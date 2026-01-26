@@ -27,6 +27,12 @@ function isWorkbenchLocationState(state: unknown): state is WorkbenchLocationSta
   return typeof state === 'object' && state !== null && 'workbenchSearch' in state;
 }
 
+function toLocalInput(value: Date) {
+  const tzOffset = value.getTimezoneOffset() * 60000;
+  const local = new Date(value.getTime() - tzOffset);
+  return local.toISOString().slice(0, 16);
+}
+
 export function WorkbenchPage() {
   const [pendingCollectionOpenId, setPendingCollectionOpenId] = useState<string | null>(null);
   const [shareOverrides, setShareOverrides] = useState<WorkbenchShareOverrides | null>(null);
