@@ -7,6 +7,9 @@ import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-r
 import { RequireUser } from './components/RequireUser';
 import { UserMenu } from './components/UserMenu';
 import { RepositoriesPage } from './page/repositories/RepositoriesPage';
+import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
+import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
+import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
@@ -20,29 +23,32 @@ type NavItem = {
 const navItems: NavItem[] = [
   { to: '/repositories', label: 'Repositories', element: <RepositoriesPage /> },
   { to: '/workbench', label: 'Workbench', element: <WorkbenchPage /> },
+  { to: '/review-projects', label: 'Review Projects', element: <ReviewProjectsPage /> },
 ];
 
 const queryClient = new QueryClient();
 
-function AppLayout() {
+function AppLayout({ showHeader }: { showHeader: boolean }) {
   return (
-    <div className="app-shell">
-      <header className="app-shell__header">
-        <div className="app-shell__header-content">
-          <nav className="app-shell__nav">
-            {navItems.map(({ to, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) => `app-shell__nav-link${isActive ? ' is-active' : ''}`}
-              >
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-          <UserMenu />
-        </div>
-      </header>
+    <div className={`app-shell${showHeader ? '' : ' app-shell--bare'}`}>
+      {showHeader ? (
+        <header className="app-shell__header">
+          <div className="app-shell__header-content">
+            <nav className="app-shell__nav">
+              {navItems.map(({ to, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) => `app-shell__nav-link${isActive ? ' is-active' : ''}`}
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </nav>
+            <UserMenu />
+          </div>
+        </header>
+      ) : null}
       <main className="app-shell__main">
         <Outlet />
       </main>
@@ -58,7 +64,7 @@ export function App() {
           <Route
             element={
               <RequireUser>
-                <AppLayout />
+                <AppLayout showHeader />
               </RequireUser>
             }
           >
@@ -66,9 +72,19 @@ export function App() {
             {navItems.map(({ to, element }) => (
               <Route key={to} path={to} element={element} />
             ))}
+            <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
             <Route path="/settings/admin" element={<AdminSettingsPage />} />
             <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
             <Route path="*" element={<Navigate to="/repositories" replace />} />
+          </Route>
+          <Route
+            element={
+              <RequireUser>
+                <AppLayout showHeader={false} />
+              </RequireUser>
+            }
+          >
+            <Route path="/review-projects/:projectId" element={<ReviewProjectPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
