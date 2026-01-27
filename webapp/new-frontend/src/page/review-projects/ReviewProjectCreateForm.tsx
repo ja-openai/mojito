@@ -68,7 +68,6 @@ export function ReviewProjectCreateForm({
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
-  const [screenshotDraft, setScreenshotDraft] = useState('');
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -108,12 +107,6 @@ export function ReviewProjectCreateForm({
       });
       return merged;
     });
-  };
-
-  const handleScreenshotDraftCommit = () => {
-    if (!screenshotDraft.trim()) return;
-    addScreenshotKeys(screenshotDraft.split(/[\n,]/).map((value) => value.trim()));
-    setScreenshotDraft('');
   };
 
   const uploadImage = async (file: File): Promise<string> => {
@@ -282,9 +275,7 @@ export function ReviewProjectCreateForm({
         <div className="review-create__field">
           <div className="review-create__label-row">
             <span className="review-create__label">Screenshots (optional)</span>
-            <span className="review-create__hint">
-              Drop images/videos to upload or paste screenshot URLs/keys.
-            </span>
+            <span className="review-create__hint">Drop images/videos to upload.</span>
           </div>
           <div
             className="review-create__dropzone"
@@ -317,26 +308,8 @@ export function ReviewProjectCreateForm({
               >
                 Choose files
               </button>
-              <div className="review-create__drop-hint">or drop files / paste keys below</div>
+              <div className="review-create__drop-hint">or drop files here</div>
             </div>
-            <input
-              type="text"
-              className="review-create__input review-create__key-input"
-              placeholder="screenshot-key or comma/newline separated"
-              value={screenshotDraft}
-              onChange={(event) => setScreenshotDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  handleScreenshotDraftCommit();
-                }
-                if (event.key === 'Escape') {
-                  setScreenshotDraft('');
-                }
-              }}
-              onBlur={handleScreenshotDraftCommit}
-              disabled={isSubmitting}
-            />
           </div>
           {screenshotKeys.length ? (
             <div className="review-create__chips" aria-label="Screenshot keys">
