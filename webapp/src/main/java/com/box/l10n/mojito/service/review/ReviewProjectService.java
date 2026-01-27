@@ -361,6 +361,35 @@ public class ReviewProjectService {
   }
 
   @Transactional
+  public GetProjectDetailView updateProjectStatus(
+      Long projectId, ReviewProjectStatus status, String closeReason) {
+    if (status == null) {
+      throw new IllegalArgumentException("status must be provided");
+    }
+
+    ReviewProject reviewProject =
+        reviewProjectRepository
+            .findById(projectId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProject with id: " + projectId + " not found"));
+
+    userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
+
+    reviewProject.setStatus(status);
+    if (status == ReviewProjectStatus.OPEN) {
+      reviewProject.setCloseReason(null);
+    } else if (closeReason != null) {
+      String trimmed = closeReason.trim();
+      reviewProject.setCloseReason(trimmed.isEmpty() ? null : trimmed);
+    }
+
+    reviewProjectRepository.save(reviewProject);
+    return getProjectDetail(projectId);
+  }
+
+  @Transactional
   public ReviewProjectTextUnitDetail saveDecision(
       Long reviewProjectTextUnitId,
       String target,

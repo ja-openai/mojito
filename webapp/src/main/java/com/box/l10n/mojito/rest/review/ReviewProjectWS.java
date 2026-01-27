@@ -75,6 +75,19 @@ public class ReviewProjectWS {
     return toDetailResponse(projectDetail);
   }
 
+  @PostMapping("/review-projects/{projectId}/status")
+  public GetReviewProjectResponse updateReviewProjectStatus(
+      @PathVariable Long projectId, @RequestBody UpdateReviewProjectStatusRequest request) {
+    if (request == null || request.status() == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
+    }
+
+    GetProjectDetailView projectDetail =
+        reviewProjectService.updateProjectStatus(
+            projectId, request.status(), request.closeReason());
+    return toDetailResponse(projectDetail);
+  }
+
   @PostMapping("/review-project-text-units/{textUnitId}/decision")
   public ResponseEntity<GetReviewProjectResponse.ReviewProjectTextUnit> saveDecision(
       @PathVariable Long textUnitId, @RequestBody ReviewProjectTextUnitDecisionRequest request)
@@ -112,6 +125,8 @@ public class ReviewProjectWS {
       List<String> localeTags,
       ZonedDateTime dueDate,
       List<Long> projectIds) {}
+
+  public record UpdateReviewProjectStatusRequest(ReviewProjectStatus status, String closeReason) {}
 
   /** Summary response used by list/search endpoints. */
   public record SearchReviewProjectsResponse(List<ReviewProject> reviewProjects) {
