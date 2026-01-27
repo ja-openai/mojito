@@ -274,7 +274,6 @@ export function ReviewProjectCreateForm({
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             rows={4}
-            maxLength={400}
             placeholder="Describe the feature, glossary guidance, etc"
             disabled={isSubmitting}
           />
