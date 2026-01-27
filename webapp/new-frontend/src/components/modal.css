@@ -80,9 +80,13 @@
   cursor: pointer;
 }
 
-.modal__button--primary,
-.modal__button--danger {
+.modal__button--primary {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: #fff;
+}
+
+.modal__button--danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
 }
