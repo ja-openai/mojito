@@ -14,6 +14,7 @@ export function useMeasuredRowRefs<K, T extends HTMLElement = HTMLDivElement>({
   onAssign,
 }: UseMeasuredRowRefsOptions<K, T>): UseMeasuredRowRefsResult<K, T> {
   const rowRefCallbacks = useRef(new Map<K, (element: T | null) => void>());
+  const resizeObservers = useRef(new Map<K, ResizeObserver>());
 
   const getRowRef = useCallback(
     (key: K) => {
@@ -23,11 +24,27 @@ export function useMeasuredRowRefs<K, T extends HTMLElement = HTMLDivElement>({
       }
 
       const callback = (element: T | null) => {
+        const existingObserver = resizeObservers.current.get(key);
+        if (existingObserver) {
+          existingObserver.disconnect();
+          resizeObservers.current.delete(key);
+        }
+
         if (onAssign) {
           onAssign(key, element);
         }
-        if (element) {
-          measureElement(element);
+        if (!element) {
+          return;
+        }
+
+        measureElement(element);
+
+        if (typeof ResizeObserver !== 'undefined') {
+          const observer = new ResizeObserver(() => {
+            measureElement(element);
+          });
+          observer.observe(element);
+          resizeObservers.current.set(key, observer);
         }
       };
 
