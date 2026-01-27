@@ -104,6 +104,26 @@ public class ReviewProjectService {
       throw new IllegalArgumentException("type must be provided");
     }
 
+    List<LocaleCandidates> localesToCreate = new ArrayList<>();
+    for (String localeTag : new LinkedHashSet<>(request.localeTags())) {
+      Locale locale = localeService.findByBcp47Tag(localeTag);
+
+      if (locale == null) {
+        throw new IllegalArgumentException("Unknown locale: " + localeTag);
+      }
+
+      List<TextUnitDTO> candidates = searchReviewCandidates(request.tmTextUnitIds(), locale);
+      if (candidates.isEmpty()) {
+        continue;
+      }
+
+      localesToCreate.add(new LocaleCandidates(locale, candidates));
+    }
+
+    if (localesToCreate.isEmpty()) {
+      throw new IllegalArgumentException("No text units found for provided locales");
+    }
+
     ReviewProjectRequest reviewProjectRequest = new ReviewProjectRequest();
     reviewProjectRequest.setName(request.name());
     reviewProjectRequest.setNotes(request.notes());
@@ -119,14 +139,10 @@ public class ReviewProjectService {
     }
 
     List<Long> projectIds = new ArrayList<>();
+    List<String> createdLocaleTags = new ArrayList<>();
 
-    for (String localeTag : request.localeTags()) {
-      Locale locale = localeService.findByBcp47Tag(localeTag);
-
-      if (locale == null) {
-        throw new IllegalArgumentException("Unknown locale: " + localeTag);
-      }
-
+    for (LocaleCandidates localeCandidates : localesToCreate) {
+      Locale locale = localeCandidates.locale();
       ReviewProject reviewProject = new ReviewProject();
       reviewProject.setType(request.type());
       reviewProject.setStatus(ReviewProjectStatus.OPEN);
@@ -139,9 +155,7 @@ public class ReviewProjectService {
       int wordCount = 0;
       int textUnitCount = 0;
 
-      List<TextUnitDTO> candidates = searchReviewCandidates(request.tmTextUnitIds(), locale);
-
-      for (TextUnitDTO textUnitDTO : candidates) {
+      for (TextUnitDTO textUnitDTO : localeCandidates.candidates()) {
         ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
         reviewProjectTextUnit.setReviewProject(reviewProject);
         reviewProjectTextUnit.setTmTextUnit(
@@ -161,15 +175,18 @@ public class ReviewProjectService {
       saved.setTextUnitCount(textUnitCount);
 
       projectIds.add(saved.getId());
+      createdLocaleTags.add(locale.getBcp47Tag());
     }
 
     return new CreateReviewProjectRequestResult(
         reviewProjectRequest.getId(),
         reviewProjectRequest.getName(),
-        request.localeTags(),
+        createdLocaleTags,
         request.dueDate(),
         projectIds);
   }
+
+  private record LocaleCandidates(Locale locale, List<TextUnitDTO> candidates) {}
 
   @Transactional(readOnly = true)
   public SearchReviewProjectsView searchReviewProjects(SearchReviewProjectsCriteria request) {
