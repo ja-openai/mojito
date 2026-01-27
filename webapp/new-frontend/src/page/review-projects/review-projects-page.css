@@ -535,12 +535,6 @@
   text-decoration: none;
 }
 
-.review-projects-page__link:hover,
-.review-projects-page__link:focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
-
 .review-projects-page__id-row {
   display: flex;
   align-items: center;
