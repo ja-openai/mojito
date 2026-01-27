@@ -8,10 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
-import {
-  REVIEW_PROJECT_STATUS_LABELS,
-  REVIEW_PROJECT_TYPE_LABELS,
-} from '../../api/review-projects';
+import { REVIEW_PROJECT_TYPE_LABELS } from '../../api/review-projects';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import {
@@ -434,7 +431,12 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
 
   return (
     <div className="review-project-page">
-      <ReviewProjectHeader projectId={projectId} project={project} textUnits={textUnits} />
+      <ReviewProjectHeader
+        projectId={projectId}
+        project={project}
+        textUnits={textUnits}
+        mutations={mutations}
+      />
 
       <div
         className={`review-project-page__content${isListCollapsed ? ' review-project-page__content--collapsed' : ''}`}
@@ -1462,16 +1464,24 @@ function ReviewProjectHeader({
   projectId,
   project,
   textUnits: textUnitsProp,
+  mutations,
 }: {
   projectId: number;
   project: ApiReviewProjectDetail;
   textUnits: ApiReviewProjectTextUnit[];
+  mutations: ReviewProjectMutationControls;
 }) {
   const { dueDate, textUnitCount, wordCount, status, type } = project;
   const name = project.reviewProjectRequest?.name ?? null;
   const locale = project.locale ?? null;
   const textUnits = useMemo(() => textUnitsProp ?? [], [textUnitsProp]);
   const locales = useMemo(() => (locale ? [locale] : []), [locale]);
+  const nextStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
+  const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
+  const actionClass =
+    status === 'OPEN'
+      ? 'review-project-page__header-action--close'
+      : 'review-project-page__header-action--reopen';
 
   const { selectedCount, progressPercent, progressTitle } = useMemo(() => {
     const selected = textUnits?.length ?? 0;
@@ -1518,11 +1528,6 @@ function ReviewProjectHeader({
             >
               {REVIEW_PROJECT_TYPE_LABELS[type]}
             </Pill>
-            <Pill
-              className={`review-project-page__header-pill review-project-page__header-pill--status-${status.toLowerCase()}`}
-            >
-              {REVIEW_PROJECT_STATUS_LABELS[status]}
-            </Pill>
           </span>
           <div className="review-project-page__header-locale-row">
             {locales.length > 0 ? (
@@ -1557,6 +1562,14 @@ function ReviewProjectHeader({
 
         <div className="review-project-page__header-group review-project-page__header-group--meta">
           <span>Due {formatDate(dueDate)}</span>
+          <button
+            type="button"
+            className={`review-project-page__header-action ${actionClass}`}
+            onClick={() => mutations.onRequestProjectStatus(nextStatus)}
+            disabled={mutations.isProjectStatusSaving}
+          >
+            {mutations.isProjectStatusSaving ? 'Saving…' : actionLabel}
+          </button>
         </div>
       </div>
     </header>

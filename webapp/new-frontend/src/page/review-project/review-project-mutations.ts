@@ -1,10 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
+import type {
+  ApiReviewProjectDetail,
+  ApiReviewProjectStatus,
+  ApiReviewProjectTextUnit,
+} from '../../api/review-projects';
 import {
   saveReviewProjectTextUnitDecision,
   setReviewProjectTextUnitDecisionState,
+  updateReviewProjectStatus,
 } from '../../api/review-projects';
 import { checkTextUnitIntegrity, type TextUnitIntegrityCheckResult } from '../../api/text-units';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
@@ -41,6 +46,7 @@ export type PendingValidationSave = {
 
 export type ReviewProjectMutationControls = {
   isSaving: boolean;
+  isProjectStatusSaving: boolean;
   errorMessage: string | null;
   activeTextUnitId: number | null;
   conflictTextUnit: ApiReviewProjectTextUnit | null;
@@ -52,6 +58,7 @@ export type ReviewProjectMutationControls = {
   onOverwriteConflict: () => void;
   onRequestSaveDecision: (request: SaveDecisionRequest) => void;
   onRequestDecisionState: (request: DecisionStateRequest) => void;
+  onRequestProjectStatus: (status: ApiReviewProjectStatus) => void;
 };
 
 type MutationError = Error & { status?: number; data?: ApiReviewProjectTextUnit | null };
@@ -132,6 +139,29 @@ export function useReviewProjectMutations(
       });
     },
     retry: shouldRetry,
+  });
+
+  const projectStatusMutation = useMutation<ApiReviewProjectDetail, Error, ApiReviewProjectStatus>({
+    mutationFn: async (nextStatus) => {
+      if (projectId == null) {
+        throw new Error('Missing project id');
+      }
+      return updateReviewProjectStatus(projectId, nextStatus);
+    },
+    onSuccess: (updatedProject) => {
+      if (projectId == null) {
+        return;
+      }
+      queryClient.setQueryData<ApiReviewProjectDetail>(
+        [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
+        updatedProject,
+      );
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      setErrorMessage(null);
+    },
+    onError: (error) => {
+      setErrorMessage(error.message || 'Failed to update project status');
+    },
   });
 
   const executeAction = useCallback(
@@ -235,6 +265,16 @@ export function useReviewProjectMutations(
     [performAction],
   );
 
+  const onRequestProjectStatus = useCallback(
+    (nextStatus: ApiReviewProjectStatus) => {
+      if (projectId == null || projectStatusMutation.isPending) {
+        return;
+      }
+      projectStatusMutation.mutate(nextStatus);
+    },
+    [projectId, projectStatusMutation],
+  );
+
   const onConfirmValidationSave = useCallback(() => {
     if (!pendingValidationSave) {
       return;
@@ -298,6 +338,7 @@ export function useReviewProjectMutations(
   return useMemo(
     () => ({
       isSaving: mutation.isPending,
+      isProjectStatusSaving: projectStatusMutation.isPending,
       errorMessage,
       activeTextUnitId,
       conflictTextUnit,
@@ -309,6 +350,7 @@ export function useReviewProjectMutations(
       onOverwriteConflict,
       onRequestSaveDecision,
       onRequestDecisionState,
+      onRequestProjectStatus,
     }),
     [
       activeTextUnitId,
@@ -319,9 +361,11 @@ export function useReviewProjectMutations(
       onDismissValidationSave,
       onOverwriteConflict,
       onRequestDecisionState,
+      onRequestProjectStatus,
       onRequestSaveDecision,
       onUseConflictCurrent,
       pendingValidationSave,
+      projectStatusMutation.isPending,
     ],
   );
 }

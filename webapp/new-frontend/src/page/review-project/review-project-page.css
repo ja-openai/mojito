@@ -107,6 +107,52 @@
   justify-self: end;
 }
 
+.review-project-page__header-action {
+  margin-left: var(--space-3);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill);
+  border: 0.0625rem solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.review-project-page__header-action:hover:not(:disabled),
+.review-project-page__header-action:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 88%, black);
+}
+
+.review-project-page__header-action:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.review-project-page__header-action--close {
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.review-project-page__header-action--close:hover:not(:disabled),
+.review-project-page__header-action--close:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 88%, black);
+}
+
+.review-project-page__header-action--reopen {
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.review-project-page__header-action--reopen:hover:not(:disabled),
+.review-project-page__header-action--reopen:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 88%, black);
+}
+
 .review-project-page__header-group--stats {
   flex: 0 0 auto;
   min-width: 260px;

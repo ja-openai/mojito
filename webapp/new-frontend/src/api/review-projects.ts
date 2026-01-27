@@ -198,6 +198,25 @@ export const fetchReviewProjectDetail = async (
   return (await response.json()) as ApiReviewProjectDetail;
 };
 
+export const updateReviewProjectStatus = async (
+  projectId: number,
+  status: ApiReviewProjectStatus,
+): Promise<ApiReviewProjectDetail> => {
+  const response = await fetch(`/api/review-projects/${projectId}/status`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to update review project status');
+  }
+
+  return (await response.json()) as ApiReviewProjectDetail;
+};
+
 export const saveReviewProjectTextUnitDecision = async ({
   textUnitId,
   target,
