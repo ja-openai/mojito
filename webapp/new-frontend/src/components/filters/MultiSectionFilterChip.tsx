@@ -154,10 +154,13 @@ export function MultiSectionFilterChip({
   }, [commitSizeDraft, isOpen]);
 
   useEffect(() => {
-    if (sizeSection) {
-      setSizeDraft(String(sizeSection.value ?? ''));
-      setShowCustomSize(!sizeIsPreset);
+    if (!sizeSection) {
+      return;
     }
+    const nextDraft = String(sizeSection.value ?? '');
+    setSizeDraft((prev) => (prev === nextDraft ? prev : nextDraft));
+    const nextShowCustomSize = !sizeIsPreset;
+    setShowCustomSize((prev) => (prev === nextShowCustomSize ? prev : nextShowCustomSize));
   }, [sizeIsPreset, sizeSection]);
 
   useEffect(() => {
