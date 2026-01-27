@@ -15,7 +15,7 @@ export default defineConfig({
         changeOrigin: true,
         headers: {
           // Login as the configured dev user (defaults to admin), requires backend to have HEADER auth on
-          'x-forwarded-user': process.env.MOJITO_DEV_USER ?? 'admin',
+          'x-forwarded-user': process.env.VITE_X_FORWARD_USER ?? 'admin',
         },
       },
     },
