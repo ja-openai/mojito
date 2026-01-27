@@ -504,19 +504,16 @@ function ReviewProjectRowView({
                 />
               </label>
             ) : null}
-            <Link
-              to={`/review-projects/${project.id}`}
-              className="review-projects-page__project-link"
-            >
+            <Link to={`/review-projects/${project.id}`} className="review-projects-page__link">
               <span className="review-projects-page__project-name">{project.name}</span>
             </Link>
             {requestId != null && onRequestIdClick ? (
               <button
                 type="button"
-                className={`review-projects-page__request-link${isAdmin ? ' is-visible' : ''}`}
+                className="review-projects-page__request-link review-projects-page__link"
                 onClick={() => onRequestIdClick(requestId)}
               >
-                Req #{requestId}
+                Request #{requestId}
               </button>
             ) : null}
           </div>
