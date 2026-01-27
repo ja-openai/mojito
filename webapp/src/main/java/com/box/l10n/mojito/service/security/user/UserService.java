@@ -102,6 +102,24 @@ public class UserService {
     }
   }
 
+  public boolean isCurrentUserAdmin() {
+    Optional<User> currentUser = auditorAwareImpl.getCurrentAuditor();
+    if (currentUser.isEmpty()) {
+      return false;
+    }
+
+    User user = userRepository.findByUsername(currentUser.get().getUsername());
+    if (user == null || user.getAuthorities() == null || user.getAuthorities().isEmpty()) {
+      return false;
+    }
+
+    return user.getAuthorities().stream()
+        .map(Authority::getAuthority)
+        .filter(Objects::nonNull)
+        .map(this::createRoleFromAuthority)
+        .anyMatch(role -> role == Role.ROLE_ADMIN);
+  }
+
   /**
    * Create a {@link com.box.l10n.mojito.entity.security.user.User}. This does not check if there is
    * already a user with the provided username

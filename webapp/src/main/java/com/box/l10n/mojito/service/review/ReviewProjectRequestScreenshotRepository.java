@@ -14,5 +14,5 @@ public interface ReviewProjectRequestScreenshotRepository
       "select s.imageName from ReviewProjectRequestScreenshot s where s.reviewProjectRequest.id = ?1")
   List<String> findImageNamesByReviewProjectRequestId(Long reviewProjectRequestId);
 
-  void deleteByReviewProjectRequestId(Long reviewProjectRequestId);
+  void deleteByReviewProjectRequestIdIn(List<Long> reviewProjectRequestIds);
 }

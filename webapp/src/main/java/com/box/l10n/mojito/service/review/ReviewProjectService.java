@@ -29,6 +29,7 @@ import jakarta.persistence.criteria.*;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -375,7 +376,9 @@ public class ReviewProjectService {
                     new IllegalArgumentException(
                         "reviewProject with id: " + projectId + " not found"));
 
-    userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
+    if (!userService.isCurrentUserAdmin()) {
+      userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
+    }
 
     reviewProject.setStatus(status);
     if (status == ReviewProjectStatus.OPEN) {
@@ -387,6 +390,66 @@ public class ReviewProjectService {
 
     reviewProjectRepository.save(reviewProject);
     return getProjectDetail(projectId);
+  }
+
+  @Transactional
+  public int adminBatchUpdateStatus(
+      List<Long> projectIds, ReviewProjectStatus status, String closeReason) {
+    requireAdmin();
+    if (CollectionUtils.isEmpty(projectIds)) {
+      return 0;
+    }
+    if (status == null) {
+      throw new IllegalArgumentException("status must be provided");
+    }
+
+    List<Long> distinctIds = projectIds.stream().filter(Objects::nonNull).distinct().toList();
+    if (distinctIds.isEmpty()) {
+      return 0;
+    }
+
+    List<ReviewProject> projects = reviewProjectRepository.findAllById(distinctIds);
+    for (ReviewProject project : projects) {
+      project.setStatus(status);
+      if (status == ReviewProjectStatus.OPEN) {
+        project.setCloseReason(null);
+      } else if (closeReason != null) {
+        String trimmed = closeReason.trim();
+        project.setCloseReason(trimmed.isEmpty() ? null : trimmed);
+      }
+    }
+
+    reviewProjectRepository.saveAll(projects);
+    return projects.size();
+  }
+
+  @Transactional
+  public int adminBatchDeleteProjects(List<Long> projectIds) {
+    requireAdmin();
+    if (CollectionUtils.isEmpty(projectIds)) {
+      return 0;
+    }
+
+    List<Long> distinctIds = projectIds.stream().filter(Objects::nonNull).distinct().toList();
+    if (distinctIds.isEmpty()) {
+      return 0;
+    }
+
+    List<Long> requestIds = reviewProjectRepository.findRequestIdsByProjectIds(distinctIds);
+
+    reviewProjectTextUnitDecisionRepository.deleteByReviewProjectIds(distinctIds);
+    reviewProjectTextUnitRepository.deleteByReviewProjectIds(distinctIds);
+    int deletedProjects = reviewProjectRepository.deleteByProjectIds(distinctIds);
+
+    if (!CollectionUtils.isEmpty(requestIds)) {
+      List<Long> orphanRequestIds = reviewProjectRequestRepository.findOrphanRequestIds(requestIds);
+      if (!CollectionUtils.isEmpty(orphanRequestIds)) {
+        reviewProjectScreenshotRepository.deleteByReviewProjectRequestIdIn(orphanRequestIds);
+        reviewProjectRequestRepository.deleteAllById(orphanRequestIds);
+      }
+    }
+
+    return deletedProjects;
   }
 
   @Transactional
@@ -593,5 +656,11 @@ public class ReviewProjectService {
     params.setLimit(tmTextUnitIds.size());
 
     return textUnitSearcher.search(params);
+  }
+
+  private void requireAdmin() {
+    if (!userService.isCurrentUserAdmin()) {
+      throw new AccessDeniedException("Admin role required");
+    }
   }
 }

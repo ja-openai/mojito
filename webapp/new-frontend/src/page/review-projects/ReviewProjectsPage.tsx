@@ -1,3 +1,4 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -8,18 +9,25 @@ import type {
   ReviewProjectsSearchRequest,
 } from '../../api/review-projects';
 import {
+  adminBatchDeleteReviewProjects,
+  adminBatchUpdateReviewProjectStatus,
   REVIEW_PROJECT_STATUS_LABELS,
   REVIEW_PROJECT_STATUSES,
   REVIEW_PROJECT_TYPE_LABELS,
   REVIEW_PROJECT_TYPES,
 } from '../../api/review-projects';
+import { ConfirmModal } from '../../components/ConfirmModal';
 import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
-import { useReviewProjects } from '../../hooks/useReviewProjects';
+import { REVIEW_PROJECTS_QUERY_KEY, useReviewProjects } from '../../hooks/useReviewProjects';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';
 import { loadPreferredLocales } from '../workbench/workbench-preferences';
-import { type ReviewProjectRow, ReviewProjectsPageView } from './ReviewProjectsPageView';
+import {
+  type ReviewProjectRow,
+  type ReviewProjectsAdminControls,
+  ReviewProjectsPageView,
+} from './ReviewProjectsPageView';
 
 type FilterOption<T extends string | number> = { value: T; label: string };
 
@@ -103,6 +111,8 @@ export function ReviewProjectsPage() {
   const { data: repositoryData } = useRepositories();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const isAdmin = user.role === 'ROLE_ADMIN';
 
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
   const [hasTouchedLocales, setHasTouchedLocales] = useState(false);
@@ -117,6 +127,9 @@ export function ReviewProjectsPage() {
   const [dueAfter, setDueAfter] = useState<string | null>(null);
   const [dueBefore, setDueBefore] = useState<string | null>(null);
   const [requestIdFilter, setRequestIdFilter] = useState<number | null>(null);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
+  const [adminErrorMessage, setAdminErrorMessage] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const repositories = useMemo(() => repositoryData ?? [], [repositoryData]);
   const localeOptions = useLocaleOptionsWithDisplayNames(repositories);
@@ -187,9 +200,9 @@ export function ReviewProjectsPage() {
         userLocales: user.userLocales ?? [],
         preferredLocales,
         isLimitedTranslator: !user.canTranslateAllLocales && (user.userLocales?.length ?? 0) > 0,
-        isAdmin: user.role === 'ROLE_ADMIN',
+        isAdmin,
       }),
-    [localeOptions, preferredLocales, user.canTranslateAllLocales, user.role, user.userLocales],
+    [isAdmin, localeOptions, preferredLocales, user.canTranslateAllLocales, user.userLocales],
   );
 
   const status: 'loading' | 'error' | 'ready' = isLoading ? 'loading' : isError ? 'error' : 'ready';
@@ -321,6 +334,57 @@ export function ReviewProjectsPage() {
     }));
   }, [filteredProjects]);
 
+  const visibleProjectIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  const visibleProjectIdSet = useMemo(() => new Set(visibleProjectIds), [visibleProjectIds]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+    setSelectedProjectIds((prev) => prev.filter((id) => visibleProjectIdSet.has(id)));
+  }, [isAdmin, visibleProjectIdSet]);
+
+  useEffect(() => {
+    if (!isAdmin || selectedProjectIds.length === 0) {
+      setDeleteConfirmOpen(false);
+    }
+  }, [isAdmin, selectedProjectIds.length]);
+
+  const batchStatusMutation = useMutation({
+    mutationFn: async ({
+      projectIds,
+      status,
+    }: {
+      projectIds: number[];
+      status: ApiReviewProjectStatus;
+    }) => adminBatchUpdateReviewProjectStatus(projectIds, status),
+    onSuccess: () => {
+      setAdminErrorMessage(null);
+      setSelectedProjectIds([]);
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void refetch();
+    },
+    onError: (error) => {
+      setAdminErrorMessage(error instanceof Error ? error.message : 'Batch update failed');
+    },
+  });
+
+  const batchDeleteMutation = useMutation({
+    mutationFn: async ({ projectIds }: { projectIds: number[] }) =>
+      adminBatchDeleteReviewProjects(projectIds),
+    onSuccess: () => {
+      setAdminErrorMessage(null);
+      setSelectedProjectIds([]);
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void refetch();
+    },
+    onError: (error) => {
+      setAdminErrorMessage(error instanceof Error ? error.message : 'Batch delete failed');
+    },
+  });
+
+  const isBatchSaving = batchStatusMutation.isPending || batchDeleteMutation.isPending;
+
   const requestFilter = useMemo(
     () =>
       requestIdFilter === null
@@ -338,6 +402,68 @@ export function ReviewProjectsPage() {
     void refetch();
   }, [refetch]);
 
+  const toggleProjectSelection = useCallback((projectId: number) => {
+    setSelectedProjectIds((prev) => {
+      const exists = prev.includes(projectId);
+      if (exists) {
+        return prev.filter((id) => id !== projectId);
+      }
+      return [...prev, projectId];
+    });
+  }, []);
+
+  const clearProjectSelection = useCallback(() => {
+    setSelectedProjectIds([]);
+  }, []);
+
+  const selectAllVisibleProjects = useCallback(() => {
+    setSelectedProjectIds(visibleProjectIds);
+  }, [visibleProjectIds]);
+
+  const requestBatchStatus = useCallback(
+    (nextStatus: ApiReviewProjectStatus) => {
+      if (!isAdmin || selectedProjectIds.length === 0 || isBatchSaving) {
+        return;
+      }
+      batchStatusMutation.mutate({ projectIds: [...selectedProjectIds], status: nextStatus });
+    },
+    [batchStatusMutation, isAdmin, isBatchSaving, selectedProjectIds],
+  );
+
+  const requestBatchDelete = useCallback(() => {
+    if (!isAdmin || selectedProjectIds.length === 0 || isBatchSaving) {
+      return;
+    }
+    setDeleteConfirmOpen(true);
+  }, [isAdmin, isBatchSaving, selectedProjectIds.length]);
+
+  const handleConfirmBatchDelete = useCallback(() => {
+    if (!isAdmin || selectedProjectIds.length === 0 || isBatchSaving) {
+      setDeleteConfirmOpen(false);
+      return;
+    }
+    batchDeleteMutation.mutate({ projectIds: [...selectedProjectIds] });
+    setDeleteConfirmOpen(false);
+  }, [batchDeleteMutation, isAdmin, isBatchSaving, selectedProjectIds]);
+
+  const handleCancelBatchDelete = useCallback(() => {
+    setDeleteConfirmOpen(false);
+  }, []);
+
+  const adminControls: ReviewProjectsAdminControls | undefined = isAdmin
+    ? {
+        enabled: true,
+        selectedProjectIds,
+        onToggleProjectSelection: toggleProjectSelection,
+        onSelectAllVisible: selectAllVisibleProjects,
+        onClearSelection: clearProjectSelection,
+        onBatchStatus: requestBatchStatus,
+        onBatchDelete: requestBatchDelete,
+        isSaving: isBatchSaving,
+        errorMessage: adminErrorMessage,
+      }
+    : undefined;
+
   useSelectAllLocales({
     localeOptions,
     projects: data,
@@ -347,45 +473,59 @@ export function ReviewProjectsPage() {
   });
 
   return (
-    <ReviewProjectsPageView
-      status={status}
-      errorMessage={errorMessage}
-      errorOnRetry={handleRetry}
-      projects={rows}
-      filters={{
-        localeOptions,
-        selectedLocaleTags,
-        onLocaleChange: (next) => {
-          setHasTouchedLocales(true);
-          setSelectedLocaleTags(next);
-        },
-        myLocaleTags: myLocaleSelections,
-        typeOptions,
-        typeValue: typeFilter,
-        onTypeChange: setTypeFilter,
-        statusOptions,
-        statusValue: statusFilter,
-        onStatusChange: setStatusFilter,
-        limitOptions,
-        limitValue: limit,
-        onLimitChange: setLimit,
-        createdAfter,
-        createdBefore,
-        onChangeCreatedAfter: setCreatedAfter,
-        onChangeCreatedBefore: setCreatedBefore,
-        dueAfter,
-        dueBefore,
-        onChangeDueAfter: setDueAfter,
-        onChangeDueBefore: setDueBefore,
-        searchQuery,
-        onSearchChange: setSearchQuery,
-        searchField,
-        onSearchFieldChange: setSearchField,
-        searchType,
-        onSearchTypeChange: setSearchType,
-      }}
-      requestFilter={requestFilter ?? undefined}
-      canCreate={user.role === 'ROLE_ADMIN'}
-    />
+    <>
+      <ReviewProjectsPageView
+        status={status}
+        errorMessage={errorMessage}
+        errorOnRetry={handleRetry}
+        projects={rows}
+        filters={{
+          localeOptions,
+          selectedLocaleTags,
+          onLocaleChange: (next) => {
+            setHasTouchedLocales(true);
+            setSelectedLocaleTags(next);
+          },
+          myLocaleTags: myLocaleSelections,
+          typeOptions,
+          typeValue: typeFilter,
+          onTypeChange: setTypeFilter,
+          statusOptions,
+          statusValue: statusFilter,
+          onStatusChange: setStatusFilter,
+          limitOptions,
+          limitValue: limit,
+          onLimitChange: setLimit,
+          createdAfter,
+          createdBefore,
+          onChangeCreatedAfter: setCreatedAfter,
+          onChangeCreatedBefore: setCreatedBefore,
+          dueAfter,
+          dueBefore,
+          onChangeDueAfter: setDueAfter,
+          onChangeDueBefore: setDueBefore,
+          searchQuery,
+          onSearchChange: setSearchQuery,
+          searchField,
+          onSearchFieldChange: setSearchField,
+          searchType,
+          onSearchTypeChange: setSearchType,
+        }}
+        requestFilter={requestFilter ?? undefined}
+        canCreate={isAdmin}
+        adminControls={adminControls}
+      />
+      {isAdmin ? (
+        <ConfirmModal
+          open={deleteConfirmOpen}
+          title="Delete review projects?"
+          body={`This will permanently delete ${selectedProjectIds.length} project(s). This cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          onConfirm={handleConfirmBatchDelete}
+          onCancel={handleCancelBatchDelete}
+        />
+      ) : null}
+    </>
   );
 }

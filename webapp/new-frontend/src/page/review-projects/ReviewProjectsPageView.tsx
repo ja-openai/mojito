@@ -67,6 +67,18 @@ export type ReviewProjectRow = {
   closeReason?: string | null;
 };
 
+export type ReviewProjectsAdminControls = {
+  enabled: boolean;
+  selectedProjectIds: number[];
+  onToggleProjectSelection: (projectId: number) => void;
+  onSelectAllVisible: () => void;
+  onClearSelection: () => void;
+  onBatchStatus: (status: ApiReviewProjectStatus) => void;
+  onBatchDelete: () => void;
+  isSaving: boolean;
+  errorMessage?: string | null;
+};
+
 type Props = {
   status: 'loading' | 'error' | 'ready';
   errorMessage?: string;
@@ -76,6 +88,7 @@ type Props = {
   filters: FiltersProps;
   requestFilter?: { requestId: number | null; onClear: () => void };
   canCreate?: boolean;
+  adminControls?: ReviewProjectsAdminControls;
 };
 
 function CountsInline({ words, strings }: { words: number | null; strings: number | null }) {
@@ -115,19 +128,94 @@ function SummaryBar({
   );
 }
 
+function AdminBar({
+  adminControls,
+  visibleCount,
+}: {
+  adminControls: ReviewProjectsAdminControls;
+  visibleCount: number;
+}) {
+  const selectedCount = adminControls.selectedProjectIds.length;
+  const hasSelection = selectedCount > 0;
+  const disabled = adminControls.isSaving;
+
+  return (
+    <div className="review-projects-page__admin-bar" role="region" aria-label="Admin actions">
+      <div className="review-projects-page__admin-left">
+        <span className="review-projects-page__admin-count">
+          {hasSelection ? `${selectedCount} selected` : 'No selection'}
+        </span>
+        <button
+          type="button"
+          className="review-projects-page__admin-link"
+          onClick={adminControls.onSelectAllVisible}
+          disabled={visibleCount === 0 || disabled}
+        >
+          Select all visible
+        </button>
+        <button
+          type="button"
+          className="review-projects-page__admin-link"
+          onClick={adminControls.onClearSelection}
+          disabled={!hasSelection || disabled}
+        >
+          Clear
+        </button>
+      </div>
+      <div className="review-projects-page__admin-actions">
+        <button
+          type="button"
+          className="review-projects-page__admin-button"
+          onClick={() => adminControls.onBatchStatus('CLOSED')}
+          disabled={!hasSelection || disabled}
+        >
+          Close
+        </button>
+        <button
+          type="button"
+          className="review-projects-page__admin-button"
+          onClick={() => adminControls.onBatchStatus('OPEN')}
+          disabled={!hasSelection || disabled}
+        >
+          Reopen
+        </button>
+        <button
+          type="button"
+          className="review-projects-page__admin-button review-projects-page__admin-button--danger"
+          onClick={adminControls.onBatchDelete}
+          disabled={!hasSelection || disabled}
+        >
+          Delete
+        </button>
+      </div>
+      {adminControls.errorMessage ? (
+        <div className="review-projects-page__admin-error">{adminControls.errorMessage}</div>
+      ) : null}
+    </div>
+  );
+}
+
 function ContentSection({
   projects,
   rowsParentRef,
   virtualItems,
   totalSize,
   getRowRef,
+  adminControls,
 }: {
   projects: ReviewProjectRow[];
   rowsParentRef: React.RefObject<HTMLDivElement>;
   virtualItems: VirtualItem[];
   totalSize: number;
   getRowRef: (rowId: number) => (element: HTMLDivElement | null) => void;
+  adminControls?: ReviewProjectsAdminControls;
 }) {
+  const isAdmin = adminControls?.enabled ?? false;
+  const selectedProjectIdSet = useMemo(
+    () => new Set(adminControls?.selectedProjectIds ?? []),
+    [adminControls?.selectedProjectIds],
+  );
+
   if (projects.length === 0) {
     return (
       <div className="review-projects-page__rows-frame">
@@ -155,7 +243,14 @@ function ContentSection({
               props: {
                 ref: getRowRef(project.id),
               },
-              content: <ReviewProjectRowView project={project} />,
+              content: (
+                <ReviewProjectRowView
+                  project={project}
+                  isAdmin={isAdmin}
+                  isSelected={selectedProjectIdSet.has(project.id)}
+                  onToggleSelection={adminControls?.onToggleProjectSelection}
+                />
+              ),
             };
           }}
         />
@@ -358,7 +453,17 @@ function EmptyState() {
   );
 }
 
-function ReviewProjectRowView({ project }: { project: ReviewProjectRow }) {
+function ReviewProjectRowView({
+  project,
+  isAdmin,
+  isSelected,
+  onToggleSelection,
+}: {
+  project: ReviewProjectRow;
+  isAdmin: boolean;
+  isSelected: boolean;
+  onToggleSelection?: (projectId: number) => void;
+}) {
   const textUnitCount = project.textUnitCount ?? 0;
   const percent = formatPercent(project.acceptedCount, textUnitCount);
   const percentValue =
@@ -374,6 +479,17 @@ function ReviewProjectRowView({ project }: { project: ReviewProjectRow }) {
       <div className="review-projects-page__row-grid">
         <div className="review-projects-page__project">
           <div className="review-projects-page__id-row">
+            {isAdmin ? (
+              <label className="review-projects-page__select">
+                <input
+                  type="checkbox"
+                  className="review-projects-page__select-input"
+                  checked={isSelected}
+                  onChange={() => onToggleSelection?.(project.id)}
+                  aria-label={`Select review project ${project.id}`}
+                />
+              </label>
+            ) : null}
             <Link
               to={`/review-projects/${project.id}`}
               className="review-projects-page__project-link"
@@ -440,6 +556,7 @@ export function ReviewProjectsPageView({
   filters,
   requestFilter,
   canCreate = true,
+  adminControls,
 }: Props) {
   const scrollElementRef = useRef<HTMLDivElement>(null);
   const getItemKey = useCallback((index: number) => projects[index]?.id ?? index, [projects]);
@@ -512,12 +629,16 @@ export function ReviewProjectsPageView({
           totalStrings={totalStrings}
         />
       ) : null}
+      {hasResults && adminControls && adminControls.enabled ? (
+        <AdminBar adminControls={adminControls} visibleCount={projects.length} />
+      ) : null}
       <ContentSection
         projects={projects}
         rowsParentRef={scrollElementRef}
         virtualItems={virtualItems}
         totalSize={totalSize}
         getRowRef={getRowRef}
+        adminControls={adminControls}
       />
     </div>
   );

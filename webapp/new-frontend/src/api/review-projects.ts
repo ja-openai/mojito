@@ -217,6 +217,47 @@ export const updateReviewProjectStatus = async (
   return (await response.json()) as ApiReviewProjectDetail;
 };
 
+export type AdminBatchActionResponse = {
+  affectedCount: number;
+};
+
+export const adminBatchUpdateReviewProjectStatus = async (
+  projectIds: number[],
+  status: ApiReviewProjectStatus,
+): Promise<AdminBatchActionResponse> => {
+  const response = await fetch('/api/admin/review-projects/status', {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify({ projectIds, status }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to batch update review project status');
+  }
+
+  return (await response.json()) as AdminBatchActionResponse;
+};
+
+export const adminBatchDeleteReviewProjects = async (
+  projectIds: number[],
+): Promise<AdminBatchActionResponse> => {
+  const response = await fetch('/api/admin/review-projects/delete', {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify({ projectIds }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to delete review projects');
+  }
+
+  return (await response.json()) as AdminBatchActionResponse;
+};
+
 export const saveReviewProjectTextUnitDecision = async ({
   textUnitId,
   target,

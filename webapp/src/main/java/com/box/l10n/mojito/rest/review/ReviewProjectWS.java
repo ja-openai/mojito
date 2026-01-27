@@ -88,6 +88,33 @@ public class ReviewProjectWS {
     return toDetailResponse(projectDetail);
   }
 
+  @PostMapping("/admin/review-projects/status")
+  public AdminBatchActionResponse adminBatchUpdateReviewProjectStatus(
+      @RequestBody AdminBatchUpdateStatusRequest request) {
+    if (request == null || request.status() == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
+    }
+    if (request.projectIds() == null || request.projectIds().isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "projectIds is required");
+    }
+
+    int affected =
+        reviewProjectService.adminBatchUpdateStatus(
+            request.projectIds(), request.status(), request.closeReason());
+    return new AdminBatchActionResponse(affected);
+  }
+
+  @PostMapping("/admin/review-projects/delete")
+  public AdminBatchActionResponse adminBatchDeleteReviewProjects(
+      @RequestBody AdminBatchDeleteRequest request) {
+    if (request == null || request.projectIds() == null || request.projectIds().isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "projectIds is required");
+    }
+
+    int affected = reviewProjectService.adminBatchDeleteProjects(request.projectIds());
+    return new AdminBatchActionResponse(affected);
+  }
+
   @PostMapping("/review-project-text-units/{textUnitId}/decision")
   public ResponseEntity<GetReviewProjectResponse.ReviewProjectTextUnit> saveDecision(
       @PathVariable Long textUnitId, @RequestBody ReviewProjectTextUnitDecisionRequest request)
@@ -127,6 +154,13 @@ public class ReviewProjectWS {
       List<Long> projectIds) {}
 
   public record UpdateReviewProjectStatusRequest(ReviewProjectStatus status, String closeReason) {}
+
+  public record AdminBatchUpdateStatusRequest(
+      List<Long> projectIds, ReviewProjectStatus status, String closeReason) {}
+
+  public record AdminBatchDeleteRequest(List<Long> projectIds) {}
+
+  public record AdminBatchActionResponse(int affectedCount) {}
 
   /** Summary response used by list/search endpoints. */
   public record SearchReviewProjectsResponse(List<ReviewProject> reviewProjects) {

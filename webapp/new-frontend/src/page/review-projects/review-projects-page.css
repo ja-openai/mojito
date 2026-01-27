@@ -137,6 +137,86 @@
   font-size: var(--font-size-md);
 }
 
+.review-projects-page__admin-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-6);
+  background: var(--color-surface);
+  border-top: 0.0625rem solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  border-bottom: 0.0625rem solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.review-projects-page__admin-left {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.review-projects-page__admin-count {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.review-projects-page__admin-link {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.review-projects-page__admin-link:disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
+.review-projects-page__admin-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.review-projects-page__admin-button {
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-pill);
+  border: 0.0625rem solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.review-projects-page__admin-button:hover:not(:disabled),
+.review-projects-page__admin-button:focus-visible:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-accent) 65%, var(--color-border));
+  color: var(--color-accent);
+}
+
+.review-projects-page__admin-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.review-projects-page__admin-button--danger:hover:not(:disabled),
+.review-projects-page__admin-button--danger:focus-visible:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-danger) 65%, var(--color-border));
+  color: var(--color-danger);
+}
+
+.review-projects-page__admin-error {
+  flex: 1 0 100%;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
 .review-create__body {
   display: flex;
   flex-direction: column;
@@ -488,6 +568,18 @@
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
+}
+
+.review-projects-page__select {
+  display: inline-flex;
+  align-items: center;
+}
+
+.review-projects-page__select-input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--color-accent);
 }
 
 .review-projects-page__close-reason {
