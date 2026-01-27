@@ -159,7 +159,7 @@
 
 .review-projects-page__admin-count {
   color: var(--color-text);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
 }
 
 .review-projects-page__admin-link {
@@ -169,7 +169,7 @@
   cursor: pointer;
   padding: 0;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
 }
 
 .review-projects-page__admin-link:disabled {
@@ -191,7 +191,7 @@
   color: var(--color-text);
   cursor: pointer;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
 }
 
 .review-projects-page__admin-button:hover:not(:disabled),
