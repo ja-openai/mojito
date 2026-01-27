@@ -65,9 +65,7 @@ export function ReviewProjectCreateForm({
   const [name, setName] = useState(defaultName);
   const [dueDate, setDueDate] = useState(defaultDueDate);
   const [type, setType] = useState<ApiReviewProjectType>('NORMAL');
-  const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>(
-    localeOptions.map((opt) => opt.tag),
-  );
+  const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
   const [screenshotDraft, setScreenshotDraft] = useState('');
@@ -79,12 +77,7 @@ export function ReviewProjectCreateForm({
   useEffect(() => {
     setSelectedLocaleTags((current) => {
       const allowed = new Set(localeOptions.map((opt) => opt.tag));
-      const next = current.filter((tag) => allowed.has(tag));
-      if (next.length > 0) {
-        return next;
-      }
-      const all = Array.from(allowed);
-      return all.length ? all : [];
+      return current.filter((tag) => allowed.has(tag));
     });
   }, [localeOptions]);
 
