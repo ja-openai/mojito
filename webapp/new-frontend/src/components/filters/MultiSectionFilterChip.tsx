@@ -107,8 +107,6 @@ export function MultiSectionFilterChip({
     [classNames],
   );
   const [isOpen, setIsOpen] = useState(false);
-  const [sizeDraft, setSizeDraft] = useState('');
-  const [showCustomSize, setShowCustomSize] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sizeInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -118,9 +116,13 @@ export function MultiSectionFilterChip({
       ? sizeSection.options
       : resultSizePresets;
   const sizeMin = sizeSection?.min ?? WORKSET_SIZE_MIN;
+  const hasSizeSection = sizeSection != null;
+  const sizeValue = sizeSection?.value;
 
   const sizeIsPreset =
     sizeSection != null && sizeOptions.some((option) => option.value === sizeSection.value);
+  const [sizeDraft, setSizeDraft] = useState(() => String(sizeValue ?? ''));
+  const [showCustomSize, setShowCustomSize] = useState(() => !sizeIsPreset);
 
   const commitSizeDraft = useCallback(() => {
     if (!sizeSection) return;
@@ -154,14 +156,14 @@ export function MultiSectionFilterChip({
   }, [commitSizeDraft, isOpen]);
 
   useEffect(() => {
-    if (!sizeSection) {
+    if (!hasSizeSection) {
       return;
     }
-    const nextDraft = String(sizeSection.value ?? '');
-    setSizeDraft((prev) => (prev === nextDraft ? prev : nextDraft));
+    const nextDraft = String(sizeValue ?? '');
     const nextShowCustomSize = !sizeIsPreset;
+    setSizeDraft((prev) => (prev === nextDraft ? prev : nextDraft));
     setShowCustomSize((prev) => (prev === nextShowCustomSize ? prev : nextShowCustomSize));
-  }, [sizeIsPreset, sizeSection]);
+  }, [hasSizeSection, sizeIsPreset, sizeValue]);
 
   useEffect(() => {
     if (showCustomSize) {

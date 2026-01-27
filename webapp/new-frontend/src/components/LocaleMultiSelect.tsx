@@ -80,6 +80,9 @@ export function LocaleMultiSelect({
         if (!selectedValues.length) {
           return label ?? 'Locales';
         }
+        if (isMyLocaleSelectionActive) {
+          return myLocalesLabel;
+        }
         if (selectedValues.length === opts.length) {
           return 'All locales';
         }

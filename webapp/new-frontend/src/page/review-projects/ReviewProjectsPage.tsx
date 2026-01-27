@@ -33,6 +33,7 @@ type FilterOption<T extends string | number> = { value: T; label: string };
 
 type SelectAllLocalesParams = {
   localeOptions: { tag: string }[];
+  defaultLocaleTags?: string[];
   projects: ApiReviewProjectSummary[] | undefined;
   selectedLocaleTags: string[];
   setSelectedLocaleTags: (tags: string[]) => void;
@@ -54,6 +55,7 @@ function isReviewProjectsNavState(value: unknown): value is ReviewProjectsNavSta
 
 function useSelectAllLocales({
   localeOptions,
+  defaultLocaleTags,
   selectedLocaleTags,
   setSelectedLocaleTags,
   userHasTouchedLocales,
@@ -72,6 +74,17 @@ function useSelectAllLocales({
       return;
     }
 
+    if (defaultLocaleTags && defaultLocaleTags.length > 0) {
+      const optionTagSet = new Set(optionTags.map((tag) => tag.toLowerCase()));
+      const defaults = Array.from(
+        new Set(defaultLocaleTags.filter((tag) => optionTagSet.has(tag.toLowerCase()))),
+      );
+      if (defaults.length > 0) {
+        setSelectedLocaleTags(defaults);
+        return;
+      }
+    }
+
     const next = Array.from(new Set(optionTags));
     const currentSet = new Set(selectedLocaleTags);
     const hasDifference =
@@ -80,7 +93,13 @@ function useSelectAllLocales({
     if (hasDifference) {
       setSelectedLocaleTags(next);
     }
-  }, [localeOptions, selectedLocaleTags, setSelectedLocaleTags, userHasTouchedLocales]);
+  }, [
+    defaultLocaleTags,
+    localeOptions,
+    selectedLocaleTags,
+    setSelectedLocaleTags,
+    userHasTouchedLocales,
+  ]);
 }
 
 const typeOptions: FilterOption<ApiReviewProjectType | 'all'>[] = [
@@ -133,10 +152,25 @@ export function ReviewProjectsPage() {
 
   const repositories = useMemo(() => repositoryData ?? [], [repositoryData]);
   const localeOptions = useLocaleOptionsWithDisplayNames(repositories);
+  const userLocales = useMemo(() => user.userLocales ?? [], [user.userLocales]);
+  const isLimitedTranslator = useMemo(
+    () => !user.canTranslateAllLocales && userLocales.length > 0,
+    [user.canTranslateAllLocales, userLocales.length],
+  );
+  const userLocaleTagSet = useMemo(
+    () => new Set(userLocales.map((tag) => tag.toLowerCase())),
+    [userLocales],
+  );
+  const localeOptionsFiltered = useMemo(() => {
+    if (!isLimitedTranslator) {
+      return localeOptions;
+    }
+    return localeOptions.filter((option) => userLocaleTagSet.has(option.tag.toLowerCase()));
+  }, [isLimitedTranslator, localeOptions, userLocaleTagSet]);
   const availableLocaleTags = useMemo(() => {
-    const tags = localeOptions.map((option) => option.tag).filter(Boolean);
+    const tags = localeOptionsFiltered.map((option) => option.tag).filter(Boolean);
     return Array.from(new Set(tags));
-  }, [localeOptions]);
+  }, [localeOptionsFiltered]);
 
   const searchParams = useMemo<ReviewProjectsSearchRequest>(() => {
     const searchFieldValue: ReviewProjectsSearchRequest['searchField'] =
@@ -147,10 +181,12 @@ export function ReviewProjectsPage() {
     const localeTags =
       selectedLocaleTags.length === 0
         ? undefined
-        : availableLocaleTags.length > 0 &&
-            availableLocaleTags.every((tag) => selectedLocaleSet.has(tag))
-          ? undefined
-          : selectedLocaleTags;
+        : isLimitedTranslator
+          ? selectedLocaleTags
+          : availableLocaleTags.length > 0 &&
+              availableLocaleTags.every((tag) => selectedLocaleSet.has(tag))
+            ? undefined
+            : selectedLocaleTags;
 
     return {
       localeTags,
@@ -178,6 +214,7 @@ export function ReviewProjectsPage() {
     selectedLocaleTags,
     statusFilter,
     typeFilter,
+    isLimitedTranslator,
   ]);
 
   useEffect(() => {
@@ -196,13 +233,13 @@ export function ReviewProjectsPage() {
   const myLocaleSelections = useMemo(
     () =>
       filterMyLocales({
-        availableLocaleTags: localeOptions.map((option) => option.tag),
-        userLocales: user.userLocales ?? [],
+        availableLocaleTags: localeOptionsFiltered.map((option) => option.tag),
+        userLocales,
         preferredLocales,
-        isLimitedTranslator: !user.canTranslateAllLocales && (user.userLocales?.length ?? 0) > 0,
+        isLimitedTranslator,
         isAdmin,
       }),
-    [isAdmin, localeOptions, preferredLocales, user.canTranslateAllLocales, user.userLocales],
+    [isAdmin, isLimitedTranslator, localeOptionsFiltered, preferredLocales, userLocales],
   );
 
   const status: 'loading' | 'error' | 'ready' = isLoading ? 'loading' : isError ? 'error' : 'ready';
@@ -465,7 +502,8 @@ export function ReviewProjectsPage() {
     : undefined;
 
   useSelectAllLocales({
-    localeOptions,
+    localeOptions: localeOptionsFiltered,
+    defaultLocaleTags: isLimitedTranslator ? userLocales : undefined,
     projects: data,
     selectedLocaleTags,
     setSelectedLocaleTags,
@@ -480,7 +518,7 @@ export function ReviewProjectsPage() {
         errorOnRetry={handleRetry}
         projects={rows}
         filters={{
-          localeOptions,
+          localeOptions: localeOptionsFiltered,
           selectedLocaleTags,
           onLocaleChange: (next) => {
             setHasTouchedLocales(true);
