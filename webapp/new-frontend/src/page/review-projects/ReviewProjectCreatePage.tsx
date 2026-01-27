@@ -1,7 +1,7 @@
 import './review-projects-page.css';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
 import { useRepositories } from '../../hooks/useRepositories';
@@ -75,6 +75,7 @@ export function ReviewProjectCreatePage() {
         })),
     [collections],
   );
+  const hasCollections = collectionOptions.length > 0;
 
   useEffect(() => {
     const state = isReviewProjectNavState(location.state) ? location.state : null;
@@ -171,28 +172,40 @@ export function ReviewProjectCreatePage() {
       </div>
 
       <div className="review-create__page-shell">
-        <ReviewProjectCreateForm
-          defaultName={prefillName || 'Review project'}
-          defaultDueDate={prefillDueDate ?? defaultDueDate}
-          localeOptions={localeOptions}
-          tmTextUnitIds={tmIds}
-          collectionName={prefillCollectionName ?? null}
-          collectionOptions={collectionOptions.length ? collectionOptions : undefined}
-          selectedCollectionId={selectedCollectionId}
-          onChangeCollection={(id) => {
-            setSelectedCollectionId(id);
-            if (!id) {
-              setPrefillCollectionName(null);
-            }
-          }}
-          isSubmitting={createReviewProject.isPending}
-          errorMessage={errorMessage}
-          submitLabel="Create"
-          onSubmit={handleSubmit}
-          onCancel={() => {
-            void navigate(-1);
-          }}
-        />
+        {hasCollections ? (
+          <ReviewProjectCreateForm
+            defaultName={prefillName || 'Review project'}
+            defaultDueDate={prefillDueDate ?? defaultDueDate}
+            localeOptions={localeOptions}
+            tmTextUnitIds={tmIds}
+            collectionName={prefillCollectionName ?? null}
+            collectionOptions={collectionOptions}
+            selectedCollectionId={selectedCollectionId}
+            onChangeCollection={(id) => {
+              setSelectedCollectionId(id);
+              if (!id) {
+                setPrefillCollectionName(null);
+              }
+            }}
+            isSubmitting={createReviewProject.isPending}
+            errorMessage={errorMessage}
+            submitLabel="Create"
+            onSubmit={handleSubmit}
+            onCancel={() => {
+              void navigate(-1);
+            }}
+          />
+        ) : (
+          <div className="review-create__empty">
+            <div className="review-create__empty-title">No collections yet</div>
+            <div className="review-create__empty-body">
+              Review projects are created from Workbench collections.
+            </div>
+            <Link className="review-create__empty-cta" to="/workbench">
+              Open Workbench
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
