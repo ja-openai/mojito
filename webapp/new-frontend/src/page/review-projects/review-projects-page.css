@@ -98,28 +98,6 @@
   justify-content: center;
 }
 
-.review-projects-page__notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  margin: 0 var(--space-6) var(--space-3);
-  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
-  border-radius: var(--radius-3);
-  background: color-mix(in srgb, var(--color-surface-selected) 65%, var(--color-surface));
-  color: var(--color-text);
-  font-size: var(--font-size-sm);
-}
-
-.review-projects-page__notice-clear {
-  border: 0;
-  background: transparent;
-  color: var(--color-accent);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-}
-
 .review-projects-page__rows-inner {
   position: relative;
   width: 100%;

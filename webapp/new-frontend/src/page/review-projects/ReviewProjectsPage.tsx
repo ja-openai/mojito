@@ -426,22 +426,6 @@ export function ReviewProjectsPage() {
 
   const isBatchSaving = batchStatusMutation.isPending || batchDeleteMutation.isPending;
 
-  const requestFilter = useMemo(() => {
-    if (searchField !== 'requestId') {
-      return null;
-    }
-    const parsed = Number(searchQuery.trim());
-    if (!Number.isFinite(parsed)) {
-      return null;
-    }
-    return {
-      requestId: parsed,
-      onClear: () => {
-        setSearchQuery('');
-      },
-    };
-  }, [searchField, searchQuery]);
-
   const handleRetry = useCallback(() => {
     void refetch();
   }, [refetch]);
@@ -562,7 +546,6 @@ export function ReviewProjectsPage() {
           searchType,
           onSearchTypeChange: setSearchType,
         }}
-        requestFilter={requestFilter ?? undefined}
         onRequestIdClick={handleRequestIdClick}
         canCreate={isAdmin}
         adminControls={adminControls}
