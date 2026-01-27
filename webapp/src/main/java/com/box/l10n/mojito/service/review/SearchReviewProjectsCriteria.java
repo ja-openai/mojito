@@ -49,7 +49,8 @@ public record SearchReviewProjectsCriteria(
 
   public enum SearchField {
     NAME,
-    ID
+    ID,
+    REQUEST_ID
   }
 
   public enum SearchMatchType {

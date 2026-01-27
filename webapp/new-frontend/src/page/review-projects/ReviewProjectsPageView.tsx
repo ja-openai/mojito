@@ -48,8 +48,8 @@ type FiltersProps = {
   onChangeDueBefore: (value: string | null) => void;
   searchQuery: string;
   onSearchChange: (value: string) => void;
-  searchField: 'name' | 'id';
-  onSearchFieldChange: (value: 'name' | 'id') => void;
+  searchField: 'name' | 'id' | 'requestId';
+  onSearchFieldChange: (value: 'name' | 'id' | 'requestId') => void;
   searchType: 'contains' | 'exact' | 'ilike';
   onSearchTypeChange: (value: 'contains' | 'exact' | 'ilike') => void;
 };
@@ -57,6 +57,7 @@ type FiltersProps = {
 export type ReviewProjectRow = {
   id: number;
   name: string;
+  requestId: number | null;
   type: ApiReviewProjectType;
   status: ApiReviewProjectStatus;
   localeTag: string | null;
@@ -87,6 +88,7 @@ type Props = {
   projects: ReviewProjectRow[];
   filters: FiltersProps;
   requestFilter?: { requestId: number | null; onClear: () => void };
+  onRequestIdClick?: (requestId: number) => void;
   canCreate?: boolean;
   adminControls?: ReviewProjectsAdminControls;
 };
@@ -202,6 +204,7 @@ function ContentSection({
   totalSize,
   getRowRef,
   adminControls,
+  onRequestIdClick,
 }: {
   projects: ReviewProjectRow[];
   rowsParentRef: React.RefObject<HTMLDivElement>;
@@ -209,6 +212,7 @@ function ContentSection({
   totalSize: number;
   getRowRef: (rowId: number) => (element: HTMLDivElement | null) => void;
   adminControls?: ReviewProjectsAdminControls;
+  onRequestIdClick?: (requestId: number) => void;
 }) {
   const isAdmin = adminControls?.enabled ?? false;
   const selectedProjectIdSet = useMemo(
@@ -249,6 +253,7 @@ function ContentSection({
                   isAdmin={isAdmin}
                   isSelected={selectedProjectIdSet.has(project.id)}
                   onToggleSelection={adminControls?.onToggleProjectSelection}
+                  onRequestIdClick={onRequestIdClick}
                 />
               ),
             };
@@ -306,7 +311,11 @@ function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCrea
         value={filters.searchQuery}
         onChange={filters.onSearchChange}
         placeholder={
-          filters.searchField === 'id' ? 'Search by project #id' : 'Search by project name'
+          filters.searchField === 'id'
+            ? 'Search by project #id'
+            : filters.searchField === 'requestId'
+              ? 'Search by request #id'
+              : 'Search by project name'
         }
         inputAriaLabel="Search projects"
         className="review-projects-page__searchcontrol"
@@ -324,7 +333,7 @@ function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCrea
               list: 'filter-chip__list',
               option: 'filter-chip__option',
             }}
-            summary={`${filters.searchField === 'id' ? 'ID' : 'Name'} · ${
+            summary={`${filters.searchField === 'id' ? 'ID' : filters.searchField === 'requestId' ? 'Request' : 'Name'} · ${
               filters.searchType === 'contains'
                 ? 'Contains'
                 : filters.searchType === 'exact'
@@ -338,9 +347,11 @@ function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCrea
                 options: [
                   { value: 'name', label: 'Name' },
                   { value: 'id', label: 'ID' },
+                  { value: 'requestId', label: 'Request ID' },
                 ],
                 value: filters.searchField,
-                onChange: (value) => filters.onSearchFieldChange(value as 'name' | 'id'),
+                onChange: (value) =>
+                  filters.onSearchFieldChange(value as 'name' | 'id' | 'requestId'),
               },
               {
                 kind: 'radio',
@@ -458,17 +469,20 @@ function ReviewProjectRowView({
   isAdmin,
   isSelected,
   onToggleSelection,
+  onRequestIdClick,
 }: {
   project: ReviewProjectRow;
   isAdmin: boolean;
   isSelected: boolean;
   onToggleSelection?: (projectId: number) => void;
+  onRequestIdClick?: (requestId: number) => void;
 }) {
   const textUnitCount = project.textUnitCount ?? 0;
   const percent = formatPercent(project.acceptedCount, textUnitCount);
   const percentValue =
     textUnitCount === 0 ? 0 : Math.round((project.acceptedCount / textUnitCount) * 100);
   const localeTag = project.localeTag;
+  const requestId = project.requestId;
   const typeClass =
     project.type === 'EMERGENCY'
       ? 'review-projects-page__type-pill--emergency'
@@ -496,6 +510,15 @@ function ReviewProjectRowView({
             >
               <span className="review-projects-page__project-name">{project.name}</span>
             </Link>
+            {requestId != null && onRequestIdClick ? (
+              <button
+                type="button"
+                className={`review-projects-page__request-link${isAdmin ? ' is-visible' : ''}`}
+                onClick={() => onRequestIdClick(requestId)}
+              >
+                Req #{requestId}
+              </button>
+            ) : null}
           </div>
         </div>
         <div className="review-projects-page__counts">
@@ -555,6 +578,7 @@ export function ReviewProjectsPageView({
   projects,
   filters,
   requestFilter,
+  onRequestIdClick,
   canCreate = true,
   adminControls,
 }: Props) {
@@ -639,6 +663,7 @@ export function ReviewProjectsPageView({
         totalSize={totalSize}
         getRowRef={getRowRef}
         adminControls={adminControls}
+        onRequestIdClick={onRequestIdClick}
       />
     </div>
   );

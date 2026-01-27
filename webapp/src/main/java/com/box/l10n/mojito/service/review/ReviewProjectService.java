@@ -313,6 +313,7 @@ public class ReviewProjectService {
         switch (searchField) {
           case ID -> root.get(ReviewProject_.id).as(String.class);
           case NAME -> requestJoin.get(ReviewProjectRequest_.name);
+          case REQUEST_ID -> requestJoin.get(ReviewProjectRequest_.id).as(String.class);
         };
 
     return buildStringPredicate(cb, expression, request.searchQuery(), matchType);

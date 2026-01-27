@@ -20,7 +20,8 @@ public record SearchReviewProjectsRequest(
 
   public enum SearchField {
     NAME,
-    ID
+    ID,
+    REQUEST_ID
   }
 
   public enum SearchMatchType {

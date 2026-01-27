@@ -570,6 +570,26 @@
   margin-bottom: var(--space-3);
 }
 
+.review-projects-page__request-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.review-projects-page__row-card:hover .review-projects-page__request-link,
+.review-projects-page__request-link.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .review-projects-page__select {
   display: inline-flex;
   align-items: center;

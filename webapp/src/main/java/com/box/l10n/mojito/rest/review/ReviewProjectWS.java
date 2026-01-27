@@ -269,6 +269,7 @@ public class ReviewProjectWS {
                     switch (sf) {
                       case ID -> SearchReviewProjectsCriteria.SearchField.ID;
                       case NAME -> SearchReviewProjectsCriteria.SearchField.NAME;
+                      case REQUEST_ID -> SearchReviewProjectsCriteria.SearchField.REQUEST_ID;
                     })
             .orElse(null),
         Optional.ofNullable(request.searchMatchType())

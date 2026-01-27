@@ -139,13 +139,12 @@ export function ReviewProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<ApiReviewProjectStatus | 'all'>('OPEN');
   const [limit, setLimit] = useState<number>(1000);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchField, setSearchField] = useState<'name' | 'id'>('name');
+  const [searchField, setSearchField] = useState<'name' | 'id' | 'requestId'>('name');
   const [searchType, setSearchType] = useState<'contains' | 'exact' | 'ilike'>('contains');
   const [createdAfter, setCreatedAfter] = useState<string | null>(null);
   const [createdBefore, setCreatedBefore] = useState<string | null>(null);
   const [dueAfter, setDueAfter] = useState<string | null>(null);
   const [dueBefore, setDueBefore] = useState<string | null>(null);
-  const [requestIdFilter, setRequestIdFilter] = useState<number | null>(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [adminErrorMessage, setAdminErrorMessage] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -174,7 +173,7 @@ export function ReviewProjectsPage() {
 
   const searchParams = useMemo<ReviewProjectsSearchRequest>(() => {
     const searchFieldValue: ReviewProjectsSearchRequest['searchField'] =
-      searchField === 'id' ? 'ID' : 'NAME';
+      searchField === 'requestId' ? 'REQUEST_ID' : searchField === 'id' ? 'ID' : 'NAME';
     const searchMatchTypeValue: ReviewProjectsSearchRequest['searchMatchType'] =
       searchType === 'exact' ? 'EXACT' : searchType === 'ilike' ? 'ILIKE' : 'CONTAINS';
     const selectedLocaleSet = new Set(selectedLocaleTags);
@@ -222,9 +221,13 @@ export function ReviewProjectsPage() {
     if (!state) {
       return;
     }
-    setRequestIdFilter(state.requestId ?? null);
+    if (state.requestId != null) {
+      setSearchField('requestId');
+      setSearchType('exact');
+      setSearchQuery(String(state.requestId));
+    }
     void navigate(location.pathname, { replace: true });
-  }, [location.pathname, location.state, navigate]);
+  }, [location.pathname, location.state, navigate, setSearchField, setSearchQuery, setSearchType]);
 
   const { data, isLoading, isError, error, refetch } = useReviewProjects(searchParams);
 
@@ -251,10 +254,7 @@ export function ReviewProjectsPage() {
     : undefined;
 
   const filteredProjects = useMemo(() => {
-    let source = projects ?? [];
-    if (requestIdFilter !== null) {
-      source = source.filter((project) => project.reviewProjectRequest?.id === requestIdFilter);
-    }
+    const source = projects ?? [];
     const {
       localeTags,
       statuses,
@@ -283,11 +283,14 @@ export function ReviewProjectsPage() {
 
     const matchesSearch = (project: ApiReviewProjectSummary) => {
       if (!q) return true;
-      const field: 'id' | 'name' = sf === 'ID' ? 'id' : 'name';
+      const field: 'id' | 'name' | 'requestId' =
+        sf === 'ID' ? 'id' : sf === 'REQUEST_ID' ? 'requestId' : 'name';
       const value =
         field === 'id'
           ? String(project.id)
-          : (project.reviewProjectRequest?.name ?? `Review project #${project.id}`);
+          : field === 'requestId'
+            ? String(project.reviewProjectRequest?.id ?? '')
+            : (project.reviewProjectRequest?.name ?? `Review project #${project.id}`);
       const valueLower = value.toLowerCase();
       const queryLower = q.toLowerCase();
 
@@ -354,12 +357,13 @@ export function ReviewProjectsPage() {
 
     const limitValue = lmt && lmt > 0 ? lmt : undefined;
     return limitValue ? filtered.slice(0, limitValue) : filtered;
-  }, [projects, searchParams, hasTouchedLocales, requestIdFilter]);
+  }, [projects, searchParams, hasTouchedLocales]);
 
   const rows = useMemo<ReviewProjectRow[]>(() => {
     return filteredProjects.map((project) => ({
       id: project.id,
       name: project.reviewProjectRequest?.name ?? `Review project #${project.id}`,
+      requestId: project.reviewProjectRequest?.id ?? null,
       type: project.type,
       status: project.status,
       localeTag: project.locale?.bcp47Tag ?? null,
@@ -422,22 +426,31 @@ export function ReviewProjectsPage() {
 
   const isBatchSaving = batchStatusMutation.isPending || batchDeleteMutation.isPending;
 
-  const requestFilter = useMemo(
-    () =>
-      requestIdFilter === null
-        ? null
-        : {
-            requestId: requestIdFilter,
-            onClear: () => {
-              setRequestIdFilter(null);
-            },
-          },
-    [requestIdFilter],
-  );
+  const requestFilter = useMemo(() => {
+    if (searchField !== 'requestId') {
+      return null;
+    }
+    const parsed = Number(searchQuery.trim());
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+    return {
+      requestId: parsed,
+      onClear: () => {
+        setSearchQuery('');
+      },
+    };
+  }, [searchField, searchQuery]);
 
   const handleRetry = useCallback(() => {
     void refetch();
   }, [refetch]);
+
+  const handleRequestIdClick = useCallback((requestId: number) => {
+    setSearchField('requestId');
+    setSearchType('exact');
+    setSearchQuery(String(requestId));
+  }, []);
 
   const toggleProjectSelection = useCallback((projectId: number) => {
     setSelectedProjectIds((prev) => {
@@ -550,6 +563,7 @@ export function ReviewProjectsPage() {
           onSearchTypeChange: setSearchType,
         }}
         requestFilter={requestFilter ?? undefined}
+        onRequestIdClick={handleRequestIdClick}
         canCreate={isAdmin}
         adminControls={adminControls}
       />

@@ -114,7 +114,7 @@ export type ReviewProjectsSearchRequest = {
   dueBefore?: string | null;
   limit?: number;
   searchQuery?: string;
-  searchField?: 'NAME' | 'ID';
+  searchField?: 'NAME' | 'ID' | 'REQUEST_ID';
   searchMatchType?: 'CONTAINS' | 'EXACT' | 'ILIKE';
 };
 
