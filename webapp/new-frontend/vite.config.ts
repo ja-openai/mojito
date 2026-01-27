@@ -6,7 +6,7 @@ export default defineConfig({
   base: '/n/',
   plugins: [react()],
   server: {
-    port: 5173,
+    port: Number(process.env.VITE_PORT ?? 5173),
     strictPort: true,
     proxy: {
       // Forward API calls to the Spring Boot backend
