@@ -145,8 +145,6 @@
   gap: var(--space-3);
   padding: var(--space-2) var(--space-6);
   background: var(--color-surface);
-  border-top: 0.0625rem solid color-mix(in srgb, var(--color-border) 55%, transparent);
-  border-bottom: 0.0625rem solid color-mix(in srgb, var(--color-border) 55%, transparent);
 }
 
 .review-projects-page__admin-left {
