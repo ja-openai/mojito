@@ -65,6 +65,7 @@ type Props = {
     status?: string | null;
     localeTag?: string | null;
     count?: number | null;
+    usedFilter?: 'USED' | 'UNUSED';
   }) => void;
   isRepositorySelectionEmpty: boolean;
 };
@@ -79,6 +80,7 @@ type RepositoryTableProps = {
     repositoryId: number;
     status?: string | null;
     count?: number | null;
+    usedFilter?: 'USED' | 'UNUSED';
   }) => void;
 };
 
@@ -91,6 +93,7 @@ type LocaleTableProps = {
     status?: string | null;
     localeTag?: string | null;
     count?: number | null;
+    usedFilter?: 'USED' | 'UNUSED';
   }) => void;
 };
 
@@ -307,7 +310,13 @@ function RepositoryTable({
                   <CellLink
                     className="repositories-page__cell-link--name"
                     stopPropagation
-                    onClick={() => onOpenWorkbench({ repositoryId: repo.id, status: null })}
+                    onClick={() =>
+                      onOpenWorkbench({
+                        repositoryId: repo.id,
+                        status: null,
+                        usedFilter: 'USED',
+                      })
+                    }
                   >
                     {repo.name}
                   </CellLink>
@@ -321,6 +330,7 @@ function RepositoryTable({
                         repositoryId: repo.id,
                         status: 'REJECTED',
                         count: repo.rejected,
+                        usedFilter: 'USED',
                       })
                     }
                     ariaLabel={`Open rejected units for ${repo.name} in workbench`}
@@ -346,6 +356,7 @@ function RepositoryTable({
                         repositoryId: repo.id,
                         status: 'FOR_TRANSLATION',
                         count: repo.needsTranslation,
+                        usedFilter: 'USED',
                       })
                     }
                     ariaLabel={`Open "to translate" units for ${repo.name} in workbench`}
@@ -369,6 +380,7 @@ function RepositoryTable({
                         repositoryId: repo.id,
                         status: 'REVIEW_NEEDED',
                         count: repo.needsReview,
+                        usedFilter: 'USED',
                       })
                     }
                     ariaLabel={`Open "to review" units for ${repo.name} in workbench`}
@@ -425,6 +437,7 @@ function LocaleTable({ locales, hasSelection, repositoryId, onOpenWorkbench }: L
                       status: null,
                       localeTag: locale.id,
                       count: null,
+                      usedFilter: 'USED',
                     })
                   }
                 >
@@ -440,6 +453,7 @@ function LocaleTable({ locales, hasSelection, repositoryId, onOpenWorkbench }: L
                       status: 'REJECTED',
                       localeTag: locale.id,
                       count: locale.rejected,
+                      usedFilter: 'USED',
                     })
                   }
                   ariaLabel={`Open rejected units for ${locale.name} in workbench`}
@@ -456,6 +470,7 @@ function LocaleTable({ locales, hasSelection, repositoryId, onOpenWorkbench }: L
                       status: 'FOR_TRANSLATION',
                       localeTag: locale.id,
                       count: locale.needsTranslation,
+                      usedFilter: 'USED',
                     })
                   }
                   ariaLabel={`Open "to translate" units for ${locale.name} in workbench`}
@@ -477,6 +492,7 @@ function LocaleTable({ locales, hasSelection, repositoryId, onOpenWorkbench }: L
                       status: 'REVIEW_NEEDED',
                       localeTag: locale.id,
                       count: locale.needsReview,
+                      usedFilter: 'USED',
                     })
                   }
                   ariaLabel={`Open "to review" units for ${locale.name} in workbench`}

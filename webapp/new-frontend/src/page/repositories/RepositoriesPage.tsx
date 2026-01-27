@@ -368,11 +368,13 @@ export function RepositoriesPage() {
       status,
       localeTag,
       count,
+      usedFilter,
     }: {
       repositoryId: number;
       status?: string | null;
       localeTag?: string | null;
       count?: number | null;
+      usedFilter?: 'USED' | 'UNUSED';
     }) => {
       const repository = repositories.find((repo) => repo.id === repositoryId);
       if (!repository) {
@@ -394,6 +396,7 @@ export function RepositoriesPage() {
         searchType: 'contains',
         searchText: '',
         statusFilter: status ?? undefined,
+        usedFilter,
         offset: 0,
       };
 
