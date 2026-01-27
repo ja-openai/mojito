@@ -175,8 +175,15 @@ public class WebSecurityConfig {
                 .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/textunits/search-hybrid")
                 .authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/translate")
+                .authenticated()
+                // Review projects search should be available to translators
+                .requestMatchers(HttpMethod.POST, "/api/review-projects/search")
+                .authenticated()
                 // USERs are not allowed to change translations
                 .requestMatchers("/api/textunits/**")
+                .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/review-project-text-units/**")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 // Read-only is OK for everyone
                 .requestMatchers(HttpMethod.GET, "/api/**")
