@@ -13,6 +13,7 @@ import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
+import { AiTranslatePage } from './page/ai-translate/AiTranslatePage';
 
 type NavItem = {
   to: string;
@@ -24,6 +25,7 @@ const navItems: NavItem[] = [
   { to: '/repositories', label: 'Repositories', element: <RepositoriesPage /> },
   { to: '/workbench', label: 'Workbench', element: <WorkbenchPage /> },
   { to: '/review-projects', label: 'Review Projects', element: <ReviewProjectsPage /> },
+  { to: '/ai-translate', label: 'AI Translate', element: <AiTranslatePage /> },
 ];
 
 const queryClient = new QueryClient();
