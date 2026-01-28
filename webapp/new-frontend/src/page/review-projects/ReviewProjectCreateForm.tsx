@@ -7,6 +7,7 @@ import {
   REVIEW_PROJECT_TYPE_LABELS,
   REVIEW_PROJECT_TYPES,
 } from '../../api/review-projects';
+import { CollectionSelect, type CollectionOption } from '../../components/CollectionSelect';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 
@@ -19,8 +20,6 @@ export type ReviewProjectCreateFormValues = {
   tmTextUnitIds: number[];
   screenshotImageIds: string[];
 };
-
-export type CollectionOption = { id: string; name: string; size: number };
 
 type UploadQueueItem = {
   key: string;
@@ -199,19 +198,13 @@ export function ReviewProjectCreateForm({
         {collectionOptions && onChangeCollection ? (
           <label className="review-create__field">
             <span className="review-create__label">Collection</span>
-            <select
-              className="review-create__select"
-              value={selectedCollectionId ?? ''}
-              onChange={(event) => onChangeCollection(event.target.value || null)}
+            <CollectionSelect
+              options={collectionOptions}
+              value={selectedCollectionId ?? null}
+              onChange={onChangeCollection}
               disabled={isSubmitting}
-            >
-              <option value="">(None)</option>
-              {collectionOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.name} · {opt.size} ids
-                </option>
-              ))}
-            </select>
+              className="review-create__select"
+            />
           </label>
         ) : collectionName ? (
           <div className="review-create__field">

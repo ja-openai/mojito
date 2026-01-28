@@ -6,8 +6,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
+import type { CollectionOption } from '../../components/CollectionSelect';
 import { useWorkbenchCollections } from '../workbench/useWorkbenchCollections';
-import type { CollectionOption, ReviewProjectCreateFormValues } from './ReviewProjectCreateForm';
+import type { ReviewProjectCreateFormValues } from './ReviewProjectCreateForm';
 import { ReviewProjectCreateForm } from './ReviewProjectCreateForm';
 
 function toLocalInput(value: Date) {
