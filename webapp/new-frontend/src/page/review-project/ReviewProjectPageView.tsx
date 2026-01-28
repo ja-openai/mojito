@@ -732,6 +732,8 @@ function DetailPane({
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
   const heroRef = useRef<HTMLDivElement | null>(null);
   const translationRef = useRef<HTMLTextAreaElement | null>(null);
+  const commentRef = useRef<HTMLTextAreaElement | null>(null);
+  const decisionNotesRef = useRef<HTMLTextAreaElement | null>(null);
   const didAutoAcceptRef = useRef(false);
   const savingIndicatorStartRef = useRef<number | null>(null);
   const savingIndicatorTimeoutRef = useRef<number | null>(null);
@@ -838,6 +840,19 @@ function DetailPane({
       if (event.key === 'Escape') {
         event.currentTarget.blur();
         event.stopPropagation();
+        return;
+      }
+      if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        const editors = [translationRef, commentRef, decisionNotesRef];
+        const currentIndex = editors.findIndex((ref) => ref.current === event.currentTarget);
+        if (currentIndex === -1) {
+          return;
+        }
+        event.preventDefault();
+        const nextIndex = event.shiftKey
+          ? (currentIndex - 1 + editors.length) % editors.length
+          : (currentIndex + 1) % editors.length;
+        editors[nextIndex]?.current?.focus();
       }
     },
     [],
@@ -1407,26 +1422,28 @@ function DetailPane({
 
           <div className="review-project-detail__field">
             <div className="review-project-detail__label">Comment on translation</div>
-            <AutoTextarea
-              className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
-              value={draftComment}
-              onChange={(event) => setDraftComment(event.target.value)}
-              placeholder="Explain why you chose this translation (if not obvious)."
-              onKeyDown={handleEditorKeyDown}
-              rows={1}
+          <AutoTextarea
+            className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+            ref={commentRef}
+            value={draftComment}
+            onChange={(event) => setDraftComment(event.target.value)}
+            placeholder="Explain why you chose this translation (if not obvious)."
+            onKeyDown={handleEditorKeyDown}
+            rows={1}
               style={{ resize: 'none' }}
             />
           </div>
 
           <div className="review-project-detail__field">
             <div className="review-project-detail__label">Decision notes</div>
-            <AutoTextarea
-              className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
-              value={draftDecisionNotes}
-              onChange={(event) => setDraftDecisionNotes(event.target.value)}
-              placeholder="Explain why the baseline translation was bad (to improve AI translation)."
-              onKeyDown={handleEditorKeyDown}
-              rows={1}
+          <AutoTextarea
+            className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+            ref={decisionNotesRef}
+            value={draftDecisionNotes}
+            onChange={(event) => setDraftDecisionNotes(event.target.value)}
+            placeholder="Explain why the baseline translation was bad (to improve AI translation)."
+            onKeyDown={handleEditorKeyDown}
+            rows={1}
               style={{ resize: 'none' }}
             />
           </div>
