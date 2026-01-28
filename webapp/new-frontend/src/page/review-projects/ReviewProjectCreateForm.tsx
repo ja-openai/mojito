@@ -7,7 +7,7 @@ import {
   REVIEW_PROJECT_TYPE_LABELS,
   REVIEW_PROJECT_TYPES,
 } from '../../api/review-projects';
-import { CollectionSelect, type CollectionOption } from '../../components/CollectionSelect';
+import { type CollectionOption, CollectionSelect } from '../../components/CollectionSelect';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 

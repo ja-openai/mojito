@@ -16,6 +16,7 @@ import {
   MultiSectionFilterChip,
 } from '../../components/filters/MultiSectionFilterChip';
 import { LocalePill } from '../../components/LocalePill';
+import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
@@ -231,6 +232,7 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
   const [selectedTextUnitId, setSelectedTextUnitId] = useState<number | null>(null);
   const [detailIsDirty, setDetailIsDirty] = useState(false);
   const [focusTranslationKey, setFocusTranslationKey] = useState(0);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<{
     id: number;
     index?: number;
@@ -513,6 +515,7 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
         project={project}
         textUnits={textUnits}
         mutations={mutations}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
       />
 
       <div
@@ -659,6 +662,46 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
         onConfirm={confirmDiscardChanges}
         onCancel={cancelDiscardChanges}
       />
+      <Modal
+        open={isShortcutsOpen}
+        size="md"
+        ariaLabel="Keyboard shortcuts"
+        onClose={() => setIsShortcutsOpen(false)}
+        closeOnBackdrop
+      >
+        <div className="modal__header">
+          <div className="modal__title">Keyboard shortcuts</div>
+        </div>
+        <div className="modal__body">
+          <ul className="review-project-shortcuts__list">
+            <li className="review-project-shortcuts__item">
+              <span className="review-project-shortcuts__key">Esc</span>
+              <span>Stop editing</span>
+            </li>
+            <li className="review-project-shortcuts__item">
+              <span className="review-project-shortcuts__key">Cmd/Ctrl + Enter</span>
+              <span>Save and blur</span>
+            </li>
+            <li className="review-project-shortcuts__item">
+              <span className="review-project-shortcuts__key">Cmd/Ctrl + Shift + Enter</span>
+              <span>Save and go to next text unit. If unchanged, mark decided and go to next.</span>
+            </li>
+            <li className="review-project-shortcuts__item">
+              <span className="review-project-shortcuts__key">Tab</span>
+              <span>Next editor (translation → comment → notes)</span>
+            </li>
+            <li className="review-project-shortcuts__item">
+              <span className="review-project-shortcuts__key">Shift + Tab</span>
+              <span>Previous editor</span>
+            </li>
+          </ul>
+        </div>
+        <div className="modal__actions">
+          <button type="button" className="modal__button" onClick={() => setIsShortcutsOpen(false)}>
+            Close
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -835,28 +878,25 @@ function DetailPane({
     didAutoAcceptRef.current = false;
   }, [snapshot]);
 
-  const handleEditorKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (event.key === 'Escape') {
-        event.currentTarget.blur();
-        event.stopPropagation();
+  const handleEditorKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Escape') {
+      event.currentTarget.blur();
+      event.stopPropagation();
+      return;
+    }
+    if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      const editors = [translationRef, commentRef, decisionNotesRef];
+      const currentIndex = editors.findIndex((ref) => ref.current === event.currentTarget);
+      if (currentIndex === -1) {
         return;
       }
-      if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        const editors = [translationRef, commentRef, decisionNotesRef];
-        const currentIndex = editors.findIndex((ref) => ref.current === event.currentTarget);
-        if (currentIndex === -1) {
-          return;
-        }
-        event.preventDefault();
-        const nextIndex = event.shiftKey
-          ? (currentIndex - 1 + editors.length) % editors.length
-          : (currentIndex + 1) % editors.length;
-        editors[nextIndex]?.current?.focus();
-      }
-    },
-    [],
-  );
+      event.preventDefault();
+      const nextIndex = event.shiftKey
+        ? (currentIndex - 1 + editors.length) % editors.length
+        : (currentIndex + 1) % editors.length;
+      editors[nextIndex]?.current?.focus();
+    }
+  }, []);
 
   const handleSave = useCallback(() => {
     requestSaveDecision();
@@ -1332,14 +1372,14 @@ function DetailPane({
                 ) : null}
               </div>
             </div>
-          <AutoTextarea
-            className={`review-project-detail__input review-project-detail__input--autosize${
-              isRejected ? ' review-project-detail__input--rejected' : ''
-            }`}
-            ref={translationRef}
-            value={draftTarget}
-            onChange={(event) => {
-              const next = event.target.value;
+            <AutoTextarea
+              className={`review-project-detail__input review-project-detail__input--autosize${
+                isRejected ? ' review-project-detail__input--rejected' : ''
+              }`}
+              ref={translationRef}
+              value={draftTarget}
+              onChange={(event) => {
+                const next = event.target.value;
                 if (!didAutoAcceptRef.current && next !== snapshot.target) {
                   setDraftStatusChoice('ACCEPTED');
                   didAutoAcceptRef.current = true;
@@ -1422,28 +1462,28 @@ function DetailPane({
 
           <div className="review-project-detail__field">
             <div className="review-project-detail__label">Comment on translation</div>
-          <AutoTextarea
-            className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
-            ref={commentRef}
-            value={draftComment}
-            onChange={(event) => setDraftComment(event.target.value)}
-            placeholder="Explain why you chose this translation (if not obvious)."
-            onKeyDown={handleEditorKeyDown}
-            rows={1}
+            <AutoTextarea
+              className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+              ref={commentRef}
+              value={draftComment}
+              onChange={(event) => setDraftComment(event.target.value)}
+              placeholder="Explain why you chose this translation (if not obvious)."
+              onKeyDown={handleEditorKeyDown}
+              rows={1}
               style={{ resize: 'none' }}
             />
           </div>
 
           <div className="review-project-detail__field">
             <div className="review-project-detail__label">Decision notes</div>
-          <AutoTextarea
-            className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
-            ref={decisionNotesRef}
-            value={draftDecisionNotes}
-            onChange={(event) => setDraftDecisionNotes(event.target.value)}
-            placeholder="Explain why the baseline translation was bad (to improve AI translation)."
-            onKeyDown={handleEditorKeyDown}
-            rows={1}
+            <AutoTextarea
+              className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+              ref={decisionNotesRef}
+              value={draftDecisionNotes}
+              onChange={(event) => setDraftDecisionNotes(event.target.value)}
+              placeholder="Explain why the baseline translation was bad (to improve AI translation)."
+              onKeyDown={handleEditorKeyDown}
+              rows={1}
               style={{ resize: 'none' }}
             />
           </div>
@@ -1638,11 +1678,13 @@ function ReviewProjectHeader({
   project,
   textUnits: textUnitsProp,
   mutations,
+  onOpenShortcuts,
 }: {
   projectId: number;
   project: ApiReviewProjectDetail;
   textUnits: ApiReviewProjectTextUnit[];
   mutations: ReviewProjectMutationControls;
+  onOpenShortcuts: () => void;
 }) {
   const { dueDate, textUnitCount, wordCount, status, type } = project;
   const name = project.reviewProjectRequest?.name ?? null;
@@ -1735,6 +1777,18 @@ function ReviewProjectHeader({
 
         <div className="review-project-page__header-group review-project-page__header-group--meta">
           <span>Due {formatDate(dueDate)}</span>
+          <button
+            type="button"
+            className="review-project-page__header-help"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenShortcuts();
+            }}
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts"
+          >
+            <span aria-hidden="true">?</span>
+          </button>
           <button
             type="button"
             className={`review-project-page__header-action ${actionClass}`}

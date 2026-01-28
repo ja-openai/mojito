@@ -3,10 +3,10 @@ import './review-projects-page.css';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
+import type { CollectionOption } from '../../components/CollectionSelect';
 import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
-import type { CollectionOption } from '../../components/CollectionSelect';
 import { useWorkbenchCollections } from '../workbench/useWorkbenchCollections';
 import type { ReviewProjectCreateFormValues } from './ReviewProjectCreateForm';
 import { ReviewProjectCreateForm } from './ReviewProjectCreateForm';
