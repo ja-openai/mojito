@@ -1153,9 +1153,7 @@ function DetailPane({
               </div>
             )}
           </>
-        ) : (
-          <div className="review-project-detail__shots-empty">No screenshots attached.</div>
-        )}
+        ) : null}
       </div>
       {screenshotImages.length ? (
         <div
@@ -1647,9 +1645,7 @@ function ScreenshotOverlay({
               ›
             </button>
           </div>
-        ) : (
-          <div className="review-project-screenshot-modal__empty">No screenshots attached.</div>
-        )}
+        ) : null}
         {screenshotImages.length ? (
           <div className="review-project-detail__thumbs review-project-detail__thumbs--modal">
             {screenshotImages.map((key, idx) => {
