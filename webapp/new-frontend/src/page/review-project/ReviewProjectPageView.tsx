@@ -784,20 +784,38 @@ function DetailPane({
     requestSaveDecision();
   }, [requestSaveDecision]);
 
+  const getFocusedTextarea = useCallback(() => {
+    const active = document.activeElement;
+    if (active && active instanceof HTMLTextAreaElement) {
+      return active;
+    }
+    return null;
+  }, []);
+
   useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
       if (event.key !== 'Enter' || (!event.metaKey && !event.ctrlKey)) {
         return;
       }
-      if (!canSave || mutations.showValidationDialog) {
+      if (event.shiftKey) {
         return;
       }
-      event.preventDefault();
-      handleSave();
+      const focusedTextarea = getFocusedTextarea();
+      if (focusedTextarea) {
+        event.preventDefault();
+      }
+      if (mutations.showValidationDialog) {
+        focusedTextarea?.blur();
+        return;
+      }
+      if (canSave) {
+        handleSave();
+      }
+      focusedTextarea?.blur();
     };
     window.addEventListener('keydown', handleSaveShortcut);
     return () => window.removeEventListener('keydown', handleSaveShortcut);
-  }, [canSave, handleSave, mutations.showValidationDialog]);
+  }, [canSave, getFocusedTextarea, handleSave, mutations.showValidationDialog]);
 
   const handleDecisionStateChange = useCallback(
     (nextState: DecisionStateChoice) => {
