@@ -770,6 +770,16 @@ function DetailPane({
     didAutoAcceptRef.current = false;
   }, [snapshot]);
 
+  const handleEditorKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === 'Escape') {
+        event.currentTarget.blur();
+        event.stopPropagation();
+      }
+    },
+    [],
+  );
+
   const handleSave = useCallback(() => {
     requestSaveDecision();
   }, [requestSaveDecision]);
@@ -1213,6 +1223,7 @@ function DetailPane({
                 }
                 setDraftTarget(next);
               }}
+              onKeyDown={handleEditorKeyDown}
               rows={1}
               style={{ resize: 'none' }}
             />
@@ -1293,6 +1304,7 @@ function DetailPane({
               value={draftComment}
               onChange={(event) => setDraftComment(event.target.value)}
               placeholder="Explain why you chose this translation (if not obvious)."
+              onKeyDown={handleEditorKeyDown}
               rows={1}
               style={{ resize: 'none' }}
             />
@@ -1305,6 +1317,7 @@ function DetailPane({
               value={draftDecisionNotes}
               onChange={(event) => setDraftDecisionNotes(event.target.value)}
               placeholder="Explain why the baseline translation was bad (to improve AI translation)."
+              onKeyDown={handleEditorKeyDown}
               rows={1}
               style={{ resize: 'none' }}
             />
