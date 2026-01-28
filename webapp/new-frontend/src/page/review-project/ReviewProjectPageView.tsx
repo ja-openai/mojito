@@ -1031,17 +1031,22 @@ function DetailPane({
         <div className="review-project-detail__main">
           {conflictTextUnit ? (
             <div className="review-project-detail__conflict" role="alert">
-              <div className="review-project-detail__conflict-title">
-                Translation changed while you were working.
-              </div>
-              <div className="review-project-detail__conflict-current">
-                <span className="review-project-detail__meta-label">Current</span>{' '}
-                {conflictVariant?.content ?? '—'}
+              <div className="review-project-detail__conflict-title-row">
+                <div className="review-project-detail__conflict-title">
+                  An external translation was added.
+                </div>
                 {conflictStatusKey ? (
-                  <span className="review-project-detail__conflict-status">
+                  <Pill
+                    className={`review-project-detail__status-pill review-project-detail__status-chip review-project-detail__status-pill--right review-project-detail__status-chip--${statusKeyToChipClass(
+                      conflictStatusKey,
+                    )}`}
+                  >
                     {statusKeyToLabel(conflictStatusKey)}
-                  </span>
+                  </Pill>
                 ) : null}
+              </div>
+              <div className="review-project-detail__conflict-text">
+                {conflictVariant?.content ?? '—'}
               </div>
               <div className="review-project-detail__conflict-actions">
                 <button
@@ -1050,7 +1055,7 @@ function DetailPane({
                   onClick={handleUseCurrent}
                   disabled={isSavingGlobal}
                 >
-                  Use current
+                  Use external
                 </button>
                 <button
                   type="button"
@@ -1058,7 +1063,7 @@ function DetailPane({
                   onClick={handleOverwrite}
                   disabled={isSavingGlobal}
                 >
-                  Overwrite
+                  Use mine
                 </button>
               </div>
             </div>

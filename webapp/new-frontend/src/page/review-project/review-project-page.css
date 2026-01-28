@@ -1138,8 +1138,10 @@
 .review-project-detail__conflict {
   padding: var(--space-3);
   border-radius: var(--radius-3);
-  border: var(--border-width) solid color-mix(in srgb, var(--color-accent) 30%, transparent);
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  border-left: 4px solid var(--color-danger);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  background: transparent;
   display: grid;
   gap: var(--space-2);
 }
@@ -1149,17 +1151,17 @@
   color: var(--color-text);
 }
 
-.review-project-detail__conflict-current {
+.review-project-detail__conflict-title-row {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   flex-wrap: wrap;
   color: var(--color-text);
 }
 
-.review-project-detail__conflict-status {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+.review-project-detail__conflict-text {
+  color: var(--color-text);
+  white-space: pre-wrap;
 }
 
 .review-project-detail__conflict-actions {
