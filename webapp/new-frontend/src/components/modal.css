@@ -54,7 +54,7 @@
 .modal__title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  margin: 0;
+  margin: 0 0 var(--space-2);
 }
 
 .modal__body {
@@ -89,4 +89,5 @@
 .modal__button--danger {
   background: var(--color-danger);
   border-color: var(--color-danger);
+  color: #fff;
 }

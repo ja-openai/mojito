@@ -24,11 +24,11 @@ export function ConfirmModal({
       <div className="modal__title">{title}</div>
       <div className="modal__body">{body}</div>
       <div className="modal__actions">
-        <button type="button" className="modal__button modal__button--danger" onClick={onConfirm}>
-          {confirmLabel}
-        </button>
         <button type="button" className="modal__button" onClick={onCancel}>
           {cancelLabel}
+        </button>
+        <button type="button" className="modal__button modal__button--danger" onClick={onConfirm}>
+          {confirmLabel}
         </button>
       </div>
     </Modal>

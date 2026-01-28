@@ -230,6 +230,10 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
   const [stateFilter, setStateFilter] = useState<DecisionStateFilter>('all');
   const [selectedTextUnitId, setSelectedTextUnitId] = useState<number | null>(null);
   const [detailIsDirty, setDetailIsDirty] = useState(false);
+  const [pendingSelection, setPendingSelection] = useState<{
+    id: number;
+    index?: number;
+  } | null>(null);
   const previousSelectedRef = useRef<number | null>(null);
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const [selectedScreenshotIdx, setSelectedScreenshotIdx] = useState<number>(0);
@@ -321,7 +325,8 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
       if (nextId == null || nextId === selectedTextUnitId || mutations.isSaving) {
         return;
       }
-      if (detailIsDirty && !window.confirm('Discard unsaved changes?')) {
+      if (detailIsDirty) {
+        setPendingSelection({ id: nextId, index: nextIndex });
         return;
       }
       setSelectedTextUnitId(nextId);
@@ -365,6 +370,22 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
     },
     [attemptSelectTextUnit, filtered, selectedTextUnitId],
   );
+
+  const confirmDiscardChanges = useCallback(() => {
+    if (!pendingSelection) {
+      return;
+    }
+    setDetailIsDirty(false);
+    setSelectedTextUnitId(pendingSelection.id);
+    if (pendingSelection.index != null) {
+      scrollToIndex(pendingSelection.index, { align: 'center' });
+    }
+    setPendingSelection(null);
+  }, [pendingSelection, scrollToIndex]);
+
+  const cancelDiscardChanges = useCallback(() => {
+    setPendingSelection(null);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyNav);
@@ -570,6 +591,15 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
         cancelLabel="Keep editing"
         onConfirm={mutations.onConfirmValidationSave}
         onCancel={mutations.onDismissValidationSave}
+      />
+      <ConfirmModal
+        open={pendingSelection != null}
+        title="Discard changes?"
+        body="You have unsaved edits. Discard them and switch to another text unit?"
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        onConfirm={confirmDiscardChanges}
+        onCancel={cancelDiscardChanges}
       />
     </div>
   );
