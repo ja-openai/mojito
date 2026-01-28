@@ -410,6 +410,14 @@ export function RepositoriesPage() {
     [allowedLocaleTagSet, navigate, repositories],
   );
 
+  const handleOpenAiTranslate = useCallback(
+    (repositoryId: number) => {
+      const params = new URLSearchParams({ repositoryId: String(repositoryId) });
+      void navigate(`/ai-translate?${params.toString()}`);
+    },
+    [navigate],
+  );
+
   return (
     <RepositoriesPageView
       status={status}
@@ -421,6 +429,7 @@ export function RepositoriesPage() {
       repositoryOptions={repositoryOptions}
       selectedRepositoryIds={selectedRepositoryIds}
       onChangeRepositorySelection={onChangeRepositorySelection}
+      onOpenAiTranslate={handleOpenAiTranslate}
       localeOptions={localeOptions}
       selectedLocaleTags={selectedLocaleTags}
       onChangeLocaleSelection={handleChangeLocaleSelection}

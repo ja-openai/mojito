@@ -212,6 +212,24 @@
   gap: var(--space-3);
 }
 
+.repositories-page__row-action {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.repositories-page__repo-scroll-row:hover .repositories-page__row-action,
+.repositories-page__repo-scroll-row:focus-within .repositories-page__row-action {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .repositories-page__cell--number {
   font-variant-numeric: tabular-nums;
   text-align: end;

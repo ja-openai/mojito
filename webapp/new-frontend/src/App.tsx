@@ -25,7 +25,6 @@ const navItems: NavItem[] = [
   { to: '/repositories', label: 'Repositories', element: <RepositoriesPage /> },
   { to: '/workbench', label: 'Workbench', element: <WorkbenchPage /> },
   { to: '/review-projects', label: 'Review Projects', element: <ReviewProjectsPage /> },
-  { to: '/ai-translate', label: 'AI Translate', element: <AiTranslatePage /> },
 ];
 
 const queryClient = new QueryClient();
@@ -74,6 +73,7 @@ export function App() {
             {navItems.map(({ to, element }) => (
               <Route key={to} path={to} element={element} />
             ))}
+            <Route path="/ai-translate" element={<AiTranslatePage />} />
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
             <Route path="/settings/admin" element={<AdminSettingsPage />} />
             <Route path="/tools/char-code" element={<CharCodeHelperPage />} />

@@ -113,6 +113,7 @@ type Props = {
   onOpenCollectionSearch: (id: string) => void;
   onShareCollection: (id: string) => boolean;
   onCreateReviewProject: (id: string) => void;
+  onOpenAiTranslate: (id: string) => void;
   shareOverrides: WorkbenchShareOverrides | null;
   onPrepareShareOverrides: (overrides: WorkbenchShareOverrides | null) => void;
 };
@@ -234,6 +235,7 @@ export function WorkbenchPageView({
   onOpenCollectionSearch,
   onShareCollection,
   onCreateReviewProject,
+  onOpenAiTranslate,
   shareOverrides,
   onPrepareShareOverrides,
 }: Props) {
@@ -311,6 +313,7 @@ export function WorkbenchPageView({
           return ok;
         }}
         onCreateReviewProject={onCreateReviewProject}
+        onOpenAiTranslate={onOpenAiTranslate}
         onOpenShareModal={() => {
           onPrepareShareOverrides(null);
           setIsShareModalOpen(true);

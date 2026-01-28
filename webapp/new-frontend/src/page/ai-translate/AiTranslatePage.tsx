@@ -2,19 +2,20 @@ import '../review-projects/review-projects-page.css';
 import './ai-translate-page.css';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
-import { CollectionSelect, type CollectionOption } from '../../components/CollectionSelect';
-import type { LocaleOption } from '../../components/LocaleMultiSelect';
-import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
-import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import {
   fetchAiTranslateReport,
   fetchAiTranslateReportLocale,
   fetchAiTranslateReportPath,
+  type PollableTask,
   translateRepository,
   waitForPollableTaskToFinish,
-  type PollableTask,
 } from '../../api/ai-translate';
+import { type CollectionOption, CollectionSelect } from '../../components/CollectionSelect';
+import type { LocaleOption } from '../../components/LocaleMultiSelect';
+import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
+import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
@@ -60,6 +61,7 @@ export function AiTranslatePage() {
   const { data: repositories, isLoading, error } = useRepositories();
   const resolveLocaleName = useLocaleDisplayNameResolver();
   const { collections } = useWorkbenchCollections();
+  const [searchParams] = useSearchParams();
 
   const [selectedRepositoryId, setSelectedRepositoryId] = useState<number | null>(null);
   const [selectedLocales, setSelectedLocales] = useState<string[]>([]);
@@ -105,6 +107,48 @@ export function AiTranslatePage() {
     () => repositoryOptions.map((repo) => ({ value: repo.id, label: repo.name })),
     [repositoryOptions],
   );
+
+  const clearRunState = useCallback(() => {
+    setJobError(null);
+    setReportError(null);
+    setPollableTask(null);
+    setReportDownloads([]);
+    setIsFetchingReport(false);
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    objectUrlsRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    const repositoryParam = searchParams.get('repositoryId');
+    const collectionParam = searchParams.get('collectionId');
+
+    if (repositoryParam) {
+      const parsed = Number(repositoryParam);
+      if (Number.isFinite(parsed) && parsed !== selectedRepositoryId) {
+        setSelectedRepositoryId(parsed);
+        setSelectedLocales([]);
+        clearRunState();
+      }
+    }
+
+    if (collectionParam && collectionParam !== selectedCollectionId) {
+      setSelectedCollectionId(collectionParam);
+      clearRunState();
+    }
+  }, [clearRunState, searchParams, selectedCollectionId, selectedRepositoryId]);
+
+  useEffect(() => {
+    if (!selectedRepositoryId || isLoading) {
+      return;
+    }
+    if (repositoryOptions.length === 0) {
+      return;
+    }
+    const exists = repositoryOptions.some((repo) => repo.id === selectedRepositoryId);
+    if (!exists) {
+      setSelectedRepositoryId(null);
+    }
+  }, [isLoading, repositoryOptions, selectedRepositoryId]);
 
   const selectedRepository = useMemo(
     () => repositoryOptions.find((repo) => repo.id === selectedRepositoryId) ?? null,
@@ -154,6 +198,18 @@ export function AiTranslatePage() {
     return collections.find((collection) => collection.id === selectedCollectionId) ?? null;
   }, [collections, selectedCollectionId]);
 
+  const collectionRepositoryIds = useMemo(() => {
+    if (!selectedCollection) {
+      return [] as number[];
+    }
+    const ids = new Set(
+      selectedCollection.entries
+        .map((entry) => entry.repositoryId)
+        .filter((id): id is number => typeof id === 'number'),
+    );
+    return Array.from(ids);
+  }, [selectedCollection]);
+
   const collectionSummary = useMemo(() => {
     if (!selectedCollection) {
       return {
@@ -188,27 +244,25 @@ export function AiTranslatePage() {
   const disableForm = isSubmitting || isWaiting;
   const usesCollections = Boolean(selectedCollectionId);
 
-  const clearRunState = useCallback(() => {
-    setJobError(null);
-    setReportError(null);
-    setPollableTask(null);
-    setReportDownloads([]);
-    setIsFetchingReport(false);
-    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-    objectUrlsRef.current = [];
-  }, []);
+  useEffect(() => {
+    if (!selectedCollection || selectedRepositoryId) {
+      return;
+    }
+    if (collectionRepositoryIds.length === 1) {
+      setSelectedRepositoryId(collectionRepositoryIds[0]);
+      setSelectedLocales([]);
+    }
+  }, [collectionRepositoryIds, selectedCollection, selectedRepositoryId]);
 
   const handleRepositoryChange = (repoId: number | null) => {
     if (repoId === null) {
       setSelectedRepositoryId(null);
       setSelectedLocales([]);
-      setSelectedCollectionId(null);
       clearRunState();
       return;
     }
     setSelectedRepositoryId(repoId);
     setSelectedLocales([]);
-    setSelectedCollectionId(null);
     clearRunState();
   };
 
@@ -310,62 +364,60 @@ export function AiTranslatePage() {
       if (requestRef.current !== currentRequest) {
         return;
       }
-      const errorMessage = err instanceof Error ? err.message : 'Unexpected error while submitting.';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Unexpected error while submitting.';
       setJobError(String(errorMessage || 'Unexpected error while submitting.'));
       setIsSubmitting(false);
       setIsWaiting(false);
     }
   };
 
-  const fetchReportDownloads = useCallback(
-    async (pollableTaskId: number, requestToken: number) => {
-      setIsFetchingReport(true);
-      setReportError(null);
-      setReportDownloads([]);
+  const fetchReportDownloads = useCallback(async (pollableTaskId: number, requestToken: number) => {
+    setIsFetchingReport(true);
+    setReportError(null);
+    setReportDownloads([]);
 
-      try {
-        const report = await fetchAiTranslateReport(pollableTaskId);
-        const reportLocaleUrls = report.reportLocaleUrls ?? [];
+    try {
+      const report = await fetchAiTranslateReport(pollableTaskId);
+      const reportLocaleUrls = report.reportLocaleUrls ?? [];
 
-        const downloads = await Promise.all(
-          reportLocaleUrls.map(async (path) => {
-            const locale = path.split('/').pop() || 'report';
-            let contentResponse;
+      const downloads = await Promise.all(
+        reportLocaleUrls.map(async (path) => {
+          const locale = path.split('/').pop() || 'report';
+          let contentResponse;
 
-            try {
-              contentResponse = await fetchAiTranslateReportPath(path);
-            } catch (error) {
-              contentResponse = await fetchAiTranslateReportLocale(pollableTaskId, locale);
-            }
+          try {
+            contentResponse = await fetchAiTranslateReportPath(path);
+          } catch {
+            contentResponse = await fetchAiTranslateReportLocale(pollableTaskId, locale);
+          }
 
-            const content = contentResponse.content ?? '';
-            const blob = new Blob([content], { type: 'application/json' });
-            const href = URL.createObjectURL(blob);
-            objectUrlsRef.current.push(href);
-            return {
-              locale,
-              href,
-              filename: `${pollableTaskId}-${locale}.json`,
-            };
-          }),
-        );
+          const content = contentResponse.content ?? '';
+          const blob = new Blob([content], { type: 'application/json' });
+          const href = URL.createObjectURL(blob);
+          objectUrlsRef.current.push(href);
+          return {
+            locale,
+            href,
+            filename: `${pollableTaskId}-${locale}.json`,
+          };
+        }),
+      );
 
-        if (requestRef.current !== requestToken) {
-          return;
-        }
-
-        setReportDownloads(downloads);
-        setIsFetchingReport(false);
-      } catch (err) {
-        if (requestRef.current !== requestToken) {
-          return;
-        }
-        setReportError('Unable to download the report files.');
-        setIsFetchingReport(false);
+      if (requestRef.current !== requestToken) {
+        return;
       }
-    },
-    [],
-  );
+
+      setReportDownloads(downloads);
+      setIsFetchingReport(false);
+    } catch {
+      if (requestRef.current !== requestToken) {
+        return;
+      }
+      setReportError('Unable to download the report files.');
+      setIsFetchingReport(false);
+    }
+  }, []);
 
   const reportStatus = pollableTask && pollableTask.isAllFinished && !jobError;
 
@@ -378,7 +430,12 @@ export function AiTranslatePage() {
       </div>
 
       <div className="review-create__page-shell">
-        <form className="review-create__body" onSubmit={handleSubmit}>
+        <form
+          className="review-create__body"
+          onSubmit={(event) => {
+            void handleSubmit(event);
+          }}
+        >
           <div className="ai-translate-grid">
             <div className="review-create__stack">
               <div className="review-create__field">
@@ -443,6 +500,13 @@ export function AiTranslatePage() {
                     {collectionSummary.mismatchedEntries > 0
                       ? ` ${collectionSummary.mismatchedEntries} ids belong to other repositories.`
                       : ''}
+                  </div>
+                ) : null}
+                {selectedCollection &&
+                !selectedRepositoryId &&
+                collectionRepositoryIds.length > 1 ? (
+                  <div className="review-create__hint">
+                    Collection includes multiple repositories. Select one to translate.
                   </div>
                 ) : null}
               </div>
@@ -606,8 +670,10 @@ export function AiTranslatePage() {
 
           <div className="review-create__actions">
             <div className="ai-translate-status">
-              {jobError ? <div className="review-create__error">{jobError}</div> : null}
-              {reportError ? <div className="review-create__error">{reportError}</div> : null}
+              {jobError ? <div className="review-create__error">{String(jobError)}</div> : null}
+              {reportError ? (
+                <div className="review-create__error">{String(reportError)}</div>
+              ) : null}
               {isWaiting ? (
                 <div className="review-create__hint">
                   Waiting for AI translation job {pollableTask ? pollableTask.id : ''} to finish...

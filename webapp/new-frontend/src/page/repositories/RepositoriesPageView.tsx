@@ -53,6 +53,7 @@ type Props = {
   repositoryOptions: RepositoryMultiSelectOption[];
   selectedRepositoryIds: number[];
   onChangeRepositorySelection: (next: number[]) => void;
+  onOpenAiTranslate: (id: number) => void;
   localeOptions: LocaleOption[];
   selectedLocaleTags: string[];
   onChangeLocaleSelection: (next: string[]) => void;
@@ -76,6 +77,7 @@ type RepositoryTableProps = {
   repositories: RepositoryRow[];
   isRepositorySelectionEmpty: boolean;
   onSelectRepository: (id: number) => void;
+  onOpenAiTranslate: (id: number) => void;
   onOpenWorkbench: (params: {
     repositoryId: number;
     status?: string | null;
@@ -215,6 +217,7 @@ function RepositoryTable({
   repositories,
   isRepositorySelectionEmpty,
   onSelectRepository,
+  onOpenAiTranslate,
   onOpenWorkbench,
 }: RepositoryTableProps) {
   const selectedIndex = useMemo(
@@ -320,6 +323,16 @@ function RepositoryTable({
                   >
                     {repo.name}
                   </CellLink>
+                  <button
+                    type="button"
+                    className="repositories-page__row-action"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenAiTranslate(repo.id);
+                    }}
+                  >
+                    AI Translate
+                  </button>
                 </div>
                 <div className="repositories-page__cell repositories-page__cell--number">
                   <CellLink
@@ -523,6 +536,7 @@ export function RepositoriesPageView({
   repositoryOptions,
   selectedRepositoryIds,
   onChangeRepositorySelection,
+  onOpenAiTranslate,
   localeOptions,
   selectedLocaleTags,
   onChangeLocaleSelection,
@@ -571,6 +585,7 @@ export function RepositoriesPageView({
           repositories={repositories}
           isRepositorySelectionEmpty={isRepositorySelectionEmpty}
           onSelectRepository={onSelectRepository}
+          onOpenAiTranslate={onOpenAiTranslate}
           onOpenWorkbench={onOpenWorkbench}
         />
         <div className="repositories-page__divider">

@@ -329,6 +329,31 @@ export function WorkbenchPage() {
     [collections.collections, navigate],
   );
 
+  const handleOpenAiTranslateFromCollection = useCallback(
+    (collectionId: string) => {
+      const collection = collections.collections.find((item) => item.id === collectionId);
+      if (!collection || collection.entries.length === 0) {
+        return;
+      }
+
+      const repoIds = Array.from(
+        new Set(
+          collection.entries
+            .map((entry) => entry.repositoryId)
+            .filter((id): id is number => id != null),
+        ),
+      );
+
+      const params = new URLSearchParams({ collectionId: collection.id });
+      if (repoIds.length === 1) {
+        params.set('repositoryId', String(repoIds[0]));
+      }
+
+      void navigate(`/ai-translate?${params.toString()}`);
+    },
+    [collections.collections, navigate],
+  );
+
   useEffect(() => {
     if (!pendingCollectionOpenId) {
       return;
@@ -458,6 +483,7 @@ export function WorkbenchPage() {
         onOpenCollectionSearch={handleOpenCollectionSearch}
         onShareCollection={handleShareCollection}
         onCreateReviewProject={handleCreateReviewProjectFromCollection}
+        onOpenAiTranslate={handleOpenAiTranslateFromCollection}
         shareOverrides={shareOverrides}
         onPrepareShareOverrides={(overrides) => setShareOverrides(overrides)}
       />

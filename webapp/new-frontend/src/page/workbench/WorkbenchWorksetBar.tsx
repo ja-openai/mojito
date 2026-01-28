@@ -28,6 +28,7 @@ type WorkbenchWorksetBarProps = {
   onOpenCollectionSearch: (id: string) => void;
   onShareCollection: (id: string) => boolean;
   onCreateReviewProject: (id: string) => void;
+  onOpenAiTranslate: (id: string) => void;
 };
 
 export function WorkbenchWorksetBar({
@@ -55,6 +56,7 @@ export function WorkbenchWorksetBar({
   onOpenCollectionSearch,
   onShareCollection,
   onCreateReviewProject,
+  onOpenAiTranslate,
 }: WorkbenchWorksetBarProps) {
   const countLabel = hasMoreResults
     ? `Showing first ${worksetSize} results (more available)`
@@ -124,6 +126,7 @@ export function WorkbenchWorksetBar({
       onOpenCollectionSearch={onOpenCollectionSearch}
       onShareCollection={onShareCollection}
       onCreateReviewProject={onCreateReviewProject}
+      onOpenAiTranslate={onOpenAiTranslate}
     />,
   );
 
@@ -317,6 +320,7 @@ function CollectionDropdown({
   onOpenCollectionSearch,
   onShareCollection,
   onCreateReviewProject,
+  onOpenAiTranslate,
 }: {
   disabled: boolean;
   isSearchLoading: boolean;
@@ -336,6 +340,7 @@ function CollectionDropdown({
   onOpenCollectionSearch: (id: string) => void;
   onShareCollection: (id: string) => boolean;
   onCreateReviewProject: (id: string) => void;
+  onOpenAiTranslate: (id: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState(activeCollectionName ?? '');
@@ -593,6 +598,18 @@ function CollectionDropdown({
                             title="Create review project from this collection"
                           >
                             Review
+                          </button>
+                          <button
+                            type="button"
+                            className="workbench-worksetbar__button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onOpenAiTranslate(collection.id);
+                            }}
+                            disabled={disabled || !hasIds}
+                            title="AI translate this collection"
+                          >
+                            AI Translate
                           </button>
                           <button
                             type="button"
