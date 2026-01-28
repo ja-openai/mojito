@@ -230,9 +230,14 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
   const [stateFilter, setStateFilter] = useState<DecisionStateFilter>('all');
   const [selectedTextUnitId, setSelectedTextUnitId] = useState<number | null>(null);
   const [detailIsDirty, setDetailIsDirty] = useState(false);
+  const [focusTranslationKey, setFocusTranslationKey] = useState(0);
   const [pendingSelection, setPendingSelection] = useState<{
     id: number;
     index?: number;
+  } | null>(null);
+  const [pendingAdvance, setPendingAdvance] = useState<{
+    fromId: number;
+    focusTranslation: boolean;
   } | null>(null);
   const previousSelectedRef = useRef<number | null>(null);
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
@@ -370,6 +375,57 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
     },
     [attemptSelectTextUnit, filtered, selectedTextUnitId],
   );
+
+  const advanceToNextTextUnit = useCallback(
+    (fromId: number | null, focusTranslation: boolean) => {
+      if (!filtered.length) {
+        return;
+      }
+      const currentIndex = fromId == null ? -1 : filtered.findIndex((tu) => tu.id === fromId);
+      const nextIndex = Math.min(filtered.length - 1, currentIndex + 1);
+      const nextId = filtered[nextIndex]?.id ?? null;
+      if (nextId == null || nextId === fromId) {
+        return;
+      }
+      setSelectedTextUnitId(nextId);
+      scrollToIndex(nextIndex, { align: 'center' });
+      if (focusTranslation) {
+        setFocusTranslationKey((value) => value + 1);
+      }
+    },
+    [filtered, scrollToIndex],
+  );
+
+  const queueAdvance = useCallback(
+    (focusTranslation: boolean) => {
+      if (selectedTextUnitId == null) {
+        return;
+      }
+      setPendingAdvance({ fromId: selectedTextUnitId, focusTranslation });
+    },
+    [selectedTextUnitId],
+  );
+
+  useEffect(() => {
+    if (!pendingAdvance) {
+      return;
+    }
+    if (mutations.isSaving || mutations.showValidationDialog) {
+      return;
+    }
+    if (selectedTextUnitId !== pendingAdvance.fromId) {
+      setPendingAdvance(null);
+      return;
+    }
+    advanceToNextTextUnit(pendingAdvance.fromId, pendingAdvance.focusTranslation);
+    setPendingAdvance(null);
+  }, [
+    advanceToNextTextUnit,
+    mutations.isSaving,
+    mutations.showValidationDialog,
+    pendingAdvance,
+    selectedTextUnitId,
+  ]);
 
   const confirmDiscardChanges = useCallback(() => {
     if (!pendingSelection) {
@@ -569,6 +625,8 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
               onOpenGallery={() => setIsScreenshotModalOpen(true)}
               detailPaneRef={detailPaneRef}
               onDirtyChange={setDetailIsDirty}
+              onQueueAdvance={queueAdvance}
+              focusTranslationKey={focusTranslationKey}
             />
           ) : (
             <div className="review-project-page__empty-detail">No text unit selected</div>
@@ -650,6 +708,8 @@ function DetailPane({
   onOpenGallery,
   detailPaneRef,
   onDirtyChange,
+  onQueueAdvance,
+  focusTranslationKey,
 }: {
   textUnit: ApiReviewProjectTextUnit;
   localeTag: string;
@@ -660,6 +720,8 @@ function DetailPane({
   onOpenGallery: () => void;
   detailPaneRef: React.RefObject<HTMLDivElement | null>;
   onDirtyChange: (dirty: boolean) => void;
+  onQueueAdvance: (focusTranslation: boolean) => void;
+  focusTranslationKey: number;
 }) {
   const [isScreenshotsCollapsed, setIsScreenshotsCollapsed] = useState(false);
   const [heroHeight, setHeroHeight] = useState<number | null>(null);
@@ -669,6 +731,7 @@ function DetailPane({
   const [showStaleDecision, setShowStaleDecision] = useState(false);
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
   const heroRef = useRef<HTMLDivElement | null>(null);
+  const translationRef = useRef<HTMLTextAreaElement | null>(null);
   const didAutoAcceptRef = useRef(false);
   const savingIndicatorStartRef = useRef<number | null>(null);
   const savingIndicatorTimeoutRef = useRef<number | null>(null);
@@ -793,16 +856,33 @@ function DetailPane({
   }, []);
 
   useEffect(() => {
+    if (focusTranslationKey === 0) {
+      return;
+    }
+    translationRef.current?.focus();
+  }, [focusTranslationKey]);
+
+  useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
       if (event.key !== 'Enter' || (!event.metaKey && !event.ctrlKey)) {
-        return;
-      }
-      if (event.shiftKey) {
         return;
       }
       const focusedTextarea = getFocusedTextarea();
       if (focusedTextarea) {
         event.preventDefault();
+      }
+      if (event.shiftKey) {
+        if (mutations.showValidationDialog || mutations.isSaving) {
+          return;
+        }
+        if (canSave) {
+          handleSave();
+        } else if (snapshot.decisionState !== 'DECIDED') {
+          requestDecisionState('DECIDED');
+        }
+        onQueueAdvance(true);
+        focusedTextarea?.blur();
+        return;
       }
       if (mutations.showValidationDialog) {
         focusedTextarea?.blur();
@@ -815,7 +895,16 @@ function DetailPane({
     };
     window.addEventListener('keydown', handleSaveShortcut);
     return () => window.removeEventListener('keydown', handleSaveShortcut);
-  }, [canSave, getFocusedTextarea, handleSave, mutations.showValidationDialog]);
+  }, [
+    canSave,
+    getFocusedTextarea,
+    handleSave,
+    mutations.isSaving,
+    mutations.showValidationDialog,
+    onQueueAdvance,
+    requestDecisionState,
+    snapshot.decisionState,
+  ]);
 
   const handleDecisionStateChange = useCallback(
     (nextState: DecisionStateChoice) => {
@@ -1228,13 +1317,14 @@ function DetailPane({
                 ) : null}
               </div>
             </div>
-            <AutoTextarea
-              className={`review-project-detail__input review-project-detail__input--autosize${
-                isRejected ? ' review-project-detail__input--rejected' : ''
-              }`}
-              value={draftTarget}
-              onChange={(event) => {
-                const next = event.target.value;
+          <AutoTextarea
+            className={`review-project-detail__input review-project-detail__input--autosize${
+              isRejected ? ' review-project-detail__input--rejected' : ''
+            }`}
+            ref={translationRef}
+            value={draftTarget}
+            onChange={(event) => {
+              const next = event.target.value;
                 if (!didAutoAcceptRef.current && next !== snapshot.target) {
                   setDraftStatusChoice('ACCEPTED');
                   didAutoAcceptRef.current = true;
