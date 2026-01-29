@@ -109,18 +109,23 @@
 
 .review-project-page__header-action {
   margin-left: var(--space-3);
-  padding: 0.35rem 0.75rem;
-  border-radius: var(--radius-pill);
-  border: 0.0625rem solid var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  border: none;
   background: var(--color-accent);
   color: var(--color-on-accent);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease;
+    filter 0.15s ease,
+    transform 0.1s ease;
 }
 
 .review-project-page__header-help {
@@ -148,32 +153,35 @@
 
 .review-project-page__header-action:hover:not(:disabled),
 .review-project-page__header-action:focus-visible:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 88%, black);
+  filter: brightness(1.05);
+}
+
+.review-project-page__header-action:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .review-project-page__header-action:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+  filter: none;
 }
 
 .review-project-page__header-action--close {
-  border-color: var(--color-accent);
   color: var(--color-on-accent);
 }
 
 .review-project-page__header-action--close:hover:not(:disabled),
 .review-project-page__header-action--close:focus-visible:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 88%, black);
+  filter: brightness(1.05);
 }
 
 .review-project-page__header-action--reopen {
-  border-color: var(--color-accent);
   color: var(--color-on-accent);
 }
 
 .review-project-page__header-action--reopen:hover:not(:disabled),
 .review-project-page__header-action--reopen:focus-visible:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 88%, black);
+  filter: brightness(1.05);
 }
 
 .review-project-page__header-group--stats {
