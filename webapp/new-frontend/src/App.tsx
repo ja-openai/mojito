@@ -10,6 +10,7 @@ import { RepositoriesPage } from './page/repositories/RepositoriesPage';
 import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
 import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
+import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
 import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
@@ -25,6 +26,7 @@ const navItems: NavItem[] = [
   { to: '/repositories', label: 'Repositories', element: <RepositoriesPage /> },
   { to: '/workbench', label: 'Workbench', element: <WorkbenchPage /> },
   { to: '/review-projects', label: 'Review Projects', element: <ReviewProjectsPage /> },
+  { to: '/screenshots', label: 'Screenshots', element: <ScreenshotsDropzonePage /> },
 ];
 
 const queryClient = new QueryClient();
@@ -75,6 +77,7 @@ export function App() {
             ))}
             <Route path="/ai-translate" element={<AiTranslatePage />} />
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
+            <Route path="/screenshots" element={<ScreenshotsDropzonePage />} />
             <Route path="/settings/admin" element={<AdminSettingsPage />} />
             <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
             <Route path="*" element={<Navigate to="/repositories" replace />} />
