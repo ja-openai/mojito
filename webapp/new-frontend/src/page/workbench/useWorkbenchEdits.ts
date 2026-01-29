@@ -286,6 +286,9 @@ export function useWorkbenchEdits({
 
   const handleCancelEditing = useCallback(() => {
     saveAttemptRef.current += 1;
+    if (translationInputRef.current) {
+      translationInputRef.current.blur();
+    }
     setEditingRowId(null);
     setEditingValue('');
     setEditingInitialValue('');
