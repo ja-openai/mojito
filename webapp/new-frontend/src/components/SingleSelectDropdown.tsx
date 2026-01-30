@@ -22,6 +22,8 @@ type Props<T extends string | number> = {
   searchPlaceholder?: string;
   noResultsLabel?: string;
   noneLabel?: string;
+  searchable?: boolean;
+  getOptionClassName?: (option: SingleSelectOption<T>) => string | undefined;
 };
 
 export function SingleSelectDropdown<T extends string | number>({
@@ -37,6 +39,8 @@ export function SingleSelectDropdown<T extends string | number>({
   searchPlaceholder,
   noResultsLabel,
   noneLabel,
+  searchable = true,
+  getOptionClassName,
 }: Props<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
@@ -106,7 +110,7 @@ export function SingleSelectDropdown<T extends string | number>({
         <div className="chip-dropdown__panel" role="menu">
           {normalizedOptions.length || noneLabel ? (
             <>
-              {normalizedOptions.length ? (
+              {normalizedOptions.length && searchable ? (
                 <input
                   type="search"
                   value={filterQuery}
@@ -136,9 +140,13 @@ export function SingleSelectDropdown<T extends string | number>({
                       <button
                         type="button"
                         key={String(option.value)}
-                        className={`single-select-dropdown__option${
-                          option.value === value ? ' is-selected' : ''
-                        }`}
+                        className={[
+                          'single-select-dropdown__option',
+                          option.value === value ? 'is-selected' : '',
+                          getOptionClassName?.(option) ?? '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
                         onClick={() => {
                           onChange(option.value);
                           setIsOpen(false);
