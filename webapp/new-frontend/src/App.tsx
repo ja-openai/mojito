@@ -6,15 +6,18 @@ import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-r
 
 import { RequireUser } from './components/RequireUser';
 import { UserMenu } from './components/UserMenu';
+import { AiTranslatePage } from './page/ai-translate/AiTranslatePage';
 import { RepositoriesPage } from './page/repositories/RepositoriesPage';
 import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
 import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
 import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
+import { AdminUserBatchPage } from './page/settings/AdminUserBatchPage';
+import { AdminUserDetailPage } from './page/settings/AdminUserDetailPage';
+import { AdminUserSettingsPage } from './page/settings/AdminUserSettingsPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
-import { AiTranslatePage } from './page/ai-translate/AiTranslatePage';
 
 type NavItem = {
   to: string;
@@ -79,6 +82,7 @@ export function App() {
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
             <Route path="/screenshots" element={<ScreenshotsDropzonePage />} />
             <Route path="/settings/admin" element={<AdminSettingsPage />} />
+            <Route path="/settings/admin/users" element={<AdminUserSettingsPage />} />
             <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
             <Route path="*" element={<Navigate to="/repositories" replace />} />
           </Route>
@@ -90,6 +94,8 @@ export function App() {
             }
           >
             <Route path="/review-projects/:projectId" element={<ReviewProjectPage />} />
+            <Route path="/settings/admin/users/:userId" element={<AdminUserDetailPage />} />
+            <Route path="/settings/admin/users/batch" element={<AdminUserBatchPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

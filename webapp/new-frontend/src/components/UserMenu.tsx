@@ -69,6 +69,10 @@ export function UserMenu() {
   };
 
   const toolLinks = [{ label: 'Character helper', path: '/tools/char-code' }];
+  const adminLinks = [
+    { label: 'Admin settings', path: '/settings/admin' },
+    { label: 'User settings', path: '/settings/admin/users' },
+  ];
 
   return (
     <div className="user-menu" ref={containerRef}>
@@ -108,14 +112,17 @@ export function UserMenu() {
               </div>
               <div className="user-menu__section-label">Admin</div>
               <div className="user-menu__actions" role="none">
-                <button
-                  type="button"
-                  className="user-menu__action"
-                  role="menuitem"
-                  onClick={() => handleNavigate('/settings/admin')}
-                >
-                  Admin settings
-                </button>
+                {adminLinks.map((item) => (
+                  <button
+                    key={item.path}
+                    type="button"
+                    className="user-menu__action"
+                    role="menuitem"
+                    onClick={() => handleNavigate(item.path)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             </>
           ) : (
