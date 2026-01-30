@@ -1018,7 +1018,6 @@
   pointer-events: auto;
 }
 
-
 .review-project-detail__label-dot {
   color: var(--color-text-subtle);
   font-size: var(--font-size-xs);
@@ -1228,8 +1227,9 @@
 }
 
 .review-project-shortcuts__key {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-    'Courier New', monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
@@ -1485,28 +1485,6 @@
   font-size: var(--font-size-sm);
 }
 
-.review-project-detail__shots-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.review-project-detail__shots-count {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.review-project-detail__shots-count--muted {
-  margin-bottom: var(--space-1);
-  display: block;
-}
-
-.review-project-detail__shots-empty {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
 .review-project-detail__shots-badge {
   position: absolute;
   bottom: var(--space-2);
@@ -1739,11 +1717,6 @@
 
 .review-project-screenshot-modal__copy:hover {
   background: color-mix(in srgb, var(--color-surface-muted) 60%, transparent);
-}
-
-.review-project-screenshot-modal__empty {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
 }
 
 .review-project-media {
