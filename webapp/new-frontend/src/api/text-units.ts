@@ -1,3 +1,5 @@
+import { isTransientHttpError, poll } from '../utils/poller';
+
 export type SearchAttribute =
   | 'stringId'
   | 'source'
@@ -35,6 +37,7 @@ export type ApiTextUnit = {
 const DEFAULT_SEARCH_LIMIT = 10;
 const ASYNC_POLL_TIMEOUT_MS = 60_000;
 const DEFAULT_POLL_INTERVAL_MS = 1000;
+const MAX_POLL_INTERVAL_MS = 8000;
 
 export type TextUnitSearchRequest = {
   repositoryIds: number[];
@@ -223,28 +226,35 @@ async function pollForHybridResults(pollingToken: {
   requestId: string;
   recommendedPollingDurationMillis?: number;
 }): Promise<ApiTextUnit[]> {
-  const startedAt = Date.now();
-  const timeout = pollingToken.recommendedPollingDurationMillis ?? ASYNC_POLL_TIMEOUT_MS;
+  const timeout = getPollingTimeoutMs(pollingToken.recommendedPollingDurationMillis);
 
-  for (;;) {
-    if (Date.now() - startedAt > timeout) {
-      throw new Error('Timed out while waiting for search results');
-    }
+  const results = await poll<ApiTextUnit[] | null>(
+    async () => {
+      const response = await getJson<SearchTextUnitsHybridResponse>(
+        `/api/textunits/search-hybrid/results/${pollingToken.requestId}`,
+      );
 
-    const response = await getJson<SearchTextUnitsHybridResponse>(
-      `/api/textunits/search-hybrid/results/${pollingToken.requestId}`,
-    );
+      if (response?.results) {
+        return response.results;
+      }
 
-    if (response?.results) {
-      return response.results;
-    }
+      if (response?.error) {
+        throw createNonTransientError(response.error.message || 'Search failed');
+      }
 
-    if (response?.error) {
-      throw new Error(response.error.message || 'Search failed');
-    }
+      return null;
+    },
+    {
+      intervalMs: DEFAULT_POLL_INTERVAL_MS,
+      maxIntervalMs: MAX_POLL_INTERVAL_MS,
+      timeoutMs: timeout,
+      timeoutMessage: 'Timed out while waiting for search results',
+      isTransientError: isTransientHttpError,
+      shouldStop: (response) => response !== null,
+    },
+  );
 
-    await delay(DEFAULT_POLL_INTERVAL_MS);
-  }
+  return results ?? [];
 }
 
 async function postJson<TResponse>(url: string, body: unknown): Promise<TResponse> {
@@ -285,4 +295,15 @@ async function getJson<TResponse>(url: string): Promise<TResponse> {
   return text ? (JSON.parse(text) as TResponse) : (undefined as TResponse);
 }
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const getPollingTimeoutMs = (recommended?: number) => {
+  if (!Number.isFinite(recommended) || typeof recommended !== 'number' || recommended <= 0) {
+    return ASYNC_POLL_TIMEOUT_MS;
+  }
+  return recommended;
+};
+
+const createNonTransientError = (message: string) => {
+  const error: Error & { isTransient?: boolean } = new Error(message);
+  error.isTransient = false;
+  return error;
+};
