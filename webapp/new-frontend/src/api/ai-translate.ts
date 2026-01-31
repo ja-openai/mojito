@@ -1,3 +1,5 @@
+import { isTransientHttpError, poll } from '../utils/poller';
+
 export type AiTranslateRequest = {
   repositoryName: string;
   targetBcp47tags: string[] | null;
@@ -48,6 +50,7 @@ export type AiTranslateReportLocaleResponse = {
 };
 
 const DEFAULT_POLL_INTERVAL_MS = 500;
+const MAX_POLL_INTERVAL_MS = 8000;
 
 export async function translateRepository(request: AiTranslateRequest): Promise<PollableTask> {
   const response = await postJson<AiTranslateResponse>('/api/proto-ai-translate', request);
@@ -63,20 +66,14 @@ export async function waitForPollableTaskToFinish(
   pollableTaskId: number,
   timeoutMs?: number,
 ): Promise<PollableTask> {
-  const startedAt = Date.now();
-
-  for (;;) {
-    if (timeoutMs && Date.now() - startedAt > timeoutMs) {
-      throw new Error('Timed out while waiting for AI translate to finish');
-    }
-
-    const pollableTask = await fetchPollableTask(pollableTaskId);
-    if (pollableTask.isAllFinished) {
-      return pollableTask;
-    }
-
-    await delay(DEFAULT_POLL_INTERVAL_MS);
-  }
+  return poll(() => fetchPollableTask(pollableTaskId), {
+    intervalMs: DEFAULT_POLL_INTERVAL_MS,
+    maxIntervalMs: MAX_POLL_INTERVAL_MS,
+    timeoutMs,
+    timeoutMessage: 'Timed out while waiting for AI translate to finish',
+    isTransientError: isTransientHttpError,
+    shouldStop: (task) => task.isAllFinished,
+  });
 }
 
 export async function fetchAiTranslateReport(
@@ -132,13 +129,9 @@ async function postJson<TResponse>(url: string, body: unknown): Promise<TRespons
 
   const text = await response.text();
   if (!response.ok) {
-    const error: Error & { status?: number } = new Error(
-      text || `Request failed with status ${response.status}`,
-    );
-    error.status = response.status;
-    throw error;
+    throw buildHttpError(text, response.status);
   }
-  return text ? (JSON.parse(text) as TResponse) : (undefined as TResponse);
+  return parseJsonResponse(text, response.status);
 }
 
 async function getJson<TResponse>(url: string): Promise<TResponse> {
@@ -152,9 +145,74 @@ async function getJson<TResponse>(url: string): Promise<TResponse> {
 
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(text || `Request failed with status ${response.status}`);
+    throw buildHttpError(text, response.status);
   }
-  return text ? (JSON.parse(text) as TResponse) : (undefined as TResponse);
+  return parseJsonResponse(text, response.status);
 }
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const parseJsonResponse = <TResponse>(text: string, status: number): TResponse => {
+  if (!text) {
+    return undefined as TResponse;
+  }
+  try {
+    return JSON.parse(text) as TResponse;
+  } catch {
+    throw buildUnexpectedResponseError(text, status);
+  }
+};
+
+const buildHttpError = (text: string, status: number) => {
+  const message = buildErrorMessage(text, status);
+  const error: Error & { status?: number } = new Error(message);
+  error.status = status;
+  return error;
+};
+
+const buildUnexpectedResponseError = (text: string, status: number) => {
+  const message = buildUnexpectedResponseMessage(text, status);
+  const error: Error & { status?: number } = new Error(message);
+  error.status = status;
+  return error;
+};
+
+const buildErrorMessage = (text: string, status: number) => {
+  const trimmed = text.trim();
+  if (looksLikeHtml(trimmed)) {
+    return isServiceUnavailableStatus(status)
+      ? buildServiceUnavailableMessage(status)
+      : `AI translate returned an unexpected response (HTTP ${status}).`;
+  }
+  if (isServiceUnavailableStatus(status)) {
+    return buildServiceUnavailableMessage(status);
+  }
+  return trimmed || `Request failed with status ${status}`;
+};
+
+const buildUnexpectedResponseMessage = (text: string, status: number) => {
+  const trimmed = text.trim();
+  if (looksLikeHtml(trimmed)) {
+    return `AI translate returned an unexpected HTML response${status ? ` (HTTP ${status})` : ''}.`;
+  }
+  return trimmed
+    ? `AI translate returned an unexpected response: ${trimmed}`
+    : `AI translate returned an unexpected response${status ? ` (HTTP ${status})` : ''}.`;
+};
+
+const buildServiceUnavailableMessage = (status?: number) =>
+  `AI translate is temporarily unavailable${status ? ` (HTTP ${status})` : ''}. Please try again.`;
+
+const looksLikeHtml = (text: string) => {
+  if (!text) {
+    return false;
+  }
+  const lowered = text.toLowerCase();
+  return (
+    lowered.startsWith('<!doctype') ||
+    lowered.startsWith('<html') ||
+    lowered.includes('<html') ||
+    lowered.includes('cloudflare')
+  );
+};
+
+const isServiceUnavailableStatus = (status: number) =>
+  status === 503 || status === 502 || status === 504 || (status >= 520 && status <= 529);
