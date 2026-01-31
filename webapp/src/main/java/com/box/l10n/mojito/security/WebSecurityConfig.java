@@ -227,7 +227,10 @@ public class WebSecurityConfig {
         .ignoringRequestMatchers("/actuator/shutdown", "/actuator/loggers/**", "/api/rotation");
 
     setAuthorizationRequests(
-        http, getHealthcheckPatterns(actuatorHealthLegacyConfig.isForwarding()));
+        http,
+        getActuatorPermitAllPatterns(
+            actuatorHealthLegacyConfig.isForwarding(),
+            securityConfig.getActuator().isPrometheusPermitAll()));
 
     logger.debug("For APIs, we don't redirect to login page. Instead we return a 401");
     http.exceptionHandling()
@@ -295,12 +298,16 @@ public class WebSecurityConfig {
    * @param forwarding
    * @return
    */
-  static List<String> getHealthcheckPatterns(boolean forwarding) {
+  static List<String> getActuatorPermitAllPatterns(
+      boolean forwarding, boolean allowPrometheusScrape) {
     List<String> patterns = new ArrayList<>();
     patterns.add("/actuator/health");
 
     if (forwarding) {
       patterns.add("/health");
+    }
+    if (allowPrometheusScrape) {
+      patterns.add("/actuator/prometheus");
     }
     return patterns;
   }
