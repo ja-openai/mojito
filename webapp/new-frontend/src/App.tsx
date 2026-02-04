@@ -16,6 +16,7 @@ import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { AdminUserBatchPage } from './page/settings/AdminUserBatchPage';
 import { AdminUserDetailPage } from './page/settings/AdminUserDetailPage';
 import { AdminUserSettingsPage } from './page/settings/AdminUserSettingsPage';
+import { TextUnitDetailPage } from './page/text-unit-detail/TextUnitDetailPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
 
@@ -94,6 +95,7 @@ export function App() {
             }
           >
             <Route path="/review-projects/:projectId" element={<ReviewProjectPage />} />
+            <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
             <Route path="/settings/admin/users/:userId" element={<AdminUserDetailPage />} />
             <Route path="/settings/admin/users/batch" element={<AdminUserBatchPage />} />
           </Route>

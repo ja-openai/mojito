@@ -894,6 +894,12 @@
   transition: opacity 0.15s ease;
 }
 
+.workbench-page__row:hover .workbench-page__translation-actions,
+.workbench-page__cell--translation:focus-within .workbench-page__translation-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .workbench-page__translation-footer {
   display: flex;
   align-items: center;

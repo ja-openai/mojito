@@ -224,6 +224,17 @@ export function WorkbenchBody({
     [getRepositoryScope, navigate],
   );
 
+  const openTextUnitDetail = useCallback(
+    (row: WorkbenchRow) => {
+      const params = new URLSearchParams();
+      params.set('locale', row.locale);
+      void navigate(`/text-units/${row.tmTextUnitId}?${params.toString()}`, {
+        state: { from: '/workbench' },
+      });
+    },
+    [navigate],
+  );
+
   const scrollElementRef = useRef<HTMLDivElement>(null);
 
   const estimateSize = useCallback(
@@ -482,20 +493,20 @@ export function WorkbenchBody({
                         dir={translationDirection}
                         style={translationStyle}
                       />
-                      {isEditing || isEdited ? (
-                        <div className="workbench-page__translation-footer">
-                          {isEdited ? (
-                            <button
-                              type="button"
-                              className="workbench-page__edited-indicator"
-                              onClick={() => onShowDiff(row.id)}
-                            >
-                              <span className="workbench-page__edited-dot" aria-hidden="true" />
-                              <span className="workbench-page__edited-text">Edited</span>
-                            </button>
-                          ) : null}
+                      <div className="workbench-page__translation-footer">
+                        {isEdited ? (
+                          <button
+                            type="button"
+                            className="workbench-page__edited-indicator"
+                            onClick={() => onShowDiff(row.id)}
+                          >
+                            <span className="workbench-page__edited-dot" aria-hidden="true" />
+                            <span className="workbench-page__edited-text">Edited</span>
+                          </button>
+                        ) : null}
+                        <div className="workbench-page__translation-actions">
                           {isEditing ? (
-                            <div className="workbench-page__translation-actions">
+                            <>
                               <button
                                 type="button"
                                 className="workbench-page__translation-button workbench-page__translation-button--primary"
@@ -518,10 +529,20 @@ export function WorkbenchBody({
                               >
                                 Cancel
                               </button>
-                            </div>
+                            </>
                           ) : null}
+                          <button
+                            type="button"
+                            className="workbench-page__translation-button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openTextUnitDetail(row);
+                            }}
+                          >
+                            Details
+                          </button>
                         </div>
-                      ) : null}
+                      </div>
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--locale">
                       <LocalePill bcp47Tag={row.locale} labelMode="tag" />
@@ -552,7 +573,10 @@ export function WorkbenchBody({
                           />
                         )}
                         {isUnused ? (
-                          <span className="workbench-page__unused-pill" aria-label="Unused text unit">
+                          <span
+                            className="workbench-page__unused-pill"
+                            aria-label="Unused text unit"
+                          >
                             Unused
                           </span>
                         ) : null}
