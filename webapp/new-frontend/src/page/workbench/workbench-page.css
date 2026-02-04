@@ -423,6 +423,29 @@
   cursor: not-allowed;
 }
 
+.workbench-header__reset-button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-subtle);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  padding: 0 var(--space-1);
+  height: 1.625rem;
+  cursor: pointer;
+}
+
+.workbench-header__reset-button:not(:disabled):focus-visible,
+.workbench-header__reset-button:not(:disabled):hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.workbench-header__reset-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .workbench-filterchip__clear-link {
   border: 0;
   background: transparent;

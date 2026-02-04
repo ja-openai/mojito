@@ -71,6 +71,7 @@ type WorkbenchHeaderProps = {
   searchInputValue: string;
   onChangeSearchInput: (value: string) => void;
   onSubmitSearch: () => void;
+  onResetWorkbench: () => void;
   statusFilter: StatusFilterValue;
   includeUsed: boolean;
   includeUnused: boolean;
@@ -110,6 +111,7 @@ export function WorkbenchHeader({
   searchInputValue,
   onChangeSearchInput,
   onSubmitSearch,
+  onResetWorkbench,
   statusFilter,
   includeUsed,
   includeUnused,
@@ -248,6 +250,14 @@ export function WorkbenchHeader({
       </div>
 
       <div className="workbench-header__right">
+        <button
+          type="button"
+          className="workbench-header__reset-button"
+          onClick={onResetWorkbench}
+          disabled={searchControlsDisabled}
+        >
+          Reset
+        </button>
         <SearchFilter
           disabled={searchControlsDisabled}
           statusFilter={statusFilter}

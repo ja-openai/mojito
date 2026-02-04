@@ -229,10 +229,13 @@ export function WorkbenchBody({
       const params = new URLSearchParams();
       params.set('locale', row.locale);
       void navigate(`/text-units/${row.tmTextUnitId}?${params.toString()}`, {
-        state: { from: '/workbench' },
+        state: {
+          from: '/workbench',
+          workbenchSearch: activeSearchRequest,
+        },
       });
     },
-    [navigate],
+    [activeSearchRequest, navigate],
   );
 
   const scrollElementRef = useRef<HTMLDivElement>(null);

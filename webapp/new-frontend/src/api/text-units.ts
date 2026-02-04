@@ -20,12 +20,22 @@ export type ApiTextUnit = {
   tmTextUnitVariantId?: number | null;
   tmTextUnitCurrentVariantId?: number | null;
   localeId?: number | null;
+  createdDate?: string | null;
+  tmTextUnitCreatedDate?: string | null;
   name: string;
   source?: string | null;
   comment?: string | null;
   target?: string | null;
   targetLocale: string;
   targetComment?: string | null;
+  pluralForm?: string | null;
+  pluralFormOther?: string | null;
+  doNotTranslate?: boolean;
+  assetId?: number | null;
+  lastSuccessfulAssetExtractionId?: number | null;
+  assetExtractionId?: number | null;
+  assetTextUnitId?: number | null;
+  branchId?: number | null;
   assetPath?: string | null;
   assetTextUnitUsages?: string | null;
   used: boolean;
@@ -74,6 +84,56 @@ export type TextUnitIntegrityCheckRequest = {
 export type TextUnitIntegrityCheckResult = {
   checkResult?: boolean | null;
   failureDetail?: string | null;
+};
+
+export type ApiTextUnitHistoryComment = {
+  id?: number | null;
+  createdDate?: string | null;
+  content?: string | null;
+  severity?: string | null;
+  type?: string | null;
+};
+
+export type ApiTextUnitHistoryItem = {
+  id: number;
+  createdDate?: string | null;
+  content?: string | null;
+  comment?: string | null;
+  status?: ApiTextUnitStatus | null;
+  includedInLocalizedFile?: boolean;
+  createdByUser?: {
+    id?: number | null;
+    username?: string | null;
+  } | null;
+  tmTextUnitVariantComments?: ApiTextUnitHistoryComment[] | null;
+};
+
+export type ApiGitBlame = {
+  authorName?: string | null;
+  authorEmail?: string | null;
+  commitName?: string | null;
+  commitTime?: string | null;
+};
+
+export type ApiGitBlameWithUsage = {
+  tmTextUnitId?: number | null;
+  assetId?: number | null;
+  assetTextUnitId?: number | null;
+  thirdPartyTextUnitId?: string | null;
+  branch?: {
+    id?: number | null;
+    name?: string | null;
+  } | null;
+  isVirtual?: boolean;
+  usages?: string[] | null;
+  gitBlame?: ApiGitBlame | null;
+  screenshots?:
+    | Array<{
+        id?: number | null;
+        name?: string | null;
+        src?: string | null;
+      }>
+    | null;
 };
 
 type SearchTextUnitsHybridResponse = {
@@ -141,6 +201,25 @@ export async function checkTextUnitIntegrity(
   request: TextUnitIntegrityCheckRequest,
 ): Promise<TextUnitIntegrityCheckResult> {
   return postJson<TextUnitIntegrityCheckResult>('/api/textunits/check', request);
+}
+
+export async function fetchTextUnitHistory(
+  tmTextUnitId: number,
+  bcp47Tag: string,
+): Promise<ApiTextUnitHistoryItem[]> {
+  const params = new URLSearchParams();
+  params.set('bcp47Tag', bcp47Tag);
+  return getJson<ApiTextUnitHistoryItem[]>(
+    `/api/textunits/${tmTextUnitId}/history?${params.toString()}`,
+  );
+}
+
+export async function fetchGitBlameWithUsages(
+  tmTextUnitId: number,
+): Promise<ApiGitBlameWithUsage[]> {
+  const params = new URLSearchParams();
+  params.set('tmTextUnitId', String(tmTextUnitId));
+  return getJson<ApiGitBlameWithUsage[]>(`/api/textunits/gitBlameWithUsages?${params.toString()}`);
 }
 
 function buildSearchBody(request: TextUnitSearchRequest): TextUnitSearchBody {

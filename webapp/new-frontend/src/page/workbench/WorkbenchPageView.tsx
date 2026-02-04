@@ -266,6 +266,7 @@ export function WorkbenchPageView({
         searchInputValue={searchInputValue}
         onChangeSearchInput={onChangeSearchInput}
         onSubmitSearch={onSubmitSearch}
+        onResetWorkbench={onResetWorkbench}
         statusFilter={statusFilter}
         includeUsed={includeUsed}
         includeUnused={includeUnused}

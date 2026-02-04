@@ -103,6 +103,12 @@ export function WorkbenchPage() {
   }, [shareId]);
 
   useEffect(() => {
+    if (wsId) {
+      persistedWsIdRef.current = wsId;
+    }
+  }, [wsId]);
+
+  useEffect(() => {
     if (shareId || deepLinkTmId || stateSearchRequest || !wsId) {
       return;
     }
