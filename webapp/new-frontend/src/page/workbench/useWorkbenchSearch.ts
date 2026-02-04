@@ -75,6 +75,8 @@ type SearchState = {
   rows: WorkbenchRow[];
   hasMoreResults: boolean;
   refetchSearch: () => Promise<unknown>;
+  resetSearch: () => void;
+  hasHydratedSearch: boolean;
 };
 
 type SearchRequestInputs = {
@@ -164,6 +166,34 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   const [activeSearchRequest, setActiveSearchRequest] = useState<TextUnitSearchRequest | null>(
     null,
   );
+  const setActiveSearchRequestIfChanged = useCallback((next: TextUnitSearchRequest | null) => {
+    setActiveSearchRequest((current) => {
+      if (current === next) {
+        return current;
+      }
+      if (current === null || next === null) {
+        return current === next ? current : next;
+      }
+      return serializeSearchRequest(current) === serializeSearchRequest(next) ? current : next;
+    });
+  }, []);
+  const updateActiveSearchRequest = useCallback(
+    (
+      updater: (current: TextUnitSearchRequest | null) => TextUnitSearchRequest | null,
+    ): void => {
+      setActiveSearchRequest((current) => {
+        const next = updater(current);
+        if (current === next) {
+          return current;
+        }
+        if (current === null || next === null) {
+          return current === next ? current : next;
+        }
+        return serializeSearchRequest(current) === serializeSearchRequest(next) ? current : next;
+      });
+    },
+    [],
+  );
   const [searchAttribute, setSearchAttribute] = useState<SearchAttribute>('target');
   const [searchType, setSearchType] = useState<SearchType>('contains');
   const [searchInputValue, setSearchInputValue] = useState('');
@@ -181,7 +211,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   );
   const hydratedSearchSignatureRef = useRef<string | null>(null);
   const lastHydratedRequestRef = useRef<TextUnitSearchRequest | null>(null);
-  const [hasHydratedSearch, setHasHydratedSearch] = useState(false);
+  const [hasHydratedSearch, setHasHydratedSearch] = useState(initialSearchRequest == null);
 
   const {
     data: repositories,
@@ -289,21 +319,27 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
         translationCreatedAfter: initialSearchRequest.tmTextUnitVariantCreatedAfter ?? null,
       });
       if (normalizedRequest) {
-        setActiveSearchRequest(normalizedRequest);
+        setActiveSearchRequestIfChanged(normalizedRequest);
         lastAppliedNonTextSignatureRef.current = serializeSearchRequest({
           ...normalizedRequest,
           searchText: '',
         });
       } else {
-        setActiveSearchRequest(null);
+        setActiveSearchRequestIfChanged(null);
       }
     } else {
-      setActiveSearchRequest(null);
+      setActiveSearchRequestIfChanged(null);
     }
     hydratedSearchSignatureRef.current = initialSearchSignature;
     lastHydratedRequestRef.current = initialSearchRequest;
     setHasHydratedSearch(true);
-  }, [initialSearchRequest, initialSearchSignature, setLocaleSelection, setRepositorySelection]);
+  }, [
+    initialSearchRequest,
+    initialSearchSignature,
+    setActiveSearchRequestIfChanged,
+    setLocaleSelection,
+    setRepositorySelection,
+  ]);
 
   useEffect(() => {
     if (hasHydratedSearch || localeOptions.length) {
@@ -314,6 +350,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
 
   const canSearch = selectedRepositoryIds.length > 0 && selectedLocaleTags.length > 0;
   const debouncedSearchInput = useDebouncedValue(searchInputValue, 350);
+  const trimmedSearchInput = searchInputValue.trim();
+  const trimmedDebouncedSearchInput = debouncedSearchInput.trim();
   const searchLimit = clampWorksetSize(worksetSize);
 
   const buildPendingSearchRequest = useCallback(
@@ -354,13 +392,13 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   );
 
   const pendingSearchRequest = useMemo(
-    () => buildPendingSearchRequest(searchInputValue.trim()),
-    [buildPendingSearchRequest, searchInputValue],
+    () => buildPendingSearchRequest(trimmedSearchInput),
+    [buildPendingSearchRequest, trimmedSearchInput],
   );
 
   const pendingSearchRequestDebounced = useMemo(
-    () => buildPendingSearchRequest(debouncedSearchInput.trim()),
-    [buildPendingSearchRequest, debouncedSearchInput],
+    () => buildPendingSearchRequest(trimmedDebouncedSearchInput),
+    [buildPendingSearchRequest, trimmedDebouncedSearchInput],
   );
 
   const nonTextDraftSignature = useMemo(() => {
@@ -374,6 +412,30 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   const lastSuccessfulSearchDataRef = useRef<InfiniteData<ApiTextUnit[], number> | undefined>(
     undefined,
   );
+
+  const resetSearch = useCallback(() => {
+    const preferredWorkset = loadPreferredWorksetSize() ?? WORKSET_SIZE_DEFAULT;
+    const nextWorksetSize = clampWorksetSize(preferredWorkset);
+
+    setRepositorySelection([], { markTouched: false });
+    setLocaleSelection([], { markTouched: false });
+    setSearchAttribute('target');
+    setSearchType('contains');
+    setSearchInputValue('');
+    setStatusFilter('ALL');
+    setIncludeUsed(true);
+    setIncludeUnused(false);
+    setIncludeTranslate(true);
+    setIncludeDoNotTranslate(true);
+    setCreatedBefore(null);
+    setCreatedAfter(null);
+    setTranslationCreatedBefore(null);
+    setTranslationCreatedAfter(null);
+    setWorksetSize(nextWorksetSize);
+    setActiveSearchRequestIfChanged(null);
+    lastAppliedNonTextSignatureRef.current = null;
+    lastSuccessfulSearchDataRef.current = undefined;
+  }, [setActiveSearchRequestIfChanged, setLocaleSelection, setRepositorySelection]);
 
   // Auto-apply non-text changes immediately.
   useEffect(() => {
@@ -389,16 +451,26 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     }
 
     lastAppliedNonTextSignatureRef.current = nonTextDraftSignature;
-    setActiveSearchRequest(pendingSearchRequest);
-  }, [canSearch, nonTextDraftSignature, pendingSearchRequest]);
+    setActiveSearchRequestIfChanged(pendingSearchRequest);
+  }, [canSearch, nonTextDraftSignature, pendingSearchRequest, setActiveSearchRequestIfChanged]);
 
   // Auto-apply text changes with debounce.
   useEffect(() => {
     if (!pendingSearchRequestDebounced || !canSearch) {
       return;
     }
-    setActiveSearchRequest(pendingSearchRequestDebounced);
-  }, [canSearch, pendingSearchRequestDebounced]);
+    // Ignore stale debounced values during hydration/transitions.
+    if (trimmedDebouncedSearchInput !== trimmedSearchInput) {
+      return;
+    }
+    setActiveSearchRequestIfChanged(pendingSearchRequestDebounced);
+  }, [
+    canSearch,
+    pendingSearchRequestDebounced,
+    setActiveSearchRequestIfChanged,
+    trimmedDebouncedSearchInput,
+    trimmedSearchInput,
+  ]);
 
   // Reset search state if the scope is cleared.
   useEffect(() => {
@@ -407,8 +479,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     }
     lastAppliedNonTextSignatureRef.current = null;
     lastSuccessfulSearchDataRef.current = undefined;
-    setActiveSearchRequest((current) => (current === null ? current : null));
-  }, [canSearch]);
+    updateActiveSearchRequest((current) => (current === null ? current : null));
+  }, [canSearch, updateActiveSearchRequest]);
 
   // Treat result size as a view setting (limit); changing it resets pagination to the first page.
   useEffect(() => {
@@ -419,8 +491,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     if (appliedLimit === searchLimit) {
       return;
     }
-    setActiveSearchRequest({ ...activeSearchRequest, limit: searchLimit, offset: 0 });
-  }, [activeSearchRequest, searchLimit]);
+    setActiveSearchRequestIfChanged({ ...activeSearchRequest, limit: searchLimit, offset: 0 });
+  }, [activeSearchRequest, searchLimit, setActiveSearchRequestIfChanged]);
 
   const searchQuery = useInfiniteQuery<
     ApiTextUnit[],
@@ -478,8 +550,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     if (!canSearch || !pendingSearchRequest) {
       return;
     }
-    setActiveSearchRequest(pendingSearchRequest);
-  }, [canSearch, pendingSearchRequest]);
+    setActiveSearchRequestIfChanged(pendingSearchRequest);
+  }, [canSearch, pendingSearchRequest, setActiveSearchRequestIfChanged]);
 
   const onChangeSearchInput = useCallback((value: string) => {
     setSearchInputValue(value);
@@ -501,12 +573,12 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
       }
       setWorksetSize(next);
       if (activeSearchRequest) {
-        setActiveSearchRequest((previous) =>
+        updateActiveSearchRequest((previous) =>
           previous ? { ...previous, limit: next, offset: previous.offset ?? 0 } : previous,
         );
       }
     },
-    [activeSearchRequest, worksetSize],
+    [activeSearchRequest, updateActiveSearchRequest, worksetSize],
   );
 
   const repositoryErrorMessage = isRepositoriesError
@@ -564,5 +636,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     rows,
     hasMoreResults,
     refetchSearch: () => searchQuery.refetch(),
+    resetSearch,
+    hasHydratedSearch,
   };
 }

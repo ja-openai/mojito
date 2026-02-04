@@ -21,6 +21,7 @@ import { VirtualList } from '../../components/virtual/VirtualList';
 import { isPrimaryActionShortcut } from '../../utils/keyboardShortcuts';
 import { isRtlLocale } from '../../utils/localeDirection';
 import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
+import { saveWorkbenchSessionSearch, WORKBENCH_SESSION_QUERY_KEY } from './workbench-session-state';
 import type { WorkbenchDiffModalData, WorkbenchRow } from './workbench-types';
 
 type WorkbenchBodyProps = {
@@ -188,7 +189,10 @@ export function WorkbenchBody({
         offset: 0,
       };
 
-      void navigate('/workbench', { state: { workbenchSearch: request } });
+      const sessionKey = saveWorkbenchSessionSearch(request);
+      const params = new URLSearchParams();
+      params.set(WORKBENCH_SESSION_QUERY_KEY, sessionKey);
+      void navigate(`/workbench?${params.toString()}`);
     },
     [getRepositoryScope, navigate],
   );
@@ -212,7 +216,10 @@ export function WorkbenchBody({
         offset: 0,
       };
 
-      void navigate('/workbench', { state: { workbenchSearch: request } });
+      const sessionKey = saveWorkbenchSessionSearch(request);
+      const params = new URLSearchParams();
+      params.set(WORKBENCH_SESSION_QUERY_KEY, sessionKey);
+      void navigate(`/workbench?${params.toString()}`);
     },
     [getRepositoryScope, navigate],
   );

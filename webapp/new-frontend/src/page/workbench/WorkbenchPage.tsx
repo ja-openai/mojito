@@ -8,7 +8,12 @@ import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
 import { useWorkbenchCollections } from './useWorkbenchCollections';
 import { useWorkbenchEdits } from './useWorkbenchEdits';
 import { useWorkbenchSearch } from './useWorkbenchSearch';
-import { clampWorksetSize } from './workbench-helpers';
+import { clampWorksetSize, serializeSearchRequest } from './workbench-helpers';
+import {
+  loadWorkbenchSessionSearch,
+  saveWorkbenchSessionSearch,
+  WORKBENCH_SESSION_QUERY_KEY,
+} from './workbench-session-state';
 import { loadWorkbenchShare } from './workbench-share';
 import type { WorkbenchCollection, WorkbenchShareOverrides } from './workbench-types';
 import { WorkbenchPageView } from './WorkbenchPageView';
@@ -40,16 +45,18 @@ export function WorkbenchPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const shareId = searchParams.get('shareId');
+  const wsId = searchParams.get(WORKBENCH_SESSION_QUERY_KEY);
   const deepLinkTmId = searchParams.get('tmTextUnitId');
   const deepLinkLocale = searchParams.get('locale');
   const deepLinkRepo = searchParams.get('repo');
   const [shareIdToHydrate, setShareIdToHydrate] = useState<string | null>(shareId);
-  const shareSearchParamsRef = useRef<URLSearchParams | null>(
-    shareId ? new URLSearchParams(searchParams) : null,
-  );
   const [hydratedSearchRequest, setHydratedSearchRequest] = useState<TextUnitSearchRequest | null>(
     null,
   );
+  const hydratedWsIdRef = useRef<string | null>(null);
+  const persistedWsIdRef = useRef<string | null>(wsId);
+  const pendingWsHydrationIdRef = useRef<string | null>(wsId);
+  const lastPersistedSearchSignatureRef = useRef<string | null>(null);
   const [hydrationModal, setHydrationModal] = useState<{ title: string; body: string } | null>(
     null,
   );
@@ -68,14 +75,13 @@ export function WorkbenchPage() {
   const collections = useWorkbenchCollections();
 
   const clearShareIdFromUrl = useCallback(() => {
-    const nextParams = new URLSearchParams(shareSearchParamsRef.current ?? undefined);
+    const nextParams = new URLSearchParams(searchParams);
     if (!nextParams.has('shareId')) {
       return;
     }
     nextParams.delete('shareId');
     setSearchParams(nextParams, { replace: true });
-    shareSearchParamsRef.current = nextParams;
-  }, [setSearchParams]);
+  }, [searchParams, setSearchParams]);
 
   const clearWorkbenchSearchState = useCallback(() => {
     if (!isWorkbenchLocationState(location.state)) {
@@ -94,8 +100,26 @@ export function WorkbenchPage() {
       return;
     }
     setShareIdToHydrate(shareId);
-    shareSearchParamsRef.current = new URLSearchParams(searchParams);
-  }, [shareId, searchParams]);
+  }, [shareId]);
+
+  useEffect(() => {
+    if (shareId || deepLinkTmId || stateSearchRequest || !wsId) {
+      return;
+    }
+    pendingWsHydrationIdRef.current = wsId;
+    if (hydratedWsIdRef.current === wsId) {
+      return;
+    }
+    hydratedWsIdRef.current = wsId;
+    const savedSearch = loadWorkbenchSessionSearch(wsId);
+    if (!savedSearch) {
+      pendingWsHydrationIdRef.current = null;
+      return;
+    }
+    setShareIdToHydrate(null);
+    setHydrationModal(null);
+    setHydratedSearchRequest(savedSearch);
+  }, [deepLinkTmId, shareId, stateSearchRequest, wsId]);
 
   // Support direct link via query params (works with cmd/shift click).
   useEffect(() => {
@@ -166,13 +190,69 @@ export function WorkbenchPage() {
     };
   }, [clearShareIdFromUrl, shareIdToHydrate]);
 
+  useEffect(() => {
+    if (!search.hasHydratedSearch) {
+      return;
+    }
+    const currentWsId = searchParams.get(WORKBENCH_SESSION_QUERY_KEY);
+    const pendingWsId = pendingWsHydrationIdRef.current;
+
+    if (pendingWsId) {
+      const hydratedSignature = hydratedSearchRequest
+        ? serializeSearchRequest(hydratedSearchRequest)
+        : null;
+      const activeSignature = search.activeSearchRequest
+        ? serializeSearchRequest(search.activeSearchRequest)
+        : null;
+      const isHydratedTargetReady =
+        pendingWsId === currentWsId &&
+        hydratedSignature !== null &&
+        activeSignature === hydratedSignature;
+      if (!isHydratedTargetReady) {
+        return;
+      }
+      pendingWsHydrationIdRef.current = null;
+      persistedWsIdRef.current = pendingWsId;
+    }
+
+    if (!search.activeSearchRequest) {
+      lastPersistedSearchSignatureRef.current = null;
+      persistedWsIdRef.current = currentWsId;
+      return;
+    }
+
+    const signature = serializeSearchRequest(search.activeSearchRequest);
+    const nextWsId = saveWorkbenchSessionSearch(
+      search.activeSearchRequest,
+      persistedWsIdRef.current ?? currentWsId,
+    );
+    persistedWsIdRef.current = nextWsId;
+
+    if (lastPersistedSearchSignatureRef.current === signature && currentWsId === nextWsId) {
+      return;
+    }
+    lastPersistedSearchSignatureRef.current = signature;
+    if (currentWsId === nextWsId) {
+      return;
+    }
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set(WORKBENCH_SESSION_QUERY_KEY, nextWsId);
+    setSearchParams(nextParams, { replace: true });
+  }, [
+    hydratedSearchRequest,
+    search.activeSearchRequest,
+    search.hasHydratedSearch,
+    searchParams,
+    setSearchParams,
+  ]);
+
   const edits = useWorkbenchEdits({
     apiRows: search.rows,
     canSearch: search.canSearch,
     activeSearchRequest: search.activeSearchRequest,
   });
   const { clearWorksetEdits } = edits;
-  const { refetchSearch } = search;
+  const { refetchSearch, resetSearch } = search;
 
   const activeCollectionIds = useMemo(() => {
     const entries = collections.activeCollection?.entries ?? [];
@@ -385,6 +465,28 @@ export function WorkbenchPage() {
     void refetchSearch();
   }, [clearWorksetEdits, refetchSearch]);
 
+  const handleResetWorkbench = useCallback(() => {
+    clearWorksetEdits();
+    setHydrationModal(null);
+    setHydratedSearchRequest(null);
+    setShareIdToHydrate(null);
+    hydratedWsIdRef.current = null;
+    persistedWsIdRef.current = null;
+    pendingWsHydrationIdRef.current = null;
+    lastPersistedSearchSignatureRef.current = null;
+    resetSearch();
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('shareId');
+    nextParams.delete('tmTextUnitId');
+    nextParams.delete('locale');
+    nextParams.delete('repo');
+    nextParams.delete(WORKBENCH_SESSION_QUERY_KEY);
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [clearWorksetEdits, resetSearch, searchParams, setSearchParams]);
+
   const headerDisabled = edits.editingRowId !== null;
   const hasSearched = search.activeSearchRequest !== null;
   return (
@@ -425,6 +527,7 @@ export function WorkbenchPage() {
         searchInputValue={search.searchInputValue}
         onChangeSearchInput={search.onChangeSearchInput}
         onSubmitSearch={search.onSubmitSearch}
+        onResetWorkbench={handleResetWorkbench}
         onChangeSearchAttribute={search.onChangeSearchAttribute}
         onChangeSearchType={search.onChangeSearchType}
         onRefreshWorkset={handleRefreshWorkset}

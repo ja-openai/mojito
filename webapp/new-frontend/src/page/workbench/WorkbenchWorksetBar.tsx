@@ -13,6 +13,7 @@ type WorkbenchWorksetBarProps = {
   onChangeWorksetSize: (value: number) => void;
   editedCount: number;
   onRefreshWorkset: () => void;
+  onResetWorkbench: () => void;
   onOpenShareModal: () => void;
   collections: WorkbenchCollection[];
   activeCollectionId: string | null;
@@ -41,6 +42,7 @@ export function WorkbenchWorksetBar({
   onChangeWorksetSize,
   editedCount,
   onRefreshWorkset,
+  onResetWorkbench,
   onOpenShareModal,
   collections,
   activeCollectionId,
@@ -101,6 +103,19 @@ export function WorkbenchWorksetBar({
         disabled={!canRefresh}
       >
         Refresh
+      </button>,
+    );
+    parts.push(
+      <button
+        key="reset"
+        type="button"
+        className="workbench-worksetbar__button"
+        onClick={() => {
+          onResetWorkbench();
+        }}
+        disabled={disabled}
+      >
+        Reset
       </button>,
     );
   }

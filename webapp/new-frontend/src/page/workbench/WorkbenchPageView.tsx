@@ -57,6 +57,7 @@ type Props = {
   searchInputValue: string;
   onChangeSearchInput: (value: string) => void;
   onSubmitSearch: () => void;
+  onResetWorkbench: () => void;
   onChangeSearchAttribute: (value: SearchAttribute) => void;
   onChangeSearchType: (value: SearchType) => void;
   onRefreshWorkset: () => void;
@@ -179,6 +180,7 @@ export function WorkbenchPageView({
   searchInputValue,
   onChangeSearchInput,
   onSubmitSearch,
+  onResetWorkbench,
   onChangeSearchAttribute,
   onChangeSearchType,
   onRefreshWorkset,
@@ -293,6 +295,7 @@ export function WorkbenchPageView({
         onChangeWorksetSize={onChangeWorksetSize}
         editedCount={editedCount}
         onRefreshWorkset={onRefreshWorkset}
+        onResetWorkbench={onResetWorkbench}
         collections={collections}
         activeCollectionId={activeCollectionId}
         activeCollectionName={activeCollectionName}
