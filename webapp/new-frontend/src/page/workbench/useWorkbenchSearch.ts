@@ -178,9 +178,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     });
   }, []);
   const updateActiveSearchRequest = useCallback(
-    (
-      updater: (current: TextUnitSearchRequest | null) => TextUnitSearchRequest | null,
-    ): void => {
+    (updater: (current: TextUnitSearchRequest | null) => TextUnitSearchRequest | null): void => {
       setActiveSearchRequest((current) => {
         const next = updater(current);
         if (current === next) {

@@ -127,13 +127,11 @@ export type ApiGitBlameWithUsage = {
   isVirtual?: boolean;
   usages?: string[] | null;
   gitBlame?: ApiGitBlame | null;
-  screenshots?:
-    | Array<{
-        id?: number | null;
-        name?: string | null;
-        src?: string | null;
-      }>
-    | null;
+  screenshots?: Array<{
+    id?: number | null;
+    name?: string | null;
+    src?: string | null;
+  }> | null;
 };
 
 type SearchTextUnitsHybridResponse = {
