@@ -62,6 +62,7 @@ export function MultiSelectChip<T extends string | number>({
 }: MultiSelectChipProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const filterInputRef = useRef<HTMLInputElement | null>(null);
   const [filterQuery, setFilterQuery] = useState('');
 
   useEffect(() => {
@@ -83,6 +84,21 @@ export function MultiSelectChip<T extends string | number>({
     window.addEventListener('pointerdown', handlePointerDown);
     return () => window.removeEventListener('pointerdown', handlePointerDown);
   }, [disabled, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !options.length) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      const input = filterInputRef.current;
+      if (!input) {
+        return;
+      }
+      input.focus();
+      input.select();
+    });
+  }, [isOpen, options.length]);
 
   const selectedSet = new Set(selectedValues);
 
@@ -175,6 +191,7 @@ export function MultiSelectChip<T extends string | number>({
           {options.length ? (
             <>
               <input
+                ref={filterInputRef}
                 type="search"
                 value={filterQuery}
                 onChange={(event) => setFilterQuery(event.target.value)}
