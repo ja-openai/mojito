@@ -15,6 +15,7 @@ export type WorkbenchRow = {
   tmTextUnitId: number;
   tmTextUnitVariantId: number | null;
   tmTextUnitCurrentVariantId: number | null;
+  isUsed: boolean;
   canEdit: boolean;
 };
 

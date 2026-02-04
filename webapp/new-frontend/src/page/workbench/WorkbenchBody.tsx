@@ -355,6 +355,7 @@ export function WorkbenchBody({
               const isStatusSaving = statusSavingRowIds.has(row.id);
               const isEdited = editedRowIds.has(row.id);
               const isStatusOpen = openStatusRowId === row.id;
+              const isUnused = !row.isUsed;
               const hasActiveCollection = Boolean(activeCollectionName);
               const isInCollection = hasActiveCollection
                 ? activeCollectionIds.has(row.tmTextUnitId)
@@ -519,29 +520,36 @@ export function WorkbenchBody({
                       <LocalePill bcp47Tag={row.locale} labelMode="tag" />
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--status">
-                      {row.translation === null ? (
-                        <span className="workbench-page__status-empty">—</span>
-                      ) : (
-                        <PillDropdown
-                          value={row.status}
-                          options={statusOptions.map((status) => ({
-                            value: status,
-                            label: status,
-                          }))}
-                          onChange={(next) => onChangeStatus(row.id, next)}
-                          disabled={Boolean(editingRowId) || isStatusSaving || !row.canEdit}
-                          aria-label="Translation status"
-                          isOpen={isStatusOpen}
-                          onOpenChange={(nextOpen) => {
-                            setOpenStatusRowId((current) => {
-                              if (nextOpen) {
-                                return row.id;
-                              }
-                              return current === row.id ? null : current;
-                            });
-                          }}
-                        />
-                      )}
+                      <div className="workbench-page__status-stack">
+                        {row.translation === null ? (
+                          <span className="workbench-page__status-empty">—</span>
+                        ) : (
+                          <PillDropdown
+                            value={row.status}
+                            options={statusOptions.map((status) => ({
+                              value: status,
+                              label: status,
+                            }))}
+                            onChange={(next) => onChangeStatus(row.id, next)}
+                            disabled={Boolean(editingRowId) || isStatusSaving || !row.canEdit}
+                            aria-label="Translation status"
+                            isOpen={isStatusOpen}
+                            onOpenChange={(nextOpen) => {
+                              setOpenStatusRowId((current) => {
+                                if (nextOpen) {
+                                  return row.id;
+                                }
+                                return current === row.id ? null : current;
+                              });
+                            }}
+                          />
+                        )}
+                        {isUnused ? (
+                          <span className="workbench-page__unused-pill" aria-label="Unused text unit">
+                            Unused
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </>
                 ),

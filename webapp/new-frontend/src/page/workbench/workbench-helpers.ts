@@ -81,6 +81,7 @@ export function mapApiTextUnitToRow(
     tmTextUnitId: textUnit.tmTextUnitId,
     tmTextUnitVariantId: textUnit.tmTextUnitVariantId ?? null,
     tmTextUnitCurrentVariantId: textUnit.tmTextUnitCurrentVariantId ?? null,
+    isUsed: textUnit.used,
     canEdit: canEditLocale ? Boolean(canEditLocale(textUnit.targetLocale)) : true,
   };
 }

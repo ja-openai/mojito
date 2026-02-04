@@ -644,10 +644,24 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  width: 100%;
-  height: 32px;
+  min-height: 1.5rem;
   color: var(--color-text-muted);
-  padding-right: var(--space-2);
+}
+
+.workbench-page__unused-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.5rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  background: color-mix(in srgb, var(--color-surface-muted) 88%, transparent);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: 1;
 }
 
 .workbench-page__table-header-cell--locale {
@@ -1050,6 +1064,13 @@
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
+}
+
+.workbench-page__status-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3);
 }
 
 .workbench-page__cell--translation[data-editing='true'] .workbench-page__translation-actions {

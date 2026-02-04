@@ -28,6 +28,7 @@ export type ApiTextUnit = {
   targetComment?: string | null;
   assetPath?: string | null;
   assetTextUnitUsages?: string | null;
+  used: boolean;
   repositoryName?: string | null;
   status?: ApiTextUnitStatus | null;
   includedInLocalizedFile?: boolean;
