@@ -7,8 +7,14 @@ import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import {
+  type AiReviewMessage,
+  type AiReviewSuggestion,
+  requestAiReview,
+} from '../../api/ai-review';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
 import { REVIEW_PROJECT_TYPE_LABELS } from '../../api/review-projects';
+import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import {
@@ -56,6 +62,7 @@ type DecisionStateFilter = DecisionStateChoice | 'all';
 type StatusFilter = 'all' | 'APPROVED' | 'REVIEW_NEEDED' | 'TRANSLATION_NEEDED' | 'REJECTED';
 
 const SAVING_INDICATOR_MIN_MS = 600;
+const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
 
 function mapChoiceToApi(choice: StatusChoice): {
   status: string;
@@ -773,6 +780,10 @@ function DetailPane({
   const [showBaseline, setShowBaseline] = useState(false);
   const [showStaleDecision, setShowStaleDecision] = useState(false);
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
+  const [isAiCollapsed, setIsAiCollapsed] = useState(false);
+  const [aiMessages, setAiMessages] = useState<AiChatReviewMessage[]>([]);
+  const [aiInput, setAiInput] = useState('');
+  const [isAiResponding, setIsAiResponding] = useState(false);
   const heroRef = useRef<HTMLDivElement | null>(null);
   const translationRef = useRef<HTMLTextAreaElement | null>(null);
   const commentRef = useRef<HTMLTextAreaElement | null>(null);
@@ -789,6 +800,16 @@ function DetailPane({
   const baselineStatusKey = getStatusKey(baselineVariant);
   const snapshot = useMemo(() => buildSnapshot(textUnit), [textUnit]);
   const snapshotKey = useMemo(() => buildSnapshotKey(textUnit, snapshot), [textUnit, snapshot]);
+  const aiContextKey = useMemo(() => {
+    const variantId =
+      textUnit.currentTmTextUnitVariant?.id ?? textUnit.baselineTmTextUnitVariant?.id ?? 'none';
+    return `${textUnit.id}:${localeTag}:${variantId}`;
+  }, [
+    localeTag,
+    textUnit.baselineTmTextUnitVariant?.id,
+    textUnit.currentTmTextUnitVariant?.id,
+    textUnit.id,
+  ]);
 
   const [draftTarget, setDraftTarget] = useState(snapshot.target);
   const [draftStatusChoice, setDraftStatusChoice] = useState<StatusChoice>(snapshot.statusChoice);
@@ -817,6 +838,71 @@ function DetailPane({
     didAutoAcceptRef.current = false;
   }, [snapshot, snapshotKey]);
 
+  useEffect(() => {
+    if (!localeTag) {
+      setAiMessages([]);
+      setAiInput('');
+      setIsAiResponding(false);
+      return;
+    }
+
+    let cancelled = false;
+    setAiMessages([]);
+    setAiInput('');
+    setIsAiResponding(true);
+    setIsAiCollapsed(false);
+
+    const initialMessage: AiReviewMessage = {
+      role: 'user',
+      content: DEFAULT_AI_REVIEW_PROMPT,
+    };
+
+    void requestAiReview({
+      source: source ?? '',
+      target: snapshot.target,
+      localeTag,
+      messages: [initialMessage],
+    })
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+
+        setAiMessages([
+          {
+            id: `assistant-${Date.now()}`,
+            sender: 'assistant',
+            content: response.message.content,
+            suggestions: response.suggestions,
+            review: response.review,
+          },
+        ]);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : 'Unable to fetch AI suggestions.';
+        setAiMessages([
+          {
+            id: `assistant-error-${Date.now()}`,
+            sender: 'assistant',
+            content: message,
+          },
+        ]);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsAiResponding(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [aiContextKey, localeTag, snapshot.target, source]);
+
   const draftStatusApi = mapChoiceToApi(draftStatusChoice);
   const snapshotStatusApi = mapChoiceToApi(snapshot.statusChoice);
   const draftCommentNormalized = normalizeOptional(draftComment);
@@ -835,11 +921,12 @@ function DetailPane({
     return () => onDirtyChange(false);
   }, [isDirty, onDirtyChange]);
 
-  const requestSaveDecision = useCallback(() => {
+  const requestSaveDecision = useCallback((targetOverride?: string) => {
+    const nextTarget = targetOverride ?? draftTarget;
     mutations.onRequestSaveDecision({
       textUnitId: textUnit.id,
       tmTextUnitId: workbenchTextUnitId,
-      target: draftTarget,
+      target: nextTarget,
       comment: draftCommentNormalized,
       status: draftStatusApi.status,
       includedInLocalizedFile: draftStatusApi.includedInLocalizedFile,
@@ -901,6 +988,78 @@ function DetailPane({
   const handleSave = useCallback(() => {
     requestSaveDecision();
   }, [requestSaveDecision]);
+
+  const handleSubmitAi = useCallback(() => {
+    if (isAiResponding || !localeTag) {
+      return;
+    }
+
+    const trimmed = aiInput.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const userMessage: AiChatReviewMessage = {
+      id: `user-${Date.now()}`,
+      sender: 'user',
+      content: trimmed,
+    };
+
+    const baseMessages = [...aiMessages];
+    setAiMessages((previous) => [...previous, userMessage]);
+    setAiInput('');
+    setIsAiResponding(true);
+
+    void (async () => {
+      try {
+        const conversation: AiReviewMessage[] = [...baseMessages, userMessage].map((message) => ({
+          role: message.sender,
+          content: message.content,
+        }));
+
+        const response = await requestAiReview({
+          source: source ?? '',
+          target: draftTarget,
+          localeTag,
+          messages: conversation,
+        });
+
+        const assistantMessage: AiChatReviewMessage = {
+          id: `assistant-${Date.now()}`,
+          sender: 'assistant',
+          content: response.message.content,
+          suggestions: response.suggestions,
+          review: response.review,
+        };
+
+        setAiMessages((previous) => [...previous, assistantMessage]);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unable to fetch AI suggestions.';
+        setAiMessages((previous) => [
+          ...previous,
+          {
+            id: `assistant-error-${Date.now()}`,
+            sender: 'assistant',
+            content: message,
+          },
+        ]);
+      } finally {
+        setIsAiResponding(false);
+      }
+    })();
+  }, [aiInput, aiMessages, draftTarget, isAiResponding, localeTag, source]);
+
+  const handleUseAiSuggestion = useCallback((suggestion: AiReviewSuggestion) => {
+    setDraftTarget(suggestion.content);
+  }, []);
+
+  const handleUseAiSuggestionAndSave = useCallback(
+    (suggestion: AiReviewSuggestion) => {
+      setDraftTarget(suggestion.content);
+      requestSaveDecision(suggestion.content);
+    },
+    [requestSaveDecision],
+  );
 
   const getFocusedTextarea = useCallback(() => {
     const active = document.activeElement;
@@ -1456,6 +1615,32 @@ function DetailPane({
                 Save
               </button>
             </div>
+          </div>
+
+          <div className="review-project-detail__field review-project-detail__field--ai-chat">
+            <div className="review-project-detail__label-row">
+              <div className="review-project-detail__label">AI Chat Review</div>
+              <button
+                type="button"
+                className="review-project-detail__baseline-toggle review-project-detail__label-actions--fade"
+                onClick={() => setIsAiCollapsed((current) => !current)}
+              >
+                {isAiCollapsed ? 'Show' : 'Hide'}
+              </button>
+            </div>
+            {!isAiCollapsed ? (
+              <AiChatReview
+                className="review-project-detail__ai-chat"
+                messages={aiMessages}
+                input={aiInput}
+                onChangeInput={setAiInput}
+                onSubmit={handleSubmitAi}
+                onUseSuggestion={handleUseAiSuggestion}
+                onUseSuggestionAndSave={handleUseAiSuggestionAndSave}
+                isResponding={isAiResponding}
+                disableUseAndSave={isSavingGlobal}
+              />
+            ) : null}
           </div>
 
           <div className="review-project-detail__field">

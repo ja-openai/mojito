@@ -1,9 +1,10 @@
 import '../review-project/review-project-page.css';
 import './text-unit-detail-page.css';
 
-import { type FormEvent, type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode } from 'react';
 
-import type { AiReviewReview, AiReviewSuggestion } from '../../api/ai-review';
+import type { AiReviewSuggestion } from '../../api/ai-review';
+import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Pill } from '../../components/Pill';
@@ -36,13 +37,7 @@ export type TextUnitDetailHistoryRow = {
   comments: TextUnitDetailHistoryComment[];
 };
 
-export type TextUnitDetailAiMessage = {
-  id: string;
-  sender: 'user' | 'assistant';
-  content: string;
-  suggestions?: AiReviewSuggestion[];
-  review?: AiReviewReview;
-};
+export type TextUnitDetailAiMessage = AiChatReviewMessage;
 
 type TextUnitDetailPageViewProps = {
   tmTextUnitId: number;
@@ -132,26 +127,6 @@ export function TextUnitDetailPageView({
   onConfirmValidationSave,
   onDismissValidationDialog,
 }: TextUnitDetailPageViewProps) {
-  let firstReviewMessage: TextUnitDetailAiMessage | null = null;
-  for (const candidate of aiMessages) {
-    if (candidate.sender === 'assistant' && candidate.review) {
-      firstReviewMessage = candidate;
-      break;
-    }
-  }
-  const aiThreadRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (isAiCollapsed) {
-      return;
-    }
-    const thread = aiThreadRef.current;
-    if (!thread) {
-      return;
-    }
-    thread.scrollTo({ top: thread.scrollHeight });
-  }, [aiMessages, isAiCollapsed, isAiResponding]);
-
   return (
     <div className="review-project-page text-unit-detail-page">
       <header className="review-project-page__header">
@@ -246,111 +221,16 @@ export function TextUnitDetailPageView({
             <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--ai-inline">
               <SectionHeader title="AI Chat Review" expanded={!isAiCollapsed} onToggle={onToggleAiCollapsed} />
               {!isAiCollapsed ? (
-                <>
-                  <div className="text-unit-detail-page__ai-thread" ref={aiThreadRef}>
-                    {aiMessages.map((message) => {
-                      const review = message.review;
-                      const showReview =
-                        message.id === firstReviewMessage?.id &&
-                        message.sender === 'assistant' &&
-                        Boolean(review);
-                      const reviewBadge = review ? getReviewBadge(review.score) : null;
-                      const reviewSummary = review?.explanation?.trim() || message.content;
-                      const suggestions = message.suggestions ?? [];
-
-                      return (
-                        <div
-                          key={message.id}
-                          className={`text-unit-detail-page__ai-message text-unit-detail-page__ai-message--${message.sender}`}
-                        >
-                          {showReview && review ? (
-                            <div className="text-unit-detail-page__ai-review">
-                              {reviewBadge ? (
-                                <span
-                                  className={`text-unit-detail-page__ai-review-badge ${reviewBadge.className}`}
-                                >
-                                  {reviewBadge.label}
-                                </span>
-                              ) : null}
-                              <p>{reviewSummary}</p>
-                            </div>
-                          ) : (
-                            <p className="text-unit-detail-page__ai-message-content">{message.content}</p>
-                          )}
-
-                          {suggestions.length > 0 ? (
-                            <div className="text-unit-detail-page__ai-suggestions">
-                              {suggestions.map((suggestion, suggestionIndex) => (
-                                <div
-                                  key={`${message.id}-suggestion-${suggestionIndex}`}
-                                  className="text-unit-detail-page__ai-suggestion"
-                                >
-                                  <div className="text-unit-detail-page__ai-suggestion-main">
-                                    <span className="text-unit-detail-page__ai-suggestion-content">
-                                      {suggestion.content}
-                                    </span>
-                                    {suggestion.explanation ? (
-                                      <span className="text-unit-detail-page__ai-suggestion-explanation">
-                                        {suggestion.explanation}
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                  <div className="text-unit-detail-page__ai-suggestion-actions">
-                                    <button
-                                      type="button"
-                                      className="text-unit-detail-page__button"
-                                      onClick={() => onUseAiSuggestion(suggestion)}
-                                    >
-                                      Use
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="text-unit-detail-page__button text-unit-detail-page__button--primary"
-                                      onClick={() => onUseAiSuggestionAndSave(suggestion)}
-                                      disabled={!editorInfo.canEdit || editorInfo.isSaving}
-                                    >
-                                      Use + Save
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-
-                    {isAiResponding ? (
-                      <div className="text-unit-detail-page__state">
-                        <span className="spinner spinner--md" aria-hidden />
-                        <span>Thinking…</span>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <form
-                    className="text-unit-detail-page__ai-form"
-                    onSubmit={(event: FormEvent<HTMLFormElement>) => {
-                      event.preventDefault();
-                      onSubmitAi();
-                    }}
-                  >
-                    <input
-                      type="text"
-                      value={aiInput}
-                      onChange={(event) => onChangeAiInput(event.target.value)}
-                      placeholder="Ask AI for a suggestion"
-                      disabled={isAiResponding}
-                    />
-                    <button
-                      type="submit"
-                      className="text-unit-detail-page__button text-unit-detail-page__button--primary"
-                      disabled={isAiResponding || aiInput.trim().length === 0}
-                    >
-                      Ask
-                    </button>
-                  </form>
-                </>
+                <AiChatReview
+                  messages={aiMessages}
+                  input={aiInput}
+                  onChangeInput={onChangeAiInput}
+                  onSubmit={onSubmitAi}
+                  onUseSuggestion={onUseAiSuggestion}
+                  onUseSuggestionAndSave={onUseAiSuggestionAndSave}
+                  isResponding={isAiResponding}
+                  disableUseAndSave={!editorInfo.canEdit || editorInfo.isSaving}
+                />
               ) : null}
             </section>
 
@@ -592,61 +472,4 @@ function MetaSection({ title, rows }: { title: string; rows: TextUnitDetailMetaR
       </dl>
     </section>
   );
-}
-
-function getReviewBadge(score: number): { label: string; className: string } {
-  if (score >= 0 && score <= 1) {
-    if (score >= 0.8) {
-      return {
-        label: 'Excellent',
-        className: 'text-unit-detail-page__ai-review-badge--high',
-      };
-    }
-    if (score >= 0.4) {
-      return {
-        label: 'Needs polish',
-        className: 'text-unit-detail-page__ai-review-badge--medium',
-      };
-    }
-    return {
-      label: 'Needs rewrite',
-      className: 'text-unit-detail-page__ai-review-badge--low',
-    };
-  }
-
-  if (score >= 0 && score <= 2) {
-    if (score >= 2) {
-      return {
-        label: 'Excellent',
-        className: 'text-unit-detail-page__ai-review-badge--high',
-      };
-    }
-    if (score >= 1) {
-      return {
-        label: 'Needs polish',
-        className: 'text-unit-detail-page__ai-review-badge--medium',
-      };
-    }
-    return {
-      label: 'Needs rewrite',
-      className: 'text-unit-detail-page__ai-review-badge--low',
-    };
-  }
-
-  if (score >= 85) {
-    return {
-      label: 'Excellent',
-      className: 'text-unit-detail-page__ai-review-badge--high',
-    };
-  }
-  if (score >= 60) {
-    return {
-      label: 'Needs polish',
-      className: 'text-unit-detail-page__ai-review-badge--medium',
-    };
-  }
-  return {
-    label: 'Needs rewrite',
-    className: 'text-unit-detail-page__ai-review-badge--low',
-  };
 }

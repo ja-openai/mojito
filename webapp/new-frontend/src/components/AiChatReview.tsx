@@ -1,0 +1,190 @@
+import './ai-chat-review.css';
+
+import { type FormEvent, useEffect, useMemo, useRef } from 'react';
+
+import type { AiReviewReview, AiReviewSuggestion } from '../api/ai-review';
+
+export type AiChatReviewMessage = {
+  id: string;
+  sender: 'user' | 'assistant';
+  content: string;
+  suggestions?: AiReviewSuggestion[];
+  review?: AiReviewReview;
+};
+
+type AiChatReviewProps = {
+  messages: AiChatReviewMessage[];
+  input: string;
+  onChangeInput: (value: string) => void;
+  onSubmit: () => void;
+  onUseSuggestion: (suggestion: AiReviewSuggestion) => void;
+  onUseSuggestionAndSave?: (suggestion: AiReviewSuggestion) => void;
+  isResponding: boolean;
+  disableUseAndSave?: boolean;
+  className?: string;
+};
+
+export function AiChatReview({
+  messages,
+  input,
+  onChangeInput,
+  onSubmit,
+  onUseSuggestion,
+  onUseSuggestionAndSave,
+  isResponding,
+  disableUseAndSave = false,
+  className,
+}: AiChatReviewProps) {
+  const firstReviewMessage = useMemo(() => {
+    for (const message of messages) {
+      if (message.sender === 'assistant' && message.review) {
+        return message;
+      }
+    }
+    return null;
+  }, [messages]);
+
+  const threadRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (!thread) {
+      return;
+    }
+    thread.scrollTo({ top: thread.scrollHeight });
+  }, [isResponding, messages]);
+
+  return (
+    <div className={className}>
+      <div className="ai-chat-review__thread" ref={threadRef}>
+        {messages.map((message) => {
+          const review = message.review;
+          const showReview =
+            message.id === firstReviewMessage?.id && message.sender === 'assistant' && Boolean(review);
+          const reviewBadge = review ? getReviewBadge(review.score) : null;
+          const reviewSummary = review?.explanation?.trim() || message.content;
+          const suggestions = message.suggestions ?? [];
+
+          return (
+            <div
+              key={message.id}
+              className={`ai-chat-review__message ai-chat-review__message--${message.sender}`}
+            >
+              {showReview && review ? (
+                <div className="ai-chat-review__review">
+                  {reviewBadge ? (
+                    <span className={`ai-chat-review__review-badge ${reviewBadge.className}`}>
+                      {reviewBadge.label}
+                    </span>
+                  ) : null}
+                  <p>{reviewSummary}</p>
+                </div>
+              ) : (
+                <p className="ai-chat-review__message-content">{message.content}</p>
+              )}
+
+              {suggestions.length > 0 ? (
+                <div className="ai-chat-review__suggestions">
+                  {suggestions.map((suggestion, suggestionIndex) => (
+                    <div
+                      key={`${message.id}-suggestion-${suggestionIndex}`}
+                      className="ai-chat-review__suggestion"
+                    >
+                      <div className="ai-chat-review__suggestion-main">
+                        <span className="ai-chat-review__suggestion-content">{suggestion.content}</span>
+                        {suggestion.explanation ? (
+                          <span className="ai-chat-review__suggestion-explanation">
+                            {suggestion.explanation}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="ai-chat-review__suggestion-actions">
+                        <button
+                          type="button"
+                          className="ai-chat-review__button"
+                          onClick={() => onUseSuggestion(suggestion)}
+                        >
+                          Use
+                        </button>
+                        {onUseSuggestionAndSave ? (
+                          <button
+                            type="button"
+                            className="ai-chat-review__button ai-chat-review__button--primary"
+                            onClick={() => onUseSuggestionAndSave(suggestion)}
+                            disabled={disableUseAndSave}
+                          >
+                            Use + Save
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+
+        {isResponding ? (
+          <div className="ai-chat-review__state">
+            <span className="spinner spinner--md" aria-hidden />
+            <span>Thinking…</span>
+          </div>
+        ) : null}
+      </div>
+
+      <form
+        className="ai-chat-review__form"
+        onSubmit={(event: FormEvent<HTMLFormElement>) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        <input
+          type="text"
+          value={input}
+          onChange={(event) => onChangeInput(event.target.value)}
+          placeholder="Ask AI for a suggestion"
+          disabled={isResponding}
+        />
+        <button
+          type="submit"
+          className="ai-chat-review__button ai-chat-review__button--primary"
+          disabled={isResponding || input.trim().length === 0}
+        >
+          Ask
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function getReviewBadge(score: number): { label: string; className: string } {
+  if (score >= 0 && score <= 1) {
+    if (score >= 0.8) {
+      return { label: 'Excellent', className: 'ai-chat-review__review-badge--high' };
+    }
+    if (score >= 0.4) {
+      return { label: 'Needs polish', className: 'ai-chat-review__review-badge--medium' };
+    }
+    return { label: 'Needs rewrite', className: 'ai-chat-review__review-badge--low' };
+  }
+
+  if (score >= 0 && score <= 2) {
+    if (score >= 2) {
+      return { label: 'Excellent', className: 'ai-chat-review__review-badge--high' };
+    }
+    if (score >= 1) {
+      return { label: 'Needs polish', className: 'ai-chat-review__review-badge--medium' };
+    }
+    return { label: 'Needs rewrite', className: 'ai-chat-review__review-badge--low' };
+  }
+
+  if (score >= 85) {
+    return { label: 'Excellent', className: 'ai-chat-review__review-badge--high' };
+  }
+  if (score >= 60) {
+    return { label: 'Needs polish', className: 'ai-chat-review__review-badge--medium' };
+  }
+  return { label: 'Needs rewrite', className: 'ai-chat-review__review-badge--low' };
+}
