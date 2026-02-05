@@ -1612,13 +1612,17 @@
   border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
 }
 
-.review-project-detail__input--translation:not(.review-project-detail__input--rejected):hover:not(:focus) {
+.review-project-detail__input--translation:not(.review-project-detail__input--rejected):hover:not(
+    :focus
+  ) {
   border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
   box-shadow: none;
 }
 
 .review-project-detail__input--translation:not(.review-project-detail__input--rejected):focus,
-.review-project-detail__input--translation:not(.review-project-detail__input--rejected):focus-visible {
+.review-project-detail__input--translation:not(
+    .review-project-detail__input--rejected
+  ):focus-visible {
   outline: 0;
   border-color: var(--color-focus-border);
   box-shadow: 0 0 0 0.15em var(--color-focus-outline);

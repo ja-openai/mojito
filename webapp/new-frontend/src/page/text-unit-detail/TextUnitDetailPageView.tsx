@@ -158,7 +158,10 @@ export function TextUnitDetailPageView({
             <span className="review-project-page__header-name">Text unit #{tmTextUnitId}</span>
             <div className="text-unit-detail-page__header-context">
               <Pill>{keyInfo.locale}</Pill>
-              <span className="text-unit-detail-page__header-repository" title={keyInfo.repositoryName}>
+              <span
+                className="text-unit-detail-page__header-repository"
+                title={keyInfo.repositoryName}
+              >
                 {keyInfo.repositoryName}
               </span>
             </div>
@@ -219,7 +222,11 @@ export function TextUnitDetailPageView({
             </div>
 
             <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--ai-inline">
-              <SectionHeader title="AI Chat Review" expanded={!isAiCollapsed} onToggle={onToggleAiCollapsed} />
+              <SectionHeader
+                title="AI Chat Review"
+                expanded={!isAiCollapsed}
+                onToggle={onToggleAiCollapsed}
+              />
               {!isAiCollapsed ? (
                 <AiChatReview
                   messages={aiMessages}
@@ -321,7 +328,9 @@ export function TextUnitDetailPageView({
                                 </>
                               ) : null}
                             </div>
-                            <time className="text-unit-detail-page__timeline-time">{item.date}</time>
+                            <time className="text-unit-detail-page__timeline-time">
+                              {item.date}
+                            </time>
                           </div>
                           <pre className="text-unit-detail-page__timeline-content">
                             {item.translation}

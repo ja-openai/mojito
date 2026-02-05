@@ -921,30 +921,33 @@ function DetailPane({
     return () => onDirtyChange(false);
   }, [isDirty, onDirtyChange]);
 
-  const requestSaveDecision = useCallback((targetOverride?: string) => {
-    const nextTarget = targetOverride ?? draftTarget;
-    mutations.onRequestSaveDecision({
-      textUnitId: textUnit.id,
-      tmTextUnitId: workbenchTextUnitId,
-      target: nextTarget,
-      comment: draftCommentNormalized,
-      status: draftStatusApi.status,
-      includedInLocalizedFile: draftStatusApi.includedInLocalizedFile,
-      decisionState: 'DECIDED',
-      expectedCurrentTmTextUnitVariantId: snapshot.expectedCurrentVariantId,
-      decisionNotes: draftDecisionNotesNormalized,
-    });
-  }, [
-    draftCommentNormalized,
-    draftDecisionNotesNormalized,
-    draftStatusApi.includedInLocalizedFile,
-    draftStatusApi.status,
-    draftTarget,
-    mutations,
-    snapshot.expectedCurrentVariantId,
-    textUnit.id,
-    workbenchTextUnitId,
-  ]);
+  const requestSaveDecision = useCallback(
+    (targetOverride?: string) => {
+      const nextTarget = targetOverride ?? draftTarget;
+      mutations.onRequestSaveDecision({
+        textUnitId: textUnit.id,
+        tmTextUnitId: workbenchTextUnitId,
+        target: nextTarget,
+        comment: draftCommentNormalized,
+        status: draftStatusApi.status,
+        includedInLocalizedFile: draftStatusApi.includedInLocalizedFile,
+        decisionState: 'DECIDED',
+        expectedCurrentTmTextUnitVariantId: snapshot.expectedCurrentVariantId,
+        decisionNotes: draftDecisionNotesNormalized,
+      });
+    },
+    [
+      draftCommentNormalized,
+      draftDecisionNotesNormalized,
+      draftStatusApi.includedInLocalizedFile,
+      draftStatusApi.status,
+      draftTarget,
+      mutations,
+      snapshot.expectedCurrentVariantId,
+      textUnit.id,
+      workbenchTextUnitId,
+    ],
+  );
 
   const requestDecisionState = useCallback(
     (decisionState: DecisionStateChoice) => {

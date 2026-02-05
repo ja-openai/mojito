@@ -58,9 +58,9 @@ export function TextUnitDetailPage() {
 
   const [draftTarget, setDraftTarget] = useState('');
   const [baselineTarget, setBaselineTarget] = useState('');
-  const [draftStatus, setDraftStatus] = useState<'Accepted' | 'To review' | 'To translate' | 'Rejected'>(
-    'To translate',
-  );
+  const [draftStatus, setDraftStatus] = useState<
+    'Accepted' | 'To review' | 'To translate' | 'Rejected'
+  >('To translate');
   const [baselineStatus, setBaselineStatus] = useState<
     'Accepted' | 'To review' | 'To translate' | 'Rejected'
   >('To translate');
@@ -171,7 +171,8 @@ export function TextUnitDetailPage() {
     const status = normalizeEditorStatus(
       formatStatus(activeTextUnit.status, activeTextUnit.includedInLocalizedFile),
     );
-    const variantId = activeTextUnit.tmTextUnitVariantId ?? activeTextUnit.tmTextUnitCurrentVariantId;
+    const variantId =
+      activeTextUnit.tmTextUnitVariantId ?? activeTextUnit.tmTextUnitCurrentVariantId;
     return [
       activeTextUnit.tmTextUnitId,
       localeForEditing ?? '',
@@ -209,7 +210,8 @@ export function TextUnitDetailPage() {
     if (!activeTextUnit || !localeForEditing) {
       return null;
     }
-    const variantId = activeTextUnit.tmTextUnitVariantId ?? activeTextUnit.tmTextUnitCurrentVariantId;
+    const variantId =
+      activeTextUnit.tmTextUnitVariantId ?? activeTextUnit.tmTextUnitCurrentVariantId;
     return `${activeTextUnit.tmTextUnitId}:${localeForEditing}:${variantId ?? 'none'}`;
   }, [activeTextUnit, localeForEditing]);
 
@@ -660,7 +662,9 @@ export function TextUnitDetailPage() {
   );
 }
 
-const normalizeEditorStatus = (value?: string | null): 'Accepted' | 'To review' | 'To translate' | 'Rejected' => {
+const normalizeEditorStatus = (
+  value?: string | null,
+): 'Accepted' | 'To review' | 'To translate' | 'Rejected' => {
   if (
     value === 'Accepted' ||
     value === 'To review' ||

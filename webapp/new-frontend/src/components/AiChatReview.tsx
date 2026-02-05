@@ -60,7 +60,9 @@ export function AiChatReview({
         {messages.map((message) => {
           const review = message.review;
           const showReview =
-            message.id === firstReviewMessage?.id && message.sender === 'assistant' && Boolean(review);
+            message.id === firstReviewMessage?.id &&
+            message.sender === 'assistant' &&
+            Boolean(review);
           const reviewBadge = review ? getReviewBadge(review.score) : null;
           const reviewSummary = review?.explanation?.trim() || message.content;
           const suggestions = message.suggestions ?? [];
@@ -95,7 +97,9 @@ export function AiChatReview({
                       className="ai-chat-review__suggestion"
                     >
                       <div className="ai-chat-review__suggestion-main">
-                        <span className="ai-chat-review__suggestion-content">{suggestion.content}</span>
+                        <span className="ai-chat-review__suggestion-content">
+                          {suggestion.content}
+                        </span>
                         {suggestion.explanation ? (
                           <span className="ai-chat-review__suggestion-explanation">
                             {suggestion.explanation}
