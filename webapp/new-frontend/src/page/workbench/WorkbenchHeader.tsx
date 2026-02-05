@@ -43,6 +43,7 @@ const searchTypeOptions: SearchTypeOption[] = [
 const statusFilterOptions: StatusFilterOption[] = [
   // Match legacy workbench semantics and wording.
   { value: 'ALL', label: 'All statuses' },
+  { value: 'NOT_ACCEPTED', label: 'Not accepted' },
   { value: 'TRANSLATED', label: 'Translated' },
   { value: 'UNTRANSLATED', label: 'Untranslated' },
   { value: 'FOR_TRANSLATION', label: 'To translate' },

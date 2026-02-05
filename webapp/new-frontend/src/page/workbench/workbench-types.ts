@@ -21,6 +21,7 @@ export type WorkbenchRow = {
 
 export type StatusFilterValue =
   | 'ALL'
+  | 'NOT_ACCEPTED'
   | 'FOR_TRANSLATION'
   | 'REVIEW_NEEDED'
   | 'TRANSLATED'

@@ -427,6 +427,14 @@ public class TextUnitSearcher {
               new NativeEqExpFix(
                   "tuv.status", TMTextUnitVariant.Status.TRANSLATION_NEEDED.toString()));
           break;
+        case NOT_ACCEPTED:
+          conjunction.add(
+              NativeExps.disjunction(
+                  Arrays.asList(
+                      NativeExps.isNull("tuv.id"),
+                      NativeExps.notEq("tuv.status", TMTextUnitVariant.Status.APPROVED.toString()),
+                      new NativeEqExpFix("tuv.included_in_localized_file", Boolean.FALSE))));
+          break;
         case TRANSLATED:
           conjunction.add(NativeExps.isNotNull("tuv.id"));
           break;
