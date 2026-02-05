@@ -1371,7 +1371,7 @@ function DetailPane({
               </div>
             </div>
             <AutoTextarea
-              className={`review-project-detail__input review-project-detail__input--autosize${
+              className={`review-project-detail__input review-project-detail__input--autosize review-project-detail__input--translation${
                 isRejected ? ' review-project-detail__input--rejected' : ''
               }`}
               ref={translationRef}

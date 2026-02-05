@@ -999,6 +999,28 @@
   position: relative;
 }
 
+.review-project-detail__side .review-project-detail__label {
+  min-height: 0;
+  line-height: 1.25;
+  align-items: baseline;
+}
+
+.review-project-detail__side .review-project-detail__label-row {
+  min-height: 0;
+  align-items: baseline;
+}
+
+.review-project-detail__side .review-project-detail__value {
+  padding: 0;
+  border: 0;
+  font-size: var(--font-size-md);
+  line-height: 1.4;
+}
+
+.review-project-detail__side .review-project-detail__value--meta {
+  color: var(--color-text);
+}
+
 .review-project-detail__label-actions--hover {
   position: absolute;
   right: 0;
@@ -1584,6 +1606,32 @@
   outline: none;
   border-color: color-mix(in srgb, var(--color-border) 80%, transparent);
   resize: vertical;
+}
+
+.review-project-detail__input--translation:not(.review-project-detail__input--rejected) {
+  border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.review-project-detail__input--translation:not(.review-project-detail__input--rejected):hover:not(:focus) {
+  border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+  box-shadow: none;
+}
+
+.review-project-detail__input--translation:not(.review-project-detail__input--rejected):focus,
+.review-project-detail__input--translation:not(.review-project-detail__input--rejected):focus-visible {
+  outline: 0;
+  border-color: var(--color-focus-border);
+  box-shadow: 0 0 0 0.15em var(--color-focus-outline);
+  background: transparent;
+  resize: none;
+}
+
+.review-project-detail__input--translation.review-project-detail__input--rejected:focus,
+.review-project-detail__input--translation.review-project-detail__input--rejected:focus-visible {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
+  box-shadow: 0 0 0 0.15em color-mix(in srgb, var(--color-danger) 18%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 6%, transparent);
+  resize: none;
 }
 
 .review-project-page__empty-detail {
