@@ -131,7 +131,9 @@
 }
 
 .ai-chat-review__suggestion-content {
-  font-size: var(--font-size-sm);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
   color: var(--color-text);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
