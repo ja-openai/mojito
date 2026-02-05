@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import type {
   ApiLocale,
@@ -28,6 +28,13 @@ import {
   loadPreferredWorksetSize,
   PREFERRED_LOCALES_KEY,
 } from '../workbench/workbench-preferences';
+import {
+  loadRepositoriesSessionState,
+  REPOSITORIES_SESSION_QUERY_KEY,
+  type RepositoriesSessionState,
+  saveRepositoriesSessionState,
+  serializeRepositoriesSessionState,
+} from './repositories-session-state';
 import type { LocaleRow, RepositoryRow, RepositoryStatusFilter } from './RepositoriesPageView';
 import { RepositoriesPageView } from './RepositoriesPageView';
 
@@ -146,10 +153,27 @@ const buildLocalesForRepository = (
 
 export function RepositoriesPage() {
   const user = useUser();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rsId = searchParams.get(REPOSITORIES_SESSION_QUERY_KEY);
   const [selectedRepositoryId, setSelectedRepositoryId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<RepositoryStatusFilter>('all');
   const [preferredLocales, setPreferredLocales] = useState<string[]>(() => loadPreferredLocales());
+  const [hydratedSession, setHydratedSession] = useState<{
+    key: string;
+    state: RepositoriesSessionState;
+  } | null>(() => {
+    if (!rsId) {
+      return null;
+    }
+    const initialState = loadRepositoriesSessionState(rsId);
+    return initialState ? { key: rsId, state: initialState } : null;
+  });
+  const [hydrationPhase, setHydrationPhase] = useState<'idle' | 'pending' | 'applied'>(
+    rsId ? 'pending' : 'idle',
+  );
   const navigate = useNavigate();
+  const persistedRsIdRef = useRef<string | null>(rsId);
+  const lastPersistedStateSignatureRef = useRef<string | null>(null);
 
   const { data: repositoryData, isLoading, isError, error, refetch } = useRepositories();
   const handleRetryFetch = useCallback(() => {
@@ -173,6 +197,7 @@ export function RepositoriesPage() {
     setSelection: setRepositorySelection,
   } = useRepositorySelection({
     options: repositoryOptions,
+    allowStaleSelections: true,
   });
 
   useEffect(() => {
@@ -208,11 +233,103 @@ export function RepositoriesPage() {
   const {
     selectedTags: selectedLocaleTags,
     onChangeSelection: onChangeLocaleSelection,
+    hasTouched: hasTouchedLocaleSelection,
+    setSelection: setLocaleSelection,
     allowedTagSet: allowedLocaleTagSet,
   } = useLocaleSelection({
     options: localeOptions,
     autoSelectAll: true,
+    allowStaleSelections: true,
   });
+
+  useEffect(() => {
+    persistedRsIdRef.current = rsId;
+  }, [rsId]);
+
+  useEffect(() => {
+    if (!rsId) {
+      setHydratedSession(null);
+      setHydrationPhase('idle');
+      return;
+    }
+    setHydrationPhase('pending');
+    const nextHydratedState = loadRepositoriesSessionState(rsId);
+    setHydratedSession(nextHydratedState ? { key: rsId, state: nextHydratedState } : null);
+    if (!nextHydratedState) {
+      setHydrationPhase('idle');
+    }
+  }, [rsId]);
+
+  useEffect(() => {
+    if (!rsId || hydrationPhase !== 'pending') {
+      return;
+    }
+    if (!hydratedSession || hydratedSession.key !== rsId) {
+      setHydrationPhase('idle');
+      return;
+    }
+    setSelectedRepositoryId(hydratedSession.state.selectedRepositoryId);
+    setStatusFilter(hydratedSession.state.statusFilter);
+    setRepositorySelection(hydratedSession.state.selectedRepositoryIds, {
+      touched: hydratedSession.state.repositorySelectionTouched,
+    });
+    setLocaleSelection(hydratedSession.state.selectedLocaleTags, {
+      touched: hydratedSession.state.localeSelectionTouched,
+    });
+    setHydrationPhase('applied');
+  }, [hydratedSession, hydrationPhase, rsId, setLocaleSelection, setRepositorySelection]);
+
+  useEffect(() => {
+    if (hydrationPhase !== 'applied') {
+      return;
+    }
+    setHydrationPhase('idle');
+  }, [hydrationPhase]);
+
+  const repositoriesSessionState = useMemo(
+    () => ({
+      selectedRepositoryId,
+      selectedRepositoryIds,
+      repositorySelectionTouched: hasTouchedRepositorySelection,
+      selectedLocaleTags,
+      localeSelectionTouched: hasTouchedLocaleSelection,
+      statusFilter,
+    }),
+    [
+      hasTouchedLocaleSelection,
+      hasTouchedRepositorySelection,
+      selectedLocaleTags,
+      selectedRepositoryId,
+      selectedRepositoryIds,
+      statusFilter,
+    ],
+  );
+
+  useEffect(() => {
+    if (hydrationPhase !== 'idle') {
+      return;
+    }
+    const currentRsId = searchParams.get(REPOSITORIES_SESSION_QUERY_KEY);
+
+    const signature = serializeRepositoriesSessionState(repositoriesSessionState);
+    const nextRsId = saveRepositoriesSessionState(
+      repositoriesSessionState,
+      persistedRsIdRef.current ?? currentRsId,
+    );
+    persistedRsIdRef.current = nextRsId;
+
+    if (lastPersistedStateSignatureRef.current === signature && currentRsId === nextRsId) {
+      return;
+    }
+    lastPersistedStateSignatureRef.current = signature;
+    if (currentRsId === nextRsId) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set(REPOSITORIES_SESSION_QUERY_KEY, nextRsId);
+    setSearchParams(nextParams, { replace: true });
+  }, [hydrationPhase, repositoriesSessionState, searchParams, setSearchParams]);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
@@ -283,12 +400,18 @@ export function RepositoriesPage() {
     if (selectedRepositoryId == null) {
       return;
     }
+    if (status !== 'ready') {
+      return;
+    }
+    if (hydrationPhase !== 'idle') {
+      return;
+    }
 
     const stillVisible = filteredRepositories.some((repo) => repo.id === selectedRepositoryId);
     if (!stillVisible) {
       setSelectedRepositoryId(null);
     }
-  }, [filteredRepositories, selectedRepositoryId]);
+  }, [filteredRepositories, hydrationPhase, selectedRepositoryId, status]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

@@ -20,7 +20,7 @@ type UseLocaleSelectionResult = {
   selectedTags: string[];
   hasTouched: boolean;
   onChangeSelection: (next: string[]) => void;
-  setSelection: (next: string[], options?: { markTouched?: boolean }) => void;
+  setSelection: (next: string[], options?: { markTouched?: boolean; touched?: boolean }) => void;
   availableTagSet: Set<string>;
   allowedTagSet?: Set<string>;
 };
@@ -117,6 +117,13 @@ const normalizeLocaleSelection = (
   }, []);
 };
 
+const areLocaleSelectionsEqual = (left: string[], right: string[]) => {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((value, index) => value.toLowerCase() === (right[index] ?? '').toLowerCase());
+};
+
 export function useLocaleSelection({
   options,
   initialSelected = [],
@@ -138,9 +145,17 @@ export function useLocaleSelection({
   const [hasTouched, setHasTouched] = useState(false);
 
   const setSelection = useCallback(
-    (next: string[], { markTouched = false }: { markTouched?: boolean } = {}) => {
-      setSelectedTags(normalize(next));
-      if (markTouched) {
+    (
+      next: string[],
+      { markTouched = false, touched }: { markTouched?: boolean; touched?: boolean } = {},
+    ) => {
+      const normalized = normalize(next);
+      setSelectedTags((current) =>
+        areLocaleSelectionsEqual(current, normalized) ? current : normalized,
+      );
+      if (typeof touched === 'boolean') {
+        setHasTouched(touched);
+      } else if (markTouched) {
         setHasTouched(true);
       }
     },
@@ -155,7 +170,10 @@ export function useLocaleSelection({
   );
 
   useEffect(() => {
-    setSelectedTags((current) => normalize(current));
+    setSelectedTags((current) => {
+      const normalized = normalize(current);
+      return areLocaleSelectionsEqual(current, normalized) ? current : normalized;
+    });
   }, [normalize]);
 
   useEffect(() => {

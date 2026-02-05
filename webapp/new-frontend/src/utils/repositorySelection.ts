@@ -17,7 +17,7 @@ type UseRepositorySelectionResult = {
   selectedIds: number[];
   hasTouched: boolean;
   onChangeSelection: (next: number[]) => void;
-  setSelection: (next: number[], options?: { markTouched?: boolean }) => void;
+  setSelection: (next: number[], options?: { markTouched?: boolean; touched?: boolean }) => void;
   availableIdSet: Set<number>;
 };
 
@@ -57,6 +57,13 @@ const normalizeRepositorySelection = (
   }, []);
 };
 
+const areRepositorySelectionsEqual = (left: number[], right: number[]) => {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((value, index) => value === right[index]);
+};
+
 export function useRepositorySelection({
   options,
   initialSelected = [],
@@ -74,9 +81,17 @@ export function useRepositorySelection({
   const [hasTouched, setHasTouched] = useState(false);
 
   const setSelection = useCallback(
-    (next: number[], { markTouched = false }: { markTouched?: boolean } = {}) => {
-      setSelectedIds(normalize(next));
-      if (markTouched) {
+    (
+      next: number[],
+      { markTouched = false, touched }: { markTouched?: boolean; touched?: boolean } = {},
+    ) => {
+      const normalized = normalize(next);
+      setSelectedIds((current) =>
+        areRepositorySelectionsEqual(current, normalized) ? current : normalized,
+      );
+      if (typeof touched === 'boolean') {
+        setHasTouched(touched);
+      } else if (markTouched) {
         setHasTouched(true);
       }
     },
@@ -91,7 +106,10 @@ export function useRepositorySelection({
   );
 
   useEffect(() => {
-    setSelectedIds((current) => normalize(current));
+    setSelectedIds((current) => {
+      const normalized = normalize(current);
+      return areRepositorySelectionsEqual(current, normalized) ? current : normalized;
+    });
   }, [normalize]);
 
   return {
