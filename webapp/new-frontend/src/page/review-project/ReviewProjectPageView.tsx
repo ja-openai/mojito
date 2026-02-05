@@ -210,9 +210,17 @@ type Props = {
   projectId: number;
   project: ApiReviewProjectDetail | null;
   mutations: ReviewProjectMutationControls;
+  selectedTextUnitQueryId: number | null;
+  onSelectedTextUnitIdChange: (id: number | null) => void;
 };
 
-export function ReviewProjectPageView({ projectId, project, mutations }: Props) {
+export function ReviewProjectPageView({
+  projectId,
+  project,
+  mutations,
+  selectedTextUnitQueryId,
+  onSelectedTextUnitIdChange,
+}: Props) {
   const locale = project?.locale ?? null;
   const localeTag = locale?.bcp47Tag ?? '';
   const textUnits = useMemo<ApiReviewProjectTextUnit[]>(
@@ -249,6 +257,8 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
     focusTranslation: boolean;
   } | null>(null);
   const previousSelectedRef = useRef<number | null>(null);
+  const pendingQueryAutoScrollIdRef = useRef<number | null>(null);
+  const lastAppliedQueryIdRef = useRef<number | null>(null);
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const [selectedScreenshotIdx, setSelectedScreenshotIdx] = useState<number>(0);
   const { onDismissValidationSave, showValidationDialog } = mutations;
@@ -296,14 +306,55 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
   );
 
   useEffect(() => {
+    if (selectedTextUnitQueryId == null) {
+      lastAppliedQueryIdRef.current = null;
+      return;
+    }
+    if (lastAppliedQueryIdRef.current === selectedTextUnitQueryId) {
+      return;
+    }
+    const matchedByTmTextUnitId =
+      filtered.find((tu) => tu.tmTextUnit?.id === selectedTextUnitQueryId) ?? null;
+    const matchedByReviewTextUnitId =
+      filtered.find((tu) => tu.id === selectedTextUnitQueryId) ?? null;
+    const matched = matchedByTmTextUnitId ?? matchedByReviewTextUnitId;
+    const matchedId = matched?.id ?? null;
+    if (matchedId == null) {
+      return;
+    }
+    lastAppliedQueryIdRef.current = selectedTextUnitQueryId;
+    if (selectedTextUnitId !== matchedId) {
+      pendingQueryAutoScrollIdRef.current = matchedId;
+    }
+    setSelectedTextUnitId((current) => (current === matchedId ? current : matchedId));
+  }, [filtered, selectedTextUnitId, selectedTextUnitQueryId]);
+
+  useEffect(() => {
     if (filtered.length === 0) {
       setSelectedTextUnitId(null);
       return;
     }
+    if (selectedTextUnitQueryId != null) {
+      const hasQueryMatch = filtered.some(
+        (tu) => tu.tmTextUnit?.id === selectedTextUnitQueryId || tu.id === selectedTextUnitQueryId,
+      );
+      if (hasQueryMatch) {
+        return;
+      }
+    }
     if (selectedTextUnitId == null || !filtered.some((tu) => tu.id === selectedTextUnitId)) {
       setSelectedTextUnitId(filtered[0]?.id ?? null);
     }
-  }, [filtered, selectedTextUnitId]);
+  }, [filtered, selectedTextUnitId, selectedTextUnitQueryId]);
+
+  useEffect(() => {
+    if (selectedTextUnitQueryId != null && !selectedTextUnit) {
+      // Wait until we resolve the query-param selection before rewriting URL.
+      return;
+    }
+    const nextQueryId = selectedTextUnit?.tmTextUnit?.id ?? selectedTextUnit?.id ?? null;
+    onSelectedTextUnitIdChange(nextQueryId);
+  }, [onSelectedTextUnitIdChange, selectedTextUnit, selectedTextUnitQueryId]);
 
   useEffect(() => {
     if (
@@ -333,6 +384,19 @@ export function ReviewProjectPageView({ projectId, project, mutations }: Props) 
       estimateSize: estimateRowHeight,
       getItemKey,
     });
+
+  useEffect(() => {
+    const pendingId = pendingQueryAutoScrollIdRef.current;
+    if (pendingId == null) {
+      return;
+    }
+    const index = filtered.findIndex((tu) => tu.id === pendingId);
+    if (index < 0) {
+      return;
+    }
+    scrollToIndex(index, { align: 'center' });
+    pendingQueryAutoScrollIdRef.current = null;
+  }, [filtered, scrollToIndex]);
 
   const attemptSelectTextUnit = useCallback(
     (nextId: number | null, nextIndex?: number) => {
