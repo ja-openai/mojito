@@ -1,4 +1,4 @@
-import { type MessageFormatElement,parse, TYPE } from '@formatjs/icu-messageformat-parser';
+import { type MessageFormatElement, parse, TYPE } from '@formatjs/icu-messageformat-parser';
 import IntlMessageFormat from 'intl-messageformat';
 
 export type IcuParameterKind = 'string' | 'number' | 'date' | 'time' | 'select' | 'plural';
@@ -21,6 +21,10 @@ export type IcuValueSet = {
   values: Record<string, string>;
 };
 
+export type IcuPluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
+
+const ICU_PLURAL_CATEGORIES: IcuPluralCategory[] = ['zero', 'one', 'two', 'few', 'many', 'other'];
+
 type MutableParameterDescriptor = {
   name: string;
   kinds: Set<IcuParameterKind>;
@@ -33,7 +37,9 @@ const FALLBACK_DATE_TIME = '2026-02-05T09:30';
 type MessageFormatParser = typeof parse;
 
 function ensureIntlMessageFormatParser() {
-  const formatter = IntlMessageFormat as typeof IntlMessageFormat & { __parse?: MessageFormatParser };
+  const formatter = IntlMessageFormat as typeof IntlMessageFormat & {
+    __parse?: MessageFormatParser;
+  };
   if (typeof formatter.__parse !== 'function') {
     formatter.__parse = parse;
   }
@@ -122,7 +128,10 @@ export function parseIcuMessage(message: string): IcuMessageParseResult {
   };
 }
 
-export function buildIcuExampleValueSets(parameters: IcuParameterDescriptor[]): IcuValueSet[] {
+export function buildIcuExampleValueSets(
+  parameters: IcuParameterDescriptor[],
+  locale = 'en',
+): IcuValueSet[] {
   const base: Record<string, string> = {};
   const variant: Record<string, string> = {};
   const zeroCase: Record<string, string> = {};
@@ -148,12 +157,14 @@ export function buildIcuExampleValueSets(parameters: IcuParameterDescriptor[]): 
       ? firstOptionParam.selectOptions
       : firstOptionParam.pluralOptions;
 
-    optionValues.slice(0, 3).forEach((option, index) => {
-      const optionValue = usesSelectOptions ? option : pluralOptionToValue(option);
+    optionValues.forEach((option, index) => {
+      const optionValue = usesSelectOptions ? option : getPluralSampleValue(option, locale);
       const values = { ...base, [firstOptionParam.name]: optionValue };
       candidateSets.push({
         id: `option-${index}`,
-        label: `${firstOptionParam.name}=${option}`,
+        label: usesSelectOptions
+          ? `${firstOptionParam.name}=${option}`
+          : `${firstOptionParam.name}: ${option} -> ${optionValue}`,
         values,
       });
     });
@@ -161,7 +172,7 @@ export function buildIcuExampleValueSets(parameters: IcuParameterDescriptor[]): 
 
   const deduped = new Map<string, IcuValueSet>();
   candidateSets.forEach((set) => {
-    const key = JSON.stringify(set.values);
+    const key = set.id.startsWith('option-') ? set.id : `${set.id}:${JSON.stringify(set.values)}`;
     if (!deduped.has(key)) {
       deduped.set(key, set);
     }
@@ -170,12 +181,59 @@ export function buildIcuExampleValueSets(parameters: IcuParameterDescriptor[]): 
   return [...deduped.values()];
 }
 
-function pluralOptionToValue(option: string): string {
+export function getPluralCategories(locale: string): IcuPluralCategory[] {
+  let rules: Intl.PluralRules;
+  try {
+    rules = new Intl.PluralRules(locale || 'en');
+  } catch {
+    try {
+      rules = new Intl.PluralRules('en');
+    } catch {
+      return ['other'];
+    }
+  }
+
+  const categories = rules.resolvedOptions().pluralCategories ?? [];
+  const normalized = categories.filter((category): category is IcuPluralCategory =>
+    ICU_PLURAL_CATEGORIES.includes(category as IcuPluralCategory),
+  );
+  if (normalized.length === 0) {
+    return ['other'];
+  }
+
+  return normalized;
+}
+
+export function getPluralCategorySampleMap(
+  locale: string,
+): Record<IcuPluralCategory, string | null> {
+  const map: Record<IcuPluralCategory, string | null> = {
+    zero: null,
+    one: null,
+    two: null,
+    few: null,
+    many: null,
+    other: null,
+  };
+
+  for (const category of getPluralCategories(locale)) {
+    map[category] = findSampleNumberForPluralCategory(category, locale);
+  }
+
+  return map;
+}
+
+export function getPluralSampleValue(option: string, locale: string): string {
   if (option.startsWith('=')) {
     const parsed = Number(option.slice(1));
     if (Number.isFinite(parsed)) {
       return String(parsed);
     }
+  }
+
+  const localeCandidate = findSampleNumberForPluralCategory(option, locale);
+  if (localeCandidate != null) {
+    return localeCandidate;
   }
 
   switch (option) {
@@ -194,6 +252,44 @@ function pluralOptionToValue(option: string): string {
     default:
       return '1';
   }
+}
+
+const PLURAL_SAMPLE_CANDIDATES = [
+  0, 1, 2, 3, 4, 5, 6, 10, 11, 12, 14, 15, 20, 21, 22, 24, 25, 30, 31, 32, 35, 40, 41, 42, 45, 50,
+  51, 52, 55, 60, 61, 62, 65, 70, 71, 72, 75, 80, 81, 82, 85, 90, 91, 92, 95, 100, 101, 102, 111,
+  1.1, 1.5, 2.1, 5.1,
+];
+
+function findSampleNumberForPluralCategory(option: string, locale: string): string | null {
+  if (
+    option !== 'zero' &&
+    option !== 'one' &&
+    option !== 'two' &&
+    option !== 'few' &&
+    option !== 'many' &&
+    option !== 'other'
+  ) {
+    return null;
+  }
+
+  let rules: Intl.PluralRules;
+  try {
+    rules = new Intl.PluralRules(locale || 'en');
+  } catch {
+    try {
+      rules = new Intl.PluralRules('en');
+    } catch {
+      return null;
+    }
+  }
+
+  for (const candidate of PLURAL_SAMPLE_CANDIDATES) {
+    if (rules.select(candidate) === option) {
+      return String(candidate);
+    }
+  }
+
+  return null;
 }
 
 export function mergeValues(
@@ -269,7 +365,9 @@ function coerceForFormatting(
 
     if (hasKind(parameter, 'date') || hasKind(parameter, 'time')) {
       const parsedDate = Date.parse(raw);
-      output[parameter.name] = Number.isNaN(parsedDate) ? new Date(FALLBACK_DATE_TIME) : new Date(parsedDate);
+      output[parameter.name] = Number.isNaN(parsedDate)
+        ? new Date(FALLBACK_DATE_TIME)
+        : new Date(parsedDate);
       return;
     }
 

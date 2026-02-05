@@ -68,6 +68,8 @@ type TextUnitDetailPageViewProps = {
   previewLocale: string;
   isIcuPreviewCollapsed: boolean;
   onToggleIcuPreviewCollapsed: () => void;
+  icuPreviewMode: 'source' | 'target';
+  onChangeIcuPreviewMode: (mode: 'source' | 'target') => void;
   isAiCollapsed: boolean;
   onToggleAiCollapsed: () => void;
   aiMessages: TextUnitDetailAiMessage[];
@@ -107,6 +109,8 @@ export function TextUnitDetailPageView({
   previewLocale,
   isIcuPreviewCollapsed,
   onToggleIcuPreviewCollapsed,
+  icuPreviewMode,
+  onChangeIcuPreviewMode,
   isAiCollapsed,
   onToggleAiCollapsed,
   aiMessages,
@@ -147,6 +151,68 @@ export function TextUnitDetailPageView({
       return false;
     }
   }, [keyInfo.source]);
+
+  const hasIcuTarget = useMemo(() => {
+    const target = editorInfo.target?.trim();
+    if (!target || target === '-') {
+      return false;
+    }
+    if (!target.includes('{')) {
+      return false;
+    }
+    try {
+      return parseIcuMessage(target).parameters.length > 0;
+    } catch {
+      return false;
+    }
+  }, [editorInfo.target]);
+
+  const missingSourceParameters = useMemo(() => {
+    const source = keyInfo.source?.trim();
+    if (!source || source === '-' || !source.includes('{')) {
+      return [] as string[];
+    }
+
+    let sourceParameterNames: string[];
+    try {
+      sourceParameterNames = parseIcuMessage(source).parameters.map((parameter) => parameter.name);
+    } catch {
+      return [] as string[];
+    }
+
+    if (sourceParameterNames.length === 0) {
+      return [];
+    }
+
+    const target = editorInfo.target?.trim();
+    if (!target || target === '-') {
+      return sourceParameterNames;
+    }
+
+    let targetParameterNames: Set<string>;
+    try {
+      targetParameterNames = new Set(
+        parseIcuMessage(target).parameters.map((parameter) => parameter.name),
+      );
+    } catch {
+      return sourceParameterNames;
+    }
+
+    return sourceParameterNames.filter((name) => !targetParameterNames.has(name));
+  }, [editorInfo.target, keyInfo.source]);
+
+  const selectedIcuMode =
+    icuPreviewMode === 'source' && hasIcuSource
+      ? 'source'
+      : hasIcuTarget
+        ? 'target'
+        : hasIcuSource
+          ? 'source'
+          : 'target';
+
+  const selectedIcuMessage = selectedIcuMode === 'source' ? keyInfo.source : editorInfo.target;
+  const selectedIcuLocale = selectedIcuMode === 'source' ? 'en' : previewLocale;
+  const hasIcuMessage = hasIcuSource || hasIcuTarget;
 
   return (
     <div className="review-project-page text-unit-detail-page">
@@ -242,33 +308,58 @@ export function TextUnitDetailPageView({
               </div>
             </div>
 
-            {hasIcuSource ? (
+            {hasIcuMessage ? (
               <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--icu-inline">
                 <SectionHeader
                   title="ICU preview"
                   expanded={!isIcuPreviewCollapsed}
                   onToggle={onToggleIcuPreviewCollapsed}
+                  controls={
+                    <div
+                      className="text-unit-detail-page__icu-toggle text-unit-detail-page__icu-toggle--compact"
+                      role="group"
+                      aria-label="ICU message"
+                    >
+                      <button
+                        type="button"
+                        className={`text-unit-detail-page__icu-toggle-option ${
+                          selectedIcuMode === 'target' ? 'is-active' : ''
+                        }`}
+                        onClick={() => onChangeIcuPreviewMode('target')}
+                        disabled={!hasIcuTarget}
+                      >
+                        Target
+                      </button>
+                      <button
+                        type="button"
+                        className={`text-unit-detail-page__icu-toggle-option ${
+                          selectedIcuMode === 'source' ? 'is-active' : ''
+                        }`}
+                        onClick={() => onChangeIcuPreviewMode('source')}
+                        disabled={!hasIcuSource}
+                      >
+                        Source
+                      </button>
+                    </div>
+                  }
+                  summary={
+                    missingSourceParameters.length > 0 ? (
+                      <span className="text-unit-detail-page__section-summary-warning">
+                        Missing in target:{' '}
+                        {missingSourceParameters.map((name) => `{${name}}`).join(', ')}
+                      </span>
+                    ) : undefined
+                  }
                 />
                 {!isIcuPreviewCollapsed ? (
-                  <div className="text-unit-detail-page__icu-grid">
-                    <div className="text-unit-detail-page__icu-column">
-                      <h3 className="text-unit-detail-page__icu-title">Source message</h3>
-                      <IcuMessagePreview
-                        message={keyInfo.source}
-                        locale="en"
-                        showMessageEditor={false}
-                        showLocaleInput={false}
-                      />
-                    </div>
-                    <div className="text-unit-detail-page__icu-column">
-                      <h3 className="text-unit-detail-page__icu-title">Target message</h3>
-                      <IcuMessagePreview
-                        message={editorInfo.target}
-                        locale={previewLocale}
-                        showMessageEditor={false}
-                        showLocaleInput={false}
-                      />
-                    </div>
+                  <div className="text-unit-detail-page__icu-content">
+                    <IcuMessagePreview
+                      message={selectedIcuMessage}
+                      locale={selectedIcuLocale}
+                      showMessageEditor={false}
+                      showLocaleInput={false}
+                      showExamples={false}
+                    />
                   </div>
                 ) : null}
               </section>
@@ -500,25 +591,39 @@ function SectionHeader({
   expanded,
   onToggle,
   summary,
+  controls,
 }: {
   title: string;
   expanded: boolean;
   onToggle: () => void;
   summary?: ReactNode;
+  controls?: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      className="text-unit-detail-page__section-header"
-      onClick={onToggle}
-      aria-expanded={expanded}
-    >
-      <span className="text-unit-detail-page__section-heading">
-        <span className="text-unit-detail-page__section-title">{title}</span>
-        {summary ? <span className="text-unit-detail-page__section-summary">{summary}</span> : null}
-      </span>
-      <span className="text-unit-detail-page__section-action">{expanded ? 'Hide' : 'Show'}</span>
-    </button>
+    <div className="text-unit-detail-page__section-header-row">
+      <button
+        type="button"
+        className="text-unit-detail-page__section-header"
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
+        <span className="text-unit-detail-page__section-heading">
+          <span className="text-unit-detail-page__section-title">{title}</span>
+          {summary ? (
+            <span className="text-unit-detail-page__section-summary">{summary}</span>
+          ) : null}
+        </span>
+      </button>
+      {controls ? <div className="text-unit-detail-page__section-controls">{controls}</div> : null}
+      <button
+        type="button"
+        className="text-unit-detail-page__section-action"
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
+        {expanded ? 'Hide' : 'Show'}
+      </button>
+    </div>
   );
 }
 

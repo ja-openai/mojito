@@ -55,6 +55,7 @@ export function TextUnitDetailPage() {
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
   const [isMetaCollapsed, setIsMetaCollapsed] = useState(true);
   const [isIcuPreviewCollapsed, setIsIcuPreviewCollapsed] = useState(true);
+  const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
 
   const [draftTarget, setDraftTarget] = useState('');
@@ -358,7 +359,13 @@ export function TextUnitDetailPage() {
       { title: 'Git blame', rows: gitBlameRows },
       { title: 'More', rows: moreRows },
     ];
-  }, [activeTextUnit?.repositoryName, gitBlame, localeForEditing, textUnitLocation, textUnitQuery.data]);
+  }, [
+    activeTextUnit?.repositoryName,
+    gitBlame,
+    localeForEditing,
+    textUnitLocation,
+    textUnitQuery.data,
+  ]);
 
   const historyRows = useMemo<TextUnitDetailHistoryRow[]>(() => {
     return sortedHistoryItems.map((item) => {
@@ -622,6 +629,8 @@ export function TextUnitDetailPage() {
       previewLocale={localeForEditing ?? 'en'}
       isIcuPreviewCollapsed={isIcuPreviewCollapsed}
       onToggleIcuPreviewCollapsed={() => setIsIcuPreviewCollapsed((current) => !current)}
+      icuPreviewMode={icuPreviewMode}
+      onChangeIcuPreviewMode={setIcuPreviewMode}
       isAiCollapsed={isAiCollapsed}
       onToggleAiCollapsed={() => setIsAiCollapsed((current) => !current)}
       aiMessages={aiMessages}

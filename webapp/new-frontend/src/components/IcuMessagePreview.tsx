@@ -2,9 +2,11 @@ import './icu-message-preview.css';
 
 import { useEffect, useMemo, useState } from 'react';
 
-import type { IcuParameterDescriptor } from '../utils/icuMessageFormat';
+import type { IcuParameterDescriptor, IcuPluralCategory } from '../utils/icuMessageFormat';
 import {
   buildIcuExampleValueSets,
+  getPluralCategories,
+  getPluralSampleValue,
   mergeValues,
   parseIcuMessage,
   renderIcuWithValues,
@@ -26,6 +28,7 @@ export type IcuMessagePreviewProps = {
   initialLocale?: string;
   showMessageEditor?: boolean;
   showLocaleInput?: boolean;
+  showExamples?: boolean;
   requestAiValues?: (request: IcuAiSuggestionRequest) => Promise<Record<string, string>>;
 };
 
@@ -47,6 +50,7 @@ export function IcuMessagePreview({
   initialLocale = 'en',
   showMessageEditor = true,
   showLocaleInput = true,
+  showExamples = true,
   requestAiValues,
 }: IcuMessagePreviewProps) {
   const [internalMessage, setInternalMessage] = useState(initialMessage);
@@ -99,7 +103,18 @@ export function IcuMessagePreview({
     }
   }, [normalizedMessage]);
 
-  const presets = useMemo(() => buildIcuExampleValueSets(parseState.parameters), [parseState.parameters]);
+  const presets = useMemo(
+    () => buildIcuExampleValueSets(parseState.parameters, locale),
+    [locale, parseState.parameters],
+  );
+
+  const singlePluralParameter = useMemo(() => {
+    if (parseState.error || parseState.parameters.length !== 1) {
+      return null;
+    }
+    const [parameter] = parseState.parameters;
+    return parameter.kinds.includes('plural') ? parameter : null;
+  }, [parseState.error, parseState.parameters]);
 
   useEffect(() => {
     if (parseState.error) {
@@ -108,14 +123,14 @@ export function IcuMessagePreview({
       return;
     }
 
-    const firstPreset = presets[0];
+    const pluralOptionPreset = presets.find((preset) => preset.id.startsWith('option-'));
+    const firstPreset = singlePluralParameter ? (pluralOptionPreset ?? presets[0]) : presets[0];
     const nextSelectedPresetId =
       selectedPresetId && presets.some((preset) => preset.id === selectedPresetId)
         ? selectedPresetId
         : (firstPreset?.id ?? null);
 
-    const activePreset =
-      presets.find((preset) => preset.id === nextSelectedPresetId) ??
+    const activePreset = presets.find((preset) => preset.id === nextSelectedPresetId) ??
       firstPreset ?? {
         id: 'empty',
         label: 'Empty',
@@ -135,7 +150,7 @@ export function IcuMessagePreview({
       });
       return merged;
     });
-  }, [parseState.error, parseState.parameters, presets, selectedPresetId]);
+  }, [parseState.error, parseState.parameters, presets, selectedPresetId, singlePluralParameter]);
 
   const selectedOutput = useMemo(() => {
     if (parseState.error || !parseState.ast) {
@@ -146,7 +161,13 @@ export function IcuMessagePreview({
     }
     try {
       return {
-        value: renderIcuWithValues(parseState.ast, parseState.parameters, values, locale, normalizedMessage),
+        value: renderIcuWithValues(
+          parseState.ast,
+          parseState.parameters,
+          values,
+          locale,
+          normalizedMessage,
+        ),
         error: null,
       };
     } catch (error: unknown) {
@@ -155,7 +176,7 @@ export function IcuMessagePreview({
         error: error instanceof Error ? error.message : 'Failed to render message.',
       };
     }
-  }, [locale, parseState.ast, parseState.error, parseState.parameters, values]);
+  }, [locale, normalizedMessage, parseState.ast, parseState.error, parseState.parameters, values]);
 
   const presetOutputs = useMemo(() => {
     const ast = parseState.ast;
@@ -167,7 +188,13 @@ export function IcuMessagePreview({
       try {
         return {
           ...preset,
-          output: renderIcuWithValues(ast, parseState.parameters, preset.values, locale, normalizedMessage),
+          output: renderIcuWithValues(
+            ast,
+            parseState.parameters,
+            preset.values,
+            locale,
+            normalizedMessage,
+          ),
           error: null,
         };
       } catch (error: unknown) {
@@ -178,7 +205,14 @@ export function IcuMessagePreview({
         };
       }
     });
-  }, [locale, parseState.ast, parseState.error, parseState.parameters, presets]);
+  }, [locale, normalizedMessage, parseState.ast, parseState.error, parseState.parameters, presets]);
+
+  const visiblePresetOutputs = useMemo(() => {
+    if (!singlePluralParameter) {
+      return presetOutputs;
+    }
+    return presetOutputs.filter((preset) => preset.id.startsWith('option-'));
+  }, [presetOutputs, singlePluralParameter]);
 
   const handleSelectPreset = (presetId: string) => {
     const preset = presets.find((item) => item.id === presetId);
@@ -217,66 +251,81 @@ export function IcuMessagePreview({
     }
   };
 
+  const showIntroSection =
+    showMessageEditor ||
+    showLocaleInput ||
+    Boolean(parseState.error) ||
+    parseState.parameters.length === 0;
+
   return (
     <div className="icu-preview">
-      <section className="icu-preview__section">
-        {showMessageEditor ? (
-          <>
-            <div className="icu-preview__label-row">
-              <label className="form-label" htmlFor="icu-message-input">
-                ICU message
+      {showIntroSection ? (
+        <section className="icu-preview__section">
+          {showMessageEditor ? (
+            <>
+              <div className="icu-preview__label-row">
+                <label className="form-label" htmlFor="icu-message-input">
+                  ICU message
+                </label>
+              </div>
+              <textarea
+                id="icu-message-input"
+                className="input icu-preview__textarea"
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                rows={5}
+                spellCheck={false}
+                placeholder="e.g. {name} has {count, plural, one {# message} other {# messages}}."
+              />
+            </>
+          ) : null}
+          {showLocaleInput ? (
+            <div className="icu-preview__locale-row">
+              <label className="form-label" htmlFor="icu-locale-input">
+                Locale
               </label>
+              <input
+                id="icu-locale-input"
+                className="input icu-preview__locale-input"
+                type="text"
+                value={locale}
+                onChange={(event) => setLocale(event.target.value)}
+                placeholder="en"
+              />
             </div>
-            <textarea
-              id="icu-message-input"
-              className="input icu-preview__textarea"
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              rows={5}
-              spellCheck={false}
-              placeholder="e.g. {name} has {count, plural, one {# message} other {# messages}}."
-            />
-          </>
-        ) : null}
-        {showLocaleInput ? (
-          <div className="icu-preview__locale-row">
-            <label className="form-label" htmlFor="icu-locale-input">
-              Locale
-            </label>
-            <input
-              id="icu-locale-input"
-              className="input icu-preview__locale-input"
-              type="text"
-              value={locale}
-              onChange={(event) => setLocale(event.target.value)}
-              placeholder="en"
-            />
-          </div>
-        ) : null}
-        {parseState.error ? (
-          <div className="alert alert--error">Parse error: {parseState.error}</div>
-        ) : parseState.parameters.length === 0 ? (
-          <div className="alert alert--muted">No parameters detected.</div>
-        ) : null}
+          ) : null}
+          {parseState.error ? (
+            <div className="alert alert--error">Parse error: {parseState.error}</div>
+          ) : parseState.parameters.length === 0 ? (
+            <div className="alert alert--muted">No parameters detected.</div>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section className="icu-preview__section">
+        {selectedOutput.error ? (
+          <div className="alert alert--error">{selectedOutput.error}</div>
+        ) : (
+          <pre className="icu-preview__output">{selectedOutput.value}</pre>
+        )}
       </section>
 
       {parseState.parameters.length > 0 && !parseState.error ? (
-        <section className="icu-preview__section">
-          <h2 className="page-title icu-preview__heading">Detected parameters</h2>
+        <section className="icu-preview__section icu-preview__section--parameters">
+          <h2 className="icu-preview__heading">Parameters</h2>
           <div className="icu-preview__parameter-table">
             {parseState.parameters.map((parameter) => (
               <div key={parameter.name} className="icu-preview__parameter-row">
                 <div className="icu-preview__parameter-meta">
-                  <code>{parameter.name}</code>
-                  <span className="icu-preview__parameter-kinds">{parameter.kinds.join(', ')}</span>
+                  <span className="icu-preview__parameter-name-row">
+                    <code>{parameter.name}</code>
+                    <span className="icu-preview__parameter-kinds">
+                      {formatKinds(parameter.kinds)}
+                    </span>
+                  </span>
                   {parameter.selectOptions.length > 0 ? (
                     <span className="icu-preview__parameter-options">
-                      select: {parameter.selectOptions.join(', ')}
-                    </span>
-                  ) : null}
-                  {parameter.pluralOptions.length > 0 ? (
-                    <span className="icu-preview__parameter-options">
-                      plural: {parameter.pluralOptions.join(', ')}
+                      {parameter.selectOptions.join(', ')}
                     </span>
                   ) : null}
                 </div>
@@ -284,6 +333,7 @@ export function IcuMessagePreview({
                   <ParameterInput
                     parameter={parameter}
                     value={values[parameter.name] ?? ''}
+                    locale={locale}
                     onChange={(nextValue) => handleChangeValue(parameter.name, nextValue)}
                   />
                 </div>
@@ -293,19 +343,10 @@ export function IcuMessagePreview({
         </section>
       ) : null}
 
-      <section className="icu-preview__section">
-        <h2 className="page-title icu-preview__heading">Rendered output</h2>
-        {selectedOutput.error ? (
-          <div className="alert alert--error">{selectedOutput.error}</div>
-        ) : (
-          <pre className="icu-preview__output">{selectedOutput.value}</pre>
-        )}
-      </section>
-
-      {presets.length > 0 && !parseState.error ? (
+      {showExamples && visiblePresetOutputs.length > 0 && !parseState.error ? (
         <section className="icu-preview__section">
           <div className="icu-preview__preset-header">
-            <h2 className="page-title icu-preview__heading">Example parameter sets</h2>
+            <h2 className="icu-preview__heading">Examples</h2>
             {requestAiValues ? (
               <button
                 type="button"
@@ -321,7 +362,7 @@ export function IcuMessagePreview({
           </div>
           {aiError ? <div className="alert alert--error">{aiError}</div> : null}
           <div className="icu-preview__preset-list">
-            {presetOutputs.map((preset) => (
+            {visiblePresetOutputs.map((preset) => (
               <label key={preset.id} className="icu-preview__preset-item">
                 <input
                   type="radio"
@@ -331,7 +372,9 @@ export function IcuMessagePreview({
                 />
                 <span className="icu-preview__preset-content">
                   <span className="icu-preview__preset-title">{preset.label}</span>
-                  <code className="icu-preview__preset-values">{JSON.stringify(preset.values)}</code>
+                  <code className="icu-preview__preset-values">
+                    {JSON.stringify(preset.values)}
+                  </code>
                   {preset.error ? (
                     <span className="icu-preview__preset-error">{preset.error}</span>
                   ) : (
@@ -350,10 +393,12 @@ export function IcuMessagePreview({
 function ParameterInput({
   parameter,
   value,
+  locale,
   onChange,
 }: {
   parameter: IcuParameterDescriptor;
   value: string;
+  locale: string;
   onChange: (value: string) => void;
 }) {
   if (parameter.selectOptions.length > 0) {
@@ -380,13 +425,41 @@ function ParameterInput({
   }
 
   if (parameter.kinds.includes('number') || parameter.kinds.includes('plural')) {
+    const pluralQuickOptions = parameter.kinds.includes('plural')
+      ? buildPluralQuickOptions(parameter.pluralOptions, locale)
+      : [];
+
     return (
-      <input
-        className="input"
-        type="number"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <div className="icu-preview__parameter-input-group">
+        <input
+          className="input icu-preview__number-input"
+          type="number"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {parameter.kinds.includes('plural') && pluralQuickOptions.length > 0 ? (
+          <div
+            className="icu-preview__plural-pills"
+            role="group"
+            aria-label={`${parameter.name} plural forms`}
+          >
+            {pluralQuickOptions.map((option) => {
+              const sampleValue = getPluralSampleValue(option, locale);
+              const isActive = value === sampleValue;
+              return (
+                <button
+                  key={`${option}-${sampleValue}`}
+                  type="button"
+                  className={`icu-preview__plural-pill ${isActive ? 'is-active' : ''}`}
+                  onClick={() => onChange(sampleValue)}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
     );
   }
 
@@ -398,4 +471,26 @@ function ParameterInput({
       onChange={(event) => onChange(event.target.value)}
     />
   );
+}
+
+function buildPluralQuickOptions(messageOptions: string[], locale: string): string[] {
+  const orderedCategories: IcuPluralCategory[] = ['zero', 'one', 'two', 'few', 'many', 'other'];
+  const localeCategories = new Set(getPluralCategories(locale));
+  const categoryOptions = orderedCategories.filter(
+    (category) => localeCategories.has(category) || messageOptions.includes(category),
+  );
+  const defaultOptions = ['=0', '=1', ...categoryOptions];
+  const options = [...defaultOptions];
+
+  messageOptions.forEach((option) => {
+    if (!options.includes(option)) {
+      options.push(option);
+    }
+  });
+
+  return options;
+}
+
+function formatKinds(kinds: IcuParameterDescriptor['kinds']): string {
+  return kinds.join(' · ');
 }
