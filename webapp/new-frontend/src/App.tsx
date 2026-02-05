@@ -18,6 +18,7 @@ import { AdminUserDetailPage } from './page/settings/AdminUserDetailPage';
 import { AdminUserSettingsPage } from './page/settings/AdminUserSettingsPage';
 import { TextUnitDetailPage } from './page/text-unit-detail/TextUnitDetailPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
+import { IcuMessagePreviewPage } from './page/tools/IcuMessagePreviewPage';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
 
 type NavItem = {
@@ -85,6 +86,7 @@ export function App() {
             <Route path="/settings/admin" element={<AdminSettingsPage />} />
             <Route path="/settings/admin/users" element={<AdminUserSettingsPage />} />
             <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
+            <Route path="/tools/icu-preview" element={<IcuMessagePreviewPage />} />
             <Route path="*" element={<Navigate to="/repositories" replace />} />
           </Route>
           <Route

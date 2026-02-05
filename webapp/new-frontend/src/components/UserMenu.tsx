@@ -68,7 +68,10 @@ export function UserMenu() {
     void navigate(path);
   };
 
-  const toolLinks = [{ label: 'Character helper', path: '/tools/char-code' }];
+  const toolLinks = [
+    { label: 'Character helper', path: '/tools/char-code' },
+    { label: 'ICU preview', path: '/tools/icu-preview' },
+  ];
   const adminLinks = [
     { label: 'Admin settings', path: '/settings/admin' },
     { label: 'User settings', path: '/settings/admin/users' },
