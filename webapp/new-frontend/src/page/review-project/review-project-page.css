@@ -1013,7 +1013,8 @@
 .review-project-detail__side .review-project-detail__value {
   padding: 0;
   border: 0;
-  font-size: var(--font-size-md);
+  font-size: 1rem;
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -1610,6 +1611,11 @@
 
 .review-project-detail__input--translation:not(.review-project-detail__input--rejected) {
   border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.review-project-detail__input--translation {
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 .review-project-detail__input--translation:not(.review-project-detail__input--rejected):hover:not(
