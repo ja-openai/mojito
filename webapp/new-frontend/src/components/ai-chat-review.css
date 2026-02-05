@@ -55,33 +55,27 @@
 .ai-chat-review__review-badge {
   display: inline-flex;
   align-items: center;
-  width: fit-content;
+  white-space: nowrap;
   border-radius: var(--radius-pill);
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
   background: color-mix(in srgb, var(--color-border) 28%, transparent);
   color: var(--color-text-subtle);
-  padding: 0.2em 0.7em;
+  padding: 0.2em 0.65em;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   letter-spacing: var(--letter-spacing-tight);
 }
 
-.ai-chat-review__review-badge--high {
-  border-color: color-mix(in srgb, var(--color-border) 78%, transparent);
-  background: color-mix(in srgb, var(--color-border) 28%, transparent);
-  color: var(--color-text-subtle);
-}
-
-.ai-chat-review__review-badge--medium {
-  border-color: color-mix(in srgb, var(--color-border) 78%, transparent);
-  background: color-mix(in srgb, var(--color-border) 28%, transparent);
-  color: var(--color-text-subtle);
-}
-
-.ai-chat-review__review-badge--low {
+.ai-chat-review__review-badge--bad {
   border-color: color-mix(in srgb, #ef4444 52%, transparent);
   background: color-mix(in srgb, #ef4444 16%, transparent);
   color: color-mix(in srgb, #991b1b 88%, var(--color-text));
+}
+
+.ai-chat-review__review-badge--average {
+  border-color: color-mix(in srgb, #ef4444 38%, transparent);
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+  color: color-mix(in srgb, #7f1d1d 72%, var(--color-text-subtle));
 }
 
 .ai-chat-review__suggestions {

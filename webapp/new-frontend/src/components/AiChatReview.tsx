@@ -73,7 +73,11 @@ export function AiChatReview({
               {showReview && review ? (
                 <div className="ai-chat-review__review">
                   {reviewBadge ? (
-                    <span className={`ai-chat-review__review-badge ${reviewBadge.className}`}>
+                    <span
+                      className={`ai-chat-review__review-badge${
+                        reviewBadge.className ? ` ${reviewBadge.className}` : ''
+                      }`}
+                    >
                       {reviewBadge.label}
                     </span>
                   ) : null}
@@ -159,32 +163,25 @@ export function AiChatReview({
   );
 }
 
-function getReviewBadge(score: number): { label: string; className: string } {
-  if (score >= 0 && score <= 1) {
-    if (score >= 0.8) {
-      return { label: 'Excellent', className: 'ai-chat-review__review-badge--high' };
-    }
-    if (score >= 0.4) {
-      return { label: 'Needs polish', className: 'ai-chat-review__review-badge--medium' };
-    }
-    return { label: 'Needs rewrite', className: 'ai-chat-review__review-badge--low' };
+function getReviewBadge(score: number): { label: string; className: string } | null {
+  if (!Number.isFinite(score)) {
+    return null;
   }
-
-  if (score >= 0 && score <= 2) {
-    if (score >= 2) {
-      return { label: 'Excellent', className: 'ai-chat-review__review-badge--high' };
-    }
-    if (score >= 1) {
-      return { label: 'Needs polish', className: 'ai-chat-review__review-badge--medium' };
-    }
-    return { label: 'Needs rewrite', className: 'ai-chat-review__review-badge--low' };
+  switch (score) {
+    case 0:
+      return {
+        label: 'Bad',
+        className: 'ai-chat-review__review-badge--bad',
+      };
+    case 2:
+      return {
+        label: 'Good',
+        className: '',
+      };
+    default:
+      return {
+        label: 'Average',
+        className: 'ai-chat-review__review-badge--average',
+      };
   }
-
-  if (score >= 85) {
-    return { label: 'Excellent', className: 'ai-chat-review__review-badge--high' };
-  }
-  if (score >= 60) {
-    return { label: 'Needs polish', className: 'ai-chat-review__review-badge--medium' };
-  }
-  return { label: 'Needs rewrite', className: 'ai-chat-review__review-badge--low' };
 }
