@@ -255,13 +255,17 @@ export function TextUnitDetailPageView({
                 <div className="text-unit-detail-page__key-info-row">
                   <dt>Source</dt>
                   <dd>
-                    <pre className="text-unit-detail-page__key-info-text">{keyInfo.source}</pre>
+                    <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
+                      {keyInfo.source}
+                    </pre>
                   </dd>
                 </div>
                 <div className="text-unit-detail-page__key-info-row">
                   <dt>Comment</dt>
                   <dd>
-                    <pre className="text-unit-detail-page__key-info-text">{keyInfo.comment}</pre>
+                    <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
+                      {keyInfo.comment}
+                    </pre>
                   </dd>
                 </div>
                 <div className="text-unit-detail-page__key-info-row">

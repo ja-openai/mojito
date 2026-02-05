@@ -99,7 +99,8 @@
   background: transparent;
   padding: var(--space-3);
   font-family: inherit;
-  font-size: var(--font-size-md);
+  font-size: 1rem;
+  font-weight: 500;
   line-height: 1.4;
   color: var(--color-text);
 }
@@ -252,6 +253,11 @@
   color: inherit;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.text-unit-detail-page__key-info-text--primary {
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 .text-unit-detail-page__meta {
