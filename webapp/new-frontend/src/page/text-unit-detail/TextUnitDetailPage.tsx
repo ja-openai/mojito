@@ -576,14 +576,6 @@ export function TextUnitDetailPage() {
     setSaveErrorMessage(null);
   }, []);
 
-  const handleUseAiSuggestionAndSave = useCallback(
-    (suggestion: AiReviewSuggestion) => {
-      setDraftTarget(suggestion.content);
-      void saveDraft(suggestion.content);
-    },
-    [saveDraft],
-  );
-
   const editorWarningMessage =
     !localeForEditing || !activeTextUnit
       ? 'Missing locale. Open this page from a workbench row to enable editing.'
@@ -631,7 +623,6 @@ export function TextUnitDetailPage() {
       onChangeAiInput={setAiInput}
       onSubmitAi={handleSubmitAi}
       onUseAiSuggestion={handleUseAiSuggestion}
-      onUseAiSuggestionAndSave={handleUseAiSuggestionAndSave}
       isAiResponding={isAiResponding}
       isMetaCollapsed={isMetaCollapsed}
       onToggleMetaCollapsed={() => setIsMetaCollapsed((current) => !current)}

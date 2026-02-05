@@ -18,9 +18,7 @@ type AiChatReviewProps = {
   onChangeInput: (value: string) => void;
   onSubmit: () => void;
   onUseSuggestion: (suggestion: AiReviewSuggestion) => void;
-  onUseSuggestionAndSave?: (suggestion: AiReviewSuggestion) => void;
   isResponding: boolean;
-  disableUseAndSave?: boolean;
   className?: string;
 };
 
@@ -30,9 +28,7 @@ export function AiChatReview({
   onChangeInput,
   onSubmit,
   onUseSuggestion,
-  onUseSuggestionAndSave,
   isResponding,
-  disableUseAndSave = false,
   className,
 }: AiChatReviewProps) {
   const firstReviewMessage = useMemo(() => {
@@ -96,6 +92,9 @@ export function AiChatReview({
                       key={`${message.id}-suggestion-${suggestionIndex}`}
                       className="ai-chat-review__suggestion"
                     >
+                      <span className="ai-chat-review__suggestion-score">
+                        {formatSuggestionScore(suggestion.confidenceLevel)}
+                      </span>
                       <div className="ai-chat-review__suggestion-main">
                         <span className="ai-chat-review__suggestion-content">
                           {suggestion.content}
@@ -114,16 +113,6 @@ export function AiChatReview({
                         >
                           Use
                         </button>
-                        {onUseSuggestionAndSave ? (
-                          <button
-                            type="button"
-                            className="ai-chat-review__button ai-chat-review__button--primary"
-                            onClick={() => onUseSuggestionAndSave(suggestion)}
-                            disabled={disableUseAndSave}
-                          >
-                            Use + Save
-                          </button>
-                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -188,4 +177,16 @@ function getReviewBadge(score: number): { label: string; className: string } | n
         className: 'ai-chat-review__review-badge--average',
       };
   }
+}
+
+function formatSuggestionScore(confidenceLevel: number | undefined): string {
+  if (typeof confidenceLevel !== 'number' || !Number.isFinite(confidenceLevel)) {
+    return '—';
+  }
+
+  if (Number.isInteger(confidenceLevel)) {
+    return String(confidenceLevel);
+  }
+
+  return confidenceLevel.toFixed(2).replace(/\.?0+$/, '');
 }

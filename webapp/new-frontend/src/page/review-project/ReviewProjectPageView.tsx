@@ -1120,14 +1120,6 @@ function DetailPane({
     setDraftTarget(suggestion.content);
   }, []);
 
-  const handleUseAiSuggestionAndSave = useCallback(
-    (suggestion: AiReviewSuggestion) => {
-      setDraftTarget(suggestion.content);
-      requestSaveDecision(suggestion.content);
-    },
-    [requestSaveDecision],
-  );
-
   const getFocusedTextarea = useCallback(() => {
     const active = document.activeElement;
     if (active && active instanceof HTMLTextAreaElement) {
@@ -1703,9 +1695,7 @@ function DetailPane({
                 onChangeInput={setAiInput}
                 onSubmit={handleSubmitAi}
                 onUseSuggestion={handleUseAiSuggestion}
-                onUseSuggestionAndSave={handleUseAiSuggestionAndSave}
                 isResponding={isAiResponding}
-                disableUseAndSave={isSavingGlobal}
               />
             ) : null}
           </div>

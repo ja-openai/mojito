@@ -70,7 +70,6 @@ type TextUnitDetailPageViewProps = {
   onChangeAiInput: (value: string) => void;
   onSubmitAi: () => void;
   onUseAiSuggestion: (suggestion: AiReviewSuggestion) => void;
-  onUseAiSuggestionAndSave: (suggestion: AiReviewSuggestion) => void;
   isAiResponding: boolean;
   isMetaCollapsed: boolean;
   onToggleMetaCollapsed: () => void;
@@ -107,7 +106,6 @@ export function TextUnitDetailPageView({
   onChangeAiInput,
   onSubmitAi,
   onUseAiSuggestion,
-  onUseAiSuggestionAndSave,
   isAiResponding,
   isMetaCollapsed,
   onToggleMetaCollapsed,
@@ -234,9 +232,7 @@ export function TextUnitDetailPageView({
                   onChangeInput={onChangeAiInput}
                   onSubmit={onSubmitAi}
                   onUseSuggestion={onUseAiSuggestion}
-                  onUseSuggestionAndSave={onUseAiSuggestionAndSave}
                   isResponding={isAiResponding}
-                  disableUseAndSave={!editorInfo.canEdit || editorInfo.isSaving}
                 />
               ) : null}
             </section>

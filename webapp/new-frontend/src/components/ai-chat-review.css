@@ -1,3 +1,9 @@
+.ai-chat-review__thread,
+.ai-chat-review__review,
+.ai-chat-review__suggestion {
+  --ai-chat-review-score-column-width: 5.5em;
+}
+
 .ai-chat-review__thread {
   display: flex;
   flex-direction: column;
@@ -40,9 +46,10 @@
 }
 
 .ai-chat-review__review {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  display: grid;
+  grid-template-columns: var(--ai-chat-review-score-column-width) minmax(0, 1fr);
+  column-gap: var(--space-2);
+  align-items: start;
 }
 
 .ai-chat-review__review p {
@@ -55,6 +62,8 @@
 .ai-chat-review__review-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  justify-self: center;
   white-space: nowrap;
   border-radius: var(--radius-pill);
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
@@ -89,22 +98,29 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-5);
-  display: flex;
-  flex-direction: column;
+  padding: var(--space-1) var(--space-2) var(--space-1) 0;
+  display: grid;
+  grid-template-columns: var(--ai-chat-review-score-column-width) minmax(0, 1fr);
+  column-gap: var(--space-2);
   gap: var(--space-2);
 }
 
-.ai-chat-review__suggestion::before {
-  content: '';
-  position: absolute;
-  top: calc(50% + 0.08em);
-  transform: translateY(-50%);
-  left: var(--space-1);
-  width: var(--space-2);
-  height: var(--space-2);
+.ai-chat-review__suggestion-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  min-width: 2em;
+  height: 1.4em;
+  padding-inline: var(--space-1);
+  margin-top: 0.2em;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-accent) 68%, transparent);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: color-mix(in srgb, var(--color-border) 24%, transparent);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
 }
 
 .ai-chat-review__suggestion-main {
