@@ -307,6 +307,8 @@ export function TextUnitDetailPage() {
 
   const metaSections = useMemo<TextUnitDetailMetaSection[]>(() => {
     const textUnitRows: TextUnitDetailMetaRow[] = [
+      { label: 'Repository', value: formatValue(activeTextUnit?.repositoryName) },
+      { label: 'Locale', value: formatValue(localeForEditing) },
       { label: 'Created', value: formatDateTime(textUnitQuery.data?.tmTextUnitCreatedDate) },
       { label: 'Translated', value: formatDateTime(textUnitQuery.data?.createdDate) },
       { label: 'AssetPath', value: formatValue(textUnitQuery.data?.assetPath) },
@@ -355,7 +357,7 @@ export function TextUnitDetailPage() {
       { title: 'Git blame', rows: gitBlameRows },
       { title: 'More', rows: moreRows },
     ];
-  }, [gitBlame, textUnitLocation, textUnitQuery.data]);
+  }, [activeTextUnit?.repositoryName, gitBlame, localeForEditing, textUnitLocation, textUnitQuery.data]);
 
   const historyRows = useMemo<TextUnitDetailHistoryRow[]>(() => {
     return sortedHistoryItems.map((item) => {
