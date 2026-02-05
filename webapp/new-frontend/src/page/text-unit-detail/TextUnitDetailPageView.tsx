@@ -1,14 +1,16 @@
 import '../review-project/review-project-page.css';
 import './text-unit-detail-page.css';
 
-import { type ReactNode } from 'react';
+import { type ReactNode, useMemo } from 'react';
 
 import type { AiReviewSuggestion } from '../../api/ai-review';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { IcuMessagePreview } from '../../components/IcuMessagePreview';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
+import { parseIcuMessage } from '../../utils/icuMessageFormat';
 
 export type TextUnitDetailMetaRow = {
   label: string;
@@ -63,6 +65,9 @@ type TextUnitDetailPageViewProps = {
   onChangeStatus: (value: string) => void;
   onSaveEditor: () => void;
   onResetEditor: () => void;
+  previewLocale: string;
+  isIcuPreviewCollapsed: boolean;
+  onToggleIcuPreviewCollapsed: () => void;
   isAiCollapsed: boolean;
   onToggleAiCollapsed: () => void;
   aiMessages: TextUnitDetailAiMessage[];
@@ -99,6 +104,9 @@ export function TextUnitDetailPageView({
   onChangeStatus,
   onSaveEditor,
   onResetEditor,
+  previewLocale,
+  isIcuPreviewCollapsed,
+  onToggleIcuPreviewCollapsed,
   isAiCollapsed,
   onToggleAiCollapsed,
   aiMessages,
@@ -125,6 +133,21 @@ export function TextUnitDetailPageView({
   onConfirmValidationSave,
   onDismissValidationDialog,
 }: TextUnitDetailPageViewProps) {
+  const hasIcuSource = useMemo(() => {
+    const source = keyInfo.source?.trim();
+    if (!source || source === '-') {
+      return false;
+    }
+    if (!source.includes('{')) {
+      return false;
+    }
+    try {
+      return parseIcuMessage(source).parameters.length > 0;
+    } catch {
+      return false;
+    }
+  }, [keyInfo.source]);
+
   return (
     <div className="review-project-page text-unit-detail-page">
       <header className="review-project-page__header">
@@ -218,6 +241,38 @@ export function TextUnitDetailPageView({
                 </button>
               </div>
             </div>
+
+            {hasIcuSource ? (
+              <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--icu-inline">
+                <SectionHeader
+                  title="ICU preview"
+                  expanded={!isIcuPreviewCollapsed}
+                  onToggle={onToggleIcuPreviewCollapsed}
+                />
+                {!isIcuPreviewCollapsed ? (
+                  <div className="text-unit-detail-page__icu-grid">
+                    <div className="text-unit-detail-page__icu-column">
+                      <h3 className="text-unit-detail-page__icu-title">Source message</h3>
+                      <IcuMessagePreview
+                        message={keyInfo.source}
+                        locale="en"
+                        showMessageEditor={false}
+                        showLocaleInput={false}
+                      />
+                    </div>
+                    <div className="text-unit-detail-page__icu-column">
+                      <h3 className="text-unit-detail-page__icu-title">Target message</h3>
+                      <IcuMessagePreview
+                        message={editorInfo.target}
+                        locale={previewLocale}
+                        showMessageEditor={false}
+                        showLocaleInput={false}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
 
             <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--ai-inline">
               <SectionHeader

@@ -54,6 +54,7 @@ export function TextUnitDetailPage() {
 
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
   const [isMetaCollapsed, setIsMetaCollapsed] = useState(true);
+  const [isIcuPreviewCollapsed, setIsIcuPreviewCollapsed] = useState(true);
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
 
   const [draftTarget, setDraftTarget] = useState('');
@@ -618,6 +619,9 @@ export function TextUnitDetailPage() {
       onChangeStatus={(value) => setDraftStatus(normalizeEditorStatus(value))}
       onSaveEditor={handleSaveEditor}
       onResetEditor={handleResetEditor}
+      previewLocale={localeForEditing ?? 'en'}
+      isIcuPreviewCollapsed={isIcuPreviewCollapsed}
+      onToggleIcuPreviewCollapsed={() => setIsIcuPreviewCollapsed((current) => !current)}
       isAiCollapsed={isAiCollapsed}
       onToggleAiCollapsed={() => setIsAiCollapsed((current) => !current)}
       aiMessages={aiMessages}
