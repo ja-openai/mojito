@@ -765,6 +765,10 @@ export function ReviewProjectPageView({
               <span className="review-project-shortcuts__key">Shift + Tab</span>
               <span>Previous editor</span>
             </li>
+            <li className="review-project-shortcuts__item">
+              <span className="review-project-shortcuts__key">a</span>
+              <span>Accept selected text unit (outside edit fields)</span>
+            </li>
           </ul>
         </div>
         <div className="modal__actions">
@@ -1164,6 +1168,19 @@ function DetailPane({
     return null;
   }, []);
 
+  const isEditableTarget = useCallback((target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+    const tagName = target.tagName;
+    return (
+      tagName === 'INPUT' ||
+      tagName === 'TEXTAREA' ||
+      tagName === 'SELECT' ||
+      target.isContentEditable
+    );
+  }, []);
+
   useEffect(() => {
     if (focusTranslationKey === 0) {
       return;
@@ -1173,6 +1190,26 @@ function DetailPane({
 
   useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
+      const isAcceptHotkey =
+        event.key.toLowerCase() === 'a' &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey;
+      if (isAcceptHotkey) {
+        if (isEditableTarget(event.target) || event.repeat) {
+          return;
+        }
+        if (mutations.showValidationDialog || mutations.isSaving) {
+          return;
+        }
+        if (canAccept) {
+          event.preventDefault();
+          handleAccept();
+        }
+        return;
+      }
+
       if (event.key !== 'Enter' || (!event.metaKey && !event.ctrlKey)) {
         return;
       }
@@ -1207,6 +1244,7 @@ function DetailPane({
   }, [
     canAccept,
     getFocusedTextarea,
+    isEditableTarget,
     handleAccept,
     mutations.isSaving,
     mutations.showValidationDialog,
