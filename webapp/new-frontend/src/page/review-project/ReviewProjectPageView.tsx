@@ -1678,18 +1678,29 @@ function DetailPane({
           </div>
 
           <div className="review-project-detail__editor-controls">
-            <div className="review-project-detail__field review-project-detail__field--status">
-              <PillDropdown
-                value={draftStatusChoice}
-                options={STATUS_CHOICES.map((option) => ({
-                  value: option.value,
-                  label: option.label,
-                }))}
-                onChange={handleStatusChange}
-                ariaLabel="Translation status"
-                className="review-project-detail__status-dropdown"
-                disabled={isStatusDropdownDisabled}
-              />
+            <div className="review-project-detail__decision-segmented" role="group">
+              <button
+                type="button"
+                className={`review-project-detail__decision-option${
+                  snapshot.decisionState === 'PENDING' ? ' is-active' : ''
+                }`}
+                onClick={() => handleDecisionStateChange('PENDING')}
+                disabled={isDirty || isSavingGlobal}
+                aria-pressed={snapshot.decisionState === 'PENDING'}
+              >
+                Pending
+              </button>
+              <button
+                type="button"
+                className={`review-project-detail__decision-option${
+                  snapshot.decisionState === 'DECIDED' ? ' is-active' : ''
+                }`}
+                onClick={() => handleDecisionStateChange('DECIDED')}
+                disabled={isDirty || isSavingGlobal}
+                aria-pressed={snapshot.decisionState === 'DECIDED'}
+              >
+                Decided
+              </button>
             </div>
             <div
               className={`review-project-detail__saving-indicator${
@@ -1703,30 +1714,6 @@ function DetailPane({
               <span>Saving…</span>
             </div>
             <div className="review-project-detail__editor-actions">
-              <div className="review-project-detail__decision-segmented" role="group">
-                <button
-                  type="button"
-                  className={`review-project-detail__decision-option${
-                    snapshot.decisionState === 'PENDING' ? ' is-active' : ''
-                  }`}
-                  onClick={() => handleDecisionStateChange('PENDING')}
-                  disabled={isDirty || isSavingGlobal}
-                  aria-pressed={snapshot.decisionState === 'PENDING'}
-                >
-                  Pending
-                </button>
-                <button
-                  type="button"
-                  className={`review-project-detail__decision-option${
-                    snapshot.decisionState === 'DECIDED' ? ' is-active' : ''
-                  }`}
-                  onClick={() => handleDecisionStateChange('DECIDED')}
-                  disabled={isDirty || isSavingGlobal}
-                  aria-pressed={snapshot.decisionState === 'DECIDED'}
-                >
-                  Decided
-                </button>
-              </div>
               <button
                 type="button"
                 className="review-project-detail__actions-button"
@@ -1846,6 +1833,21 @@ function DetailPane({
             <div className="review-project-detail__value review-project-detail__value--meta">
               <span className="review-project-detail__title-text">{textUnitName}</span>
             </div>
+          </div>
+
+          <div className="review-project-detail__field review-project-detail__field--status">
+            <div className="review-project-detail__label">Status</div>
+            <PillDropdown
+              value={draftStatusChoice}
+              options={STATUS_CHOICES.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              onChange={handleStatusChange}
+              ariaLabel="Translation status"
+              className="review-project-detail__status-dropdown"
+              disabled={isStatusDropdownDisabled}
+            />
           </div>
         </div>
       </div>
