@@ -5,7 +5,7 @@ import './review-project-page.css';
 import type { VirtualItem } from '@tanstack/react-virtual';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import {
   type AiReviewMessage,
@@ -172,6 +172,13 @@ function normalizeOptional(value: string): string | null {
   return value === '' ? null : value;
 }
 
+function parseDecisionStateFilter(value: string | null): DecisionStateFilter {
+  if (value === 'PENDING' || value === 'DECIDED') {
+    return value;
+  }
+  return 'all';
+}
+
 type DecisionSnapshot = {
   expectedCurrentVariantId: number | null;
   target: string;
@@ -225,6 +232,7 @@ export function ReviewProjectPageView({
   selectedTextUnitQueryId,
   onSelectedTextUnitIdChange,
 }: Props) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const locale = project?.locale ?? null;
   const localeTag = locale?.bcp47Tag ?? '';
   const textUnits = useMemo<ApiReviewProjectTextUnit[]>(
@@ -247,7 +255,9 @@ export function ReviewProjectPageView({
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [stateFilter, setStateFilter] = useState<DecisionStateFilter>('all');
+  const [stateFilter, setStateFilter] = useState<DecisionStateFilter>(() =>
+    parseDecisionStateFilter(searchParams.get('state')),
+  );
   const [selectedTextUnitId, setSelectedTextUnitId] = useState<number | null>(null);
   const [detailIsDirty, setDetailIsDirty] = useState(false);
   const [focusTranslationKey, setFocusTranslationKey] = useState(0);
@@ -520,6 +530,27 @@ export function ReviewProjectPageView({
     setPendingSelection(null);
   }, []);
 
+  const setDecisionStateFilter = useCallback(
+    (next: DecisionStateFilter) => {
+      setStateFilter(next);
+      const nextParams = new URLSearchParams(searchParams);
+      if (next === 'all') {
+        nextParams.delete('state');
+      } else {
+        nextParams.set('state', next);
+      }
+      if (nextParams.toString() !== searchParams.toString()) {
+        setSearchParams(nextParams, { replace: true });
+      }
+    },
+    [searchParams, setSearchParams],
+  );
+
+  useEffect(() => {
+    const next = parseDecisionStateFilter(searchParams.get('state'));
+    setStateFilter((current) => (current === next ? current : next));
+  }, [searchParams]);
+
   useEffect(() => {
     window.addEventListener('keydown', handleKeyNav);
     return () => window.removeEventListener('keydown', handleKeyNav);
@@ -591,6 +622,7 @@ export function ReviewProjectPageView({
         textUnits={textUnits}
         mutations={mutations}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        onReviewPending={() => setDecisionStateFilter('PENDING')}
       />
 
       <div
@@ -636,7 +668,7 @@ export function ReviewProjectPageView({
                   label: 'State',
                   options: DECISION_STATE_OPTIONS as Array<FilterOption<string | number>>,
                   value: stateFilter,
-                  onChange: (value) => setStateFilter(value as DecisionStateFilter),
+                  onChange: (value) => setDecisionStateFilter(value as DecisionStateFilter),
                 },
               ]}
             />
@@ -1993,12 +2025,14 @@ function ReviewProjectHeader({
   textUnits: textUnitsProp,
   mutations,
   onOpenShortcuts,
+  onReviewPending,
 }: {
   projectId: number;
   project: ApiReviewProjectDetail;
   textUnits: ApiReviewProjectTextUnit[];
   mutations: ReviewProjectMutationControls;
   onOpenShortcuts: () => void;
+  onReviewPending: () => void;
 }) {
   const { dueDate, textUnitCount, wordCount, status, type } = project;
   const name = project.reviewProjectRequest?.name ?? null;
@@ -2007,113 +2041,163 @@ function ReviewProjectHeader({
   const locales = useMemo(() => (locale ? [locale] : []), [locale]);
   const nextStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
+  const [showCloseWarning, setShowCloseWarning] = useState(false);
   const actionClass =
     status === 'OPEN'
       ? 'review-project-page__header-action--close'
       : 'review-project-page__header-action--reopen';
 
-  const { selectedCount, progressPercent, progressTitle } = useMemo(() => {
+  const { selectedCount, decidedCount, pendingCount, progressPercent, progressTitle } = useMemo(() => {
     const selected = textUnits?.length ?? 0;
     const decided = textUnits?.filter((tu) => getDecisionState(tu) === 'DECIDED').length ?? 0;
+    const pending = Math.max(0, selected - decided);
     const percent = selected > 0 ? Math.round((decided / selected) * 100) : 0;
     const title = selected > 0 ? `${decided}/${selected}` : 'No text units';
     return {
       selectedCount: selected,
+      decidedCount: decided,
+      pendingCount: pending,
       progressPercent: percent,
       progressTitle: title,
     };
   }, [textUnits]);
 
+  const handleProjectAction = useCallback(() => {
+    if (mutations.isProjectStatusSaving) {
+      return;
+    }
+    if (status === 'OPEN' && pendingCount > 0) {
+      setShowCloseWarning(true);
+      return;
+    }
+    mutations.onRequestProjectStatus(nextStatus);
+  }, [mutations, nextStatus, pendingCount, status]);
+
+  const confirmCloseProject = useCallback(() => {
+    setShowCloseWarning(false);
+    mutations.onRequestProjectStatus('CLOSED');
+  }, [mutations]);
+
+  const dismissCloseWarning = useCallback(() => {
+    setShowCloseWarning(false);
+  }, []);
+
+  const handleReviewPending = useCallback(() => {
+    setShowCloseWarning(false);
+    onReviewPending();
+  }, [onReviewPending]);
+
   return (
-    <header className="review-project-page__header">
-      <div className="review-project-page__header-row">
-        <div className="review-project-page__header-group review-project-page__header-group--left">
-          <Link
-            className="review-project-page__header-back-link"
-            to="/review-projects"
-            aria-label="Back to review projects"
-            title="Back to review projects"
-          >
-            <svg
-              className="review-project-page__header-back-icon"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
+    <>
+      <header className="review-project-page__header">
+        <div className="review-project-page__header-row">
+          <div className="review-project-page__header-group review-project-page__header-group--left">
+            <Link
+              className="review-project-page__header-back-link"
+              to="/review-projects"
+              aria-label="Back to review projects"
+              title="Back to review projects"
             >
-              <path
-                d="M20 12H6m0 0l5-5m-5 5l5 5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
-          <span className="review-project-page__header-name">{name ?? `Project ${projectId}`}</span>
-          <span className="review-project-page__header-pills">
-            <Pill
-              className={`review-project-page__header-pill review-project-page__header-pill--type-${type}`}
-            >
-              {REVIEW_PROJECT_TYPE_LABELS[type]}
-            </Pill>
-          </span>
-          <div className="review-project-page__header-locale-row">
-            {locales.length > 0 ? (
-              locales.map((locale) => {
-                const tag = locale.bcp47Tag ?? '';
-                return (
-                  <LocalePill
-                    key={String(locale.id ?? (tag || 'unknown-locale'))}
-                    bcp47Tag={tag}
-                    displayName={tag}
-                    labelMode="tag"
-                    className="review-project-page__header-locale-pill"
-                  />
-                );
-              })
-            ) : (
-              <span className="review-project-page__header-muted">No locale</span>
-            )}
-          </div>
-        </div>
-
-        <div className="review-project-page__header-group review-project-page__header-group--stats">
-          <CountsInline words={wordCount} strings={textUnitCount ?? selectedCount} />
-          <span className="review-project-page__header-dot">•</span>
-          <div className="review-project-page__header-progress">
-            <span className="review-project-page__header-progress-label" title={progressTitle}>
-              {progressPercent}%
+              <svg
+                className="review-project-page__header-back-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M20 12H6m0 0l5-5m-5 5l5 5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+            <span className="review-project-page__header-name">{name ?? `Project ${projectId}`}</span>
+            <span className="review-project-page__header-pills">
+              <Pill
+                className={`review-project-page__header-pill review-project-page__header-pill--type-${type}`}
+              >
+                {REVIEW_PROJECT_TYPE_LABELS[type]}
+              </Pill>
             </span>
-            <ProgressBar percent={progressPercent} title={progressTitle} />
+            <div className="review-project-page__header-locale-row">
+              {locales.length > 0 ? (
+                locales.map((locale) => {
+                  const tag = locale.bcp47Tag ?? '';
+                  return (
+                    <LocalePill
+                      key={String(locale.id ?? (tag || 'unknown-locale'))}
+                      bcp47Tag={tag}
+                      displayName={tag}
+                      labelMode="tag"
+                      className="review-project-page__header-locale-pill"
+                    />
+                  );
+                })
+              ) : (
+                <span className="review-project-page__header-muted">No locale</span>
+              )}
+            </div>
+          </div>
+
+          <div className="review-project-page__header-group review-project-page__header-group--stats">
+            <CountsInline words={wordCount} strings={textUnitCount ?? selectedCount} />
+            <span className="review-project-page__header-dot">•</span>
+            <div className="review-project-page__header-progress">
+              <span className="review-project-page__header-progress-label" title={progressTitle}>
+                {progressPercent}%
+              </span>
+              <ProgressBar percent={progressPercent} title={progressTitle} />
+            </div>
+          </div>
+
+          <div className="review-project-page__header-group review-project-page__header-group--meta">
+            <span>Due {formatDate(dueDate)}</span>
+            <button
+              type="button"
+              className="review-project-page__header-help"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenShortcuts();
+              }}
+              aria-label="Keyboard shortcuts"
+              title="Keyboard shortcuts"
+            >
+              <span aria-hidden="true">?</span>
+            </button>
+            <button
+              type="button"
+              className={`review-project-page__header-action ${actionClass}`}
+              onClick={handleProjectAction}
+              disabled={mutations.isProjectStatusSaving}
+            >
+              {mutations.isProjectStatusSaving ? 'Saving…' : actionLabel}
+            </button>
           </div>
         </div>
-
-        <div className="review-project-page__header-group review-project-page__header-group--meta">
-          <span>Due {formatDate(dueDate)}</span>
-          <button
-            type="button"
-            className="review-project-page__header-help"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenShortcuts();
-            }}
-            aria-label="Keyboard shortcuts"
-            title="Keyboard shortcuts"
-          >
-            <span aria-hidden="true">?</span>
+      </header>
+      <Modal open={showCloseWarning} size="md" role="alertdialog" ariaLabel="Close with pending items?">
+        <div className="modal__title">Close with pending items?</div>
+        <div className="modal__body">
+          {pendingCount} text unit{pendingCount === 1 ? '' : 's'} still{' '}
+          {pendingCount === 1 ? 'needs' : 'need'} a decision ({decidedCount}/{selectedCount}{' '}
+          decided). Close project anyway?
+        </div>
+        <div className="modal__actions">
+          <button type="button" className="modal__button" onClick={dismissCloseWarning}>
+            Keep open
           </button>
-          <button
-            type="button"
-            className={`review-project-page__header-action ${actionClass}`}
-            onClick={() => mutations.onRequestProjectStatus(nextStatus)}
-            disabled={mutations.isProjectStatusSaving}
-          >
-            {mutations.isProjectStatusSaving ? 'Saving…' : actionLabel}
+          <button type="button" className="modal__button modal__button--primary" onClick={handleReviewPending}>
+            Review pending
+          </button>
+          <button type="button" className="modal__button modal__button--danger" onClick={confirmCloseProject}>
+            Close project
           </button>
         </div>
-      </div>
-    </header>
+      </Modal>
+    </>
   );
 }
 
