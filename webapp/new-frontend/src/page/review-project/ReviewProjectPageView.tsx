@@ -107,6 +107,10 @@ function getDecisionState(textUnit: ApiReviewProjectTextUnit): DecisionStateChoi
   if (decision?.decisionState === 'DECIDED' || decision?.decisionState === 'PENDING') {
     return decision.decisionState;
   }
+  // Treat accepted translations as decided when there is no explicit decision state yet.
+  if (getStatusKey(getEffectiveVariant(textUnit)) === 'APPROVED') {
+    return 'DECIDED';
+  }
   return decision?.decisionTmTextUnitVariant?.id != null ? 'DECIDED' : 'PENDING';
 }
 
