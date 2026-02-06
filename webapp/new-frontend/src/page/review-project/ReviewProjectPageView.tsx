@@ -751,11 +751,11 @@ export function ReviewProjectPageView({
             </li>
             <li className="review-project-shortcuts__item">
               <span className="review-project-shortcuts__key">Cmd/Ctrl + Enter</span>
-              <span>Save and blur</span>
+              <span>Accept and blur</span>
             </li>
             <li className="review-project-shortcuts__item">
               <span className="review-project-shortcuts__key">Cmd/Ctrl + Shift + Enter</span>
-              <span>Save and go to next text unit. If unchanged, mark decided and go to next.</span>
+              <span>Accept and go to next text unit. If unchanged, mark decided and go to next.</span>
             </li>
             <li className="review-project-shortcuts__item">
               <span className="review-project-shortcuts__key">Tab</span>
@@ -852,7 +852,6 @@ function DetailPane({
   const translationRef = useRef<HTMLTextAreaElement | null>(null);
   const commentRef = useRef<HTMLTextAreaElement | null>(null);
   const decisionNotesRef = useRef<HTMLTextAreaElement | null>(null);
-  const didAutoAcceptRef = useRef(false);
   const savingIndicatorStartRef = useRef<number | null>(null);
   const savingIndicatorTimeoutRef = useRef<number | null>(null);
   const workbenchTextUnitId = textUnit.tmTextUnit?.id ?? null;
@@ -899,7 +898,6 @@ function DetailPane({
     setDraftStatusChoice(snapshot.statusChoice);
     setDraftComment(snapshot.comment ?? '');
     setDraftDecisionNotes(snapshot.decisionNotes ?? '');
-    didAutoAcceptRef.current = false;
   }, [snapshot, snapshotKey]);
 
   useEffect(() => {
@@ -971,14 +969,20 @@ function DetailPane({
   const snapshotStatusApi = mapChoiceToApi(snapshot.statusChoice);
   const draftCommentNormalized = normalizeOptional(draftComment);
   const draftDecisionNotesNormalized = normalizeOptional(draftDecisionNotes);
+  const isTranslationDirty = draftTarget !== snapshot.target;
   const isDirty =
-    draftTarget !== snapshot.target ||
+    isTranslationDirty ||
     draftStatusApi.status !== snapshotStatusApi.status ||
     draftStatusApi.includedInLocalizedFile !== snapshotStatusApi.includedInLocalizedFile ||
     draftCommentNormalized !== snapshot.comment ||
     draftDecisionNotesNormalized !== snapshot.decisionNotes;
   const isRejected = draftStatusApi.includedInLocalizedFile === false;
-  const canSave = isDirty && !isSavingGlobal;
+  const canReset = isDirty && !isSavingGlobal;
+  const canAccept = !isSavingGlobal && (isTranslationDirty || snapshot.statusChoice !== 'ACCEPTED');
+  const isCommentDirty = draftCommentNormalized !== snapshot.comment;
+  const isDecisionNotesDirty = draftDecisionNotesNormalized !== snapshot.decisionNotes;
+  const isStatusDropdownDisabled =
+    isSavingGlobal || isTranslationDirty || isCommentDirty || isDecisionNotesDirty;
 
   useEffect(() => {
     onDirtyChange(isDirty);
@@ -986,25 +990,35 @@ function DetailPane({
   }, [isDirty, onDirtyChange]);
 
   const requestSaveDecision = useCallback(
-    (targetOverride?: string) => {
+    ({
+      targetOverride,
+      statusChoiceOverride,
+      commentOverride,
+      decisionNotesOverride,
+    }: {
+      targetOverride?: string;
+      statusChoiceOverride?: StatusChoice;
+      commentOverride?: string | null;
+      decisionNotesOverride?: string | null;
+    } = {}) => {
       const nextTarget = targetOverride ?? draftTarget;
+      const nextStatusApi = mapChoiceToApi(statusChoiceOverride ?? draftStatusChoice);
       mutations.onRequestSaveDecision({
         textUnitId: textUnit.id,
         tmTextUnitId: workbenchTextUnitId,
         target: nextTarget,
-        comment: draftCommentNormalized,
-        status: draftStatusApi.status,
-        includedInLocalizedFile: draftStatusApi.includedInLocalizedFile,
+        comment: commentOverride ?? draftCommentNormalized,
+        status: nextStatusApi.status,
+        includedInLocalizedFile: nextStatusApi.includedInLocalizedFile,
         decisionState: 'DECIDED',
         expectedCurrentTmTextUnitVariantId: snapshot.expectedCurrentVariantId,
-        decisionNotes: draftDecisionNotesNormalized,
+        decisionNotes: decisionNotesOverride ?? draftDecisionNotesNormalized,
       });
     },
     [
       draftCommentNormalized,
       draftDecisionNotesNormalized,
-      draftStatusApi.includedInLocalizedFile,
-      draftStatusApi.status,
+      draftStatusChoice,
       draftTarget,
       mutations,
       snapshot.expectedCurrentVariantId,
@@ -1029,7 +1043,6 @@ function DetailPane({
     setDraftStatusChoice(snapshot.statusChoice);
     setDraftComment(snapshot.comment ?? '');
     setDraftDecisionNotes(snapshot.decisionNotes ?? '');
-    didAutoAcceptRef.current = false;
   }, [snapshot]);
 
   const handleEditorKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1052,9 +1065,32 @@ function DetailPane({
     }
   }, []);
 
-  const handleSave = useCallback(() => {
-    requestSaveDecision();
+  const handleAccept = useCallback(() => {
+    requestSaveDecision({ statusChoiceOverride: 'ACCEPTED' });
   }, [requestSaveDecision]);
+
+  const handleStatusChange = useCallback(
+    (next: StatusChoice) => {
+      setDraftStatusChoice(next);
+      if (isStatusDropdownDisabled || next === snapshot.statusChoice) {
+        return;
+      }
+      requestSaveDecision({
+        statusChoiceOverride: next,
+        targetOverride: snapshot.target,
+        commentOverride: snapshot.comment,
+        decisionNotesOverride: snapshot.decisionNotes,
+      });
+    },
+    [
+      isStatusDropdownDisabled,
+      requestSaveDecision,
+      snapshot.comment,
+      snapshot.decisionNotes,
+      snapshot.statusChoice,
+      snapshot.target,
+    ],
+  );
 
   const handleSubmitAi = useCallback(() => {
     if (isAiResponding || !localeTag) {
@@ -1148,8 +1184,8 @@ function DetailPane({
         if (mutations.showValidationDialog || mutations.isSaving) {
           return;
         }
-        if (canSave) {
-          handleSave();
+        if (canAccept) {
+          handleAccept();
         } else if (snapshot.decisionState !== 'DECIDED') {
           requestDecisionState('DECIDED');
         }
@@ -1161,17 +1197,17 @@ function DetailPane({
         focusedTextarea?.blur();
         return;
       }
-      if (canSave) {
-        handleSave();
+      if (canAccept) {
+        handleAccept();
       }
       focusedTextarea?.blur();
     };
     window.addEventListener('keydown', handleSaveShortcut);
     return () => window.removeEventListener('keydown', handleSaveShortcut);
   }, [
-    canSave,
+    canAccept,
     getFocusedTextarea,
-    handleSave,
+    handleAccept,
     mutations.isSaving,
     mutations.showValidationDialog,
     onQueueAdvance,
@@ -1595,12 +1631,7 @@ function DetailPane({
               ref={translationRef}
               value={draftTarget}
               onChange={(event) => {
-                const next = event.target.value;
-                if (!didAutoAcceptRef.current && next !== snapshot.target) {
-                  setDraftStatusChoice('ACCEPTED');
-                  didAutoAcceptRef.current = true;
-                }
-                setDraftTarget(next);
+                setDraftTarget(event.target.value);
               }}
               onKeyDown={handleEditorKeyDown}
               rows={1}
@@ -1616,9 +1647,10 @@ function DetailPane({
                   value: option.value,
                   label: option.label,
                 }))}
-                onChange={(next) => setDraftStatusChoice(next)}
+                onChange={handleStatusChange}
                 ariaLabel="Translation status"
                 className="review-project-detail__status-dropdown"
+                disabled={isStatusDropdownDisabled}
               />
             </div>
             <div
@@ -1661,17 +1693,17 @@ function DetailPane({
                 type="button"
                 className="review-project-detail__actions-button"
                 onClick={handleReset}
-                disabled={!canSave}
+                disabled={!canReset}
               >
                 Reset
               </button>
               <button
                 type="button"
                 className="review-project-detail__actions-button review-project-detail__actions-button--primary"
-                onClick={handleSave}
-                disabled={!canSave}
+                onClick={handleAccept}
+                disabled={!canAccept}
               >
-                Save
+                Accept
               </button>
             </div>
           </div>
