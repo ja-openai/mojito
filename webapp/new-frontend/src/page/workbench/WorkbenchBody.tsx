@@ -34,6 +34,7 @@ type WorkbenchBodyProps = {
   onStartEditing: (rowId: string, translation: string | null) => void;
   onCancelEditing: () => void;
   onSaveEditing: () => void;
+  canSaveEditing: boolean;
   onChangeEditingValue: (value: string) => void;
   onChangeStatus: (rowId: string, status: string) => void;
   statusOptions: string[];
@@ -66,6 +67,7 @@ export function WorkbenchBody({
   onStartEditing,
   onCancelEditing,
   onSaveEditing,
+  canSaveEditing,
   onChangeEditingValue,
   onChangeStatus,
   statusOptions,
@@ -517,7 +519,12 @@ export function WorkbenchBody({
                                   event.stopPropagation();
                                   onSaveEditing();
                                 }}
-                                disabled={isSaving}
+                                disabled={!canSaveEditing || isSaving}
+                                title={
+                                  !canSaveEditing
+                                    ? 'Already accepted. Edit the translation to save again.'
+                                    : undefined
+                                }
                               >
                                 <span>Accept</span>
                               </button>

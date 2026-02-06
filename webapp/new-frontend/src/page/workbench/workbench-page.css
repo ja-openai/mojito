@@ -1055,10 +1055,20 @@
   white-space: nowrap;
 }
 
+.workbench-page__translation-button:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
 .workbench-page__translation-button--primary {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: #fff;
+}
+
+.workbench-page__translation-button--primary:disabled {
+  background: color-mix(in srgb, var(--color-accent) 62%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-accent) 62%, var(--color-surface));
 }
 
 .workbench-page__translation-input {

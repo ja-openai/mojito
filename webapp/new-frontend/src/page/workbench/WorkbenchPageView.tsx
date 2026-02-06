@@ -34,6 +34,7 @@ type Props = {
   hasMoreResults: boolean;
   editingRowId: string | null;
   editingValue: string;
+  canSaveEditing: boolean;
   onStartEditing: (rowId: string, translation: string | null) => void;
   onCancelEditing: () => void;
   onSaveEditing: () => void;
@@ -157,6 +158,7 @@ export function WorkbenchPageView({
   hasMoreResults,
   editingRowId,
   editingValue,
+  canSaveEditing,
   onStartEditing,
   onCancelEditing,
   onSaveEditing,
@@ -333,6 +335,7 @@ export function WorkbenchPageView({
         onStartEditing={onStartEditing}
         onCancelEditing={onCancelEditing}
         onSaveEditing={onSaveEditing}
+        canSaveEditing={canSaveEditing}
         onChangeEditingValue={onChangeEditingValue}
         onChangeStatus={onChangeStatus}
         statusOptions={statusOptions}

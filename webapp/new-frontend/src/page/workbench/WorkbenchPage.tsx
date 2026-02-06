@@ -510,6 +510,7 @@ export function WorkbenchPage() {
         hasMoreResults={search.hasMoreResults}
         editingRowId={edits.editingRowId}
         editingValue={edits.editingValue}
+        canSaveEditing={edits.canSaveEditing}
         onStartEditing={edits.onStartEditing}
         onCancelEditing={edits.onCancelEditing}
         onSaveEditing={edits.onSaveEditing}

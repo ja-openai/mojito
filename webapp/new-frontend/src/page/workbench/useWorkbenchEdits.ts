@@ -45,6 +45,7 @@ type Params = {
 type UseWorkbenchEditsResult = {
   editingRowId: string | null;
   editingValue: string;
+  canSaveEditing: boolean;
   editedRowIds: Set<string>;
   statusSavingRowIds: Set<string>;
   diffModal: {
@@ -302,6 +303,16 @@ export function useWorkbenchEdits({
   }, []);
 
   const hasUnsavedChanges = editingRowId !== null && editingValue !== editingInitialValue;
+  const canSaveEditing = useMemo(() => {
+    if (!editingRowId) {
+      return false;
+    }
+    const row = apiRows.find((candidate) => candidate.id === editingRowId);
+    if (!row || !row.canEdit) {
+      return false;
+    }
+    return editingValue !== editingInitialValue || row.status !== 'Accepted';
+  }, [apiRows, editingInitialValue, editingRowId, editingValue]);
 
   const handleRequestStartEditing = useCallback(
     (rowId: string, translation: string | null) => {
@@ -370,9 +381,7 @@ export function useWorkbenchEdits({
       return;
     }
 
-    if (editingValue === editingInitialValue) {
-      // Match legacy behavior: don't post if nothing changed.
-      handleCancelEditing();
+    if (editingValue === editingInitialValue && row.status === 'Accepted') {
       return;
     }
 
@@ -558,6 +567,7 @@ export function useWorkbenchEdits({
   return {
     editingRowId,
     editingValue,
+    canSaveEditing,
     editedRowIds,
     statusSavingRowIds,
     diffModal,
