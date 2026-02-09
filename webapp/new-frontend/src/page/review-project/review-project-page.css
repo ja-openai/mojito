@@ -1172,17 +1172,18 @@
 }
 
 .review-project-detail__decision-option.is-active {
-  background: color-mix(in srgb, var(--color-surface-muted) 75%, transparent);
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-accent) 72%, var(--color-text));
   font-weight: var(--font-weight-medium);
 }
 
 .review-project-detail__decision-option:hover:not(:disabled) {
-  color: var(--color-text);
+  color: color-mix(in srgb, var(--color-accent) 58%, var(--color-text));
 }
 
 .review-project-detail__decision-option.is-active:hover:not(:disabled) {
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 17%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-accent) 78%, var(--color-text));
 }
 
 .review-project-detail__decision-option:disabled {
