@@ -49,8 +49,10 @@ type TextUnitDetailPageViewProps = {
     status: string;
     statusOptions: string[];
     canEdit: boolean;
+    canDelete: boolean;
     isDirty: boolean;
     isSaving: boolean;
+    isDeleting: boolean;
     errorMessage: string | null;
     warningMessage: string | null;
   };
@@ -65,6 +67,7 @@ type TextUnitDetailPageViewProps = {
   onChangeStatus: (value: string) => void;
   onSaveEditor: () => void;
   onResetEditor: () => void;
+  onRequestDeleteEditor: () => void;
   previewLocale: string;
   isIcuPreviewCollapsed: boolean;
   onToggleIcuPreviewCollapsed: () => void;
@@ -91,10 +94,15 @@ type TextUnitDetailPageViewProps = {
   historyMissingLocale: boolean;
   historyRows: TextUnitDetailHistoryRow[];
   historyInitialDate: string;
+  showDeletedHistoryEntry: boolean;
   showValidationDialog: boolean;
   validationDialogBody: string;
   onConfirmValidationSave: () => void;
   onDismissValidationDialog: () => void;
+  showDeleteDialog: boolean;
+  deleteDialogBody: string;
+  onConfirmDeleteEditor: () => void;
+  onDismissDeleteDialog: () => void;
 };
 
 export function TextUnitDetailPageView({
@@ -106,6 +114,7 @@ export function TextUnitDetailPageView({
   onChangeStatus,
   onSaveEditor,
   onResetEditor,
+  onRequestDeleteEditor,
   previewLocale,
   isIcuPreviewCollapsed,
   onToggleIcuPreviewCollapsed,
@@ -132,10 +141,15 @@ export function TextUnitDetailPageView({
   historyMissingLocale,
   historyRows,
   historyInitialDate,
+  showDeletedHistoryEntry,
   showValidationDialog,
   validationDialogBody,
   onConfirmValidationSave,
   onDismissValidationDialog,
+  showDeleteDialog,
+  deleteDialogBody,
+  onConfirmDeleteEditor,
+  onDismissDeleteDialog,
 }: TextUnitDetailPageViewProps) {
   const hasIcuSource = useMemo(() => {
     const source = keyInfo.source?.trim();
@@ -292,8 +306,21 @@ export function TextUnitDetailPageView({
                 <button
                   type="button"
                   className="text-unit-detail-page__button"
+                  onClick={onRequestDeleteEditor}
+                  disabled={
+                    !editorInfo.canDelete ||
+                    editorInfo.isSaving ||
+                    editorInfo.isDeleting ||
+                    !editorInfo.canEdit
+                  }
+                >
+                  {editorInfo.isDeleting ? 'Deleting…' : 'Delete'}
+                </button>
+                <button
+                  type="button"
+                  className="text-unit-detail-page__button"
                   onClick={onResetEditor}
-                  disabled={!editorInfo.isDirty || editorInfo.isSaving}
+                  disabled={!editorInfo.isDirty || editorInfo.isSaving || editorInfo.isDeleting}
                 >
                   Reset
                 </button>
@@ -301,7 +328,12 @@ export function TextUnitDetailPageView({
                   type="button"
                   className="text-unit-detail-page__button text-unit-detail-page__button--primary"
                   onClick={onSaveEditor}
-                  disabled={!editorInfo.canEdit || !editorInfo.isDirty || editorInfo.isSaving}
+                  disabled={
+                    !editorInfo.canEdit ||
+                    !editorInfo.isDirty ||
+                    editorInfo.isSaving ||
+                    editorInfo.isDeleting
+                  }
                 >
                   {editorInfo.isSaving ? 'Saving…' : 'Save'}
                 </button>
@@ -445,6 +477,34 @@ export function TextUnitDetailPageView({
                   </div>
                 ) : (
                   <ol className="text-unit-detail-page__timeline">
+                    {showDeletedHistoryEntry ? (
+                      <li className="text-unit-detail-page__timeline-item">
+                        <div className="text-unit-detail-page__timeline-dot" aria-hidden="true" />
+                        <div className="text-unit-detail-page__timeline-card">
+                          <div className="text-unit-detail-page__timeline-header">
+                            <div className="text-unit-detail-page__timeline-summary">
+                              <span className="text-unit-detail-page__timeline-title">
+                                Translation deleted
+                              </span>
+                              <span className="text-unit-detail-page__timeline-summary-separator">
+                                &middot;
+                              </span>
+                              <span className="text-unit-detail-page__timeline-summary-meta">-</span>
+                              <span className="text-unit-detail-page__timeline-summary-separator">
+                                &middot;
+                              </span>
+                              <span className="text-unit-detail-page__timeline-summary-status">
+                                Deleted
+                              </span>
+                            </div>
+                            <time className="text-unit-detail-page__timeline-time">-</time>
+                          </div>
+                          <pre className="text-unit-detail-page__timeline-content">
+                            {'<no current translation>'}
+                          </pre>
+                        </div>
+                      </li>
+                    ) : null}
                     {historyRows.map((item) => (
                       <li key={item.key} className="text-unit-detail-page__timeline-item">
                         <div className="text-unit-detail-page__timeline-dot" aria-hidden="true" />
@@ -581,6 +641,15 @@ export function TextUnitDetailPageView({
         cancelLabel="Keep editing"
         onConfirm={onConfirmValidationSave}
         onCancel={onDismissValidationDialog}
+      />
+      <ConfirmModal
+        open={showDeleteDialog}
+        title="Delete?"
+        body={deleteDialogBody}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={onConfirmDeleteEditor}
+        onCancel={onDismissDeleteDialog}
       />
     </div>
   );

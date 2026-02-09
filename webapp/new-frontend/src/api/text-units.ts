@@ -195,6 +195,27 @@ export async function saveTextUnit(request: SaveTextUnitRequest): Promise<ApiTex
   return postJson<ApiTextUnit>('/api/textunits', request);
 }
 
+export async function deleteTextUnitCurrentVariant(
+  textUnitCurrentVariantId: number,
+): Promise<void> {
+  const response = await fetch(`/api/textunits/${textUnitCurrentVariantId}`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    const error: Error & { status?: number } = new Error(
+      message || `Request failed with status ${response.status}`,
+    );
+    error.status = response.status;
+    throw error;
+  }
+}
+
 export async function checkTextUnitIntegrity(
   request: TextUnitIntegrityCheckRequest,
 ): Promise<TextUnitIntegrityCheckResult> {

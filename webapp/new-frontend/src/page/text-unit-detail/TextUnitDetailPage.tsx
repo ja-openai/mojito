@@ -11,6 +11,7 @@ import {
   type ApiGitBlameWithUsage,
   type ApiTextUnitHistoryItem,
   checkTextUnitIntegrity,
+  deleteTextUnitCurrentVariant,
   fetchGitBlameWithUsages,
   fetchTextUnitHistory,
   saveTextUnit,
@@ -71,6 +72,7 @@ export function TextUnitDetailPage() {
     request: SaveTextUnitRequest;
     body: string;
   } | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const [aiMessages, setAiMessages] = useState<TextUnitDetailAiMessage[]>([]);
   const [aiInput, setAiInput] = useState('');
@@ -159,6 +161,40 @@ export function TextUnitDetailPage() {
         return;
       }
       setSaveErrorMessage(error instanceof Error ? error.message : 'Unable to save translation.');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (textUnitCurrentVariantId: number) =>
+      deleteTextUnitCurrentVariant(textUnitCurrentVariantId),
+    onSuccess: () => {
+      setBaselineTarget('');
+      setDraftTarget('');
+      setBaselineStatus('To translate');
+      setDraftStatus('To translate');
+      setSaveErrorMessage(null);
+      setPendingValidationSave(null);
+      setShowDeleteDialog(false);
+      setIsHistoryCollapsed(false);
+
+      void queryClient.invalidateQueries({
+        queryKey: ['text-unit-detail', tmTextUnitId, localeTag],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['text-unit-history', tmTextUnitId, localeTag],
+      });
+      void queryClient.invalidateQueries({ queryKey: ['workbench-search'] });
+    },
+    onError: (error: unknown) => {
+      setShowDeleteDialog(false);
+      const status = (error as { status?: number })?.status;
+      if (status === 403) {
+        setSaveErrorMessage('You cannot delete this locale translation.');
+        return;
+      }
+      setSaveErrorMessage(
+        error instanceof Error ? error.message : 'Unable to delete translation.',
+      );
     },
   });
 
@@ -409,6 +445,12 @@ export function TextUnitDetailPage() {
   };
 
   const isEditorDirty = draftTarget !== baselineTarget || draftStatus !== baselineStatus;
+  const hasCurrentTranslation = typeof activeTextUnit?.tmTextUnitVariantId === 'number';
+  const showDeletedHistoryEntry = !hasCurrentTranslation && historyRows.length > 1;
+  const canDeleteCurrentTranslation =
+    canEdit &&
+    hasCurrentTranslation &&
+    typeof activeTextUnit?.tmTextUnitCurrentVariantId === 'number';
 
   const buildSaveRequest = useCallback(
     (targetValue: string): SaveTextUnitRequest | null => {
@@ -505,6 +547,44 @@ export function TextUnitDetailPage() {
     setSaveErrorMessage(null);
     setPendingValidationSave(null);
   }, [baselineStatus, baselineTarget]);
+
+  const handleRequestDeleteEditor = useCallback(() => {
+    if (!canDeleteCurrentTranslation || deleteMutation.isPending || saveMutation.isPending) {
+      return;
+    }
+    setPendingValidationSave(null);
+    setSaveErrorMessage(null);
+    setShowDeleteDialog(true);
+  }, [canDeleteCurrentTranslation, deleteMutation.isPending, saveMutation.isPending]);
+
+  const handleConfirmDeleteEditor = useCallback(() => {
+    if (!canDeleteCurrentTranslation || !hasCurrentTranslation) {
+      setShowDeleteDialog(false);
+      return;
+    }
+
+    const currentVariantId = activeTextUnit?.tmTextUnitCurrentVariantId;
+    if (typeof currentVariantId !== 'number') {
+      setShowDeleteDialog(false);
+      setSaveErrorMessage('No current translation to delete.');
+      return;
+    }
+
+    setSaveErrorMessage(null);
+    void deleteMutation.mutateAsync(currentVariantId);
+  }, [
+    activeTextUnit?.tmTextUnitCurrentVariantId,
+    canDeleteCurrentTranslation,
+    deleteMutation,
+    hasCurrentTranslation,
+  ]);
+
+  const handleDismissDeleteDialog = useCallback(() => {
+    if (deleteMutation.isPending) {
+      return;
+    }
+    setShowDeleteDialog(false);
+  }, [deleteMutation.isPending]);
 
   const handleConfirmValidationSave = useCallback(() => {
     if (!pendingValidationSave) {
@@ -610,8 +690,10 @@ export function TextUnitDetailPage() {
         status: draftStatus,
         statusOptions: editorStatusOptions,
         canEdit,
+        canDelete: canDeleteCurrentTranslation,
         isDirty: isEditorDirty,
         isSaving: saveMutation.isPending,
+        isDeleting: deleteMutation.isPending,
         errorMessage: saveErrorMessage,
         warningMessage: editorWarningMessage,
       }}
@@ -626,6 +708,7 @@ export function TextUnitDetailPage() {
       onChangeStatus={(value) => setDraftStatus(normalizeEditorStatus(value))}
       onSaveEditor={handleSaveEditor}
       onResetEditor={handleResetEditor}
+      onRequestDeleteEditor={handleRequestDeleteEditor}
       previewLocale={localeForEditing ?? 'en'}
       isIcuPreviewCollapsed={isIcuPreviewCollapsed}
       onToggleIcuPreviewCollapsed={() => setIsIcuPreviewCollapsed((current) => !current)}
@@ -660,10 +743,19 @@ export function TextUnitDetailPage() {
       historyMissingLocale={!localeTag}
       historyRows={historyRows}
       historyInitialDate={formatDateTime(textUnitQuery.data?.tmTextUnitCreatedDate)}
+      showDeletedHistoryEntry={showDeletedHistoryEntry}
       showValidationDialog={pendingValidationSave !== null}
       validationDialogBody={pendingValidationSave?.body ?? ''}
       onConfirmValidationSave={handleConfirmValidationSave}
       onDismissValidationDialog={handleDismissValidationDialog}
+      showDeleteDialog={showDeleteDialog}
+      deleteDialogBody={
+        isEditorDirty
+          ? 'This will delete the current translation and discard unsaved edits.'
+          : 'This will delete the current translation for this locale.'
+      }
+      onConfirmDeleteEditor={handleConfirmDeleteEditor}
+      onDismissDeleteDialog={handleDismissDeleteDialog}
     />
   );
 }
