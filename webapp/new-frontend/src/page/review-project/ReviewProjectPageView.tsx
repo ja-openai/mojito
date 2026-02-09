@@ -107,10 +107,6 @@ function getDecisionState(textUnit: ApiReviewProjectTextUnit): DecisionStateChoi
   if (decision?.decisionState === 'DECIDED' || decision?.decisionState === 'PENDING') {
     return decision.decisionState;
   }
-  // Treat accepted translations as decided when there is no explicit decision state yet.
-  if (getStatusKey(getEffectiveVariant(textUnit)) === 'APPROVED') {
-    return 'DECIDED';
-  }
   return decision?.decisionTmTextUnitVariant?.id != null ? 'DECIDED' : 'PENDING';
 }
 
@@ -1018,7 +1014,9 @@ function DetailPane({
     draftDecisionNotesNormalized !== snapshot.decisionNotes;
   const isRejected = draftStatusApi.includedInLocalizedFile === false;
   const canReset = isDirty && !isSavingGlobal;
-  const canAccept = !isSavingGlobal && (isTranslationDirty || snapshot.statusChoice !== 'ACCEPTED');
+  const isAcceptedAndDecided =
+    snapshot.statusChoice === 'ACCEPTED' && snapshot.decisionState === 'DECIDED';
+  const canAccept = !isSavingGlobal && (!isAcceptedAndDecided || isDirty);
   const isCommentDirty = draftCommentNormalized !== snapshot.comment;
   const isDecisionNotesDirty = draftDecisionNotesNormalized !== snapshot.decisionNotes;
   const isStatusDropdownDisabled =
