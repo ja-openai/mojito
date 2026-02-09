@@ -177,6 +177,8 @@ public class WebSecurityConfig {
                 .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/translate")
                 .authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/ai/review")
+                .authenticated()
                 // Review projects search should be available to translators
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/search")
                 .authenticated()
