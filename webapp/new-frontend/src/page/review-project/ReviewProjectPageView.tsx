@@ -2060,6 +2060,7 @@ function ReviewProjectHeader({
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
+  const [descriptionEditorMode, setDescriptionEditorMode] = useState<'edit' | 'preview'>('edit');
   const [requestNameDraft, setRequestNameDraft] = useState(name ?? '');
   const [descriptionDraft, setDescriptionDraft] = useState(description);
   const [projectTypeDraft, setProjectTypeDraft] = useState<ApiReviewProjectType>(type);
@@ -2120,11 +2121,12 @@ function ReviewProjectHeader({
     setProjectTypeDraft(type);
     setDueDateDraft(toDateTimeLocalInputValue(dueDate));
     setAttachmentDrafts(requestAttachments);
+    setDescriptionEditorMode(canEditRequest ? 'edit' : 'preview');
     setIsAttachmentUploading(false);
     setIsAttachmentDropActive(false);
     setAttachmentUploadError(null);
     setRequestSaveError(null);
-  }, [description, dueDate, name, requestAttachments, showDescription, type]);
+  }, [canEditRequest, description, dueDate, name, requestAttachments, showDescription, type]);
 
   const closeDescriptionModal = useCallback(() => {
     if (mutations.isProjectRequestSaving || isAttachmentUploading) {
@@ -2552,12 +2554,43 @@ function ReviewProjectHeader({
                 <div className="review-project-page__description-field">
                   <div className="review-project-page__description-label-row">
                     <span className="review-project-page__description-label">Description</span>
-                    <span className="review-project-page__description-hint">
-                      Rich text, stored as markdown
-                    </span>
+                    {canEditRequest ? (
+                      <div
+                        className="review-project-page__description-mode-toggle"
+                        role="group"
+                        aria-label="Description editor mode"
+                      >
+                        <button
+                          type="button"
+                          className={`review-project-page__description-mode-button${
+                            descriptionEditorMode === 'edit'
+                              ? ' review-project-page__description-mode-button--active'
+                              : ''
+                          }`}
+                          onClick={() => setDescriptionEditorMode('edit')}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className={`review-project-page__description-mode-button${
+                            descriptionEditorMode === 'preview'
+                              ? ' review-project-page__description-mode-button--active'
+                              : ''
+                          }`}
+                          onClick={() => setDescriptionEditorMode('preview')}
+                        >
+                          Preview
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="review-project-page__description-hint">
+                        Rich text, stored as markdown
+                      </span>
+                    )}
                   </div>
                   {canEditRequest ? (
-                    <>
+                    descriptionEditorMode === 'edit' ? (
                       <MarkdownRichTextEditor
                         className="review-project-page__description-rich-editor"
                         value={descriptionDraft}
@@ -2565,15 +2598,13 @@ function ReviewProjectHeader({
                         disabled={mutations.isProjectRequestSaving}
                         placeholder="Write request guidance, checklists, links, and notes."
                       />
-                      <div className="review-project-page__description-preview-block">
-                        <span className="review-project-page__description-label">Preview</span>
-                        <MarkdownPreview
-                          className="review-project-page__description-markdown"
-                          markdown={descriptionDraft}
-                          emptyLabel="No description provided."
-                        />
-                      </div>
-                    </>
+                    ) : (
+                      <MarkdownPreview
+                        className="review-project-page__description-markdown"
+                        markdown={descriptionDraft}
+                        emptyLabel="No description provided."
+                      />
+                    )
                   ) : (
                     <MarkdownPreview
                       className="review-project-page__description-markdown"

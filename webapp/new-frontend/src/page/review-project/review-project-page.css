@@ -448,14 +448,39 @@
   width: 100%;
 }
 
-.review-project-page__description-preview-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
 .review-project-page__description-markdown {
   min-height: 8rem;
+}
+
+.review-project-page__description-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-surface-muted) 30%, transparent);
+}
+
+.review-project-page__description-mode-button {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  padding: 0.26rem 0.62rem;
+  cursor: pointer;
+}
+
+.review-project-page__description-mode-button:hover,
+.review-project-page__description-mode-button:focus-visible {
+  background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+  color: var(--color-text);
+}
+
+.review-project-page__description-mode-button--active {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-text) 88%, var(--color-accent));
 }
 
 .review-project-page__description-error {
