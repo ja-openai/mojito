@@ -56,7 +56,8 @@ function mediaMarkdownToHtml(label: string, rawUrl: string): string | null {
     return null;
   }
   const safeUrl = escapeHtml(url);
-  const safeLabel = label.trim() || 'Attachment';
+  const labelTrimmed = label.trim();
+  const safeLabel = escapeHtml(labelTrimmed || 'Attachment');
 
   if (isImageUrl(url)) {
     return `<img class="markdown-preview__media markdown-preview__media--image" src="${safeUrl}" alt="${safeLabel}" loading="lazy" />`;
@@ -65,7 +66,8 @@ function mediaMarkdownToHtml(label: string, rawUrl: string): string | null {
     return `<video class="markdown-preview__media markdown-preview__media--video" src="${safeUrl}" controls preload="metadata"></video>`;
   }
   if (isPdfUrl(url)) {
-    return `<object class="markdown-preview__media markdown-preview__media--pdf" data="${safeUrl}" type="application/pdf"><a href="${safeUrl}" target="_blank" rel="noreferrer">Open PDF</a></object>`;
+    const pdfLabel = labelTrimmed ? `: ${escapeHtml(labelTrimmed)}` : '';
+    return `<a class="markdown-preview__media-link" href="${safeUrl}" target="_blank" rel="noreferrer">Open PDF${pdfLabel}</a>`;
   }
 
   return null;

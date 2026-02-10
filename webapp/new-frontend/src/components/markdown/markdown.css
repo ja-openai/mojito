@@ -127,8 +127,14 @@
   max-height: 28rem;
 }
 
-.markdown-preview__media--pdf {
-  min-height: 28rem;
+.markdown-preview__media-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--font-size-sm);
+  line-height: 1.3;
+  color: var(--color-accent);
+  text-decoration: underline;
 }
 
 .markdown-preview blockquote {
