@@ -2777,6 +2777,11 @@ function ReviewProjectHeader({
                 Request details
               </button>
             ) : null}
+            {requestId != null ? (
+              <span className="review-project-page__header-dot" aria-hidden>
+                •
+              </span>
+            ) : null}
             <span>Due {formatDate(dueDate)}</span>
             <button
               type="button"
