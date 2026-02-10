@@ -2381,7 +2381,7 @@ function ReviewProjectHeader({
                 onClick={() => setShowDescription(true)}
                 aria-label={canEditRequest ? 'Edit request details' : 'View request details'}
               >
-                Description
+                Request details
               </button>
             ) : null}
             <span>Due {formatDate(dueDate)}</span>
