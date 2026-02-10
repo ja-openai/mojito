@@ -1,7 +1,8 @@
+import './markdown.css';
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { htmlToMarkdown, markdownToHtml } from './markdown-format';
-import './markdown.css';
 
 type Props = {
   value: string;

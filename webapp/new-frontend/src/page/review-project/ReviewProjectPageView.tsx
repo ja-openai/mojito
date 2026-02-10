@@ -21,15 +21,17 @@ import { REVIEW_PROJECT_TYPE_LABELS, REVIEW_PROJECT_TYPES } from '../../api/revi
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
-import { useUser } from '../../components/RequireUser';
 import {
   type FilterOption,
   MultiSectionFilterChip,
 } from '../../components/filters/MultiSectionFilterChip';
 import { LocalePill } from '../../components/LocalePill';
+import { MarkdownPreview } from '../../components/markdown/MarkdownPreview';
+import { MarkdownRichTextEditor } from '../../components/markdown/MarkdownRichTextEditor';
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
+import { useUser } from '../../components/RequireUser';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
@@ -2046,7 +2048,7 @@ function ReviewProjectHeader({
   const { dueDate, textUnitCount, wordCount, status, type } = project;
   const name = project.reviewProjectRequest?.name ?? null;
   const requestId = project.reviewProjectRequest?.id ?? null;
-  const description = project.reviewProjectRequest?.notes?.trim() ?? '';
+  const description = project.reviewProjectRequest?.notes ?? '';
   const requestAttachments = useMemo(
     () => project.reviewProjectRequest?.screenshotImageIds ?? [],
     [project.reviewProjectRequest?.screenshotImageIds],
@@ -2547,17 +2549,39 @@ function ReviewProjectHeader({
                     />
                   </label>
                 </div>
-                <label className="review-project-page__description-field">
-                  <span className="review-project-page__description-label">Description</span>
-                  <AutoTextarea
-                    className="review-project-page__description-textarea"
-                    value={descriptionDraft}
-                    onChange={(event) => setDescriptionDraft(event.target.value)}
-                    disabled={!canEditRequest || mutations.isProjectRequestSaving}
-                    placeholder="No description provided."
-                    minRows={12}
-                  />
-                </label>
+                <div className="review-project-page__description-field">
+                  <div className="review-project-page__description-label-row">
+                    <span className="review-project-page__description-label">Description</span>
+                    <span className="review-project-page__description-hint">
+                      Rich text, stored as markdown
+                    </span>
+                  </div>
+                  {canEditRequest ? (
+                    <>
+                      <MarkdownRichTextEditor
+                        className="review-project-page__description-rich-editor"
+                        value={descriptionDraft}
+                        onChange={setDescriptionDraft}
+                        disabled={mutations.isProjectRequestSaving}
+                        placeholder="Write request guidance, checklists, links, and notes."
+                      />
+                      <div className="review-project-page__description-preview-block">
+                        <span className="review-project-page__description-label">Preview</span>
+                        <MarkdownPreview
+                          className="review-project-page__description-markdown"
+                          markdown={descriptionDraft}
+                          emptyLabel="No description provided."
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <MarkdownPreview
+                      className="review-project-page__description-markdown"
+                      markdown={descriptionDraft}
+                      emptyLabel="No description provided."
+                    />
+                  )}
+                </div>
                 <div className="review-project-page__description-field">
                   <div className="review-project-page__description-label-row">
                     <span className="review-project-page__description-label">Attachments</span>

@@ -1,7 +1,8 @@
+import './markdown.css';
+
 import { useMemo } from 'react';
 
 import { markdownToHtml } from './markdown-format';
-import './markdown.css';
 
 type Props = {
   markdown: string;
