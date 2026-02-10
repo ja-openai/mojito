@@ -7,10 +7,12 @@ import com.box.l10n.mojito.service.image.ImageService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -44,12 +46,29 @@ public class ImageWS {
     Optional<Image> image = imageService.getImage(imageName);
 
     return image
-        .map(
-            i ->
-                ResponseEntity.ok()
-                    .contentType(getMediaTypeFromImageName(imageName))
-                    .body(image.get().getContent()))
+        .map(i -> toImageResponse(imageName, i))
         .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  ResponseEntity<byte[]> toImageResponse(String imageName, Image image) {
+    byte[] content = image.getContent();
+    MediaType mediaType = getMediaTypeFromImageName(imageName);
+    boolean inferredPdf = mediaType == MediaType.APPLICATION_OCTET_STREAM && isPdfContent(content);
+    if (inferredPdf) {
+      mediaType = MediaType.APPLICATION_PDF;
+    }
+
+    String filename = FilenameUtils.getName(imageName);
+    if (inferredPdf && !filename.toLowerCase().endsWith(".pdf")) {
+      filename = filename + ".pdf";
+    }
+
+    return ResponseEntity.ok()
+        .header(
+            "Content-Disposition",
+            ContentDisposition.inline().filename(filename, StandardCharsets.UTF_8).build().toString())
+        .contentType(mediaType)
+        .body(content);
   }
 
   @RequestMapping(value = "/api/images/**", method = RequestMethod.PUT)
@@ -99,8 +118,19 @@ public class ImageWS {
       case "gif":
         mediaType = MediaType.IMAGE_GIF;
         break;
+      case "pdf":
+        mediaType = MediaType.APPLICATION_PDF;
+        break;
     }
 
     return mediaType;
+  }
+
+  boolean isPdfContent(byte[] content) {
+    if (content == null || content.length < 5) {
+      return false;
+    }
+    return content[0] == '%' && content[1] == 'P' && content[2] == 'D' && content[3] == 'F'
+        && content[4] == '-';
   }
 }
