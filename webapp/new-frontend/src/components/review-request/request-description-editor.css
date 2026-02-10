@@ -1,0 +1,63 @@
+.request-description-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.request-description-editor__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.request-description-editor__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.request-description-editor__hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.request-description-editor__header-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.request-description-editor__mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-surface-muted) 30%, transparent);
+}
+
+.request-description-editor__mode-button {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  padding: 0.26rem 0.62rem;
+  cursor: pointer;
+}
+
+.request-description-editor__mode-button:not(.request-description-editor__mode-button--active):hover,
+.request-description-editor__mode-button:not(.request-description-editor__mode-button--active):focus-visible {
+  background: color-mix(in srgb, var(--color-surface-muted) 55%, transparent);
+  color: var(--color-text);
+}
+
+.request-description-editor__mode-button--active {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-text) 88%, var(--color-accent));
+}

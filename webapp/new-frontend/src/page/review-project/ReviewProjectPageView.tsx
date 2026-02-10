@@ -26,16 +26,23 @@ import {
   MultiSectionFilterChip,
 } from '../../components/filters/MultiSectionFilterChip';
 import { LocalePill } from '../../components/LocalePill';
-import { MarkdownPreview } from '../../components/markdown/MarkdownPreview';
-import { MarkdownRichTextEditor } from '../../components/markdown/MarkdownRichTextEditor';
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
 import { useUser } from '../../components/RequireUser';
+import { RequestDescriptionEditor } from '../../components/review-request/RequestDescriptionEditor';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import {
+  buildUploadFileKey,
+  isImageAttachmentKey,
+  isPdfAttachmentKey,
+  isVideoAttachmentKey,
+  resolveAttachmentUrl,
+  toDescriptionAttachmentMarkdown,
+} from '../../utils/request-attachments';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
 
 const Chevron = ({ direction }: { direction: 'left' | 'right' | 'up' | 'down' }) => (
@@ -2060,7 +2067,6 @@ function ReviewProjectHeader({
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
-  const [descriptionEditorMode, setDescriptionEditorMode] = useState<'edit' | 'preview'>('edit');
   const [requestNameDraft, setRequestNameDraft] = useState(name ?? '');
   const [descriptionDraft, setDescriptionDraft] = useState(description);
   const [projectTypeDraft, setProjectTypeDraft] = useState<ApiReviewProjectType>(type);
@@ -2121,12 +2127,11 @@ function ReviewProjectHeader({
     setProjectTypeDraft(type);
     setDueDateDraft(toDateTimeLocalInputValue(dueDate));
     setAttachmentDrafts(requestAttachments);
-    setDescriptionEditorMode(canEditRequest ? 'edit' : 'preview');
     setIsAttachmentUploading(false);
     setIsAttachmentDropActive(false);
     setAttachmentUploadError(null);
     setRequestSaveError(null);
-  }, [canEditRequest, description, dueDate, name, requestAttachments, showDescription, type]);
+  }, [description, dueDate, name, requestAttachments, showDescription, type]);
 
   const closeDescriptionModal = useCallback(() => {
     if (mutations.isProjectRequestSaving || isAttachmentUploading) {
@@ -2553,79 +2558,20 @@ function ReviewProjectHeader({
                   </label>
                 </div>
                 <div className="review-project-page__description-field">
-                  <div className="review-project-page__description-label-row">
-                    <span className="review-project-page__description-label">Description</span>
-                    {canEditRequest ? (
-                      <div className="review-project-page__description-label-controls">
-                        <span className="review-project-page__description-hint">
-                          Drop files in editor to upload and attach below
-                        </span>
-                        <div
-                          className="review-project-page__description-mode-toggle"
-                          role="group"
-                          aria-label="Description editor mode"
-                        >
-                          <button
-                            type="button"
-                            className={`review-project-page__description-mode-button${
-                              descriptionEditorMode === 'edit'
-                                ? ' review-project-page__description-mode-button--active'
-                                : ''
-                            }`}
-                            onClick={() => setDescriptionEditorMode('edit')}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className={`review-project-page__description-mode-button${
-                              descriptionEditorMode === 'preview'
-                                ? ' review-project-page__description-mode-button--active'
-                                : ''
-                            }`}
-                            onClick={() => setDescriptionEditorMode('preview')}
-                          >
-                            Preview
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="review-project-page__description-hint">
-                        Rich text, stored as markdown
-                      </span>
-                    )}
-                  </div>
-                  {canEditRequest ? (
-                    descriptionEditorMode === 'edit' ? (
-                      <MarkdownRichTextEditor
-                        className="review-project-page__description-rich-editor"
-                        value={descriptionDraft}
-                        onChange={setDescriptionDraft}
-                        onDropFiles={async (files) => {
-                          const uploadedKeys = await handleAttachmentFiles(files);
-                          if (uploadedKeys.length === 0) {
-                            return null;
-                          }
-                          const snippets = uploadedKeys.map((key) => toDescriptionAttachmentMarkdown(key));
-                          return `${snippets.join('\n')}\n`;
-                        }}
-                        disabled={mutations.isProjectRequestSaving}
-                        placeholder="Write request guidance, checklists, links, and notes."
-                      />
-                    ) : (
-                      <MarkdownPreview
-                        className="review-project-page__description-markdown"
-                        markdown={descriptionDraft}
-                        emptyLabel="No description provided."
-                      />
-                    )
-                  ) : (
-                    <MarkdownPreview
-                      className="review-project-page__description-markdown"
-                      markdown={descriptionDraft}
-                      emptyLabel="No description provided."
-                    />
-                  )}
+                  <RequestDescriptionEditor
+                    value={descriptionDraft}
+                    onChange={setDescriptionDraft}
+                    canEdit={canEditRequest}
+                    disabled={mutations.isProjectRequestSaving}
+                    onDropFiles={async (files) => {
+                      const uploadedKeys = await handleAttachmentFiles(files);
+                      if (uploadedKeys.length === 0) {
+                        return null;
+                      }
+                      const snippets = uploadedKeys.map((key) => toDescriptionAttachmentMarkdown(key));
+                      return `${snippets.join('\n')}\n`;
+                    }}
+                  />
                 </div>
                 <div className="review-project-page__description-field">
                   <div className="review-project-page__description-label-row">
@@ -2686,7 +2632,7 @@ function ReviewProjectHeader({
                         <span key={key} className="review-project-page__description-chip">
                           <a
                             className="review-project-page__description-chip-link"
-                            href={resolveMediaUrl(key)}
+                            href={resolveAttachmentUrl(key)}
                             target="_blank"
                             rel="noreferrer"
                             title={key}
@@ -2793,109 +2739,6 @@ const toDateTimeLocalInputValue = (value: string | null | undefined) => {
   )}:${pad(parsed.getMinutes())}`;
 };
 
-const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.ogv', '.ogg', '.m4v', '.mkv'];
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif'];
-const PDF_EXTENSIONS = ['.pdf'];
-const MIME_EXTENSION_MAP: Record<string, string> = {
-  'application/pdf': 'pdf',
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-  'image/bmp': 'bmp',
-  'image/svg+xml': 'svg',
-  'image/avif': 'avif',
-  'video/mp4': 'mp4',
-  'video/quicktime': 'mov',
-  'video/webm': 'webm',
-  'video/ogg': 'ogv',
-  'video/x-matroska': 'mkv',
-};
-
-const getUploadFileExtension = (file: File) => {
-  const trimmedName = file.name.trim();
-  const lastDot = trimmedName.lastIndexOf('.');
-  let extension =
-    lastDot > 0 && lastDot < trimmedName.length - 1 ? trimmedName.slice(lastDot + 1) : '';
-  if (!extension && file.type) {
-    extension = MIME_EXTENSION_MAP[file.type.toLowerCase()] ?? '';
-  }
-  return extension.toLowerCase().replace(/[^a-z0-9]/g, '');
-};
-
-const getUploadFileBaseName = (file: File) => {
-  const trimmedName = file.name.trim();
-  if (!trimmedName) {
-    return 'attachment';
-  }
-  const lastDot = trimmedName.lastIndexOf('.');
-  const rawBase = lastDot > 0 ? trimmedName.slice(0, lastDot) : trimmedName;
-  const sanitized = rawBase
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return (sanitized || 'attachment').slice(0, 80);
-};
-
-const getRandomKeySuffix = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto && crypto.randomUUID
-    ? crypto.randomUUID().slice(0, 8)
-    : Math.random().toString(36).slice(2, 10);
-
-const buildUploadFileKey = (file: File) => {
-  const baseName = getUploadFileBaseName(file);
-  const ext = getUploadFileExtension(file);
-  const suffix = getRandomKeySuffix();
-  return ext ? `${baseName}-${suffix}.${ext}` : `${baseName}-${suffix}`;
-};
-
-const resolveMediaUrl = (key: string) => {
-  const isExternal =
-    /^https?:\/\//i.test(key) ||
-    key.startsWith('//') ||
-    key.startsWith('data:') ||
-    key.startsWith('blob:');
-  return isExternal ? key : `/api/images/${encodeURIComponent(key)}`;
-};
-
-const isVideoKey = (key: string) => {
-  const lower = key.split('?')[0].toLowerCase();
-  return (
-    key.startsWith('data:video') ||
-    key.startsWith('blob:') ||
-    VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext))
-  );
-};
-
-const isImageKey = (key: string) => {
-  const lower = key.split('?')[0].toLowerCase();
-  return (
-    key.startsWith('data:image') ||
-    key.startsWith('blob:') ||
-    IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext))
-  );
-};
-
-const isPdfKey = (key: string) => {
-  const lower = key.split('?')[0].toLowerCase();
-  return key.startsWith('data:application/pdf') || PDF_EXTENSIONS.some((ext) => lower.endsWith(ext));
-};
-
-const toDescriptionAttachmentMarkdown = (key: string) => {
-  const url = resolveMediaUrl(key);
-  if (isImageKey(key)) {
-    return `![${key}](${url})`;
-  }
-  if (isVideoKey(key)) {
-    return `[video: ${key}](${url})`;
-  }
-  if (isPdfKey(key)) {
-    return `[pdf: ${key}](${url})`;
-  }
-  return `[${key}](${url})`;
-};
-
 const toAttachmentLabel = (key: string) => {
   const withoutQuery = key.split('?')[0];
   const ext = withoutQuery.includes('.') ? withoutQuery.split('.').pop() ?? '' : '';
@@ -2915,7 +2758,7 @@ type MediaRenderOptions = {
 };
 
 const renderMedia = (key: string, className?: string, options: MediaRenderOptions = {}) => {
-  const url = resolveMediaUrl(key);
+  const url = resolveAttachmentUrl(key);
   const baseClass = className ? `${className} review-project-media` : 'review-project-media';
   const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     if (!options.onClick) {
@@ -2936,7 +2779,7 @@ const renderMedia = (key: string, className?: string, options: MediaRenderOption
         'aria-label': options.ariaLabel ?? 'Open media',
       }
     : {};
-  if (isVideoKey(key)) {
+  if (isVideoAttachmentKey(key)) {
     return (
       <video
         key={url}
@@ -2952,7 +2795,7 @@ const renderMedia = (key: string, className?: string, options: MediaRenderOption
       />
     );
   }
-  if (isPdfKey(key)) {
+  if (isPdfAttachmentKey(key)) {
     if (options.asThumbnail) {
       return (
         <span className={`${baseClass} review-project-media review-project-media--file-thumb`}>PDF</span>
@@ -2971,7 +2814,7 @@ const renderMedia = (key: string, className?: string, options: MediaRenderOption
       </a>
     );
   }
-  if (!isImageKey(key)) {
+  if (!isImageAttachmentKey(key)) {
     if (options.asThumbnail) {
       return (
         <span className={`${baseClass} review-project-media review-project-media--file-thumb`}>
