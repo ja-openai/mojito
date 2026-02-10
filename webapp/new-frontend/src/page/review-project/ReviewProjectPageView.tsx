@@ -2877,16 +2877,15 @@ const renderMedia = (key: string, className?: string, options: MediaRenderOption
     }
 
     return (
-      <div key={url} className={`${baseClass} review-project-media--pdf`}>
-        <iframe
-          src={url}
-          title="PDF preview"
-          className={`review-project-media__pdf-iframe${
-            options.onClick ? ' review-project-media__pdf-iframe--passive' : ''
-          }`}
-          onLoad={options.onLoad}
-        />
-      </div>
+      <a
+        key={url}
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className={`${baseClass} review-project-media review-project-media--file`}
+      >
+        Open attachment (PDF)
+      </a>
     );
   }
   if (!isImageKey(key)) {
