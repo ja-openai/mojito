@@ -951,10 +951,10 @@
 }
 
 .pill.review-project-detail__pill--warning {
-  background: var(--color-danger);
-  border-color: var(--color-danger);
-  color: var(--color-surface);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 50%, transparent);
+  background: var(--color-warning);
+  border-color: var(--color-warning);
+  color: var(--color-on-warning);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 50%, transparent);
   cursor: default;
   font-size: var(--font-size-2xs);
   min-height: 1.125rem;
@@ -963,10 +963,10 @@
 
 .pill.review-project-detail__pill--warning:hover,
 .pill.review-project-detail__pill--warning:focus-visible {
-  background: var(--color-danger);
-  border-color: var(--color-danger);
-  color: var(--color-surface);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 50%, transparent);
+  background: var(--color-warning);
+  border-color: var(--color-warning);
+  color: var(--color-on-warning);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 50%, transparent);
 }
 
 .review-project-detail__pill:hover {
@@ -1242,10 +1242,10 @@
   display: inline-flex;
   align-items: center;
   height: 1.5rem;
-  border: var(--border-width) solid color-mix(in srgb, var(--color-danger) 50%, transparent);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-warning-border) 68%, transparent);
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-warning-soft) 84%, var(--color-surface));
+  color: var(--color-warning);
   padding: 0 var(--space-2);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
@@ -1264,12 +1264,12 @@
 
 .review-project-detail__warning-inline:hover .review-project-detail__warning-inline-pill,
 .review-project-detail__warning-inline:focus-visible .review-project-detail__warning-inline-pill {
-  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
-  border-color: color-mix(in srgb, var(--color-danger) 60%, transparent);
+  background: color-mix(in srgb, var(--color-warning-soft) 72%, var(--color-warning) 8%);
+  border-color: color-mix(in srgb, var(--color-warning-border) 78%, transparent);
 }
 
 .review-project-detail__warning-inline:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-danger) 45%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--color-warning) 45%, transparent);
   outline-offset: 2px;
 }
 
@@ -1398,8 +1398,8 @@
 }
 
 .review-project-detail__warning-modal-preview-issue {
-  color: color-mix(in srgb, #b45309 88%, var(--color-text));
-  background: color-mix(in srgb, #f59e0b 22%, transparent);
+  color: color-mix(in srgb, var(--color-warning) 88%, var(--color-text));
+  background: color-mix(in srgb, var(--color-warning-soft) 52%, transparent);
   border-radius: 2px;
 }
 

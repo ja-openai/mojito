@@ -207,7 +207,7 @@
 }
 
 .meta-warning {
-  color: #b42318;
+  color: var(--color-warning);
   font-weight: var(--font-weight-medium);
   font-size: var(--font-size-sm);
 }
@@ -269,11 +269,11 @@
   padding: 0 var(--space-2);
   height: 1.9rem;
   border-radius: var(--radius-pill);
-  background: rgba(208, 58, 58, 0.12);
-  color: #b42318;
+  background: color-mix(in srgb, var(--color-warning-soft) 84%, var(--color-surface));
+  color: var(--color-warning);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
-  border: var(--border-width) solid rgba(208, 58, 58, 0.35);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-warning-border) 68%, transparent);
 }
 
 .copy-status {

@@ -124,7 +124,7 @@
 }
 
 .user-admin-page__bulk .single-select-dropdown__option.is-warning {
-  color: var(--color-text-muted);
+  color: var(--color-warning);
 }
 
 .user-admin-page__count-spinner {
