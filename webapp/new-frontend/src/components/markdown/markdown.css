@@ -11,6 +11,11 @@
   opacity: 0.85;
 }
 
+.markdown-editor--drag-active {
+  border-color: color-mix(in srgb, var(--color-accent) 58%, var(--color-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
 .markdown-editor__toolbar {
   display: flex;
   flex-wrap: wrap;

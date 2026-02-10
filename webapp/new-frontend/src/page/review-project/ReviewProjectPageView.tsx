@@ -2174,9 +2174,9 @@ function ReviewProjectHeader({
   }, []);
 
   const handleAttachmentFiles = useCallback(
-    async (files: FileList | null) => {
+    async (files: FileList | null): Promise<string[]> => {
       if (!files || files.length === 0 || mutations.isProjectRequestSaving || isAttachmentUploading) {
-        return;
+        return [];
       }
       setAttachmentUploadError(null);
       setIsAttachmentUploading(true);
@@ -2201,6 +2201,7 @@ function ReviewProjectHeader({
         setAttachmentUploadError(failed.join('; '));
       }
       setIsAttachmentUploading(false);
+      return uploaded;
     },
     [addAttachmentKeys, isAttachmentUploading, mutations.isProjectRequestSaving, uploadAttachment],
   );
@@ -2555,33 +2556,38 @@ function ReviewProjectHeader({
                   <div className="review-project-page__description-label-row">
                     <span className="review-project-page__description-label">Description</span>
                     {canEditRequest ? (
-                      <div
-                        className="review-project-page__description-mode-toggle"
-                        role="group"
-                        aria-label="Description editor mode"
-                      >
-                        <button
-                          type="button"
-                          className={`review-project-page__description-mode-button${
-                            descriptionEditorMode === 'edit'
-                              ? ' review-project-page__description-mode-button--active'
-                              : ''
-                          }`}
-                          onClick={() => setDescriptionEditorMode('edit')}
+                      <div className="review-project-page__description-label-controls">
+                        <span className="review-project-page__description-hint">
+                          Drop files in editor to upload and attach below
+                        </span>
+                        <div
+                          className="review-project-page__description-mode-toggle"
+                          role="group"
+                          aria-label="Description editor mode"
                         >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className={`review-project-page__description-mode-button${
-                            descriptionEditorMode === 'preview'
-                              ? ' review-project-page__description-mode-button--active'
-                              : ''
-                          }`}
-                          onClick={() => setDescriptionEditorMode('preview')}
-                        >
-                          Preview
-                        </button>
+                          <button
+                            type="button"
+                            className={`review-project-page__description-mode-button${
+                              descriptionEditorMode === 'edit'
+                                ? ' review-project-page__description-mode-button--active'
+                                : ''
+                            }`}
+                            onClick={() => setDescriptionEditorMode('edit')}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className={`review-project-page__description-mode-button${
+                              descriptionEditorMode === 'preview'
+                                ? ' review-project-page__description-mode-button--active'
+                                : ''
+                            }`}
+                            onClick={() => setDescriptionEditorMode('preview')}
+                          >
+                            Preview
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <span className="review-project-page__description-hint">
@@ -2595,6 +2601,14 @@ function ReviewProjectHeader({
                         className="review-project-page__description-rich-editor"
                         value={descriptionDraft}
                         onChange={setDescriptionDraft}
+                        onDropFiles={async (files) => {
+                          const uploadedKeys = await handleAttachmentFiles(files);
+                          if (uploadedKeys.length === 0) {
+                            return null;
+                          }
+                          const snippets = uploadedKeys.map((key) => toDescriptionAttachmentMarkdown(key));
+                          return `${snippets.join('\n')}\n`;
+                        }}
                         disabled={mutations.isProjectRequestSaving}
                         placeholder="Write request guidance, checklists, links, and notes."
                       />
@@ -2866,6 +2880,20 @@ const isImageKey = (key: string) => {
 const isPdfKey = (key: string) => {
   const lower = key.split('?')[0].toLowerCase();
   return key.startsWith('data:application/pdf') || PDF_EXTENSIONS.some((ext) => lower.endsWith(ext));
+};
+
+const toDescriptionAttachmentMarkdown = (key: string) => {
+  const url = resolveMediaUrl(key);
+  if (isImageKey(key)) {
+    return `![${key}](${url})`;
+  }
+  if (isVideoKey(key)) {
+    return `[video: ${key}](${url})`;
+  }
+  if (isPdfKey(key)) {
+    return `[pdf: ${key}](${url})`;
+  }
+  return `[${key}](${url})`;
 };
 
 const toAttachmentLabel = (key: string) => {

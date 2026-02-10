@@ -1,12 +1,13 @@
 import './markdown.css';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { htmlToMarkdown, markdownToHtml } from './markdown-format';
 
 type Props = {
   value: string;
   onChange: (nextValue: string) => void;
+  onDropFiles?: (files: FileList) => string | null | void | Promise<string | null | void>;
   disabled?: boolean;
   placeholder?: string;
   className?: string;
@@ -40,6 +41,7 @@ function ToolbarButton({
 export function MarkdownRichTextEditor({
   value,
   onChange,
+  onDropFiles,
   disabled = false,
   placeholder = 'Start typing…',
   className,
@@ -47,6 +49,7 @@ export function MarkdownRichTextEditor({
   const editorRef = useRef<HTMLDivElement | null>(null);
   const lastEmittedValueRef = useRef(value);
   const [isEmpty, setIsEmpty] = useState(() => value.trim().length === 0);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const setEditorFromMarkdown = useCallback((markdown: string) => {
     const editor = editorRef.current;
@@ -268,12 +271,133 @@ export function MarkdownRichTextEditor({
     });
   }, [disabled, normalizeLink, selectNodeContents, withEditorSelection]);
 
+  const getDropRange = useCallback((event: DragEvent<HTMLDivElement>): Range | null => {
+    const docWithCaretRange = document as Document & {
+      caretRangeFromPoint?: (x: number, y: number) => Range | null;
+      caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+    };
+    const byRange = docWithCaretRange.caretRangeFromPoint?.(event.clientX, event.clientY);
+    if (byRange) {
+      return byRange;
+    }
+    const byPosition = docWithCaretRange.caretPositionFromPoint?.(event.clientX, event.clientY);
+    if (!byPosition) {
+      return null;
+    }
+    const range = document.createRange();
+    range.setStart(byPosition.offsetNode, byPosition.offset);
+    range.collapse(true);
+    return range;
+  }, []);
+
+  const handleDragOver = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (disabled || !onDropFiles) {
+        return;
+      }
+      event.preventDefault();
+      setIsDragOver(true);
+    },
+    [disabled, onDropFiles],
+  );
+
+  const handleDragLeave = useCallback((event: DragEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
+    }
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (disabled || !onDropFiles) {
+        return;
+      }
+      event.preventDefault();
+      setIsDragOver(false);
+      const { files } = event.dataTransfer;
+      if (!files || files.length === 0) {
+        return;
+      }
+      void (async () => {
+        const editor = editorRef.current;
+        const selection = window.getSelection();
+        if (!editor || !selection) {
+          return;
+        }
+
+        const dropRange = getDropRange(event);
+        if (dropRange && editor.contains(dropRange.commonAncestorContainer)) {
+          selection.removeAllRanges();
+          selection.addRange(dropRange);
+        } else if (
+          selection.rangeCount > 0 &&
+          !editor.contains(selection.getRangeAt(0).commonAncestorContainer)
+        ) {
+          const fallback = document.createRange();
+          fallback.selectNodeContents(editor);
+          fallback.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(fallback);
+        }
+
+        const insertionRange =
+          selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+        const insertedText = await onDropFiles(files);
+        if (!insertedText) {
+          return;
+        }
+
+        editor.focus();
+        const activeSelection = window.getSelection();
+        if (!activeSelection) {
+          return;
+        }
+        let rangeToUse = insertionRange;
+        if (!rangeToUse || !editor.contains(rangeToUse.commonAncestorContainer)) {
+          rangeToUse = document.createRange();
+          rangeToUse.selectNodeContents(editor);
+          rangeToUse.collapse(false);
+        }
+        activeSelection.removeAllRanges();
+        activeSelection.addRange(rangeToUse);
+        rangeToUse.deleteContents();
+        const renderedHtml = markdownToHtml(insertedText);
+        const container = document.createElement('div');
+        container.innerHTML = renderedHtml;
+        const fragment = document.createDocumentFragment();
+        let lastInsertedNode: Node | null = null;
+        while (container.firstChild) {
+          lastInsertedNode = fragment.appendChild(container.firstChild);
+        }
+
+        if (lastInsertedNode) {
+          rangeToUse.insertNode(fragment);
+        } else {
+          const textNode = document.createTextNode(insertedText);
+          rangeToUse.insertNode(textNode);
+          lastInsertedNode = textNode;
+        }
+
+        const cursor = document.createRange();
+        cursor.setStartAfter(lastInsertedNode);
+        cursor.collapse(true);
+        activeSelection.removeAllRanges();
+        activeSelection.addRange(cursor);
+        emitMarkdown();
+      })();
+    },
+    [disabled, emitMarkdown, getDropRange, onDropFiles],
+  );
+
   const containerClassName = useMemo(
     () =>
       `markdown-editor${disabled ? ' markdown-editor--disabled' : ''}${
+        isDragOver ? ' markdown-editor--drag-active' : ''
+      }${
         className ? ` ${className}` : ''
       }`,
-    [className, disabled],
+    [className, disabled, isDragOver],
   );
 
   return (
@@ -332,6 +456,9 @@ export function MarkdownRichTextEditor({
         suppressContentEditableWarning
         onInput={emitMarkdown}
         onBlur={emitMarkdown}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         data-placeholder={placeholder}
         data-empty={isEmpty ? 'true' : 'false'}
       />
