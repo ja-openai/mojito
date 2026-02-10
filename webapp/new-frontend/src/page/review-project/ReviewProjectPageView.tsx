@@ -2034,12 +2034,14 @@ function ReviewProjectHeader({
 }) {
   const { dueDate, textUnitCount, wordCount, status, type } = project;
   const name = project.reviewProjectRequest?.name ?? null;
+  const description = project.reviewProjectRequest?.notes?.trim() ?? '';
   const locale = project.locale ?? null;
   const textUnits = useMemo(() => textUnitsProp ?? [], [textUnitsProp]);
   const locales = useMemo(() => (locale ? [locale] : []), [locale]);
   const nextStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [showDescription, setShowDescription] = useState(false);
   const actionClass =
     status === 'OPEN'
       ? 'review-project-page__header-action--close'
@@ -2152,6 +2154,14 @@ function ReviewProjectHeader({
           </div>
 
           <div className="review-project-page__header-group review-project-page__header-group--meta">
+            <button
+              type="button"
+              className="review-project-page__header-link"
+              onClick={() => setShowDescription(true)}
+              aria-label="Project description"
+            >
+              Description
+            </button>
             <span>Due {formatDate(dueDate)}</span>
             <button
               type="button"
@@ -2192,6 +2202,25 @@ function ReviewProjectHeader({
           </button>
           <button type="button" className="modal__button modal__button--danger" onClick={confirmCloseProject}>
             Close project
+          </button>
+        </div>
+      </Modal>
+      <Modal
+        open={showDescription}
+        size="xl"
+        ariaLabel="Project description"
+        onClose={() => setShowDescription(false)}
+        closeOnBackdrop
+      >
+        <div className="modal__header">
+          <div className="modal__title">Project description</div>
+        </div>
+        <div className="modal__body review-project-page__description-modal-body">
+          {description || 'No description provided.'}
+        </div>
+        <div className="modal__actions">
+          <button type="button" className="modal__button" onClick={() => setShowDescription(false)}>
+            Close
           </button>
         </div>
       </Modal>

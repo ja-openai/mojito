@@ -381,6 +381,7 @@ public class ReviewProjectService {
         new GetProjectDetailView.ReviewProjectRequest(
             project.reviewProjectRequestId(),
             project.reviewProjectRequestName(),
+            project.reviewProjectRequestNotes(),
             screenshotImageIds),
         new GetProjectDetailView.Locale(project.localeId(), project.localeTag()),
         reviewProjectTextUnits);

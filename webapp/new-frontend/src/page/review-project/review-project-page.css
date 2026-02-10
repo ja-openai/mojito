@@ -145,6 +145,23 @@
   cursor: pointer;
 }
 
+.review-project-page__header-link {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  padding: 0;
+  text-decoration: none;
+}
+
+.review-project-page__header-link:hover,
+.review-project-page__header-link:focus-visible {
+  color: color-mix(in srgb, var(--color-accent) 85%, var(--color-text));
+  text-decoration: underline;
+}
+
 .review-project-page__header-help:hover,
 .review-project-page__header-help:focus-visible {
   color: var(--color-text-muted);
@@ -327,6 +344,11 @@
   background: var(--color-accent);
   border-radius: var(--radius-pill);
   transition: width 0.2s ease;
+}
+
+.review-project-page__description-modal-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .review-project-page__content {

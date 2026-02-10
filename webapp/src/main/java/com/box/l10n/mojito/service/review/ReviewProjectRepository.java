@@ -26,7 +26,8 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
         locale.id,
         locale.bcp47Tag,
         request.id,
-        request.name
+        request.name,
+        request.notes
       )
       from ReviewProject rp
       left join rp.locale locale

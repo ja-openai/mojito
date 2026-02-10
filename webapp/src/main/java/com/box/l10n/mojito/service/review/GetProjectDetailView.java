@@ -19,7 +19,8 @@ public record GetProjectDetailView(
     Locale locale,
     List<ReviewProjectTextUnit> reviewProjectTextUnits) {
 
-  public record ReviewProjectRequest(Long id, String name, List<String> screenshotImageIds) {}
+  public record ReviewProjectRequest(
+      Long id, String name, String notes, List<String> screenshotImageIds) {}
 
   public record Locale(Long id, String bcp47Tag) {}
 

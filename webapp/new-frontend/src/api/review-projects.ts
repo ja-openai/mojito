@@ -78,6 +78,7 @@ export type ApiReviewProjectDetail = {
   reviewProjectRequest?: {
     id: number | null;
     name?: string | null;
+    notes?: string | null;
     screenshotImageIds?: string[];
   } | null;
   locale?: { id: number | null; bcp47Tag?: string | null } | null;

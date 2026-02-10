@@ -198,7 +198,8 @@ public class ReviewProjectWS {
       Locale locale,
       List<ReviewProjectTextUnit> reviewProjectTextUnits) {
 
-    public record ReviewProjectRequest(Long id, String name, List<String> screenshotImageIds) {}
+    public record ReviewProjectRequest(
+        Long id, String name, String notes, List<String> screenshotImageIds) {}
 
     public record Locale(Long id, String bcp47Tag) {}
 
@@ -300,6 +301,7 @@ public class ReviewProjectWS {
             ? new GetReviewProjectResponse.ReviewProjectRequest(
                 detail.reviewProjectRequest().id(),
                 detail.reviewProjectRequest().name(),
+                detail.reviewProjectRequest().notes(),
                 detail.reviewProjectRequest().screenshotImageIds())
             : null,
         detail.locale() != null
