@@ -494,6 +494,7 @@ export function WorkbenchBody({
                         readOnly={!isEditing || !row.canEdit}
                         aria-disabled={row.canEdit ? undefined : 'true'}
                         ref={isEditing ? translationInputRef : undefined}
+                        spellCheck={true}
                         lang={translationLocale}
                         dir={translationDirection}
                         style={translationStyle}

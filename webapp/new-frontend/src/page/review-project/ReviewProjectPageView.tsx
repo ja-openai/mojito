@@ -39,6 +39,7 @@ import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import { toHtmlLangTag } from '../../utils/localeTag';
 import {
   buildUploadFileKey,
   getAttachmentKindFromFile,
@@ -947,6 +948,7 @@ function DetailPane({
   const decisionVariant = decision?.decisionTmTextUnitVariant ?? null;
   const decisionVariantId = decisionVariant?.id ?? null;
   const currentVariantId = textUnit.currentTmTextUnitVariant?.id ?? null;
+  const translationLang = toHtmlLangTag(localeTag);
   const isDecisionStale =
     decision?.decisionState === 'DECIDED' &&
     decisionVariantId != null &&
@@ -1729,6 +1731,8 @@ function DetailPane({
               onChange={(event) => {
                 setDraftTarget(event.target.value);
               }}
+              spellCheck={true}
+              lang={translationLang}
               onKeyDown={handleEditorKeyDown}
               rows={1}
               style={{ resize: 'none' }}
