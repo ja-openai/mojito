@@ -472,9 +472,9 @@
   cursor: pointer;
 }
 
-.review-project-page__description-mode-button:hover,
-.review-project-page__description-mode-button:focus-visible {
-  background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+.review-project-page__description-mode-button:not(.review-project-page__description-mode-button--active):hover,
+.review-project-page__description-mode-button:not(.review-project-page__description-mode-button--active):focus-visible {
+  background: color-mix(in srgb, var(--color-surface-muted) 55%, transparent);
   color: var(--color-text);
 }
 
