@@ -61,7 +61,10 @@ export function MarkdownRichTextEditor({
   }, []);
 
   useEffect(() => {
-    if (value !== lastEmittedValueRef.current) {
+    if (
+      value !== lastEmittedValueRef.current ||
+      (editorRef.current != null && editorRef.current.innerHTML === '')
+    ) {
       setEditorFromMarkdown(value);
     }
     lastEmittedValueRef.current = value;
