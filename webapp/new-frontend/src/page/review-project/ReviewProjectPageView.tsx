@@ -29,6 +29,7 @@ import { LocalePill } from '../../components/LocalePill';
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
+import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
@@ -2392,18 +2393,23 @@ function ReviewProjectHeader({
           <div className="review-project-page__description-two-up">
             <label className="review-project-page__description-field">
               <span className="review-project-page__description-label">Type</span>
-              <select
-                className="review-project-page__description-input"
+              <SingleSelectDropdown
+                label="Type"
+                className="review-project-page__description-select"
+                options={REVIEW_PROJECT_TYPES.filter((option) => option !== 'UNKNOWN').map((option) => ({
+                  value: option,
+                  label: REVIEW_PROJECT_TYPE_LABELS[option],
+                }))}
                 value={projectTypeDraft}
-                onChange={(event) => setProjectTypeDraft(event.target.value as ApiReviewProjectType)}
+                onChange={(next) => {
+                  if (next == null) {
+                    return;
+                  }
+                  setProjectTypeDraft(next);
+                }}
                 disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-              >
-                {REVIEW_PROJECT_TYPES.filter((option) => option !== 'UNKNOWN').map((option) => (
-                  <option key={option} value={option}>
-                    {REVIEW_PROJECT_TYPE_LABELS[option]}
-                  </option>
-                ))}
-              </select>
+                searchable={false}
+              />
             </label>
             <label className="review-project-page__description-field">
               <span className="review-project-page__description-label">Due date</span>

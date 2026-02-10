@@ -393,6 +393,19 @@
   font: inherit;
 }
 
+.review-project-page__description-select.chip-dropdown {
+  width: 100%;
+}
+
+.review-project-page__description-select .chip-dropdown__button {
+  min-height: 2.25rem;
+  padding: var(--space-2) var(--space-3);
+}
+
+.review-project-page__description-select .chip-dropdown__panel {
+  min-width: 100%;
+}
+
 .review-project-page__description-input:focus,
 .review-project-page__description-textarea:focus {
   outline: 2px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
