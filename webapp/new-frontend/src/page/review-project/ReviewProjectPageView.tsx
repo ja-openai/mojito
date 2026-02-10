@@ -2058,9 +2058,11 @@ function ReviewProjectHeader({
   const [dueDateDraft, setDueDateDraft] = useState(toDateTimeLocalInputValue(dueDate));
   const [attachmentDrafts, setAttachmentDrafts] = useState<string[]>(requestAttachments);
   const [isAttachmentUploading, setIsAttachmentUploading] = useState(false);
+  const [isAttachmentDropActive, setIsAttachmentDropActive] = useState(false);
   const [attachmentUploadError, setAttachmentUploadError] = useState<string | null>(null);
   const [requestSaveError, setRequestSaveError] = useState<string | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const attachmentDragDepthRef = useRef(0);
   const actionClass =
     status === 'OPEN'
       ? 'review-project-page__header-action--close'
@@ -2111,6 +2113,7 @@ function ReviewProjectHeader({
     setDueDateDraft(toDateTimeLocalInputValue(dueDate));
     setAttachmentDrafts(requestAttachments);
     setIsAttachmentUploading(false);
+    setIsAttachmentDropActive(false);
     setAttachmentUploadError(null);
     setRequestSaveError(null);
   }, [description, dueDate, name, requestAttachments, showDescription, type]);
@@ -2190,6 +2193,51 @@ function ReviewProjectHeader({
       setIsAttachmentUploading(false);
     },
     [addAttachmentKeys, isAttachmentUploading, mutations.isProjectRequestSaving, uploadAttachment],
+  );
+  const attachmentsDisabled = mutations.isProjectRequestSaving || isAttachmentUploading;
+
+  const handleAttachmentDragEnter = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (attachmentsDisabled) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      attachmentDragDepthRef.current += 1;
+      setIsAttachmentDropActive(true);
+    },
+    [attachmentsDisabled],
+  );
+
+  const handleAttachmentDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    attachmentDragDepthRef.current = Math.max(attachmentDragDepthRef.current - 1, 0);
+    if (attachmentDragDepthRef.current === 0) {
+      setIsAttachmentDropActive(false);
+    }
+  }, []);
+
+  const handleAttachmentDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    if (attachmentsDisabled) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  }, [attachmentsDisabled]);
+
+  const handleAttachmentDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (attachmentsDisabled) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      attachmentDragDepthRef.current = 0;
+      setIsAttachmentDropActive(false);
+      void handleAttachmentFiles(event.dataTransfer.files);
+    },
+    [attachmentsDisabled, handleAttachmentFiles],
   );
 
   const saveRequestDetails = useCallback(async () => {
@@ -2438,7 +2486,34 @@ function ReviewProjectHeader({
               <span className="review-project-page__description-label">Attachments</span>
               <span className="review-project-page__description-hint">Screenshots, videos, PDFs</span>
             </div>
-            <div className="review-project-page__description-upload-row">
+            <div
+              className={`review-project-page__description-upload-row${
+                isAttachmentDropActive ? ' review-project-page__description-upload-row--active' : ''
+              }${attachmentsDisabled ? ' review-project-page__description-upload-row--disabled' : ''}`}
+              onClick={() => {
+                if (attachmentsDisabled) {
+                  return;
+                }
+                attachmentInputRef.current?.click();
+              }}
+              onKeyDown={(event) => {
+                if (attachmentsDisabled) {
+                  return;
+                }
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                  return;
+                }
+                event.preventDefault();
+                attachmentInputRef.current?.click();
+              }}
+              onDragEnter={handleAttachmentDragEnter}
+              onDragLeave={handleAttachmentDragLeave}
+              onDragOver={handleAttachmentDragOver}
+              onDrop={handleAttachmentDrop}
+              role="button"
+              tabIndex={attachmentsDisabled ? -1 : 0}
+              aria-disabled={attachmentsDisabled}
+            >
               <input
                 ref={attachmentInputRef}
                 type="file"
@@ -2448,16 +2523,11 @@ function ReviewProjectHeader({
                   void handleAttachmentFiles(event.target.files);
                   event.target.value = '';
                 }}
-                disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                disabled={attachmentsDisabled}
               />
-              <button
-                type="button"
-                className="review-project-page__description-upload-button"
-                onClick={() => attachmentInputRef.current?.click()}
-                disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-              >
-                {isAttachmentUploading ? 'Uploading…' : 'Choose files'}
-              </button>
+              <span className="review-project-page__description-upload-button">
+                {isAttachmentUploading ? 'Uploading…' : 'Drop files or click to upload'}
+              </span>
               {isAttachmentUploading ? (
                 <span className="review-project-page__description-upload-status">Uploading files…</span>
               ) : null}
@@ -2481,7 +2551,7 @@ function ReviewProjectHeader({
                       onClick={() =>
                         setAttachmentDrafts((current) => current.filter((value) => value !== key))
                       }
-                      disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                      disabled={attachmentsDisabled}
                       aria-label={`Remove ${key}`}
                     >
                       ×
