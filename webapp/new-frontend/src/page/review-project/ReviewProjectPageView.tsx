@@ -26,6 +26,7 @@ import {
   type FilterOption,
   MultiSectionFilterChip,
 } from '../../components/filters/MultiSectionFilterChip';
+import { IcuPreviewSection } from '../../components/IcuPreviewSection';
 import { LocalePill } from '../../components/LocalePill';
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
@@ -1122,6 +1123,8 @@ function DetailPane({
   const [showBaseline, setShowBaseline] = useState(false);
   const [showStaleDecision, setShowStaleDecision] = useState(false);
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
+  const [isIcuCollapsed, setIsIcuCollapsed] = useState(true);
+  const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiChatReviewMessage[]>([]);
@@ -1700,6 +1703,8 @@ function DetailPane({
   useEffect(() => {
     setShowBaseline(false);
     setShowStaleDecision(false);
+    setIsIcuCollapsed(true);
+    setIcuPreviewMode('target');
   }, [textUnit.id]);
 
   useEffect(() => {
@@ -2119,6 +2124,21 @@ function DetailPane({
               </span>
             </button>
           ) : null}
+
+          <IcuPreviewSection
+            sourceMessage={source}
+            targetMessage={draftTarget}
+            targetLocale={localeTag}
+            mode={icuPreviewMode}
+            isCollapsed={isIcuCollapsed}
+            onToggleCollapsed={() => setIsIcuCollapsed((current) => !current)}
+            onChangeMode={(mode) => {
+              setIcuPreviewMode(mode);
+              setIsIcuCollapsed(false);
+            }}
+            className="review-project-detail__field review-project-detail__field--icu"
+            titleClassName="review-project-detail__label"
+          />
 
           <div className="review-project-detail__field review-project-detail__field--ai-chat">
             <div className="review-project-detail__label-row">
