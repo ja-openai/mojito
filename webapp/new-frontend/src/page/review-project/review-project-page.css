@@ -1264,6 +1264,12 @@
   background: var(--color-surface);
 }
 
+.review-project-detail__decision-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .review-project-detail__decision-option {
   height: 100%;
   padding: 0 var(--space-3);
@@ -1303,6 +1309,79 @@
 .review-project-detail__decision-option:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.review-project-detail__warning-badge {
+  height: 1.75rem;
+  min-width: 1.75rem;
+  padding: 0 0.5rem;
+  border: var(--border-width) solid color-mix(in srgb, #b45309 45%, var(--color-border));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, #b45309 14%, var(--color-surface));
+  color: color-mix(in srgb, #7c2d12 90%, var(--color-text));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+.review-project-detail__warning-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, #b45309 80%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+}
+
+.review-project-detail__warning-count {
+  min-width: 0.6rem;
+  text-align: center;
+}
+
+.review-project-detail__warning-modal-summary {
+  margin: 0 0 var(--space-2);
+}
+
+.review-project-detail__warning-modal-list {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.review-project-detail__warning-modal-preview-label {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.review-project-detail__warning-modal-preview {
+  margin: 0;
+  padding: var(--space-2);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface-muted) 60%, transparent);
+  color: var(--color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: var(--font-size-xs);
+  line-height: 1.35;
+}
+
+.review-project-detail__warning-modal-preview-issue {
+  color: color-mix(in srgb, #b45309 88%, var(--color-text));
+  background: color-mix(in srgb, #f59e0b 22%, transparent);
+  border-radius: 2px;
 }
 
 .review-project-detail__conflict {

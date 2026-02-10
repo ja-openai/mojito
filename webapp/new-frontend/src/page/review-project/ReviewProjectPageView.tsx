@@ -206,6 +206,206 @@ type DecisionSnapshot = {
   decisionState: DecisionStateChoice;
 };
 
+type TranslationWarning = {
+  code: string;
+  message: string;
+};
+
+type PreviewSegment = {
+  text: string;
+  issue: boolean;
+};
+
+function getLeadingWhitespace(value: string): string {
+  const match = value.match(/^\s+/);
+  return match?.[0] ?? '';
+}
+
+function getTrailingWhitespace(value: string): string {
+  const match = value.match(/\s+$/);
+  return match?.[0] ?? '';
+}
+
+function isInvisibleDirectionalOrZeroWidthCode(code: number): boolean {
+  return (
+    code === 0x200b ||
+    code === 0x200c ||
+    code === 0x200d ||
+    code === 0x200e ||
+    code === 0x200f ||
+    code === 0xfeff ||
+    (code >= 0x2066 && code <= 0x2069)
+  );
+}
+
+function isControlCode(code: number): boolean {
+  return (
+    (code >= 0x0 && code <= 0x8) ||
+    (code >= 0xb && code <= 0xc) ||
+    (code >= 0xe && code <= 0x1f) ||
+    code === 0x7f
+  );
+}
+
+function hasInvisibleDirectionalOrZeroWidthChars(value: string): boolean {
+  for (const char of value) {
+    const code = char.codePointAt(0);
+    if (code == null) {
+      continue;
+    }
+    if (isInvisibleDirectionalOrZeroWidthCode(code)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasControlChars(value: string): boolean {
+  for (const char of value) {
+    const code = char.codePointAt(0);
+    if (code == null) {
+      continue;
+    }
+    if (isControlCode(code)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function buildTranslationIssuePreview(source: string, target: string): PreviewSegment[] {
+  const chars = Array.from(target);
+  if (chars.length === 0) {
+    return [];
+  }
+
+  const sourceLeadingWhitespace = getLeadingWhitespace(source);
+  const sourceTrailingWhitespace = getTrailingWhitespace(source);
+  const targetLeadingWhitespace = getLeadingWhitespace(target);
+  const targetTrailingWhitespace = getTrailingWhitespace(target);
+  const hasLeadingWhitespaceMismatch = sourceLeadingWhitespace !== targetLeadingWhitespace;
+  const hasTrailingWhitespaceMismatch = sourceTrailingWhitespace !== targetTrailingWhitespace;
+
+  let leadingEnd = 0;
+  while (leadingEnd < chars.length && /\s/.test(chars[leadingEnd] ?? '')) {
+    leadingEnd += 1;
+  }
+
+  let trailingStart = chars.length;
+  while (trailingStart > 0 && /\s/.test(chars[trailingStart - 1] ?? '')) {
+    trailingStart -= 1;
+  }
+
+  const pieces: Array<{ text: string; issue: boolean }> = chars.map((char, index) => {
+    const code = char.codePointAt(0);
+    const isLeadingOrTrailingWhitespace =
+      /\s/.test(char) &&
+      ((hasLeadingWhitespaceMismatch && index < leadingEnd) ||
+        (hasTrailingWhitespaceMismatch && index >= trailingStart));
+    const isRepeatedSpace = char === ' ' && index > 0 && chars[index - 1] === ' ';
+    const isTab = char === '\t';
+    const isNbsp = char === '\u00A0';
+    const isInvisible = code != null && isInvisibleDirectionalOrZeroWidthCode(code);
+    const isControl = code != null && isControlCode(code);
+
+    const issue =
+      isLeadingOrTrailingWhitespace ||
+      isRepeatedSpace ||
+      isTab ||
+      isNbsp ||
+      isInvisible ||
+      isControl;
+
+    if (!issue) {
+      return { text: char, issue: false };
+    }
+
+    if (char === ' ') {
+      return { text: '·', issue: true };
+    }
+    if (isTab) {
+      return { text: '→', issue: true };
+    }
+    if (char === '\n') {
+      return { text: '↵\n', issue: true };
+    }
+    if (char === '\r') {
+      return { text: '␍', issue: true };
+    }
+    if (isNbsp) {
+      return { text: '⍽', issue: true };
+    }
+    if (isInvisible) {
+      return { text: '¤', issue: true };
+    }
+    if (isControl) {
+      return { text: '�', issue: true };
+    }
+
+    return { text: char, issue: true };
+  });
+
+  const merged: PreviewSegment[] = [];
+  for (const piece of pieces) {
+    const previous = merged[merged.length - 1];
+    if (previous && previous.issue === piece.issue) {
+      previous.text += piece.text;
+    } else {
+      merged.push({ text: piece.text, issue: piece.issue });
+    }
+  }
+  return merged;
+}
+
+function buildTranslationWarnings(source: string, target: string): TranslationWarning[] {
+  const warnings: TranslationWarning[] = [];
+
+  if (!target) {
+    return warnings;
+  }
+
+  const sourceLeadingWhitespace = getLeadingWhitespace(source);
+  const sourceTrailingWhitespace = getTrailingWhitespace(source);
+  const targetLeadingWhitespace = getLeadingWhitespace(target);
+  const targetTrailingWhitespace = getTrailingWhitespace(target);
+
+  if (sourceLeadingWhitespace !== targetLeadingWhitespace) {
+    warnings.push({
+      code: 'leading-space',
+      message:
+        sourceLeadingWhitespace.length === 0
+          ? 'Unexpected leading whitespace at start.'
+          : 'Leading whitespace does not match source.',
+    });
+  }
+  if (sourceTrailingWhitespace !== targetTrailingWhitespace) {
+    warnings.push({
+      code: 'trailing-space',
+      message:
+        sourceTrailingWhitespace.length === 0
+          ? 'Unexpected trailing whitespace at end.'
+          : 'Trailing whitespace does not match source.',
+    });
+  }
+  if (/ {2,}/.test(target)) {
+    warnings.push({ code: 'double-space', message: 'Contains repeated spaces.' });
+  }
+  if (/\t/.test(target)) {
+    warnings.push({ code: 'tab', message: 'Contains tab characters.' });
+  }
+  if (target.includes('\u00A0')) {
+    warnings.push({ code: 'nbsp', message: 'Contains non-breaking spaces.' });
+  }
+  if (hasInvisibleDirectionalOrZeroWidthChars(target)) {
+    warnings.push({ code: 'invisible', message: 'Contains invisible directional/zero-width characters.' });
+  }
+  if (hasControlChars(target)) {
+    warnings.push({ code: 'control', message: 'Contains control characters.' });
+  }
+
+  return warnings;
+}
+
 function buildSnapshot(textUnit: ApiReviewProjectTextUnit): DecisionSnapshot {
   const current =
     textUnit.currentTmTextUnitVariant?.id != null ? textUnit.currentTmTextUnitVariant : null;
@@ -906,6 +1106,7 @@ function DetailPane({
   const [showStaleDecision, setShowStaleDecision] = useState(false);
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
+  const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiChatReviewMessage[]>([]);
   const [aiInput, setAiInput] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
@@ -1047,6 +1248,27 @@ function DetailPane({
   const isDecisionNotesDirty = draftDecisionNotesNormalized !== snapshot.decisionNotes;
   const isStatusDropdownDisabled =
     isSavingGlobal || isTranslationDirty || isCommentDirty || isDecisionNotesDirty;
+  const translationWarnings = useMemo(
+    () => buildTranslationWarnings(source ?? '', draftTarget),
+    [draftTarget, source],
+  );
+  const warningTooltip = useMemo(
+    () =>
+      translationWarnings.length === 0
+        ? ''
+        : translationWarnings.map((warning, idx) => `${idx + 1}. ${warning.message}`).join('\n'),
+    [translationWarnings],
+  );
+  const visibleWhitespacePreviewSegments = useMemo(
+    () => buildTranslationIssuePreview(source ?? '', draftTarget),
+    [draftTarget, source],
+  );
+
+  useEffect(() => {
+    if (translationWarnings.length === 0) {
+      setIsWarningModalOpen(false);
+    }
+  }, [translationWarnings.length]);
 
   useEffect(() => {
     onDirtyChange(isDirty);
@@ -1740,29 +1962,48 @@ function DetailPane({
           </div>
 
           <div className="review-project-detail__editor-controls">
-            <div className="review-project-detail__decision-segmented" role="group">
-              <button
-                type="button"
-                className={`review-project-detail__decision-option${
-                  snapshot.decisionState === 'PENDING' ? ' is-active' : ''
-                }`}
-                onClick={() => handleDecisionStateChange('PENDING')}
-                disabled={isDirty || isSavingGlobal}
-                aria-pressed={snapshot.decisionState === 'PENDING'}
-              >
-                Pending
-              </button>
-              <button
-                type="button"
-                className={`review-project-detail__decision-option${
-                  snapshot.decisionState === 'DECIDED' ? ' is-active' : ''
-                }`}
-                onClick={() => handleDecisionStateChange('DECIDED')}
-                disabled={isDirty || isSavingGlobal}
-                aria-pressed={snapshot.decisionState === 'DECIDED'}
-              >
-                Decided
-              </button>
+            <div className="review-project-detail__decision-cluster">
+              <div className="review-project-detail__decision-segmented" role="group">
+                <button
+                  type="button"
+                  className={`review-project-detail__decision-option${
+                    snapshot.decisionState === 'PENDING' ? ' is-active' : ''
+                  }`}
+                  onClick={() => handleDecisionStateChange('PENDING')}
+                  disabled={isDirty || isSavingGlobal}
+                  aria-pressed={snapshot.decisionState === 'PENDING'}
+                >
+                  Pending
+                </button>
+                <button
+                  type="button"
+                  className={`review-project-detail__decision-option${
+                    snapshot.decisionState === 'DECIDED' ? ' is-active' : ''
+                  }`}
+                  onClick={() => handleDecisionStateChange('DECIDED')}
+                  disabled={isDirty || isSavingGlobal}
+                  aria-pressed={snapshot.decisionState === 'DECIDED'}
+                >
+                  Decided
+                </button>
+              </div>
+              {translationWarnings.length > 0 ? (
+                <button
+                  type="button"
+                  className="review-project-detail__warning-badge"
+                  title={warningTooltip}
+                  aria-label={`${translationWarnings.length} translation warnings`}
+                  aria-haspopup="dialog"
+                  onClick={() => setIsWarningModalOpen(true)}
+                >
+                  <span className="review-project-detail__warning-icon" aria-hidden="true">
+                    !
+                  </span>
+                  <span className="review-project-detail__warning-count">
+                    {translationWarnings.length}
+                  </span>
+                </button>
+              ) : null}
             </div>
             <div
               className={`review-project-detail__saving-indicator${
@@ -1913,6 +2154,62 @@ function DetailPane({
           </div>
         </div>
       </div>
+      <Modal
+        open={isWarningModalOpen}
+        size="md"
+        closeOnBackdrop
+        onClose={() => setIsWarningModalOpen(false)}
+        ariaLabel="Translation warnings"
+      >
+        <div className="modal__title">Translation warnings</div>
+        <div className="modal__body">
+          {translationWarnings.length > 0 ? (
+            <>
+              <p className="review-project-detail__warning-modal-summary">
+                {translationWarnings.length} issue
+                {translationWarnings.length === 1 ? '' : 's'} detected.
+              </p>
+              <ul className="review-project-detail__warning-modal-list">
+                {translationWarnings.map((warning) => (
+                  <li key={warning.code}>{warning.message}</li>
+                ))}
+              </ul>
+              <div className="review-project-detail__warning-modal-preview-label">
+                Visible whitespace preview
+              </div>
+              <pre className="review-project-detail__warning-modal-preview">
+                {visibleWhitespacePreviewSegments.length > 0 ? (
+                  visibleWhitespacePreviewSegments.map((segment, idx) => (
+                    <span
+                      key={`${segment.issue ? 'issue' : 'normal'}-${idx}`}
+                      className={
+                        segment.issue
+                          ? 'review-project-detail__warning-modal-preview-issue'
+                          : undefined
+                      }
+                    >
+                      {segment.text}
+                    </span>
+                  ))
+                ) : (
+                  '(empty)'
+                )}
+              </pre>
+            </>
+          ) : (
+            'No translation warnings.'
+          )}
+        </div>
+        <div className="modal__actions">
+          <button
+            type="button"
+            className="modal__button modal__button--primary"
+            onClick={() => setIsWarningModalOpen(false)}
+          >
+            Close
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
