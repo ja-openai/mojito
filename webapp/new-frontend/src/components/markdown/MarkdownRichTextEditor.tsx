@@ -13,6 +13,55 @@ type Props = {
   className?: string;
 };
 
+const BLOCK_CONTAINER_TAGS = new Set([
+  'ADDRESS',
+  'ARTICLE',
+  'ASIDE',
+  'BLOCKQUOTE',
+  'DD',
+  'DIV',
+  'DL',
+  'DT',
+  'FIELDSET',
+  'FIGCAPTION',
+  'FIGURE',
+  'FOOTER',
+  'FORM',
+  'H1',
+  'H2',
+  'H3',
+  'H4',
+  'H5',
+  'H6',
+  'HEADER',
+  'HR',
+  'LI',
+  'MAIN',
+  'NAV',
+  'OL',
+  'P',
+  'PRE',
+  'SECTION',
+  'TABLE',
+  'TBODY',
+  'TD',
+  'TFOOT',
+  'TH',
+  'THEAD',
+  'TR',
+  'UL',
+]);
+
+function shouldLiftFromParent(parent: HTMLElement): boolean {
+  if (BLOCK_CONTAINER_TAGS.has(parent.tagName)) {
+    return false;
+  }
+  // Any non-block wrapper can carry inline formatting from paste/contentEditable.
+  // Lift through those wrappers so replacement text remains plain.
+  const display = window.getComputedStyle(parent).display;
+  return !display.startsWith('block') && display !== 'table' && display !== 'flex' && display !== 'grid';
+}
+
 function ToolbarButton({
   label,
   onClick,
@@ -209,14 +258,62 @@ export function MarkdownRichTextEditor({
   }, [selectNodeContents, withEditorSelection]);
 
   const clearFormatting = useCallback(() => {
-    withEditorSelection(({ selection, range }) => {
+    withEditorSelection(({ editor, selection, range }) => {
       if (range.collapsed) {
         return;
       }
-      const text = range.toString();
+
+      const selectedText = range.toString();
+      if (!selectedText) {
+        return;
+      }
+
+      const marker = document.createElement('span');
+      marker.setAttribute('data-clear-marker', 'true');
       range.deleteContents();
-      const textNode = document.createTextNode(text);
-      range.insertNode(textNode);
+      range.insertNode(marker);
+
+      const splitAndLiftOut = (node: Node, parent: HTMLElement) => {
+        const grand = parent.parentNode;
+        if (!grand) {
+          return;
+        }
+
+        const before = parent.cloneNode(false) as HTMLElement;
+        const after = parent.cloneNode(false) as HTMLElement;
+
+        while (parent.firstChild && parent.firstChild !== node) {
+          before.append(parent.firstChild);
+        }
+
+        if (parent.firstChild === node) {
+          parent.removeChild(node);
+        }
+
+        while (parent.firstChild) {
+          after.append(parent.firstChild);
+        }
+
+        if (before.childNodes.length > 0) {
+          grand.insertBefore(before, parent);
+        }
+        grand.insertBefore(node, parent);
+        if (after.childNodes.length > 0) {
+          grand.insertBefore(after, parent);
+        }
+        grand.removeChild(parent);
+      };
+
+      while (
+        marker.parentElement &&
+        editor.contains(marker.parentElement) &&
+        shouldLiftFromParent(marker.parentElement)
+      ) {
+        splitAndLiftOut(marker, marker.parentElement);
+      }
+
+      const textNode = document.createTextNode(selectedText);
+      marker.replaceWith(textNode);
       const nextRange = document.createRange();
       nextRange.setStartAfter(textNode);
       nextRange.collapse(true);
