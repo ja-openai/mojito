@@ -48,10 +48,12 @@ type FiltersProps = {
   onChangeDueBefore: (value: string | null) => void;
   searchQuery: string;
   onSearchChange: (value: string) => void;
-  searchField: 'name' | 'id' | 'requestId';
-  onSearchFieldChange: (value: 'name' | 'id' | 'requestId') => void;
+  searchField: 'name' | 'id' | 'requestId' | 'createdBy';
+  onSearchFieldChange: (value: 'name' | 'id' | 'requestId' | 'createdBy') => void;
   searchType: 'contains' | 'exact' | 'ilike';
   onSearchTypeChange: (value: 'contains' | 'exact' | 'ilike') => void;
+  creatorFilter: 'all' | 'mine';
+  onCreatorFilterChange: (value: 'all' | 'mine') => void;
 };
 
 export type ReviewProjectRow = {
@@ -315,10 +317,25 @@ function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCrea
             ? 'Search by project #id'
             : filters.searchField === 'requestId'
               ? 'Search by request #id'
-              : 'Search by project name'
+              : filters.searchField === 'createdBy'
+                ? 'Search by creator username'
+                : 'Search by project name'
         }
         inputAriaLabel="Search projects"
         className="review-projects-page__searchcontrol"
+        trailing={
+          filters.searchField === 'createdBy' && filters.creatorFilter !== 'mine' ? (
+            <button
+              type="button"
+              className="review-projects-page__search-mine"
+              onClick={() => filters.onCreatorFilterChange('mine')}
+              aria-label="Use my username"
+              title="Use my username"
+            >
+              mine
+            </button>
+          ) : null
+        }
         leading={
           <MultiSectionFilterChip
             ariaLabel="Search options"
@@ -333,7 +350,15 @@ function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCrea
               list: 'filter-chip__list',
               option: 'filter-chip__option',
             }}
-            summary={`${filters.searchField === 'id' ? 'ID' : filters.searchField === 'requestId' ? 'Request' : 'Name'} · ${
+            summary={`${
+              filters.searchField === 'id'
+                ? 'ID'
+                : filters.searchField === 'requestId'
+                  ? 'Request'
+                  : filters.searchField === 'createdBy'
+                    ? 'Creator'
+                    : 'Name'
+            } · ${
               filters.searchType === 'contains'
                 ? 'Contains'
                 : filters.searchType === 'exact'
@@ -348,10 +373,11 @@ function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCrea
                   { value: 'name', label: 'Name' },
                   { value: 'id', label: 'ID' },
                   { value: 'requestId', label: 'Request ID' },
+                  { value: 'createdBy', label: 'Creator' },
                 ],
                 value: filters.searchField,
                 onChange: (value) =>
-                  filters.onSearchFieldChange(value as 'name' | 'id' | 'requestId'),
+                  filters.onSearchFieldChange(value as 'name' | 'id' | 'requestId' | 'createdBy'),
               },
               {
                 kind: 'radio',

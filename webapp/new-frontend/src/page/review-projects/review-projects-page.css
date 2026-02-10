@@ -70,6 +70,22 @@
   transform: translateY(1px);
 }
 
+.review-projects-page__search-mine {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  padding: 0.125rem;
+  cursor: pointer;
+  text-transform: lowercase;
+}
+
+.review-projects-page__search-mine:hover,
+.review-projects-page__search-mine:focus-visible {
+  color: var(--color-accent);
+}
+
 .review-projects-page__rows-frame {
   flex: 1;
   min-height: 0;

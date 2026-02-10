@@ -93,6 +93,7 @@ export type ApiReviewProjectSummary = {
   id: number;
   createdDate?: string | null;
   lastModifiedDate?: string | null;
+  createdByUsername?: string | null;
   dueDate?: string | null;
   closeReason?: string | null;
   textUnitCount?: number | null;
@@ -114,7 +115,7 @@ export type ReviewProjectsSearchRequest = {
   dueBefore?: string | null;
   limit?: number;
   searchQuery?: string;
-  searchField?: 'NAME' | 'ID' | 'REQUEST_ID';
+  searchField?: 'NAME' | 'ID' | 'REQUEST_ID' | 'CREATED_BY';
   searchMatchType?: 'CONTAINS' | 'EXACT' | 'ILIKE';
 };
 

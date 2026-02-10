@@ -14,6 +14,7 @@ public record SearchReviewProjectDetail(
     Integer wordCount,
     ReviewProjectType type,
     ReviewProjectStatus status,
+    String createdByUsername,
     Long localeId,
     String localeTag,
     Long requestId,

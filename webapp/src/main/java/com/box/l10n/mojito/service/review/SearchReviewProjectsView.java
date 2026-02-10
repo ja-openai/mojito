@@ -18,6 +18,7 @@ public record SearchReviewProjectsView(List<ReviewProject> reviewProject) {
       Long acceptedCount,
       ReviewProjectType type,
       ReviewProjectStatus status,
+      String createdByUsername,
       Locale locale,
       ReviewProjectRequest reviewProjectRequest) {}
 

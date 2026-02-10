@@ -11,6 +11,7 @@ type Props = {
   className?: string;
   inputAriaLabel?: string;
   leading?: React.ReactNode;
+  trailing?: React.ReactNode;
   inputId?: string;
 };
 
@@ -23,17 +24,24 @@ export function SearchControl({
   className,
   inputAriaLabel,
   leading,
+  trailing,
   inputId,
 }: Props) {
   const showClear = value.length > 0 && !disabled;
   const hasLeading = Boolean(leading);
+  const hasTrailing = Boolean(trailing);
 
   const resolvedClassName = useMemo(
     () =>
-      ['search-control', hasLeading ? 'search-control--with-leading' : null, className]
+      [
+        'search-control',
+        hasLeading ? 'search-control--with-leading' : null,
+        hasTrailing ? 'search-control--with-trailing' : null,
+        className,
+      ]
         .filter(Boolean)
         .join(' '),
-    [className, hasLeading],
+    [className, hasLeading, hasTrailing],
   );
 
   return (
@@ -57,16 +65,21 @@ export function SearchControl({
             disabled={disabled}
             aria-label={inputAriaLabel ?? placeholder}
           />
-          {showClear ? (
-            <button
-              type="button"
-              className="search-control__clear"
-              onClick={() => onChange('')}
-              aria-label="Clear search text"
-            >
-              ×
-            </button>
-          ) : null}
+          {(showClear || trailing) && (
+            <div className="search-control__actions">
+              {trailing ? <div className="search-control__trailing">{trailing}</div> : null}
+              {showClear ? (
+                <button
+                  type="button"
+                  className="search-control__clear"
+                  onClick={() => onChange('')}
+                  aria-label="Clear search text"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
+          )}
         </form>
       </div>
     </div>

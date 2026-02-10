@@ -139,8 +139,11 @@ export function ReviewProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<ApiReviewProjectStatus | 'all'>('OPEN');
   const [limit, setLimit] = useState<number>(1000);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchField, setSearchField] = useState<'name' | 'id' | 'requestId'>('name');
+  const [searchField, setSearchField] = useState<'name' | 'id' | 'requestId' | 'createdBy'>(
+    'name',
+  );
   const [searchType, setSearchType] = useState<'contains' | 'exact' | 'ilike'>('contains');
+  const [creatorFilter, setCreatorFilter] = useState<'all' | 'mine'>('all');
   const [createdAfter, setCreatedAfter] = useState<string | null>(null);
   const [createdBefore, setCreatedBefore] = useState<string | null>(null);
   const [dueAfter, setDueAfter] = useState<string | null>(null);
@@ -173,7 +176,13 @@ export function ReviewProjectsPage() {
 
   const searchParams = useMemo<ReviewProjectsSearchRequest>(() => {
     const searchFieldValue: ReviewProjectsSearchRequest['searchField'] =
-      searchField === 'requestId' ? 'REQUEST_ID' : searchField === 'id' ? 'ID' : 'NAME';
+      searchField === 'requestId'
+        ? 'REQUEST_ID'
+        : searchField === 'id'
+          ? 'ID'
+          : searchField === 'createdBy'
+            ? 'CREATED_BY'
+            : 'NAME';
     const searchMatchTypeValue: ReviewProjectsSearchRequest['searchMatchType'] =
       searchType === 'exact' ? 'EXACT' : searchType === 'ilike' ? 'ILIKE' : 'CONTAINS';
     const selectedLocaleSet = new Set(selectedLocaleTags);
@@ -229,6 +238,30 @@ export function ReviewProjectsPage() {
     void navigate(location.pathname, { replace: true });
   }, [location.pathname, location.state, navigate, setSearchField, setSearchQuery, setSearchType]);
 
+  useEffect(() => {
+    if (creatorFilter !== 'mine') {
+      return;
+    }
+
+    if (searchField !== 'createdBy') {
+      setSearchField('createdBy');
+      return;
+    }
+
+    const username = (user.username ?? '').trim();
+    if (!username) {
+      return;
+    }
+
+    if (searchType !== 'exact') {
+      setSearchType('exact');
+    }
+
+    if (searchQuery !== username) {
+      setSearchQuery(username);
+    }
+  }, [creatorFilter, searchField, searchQuery, searchType, user.username]);
+
   const { data, isLoading, isError, error, refetch } = useReviewProjects(searchParams);
 
   const projects = useMemo(() => data ?? [], [data]);
@@ -283,13 +316,21 @@ export function ReviewProjectsPage() {
 
     const matchesSearch = (project: ApiReviewProjectSummary) => {
       if (!q) return true;
-      const field: 'id' | 'name' | 'requestId' =
-        sf === 'ID' ? 'id' : sf === 'REQUEST_ID' ? 'requestId' : 'name';
+      const field: 'id' | 'name' | 'requestId' | 'createdBy' =
+        sf === 'ID'
+          ? 'id'
+          : sf === 'REQUEST_ID'
+            ? 'requestId'
+            : sf === 'CREATED_BY'
+              ? 'createdBy'
+              : 'name';
       const value =
         field === 'id'
           ? String(project.id)
           : field === 'requestId'
             ? String(project.reviewProjectRequest?.id ?? '')
+            : field === 'createdBy'
+              ? (project.createdByUsername ?? '')
             : (project.reviewProjectRequest?.name ?? `Review project #${project.id}`);
       const valueLower = value.toLowerCase();
       const queryLower = q.toLowerCase();
@@ -345,11 +386,21 @@ export function ReviewProjectsPage() {
       return types.includes(project.type);
     };
 
+    const matchesCreator = (project: ApiReviewProjectSummary) => {
+      if (creatorFilter !== 'mine' || sf !== 'CREATED_BY') {
+        return true;
+      }
+      return (
+        (project.createdByUsername ?? '').toLowerCase() === (user.username ?? '').toLowerCase()
+      );
+    };
+
     const filtered = source.filter(
       (project) =>
         matchesLocales(project) &&
         matchesStatus(project) &&
         matchesType(project) &&
+        matchesCreator(project) &&
         matchesDateRange(project.createdDate ?? null, createdAfterDate, createdBeforeDate) &&
         matchesDateRange(project.dueDate ?? null, dueAfterDate, dueBeforeDate) &&
         matchesSearch(project),
@@ -357,7 +408,7 @@ export function ReviewProjectsPage() {
 
     const limitValue = lmt && lmt > 0 ? lmt : undefined;
     return limitValue ? filtered.slice(0, limitValue) : filtered;
-  }, [projects, searchParams, hasTouchedLocales]);
+  }, [creatorFilter, hasTouchedLocales, projects, searchParams, user.username]);
 
   const rows = useMemo<ReviewProjectRow[]>(() => {
     return filteredProjects.map((project) => ({
@@ -435,6 +486,26 @@ export function ReviewProjectsPage() {
     setSearchType('exact');
     setSearchQuery(String(requestId));
   }, []);
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      if (creatorFilter === 'mine') {
+        setCreatorFilter('all');
+      }
+      setSearchQuery(value);
+    },
+    [creatorFilter],
+  );
+
+  const handleSearchFieldChange = useCallback(
+    (value: 'name' | 'id' | 'requestId' | 'createdBy') => {
+      setSearchField(value);
+      if (value !== 'createdBy' && creatorFilter === 'mine') {
+        setCreatorFilter('all');
+      }
+    },
+    [creatorFilter],
+  );
 
   const toggleProjectSelection = useCallback((projectId: number) => {
     setSelectedProjectIds((prev) => {
@@ -540,11 +611,13 @@ export function ReviewProjectsPage() {
           onChangeDueAfter: setDueAfter,
           onChangeDueBefore: setDueBefore,
           searchQuery,
-          onSearchChange: setSearchQuery,
+          onSearchChange: handleSearchChange,
           searchField,
-          onSearchFieldChange: setSearchField,
+          onSearchFieldChange: handleSearchFieldChange,
           searchType,
           onSearchTypeChange: setSearchType,
+          creatorFilter,
+          onCreatorFilterChange: setCreatorFilter,
         }}
         onRequestIdClick={handleRequestIdClick}
         canCreate={isAdmin}

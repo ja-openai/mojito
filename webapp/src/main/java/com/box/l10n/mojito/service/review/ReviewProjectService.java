@@ -11,6 +11,7 @@ import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 // TODO(JA) NO rest !!
 import com.box.l10n.mojito.entity.review.ReviewProject_;
+import com.box.l10n.mojito.entity.security.user.User_;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.locale.LocaleService;
@@ -22,6 +23,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
+import com.box.l10n.mojito.entity.security.user.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -201,15 +203,16 @@ public class ReviewProjectService {
     Join<ReviewProject, Locale> localeJoin = root.join(ReviewProject_.locale, JoinType.LEFT);
     Join<ReviewProject, ReviewProjectRequest> requestJoin =
         root.join(ReviewProject_.reviewProjectRequest, JoinType.LEFT);
+    Join<ReviewProject, User> createdByUserJoin = root.join(ReviewProject_.createdByUser, JoinType.LEFT);
 
     List<Predicate> predicates = new ArrayList<>();
 
     if (request.statuses() != null) {
-      predicates.add(root.get("status").in(request.statuses()));
+      predicates.add(root.get(ReviewProject_.status).in(request.statuses()));
     }
 
     if (request.types() != null) {
-      predicates.add(root.get("type").in(request.types()));
+      predicates.add(root.get(ReviewProject_.type).in(request.types()));
     }
 
     if (request.localeTags() != null) {
@@ -232,7 +235,7 @@ public class ReviewProjectService {
     }
 
     if (request.searchQuery() != null) {
-      predicates.add(buildSearchPredicate(cb, root, requestJoin, request));
+      predicates.add(buildSearchPredicate(cb, root, requestJoin, createdByUserJoin, request));
     }
 
     Predicate[] predicateArray = predicates.toArray(Predicate[]::new);
@@ -250,6 +253,7 @@ public class ReviewProjectService {
                 root.get(ReviewProject_.wordCount),
                 root.get(ReviewProject_.type),
                 root.get(ReviewProject_.status),
+                createdByUserJoin.get(User_.username),
                 localeJoin.get(Locale_.id),
                 localeJoin.get(Locale_.bcp47Tag),
                 requestJoin.get(ReviewProjectRequest_.id),
@@ -289,6 +293,7 @@ public class ReviewProjectService {
                       acceptedCount,
                       detail.type(),
                       detail.status(),
+                      detail.createdByUsername(),
                       new SearchReviewProjectsView.Locale(detail.localeId(), detail.localeTag()),
                       new SearchReviewProjectsView.ReviewProjectRequest(
                           detail.requestId(), detail.requestName()));
@@ -321,6 +326,7 @@ public class ReviewProjectService {
       CriteriaBuilder cb,
       Root<ReviewProject> root,
       Join<ReviewProject, ReviewProjectRequest> requestJoin,
+      Join<ReviewProject, User> createdByUserJoin,
       SearchReviewProjectsCriteria request) {
     SearchReviewProjectsCriteria.SearchField searchField = request.searchField();
     SearchReviewProjectsCriteria.SearchMatchType matchType = request.searchMatchType();
@@ -331,6 +337,7 @@ public class ReviewProjectService {
           case ID -> root.get(ReviewProject_.id).as(String.class);
           case NAME -> requestJoin.get(ReviewProjectRequest_.name);
           case REQUEST_ID -> requestJoin.get(ReviewProjectRequest_.id).as(String.class);
+          case CREATED_BY -> createdByUserJoin.get(User_.username);
         };
 
     return buildStringPredicate(cb, expression, request.searchQuery(), matchType);

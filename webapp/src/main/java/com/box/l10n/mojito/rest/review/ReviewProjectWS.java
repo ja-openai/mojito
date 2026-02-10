@@ -176,6 +176,7 @@ public class ReviewProjectWS {
         Long acceptedCount,
         ReviewProjectType type,
         ReviewProjectStatus status,
+        String createdByUsername,
         Locale locale,
         ReviewProjectRequest reviewProjectRequest) {
       public record Locale(Long id, String bcp47Tag) {}
@@ -239,6 +240,7 @@ public class ReviewProjectWS {
         view.acceptedCount(),
         view.type(),
         view.status(),
+        view.createdByUsername(),
         view.locale() != null
             ? new SearchReviewProjectsResponse.ReviewProject.Locale(
                 view.locale().id(), view.locale().bcp47Tag())
@@ -270,6 +272,7 @@ public class ReviewProjectWS {
                       case ID -> SearchReviewProjectsCriteria.SearchField.ID;
                       case NAME -> SearchReviewProjectsCriteria.SearchField.NAME;
                       case REQUEST_ID -> SearchReviewProjectsCriteria.SearchField.REQUEST_ID;
+                      case CREATED_BY -> SearchReviewProjectsCriteria.SearchField.CREATED_BY;
                     })
             .orElse(null),
         Optional.ofNullable(request.searchMatchType())
