@@ -1273,13 +1273,6 @@ function DetailPane({
     () => buildTranslationWarnings(source ?? '', draftTarget),
     [draftTarget, source],
   );
-  const warningTooltip = useMemo(
-    () =>
-      translationWarnings.length === 0
-        ? ''
-        : translationWarnings.map((warning, idx) => `${idx + 1}. ${warning.message}`).join('\n'),
-    [translationWarnings],
-  );
   const visibleWhitespacePreviewSegments = useMemo(
     () => buildTranslationIssuePreview(source ?? '', draftTarget),
     [draftTarget, source],
@@ -2071,23 +2064,6 @@ function DetailPane({
                   Decided
                 </button>
               </div>
-              {translationWarnings.length > 0 ? (
-                <button
-                  type="button"
-                  className="review-project-detail__warning-badge"
-                  title={warningTooltip}
-                  aria-label={`${translationWarnings.length} translation warnings`}
-                  aria-haspopup="dialog"
-                  onClick={() => setIsWarningModalOpen(true)}
-                >
-                  <span className="review-project-detail__warning-icon" aria-hidden="true">
-                    !
-                  </span>
-                  <span className="review-project-detail__warning-count">
-                    {translationWarnings.length}
-                  </span>
-                </button>
-              ) : null}
             </div>
             <div
               className={`review-project-detail__saving-indicator${
@@ -2119,6 +2095,30 @@ function DetailPane({
               </button>
             </div>
           </div>
+
+          {translationWarnings.length > 0 ? (
+            <button
+              type="button"
+              className="review-project-detail__warning-inline"
+              onClick={() => setIsWarningModalOpen(true)}
+              aria-haspopup="dialog"
+              aria-label={`${translationWarnings.length} translation warnings`}
+            >
+              <span className="review-project-detail__warning-inline-pill">
+                {translationWarnings.length} warning
+                {translationWarnings.length === 1 ? '' : 's'}
+              </span>
+              <span className="review-project-detail__warning-inline-summary">
+                <span>{translationWarnings[0]?.message}</span>
+                {translationWarnings.length > 1 ? (
+                  <span>
+                    {' '}
+                    +{translationWarnings.length - 1} more
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          ) : null}
 
           <div className="review-project-detail__field review-project-detail__field--ai-chat">
             <div className="review-project-detail__label-row">
