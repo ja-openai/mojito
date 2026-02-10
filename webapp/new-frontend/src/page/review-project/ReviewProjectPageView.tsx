@@ -896,17 +896,17 @@ export function ReviewProjectPageView({
               sections={[
                 {
                   kind: 'radio',
-                  label: 'Status',
-                  options: STATUS_FILTER_OPTIONS as Array<FilterOption<string | number>>,
-                  value: statusFilter,
-                  onChange: (value) => setStatusFilter(value as StatusFilter),
-                },
-                {
-                  kind: 'radio',
                   label: 'State',
                   options: DECISION_STATE_OPTIONS as Array<FilterOption<string | number>>,
                   value: stateFilter,
                   onChange: (value) => setDecisionStateFilter(value as DecisionStateFilter),
+                },
+                {
+                  kind: 'radio',
+                  label: 'Status',
+                  options: STATUS_FILTER_OPTIONS as Array<FilterOption<string | number>>,
+                  value: statusFilter,
+                  onChange: (value) => setStatusFilter(value as StatusFilter),
                 },
               ]}
             />
