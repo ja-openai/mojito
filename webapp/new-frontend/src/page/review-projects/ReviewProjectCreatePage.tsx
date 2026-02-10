@@ -77,9 +77,10 @@ export function ReviewProjectCreatePage() {
     [collections],
   );
   const hasCollections = collectionOptions.length > 0;
+  const navState = isReviewProjectNavState(location.state) ? location.state : null;
 
   useEffect(() => {
-    const state = isReviewProjectNavState(location.state) ? location.state : null;
+    const state = navState;
     if (!state) {
       return;
     }
@@ -99,7 +100,7 @@ export function ReviewProjectCreatePage() {
     if (state.defaultDueDate) {
       setPrefillDueDate(state.defaultDueDate);
     }
-  }, [location.state]);
+  }, [navState]);
 
   useEffect(() => {
     if (selectedCollectionId === null) {
@@ -120,6 +121,9 @@ export function ReviewProjectCreatePage() {
   }, [collections, selectedCollectionId]);
 
   useEffect(() => {
+    if (navState?.collectionId) {
+      return;
+    }
     if (selectedCollectionId || tmIds.length || !activeCollection) {
       return;
     }
@@ -127,7 +131,7 @@ export function ReviewProjectCreatePage() {
       return;
     }
     setSelectedCollectionId(activeCollection.id);
-  }, [activeCollection, selectedCollectionId, tmIds.length]);
+  }, [activeCollection, navState?.collectionId, selectedCollectionId, tmIds.length]);
 
   const handleSubmit = useCallback(
     (values: ReviewProjectCreateFormValues) => {
