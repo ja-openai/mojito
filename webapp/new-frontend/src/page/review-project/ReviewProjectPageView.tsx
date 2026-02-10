@@ -21,6 +21,7 @@ import { REVIEW_PROJECT_TYPE_LABELS, REVIEW_PROJECT_TYPES } from '../../api/revi
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { useUser } from '../../components/RequireUser';
 import {
   type FilterOption,
   MultiSectionFilterChip,
@@ -233,6 +234,8 @@ export function ReviewProjectPageView({
   selectedTextUnitQueryId,
   onSelectedTextUnitIdChange,
 }: Props) {
+  const user = useUser();
+  const canEditRequest = user.role === 'ROLE_ADMIN';
   const [searchParams, setSearchParams] = useSearchParams();
   const locale = project?.locale ?? null;
   const localeTag = locale?.bcp47Tag ?? '';
@@ -622,6 +625,7 @@ export function ReviewProjectPageView({
         project={project}
         textUnits={textUnits}
         mutations={mutations}
+        canEditRequest={canEditRequest}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onReviewPending={() => setDecisionStateFilter('PENDING')}
       />
@@ -2027,6 +2031,7 @@ function ReviewProjectHeader({
   project,
   textUnits: textUnitsProp,
   mutations,
+  canEditRequest,
   onOpenShortcuts,
   onReviewPending,
 }: {
@@ -2034,6 +2039,7 @@ function ReviewProjectHeader({
   project: ApiReviewProjectDetail;
   textUnits: ApiReviewProjectTextUnit[];
   mutations: ReviewProjectMutationControls;
+  canEditRequest: boolean;
   onOpenShortcuts: () => void;
   onReviewPending: () => void;
 }) {
@@ -2194,7 +2200,8 @@ function ReviewProjectHeader({
     },
     [addAttachmentKeys, isAttachmentUploading, mutations.isProjectRequestSaving, uploadAttachment],
   );
-  const attachmentsDisabled = mutations.isProjectRequestSaving || isAttachmentUploading;
+  const attachmentsDisabled =
+    !canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading;
 
   const handleAttachmentDragEnter = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -2241,6 +2248,9 @@ function ReviewProjectHeader({
   );
 
   const saveRequestDetails = useCallback(async () => {
+    if (!canEditRequest) {
+      return;
+    }
     if (isAttachmentUploading) {
       setRequestSaveError('Please wait for uploads to finish.');
       return;
@@ -2289,6 +2299,7 @@ function ReviewProjectHeader({
     projectTypeDraft,
     requestId,
     requestNameDraft,
+    canEditRequest,
   ]);
 
   const handleReviewPending = useCallback(() => {
@@ -2368,7 +2379,7 @@ function ReviewProjectHeader({
                 type="button"
                 className="review-project-page__header-link"
                 onClick={() => setShowDescription(true)}
-                aria-label="Edit request details"
+                aria-label={canEditRequest ? 'Edit request details' : 'View request details'}
               >
                 Description
               </button>
@@ -2421,7 +2432,7 @@ function ReviewProjectHeader({
           className="review-project-page__description-screen"
           role="dialog"
           aria-modal="true"
-          aria-label="Edit request details"
+          aria-label={canEditRequest ? 'Edit request details' : 'Request details'}
         >
           <div className="review-project-page review-project-page__description-screen-page">
             <header className="review-project-page__header">
@@ -2451,27 +2462,41 @@ function ReviewProjectHeader({
                       />
                     </svg>
                   </button>
-                  <span className="review-project-page__header-name">Edit request details</span>
+                  <span className="review-project-page__header-name">
+                    {canEditRequest ? 'Edit request details' : 'Request details'}
+                  </span>
                 </div>
                 <div className="review-project-page__header-group review-project-page__header-group--meta">
-                  <button
-                    type="button"
-                    className="review-project-page__header-action review-project-page__header-action--secondary"
-                    onClick={closeDescriptionModal}
-                    disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="review-project-page__header-action"
-                    onClick={() => {
-                      void saveRequestDetails();
-                    }}
-                    disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-                  >
-                    {mutations.isProjectRequestSaving ? 'Saving…' : 'Save'}
-                  </button>
+                  {canEditRequest ? (
+                    <>
+                      <button
+                        type="button"
+                        className="review-project-page__header-action review-project-page__header-action--secondary"
+                        onClick={closeDescriptionModal}
+                        disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="review-project-page__header-action"
+                        onClick={() => {
+                          void saveRequestDetails();
+                        }}
+                        disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                      >
+                        {mutations.isProjectRequestSaving ? 'Saving…' : 'Save'}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="review-project-page__header-action review-project-page__header-action--secondary"
+                      onClick={closeDescriptionModal}
+                    >
+                      Close
+                    </button>
+                  )}
                 </div>
               </div>
             </header>
@@ -2484,7 +2509,7 @@ function ReviewProjectHeader({
                     type="text"
                     value={requestNameDraft}
                     onChange={(event) => setRequestNameDraft(event.target.value)}
-                    disabled={mutations.isProjectRequestSaving}
+                    disabled={!canEditRequest || mutations.isProjectRequestSaving}
                     placeholder="Request name"
                   />
                 </label>
@@ -2507,7 +2532,7 @@ function ReviewProjectHeader({
                         }
                         setProjectTypeDraft(next);
                       }}
-                      disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                      disabled={!canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading}
                       searchable={false}
                     />
                   </label>
@@ -2518,7 +2543,7 @@ function ReviewProjectHeader({
                       type="datetime-local"
                       value={dueDateDraft}
                       onChange={(event) => setDueDateDraft(event.target.value)}
-                      disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                      disabled={!canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading}
                     />
                   </label>
                 </div>
@@ -2528,7 +2553,7 @@ function ReviewProjectHeader({
                     className="review-project-page__description-textarea"
                     value={descriptionDraft}
                     onChange={(event) => setDescriptionDraft(event.target.value)}
-                    disabled={mutations.isProjectRequestSaving}
+                    disabled={!canEditRequest || mutations.isProjectRequestSaving}
                     placeholder="No description provided."
                     minRows={12}
                   />
