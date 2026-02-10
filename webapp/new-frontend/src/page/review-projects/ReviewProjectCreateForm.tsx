@@ -9,7 +9,16 @@ import {
 } from '../../api/review-projects';
 import { type CollectionOption, CollectionSelect } from '../../components/CollectionSelect';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
+import { RequestDescriptionEditor } from '../../components/review-request/RequestDescriptionEditor';
+import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
+import {
+  buildUploadFileKey,
+  getAttachmentKindFromFile,
+  isSupportedRequestAttachmentFile,
+  type RequestAttachmentKind,
+  toDescriptionAttachmentMarkdown,
+} from '../../utils/request-attachments';
 
 export type ReviewProjectCreateFormValues = {
   name: string;
@@ -25,63 +34,9 @@ type UploadQueueItem = {
   key: string;
   name: string;
   status: 'uploading' | 'done' | 'error';
-  kind: 'image' | 'video';
+  kind: RequestAttachmentKind;
   preview?: string | null;
   error?: string;
-};
-
-const MIME_EXTENSION_MAP: Record<string, string> = {
-  'application/pdf': 'pdf',
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-  'image/bmp': 'bmp',
-  'image/svg+xml': 'svg',
-  'image/avif': 'avif',
-  'video/mp4': 'mp4',
-  'video/quicktime': 'mov',
-  'video/webm': 'webm',
-  'video/ogg': 'ogv',
-  'video/x-matroska': 'mkv',
-};
-
-const getUploadFileExtension = (file: File) => {
-  const trimmedName = file.name.trim();
-  const lastDot = trimmedName.lastIndexOf('.');
-  let extension =
-    lastDot > 0 && lastDot < trimmedName.length - 1 ? trimmedName.slice(lastDot + 1) : '';
-  if (!extension && file.type) {
-    extension = MIME_EXTENSION_MAP[file.type.toLowerCase()] ?? '';
-  }
-  return extension.toLowerCase().replace(/[^a-z0-9]/g, '');
-};
-
-const getUploadFileBaseName = (file: File) => {
-  const trimmedName = file.name.trim();
-  if (!trimmedName) {
-    return 'attachment';
-  }
-  const lastDot = trimmedName.lastIndexOf('.');
-  const rawBase = lastDot > 0 ? trimmedName.slice(0, lastDot) : trimmedName;
-  const sanitized = rawBase
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return (sanitized || 'attachment').slice(0, 80);
-};
-
-const getRandomKeySuffix = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto && crypto.randomUUID
-    ? crypto.randomUUID().slice(0, 8)
-    : Math.random().toString(36).slice(2, 10);
-
-const buildUploadFileKey = (file: File) => {
-  const baseName = getUploadFileBaseName(file);
-  const ext = getUploadFileExtension(file);
-  const suffix = getRandomKeySuffix();
-  return ext ? `${baseName}-${suffix}.${ext}` : `${baseName}-${suffix}`;
 };
 
 type Props = {
@@ -177,40 +132,35 @@ export function ReviewProjectCreateForm({
     return key;
   };
 
-  const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm', 'm4v', 'ogv', 'ogg', 'mkv'];
-
-  const isVideoFile = (file: File) => {
-    if (file.type.startsWith('video/')) return true;
-    const lower = file.name.toLowerCase();
-    return VIDEO_EXTENSIONS.some((ext) => lower.endsWith(`.${ext}`));
-  };
-
-  const isSupportedFile = (file: File) =>
-    file.type.startsWith('image/') ||
-    file.type.startsWith('video/') ||
-    /\.(png|jpe?g|gif|webp|bmp|svg|mp4|mov|webm|m4v|ogv|ogg|mkv)$/i.test(file.name);
-
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const handleFiles = async (files: FileList | null): Promise<string[]> => {
+    if (!files || files.length === 0) {
+      return [];
+    }
     const fileArr = Array.from(files);
-    const queueEntries: UploadQueueItem[] = fileArr.map((file) => ({
-      key: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      name: file.name,
-      status: isSupportedFile(file) ? ('uploading' as const) : ('error' as const),
-      kind: isVideoFile(file) ? 'video' : 'image',
-      preview: URL.createObjectURL(file),
-      error: isSupportedFile(file) ? undefined : 'Unsupported file type',
-    }));
+    const queueEntries: UploadQueueItem[] = fileArr.map((file) => {
+      const kind = getAttachmentKindFromFile(file);
+      const isSupported = isSupportedRequestAttachmentFile(file);
+      return {
+        key: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        name: file.name,
+        status: isSupported ? ('uploading' as const) : ('error' as const),
+        kind,
+        preview: kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null,
+        error: isSupported ? undefined : 'Unsupported file type',
+      };
+    });
     setUploadQueue((prev) => [...queueEntries, ...prev]);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    const uploadedKeys: string[] = [];
     await Promise.all(
       queueEntries.map(async (entry, index) => {
         const file = fileArr[index];
-        if (!isSupportedFile(file)) {
+        if (!isSupportedRequestAttachmentFile(file)) {
           return;
         }
         try {
           const uploadedKey = await uploadImage(file);
+          uploadedKeys.push(uploadedKey);
           setUploadQueue((prev) =>
             prev.map((item) => (item.key === entry.key ? { ...item, status: 'done' } : item)),
           );
@@ -226,6 +176,7 @@ export function ReviewProjectCreateForm({
         }
       }),
     );
+    return uploadedKeys;
   };
 
   return (
@@ -277,18 +228,23 @@ export function ReviewProjectCreateForm({
         <div className="review-create__two-up">
           <label className="review-create__field">
             <span className="review-create__label">Type</span>
-            <select
-              className="review-create__select"
+            <SingleSelectDropdown
+              label="Type"
+              className="review-create__select-dropdown"
+              options={REVIEW_PROJECT_TYPES.filter((option) => option !== 'UNKNOWN').map((option) => ({
+                value: option,
+                label: REVIEW_PROJECT_TYPE_LABELS[option],
+              }))}
               value={type}
-              onChange={(event) => setType(event.target.value as ApiReviewProjectType)}
+              onChange={(next) => {
+                if (next == null) {
+                  return;
+                }
+                setType(next);
+              }}
               disabled={isSubmitting}
-            >
-              {REVIEW_PROJECT_TYPES.filter((t) => t !== 'UNKNOWN').map((option) => (
-                <option key={option} value={option}>
-                  {REVIEW_PROJECT_TYPE_LABELS[option]}
-                </option>
-              ))}
-            </select>
+              searchable={false}
+            />
           </label>
           <label className="review-create__field">
             <span className="review-create__label">Due date</span>
@@ -302,22 +258,27 @@ export function ReviewProjectCreateForm({
           </label>
         </div>
 
-        <label className="review-create__field">
-          <span className="review-create__label">Notes (optional)</span>
-          <textarea
-            className="review-create__textarea"
+        <div className="review-create__field">
+          <RequestDescriptionEditor
             value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            rows={4}
-            placeholder="Describe the feature, glossary guidance, etc"
+            onChange={setNotes}
+            canEdit
             disabled={isSubmitting}
+            onDropFiles={async (files) => {
+              const uploadedKeys = await handleFiles(files);
+              if (uploadedKeys.length === 0) {
+                return null;
+              }
+              const snippets = uploadedKeys.map((key) => toDescriptionAttachmentMarkdown(key));
+              return `${snippets.join('\n')}\n`;
+            }}
           />
-        </label>
+        </div>
 
         <div className="review-create__field">
           <div className="review-create__label-row">
             <span className="review-create__label">Screenshots (optional)</span>
-            <span className="review-create__hint">Drop images/videos to upload.</span>
+            <span className="review-create__hint">Drop images, videos, PDFs to upload.</span>
           </div>
           <div
             className="review-create__dropzone"
@@ -335,7 +296,7 @@ export function ReviewProjectCreateForm({
               type="file"
               multiple
               className="review-create__file-input"
-              accept="image/*,video/*"
+              accept="image/*,video/*,application/pdf"
               onChange={(event) => {
                 void handleFiles(event.target.files);
               }}
@@ -396,7 +357,9 @@ export function ReviewProjectCreateForm({
                       />
                     )
                   ) : (
-                    <span className="review-create__upload-thumb placeholder" />
+                    <span className="review-create__upload-thumb placeholder">
+                      {item.kind === 'pdf' ? 'PDF' : 'FILE'}
+                    </span>
                   )}
                   <span className="review-create__upload-name">{item.name}</span>
                   <span className={`review-create__upload-status status-${item.status}`}>
@@ -431,7 +394,7 @@ export function ReviewProjectCreateForm({
               dueDate: dueIso,
               type,
               localeTags: selectedLocaleTags,
-              notes: notes.trim() || null,
+              notes: notes.trim().length > 0 ? notes : null,
               tmTextUnitIds,
               screenshotImageIds: screenshotKeys,
             });

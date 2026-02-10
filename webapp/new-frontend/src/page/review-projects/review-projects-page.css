@@ -252,6 +252,22 @@
   padding-right: var(--space-7);
 }
 
+.review-create__select-dropdown.chip-dropdown {
+  width: 100%;
+}
+
+.review-create__select-dropdown .chip-dropdown__button {
+  min-height: 2.25rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+}
+
+.review-create__select-dropdown .chip-dropdown__panel {
+  min-width: 100%;
+}
+
 .review-create__textarea {
   resize: vertical;
   min-height: 5.5rem;
@@ -347,7 +363,12 @@
 }
 
 .review-create__upload-thumb.placeholder {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
 }
 
 .review-create__upload-name {
