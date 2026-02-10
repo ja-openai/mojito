@@ -45,6 +45,31 @@
   overflow-wrap: anywhere;
 }
 
+.ai-chat-review__error-details {
+  margin: 0;
+  padding: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
+.ai-chat-review__error-details summary {
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+}
+
+.ai-chat-review__error-details pre {
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.ai-chat-review__error-actions {
+  display: inline-flex;
+  align-items: center;
+}
+
 .ai-chat-review__review {
   display: grid;
   grid-template-columns: var(--ai-chat-review-score-column-width) minmax(0, 1fr);

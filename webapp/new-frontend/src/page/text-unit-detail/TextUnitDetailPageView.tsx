@@ -79,6 +79,7 @@ type TextUnitDetailPageViewProps = {
   aiInput: string;
   onChangeAiInput: (value: string) => void;
   onSubmitAi: () => void;
+  onRetryAi: () => void;
   onUseAiSuggestion: (suggestion: AiReviewSuggestion) => void;
   isAiResponding: boolean;
   isMetaCollapsed: boolean;
@@ -126,6 +127,7 @@ export function TextUnitDetailPageView({
   aiInput,
   onChangeAiInput,
   onSubmitAi,
+  onRetryAi,
   onUseAiSuggestion,
   isAiResponding,
   isMetaCollapsed,
@@ -409,6 +411,7 @@ export function TextUnitDetailPageView({
                   input={aiInput}
                   onChangeInput={onChangeAiInput}
                   onSubmit={onSubmitAi}
+                  onRetryError={onRetryAi}
                   onUseSuggestion={onUseAiSuggestion}
                   isResponding={isAiResponding}
                 />

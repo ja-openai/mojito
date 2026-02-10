@@ -10,6 +10,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import {
   type AiReviewMessage,
   type AiReviewSuggestion,
+  formatAiReviewError,
   requestAiReview,
 } from '../../api/ai-review';
 import type {
@@ -1226,12 +1227,14 @@ function DetailPane({
           return;
         }
 
-        const message = error instanceof Error ? error.message : 'Unable to fetch AI suggestions.';
+        const aiError = formatAiReviewError(error);
         setAiMessages([
           {
             id: `assistant-error-${Date.now()}`,
             sender: 'assistant',
-            content: message,
+            content: aiError.message,
+            isError: true,
+            errorDetail: aiError.detail,
           },
         ]);
       })
@@ -1412,7 +1415,7 @@ function DetailPane({
       content: trimmed,
     };
 
-    const baseMessages = [...aiMessages];
+    const baseMessages = aiMessages.filter((message) => !message.isError);
     setAiMessages((previous) => [...previous, userMessage]);
     setAiInput('');
     setIsAiResponding(true);
@@ -1446,13 +1449,15 @@ function DetailPane({
 
         setAiMessages((previous) => [...previous, assistantMessage]);
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Unable to fetch AI suggestions.';
+        const aiError = formatAiReviewError(error);
         setAiMessages((previous) => [
-          ...previous,
+          ...previous.filter((message) => !message.isError),
           {
             id: `assistant-error-${Date.now()}`,
             sender: 'assistant',
-            content: message,
+            content: aiError.message,
+            isError: true,
+            errorDetail: aiError.detail,
           },
         ]);
       } finally {
@@ -1460,6 +1465,62 @@ function DetailPane({
       }
     })();
   }, [aiInput, aiMessages, draftTarget, isAiResponding, localeTag, source]);
+
+  const handleRetryAi = useCallback(() => {
+    if (isAiResponding || !localeTag) {
+      return;
+    }
+
+    const baseMessages = aiMessages.filter((message) => !message.isError);
+    const conversation: AiReviewMessage[] =
+      baseMessages.length > 0
+        ? baseMessages.map((message) => ({
+            role: message.sender,
+            content: message.content,
+          }))
+        : [{ role: 'user', content: DEFAULT_AI_REVIEW_PROMPT }];
+    const retryTarget = baseMessages.length > 0 ? draftTarget : snapshot.target;
+    const warningContextMessage = buildAiWarningContextMessage(
+      buildTranslationWarnings(source ?? '', retryTarget),
+    );
+
+    setIsAiResponding(true);
+    void requestAiReview({
+      source: source ?? '',
+      target: retryTarget,
+      localeTag,
+      messages: warningContextMessage ? [warningContextMessage, ...conversation] : conversation,
+    })
+      .then((response) => {
+        const assistantMessage: AiChatReviewMessage = {
+          id: `assistant-${Date.now()}`,
+          sender: 'assistant',
+          content: response.message.content,
+          suggestions: response.suggestions,
+          review: response.review,
+        };
+        setAiMessages((previous) => [
+          ...previous.filter((message) => !message.isError),
+          assistantMessage,
+        ]);
+      })
+      .catch((error: unknown) => {
+        const aiError = formatAiReviewError(error);
+        setAiMessages((previous) => [
+          ...previous.filter((message) => !message.isError),
+          {
+            id: `assistant-error-${Date.now()}`,
+            sender: 'assistant',
+            content: aiError.message,
+            isError: true,
+            errorDetail: aiError.detail,
+          },
+        ]);
+      })
+      .finally(() => {
+        setIsAiResponding(false);
+      });
+  }, [aiMessages, draftTarget, isAiResponding, localeTag, snapshot.target, source]);
 
   const handleUseAiSuggestion = useCallback((suggestion: AiReviewSuggestion) => {
     setDraftTarget(suggestion.content);
@@ -2078,6 +2139,7 @@ function DetailPane({
                 onChangeInput={setAiInput}
                 onSubmit={handleSubmitAi}
                 onUseSuggestion={handleUseAiSuggestion}
+                onRetryError={handleRetryAi}
                 isResponding={isAiResponding}
               />
             ) : null}

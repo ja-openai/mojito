@@ -10,6 +10,8 @@ export type AiChatReviewMessage = {
   content: string;
   suggestions?: AiReviewSuggestion[];
   review?: AiReviewReview;
+  isError?: boolean;
+  errorDetail?: string;
 };
 
 type AiChatReviewProps = {
@@ -18,6 +20,7 @@ type AiChatReviewProps = {
   onChangeInput: (value: string) => void;
   onSubmit: () => void;
   onUseSuggestion: (suggestion: AiReviewSuggestion) => void;
+  onRetryError?: () => void;
   isResponding: boolean;
   className?: string;
 };
@@ -28,6 +31,7 @@ export function AiChatReview({
   onChangeInput,
   onSubmit,
   onUseSuggestion,
+  onRetryError,
   isResponding,
   className,
 }: AiChatReviewProps) {
@@ -53,7 +57,7 @@ export function AiChatReview({
   return (
     <div className={className}>
       <div className="ai-chat-review__thread" ref={threadRef}>
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const review = message.review;
           const showReview =
             message.id === firstReviewMessage?.id &&
@@ -62,6 +66,13 @@ export function AiChatReview({
           const reviewBadge = review ? getReviewBadge(review.score) : null;
           const reviewSummary = review?.explanation?.trim() || message.content;
           const suggestions = message.suggestions ?? [];
+          const isLastMessage = index === messages.length - 1;
+          const showRetryButton =
+            Boolean(onRetryError) &&
+            message.isError === true &&
+            message.sender === 'assistant' &&
+            isLastMessage &&
+            !isResponding;
 
           return (
             <div
@@ -84,6 +95,21 @@ export function AiChatReview({
               ) : (
                 <p className="ai-chat-review__message-content">{message.content}</p>
               )}
+
+              {message.isError && message.errorDetail ? (
+                <details className="ai-chat-review__error-details">
+                  <summary>Details</summary>
+                  <pre>{message.errorDetail}</pre>
+                </details>
+              ) : null}
+
+              {showRetryButton ? (
+                <div className="ai-chat-review__error-actions">
+                  <button type="button" className="ai-chat-review__button" onClick={onRetryError}>
+                    Retry
+                  </button>
+                </div>
+              ) : null}
 
               {suggestions.length > 0 ? (
                 <div className="ai-chat-review__suggestions">
