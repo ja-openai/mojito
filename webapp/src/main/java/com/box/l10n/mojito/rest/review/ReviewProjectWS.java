@@ -88,6 +88,24 @@ public class ReviewProjectWS {
     return toDetailResponse(projectDetail);
   }
 
+  @PostMapping("/review-projects/{projectId}/request")
+  public GetReviewProjectResponse updateReviewProjectRequest(
+      @PathVariable Long projectId, @RequestBody UpdateReviewProjectRequestRequest request) {
+    if (request == null || request.name() == null || request.name().trim().isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name is required");
+    }
+
+    GetProjectDetailView projectDetail =
+        reviewProjectService.updateProjectRequest(
+            projectId,
+            request.name(),
+            request.notes(),
+            request.type(),
+            request.dueDate(),
+            request.screenshotImageIds());
+    return toDetailResponse(projectDetail);
+  }
+
   @PostMapping("/admin/review-projects/status")
   public AdminBatchActionResponse adminBatchUpdateReviewProjectStatus(
       @RequestBody AdminBatchUpdateStatusRequest request) {
@@ -154,6 +172,13 @@ public class ReviewProjectWS {
       List<Long> projectIds) {}
 
   public record UpdateReviewProjectStatusRequest(ReviewProjectStatus status, String closeReason) {}
+
+  public record UpdateReviewProjectRequestRequest(
+      String name,
+      String notes,
+      ReviewProjectType type,
+      ZonedDateTime dueDate,
+      List<String> screenshotImageIds) {}
 
   public record AdminBatchUpdateStatusRequest(
       List<Long> projectIds, ReviewProjectStatus status, String closeReason) {}

@@ -12,8 +12,12 @@ import {
   type AiReviewSuggestion,
   requestAiReview,
 } from '../../api/ai-review';
-import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
-import { REVIEW_PROJECT_TYPE_LABELS } from '../../api/review-projects';
+import type {
+  ApiReviewProjectDetail,
+  ApiReviewProjectTextUnit,
+  ApiReviewProjectType,
+} from '../../api/review-projects';
+import { REVIEW_PROJECT_TYPE_LABELS, REVIEW_PROJECT_TYPES } from '../../api/review-projects';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -2034,7 +2038,12 @@ function ReviewProjectHeader({
 }) {
   const { dueDate, textUnitCount, wordCount, status, type } = project;
   const name = project.reviewProjectRequest?.name ?? null;
+  const requestId = project.reviewProjectRequest?.id ?? null;
   const description = project.reviewProjectRequest?.notes?.trim() ?? '';
+  const requestAttachments = useMemo(
+    () => project.reviewProjectRequest?.screenshotImageIds ?? [],
+    [project.reviewProjectRequest?.screenshotImageIds],
+  );
   const locale = project.locale ?? null;
   const textUnits = useMemo(() => textUnitsProp ?? [], [textUnitsProp]);
   const locales = useMemo(() => (locale ? [locale] : []), [locale]);
@@ -2042,6 +2051,15 @@ function ReviewProjectHeader({
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
+  const [requestNameDraft, setRequestNameDraft] = useState(name ?? '');
+  const [descriptionDraft, setDescriptionDraft] = useState(description);
+  const [projectTypeDraft, setProjectTypeDraft] = useState<ApiReviewProjectType>(type);
+  const [dueDateDraft, setDueDateDraft] = useState(toDateTimeLocalInputValue(dueDate));
+  const [attachmentDrafts, setAttachmentDrafts] = useState<string[]>(requestAttachments);
+  const [isAttachmentUploading, setIsAttachmentUploading] = useState(false);
+  const [attachmentUploadError, setAttachmentUploadError] = useState<string | null>(null);
+  const [requestSaveError, setRequestSaveError] = useState<string | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const actionClass =
     status === 'OPEN'
       ? 'review-project-page__header-action--close'
@@ -2081,6 +2099,148 @@ function ReviewProjectHeader({
   const dismissCloseWarning = useCallback(() => {
     setShowCloseWarning(false);
   }, []);
+
+  useEffect(() => {
+    if (!showDescription) {
+      return;
+    }
+    setRequestNameDraft(name ?? '');
+    setDescriptionDraft(description);
+    setProjectTypeDraft(type);
+    setDueDateDraft(toDateTimeLocalInputValue(dueDate));
+    setAttachmentDrafts(requestAttachments);
+    setIsAttachmentUploading(false);
+    setAttachmentUploadError(null);
+    setRequestSaveError(null);
+  }, [description, dueDate, name, requestAttachments, showDescription, type]);
+
+  const closeDescriptionModal = useCallback(() => {
+    if (mutations.isProjectRequestSaving || isAttachmentUploading) {
+      return;
+    }
+    setShowDescription(false);
+    setAttachmentUploadError(null);
+    setRequestSaveError(null);
+  }, [isAttachmentUploading, mutations.isProjectRequestSaving]);
+
+  const addAttachmentKeys = useCallback((raw: string[]) => {
+    const next = raw
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => item.slice(0, 255));
+    if (!next.length) {
+      return;
+    }
+    setAttachmentDrafts((current) => {
+      const set = new Set(current.map((key) => key.toLowerCase()));
+      const merged = [...current];
+      next.forEach((key) => {
+        if (!set.has(key.toLowerCase())) {
+          merged.push(key);
+          set.add(key.toLowerCase());
+        }
+      });
+      return merged;
+    });
+  }, []);
+
+  const uploadAttachment = useCallback(async (file: File): Promise<string> => {
+    const key = buildUploadFileKey(file);
+    const buffer = await file.arrayBuffer();
+    const response = await fetch(`/api/images/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      credentials: 'include',
+      body: buffer,
+    });
+    if (!response.ok) {
+      const message = await response.text().catch(() => '');
+      throw new Error(message || `Failed to upload ${file.name}`);
+    }
+    return key;
+  }, []);
+
+  const handleAttachmentFiles = useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0 || mutations.isProjectRequestSaving || isAttachmentUploading) {
+        return;
+      }
+      setAttachmentUploadError(null);
+      setIsAttachmentUploading(true);
+      const uploaded: string[] = [];
+      const failed: string[] = [];
+
+      for (const file of Array.from(files)) {
+        try {
+          const key = await uploadAttachment(file);
+          uploaded.push(key);
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : `Failed to upload ${file.name}`;
+          failed.push(message);
+        }
+      }
+
+      if (uploaded.length > 0) {
+        addAttachmentKeys(uploaded);
+      }
+      if (failed.length > 0) {
+        setAttachmentUploadError(failed.join('; '));
+      }
+      setIsAttachmentUploading(false);
+    },
+    [addAttachmentKeys, isAttachmentUploading, mutations.isProjectRequestSaving, uploadAttachment],
+  );
+
+  const saveRequestDetails = useCallback(async () => {
+    if (isAttachmentUploading) {
+      setRequestSaveError('Please wait for uploads to finish.');
+      return;
+    }
+    if (requestId == null) {
+      setRequestSaveError('This review project has no request to update.');
+      return;
+    }
+    const trimmedName = requestNameDraft.trim();
+    if (!trimmedName) {
+      setRequestSaveError('Name is required.');
+      return;
+    }
+    if (!dueDateDraft) {
+      setRequestSaveError('Due date is required.');
+      return;
+    }
+    const dueDateParsed = new Date(dueDateDraft);
+    if (Number.isNaN(dueDateParsed.getTime())) {
+      setRequestSaveError('Due date is invalid.');
+      return;
+    }
+    const dueDateIso = dueDateParsed.toISOString();
+
+    try {
+      setRequestSaveError(null);
+      await mutations.onRequestProjectRequestUpdate({
+        name: trimmedName,
+        notes: descriptionDraft,
+        type: projectTypeDraft,
+        dueDate: dueDateIso,
+        screenshotImageIds: attachmentDrafts,
+      });
+      setShowDescription(false);
+    } catch (error) {
+      setRequestSaveError(
+        error instanceof Error ? error.message : 'Failed to update request details.',
+      );
+    }
+  }, [
+    attachmentDrafts,
+    descriptionDraft,
+    dueDateDraft,
+    isAttachmentUploading,
+    mutations,
+    projectTypeDraft,
+    requestId,
+    requestNameDraft,
+  ]);
 
   const handleReviewPending = useCallback(() => {
     setShowCloseWarning(false);
@@ -2154,14 +2314,16 @@ function ReviewProjectHeader({
           </div>
 
           <div className="review-project-page__header-group review-project-page__header-group--meta">
-            <button
-              type="button"
-              className="review-project-page__header-link"
-              onClick={() => setShowDescription(true)}
-              aria-label="Project description"
-            >
-              Description
-            </button>
+            {requestId != null ? (
+              <button
+                type="button"
+                className="review-project-page__header-link"
+                onClick={() => setShowDescription(true)}
+                aria-label="Edit request details"
+              >
+                Description
+              </button>
+            ) : null}
             <span>Due {formatDate(dueDate)}</span>
             <button
               type="button"
@@ -2208,19 +2370,148 @@ function ReviewProjectHeader({
       <Modal
         open={showDescription}
         size="xl"
-        ariaLabel="Project description"
-        onClose={() => setShowDescription(false)}
+        ariaLabel="Edit request details"
+        onClose={closeDescriptionModal}
         closeOnBackdrop
       >
         <div className="modal__header">
-          <div className="modal__title">Project description</div>
+          <div className="modal__title">Edit request details</div>
         </div>
         <div className="modal__body review-project-page__description-modal-body">
-          {description || 'No description provided.'}
+          <label className="review-project-page__description-field">
+            <span className="review-project-page__description-label">Name</span>
+            <input
+              className="review-project-page__description-input"
+              type="text"
+              value={requestNameDraft}
+              onChange={(event) => setRequestNameDraft(event.target.value)}
+              disabled={mutations.isProjectRequestSaving}
+              placeholder="Request name"
+            />
+          </label>
+          <div className="review-project-page__description-two-up">
+            <label className="review-project-page__description-field">
+              <span className="review-project-page__description-label">Type</span>
+              <select
+                className="review-project-page__description-input"
+                value={projectTypeDraft}
+                onChange={(event) => setProjectTypeDraft(event.target.value as ApiReviewProjectType)}
+                disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+              >
+                {REVIEW_PROJECT_TYPES.filter((option) => option !== 'UNKNOWN').map((option) => (
+                  <option key={option} value={option}>
+                    {REVIEW_PROJECT_TYPE_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="review-project-page__description-field">
+              <span className="review-project-page__description-label">Due date</span>
+              <input
+                className="review-project-page__description-input"
+                type="datetime-local"
+                value={dueDateDraft}
+                onChange={(event) => setDueDateDraft(event.target.value)}
+                disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+              />
+            </label>
+          </div>
+          <label className="review-project-page__description-field">
+            <span className="review-project-page__description-label">Description</span>
+            <AutoTextarea
+              className="review-project-page__description-textarea"
+              value={descriptionDraft}
+              onChange={(event) => setDescriptionDraft(event.target.value)}
+              disabled={mutations.isProjectRequestSaving}
+              placeholder="No description provided."
+              minRows={8}
+            />
+          </label>
+          <div className="review-project-page__description-field">
+            <div className="review-project-page__description-label-row">
+              <span className="review-project-page__description-label">Attachments</span>
+              <span className="review-project-page__description-hint">Screenshots, videos, PDFs</span>
+            </div>
+            <div className="review-project-page__description-upload-row">
+              <input
+                ref={attachmentInputRef}
+                type="file"
+                multiple
+                className="review-project-page__description-file-input"
+                onChange={(event) => {
+                  void handleAttachmentFiles(event.target.files);
+                  event.target.value = '';
+                }}
+                disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+              />
+              <button
+                type="button"
+                className="review-project-page__description-upload-button"
+                onClick={() => attachmentInputRef.current?.click()}
+                disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+              >
+                {isAttachmentUploading ? 'Uploading…' : 'Choose files'}
+              </button>
+              {isAttachmentUploading ? (
+                <span className="review-project-page__description-upload-status">Uploading files…</span>
+              ) : null}
+            </div>
+            {attachmentDrafts.length > 0 ? (
+              <div className="review-project-page__description-chips">
+                {attachmentDrafts.map((key) => (
+                  <span key={key} className="review-project-page__description-chip">
+                    <a
+                      className="review-project-page__description-chip-link"
+                      href={resolveMediaUrl(key)}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={key}
+                    >
+                      {key}
+                    </a>
+                    <button
+                      type="button"
+                      className="review-project-page__description-chip-remove"
+                      onClick={() =>
+                        setAttachmentDrafts((current) => current.filter((value) => value !== key))
+                      }
+                      disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                      aria-label={`Remove ${key}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="review-project-page__description-empty">No attachments</span>
+            )}
+          </div>
+          {attachmentUploadError ? (
+            <div className="review-project-page__description-error">{attachmentUploadError}</div>
+          ) : null}
+          {requestSaveError ? (
+            <div className="review-project-page__description-error">{requestSaveError}</div>
+          ) : null}
         </div>
         <div className="modal__actions">
-          <button type="button" className="modal__button" onClick={() => setShowDescription(false)}>
-            Close
+          <button
+            type="button"
+            className="modal__button"
+            onClick={closeDescriptionModal}
+            disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="modal__button modal__button--primary"
+            onClick={() => {
+              void saveRequestDetails();
+            }}
+            disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+          >
+            {mutations.isProjectRequestSaving ? 'Saving…' : 'Save'}
           </button>
         </div>
       </Modal>
@@ -2279,7 +2570,76 @@ const formatDate = (value: string | null | undefined) => {
   });
 };
 
+const toDateTimeLocalInputValue = (value: string | null | undefined) => {
+  if (!value) {
+    return '';
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(
+    parsed.getHours(),
+  )}:${pad(parsed.getMinutes())}`;
+};
+
 const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.ogv', '.ogg', '.m4v', '.mkv'];
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif'];
+const PDF_EXTENSIONS = ['.pdf'];
+const MIME_EXTENSION_MAP: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/bmp': 'bmp',
+  'image/svg+xml': 'svg',
+  'image/avif': 'avif',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
+  'video/ogg': 'ogv',
+  'video/x-matroska': 'mkv',
+};
+
+const getUploadFileExtension = (file: File) => {
+  const trimmedName = file.name.trim();
+  const lastDot = trimmedName.lastIndexOf('.');
+  let extension =
+    lastDot > 0 && lastDot < trimmedName.length - 1 ? trimmedName.slice(lastDot + 1) : '';
+  if (!extension && file.type) {
+    extension = MIME_EXTENSION_MAP[file.type.toLowerCase()] ?? '';
+  }
+  return extension.toLowerCase().replace(/[^a-z0-9]/g, '');
+};
+
+const getUploadFileBaseName = (file: File) => {
+  const trimmedName = file.name.trim();
+  if (!trimmedName) {
+    return 'attachment';
+  }
+  const lastDot = trimmedName.lastIndexOf('.');
+  const rawBase = lastDot > 0 ? trimmedName.slice(0, lastDot) : trimmedName;
+  const sanitized = rawBase
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return (sanitized || 'attachment').slice(0, 80);
+};
+
+const getRandomKeySuffix = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto && crypto.randomUUID
+    ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).slice(2, 10);
+
+const buildUploadFileKey = (file: File) => {
+  const baseName = getUploadFileBaseName(file);
+  const ext = getUploadFileExtension(file);
+  const suffix = getRandomKeySuffix();
+  return ext ? `${baseName}-${suffix}.${ext}` : `${baseName}-${suffix}`;
+};
 
 const resolveMediaUrl = (key: string) => {
   const isExternal =
@@ -2299,6 +2659,26 @@ const isVideoKey = (key: string) => {
   );
 };
 
+const isImageKey = (key: string) => {
+  const lower = key.split('?')[0].toLowerCase();
+  return (
+    key.startsWith('data:image') ||
+    key.startsWith('blob:') ||
+    IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext))
+  );
+};
+
+const isPdfKey = (key: string) => {
+  const lower = key.split('?')[0].toLowerCase();
+  return key.startsWith('data:application/pdf') || PDF_EXTENSIONS.some((ext) => lower.endsWith(ext));
+};
+
+const toAttachmentLabel = (key: string) => {
+  const withoutQuery = key.split('?')[0];
+  const ext = withoutQuery.includes('.') ? withoutQuery.split('.').pop() ?? '' : '';
+  return ext ? ext.toUpperCase() : 'FILE';
+};
+
 type MediaRenderOptions = {
   controls?: boolean;
   muted?: boolean;
@@ -2308,6 +2688,7 @@ type MediaRenderOptions = {
   ariaLabel?: string;
   onLoad?: () => void;
   onLoadedMetadata?: () => void;
+  asThumbnail?: boolean;
 };
 
 const renderMedia = (key: string, className?: string, options: MediaRenderOptions = {}) => {
@@ -2348,6 +2729,47 @@ const renderMedia = (key: string, className?: string, options: MediaRenderOption
       />
     );
   }
+  if (isPdfKey(key)) {
+    if (options.asThumbnail) {
+      return (
+        <span className={`${baseClass} review-project-media review-project-media--file-thumb`}>PDF</span>
+      );
+    }
+
+    return (
+      <div key={url} className={`${baseClass} review-project-media--pdf`}>
+        <iframe
+          src={url}
+          title="PDF preview"
+          className={`review-project-media__pdf-iframe${
+            options.onClick ? ' review-project-media__pdf-iframe--passive' : ''
+          }`}
+          onLoad={options.onLoad}
+        />
+      </div>
+    );
+  }
+  if (!isImageKey(key)) {
+    if (options.asThumbnail) {
+      return (
+        <span className={`${baseClass} review-project-media review-project-media--file-thumb`}>
+          {toAttachmentLabel(key)}
+        </span>
+      );
+    }
+
+    return (
+      <a
+        key={url}
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className={`${baseClass} review-project-media review-project-media--file`}
+      >
+        Open attachment ({toAttachmentLabel(key)})
+      </a>
+    );
+  }
   return (
     <img
       key={url}
@@ -2367,4 +2789,5 @@ const renderThumbMedia = (key: string) =>
     muted: true,
     loop: true,
     preload: 'metadata',
+    asThumbnail: true,
   });

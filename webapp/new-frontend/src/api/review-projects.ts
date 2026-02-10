@@ -219,6 +219,31 @@ export const updateReviewProjectStatus = async (
   return (await response.json()) as ApiReviewProjectDetail;
 };
 
+export const updateReviewProjectRequest = async (
+  projectId: number,
+  payload: {
+    name: string;
+    notes?: string | null;
+    type?: ApiReviewProjectType | null;
+    dueDate?: string | null;
+    screenshotImageIds?: string[] | null;
+  },
+): Promise<ApiReviewProjectDetail> => {
+  const response = await fetch(`/api/review-projects/${projectId}/request`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to update review project request');
+  }
+
+  return (await response.json()) as ApiReviewProjectDetail;
+};
+
 export type AdminBatchActionResponse = {
   affectedCount: number;
 };

@@ -28,7 +28,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
+import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
@@ -415,6 +417,71 @@ public class ReviewProjectService {
     }
 
     reviewProjectRepository.save(reviewProject);
+    return getProjectDetail(projectId);
+  }
+
+  @Transactional
+  public GetProjectDetailView updateProjectRequest(
+      Long projectId,
+      String name,
+      String notes,
+      ReviewProjectType type,
+      ZonedDateTime dueDate,
+      List<String> screenshotImageIds) {
+    String trimmedName = name == null ? null : name.trim();
+    if (trimmedName == null || trimmedName.isEmpty()) {
+      throw new IllegalArgumentException("name must be provided");
+    }
+
+    ReviewProject reviewProject =
+        reviewProjectRepository
+            .findById(projectId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProject with id: " + projectId + " not found"));
+
+    if (!userService.isCurrentUserAdmin()) {
+      userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
+    }
+
+    ReviewProjectRequest request = reviewProject.getReviewProjectRequest();
+    if (request == null) {
+      throw new IllegalArgumentException(
+          "reviewProject with id: " + projectId + " has no request to update");
+    }
+
+    String trimmedNotes = notes == null ? null : notes.trim();
+    request.setName(trimmedName);
+    request.setNotes(trimmedNotes == null || trimmedNotes.isEmpty() ? null : trimmedNotes);
+    reviewProjectRequestRepository.save(request);
+
+    if (type != null) {
+      reviewProject.setType(type);
+    }
+    if (dueDate != null) {
+      reviewProject.setDueDate(dueDate);
+    }
+    reviewProjectRepository.save(reviewProject);
+
+    if (screenshotImageIds != null) {
+      reviewProjectScreenshotRepository.deleteByReviewProjectRequestId(request.getId());
+      LinkedHashSet<String> dedupedImageIds =
+          screenshotImageIds.stream()
+              .filter(Objects::nonNull)
+              .map(String::trim)
+              .filter(id -> !id.isEmpty())
+              .map(id -> id.length() > 255 ? id.substring(0, 255) : id)
+              .collect(Collectors.toCollection(LinkedHashSet::new));
+
+      for (String imageId : dedupedImageIds) {
+        ReviewProjectRequestScreenshot screenshot = new ReviewProjectRequestScreenshot();
+        screenshot.setReviewProjectRequest(request);
+        screenshot.setImageName(imageId);
+        reviewProjectScreenshotRepository.save(screenshot);
+      }
+    }
+
     return getProjectDetail(projectId);
   }
 

@@ -5,10 +5,12 @@ import type {
   ApiReviewProjectDetail,
   ApiReviewProjectStatus,
   ApiReviewProjectTextUnit,
+  ApiReviewProjectType,
 } from '../../api/review-projects';
 import {
   saveReviewProjectTextUnitDecision,
   setReviewProjectTextUnitDecisionState,
+  updateReviewProjectRequest,
   updateReviewProjectStatus,
 } from '../../api/review-projects';
 import { checkTextUnitIntegrity, type TextUnitIntegrityCheckResult } from '../../api/text-units';
@@ -47,6 +49,7 @@ export type PendingValidationSave = {
 export type ReviewProjectMutationControls = {
   isSaving: boolean;
   isProjectStatusSaving: boolean;
+  isProjectRequestSaving: boolean;
   errorMessage: string | null;
   activeTextUnitId: number | null;
   conflictTextUnit: ApiReviewProjectTextUnit | null;
@@ -59,6 +62,13 @@ export type ReviewProjectMutationControls = {
   onRequestSaveDecision: (request: SaveDecisionRequest) => void;
   onRequestDecisionState: (request: DecisionStateRequest) => void;
   onRequestProjectStatus: (status: ApiReviewProjectStatus) => void;
+  onRequestProjectRequestUpdate: (request: {
+    name: string;
+    notes?: string | null;
+    type?: ApiReviewProjectType | null;
+    dueDate?: string | null;
+    screenshotImageIds?: string[] | null;
+  }) => Promise<void>;
 };
 
 type MutationError = Error & { status?: number; data?: ApiReviewProjectTextUnit | null };
@@ -161,6 +171,39 @@ export function useReviewProjectMutations(
     },
     onError: (error) => {
       setErrorMessage(error.message || 'Failed to update project status');
+    },
+  });
+
+  const projectRequestMutation = useMutation<
+    ApiReviewProjectDetail,
+    Error,
+    {
+      name: string;
+      notes?: string | null;
+      type?: ApiReviewProjectType | null;
+      dueDate?: string | null;
+      screenshotImageIds?: string[] | null;
+    }
+  >({
+    mutationFn: async (request) => {
+      if (projectId == null) {
+        throw new Error('Missing project id');
+      }
+      return updateReviewProjectRequest(projectId, request);
+    },
+    onSuccess: (updatedProject) => {
+      if (projectId == null) {
+        return;
+      }
+      queryClient.setQueryData<ApiReviewProjectDetail>(
+        [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
+        updatedProject,
+      );
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      setErrorMessage(null);
+    },
+    onError: (error) => {
+      setErrorMessage(error.message || 'Failed to update project request');
     },
   });
 
@@ -275,6 +318,22 @@ export function useReviewProjectMutations(
     [projectId, projectStatusMutation],
   );
 
+  const onRequestProjectRequestUpdate = useCallback(
+    async (request: {
+      name: string;
+      notes?: string | null;
+      type?: ApiReviewProjectType | null;
+      dueDate?: string | null;
+      screenshotImageIds?: string[] | null;
+    }) => {
+      if (projectId == null || projectRequestMutation.isPending) {
+        return;
+      }
+      await projectRequestMutation.mutateAsync(request);
+    },
+    [projectId, projectRequestMutation],
+  );
+
   const onConfirmValidationSave = useCallback(() => {
     if (!pendingValidationSave) {
       return;
@@ -339,6 +398,7 @@ export function useReviewProjectMutations(
     () => ({
       isSaving: mutation.isPending,
       isProjectStatusSaving: projectStatusMutation.isPending,
+      isProjectRequestSaving: projectRequestMutation.isPending,
       errorMessage,
       activeTextUnitId,
       conflictTextUnit,
@@ -351,6 +411,7 @@ export function useReviewProjectMutations(
       onRequestSaveDecision,
       onRequestDecisionState,
       onRequestProjectStatus,
+      onRequestProjectRequestUpdate,
     }),
     [
       activeTextUnitId,
@@ -361,10 +422,12 @@ export function useReviewProjectMutations(
       onDismissValidationSave,
       onOverwriteConflict,
       onRequestDecisionState,
+      onRequestProjectRequestUpdate,
       onRequestProjectStatus,
       onRequestSaveDecision,
       onUseConflictCurrent,
       pendingValidationSave,
+      projectRequestMutation.isPending,
       projectStatusMutation.isPending,
     ],
   );
