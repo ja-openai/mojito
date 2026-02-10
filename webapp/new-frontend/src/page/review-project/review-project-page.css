@@ -201,6 +201,12 @@
   filter: brightness(1.05);
 }
 
+.review-project-page__header-action--secondary {
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  color: var(--color-text);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
+}
+
 .review-project-page__header-group--stats {
   flex: 0 0 auto;
   min-width: 260px;
@@ -350,6 +356,32 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.review-project-page__description-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: var(--color-bg);
+}
+
+.review-project-page__description-screen-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.review-project-page__description-screen-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-5);
+}
+
+.review-project-page__description-screen-content {
+  max-width: 72rem;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .review-project-page__description-field {

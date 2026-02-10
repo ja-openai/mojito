@@ -2416,181 +2416,220 @@ function ReviewProjectHeader({
           </button>
         </div>
       </Modal>
-      <Modal
-        open={showDescription}
-        size="xl"
-        ariaLabel="Edit request details"
-        onClose={closeDescriptionModal}
-        closeOnBackdrop
-      >
-        <div className="modal__header">
-          <div className="modal__title">Edit request details</div>
-        </div>
-        <div className="modal__body review-project-page__description-modal-body">
-          <label className="review-project-page__description-field">
-            <span className="review-project-page__description-label">Name</span>
-            <input
-              className="review-project-page__description-input"
-              type="text"
-              value={requestNameDraft}
-              onChange={(event) => setRequestNameDraft(event.target.value)}
-              disabled={mutations.isProjectRequestSaving}
-              placeholder="Request name"
-            />
-          </label>
-          <div className="review-project-page__description-two-up">
-            <label className="review-project-page__description-field">
-              <span className="review-project-page__description-label">Type</span>
-              <SingleSelectDropdown
-                label="Type"
-                className="review-project-page__description-select"
-                options={REVIEW_PROJECT_TYPES.filter((option) => option !== 'UNKNOWN').map((option) => ({
-                  value: option,
-                  label: REVIEW_PROJECT_TYPE_LABELS[option],
-                }))}
-                value={projectTypeDraft}
-                onChange={(next) => {
-                  if (next == null) {
-                    return;
-                  }
-                  setProjectTypeDraft(next);
-                }}
-                disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-                searchable={false}
-              />
-            </label>
-            <label className="review-project-page__description-field">
-              <span className="review-project-page__description-label">Due date</span>
-              <input
-                className="review-project-page__description-input"
-                type="datetime-local"
-                value={dueDateDraft}
-                onChange={(event) => setDueDateDraft(event.target.value)}
-                disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-              />
-            </label>
-          </div>
-          <label className="review-project-page__description-field">
-            <span className="review-project-page__description-label">Description</span>
-            <AutoTextarea
-              className="review-project-page__description-textarea"
-              value={descriptionDraft}
-              onChange={(event) => setDescriptionDraft(event.target.value)}
-              disabled={mutations.isProjectRequestSaving}
-              placeholder="No description provided."
-              minRows={8}
-            />
-          </label>
-          <div className="review-project-page__description-field">
-            <div className="review-project-page__description-label-row">
-              <span className="review-project-page__description-label">Attachments</span>
-              <span className="review-project-page__description-hint">Screenshots, videos, PDFs</span>
-            </div>
-            <div
-              className={`review-project-page__description-upload-row${
-                isAttachmentDropActive ? ' review-project-page__description-upload-row--active' : ''
-              }${attachmentsDisabled ? ' review-project-page__description-upload-row--disabled' : ''}`}
-              onClick={() => {
-                if (attachmentsDisabled) {
-                  return;
-                }
-                attachmentInputRef.current?.click();
-              }}
-              onKeyDown={(event) => {
-                if (attachmentsDisabled) {
-                  return;
-                }
-                if (event.key !== 'Enter' && event.key !== ' ') {
-                  return;
-                }
-                event.preventDefault();
-                attachmentInputRef.current?.click();
-              }}
-              onDragEnter={handleAttachmentDragEnter}
-              onDragLeave={handleAttachmentDragLeave}
-              onDragOver={handleAttachmentDragOver}
-              onDrop={handleAttachmentDrop}
-              role="button"
-              tabIndex={attachmentsDisabled ? -1 : 0}
-              aria-disabled={attachmentsDisabled}
-            >
-              <input
-                ref={attachmentInputRef}
-                type="file"
-                multiple
-                className="review-project-page__description-file-input"
-                onChange={(event) => {
-                  void handleAttachmentFiles(event.target.files);
-                  event.target.value = '';
-                }}
-                disabled={attachmentsDisabled}
-              />
-              <span className="review-project-page__description-upload-button">
-                {isAttachmentUploading ? 'Uploading…' : 'Drop files or click to upload'}
-              </span>
-              {isAttachmentUploading ? (
-                <span className="review-project-page__description-upload-status">Uploading files…</span>
-              ) : null}
-            </div>
-            {attachmentDrafts.length > 0 ? (
-              <div className="review-project-page__description-chips">
-                {attachmentDrafts.map((key) => (
-                  <span key={key} className="review-project-page__description-chip">
-                    <a
-                      className="review-project-page__description-chip-link"
-                      href={resolveMediaUrl(key)}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={key}
+      {showDescription ? (
+        <section
+          className="review-project-page__description-screen"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Edit request details"
+        >
+          <div className="review-project-page review-project-page__description-screen-page">
+            <header className="review-project-page__header">
+              <div className="review-project-page__header-row">
+                <div className="review-project-page__header-group review-project-page__header-group--left">
+                  <button
+                    type="button"
+                    className="review-project-page__header-back-link"
+                    onClick={closeDescriptionModal}
+                    aria-label="Back to review project"
+                    title="Back to review project"
+                    disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                  >
+                    <svg
+                      className="review-project-page__header-back-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
                     >
-                      {key}
-                    </a>
-                    <button
-                      type="button"
-                      className="review-project-page__description-chip-remove"
-                      onClick={() =>
-                        setAttachmentDrafts((current) => current.filter((value) => value !== key))
-                      }
-                      disabled={attachmentsDisabled}
-                      aria-label={`Remove ${key}`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                      <path
+                        d="M20 12H6m0 0l5-5m-5 5l5 5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  <span className="review-project-page__header-name">Edit request details</span>
+                </div>
+                <div className="review-project-page__header-group review-project-page__header-group--meta">
+                  <button
+                    type="button"
+                    className="review-project-page__header-action review-project-page__header-action--secondary"
+                    onClick={closeDescriptionModal}
+                    disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="review-project-page__header-action"
+                    onClick={() => {
+                      void saveRequestDetails();
+                    }}
+                    disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                  >
+                    {mutations.isProjectRequestSaving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
               </div>
-            ) : (
-              <span className="review-project-page__description-empty">No attachments</span>
-            )}
+            </header>
+            <div className="review-project-page__description-screen-body">
+              <div className="review-project-page__description-screen-content review-project-page__description-modal-body">
+                <label className="review-project-page__description-field">
+                  <span className="review-project-page__description-label">Name</span>
+                  <input
+                    className="review-project-page__description-input"
+                    type="text"
+                    value={requestNameDraft}
+                    onChange={(event) => setRequestNameDraft(event.target.value)}
+                    disabled={mutations.isProjectRequestSaving}
+                    placeholder="Request name"
+                  />
+                </label>
+                <div className="review-project-page__description-two-up">
+                  <label className="review-project-page__description-field">
+                    <span className="review-project-page__description-label">Type</span>
+                    <SingleSelectDropdown
+                      label="Type"
+                      className="review-project-page__description-select"
+                      options={REVIEW_PROJECT_TYPES.filter((option) => option !== 'UNKNOWN').map(
+                        (option) => ({
+                          value: option,
+                          label: REVIEW_PROJECT_TYPE_LABELS[option],
+                        }),
+                      )}
+                      value={projectTypeDraft}
+                      onChange={(next) => {
+                        if (next == null) {
+                          return;
+                        }
+                        setProjectTypeDraft(next);
+                      }}
+                      disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                      searchable={false}
+                    />
+                  </label>
+                  <label className="review-project-page__description-field">
+                    <span className="review-project-page__description-label">Due date</span>
+                    <input
+                      className="review-project-page__description-input"
+                      type="datetime-local"
+                      value={dueDateDraft}
+                      onChange={(event) => setDueDateDraft(event.target.value)}
+                      disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                    />
+                  </label>
+                </div>
+                <label className="review-project-page__description-field">
+                  <span className="review-project-page__description-label">Description</span>
+                  <AutoTextarea
+                    className="review-project-page__description-textarea"
+                    value={descriptionDraft}
+                    onChange={(event) => setDescriptionDraft(event.target.value)}
+                    disabled={mutations.isProjectRequestSaving}
+                    placeholder="No description provided."
+                    minRows={12}
+                  />
+                </label>
+                <div className="review-project-page__description-field">
+                  <div className="review-project-page__description-label-row">
+                    <span className="review-project-page__description-label">Attachments</span>
+                    <span className="review-project-page__description-hint">Screenshots, videos, PDFs</span>
+                  </div>
+                  <div
+                    className={`review-project-page__description-upload-row${
+                      isAttachmentDropActive
+                        ? ' review-project-page__description-upload-row--active'
+                        : ''
+                    }${attachmentsDisabled ? ' review-project-page__description-upload-row--disabled' : ''}`}
+                    onClick={() => {
+                      if (attachmentsDisabled) {
+                        return;
+                      }
+                      attachmentInputRef.current?.click();
+                    }}
+                    onKeyDown={(event) => {
+                      if (attachmentsDisabled) {
+                        return;
+                      }
+                      if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                      }
+                      event.preventDefault();
+                      attachmentInputRef.current?.click();
+                    }}
+                    onDragEnter={handleAttachmentDragEnter}
+                    onDragLeave={handleAttachmentDragLeave}
+                    onDragOver={handleAttachmentDragOver}
+                    onDrop={handleAttachmentDrop}
+                    role="button"
+                    tabIndex={attachmentsDisabled ? -1 : 0}
+                    aria-disabled={attachmentsDisabled}
+                  >
+                    <input
+                      ref={attachmentInputRef}
+                      type="file"
+                      multiple
+                      className="review-project-page__description-file-input"
+                      onChange={(event) => {
+                        void handleAttachmentFiles(event.target.files);
+                        event.target.value = '';
+                      }}
+                      disabled={attachmentsDisabled}
+                    />
+                    <span className="review-project-page__description-upload-button">
+                      {isAttachmentUploading ? 'Uploading…' : 'Drop files or click to upload'}
+                    </span>
+                    {isAttachmentUploading ? (
+                      <span className="review-project-page__description-upload-status">Uploading files…</span>
+                    ) : null}
+                  </div>
+                  {attachmentDrafts.length > 0 ? (
+                    <div className="review-project-page__description-chips">
+                      {attachmentDrafts.map((key) => (
+                        <span key={key} className="review-project-page__description-chip">
+                          <a
+                            className="review-project-page__description-chip-link"
+                            href={resolveMediaUrl(key)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={key}
+                          >
+                            {key}
+                          </a>
+                          <button
+                            type="button"
+                            className="review-project-page__description-chip-remove"
+                            onClick={() =>
+                              setAttachmentDrafts((current) =>
+                                current.filter((value) => value !== key),
+                              )
+                            }
+                            disabled={attachmentsDisabled}
+                            aria-label={`Remove ${key}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="review-project-page__description-empty">No attachments</span>
+                  )}
+                </div>
+                {attachmentUploadError ? (
+                  <div className="review-project-page__description-error">{attachmentUploadError}</div>
+                ) : null}
+                {requestSaveError ? (
+                  <div className="review-project-page__description-error">{requestSaveError}</div>
+                ) : null}
+              </div>
+            </div>
           </div>
-          {attachmentUploadError ? (
-            <div className="review-project-page__description-error">{attachmentUploadError}</div>
-          ) : null}
-          {requestSaveError ? (
-            <div className="review-project-page__description-error">{requestSaveError}</div>
-          ) : null}
-        </div>
-        <div className="modal__actions">
-          <button
-            type="button"
-            className="modal__button"
-            onClick={closeDescriptionModal}
-            disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="modal__button modal__button--primary"
-            onClick={() => {
-              void saveRequestDetails();
-            }}
-            disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-          >
-            {mutations.isProjectRequestSaving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </Modal>
+        </section>
+      ) : null}
     </>
   );
 }
