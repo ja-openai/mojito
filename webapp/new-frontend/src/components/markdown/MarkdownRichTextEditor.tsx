@@ -290,6 +290,30 @@ export function MarkdownRichTextEditor({
     return range;
   }, []);
 
+  const getEditorEndRange = useCallback((editor: HTMLDivElement): Range => {
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    return range;
+  }, []);
+
+  const setSelectionToRange = useCallback((selection: Selection, range: Range) => {
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, []);
+
+  const buildInsertFragment = useCallback((markdown: string) => {
+    const renderedHtml = markdownToHtml(markdown);
+    const container = document.createElement('div');
+    container.innerHTML = renderedHtml;
+    const fragment = document.createDocumentFragment();
+    let lastInsertedNode: Node | null = null;
+    while (container.firstChild) {
+      lastInsertedNode = fragment.appendChild(container.firstChild);
+    }
+    return { fragment, lastInsertedNode };
+  }, []);
+
   const handleDragOver = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
       if (disabled || !onDropFiles) {
@@ -308,6 +332,71 @@ export function MarkdownRichTextEditor({
     setIsDragOver(false);
   }, []);
 
+  const processFileDrop = useCallback(
+    async (event: DragEvent<HTMLDivElement>, files: FileList) => {
+      const editor = editorRef.current;
+      const selection = window.getSelection();
+      if (!editor || !selection) {
+        return;
+      }
+
+      const dropRange = getDropRange(event);
+      if (dropRange && editor.contains(dropRange.commonAncestorContainer)) {
+        setSelectionToRange(selection, dropRange);
+      } else if (
+        selection.rangeCount > 0 &&
+        !editor.contains(selection.getRangeAt(0).commonAncestorContainer)
+      ) {
+        setSelectionToRange(selection, getEditorEndRange(editor));
+      }
+
+      const insertionRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+      const insertedText = await onDropFiles?.(files);
+      if (!insertedText) {
+        return;
+      }
+
+      editor.focus();
+      const activeSelection = window.getSelection();
+      if (!activeSelection) {
+        return;
+      }
+      const rangeToUse =
+        insertionRange && editor.contains(insertionRange.commonAncestorContainer)
+          ? insertionRange
+          : getEditorEndRange(editor);
+      setSelectionToRange(activeSelection, rangeToUse);
+      rangeToUse.deleteContents();
+      const { fragment, lastInsertedNode } = buildInsertFragment(insertedText);
+
+      let anchorNode: Node | null = lastInsertedNode;
+      if (lastInsertedNode) {
+        rangeToUse.insertNode(fragment);
+      } else {
+        const textNode = document.createTextNode(insertedText);
+        rangeToUse.insertNode(textNode);
+        anchorNode = textNode;
+      }
+
+      if (!anchorNode) {
+        return;
+      }
+      const cursor = document.createRange();
+      cursor.setStartAfter(anchorNode);
+      cursor.collapse(true);
+      setSelectionToRange(activeSelection, cursor);
+      emitMarkdown();
+    },
+    [
+      buildInsertFragment,
+      emitMarkdown,
+      getDropRange,
+      getEditorEndRange,
+      onDropFiles,
+      setSelectionToRange,
+    ],
+  );
+
   const handleDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
       if (disabled || !onDropFiles) {
@@ -319,75 +408,9 @@ export function MarkdownRichTextEditor({
       if (!files || files.length === 0) {
         return;
       }
-      void (async () => {
-        const editor = editorRef.current;
-        const selection = window.getSelection();
-        if (!editor || !selection) {
-          return;
-        }
-
-        const dropRange = getDropRange(event);
-        if (dropRange && editor.contains(dropRange.commonAncestorContainer)) {
-          selection.removeAllRanges();
-          selection.addRange(dropRange);
-        } else if (
-          selection.rangeCount > 0 &&
-          !editor.contains(selection.getRangeAt(0).commonAncestorContainer)
-        ) {
-          const fallback = document.createRange();
-          fallback.selectNodeContents(editor);
-          fallback.collapse(false);
-          selection.removeAllRanges();
-          selection.addRange(fallback);
-        }
-
-        const insertionRange =
-          selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
-        const insertedText = await onDropFiles(files);
-        if (!insertedText) {
-          return;
-        }
-
-        editor.focus();
-        const activeSelection = window.getSelection();
-        if (!activeSelection) {
-          return;
-        }
-        let rangeToUse = insertionRange;
-        if (!rangeToUse || !editor.contains(rangeToUse.commonAncestorContainer)) {
-          rangeToUse = document.createRange();
-          rangeToUse.selectNodeContents(editor);
-          rangeToUse.collapse(false);
-        }
-        activeSelection.removeAllRanges();
-        activeSelection.addRange(rangeToUse);
-        rangeToUse.deleteContents();
-        const renderedHtml = markdownToHtml(insertedText);
-        const container = document.createElement('div');
-        container.innerHTML = renderedHtml;
-        const fragment = document.createDocumentFragment();
-        let lastInsertedNode: Node | null = null;
-        while (container.firstChild) {
-          lastInsertedNode = fragment.appendChild(container.firstChild);
-        }
-
-        if (lastInsertedNode) {
-          rangeToUse.insertNode(fragment);
-        } else {
-          const textNode = document.createTextNode(insertedText);
-          rangeToUse.insertNode(textNode);
-          lastInsertedNode = textNode;
-        }
-
-        const cursor = document.createRange();
-        cursor.setStartAfter(lastInsertedNode);
-        cursor.collapse(true);
-        activeSelection.removeAllRanges();
-        activeSelection.addRange(cursor);
-        emitMarkdown();
-      })();
+      void processFileDrop(event, files);
     },
-    [disabled, emitMarkdown, getDropRange, onDropFiles],
+    [disabled, onDropFiles, processFileDrop],
   );
 
   const containerClassName = useMemo(
