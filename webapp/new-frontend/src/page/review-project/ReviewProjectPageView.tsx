@@ -406,6 +406,22 @@ function buildTranslationWarnings(source: string, target: string): TranslationWa
   return warnings;
 }
 
+function buildAiWarningContextMessage(warnings: TranslationWarning[]): AiReviewMessage | null {
+  if (warnings.length === 0) {
+    return null;
+  }
+
+  const warningLines = warnings.map((warning) => `- ${warning.code}: ${warning.message}`).join('\n');
+  return {
+    role: 'user',
+    content: [
+      'Context only: deterministic translation quality warnings for current target text.',
+      'Use these warnings when scoring and proposing edits.',
+      warningLines,
+    ].join('\n'),
+  };
+}
+
 function buildSnapshot(textUnit: ApiReviewProjectTextUnit): DecisionSnapshot {
   const current =
     textUnit.currentTmTextUnitVariant?.id != null ? textUnit.currentTmTextUnitVariant : null;
@@ -1181,12 +1197,14 @@ function DetailPane({
       role: 'user',
       content: DEFAULT_AI_REVIEW_PROMPT,
     };
+    const initialWarnings = buildTranslationWarnings(source ?? '', snapshot.target);
+    const warningContextMessage = buildAiWarningContextMessage(initialWarnings);
 
     void requestAiReview({
       source: source ?? '',
       target: snapshot.target,
       localeTag,
-      messages: [initialMessage],
+      messages: warningContextMessage ? [warningContextMessage, initialMessage] : [initialMessage],
     })
       .then((response) => {
         if (cancelled) {
@@ -1405,12 +1423,17 @@ function DetailPane({
           role: message.sender,
           content: message.content,
         }));
+        const warningContextMessage = buildAiWarningContextMessage(
+          buildTranslationWarnings(source ?? '', draftTarget),
+        );
 
         const response = await requestAiReview({
           source: source ?? '',
           target: draftTarget,
           localeTag,
-          messages: conversation,
+          messages: warningContextMessage
+            ? [warningContextMessage, ...conversation]
+            : conversation,
         });
 
         const assistantMessage: AiChatReviewMessage = {
