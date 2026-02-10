@@ -30,6 +30,60 @@ type UploadQueueItem = {
   error?: string;
 };
 
+const MIME_EXTENSION_MAP: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/bmp': 'bmp',
+  'image/svg+xml': 'svg',
+  'image/avif': 'avif',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
+  'video/ogg': 'ogv',
+  'video/x-matroska': 'mkv',
+};
+
+const getUploadFileExtension = (file: File) => {
+  const trimmedName = file.name.trim();
+  const lastDot = trimmedName.lastIndexOf('.');
+  let extension =
+    lastDot > 0 && lastDot < trimmedName.length - 1 ? trimmedName.slice(lastDot + 1) : '';
+  if (!extension && file.type) {
+    extension = MIME_EXTENSION_MAP[file.type.toLowerCase()] ?? '';
+  }
+  return extension.toLowerCase().replace(/[^a-z0-9]/g, '');
+};
+
+const getUploadFileBaseName = (file: File) => {
+  const trimmedName = file.name.trim();
+  if (!trimmedName) {
+    return 'attachment';
+  }
+  const lastDot = trimmedName.lastIndexOf('.');
+  const rawBase = lastDot > 0 ? trimmedName.slice(0, lastDot) : trimmedName;
+  const sanitized = rawBase
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return (sanitized || 'attachment').slice(0, 80);
+};
+
+const getRandomKeySuffix = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto && crypto.randomUUID
+    ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).slice(2, 10);
+
+const buildUploadFileKey = (file: File) => {
+  const baseName = getUploadFileBaseName(file);
+  const ext = getUploadFileExtension(file);
+  const suffix = getRandomKeySuffix();
+  return ext ? `${baseName}-${suffix}.${ext}` : `${baseName}-${suffix}`;
+};
+
 type Props = {
   defaultName: string;
   defaultDueDate: string;
@@ -109,12 +163,7 @@ export function ReviewProjectCreateForm({
   };
 
   const uploadImage = async (file: File): Promise<string> => {
-    const ext = file.name.includes('.') ? (file.name.split('.').pop() ?? '') : '';
-    const suffix = ext ? `.${ext.toLowerCase()}` : '';
-    const key =
-      (typeof crypto !== 'undefined' && 'randomUUID' in crypto && crypto.randomUUID
-        ? crypto.randomUUID()
-        : Math.random().toString(36).slice(2)) + suffix;
+    const key = buildUploadFileKey(file);
     const buffer = await file.arrayBuffer();
     const response = await fetch(`/api/images/${encodeURIComponent(key)}`, {
       method: 'PUT',
