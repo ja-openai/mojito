@@ -771,7 +771,10 @@ export function TextUnitDetailPage() {
       isIcuPreviewCollapsed={isIcuPreviewCollapsed}
       onToggleIcuPreviewCollapsed={() => setIsIcuPreviewCollapsed((current) => !current)}
       icuPreviewMode={icuPreviewMode}
-      onChangeIcuPreviewMode={setIcuPreviewMode}
+      onChangeIcuPreviewMode={(mode) => {
+        setIcuPreviewMode(mode);
+        setIsIcuPreviewCollapsed(false);
+      }}
       isAiCollapsed={isAiCollapsed}
       onToggleAiCollapsed={() => setIsAiCollapsed((current) => !current)}
       aiMessages={aiMessages}
