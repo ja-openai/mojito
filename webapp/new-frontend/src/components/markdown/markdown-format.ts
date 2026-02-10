@@ -1,4 +1,7 @@
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif'];
+const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.ogv', '.ogg', '.m4v', '.mkv'];
+const PDF_EXTENSIONS = ['.pdf'];
 
 function escapeHtml(raw: string): string {
   return raw
@@ -28,6 +31,46 @@ function sanitizeLinkUrl(raw: string): string {
   return '#';
 }
 
+function stripQueryAndHash(url: string): string {
+  return url.split('#')[0]?.split('?')[0] ?? url;
+}
+
+function isImageUrl(url: string): boolean {
+  const lower = stripQueryAndHash(url).toLowerCase();
+  return lower.startsWith('data:image/') || IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+function isVideoUrl(url: string): boolean {
+  const lower = stripQueryAndHash(url).toLowerCase();
+  return lower.startsWith('data:video/') || VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+function isPdfUrl(url: string): boolean {
+  const lower = stripQueryAndHash(url).toLowerCase();
+  return lower.startsWith('data:application/pdf') || PDF_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+function mediaMarkdownToHtml(label: string, rawUrl: string): string | null {
+  const url = sanitizeLinkUrl(rawUrl);
+  if (url === '#') {
+    return null;
+  }
+  const safeUrl = escapeHtml(url);
+  const safeLabel = label.trim() || 'Attachment';
+
+  if (isImageUrl(url)) {
+    return `<img class="markdown-preview__media markdown-preview__media--image" src="${safeUrl}" alt="${safeLabel}" loading="lazy" />`;
+  }
+  if (isVideoUrl(url)) {
+    return `<video class="markdown-preview__media markdown-preview__media--video" src="${safeUrl}" controls preload="metadata"></video>`;
+  }
+  if (isPdfUrl(url)) {
+    return `<object class="markdown-preview__media markdown-preview__media--pdf" data="${safeUrl}" type="application/pdf"><a href="${safeUrl}" target="_blank" rel="noreferrer">Open PDF</a></object>`;
+  }
+
+  return null;
+}
+
 function parseInlineMarkdown(value: string): string {
   const escaped = escapeHtml(value);
   const codeSegments: string[] = [];
@@ -36,10 +79,28 @@ function parseInlineMarkdown(value: string): string {
     return `@@CODE_SEGMENT_${idx}@@`;
   });
 
-  const withLinks = withCodeTokens.replace(
+  const mediaSegments: string[] = [];
+  const withMediaTokens = withCodeTokens.replace(
+    /!\[([^\]]*)\]\(([^)\s]+)\)/g,
+    (_match, label: string, href: string) => {
+      const mediaHtml = mediaMarkdownToHtml(label, href);
+      if (!mediaHtml) {
+        return `![${label}](${href})`;
+      }
+      const idx = mediaSegments.push(mediaHtml) - 1;
+      return `@@MEDIA_SEGMENT_${idx}@@`;
+    },
+  );
+
+  const withLinks = withMediaTokens.replace(
     /\[([^\]]+)\]\(([^)\s]+)\)/g,
-    (_match, label: string, href: string) =>
-      `<a href="${escapeHtml(sanitizeLinkUrl(href))}" target="_blank" rel="noreferrer">${label}</a>`,
+    (_match, label: string, href: string) => {
+      const mediaHtml = mediaMarkdownToHtml(label, href);
+      if (mediaHtml) {
+        return mediaHtml;
+      }
+      return `<a href="${escapeHtml(sanitizeLinkUrl(href))}" target="_blank" rel="noreferrer">${label}</a>`;
+    },
   );
 
   const withBold = withLinks.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -48,9 +109,14 @@ function parseInlineMarkdown(value: string): string {
     '$1<em>$2</em>',
   );
 
-  return withItalic.replace(/@@CODE_SEGMENT_(\d+)@@/g, (_match, idxString: string) => {
+  const withCodeRestored = withItalic.replace(/@@CODE_SEGMENT_(\d+)@@/g, (_match, idxString: string) => {
     const idx = Number(idxString);
     return Number.isFinite(idx) ? (codeSegments[idx] ?? '') : '';
+  });
+
+  return withCodeRestored.replace(/@@MEDIA_SEGMENT_(\d+)@@/g, (_match, idxString: string) => {
+    const idx = Number(idxString);
+    return Number.isFinite(idx) ? (mediaSegments[idx] ?? '') : '';
   });
 }
 
@@ -233,6 +299,33 @@ function nodeToMarkdown(node: Node): string {
       const href = element.getAttribute('href') ?? '#';
       const label = childText.trim() || href;
       return `[${label}](${href})`;
+    }
+    case 'img': {
+      const src = element.getAttribute('src') ?? '';
+      if (!src) {
+        return '';
+      }
+      const alt = element.getAttribute('alt') ?? 'image';
+      return `![${alt}](${src})`;
+    }
+    case 'video': {
+      const src =
+        element.getAttribute('src') ??
+        element.querySelector('source')?.getAttribute('src') ??
+        '';
+      if (!src) {
+        return '';
+      }
+      return `![video](${src})`;
+    }
+    case 'object':
+    case 'embed':
+    case 'iframe': {
+      const src = element.getAttribute('data') ?? element.getAttribute('src') ?? '';
+      if (!src) {
+        return '';
+      }
+      return `![attachment](${src})`;
     }
     case 'h1':
     case 'h2':

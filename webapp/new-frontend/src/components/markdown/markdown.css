@@ -100,6 +100,29 @@
   color: var(--color-accent);
 }
 
+.markdown-preview__media {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: var(--space-2) 0;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface-muted) 28%, transparent);
+}
+
+.markdown-preview__media--image {
+  max-height: 24rem;
+  object-fit: contain;
+}
+
+.markdown-preview__media--video {
+  max-height: 28rem;
+}
+
+.markdown-preview__media--pdf {
+  min-height: 28rem;
+}
+
 .markdown-preview blockquote {
   margin-left: 0;
   padding-left: var(--space-2);
