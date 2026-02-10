@@ -43,11 +43,14 @@
 
 .markdown-editor__surface {
   min-height: 12rem;
+  max-height: min(52vh, 30rem);
   padding: var(--space-3);
   color: var(--color-text);
   outline: none;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .markdown-editor__surface[data-empty='true']::before {
