@@ -1,6 +1,6 @@
 import './review-projects-page.css';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   type ApiReviewProjectType,
@@ -9,6 +9,10 @@ import {
 } from '../../api/review-projects';
 import { type CollectionOption, CollectionSelect } from '../../components/CollectionSelect';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
+import {
+  RequestAttachmentsDropzone,
+  type RequestAttachmentUploadQueueItem,
+} from '../../components/review-request/RequestAttachmentsDropzone';
 import { RequestDescriptionEditor } from '../../components/review-request/RequestDescriptionEditor';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
@@ -16,7 +20,6 @@ import {
   buildUploadFileKey,
   getAttachmentKindFromFile,
   isSupportedRequestAttachmentFile,
-  type RequestAttachmentKind,
   toDescriptionAttachmentMarkdown,
 } from '../../utils/request-attachments';
 
@@ -28,15 +31,6 @@ export type ReviewProjectCreateFormValues = {
   notes: string | null;
   tmTextUnitIds: number[];
   screenshotImageIds: string[];
-};
-
-type UploadQueueItem = {
-  key: string;
-  name: string;
-  status: 'uploading' | 'done' | 'error';
-  kind: RequestAttachmentKind;
-  preview?: string | null;
-  error?: string;
 };
 
 type Props = {
@@ -76,8 +70,7 @@ export function ReviewProjectCreateForm({
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
-  const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadQueue, setUploadQueue] = useState<RequestAttachmentUploadQueueItem[]>([]);
 
   useEffect(() => setName(defaultName), [defaultName]);
   useEffect(() => setDueDate(defaultDueDate), [defaultDueDate]);
@@ -137,7 +130,7 @@ export function ReviewProjectCreateForm({
       return [];
     }
     const fileArr = Array.from(files);
-    const queueEntries: UploadQueueItem[] = fileArr.map((file) => {
+    const queueEntries: RequestAttachmentUploadQueueItem[] = fileArr.map((file) => {
       const kind = getAttachmentKindFromFile(file);
       const isSupported = isSupportedRequestAttachmentFile(file);
       return {
@@ -150,7 +143,6 @@ export function ReviewProjectCreateForm({
       };
     });
     setUploadQueue((prev) => [...queueEntries, ...prev]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
     const uploadedKeys: string[] = [];
     await Promise.all(
       queueEntries.map(async (entry, index) => {
@@ -276,103 +268,20 @@ export function ReviewProjectCreateForm({
         </div>
 
         <div className="review-create__field">
-          <div className="review-create__label-row">
-            <span className="review-create__label">Screenshots (optional)</span>
-            <span className="review-create__hint">Drop images, videos, PDFs to upload.</span>
-          </div>
-          <div
-            className="review-create__dropzone"
-            onDragOver={(event) => {
-              event.preventDefault();
+          <RequestAttachmentsDropzone
+            label="Screenshots (optional)"
+            hint="Drop images, videos, PDFs to upload."
+            keys={screenshotKeys}
+            uploadQueue={uploadQueue}
+            disabled={isSubmitting}
+            isUploading={uploadQueue.some((item) => item.status === 'uploading')}
+            onFilesSelected={async (files) => {
+              await handleFiles(files);
             }}
-            onDrop={(event) => {
-              event.preventDefault();
-              if (isSubmitting) return;
-              void handleFiles(event.dataTransfer.files);
-            }}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="review-create__file-input"
-              accept="image/*,video/*,application/pdf"
-              onChange={(event) => {
-                void handleFiles(event.target.files);
-              }}
-              disabled={isSubmitting}
-            />
-            <div className="review-create__dropzone-main">
-              <button
-                type="button"
-                className="review-create__ghost"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isSubmitting}
-              >
-                Choose files
-              </button>
-              <div className="review-create__drop-hint">or drop files here</div>
-            </div>
-          </div>
-          {screenshotKeys.length ? (
-            <div className="review-create__chips" aria-label="Screenshot keys">
-              {screenshotKeys.map((key) => (
-                <span key={key} className="review-create__chip">
-                  <span className="review-create__chip-label">{key}</span>
-                  <button
-                    type="button"
-                    className="review-create__chip-remove"
-                    onClick={() =>
-                      setScreenshotKeys((current) => current.filter((value) => value !== key))
-                    }
-                    disabled={isSubmitting}
-                    aria-label={`Remove ${key}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          ) : null}
-          {uploadQueue.length ? (
-            <div className="review-create__upload-list" aria-label="Upload status">
-              {uploadQueue.map((item) => (
-                <div key={item.key} className="review-create__upload-row">
-                  {item.preview ? (
-                    item.kind === 'video' ? (
-                      <video
-                        src={item.preview}
-                        className="review-create__upload-thumb review-create__upload-thumb--video"
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                      />
-                    ) : (
-                      <img
-                        src={item.preview}
-                        alt=""
-                        className="review-create__upload-thumb"
-                        loading="lazy"
-                      />
-                    )
-                  ) : (
-                    <span className="review-create__upload-thumb placeholder">
-                      {item.kind === 'pdf' ? 'PDF' : 'FILE'}
-                    </span>
-                  )}
-                  <span className="review-create__upload-name">{item.name}</span>
-                  <span className={`review-create__upload-status status-${item.status}`}>
-                    {item.status === 'uploading'
-                      ? 'Uploading…'
-                      : item.status === 'done'
-                        ? 'Ready'
-                        : item.error || 'Failed'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : null}
+            onRemoveKey={(key) =>
+              setScreenshotKeys((current) => current.filter((value) => value !== key))
+            }
+          />
         </div>
       </div>
 
