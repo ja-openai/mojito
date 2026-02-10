@@ -81,38 +81,192 @@ export function MarkdownRichTextEditor({
     onChange(markdown);
   }, [onChange]);
 
-  const runCommand = useCallback(
-    (command: string, arg?: string) => {
+  const withEditorSelection = useCallback(
+    (
+      action: (params: {
+        editor: HTMLDivElement;
+        selection: Selection;
+        range: Range;
+      }) => void,
+    ) => {
       if (disabled) {
         return;
       }
       const editor = editorRef.current;
-      if (!editor) {
+      const selection = window.getSelection();
+      if (!editor || !selection) {
         return;
       }
       editor.focus();
-      document.execCommand(command, false, arg);
+      if (selection.rangeCount === 0) {
+        const fallback = document.createRange();
+        fallback.selectNodeContents(editor);
+        fallback.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(fallback);
+      }
+      const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      if (!range) {
+        return;
+      }
+      if (!editor.contains(range.commonAncestorContainer)) {
+        const fallback = document.createRange();
+        fallback.selectNodeContents(editor);
+        fallback.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(fallback);
+      }
+      const activeRange = selection.getRangeAt(0);
+      action({ editor, selection, range: activeRange });
       emitMarkdown();
     },
     [disabled, emitMarkdown],
   );
 
+  const selectNodeContents = useCallback((selection: Selection, node: Node) => {
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(node);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+  }, []);
+
+  const applyInlineWrap = useCallback(
+    (tagName: 'strong' | 'em' | 'code', placeholder: string) => {
+      withEditorSelection(({ selection, range }) => {
+        const wrapper = document.createElement(tagName);
+        if (range.collapsed) {
+          wrapper.textContent = placeholder;
+          range.insertNode(wrapper);
+        } else {
+          const fragment = range.extractContents();
+          wrapper.append(fragment);
+          range.insertNode(wrapper);
+        }
+        selectNodeContents(selection, wrapper);
+      });
+    },
+    [selectNodeContents, withEditorSelection],
+  );
+
+  const applyList = useCallback(
+    (ordered: boolean) => {
+      withEditorSelection(({ selection, range }) => {
+        const raw = range.toString();
+        const lines = raw
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+        const nextLines = lines.length > 0 ? lines : ['List item'];
+        const list = document.createElement(ordered ? 'ol' : 'ul');
+        nextLines.forEach((line) => {
+          const item = document.createElement('li');
+          item.textContent = line;
+          list.append(item);
+        });
+        range.deleteContents();
+        range.insertNode(list);
+        selectNodeContents(selection, list);
+      });
+    },
+    [selectNodeContents, withEditorSelection],
+  );
+
+  const applyBlockquote = useCallback(() => {
+    withEditorSelection(({ selection, range }) => {
+      const raw = range.toString().trim();
+      const content = raw || 'Quote';
+      const block = document.createElement('blockquote');
+      const paragraph = document.createElement('p');
+      const lines = content.split(/\r?\n/);
+      lines.forEach((line, idx) => {
+        if (idx > 0) {
+          paragraph.append(document.createElement('br'));
+        }
+        paragraph.append(document.createTextNode(line));
+      });
+      block.append(paragraph);
+      range.deleteContents();
+      range.insertNode(block);
+      selectNodeContents(selection, block);
+    });
+  }, [selectNodeContents, withEditorSelection]);
+
+  const applyCodeBlock = useCallback(() => {
+    withEditorSelection(({ selection, range }) => {
+      const raw = range.toString();
+      const content = raw || 'code';
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
+      code.textContent = content;
+      pre.append(code);
+      range.deleteContents();
+      range.insertNode(pre);
+      selectNodeContents(selection, pre);
+    });
+  }, [selectNodeContents, withEditorSelection]);
+
   const clearFormatting = useCallback(() => {
-    runCommand('removeFormat');
-    runCommand('unlink');
-  }, [runCommand]);
+    withEditorSelection(({ selection, range }) => {
+      if (range.collapsed) {
+        return;
+      }
+      const text = range.toString();
+      range.deleteContents();
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      const nextRange = document.createRange();
+      nextRange.setStartAfter(textNode);
+      nextRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(nextRange);
+    });
+  }, [withEditorSelection]);
+
+  const normalizeLink = useCallback((raw: string): string | null => {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return null;
+    }
+    if (trimmed.startsWith('/') || trimmed.startsWith('#')) {
+      return trimmed;
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
+        return parsed.toString();
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }, []);
 
   const addLink = useCallback(() => {
     if (disabled) {
       return;
     }
     const raw = window.prompt('Enter URL');
-    const next = raw?.trim() ?? '';
+    const next = raw ? normalizeLink(raw) : null;
     if (!next) {
       return;
     }
-    runCommand('createLink', next);
-  }, [disabled, runCommand]);
+    withEditorSelection(({ selection, range }) => {
+      const anchor = document.createElement('a');
+      anchor.href = next;
+      anchor.target = '_blank';
+      anchor.rel = 'noreferrer';
+
+      if (range.collapsed) {
+        anchor.textContent = 'link';
+        range.insertNode(anchor);
+      } else {
+        const fragment = range.extractContents();
+        anchor.append(fragment);
+        range.insertNode(anchor);
+      }
+      selectNodeContents(selection, anchor);
+    });
+  }, [disabled, normalizeLink, selectNodeContents, withEditorSelection]);
 
   const containerClassName = useMemo(
     () =>
@@ -128,37 +282,37 @@ export function MarkdownRichTextEditor({
         <ToolbarButton
           label="B"
           title="Bold"
-          onClick={() => runCommand('bold')}
+          onClick={() => applyInlineWrap('strong', 'bold')}
           disabled={disabled}
         />
         <ToolbarButton
           label="I"
           title="Italic"
-          onClick={() => runCommand('italic')}
+          onClick={() => applyInlineWrap('em', 'italic')}
           disabled={disabled}
         />
         <ToolbarButton
           label="• List"
           title="Bullet list"
-          onClick={() => runCommand('insertUnorderedList')}
+          onClick={() => applyList(false)}
           disabled={disabled}
         />
         <ToolbarButton
           label="1. List"
           title="Numbered list"
-          onClick={() => runCommand('insertOrderedList')}
+          onClick={() => applyList(true)}
           disabled={disabled}
         />
         <ToolbarButton
           label="Quote"
           title="Quote"
-          onClick={() => runCommand('formatBlock', 'blockquote')}
+          onClick={applyBlockquote}
           disabled={disabled}
         />
         <ToolbarButton
           label="Code"
           title="Inline code"
-          onClick={() => runCommand('formatBlock', 'pre')}
+          onClick={applyCodeBlock}
           disabled={disabled}
         />
         <ToolbarButton label="Link" title="Add link" onClick={addLink} disabled={disabled} />
