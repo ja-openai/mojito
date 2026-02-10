@@ -13,6 +13,8 @@ type Props = {
   className?: string;
 };
 
+const ATTACHMENT_MARKDOWN_MIME = 'application/x-mojito-markdown';
+
 const BLOCK_CONTAINER_TAGS = new Set([
   'ADDRESS',
   'ARTICLE',
@@ -411,26 +413,34 @@ export function MarkdownRichTextEditor({
     return { fragment, lastInsertedNode };
   }, []);
 
-  const handleDragOver = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      if (disabled || !onDropFiles) {
-        return;
-      }
-      event.preventDefault();
-      setIsDragOver(true);
-    },
-    [disabled, onDropFiles],
-  );
-
-  const handleDragLeave = useCallback((event: DragEvent<HTMLDivElement>) => {
-    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
-      return;
-    }
-    setIsDragOver(false);
+  const hasDraggedMarkdown = useCallback((event: DragEvent<HTMLDivElement>): boolean => {
+    const types = Array.from(event.dataTransfer.types ?? []);
+    return types.includes(ATTACHMENT_MARKDOWN_MIME) || types.includes('text/markdown');
   }, []);
 
-  const processFileDrop = useCallback(
-    async (event: DragEvent<HTMLDivElement>, files: FileList) => {
+  const readDraggedMarkdown = useCallback((event: DragEvent<HTMLDivElement>): string | null => {
+    const dataTransfer = event.dataTransfer;
+    const customMarkdown = dataTransfer.getData(ATTACHMENT_MARKDOWN_MIME);
+    if (customMarkdown.trim()) {
+      return customMarkdown;
+    }
+    const markdown = dataTransfer.getData('text/markdown');
+    if (markdown.trim()) {
+      return markdown;
+    }
+    return null;
+  }, []);
+
+  const hasDraggedFiles = useCallback((event: DragEvent<HTMLDivElement>): boolean => {
+    const files = event.dataTransfer.files;
+    if (files && files.length > 0) {
+      return true;
+    }
+    return Array.from(event.dataTransfer.items ?? []).some((item) => item.kind === 'file');
+  }, []);
+
+  const insertMarkdownAtDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>, markdown: string) => {
       const editor = editorRef.current;
       const selection = window.getSelection();
       if (!editor || !selection) {
@@ -448,29 +458,25 @@ export function MarkdownRichTextEditor({
       }
 
       const insertionRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
-      const insertedText = await onDropFiles?.(files);
-      if (!insertedText) {
-        return;
-      }
-
       editor.focus();
       const activeSelection = window.getSelection();
       if (!activeSelection) {
         return;
       }
+
       const rangeToUse =
         insertionRange && editor.contains(insertionRange.commonAncestorContainer)
           ? insertionRange
           : getEditorEndRange(editor);
       setSelectionToRange(activeSelection, rangeToUse);
       rangeToUse.deleteContents();
-      const { fragment, lastInsertedNode } = buildInsertFragment(insertedText);
+      const { fragment, lastInsertedNode } = buildInsertFragment(markdown);
 
       let anchorNode: Node | null = lastInsertedNode;
       if (lastInsertedNode) {
         rangeToUse.insertNode(fragment);
       } else {
-        const textNode = document.createTextNode(insertedText);
+        const textNode = document.createTextNode(markdown);
         rangeToUse.insertNode(textNode);
         anchorNode = textNode;
       }
@@ -478,25 +484,80 @@ export function MarkdownRichTextEditor({
       if (!anchorNode) {
         return;
       }
+
       const cursor = document.createRange();
       cursor.setStartAfter(anchorNode);
       cursor.collapse(true);
       setSelectionToRange(activeSelection, cursor);
       emitMarkdown();
     },
+    [buildInsertFragment, emitMarkdown, getDropRange, getEditorEndRange, setSelectionToRange],
+  );
+
+  const handleDragOver = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (disabled) {
+        return;
+      }
+      if (hasDraggedMarkdown(event)) {
+        event.preventDefault();
+        setIsDragOver(true);
+        return;
+      }
+      if (!onDropFiles) {
+        return;
+      }
+      if (!hasDraggedFiles(event)) {
+        setIsDragOver(false);
+        return;
+      }
+      event.preventDefault();
+      setIsDragOver(true);
+    },
+    [disabled, hasDraggedFiles, hasDraggedMarkdown, onDropFiles],
+  );
+
+  const handleDragLeave = useCallback((event: DragEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
+    }
+    setIsDragOver(false);
+  }, []);
+
+  const processFileDrop = useCallback(
+    async (event: DragEvent<HTMLDivElement>, files: FileList) => {
+      const insertedText = await onDropFiles?.(files);
+      if (!insertedText) {
+        return;
+      }
+      insertMarkdownAtDrop(event, insertedText);
+    },
     [
-      buildInsertFragment,
-      emitMarkdown,
-      getDropRange,
-      getEditorEndRange,
+      insertMarkdownAtDrop,
       onDropFiles,
-      setSelectionToRange,
     ],
   );
 
   const handleDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
-      if (disabled || !onDropFiles) {
+      if (disabled) {
+        return;
+      }
+      if (hasDraggedMarkdown(event)) {
+        const markdown = readDraggedMarkdown(event);
+        if (!markdown) {
+          return;
+        }
+        event.preventDefault();
+        setIsDragOver(false);
+        insertMarkdownAtDrop(event, markdown);
+        return;
+      }
+      if (!onDropFiles) {
+        return;
+      }
+      if (!hasDraggedFiles(event)) {
+        setIsDragOver(false);
         return;
       }
       event.preventDefault();
@@ -507,7 +568,15 @@ export function MarkdownRichTextEditor({
       }
       void processFileDrop(event, files);
     },
-    [disabled, onDropFiles, processFileDrop],
+    [
+      disabled,
+      hasDraggedFiles,
+      hasDraggedMarkdown,
+      insertMarkdownAtDrop,
+      onDropFiles,
+      processFileDrop,
+      readDraggedMarkdown,
+    ],
   );
 
   const containerClassName = useMemo(

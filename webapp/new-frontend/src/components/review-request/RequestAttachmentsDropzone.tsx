@@ -2,7 +2,14 @@ import './request-attachments-dropzone.css';
 
 import { type ChangeEvent, type DragEvent, useCallback, useRef, useState } from 'react';
 
-import { type RequestAttachmentKind, resolveAttachmentUrl } from '../../utils/request-attachments';
+import {
+  isImageAttachmentKey,
+  isPdfAttachmentKey,
+  isVideoAttachmentKey,
+  type RequestAttachmentKind,
+  resolveAttachmentUrl,
+  toDescriptionAttachmentMarkdown,
+} from '../../utils/request-attachments';
 
 export type RequestAttachmentUploadQueueItem = {
   key: string;
@@ -12,6 +19,8 @@ export type RequestAttachmentUploadQueueItem = {
   preview?: string | null;
   error?: string;
 };
+
+const ATTACHMENT_MARKDOWN_MIME = 'application/x-mojito-markdown';
 
 type Props = {
   label?: string;
@@ -106,6 +115,21 @@ export function RequestAttachmentsDropzone({
     [onFilesSelected],
   );
 
+  const queueItems = uploadQueue.filter((item) => item.status !== 'done');
+
+  const getKeyKind = useCallback((key: string): RequestAttachmentKind => {
+    if (isImageAttachmentKey(key)) {
+      return 'image';
+    }
+    if (isVideoAttachmentKey(key)) {
+      return 'video';
+    }
+    if (isPdfAttachmentKey(key)) {
+      return 'pdf';
+    }
+    return 'file';
+  }, []);
+
   return (
     <div className="request-attachments">
       <div className="request-attachments__label-row">
@@ -168,37 +192,74 @@ export function RequestAttachmentsDropzone({
       </div>
 
       {keys.length > 0 ? (
-        <div className="request-attachments__keys">
-          {keys.map((key) => (
-            <span key={key} className="request-attachments__key-row">
-              <a
-                className="request-attachments__key-link"
-                href={resolveAttachmentUrl(key)}
-                target="_blank"
-                rel="noreferrer"
-                title={key}
+        <div className="request-attachments__upload-list" aria-label="Upload status">
+          {keys.map((key) => {
+            const kind = getKeyKind(key);
+            const src = resolveAttachmentUrl(key);
+            const insertSnippet = `${toDescriptionAttachmentMarkdown(key)}\n`;
+            return (
+              <div
+                key={key}
+                className="request-attachments__upload-row request-attachments__upload-row--attached"
+                draggable={!disabled}
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = 'copy';
+                  event.dataTransfer.setData(ATTACHMENT_MARKDOWN_MIME, insertSnippet);
+                  event.dataTransfer.setData('text/plain', insertSnippet);
+                  event.dataTransfer.setData('text/markdown', insertSnippet);
+                }}
+                title="Drag into description to insert"
               >
-                {key}
-              </a>
-              <button
-                type="button"
-                className="request-attachments__key-remove"
-                onClick={() => onRemoveKey(key)}
-                disabled={disabled}
-                aria-label={`Remove ${key}`}
-              >
-                ×
-              </button>
-            </span>
-          ))}
+                {kind === 'image' ? (
+                  <img
+                    src={src}
+                    alt=""
+                    className="request-attachments__upload-thumb"
+                    loading="lazy"
+                  />
+                ) : kind === 'video' ? (
+                  <video
+                    src={src}
+                    className="request-attachments__upload-thumb request-attachments__upload-thumb--video"
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                  />
+                ) : (
+                  <span className="request-attachments__upload-thumb request-attachments__upload-thumb--placeholder">
+                    {kind === 'pdf' ? 'PDF' : 'FILE'}
+                  </span>
+                )}
+                <a
+                  className="request-attachments__upload-name request-attachments__upload-name--link"
+                  href={src}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={key}
+                >
+                  {key}
+                </a>
+                <button
+                  type="button"
+                  className="request-attachments__upload-action"
+                  onClick={() => onRemoveKey(key)}
+                  disabled={disabled}
+                  aria-label={`Remove ${key}`}
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <span className="request-attachments__empty">{emptyLabel}</span>
       )}
 
-      {uploadQueue.length > 0 ? (
+      {queueItems.length > 0 ? (
         <div className="request-attachments__upload-list" aria-label="Upload status">
-          {uploadQueue.map((item) => (
+          {queueItems.map((item) => (
             <div key={item.key} className="request-attachments__upload-row">
               {item.preview ? (
                 item.kind === 'video' ? (
@@ -225,11 +286,7 @@ export function RequestAttachmentsDropzone({
               )}
               <span className="request-attachments__upload-name">{item.name}</span>
               <span className={`request-attachments__upload-status-label status-${item.status}`}>
-                {item.status === 'uploading'
-                  ? 'Uploading…'
-                  : item.status === 'done'
-                    ? 'Ready'
-                    : item.error || 'Failed'}
+                {item.status === 'uploading' ? 'Uploading…' : item.error || 'Failed'}
               </span>
             </div>
           ))}
