@@ -637,6 +637,7 @@ export function ReviewProjectPageView({
       setSelectedTextUnitId(null);
       return;
     }
+    const hasSearchTerm = search.trim().length > 0;
     if (selectedTextUnitQueryId != null) {
       const hasQueryMatch = filtered.some(
         (tu) => tu.tmTextUnit?.id === selectedTextUnitQueryId || tu.id === selectedTextUnitQueryId,
@@ -645,10 +646,19 @@ export function ReviewProjectPageView({
         return;
       }
     }
-    if (selectedTextUnitId == null || !filtered.some((tu) => tu.id === selectedTextUnitId)) {
+    const hasSelectedInFiltered =
+      selectedTextUnitId != null && filtered.some((tu) => tu.id === selectedTextUnitId);
+    if (hasSelectedInFiltered) {
+      return;
+    }
+    if (hasSearchTerm) {
+      setSelectedTextUnitId(null);
+      return;
+    }
+    if (selectedTextUnitId == null || !hasSelectedInFiltered) {
       setSelectedTextUnitId(filtered[0]?.id ?? null);
     }
-  }, [filtered, selectedTextUnitId, selectedTextUnitQueryId]);
+  }, [filtered, search, selectedTextUnitId, selectedTextUnitQueryId]);
 
   useEffect(() => {
     if (selectedTextUnitQueryId != null && !selectedTextUnit) {
