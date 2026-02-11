@@ -650,7 +650,7 @@
   gap: var(--space-2);
 }
 
-.review-project-row--edited .review-project-row__inner {
+.review-project-row--decided .review-project-row__inner {
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: var(--space-2);
 }
@@ -664,12 +664,12 @@
   white-space: nowrap;
 }
 
-.review-project-row--edited .review-project-row__name,
-.review-project-row--edited .review-project-row__strings {
+.review-project-row--decided .review-project-row__name,
+.review-project-row--decided .review-project-row__strings {
   grid-column: 1;
 }
 
-.review-project-row__edited-dot {
+.review-project-row__decided-dot {
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;

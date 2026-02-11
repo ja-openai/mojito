@@ -1004,7 +1004,7 @@ export function ReviewProjectPageView({
               if (!textUnit) {
                 return null;
               }
-              const isEdited = getEditKinds(textUnit).length > 0;
+              const isDecided = getDecisionState(textUnit) === 'DECIDED';
               return {
                 key: virtualItem.key,
                 props: {
@@ -1012,14 +1012,16 @@ export function ReviewProjectPageView({
                   onClick: () => attemptSelectTextUnit(textUnit.id, virtualItem.index),
                   className:
                     textUnit.id === selectedTextUnitId
-                      ? `review-project-row is-selected${isEdited ? ' review-project-row--edited' : ''}`
-                      : `review-project-row${isEdited ? ' review-project-row--edited' : ''}`,
+                      ? `review-project-row is-selected${
+                          isDecided ? ' review-project-row--decided' : ''
+                        }`
+                      : `review-project-row${isDecided ? ' review-project-row--decided' : ''}`,
                 },
                 content: (
                   <TextUnitRow
                     textUnit={textUnit}
                     isSelected={textUnit.id === selectedTextUnitId}
-                    isEdited={isEdited}
+                    isDecided={isDecided}
                   />
                 ),
               };
@@ -1154,11 +1156,11 @@ export function ReviewProjectPageView({
 function TextUnitRow({
   textUnit,
   isSelected,
-  isEdited,
+  isDecided,
 }: {
   textUnit: ApiReviewProjectTextUnit;
   isSelected: boolean;
-  isEdited: boolean;
+  isDecided: boolean;
 }) {
   if (!textUnit) {
     return null;
@@ -1184,7 +1186,7 @@ function TextUnitRow({
           </span>
         </div>
       </div>
-      {isEdited ? <span className="review-project-row__edited-dot" aria-hidden="true" /> : null}
+      {isDecided ? <span className="review-project-row__decided-dot" aria-hidden="true" /> : null}
     </div>
   );
 }
