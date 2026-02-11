@@ -375,6 +375,27 @@ export type ReviewProjectRequestGroupRow = {
   projects: ReviewProjectRow[];
 };
 
+function getRequestGroupTypeBadge(group: ReviewProjectRequestGroupRow): {
+  label: string;
+  className: string;
+} {
+  const uniqueTypes = Array.from(new Set(group.projects.map((project) => project.type)));
+  if (uniqueTypes.length === 1) {
+    const type = uniqueTypes[0];
+    return {
+      label: REVIEW_PROJECT_TYPE_LABELS[type] ?? REVIEW_PROJECT_TYPE_LABELS.NORMAL,
+      className:
+        type === 'EMERGENCY'
+          ? 'review-projects-page__type-pill--emergency'
+          : 'review-projects-page__type-pill--default',
+    };
+  }
+  return {
+    label: 'Mixed',
+    className: 'review-projects-page__type-pill--default',
+  };
+}
+
 function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestGroupRow[] {
   const groups = new Map<string, ReviewProjectRequestGroupRow>();
   const dueByKey = new Map<string, number | null>();
@@ -862,7 +883,7 @@ function RequestGroupsSection({
               group.acceptedCount,
               group.textUnitCount,
             );
-            const localeCount = group.localeTags.length;
+            const typeBadge = getRequestGroupTypeBadge(group);
             const requestLabel =
               group.requestId != null ? `Request #${group.requestId}` : 'Request';
             const onCardToggleClick = (event: MouseEvent<HTMLElement>) => {
@@ -941,8 +962,8 @@ function RequestGroupsSection({
                     <CountsInline words={group.wordCount} strings={total} />
                   </div>
                   <div className="review-projects-page__type">
-                    <Pill className="review-projects-page__type-pill review-projects-page__type-pill--default">
-                      {localeCount} locale{localeCount === 1 ? '' : 's'}
+                    <Pill className={`review-projects-page__type-pill ${typeBadge.className}`}>
+                      {typeBadge.label}
                     </Pill>
                   </div>
                   <div className="review-projects-page__meta">
