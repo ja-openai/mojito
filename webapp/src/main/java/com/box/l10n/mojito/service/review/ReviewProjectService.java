@@ -212,12 +212,16 @@ public class ReviewProjectService {
       throw new IllegalArgumentException("request must not be null");
     }
 
-    List<Long> activeRequestIds = findActiveRequestIds(request);
-    if (activeRequestIds.isEmpty()) {
+    List<ReviewProjectStatus> requestedStatuses = getRequestModeStatuses(request.statuses());
+    boolean includeOpen = requestedStatuses.contains(ReviewProjectStatus.OPEN);
+    boolean includeClosed = requestedStatuses.contains(ReviewProjectStatus.CLOSED);
+
+    List<Long> requestIds = findRequestIdsByStatuses(request, requestedStatuses);
+    if (requestIds.isEmpty()) {
       return new SearchReviewProjectRequestsView(List.of());
     }
 
-    List<SearchReviewProjectDetail> projectDetails = getProjectDetailsByRequestIds(activeRequestIds);
+    List<SearchReviewProjectDetail> projectDetails = getProjectDetailsByRequestIds(requestIds);
     Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
     List<SearchReviewProjectsView.ReviewProject> reviewProjects =
         toReviewProjectViews(projectDetails, acceptedCountByProjectId);
@@ -231,7 +235,7 @@ public class ReviewProjectService {
             .collect(Collectors.groupingBy(reviewProject -> reviewProject.reviewProjectRequest().id()));
 
     List<SearchReviewProjectRequestsView.ReviewProjectRequestGroup> groups = new ArrayList<>();
-    for (Long requestId : activeRequestIds) {
+    for (Long requestId : requestIds) {
       List<SearchReviewProjectsView.ReviewProject> groupedProjects =
           projectsByRequestId.getOrDefault(requestId, List.of());
       if (groupedProjects.isEmpty()) {
@@ -254,14 +258,16 @@ public class ReviewProjectService {
               sortedProjects.stream()
                   .filter(reviewProject -> reviewProject.status() == ReviewProjectStatus.OPEN)
                   .count();
-      if (openProjectCount <= 0) {
-        continue;
-      }
       int closedProjectCount =
           (int)
               sortedProjects.stream()
                   .filter(reviewProject -> reviewProject.status() == ReviewProjectStatus.CLOSED)
                   .count();
+      boolean matchesStatusFilter =
+          (includeOpen && openProjectCount > 0) || (includeClosed && closedProjectCount > 0);
+      if (!matchesStatusFilter) {
+        continue;
+      }
       int textUnitCount =
           sortedProjects.stream().mapToInt(project -> Optional.ofNullable(project.textUnitCount()).orElse(0)).sum();
       int wordCount =
@@ -293,6 +299,13 @@ public class ReviewProjectService {
     }
 
     return new SearchReviewProjectRequestsView(groups);
+  }
+
+  private List<ReviewProjectStatus> getRequestModeStatuses(List<ReviewProjectStatus> statuses) {
+    if (statuses == null || statuses.isEmpty()) {
+      return List.of(ReviewProjectStatus.OPEN);
+    }
+    return statuses;
   }
 
   private List<SearchReviewProjectDetail> getProjectDetailsByCriteria(SearchReviewProjectsCriteria request) {
@@ -341,7 +354,8 @@ public class ReviewProjectService {
     return query.getResultList();
   }
 
-  private List<Long> findActiveRequestIds(SearchReviewProjectsCriteria request) {
+  private List<Long> findRequestIdsByStatuses(
+      SearchReviewProjectsCriteria request, List<ReviewProjectStatus> statuses) {
     CriteriaBuilder cb = entityManager.getCriteriaBuilder();
     CriteriaQuery<Long> cq = cb.createQuery(Long.class);
     Root<ReviewProject> root = cq.from(ReviewProject.class);
@@ -359,7 +373,7 @@ public class ReviewProjectService {
             requestJoin,
             createdByUserJoin,
             request,
-            List.of(ReviewProjectStatus.OPEN));
+            statuses);
     predicates.add(cb.isNotNull(requestJoin.get(ReviewProjectRequest_.id)));
 
     cq.where(predicates.toArray(Predicate[]::new))

@@ -300,7 +300,6 @@ export function ReviewProjectsPage() {
   const requestSearchParams = useMemo<ReviewProjectsSearchRequest>(
     () => ({
       ...searchParams,
-      statuses: undefined,
     }),
     [searchParams],
   );
