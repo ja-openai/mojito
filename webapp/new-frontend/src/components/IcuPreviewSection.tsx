@@ -41,7 +41,7 @@ export function IcuPreviewSection({
   );
   const hasIcuMessage = hasIcuSource || hasIcuTarget;
   const selectedMode = resolveIcuPreviewMode(mode, hasIcuSource, hasIcuTarget);
-  const selectedMessage = selectedMode === 'source' ? sourceMessage ?? '' : targetMessage ?? '';
+  const selectedMessage = selectedMode === 'source' ? (sourceMessage ?? '') : (targetMessage ?? '');
   const selectedLocale = selectedMode === 'source' ? 'en' : targetLocale;
 
   if (!hasIcuMessage) {

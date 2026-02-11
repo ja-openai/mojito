@@ -51,8 +51,12 @@
   cursor: pointer;
 }
 
-.request-description-editor__mode-button:not(.request-description-editor__mode-button--active):hover,
-.request-description-editor__mode-button:not(.request-description-editor__mode-button--active):focus-visible {
+.request-description-editor__mode-button:not(
+    .request-description-editor__mode-button--active
+  ):hover,
+.request-description-editor__mode-button:not(
+    .request-description-editor__mode-button--active
+  ):focus-visible {
   background: color-mix(in srgb, var(--color-surface-muted) 55%, transparent);
   color: var(--color-text);
 }

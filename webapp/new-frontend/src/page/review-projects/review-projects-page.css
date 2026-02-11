@@ -229,7 +229,8 @@
   min-width: 0;
 }
 
-.review-projects-page__request-project-row > .review-projects-page__request-project-link:only-child {
+.review-projects-page__request-project-row
+  > .review-projects-page__request-project-link:only-child {
   grid-column: 1 / -1;
 }
 

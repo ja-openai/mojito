@@ -193,9 +193,7 @@ export function TextUnitDetailPage() {
         setSaveErrorMessage('You cannot delete this locale translation.');
         return;
       }
-      setSaveErrorMessage(
-        error instanceof Error ? error.message : 'Unable to delete translation.',
-      );
+      setSaveErrorMessage(error instanceof Error ? error.message : 'Unable to delete translation.');
     },
   });
 
@@ -679,7 +677,7 @@ export function TextUnitDetailPage() {
             content: message.content,
           }))
         : [{ role: 'user', content: DEFAULT_AI_REVIEW_PROMPT }];
-    const retryTarget = baseMessages.length > 0 ? draftTarget : activeTextUnit.target ?? '';
+    const retryTarget = baseMessages.length > 0 ? draftTarget : (activeTextUnit.target ?? '');
 
     setIsAiResponding(true);
     void requestAiReview({

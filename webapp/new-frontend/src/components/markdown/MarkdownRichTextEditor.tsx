@@ -61,7 +61,9 @@ function shouldLiftFromParent(parent: HTMLElement): boolean {
   // Any non-block wrapper can carry inline formatting from paste/contentEditable.
   // Lift through those wrappers so replacement text remains plain.
   const display = window.getComputedStyle(parent).display;
-  return !display.startsWith('block') && display !== 'table' && display !== 'flex' && display !== 'grid';
+  return (
+    !display.startsWith('block') && display !== 'table' && display !== 'flex' && display !== 'grid'
+  );
 }
 
 function ToolbarButton({
@@ -136,13 +138,7 @@ export function MarkdownRichTextEditor({
   }, [onChange]);
 
   const withEditorSelection = useCallback(
-    (
-      action: (params: {
-        editor: HTMLDivElement;
-        selection: Selection;
-        range: Range;
-      }) => void,
-    ) => {
+    (action: (params: { editor: HTMLDivElement; selection: Selection; range: Range }) => void) => {
       if (disabled) {
         return;
       }
@@ -334,7 +330,11 @@ export function MarkdownRichTextEditor({
     }
     try {
       const parsed = new URL(trimmed);
-      if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
+      if (
+        parsed.protocol === 'http:' ||
+        parsed.protocol === 'https:' ||
+        parsed.protocol === 'mailto:'
+      ) {
         return parsed.toString();
       }
     } catch {
@@ -373,7 +373,10 @@ export function MarkdownRichTextEditor({
   const getDropRange = useCallback((event: DragEvent<HTMLDivElement>): Range | null => {
     const docWithCaretRange = document as Document & {
       caretRangeFromPoint?: (x: number, y: number) => Range | null;
-      caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+      caretPositionFromPoint?: (
+        x: number,
+        y: number,
+      ) => { offsetNode: Node; offset: number } | null;
     };
     const byRange = docWithCaretRange.caretRangeFromPoint?.(event.clientX, event.clientY);
     if (byRange) {
@@ -532,10 +535,7 @@ export function MarkdownRichTextEditor({
       }
       insertMarkdownAtDrop(event, insertedText);
     },
-    [
-      insertMarkdownAtDrop,
-      onDropFiles,
-    ],
+    [insertMarkdownAtDrop, onDropFiles],
   );
 
   const handleDrop = useCallback(
@@ -583,9 +583,7 @@ export function MarkdownRichTextEditor({
     () =>
       `markdown-editor${disabled ? ' markdown-editor--disabled' : ''}${
         isDragOver ? ' markdown-editor--drag-active' : ''
-      }${
-        className ? ` ${className}` : ''
-      }`,
+      }${className ? ` ${className}` : ''}`,
     [className, disabled, isDragOver],
   );
 
@@ -616,12 +614,7 @@ export function MarkdownRichTextEditor({
           onClick={() => applyList(true)}
           disabled={disabled}
         />
-        <ToolbarButton
-          label="Quote"
-          title="Quote"
-          onClick={applyBlockquote}
-          disabled={disabled}
-        />
+        <ToolbarButton label="Quote" title="Quote" onClick={applyBlockquote} disabled={disabled} />
         <ToolbarButton
           label="Code"
           title="Inline code"

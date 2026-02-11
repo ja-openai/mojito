@@ -89,7 +89,9 @@ export const isVideoAttachmentKey = (key: string) => {
 
 export const isPdfAttachmentKey = (key: string) => {
   const lower = stripQueryAndHash(key).toLowerCase();
-  return key.startsWith('data:application/pdf') || PDF_EXTENSIONS.some((ext) => lower.endsWith(ext));
+  return (
+    key.startsWith('data:application/pdf') || PDF_EXTENSIONS.some((ext) => lower.endsWith(ext))
+  );
 };
 
 export const toDescriptionAttachmentMarkdown = (key: string) => {

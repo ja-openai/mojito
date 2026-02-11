@@ -223,10 +223,12 @@ export function ReviewProjectCreateForm({
             <SingleSelectDropdown
               label="Type"
               className="review-create__select-dropdown"
-              options={REVIEW_PROJECT_TYPES.filter((option) => option !== 'UNKNOWN').map((option) => ({
-                value: option,
-                label: REVIEW_PROJECT_TYPE_LABELS[option],
-              }))}
+              options={REVIEW_PROJECT_TYPES.filter((option) => option !== 'UNKNOWN').map(
+                (option) => ({
+                  value: option,
+                  label: REVIEW_PROJECT_TYPE_LABELS[option],
+                }),
+              )}
               value={type}
               onChange={(next) => {
                 if (next == null) {

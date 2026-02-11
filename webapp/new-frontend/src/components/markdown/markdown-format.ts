@@ -47,7 +47,9 @@ function isVideoUrl(url: string): boolean {
 
 function isPdfUrl(url: string): boolean {
   const lower = stripQueryAndHash(url).toLowerCase();
-  return lower.startsWith('data:application/pdf') || PDF_EXTENSIONS.some((ext) => lower.endsWith(ext));
+  return (
+    lower.startsWith('data:application/pdf') || PDF_EXTENSIONS.some((ext) => lower.endsWith(ext))
+  );
 }
 
 function mediaMarkdownToHtml(label: string, rawUrl: string): string | null {
@@ -106,15 +108,15 @@ function parseInlineMarkdown(value: string): string {
   );
 
   const withBold = withLinks.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  const withItalic = withBold.replace(
-    /(^|[^\w*])\*([^*\n]+)\*(?=([^\w*]|$))/g,
-    '$1<em>$2</em>',
-  );
+  const withItalic = withBold.replace(/(^|[^\w*])\*([^*\n]+)\*(?=([^\w*]|$))/g, '$1<em>$2</em>');
 
-  const withCodeRestored = withItalic.replace(/@@CODE_SEGMENT_(\d+)@@/g, (_match, idxString: string) => {
-    const idx = Number(idxString);
-    return Number.isFinite(idx) ? (codeSegments[idx] ?? '') : '';
-  });
+  const withCodeRestored = withItalic.replace(
+    /@@CODE_SEGMENT_(\d+)@@/g,
+    (_match, idxString: string) => {
+      const idx = Number(idxString);
+      return Number.isFinite(idx) ? (codeSegments[idx] ?? '') : '';
+    },
+  );
 
   return withCodeRestored.replace(/@@MEDIA_SEGMENT_(\d+)@@/g, (_match, idxString: string) => {
     const idx = Number(idxString);
@@ -312,9 +314,7 @@ function nodeToMarkdown(node: Node): string {
     }
     case 'video': {
       const src =
-        element.getAttribute('src') ??
-        element.querySelector('source')?.getAttribute('src') ??
-        '';
+        element.getAttribute('src') ?? element.querySelector('source')?.getAttribute('src') ?? '';
       if (!src) {
         return '';
       }

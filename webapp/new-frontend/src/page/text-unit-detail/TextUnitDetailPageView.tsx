@@ -369,7 +369,9 @@ export function TextUnitDetailPageView({
                               <span className="text-unit-detail-page__timeline-summary-separator">
                                 &middot;
                               </span>
-                              <span className="text-unit-detail-page__timeline-summary-meta">-</span>
+                              <span className="text-unit-detail-page__timeline-summary-meta">
+                                -
+                              </span>
                               <span className="text-unit-detail-page__timeline-summary-separator">
                                 &middot;
                               </span>

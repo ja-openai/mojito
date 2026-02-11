@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import type {
   ApiReviewProjectRequestGroupSummary,
@@ -29,6 +29,13 @@ import {
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';
 import { loadPreferredLocales } from '../workbench/workbench-preferences';
+import {
+  loadReviewProjectsSessionState,
+  REVIEW_PROJECTS_SESSION_QUERY_KEY,
+  type ReviewProjectsSessionState,
+  saveReviewProjectsSessionState,
+  serializeReviewProjectsSessionState,
+} from './review-projects-session-state';
 import {
   type ReviewProjectRequestGroupRow,
   type ReviewProjectRow,
@@ -177,7 +184,9 @@ const toReviewProjectRequestGroupRow = (
     toFiniteNumberOrNull(requestGroup.acceptedCount) ??
     projects.reduce((sum, project) => sum + project.acceptedCount, 0);
   const localeTags = Array.from(
-    new Set(projects.map((project) => project.localeTag).filter((tag): tag is string => Boolean(tag))),
+    new Set(
+      projects.map((project) => project.localeTag).filter((tag): tag is string => Boolean(tag)),
+    ),
   ).sort((a, b) => a.localeCompare(b));
 
   return {
@@ -199,6 +208,8 @@ export function ReviewProjectsPage() {
   const { data: repositoryData } = useRepositories();
   const location = useLocation();
   const navigate = useNavigate();
+  const [urlSearchParams, setUrlSearchParams] = useSearchParams();
+  const reviewSessionKey = urlSearchParams.get(REVIEW_PROJECTS_SESSION_QUERY_KEY);
   const queryClient = useQueryClient();
   const isAdmin = user.role === 'ROLE_ADMIN';
   const canUseRequestMode = isAdmin || user.role === 'ROLE_PM';
@@ -209,9 +220,7 @@ export function ReviewProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<ApiReviewProjectStatus | 'all'>('OPEN');
   const [limit, setLimit] = useState<number>(1000);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchField, setSearchField] = useState<'name' | 'id' | 'requestId' | 'createdBy'>(
-    'name',
-  );
+  const [searchField, setSearchField] = useState<'name' | 'id' | 'requestId' | 'createdBy'>('name');
   const [searchType, setSearchType] = useState<'contains' | 'exact' | 'ilike'>('contains');
   const [creatorFilter, setCreatorFilter] = useState<'all' | 'mine'>('all');
   const [createdAfter, setCreatedAfter] = useState<string | null>(null);
@@ -224,6 +233,12 @@ export function ReviewProjectsPage() {
   const [displayMode, setDisplayMode] = useState<'list' | 'requests'>(() =>
     canUseRequestMode ? 'requests' : 'list',
   );
+  const [hasHydratedSessionState, setHasHydratedSessionState] = useState(false);
+  const persistedSessionKeyRef = useRef<string | null>(reviewSessionKey);
+  const hydratedSessionKeyRef = useRef<string | null>(null);
+  const pendingSessionHydrationKeyRef = useRef<string | null>(reviewSessionKey);
+  const pendingSessionHydrationSignatureRef = useRef<string | null>(null);
+  const lastPersistedSessionSignatureRef = useRef<string | null>(null);
 
   const repositories = useMemo(() => repositoryData ?? [], [repositoryData]);
   const localeOptions = useLocaleOptionsWithDisplayNames(repositories);
@@ -247,7 +262,143 @@ export function ReviewProjectsPage() {
     return Array.from(new Set(tags));
   }, [localeOptionsFiltered]);
 
-  const searchParams = useMemo<ReviewProjectsSearchRequest>(() => {
+  const sessionState = useMemo<ReviewProjectsSessionState>(
+    () => ({
+      selectedLocaleTags,
+      hasTouchedLocales,
+      typeFilter,
+      statusFilter,
+      limit,
+      searchQuery,
+      searchField,
+      searchType,
+      creatorFilter,
+      createdAfter,
+      createdBefore,
+      dueAfter,
+      dueBefore,
+      displayMode: canUseRequestMode ? displayMode : 'list',
+    }),
+    [
+      canUseRequestMode,
+      createdAfter,
+      createdBefore,
+      creatorFilter,
+      displayMode,
+      dueAfter,
+      dueBefore,
+      hasTouchedLocales,
+      limit,
+      searchField,
+      searchQuery,
+      searchType,
+      selectedLocaleTags,
+      statusFilter,
+      typeFilter,
+    ],
+  );
+
+  useEffect(() => {
+    if (reviewSessionKey) {
+      persistedSessionKeyRef.current = reviewSessionKey;
+    }
+  }, [reviewSessionKey]);
+
+  useEffect(() => {
+    if (!reviewSessionKey) {
+      pendingSessionHydrationKeyRef.current = null;
+      pendingSessionHydrationSignatureRef.current = null;
+      hydratedSessionKeyRef.current = null;
+      setHasHydratedSessionState(true);
+      return;
+    }
+
+    pendingSessionHydrationKeyRef.current = reviewSessionKey;
+    if (hydratedSessionKeyRef.current === reviewSessionKey) {
+      setHasHydratedSessionState(true);
+      return;
+    }
+
+    hydratedSessionKeyRef.current = reviewSessionKey;
+    const savedState = loadReviewProjectsSessionState(reviewSessionKey);
+    if (!savedState) {
+      pendingSessionHydrationKeyRef.current = null;
+      pendingSessionHydrationSignatureRef.current = null;
+      setHasHydratedSessionState(true);
+      return;
+    }
+
+    const normalizedState: ReviewProjectsSessionState = {
+      ...savedState,
+      displayMode: canUseRequestMode ? savedState.displayMode : 'list',
+    };
+    const normalizedSignature = serializeReviewProjectsSessionState(normalizedState);
+    pendingSessionHydrationSignatureRef.current = normalizedSignature;
+    persistedSessionKeyRef.current = reviewSessionKey;
+    lastPersistedSessionSignatureRef.current = normalizedSignature;
+
+    setSelectedLocaleTags(normalizedState.selectedLocaleTags);
+    setHasTouchedLocales(normalizedState.hasTouchedLocales);
+    setTypeFilter(normalizedState.typeFilter);
+    setStatusFilter(normalizedState.statusFilter);
+    setLimit(normalizedState.limit);
+    setSearchQuery(normalizedState.searchQuery);
+    setSearchField(normalizedState.searchField);
+    setSearchType(normalizedState.searchType);
+    setCreatorFilter(normalizedState.creatorFilter);
+    setCreatedAfter(normalizedState.createdAfter);
+    setCreatedBefore(normalizedState.createdBefore);
+    setDueAfter(normalizedState.dueAfter);
+    setDueBefore(normalizedState.dueBefore);
+    setDisplayMode(normalizedState.displayMode);
+    setHasHydratedSessionState(true);
+  }, [canUseRequestMode, reviewSessionKey]);
+
+  useEffect(() => {
+    if (!hasHydratedSessionState) {
+      return;
+    }
+    const signature = serializeReviewProjectsSessionState(sessionState);
+    const currentSessionKey = urlSearchParams.get(REVIEW_PROJECTS_SESSION_QUERY_KEY);
+    const pendingHydrationKey = pendingSessionHydrationKeyRef.current;
+
+    if (pendingHydrationKey) {
+      const pendingSignature = pendingSessionHydrationSignatureRef.current;
+      const isHydrationReady =
+        pendingHydrationKey === currentSessionKey &&
+        pendingSignature !== null &&
+        pendingSignature === signature;
+      if (!isHydrationReady) {
+        return;
+      }
+      pendingSessionHydrationKeyRef.current = null;
+      pendingSessionHydrationSignatureRef.current = null;
+      persistedSessionKeyRef.current = pendingHydrationKey;
+    }
+
+    const nextSessionKey = saveReviewProjectsSessionState(
+      sessionState,
+      persistedSessionKeyRef.current ?? currentSessionKey,
+    );
+    persistedSessionKeyRef.current = nextSessionKey;
+
+    if (
+      lastPersistedSessionSignatureRef.current === signature &&
+      currentSessionKey === nextSessionKey
+    ) {
+      return;
+    }
+    lastPersistedSessionSignatureRef.current = signature;
+
+    if (currentSessionKey === nextSessionKey) {
+      return;
+    }
+    const nextParams = new URLSearchParams(urlSearchParams);
+    nextParams.set(REVIEW_PROJECTS_SESSION_QUERY_KEY, nextSessionKey);
+    setUrlSearchParams(nextParams, { replace: true });
+  }, [hasHydratedSessionState, sessionState, setUrlSearchParams, urlSearchParams]);
+
+  const apiSearchParams = useMemo<ReviewProjectsSearchRequest>(() => {
     const searchFieldValue: ReviewProjectsSearchRequest['searchField'] =
       searchField === 'requestId'
         ? 'REQUEST_ID'
@@ -300,9 +451,9 @@ export function ReviewProjectsPage() {
 
   const requestSearchParams = useMemo<ReviewProjectsSearchRequest>(
     () => ({
-      ...searchParams,
+      ...apiSearchParams,
     }),
-    [searchParams],
+    [apiSearchParams],
   );
 
   useEffect(() => {
@@ -315,8 +466,16 @@ export function ReviewProjectsPage() {
       setSearchType('exact');
       setSearchQuery(String(state.requestId));
     }
-    void navigate(location.pathname, { replace: true });
-  }, [location.pathname, location.state, navigate, setSearchField, setSearchQuery, setSearchType]);
+    void navigate(location.pathname + location.search, { replace: true });
+  }, [
+    location.pathname,
+    location.search,
+    location.state,
+    navigate,
+    setSearchField,
+    setSearchQuery,
+    setSearchType,
+  ]);
 
   useEffect(() => {
     if (!canUseRequestMode && displayMode !== 'list') {
@@ -355,14 +514,16 @@ export function ReviewProjectsPage() {
     isError: isErrorList,
     error: listError,
     refetch: refetchList,
-  } = useReviewProjects(searchParams, { enabled: !isRequestMode });
+  } = useReviewProjects(apiSearchParams, { enabled: hasHydratedSessionState && !isRequestMode });
   const {
     data: requestGroupsData,
     isLoading: isLoadingRequestGroups,
     isError: isErrorRequestGroups,
     error: requestGroupsError,
     refetch: refetchRequestGroups,
-  } = useReviewProjectRequests(requestSearchParams, { enabled: isRequestMode });
+  } = useReviewProjectRequests(requestSearchParams, {
+    enabled: hasHydratedSessionState && isRequestMode,
+  });
 
   const projects = useMemo(() => listProjectsData ?? [], [listProjectsData]);
   const requestGroups = useMemo(() => requestGroupsData ?? [], [requestGroupsData]);
@@ -382,7 +543,13 @@ export function ReviewProjectsPage() {
   const isLoading = isRequestMode ? isLoadingRequestGroups : isLoadingList;
   const isError = isRequestMode ? isErrorRequestGroups : isErrorList;
   const activeError = isRequestMode ? requestGroupsError : listError;
-  const status: 'loading' | 'error' | 'ready' = isLoading ? 'loading' : isError ? 'error' : 'ready';
+  const status: 'loading' | 'error' | 'ready' = !hasHydratedSessionState
+    ? 'loading'
+    : isLoading
+      ? 'loading'
+      : isError
+        ? 'error'
+        : 'ready';
 
   const errorMessage = isError
     ? activeError instanceof Error
@@ -404,7 +571,7 @@ export function ReviewProjectsPage() {
       searchQuery: q,
       searchField: sf,
       searchMatchType: mt,
-    } = searchParams;
+    } = apiSearchParams;
 
     // If the user intentionally cleared all locales, treat it as "no results"
     // instead of falling back to "all locales".
@@ -435,7 +602,7 @@ export function ReviewProjectsPage() {
             ? String(project.reviewProjectRequest?.id ?? '')
             : field === 'createdBy'
               ? (project.createdByUsername ?? '')
-            : (project.reviewProjectRequest?.name ?? `Review project #${project.id}`);
+              : (project.reviewProjectRequest?.name ?? `Review project #${project.id}`);
       const valueLower = value.toLowerCase();
       const queryLower = q.toLowerCase();
 
@@ -512,7 +679,7 @@ export function ReviewProjectsPage() {
 
     const limitValue = lmt && lmt > 0 ? lmt : undefined;
     return limitValue ? filtered.slice(0, limitValue) : filtered;
-  }, [creatorFilter, hasTouchedLocales, projects, searchParams, user.username]);
+  }, [apiSearchParams, creatorFilter, hasTouchedLocales, projects, user.username]);
 
   const listRows = useMemo<ReviewProjectRow[]>(
     () => filteredProjects.map(toReviewProjectRow),
@@ -754,6 +921,7 @@ export function ReviewProjectsPage() {
         displayMode={displayMode}
         canUseRequestMode={canUseRequestMode}
         onDisplayModeChange={setDisplayMode}
+        reviewProjectsSessionKey={reviewSessionKey}
       />
       {isAdmin ? (
         <ConfirmModal

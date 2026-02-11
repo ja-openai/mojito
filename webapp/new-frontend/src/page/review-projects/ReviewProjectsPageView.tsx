@@ -24,6 +24,7 @@ import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
+import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from './review-projects-session-state';
 
 type FiltersProps = {
   localeOptions: LocaleOption[];
@@ -100,7 +101,26 @@ type Props = {
   displayMode?: 'list' | 'requests';
   canUseRequestMode?: boolean;
   onDisplayModeChange?: (mode: 'list' | 'requests') => void;
+  reviewProjectsSessionKey?: string | null;
 };
+
+function buildReviewProjectDetailPath(
+  projectId: number,
+  reviewProjectsSessionKey?: string | null,
+  options?: { requestDetails?: boolean },
+) {
+  const params = new URLSearchParams();
+  if (reviewProjectsSessionKey) {
+    params.set(REVIEW_PROJECTS_SESSION_QUERY_KEY, reviewProjectsSessionKey);
+  }
+  if (options?.requestDetails) {
+    params.set('requestDetails', '1');
+  }
+  const query = params.toString();
+  return query.length > 0
+    ? `/review-projects/${projectId}?${query}`
+    : `/review-projects/${projectId}`;
+}
 
 function CountsInline({ words, strings }: { words: number | null; strings: number | null }) {
   return (
@@ -142,10 +162,7 @@ function SummaryBar({
       <div className="review-projects-page__summary-left">{formatSummaryText(resultCount)}</div>
       <div className="review-projects-page__summary-center">
         {showModeToggle ? (
-          <DisplayModeToggle
-            mode={displayMode}
-            onChange={(mode) => onDisplayModeChange?.(mode)}
-          />
+          <DisplayModeToggle mode={displayMode} onChange={(mode) => onDisplayModeChange?.(mode)} />
         ) : null}
       </div>
       <div className="review-projects-page__summary-right">
@@ -230,6 +247,7 @@ function ContentSection({
   getRowRef,
   adminControls,
   onRequestIdClick,
+  reviewProjectsSessionKey,
 }: {
   projects: ReviewProjectRow[];
   rowsParentRef: React.RefObject<HTMLDivElement>;
@@ -238,6 +256,7 @@ function ContentSection({
   getRowRef: (rowId: number) => (element: HTMLDivElement | null) => void;
   adminControls?: ReviewProjectsAdminControls;
   onRequestIdClick?: (requestId: number) => void;
+  reviewProjectsSessionKey?: string | null;
 }) {
   const isAdmin = adminControls?.enabled ?? false;
   const selectedProjectIdSet = useMemo(
@@ -279,6 +298,7 @@ function ContentSection({
                   isSelected={selectedProjectIdSet.has(project.id)}
                   onToggleSelection={adminControls?.onToggleProjectSelection}
                   onRequestIdClick={onRequestIdClick}
+                  reviewProjectsSessionKey={reviewProjectsSessionKey}
                 />
               ),
             };
@@ -360,7 +380,8 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
     const acceptedCount = toFiniteNonNegative(project.acceptedCount);
     const textUnitCount = toFiniteNonNegative(project.textUnitCount ?? 0);
     const wordCount = toFiniteNonNegative(project.wordCount ?? 0);
-    const key = project.requestId != null ? `request:${project.requestId}` : `project:${project.id}`;
+    const key =
+      project.requestId != null ? `request:${project.requestId}` : `project:${project.id}`;
     const existing = groups.get(key);
     if (!existing) {
       groups.set(key, {
@@ -645,12 +666,14 @@ function ReviewProjectRowView({
   isSelected,
   onToggleSelection,
   onRequestIdClick,
+  reviewProjectsSessionKey,
 }: {
   project: ReviewProjectRow;
   isAdmin: boolean;
   isSelected: boolean;
   onToggleSelection?: (projectId: number) => void;
   onRequestIdClick?: (requestId: number) => void;
+  reviewProjectsSessionKey?: string | null;
 }) {
   const { accepted, total, percentWidth, percentLabel } = getProgressMetrics(
     project.acceptedCount,
@@ -679,7 +702,10 @@ function ReviewProjectRowView({
                 />
               </label>
             ) : null}
-            <Link to={`/review-projects/${project.id}`} className="review-projects-page__link">
+            <Link
+              to={buildReviewProjectDetailPath(project.id, reviewProjectsSessionKey)}
+              className="review-projects-page__link"
+            >
               <span className="review-projects-page__project-name">{project.name}</span>
             </Link>
             {requestId != null ? (
@@ -763,7 +789,10 @@ function SelectionCheckbox({
   className?: string;
 }) {
   return (
-    <label className={`review-projects-page__select${className ? ` ${className}` : ''}`} data-no-toggle="true">
+    <label
+      className={`review-projects-page__select${className ? ` ${className}` : ''}`}
+      data-no-toggle="true"
+    >
       <input
         ref={(element) => {
           if (element) {
@@ -787,12 +816,14 @@ function RequestGroupsSection({
   onToggleExpanded,
   onFilterByRequest,
   adminControls,
+  reviewProjectsSessionKey,
 }: {
   groups: ReviewProjectRequestGroupRow[];
   expandedKey: string | null;
   onToggleExpanded: (key: string) => void;
   onFilterByRequest: (requestId: number) => void;
   adminControls?: ReviewProjectsAdminControls;
+  reviewProjectsSessionKey?: string | null;
 }) {
   const resolveLocaleDisplayName = useLocaleDisplayNameResolver();
   const isAdmin = adminControls?.enabled ?? false;
@@ -825,12 +856,13 @@ function RequestGroupsSection({
             const allSelectedInGroup =
               groupProjectIds.length > 0 && selectedInGroup === groupProjectIds.length;
             const partiallySelectedInGroup = selectedInGroup > 0 && !allSelectedInGroup;
-            const { accepted, total, percentWidth, percentLabel } = getProgressMetrics(
+            const { total, percentWidth, percentLabel } = getProgressMetrics(
               group.acceptedCount,
               group.textUnitCount,
             );
             const localeCount = group.localeTags.length;
-            const requestLabel = group.requestId != null ? `Request #${group.requestId}` : 'Request';
+            const requestLabel =
+              group.requestId != null ? `Request #${group.requestId}` : 'Request';
             const onCardToggleClick = (event: MouseEvent<HTMLElement>) => {
               const target = event.target as HTMLElement | null;
               if (target && target.closest(TOGGLE_IGNORE_SELECTOR)) {
@@ -889,7 +921,11 @@ function RequestGroupsSection({
                               ·
                             </span>
                             <Link
-                              to={`/review-projects/${requestEditProjectId}?requestDetails=1`}
+                              to={buildReviewProjectDetailPath(
+                                requestEditProjectId,
+                                reviewProjectsSessionKey,
+                                { requestDetails: true },
+                              )}
                               className="review-projects-page__request-link review-projects-page__link"
                             >
                               Edit
@@ -941,9 +977,7 @@ function RequestGroupsSection({
                       />
                     </div>
                     <div className="review-projects-page__progress-meta">
-                      <div className="review-projects-page__progress-percent">
-                        {percentLabel}
-                      </div>
+                      <div className="review-projects-page__progress-percent">{percentLabel}</div>
                     </div>
                   </div>
                 </div>
@@ -956,10 +990,7 @@ function RequestGroupsSection({
                         total: projectTotal,
                         percentWidth: projectPercentWidth,
                         percentLabel: projectPercentLabel,
-                      } = getProgressMetrics(
-                        project.acceptedCount,
-                        project.textUnitCount ?? 0,
-                      );
+                      } = getProgressMetrics(project.acceptedCount, project.textUnitCount ?? 0);
                       return (
                         <div key={project.id} className="review-projects-page__request-project-row">
                           {isAdmin ? (
@@ -972,7 +1003,7 @@ function RequestGroupsSection({
                             />
                           ) : null}
                           <Link
-                            to={`/review-projects/${project.id}`}
+                            to={buildReviewProjectDetailPath(project.id, reviewProjectsSessionKey)}
                             className="review-projects-page__request-project-link review-projects-page__link"
                           >
                             <div className="review-projects-page__request-project-locale">
@@ -984,7 +1015,8 @@ function RequestGroupsSection({
                                     labelMode="tag"
                                   />
                                   <span className="review-projects-page__request-project-locale-name">
-                                    {resolveLocaleDisplayName(project.localeTag) || project.localeTag}
+                                    {resolveLocaleDisplayName(project.localeTag) ||
+                                      project.localeTag}
                                   </span>
                                 </>
                               ) : (
@@ -1042,8 +1074,8 @@ export function ReviewProjectsPageView({
   displayMode = 'list',
   canUseRequestMode = false,
   onDisplayModeChange,
+  reviewProjectsSessionKey,
 }: Props) {
-  const isAdmin = Boolean(adminControls?.enabled);
   const effectiveDisplayMode = canUseRequestMode ? displayMode : 'list';
   const scrollElementRef = useRef<HTMLDivElement>(null);
   const getItemKey = useCallback((index: number) => projects[index]?.id ?? index, [projects]);
@@ -1161,6 +1193,7 @@ export function ReviewProjectsPageView({
           onToggleExpanded={handleToggleRequestGroup}
           onFilterByRequest={handleFilterByRequest}
           adminControls={adminControls}
+          reviewProjectsSessionKey={reviewProjectsSessionKey}
         />
       ) : (
         <ContentSection
@@ -1171,6 +1204,7 @@ export function ReviewProjectsPageView({
           getRowRef={getRowRef}
           adminControls={adminControls}
           onRequestIdClick={onRequestIdClick}
+          reviewProjectsSessionKey={reviewProjectsSessionKey}
         />
       )}
     </div>

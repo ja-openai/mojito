@@ -52,6 +52,7 @@ import {
   resolveAttachmentUrl,
   toDescriptionAttachmentMarkdown,
 } from '../../utils/request-attachments';
+import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
 
 const Chevron = ({ direction }: { direction: 'left' | 'right' | 'up' | 'down' }) => (
@@ -442,7 +443,10 @@ function buildTranslationWarnings(source: string, target: string): TranslationWa
     warnings.push({ code: 'nbsp', message: 'Contains non-breaking spaces.' });
   }
   if (hasInvisibleDirectionalOrZeroWidthChars(target)) {
-    warnings.push({ code: 'invisible', message: 'Contains invisible directional/zero-width characters.' });
+    warnings.push({
+      code: 'invisible',
+      message: 'Contains invisible directional/zero-width characters.',
+    });
   }
   if (hasControlChars(target)) {
     warnings.push({ code: 'control', message: 'Contains control characters.' });
@@ -456,7 +460,9 @@ function buildAiWarningContextMessage(warnings: TranslationWarning[]): AiReviewM
     return null;
   }
 
-  const warningLines = warnings.map((warning) => `- ${warning.code}: ${warning.message}`).join('\n');
+  const warningLines = warnings
+    .map((warning) => `- ${warning.code}: ${warning.message}`)
+    .join('\n');
   return {
     role: 'user',
     content: [
@@ -518,6 +524,7 @@ export function ReviewProjectPageView({
   const user = useUser();
   const canEditRequest = user.role === 'ROLE_ADMIN';
   const [searchParams, setSearchParams] = useSearchParams();
+  const reviewProjectsSessionKey = searchParams.get(REVIEW_PROJECTS_SESSION_QUERY_KEY);
   const locale = project?.locale ?? null;
   const localeTag = locale?.bcp47Tag ?? '';
   const textUnits = useMemo<ApiReviewProjectTextUnit[]>(
@@ -926,6 +933,7 @@ export function ReviewProjectPageView({
         textUnits={textUnits}
         mutations={mutations}
         canEditRequest={canEditRequest}
+        reviewProjectsSessionKey={reviewProjectsSessionKey}
         openRequestDetailsQuery={openRequestDetailsQuery}
         onRequestDetailsQueryHandled={onRequestDetailsQueryHandled}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
@@ -1107,7 +1115,9 @@ export function ReviewProjectPageView({
             </li>
             <li className="review-project-shortcuts__item">
               <span className="review-project-shortcuts__key">Cmd/Ctrl + Shift + Enter</span>
-              <span>Accept and go to next text unit. If unchanged, mark decided and go to next.</span>
+              <span>
+                Accept and go to next text unit. If unchanged, mark decided and go to next.
+              </span>
             </li>
             <li className="review-project-shortcuts__item">
               <span className="review-project-shortcuts__key">Tab</span>
@@ -1518,9 +1528,7 @@ function DetailPane({
           source: source ?? '',
           target: draftTarget,
           localeTag,
-          messages: warningContextMessage
-            ? [warningContextMessage, ...conversation]
-            : conversation,
+          messages: warningContextMessage ? [warningContextMessage, ...conversation] : conversation,
         });
 
         const assistantMessage: AiChatReviewMessage = {
@@ -1641,8 +1649,7 @@ function DetailPane({
   useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
       const lowerKey = event.key.toLowerCase();
-      const isPlainKey =
-        !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+      const isPlainKey = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
       const isOutsideEditable = !isEditableTarget(event.target) && !event.repeat;
 
       if (lowerKey === 'e' && isPlainKey) {
@@ -1669,11 +1676,7 @@ function DetailPane({
       }
 
       const isAcceptHotkey =
-        lowerKey === 'a' &&
-        !event.metaKey &&
-        !event.ctrlKey &&
-        !event.altKey &&
-        !event.shiftKey;
+        lowerKey === 'a' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
       if (isAcceptHotkey) {
         if (isEditableTarget(event.target) || event.repeat) {
           return;
@@ -2233,10 +2236,7 @@ function DetailPane({
               <span className="review-project-detail__warning-inline-summary">
                 <span>{translationWarnings[0]?.message}</span>
                 {translationWarnings.length > 1 ? (
-                  <span>
-                    {' '}
-                    +{translationWarnings.length - 1} more
-                  </span>
+                  <span> +{translationWarnings.length - 1} more</span>
                 ) : null}
               </span>
             </button>
@@ -2400,22 +2400,20 @@ function DetailPane({
                 Visible whitespace preview
               </div>
               <pre className="review-project-detail__warning-modal-preview">
-                {visibleWhitespacePreviewSegments.length > 0 ? (
-                  visibleWhitespacePreviewSegments.map((segment, idx) => (
-                    <span
-                      key={`${segment.issue ? 'issue' : 'normal'}-${idx}`}
-                      className={
-                        segment.issue
-                          ? 'review-project-detail__warning-modal-preview-issue'
-                          : undefined
-                      }
-                    >
-                      {segment.text}
-                    </span>
-                  ))
-                ) : (
-                  '(empty)'
-                )}
+                {visibleWhitespacePreviewSegments.length > 0
+                  ? visibleWhitespacePreviewSegments.map((segment, idx) => (
+                      <span
+                        key={`${segment.issue ? 'issue' : 'normal'}-${idx}`}
+                        className={
+                          segment.issue
+                            ? 'review-project-detail__warning-modal-preview-issue'
+                            : undefined
+                        }
+                      >
+                        {segment.text}
+                      </span>
+                    ))
+                  : '(empty)'}
               </pre>
             </>
           ) : (
@@ -2570,6 +2568,7 @@ function ReviewProjectHeader({
   textUnits: textUnitsProp,
   mutations,
   canEditRequest,
+  reviewProjectsSessionKey,
   openRequestDetailsQuery,
   onRequestDetailsQueryHandled,
   onOpenShortcuts,
@@ -2580,6 +2579,7 @@ function ReviewProjectHeader({
   textUnits: ApiReviewProjectTextUnit[];
   mutations: ReviewProjectMutationControls;
   canEditRequest: boolean;
+  reviewProjectsSessionKey: string | null;
   openRequestDetailsQuery: boolean;
   onRequestDetailsQueryHandled: () => void;
   onOpenShortcuts: () => void;
@@ -2616,21 +2616,30 @@ function ReviewProjectHeader({
     status === 'OPEN'
       ? 'review-project-page__header-action--close'
       : 'review-project-page__header-action--reopen';
+  const backToReviewProjects = useMemo(() => {
+    if (!reviewProjectsSessionKey) {
+      return '/review-projects';
+    }
+    const params = new URLSearchParams();
+    params.set(REVIEW_PROJECTS_SESSION_QUERY_KEY, reviewProjectsSessionKey);
+    return `/review-projects?${params.toString()}`;
+  }, [reviewProjectsSessionKey]);
 
-  const { selectedCount, decidedCount, pendingCount, progressPercent, progressTitle } = useMemo(() => {
-    const selected = textUnits?.length ?? 0;
-    const decided = textUnits?.filter((tu) => getDecisionState(tu) === 'DECIDED').length ?? 0;
-    const pending = Math.max(0, selected - decided);
-    const percent = selected > 0 ? Math.round((decided / selected) * 100) : 0;
-    const title = selected > 0 ? `${decided}/${selected}` : 'No text units';
-    return {
-      selectedCount: selected,
-      decidedCount: decided,
-      pendingCount: pending,
-      progressPercent: percent,
-      progressTitle: title,
-    };
-  }, [textUnits]);
+  const { selectedCount, decidedCount, pendingCount, progressPercent, progressTitle } =
+    useMemo(() => {
+      const selected = textUnits?.length ?? 0;
+      const decided = textUnits?.filter((tu) => getDecisionState(tu) === 'DECIDED').length ?? 0;
+      const pending = Math.max(0, selected - decided);
+      const percent = selected > 0 ? Math.round((decided / selected) * 100) : 0;
+      const title = selected > 0 ? `${decided}/${selected}` : 'No text units';
+      return {
+        selectedCount: selected,
+        decidedCount: decided,
+        pendingCount: pending,
+        progressPercent: percent,
+        progressTitle: title,
+      };
+    }, [textUnits]);
 
   const handleProjectAction = useCallback(() => {
     if (mutations.isProjectStatusSaving) {
@@ -2724,7 +2733,12 @@ function ReviewProjectHeader({
 
   const handleAttachmentFiles = useCallback(
     async (files: FileList | null): Promise<string[]> => {
-      if (!files || files.length === 0 || mutations.isProjectRequestSaving || isAttachmentUploading) {
+      if (
+        !files ||
+        files.length === 0 ||
+        mutations.isProjectRequestSaving ||
+        isAttachmentUploading
+      ) {
         return [];
       }
       setAttachmentUploadError(null);
@@ -2762,8 +2776,7 @@ function ReviewProjectHeader({
             ),
           );
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : `Failed to upload ${file.name}`;
+          const message = error instanceof Error ? error.message : `Failed to upload ${file.name}`;
           failed.push(message);
           setAttachmentUploadQueue((current) =>
             current.map((item) =>
@@ -2782,12 +2795,7 @@ function ReviewProjectHeader({
       setIsAttachmentUploading(false);
       return uploaded;
     },
-    [
-      addAttachmentKeys,
-      isAttachmentUploading,
-      mutations.isProjectRequestSaving,
-      uploadAttachment,
-    ],
+    [addAttachmentKeys, isAttachmentUploading, mutations.isProjectRequestSaving, uploadAttachment],
   );
   const attachmentsDisabled =
     !canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading;
@@ -2859,7 +2867,7 @@ function ReviewProjectHeader({
           <div className="review-project-page__header-group review-project-page__header-group--left">
             <Link
               className="review-project-page__header-back-link"
-              to="/review-projects"
+              to={backToReviewProjects}
               aria-label="Back to review projects"
               title="Back to review projects"
             >
@@ -2879,7 +2887,9 @@ function ReviewProjectHeader({
                 />
               </svg>
             </Link>
-            <span className="review-project-page__header-name">{name ?? `Project ${projectId}`}</span>
+            <span className="review-project-page__header-name">
+              {name ?? `Project ${projectId}`}
+            </span>
             <span className="review-project-page__header-pills">
               <Pill
                 className={`review-project-page__header-pill review-project-page__header-pill--type-${type}`}
@@ -2958,7 +2968,12 @@ function ReviewProjectHeader({
           </div>
         </div>
       </header>
-      <Modal open={showCloseWarning} size="md" role="alertdialog" ariaLabel="Close with pending items?">
+      <Modal
+        open={showCloseWarning}
+        size="md"
+        role="alertdialog"
+        ariaLabel="Close with pending items?"
+      >
         <div className="modal__title">Close with pending items?</div>
         <div className="modal__body">
           {pendingCount} text unit{pendingCount === 1 ? '' : 's'} still{' '}
@@ -2969,10 +2984,18 @@ function ReviewProjectHeader({
           <button type="button" className="modal__button" onClick={dismissCloseWarning}>
             Keep open
           </button>
-          <button type="button" className="modal__button modal__button--primary" onClick={handleReviewPending}>
+          <button
+            type="button"
+            className="modal__button modal__button--primary"
+            onClick={handleReviewPending}
+          >
             Review pending
           </button>
-          <button type="button" className="modal__button modal__button--danger" onClick={confirmCloseProject}>
+          <button
+            type="button"
+            className="modal__button modal__button--danger"
+            onClick={confirmCloseProject}
+          >
             Close project
           </button>
         </div>
@@ -3082,7 +3105,9 @@ function ReviewProjectHeader({
                         }
                         setProjectTypeDraft(next);
                       }}
-                      disabled={!canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading}
+                      disabled={
+                        !canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading
+                      }
                       searchable={false}
                     />
                   </label>
@@ -3093,7 +3118,9 @@ function ReviewProjectHeader({
                       type="datetime-local"
                       value={dueDateDraft}
                       onChange={(event) => setDueDateDraft(event.target.value)}
-                      disabled={!canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading}
+                      disabled={
+                        !canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading
+                      }
                     />
                   </label>
                 </div>
@@ -3121,7 +3148,9 @@ function ReviewProjectHeader({
                       if (uploadedKeys.length === 0) {
                         return null;
                       }
-                      const snippets = uploadedKeys.map((key) => toDescriptionAttachmentMarkdown(key));
+                      const snippets = uploadedKeys.map((key) =>
+                        toDescriptionAttachmentMarkdown(key),
+                      );
                       return `${snippets.join('\n')}\n`;
                     }}
                   />
@@ -3141,7 +3170,9 @@ function ReviewProjectHeader({
                   />
                 </div>
                 {attachmentUploadError ? (
-                  <div className="review-project-page__description-error">{attachmentUploadError}</div>
+                  <div className="review-project-page__description-error">
+                    {attachmentUploadError}
+                  </div>
                 ) : null}
                 {requestSaveError ? (
                   <div className="review-project-page__description-error">{requestSaveError}</div>
@@ -3222,7 +3253,7 @@ const toDateTimeLocalInputValue = (value: string | null | undefined) => {
 
 const toAttachmentLabel = (key: string) => {
   const withoutQuery = key.split('?')[0];
-  const ext = withoutQuery.includes('.') ? withoutQuery.split('.').pop() ?? '' : '';
+  const ext = withoutQuery.includes('.') ? (withoutQuery.split('.').pop() ?? '') : '';
   return ext ? ext.toUpperCase() : 'FILE';
 };
 
@@ -3279,7 +3310,9 @@ const renderMedia = (key: string, className?: string, options: MediaRenderOption
   if (isPdfAttachmentKey(key)) {
     if (options.asThumbnail) {
       return (
-        <span className={`${baseClass} review-project-media review-project-media--file-thumb`}>PDF</span>
+        <span className={`${baseClass} review-project-media review-project-media--file-thumb`}>
+          PDF
+        </span>
       );
     }
 
