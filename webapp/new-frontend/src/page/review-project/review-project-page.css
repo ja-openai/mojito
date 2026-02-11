@@ -650,12 +650,35 @@
   gap: var(--space-2);
 }
 
+.review-project-row--edited .review-project-row__inner {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-2);
+}
+
 .review-project-row__name {
+  min-width: 0;
   font-weight: var(--font-weight-normal);
   color: var(--color-text-subtle);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.review-project-row--edited .review-project-row__name,
+.review-project-row--edited .review-project-row__strings {
+  grid-column: 1;
+}
+
+.review-project-row__edited-dot {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 58%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 32%, var(--color-surface));
+  pointer-events: none;
 }
 
 .review-project-row__strings {
@@ -2324,3 +2347,4 @@
 .review-project-screenshot-lightbox__nav--next {
   grid-column: 3;
 }
+  font-weight: var(--font-weight-regular);

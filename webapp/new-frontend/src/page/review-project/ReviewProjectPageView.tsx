@@ -84,6 +84,8 @@ type TextUnitVariant = ApiReviewProjectTextUnit['baselineTmTextUnitVariant'];
 type DecisionStateChoice = 'PENDING' | 'DECIDED';
 type DecisionStateFilter = DecisionStateChoice | 'all';
 type StatusFilter = 'all' | 'APPROVED' | 'REVIEW_NEEDED' | 'TRANSLATION_NEEDED' | 'REJECTED';
+type EditedFilter = 'all' | 'edited' | 'notEdited';
+type EditKind = 'translation' | 'status' | 'comment';
 
 const SAVING_INDICATOR_MIN_MS = 600;
 const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
@@ -188,6 +190,12 @@ const DECISION_STATE_OPTIONS: Array<FilterOption<DecisionStateFilter>> = [
   { value: 'DECIDED', label: 'Decided' },
 ];
 
+const EDITED_FILTER_OPTIONS: Array<FilterOption<EditedFilter>> = [
+  { value: 'all', label: 'All rows' },
+  { value: 'edited', label: 'Edited' },
+  { value: 'notEdited', label: 'Non-edited' },
+];
+
 function normalizeOptional(value: string): string | null {
   return value === '' ? null : value;
 }
@@ -197,6 +205,41 @@ function parseDecisionStateFilter(value: string | null): DecisionStateFilter {
     return value;
   }
   return 'all';
+}
+
+function normalizeNullableString(value?: string | null): string {
+  return value ?? '';
+}
+
+function getEditKinds(textUnit: ApiReviewProjectTextUnit): EditKind[] {
+  const current =
+    textUnit.currentTmTextUnitVariant?.id != null ? textUnit.currentTmTextUnitVariant : null;
+  if (!current) {
+    return [];
+  }
+
+  const baseline = textUnit.baselineTmTextUnitVariant;
+  const kinds: EditKind[] = [];
+
+  if (normalizeNullableString(current.content) !== normalizeNullableString(baseline?.content)) {
+    kinds.push('translation');
+  }
+
+  const baselineStatus = getStatusKey(baseline);
+  const currentStatus = getStatusKey(current);
+  if (baselineStatus !== currentStatus) {
+    kinds.push('status');
+  }
+
+  if (normalizeNullableString(current.comment) !== normalizeNullableString(baseline?.comment)) {
+    kinds.push('comment');
+  }
+
+  if (kinds.length === 0 && current.id !== baseline?.id) {
+    kinds.push('translation');
+  }
+
+  return kinds;
 }
 
 type DecisionSnapshot = {
@@ -496,6 +539,7 @@ export function ReviewProjectPageView({
   const [stateFilter, setStateFilter] = useState<DecisionStateFilter>(() =>
     parseDecisionStateFilter(searchParams.get('state')),
   );
+  const [editedFilter, setEditedFilter] = useState<EditedFilter>('all');
   const [selectedTextUnitId, setSelectedTextUnitId] = useState<number | null>(null);
   const [detailIsDirty, setDetailIsDirty] = useState(false);
   const [focusTranslationKey, setFocusTranslationKey] = useState(0);
@@ -526,6 +570,13 @@ export function ReviewProjectPageView({
       if (stateFilter !== 'all' && getDecisionState(tu) !== stateFilter) {
         return false;
       }
+      const isEdited = getEditKinds(tu).length > 0;
+      if (editedFilter === 'edited' && !isEdited) {
+        return false;
+      }
+      if (editedFilter === 'notEdited' && isEdited) {
+        return false;
+      }
       if (!term) return true;
       const haystacks = [
         tu.tmTextUnit?.name,
@@ -537,7 +588,7 @@ export function ReviewProjectPageView({
         .map((s) => String(s).toLowerCase());
       return haystacks.some((h) => h.includes(term));
     });
-  }, [search, stateFilter, statusFilter, textUnits]);
+  }, [editedFilter, search, stateFilter, statusFilter, textUnits]);
 
   const screenshotImages = useMemo(
     () => project?.reviewProjectRequest?.screenshotImageIds ?? [],
@@ -909,6 +960,13 @@ export function ReviewProjectPageView({
                   value: statusFilter,
                   onChange: (value) => setStatusFilter(value as StatusFilter),
                 },
+                {
+                  kind: 'radio',
+                  label: 'Edited',
+                  options: EDITED_FILTER_OPTIONS as Array<FilterOption<string | number>>,
+                  value: editedFilter,
+                  onChange: (value) => setEditedFilter(value as EditedFilter),
+                },
               ]}
             />
           </div>
@@ -921,6 +979,7 @@ export function ReviewProjectPageView({
               if (!textUnit) {
                 return null;
               }
+              const isEdited = getEditKinds(textUnit).length > 0;
               return {
                 key: virtualItem.key,
                 props: {
@@ -928,13 +987,14 @@ export function ReviewProjectPageView({
                   onClick: () => attemptSelectTextUnit(textUnit.id, virtualItem.index),
                   className:
                     textUnit.id === selectedTextUnitId
-                      ? 'review-project-row is-selected'
-                      : 'review-project-row',
+                      ? `review-project-row is-selected${isEdited ? ' review-project-row--edited' : ''}`
+                      : `review-project-row${isEdited ? ' review-project-row--edited' : ''}`,
                 },
                 content: (
                   <TextUnitRow
                     textUnit={textUnit}
                     isSelected={textUnit.id === selectedTextUnitId}
+                    isEdited={isEdited}
                   />
                 ),
               };
@@ -1059,9 +1119,11 @@ export function ReviewProjectPageView({
 function TextUnitRow({
   textUnit,
   isSelected,
+  isEdited,
 }: {
   textUnit: ApiReviewProjectTextUnit;
   isSelected: boolean;
+  isEdited: boolean;
 }) {
   if (!textUnit) {
     return null;
@@ -1087,6 +1149,7 @@ function TextUnitRow({
           </span>
         </div>
       </div>
+      {isEdited ? <span className="review-project-row__edited-dot" aria-hidden="true" /> : null}
     </div>
   );
 }
