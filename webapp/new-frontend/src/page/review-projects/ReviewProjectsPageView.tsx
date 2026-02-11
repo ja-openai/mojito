@@ -682,14 +682,18 @@ function ReviewProjectRowView({
             <Link to={`/review-projects/${project.id}`} className="review-projects-page__link">
               <span className="review-projects-page__project-name">{project.name}</span>
             </Link>
-            {requestId != null && onRequestIdClick ? (
-              <button
-                type="button"
-                className="review-projects-page__request-link review-projects-page__link"
-                onClick={() => onRequestIdClick(requestId)}
-              >
-                Request #{requestId}
-              </button>
+            {requestId != null ? (
+              onRequestIdClick ? (
+                <button
+                  type="button"
+                  className="review-projects-page__request-id review-projects-page__request-id-button"
+                  onClick={() => onRequestIdClick(requestId)}
+                >
+                  Request #{requestId}
+                </button>
+              ) : (
+                <span className="review-projects-page__request-id">Request #{requestId}</span>
+              )
             ) : null}
           </div>
         </div>

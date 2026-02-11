@@ -172,6 +172,19 @@
   font-weight: var(--font-weight-regular);
 }
 
+.review-projects-page__request-id-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-projects-page__request-id-button:hover,
+.review-projects-page__request-id-button:focus-visible {
+  color: var(--color-accent);
+}
+
 .review-projects-page__request-created-by {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
