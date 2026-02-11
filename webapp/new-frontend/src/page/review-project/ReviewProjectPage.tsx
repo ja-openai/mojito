@@ -24,7 +24,7 @@ export function ReviewProjectPage() {
   const mutationControls = useReviewProjectMutations(projectId);
 
   const handleSelectedTextUnitIdChange = useCallback(
-    (nextTextUnitId: number | null) => {
+    (nextTextUnitId: number | null, options?: { replace?: boolean }) => {
       const nextParams = new URLSearchParams(searchParams);
       if (nextTextUnitId == null) {
         nextParams.delete('tu');
@@ -34,7 +34,7 @@ export function ReviewProjectPage() {
       if (nextParams.toString() === searchParams.toString()) {
         return;
       }
-      setSearchParams(nextParams, { replace: true });
+      setSearchParams(nextParams, { replace: options?.replace ?? false });
     },
     [searchParams, setSearchParams],
   );

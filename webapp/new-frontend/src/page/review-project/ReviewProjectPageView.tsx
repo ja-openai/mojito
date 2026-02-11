@@ -501,7 +501,7 @@ type Props = {
   project: ApiReviewProjectDetail | null;
   mutations: ReviewProjectMutationControls;
   selectedTextUnitQueryId: number | null;
-  onSelectedTextUnitIdChange: (id: number | null) => void;
+  onSelectedTextUnitIdChange: (id: number | null, options?: { replace?: boolean }) => void;
   openRequestDetailsQuery: boolean;
   onRequestDetailsQueryHandled: () => void;
 };
@@ -670,7 +670,8 @@ export function ReviewProjectPageView({
       return;
     }
     const nextQueryId = selectedTextUnit?.tmTextUnit?.id ?? selectedTextUnit?.id ?? null;
-    onSelectedTextUnitIdChange(nextQueryId);
+    const shouldReplace = selectedTextUnitQueryId == null || nextQueryId == null;
+    onSelectedTextUnitIdChange(nextQueryId, { replace: shouldReplace });
   }, [onSelectedTextUnitIdChange, selectedTextUnit, selectedTextUnitQueryId]);
 
   useEffect(() => {
