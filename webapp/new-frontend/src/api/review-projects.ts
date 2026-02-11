@@ -79,6 +79,7 @@ export type ApiReviewProjectDetail = {
     id: number | null;
     name?: string | null;
     notes?: string | null;
+    createdByUsername?: string | null;
     screenshotImageIds?: string[];
   } | null;
   locale?: { id: number | null; bcp47Tag?: string | null } | null;
@@ -103,7 +104,11 @@ export type ApiReviewProjectSummary = {
   type: ApiReviewProjectType;
   status: ApiReviewProjectStatus;
   locale?: { id: number | null; bcp47Tag?: string | null } | null;
-  reviewProjectRequest?: { id: number | null; name?: string | null } | null;
+  reviewProjectRequest?: {
+    id: number | null;
+    name?: string | null;
+    createdByUsername?: string | null;
+  } | null;
 };
 
 export type ReviewProjectsSearchRequest = {

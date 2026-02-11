@@ -24,5 +24,5 @@ public record SearchReviewProjectsView(List<ReviewProject> reviewProject) {
 
   public record Locale(Long id, String bcp47Tag) {}
 
-  public record ReviewProjectRequest(Long id, String name) {}
+  public record ReviewProjectRequest(Long id, String name, String createdByUsername) {}
 }

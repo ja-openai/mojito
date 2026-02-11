@@ -206,7 +206,7 @@ public class ReviewProjectWS {
         ReviewProjectRequest reviewProjectRequest) {
       public record Locale(Long id, String bcp47Tag) {}
 
-      public record ReviewProjectRequest(Long id, String name) {}
+      public record ReviewProjectRequest(Long id, String name, String createdByUsername) {}
     }
   }
 
@@ -224,7 +224,11 @@ public class ReviewProjectWS {
       List<ReviewProjectTextUnit> reviewProjectTextUnits) {
 
     public record ReviewProjectRequest(
-        Long id, String name, String notes, List<String> screenshotImageIds) {}
+        Long id,
+        String name,
+        String notes,
+        String createdByUsername,
+        List<String> screenshotImageIds) {}
 
     public record Locale(Long id, String bcp47Tag) {}
 
@@ -273,7 +277,9 @@ public class ReviewProjectWS {
             : null,
         view.reviewProjectRequest() != null
             ? new SearchReviewProjectsResponse.ReviewProject.ReviewProjectRequest(
-                view.reviewProjectRequest().id(), view.reviewProjectRequest().name())
+                view.reviewProjectRequest().id(),
+                view.reviewProjectRequest().name(),
+                view.reviewProjectRequest().createdByUsername())
             : null);
   }
 
@@ -327,6 +333,7 @@ public class ReviewProjectWS {
                 detail.reviewProjectRequest().id(),
                 detail.reviewProjectRequest().name(),
                 detail.reviewProjectRequest().notes(),
+                detail.reviewProjectRequest().createdByUsername(),
                 detail.reviewProjectRequest().screenshotImageIds())
             : null,
         detail.locale() != null

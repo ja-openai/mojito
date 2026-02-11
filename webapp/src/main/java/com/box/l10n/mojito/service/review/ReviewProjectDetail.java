@@ -17,4 +17,5 @@ public record ReviewProjectDetail(
     String localeTag,
     Long reviewProjectRequestId,
     String reviewProjectRequestName,
-    String reviewProjectRequestNotes) {}
+    String reviewProjectRequestNotes,
+    String reviewProjectRequestCreatedByUsername) {}

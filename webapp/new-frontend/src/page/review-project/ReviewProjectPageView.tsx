@@ -2541,6 +2541,7 @@ function ReviewProjectHeader({
   const name = project.reviewProjectRequest?.name ?? null;
   const requestId = project.reviewProjectRequest?.id ?? null;
   const description = project.reviewProjectRequest?.notes ?? '';
+  const requestCreatedBy = project.reviewProjectRequest?.createdByUsername ?? null;
   const requestAttachments = useMemo(
     () => project.reviewProjectRequest?.screenshotImageIds ?? [],
     [project.reviewProjectRequest?.screenshotImageIds],
@@ -3037,6 +3038,19 @@ function ReviewProjectHeader({
                       disabled={!canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading}
                     />
                   </label>
+                </div>
+                <div className="review-project-page__description-two-up">
+                  <label className="review-project-page__description-field">
+                    <span className="review-project-page__description-label">Created by</span>
+                    <input
+                      className="review-project-page__description-input"
+                      type="text"
+                      value={requestCreatedBy ?? '—'}
+                      readOnly
+                      disabled
+                    />
+                  </label>
+                  <span aria-hidden="true" />
                 </div>
                 <div className="review-project-page__description-field">
                   <RequestDescriptionEditor

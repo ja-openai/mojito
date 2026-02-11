@@ -20,7 +20,7 @@ public record GetProjectDetailView(
     List<ReviewProjectTextUnit> reviewProjectTextUnits) {
 
   public record ReviewProjectRequest(
-      Long id, String name, String notes, List<String> screenshotImageIds) {}
+      Long id, String name, String notes, String createdByUsername, List<String> screenshotImageIds) {}
 
   public record Locale(Long id, String bcp47Tag) {}
 

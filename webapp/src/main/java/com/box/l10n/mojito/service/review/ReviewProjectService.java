@@ -205,7 +205,10 @@ public class ReviewProjectService {
     Join<ReviewProject, Locale> localeJoin = root.join(ReviewProject_.locale, JoinType.LEFT);
     Join<ReviewProject, ReviewProjectRequest> requestJoin =
         root.join(ReviewProject_.reviewProjectRequest, JoinType.LEFT);
-    Join<ReviewProject, User> createdByUserJoin = root.join(ReviewProject_.createdByUser, JoinType.LEFT);
+    Join<ReviewProject, User> createdByUserJoin =
+        root.join(ReviewProject_.createdByUser, JoinType.LEFT);
+    Join<ReviewProjectRequest, User> requestCreatedByUserJoin =
+        requestJoin.join(ReviewProjectRequest_.createdByUser, JoinType.LEFT);
 
     List<Predicate> predicates = new ArrayList<>();
 
@@ -259,7 +262,8 @@ public class ReviewProjectService {
                 localeJoin.get(Locale_.id),
                 localeJoin.get(Locale_.bcp47Tag),
                 requestJoin.get(ReviewProjectRequest_.id),
-                requestJoin.get(ReviewProjectRequest_.name)))
+                requestJoin.get(ReviewProjectRequest_.name),
+                requestCreatedByUserJoin.get(User_.username)))
         .distinct(true)
         .orderBy(cb.desc(root.get(ReviewProject_.id)));
 
@@ -298,7 +302,9 @@ public class ReviewProjectService {
                       detail.createdByUsername(),
                       new SearchReviewProjectsView.Locale(detail.localeId(), detail.localeTag()),
                       new SearchReviewProjectsView.ReviewProjectRequest(
-                          detail.requestId(), detail.requestName()));
+                          detail.requestId(),
+                          detail.requestName(),
+                          detail.requestCreatedByUsername()));
                 })
             .toList();
 
@@ -384,6 +390,7 @@ public class ReviewProjectService {
             project.reviewProjectRequestId(),
             project.reviewProjectRequestName(),
             project.reviewProjectRequestNotes(),
+            project.reviewProjectRequestCreatedByUsername(),
             screenshotImageIds),
         new GetProjectDetailView.Locale(project.localeId(), project.localeTag()),
         reviewProjectTextUnits);

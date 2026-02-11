@@ -18,4 +18,5 @@ public record SearchReviewProjectDetail(
     Long localeId,
     String localeTag,
     Long requestId,
-    String requestName) {}
+    String requestName,
+    String requestCreatedByUsername) {}

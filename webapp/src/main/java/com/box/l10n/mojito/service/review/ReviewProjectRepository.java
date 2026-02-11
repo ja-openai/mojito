@@ -27,11 +27,13 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
         locale.bcp47Tag,
         request.id,
         request.name,
-        request.notes
+        request.notes,
+        requestCreatedBy.username
       )
       from ReviewProject rp
       left join rp.locale locale
       left join rp.reviewProjectRequest request
+      left join request.createdByUser requestCreatedBy
       where rp.id = :id
       """)
   Optional<ReviewProjectDetail> findDetailById(@Param("id") Long id);
