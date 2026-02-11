@@ -1114,6 +1114,14 @@ export function ReviewProjectPageView({
               <span className="review-project-shortcuts__key">a</span>
               <span>Accept selected text unit (outside edit fields)</span>
             </li>
+            <li className="review-project-shortcuts__item">
+              <span className="review-project-shortcuts__key">e</span>
+              <span>Focus translation editor (outside edit fields)</span>
+            </li>
+            <li className="review-project-shortcuts__item">
+              <span className="review-project-shortcuts__key">p</span>
+              <span>Mark selected text unit as pending (outside edit fields)</span>
+            </li>
           </ul>
         </div>
         <div className="modal__actions">
@@ -1625,8 +1633,36 @@ function DetailPane({
 
   useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
+      const lowerKey = event.key.toLowerCase();
+      const isPlainKey =
+        !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+      const isOutsideEditable = !isEditableTarget(event.target) && !event.repeat;
+
+      if (lowerKey === 'e' && isPlainKey) {
+        if (!isOutsideEditable) {
+          return;
+        }
+        event.preventDefault();
+        translationRef.current?.focus();
+        return;
+      }
+
+      if (lowerKey === 'p' && isPlainKey) {
+        if (!isOutsideEditable) {
+          return;
+        }
+        if (mutations.showValidationDialog || mutations.isSaving || isDirty) {
+          return;
+        }
+        if (snapshot.decisionState !== 'PENDING') {
+          event.preventDefault();
+          requestDecisionState('PENDING');
+        }
+        return;
+      }
+
       const isAcceptHotkey =
-        event.key.toLowerCase() === 'a' &&
+        lowerKey === 'a' &&
         !event.metaKey &&
         !event.ctrlKey &&
         !event.altKey &&
@@ -1681,6 +1717,7 @@ function DetailPane({
     getFocusedTextarea,
     isEditableTarget,
     handleAccept,
+    isDirty,
     mutations.isSaving,
     mutations.showValidationDialog,
     onQueueAdvance,
