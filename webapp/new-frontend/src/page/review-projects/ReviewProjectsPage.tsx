@@ -221,8 +221,8 @@ export function ReviewProjectsPage() {
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [adminErrorMessage, setAdminErrorMessage] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [displayMode, setDisplayMode] = useState<'queue' | 'requests'>(() =>
-    canUseRequestMode ? 'requests' : 'queue',
+  const [displayMode, setDisplayMode] = useState<'list' | 'requests'>(() =>
+    canUseRequestMode ? 'requests' : 'list',
   );
 
   const repositories = useMemo(() => repositoryData ?? [], [repositoryData]);
@@ -319,8 +319,8 @@ export function ReviewProjectsPage() {
   }, [location.pathname, location.state, navigate, setSearchField, setSearchQuery, setSearchType]);
 
   useEffect(() => {
-    if (!canUseRequestMode && displayMode !== 'queue') {
-      setDisplayMode('queue');
+    if (!canUseRequestMode && displayMode !== 'list') {
+      setDisplayMode('list');
     }
   }, [canUseRequestMode, displayMode]);
 
@@ -350,11 +350,11 @@ export function ReviewProjectsPage() {
 
   const isRequestMode = canUseRequestMode && displayMode === 'requests';
   const {
-    data: queueProjectsData,
-    isLoading: isLoadingQueue,
-    isError: isErrorQueue,
-    error: queueError,
-    refetch: refetchQueue,
+    data: listProjectsData,
+    isLoading: isLoadingList,
+    isError: isErrorList,
+    error: listError,
+    refetch: refetchList,
   } = useReviewProjects(searchParams, { enabled: !isRequestMode });
   const {
     data: requestGroupsData,
@@ -364,7 +364,7 @@ export function ReviewProjectsPage() {
     refetch: refetchRequestGroups,
   } = useReviewProjectRequests(requestSearchParams, { enabled: isRequestMode });
 
-  const projects = useMemo(() => queueProjectsData ?? [], [queueProjectsData]);
+  const projects = useMemo(() => listProjectsData ?? [], [listProjectsData]);
   const requestGroups = useMemo(() => requestGroupsData ?? [], [requestGroupsData]);
   const preferredLocales = useMemo(() => loadPreferredLocales(), []);
   const myLocaleSelections = useMemo(
@@ -379,9 +379,9 @@ export function ReviewProjectsPage() {
     [isAdmin, isLimitedTranslator, localeOptionsFiltered, preferredLocales, userLocales],
   );
 
-  const isLoading = isRequestMode ? isLoadingRequestGroups : isLoadingQueue;
-  const isError = isRequestMode ? isErrorRequestGroups : isErrorQueue;
-  const activeError = isRequestMode ? requestGroupsError : queueError;
+  const isLoading = isRequestMode ? isLoadingRequestGroups : isLoadingList;
+  const isError = isRequestMode ? isErrorRequestGroups : isErrorList;
+  const activeError = isRequestMode ? requestGroupsError : listError;
   const status: 'loading' | 'error' | 'ready' = isLoading ? 'loading' : isError ? 'error' : 'ready';
 
   const errorMessage = isError
@@ -514,7 +514,7 @@ export function ReviewProjectsPage() {
     return limitValue ? filtered.slice(0, limitValue) : filtered;
   }, [creatorFilter, hasTouchedLocales, projects, searchParams, user.username]);
 
-  const queueRows = useMemo<ReviewProjectRow[]>(
+  const listRows = useMemo<ReviewProjectRow[]>(
     () => filteredProjects.map(toReviewProjectRow),
     [filteredProjects],
   );
@@ -526,11 +526,11 @@ export function ReviewProjectsPage() {
     () => requestGroupRows.flatMap((group) => group.projects),
     [requestGroupRows],
   );
-  const rows = isRequestMode ? requestModeRows : queueRows;
+  const rows = isRequestMode ? requestModeRows : listRows;
 
   const visibleProjectIds = useMemo(
-    () => (isRequestMode ? requestModeRows.map((row) => row.id) : queueRows.map((row) => row.id)),
-    [isRequestMode, queueRows, requestModeRows],
+    () => (isRequestMode ? requestModeRows.map((row) => row.id) : listRows.map((row) => row.id)),
+    [isRequestMode, listRows, requestModeRows],
   );
   const visibleProjectIdSet = useMemo(() => new Set(visibleProjectIds), [visibleProjectIds]);
 
@@ -560,7 +560,7 @@ export function ReviewProjectsPage() {
       setSelectedProjectIds([]);
       void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
       void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
-      void refetchQueue();
+      void refetchList();
       void refetchRequestGroups();
     },
     onError: (error) => {
@@ -576,7 +576,7 @@ export function ReviewProjectsPage() {
       setSelectedProjectIds([]);
       void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
       void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
-      void refetchQueue();
+      void refetchList();
       void refetchRequestGroups();
     },
     onError: (error) => {
@@ -590,9 +590,9 @@ export function ReviewProjectsPage() {
     if (isRequestMode) {
       void refetchRequestGroups();
     } else {
-      void refetchQueue();
+      void refetchList();
     }
-  }, [isRequestMode, refetchQueue, refetchRequestGroups]);
+  }, [isRequestMode, refetchList, refetchRequestGroups]);
 
   const handleRequestIdClick = useCallback((requestId: number) => {
     setSearchField('requestId');

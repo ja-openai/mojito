@@ -97,9 +97,9 @@ type Props = {
   onRequestIdClick?: (requestId: number) => void;
   canCreate?: boolean;
   adminControls?: ReviewProjectsAdminControls;
-  displayMode?: 'queue' | 'requests';
+  displayMode?: 'list' | 'requests';
   canUseRequestMode?: boolean;
-  onDisplayModeChange?: (mode: 'queue' | 'requests') => void;
+  onDisplayModeChange?: (mode: 'list' | 'requests') => void;
 };
 
 function CountsInline({ words, strings }: { words: number | null; strings: number | null }) {
@@ -127,15 +127,15 @@ function SummaryBar({
   totalWords,
   totalStrings,
   showModeToggle = false,
-  displayMode = 'queue',
+  displayMode = 'list',
   onDisplayModeChange,
 }: {
   resultCount: number;
   totalWords: number;
   totalStrings: number;
   showModeToggle?: boolean;
-  displayMode?: 'queue' | 'requests';
-  onDisplayModeChange?: (mode: 'queue' | 'requests') => void;
+  displayMode?: 'list' | 'requests';
+  onDisplayModeChange?: (mode: 'list' | 'requests') => void;
 }) {
   return (
     <div className="review-projects-page__summary-bar">
@@ -421,8 +421,8 @@ function DisplayModeToggle({
   mode,
   onChange,
 }: {
-  mode: 'queue' | 'requests';
-  onChange: (mode: 'queue' | 'requests') => void;
+  mode: 'list' | 'requests';
+  onChange: (mode: 'list' | 'requests') => void;
 }) {
   return (
     <div className="review-projects-page__mode-toggle" role="group" aria-label="Display mode">
@@ -436,9 +436,9 @@ function DisplayModeToggle({
       </button>
       <button
         type="button"
-        className={`review-projects-page__mode-button${mode === 'queue' ? ' is-active' : ''}`}
-        onClick={() => onChange('queue')}
-        aria-pressed={mode === 'queue'}
+        className={`review-projects-page__mode-button${mode === 'list' ? ' is-active' : ''}`}
+        onClick={() => onChange('list')}
+        aria-pressed={mode === 'list'}
       >
         List
       </button>
@@ -785,13 +785,13 @@ function RequestGroupsSection({
   groups,
   expandedKey,
   onToggleExpanded,
-  onOpenQueue,
+  onFilterByRequest,
   adminControls,
 }: {
   groups: ReviewProjectRequestGroupRow[];
   expandedKey: string | null;
   onToggleExpanded: (key: string) => void;
-  onOpenQueue: (requestId: number) => void;
+  onFilterByRequest: (requestId: number) => void;
   adminControls?: ReviewProjectsAdminControls;
 }) {
   const resolveLocaleDisplayName = useLocaleDisplayNameResolver();
@@ -876,7 +876,7 @@ function RequestGroupsSection({
                           <button
                             type="button"
                             className="review-projects-page__request-id review-projects-page__request-id-button"
-                            onClick={() => onOpenQueue(group.requestId as number)}
+                            onClick={() => onFilterByRequest(group.requestId as number)}
                           >
                             {requestLabel}
                           </button>
@@ -1039,12 +1039,12 @@ export function ReviewProjectsPageView({
   onRequestIdClick,
   canCreate = true,
   adminControls,
-  displayMode = 'queue',
+  displayMode = 'list',
   canUseRequestMode = false,
   onDisplayModeChange,
 }: Props) {
   const isAdmin = Boolean(adminControls?.enabled);
-  const effectiveDisplayMode = canUseRequestMode ? displayMode : 'queue';
+  const effectiveDisplayMode = canUseRequestMode ? displayMode : 'list';
   const scrollElementRef = useRef<HTMLDivElement>(null);
   const getItemKey = useCallback((index: number) => projects[index]?.id ?? index, [projects]);
   const groupedRequestRows = useMemo(
@@ -1107,7 +1107,7 @@ export function ReviewProjectsPageView({
     setExpandedRequestKey((current) => (current === key ? null : key));
   }, []);
 
-  const handleOpenQueue = useCallback(
+  const handleFilterByRequest = useCallback(
     (requestId: number) => {
       onRequestIdClick?.(requestId);
     },
@@ -1159,7 +1159,7 @@ export function ReviewProjectsPageView({
           groups={groupedRequestRows}
           expandedKey={expandedRequestKey}
           onToggleExpanded={handleToggleRequestGroup}
-          onOpenQueue={handleOpenQueue}
+          onFilterByRequest={handleFilterByRequest}
           adminControls={adminControls}
         />
       ) : (
