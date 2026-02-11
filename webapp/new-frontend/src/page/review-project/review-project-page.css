@@ -418,7 +418,7 @@
 }
 
 .review-project-page__description-select .chip-dropdown__button {
-  min-height: 2.25rem;
+  min-height: 2.5rem;
   padding: var(--space-2) var(--space-3);
 }
 

@@ -459,7 +459,7 @@
 }
 
 .review-create__select-dropdown .chip-dropdown__button {
-  min-height: 2.25rem;
+  min-height: 2.5rem;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-2);
   border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
