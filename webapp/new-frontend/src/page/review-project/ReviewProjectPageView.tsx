@@ -3152,7 +3152,7 @@ function ReviewProjectHeader({
                     <>
                       <button
                         type="button"
-                        className="review-project-page__header-action review-project-page__header-action--secondary"
+                        className="review-project-detail__actions-button"
                         onClick={closeDescriptionModal}
                         disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
                       >
@@ -3160,7 +3160,7 @@ function ReviewProjectHeader({
                       </button>
                       <button
                         type="button"
-                        className="review-project-page__header-action"
+                        className="review-project-detail__actions-button review-project-detail__actions-button--primary"
                         onClick={() => {
                           void saveRequestDetails();
                         }}
@@ -3172,7 +3172,7 @@ function ReviewProjectHeader({
                   ) : (
                     <button
                       type="button"
-                      className="review-project-page__header-action review-project-page__header-action--secondary"
+                      className="review-project-detail__actions-button"
                       onClick={closeDescriptionModal}
                     >
                       Close
