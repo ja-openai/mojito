@@ -91,6 +91,10 @@ export type SearchReviewProjectsResponse = {
   reviewProjects: ApiReviewProjectSummary[];
 };
 
+export type SearchReviewProjectRequestsResponse = {
+  requestGroups: ApiReviewProjectRequestGroupSummary[];
+};
+
 export type ApiReviewProjectSummary = {
   id: number;
   createdDate?: string | null;
@@ -109,6 +113,19 @@ export type ApiReviewProjectSummary = {
     name?: string | null;
     createdByUsername?: string | null;
   } | null;
+};
+
+export type ApiReviewProjectRequestGroupSummary = {
+  requestId: number | null;
+  requestName?: string | null;
+  requestCreatedByUsername?: string | null;
+  openProjectCount?: number | null;
+  closedProjectCount?: number | null;
+  textUnitCount?: number | null;
+  wordCount?: number | null;
+  acceptedCount?: number | null;
+  dueDate?: string | null;
+  reviewProjects?: ApiReviewProjectSummary[] | null;
 };
 
 export type ReviewProjectsSearchRequest = {
@@ -163,6 +180,24 @@ export const searchReviewProjects = async (
   }
 
   return (await response.json()) as SearchReviewProjectsResponse;
+};
+
+export const searchReviewProjectRequests = async (
+  params: ReviewProjectsSearchRequest,
+): Promise<SearchReviewProjectRequestsResponse> => {
+  const response = await fetch('/api/review-project-requests/search', {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify(params ?? {}),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load review project requests');
+  }
+
+  return (await response.json()) as SearchReviewProjectRequestsResponse;
 };
 
 export const fetchReviewProjects = async (): Promise<ApiReviewProjectSummary[]> => {

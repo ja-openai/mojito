@@ -10,6 +10,7 @@ import com.box.l10n.mojito.service.review.GetProjectDetailView;
 import com.box.l10n.mojito.service.review.ReviewProjectCurrentVariantConflictException;
 import com.box.l10n.mojito.service.review.ReviewProjectService;
 import com.box.l10n.mojito.service.review.ReviewProjectTextUnitDetail;
+import com.box.l10n.mojito.service.review.SearchReviewProjectRequestsView;
 import com.box.l10n.mojito.service.review.SearchReviewProjectsCriteria;
 import com.box.l10n.mojito.service.review.SearchReviewProjectsView;
 import java.time.ZonedDateTime;
@@ -43,6 +44,16 @@ public class ReviewProjectWS {
     List<SearchReviewProjectsResponse.ReviewProject> projects =
         view.reviewProject().stream().map(this::toSearchReviewProjectsResponse).toList();
     return new SearchReviewProjectsResponse(projects);
+  }
+
+  @PostMapping("/review-project-requests/search")
+  public SearchReviewProjectRequestsResponse searchReviewProjectRequests(
+      @RequestBody SearchReviewProjectsRequest request) {
+    SearchReviewProjectRequestsView view =
+        reviewProjectService.searchReviewProjectRequests(toCriteria(request));
+    List<SearchReviewProjectRequestsResponse.ReviewProjectRequestGroup> requestGroups =
+        view.reviewProjectRequests().stream().map(this::toSearchReviewProjectRequestsResponse).toList();
+    return new SearchReviewProjectRequestsResponse(requestGroups);
   }
 
   @PostMapping("/review-project-requests")
@@ -210,6 +221,20 @@ public class ReviewProjectWS {
     }
   }
 
+  public record SearchReviewProjectRequestsResponse(List<ReviewProjectRequestGroup> requestGroups) {
+    public record ReviewProjectRequestGroup(
+        Long requestId,
+        String requestName,
+        String requestCreatedByUsername,
+        Integer openProjectCount,
+        Integer closedProjectCount,
+        Integer textUnitCount,
+        Integer wordCount,
+        Long acceptedCount,
+        ZonedDateTime dueDate,
+        List<SearchReviewProjectsResponse.ReviewProject> reviewProjects) {}
+  }
+
   public record GetReviewProjectResponse(
       Long id,
       ReviewProjectType type,
@@ -281,6 +306,22 @@ public class ReviewProjectWS {
                 view.reviewProjectRequest().name(),
                 view.reviewProjectRequest().createdByUsername())
             : null);
+  }
+
+  private SearchReviewProjectRequestsResponse.ReviewProjectRequestGroup
+      toSearchReviewProjectRequestsResponse(
+          SearchReviewProjectRequestsView.ReviewProjectRequestGroup view) {
+    return new SearchReviewProjectRequestsResponse.ReviewProjectRequestGroup(
+        view.requestId(),
+        view.requestName(),
+        view.requestCreatedByUsername(),
+        view.openProjectCount(),
+        view.closedProjectCount(),
+        view.textUnitCount(),
+        view.wordCount(),
+        view.acceptedCount(),
+        view.dueDate(),
+        view.reviewProjects().stream().map(this::toSearchReviewProjectsResponse).toList());
   }
 
   private SearchReviewProjectsCriteria toCriteria(SearchReviewProjectsRequest request) {

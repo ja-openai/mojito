@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import type {
+  ApiReviewProjectRequestGroupSummary,
   ApiReviewProjectStatus,
   ApiReviewProjectSummary,
   ApiReviewProjectType,
@@ -19,11 +20,17 @@ import {
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
-import { REVIEW_PROJECTS_QUERY_KEY, useReviewProjects } from '../../hooks/useReviewProjects';
+import {
+  REVIEW_PROJECT_REQUESTS_QUERY_KEY,
+  REVIEW_PROJECTS_QUERY_KEY,
+  useReviewProjectRequests,
+  useReviewProjects,
+} from '../../hooks/useReviewProjects';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';
 import { loadPreferredLocales } from '../workbench/workbench-preferences';
 import {
+  type ReviewProjectRequestGroupRow,
   type ReviewProjectRow,
   type ReviewProjectsAdminControls,
   ReviewProjectsPageView,
@@ -124,6 +131,68 @@ const limitOptions: FilterOption<number>[] = [
   { value: 1000, label: '1k' },
   { value: 10000, label: '10k' },
 ];
+
+const toFiniteNumberOrNull = (value: unknown) => {
+  if (value == null) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const toReviewProjectRow = (project: ApiReviewProjectSummary): ReviewProjectRow => {
+  const acceptedCountRaw = Number(project.acceptedCount ?? 0);
+  const textUnitCountRaw = toFiniteNumberOrNull(project.textUnitCount);
+  const wordCountRaw = toFiniteNumberOrNull(project.wordCount);
+
+  return {
+    id: project.id,
+    name: project.reviewProjectRequest?.name ?? `Review project #${project.id}`,
+    requestId: project.reviewProjectRequest?.id ?? null,
+    requestCreatedByUsername: project.reviewProjectRequest?.createdByUsername ?? null,
+    type: project.type,
+    status: project.status,
+    localeTag: project.locale?.bcp47Tag ?? null,
+    acceptedCount: Number.isFinite(acceptedCountRaw) ? acceptedCountRaw : 0,
+    textUnitCount: textUnitCountRaw,
+    wordCount: wordCountRaw,
+    dueDate: project.dueDate ?? null,
+    closeReason: project.closeReason ?? null,
+  };
+};
+
+const toReviewProjectRequestGroupRow = (
+  requestGroup: ApiReviewProjectRequestGroupSummary,
+): ReviewProjectRequestGroupRow => {
+  const projects = (requestGroup.reviewProjects ?? []).map(toReviewProjectRow);
+  const fallbackRequestId = requestGroup.requestId ?? -1;
+  const key = `request:${fallbackRequestId}`;
+  const textUnitCount =
+    toFiniteNumberOrNull(requestGroup.textUnitCount) ??
+    projects.reduce((sum, project) => sum + (project.textUnitCount ?? 0), 0);
+  const wordCount =
+    toFiniteNumberOrNull(requestGroup.wordCount) ??
+    projects.reduce((sum, project) => sum + (project.wordCount ?? 0), 0);
+  const acceptedCountRaw =
+    toFiniteNumberOrNull(requestGroup.acceptedCount) ??
+    projects.reduce((sum, project) => sum + project.acceptedCount, 0);
+  const localeTags = Array.from(
+    new Set(projects.map((project) => project.localeTag).filter((tag): tag is string => Boolean(tag))),
+  ).sort((a, b) => a.localeCompare(b));
+
+  return {
+    key,
+    requestId: requestGroup.requestId ?? null,
+    name: requestGroup.requestName ?? `Request #${fallbackRequestId}`,
+    createdByUsername: requestGroup.requestCreatedByUsername ?? null,
+    localeTags,
+    acceptedCount: Math.max(0, acceptedCountRaw ?? 0),
+    textUnitCount: Math.max(0, textUnitCount ?? 0),
+    wordCount: Math.max(0, wordCount ?? 0),
+    dueDate: requestGroup.dueDate ?? null,
+    projects,
+  };
+};
 
 export function ReviewProjectsPage() {
   const user = useUser();
@@ -228,6 +297,14 @@ export function ReviewProjectsPage() {
     isLimitedTranslator,
   ]);
 
+  const requestSearchParams = useMemo<ReviewProjectsSearchRequest>(
+    () => ({
+      ...searchParams,
+      statuses: undefined,
+    }),
+    [searchParams],
+  );
+
   useEffect(() => {
     const state = isReviewProjectsNavState(location.state) ? location.state : null;
     if (!state) {
@@ -271,9 +348,24 @@ export function ReviewProjectsPage() {
     }
   }, [creatorFilter, searchField, searchQuery, searchType, user.username]);
 
-  const { data, isLoading, isError, error, refetch } = useReviewProjects(searchParams);
+  const isRequestMode = isAdmin && displayMode === 'requests';
+  const {
+    data: queueProjectsData,
+    isLoading: isLoadingQueue,
+    isError: isErrorQueue,
+    error: queueError,
+    refetch: refetchQueue,
+  } = useReviewProjects(searchParams, { enabled: !isRequestMode });
+  const {
+    data: requestGroupsData,
+    isLoading: isLoadingRequestGroups,
+    isError: isErrorRequestGroups,
+    error: requestGroupsError,
+    refetch: refetchRequestGroups,
+  } = useReviewProjectRequests(requestSearchParams, { enabled: isRequestMode });
 
-  const projects = useMemo(() => data ?? [], [data]);
+  const projects = useMemo(() => queueProjectsData ?? [], [queueProjectsData]);
+  const requestGroups = useMemo(() => requestGroupsData ?? [], [requestGroupsData]);
   const preferredLocales = useMemo(() => loadPreferredLocales(), []);
   const myLocaleSelections = useMemo(
     () =>
@@ -287,11 +379,14 @@ export function ReviewProjectsPage() {
     [isAdmin, isLimitedTranslator, localeOptionsFiltered, preferredLocales, userLocales],
   );
 
+  const isLoading = isRequestMode ? isLoadingRequestGroups : isLoadingQueue;
+  const isError = isRequestMode ? isErrorRequestGroups : isErrorQueue;
+  const activeError = isRequestMode ? requestGroupsError : queueError;
   const status: 'loading' | 'error' | 'ready' = isLoading ? 'loading' : isError ? 'error' : 'ready';
 
   const errorMessage = isError
-    ? error instanceof Error
-      ? error.message
+    ? activeError instanceof Error
+      ? activeError.message
       : 'Failed to load review projects.'
     : undefined;
 
@@ -419,32 +514,24 @@ export function ReviewProjectsPage() {
     return limitValue ? filtered.slice(0, limitValue) : filtered;
   }, [creatorFilter, hasTouchedLocales, projects, searchParams, user.username]);
 
-  const rows = useMemo<ReviewProjectRow[]>(() => {
-    return filteredProjects.map((project) => {
-      const acceptedCountRaw = Number(project.acceptedCount ?? 0);
-      const textUnitCountRaw =
-        project.textUnitCount == null ? null : Number(project.textUnitCount);
-      const wordCountRaw = project.wordCount == null ? null : Number(project.wordCount);
+  const queueRows = useMemo<ReviewProjectRow[]>(
+    () => filteredProjects.map(toReviewProjectRow),
+    [filteredProjects],
+  );
+  const requestGroupRows = useMemo<ReviewProjectRequestGroupRow[]>(
+    () => requestGroups.map(toReviewProjectRequestGroupRow),
+    [requestGroups],
+  );
+  const requestModeRows = useMemo(
+    () => requestGroupRows.flatMap((group) => group.projects),
+    [requestGroupRows],
+  );
+  const rows = isRequestMode ? requestModeRows : queueRows;
 
-      return {
-        id: project.id,
-        name: project.reviewProjectRequest?.name ?? `Review project #${project.id}`,
-        requestId: project.reviewProjectRequest?.id ?? null,
-        requestCreatedByUsername: project.reviewProjectRequest?.createdByUsername ?? null,
-        type: project.type,
-        status: project.status,
-        localeTag: project.locale?.bcp47Tag ?? null,
-        acceptedCount: Number.isFinite(acceptedCountRaw) ? acceptedCountRaw : 0,
-        textUnitCount:
-          textUnitCountRaw == null ? null : Number.isFinite(textUnitCountRaw) ? textUnitCountRaw : null,
-        wordCount: wordCountRaw == null ? null : Number.isFinite(wordCountRaw) ? wordCountRaw : null,
-        dueDate: project.dueDate ?? null,
-        closeReason: project.closeReason ?? null,
-      };
-    });
-  }, [filteredProjects]);
-
-  const visibleProjectIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  const visibleProjectIds = useMemo(
+    () => (isRequestMode ? [] : queueRows.map((row) => row.id)),
+    [isRequestMode, queueRows],
+  );
   const visibleProjectIdSet = useMemo(() => new Set(visibleProjectIds), [visibleProjectIds]);
 
   useEffect(() => {
@@ -472,7 +559,9 @@ export function ReviewProjectsPage() {
       setAdminErrorMessage(null);
       setSelectedProjectIds([]);
       void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
-      void refetch();
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
+      void refetchQueue();
+      void refetchRequestGroups();
     },
     onError: (error) => {
       setAdminErrorMessage(error instanceof Error ? error.message : 'Batch update failed');
@@ -486,7 +575,9 @@ export function ReviewProjectsPage() {
       setAdminErrorMessage(null);
       setSelectedProjectIds([]);
       void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
-      void refetch();
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
+      void refetchQueue();
+      void refetchRequestGroups();
     },
     onError: (error) => {
       setAdminErrorMessage(error instanceof Error ? error.message : 'Batch delete failed');
@@ -496,8 +587,12 @@ export function ReviewProjectsPage() {
   const isBatchSaving = batchStatusMutation.isPending || batchDeleteMutation.isPending;
 
   const handleRetry = useCallback(() => {
-    void refetch();
-  }, [refetch]);
+    if (isRequestMode) {
+      void refetchRequestGroups();
+    } else {
+      void refetchQueue();
+    }
+  }, [isRequestMode, refetchQueue, refetchRequestGroups]);
 
   const handleRequestIdClick = useCallback((requestId: number) => {
     setDisplayMode('queue');
@@ -591,7 +686,7 @@ export function ReviewProjectsPage() {
   useSelectAllLocales({
     localeOptions: localeOptionsFiltered,
     defaultLocaleTags: isLimitedTranslator ? userLocales : undefined,
-    projects: data,
+    projects,
     selectedLocaleTags,
     setSelectedLocaleTags,
     userHasTouchedLocales: hasTouchedLocales,
@@ -604,6 +699,7 @@ export function ReviewProjectsPage() {
         errorMessage={errorMessage}
         errorOnRetry={handleRetry}
         projects={rows}
+        requestGroups={isRequestMode ? requestGroupRows : undefined}
         filters={{
           localeOptions: localeOptionsFiltered,
           selectedLocaleTags,

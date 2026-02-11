@@ -182,6 +182,8 @@ public class WebSecurityConfig {
                 // Review projects search should be available to translators
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/search")
                 .authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/review-project-requests/search")
+                .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/*/status")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 // USERs are not allowed to change translations

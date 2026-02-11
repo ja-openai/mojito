@@ -90,6 +90,7 @@ type Props = {
   errorOnRetry?: () => void;
   onLoadMock?: () => void;
   projects: ReviewProjectRow[];
+  requestGroups?: ReviewProjectRequestGroupRow[];
   filters: FiltersProps;
   requestFilter?: { requestId: number | null; onClear: () => void };
   onRequestIdClick?: (requestId: number) => void;
@@ -337,7 +338,7 @@ const getProgressMetrics = (acceptedValue: unknown, totalValue: unknown) => {
 const TOGGLE_IGNORE_SELECTOR =
   'a,button,input,select,textarea,label,[role="button"],[role="link"],[data-no-toggle="true"]';
 
-type RequestGroup = {
+export type ReviewProjectRequestGroupRow = {
   key: string;
   requestId: number | null;
   name: string;
@@ -350,8 +351,8 @@ type RequestGroup = {
   projects: ReviewProjectRow[];
 };
 
-function buildRequestGroups(projects: ReviewProjectRow[]): RequestGroup[] {
-  const groups = new Map<string, RequestGroup>();
+function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestGroupRow[] {
+  const groups = new Map<string, ReviewProjectRequestGroupRow>();
   const dueByKey = new Map<string, number | null>();
   for (const project of projects) {
     const acceptedCount = toFiniteNonNegative(project.acceptedCount);
@@ -746,7 +747,7 @@ function RequestGroupsSection({
   onToggleExpanded,
   onOpenQueue,
 }: {
-  groups: RequestGroup[];
+  groups: ReviewProjectRequestGroupRow[];
   expandedKey: string | null;
   onToggleExpanded: (key: string) => void;
   onOpenQueue: (requestId: number) => void;
@@ -928,6 +929,7 @@ export function ReviewProjectsPageView({
   errorMessage,
   errorOnRetry,
   projects,
+  requestGroups,
   filters,
   requestFilter,
   onRequestIdClick,
@@ -940,10 +942,13 @@ export function ReviewProjectsPageView({
   const effectiveDisplayMode = isAdmin ? displayMode : 'queue';
   const scrollElementRef = useRef<HTMLDivElement>(null);
   const getItemKey = useCallback((index: number) => projects[index]?.id ?? index, [projects]);
-  const requestGroups = useMemo(() => buildRequestGroups(projects), [projects]);
+  const groupedRequestRows = useMemo(
+    () => requestGroups ?? buildRequestGroups(projects),
+    [projects, requestGroups],
+  );
   const [expandedRequestKey, setExpandedRequestKey] = useState<string | null>(null);
   const hasResults =
-    effectiveDisplayMode === 'requests' ? requestGroups.length > 0 : projects.length > 0;
+    effectiveDisplayMode === 'requests' ? groupedRequestRows.length > 0 : projects.length > 0;
 
   const estimateSize = useCallback(
     () =>
@@ -970,13 +975,19 @@ export function ReviewProjectsPageView({
   const { getRowRef } = useMeasuredRowRefs<number, HTMLDivElement>({ measureElement });
 
   const totalWords = useMemo(
-    () => projects.reduce((sum, project) => sum + (project.wordCount ?? 0), 0),
-    [projects],
+    () =>
+      effectiveDisplayMode === 'requests'
+        ? groupedRequestRows.reduce((sum, group) => sum + (group.wordCount ?? 0), 0)
+        : projects.reduce((sum, project) => sum + (project.wordCount ?? 0), 0),
+    [effectiveDisplayMode, groupedRequestRows, projects],
   );
 
   const totalStrings = useMemo(
-    () => projects.reduce((sum, project) => sum + (project.textUnitCount ?? 0), 0),
-    [projects],
+    () =>
+      effectiveDisplayMode === 'requests'
+        ? groupedRequestRows.reduce((sum, group) => sum + (group.textUnitCount ?? 0), 0)
+        : projects.reduce((sum, project) => sum + (project.textUnitCount ?? 0), 0),
+    [effectiveDisplayMode, groupedRequestRows, projects],
   );
 
   useEffect(() => {
@@ -1026,7 +1037,9 @@ export function ReviewProjectsPageView({
       <FilterControls filters={filters} canCreate={canCreate} />
       {hasResults ? (
         <SummaryBar
-          resultCount={effectiveDisplayMode === 'requests' ? requestGroups.length : projects.length}
+          resultCount={
+            effectiveDisplayMode === 'requests' ? groupedRequestRows.length : projects.length
+          }
           totalWords={totalWords}
           totalStrings={totalStrings}
           showModeToggle={isAdmin}
@@ -1039,7 +1052,7 @@ export function ReviewProjectsPageView({
       ) : null}
       {effectiveDisplayMode === 'requests' ? (
         <RequestGroupsSection
-          groups={requestGroups}
+          groups={groupedRequestRows}
           expandedKey={expandedRequestKey}
           onToggleExpanded={handleToggleRequestGroup}
           onOpenQueue={handleOpenQueue}

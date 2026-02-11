@@ -194,9 +194,187 @@ public class ReviewProjectService {
 
   @Transactional(readOnly = true)
   public SearchReviewProjectsView searchReviewProjects(SearchReviewProjectsCriteria request) {
-
     if (request == null) {
       throw new IllegalArgumentException("request must not be null");
+    }
+
+    List<SearchReviewProjectDetail> projectDetails = getProjectDetailsByCriteria(request);
+    Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
+    List<SearchReviewProjectsView.ReviewProject> reviewProjects =
+        toReviewProjectViews(projectDetails, acceptedCountByProjectId);
+
+    return new SearchReviewProjectsView(reviewProjects);
+  }
+
+  @Transactional(readOnly = true)
+  public SearchReviewProjectRequestsView searchReviewProjectRequests(SearchReviewProjectsCriteria request) {
+    if (request == null) {
+      throw new IllegalArgumentException("request must not be null");
+    }
+
+    List<Long> activeRequestIds = findActiveRequestIds(request);
+    if (activeRequestIds.isEmpty()) {
+      return new SearchReviewProjectRequestsView(List.of());
+    }
+
+    List<SearchReviewProjectDetail> projectDetails = getProjectDetailsByRequestIds(activeRequestIds);
+    Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
+    List<SearchReviewProjectsView.ReviewProject> reviewProjects =
+        toReviewProjectViews(projectDetails, acceptedCountByProjectId);
+
+    Map<Long, List<SearchReviewProjectsView.ReviewProject>> projectsByRequestId =
+        reviewProjects.stream()
+            .filter(
+                reviewProject ->
+                    reviewProject.reviewProjectRequest() != null
+                        && reviewProject.reviewProjectRequest().id() != null)
+            .collect(Collectors.groupingBy(reviewProject -> reviewProject.reviewProjectRequest().id()));
+
+    List<SearchReviewProjectRequestsView.ReviewProjectRequestGroup> groups = new ArrayList<>();
+    for (Long requestId : activeRequestIds) {
+      List<SearchReviewProjectsView.ReviewProject> groupedProjects =
+          projectsByRequestId.getOrDefault(requestId, List.of());
+      if (groupedProjects.isEmpty()) {
+        continue;
+      }
+
+      List<SearchReviewProjectsView.ReviewProject> sortedProjects =
+          groupedProjects.stream()
+              .sorted(
+                  Comparator.comparing(
+                          (SearchReviewProjectsView.ReviewProject reviewProject) ->
+                              reviewProject.locale() != null && reviewProject.locale().bcp47Tag() != null
+                                  ? reviewProject.locale().bcp47Tag()
+                                  : "")
+                      .thenComparing(SearchReviewProjectsView.ReviewProject::id))
+              .toList();
+
+      int openProjectCount =
+          (int)
+              sortedProjects.stream()
+                  .filter(reviewProject -> reviewProject.status() == ReviewProjectStatus.OPEN)
+                  .count();
+      if (openProjectCount <= 0) {
+        continue;
+      }
+      int closedProjectCount =
+          (int)
+              sortedProjects.stream()
+                  .filter(reviewProject -> reviewProject.status() == ReviewProjectStatus.CLOSED)
+                  .count();
+      int textUnitCount =
+          sortedProjects.stream().mapToInt(project -> Optional.ofNullable(project.textUnitCount()).orElse(0)).sum();
+      int wordCount =
+          sortedProjects.stream().mapToInt(project -> Optional.ofNullable(project.wordCount()).orElse(0)).sum();
+      long acceptedCount =
+          sortedProjects.stream().mapToLong(project -> Optional.ofNullable(project.acceptedCount()).orElse(0L)).sum();
+      ZonedDateTime dueDate =
+          sortedProjects.stream()
+              .map(SearchReviewProjectsView.ReviewProject::dueDate)
+              .filter(Objects::nonNull)
+              .min(ZonedDateTime::compareTo)
+              .orElse(null);
+
+      SearchReviewProjectsView.ReviewProject firstProject = sortedProjects.get(0);
+      SearchReviewProjectsView.ReviewProjectRequest requestInfo = firstProject.reviewProjectRequest();
+
+      groups.add(
+          new SearchReviewProjectRequestsView.ReviewProjectRequestGroup(
+              requestId,
+              requestInfo != null ? requestInfo.name() : null,
+              requestInfo != null ? requestInfo.createdByUsername() : null,
+              openProjectCount,
+              closedProjectCount,
+              textUnitCount,
+              wordCount,
+              acceptedCount,
+              dueDate,
+              sortedProjects));
+    }
+
+    return new SearchReviewProjectRequestsView(groups);
+  }
+
+  private List<SearchReviewProjectDetail> getProjectDetailsByCriteria(SearchReviewProjectsCriteria request) {
+    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+    CriteriaQuery<SearchReviewProjectDetail> cq = cb.createQuery(SearchReviewProjectDetail.class);
+    Root<ReviewProject> root = cq.from(ReviewProject.class);
+    Join<ReviewProject, Locale> localeJoin = root.join(ReviewProject_.locale, JoinType.LEFT);
+    Join<ReviewProject, ReviewProjectRequest> requestJoin =
+        root.join(ReviewProject_.reviewProjectRequest, JoinType.LEFT);
+    Join<ReviewProject, User> createdByUserJoin =
+        root.join(ReviewProject_.createdByUser, JoinType.LEFT);
+    Join<ReviewProjectRequest, User> requestCreatedByUserJoin =
+        requestJoin.join(ReviewProjectRequest_.createdByUser, JoinType.LEFT);
+
+    List<Predicate> predicates =
+        buildProjectSearchPredicates(
+            cb, root, localeJoin, requestJoin, createdByUserJoin, request, request.statuses());
+
+    Predicate[] predicateArray = predicates.toArray(Predicate[]::new);
+
+    cq.where(predicateArray)
+        .select(
+            cb.construct(
+                SearchReviewProjectDetail.class,
+                root.get(ReviewProject_.id),
+                root.get(ReviewProject_.createdDate),
+                root.get(ReviewProject_.lastModifiedDate),
+                root.get(ReviewProject_.dueDate),
+                root.get(ReviewProject_.closeReason),
+                root.get(ReviewProject_.textUnitCount),
+                root.get(ReviewProject_.wordCount),
+                root.get(ReviewProject_.type),
+                root.get(ReviewProject_.status),
+                createdByUserJoin.get(User_.username),
+                localeJoin.get(Locale_.id),
+                localeJoin.get(Locale_.bcp47Tag),
+                requestJoin.get(ReviewProjectRequest_.id),
+                requestJoin.get(ReviewProjectRequest_.name),
+                requestCreatedByUserJoin.get(User_.username)))
+        .distinct(true)
+        .orderBy(cb.desc(root.get(ReviewProject_.id)));
+
+    TypedQuery<SearchReviewProjectDetail> query = entityManager.createQuery(cq);
+    query.setMaxResults(request.limit());
+
+    return query.getResultList();
+  }
+
+  private List<Long> findActiveRequestIds(SearchReviewProjectsCriteria request) {
+    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+    CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+    Root<ReviewProject> root = cq.from(ReviewProject.class);
+    Join<ReviewProject, Locale> localeJoin = root.join(ReviewProject_.locale, JoinType.LEFT);
+    Join<ReviewProject, ReviewProjectRequest> requestJoin =
+        root.join(ReviewProject_.reviewProjectRequest, JoinType.LEFT);
+    Join<ReviewProject, User> createdByUserJoin =
+        root.join(ReviewProject_.createdByUser, JoinType.LEFT);
+
+    List<Predicate> predicates =
+        buildProjectSearchPredicates(
+            cb,
+            root,
+            localeJoin,
+            requestJoin,
+            createdByUserJoin,
+            request,
+            List.of(ReviewProjectStatus.OPEN));
+    predicates.add(cb.isNotNull(requestJoin.get(ReviewProjectRequest_.id)));
+
+    cq.where(predicates.toArray(Predicate[]::new))
+        .select(requestJoin.get(ReviewProjectRequest_.id))
+        .groupBy(requestJoin.get(ReviewProjectRequest_.id))
+        .orderBy(cb.desc(requestJoin.get(ReviewProjectRequest_.id)));
+
+    TypedQuery<Long> query = entityManager.createQuery(cq);
+    query.setMaxResults(request.limit());
+    return query.getResultList();
+  }
+
+  private List<SearchReviewProjectDetail> getProjectDetailsByRequestIds(List<Long> requestIds) {
+    if (requestIds == null || requestIds.isEmpty()) {
+      return List.of();
     }
 
     CriteriaBuilder cb = entityManager.getCriteriaBuilder();
@@ -210,10 +388,88 @@ public class ReviewProjectService {
     Join<ReviewProjectRequest, User> requestCreatedByUserJoin =
         requestJoin.join(ReviewProjectRequest_.createdByUser, JoinType.LEFT);
 
+    cq.where(requestJoin.get(ReviewProjectRequest_.id).in(requestIds))
+        .select(
+            cb.construct(
+                SearchReviewProjectDetail.class,
+                root.get(ReviewProject_.id),
+                root.get(ReviewProject_.createdDate),
+                root.get(ReviewProject_.lastModifiedDate),
+                root.get(ReviewProject_.dueDate),
+                root.get(ReviewProject_.closeReason),
+                root.get(ReviewProject_.textUnitCount),
+                root.get(ReviewProject_.wordCount),
+                root.get(ReviewProject_.type),
+                root.get(ReviewProject_.status),
+                createdByUserJoin.get(User_.username),
+                localeJoin.get(Locale_.id),
+                localeJoin.get(Locale_.bcp47Tag),
+                requestJoin.get(ReviewProjectRequest_.id),
+                requestJoin.get(ReviewProjectRequest_.name),
+                requestCreatedByUserJoin.get(User_.username)))
+        .distinct(true)
+        .orderBy(cb.desc(root.get(ReviewProject_.id)));
+
+    return entityManager.createQuery(cq).getResultList();
+  }
+
+  private Map<Long, Long> getAcceptedCountByProjectId(List<SearchReviewProjectDetail> projectDetails) {
+    Map<Long, Long> acceptedCountByProjectId = new HashMap<>();
+    if (projectDetails == null || projectDetails.isEmpty()) {
+      return acceptedCountByProjectId;
+    }
+
+    List<Long> projectIds = projectDetails.stream().map(SearchReviewProjectDetail::id).toList();
+    List<ReviewProjectAcceptedCountRow> acceptedCounts =
+        reviewProjectTextUnitDecisionRepository.countAcceptedByProjectIdsAndDecisionState(
+            projectIds, DecisionState.DECIDED);
+    for (ReviewProjectAcceptedCountRow acceptedCount : acceptedCounts) {
+      acceptedCountByProjectId.put(acceptedCount.projectId(), acceptedCount.acceptedCount());
+    }
+    return acceptedCountByProjectId;
+  }
+
+  private List<SearchReviewProjectsView.ReviewProject> toReviewProjectViews(
+      List<SearchReviewProjectDetail> projectDetails, Map<Long, Long> acceptedCountByProjectId) {
+    if (projectDetails == null || projectDetails.isEmpty()) {
+      return List.of();
+    }
+
+    return projectDetails.stream()
+        .map(
+            detail -> {
+              long acceptedCount = acceptedCountByProjectId.getOrDefault(detail.id(), 0L);
+              return new SearchReviewProjectsView.ReviewProject(
+                  detail.id(),
+                  detail.createdDate(),
+                  detail.lastModifiedDate(),
+                  detail.dueDate(),
+                  detail.closeReason(),
+                  detail.textUnitCount(),
+                  detail.wordCount(),
+                  acceptedCount,
+                  detail.type(),
+                  detail.status(),
+                  detail.createdByUsername(),
+                  new SearchReviewProjectsView.Locale(detail.localeId(), detail.localeTag()),
+                  new SearchReviewProjectsView.ReviewProjectRequest(
+                      detail.requestId(), detail.requestName(), detail.requestCreatedByUsername()));
+            })
+        .toList();
+  }
+
+  private List<Predicate> buildProjectSearchPredicates(
+      CriteriaBuilder cb,
+      Root<ReviewProject> root,
+      Join<ReviewProject, Locale> localeJoin,
+      Join<ReviewProject, ReviewProjectRequest> requestJoin,
+      Join<ReviewProject, User> createdByUserJoin,
+      SearchReviewProjectsCriteria request,
+      List<ReviewProjectStatus> statuses) {
     List<Predicate> predicates = new ArrayList<>();
 
-    if (request.statuses() != null) {
-      predicates.add(root.get(ReviewProject_.status).in(request.statuses()));
+    if (statuses != null && !statuses.isEmpty()) {
+      predicates.add(root.get(ReviewProject_.status).in(statuses));
     }
 
     if (request.types() != null) {
@@ -243,72 +499,7 @@ public class ReviewProjectService {
       predicates.add(buildSearchPredicate(cb, root, requestJoin, createdByUserJoin, request));
     }
 
-    Predicate[] predicateArray = predicates.toArray(Predicate[]::new);
-
-    cq.where(predicateArray)
-        .select(
-            cb.construct(
-                SearchReviewProjectDetail.class,
-                root.get(ReviewProject_.id),
-                root.get(ReviewProject_.createdDate),
-                root.get(ReviewProject_.lastModifiedDate),
-                root.get(ReviewProject_.dueDate),
-                root.get(ReviewProject_.closeReason),
-                root.get(ReviewProject_.textUnitCount),
-                root.get(ReviewProject_.wordCount),
-                root.get(ReviewProject_.type),
-                root.get(ReviewProject_.status),
-                createdByUserJoin.get(User_.username),
-                localeJoin.get(Locale_.id),
-                localeJoin.get(Locale_.bcp47Tag),
-                requestJoin.get(ReviewProjectRequest_.id),
-                requestJoin.get(ReviewProjectRequest_.name),
-                requestCreatedByUserJoin.get(User_.username)))
-        .distinct(true)
-        .orderBy(cb.desc(root.get(ReviewProject_.id)));
-
-    TypedQuery<SearchReviewProjectDetail> query = entityManager.createQuery(cq);
-    query.setMaxResults(request.limit());
-
-    List<SearchReviewProjectDetail> projectDetails = query.getResultList();
-
-    Map<Long, Long> acceptedCountByProjectId = new HashMap<>();
-    if (!projectDetails.isEmpty()) {
-      List<Long> projectIds = projectDetails.stream().map(SearchReviewProjectDetail::id).toList();
-      List<ReviewProjectAcceptedCountRow> acceptedCounts =
-          reviewProjectTextUnitDecisionRepository.countAcceptedByProjectIdsAndDecisionState(
-              projectIds, DecisionState.DECIDED);
-      for (ReviewProjectAcceptedCountRow acceptedCount : acceptedCounts) {
-        acceptedCountByProjectId.put(acceptedCount.projectId(), acceptedCount.acceptedCount());
-      }
-    }
-
-    List<SearchReviewProjectsView.ReviewProject> reviewProjects =
-        projectDetails.stream()
-            .map(
-                detail -> {
-                  long acceptedCount = acceptedCountByProjectId.getOrDefault(detail.id(), 0L);
-                  return new SearchReviewProjectsView.ReviewProject(
-                      detail.id(),
-                      detail.createdDate(),
-                      detail.lastModifiedDate(),
-                      detail.dueDate(),
-                      detail.closeReason(),
-                      detail.textUnitCount(),
-                      detail.wordCount(),
-                      acceptedCount,
-                      detail.type(),
-                      detail.status(),
-                      detail.createdByUsername(),
-                      new SearchReviewProjectsView.Locale(detail.localeId(), detail.localeTag()),
-                      new SearchReviewProjectsView.ReviewProjectRequest(
-                          detail.requestId(),
-                          detail.requestName(),
-                          detail.requestCreatedByUsername()));
-                })
-            .toList();
-
-    return new SearchReviewProjectsView(reviewProjects);
+    return predicates;
   }
 
   private Predicate buildStringPredicate(
