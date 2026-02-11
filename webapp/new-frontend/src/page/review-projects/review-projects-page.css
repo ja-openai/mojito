@@ -223,7 +223,7 @@
 
 .review-projects-page__request-project-link {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(10rem, 14rem);
+  grid-template-columns: minmax(0, 1fr) auto minmax(12rem, 18rem);
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
@@ -285,13 +285,14 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+  width: 100%;
 }
 
 .review-projects-page__request-project-progress .review-projects-page__progress-bar {
-  flex: 1 1 8rem;
-  min-width: 7rem;
-  height: 0.875rem;
-  min-height: 0.875rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 0.75rem;
+  min-height: 0.75rem;
 }
 
 .review-projects-page__request-project-progress .review-projects-page__progress-fill {
