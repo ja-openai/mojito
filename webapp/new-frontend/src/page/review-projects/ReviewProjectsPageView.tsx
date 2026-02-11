@@ -76,6 +76,7 @@ export type ReviewProjectsAdminControls = {
   enabled: boolean;
   selectedProjectIds: number[];
   onToggleProjectSelection: (projectId: number) => void;
+  onSetProjectSelection?: (projectIds: number[], selected: boolean) => void;
   onSelectAllVisible: () => void;
   onClearSelection: () => void;
   onBatchStatus: (status: ApiReviewProjectStatus) => void;
@@ -741,18 +742,59 @@ function ReviewProjectRowView({
   );
 }
 
+function SelectionCheckbox({
+  checked,
+  indeterminate = false,
+  disabled = false,
+  ariaLabel,
+  onChange,
+  className,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  disabled?: boolean;
+  ariaLabel: string;
+  onChange: () => void;
+  className?: string;
+}) {
+  return (
+    <label className={`review-projects-page__select${className ? ` ${className}` : ''}`} data-no-toggle="true">
+      <input
+        ref={(element) => {
+          if (element) {
+            element.indeterminate = indeterminate && !checked;
+          }
+        }}
+        type="checkbox"
+        className="review-projects-page__select-input"
+        checked={checked}
+        disabled={disabled}
+        onChange={onChange}
+        aria-label={ariaLabel}
+      />
+    </label>
+  );
+}
+
 function RequestGroupsSection({
   groups,
   expandedKey,
   onToggleExpanded,
   onOpenQueue,
+  adminControls,
 }: {
   groups: ReviewProjectRequestGroupRow[];
   expandedKey: string | null;
   onToggleExpanded: (key: string) => void;
   onOpenQueue: (requestId: number) => void;
+  adminControls?: ReviewProjectsAdminControls;
 }) {
   const resolveLocaleDisplayName = useLocaleDisplayNameResolver();
+  const isAdmin = adminControls?.enabled ?? false;
+  const selectedProjectIdSet = useMemo(
+    () => new Set(adminControls?.selectedProjectIds ?? []),
+    [adminControls?.selectedProjectIds],
+  );
 
   if (groups.length === 0) {
     return (
@@ -770,6 +812,13 @@ function RequestGroupsSection({
         <div className="review-projects-page__rows">
           {groups.map((group) => {
             const isExpanded = expandedKey === group.key;
+            const groupProjectIds = group.projects.map((project) => project.id);
+            const selectedInGroup = groupProjectIds.filter((projectId) =>
+              selectedProjectIdSet.has(projectId),
+            ).length;
+            const allSelectedInGroup =
+              groupProjectIds.length > 0 && selectedInGroup === groupProjectIds.length;
+            const partiallySelectedInGroup = selectedInGroup > 0 && !allSelectedInGroup;
             const { accepted, total, percentWidth, percentLabel } = getProgressMetrics(
               group.acceptedCount,
               group.textUnitCount,
@@ -791,6 +840,28 @@ function RequestGroupsSection({
                 >
                   <div className="review-projects-page__project">
                     <div className="review-projects-page__id-row">
+                      {isAdmin ? (
+                        <SelectionCheckbox
+                          className="review-projects-page__select--request-group"
+                          checked={allSelectedInGroup}
+                          indeterminate={partiallySelectedInGroup}
+                          disabled={adminControls?.isSaving}
+                          ariaLabel={`Select all projects in ${group.name}`}
+                          onChange={() => {
+                            const shouldSelect = !allSelectedInGroup;
+                            if (adminControls?.onSetProjectSelection) {
+                              adminControls.onSetProjectSelection(groupProjectIds, shouldSelect);
+                              return;
+                            }
+                            groupProjectIds.forEach((projectId) => {
+                              const isSelected = selectedProjectIdSet.has(projectId);
+                              if (isSelected !== shouldSelect) {
+                                adminControls?.onToggleProjectSelection(projectId);
+                              }
+                            });
+                          }}
+                        />
+                      ) : null}
                       <span className="review-projects-page__request-toggle">
                         <span className="review-projects-page__project-name">{group.name}</span>
                       </span>
@@ -857,6 +928,7 @@ function RequestGroupsSection({
                 {isExpanded ? (
                   <div className="review-projects-page__request-projects">
                     {group.projects.map((project) => {
+                      const isSelected = selectedProjectIdSet.has(project.id);
                       const {
                         accepted: projectAccepted,
                         total: projectTotal,
@@ -867,50 +939,60 @@ function RequestGroupsSection({
                         project.textUnitCount ?? 0,
                       );
                       return (
-                        <Link
-                          key={project.id}
-                          to={`/review-projects/${project.id}`}
-                          className="review-projects-page__request-project-row review-projects-page__link"
-                        >
-                          <div className="review-projects-page__request-project-locale">
-                            {project.localeTag ? (
-                              <>
-                                <LocalePill
-                                  className="review-projects-page__pill review-projects-page__pill--locale"
-                                  bcp47Tag={project.localeTag}
-                                  labelMode="tag"
-                                />
-                                <span className="review-projects-page__request-project-locale-name">
-                                  {resolveLocaleDisplayName(project.localeTag) || project.localeTag}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="review-projects-page__muted">No locale</span>
-                            )}
-                          </div>
-                          <div className="review-projects-page__request-project-meta">
-                            {project.status === 'CLOSED' ? (
-                              <Pill className="review-projects-page__status-pill status-closed">
-                                {REVIEW_PROJECT_STATUS_LABELS[project.status]}
-                              </Pill>
-                            ) : null}
-                          </div>
-                          <div className="review-projects-page__request-project-progress">
-                            <div
-                              className="review-projects-page__progress-bar"
-                              title={`${formatNumber(projectAccepted)} of ${formatNumber(projectTotal)} processed`}
-                            >
-                              <div
-                                className="review-projects-page__progress-fill"
-                                style={{ width: projectPercentWidth }}
-                                aria-hidden
-                              />
+                        <div key={project.id} className="review-projects-page__request-project-row">
+                          {isAdmin ? (
+                            <SelectionCheckbox
+                              className="review-projects-page__select--request-row"
+                              checked={isSelected}
+                              disabled={adminControls?.isSaving}
+                              ariaLabel={`Select review project ${project.id}`}
+                              onChange={() => adminControls?.onToggleProjectSelection(project.id)}
+                            />
+                          ) : null}
+                          <Link
+                            to={`/review-projects/${project.id}`}
+                            className="review-projects-page__request-project-link review-projects-page__link"
+                          >
+                            <div className="review-projects-page__request-project-locale">
+                              {project.localeTag ? (
+                                <>
+                                  <LocalePill
+                                    className="review-projects-page__pill review-projects-page__pill--locale"
+                                    bcp47Tag={project.localeTag}
+                                    labelMode="tag"
+                                  />
+                                  <span className="review-projects-page__request-project-locale-name">
+                                    {resolveLocaleDisplayName(project.localeTag) || project.localeTag}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="review-projects-page__muted">No locale</span>
+                              )}
                             </div>
-                            <span className="review-projects-page__progress-percent">
-                              {projectPercentLabel}
-                            </span>
-                          </div>
-                        </Link>
+                            <div className="review-projects-page__request-project-meta">
+                              {project.status === 'CLOSED' ? (
+                                <Pill className="review-projects-page__status-pill status-closed">
+                                  {REVIEW_PROJECT_STATUS_LABELS[project.status]}
+                                </Pill>
+                              ) : null}
+                            </div>
+                            <div className="review-projects-page__request-project-progress">
+                              <div
+                                className="review-projects-page__progress-bar"
+                                title={`${formatNumber(projectAccepted)} of ${formatNumber(projectTotal)} processed`}
+                              >
+                                <div
+                                  className="review-projects-page__progress-fill"
+                                  style={{ width: projectPercentWidth }}
+                                  aria-hidden
+                                />
+                              </div>
+                              <span className="review-projects-page__progress-percent">
+                                {projectPercentLabel}
+                              </span>
+                            </div>
+                          </Link>
+                        </div>
                       );
                     })}
                   </div>
@@ -1047,7 +1129,7 @@ export function ReviewProjectsPageView({
           onDisplayModeChange={onDisplayModeChange}
         />
       ) : null}
-      {hasResults && adminControls && adminControls.enabled && effectiveDisplayMode === 'queue' ? (
+      {hasResults && adminControls && adminControls.enabled ? (
         <AdminBar adminControls={adminControls} visibleCount={projects.length} />
       ) : null}
       {effectiveDisplayMode === 'requests' ? (
@@ -1056,6 +1138,7 @@ export function ReviewProjectsPageView({
           expandedKey={expandedRequestKey}
           onToggleExpanded={handleToggleRequestGroup}
           onOpenQueue={handleOpenQueue}
+          adminControls={adminControls}
         />
       ) : (
         <ContentSection

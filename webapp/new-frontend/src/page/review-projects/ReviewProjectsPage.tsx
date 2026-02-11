@@ -529,8 +529,8 @@ export function ReviewProjectsPage() {
   const rows = isRequestMode ? requestModeRows : queueRows;
 
   const visibleProjectIds = useMemo(
-    () => (isRequestMode ? [] : queueRows.map((row) => row.id)),
-    [isRequestMode, queueRows],
+    () => (isRequestMode ? requestModeRows.map((row) => row.id) : queueRows.map((row) => row.id)),
+    [isRequestMode, queueRows, requestModeRows],
   );
   const visibleProjectIdSet = useMemo(() => new Set(visibleProjectIds), [visibleProjectIds]);
 
@@ -635,6 +635,20 @@ export function ReviewProjectsPage() {
     setSelectedProjectIds([]);
   }, []);
 
+  const setProjectSelection = useCallback((projectIds: number[], selected: boolean) => {
+    setSelectedProjectIds((prev) => {
+      const next = new Set(prev);
+      projectIds.forEach((projectId) => {
+        if (selected) {
+          next.add(projectId);
+        } else {
+          next.delete(projectId);
+        }
+      });
+      return Array.from(next);
+    });
+  }, []);
+
   const selectAllVisibleProjects = useCallback(() => {
     setSelectedProjectIds(visibleProjectIds);
   }, [visibleProjectIds]);
@@ -674,6 +688,7 @@ export function ReviewProjectsPage() {
         enabled: true,
         selectedProjectIds,
         onToggleProjectSelection: toggleProjectSelection,
+        onSetProjectSelection: setProjectSelection,
         onSelectAllVisible: selectAllVisibleProjects,
         onClearSelection: clearProjectSelection,
         onBatchStatus: requestBatchStatus,
