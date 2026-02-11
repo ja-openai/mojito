@@ -3041,38 +3041,6 @@ function ReviewProjectHeader({
                     {canEditRequest ? 'Edit request details' : 'Request details'}
                   </span>
                 </div>
-                <div className="review-project-page__header-group review-project-page__header-group--meta">
-                  {canEditRequest ? (
-                    <>
-                      <button
-                        type="button"
-                        className="review-project-page__header-action review-project-page__header-action--secondary"
-                        onClick={closeDescriptionModal}
-                        disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        className="review-project-page__header-action"
-                        onClick={() => {
-                          void saveRequestDetails();
-                        }}
-                        disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
-                      >
-                        {mutations.isProjectRequestSaving ? 'Saving…' : 'Save'}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="review-project-page__header-action review-project-page__header-action--secondary"
-                      onClick={closeDescriptionModal}
-                    >
-                      Close
-                    </button>
-                  )}
-                </div>
               </div>
             </header>
             <div className="review-project-page__description-screen-body">
@@ -3179,6 +3147,38 @@ function ReviewProjectHeader({
                 {requestSaveError ? (
                   <div className="review-project-page__description-error">{requestSaveError}</div>
                 ) : null}
+                <div className="review-project-page__description-actions">
+                  {canEditRequest ? (
+                    <>
+                      <button
+                        type="button"
+                        className="review-project-page__header-action review-project-page__header-action--secondary"
+                        onClick={closeDescriptionModal}
+                        disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="review-project-page__header-action"
+                        onClick={() => {
+                          void saveRequestDetails();
+                        }}
+                        disabled={mutations.isProjectRequestSaving || isAttachmentUploading}
+                      >
+                        {mutations.isProjectRequestSaving ? 'Saving…' : 'Save'}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="review-project-page__header-action review-project-page__header-action--secondary"
+                      onClick={closeDescriptionModal}
+                    >
+                      Close
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
