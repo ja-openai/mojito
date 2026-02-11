@@ -59,7 +59,7 @@ export function ReviewProjectCreatePage() {
   const createReviewProject = useCreateReviewProject();
 
   const defaultDueDate = useMemo(
-    () => toLocalInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+    () => toLocalInput(new Date(Date.now() + 1 * 24 * 60 * 60 * 1000)),
     [],
   );
 
