@@ -242,9 +242,12 @@
   background: color-mix(in srgb, var(--color-accent) 7%, transparent);
 }
 
-.review-projects-page__select--request-group,
 .review-projects-page__select--request-row {
   margin-right: var(--space-1);
+}
+
+.review-projects-page__select--request-group {
+  margin-right: 0;
 }
 
 .review-projects-page__request-project-locale {
