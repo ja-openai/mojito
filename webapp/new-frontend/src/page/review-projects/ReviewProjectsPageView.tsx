@@ -2,7 +2,7 @@ import '../../components/chip-dropdown.css';
 import './review-projects-page.css';
 
 import { type VirtualItem } from '@tanstack/react-virtual';
-import { useCallback, useMemo, useRef } from 'react';
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ApiReviewProjectStatus, ApiReviewProjectType } from '../../api/review-projects';
@@ -23,6 +23,7 @@ import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs'
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
+import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 
 type FiltersProps = {
   localeOptions: LocaleOption[];
@@ -60,6 +61,7 @@ export type ReviewProjectRow = {
   id: number;
   name: string;
   requestId: number | null;
+  requestCreatedByUsername: string | null;
   type: ApiReviewProjectType;
   status: ApiReviewProjectStatus;
   localeTag: string | null;
@@ -93,6 +95,8 @@ type Props = {
   onRequestIdClick?: (requestId: number) => void;
   canCreate?: boolean;
   adminControls?: ReviewProjectsAdminControls;
+  displayMode?: 'queue' | 'requests';
+  onDisplayModeChange?: (mode: 'queue' | 'requests') => void;
 };
 
 function CountsInline({ words, strings }: { words: number | null; strings: number | null }) {
@@ -119,15 +123,31 @@ function SummaryBar({
   resultCount,
   totalWords,
   totalStrings,
+  showModeToggle = false,
+  displayMode = 'queue',
+  onDisplayModeChange,
 }: {
   resultCount: number;
   totalWords: number;
   totalStrings: number;
+  showModeToggle?: boolean;
+  displayMode?: 'queue' | 'requests';
+  onDisplayModeChange?: (mode: 'queue' | 'requests') => void;
 }) {
   return (
     <div className="review-projects-page__summary-bar">
-      <div>{formatSummaryText(resultCount)}</div>
-      <CountsInline words={totalWords} strings={totalStrings} />
+      <div className="review-projects-page__summary-left">{formatSummaryText(resultCount)}</div>
+      <div className="review-projects-page__summary-center">
+        {showModeToggle ? (
+          <DisplayModeToggle
+            mode={displayMode}
+            onChange={(mode) => onDisplayModeChange?.(mode)}
+          />
+        ) : null}
+      </div>
+      <div className="review-projects-page__summary-right">
+        <CountsInline words={totalWords} strings={totalStrings} />
+      </div>
     </div>
   );
 }
@@ -289,13 +309,139 @@ const formatNumber = (value: number | null) => {
   return value.toLocaleString();
 };
 
-const formatPercent = (accepted: number, total: number) => {
-  if (total === 0) {
-    return '0%';
+const toFiniteNonNegative = (value: unknown) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0;
   }
-  const value = Math.round((accepted / total) * 100);
-  return `${value}%`;
+  return parsed < 0 ? 0 : parsed;
 };
+
+const getProgressMetrics = (acceptedValue: unknown, totalValue: unknown) => {
+  const accepted = toFiniteNonNegative(acceptedValue);
+  const total = toFiniteNonNegative(totalValue);
+  const rawPercent = total === 0 ? 0 : (accepted / total) * 100;
+  const percentValue = Math.max(0, Math.min(100, rawPercent));
+  const roundedPercent = Math.round(percentValue);
+  const percentWidth =
+    accepted > 0 && percentValue > 0 && percentValue < 1 ? '2px' : `${percentValue}%`;
+  return {
+    accepted,
+    total,
+    percentValue,
+    percentWidth,
+    percentLabel: `${roundedPercent}%`,
+  };
+};
+
+const TOGGLE_IGNORE_SELECTOR =
+  'a,button,input,select,textarea,label,[role="button"],[role="link"],[data-no-toggle="true"]';
+
+type RequestGroup = {
+  key: string;
+  requestId: number | null;
+  name: string;
+  createdByUsername: string | null;
+  localeTags: string[];
+  acceptedCount: number;
+  textUnitCount: number;
+  wordCount: number;
+  dueDate: string | null;
+  projects: ReviewProjectRow[];
+};
+
+function buildRequestGroups(projects: ReviewProjectRow[]): RequestGroup[] {
+  const groups = new Map<string, RequestGroup>();
+  const dueByKey = new Map<string, number | null>();
+  for (const project of projects) {
+    const acceptedCount = toFiniteNonNegative(project.acceptedCount);
+    const textUnitCount = toFiniteNonNegative(project.textUnitCount ?? 0);
+    const wordCount = toFiniteNonNegative(project.wordCount ?? 0);
+    const key = project.requestId != null ? `request:${project.requestId}` : `project:${project.id}`;
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, {
+        key,
+        requestId: project.requestId,
+        name: project.name,
+        createdByUsername: project.requestCreatedByUsername ?? null,
+        localeTags: project.localeTag ? [project.localeTag] : [],
+        acceptedCount,
+        textUnitCount,
+        wordCount,
+        dueDate: project.dueDate ?? null,
+        projects: [project],
+      });
+      dueByKey.set(key, project.dueDate ? Date.parse(project.dueDate) : null);
+      continue;
+    }
+
+    existing.projects.push(project);
+    existing.acceptedCount += acceptedCount;
+    existing.textUnitCount += textUnitCount;
+    existing.wordCount += wordCount;
+    if (!existing.createdByUsername && project.requestCreatedByUsername) {
+      existing.createdByUsername = project.requestCreatedByUsername;
+    }
+    if (project.localeTag && !existing.localeTags.includes(project.localeTag)) {
+      existing.localeTags.push(project.localeTag);
+    }
+    const existingDueMs = dueByKey.get(key) ?? null;
+    const nextDueMs = project.dueDate ? Date.parse(project.dueDate) : null;
+    if (nextDueMs != null && !Number.isNaN(nextDueMs)) {
+      if (existingDueMs == null || nextDueMs < existingDueMs) {
+        dueByKey.set(key, nextDueMs);
+        existing.dueDate = project.dueDate;
+      }
+    }
+  }
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      localeTags: [...group.localeTags].sort((a, b) => a.localeCompare(b)),
+      projects: [...group.projects].sort((a, b) =>
+        (a.localeTag ?? '').localeCompare(b.localeTag ?? ''),
+      ),
+    }))
+    .sort((a, b) => {
+      if (a.requestId != null && b.requestId != null) {
+        return b.requestId - a.requestId;
+      }
+      const aId = a.projects[0]?.id ?? 0;
+      const bId = b.projects[0]?.id ?? 0;
+      return bId - aId;
+    });
+}
+
+function DisplayModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: 'queue' | 'requests';
+  onChange: (mode: 'queue' | 'requests') => void;
+}) {
+  return (
+    <div className="review-projects-page__mode-toggle" role="group" aria-label="Display mode">
+      <button
+        type="button"
+        className={`review-projects-page__mode-button${mode === 'requests' ? ' is-active' : ''}`}
+        onClick={() => onChange('requests')}
+        aria-pressed={mode === 'requests'}
+      >
+        By request
+      </button>
+      <button
+        type="button"
+        className={`review-projects-page__mode-button${mode === 'queue' ? ' is-active' : ''}`}
+        onClick={() => onChange('queue')}
+        aria-pressed={mode === 'queue'}
+      >
+        List
+      </button>
+    </div>
+  );
+}
 
 function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCreate: boolean }) {
   const dateQuickRanges = getStandardDateQuickRanges();
@@ -503,10 +649,10 @@ function ReviewProjectRowView({
   onToggleSelection?: (projectId: number) => void;
   onRequestIdClick?: (requestId: number) => void;
 }) {
-  const textUnitCount = project.textUnitCount ?? 0;
-  const percent = formatPercent(project.acceptedCount, textUnitCount);
-  const percentValue =
-    textUnitCount === 0 ? 0 : Math.round((project.acceptedCount / textUnitCount) * 100);
+  const { accepted, total, percentWidth, percentLabel } = getProgressMetrics(
+    project.acceptedCount,
+    project.textUnitCount ?? 0,
+  );
   const localeTag = project.localeTag;
   const requestId = project.requestId;
   const typeClass =
@@ -577,17 +723,200 @@ function ReviewProjectRowView({
         <div className="review-projects-page__progress">
           <div
             className="review-projects-page__progress-bar"
-            title={`${formatNumber(project.acceptedCount)} of ${formatNumber(textUnitCount)} processed`}
+            title={`${formatNumber(accepted)} of ${formatNumber(total)} processed`}
           >
             <div
               className="review-projects-page__progress-fill"
-              style={{ width: `${percentValue}%` }}
+              style={{ width: percentWidth }}
               aria-hidden
             />
           </div>
           <div className="review-projects-page__progress-meta">
-            <div className="review-projects-page__progress-percent">{percent} reviewed</div>
+            <div className="review-projects-page__progress-percent">{percentLabel} reviewed</div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequestGroupsSection({
+  groups,
+  expandedKey,
+  onToggleExpanded,
+  onOpenQueue,
+}: {
+  groups: RequestGroup[];
+  expandedKey: string | null;
+  onToggleExpanded: (key: string) => void;
+  onOpenQueue: (requestId: number) => void;
+}) {
+  const resolveLocaleDisplayName = useLocaleDisplayNameResolver();
+
+  if (groups.length === 0) {
+    return (
+      <div className="review-projects-page__rows-frame">
+        <div className="review-projects-page__rows review-projects-page__rows--empty">
+          <EmptyState />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="review-projects-page__rows-frame">
+      <div className="review-projects-page__rows-shell">
+        <div className="review-projects-page__rows">
+          {groups.map((group) => {
+            const isExpanded = expandedKey === group.key;
+            const { accepted, total, percentWidth, percentLabel } = getProgressMetrics(
+              group.acceptedCount,
+              group.textUnitCount,
+            );
+            const localeCount = group.localeTags.length;
+            const requestLabel = group.requestId != null ? `Request #${group.requestId}` : 'Request';
+            const onCardToggleClick = (event: MouseEvent<HTMLElement>) => {
+              const target = event.target as HTMLElement | null;
+              if (target && target.closest(TOGGLE_IGNORE_SELECTOR)) {
+                return;
+              }
+              onToggleExpanded(group.key);
+            };
+            return (
+              <section key={group.key} className="review-projects-page__row-card">
+                <div
+                  className="review-projects-page__row-grid review-projects-page__row-grid--request"
+                  onClick={onCardToggleClick}
+                >
+                  <div className="review-projects-page__project">
+                    <div className="review-projects-page__id-row">
+                      <span className="review-projects-page__request-toggle">
+                        <span className="review-projects-page__project-name">{group.name}</span>
+                      </span>
+                      <span className="review-projects-page__request-id">{requestLabel}</span>
+                      {group.requestId != null ? (
+                        <button
+                          type="button"
+                          className="review-projects-page__request-link review-projects-page__link"
+                          onClick={() => onOpenQueue(group.requestId as number)}
+                        >
+                          See list
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="review-projects-page__counts">
+                    <CountsInline words={group.wordCount} strings={total} />
+                  </div>
+                  <div className="review-projects-page__type">
+                    <Pill className="review-projects-page__type-pill review-projects-page__type-pill--default">
+                      {localeCount} locale{localeCount === 1 ? '' : 's'}
+                    </Pill>
+                  </div>
+                  <div className="review-projects-page__meta">
+                    {group.dueDate ? <span>Due {formatDateTime(group.dueDate)}</span> : null}
+                    {group.createdByUsername ? (
+                      <span className="review-projects-page__request-created-by">
+                        by {group.createdByUsername}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="review-projects-page__locales">
+                    <div className="review-projects-page__pill-list">
+                      {group.localeTags.slice(0, 8).map((tag) => (
+                        <LocalePill
+                          key={`${group.key}-${tag}`}
+                          className="review-projects-page__pill review-projects-page__pill--locale"
+                          bcp47Tag={tag}
+                          labelMode="tag"
+                        />
+                      ))}
+                      {group.localeTags.length > 8 ? (
+                        <span className="review-projects-page__muted">
+                          +{group.localeTags.length - 8} more
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="review-projects-page__progress">
+                    <div className="review-projects-page__progress-bar">
+                      <div
+                        className="review-projects-page__progress-fill"
+                        style={{ width: percentWidth }}
+                        aria-hidden
+                      />
+                    </div>
+                    <div className="review-projects-page__progress-meta">
+                      <div className="review-projects-page__progress-percent">
+                        {percentLabel}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {isExpanded ? (
+                  <div className="review-projects-page__request-projects">
+                    {group.projects.map((project) => {
+                      const {
+                        accepted: projectAccepted,
+                        total: projectTotal,
+                        percentWidth: projectPercentWidth,
+                        percentLabel: projectPercentLabel,
+                      } = getProgressMetrics(
+                        project.acceptedCount,
+                        project.textUnitCount ?? 0,
+                      );
+                      return (
+                        <Link
+                          key={project.id}
+                          to={`/review-projects/${project.id}`}
+                          className="review-projects-page__request-project-row review-projects-page__link"
+                        >
+                          <div className="review-projects-page__request-project-locale">
+                            {project.localeTag ? (
+                              <>
+                                <LocalePill
+                                  className="review-projects-page__pill review-projects-page__pill--locale"
+                                  bcp47Tag={project.localeTag}
+                                  labelMode="tag"
+                                />
+                                <span className="review-projects-page__request-project-locale-name">
+                                  {resolveLocaleDisplayName(project.localeTag) || project.localeTag}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="review-projects-page__muted">No locale</span>
+                            )}
+                          </div>
+                          <div className="review-projects-page__request-project-meta">
+                            {project.status === 'CLOSED' ? (
+                              <Pill className="review-projects-page__status-pill status-closed">
+                                {REVIEW_PROJECT_STATUS_LABELS[project.status]}
+                              </Pill>
+                            ) : null}
+                          </div>
+                          <div className="review-projects-page__request-project-progress">
+                            <div
+                              className="review-projects-page__progress-bar"
+                              title={`${formatNumber(projectAccepted)} of ${formatNumber(projectTotal)} processed`}
+                            >
+                              <div
+                                className="review-projects-page__progress-fill"
+                                style={{ width: projectPercentWidth }}
+                                aria-hidden
+                              />
+                            </div>
+                            <span className="review-projects-page__progress-percent">
+                              {projectPercentLabel}
+                            </span>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -604,10 +933,17 @@ export function ReviewProjectsPageView({
   onRequestIdClick,
   canCreate = true,
   adminControls,
+  displayMode = 'queue',
+  onDisplayModeChange,
 }: Props) {
+  const isAdmin = Boolean(adminControls?.enabled);
+  const effectiveDisplayMode = isAdmin ? displayMode : 'queue';
   const scrollElementRef = useRef<HTMLDivElement>(null);
   const getItemKey = useCallback((index: number) => projects[index]?.id ?? index, [projects]);
-  const hasResults = projects.length > 0;
+  const requestGroups = useMemo(() => buildRequestGroups(projects), [projects]);
+  const [expandedRequestKey, setExpandedRequestKey] = useState<string | null>(null);
+  const hasResults =
+    effectiveDisplayMode === 'requests' ? requestGroups.length > 0 : projects.length > 0;
 
   const estimateSize = useCallback(
     () =>
@@ -643,6 +979,26 @@ export function ReviewProjectsPageView({
     [projects],
   );
 
+  useEffect(() => {
+    if (requestFilter?.requestId == null) {
+      return;
+    }
+    const requestKey = `request:${requestFilter.requestId}`;
+    setExpandedRequestKey(requestKey);
+  }, [requestFilter?.requestId]);
+
+  const handleToggleRequestGroup = useCallback((key: string) => {
+    setExpandedRequestKey((current) => (current === key ? null : key));
+  }, []);
+
+  const handleOpenQueue = useCallback(
+    (requestId: number) => {
+      onDisplayModeChange?.('queue');
+      onRequestIdClick?.(requestId);
+    },
+    [onDisplayModeChange, onRequestIdClick],
+  );
+
   if (status === 'loading') {
     return <LoadingState />;
   }
@@ -667,27 +1023,38 @@ export function ReviewProjectsPageView({
           </button>
         </div>
       ) : null}
-      {}
       <FilterControls filters={filters} canCreate={canCreate} />
       {hasResults ? (
         <SummaryBar
-          resultCount={projects.length}
+          resultCount={effectiveDisplayMode === 'requests' ? requestGroups.length : projects.length}
           totalWords={totalWords}
           totalStrings={totalStrings}
+          showModeToggle={isAdmin}
+          displayMode={effectiveDisplayMode}
+          onDisplayModeChange={onDisplayModeChange}
         />
       ) : null}
-      {hasResults && adminControls && adminControls.enabled ? (
+      {hasResults && adminControls && adminControls.enabled && effectiveDisplayMode === 'queue' ? (
         <AdminBar adminControls={adminControls} visibleCount={projects.length} />
       ) : null}
-      <ContentSection
-        projects={projects}
-        rowsParentRef={scrollElementRef}
-        virtualItems={virtualItems}
-        totalSize={totalSize}
-        getRowRef={getRowRef}
-        adminControls={adminControls}
-        onRequestIdClick={onRequestIdClick}
-      />
+      {effectiveDisplayMode === 'requests' ? (
+        <RequestGroupsSection
+          groups={requestGroups}
+          expandedKey={expandedRequestKey}
+          onToggleExpanded={handleToggleRequestGroup}
+          onOpenQueue={handleOpenQueue}
+        />
+      ) : (
+        <ContentSection
+          projects={projects}
+          rowsParentRef={scrollElementRef}
+          virtualItems={virtualItems}
+          totalSize={totalSize}
+          getRowRef={getRowRef}
+          adminControls={adminControls}
+          onRequestIdClick={onRequestIdClick}
+        />
+      )}
     </div>
   );
 }

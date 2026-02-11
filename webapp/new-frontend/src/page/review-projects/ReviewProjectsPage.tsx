@@ -151,6 +151,9 @@ export function ReviewProjectsPage() {
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [adminErrorMessage, setAdminErrorMessage] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'queue' | 'requests'>(() =>
+    isAdmin ? 'requests' : 'queue',
+  );
 
   const repositories = useMemo(() => repositoryData ?? [], [repositoryData]);
   const localeOptions = useLocaleOptionsWithDisplayNames(repositories);
@@ -237,6 +240,12 @@ export function ReviewProjectsPage() {
     }
     void navigate(location.pathname, { replace: true });
   }, [location.pathname, location.state, navigate, setSearchField, setSearchQuery, setSearchType]);
+
+  useEffect(() => {
+    if (!isAdmin && displayMode !== 'queue') {
+      setDisplayMode('queue');
+    }
+  }, [displayMode, isAdmin]);
 
   useEffect(() => {
     if (creatorFilter !== 'mine') {
@@ -411,19 +420,28 @@ export function ReviewProjectsPage() {
   }, [creatorFilter, hasTouchedLocales, projects, searchParams, user.username]);
 
   const rows = useMemo<ReviewProjectRow[]>(() => {
-    return filteredProjects.map((project) => ({
-      id: project.id,
-      name: project.reviewProjectRequest?.name ?? `Review project #${project.id}`,
-      requestId: project.reviewProjectRequest?.id ?? null,
-      type: project.type,
-      status: project.status,
-      localeTag: project.locale?.bcp47Tag ?? null,
-      acceptedCount: project.acceptedCount ?? 0,
-      textUnitCount: project.textUnitCount ?? null,
-      wordCount: project.wordCount ?? null,
-      dueDate: project.dueDate ?? null,
-      closeReason: project.closeReason ?? null,
-    }));
+    return filteredProjects.map((project) => {
+      const acceptedCountRaw = Number(project.acceptedCount ?? 0);
+      const textUnitCountRaw =
+        project.textUnitCount == null ? null : Number(project.textUnitCount);
+      const wordCountRaw = project.wordCount == null ? null : Number(project.wordCount);
+
+      return {
+        id: project.id,
+        name: project.reviewProjectRequest?.name ?? `Review project #${project.id}`,
+        requestId: project.reviewProjectRequest?.id ?? null,
+        requestCreatedByUsername: project.reviewProjectRequest?.createdByUsername ?? null,
+        type: project.type,
+        status: project.status,
+        localeTag: project.locale?.bcp47Tag ?? null,
+        acceptedCount: Number.isFinite(acceptedCountRaw) ? acceptedCountRaw : 0,
+        textUnitCount:
+          textUnitCountRaw == null ? null : Number.isFinite(textUnitCountRaw) ? textUnitCountRaw : null,
+        wordCount: wordCountRaw == null ? null : Number.isFinite(wordCountRaw) ? wordCountRaw : null,
+        dueDate: project.dueDate ?? null,
+        closeReason: project.closeReason ?? null,
+      };
+    });
   }, [filteredProjects]);
 
   const visibleProjectIds = useMemo(() => rows.map((row) => row.id), [rows]);
@@ -482,6 +500,7 @@ export function ReviewProjectsPage() {
   }, [refetch]);
 
   const handleRequestIdClick = useCallback((requestId: number) => {
+    setDisplayMode('queue');
     setSearchField('requestId');
     setSearchType('exact');
     setSearchQuery(String(requestId));
@@ -622,6 +641,8 @@ export function ReviewProjectsPage() {
         onRequestIdClick={handleRequestIdClick}
         canCreate={isAdmin}
         adminControls={adminControls}
+        displayMode={displayMode}
+        onDisplayModeChange={setDisplayMode}
       />
       {isAdmin ? (
         <ConfirmModal
