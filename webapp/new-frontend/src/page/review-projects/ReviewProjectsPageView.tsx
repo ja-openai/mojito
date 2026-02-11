@@ -98,6 +98,7 @@ type Props = {
   canCreate?: boolean;
   adminControls?: ReviewProjectsAdminControls;
   displayMode?: 'queue' | 'requests';
+  canUseRequestMode?: boolean;
   onDisplayModeChange?: (mode: 'queue' | 'requests') => void;
 };
 
@@ -1018,10 +1019,11 @@ export function ReviewProjectsPageView({
   canCreate = true,
   adminControls,
   displayMode = 'queue',
+  canUseRequestMode = false,
   onDisplayModeChange,
 }: Props) {
   const isAdmin = Boolean(adminControls?.enabled);
-  const effectiveDisplayMode = isAdmin ? displayMode : 'queue';
+  const effectiveDisplayMode = canUseRequestMode ? displayMode : 'queue';
   const scrollElementRef = useRef<HTMLDivElement>(null);
   const getItemKey = useCallback((index: number) => projects[index]?.id ?? index, [projects]);
   const groupedRequestRows = useMemo(
@@ -1124,7 +1126,7 @@ export function ReviewProjectsPageView({
           }
           totalWords={totalWords}
           totalStrings={totalStrings}
-          showModeToggle={isAdmin}
+          showModeToggle={canUseRequestMode}
           displayMode={effectiveDisplayMode}
           onDisplayModeChange={onDisplayModeChange}
         />

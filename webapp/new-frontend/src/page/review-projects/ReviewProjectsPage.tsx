@@ -201,6 +201,7 @@ export function ReviewProjectsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isAdmin = user.role === 'ROLE_ADMIN';
+  const canUseRequestMode = isAdmin || user.role === 'ROLE_PM';
 
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
   const [hasTouchedLocales, setHasTouchedLocales] = useState(false);
@@ -221,7 +222,7 @@ export function ReviewProjectsPage() {
   const [adminErrorMessage, setAdminErrorMessage] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [displayMode, setDisplayMode] = useState<'queue' | 'requests'>(() =>
-    isAdmin ? 'requests' : 'queue',
+    canUseRequestMode ? 'requests' : 'queue',
   );
 
   const repositories = useMemo(() => repositoryData ?? [], [repositoryData]);
@@ -318,10 +319,10 @@ export function ReviewProjectsPage() {
   }, [location.pathname, location.state, navigate, setSearchField, setSearchQuery, setSearchType]);
 
   useEffect(() => {
-    if (!isAdmin && displayMode !== 'queue') {
+    if (!canUseRequestMode && displayMode !== 'queue') {
       setDisplayMode('queue');
     }
-  }, [displayMode, isAdmin]);
+  }, [canUseRequestMode, displayMode]);
 
   useEffect(() => {
     if (creatorFilter !== 'mine') {
@@ -347,7 +348,7 @@ export function ReviewProjectsPage() {
     }
   }, [creatorFilter, searchField, searchQuery, searchType, user.username]);
 
-  const isRequestMode = isAdmin && displayMode === 'requests';
+  const isRequestMode = canUseRequestMode && displayMode === 'requests';
   const {
     data: queueProjectsData,
     isLoading: isLoadingQueue,
@@ -752,6 +753,7 @@ export function ReviewProjectsPage() {
         canCreate={isAdmin}
         adminControls={adminControls}
         displayMode={displayMode}
+        canUseRequestMode={canUseRequestMode}
         onDisplayModeChange={setDisplayMode}
       />
       {isAdmin ? (
