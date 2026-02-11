@@ -203,6 +203,10 @@
   min-width: 0;
 }
 
+.review-projects-page__request-project-row > .review-projects-page__request-project-link:only-child {
+  grid-column: 1 / -1;
+}
+
 .review-projects-page__request-project-row + .review-projects-page__request-project-row {
   border-top: 1px solid color-mix(in srgb, var(--color-border) 45%, transparent);
 }
