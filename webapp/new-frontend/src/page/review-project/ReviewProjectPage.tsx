@@ -9,6 +9,7 @@ export function ReviewProjectPage() {
   const { projectId: projectIdParam } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTextUnitParam = searchParams.get('tu');
+  const requestDetailsParam = searchParams.get('requestDetails');
 
   const parsedProjectId = projectIdParam ? Number(projectIdParam) : NaN;
   const projectId =
@@ -18,6 +19,7 @@ export function ReviewProjectPage() {
     Number.isInteger(parsedSelectedTextUnitId) && parsedSelectedTextUnitId > 0
       ? parsedSelectedTextUnitId
       : null;
+  const openRequestDetails = requestDetailsParam === '1';
   const projectDetailQuery = useReviewProjectDetail(projectId);
   const mutationControls = useReviewProjectMutations(projectId);
 
@@ -36,6 +38,15 @@ export function ReviewProjectPage() {
     },
     [searchParams, setSearchParams],
   );
+
+  const handleRequestDetailsQueryHandled = useCallback(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (!nextParams.has('requestDetails')) {
+      return;
+    }
+    nextParams.delete('requestDetails');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   if (projectId == null) {
     return <ErrorState message="Missing or invalid project id." />;
@@ -60,6 +71,8 @@ export function ReviewProjectPage() {
       mutations={mutationControls}
       selectedTextUnitQueryId={selectedTextUnitId}
       onSelectedTextUnitIdChange={handleSelectedTextUnitIdChange}
+      openRequestDetailsQuery={openRequestDetails}
+      onRequestDetailsQueryHandled={handleRequestDetailsQueryHandled}
     />
   );
 }

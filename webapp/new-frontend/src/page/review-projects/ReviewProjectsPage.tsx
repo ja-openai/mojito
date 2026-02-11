@@ -595,7 +595,6 @@ export function ReviewProjectsPage() {
   }, [isRequestMode, refetchQueue, refetchRequestGroups]);
 
   const handleRequestIdClick = useCallback((requestId: number) => {
-    setDisplayMode('queue');
     setSearchField('requestId');
     setSearchType('exact');
     setSearchQuery(String(requestId));

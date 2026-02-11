@@ -818,6 +818,7 @@ function RequestGroupsSection({
           {groups.map((group) => {
             const isExpanded = expandedKey === group.key;
             const groupProjectIds = group.projects.map((project) => project.id);
+            const requestEditProjectId = group.projects[0]?.id ?? null;
             const selectedInGroup = groupProjectIds.filter((projectId) =>
               selectedProjectIdSet.has(projectId),
             ).length;
@@ -870,16 +871,32 @@ function RequestGroupsSection({
                       <span className="review-projects-page__request-toggle">
                         <span className="review-projects-page__project-name">{group.name}</span>
                       </span>
-                      <span className="review-projects-page__request-id">{requestLabel}</span>
-                      {group.requestId != null ? (
-                        <button
-                          type="button"
-                          className="review-projects-page__request-link review-projects-page__link"
-                          onClick={() => onOpenQueue(group.requestId as number)}
-                        >
-                          See list
-                        </button>
-                      ) : null}
+                      <span className="review-projects-page__request-secondary">
+                        {group.requestId != null ? (
+                          <button
+                            type="button"
+                            className="review-projects-page__request-id review-projects-page__request-id-button"
+                            onClick={() => onOpenQueue(group.requestId as number)}
+                          >
+                            {requestLabel}
+                          </button>
+                        ) : (
+                          <span className="review-projects-page__request-id">{requestLabel}</span>
+                        )}
+                        {isAdmin && requestEditProjectId != null ? (
+                          <>
+                            <span className="review-projects-page__request-dot" aria-hidden="true">
+                              ·
+                            </span>
+                            <Link
+                              to={`/review-projects/${requestEditProjectId}?requestDetails=1`}
+                              className="review-projects-page__request-link review-projects-page__link"
+                            >
+                              Edit
+                            </Link>
+                          </>
+                        ) : null}
+                      </span>
                     </div>
                   </div>
                   <div className="review-projects-page__counts">
@@ -1092,10 +1109,9 @@ export function ReviewProjectsPageView({
 
   const handleOpenQueue = useCallback(
     (requestId: number) => {
-      onDisplayModeChange?.('queue');
       onRequestIdClick?.(requestId);
     },
-    [onDisplayModeChange, onRequestIdClick],
+    [onRequestIdClick],
   );
 
   if (status === 'loading') {

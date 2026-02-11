@@ -502,6 +502,8 @@ type Props = {
   mutations: ReviewProjectMutationControls;
   selectedTextUnitQueryId: number | null;
   onSelectedTextUnitIdChange: (id: number | null) => void;
+  openRequestDetailsQuery: boolean;
+  onRequestDetailsQueryHandled: () => void;
 };
 
 export function ReviewProjectPageView({
@@ -510,6 +512,8 @@ export function ReviewProjectPageView({
   mutations,
   selectedTextUnitQueryId,
   onSelectedTextUnitIdChange,
+  openRequestDetailsQuery,
+  onRequestDetailsQueryHandled,
 }: Props) {
   const user = useUser();
   const canEditRequest = user.role === 'ROLE_ADMIN';
@@ -921,6 +925,8 @@ export function ReviewProjectPageView({
         textUnits={textUnits}
         mutations={mutations}
         canEditRequest={canEditRequest}
+        openRequestDetailsQuery={openRequestDetailsQuery}
+        onRequestDetailsQueryHandled={onRequestDetailsQueryHandled}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onReviewPending={() => setDecisionStateFilter('PENDING')}
       />
@@ -2563,6 +2569,8 @@ function ReviewProjectHeader({
   textUnits: textUnitsProp,
   mutations,
   canEditRequest,
+  openRequestDetailsQuery,
+  onRequestDetailsQueryHandled,
   onOpenShortcuts,
   onReviewPending,
 }: {
@@ -2571,6 +2579,8 @@ function ReviewProjectHeader({
   textUnits: ApiReviewProjectTextUnit[];
   mutations: ReviewProjectMutationControls;
   canEditRequest: boolean;
+  openRequestDetailsQuery: boolean;
+  onRequestDetailsQueryHandled: () => void;
   onOpenShortcuts: () => void;
   onReviewPending: () => void;
 }) {
@@ -2655,6 +2665,16 @@ function ReviewProjectHeader({
     setAttachmentUploadError(null);
     setRequestSaveError(null);
   }, [description, dueDate, name, requestAttachments, showDescription, type]);
+
+  useEffect(() => {
+    if (!openRequestDetailsQuery) {
+      return;
+    }
+    if (requestId != null) {
+      setShowDescription(true);
+    }
+    onRequestDetailsQueryHandled();
+  }, [onRequestDetailsQueryHandled, openRequestDetailsQuery, requestId]);
 
   const closeDescriptionModal = useCallback(() => {
     if (mutations.isProjectRequestSaving || isAttachmentUploading) {
