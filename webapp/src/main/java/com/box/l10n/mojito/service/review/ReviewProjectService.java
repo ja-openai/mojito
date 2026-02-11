@@ -11,6 +11,7 @@ import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 // TODO(JA) NO rest !!
 import com.box.l10n.mojito.entity.review.ReviewProject_;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.entity.security.user.User_;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
@@ -23,7 +24,6 @@ import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
-import com.box.l10n.mojito.entity.security.user.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -207,7 +207,8 @@ public class ReviewProjectService {
   }
 
   @Transactional(readOnly = true)
-  public SearchReviewProjectRequestsView searchReviewProjectRequests(SearchReviewProjectsCriteria request) {
+  public SearchReviewProjectRequestsView searchReviewProjectRequests(
+      SearchReviewProjectsCriteria request) {
     if (request == null) {
       throw new IllegalArgumentException("request must not be null");
     }
@@ -232,7 +233,8 @@ public class ReviewProjectService {
                 reviewProject ->
                     reviewProject.reviewProjectRequest() != null
                         && reviewProject.reviewProjectRequest().id() != null)
-            .collect(Collectors.groupingBy(reviewProject -> reviewProject.reviewProjectRequest().id()));
+            .collect(
+                Collectors.groupingBy(reviewProject -> reviewProject.reviewProjectRequest().id()));
 
     List<SearchReviewProjectRequestsView.ReviewProjectRequestGroup> groups = new ArrayList<>();
     for (Long requestId : requestIds) {
@@ -247,7 +249,8 @@ public class ReviewProjectService {
               .sorted(
                   Comparator.comparing(
                           (SearchReviewProjectsView.ReviewProject reviewProject) ->
-                              reviewProject.locale() != null && reviewProject.locale().bcp47Tag() != null
+                              reviewProject.locale() != null
+                                      && reviewProject.locale().bcp47Tag() != null
                                   ? reviewProject.locale().bcp47Tag()
                                   : "")
                       .thenComparing(SearchReviewProjectsView.ReviewProject::id))
@@ -269,11 +272,17 @@ public class ReviewProjectService {
         continue;
       }
       int textUnitCount =
-          sortedProjects.stream().mapToInt(project -> Optional.ofNullable(project.textUnitCount()).orElse(0)).sum();
+          sortedProjects.stream()
+              .mapToInt(project -> Optional.ofNullable(project.textUnitCount()).orElse(0))
+              .sum();
       int wordCount =
-          sortedProjects.stream().mapToInt(project -> Optional.ofNullable(project.wordCount()).orElse(0)).sum();
+          sortedProjects.stream()
+              .mapToInt(project -> Optional.ofNullable(project.wordCount()).orElse(0))
+              .sum();
       long acceptedCount =
-          sortedProjects.stream().mapToLong(project -> Optional.ofNullable(project.acceptedCount()).orElse(0L)).sum();
+          sortedProjects.stream()
+              .mapToLong(project -> Optional.ofNullable(project.acceptedCount()).orElse(0L))
+              .sum();
       ZonedDateTime dueDate =
           sortedProjects.stream()
               .map(SearchReviewProjectsView.ReviewProject::dueDate)
@@ -282,7 +291,8 @@ public class ReviewProjectService {
               .orElse(null);
 
       SearchReviewProjectsView.ReviewProject firstProject = sortedProjects.get(0);
-      SearchReviewProjectsView.ReviewProjectRequest requestInfo = firstProject.reviewProjectRequest();
+      SearchReviewProjectsView.ReviewProjectRequest requestInfo =
+          firstProject.reviewProjectRequest();
 
       groups.add(
           new SearchReviewProjectRequestsView.ReviewProjectRequestGroup(
@@ -308,7 +318,8 @@ public class ReviewProjectService {
     return statuses;
   }
 
-  private List<SearchReviewProjectDetail> getProjectDetailsByCriteria(SearchReviewProjectsCriteria request) {
+  private List<SearchReviewProjectDetail> getProjectDetailsByCriteria(
+      SearchReviewProjectsCriteria request) {
     CriteriaBuilder cb = entityManager.getCriteriaBuilder();
     CriteriaQuery<SearchReviewProjectDetail> cq = cb.createQuery(SearchReviewProjectDetail.class);
     Root<ReviewProject> root = cq.from(ReviewProject.class);
@@ -367,13 +378,7 @@ public class ReviewProjectService {
 
     List<Predicate> predicates =
         buildProjectSearchPredicates(
-            cb,
-            root,
-            localeJoin,
-            requestJoin,
-            createdByUserJoin,
-            request,
-            statuses);
+            cb, root, localeJoin, requestJoin, createdByUserJoin, request, statuses);
     predicates.add(cb.isNotNull(requestJoin.get(ReviewProjectRequest_.id)));
 
     cq.where(predicates.toArray(Predicate[]::new))
@@ -427,7 +432,8 @@ public class ReviewProjectService {
     return entityManager.createQuery(cq).getResultList();
   }
 
-  private Map<Long, Long> getAcceptedCountByProjectId(List<SearchReviewProjectDetail> projectDetails) {
+  private Map<Long, Long> getAcceptedCountByProjectId(
+      List<SearchReviewProjectDetail> projectDetails) {
     Map<Long, Long> acceptedCountByProjectId = new HashMap<>();
     if (projectDetails == null || projectDetails.isEmpty()) {
       return acceptedCountByProjectId;

@@ -66,7 +66,10 @@ public class ImageWS {
     return ResponseEntity.ok()
         .header(
             "Content-Disposition",
-            ContentDisposition.inline().filename(filename, StandardCharsets.UTF_8).build().toString())
+            ContentDisposition.inline()
+                .filename(filename, StandardCharsets.UTF_8)
+                .build()
+                .toString())
         .contentType(mediaType)
         .body(content);
   }
@@ -130,7 +133,10 @@ public class ImageWS {
     if (content == null || content.length < 5) {
       return false;
     }
-    return content[0] == '%' && content[1] == 'P' && content[2] == 'D' && content[3] == 'F'
+    return content[0] == '%'
+        && content[1] == 'P'
+        && content[2] == 'D'
+        && content[3] == 'F'
         && content[4] == '-';
   }
 }

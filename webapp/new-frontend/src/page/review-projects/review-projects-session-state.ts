@@ -35,6 +35,7 @@ export type ReviewProjectsSessionState = {
   dueAfter: string | null;
   dueBefore: string | null;
   displayMode: DisplayMode;
+  expandedRequestKey: string | null;
 };
 
 const DEFAULT_STATE: ReviewProjectsSessionState = {
@@ -52,6 +53,7 @@ const DEFAULT_STATE: ReviewProjectsSessionState = {
   dueAfter: null,
   dueBefore: null,
   displayMode: 'list',
+  expandedRequestKey: null,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -130,6 +132,7 @@ export function normalizeReviewProjectsSessionState(
     dueAfter: sanitizeNullableString(input.dueAfter),
     dueBefore: sanitizeNullableString(input.dueBefore),
     displayMode: sanitizeEnum(input.displayMode, DISPLAY_MODES, DEFAULT_STATE.displayMode),
+    expandedRequestKey: sanitizeNullableString(input.expandedRequestKey),
   };
 }
 

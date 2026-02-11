@@ -52,7 +52,9 @@ public class ReviewProjectWS {
     SearchReviewProjectRequestsView view =
         reviewProjectService.searchReviewProjectRequests(toCriteria(request));
     List<SearchReviewProjectRequestsResponse.ReviewProjectRequestGroup> requestGroups =
-        view.reviewProjectRequests().stream().map(this::toSearchReviewProjectRequestsResponse).toList();
+        view.reviewProjectRequests().stream()
+            .map(this::toSearchReviewProjectRequestsResponse)
+            .toList();
     return new SearchReviewProjectRequestsResponse(requestGroups);
   }
 

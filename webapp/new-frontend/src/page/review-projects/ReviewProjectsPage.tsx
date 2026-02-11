@@ -233,8 +233,8 @@ export function ReviewProjectsPage() {
   const [displayMode, setDisplayMode] = useState<'list' | 'requests'>(() =>
     canUseRequestMode ? 'requests' : 'list',
   );
+  const [expandedRequestKey, setExpandedRequestKey] = useState<string | null>(null);
   const [hasHydratedSessionState, setHasHydratedSessionState] = useState(false);
-  const persistedSessionKeyRef = useRef<string | null>(reviewSessionKey);
   const hydratedSessionKeyRef = useRef<string | null>(null);
   const pendingSessionHydrationKeyRef = useRef<string | null>(reviewSessionKey);
   const pendingSessionHydrationSignatureRef = useRef<string | null>(null);
@@ -278,6 +278,7 @@ export function ReviewProjectsPage() {
       dueAfter,
       dueBefore,
       displayMode: canUseRequestMode ? displayMode : 'list',
+      expandedRequestKey,
     }),
     [
       canUseRequestMode,
@@ -287,6 +288,7 @@ export function ReviewProjectsPage() {
       displayMode,
       dueAfter,
       dueBefore,
+      expandedRequestKey,
       hasTouchedLocales,
       limit,
       searchField,
@@ -297,12 +299,6 @@ export function ReviewProjectsPage() {
       typeFilter,
     ],
   );
-
-  useEffect(() => {
-    if (reviewSessionKey) {
-      persistedSessionKeyRef.current = reviewSessionKey;
-    }
-  }, [reviewSessionKey]);
 
   useEffect(() => {
     if (!reviewSessionKey) {
@@ -334,7 +330,6 @@ export function ReviewProjectsPage() {
     };
     const normalizedSignature = serializeReviewProjectsSessionState(normalizedState);
     pendingSessionHydrationSignatureRef.current = normalizedSignature;
-    persistedSessionKeyRef.current = reviewSessionKey;
     lastPersistedSessionSignatureRef.current = normalizedSignature;
 
     setSelectedLocaleTags(normalizedState.selectedLocaleTags);
@@ -351,6 +346,7 @@ export function ReviewProjectsPage() {
     setDueAfter(normalizedState.dueAfter);
     setDueBefore(normalizedState.dueBefore);
     setDisplayMode(normalizedState.displayMode);
+    setExpandedRequestKey(normalizedState.expandedRequestKey);
     setHasHydratedSessionState(true);
   }, [canUseRequestMode, reviewSessionKey]);
 
@@ -373,29 +369,18 @@ export function ReviewProjectsPage() {
       }
       pendingSessionHydrationKeyRef.current = null;
       pendingSessionHydrationSignatureRef.current = null;
-      persistedSessionKeyRef.current = pendingHydrationKey;
     }
 
-    const nextSessionKey = saveReviewProjectsSessionState(
-      sessionState,
-      persistedSessionKeyRef.current ?? currentSessionKey,
-    );
-    persistedSessionKeyRef.current = nextSessionKey;
-
-    if (
-      lastPersistedSessionSignatureRef.current === signature &&
-      currentSessionKey === nextSessionKey
-    ) {
+    if (lastPersistedSessionSignatureRef.current === signature && Boolean(currentSessionKey)) {
       return;
     }
+
+    const nextSessionKey = saveReviewProjectsSessionState(sessionState);
     lastPersistedSessionSignatureRef.current = signature;
 
-    if (currentSessionKey === nextSessionKey) {
-      return;
-    }
     const nextParams = new URLSearchParams(urlSearchParams);
     nextParams.set(REVIEW_PROJECTS_SESSION_QUERY_KEY, nextSessionKey);
-    setUrlSearchParams(nextParams, { replace: true });
+    setUrlSearchParams(nextParams, { replace: false });
   }, [hasHydratedSessionState, sessionState, setUrlSearchParams, urlSearchParams]);
 
   const apiSearchParams = useMemo<ReviewProjectsSearchRequest>(() => {
@@ -921,6 +906,8 @@ export function ReviewProjectsPage() {
         displayMode={displayMode}
         canUseRequestMode={canUseRequestMode}
         onDisplayModeChange={setDisplayMode}
+        expandedRequestKey={expandedRequestKey}
+        onExpandedRequestKeyChange={setExpandedRequestKey}
         reviewProjectsSessionKey={reviewSessionKey}
       />
       {isAdmin ? (

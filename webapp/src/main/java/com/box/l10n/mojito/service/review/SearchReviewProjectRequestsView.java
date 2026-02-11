@@ -3,7 +3,8 @@ package com.box.l10n.mojito.service.review;
 import java.time.ZonedDateTime;
 import java.util.List;
 
-public record SearchReviewProjectRequestsView(List<ReviewProjectRequestGroup> reviewProjectRequests) {
+public record SearchReviewProjectRequestsView(
+    List<ReviewProjectRequestGroup> reviewProjectRequests) {
 
   public record ReviewProjectRequestGroup(
       Long requestId,
@@ -17,4 +18,3 @@ public record SearchReviewProjectRequestsView(List<ReviewProjectRequestGroup> re
       ZonedDateTime dueDate,
       List<SearchReviewProjectsView.ReviewProject> reviewProjects) {}
 }
-

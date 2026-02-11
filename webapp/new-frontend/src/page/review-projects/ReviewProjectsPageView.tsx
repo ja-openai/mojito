@@ -101,6 +101,8 @@ type Props = {
   displayMode?: 'list' | 'requests';
   canUseRequestMode?: boolean;
   onDisplayModeChange?: (mode: 'list' | 'requests') => void;
+  expandedRequestKey?: string | null;
+  onExpandedRequestKeyChange?: (key: string | null) => void;
   reviewProjectsSessionKey?: string | null;
 };
 
@@ -1074,6 +1076,8 @@ export function ReviewProjectsPageView({
   displayMode = 'list',
   canUseRequestMode = false,
   onDisplayModeChange,
+  expandedRequestKey,
+  onExpandedRequestKeyChange,
   reviewProjectsSessionKey,
 }: Props) {
   const effectiveDisplayMode = canUseRequestMode ? displayMode : 'list';
@@ -1083,7 +1087,10 @@ export function ReviewProjectsPageView({
     () => requestGroups ?? buildRequestGroups(projects),
     [projects, requestGroups],
   );
-  const [expandedRequestKey, setExpandedRequestKey] = useState<string | null>(null);
+  const [localExpandedRequestKey, setLocalExpandedRequestKey] = useState<string | null>(null);
+  const effectiveExpandedRequestKey =
+    expandedRequestKey !== undefined ? expandedRequestKey : localExpandedRequestKey;
+  const setExpandedRequestKey = onExpandedRequestKeyChange ?? setLocalExpandedRequestKey;
   const hasResults =
     effectiveDisplayMode === 'requests' ? groupedRequestRows.length > 0 : projects.length > 0;
 
@@ -1133,11 +1140,14 @@ export function ReviewProjectsPageView({
     }
     const requestKey = `request:${requestFilter.requestId}`;
     setExpandedRequestKey(requestKey);
-  }, [requestFilter?.requestId]);
+  }, [requestFilter?.requestId, setExpandedRequestKey]);
 
-  const handleToggleRequestGroup = useCallback((key: string) => {
-    setExpandedRequestKey((current) => (current === key ? null : key));
-  }, []);
+  const handleToggleRequestGroup = useCallback(
+    (key: string) => {
+      setExpandedRequestKey(effectiveExpandedRequestKey === key ? null : key);
+    },
+    [effectiveExpandedRequestKey, setExpandedRequestKey],
+  );
 
   const handleFilterByRequest = useCallback(
     (requestId: number) => {
@@ -1189,7 +1199,7 @@ export function ReviewProjectsPageView({
       {effectiveDisplayMode === 'requests' ? (
         <RequestGroupsSection
           groups={groupedRequestRows}
-          expandedKey={expandedRequestKey}
+          expandedKey={effectiveExpandedRequestKey}
           onToggleExpanded={handleToggleRequestGroup}
           onFilterByRequest={handleFilterByRequest}
           adminControls={adminControls}
