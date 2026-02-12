@@ -48,7 +48,6 @@ type FilterOption<T extends string | number> = { value: T; label: string };
 type SelectAllLocalesParams = {
   localeOptions: { tag: string }[];
   defaultLocaleTags?: string[];
-  projects: ApiReviewProjectSummary[] | undefined;
   selectedLocaleTags: string[];
   setSelectedLocaleTags: (tags: string[]) => void;
   userHasTouchedLocales: boolean;
@@ -542,133 +541,11 @@ export function ReviewProjectsPage() {
       : 'Failed to load review projects.'
     : undefined;
 
-  const filteredProjects = useMemo(() => {
-    const source = projects ?? [];
-    const {
-      localeTags,
-      statuses,
-      types,
-      createdAfter: ca,
-      createdBefore: cb,
-      dueAfter: da,
-      dueBefore: db,
-      limit: lmt,
-      searchQuery: q,
-      searchField: sf,
-      searchMatchType: mt,
-    } = apiSearchParams;
-
-    // If the user intentionally cleared all locales, treat it as "no results"
-    // instead of falling back to "all locales".
-    const userClearedLocales = hasTouchedLocales && (!localeTags || localeTags.length === 0);
-    if (userClearedLocales) {
-      return [];
-    }
-
-    const createdAfterDate = ca ? new Date(ca) : null;
-    const createdBeforeDate = cb ? new Date(cb) : null;
-    const dueAfterDate = da ? new Date(da) : null;
-    const dueBeforeDate = db ? new Date(db) : null;
-
-    const matchesSearch = (project: ApiReviewProjectSummary) => {
-      if (!q) return true;
-      const field: 'id' | 'name' | 'requestId' | 'createdBy' =
-        sf === 'ID'
-          ? 'id'
-          : sf === 'REQUEST_ID'
-            ? 'requestId'
-            : sf === 'CREATED_BY'
-              ? 'createdBy'
-              : 'name';
-      const value =
-        field === 'id'
-          ? String(project.id)
-          : field === 'requestId'
-            ? String(project.reviewProjectRequest?.id ?? '')
-            : field === 'createdBy'
-              ? (project.createdByUsername ?? '')
-              : (project.reviewProjectRequest?.name ?? `Review project #${project.id}`);
-      const valueLower = value.toLowerCase();
-      const queryLower = q.toLowerCase();
-
-      if (mt === 'EXACT') {
-        // Match backend behavior: case-insensitive exact comparison on name;
-        // IDs are numeric but comparing as string keeps it stable.
-        return valueLower === queryLower;
-      }
-
-      // Backend treats CONTAINS and ILIKE identically (case-insensitive LIKE)
-      return valueLower.includes(queryLower);
-    };
-
-    const matchesDateRange = (
-      value: string | null | undefined,
-      after: Date | null,
-      before: Date | null,
-    ) => {
-      if (!value) return true;
-      const parsed = new Date(value);
-      if (Number.isNaN(parsed.getTime())) return true;
-      if (after && parsed < after) return false;
-      if (before && parsed > before) return false;
-      return true;
-    };
-
-    const matchesLocales = (project: ApiReviewProjectSummary) => {
-      if (!localeTags || localeTags.length === 0) {
-        return true;
-      }
-      const localeId = project.locale?.id ?? null;
-      const localeTag = project.locale?.bcp47Tag ?? null;
-      if (localeId == null && !localeTag) {
-        return true;
-      }
-      return localeTags.some((tag) => {
-        const lowered = tag.toLowerCase();
-        if (localeTag && localeTag.toLowerCase() === lowered) {
-          return true;
-        }
-        return localeId != null && String(localeId) === tag;
-      });
-    };
-
-    const matchesStatus = (project: ApiReviewProjectSummary) => {
-      if (!statuses || statuses.length === 0) return true;
-      return statuses.includes(project.status);
-    };
-
-    const matchesType = (project: ApiReviewProjectSummary) => {
-      if (!types || types.length === 0) return true;
-      return types.includes(project.type);
-    };
-
-    const matchesCreator = (project: ApiReviewProjectSummary) => {
-      if (creatorFilter !== 'mine' || sf !== 'CREATED_BY') {
-        return true;
-      }
-      return (
-        (project.createdByUsername ?? '').toLowerCase() === (user.username ?? '').toLowerCase()
-      );
-    };
-
-    const filtered = source.filter(
-      (project) =>
-        matchesLocales(project) &&
-        matchesStatus(project) &&
-        matchesType(project) &&
-        matchesCreator(project) &&
-        matchesDateRange(project.createdDate ?? null, createdAfterDate, createdBeforeDate) &&
-        matchesDateRange(project.dueDate ?? null, dueAfterDate, dueBeforeDate) &&
-        matchesSearch(project),
-    );
-
-    const limitValue = lmt && lmt > 0 ? lmt : undefined;
-    return limitValue ? filtered.slice(0, limitValue) : filtered;
-  }, [apiSearchParams, creatorFilter, hasTouchedLocales, projects, user.username]);
+  const userClearedLocales = hasTouchedLocales && selectedLocaleTags.length === 0;
 
   const listRows = useMemo<ReviewProjectRow[]>(
-    () => filteredProjects.map(toReviewProjectRow),
-    [filteredProjects],
+    () => (userClearedLocales ? [] : projects.map(toReviewProjectRow)),
+    [projects, userClearedLocales],
   );
   const requestGroupRows = useMemo<ReviewProjectRequestGroupRow[]>(
     () => requestGroups.map(toReviewProjectRequestGroupRow),
@@ -852,7 +729,6 @@ export function ReviewProjectsPage() {
   useSelectAllLocales({
     localeOptions: localeOptionsFiltered,
     defaultLocaleTags: isLimitedTranslator ? userLocales : undefined,
-    projects,
     selectedLocaleTags,
     setSelectedLocaleTags,
     userHasTouchedLocales: hasTouchedLocales,
