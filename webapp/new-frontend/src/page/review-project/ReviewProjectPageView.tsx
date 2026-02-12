@@ -5,7 +5,7 @@ import './review-project-page.css';
 import type { VirtualItem } from '@tanstack/react-virtual';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
   type AiReviewMessage,
@@ -43,14 +43,15 @@ import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import { toHtmlLangTag } from '../../utils/localeTag';
 import {
-  buildUploadFileKey,
-  getAttachmentKindFromFile,
+  buildRequestAttachmentUploadQueueEntries,
   isImageAttachmentKey,
   isPdfAttachmentKey,
   isSupportedRequestAttachmentFile,
   isVideoAttachmentKey,
   resolveAttachmentUrl,
+  revokeRequestAttachmentUploadQueuePreviews,
   toDescriptionAttachmentMarkdown,
+  uploadRequestAttachmentFile,
 } from '../../utils/request-attachments';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
@@ -509,7 +510,9 @@ type Props = {
   selectedTextUnitQueryId: number | null;
   onSelectedTextUnitIdChange: (id: number | null, options?: { replace?: boolean }) => void;
   openRequestDetailsQuery: boolean;
+  requestDetailsSource: 'list' | null;
   onRequestDetailsQueryHandled: () => void;
+  onRequestDetailsFlowFinished: () => void;
 };
 
 export function ReviewProjectPageView({
@@ -519,7 +522,9 @@ export function ReviewProjectPageView({
   selectedTextUnitQueryId,
   onSelectedTextUnitIdChange,
   openRequestDetailsQuery,
+  requestDetailsSource,
   onRequestDetailsQueryHandled,
+  onRequestDetailsFlowFinished,
 }: Props) {
   const user = useUser();
   const canEditRequest = user.role === 'ROLE_ADMIN';
@@ -935,7 +940,9 @@ export function ReviewProjectPageView({
         canEditRequest={canEditRequest}
         reviewProjectsSessionKey={reviewProjectsSessionKey}
         openRequestDetailsQuery={openRequestDetailsQuery}
+        requestDetailsSource={requestDetailsSource}
         onRequestDetailsQueryHandled={onRequestDetailsQueryHandled}
+        onRequestDetailsFlowFinished={onRequestDetailsFlowFinished}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onReviewPending={() => setDecisionStateFilter('PENDING')}
       />
@@ -2574,7 +2581,9 @@ function ReviewProjectHeader({
   canEditRequest,
   reviewProjectsSessionKey,
   openRequestDetailsQuery,
+  requestDetailsSource,
   onRequestDetailsQueryHandled,
+  onRequestDetailsFlowFinished,
   onOpenShortcuts,
   onReviewPending,
 }: {
@@ -2585,7 +2594,9 @@ function ReviewProjectHeader({
   canEditRequest: boolean;
   reviewProjectsSessionKey: string | null;
   openRequestDetailsQuery: boolean;
+  requestDetailsSource: 'list' | null;
   onRequestDetailsQueryHandled: () => void;
+  onRequestDetailsFlowFinished: () => void;
   onOpenShortcuts: () => void;
   onReviewPending: () => void;
 }) {
@@ -2613,6 +2624,7 @@ function ReviewProjectHeader({
   const [attachmentUploadQueue, setAttachmentUploadQueue] = useState<
     RequestAttachmentUploadQueueItem[]
   >([]);
+  const attachmentUploadPreviewUrlsRef = useRef<Set<string>>(new Set());
   const [isAttachmentUploading, setIsAttachmentUploading] = useState(false);
   const [attachmentUploadError, setAttachmentUploadError] = useState<string | null>(null);
   const [requestSaveError, setRequestSaveError] = useState<string | null>(null);
@@ -2620,6 +2632,8 @@ function ReviewProjectHeader({
     status === 'OPEN'
       ? 'review-project-page__header-action--close'
       : 'review-project-page__header-action--reopen';
+  const navigate = useNavigate();
+  const shouldReturnToReviewProjects = requestDetailsSource === 'list';
   const backToReviewProjects = useMemo(() => {
     if (!reviewProjectsSessionKey) {
       return '/review-projects';
@@ -2681,6 +2695,29 @@ function ReviewProjectHeader({
   }, [description, dueDate, name, requestAttachments, showDescription, type]);
 
   useEffect(() => {
+    const nextUrls = new Set(
+      attachmentUploadQueue
+        .map((item) => item.preview)
+        .filter((preview): preview is string => typeof preview === 'string' && preview.length > 0),
+    );
+    revokeRequestAttachmentUploadQueuePreviews(
+      Array.from(attachmentUploadPreviewUrlsRef.current)
+        .filter((url) => !nextUrls.has(url))
+        .map((preview) => ({ preview })),
+    );
+    attachmentUploadPreviewUrlsRef.current = nextUrls;
+  }, [attachmentUploadQueue]);
+
+  useEffect(() => {
+    return () => {
+      revokeRequestAttachmentUploadQueuePreviews(
+        Array.from(attachmentUploadPreviewUrlsRef.current).map((preview) => ({ preview })),
+      );
+      attachmentUploadPreviewUrlsRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!openRequestDetailsQuery) {
       return;
     }
@@ -2694,10 +2731,22 @@ function ReviewProjectHeader({
     if (mutations.isProjectRequestSaving || isAttachmentUploading) {
       return;
     }
+    onRequestDetailsFlowFinished();
+    if (shouldReturnToReviewProjects) {
+      void navigate(backToReviewProjects);
+      return;
+    }
     setShowDescription(false);
     setAttachmentUploadError(null);
     setRequestSaveError(null);
-  }, [isAttachmentUploading, mutations.isProjectRequestSaving]);
+  }, [
+    backToReviewProjects,
+    isAttachmentUploading,
+    mutations.isProjectRequestSaving,
+    navigate,
+    onRequestDetailsFlowFinished,
+    shouldReturnToReviewProjects,
+  ]);
 
   const addAttachmentKeys = useCallback((raw: string[]) => {
     const next = raw
@@ -2720,21 +2769,6 @@ function ReviewProjectHeader({
     });
   }, []);
 
-  const uploadAttachment = useCallback(async (file: File): Promise<string> => {
-    const key = buildUploadFileKey(file);
-    const buffer = await file.arrayBuffer();
-    const response = await fetch(`/api/images/${encodeURIComponent(key)}`, {
-      method: 'PUT',
-      credentials: 'include',
-      body: buffer,
-    });
-    if (!response.ok) {
-      const message = await response.text().catch(() => '');
-      throw new Error(message || `Failed to upload ${file.name}`);
-    }
-    return key;
-  }, []);
-
   const handleAttachmentFiles = useCallback(
     async (files: FileList | null): Promise<string[]> => {
       if (
@@ -2747,23 +2781,15 @@ function ReviewProjectHeader({
       }
       setAttachmentUploadError(null);
       setIsAttachmentUploading(true);
-      const uploaded: string[] = [];
-      const queueEntries: RequestAttachmentUploadQueueItem[] = Array.from(files).map((file) => {
-        const kind = getAttachmentKindFromFile(file);
-        const isSupported = isSupportedRequestAttachmentFile(file);
-        return {
-          key: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          name: file.name,
-          status: isSupported ? ('uploading' as const) : ('error' as const),
-          kind,
-          preview: kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null,
-          error: isSupported ? undefined : 'Unsupported file type',
-        };
-      });
+
+      const fileList = Array.from(files);
+      const queueEntries = buildRequestAttachmentUploadQueueEntries(fileList);
       setAttachmentUploadQueue((current) => [...queueEntries, ...current]);
+
+      const uploaded: string[] = [];
       const failed: string[] = [];
 
-      for (const [index, file] of Array.from(files).entries()) {
+      for (const [index, file] of fileList.entries()) {
         const queueEntry = queueEntries[index];
         if (!queueEntry || !isSupportedRequestAttachmentFile(file)) {
           if (!isSupportedRequestAttachmentFile(file)) {
@@ -2772,12 +2798,10 @@ function ReviewProjectHeader({
           continue;
         }
         try {
-          const key = await uploadAttachment(file);
+          const key = await uploadRequestAttachmentFile(file);
           uploaded.push(key);
           setAttachmentUploadQueue((current) =>
-            current.map((item) =>
-              item.key === queueEntry.key ? { ...item, status: 'done', error: undefined } : item,
-            ),
+            current.filter((item) => item.key !== queueEntry.key),
           );
         } catch (error) {
           const message = error instanceof Error ? error.message : `Failed to upload ${file.name}`;
@@ -2799,7 +2823,7 @@ function ReviewProjectHeader({
       setIsAttachmentUploading(false);
       return uploaded;
     },
-    [addAttachmentKeys, isAttachmentUploading, mutations.isProjectRequestSaving, uploadAttachment],
+    [addAttachmentKeys, isAttachmentUploading, mutations.isProjectRequestSaving],
   );
   const attachmentsDisabled =
     !canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading;
@@ -2841,6 +2865,11 @@ function ReviewProjectHeader({
         dueDate: dueDateIso,
         screenshotImageIds: attachmentDrafts,
       });
+      onRequestDetailsFlowFinished();
+      if (shouldReturnToReviewProjects) {
+        void navigate(backToReviewProjects);
+        return;
+      }
       setShowDescription(false);
     } catch (error) {
       setRequestSaveError(
@@ -2849,14 +2878,18 @@ function ReviewProjectHeader({
     }
   }, [
     attachmentDrafts,
+    backToReviewProjects,
+    canEditRequest,
     descriptionDraft,
     dueDateDraft,
     isAttachmentUploading,
     mutations,
+    navigate,
+    onRequestDetailsFlowFinished,
     projectTypeDraft,
     requestId,
     requestNameDraft,
-    canEditRequest,
+    shouldReturnToReviewProjects,
   ]);
 
   const handleReviewPending = useCallback(() => {

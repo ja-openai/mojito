@@ -109,7 +109,7 @@ type Props = {
 function buildReviewProjectDetailPath(
   projectId: number,
   reviewProjectsSessionKey?: string | null,
-  options?: { requestDetails?: boolean },
+  options?: { requestDetails?: boolean; requestSource?: 'list' },
 ) {
   const params = new URLSearchParams();
   if (reviewProjectsSessionKey) {
@@ -117,6 +117,9 @@ function buildReviewProjectDetailPath(
   }
   if (options?.requestDetails) {
     params.set('requestDetails', '1');
+  }
+  if (options?.requestSource) {
+    params.set('requestFrom', options.requestSource);
   }
   const query = params.toString();
   return query.length > 0
@@ -947,7 +950,7 @@ function RequestGroupsSection({
                               to={buildReviewProjectDetailPath(
                                 requestEditProjectId,
                                 reviewProjectsSessionKey,
-                                { requestDetails: true },
+                                { requestDetails: true, requestSource: 'list' },
                               )}
                               className="review-projects-page__request-link review-projects-page__link"
                             >

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import { useReviewProjectDetail } from '../../hooks/useReviewProjectDetail';
@@ -10,6 +10,7 @@ export function ReviewProjectPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTextUnitParam = searchParams.get('tu');
   const requestDetailsParam = searchParams.get('requestDetails');
+  const requestFromParam = searchParams.get('requestFrom');
 
   const parsedProjectId = projectIdParam ? Number(projectIdParam) : NaN;
   const projectId =
@@ -20,8 +21,18 @@ export function ReviewProjectPage() {
       ? parsedSelectedTextUnitId
       : null;
   const openRequestDetails = requestDetailsParam === '1';
+  const [requestDetailsSource, setRequestDetailsSource] = useState<'list' | null>(
+    openRequestDetails && requestFromParam === 'list' ? 'list' : null,
+  );
   const projectDetailQuery = useReviewProjectDetail(projectId);
   const mutationControls = useReviewProjectMutations(projectId);
+
+  useEffect(() => {
+    if (!openRequestDetails) {
+      return;
+    }
+    setRequestDetailsSource(requestFromParam === 'list' ? 'list' : null);
+  }, [openRequestDetails, requestFromParam]);
 
   const handleSelectedTextUnitIdChange = useCallback(
     (nextTextUnitId: number | null, options?: { replace?: boolean }) => {
@@ -41,12 +52,17 @@ export function ReviewProjectPage() {
 
   const handleRequestDetailsQueryHandled = useCallback(() => {
     const nextParams = new URLSearchParams(searchParams);
-    if (!nextParams.has('requestDetails')) {
+    if (!nextParams.has('requestDetails') && !nextParams.has('requestFrom')) {
       return;
     }
     nextParams.delete('requestDetails');
+    nextParams.delete('requestFrom');
     setSearchParams(nextParams, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  const handleRequestDetailsFlowFinished = useCallback(() => {
+    setRequestDetailsSource(null);
+  }, []);
 
   if (projectId == null) {
     return <ErrorState message="Missing or invalid project id." />;
@@ -72,7 +88,9 @@ export function ReviewProjectPage() {
       selectedTextUnitQueryId={selectedTextUnitId}
       onSelectedTextUnitIdChange={handleSelectedTextUnitIdChange}
       openRequestDetailsQuery={openRequestDetails}
+      requestDetailsSource={requestDetailsSource}
       onRequestDetailsQueryHandled={handleRequestDetailsQueryHandled}
+      onRequestDetailsFlowFinished={handleRequestDetailsFlowFinished}
     />
   );
 }

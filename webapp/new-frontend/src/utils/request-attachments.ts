@@ -1,5 +1,14 @@
 export type RequestAttachmentKind = 'image' | 'video' | 'pdf' | 'file';
 
+export type RequestAttachmentUploadQueueItem = {
+  key: string;
+  name: string;
+  status: 'uploading' | 'done' | 'error';
+  kind: RequestAttachmentKind;
+  preview?: string | null;
+  error?: string;
+};
+
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif'];
 const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.ogv', '.ogg', '.m4v', '.mkv'];
 const PDF_EXTENSIONS = ['.pdf'];
@@ -52,6 +61,11 @@ const getRandomKeySuffix = () =>
     : Math.random().toString(36).slice(2, 10);
 
 const stripQueryAndHash = (value: string) => value.split('?')[0]?.split('#')[0] ?? value;
+
+const createUploadQueueItemKey = (file: File) =>
+  `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const isPreviewKind = (kind: RequestAttachmentKind) => kind === 'image' || kind === 'video';
 
 export const buildUploadFileKey = (file: File) => {
   const baseName = getUploadFileBaseName(file);
@@ -134,3 +148,45 @@ export const getAttachmentKindFromFile = (file: File): RequestAttachmentKind => 
 
 export const isSupportedRequestAttachmentFile = (file: File) =>
   getAttachmentKindFromFile(file) !== 'file';
+
+export const buildRequestAttachmentUploadQueueEntries = (
+  files: File[],
+): RequestAttachmentUploadQueueItem[] => {
+  return files.map((file) => {
+    const kind = getAttachmentKindFromFile(file);
+    const isSupported = isSupportedRequestAttachmentFile(file);
+    return {
+      key: createUploadQueueItemKey(file),
+      name: file.name,
+      status: isSupported ? ('uploading' as const) : ('error' as const),
+      kind,
+      preview: isSupported && isPreviewKind(kind) ? URL.createObjectURL(file) : null,
+      error: isSupported ? undefined : 'Unsupported file type',
+    };
+  });
+};
+
+export const revokeRequestAttachmentUploadQueuePreviews = (
+  items: Array<Pick<RequestAttachmentUploadQueueItem, 'preview'>>,
+) => {
+  items.forEach((item) => {
+    if (typeof item.preview === 'string' && item.preview.startsWith('blob:')) {
+      URL.revokeObjectURL(item.preview);
+    }
+  });
+};
+
+export const uploadRequestAttachmentFile = async (file: File): Promise<string> => {
+  const key = buildUploadFileKey(file);
+  const buffer = await file.arrayBuffer();
+  const response = await fetch(`/api/images/${encodeURIComponent(key)}`, {
+    method: 'PUT',
+    credentials: 'include',
+    body: buffer,
+  });
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || `Failed to upload ${file.name}`);
+  }
+  return key;
+};

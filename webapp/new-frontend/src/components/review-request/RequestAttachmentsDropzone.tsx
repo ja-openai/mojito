@@ -7,18 +7,12 @@ import {
   isPdfAttachmentKey,
   isVideoAttachmentKey,
   type RequestAttachmentKind,
+  type RequestAttachmentUploadQueueItem,
   resolveAttachmentUrl,
   toDescriptionAttachmentMarkdown,
 } from '../../utils/request-attachments';
 
-export type RequestAttachmentUploadQueueItem = {
-  key: string;
-  name: string;
-  status: 'uploading' | 'done' | 'error';
-  kind: RequestAttachmentKind;
-  preview?: string | null;
-  error?: string;
-};
+export type { RequestAttachmentUploadQueueItem } from '../../utils/request-attachments';
 
 const ATTACHMENT_MARKDOWN_MIME = 'application/x-mojito-markdown';
 

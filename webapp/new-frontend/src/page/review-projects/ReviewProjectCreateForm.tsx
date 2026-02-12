@@ -1,6 +1,6 @@
 import './review-projects-page.css';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   type ApiReviewProjectType,
@@ -17,10 +17,11 @@ import { RequestDescriptionEditor } from '../../components/review-request/Reques
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import {
-  buildUploadFileKey,
-  getAttachmentKindFromFile,
+  buildRequestAttachmentUploadQueueEntries,
   isSupportedRequestAttachmentFile,
+  revokeRequestAttachmentUploadQueuePreviews,
   toDescriptionAttachmentMarkdown,
+  uploadRequestAttachmentFile,
 } from '../../utils/request-attachments';
 
 export type ReviewProjectCreateFormValues = {
@@ -71,6 +72,7 @@ export function ReviewProjectCreateForm({
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
   const [uploadQueue, setUploadQueue] = useState<RequestAttachmentUploadQueueItem[]>([]);
+  const previewUrlsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => setName(defaultName), [defaultName]);
   useEffect(() => setDueDate(defaultDueDate), [defaultDueDate]);
@@ -80,6 +82,29 @@ export function ReviewProjectCreateForm({
       return current.filter((tag) => allowed.has(tag));
     });
   }, [localeOptions]);
+
+  useEffect(() => {
+    const nextUrls = new Set(
+      uploadQueue
+        .map((item) => item.preview)
+        .filter((preview): preview is string => typeof preview === 'string' && preview.length > 0),
+    );
+    revokeRequestAttachmentUploadQueuePreviews(
+      Array.from(previewUrlsRef.current)
+        .filter((url) => !nextUrls.has(url))
+        .map((preview) => ({ preview })),
+    );
+    previewUrlsRef.current = nextUrls;
+  }, [uploadQueue]);
+
+  useEffect(() => {
+    return () => {
+      revokeRequestAttachmentUploadQueuePreviews(
+        Array.from(previewUrlsRef.current).map((preview) => ({ preview })),
+      );
+      previewUrlsRef.current.clear();
+    };
+  }, []);
 
   const canSubmit = useMemo(
     () =>
@@ -110,40 +135,15 @@ export function ReviewProjectCreateForm({
     });
   };
 
-  const uploadImage = async (file: File): Promise<string> => {
-    const key = buildUploadFileKey(file);
-    const buffer = await file.arrayBuffer();
-    const response = await fetch(`/api/images/${encodeURIComponent(key)}`, {
-      method: 'PUT',
-      credentials: 'include',
-      body: buffer,
-    });
-    if (!response.ok) {
-      const msg = await response.text().catch(() => '');
-      throw new Error(msg || 'Upload failed');
-    }
-    return key;
-  };
-
   const handleFiles = async (files: FileList | null): Promise<string[]> => {
     if (!files || files.length === 0) {
       return [];
     }
     const fileArr = Array.from(files);
-    const queueEntries: RequestAttachmentUploadQueueItem[] = fileArr.map((file) => {
-      const kind = getAttachmentKindFromFile(file);
-      const isSupported = isSupportedRequestAttachmentFile(file);
-      return {
-        key: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        name: file.name,
-        status: isSupported ? ('uploading' as const) : ('error' as const),
-        kind,
-        preview: kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null,
-        error: isSupported ? undefined : 'Unsupported file type',
-      };
-    });
+    const queueEntries = buildRequestAttachmentUploadQueueEntries(fileArr);
     setUploadQueue((prev) => [...queueEntries, ...prev]);
     const uploadedKeys: string[] = [];
+
     await Promise.all(
       queueEntries.map(async (entry, index) => {
         const file = fileArr[index];
@@ -151,11 +151,9 @@ export function ReviewProjectCreateForm({
           return;
         }
         try {
-          const uploadedKey = await uploadImage(file);
+          const uploadedKey = await uploadRequestAttachmentFile(file);
           uploadedKeys.push(uploadedKey);
-          setUploadQueue((prev) =>
-            prev.map((item) => (item.key === entry.key ? { ...item, status: 'done' } : item)),
-          );
+          setUploadQueue((prev) => prev.filter((item) => item.key !== entry.key));
           addScreenshotKeys([uploadedKey]);
         } catch (error) {
           const message =
