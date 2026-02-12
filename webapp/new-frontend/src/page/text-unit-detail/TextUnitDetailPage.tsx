@@ -36,6 +36,8 @@ import {
 type LocationState = {
   from?: string;
   workbenchSearch?: TextUnitSearchRequest | null;
+  workbenchScrollTop?: number | null;
+  workbenchRowId?: string | null;
 };
 
 const editorStatusOptions = ['Accepted', 'To review', 'To translate', 'Rejected'];
@@ -433,7 +435,11 @@ export function TextUnitDetailPage() {
   const handleBack = () => {
     if (locationState?.workbenchSearch) {
       void navigate('/workbench', {
-        state: { workbenchSearch: locationState.workbenchSearch },
+        state: {
+          workbenchSearch: locationState.workbenchSearch,
+          workbenchScrollTop: locationState.workbenchScrollTop ?? null,
+          workbenchRowId: locationState.workbenchRowId ?? null,
+        },
       });
       return;
     }

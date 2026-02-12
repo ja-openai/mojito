@@ -55,6 +55,9 @@ type WorkbenchBodyProps = {
   onRemoveFromCollection: (tmTextUnitId: number) => void;
   activeCollectionIds: Set<number>;
   activeCollectionName: string | null;
+  restoreScrollTop: number | null;
+  restoreRowId: string | null;
+  onRestoreScrollConsumed: () => void;
 };
 
 export function WorkbenchBody({
@@ -88,6 +91,9 @@ export function WorkbenchBody({
   onRemoveFromCollection,
   activeCollectionIds,
   activeCollectionName,
+  restoreScrollTop,
+  restoreRowId,
+  onRestoreScrollConsumed,
 }: WorkbenchBodyProps) {
   const navigate = useNavigate();
   const registerRowRefRef = useRef(registerRowRef);
@@ -234,6 +240,8 @@ export function WorkbenchBody({
         state: {
           from: '/workbench',
           workbenchSearch: activeSearchRequest,
+          workbenchScrollTop: scrollElementRef.current?.scrollTop ?? 0,
+          workbenchRowId: row.id,
         },
       });
     },
@@ -241,6 +249,39 @@ export function WorkbenchBody({
   );
 
   const scrollElementRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (restoreScrollTop === null && restoreRowId === null) {
+      return;
+    }
+    if (isSearchLoading || rows.length === 0) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const element = scrollElementRef.current;
+      if (!element) {
+        return;
+      }
+
+      if (restoreScrollTop !== null) {
+        element.scrollTop = restoreScrollTop;
+      }
+
+      if (restoreRowId) {
+        const escapedRowId =
+          typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+            ? CSS.escape(restoreRowId)
+            : restoreRowId.replace(/"/g, '\\"');
+        const rowElement = element.querySelector('[data-workbench-row-id="' + escapedRowId + '"]');
+        if (rowElement instanceof HTMLElement) {
+          rowElement.scrollIntoView({ block: 'nearest' });
+        }
+      }
+
+      onRestoreScrollConsumed();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isSearchLoading, onRestoreScrollConsumed, restoreRowId, restoreScrollTop, rows.length]);
 
   const estimateSize = useCallback(
     () =>
@@ -400,6 +441,7 @@ export function WorkbenchBody({
                 className: 'workbench-page__row',
                 props: {
                   'data-index': virtualRow.index,
+                  'data-workbench-row-id': row.id,
                   'data-status-open': isStatusOpen ? 'true' : undefined,
                   ref: getRowRef(row.id),
                 },

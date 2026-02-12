@@ -118,6 +118,9 @@ type Props = {
   onOpenAiTranslate: (id: string) => void;
   shareOverrides: WorkbenchShareOverrides | null;
   onPrepareShareOverrides: (overrides: WorkbenchShareOverrides | null) => void;
+  restoreScrollTop: number | null;
+  restoreRowId: string | null;
+  onRestoreScrollConsumed: () => void;
 };
 
 function HydrationModal({
@@ -242,6 +245,9 @@ export function WorkbenchPageView({
   onOpenAiTranslate,
   shareOverrides,
   onPrepareShareOverrides,
+  restoreScrollTop,
+  restoreRowId,
+  onRestoreScrollConsumed,
 }: Props) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const editedCount = editedRowIds.size;
@@ -356,6 +362,9 @@ export function WorkbenchPageView({
         onRemoveFromCollection={onRemoveFromCollection}
         activeCollectionIds={activeCollectionIds}
         activeCollectionName={activeCollectionName}
+        restoreScrollTop={restoreScrollTop}
+        restoreRowId={restoreRowId}
+        onRestoreScrollConsumed={onRestoreScrollConsumed}
       />
       <HydrationModal data={hydrationModal} onClose={onDismissHydrationModal} />
       <ConfirmModal

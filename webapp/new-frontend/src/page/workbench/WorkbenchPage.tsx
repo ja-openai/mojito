@@ -26,7 +26,7 @@ const localePromptTitle = 'Choose a locale';
 type WorkbenchLocationState = { workbenchSearch?: TextUnitSearchRequest | null } & Record<
   string,
   unknown
-> & { localePrompt?: boolean };
+> & { localePrompt?: boolean; workbenchScrollTop?: number | null; workbenchRowId?: string | null };
 
 function isWorkbenchLocationState(state: unknown): state is WorkbenchLocationState {
   return typeof state === 'object' && state !== null && 'workbenchSearch' in state;
@@ -64,6 +64,17 @@ export function WorkbenchPage() {
   const locationState = (location.state as WorkbenchLocationState | null) ?? null;
   const stateSearchRequest = locationState?.workbenchSearch ?? null;
   const stateLocalePrompt = locationState?.localePrompt ?? false;
+  const stateScrollTop =
+    typeof locationState?.workbenchScrollTop === 'number' &&
+    Number.isFinite(locationState.workbenchScrollTop)
+      ? Math.max(0, locationState.workbenchScrollTop)
+      : null;
+  const stateRowId =
+    typeof locationState?.workbenchRowId === 'string' ? locationState.workbenchRowId : null;
+  const [pendingRestoreScrollTop, setPendingRestoreScrollTop] = useState<number | null>(
+    stateScrollTop,
+  );
+  const [pendingRestoreRowId, setPendingRestoreRowId] = useState<string | null>(stateRowId);
   const userLocales = currentUser.userLocales ?? [];
   const isLimitedTranslator = !currentUser.canTranslateAllLocales && userLocales.length > 0;
   const canEditLocale = useCallback(
@@ -91,6 +102,12 @@ export function WorkbenchPage() {
     delete rest.workbenchSearch;
     if ('localePrompt' in rest) {
       delete (rest as { localePrompt?: boolean }).localePrompt;
+    }
+    if ('workbenchScrollTop' in rest) {
+      delete (rest as { workbenchScrollTop?: number | null }).workbenchScrollTop;
+    }
+    if ('workbenchRowId' in rest) {
+      delete (rest as { workbenchRowId?: string | null }).workbenchRowId;
     }
     void navigate(location.pathname + location.search, { replace: true, state: rest });
   }, [location.pathname, location.search, location.state, navigate]);
@@ -155,6 +172,14 @@ export function WorkbenchPage() {
     setHydratedSearchRequest(stateSearchRequest);
     clearWorkbenchSearchState();
   }, [clearWorkbenchSearchState, stateLocalePrompt, stateSearchRequest]);
+
+  useEffect(() => {
+    if (stateScrollTop === null && stateRowId === null) {
+      return;
+    }
+    setPendingRestoreScrollTop(stateScrollTop);
+    setPendingRestoreRowId(stateRowId);
+  }, [stateRowId, stateScrollTop]);
 
   useEffect(() => {
     if (!shareIdToHydrate) {
@@ -596,6 +621,12 @@ export function WorkbenchPage() {
         onOpenAiTranslate={handleOpenAiTranslateFromCollection}
         shareOverrides={shareOverrides}
         onPrepareShareOverrides={(overrides) => setShareOverrides(overrides)}
+        restoreScrollTop={pendingRestoreScrollTop}
+        restoreRowId={pendingRestoreRowId}
+        onRestoreScrollConsumed={() => {
+          setPendingRestoreScrollTop(null);
+          setPendingRestoreRowId(null);
+        }}
       />
     </>
   );
