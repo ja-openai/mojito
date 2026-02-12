@@ -2316,9 +2316,11 @@ function DetailPane({
         </div>
 
         <div className="review-project-detail__side">
-          <div className="review-project-detail__field">
+          <div className="review-project-detail__field review-project-detail__field--source">
             <div className="review-project-detail__label">Source</div>
-            <div className="review-project-detail__value">{source || '—'}</div>
+            <div className="review-project-detail__value review-project-detail__value--source">
+              {source || '—'}
+            </div>
           </div>
 
           <div className="review-project-detail__field">

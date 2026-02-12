@@ -1178,6 +1178,21 @@
   color: var(--color-text);
 }
 
+.review-project-detail__side .review-project-detail__field--source .review-project-detail__label {
+  min-height: 1.5rem;
+  line-height: normal;
+  align-items: center;
+}
+
+.review-project-detail__side .review-project-detail__value--source {
+  min-height: 3rem;
+  padding: var(--space-2) var(--space-2) var(--space-2) 0;
+  border: var(--border-width) solid transparent;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1.4;
+}
+
 .review-project-detail__label-actions--hover {
   position: absolute;
   right: 0;
