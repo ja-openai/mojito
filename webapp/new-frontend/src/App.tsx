@@ -7,6 +7,7 @@ import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-r
 import { RequireUser } from './components/RequireUser';
 import { UserMenu } from './components/UserMenu';
 import { AiTranslatePage } from './page/ai-translate/AiTranslatePage';
+import { MonitoringPage } from './page/monitoring/MonitoringPage';
 import { RepositoriesPage } from './page/repositories/RepositoriesPage';
 import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
@@ -81,6 +82,7 @@ export function App() {
               <Route key={to} path={to} element={element} />
             ))}
             <Route path="/ai-translate" element={<AiTranslatePage />} />
+            <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
             <Route path="/screenshots" element={<ScreenshotsDropzonePage />} />
             <Route path="/settings/admin" element={<AdminSettingsPage />} />

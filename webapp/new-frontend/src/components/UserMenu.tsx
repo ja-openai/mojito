@@ -74,6 +74,7 @@ export function UserMenu() {
   ];
   const adminLinks = [
     { label: 'Admin settings', path: '/settings/admin' },
+    { label: 'Database monitoring', path: '/monitoring' },
     { label: 'User settings', path: '/settings/admin/users' },
   ];
 
