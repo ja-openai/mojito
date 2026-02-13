@@ -267,7 +267,13 @@ public class ReviewProjectWS {
         ReviewProjectTextUnitDecision reviewProjectTextUnitDecision) {}
 
     public record TmTextUnit(
-        Long id, String name, String content, String comment, Asset asset, Long wordCount) {}
+        Long id,
+        String name,
+        String content,
+        String comment,
+        ZonedDateTime createdDate,
+        Asset asset,
+        Long wordCount) {}
 
     public record Asset(String assetPath, Repository repository) {
       public record Repository(Long id, String name) {}
@@ -409,6 +415,7 @@ public class ReviewProjectWS {
             view.tmTextUnit().name(),
             view.tmTextUnit().content(),
             view.tmTextUnit().comment(),
+            view.tmTextUnit().createdDate(),
             new GetReviewProjectResponse.Asset(
                 view.tmTextUnit().asset().assetPath(),
                 new GetReviewProjectResponse.Asset.Repository(
@@ -449,6 +456,7 @@ public class ReviewProjectWS {
             detail.tmTextUnitName(),
             detail.tmTextUnitContent(),
             detail.tmTextUnitComment(),
+            detail.tmTextUnitCreatedDate(),
             asset,
             detail.tmTextUnitWordCount() != null ? detail.tmTextUnitWordCount().longValue() : null);
 

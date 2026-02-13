@@ -2470,6 +2470,7 @@ function DetailPane({
                 isLoading={historyQuery.isLoading}
                 errorMessage={historyQuery.isError ? historyErrorMessage : null}
                 entries={historyRows}
+                initialDate={formatDateTime(textUnit.tmTextUnit?.createdDate)}
                 emptyMessage="No history yet."
               />
             ) : null}

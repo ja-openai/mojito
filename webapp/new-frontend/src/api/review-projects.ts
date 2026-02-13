@@ -32,6 +32,7 @@ export type ApiReviewProjectTextUnit = {
     name?: number | string | null;
     content?: string | null;
     comment?: string | null;
+    createdDate?: string | null;
     asset?: {
       assetPath?: number | string | null;
       repository?: { id?: number | null; name?: string | null } | null;

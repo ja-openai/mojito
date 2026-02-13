@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.review;
 
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
+import java.time.ZonedDateTime;
 
 public record ReviewProjectTextUnitDetail(
     Long reviewProjectTextUnitId,
@@ -9,6 +10,7 @@ public record ReviewProjectTextUnitDetail(
     String tmTextUnitName,
     String tmTextUnitContent,
     String tmTextUnitComment,
+    ZonedDateTime tmTextUnitCreatedDate,
     Integer tmTextUnitWordCount,
     String assetPath,
     Long repositoryId,

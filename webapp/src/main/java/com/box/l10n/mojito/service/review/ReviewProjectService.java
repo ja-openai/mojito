@@ -899,6 +899,7 @@ public class ReviewProjectService {
             detail.tmTextUnitName(),
             detail.tmTextUnitContent(),
             detail.tmTextUnitComment(),
+            detail.tmTextUnitCreatedDate(),
             assetView,
             detail.tmTextUnitWordCount() != null ? detail.tmTextUnitWordCount().longValue() : null);
     GetProjectDetailView.TmTextUnitVariant baselineTmTextUnitVariantView =
