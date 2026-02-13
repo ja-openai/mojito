@@ -356,11 +356,29 @@ export function useReviewProjectMutations(
     if (!conflictTextUnit) {
       return;
     }
+
     updateTextUnitInCache(conflictTextUnit);
     setConflictTextUnit(null);
     setConflictAction(null);
     setErrorMessage(null);
-  }, [conflictTextUnit, updateTextUnitInCache]);
+
+    const isAlreadyDecided =
+      conflictTextUnit.reviewProjectTextUnitDecision?.decisionState === 'DECIDED' ||
+      conflictTextUnit.reviewProjectTextUnitDecision?.decisionTmTextUnitVariant?.id != null;
+
+    if (isAlreadyDecided) {
+      return;
+    }
+
+    performAction({
+      kind: 'decision-state',
+      request: {
+        textUnitId: conflictTextUnit.id,
+        decisionState: 'DECIDED',
+        expectedCurrentTmTextUnitVariantId: conflictTextUnit.currentTmTextUnitVariant?.id ?? null,
+      },
+    });
+  }, [conflictTextUnit, performAction, updateTextUnitInCache]);
 
   const onOverwriteConflict = useCallback(() => {
     if (!conflictAction || !conflictTextUnit) {
