@@ -1283,13 +1283,7 @@ function DetailPane({
   const decision = textUnit.reviewProjectTextUnitDecision;
   const decisionVariant = decision?.decisionTmTextUnitVariant ?? null;
   const decisionVariantId = decisionVariant?.id ?? null;
-  const currentVariantId = textUnit.currentTmTextUnitVariant?.id ?? null;
   const translationLang = toHtmlLangTag(localeTag);
-  const isDecisionStale =
-    decision?.decisionState === 'DECIDED' &&
-    decisionVariantId != null &&
-    currentVariantId != null &&
-    decisionVariantId !== currentVariantId;
 
   const historyQuery = useQuery({
     queryKey: ['review-project-text-unit-history', workbenchTextUnitId, localeTag],
@@ -1331,6 +1325,10 @@ function DetailPane({
         translation: item.content ?? '—',
         date: formatDateTime(item.createdDate),
         status: statusLabel,
+        badges: [
+          ...(item.id === baselineVariant?.id ? ['Baseline'] : []),
+          ...(item.id === decisionVariantId ? ['Decided'] : []),
+        ],
         comments: (item.tmTextUnitVariantComments ?? []).map((comment, index) => ({
           key:
             comment.id != null
@@ -1348,7 +1346,7 @@ function DetailPane({
         })),
       };
     });
-  }, [historyItems]);
+  }, [baselineVariant?.id, decisionVariantId, historyItems]);
 
   useEffect(() => {
     setDraftTarget(snapshot.target);
@@ -2193,34 +2191,6 @@ function DetailPane({
           <div className="review-project-detail__field review-project-detail__field--translation">
             <div className="review-project-detail__label-row">
               <div className="review-project-detail__label">Translation</div>
-              <div className="review-project-detail__label-actions review-project-detail__label-actions--hover">
-                {isDecisionStale && !showStaleDecision ? (
-                  <button
-                    type="button"
-                    className="review-project-detail__baseline-toggle"
-                    onClick={() => setShowStaleDecision(true)}
-                    title="Show the translation used for the decision"
-                  >
-                    Stale decision
-                  </button>
-                ) : null}
-                {baselineVariant?.id != null && !showBaseline ? (
-                  <>
-                    {isDecisionStale && !showStaleDecision ? (
-                      <span className="review-project-detail__label-dot" aria-hidden="true">
-                        ·
-                      </span>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="review-project-detail__baseline-toggle"
-                      onClick={() => setShowBaseline(true)}
-                    >
-                      Baseline
-                    </button>
-                  </>
-                ) : null}
-              </div>
             </div>
             <AutoTextarea
               className={`review-project-detail__input review-project-detail__input--autosize review-project-detail__input--translation${

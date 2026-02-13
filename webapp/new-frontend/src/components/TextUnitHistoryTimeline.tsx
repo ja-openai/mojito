@@ -15,6 +15,7 @@ export type TextUnitHistoryTimelineEntry = {
   date: string;
   status: string;
   comments: TextUnitHistoryTimelineComment[];
+  badges?: string[];
 };
 
 type TextUnitHistoryTimelineProps = {
@@ -94,6 +95,19 @@ export function TextUnitHistoryTimeline({
                   Translation updated
                   <span className="text-unit-history__timeline-title-meta">#{item.variantId}</span>
                 </span>
+                {item.badges?.length ? (
+                  <span className="text-unit-history__timeline-badges">
+                    {item.badges.map((badge) => (
+                      <span
+                        key={`${item.key}-${badge}`}
+                        className="text-unit-history__timeline-badge"
+                        title={badge}
+                      >
+                        {badge}
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
                 <span className="text-unit-history__timeline-summary-separator">&middot;</span>
                 <span className="text-unit-history__timeline-summary-meta">{item.userName}</span>
                 {item.status !== '-' ? (
