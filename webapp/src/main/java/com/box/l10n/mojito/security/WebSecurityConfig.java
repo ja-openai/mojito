@@ -164,8 +164,16 @@ public class WebSecurityConfig {
                 // user management is only allowed for ADMINs and PMs
                 .requestMatchers("/api/users/**")
                 .hasAnyRole("PM", "ADMIN")
-                // monitoring endpoint reserved for admins
-                .requestMatchers(HttpMethod.GET, "/api/monitoring/db")
+                // ingestion stats are visible to PMs and admins
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/monitoring/text-unit-ingestion",
+                    "/api/monitoring/text-unit-ingestion/**")
+                .hasAnyRole("PM", "ADMIN")
+                // recompute and DB latency probes remain admin-only
+                .requestMatchers(HttpMethod.POST, "/api/monitoring/text-unit-ingestion/recompute")
+                .hasRole("ADMIN")
+                .requestMatchers("/api/monitoring/**")
                 .hasRole("ADMIN")
                 // Read-only access is OK for users
                 .requestMatchers(HttpMethod.GET, "/api/textunits/**")

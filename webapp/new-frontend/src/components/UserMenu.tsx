@@ -62,21 +62,29 @@ export function UserMenu() {
   const displayName = user.username || 'Account';
   const roleLabel = formatRole(user.role);
   const isAdmin = user.role === 'ROLE_ADMIN';
+  const canAccessStatistics = isAdmin || user.role === 'ROLE_PM';
 
   const handleNavigate = (path: string) => {
     setOpen(false);
     void navigate(path);
   };
 
-  const toolLinks = [
-    { label: 'Character helper', path: '/tools/char-code' },
-    { label: 'ICU preview', path: '/tools/icu-preview' },
-  ];
-  const adminLinks = [
-    { label: 'Admin settings', path: '/settings/admin' },
-    { label: 'Database monitoring', path: '/monitoring' },
-    { label: 'User settings', path: '/settings/admin/users' },
-  ];
+  const insightsLinks = canAccessStatistics ? [{ label: 'Statistics', path: '/statistics' }] : [];
+
+  const toolLinks = isAdmin
+    ? [
+        { label: 'Character helper', path: '/tools/char-code' },
+        { label: 'ICU preview', path: '/tools/icu-preview' },
+      ]
+    : [];
+
+  const adminLinks = isAdmin
+    ? [
+        { label: 'Admin settings', path: '/settings/admin' },
+        { label: 'Database monitoring', path: '/monitoring' },
+        { label: 'User settings', path: '/settings/admin/users' },
+      ]
+    : [];
 
   return (
     <div className="user-menu" ref={containerRef}>
@@ -98,36 +106,62 @@ export function UserMenu() {
             <div className="user-menu__line-name">{displayName}</div>
             <div className="user-menu__line-role">{roleLabel}</div>
           </div>
-          {isAdmin ? (
+          {canAccessStatistics || isAdmin ? (
             <>
-              <div className="user-menu__section-label">Tools</div>
-              <div className="user-menu__actions" role="none">
-                {toolLinks.map((item) => (
-                  <button
-                    key={item.path}
-                    type="button"
-                    className="user-menu__action"
-                    role="menuitem"
-                    onClick={() => handleNavigate(item.path)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              <div className="user-menu__section-label">Admin</div>
-              <div className="user-menu__actions" role="none">
-                {adminLinks.map((item) => (
-                  <button
-                    key={item.path}
-                    type="button"
-                    className="user-menu__action"
-                    role="menuitem"
-                    onClick={() => handleNavigate(item.path)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
+              {insightsLinks.length > 0 ? (
+                <>
+                  <div className="user-menu__section-label">Insights</div>
+                  <div className="user-menu__actions" role="none">
+                    {insightsLinks.map((item) => (
+                      <button
+                        key={item.path}
+                        type="button"
+                        className="user-menu__action"
+                        role="menuitem"
+                        onClick={() => handleNavigate(item.path)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+              {toolLinks.length > 0 ? (
+                <>
+                  <div className="user-menu__section-label">Tools</div>
+                  <div className="user-menu__actions" role="none">
+                    {toolLinks.map((item) => (
+                      <button
+                        key={item.path}
+                        type="button"
+                        className="user-menu__action"
+                        role="menuitem"
+                        onClick={() => handleNavigate(item.path)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+              {adminLinks.length > 0 ? (
+                <>
+                  <div className="user-menu__section-label">Admin</div>
+                  <div className="user-menu__actions" role="none">
+                    {adminLinks.map((item) => (
+                      <button
+                        key={item.path}
+                        type="button"
+                        className="user-menu__action"
+                        role="menuitem"
+                        onClick={() => handleNavigate(item.path)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
             </>
           ) : (
             <div className="user-menu__hint">More account actions will land here soon.</div>

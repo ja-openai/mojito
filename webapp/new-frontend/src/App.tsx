@@ -17,6 +17,7 @@ import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { AdminUserBatchPage } from './page/settings/AdminUserBatchPage';
 import { AdminUserDetailPage } from './page/settings/AdminUserDetailPage';
 import { AdminUserSettingsPage } from './page/settings/AdminUserSettingsPage';
+import { StatisticsPage } from './page/statistics/StatisticsPage';
 import { TextUnitDetailPage } from './page/text-unit-detail/TextUnitDetailPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { IcuMessagePreviewPage } from './page/tools/IcuMessagePreviewPage';
@@ -83,6 +84,7 @@ export function App() {
             ))}
             <Route path="/ai-translate" element={<AiTranslatePage />} />
             <Route path="/monitoring" element={<MonitoringPage />} />
+            <Route path="/statistics" element={<StatisticsPage />} />
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
             <Route path="/screenshots" element={<ScreenshotsDropzonePage />} />
             <Route path="/settings/admin" element={<AdminSettingsPage />} />
