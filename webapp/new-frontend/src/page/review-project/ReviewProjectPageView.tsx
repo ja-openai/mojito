@@ -2,6 +2,7 @@ import '../../components/chip-dropdown.css';
 import '../../components/filters/filter-chip.css';
 import './review-project-page.css';
 
+import { useQuery } from '@tanstack/react-query';
 import type { VirtualItem } from '@tanstack/react-virtual';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -19,6 +20,7 @@ import type {
   ApiReviewProjectType,
 } from '../../api/review-projects';
 import { REVIEW_PROJECT_TYPE_LABELS, REVIEW_PROJECT_TYPES } from '../../api/review-projects';
+import { type ApiTextUnitHistoryItem, fetchTextUnitHistory } from '../../api/text-units';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -38,6 +40,10 @@ import {
 } from '../../components/review-request/RequestAttachmentsDropzone';
 import { RequestDescriptionEditor } from '../../components/review-request/RequestDescriptionEditor';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import {
+  TextUnitHistoryTimeline,
+  type TextUnitHistoryTimelineEntry,
+} from '../../components/TextUnitHistoryTimeline';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
@@ -1229,8 +1235,10 @@ function DetailPane({
   const [lastHeroHeight, setLastHeroHeight] = useState<number | null>(null);
   const [showBaseline, setShowBaseline] = useState(false);
   const [showStaleDecision, setShowStaleDecision] = useState(false);
+
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
   const [isIcuCollapsed, setIsIcuCollapsed] = useState(true);
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
@@ -1282,6 +1290,65 @@ function DetailPane({
     decisionVariantId != null &&
     currentVariantId != null &&
     decisionVariantId !== currentVariantId;
+
+  const historyQuery = useQuery({
+    queryKey: ['review-project-text-unit-history', workbenchTextUnitId, localeTag],
+    enabled: workbenchTextUnitId != null && Boolean(localeTag),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: () => {
+      if (workbenchTextUnitId == null || !localeTag) {
+        return Promise.resolve([] as ApiTextUnitHistoryItem[]);
+      }
+      return fetchTextUnitHistory(workbenchTextUnitId, localeTag);
+    },
+  });
+
+  const historyItems = useMemo(() => {
+    return [...(historyQuery.data ?? [])]
+      .sort((a, b) => {
+        const dateDelta =
+          (Date.parse(b.createdDate ?? '') || 0) - (Date.parse(a.createdDate ?? '') || 0);
+        if (dateDelta !== 0) {
+          return dateDelta;
+        }
+        return (b.id ?? 0) - (a.id ?? 0);
+      })
+      .slice(0, 8);
+  }, [historyQuery.data]);
+
+  const historyErrorMessage =
+    historyQuery.error instanceof Error ? historyQuery.error.message : 'Unable to load history.';
+
+  const historyRows = useMemo<TextUnitHistoryTimelineEntry[]>(() => {
+    return historyItems.map((item) => {
+      const statusKey = item.includedInLocalizedFile === false ? 'REJECTED' : (item.status ?? null);
+      const statusLabel = statusKey != null ? statusKeyToLabel(statusKey) : '-';
+      return {
+        key: String(item.id),
+        variantId: String(item.id),
+        userName: item.createdByUser?.username?.trim() || 'Unknown user',
+        translation: item.content ?? '—',
+        date: formatDateTime(item.createdDate),
+        status: statusLabel,
+        comments: (item.tmTextUnitVariantComments ?? []).map((comment, index) => ({
+          key:
+            comment.id != null
+              ? String(comment.id)
+              : String(comment.type ?? '') +
+                '-' +
+                String(comment.severity ?? '') +
+                '-' +
+                String(comment.content ?? '') +
+                '-' +
+                String(index),
+          type: comment.type ?? '-',
+          severity: comment.severity ?? '-',
+          content: comment.content ?? '-',
+        })),
+      };
+    });
+  }, [historyItems]);
 
   useEffect(() => {
     setDraftTarget(snapshot.target);
@@ -2385,6 +2452,28 @@ function DetailPane({
               disabled={isStatusDropdownDisabled}
             />
           </div>
+
+          <div className="review-project-detail__field review-project-detail__field--history">
+            <button
+              type="button"
+              className="review-project-detail__history-toggle"
+              onClick={() => setIsHistoryCollapsed((current) => !current)}
+              aria-expanded={!isHistoryCollapsed}
+            >
+              <span className="review-project-detail__label">History</span>
+              <span className="review-project-detail__baseline-toggle review-project-detail__label-actions--fade">
+                {isHistoryCollapsed ? 'Show' : 'Hide'}
+              </span>
+            </button>
+            {!isHistoryCollapsed ? (
+              <TextUnitHistoryTimeline
+                isLoading={historyQuery.isLoading}
+                errorMessage={historyQuery.isError ? historyErrorMessage : null}
+                entries={historyRows}
+                emptyMessage="No history yet."
+              />
+            ) : null}
+          </div>
         </div>
       </div>
       <Modal
@@ -3271,6 +3360,23 @@ const formatDate = (value: string | null | undefined) => {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+  });
+};
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return '—';
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 };
 

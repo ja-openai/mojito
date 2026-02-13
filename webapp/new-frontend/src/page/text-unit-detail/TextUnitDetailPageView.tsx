@@ -10,6 +10,11 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
+import {
+  TextUnitHistoryTimeline,
+  type TextUnitHistoryTimelineComment as TextUnitDetailHistoryComment,
+  type TextUnitHistoryTimelineEntry as TextUnitDetailHistoryRow,
+} from '../../components/TextUnitHistoryTimeline';
 
 export type TextUnitDetailMetaRow = {
   label: string;
@@ -21,22 +26,7 @@ export type TextUnitDetailMetaSection = {
   rows: TextUnitDetailMetaRow[];
 };
 
-export type TextUnitDetailHistoryComment = {
-  key: string;
-  type: string;
-  severity: string;
-  content: string;
-};
-
-export type TextUnitDetailHistoryRow = {
-  key: string;
-  variantId: string;
-  userName: string;
-  translation: string;
-  date: string;
-  status: string;
-  comments: TextUnitDetailHistoryComment[];
-};
+export type { TextUnitDetailHistoryComment, TextUnitDetailHistoryRow };
 
 export type TextUnitDetailAiMessage = AiChatReviewMessage;
 
@@ -342,140 +332,14 @@ export function TextUnitDetailPageView({
                 onToggle={onToggleHistoryCollapsed}
               />
               {!isHistoryCollapsed ? (
-                historyMissingLocale ? (
-                  <div className="text-unit-detail-page__state text-unit-detail-page__state--warning">
-                    Missing locale. Open this page from the workbench row to load history.
-                  </div>
-                ) : isHistoryLoading ? (
-                  <div className="text-unit-detail-page__state">
-                    <span className="spinner spinner--md" aria-hidden />
-                    <span>Loading history…</span>
-                  </div>
-                ) : historyErrorMessage ? (
-                  <div className="text-unit-detail-page__state text-unit-detail-page__state--error">
-                    {historyErrorMessage}
-                  </div>
-                ) : (
-                  <ol className="text-unit-detail-page__timeline">
-                    {showDeletedHistoryEntry ? (
-                      <li className="text-unit-detail-page__timeline-item">
-                        <div className="text-unit-detail-page__timeline-dot" aria-hidden="true" />
-                        <div className="text-unit-detail-page__timeline-card">
-                          <div className="text-unit-detail-page__timeline-header">
-                            <div className="text-unit-detail-page__timeline-summary">
-                              <span className="text-unit-detail-page__timeline-title">
-                                Translation deleted
-                              </span>
-                              <span className="text-unit-detail-page__timeline-summary-separator">
-                                &middot;
-                              </span>
-                              <span className="text-unit-detail-page__timeline-summary-meta">
-                                -
-                              </span>
-                              <span className="text-unit-detail-page__timeline-summary-separator">
-                                &middot;
-                              </span>
-                              <span className="text-unit-detail-page__timeline-summary-status">
-                                Deleted
-                              </span>
-                            </div>
-                            <time className="text-unit-detail-page__timeline-time">-</time>
-                          </div>
-                          <pre className="text-unit-detail-page__timeline-content">
-                            {'<no current translation>'}
-                          </pre>
-                        </div>
-                      </li>
-                    ) : null}
-                    {historyRows.map((item) => (
-                      <li key={item.key} className="text-unit-detail-page__timeline-item">
-                        <div className="text-unit-detail-page__timeline-dot" aria-hidden="true" />
-                        <div className="text-unit-detail-page__timeline-card">
-                          <div className="text-unit-detail-page__timeline-header">
-                            <div className="text-unit-detail-page__timeline-summary">
-                              <span className="text-unit-detail-page__timeline-title">
-                                Translation updated
-                                <span className="text-unit-detail-page__timeline-title-meta">
-                                  #{item.variantId}
-                                </span>
-                              </span>
-                              <span className="text-unit-detail-page__timeline-summary-separator">
-                                &middot;
-                              </span>
-                              <span className="text-unit-detail-page__timeline-summary-meta">
-                                {item.userName}
-                              </span>
-                              {item.status !== '-' ? (
-                                <>
-                                  <span className="text-unit-detail-page__timeline-summary-separator">
-                                    &middot;
-                                  </span>
-                                  <span className="text-unit-detail-page__timeline-summary-status">
-                                    {item.status}
-                                  </span>
-                                </>
-                              ) : null}
-                            </div>
-                            <time className="text-unit-detail-page__timeline-time">
-                              {item.date}
-                            </time>
-                          </div>
-                          <pre className="text-unit-detail-page__timeline-content">
-                            {item.translation}
-                          </pre>
-                          {item.comments.length > 0 ? (
-                            <table className="text-unit-detail-page__history-comment-table">
-                              <thead>
-                                <tr>
-                                  <th>type</th>
-                                  <th>severity</th>
-                                  <th>content</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {item.comments.map((comment) => (
-                                  <tr key={comment.key}>
-                                    <td>{comment.type}</td>
-                                    <td>{comment.severity}</td>
-                                    <td>{comment.content}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
-                    <li className="text-unit-detail-page__timeline-item">
-                      <div className="text-unit-detail-page__timeline-dot" aria-hidden="true" />
-                      <div className="text-unit-detail-page__timeline-card">
-                        <div className="text-unit-detail-page__timeline-header">
-                          <div className="text-unit-detail-page__timeline-summary">
-                            <span className="text-unit-detail-page__timeline-title">
-                              Text unit created (untranslated)
-                            </span>
-                            <span className="text-unit-detail-page__timeline-summary-separator">
-                              &middot;
-                            </span>
-                            <span className="text-unit-detail-page__timeline-summary-meta">-</span>
-                            <span className="text-unit-detail-page__timeline-summary-separator">
-                              &middot;
-                            </span>
-                            <span className="text-unit-detail-page__timeline-summary-status">
-                              Untranslated
-                            </span>
-                          </div>
-                          <time className="text-unit-detail-page__timeline-time">
-                            {historyInitialDate}
-                          </time>
-                        </div>
-                        <pre className="text-unit-detail-page__timeline-content">
-                          {'<no translation yet>'}
-                        </pre>
-                      </div>
-                    </li>
-                  </ol>
-                )
+                <TextUnitHistoryTimeline
+                  isLoading={isHistoryLoading}
+                  errorMessage={historyErrorMessage}
+                  missingLocale={historyMissingLocale}
+                  entries={historyRows}
+                  showDeletedEntry={showDeletedHistoryEntry}
+                  initialDate={historyInitialDate}
+                />
               ) : null}
             </section>
 

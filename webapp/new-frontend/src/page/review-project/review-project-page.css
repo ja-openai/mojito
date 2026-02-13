@@ -1279,6 +1279,20 @@
   display: inline-flex;
 }
 
+.review-project-detail__history-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  cursor: pointer;
+  text-align: left;
+}
+
 .review-project-detail__warning-inline {
   width: 100%;
   display: flex;

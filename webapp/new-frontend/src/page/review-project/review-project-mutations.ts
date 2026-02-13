@@ -219,6 +219,9 @@ export function useReviewProjectMutations(
         }
         updateTextUnitInCache(updated);
         void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+        void queryClient.invalidateQueries({
+          queryKey: ['review-project-text-unit-history'],
+        });
         setErrorMessage(null);
         setConflictTextUnit(null);
         setConflictAction(null);
@@ -229,6 +232,9 @@ export function useReviewProjectMutations(
         }
         const err = error as MutationError;
         if (err.status === 409 && err.data) {
+          void queryClient.invalidateQueries({
+            queryKey: ['review-project-text-unit-history'],
+          });
           setConflictTextUnit(err.data);
           setConflictAction(action);
           setErrorMessage(null);
