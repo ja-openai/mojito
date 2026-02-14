@@ -882,6 +882,7 @@
 .review-project-detail__main,
 .review-project-detail__side {
   display: grid;
+  min-width: 0;
 }
 
 .review-project-detail__main {
@@ -922,6 +923,7 @@
 .review-project-detail__field {
   display: grid;
   gap: var(--space-1);
+  min-width: 0;
 }
 
 .review-project-detail__label {

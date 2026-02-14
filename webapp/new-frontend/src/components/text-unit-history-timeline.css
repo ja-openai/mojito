@@ -17,6 +17,7 @@
 .text-unit-history__comment-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .text-unit-history__comment-table th,
@@ -25,6 +26,7 @@
   padding: var(--space-2) var(--space-3);
   font-size: var(--font-size-xs);
   border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  overflow-wrap: anywhere;
 }
 
 .text-unit-history__comment-table th {
@@ -79,13 +81,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .text-unit-history__timeline-header {
   display: flex;
   justify-content: space-between;
   gap: var(--space-3);
-  align-items: baseline;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .text-unit-history__timeline-badges {
@@ -110,12 +115,12 @@
   letter-spacing: 0;
 }
 .text-unit-history__timeline-summary {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
   gap: var(--space-1);
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  white-space: normal;
   color: var(--color-text);
 }
 
@@ -143,6 +148,7 @@
   font-size: var(--font-size-xs);
   color: var(--color-text);
   white-space: nowrap;
+  margin-left: auto;
 }
 
 .text-unit-history__timeline-content {
