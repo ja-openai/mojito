@@ -1955,10 +1955,12 @@ function DetailPane({
         }
       >
         {screenshotImages.length ? (
+          <div className="review-project-detail__shots-badge">
+            {`${currentScreenshotIdx + 1} / ${screenshotImages.length}`}
+          </div>
+        ) : null}
+        {screenshotImages.length ? (
           <>
-            <div className="review-project-detail__shots-badge">
-              {currentScreenshotIdx + 1} / {screenshotImages.length}
-            </div>
             {isScreenshotsCollapsed ? null : (
               <div className="review-project-detail__gallery review-project-detail__gallery--hero">
                 <button
