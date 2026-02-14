@@ -882,6 +882,13 @@
 .review-project-detail__main,
 .review-project-detail__side {
   display: grid;
+}
+
+.review-project-detail__main {
+  gap: var(--space-6);
+}
+
+.review-project-detail__side {
   gap: var(--space-3);
 }
 
