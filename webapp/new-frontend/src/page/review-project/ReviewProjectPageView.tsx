@@ -1327,7 +1327,7 @@ function DetailPane({
         status: statusLabel,
         badges: [
           ...(item.id === baselineVariant?.id ? ['Baseline'] : []),
-          ...(item.id === decisionVariantId ? ['Decided'] : []),
+          ...(item.id === decisionVariantId ? ['Accepted'] : []),
         ],
         comments: (item.tmTextUnitVariantComments ?? []).map((comment, index) => ({
           key:
