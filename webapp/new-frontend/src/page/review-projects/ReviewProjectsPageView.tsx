@@ -370,6 +370,25 @@ const getProgressMetrics = (acceptedValue: unknown, totalValue: unknown) => {
   };
 };
 
+const getLanguageCompletionMetrics = (projects: ReviewProjectRow[]) => {
+  const totalLanguages = projects.length;
+  const completedLanguages = projects.reduce((sum, project) => {
+    const accepted = toFiniteNonNegative(project.acceptedCount);
+    const total = toFiniteNonNegative(project.textUnitCount ?? 0);
+    return sum + (total === 0 || accepted >= total ? 1 : 0);
+  }, 0);
+  const rawPercent = totalLanguages === 0 ? 0 : (completedLanguages / totalLanguages) * 100;
+  const percentValue = Math.max(0, Math.min(100, rawPercent));
+  const percentWidth =
+    completedLanguages > 0 && percentValue > 0 && percentValue < 1 ? '2px' : `${percentValue}%`;
+  return {
+    completedLanguages,
+    totalLanguages,
+    percentWidth,
+    completionLabel: `${completedLanguages}/${totalLanguages}`,
+  };
+};
+
 const TOGGLE_IGNORE_SELECTOR =
   'a,button,input,select,textarea,label,[role="button"],[role="link"],[data-no-toggle="true"]';
 
@@ -890,10 +909,8 @@ function RequestGroupsSection({
             const allSelectedInGroup =
               groupProjectIds.length > 0 && selectedInGroup === groupProjectIds.length;
             const partiallySelectedInGroup = selectedInGroup > 0 && !allSelectedInGroup;
-            const { percentWidth, percentLabel } = getProgressMetrics(
-              group.acceptedCount,
-              group.textUnitCount,
-            );
+            const { completedLanguages, totalLanguages, percentWidth, completionLabel } =
+              getLanguageCompletionMetrics(group.projects);
             const averageWordCount = getAverageCount(
               group.projects.map((project) => project.wordCount),
             );
@@ -1009,7 +1026,10 @@ function RequestGroupsSection({
                     </div>
                   </div>
                   <div className="review-projects-page__progress">
-                    <div className="review-projects-page__progress-bar">
+                    <div
+                      className="review-projects-page__progress-bar"
+                      title={`${completedLanguages} of ${totalLanguages} locales complete`}
+                    >
                       <div
                         className="review-projects-page__progress-fill"
                         style={{ width: percentWidth }}
@@ -1017,7 +1037,7 @@ function RequestGroupsSection({
                       />
                     </div>
                     <div className="review-projects-page__progress-meta">
-                      <div className="review-projects-page__progress-percent">{percentLabel}</div>
+                      <div className="review-projects-page__progress-percent">{completionLabel}</div>
                     </div>
                   </div>
                 </div>
