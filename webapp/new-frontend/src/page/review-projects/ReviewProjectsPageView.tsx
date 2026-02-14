@@ -1049,14 +1049,20 @@ function RequestGroupsSection({
                                 <span className="review-projects-page__muted">No locale</span>
                               )}
                             </div>
-                            <div className="review-projects-page__request-project-meta">
-                              {project.status === 'CLOSED' ? (
-                                <Pill className="review-projects-page__status-pill status-closed">
-                                  {REVIEW_PROJECT_STATUS_LABELS[project.status]}
-                                </Pill>
-                              ) : null}
+                            <div className="review-projects-page__request-project-counts">
+                              <CountsInline
+                                words={project.wordCount ?? null}
+                                strings={project.textUnitCount ?? null}
+                              />
                             </div>
                             <div className="review-projects-page__request-project-progress">
+                              <div className="review-projects-page__request-project-meta">
+                                {project.status === 'CLOSED' ? (
+                                  <Pill className="review-projects-page__status-pill status-closed">
+                                    {REVIEW_PROJECT_STATUS_LABELS[project.status]}
+                                  </Pill>
+                                ) : null}
+                              </div>
                               <div
                                 className="review-projects-page__progress-bar"
                                 title={`${formatNumber(projectAccepted)} of ${formatNumber(projectTotal)} processed`}
