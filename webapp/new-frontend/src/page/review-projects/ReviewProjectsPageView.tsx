@@ -345,6 +345,14 @@ const toFiniteNonNegative = (value: unknown) => {
   return parsed < 0 ? 0 : parsed;
 };
 
+const getAverageCount = (values: Array<number | null | undefined>) => {
+  if (values.length === 0) {
+    return 0;
+  }
+  const total = values.reduce<number>((sum, value) => sum + toFiniteNonNegative(value ?? 0), 0);
+  return Math.round(total / values.length);
+};
+
 const getProgressMetrics = (acceptedValue: unknown, totalValue: unknown) => {
   const accepted = toFiniteNonNegative(acceptedValue);
   const total = toFiniteNonNegative(totalValue);
@@ -882,9 +890,15 @@ function RequestGroupsSection({
             const allSelectedInGroup =
               groupProjectIds.length > 0 && selectedInGroup === groupProjectIds.length;
             const partiallySelectedInGroup = selectedInGroup > 0 && !allSelectedInGroup;
-            const { total, percentWidth, percentLabel } = getProgressMetrics(
+            const { percentWidth, percentLabel } = getProgressMetrics(
               group.acceptedCount,
               group.textUnitCount,
+            );
+            const averageWordCount = getAverageCount(
+              group.projects.map((project) => project.wordCount),
+            );
+            const averageStringCount = getAverageCount(
+              group.projects.map((project) => project.textUnitCount),
             );
             const typeBadge = getRequestGroupTypeBadge(group);
             const requestLabel =
@@ -962,7 +976,7 @@ function RequestGroupsSection({
                     </div>
                   </div>
                   <div className="review-projects-page__counts">
-                    <CountsInline words={group.wordCount} strings={total} />
+                    <CountsInline words={averageWordCount} strings={averageStringCount} />
                   </div>
                   <div className="review-projects-page__type">
                     <Pill className={`review-projects-page__type-pill ${typeBadge.className}`}>
@@ -1149,19 +1163,13 @@ export function ReviewProjectsPageView({
   const { getRowRef } = useMeasuredRowRefs<number, HTMLDivElement>({ measureElement });
 
   const totalWords = useMemo(
-    () =>
-      effectiveDisplayMode === 'requests'
-        ? groupedRequestRows.reduce((sum, group) => sum + (group.wordCount ?? 0), 0)
-        : projects.reduce((sum, project) => sum + (project.wordCount ?? 0), 0),
-    [effectiveDisplayMode, groupedRequestRows, projects],
+    () => getAverageCount(projects.map((project) => project.wordCount)),
+    [projects],
   );
 
   const totalStrings = useMemo(
-    () =>
-      effectiveDisplayMode === 'requests'
-        ? groupedRequestRows.reduce((sum, group) => sum + (group.textUnitCount ?? 0), 0)
-        : projects.reduce((sum, project) => sum + (project.textUnitCount ?? 0), 0),
-    [effectiveDisplayMode, groupedRequestRows, projects],
+    () => getAverageCount(projects.map((project) => project.textUnitCount)),
+    [projects],
   );
 
   useEffect(() => {
