@@ -159,7 +159,7 @@
 .user-admin-page__table-header,
 .user-admin-page__row {
   display: grid;
-  grid-template-columns: 2.25rem 4.5rem 1.4fr 1.6fr 1fr 0.8fr 1fr;
+  grid-template-columns: 2.25rem 4.5rem 1.2fr 1.4fr 0.9fr 0.8fr 1fr 1fr;
   align-items: center;
   gap: var(--space-2);
 }
@@ -270,18 +270,18 @@
 
   .user-admin-page__table-header,
   .user-admin-page__row {
-    grid-template-columns: 2.25rem 3.5rem 1.2fr 1.4fr 1fr 0.8fr 1fr;
+    grid-template-columns: 2.25rem 3.5rem 1.1fr 1.3fr 0.9fr 0.8fr 1fr 1fr;
   }
 }
 
 @media (max-width: 52rem) {
   .user-admin-page__table-header,
   .user-admin-page__row {
-    grid-template-columns: 2.25rem 3rem 1.4fr 1.6fr 1fr 0.8fr;
+    grid-template-columns: 2.25rem 3rem 1.2fr 1.4fr 1fr 0.8fr 1fr;
   }
 
-  .user-admin-page__table-header > :nth-child(7),
-  .user-admin-page__row > :nth-child(7) {
+  .user-admin-page__table-header > :nth-child(8),
+  .user-admin-page__row > :nth-child(8) {
     display: none;
   }
 }

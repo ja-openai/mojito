@@ -62,6 +62,7 @@ type UserRow = {
   displayName: string;
   roleLabel: string;
   roleValue: string;
+  teamSummary: string;
   localeSummary: string;
   disabledLabel: string;
   enabled: boolean | null;
@@ -115,6 +116,15 @@ export function AdminUserSettingsPage() {
       const displayName = getDisplayName(entry);
       const roleValue = getPrimaryRole(entry);
       const roleLabel = formatRole(roleValue);
+      const teamNames =
+        (entry.teamNames ?? []).filter((name): name is string => Boolean(name && name.trim())) ??
+        [];
+      const teamSummary =
+        teamNames.length === 0
+          ? '—'
+          : teamNames.length === 1
+            ? teamNames[0]
+            : `${teamNames.length} teams`;
       const localeTags = getLocaleTags(entry);
       const localeCount = localeTags.length;
       const localeSummary = entry.canTranslateAllLocales
@@ -137,6 +147,7 @@ export function AdminUserSettingsPage() {
         entry.commonName,
         displayName,
         roleLabel,
+        ...teamNames,
       ]
         .filter(Boolean)
         .join(' ')
@@ -148,6 +159,7 @@ export function AdminUserSettingsPage() {
         displayName,
         roleLabel,
         roleValue,
+        teamSummary,
         localeSummary,
         disabledLabel,
         enabled: entry.enabled ?? null,
@@ -429,10 +441,6 @@ export function AdminUserSettingsPage() {
 
   return (
     <div className="settings-page user-admin-page">
-      <div className="settings-page__header">
-        <h1>User settings</h1>
-      </div>
-
       <div className="user-admin-page__toolbar">
         <SearchControl
           value={searchQuery}
@@ -584,6 +592,9 @@ export function AdminUserSettingsPage() {
             Disabled
           </div>
           <div className="user-admin-page__cell" role="columnheader">
+            Teams
+          </div>
+          <div className="user-admin-page__cell" role="columnheader">
             Locales
           </div>
         </div>
@@ -655,6 +666,9 @@ export function AdminUserSettingsPage() {
                     </div>
                     <div className="user-admin-page__cell user-admin-page__cell--muted" role="cell">
                       {row.disabledLabel}
+                    </div>
+                    <div className="user-admin-page__cell user-admin-page__cell--muted" role="cell">
+                      {row.teamSummary}
                     </div>
                     <div className="user-admin-page__cell user-admin-page__cell--muted" role="cell">
                       {row.localeSummary}

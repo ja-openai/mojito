@@ -1,10 +1,18 @@
 import './admin-user-batch-page.css';
 import '../../components/chip-dropdown.css';
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
+import {
+  type ApiTeam,
+  fetchTeamProjectManagers,
+  fetchTeams,
+  fetchTeamTranslators,
+  replaceTeamProjectManagers,
+  replaceTeamTranslators,
+} from '../../api/teams';
 import type { ApiAuthority, ApiUserLocale } from '../../api/users';
 import { createUser } from '../../api/users';
 import { useUser } from '../../components/RequireUser';
@@ -82,6 +90,8 @@ type CreateResult = {
   message?: string;
   username?: string;
   password?: string;
+  role?: string;
+  userId?: number;
 };
 
 type ColumnKey =
@@ -210,6 +220,25 @@ export function AdminUserBatchPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedPasswords, setGeneratedPasswords] = useState<Record<string, string>>({});
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+  const [assignmentStatus, setAssignmentStatus] = useState<{
+    kind: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const teamsQuery = useQuery<ApiTeam[]>({
+    queryKey: ['teams'],
+    queryFn: fetchTeams,
+    staleTime: 30_000,
+  });
+  const teamOptions = useMemo(
+    () =>
+      [...(teamsQuery.data ?? [])]
+        .sort((left, right) =>
+          left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
+        )
+        .map((team) => ({ value: team.id, label: `${team.name} (#${team.id})` })),
+    [teamsQuery.data],
+  );
 
   const maxColumns = useMemo(() => Math.max(getMaxColumns(input), 1), [input]);
 
@@ -260,6 +289,7 @@ export function AdminUserBatchPage() {
       return;
     }
     setIsSubmitting(true);
+    setAssignmentStatus(null);
     const nextResults: CreateResult[] = [];
     for (const row of validRows) {
       const payloadLocales: ApiUserLocale[] = row.locales.map((tag) => ({
@@ -269,7 +299,7 @@ export function AdminUserBatchPage() {
       const generatedPassword = generatedPasswords[getRowPasswordKey(row)];
       const password = row.password || generatedPassword || generatePassword();
       try {
-        await createUser({
+        const createdUser = await createUser({
           username: row.username,
           password,
           canTranslateAllLocales: row.canTranslateAllLocales,
@@ -284,6 +314,8 @@ export function AdminUserBatchPage() {
           status: 'success',
           username: row.username,
           password,
+          role: row.role,
+          userId: createdUser.id,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to create user';
@@ -296,6 +328,52 @@ export function AdminUserBatchPage() {
       }
       setResults([...nextResults]);
     }
+
+    if (selectedTeamId != null) {
+      try {
+        const createdPmIds = nextResults
+          .filter(
+            (result) =>
+              result.status === 'success' && result.role === 'ROLE_PM' && result.userId != null,
+          )
+          .map((result) => result.userId as number);
+        const createdTranslatorIds = nextResults
+          .filter(
+            (result) =>
+              result.status === 'success' &&
+              result.role === 'ROLE_TRANSLATOR' &&
+              result.userId != null,
+          )
+          .map((result) => result.userId as number);
+
+        if (createdPmIds.length > 0) {
+          const pmResponse = await fetchTeamProjectManagers(selectedTeamId);
+          const mergedPmIds = Array.from(new Set([...pmResponse.userIds, ...createdPmIds])).sort(
+            (left, right) => left - right,
+          );
+          await replaceTeamProjectManagers(selectedTeamId, mergedPmIds);
+        }
+
+        if (createdTranslatorIds.length > 0) {
+          const translatorResponse = await fetchTeamTranslators(selectedTeamId);
+          const mergedTranslatorIds = Array.from(
+            new Set([...translatorResponse.userIds, ...createdTranslatorIds]),
+          ).sort((left, right) => left - right);
+          await replaceTeamTranslators(selectedTeamId, mergedTranslatorIds);
+        }
+
+        if (createdPmIds.length > 0 || createdTranslatorIds.length > 0) {
+          setAssignmentStatus({
+            kind: 'success',
+            message: `Assigned ${createdPmIds.length + createdTranslatorIds.length} user(s) to team.`,
+          });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to assign users to team.';
+        setAssignmentStatus({ kind: 'error', message });
+      }
+    }
+
     void queryClient.invalidateQueries({ queryKey: [USERS_QUERY_KEY] });
     setIsSubmitting(false);
   };
@@ -325,7 +403,7 @@ export function AdminUserBatchPage() {
               onClick={() => {
                 void navigate('/settings/admin/users');
               }}
-              aria-label="Back to user settings"
+              aria-label="Back to users"
               title="Back to users"
             >
               <svg
@@ -390,6 +468,24 @@ export function AdminUserBatchPage() {
             />
           </div>
           <div className="user-batch-page__field user-batch-page__mapping-panel">
+            <div className="user-batch-page__mapping-row user-batch-page__team-row">
+              <span className="user-batch-page__mapping-label">Team</span>
+              <div className="user-batch-page__mapping-controls">
+                <SingleSelectDropdown
+                  label="Team"
+                  options={teamOptions}
+                  value={selectedTeamId}
+                  onChange={(next) => {
+                    setSelectedTeamId(next);
+                    setAssignmentStatus(null);
+                  }}
+                  className="user-batch-page__team-select"
+                  noneLabel="No team assignment"
+                  placeholder="No team assignment"
+                  noResultsLabel={teamsQuery.isLoading ? 'Loading teams…' : 'No teams found'}
+                />
+              </div>
+            </div>
             <div className="user-batch-page__mapping">
               {Array.from({ length: maxColumns }, (_, index) => {
                 const current = columnMapping[index] ?? 'ignore';
@@ -436,6 +532,15 @@ export function AdminUserBatchPage() {
               : `Ready to create ${validRows.length} ${validRows.length === 1 ? 'user' : 'users'}.`}
             {errorRows.length ? ` ${errorRows.length} line(s) need attention.` : ''}
           </div>
+          {assignmentStatus ? (
+            <div
+              className={`user-batch-page__summary${
+                assignmentStatus.kind === 'error' ? ' user-batch-page__summary--error' : ''
+              }`}
+            >
+              {assignmentStatus.message}
+            </div>
+          ) : null}
           <div className="user-batch-page__preview">
             <div className="user-batch-page__preview-header">
               <div>Line</div>
