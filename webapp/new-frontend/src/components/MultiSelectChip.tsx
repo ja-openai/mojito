@@ -143,19 +143,33 @@ export function MultiSelectChip<T extends string | number>({
     onChange([...selectedValues, value]);
   };
 
-  const selectAll = () => {
-    onChange(options.map((option) => option.value));
-  };
-
-  const clearAll = () => {
-    onChange([]);
-  };
-
   const visibleOptions = filterQuery
     ? options.filter((option) =>
         option.label.toLowerCase().includes(filterQuery.trim().toLowerCase()),
       )
     : options;
+
+  const allVisibleSelected =
+    visibleOptions.length > 0 && visibleOptions.every((option) => selectedSet.has(option.value));
+
+  const selectAll = () => {
+    if (!visibleOptions.length) {
+      return;
+    }
+    const next = [...selectedValues];
+    const nextSet = new Set(selectedValues);
+    visibleOptions.forEach((option) => {
+      if (!nextSet.has(option.value)) {
+        next.push(option.value);
+        nextSet.add(option.value);
+      }
+    });
+    onChange(next);
+  };
+
+  const clearAll = () => {
+    onChange([]);
+  };
 
   const resolvedClassName = ['chip-dropdown', 'chip-dropdown--xs', 'multi-select-chip', className]
     .filter(Boolean)
@@ -203,7 +217,7 @@ export function MultiSelectChip<T extends string | number>({
                   type="button"
                   className="multi-select-chip__action-button"
                   onClick={selectAll}
-                  disabled={selectedValues.length === options.length}
+                  disabled={allVisibleSelected}
                 >
                   {selectAllText}
                 </button>
