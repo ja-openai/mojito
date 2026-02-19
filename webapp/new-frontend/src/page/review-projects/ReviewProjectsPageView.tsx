@@ -1037,7 +1037,9 @@ function RequestGroupsSection({
                       />
                     </div>
                     <div className="review-projects-page__progress-meta">
-                      <div className="review-projects-page__progress-percent">{completionLabel}</div>
+                      <div className="review-projects-page__progress-percent">
+                        {completionLabel}
+                      </div>
                     </div>
                   </div>
                 </div>
