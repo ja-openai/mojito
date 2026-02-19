@@ -1,4 +1,4 @@
-import type { MultiSelectOption } from './MultiSelectChip';
+import type { MultiSelectCustomAction, MultiSelectOption } from './MultiSelectChip';
 import { MultiSelectChip } from './MultiSelectChip';
 
 export type LocaleOption = {
@@ -18,6 +18,7 @@ type Props = {
   myLocaleTags?: string[];
   myLocalesLabel?: string;
   myLocalesAriaLabel?: string;
+  customActions?: MultiSelectCustomAction[];
 };
 
 export function LocaleMultiSelect({
@@ -32,6 +33,7 @@ export function LocaleMultiSelect({
   myLocaleTags,
   myLocalesLabel = 'My locales',
   myLocalesAriaLabel = 'Select your locales',
+  customActions,
 }: Props) {
   const multiOptions: Array<MultiSelectOption<string>> = options.map((option) => ({
     value: option.tag,
@@ -48,7 +50,7 @@ export function LocaleMultiSelect({
       selectedTags.map((value) => value.toLowerCase()).includes(tag.toLowerCase()),
     );
 
-  const localeCustomActions =
+  const localeCustomActions: MultiSelectCustomAction[] =
     myLocaleSelections.length > 0
       ? [
           {
@@ -58,7 +60,9 @@ export function LocaleMultiSelect({
             ariaLabel: myLocalesAriaLabel,
           },
         ]
-      : undefined;
+      : [];
+
+  const mergedCustomActions = [...localeCustomActions, ...(customActions ?? [])];
 
   return (
     <MultiSelectChip
@@ -72,7 +76,7 @@ export function LocaleMultiSelect({
       align={align}
       disabled={disabled}
       buttonAriaLabel={buttonAriaLabel ?? label}
-      customActions={localeCustomActions}
+      customActions={mergedCustomActions.length > 0 ? mergedCustomActions : undefined}
       summaryFormatter={({ options: opts, selectedValues }) => {
         if (!opts.length) {
           return label ?? 'Locales';

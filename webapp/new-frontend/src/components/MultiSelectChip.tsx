@@ -8,7 +8,7 @@ export type MultiSelectOption<T extends string | number> = {
   label: string;
 };
 
-type CustomAction = {
+export type MultiSelectCustomAction = {
   label: string;
   onClick: () => void;
   disabled?: boolean;
@@ -38,7 +38,7 @@ export type MultiSelectChipProps<T extends string | number> = {
   clearAllLabel?: string;
   onlyLabel?: string;
   summaryFormatter?: SummaryFormatter<T>;
-  customActions?: CustomAction[];
+  customActions?: MultiSelectCustomAction[];
 };
 
 export function MultiSelectChip<T extends string | number>({
