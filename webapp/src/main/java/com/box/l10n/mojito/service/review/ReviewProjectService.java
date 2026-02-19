@@ -9,14 +9,15 @@ import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest_;
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
-// TODO(JA) NO rest !!
 import com.box.l10n.mojito.entity.review.ReviewProject_;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.entity.security.user.User_;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
+import com.box.l10n.mojito.service.team.TeamRepository;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
@@ -55,6 +56,9 @@ public class ReviewProjectService {
   private final TMService tmService;
   private final WordCountService wordCountService;
   private final UserService userService;
+  private final UserRepository userRepository;
+  private final TeamRepository teamRepository;
+  private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -70,7 +74,10 @@ public class ReviewProjectService {
       TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository,
       TMService tmService,
       WordCountService wordCountService,
-      UserService userService) {
+      UserService userService,
+      UserRepository userRepository,
+      TeamRepository teamRepository,
+      ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository) {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
@@ -83,6 +90,9 @@ public class ReviewProjectService {
     this.tmService = tmService;
     this.wordCountService = wordCountService;
     this.userService = userService;
+    this.userRepository = userRepository;
+    this.teamRepository = teamRepository;
+    this.reviewProjectAssignmentHistoryRepository = reviewProjectAssignmentHistoryRepository;
   }
 
   @Transactional
@@ -177,6 +187,7 @@ public class ReviewProjectService {
 
       saved.setWordCount(wordCount);
       saved.setTextUnitCount(textUnitCount);
+      recordAssignmentHistory(saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null);
 
       projectIds.add(saved.getId());
       createdLocaleTags.add(locale.getBcp47Tag());
@@ -704,6 +715,76 @@ public class ReviewProjectService {
   }
 
   @Transactional
+  public GetProjectDetailView updateProjectAssignment(
+      Long projectId,
+      Long teamId,
+      Long assignedPmUserId,
+      Long assignedTranslatorUserId,
+      String note) {
+    ReviewProject reviewProject =
+        reviewProjectRepository
+            .findById(projectId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProject with id: " + projectId + " not found"));
+
+    if (!userService.isCurrentUserAdmin()) {
+      userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
+    }
+
+    Team nextTeam = resolveTeam(teamId);
+    User nextAssignedPm = resolveUser(assignedPmUserId, "assignedPmUser");
+    User nextAssignedTranslator = resolveUser(assignedTranslatorUserId, "assignedTranslatorUser");
+
+    Team previousTeam = reviewProject.getTeam();
+    User previousAssignedPm = reviewProject.getAssignedPmUser();
+    User previousAssignedTranslator = reviewProject.getAssignedTranslatorUser();
+
+    boolean changed =
+        !Objects.equals(getEntityId(previousTeam), getEntityId(nextTeam))
+            || !Objects.equals(getEntityId(previousAssignedPm), getEntityId(nextAssignedPm))
+            || !Objects.equals(
+                getEntityId(previousAssignedTranslator), getEntityId(nextAssignedTranslator));
+
+    if (!changed) {
+      return getProjectDetail(projectId);
+    }
+
+    reviewProject.setTeam(nextTeam);
+    reviewProject.setAssignedPmUser(nextAssignedPm);
+    reviewProject.setAssignedTranslatorUser(nextAssignedTranslator);
+    reviewProjectRepository.save(reviewProject);
+
+    boolean hadAssignment =
+        previousTeam != null || previousAssignedPm != null || previousAssignedTranslator != null;
+    boolean hasAssignment =
+        reviewProject.getTeam() != null
+            || reviewProject.getAssignedPmUser() != null
+            || reviewProject.getAssignedTranslatorUser() != null;
+
+    ReviewProjectAssignmentEventType eventType;
+    if (!hadAssignment && hasAssignment) {
+      eventType = ReviewProjectAssignmentEventType.ASSIGNED;
+    } else if (hadAssignment && !hasAssignment) {
+      eventType = ReviewProjectAssignmentEventType.UNASSIGNED;
+    } else {
+      eventType = ReviewProjectAssignmentEventType.REASSIGNED;
+    }
+
+    recordAssignmentHistory(reviewProject, eventType, note);
+    return getProjectDetail(projectId);
+  }
+
+  @Transactional(readOnly = true)
+  public List<ReviewProjectAssignmentHistory> getProjectAssignmentHistory(Long projectId) {
+    if (!reviewProjectRepository.existsById(projectId)) {
+      throw new IllegalArgumentException("reviewProject with id: " + projectId + " not found");
+    }
+    return reviewProjectAssignmentHistoryRepository.findByProjectId(projectId);
+  }
+
+  @Transactional
   public int adminBatchUpdateStatus(
       List<Long> projectIds, ReviewProjectStatus status, String closeReason) {
     requireAdmin();
@@ -974,5 +1055,43 @@ public class ReviewProjectService {
     if (!userService.isCurrentUserAdmin()) {
       throw new AccessDeniedException("Admin role required");
     }
+  }
+
+  private Team resolveTeam(Long teamId) {
+    if (teamId == null) {
+      return null;
+    }
+    return teamRepository
+        .findByIdAndDeletedFalse(teamId)
+        .orElseThrow(() -> new IllegalArgumentException("Unknown team: " + teamId));
+  }
+
+  private User resolveUser(Long userId, String fieldName) {
+    if (userId == null) {
+      return null;
+    }
+    return userRepository
+        .findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("Unknown " + fieldName + ": " + userId));
+  }
+
+  private Long getEntityId(BaseEntity entity) {
+    return entity == null ? null : entity.getId();
+  }
+
+  private void recordAssignmentHistory(
+      ReviewProject reviewProject, ReviewProjectAssignmentEventType eventType, String note) {
+    ReviewProjectAssignmentHistory history = new ReviewProjectAssignmentHistory();
+    history.setReviewProject(reviewProject);
+    history.setTeam(reviewProject.getTeam());
+    history.setAssignedPmUser(reviewProject.getAssignedPmUser());
+    history.setAssignedTranslatorUser(reviewProject.getAssignedTranslatorUser());
+    history.setEventType(eventType);
+    String normalizedNote = note == null ? null : note.trim();
+    if (normalizedNote != null && normalizedNote.length() > 512) {
+      normalizedNote = normalizedNote.substring(0, 512);
+    }
+    history.setNote(normalizedNote == null || normalizedNote.isEmpty() ? null : normalizedNote);
+    reviewProjectAssignmentHistoryRepository.save(history);
   }
 }

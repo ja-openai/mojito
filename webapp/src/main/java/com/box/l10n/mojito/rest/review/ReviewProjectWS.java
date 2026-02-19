@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.rest.review;
 
+import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
+import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
@@ -119,6 +121,33 @@ public class ReviewProjectWS {
     return toDetailResponse(projectDetail);
   }
 
+  @PostMapping("/review-projects/{projectId}/assignment")
+  public GetReviewProjectResponse updateReviewProjectAssignment(
+      @PathVariable Long projectId, @RequestBody UpdateReviewProjectAssignmentRequest request) {
+    if (request == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "request body is required");
+    }
+
+    GetProjectDetailView projectDetail =
+        reviewProjectService.updateProjectAssignment(
+            projectId,
+            request.teamId(),
+            request.assignedPmUserId(),
+            request.assignedTranslatorUserId(),
+            request.note());
+    return toDetailResponse(projectDetail);
+  }
+
+  @GetMapping("/review-projects/{projectId}/assignment-history")
+  public ReviewProjectAssignmentHistoryResponse getReviewProjectAssignmentHistory(
+      @PathVariable Long projectId) {
+    List<ReviewProjectAssignmentHistoryResponse.Entry> entries =
+        reviewProjectService.getProjectAssignmentHistory(projectId).stream()
+            .map(this::toAssignmentHistoryEntry)
+            .toList();
+    return new ReviewProjectAssignmentHistoryResponse(entries);
+  }
+
   @PostMapping("/admin/review-projects/status")
   public AdminBatchActionResponse adminBatchUpdateReviewProjectStatus(
       @RequestBody AdminBatchUpdateStatusRequest request) {
@@ -192,6 +221,23 @@ public class ReviewProjectWS {
       ReviewProjectType type,
       ZonedDateTime dueDate,
       List<String> screenshotImageIds) {}
+
+  public record UpdateReviewProjectAssignmentRequest(
+      Long teamId, Long assignedPmUserId, Long assignedTranslatorUserId, String note) {}
+
+  public record ReviewProjectAssignmentHistoryResponse(List<Entry> entries) {
+    public record Entry(
+        Long id,
+        ZonedDateTime createdDate,
+        Long teamId,
+        String teamName,
+        Long assignedPmUserId,
+        String assignedPmUsername,
+        Long assignedTranslatorUserId,
+        String assignedTranslatorUsername,
+        ReviewProjectAssignmentEventType eventType,
+        String note) {}
+  }
 
   public record AdminBatchUpdateStatusRequest(
       List<Long> projectIds, ReviewProjectStatus status, String closeReason) {}
@@ -508,5 +554,24 @@ public class ReviewProjectWS {
 
     return new GetReviewProjectResponse.ReviewProjectTextUnit(
         detail.reviewProjectTextUnitId(), tmTextUnit, baselineVariant, currentVariant, decision);
+  }
+
+  private ReviewProjectAssignmentHistoryResponse.Entry toAssignmentHistoryEntry(
+      ReviewProjectAssignmentHistory history) {
+    return new ReviewProjectAssignmentHistoryResponse.Entry(
+        history.getId(),
+        history.getCreatedDate(),
+        history.getTeam() != null ? history.getTeam().getId() : null,
+        history.getTeam() != null ? history.getTeam().getName() : null,
+        history.getAssignedPmUser() != null ? history.getAssignedPmUser().getId() : null,
+        history.getAssignedPmUser() != null ? history.getAssignedPmUser().getUsername() : null,
+        history.getAssignedTranslatorUser() != null
+            ? history.getAssignedTranslatorUser().getId()
+            : null,
+        history.getAssignedTranslatorUser() != null
+            ? history.getAssignedTranslatorUser().getUsername()
+            : null,
+        history.getEventType(),
+        history.getNote());
   }
 }

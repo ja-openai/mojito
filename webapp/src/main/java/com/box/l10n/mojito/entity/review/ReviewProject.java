@@ -3,6 +3,7 @@ package com.box.l10n.mojito.entity.review;
 import com.box.l10n.mojito.entity.AuditableEntity;
 import com.box.l10n.mojito.entity.BaseEntity;
 import com.box.l10n.mojito.entity.Locale;
+import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
@@ -54,6 +55,22 @@ public class ReviewProject extends AuditableEntity {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "locale_id", foreignKey = @ForeignKey(name = "FK__REVIEW_PROJECT__LOCALE"))
   private Locale locale;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "team_id", foreignKey = @ForeignKey(name = "FK__REVIEW_PROJECT__TEAM"))
+  private Team team;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(
+      name = "assigned_pm_user_id",
+      foreignKey = @ForeignKey(name = "FK__REVIEW_PROJECT__ASSIGNED_PM"))
+  private User assignedPmUser;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(
+      name = "assigned_translator_user_id",
+      foreignKey = @ForeignKey(name = "FK__REVIEW_PROJECT__ASSIGNED_TRANSLATOR"))
+  private User assignedTranslatorUser;
 
   @CreatedBy
   @ManyToOne(fetch = FetchType.LAZY)
@@ -133,5 +150,29 @@ public class ReviewProject extends AuditableEntity {
 
   public void setReviewProjectRequest(ReviewProjectRequest reviewProjectRequest) {
     this.reviewProjectRequest = reviewProjectRequest;
+  }
+
+  public Team getTeam() {
+    return team;
+  }
+
+  public void setTeam(Team team) {
+    this.team = team;
+  }
+
+  public User getAssignedPmUser() {
+    return assignedPmUser;
+  }
+
+  public void setAssignedPmUser(User assignedPmUser) {
+    this.assignedPmUser = assignedPmUser;
+  }
+
+  public User getAssignedTranslatorUser() {
+    return assignedTranslatorUser;
+  }
+
+  public void setAssignedTranslatorUser(User assignedTranslatorUser) {
+    this.assignedTranslatorUser = assignedTranslatorUser;
   }
 }
