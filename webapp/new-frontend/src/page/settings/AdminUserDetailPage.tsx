@@ -470,19 +470,6 @@ export function AdminUserDetailPage() {
         </section>
 
         <div className="user-detail-page__danger">
-          <button
-            type="button"
-            className="user-detail-page__delete"
-            onClick={() => setShowDeleteConfirm(true)}
-            disabled={userRecord.username === viewer.username || deleteMutation.isPending}
-            title={
-              userRecord.username === viewer.username
-                ? 'You cannot delete your own account.'
-                : undefined
-            }
-          >
-            Delete user
-          </button>
           <div className="user-detail-page__actions">
             <button
               type="button"
@@ -506,6 +493,19 @@ export function AdminUserDetailPage() {
               <span className="user-detail-page__status">Saved</span>
             ) : null}
           </div>
+          <button
+            type="button"
+            className="user-detail-page__delete user-detail-page__delete--right"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={userRecord.username === viewer.username || deleteMutation.isPending}
+            title={
+              userRecord.username === viewer.username
+                ? 'You cannot delete your own account.'
+                : undefined
+            }
+          >
+            Delete user
+          </button>
           {deleteMutation.isError ? (
             <div className="user-detail-page__hint is-error">
               {deleteMutation.error instanceof Error
