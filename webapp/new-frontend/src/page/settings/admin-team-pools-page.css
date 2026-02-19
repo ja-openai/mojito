@@ -1,0 +1,451 @@
+.team-pools-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+}
+
+.team-pools-page__topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--app-shell-header-height);
+  min-height: var(--app-shell-header-height);
+  padding: 0 var(--space-6);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: var(--color-surface);
+}
+
+.team-pools-page__topbar-back {
+  width: var(--app-shell-header-height);
+  height: var(--app-shell-header-height);
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  line-height: 1;
+  flex-shrink: 0;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.team-pools-page__topbar-back:hover {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.team-pools-page__topbar-back:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.team-pools-page__topbar-back-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: block;
+}
+
+.team-pools-page__topbar-title {
+  display: inline-flex;
+  align-items: center;
+  height: var(--app-shell-header-height);
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  box-shadow: inset 0 -0.125rem color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+
+.team-pools-page__content {
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.team-pools-page__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.team-pools-page__hint.is-error {
+  color: var(--color-danger);
+}
+
+.team-detail-page__select.chip-dropdown {
+  width: 100%;
+}
+
+.team-detail-page__status--error {
+  color: var(--color-danger);
+}
+
+.team-pools-page__page-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.team-pools-page__page-subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.team-pools-page__editor {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.team-pools-page__list {
+  margin-top: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.team-pools-page__pm-section {
+  margin-top: var(--space-4);
+}
+
+.team-pools-page__team-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.team-pools-page__selectors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.team-pools-page__selectors .team-pools-page__translator-select.chip-dropdown,
+.team-pools-page__selectors .settings-locale-select.chip-dropdown {
+  width: min(100%, 28rem);
+}
+
+.team-pools-page__card-header {
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-2);
+}
+
+.team-pools-page__mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  width: fit-content;
+}
+
+.team-pools-page__mode-option {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+
+.team-pools-page__mode-option + .team-pools-page__mode-option {
+  border-left: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.team-pools-page__mode-option.is-active {
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.team-pools-page__mode-option:focus-visible {
+  outline: 0.125rem solid var(--color-focus-outline);
+  outline-offset: -0.125rem;
+}
+
+.team-pools-page__repository-select .chip-dropdown__button {
+  width: 100%;
+}
+
+.team-pools-page__translator-select.chip-dropdown,
+.team-pools-page__pm-select.chip-dropdown {
+  width: 100%;
+}
+
+.team-pools-page__translator-select.chip-dropdown .chip-dropdown__button,
+.team-pools-page__pm-select.chip-dropdown .chip-dropdown__button {
+  width: 100%;
+}
+
+.team-pools-page__selectors .settings-locale-select.chip-dropdown .chip-dropdown__panel,
+.team-pools-page__selectors .team-pools-page__translator-select.chip-dropdown .chip-dropdown__panel,
+.team-pools-page__pm-select.chip-dropdown .chip-dropdown__panel {
+  width: 100%;
+  min-width: 0;
+}
+
+.team-pools-page__pm-section .settings-card__content {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.team-pools-page__notice {
+  margin-left: var(--space-3);
+}
+
+.team-pools-page .settings-card__footer {
+  align-items: center;
+}
+
+.team-pools-page__prefill-button {
+  padding: var(--space-1) var(--space-2);
+}
+
+.team-pools-page__batch-controls {
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.team-pools-page__csv-input-wrap {
+  position: relative;
+  padding: var(--space-2);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.team-pools-page__csv-input {
+  width: 100%;
+  min-height: 10rem;
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  resize: vertical;
+}
+
+.team-pools-page__csv-input:focus {
+  outline: 0.125rem solid var(--color-focus-outline);
+  outline-offset: 0.125rem;
+}
+
+.team-pools-page__csv-summary {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.team-pools-page__csv-preview {
+  margin-top: var(--space-2);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  padding-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.team-pools-page__csv-preview-header,
+.team-pools-page__csv-preview-row {
+  display: grid;
+  grid-template-columns: 3rem minmax(8rem, 0.9fr) minmax(10rem, 1.5fr) minmax(12rem, 1.8fr);
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.team-pools-page__csv-preview-header {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.team-pools-page__csv-preview-row {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  padding: var(--space-1) 0;
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.team-pools-page__csv-cell-muted {
+  color: var(--color-text-muted);
+}
+
+.team-pools-page__csv-error {
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+}
+
+.team-pools-page__csv-empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  padding: var(--space-2) 0;
+}
+
+.team-pools-page__team-table {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.team-pools-page__team-header,
+.team-pools-page__team-row-item {
+  display: grid;
+  grid-template-columns: minmax(4rem, 0.5fr) minmax(12rem, 2fr) minmax(7rem, 0.9fr) minmax(
+      16rem,
+      1.5fr
+    );
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.team-pools-page__team-header {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+}
+
+.team-pools-page__team-row-item {
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.team-pools-page__table {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.team-pools-page__header,
+.team-pools-page__row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.9fr) minmax(14rem, 2fr) minmax(9rem, 1fr) 11rem;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.team-pools-page__header {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+}
+
+.team-pools-page__row {
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.team-pools-page__team-header > :last-child,
+.team-pools-page__header > :last-child,
+.team-pools-page__team-row-item > :last-child,
+.team-pools-page__row > :last-child {
+  justify-self: end;
+}
+
+.team-pools-page__translator-list {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.team-pools-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.team-pools-page__action-link {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.team-pools-page__action-link:hover,
+.team-pools-page__action-link:focus-visible {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.team-pools-page__team-row-item .team-pools-page__actions,
+.team-pools-page__row .team-pools-page__actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.team-pools-page__team-row-item:hover .team-pools-page__actions,
+.team-pools-page__team-row-item:focus-within .team-pools-page__actions,
+.team-pools-page__team-row-item--editing .team-pools-page__actions,
+.team-pools-page__row:hover .team-pools-page__actions,
+.team-pools-page__row:focus-within .team-pools-page__actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 72rem) {
+  .team-pools-page__card-header {
+    align-items: flex-start;
+  }
+
+  .team-pools-page__selectors,
+  .team-pools-page__team-create {
+    grid-template-columns: 1fr;
+  }
+
+  .team-pools-page__notice {
+    margin-left: 0;
+  }
+
+  .team-pools-page__team-header,
+  .team-pools-page__header,
+  .team-pools-page__csv-preview-header {
+    display: none;
+  }
+
+  .team-pools-page__team-row-item,
+  .team-pools-page__row,
+  .team-pools-page__csv-preview-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+    padding: var(--space-3) 0;
+  }
+
+  .team-pools-page__actions {
+    justify-content: flex-start;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .team-pools-page__content {
+    padding: var(--space-5) var(--space-4);
+  }
+}
