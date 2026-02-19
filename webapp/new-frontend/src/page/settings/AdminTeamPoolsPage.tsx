@@ -413,7 +413,7 @@ export function AdminTeamPoolsPage() {
 
   useEffect(() => {
     const fromApi = teamPmPoolQuery.data?.userIds ?? [];
-    const normalized = Array.from(new Set(fromApi)).sort((left, right) => left - right);
+    const normalized = Array.from(new Set(fromApi));
     setSelectedPmIds(normalized);
   }, [teamPmPoolQuery.data?.userIds]);
 
@@ -509,7 +509,7 @@ export function AdminTeamPoolsPage() {
 
       const translatorUserIds = Array.from(
         new Set(idsFromUsernames.filter((id) => availableTranslatorIds.has(id))),
-      ).sort((left, right) => left - right);
+      );
 
       if (translatorUserIds.length === 0) {
         errors.push('No valid translators');
@@ -606,9 +606,7 @@ export function AdminTeamPoolsPage() {
     const payload = nextEntries
       .map((entry) => ({
         localeTag: entry.localeTag,
-        translatorUserIds: Array.from(new Set(entry.translatorUserIds)).sort(
-          (left, right) => left - right,
-        ),
+        translatorUserIds: Array.from(new Set(entry.translatorUserIds)),
       }))
       .sort((left, right) =>
         left.localeTag.localeCompare(right.localeTag, undefined, { sensitivity: 'base' }),
@@ -644,9 +642,7 @@ export function AdminTeamPoolsPage() {
       return;
     }
 
-    const normalizedTranslatorIds = Array.from(new Set(selectedTranslatorIds)).sort(
-      (a, b) => a - b,
-    );
+    const normalizedTranslatorIds = Array.from(new Set(selectedTranslatorIds));
     const nextByKey =
       batchApplyMode === 'merge'
         ? new Map(activeTeamEntries.map((entry) => [makePoolKey(entry.localeTag), entry]))
@@ -681,7 +677,7 @@ export function AdminTeamPoolsPage() {
       return;
     }
 
-    const normalizedIds = Array.from(new Set(selectedPmIds)).sort((left, right) => left - right);
+    const normalizedIds = Array.from(new Set(selectedPmIds));
 
     try {
       await replaceTeamPmPoolMutation.mutateAsync({
