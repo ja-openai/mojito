@@ -15,6 +15,8 @@ public class UserAdminSummary {
   ZonedDateTime createdDate;
   List<UserAdminAuthority> authorities;
   List<UserAdminLocale> userLocales;
+  List<Long> teamIds;
+  List<String> teamNames;
 
   public UserAdminSummary(
       Long id,
@@ -26,7 +28,9 @@ public class UserAdminSummary {
       boolean canTranslateAllLocales,
       ZonedDateTime createdDate,
       List<UserAdminAuthority> authorities,
-      List<UserAdminLocale> userLocales) {
+      List<UserAdminLocale> userLocales,
+      List<Long> teamIds,
+      List<String> teamNames) {
     this.id = id;
     this.username = username;
     this.givenName = givenName;
@@ -37,6 +41,8 @@ public class UserAdminSummary {
     this.createdDate = createdDate;
     this.authorities = authorities;
     this.userLocales = userLocales;
+    this.teamIds = teamIds;
+    this.teamNames = teamNames;
   }
 
   public Long getId() {
@@ -77,6 +83,14 @@ public class UserAdminSummary {
 
   public List<UserAdminLocale> getUserLocales() {
     return userLocales;
+  }
+
+  public List<Long> getTeamIds() {
+    return teamIds;
+  }
+
+  public List<String> getTeamNames() {
+    return teamNames;
   }
 
   public static UserAdminAuthority authority(String authority) {

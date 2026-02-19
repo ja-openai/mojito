@@ -6,6 +6,8 @@ import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.entity.security.user.UserLocale;
 import com.box.l10n.mojito.security.Role;
 import com.box.l10n.mojito.service.security.user.UserService;
+import com.box.l10n.mojito.service.team.TeamUserRepository;
+import com.box.l10n.mojito.service.team.UserTeamProjection;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Component;
 public class UserProfileMapper {
 
   @Autowired UserService userService;
+  @Autowired TeamUserRepository teamUserRepository;
 
   public UserProfile toUserProfile(User user) {
     UserProfile u = new UserProfile();
@@ -27,6 +30,10 @@ public class UserProfileMapper {
             .map(UserLocale::getLocale)
             .map(Locale::getBcp47Tag)
             .collect(Collectors.toList()));
+
+    var userTeams = teamUserRepository.findUserTeams(user.getId());
+    u.setTeamIds(userTeams.stream().map(UserTeamProjection::getTeamId).distinct().toList());
+    u.setTeamNames(userTeams.stream().map(UserTeamProjection::getTeamName).distinct().toList());
 
     Role role =
         user.getAuthorities().stream()

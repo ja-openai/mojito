@@ -11,11 +11,14 @@ import com.box.l10n.mojito.rest.security.UserAdminSummary;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.security.Role;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.team.TeamUserRepository;
+import com.box.l10n.mojito.service.team.UserTeamByUserProjection;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -56,6 +59,8 @@ public class UserService {
   @Autowired UserLocaleRepository userLocaleRepository;
 
   @Autowired LocaleService localeService;
+
+  @Autowired TeamUserRepository teamUserRepository;
 
   @Autowired UserDeletionService userDeletionService;
 
@@ -542,20 +547,35 @@ public class UserService {
           .add(UserAdminSummary.locale(tag));
     }
 
+    Map<Long, LinkedHashMap<Long, String>> userTeamsByUserId = new HashMap<>();
+    for (UserTeamByUserProjection row : teamUserRepository.findUserTeamsByUserIds(userIds)) {
+      if (row.userId() == null || row.teamId() == null) {
+        continue;
+      }
+      userTeamsByUserId
+          .computeIfAbsent(row.userId(), (key) -> new LinkedHashMap<>())
+          .putIfAbsent(row.teamId(), row.teamName());
+    }
+
     return summaries.stream()
         .map(
-            summary ->
-                new UserAdminSummary(
-                    summary.id(),
-                    summary.username(),
-                    summary.givenName(),
-                    summary.surname(),
-                    summary.commonName(),
-                    summary.enabled(),
-                    summary.canTranslateAllLocales(),
-                    summary.createdDate(),
-                    authoritiesByUserId.getOrDefault(summary.id(), List.of()),
-                    userLocalesByUserId.getOrDefault(summary.id(), List.of())))
+            summary -> {
+              LinkedHashMap<Long, String> teamMap =
+                  userTeamsByUserId.getOrDefault(summary.id(), new LinkedHashMap<>());
+              return new UserAdminSummary(
+                  summary.id(),
+                  summary.username(),
+                  summary.givenName(),
+                  summary.surname(),
+                  summary.commonName(),
+                  summary.enabled(),
+                  summary.canTranslateAllLocales(),
+                  summary.createdDate(),
+                  authoritiesByUserId.getOrDefault(summary.id(), List.of()),
+                  userLocalesByUserId.getOrDefault(summary.id(), List.of()),
+                  new ArrayList<>(teamMap.keySet()),
+                  new ArrayList<>(teamMap.values()));
+            })
         .toList();
   }
 }

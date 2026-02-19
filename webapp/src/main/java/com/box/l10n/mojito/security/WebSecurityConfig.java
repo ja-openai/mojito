@@ -164,6 +164,33 @@ public class WebSecurityConfig {
                 // user management is only allowed for ADMINs and PMs
                 .requestMatchers("/api/users/**")
                 .hasAnyRole("PM", "ADMIN")
+                // Team APIs
+                .requestMatchers(HttpMethod.GET, "/api/teams/*/locale-pools")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/teams/*/locale-pools")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/teams/*/project-managers")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/teams/*/project-managers")
+                .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/teams/*/pm-pool")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/teams/*/pm-pool")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/teams/users/*/assignment")
+                .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/teams/*/translators")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/teams/*/translators")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/teams")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/teams/*")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/teams/**")
+                .hasRole("ADMIN")
+                .requestMatchers("/api/teams/**")
+                .hasRole("ADMIN")
                 // ingestion stats are visible to PMs and admins
                 .requestMatchers(
                     HttpMethod.GET,

@@ -13,6 +13,8 @@ public class UserProfile {
   Role role;
   boolean canTranslateAllLocales;
   List<String> userLocales;
+  List<Long> teamIds;
+  List<String> teamNames;
 
   public String getUsername() {
     return username;
@@ -68,5 +70,21 @@ public class UserProfile {
 
   public void setUserLocales(List<String> userLocales) {
     this.userLocales = userLocales;
+  }
+
+  public List<Long> getTeamIds() {
+    return teamIds;
+  }
+
+  public void setTeamIds(List<Long> teamIds) {
+    this.teamIds = teamIds;
+  }
+
+  public List<String> getTeamNames() {
+    return teamNames;
+  }
+
+  public void setTeamNames(List<String> teamNames) {
+    this.teamNames = teamNames;
   }
 }
