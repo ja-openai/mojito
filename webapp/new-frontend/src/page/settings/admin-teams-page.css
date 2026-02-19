@@ -109,15 +109,6 @@
   background: color-mix(in srgb, var(--color-surface-muted) 40%, transparent);
 }
 
-.team-admin-page__row--clickable {
-  cursor: pointer;
-}
-
-.team-admin-page__row--clickable:focus-visible {
-  outline: 0.125rem solid var(--color-focus-outline);
-  outline-offset: -0.125rem;
-}
-
 .team-admin-page__cell {
   font-size: var(--font-size-sm);
   color: var(--color-text);
@@ -128,6 +119,10 @@
 
 .team-admin-page__cell--muted {
   color: var(--color-text-muted);
+}
+
+.team-admin-page__cell--actions {
+  text-align: right;
 }
 
 .team-admin-page__name-cell {
@@ -144,30 +139,30 @@
   white-space: nowrap;
 }
 
-.team-admin-page__inline-action-link {
-  border: none;
-  background: none;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  font-size: var(--font-size-xs);
+.team-admin-page__actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.team-admin-page__row-action-link {
   color: var(--color-text-muted);
   text-decoration: none;
-  cursor: pointer;
-  flex-shrink: 0;
+  font-size: var(--font-size-sm);
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
 }
 
-.team-admin-page__inline-action-link:hover,
-.team-admin-page__inline-action-link:focus-visible {
+.team-admin-page__row-action-link:hover,
+.team-admin-page__row-action-link:focus-visible {
   color: var(--color-text);
   text-decoration: underline;
 }
 
-.team-admin-page__row:hover .team-admin-page__inline-action-link,
-.team-admin-page__row:focus-within .team-admin-page__inline-action-link {
+.team-admin-page__row:hover .team-admin-page__row-action-link,
+.team-admin-page__row:focus-within .team-admin-page__row-action-link {
   opacity: 1;
   pointer-events: auto;
 }
@@ -215,12 +210,16 @@
     padding: var(--space-3) var(--space-1);
   }
 
-  .team-admin-page__name-cell {
-    flex-wrap: wrap;
+  .team-admin-page__cell--actions {
+    text-align: left;
   }
 
-  .team-admin-page__inline-action-link {
+  .team-admin-page__row-action-link {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .team-admin-page__actions {
+    justify-content: flex-start;
   }
 }
