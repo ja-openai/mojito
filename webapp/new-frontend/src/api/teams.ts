@@ -125,6 +125,34 @@ export async function replaceTeamProjectManagers(teamId: number, userIds: number
   }
 }
 
+export async function fetchTeamPmPool(teamId: number): Promise<ApiTeamUserIdsResponse> {
+  const response = await fetch(`/api/teams/${teamId}/pm-pool`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load PM pool');
+  }
+
+  return (await response.json()) as ApiTeamUserIdsResponse;
+}
+
+export async function replaceTeamPmPool(teamId: number, userIds: number[]): Promise<void> {
+  const response = await fetch(`/api/teams/${teamId}/pm-pool`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: jsonHeaders,
+    body: JSON.stringify({ userIds }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to save PM pool');
+  }
+}
+
 export async function fetchTeamTranslators(teamId: number): Promise<ApiTeamUserIdsResponse> {
   const response = await fetch(`/api/teams/${teamId}/translators`, {
     credentials: 'same-origin',
