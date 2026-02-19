@@ -2,10 +2,10 @@ import './settings-page.css';
 import './admin-teams-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
 
-import { type ApiTeam, createTeam, fetchTeamLocalePools, fetchTeams } from '../../api/teams';
+import { type ApiTeam, createTeam, fetchTeams } from '../../api/teams';
 import { Modal } from '../../components/Modal';
 import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
@@ -31,7 +31,6 @@ const sortTeams = (teams: ApiTeam[]) =>
 
 export function AdminTeamsPage() {
   const user = useUser();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isAdmin = user.role === 'ROLE_ADMIN';
   const isPm = user.role === 'ROLE_PM';
@@ -42,8 +41,6 @@ export function AdminTeamsPage() {
   const [newTeamDraft, setNewTeamDraft] = useState('');
   const [createModalError, setCreateModalError] = useState<string | null>(null);
   const [statusNotice, setStatusNotice] = useState<StatusNotice | null>(null);
-  const [assignmentCounts, setAssignmentCounts] = useState<Map<number, number>>(new Map());
-  const [isLoadingAssignmentCounts, setIsLoadingAssignmentCounts] = useState(false);
 
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams'],
@@ -53,48 +50,6 @@ export function AdminTeamsPage() {
   });
 
   const sortedTeams = useMemo(() => sortTeams(teamsQuery.data ?? []), [teamsQuery.data]);
-
-  useEffect(() => {
-    if (!canAccess) {
-      return;
-    }
-
-    const teams = sortedTeams;
-    if (teams.length === 0) {
-      setAssignmentCounts(new Map());
-      setIsLoadingAssignmentCounts(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoadingAssignmentCounts(true);
-
-    void Promise.all(
-      teams.map(async (team) => {
-        try {
-          const response = await fetchTeamLocalePools(team.id);
-          return [team.id, response.entries.length] as const;
-        } catch {
-          return [team.id, 0] as const;
-        }
-      }),
-    )
-      .then((rows) => {
-        if (cancelled) {
-          return;
-        }
-        setAssignmentCounts(new Map(rows));
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoadingAssignmentCounts(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canAccess, sortedTeams]);
 
   const createTeamMutation = useMutation({
     mutationFn: (name: string) => createTeam(name),
@@ -116,15 +71,13 @@ export function AdminTeamsPage() {
   const teamRows = useMemo(
     () =>
       sortedTeams.map((team) => {
-        const assignmentCount = assignmentCounts.get(team.id) ?? 0;
-        const searchText = `${team.id} ${team.name} ${assignmentCount}`.toLowerCase();
+        const searchText = `${team.id} ${team.name}`.toLowerCase();
         return {
           team,
-          assignmentCount,
           searchText,
         };
       }),
-    [assignmentCounts, sortedTeams],
+    [sortedTeams],
   );
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -187,10 +140,7 @@ export function AdminTeamsPage() {
           </div>
 
           <div className="team-admin-page__count">
-            <span className="team-admin-page__count-text">
-              {filteredTeamRows.length} teams
-              {isLoadingAssignmentCounts ? ' · Loading assignments…' : ''}
-            </span>
+            <span className="team-admin-page__count-text">{filteredTeamRows.length} teams</span>
             {statusNotice ? (
               <span
                 className={`settings-hint team-admin-page__status${
@@ -215,53 +165,36 @@ export function AdminTeamsPage() {
               <div className="team-admin-page__table-header">
                 <div className="team-admin-page__cell">ID</div>
                 <div className="team-admin-page__cell">Team</div>
-                <div className="team-admin-page__cell">Pools</div>
+                <div className="team-admin-page__cell team-admin-page__cell--actions">Actions</div>
               </div>
-              {filteredTeamRows.map(({ team, assignmentCount }) => {
-                const assignmentUrl = isAdmin
+              {filteredTeamRows.map(({ team }) => {
+                const poolUrl = isAdmin
                   ? `/settings/admin/team-pools?teamId=${team.id}`
                   : `/settings/team?teamId=${team.id}`;
                 return (
-                  <div
-                    key={team.id}
-                    className="team-admin-page__row team-admin-page__row--clickable"
-                    role="link"
-                    tabIndex={0}
-                    onClick={() => {
-                      void navigate(assignmentUrl);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        void navigate(assignmentUrl);
-                      }
-                    }}
-                    aria-label={`Open assignments for ${team.name}`}
-                  >
+                  <div key={team.id} className="team-admin-page__row">
                     <div className="team-admin-page__cell team-admin-page__cell--muted">
                       {team.id}
                     </div>
                     <div className="team-admin-page__cell">
                       <div className="team-admin-page__name-cell">
                         <span className="team-admin-page__name-text">{team.name}</span>
-                        {isAdmin ? (
-                          <Link
-                            className="team-admin-page__inline-action-link"
-                            to={`/settings/admin/teams/${team.id}`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                            }}
-                            onKeyDown={(event) => {
-                              event.stopPropagation();
-                            }}
-                          >
-                            Edit
-                          </Link>
-                        ) : null}
                       </div>
                     </div>
-                    <div className="team-admin-page__cell team-admin-page__cell--muted">
-                      {assignmentCount}
+                    <div className="team-admin-page__cell team-admin-page__cell--actions">
+                      <div className="team-admin-page__actions">
+                        {isAdmin ? (
+                          <Link
+                            className="team-admin-page__row-action-link"
+                            to={`/settings/admin/teams/${team.id}`}
+                          >
+                            Edit team
+                          </Link>
+                        ) : null}
+                        <Link className="team-admin-page__row-action-link" to={poolUrl}>
+                          Edit pools
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 );
