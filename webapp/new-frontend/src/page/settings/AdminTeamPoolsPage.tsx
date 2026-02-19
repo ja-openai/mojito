@@ -2,7 +2,7 @@ import './settings-page.css';
 import './admin-team-pools-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { type DragEvent, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 
 import {
@@ -17,6 +17,7 @@ import {
 } from '../../api/teams';
 import type { ApiUser } from '../../api/users';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
+import { Modal } from '../../components/Modal';
 import { MultiSelectChip } from '../../components/MultiSelectChip';
 import { useUser } from '../../components/RequireUser';
 import { useLocales } from '../../hooks/useLocales';
@@ -151,6 +152,22 @@ const parseCsv = (text: string): string[][] => {
     .map(parseCsvRow);
 };
 
+const reorderIds = (ids: number[], fromIndex: number, toIndex: number) => {
+  if (
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= ids.length ||
+    toIndex >= ids.length ||
+    fromIndex === toIndex
+  ) {
+    return ids;
+  }
+  const next = [...ids];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+};
+
 export function AdminTeamPoolsPage() {
   const user = useUser();
   const queryClient = useQueryClient();
@@ -174,6 +191,9 @@ export function AdminTeamPoolsPage() {
   const [csvInput, setCsvInput] = useState('');
   const [statusNotice, setStatusNotice] = useState<StatusNotice | null>(null);
   const [pmStatusNotice, setPmStatusNotice] = useState<StatusNotice | null>(null);
+  const [reorderLocaleTag, setReorderLocaleTag] = useState<string | null>(null);
+  const [reorderTranslatorIds, setReorderTranslatorIds] = useState<number[]>([]);
+  const [draggedReorderIndex, setDraggedReorderIndex] = useState<number | null>(null);
 
   const requestedTeamId = useMemo(() => {
     const raw = searchParams.get('teamId');
@@ -216,6 +236,9 @@ export function AdminTeamPoolsPage() {
     setCsvInput('');
     setStatusNotice(null);
     setPmStatusNotice(null);
+    setReorderLocaleTag(null);
+    setReorderTranslatorIds([]);
+    setDraggedReorderIndex(null);
   }, [selectedTeamId]);
 
   const localePoolsQuery = useQuery({
@@ -576,10 +599,6 @@ export function AdminTeamPoolsPage() {
       replaceTeamPmPool(teamId, userIds),
   });
 
-  if (!canAccess) {
-    return <Navigate to="/repositories" replace />;
-  }
-
   const isTeamLoading = requestedTeamId != null ? teamByIdQuery.isLoading : false;
 
   const canWriteAssignments =
@@ -598,9 +617,9 @@ export function AdminTeamPoolsPage() {
     nextEntries: TeamPoolEntry[],
     successMessage: string,
     fallbackErrorMessage: string,
-  ) => {
+  ): Promise<boolean> => {
     if (selectedTeamId == null) {
-      return;
+      return false;
     }
 
     const payload = nextEntries
@@ -620,9 +639,11 @@ export function AdminTeamPoolsPage() {
       await queryClient.invalidateQueries({ queryKey: ['team-locale-pools', selectedTeamId] });
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
       setStatusNotice({ kind: 'success', message: successMessage });
+      return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : fallbackErrorMessage;
       setStatusNotice({ kind: 'error', message: message || fallbackErrorMessage });
+      return false;
     }
   };
 
@@ -669,6 +690,56 @@ export function AdminTeamPoolsPage() {
     );
 
     void persistEntries(nextEntries, `Removed ${entry.localeTag}.`, 'Failed to remove assignment.');
+  };
+
+  const handleOpenReorderEntry = (entry: TeamPoolEntry) => {
+    setReorderLocaleTag(entry.localeTag);
+    setReorderTranslatorIds([...entry.translatorUserIds]);
+    setDraggedReorderIndex(null);
+    setStatusNotice(null);
+  };
+
+  const handleCloseReorderEntry = () => {
+    setReorderLocaleTag(null);
+    setReorderTranslatorIds([]);
+    setDraggedReorderIndex(null);
+  };
+
+  const handleDropReorderItem = (event: DragEvent<HTMLLIElement>, toIndex: number) => {
+    event.preventDefault();
+    const rawFromIndex = event.dataTransfer.getData('text/plain');
+    const fallbackFromIndex = rawFromIndex.length > 0 ? Number(rawFromIndex) : Number.NaN;
+    const fromIndex =
+      draggedReorderIndex != null
+        ? draggedReorderIndex
+        : Number.isInteger(fallbackFromIndex)
+          ? fallbackFromIndex
+          : -1;
+    setReorderTranslatorIds((current) => reorderIds(current, fromIndex, toIndex));
+    setDraggedReorderIndex(null);
+  };
+
+  const handleSaveReorderedEntry = () => {
+    if (!reorderLocaleTag) {
+      return;
+    }
+
+    const targetKey = makePoolKey(reorderLocaleTag);
+    const nextEntries = activeTeamEntries.map((entry) =>
+      makePoolKey(entry.localeTag) === targetKey
+        ? { ...entry, translatorUserIds: [...reorderTranslatorIds] }
+        : entry,
+    );
+
+    void persistEntries(
+      nextEntries,
+      `Saved order for ${resolveLocaleName(reorderLocaleTag)}.`,
+      'Failed to save order.',
+    ).then((didSave) => {
+      if (didSave) {
+        handleCloseReorderEntry();
+      }
+    });
   };
 
   const handleSavePmPool = async () => {
@@ -778,6 +849,18 @@ export function AdminTeamPoolsPage() {
     });
   };
 
+  useEffect(() => {
+    if (!reorderLocaleTag) {
+      return;
+    }
+    const entryStillExists = activeTeamEntries.some(
+      (entry) => makePoolKey(entry.localeTag) === makePoolKey(reorderLocaleTag),
+    );
+    if (!entryStillExists) {
+      handleCloseReorderEntry();
+    }
+  }, [activeTeamEntries, reorderLocaleTag]);
+
   const csvHasContent = csvInput.trim().length > 0;
   const canApplyParsedCsv =
     selectedTeamId != null &&
@@ -786,6 +869,10 @@ export function AdminTeamPoolsPage() {
     csvValidRows.length > 0 &&
     csvErrorRows.length === 0 &&
     canWriteAssignments;
+
+  if (!canAccess) {
+    return <Navigate to="/repositories" replace />;
+  }
 
   return (
     <div className="team-pools-page">
@@ -1115,6 +1202,14 @@ export function AdminTeamPoolsPage() {
                     <button
                       type="button"
                       className="settings-button settings-button--ghost"
+                      onClick={() => handleOpenReorderEntry(entry)}
+                      disabled={!canWriteAssignments || entry.translatorUserIds.length < 2}
+                    >
+                      Reorder
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-button settings-button--ghost"
                       onClick={() => handleEditPoolEntry(entry)}
                     >
                       Edit
@@ -1133,6 +1228,67 @@ export function AdminTeamPoolsPage() {
             </div>
           )}
         </section>
+
+        <Modal
+          open={reorderLocaleTag != null}
+          size="md"
+          ariaLabel="Reorder translators"
+          onClose={handleCloseReorderEntry}
+          closeOnBackdrop
+        >
+          <div className="modal__title">
+            Reorder translators
+            {reorderLocaleTag ? ` · ${resolveLocaleName(reorderLocaleTag)}` : ''}
+          </div>
+          <div className="modal__body team-pools-page__reorder-modal-body">
+            <p className="team-pools-page__reorder-hint">
+              Drag rows to set order. Top translator is primary.
+            </p>
+            <ol className="team-pools-page__reorder-list">
+              {reorderTranslatorIds.map((translatorId, index) => (
+                <li
+                  key={`${translatorId}-${index}`}
+                  className={`team-pools-page__reorder-item${
+                    draggedReorderIndex === index ? ' is-dragging' : ''
+                  }`}
+                  draggable
+                  onDragStart={(event) => {
+                    setDraggedReorderIndex(index);
+                    event.dataTransfer.setData('text/plain', String(index));
+                    event.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDrop={(event) => handleDropReorderItem(event, index)}
+                  onDragEnd={() => setDraggedReorderIndex(null)}
+                >
+                  <span className="team-pools-page__reorder-handle" aria-hidden="true">
+                    ::
+                  </span>
+                  <span className="team-pools-page__reorder-rank">{index + 1}.</span>
+                  <span className="team-pools-page__reorder-name">
+                    {translatorNameById.get(translatorId) ?? `User #${translatorId}`}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="modal__actions">
+            <button type="button" className="modal__button" onClick={handleCloseReorderEntry}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="modal__button modal__button--primary"
+              onClick={handleSaveReorderedEntry}
+              disabled={!canWriteAssignments || reorderTranslatorIds.length < 2}
+            >
+              Save
+            </button>
+          </div>
+        </Modal>
 
         <section className="settings-card team-pools-page__pm-section" aria-label="PM pool">
           <div className="settings-card__header">
