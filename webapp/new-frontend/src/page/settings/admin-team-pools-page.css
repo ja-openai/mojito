@@ -88,6 +88,13 @@
   color: var(--color-danger);
 }
 
+.team-detail-page__danger {
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+}
+
 .team-pools-page__page-header {
   display: flex;
   flex-direction: column;
@@ -336,7 +343,7 @@
 .team-pools-page__header,
 .team-pools-page__row {
   display: grid;
-  grid-template-columns: minmax(8rem, 0.9fr) minmax(14rem, 2fr) minmax(9rem, 1fr) 11rem;
+  grid-template-columns: minmax(8rem, 0.9fr) minmax(14rem, 2fr) minmax(9rem, 1fr) 18rem;
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2) 0;
@@ -370,9 +377,62 @@
 
 .team-pools-page__actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--space-2);
   justify-content: flex-end;
+}
+
+.team-pools-page__reorder-modal-body {
+  margin-bottom: 0;
+  color: var(--color-text);
+}
+
+.team-pools-page__reorder-hint {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.team-pools-page__reorder-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.team-pools-page__reorder-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  cursor: grab;
+}
+
+.team-pools-page__reorder-item.is-dragging {
+  opacity: 0.65;
+}
+
+.team-pools-page__reorder-handle {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  color: var(--color-text-subtle);
+}
+
+.team-pools-page__reorder-rank {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  min-width: 1.5rem;
+}
+
+.team-pools-page__reorder-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .team-pools-page__action-link {
@@ -440,6 +500,7 @@
   }
 
   .team-pools-page__actions {
+    flex-wrap: wrap;
     justify-content: flex-start;
     opacity: 1;
     pointer-events: auto;

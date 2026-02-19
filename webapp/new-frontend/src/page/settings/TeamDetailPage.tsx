@@ -543,7 +543,7 @@ export function TeamDetailPage() {
           </section>
         ) : null}
 
-        <div className="user-detail-page__danger">
+        <div className="user-detail-page__danger team-detail-page__danger">
           <button
             type="button"
             className="user-detail-page__delete"
