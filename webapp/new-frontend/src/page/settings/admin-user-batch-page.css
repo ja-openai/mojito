@@ -222,6 +222,14 @@
   min-width: 10rem;
 }
 
+.user-batch-page__team-row {
+  margin-bottom: var(--space-2);
+}
+
+.user-batch-page__team-select .chip-dropdown__button {
+  min-width: 16rem;
+}
+
 .user-batch-page__textarea {
   min-height: 12rem;
   padding: var(--space-3);
@@ -253,6 +261,10 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   margin-bottom: var(--space-2);
+}
+
+.user-batch-page__summary--error {
+  color: var(--color-danger);
 }
 
 .user-batch-page__preview {

@@ -5,6 +5,8 @@ export type ApiUserProfile = {
   role: 'ROLE_PM' | 'ROLE_TRANSLATOR' | 'ROLE_ADMIN' | 'ROLE_USER';
   canTranslateAllLocales: boolean;
   userLocales: string[];
+  teamIds?: number[];
+  teamNames?: string[];
 };
 
 export type ApiAuthority = {
@@ -27,6 +29,8 @@ export type ApiUser = {
   canTranslateAllLocales: boolean;
   authorities?: ApiAuthority[] | null;
   userLocales?: ApiUserLocale[] | null;
+  teamIds?: number[] | null;
+  teamNames?: string[] | null;
 };
 
 export type UpdateUserPayload = {
@@ -109,7 +113,7 @@ export async function deleteUser(userId: number): Promise<void> {
   }
 }
 
-export async function createUser(payload: CreateUserPayload): Promise<void> {
+export async function createUser(payload: CreateUserPayload): Promise<ApiUser> {
   const response = await fetch('/api/users', {
     method: 'POST',
     credentials: 'include',
@@ -124,4 +128,6 @@ export async function createUser(payload: CreateUserPayload): Promise<void> {
     const message = await response.text().catch(() => '');
     throw new Error(message || 'Failed to create user');
   }
+
+  return (await response.json()) as ApiUser;
 }

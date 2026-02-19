@@ -62,7 +62,8 @@ export function UserMenu() {
   const displayName = user.username || 'Account';
   const roleLabel = formatRole(user.role);
   const isAdmin = user.role === 'ROLE_ADMIN';
-  const canAccessStatistics = isAdmin || user.role === 'ROLE_PM';
+  const isPm = user.role === 'ROLE_PM';
+  const canAccessStatistics = isAdmin || isPm;
 
   const handleNavigate = (path: string) => {
     setOpen(false);
@@ -78,11 +79,12 @@ export function UserMenu() {
       ]
     : [];
 
+  const operationsLinks: Array<{ label: string; path: string }> = [];
+
   const adminLinks = isAdmin
     ? [
         { label: 'Admin settings', path: '/settings/admin' },
         { label: 'Database monitoring', path: '/monitoring' },
-        { label: 'User settings', path: '/settings/admin/users' },
       ]
     : [];
 
@@ -131,6 +133,24 @@ export function UserMenu() {
                   <div className="user-menu__section-label">Tools</div>
                   <div className="user-menu__actions" role="none">
                     {toolLinks.map((item) => (
+                      <button
+                        key={item.path}
+                        type="button"
+                        className="user-menu__action"
+                        role="menuitem"
+                        onClick={() => handleNavigate(item.path)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+              {operationsLinks.length > 0 ? (
+                <>
+                  <div className="user-menu__section-label">Operations</div>
+                  <div className="user-menu__actions" role="none">
+                    {operationsLinks.map((item) => (
                       <button
                         key={item.path}
                         type="button"

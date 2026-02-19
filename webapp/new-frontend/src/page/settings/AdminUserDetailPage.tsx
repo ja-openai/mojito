@@ -2,10 +2,11 @@ import './admin-user-detail-page.css';
 import './settings-page.css';
 import '../../components/chip-dropdown.css';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
+import { type ApiTeam, fetchTeams, updateUserTeamAssignment } from '../../api/teams';
 import type { ApiAuthority, ApiUser, ApiUserLocale } from '../../api/users';
 import { deleteUser, updateUser } from '../../api/users';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -74,6 +75,12 @@ export function AdminUserDetailPage() {
   const [commonNameDraft, setCommonNameDraft] = useState('');
   const [passwordDraft, setPasswordDraft] = useState('');
   const [enabledDraft, setEnabledDraft] = useState(true);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const teamsQuery = useQuery<ApiTeam[]>({
+    queryKey: ['teams'],
+    queryFn: fetchTeams,
+    staleTime: 30_000,
+  });
 
   useEffect(() => {
     if (!userRecord) {
@@ -88,6 +95,9 @@ export function AdminUserDetailPage() {
     setLocaleDraft(getLocaleTags(userRecord));
     setEnabledDraft(userRecord.enabled ?? true);
     setPasswordDraft('');
+    const initialTeamId =
+      (userRecord.teamIds ?? []).find((id): id is number => Number.isInteger(id) && id > 0) ?? null;
+    setSelectedTeamId(initialTeamId);
   }, [userRecord]);
 
   const localeOptions = useMemo(() => {
@@ -117,6 +127,17 @@ export function AdminUserDetailPage() {
     () => (userRecord ? normalizeLocaleList(getLocaleTags(userRecord)) : []),
     [userRecord],
   );
+  const teamOptions = useMemo(
+    () =>
+      [...(teamsQuery.data ?? [])]
+        .sort((left, right) =>
+          left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
+        )
+        .map((team) => ({ value: team.id, label: `${team.name} (#${team.id})` })),
+    [teamsQuery.data],
+  );
+  const savedTeamId =
+    (userRecord?.teamIds ?? []).find((id): id is number => Number.isInteger(id) && id > 0) ?? null;
 
   const isLocaleDirty = useMemo(() => {
     if (normalizedDraftLocales.length !== normalizedSavedLocales.length) {
@@ -135,6 +156,8 @@ export function AdminUserDetailPage() {
   const normalizedPassword = passwordDraft;
   const usernameMissing = normalizedUsername.length === 0;
   const passwordDirty = normalizedPassword.length > 0;
+  const roleRequiresTeam = roleDraft === 'ROLE_PM' || roleDraft === 'ROLE_TRANSLATOR';
+  const isTeamDirty = roleRequiresTeam ? selectedTeamId !== savedTeamId : savedTeamId !== null;
 
   const isDirty = Boolean(
     userRecord &&
@@ -146,7 +169,8 @@ export function AdminUserDetailPage() {
         normalizeText(userRecord.givenName) !== normalizedGivenName ||
         normalizeText(userRecord.surname) !== normalizedSurname ||
         normalizeText(userRecord.commonName) !== normalizedCommonName ||
-        passwordDirty),
+        passwordDirty ||
+        isTeamDirty),
   );
 
   useEffect(() => {
@@ -178,7 +202,11 @@ export function AdminUserDetailPage() {
         authorities: payloadAuthorities,
         ...(normalizedPassword ? { password: normalizedPassword } : {}),
       };
-      return updateUser(userRecord.id, payload);
+      return updateUser(userRecord.id, payload).then(async () => {
+        const pmTeamId = roleDraft === 'ROLE_PM' ? selectedTeamId : null;
+        const translatorTeamId = roleDraft === 'ROLE_TRANSLATOR' ? selectedTeamId : null;
+        await updateUserTeamAssignment(userRecord.id, { pmTeamId, translatorTeamId });
+      });
     },
     onMutate: () => {
       setSaveStatus(null);
@@ -239,6 +267,10 @@ export function AdminUserDetailPage() {
     [normalizedGivenName, normalizedSurname].filter(Boolean).join(' ') ||
     normalizedUsername ||
     displayName;
+  const teamNames = (userRecord.teamNames ?? []).filter((name): name is string =>
+    Boolean(name && name.trim()),
+  );
+  const teamSummary = teamNames.length > 0 ? teamNames.join(', ') : '—';
 
   const handleReset = () => {
     setUsernameDraft(userRecord.username ?? '');
@@ -250,6 +282,7 @@ export function AdminUserDetailPage() {
     setLocaleDraft(getLocaleTags(userRecord));
     setEnabledDraft(userRecord.enabled ?? true);
     setPasswordDraft('');
+    setSelectedTeamId(savedTeamId);
   };
 
   return (
@@ -263,7 +296,7 @@ export function AdminUserDetailPage() {
               onClick={() => {
                 void navigate('/settings/admin/users');
               }}
-              aria-label="Back to user settings"
+              aria-label="Back to users"
               title="Back to users"
             >
               <svg
@@ -369,6 +402,25 @@ export function AdminUserDetailPage() {
               onChange={(next) => setRoleDraft(next ?? 'ROLE_USER')}
               className="user-detail-page__select"
             />
+          </div>
+
+          <div className="user-detail-page__field">
+            <div className="user-detail-page__label">Teams</div>
+            <SingleSelectDropdown
+              label="Team"
+              options={teamOptions}
+              value={selectedTeamId}
+              onChange={(next) => setSelectedTeamId(next)}
+              className="user-detail-page__select"
+              noneLabel="No team assignment"
+              placeholder="No team assignment"
+              noResultsLabel={teamsQuery.isLoading ? 'Loading teams…' : 'No teams found'}
+            />
+            <div className="user-detail-page__hint">
+              {roleRequiresTeam
+                ? `Current saved value: ${teamSummary}.`
+                : 'Only PM and Translator roles use team assignment. Saving another role clears assignment.'}
+            </div>
           </div>
 
           <div className="user-detail-page__field">
