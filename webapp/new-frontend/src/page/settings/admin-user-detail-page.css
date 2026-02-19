@@ -203,6 +203,10 @@
   cursor: pointer;
 }
 
+.user-detail-page__delete--right {
+  margin-left: auto;
+}
+
 .user-detail-page__delete:disabled {
   opacity: 0.5;
   cursor: not-allowed;
