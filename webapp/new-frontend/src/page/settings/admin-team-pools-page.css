@@ -108,13 +108,13 @@
 }
 
 .team-detail-page__slack-mapping-table {
-  display: grid;
-  gap: var(--space-1);
-  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
-  border-radius: var(--radius-3);
-  padding: var(--space-2);
-  background: var(--color-surface);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 6%, transparent);
+  display: flex;
+  flex-direction: column;
+  min-height: 12rem;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  background: transparent;
 }
 
 .team-detail-page__slack-mapping-header,
@@ -128,36 +128,29 @@
 }
 
 .team-detail-page__slack-mapping-header {
-  font-size: var(--font-size-xs);
+  padding: 0 0 var(--space-2);
+  border-bottom: var(--border-width) solid var(--color-border);
   color: var(--color-text-subtle);
-  text-transform: uppercase;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-wide);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-1);
-  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
-  background: color-mix(in srgb, var(--color-surface-secondary, var(--color-surface)) 85%, var(--color-accent) 15%);
+  text-transform: uppercase;
 }
 
 .team-detail-page__slack-mapping-row {
-  padding: var(--space-2);
-  border-radius: var(--radius-1);
-  border: var(--border-width) solid transparent;
-  background: color-mix(in srgb, var(--color-surface) 98%, var(--color-text) 2%);
-}
-
-.team-detail-page__slack-mapping-row:nth-child(even) {
-  background: color-mix(in srgb, var(--color-surface) 95%, var(--color-accent) 5%);
+  min-height: 3.25rem;
+  padding: var(--space-2) var(--space-1);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  color: var(--color-text);
 }
 
 .team-detail-page__slack-mapping-row:hover,
 .team-detail-page__slack-mapping-row:focus-within {
-  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border) 72%);
-  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-accent) 12%);
+  background: color-mix(in srgb, var(--color-surface-muted) 40%, transparent);
 }
 
 .team-detail-page__slack-mapping-row .settings-input {
   min-width: 0;
-  background: color-mix(in srgb, var(--color-surface) 96%, var(--color-text) 4%);
 }
 
 .team-detail-page__slack-mapping-meta {
@@ -177,6 +170,7 @@
 .team-detail-page__slack-mapping-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .team-detail-page__slack-row-action {
@@ -199,18 +193,17 @@
 .team-detail-page__slack-mapping-empty {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
-  padding: var(--space-2);
-  border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--color-surface) 96%, var(--color-text) 4%);
+  padding: var(--space-4);
+  text-align: center;
 }
 
 .team-detail-page__slack-channel-members-table {
-  display: grid;
-  gap: var(--space-1);
-  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
-  border-radius: var(--radius-2);
-  padding: var(--space-2);
-  background: color-mix(in srgb, var(--color-surface) 96%, var(--color-text) 4%);
+  display: flex;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  background: transparent;
   margin-bottom: var(--space-4);
 }
 
@@ -227,27 +220,26 @@
 }
 
 .team-detail-page__slack-channel-members-header {
-  font-size: var(--font-size-xs);
+  padding: 0 0 var(--space-2);
+  border-bottom: var(--border-width) solid var(--color-border);
   color: var(--color-text-subtle);
-  text-transform: uppercase;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-wide);
-  padding: 0 var(--space-1) var(--space-1);
-  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  text-transform: uppercase;
 }
 
 .team-detail-page__slack-channel-members-row {
-  padding: var(--space-1);
-  border-radius: var(--radius-1);
-}
-
-.team-detail-page__slack-channel-members-row:nth-child(even) {
-  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-accent) 8%);
+  min-height: 3rem;
+  padding: 0 var(--space-1);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
 }
 
 .team-detail-page__slack-channel-members-empty {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
-  padding: var(--space-2) var(--space-1);
+  padding: var(--space-4);
+  text-align: center;
 }
 
 .team-pools-page__page-header {
