@@ -9,11 +9,13 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   type ApiTeam,
   type ApiTeamSlackChannelMembersResponse,
+  type ApiSlackClientIdsResponse,
   type ApiTeamSlackSettings,
   type ApiTeamSlackUserMappingRow,
   deleteTeam,
   fetchTeam,
   fetchTeamProjectManagers,
+  fetchSlackClientIds,
   fetchTeamSlackChannelMembers,
   fetchTeamSlackSettings,
   fetchTeamSlackUserMappings,
@@ -149,6 +151,12 @@ export function TeamDetailPage() {
     enabled: isAdmin && effectiveTeamId != null,
     staleTime: 30_000,
   });
+  const slackClientIdsQuery = useQuery<ApiSlackClientIdsResponse>({
+    queryKey: ['slack-client-ids'],
+    queryFn: fetchSlackClientIds,
+    enabled: isAdmin,
+    staleTime: 60_000,
+  });
 
   const slackMappingsQuery = useQuery({
     queryKey: ['team-slack-user-mappings', effectiveTeamId],
@@ -193,6 +201,25 @@ export function TeamDetailPage() {
     setDraftSlackClientId(settings.slackClientId ?? '');
     setDraftSlackChannelId(settings.slackChannelId ?? '');
   }, [slackSettingsQuery.data]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+    if (!slackSettingsQuery.data) {
+      return;
+    }
+    if (slackSettingsQuery.data.slackClientId) {
+      return;
+    }
+    if (draftSlackClientId.trim()) {
+      return;
+    }
+    const ids = slackClientIdsQuery.data?.entries ?? [];
+    if (ids.length === 1) {
+      setDraftSlackClientId(ids[0] ?? '');
+    }
+  }, [isAdmin, slackSettingsQuery.data, slackClientIdsQuery.data?.entries, draftSlackClientId]);
 
   const allPmUsers = useMemo(
     () => (pmUsersQuery.data ?? []).filter((entry) => entry.enabled !== false),
@@ -826,6 +853,7 @@ export function TeamDetailPage() {
               <input
                 type="text"
                 className="settings-input"
+                list="team-slack-client-ids"
                 value={draftSlackClientId}
                 placeholder="Slack client ID"
                 onChange={(event) => {
@@ -833,6 +861,13 @@ export function TeamDetailPage() {
                   setSlackStatusNotice(null);
                 }}
               />
+              {isAdmin && (slackClientIdsQuery.data?.entries?.length ?? 0) > 0 ? (
+                <datalist id="team-slack-client-ids">
+                  {(slackClientIdsQuery.data?.entries ?? []).map((id) => (
+                    <option key={id} value={id} />
+                  ))}
+                </datalist>
+              ) : null}
               <input
                 type="text"
                 className="settings-input"

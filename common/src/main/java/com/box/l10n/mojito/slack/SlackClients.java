@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.slack;
 
 import java.util.AbstractMap.SimpleEntry;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,10 @@ public class SlackClients {
 
   public SlackClient getById(String id) {
     return mapIdToClient.get(id);
+  }
+
+  public List<String> getIds() {
+    return mapIdToClient.keySet().stream().sorted(String.CASE_INSENSITIVE_ORDER).toList();
   }
 
   void createClientsFromConfigration() {

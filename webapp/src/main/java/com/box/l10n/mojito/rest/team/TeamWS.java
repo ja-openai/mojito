@@ -37,6 +37,7 @@ public class TeamWS {
   }
 
   public record TeamResponse(Long id, String name) {}
+  public record SlackClientIdsResponse(List<String> entries) {}
 
   public record UpsertTeamRequest(String name) {}
 
@@ -90,6 +91,12 @@ public class TeamWS {
             ? teamService.findAll()
             : teamService.findCurrentUserTeams();
     return teams.stream().map(team -> new TeamResponse(team.getId(), team.getName())).toList();
+  }
+
+  @GetMapping("/slack-clients")
+  public SlackClientIdsResponse getSlackClientIds() {
+    assertCurrentUserIsAdmin();
+    return new SlackClientIdsResponse(slackClients.getIds());
   }
 
   @GetMapping("/{teamId}")

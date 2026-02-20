@@ -54,6 +54,10 @@ export type ApiTeamSlackChannelMembersResponse = {
   entries: ApiTeamSlackChannelMemberRow[];
 };
 
+export type ApiSlackClientIdsResponse = {
+  entries: string[];
+};
+
 const jsonHeaders = {
   'Content-Type': 'application/json',
 };
@@ -283,6 +287,20 @@ export async function fetchTeamSlackSettings(teamId: number): Promise<ApiTeamSla
   }
 
   return (await response.json()) as ApiTeamSlackSettings;
+}
+
+export async function fetchSlackClientIds(): Promise<ApiSlackClientIdsResponse> {
+  const response = await fetch('/api/teams/slack-clients', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load Slack client IDs');
+  }
+
+  return (await response.json()) as ApiSlackClientIdsResponse;
 }
 
 export async function updateTeamSlackSettings(
