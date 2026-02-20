@@ -7,15 +7,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import {
+  type ApiSlackClientIdsResponse,
   type ApiTeam,
   type ApiTeamSlackChannelMembersResponse,
-  type ApiSlackClientIdsResponse,
   type ApiTeamSlackSettings,
   type ApiTeamSlackUserMappingRow,
   deleteTeam,
+  fetchSlackClientIds,
   fetchTeam,
   fetchTeamProjectManagers,
-  fetchSlackClientIds,
   fetchTeamSlackChannelMembers,
   fetchTeamSlackSettings,
   fetchTeamSlackUserMappings,
@@ -60,6 +60,29 @@ const getUserLabel = (entry: ApiUser) => {
 };
 
 const normalizeTeamName = (value: string) => value.trim().replace(/\s+/g, ' ');
+const normalizeIdList = (ids: number[] | null | undefined) =>
+  Array.from(new Set((ids ?? []).filter((id) => Number.isInteger(id) && id > 0))).sort(
+    (left, right) => left - right,
+  );
+const sameIdList = (left: number[] | null | undefined, right: number[] | null | undefined) => {
+  const a = normalizeIdList(left);
+  const b = normalizeIdList(right);
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+};
+const normalizeOptionalText = (value: string | null | undefined) => {
+  const normalized = value?.trim() ?? '';
+  return normalized.length > 0 ? normalized : null;
+};
+const normalizeSlackMappingsForCompare = (rows: SlackMappingDraftRow[] | ApiTeamSlackUserMappingRow[]) =>
+  rows
+    .map((row) => ({
+      mojitoUserId: row.mojitoUserId,
+      slackUserId: normalizeOptionalText(row.slackUserId),
+      slackUsername: normalizeOptionalText(row.slackUsername),
+      matchSource: normalizeOptionalText(row.matchSource),
+    }))
+    .filter((row) => row.slackUserId != null)
+    .sort((left, right) => left.mojitoUserId - right.mojitoUserId);
 
 export function TeamDetailPage() {
   const user = useUser();
@@ -758,6 +781,24 @@ export function TeamDetailPage() {
   };
 
   const pageTitle = normalizeTeamName(draftName) || effectiveTeam.name;
+  const isNameDirty =
+    normalizeTeamName(draftName) !== normalizeTeamName(effectiveTeam?.name ?? draftName);
+  const isPmRosterDirty = !sameIdList(draftPmUserIds, pmRosterQuery.data?.userIds ?? draftPmUserIds);
+  const isTranslatorRosterDirty = !sameIdList(
+    draftTranslatorUserIds,
+    translatorRosterQuery.data?.userIds ?? draftTranslatorUserIds,
+  );
+  const isSlackSettingsDirty =
+    Boolean(draftSlackEnabled) !== Boolean(slackSettingsQuery.data?.enabled ?? draftSlackEnabled) ||
+    normalizeOptionalText(draftSlackClientId) !==
+      normalizeOptionalText(slackSettingsQuery.data?.slackClientId ?? draftSlackClientId) ||
+    normalizeOptionalText(draftSlackChannelId) !==
+      normalizeOptionalText(slackSettingsQuery.data?.slackChannelId ?? draftSlackChannelId);
+  const isSlackMappingsDirty =
+    JSON.stringify(normalizeSlackMappingsForCompare(draftSlackMappings)) !==
+    JSON.stringify(
+      normalizeSlackMappingsForCompare(slackMappingsQuery.data?.entries ?? draftSlackMappings),
+    );
 
   return (
     <div className="user-detail-page team-detail-page">
@@ -813,14 +854,16 @@ export function TeamDetailPage() {
               }}
             />
             <div className="user-detail-page__actions">
-              <button
-                type="button"
-                className="settings-button settings-button--primary"
-                onClick={handleSaveName}
-                disabled={saveTeamNameMutation.isPending}
-              >
-                Save
-              </button>
+              {isNameDirty ? (
+                <button
+                  type="button"
+                  className="settings-button settings-button--primary"
+                  onClick={handleSaveName}
+                  disabled={saveTeamNameMutation.isPending}
+                >
+                  Save
+                </button>
+              ) : null}
               {statusNotice ? (
                 <span
                   className={`user-detail-page__status${
@@ -850,17 +893,20 @@ export function TeamDetailPage() {
                 />
                 Enable team Slack notifications
               </label>
-              <input
-                type="text"
-                className="settings-input"
-                list="team-slack-client-ids"
-                value={draftSlackClientId}
-                placeholder="Slack client ID"
-                onChange={(event) => {
-                  setDraftSlackClientId(event.target.value);
-                  setSlackStatusNotice(null);
-                }}
-              />
+              <div className="team-detail-page__slack-setting-field">
+                <div className="team-detail-page__slack-setting-label">Slack Client ID</div>
+                <input
+                  type="text"
+                  className="settings-input"
+                  list="team-slack-client-ids"
+                  value={draftSlackClientId}
+                  placeholder="Slack client ID"
+                  onChange={(event) => {
+                    setDraftSlackClientId(event.target.value);
+                    setSlackStatusNotice(null);
+                  }}
+                />
+              </div>
               {isAdmin && (slackClientIdsQuery.data?.entries?.length ?? 0) > 0 ? (
                 <datalist id="team-slack-client-ids">
                   {(slackClientIdsQuery.data?.entries ?? []).map((id) => (
@@ -868,16 +914,19 @@ export function TeamDetailPage() {
                   ))}
                 </datalist>
               ) : null}
-              <input
-                type="text"
-                className="settings-input"
-                value={draftSlackChannelId}
-                placeholder="Slack channel ID (e.g. C123...)"
-                onChange={(event) => {
-                  setDraftSlackChannelId(event.target.value);
-                  setSlackStatusNotice(null);
-                }}
-              />
+              <div className="team-detail-page__slack-setting-field">
+                <div className="team-detail-page__slack-setting-label">Slack Channel ID</div>
+                <input
+                  type="text"
+                  className="settings-input"
+                  value={draftSlackChannelId}
+                  placeholder="Slack channel ID (e.g. C123...)"
+                  onChange={(event) => {
+                    setDraftSlackChannelId(event.target.value);
+                    setSlackStatusNotice(null);
+                  }}
+                />
+              </div>
               <div className="user-detail-page__hint">
                 One channel per team (v1). User-to-Slack-ID mappings are stored per team in the
                 backend.
@@ -913,18 +962,20 @@ export function TeamDetailPage() {
                 >
                   {testSlackChannelMutation.isPending ? 'Testing…' : 'Test channel'}
                 </button>
-                <button
-                  type="button"
-                  className="settings-button settings-button--primary"
-                  onClick={handleSaveSlackSettings}
-                  disabled={
-                    slackSettingsQuery.isLoading ||
-                    saveSlackSettingsMutation.isPending ||
-                    testSlackChannelMutation.isPending
-                  }
-                >
-                  Save
-                </button>
+                {isSlackSettingsDirty ? (
+                  <button
+                    type="button"
+                    className="settings-button settings-button--primary"
+                    onClick={handleSaveSlackSettings}
+                    disabled={
+                      slackSettingsQuery.isLoading ||
+                      saveSlackSettingsMutation.isPending ||
+                      testSlackChannelMutation.isPending
+                    }
+                  >
+                    Save
+                  </button>
+                ) : null}
                 {slackSettingsQuery.isLoading ? (
                   <span className="user-detail-page__status">Loading…</span>
                 ) : null}
@@ -1100,14 +1151,16 @@ export function TeamDetailPage() {
                 >
                   Refresh
                 </button>
-                <button
-                  type="button"
-                  className="settings-button settings-button--primary"
-                  onClick={handleSaveSlackMappings}
-                  disabled={slackMappingsQuery.isLoading || saveSlackMappingsMutation.isPending}
-                >
-                  Save
-                </button>
+                {isSlackMappingsDirty ? (
+                  <button
+                    type="button"
+                    className="settings-button settings-button--primary"
+                    onClick={handleSaveSlackMappings}
+                    disabled={slackMappingsQuery.isLoading || saveSlackMappingsMutation.isPending}
+                  >
+                    Save
+                  </button>
+                ) : null}
                 {slackMappingsQuery.isLoading ? (
                   <span className="user-detail-page__status">Loading…</span>
                 ) : isAutoMatchingSlackMappings ? (
@@ -1166,14 +1219,16 @@ export function TeamDetailPage() {
               ]}
             />
             <div className="user-detail-page__actions">
-              <button
-                type="button"
-                className="settings-button settings-button--primary"
-                onClick={handleSaveTranslatorRoster}
-                disabled={translatorUsersQuery.isLoading || saveTranslatorRosterMutation.isPending}
-              >
-                Save
-              </button>
+              {isTranslatorRosterDirty ? (
+                <button
+                  type="button"
+                  className="settings-button settings-button--primary"
+                  onClick={handleSaveTranslatorRoster}
+                  disabled={translatorUsersQuery.isLoading || saveTranslatorRosterMutation.isPending}
+                >
+                  Save
+                </button>
+              ) : null}
               {translatorStatusNotice ? (
                 <span
                   className={`user-detail-page__status${
@@ -1240,14 +1295,16 @@ export function TeamDetailPage() {
                 }}
               />
               <div className="user-detail-page__actions">
-                <button
-                  type="button"
-                  className="settings-button settings-button--primary"
-                  onClick={handleSavePmRoster}
-                  disabled={pmUsersQuery.isLoading || savePmRosterMutation.isPending}
-                >
-                  Save
-                </button>
+                {isPmRosterDirty ? (
+                  <button
+                    type="button"
+                    className="settings-button settings-button--primary"
+                    onClick={handleSavePmRoster}
+                    disabled={pmUsersQuery.isLoading || savePmRosterMutation.isPending}
+                  >
+                    Save
+                  </button>
+                ) : null}
                 {pmStatusNotice ? (
                   <span
                     className={`user-detail-page__status${
