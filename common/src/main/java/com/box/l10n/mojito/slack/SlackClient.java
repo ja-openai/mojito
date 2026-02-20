@@ -4,10 +4,14 @@ import com.box.l10n.mojito.slack.request.Channel;
 import com.box.l10n.mojito.slack.request.Message;
 import com.box.l10n.mojito.slack.request.User;
 import com.box.l10n.mojito.slack.response.ChatPostMessageResponse;
+import com.box.l10n.mojito.slack.response.ConversationsInfoResponse;
+import com.box.l10n.mojito.slack.response.ConversationsMembersResponse;
 import com.box.l10n.mojito.slack.response.ImOpenResponse;
 import com.box.l10n.mojito.slack.response.UserResponse;
 import com.google.common.base.Preconditions;
 import com.ibm.icu.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -25,7 +29,10 @@ public class SlackClient {
 
   static final String BASE_API_URL = "https://slack.com/api/";
   static final String API_USER_LOOKUP_BY_EMAIL = "users.lookupByEmail";
+  static final String API_USER_INFO = "users.info";
   static final String API_CONVERSATIONS_OPEN = "conversations.open";
+  static final String API_CONVERSATIONS_INFO = "conversations.info";
+  static final String API_CONVERSATIONS_MEMBERS = "conversations.members";
   static final String API_CHAT_POST_MESSAGE = "chat.postMessage";
 
   public static final String COLOR_GOOD = "good";
@@ -68,6 +75,86 @@ public class SlackClient {
     User user = lookupUserByEmail(email);
     Channel channel = openIm(user);
     return channel;
+  }
+
+  public User getUserById(String userId) throws SlackClientException {
+    Preconditions.checkNotNull(userId);
+
+    MultiValueMap<String, Object> payload = getBasePayloadMapWithAuthToken();
+    payload.add("user", userId);
+
+    HttpEntity<MultiValueMap<String, Object>> httpEntity = getHttpEntityForPayload(payload);
+    UserResponse userResponse =
+        restTemplate.postForObject(getUrl(API_USER_INFO), httpEntity, UserResponse.class);
+
+    if (!userResponse.getOk()) {
+      String msg =
+          MessageFormat.format("Cannot lookup user by id: {0} ({1})", userId, userResponse.getError());
+      logger.debug(msg);
+      throw new SlackClientException(msg);
+    }
+
+    return userResponse.getUser();
+  }
+
+  public Channel getConversationById(String channelId) throws SlackClientException {
+    Preconditions.checkNotNull(channelId);
+
+    MultiValueMap<String, Object> payload = getBasePayloadMapWithAuthToken();
+    payload.add("channel", channelId);
+
+    HttpEntity<MultiValueMap<String, Object>> httpEntity = getHttpEntityForPayload(payload);
+    ConversationsInfoResponse response =
+        restTemplate.postForObject(getUrl(API_CONVERSATIONS_INFO), httpEntity, ConversationsInfoResponse.class);
+
+    if (!response.getOk()) {
+      String msg =
+          MessageFormat.format(
+              "Cannot lookup conversation by id: {0} ({1})", channelId, response.getError());
+      logger.debug(msg);
+      throw new SlackClientException(msg);
+    }
+
+    return response.getChannel();
+  }
+
+  public List<String> getConversationMemberIds(String channelId) throws SlackClientException {
+    Preconditions.checkNotNull(channelId);
+
+    List<String> members = new ArrayList<>();
+    String cursor = null;
+
+    do {
+      MultiValueMap<String, Object> payload = getBasePayloadMapWithAuthToken();
+      payload.add("channel", channelId);
+      payload.add("limit", "200");
+      if (cursor != null && !cursor.isBlank()) {
+        payload.add("cursor", cursor);
+      }
+
+      HttpEntity<MultiValueMap<String, Object>> httpEntity = getHttpEntityForPayload(payload);
+      ConversationsMembersResponse response =
+          restTemplate.postForObject(
+              getUrl(API_CONVERSATIONS_MEMBERS), httpEntity, ConversationsMembersResponse.class);
+
+      if (!response.getOk()) {
+        String msg =
+            MessageFormat.format(
+                "Cannot list conversation members for channel: {0} ({1})",
+                channelId, response.getError());
+        logger.debug(msg);
+        throw new SlackClientException(msg);
+      }
+
+      if (response.getMembers() != null) {
+        members.addAll(response.getMembers());
+      }
+
+      cursor =
+          response.getResponse_metadata() != null ? response.getResponse_metadata().getNext_cursor() : null;
+    } while (cursor != null && !cursor.isBlank());
+
+    return members;
   }
 
   User lookupUserByEmail(String email) throws SlackClientException {

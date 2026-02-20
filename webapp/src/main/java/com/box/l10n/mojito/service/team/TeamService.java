@@ -4,6 +4,7 @@ import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamLocalePool;
 import com.box.l10n.mojito.entity.TeamPmPool;
+import com.box.l10n.mojito.entity.TeamSlackUserMapping;
 import com.box.l10n.mojito.entity.TeamUser;
 import com.box.l10n.mojito.entity.TeamUserRole;
 import com.box.l10n.mojito.entity.security.user.Authority;
@@ -19,6 +20,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.time.ZonedDateTime;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -36,6 +38,7 @@ public class TeamService {
   private final TeamUserRepository teamUserRepository;
   private final TeamLocalePoolRepository teamLocalePoolRepository;
   private final TeamPmPoolRepository teamPmPoolRepository;
+  private final TeamSlackUserMappingRepository teamSlackUserMappingRepository;
   private final UserRepository userRepository;
   private final UserLocaleRepository userLocaleRepository;
   private final LocaleService localeService;
@@ -46,6 +49,7 @@ public class TeamService {
       TeamUserRepository teamUserRepository,
       TeamLocalePoolRepository teamLocalePoolRepository,
       TeamPmPoolRepository teamPmPoolRepository,
+      TeamSlackUserMappingRepository teamSlackUserMappingRepository,
       UserRepository userRepository,
       UserLocaleRepository userLocaleRepository,
       LocaleService localeService,
@@ -54,6 +58,7 @@ public class TeamService {
     this.teamUserRepository = teamUserRepository;
     this.teamLocalePoolRepository = teamLocalePoolRepository;
     this.teamPmPoolRepository = teamPmPoolRepository;
+    this.teamSlackUserMappingRepository = teamSlackUserMappingRepository;
     this.userRepository = userRepository;
     this.userLocaleRepository = userLocaleRepository;
     this.localeService = localeService;
@@ -63,6 +68,20 @@ public class TeamService {
   public record LocalePoolEntry(String localeTag, List<Long> translatorUserIds) {}
 
   public record ReplaceTeamUsersResult(int removedUsersCount, int removedLocalePoolRows) {}
+
+  public record TeamSlackSettings(
+      boolean enabled, String slackClientId, String slackChannelId) {}
+
+  public record TeamSlackUserMappingEntry(
+      Long mojitoUserId,
+      String mojitoUsername,
+      String slackUserId,
+      String slackUsername,
+      String matchSource,
+      ZonedDateTime lastVerifiedAt) {}
+
+  public record UpsertTeamSlackUserMappingEntry(
+      Long mojitoUserId, String slackUserId, String slackUsername, String matchSource) {}
 
   private static String normalizeTeamName(String value) {
     return value == null ? "" : value.trim().replaceAll("\\s+", " ");
@@ -159,6 +178,7 @@ public class TeamService {
     Team team = getTeam(teamId);
     teamLocalePoolRepository.deleteByTeamId(teamId);
     teamPmPoolRepository.deleteByTeamId(teamId);
+    teamSlackUserMappingRepository.deleteByTeamId(teamId);
     teamUserRepository.deleteByTeamIdAndRole(teamId, TeamUserRole.PM);
     teamUserRepository.deleteByTeamIdAndRole(teamId, TeamUserRole.TRANSLATOR);
     String name = "deleted__" + System.currentTimeMillis() + "__" + team.getName();
@@ -516,6 +536,158 @@ public class TeamService {
     if (!pools.isEmpty()) {
       teamLocalePoolRepository.saveAll(pools);
     }
+  }
+
+  @Transactional(readOnly = true)
+  public TeamSlackSettings getTeamSlackSettings(Long teamId) {
+    Team team = getTeam(teamId);
+    return new TeamSlackSettings(
+        Boolean.TRUE.equals(team.getSlackNotificationsEnabled()),
+        team.getSlackClientId(),
+        team.getSlackChannelId());
+  }
+
+  @Transactional
+  public TeamSlackSettings updateTeamSlackSettings(
+      Long teamId, Boolean enabled, String slackClientId, String slackChannelId) {
+    Team team = getTeam(teamId);
+
+    String normalizedSlackClientId = normalizeOptionalSlackValue(slackClientId, 255);
+    String normalizedChannelId = normalizeOptionalSlackValue(slackChannelId, 64);
+    boolean normalizedEnabled = Boolean.TRUE.equals(enabled);
+
+    if (normalizedEnabled && normalizedSlackClientId == null) {
+      throw new IllegalArgumentException("Slack client ID is required when Slack notifications are enabled");
+    }
+
+    if (normalizedEnabled && normalizedChannelId == null) {
+      throw new IllegalArgumentException("Slack channel ID is required when Slack notifications are enabled");
+    }
+
+    team.setSlackNotificationsEnabled(normalizedEnabled);
+    team.setSlackClientId(normalizedSlackClientId);
+    team.setSlackChannelId(normalizedChannelId);
+    Team saved = teamRepository.save(team);
+
+    return new TeamSlackSettings(
+        Boolean.TRUE.equals(saved.getSlackNotificationsEnabled()),
+        saved.getSlackClientId(),
+        saved.getSlackChannelId());
+  }
+
+  @Transactional(readOnly = true)
+  public List<TeamSlackUserMappingEntry> getTeamSlackUserMappings(Long teamId) {
+    getTeam(teamId);
+    return teamSlackUserMappingRepository.findByTeamId(teamId).stream()
+        .map(
+            mapping ->
+                new TeamSlackUserMappingEntry(
+                    mapping.getMojitoUser().getId(),
+                    mapping.getMojitoUser().getUsername(),
+                    mapping.getSlackUserId(),
+                    mapping.getSlackUsername(),
+                    mapping.getMatchSource(),
+                    mapping.getLastVerifiedAt()))
+        .toList();
+  }
+
+  @Transactional
+  public void replaceTeamSlackUserMappings(Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
+    Team team = getTeam(teamId);
+
+    List<UpsertTeamSlackUserMappingEntry> normalizedEntries =
+        (entries == null ? List.<UpsertTeamSlackUserMappingEntry>of() : entries).stream()
+            .map(this::normalizeSlackUserMappingEntry)
+            .filter(entry -> entry != null)
+            .toList();
+
+    Map<Long, UpsertTeamSlackUserMappingEntry> entriesByUserId = new LinkedHashMap<>();
+    for (UpsertTeamSlackUserMappingEntry entry : normalizedEntries) {
+      if (entriesByUserId.putIfAbsent(entry.mojitoUserId(), entry) != null) {
+        throw new IllegalArgumentException(
+            "Duplicate Slack mapping for Mojito user: " + entry.mojitoUserId());
+      }
+    }
+
+    Set<Long> allowedUserIds = new LinkedHashSet<>();
+    teamUserRepository.findByTeamIdAndRole(teamId, TeamUserRole.PM).stream()
+        .map(TeamUser::getUser)
+        .map(User::getId)
+        .forEach(allowedUserIds::add);
+    teamUserRepository.findByTeamIdAndRole(teamId, TeamUserRole.TRANSLATOR).stream()
+        .map(TeamUser::getUser)
+        .map(User::getId)
+        .forEach(allowedUserIds::add);
+
+    List<Long> disallowedUserIds =
+        entriesByUserId.keySet().stream().filter(id -> !allowedUserIds.contains(id)).toList();
+    if (!disallowedUserIds.isEmpty()) {
+      throw new IllegalArgumentException(
+          "Cannot store Slack mappings for users outside the team roster: " + disallowedUserIds);
+    }
+
+    Map<Long, User> usersById = new LinkedHashMap<>();
+    if (!entriesByUserId.isEmpty()) {
+      userRepository.findAllById(entriesByUserId.keySet()).forEach(user -> usersById.put(user.getId(), user));
+      List<Long> missingUserIds =
+          entriesByUserId.keySet().stream().filter(id -> !usersById.containsKey(id)).toList();
+      if (!missingUserIds.isEmpty()) {
+        throw new IllegalArgumentException("Unknown users: " + missingUserIds);
+      }
+    }
+
+    teamSlackUserMappingRepository.deleteByTeamId(teamId);
+
+    if (entriesByUserId.isEmpty()) {
+      return;
+    }
+
+    ZonedDateTime now = ZonedDateTime.now();
+    List<TeamSlackUserMapping> mappings = new ArrayList<>();
+    for (UpsertTeamSlackUserMappingEntry entry : entriesByUserId.values()) {
+      TeamSlackUserMapping mapping = new TeamSlackUserMapping();
+      mapping.setTeam(team);
+      mapping.setMojitoUser(usersById.get(entry.mojitoUserId()));
+      mapping.setSlackUserId(entry.slackUserId());
+      mapping.setSlackUsername(entry.slackUsername());
+      mapping.setMatchSource(entry.matchSource());
+      mapping.setLastVerifiedAt(now);
+      mappings.add(mapping);
+    }
+
+    teamSlackUserMappingRepository.saveAll(mappings);
+  }
+
+  private UpsertTeamSlackUserMappingEntry normalizeSlackUserMappingEntry(
+      UpsertTeamSlackUserMappingEntry entry) {
+    if (entry == null || entry.mojitoUserId() == null || entry.mojitoUserId() <= 0) {
+      return null;
+    }
+
+    String slackUserId = normalizeOptionalSlackValue(entry.slackUserId(), 64);
+    if (slackUserId == null) {
+      return null;
+    }
+
+    return new UpsertTeamSlackUserMappingEntry(
+        entry.mojitoUserId(),
+        slackUserId,
+        normalizeOptionalSlackValue(entry.slackUsername(), 255),
+        normalizeOptionalSlackValue(entry.matchSource(), 32));
+  }
+
+  private String normalizeOptionalSlackValue(String value, int maxLength) {
+    if (value == null) {
+      return null;
+    }
+    String normalized = value.trim();
+    if (normalized.isEmpty()) {
+      return null;
+    }
+    if (normalized.length() > maxLength) {
+      throw new IllegalArgumentException("Value exceeds max length " + maxLength);
+    }
+    return normalized;
   }
 
   private boolean canTranslatorTranslateLocale(
