@@ -95,6 +95,153 @@
   border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
 }
 
+.team-detail-page__slack-setting-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.team-detail-page__slack-setting-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.team-detail-page__slack-mapping-table {
+  display: flex;
+  flex-direction: column;
+  min-height: 12rem;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.team-detail-page__slack-mapping-header,
+.team-detail-page__slack-mapping-row {
+  display: grid;
+  grid-template-columns:
+    minmax(12rem, 1.3fr) minmax(8rem, 1fr) minmax(10rem, 1fr) minmax(8rem, 0.9fr)
+    minmax(10rem, 1fr) minmax(6.5rem, auto);
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.team-detail-page__slack-mapping-header {
+  padding: 0 0 var(--space-2);
+  border-bottom: var(--border-width) solid var(--color-border);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.team-detail-page__slack-mapping-row {
+  min-height: 3.25rem;
+  padding: var(--space-2) var(--space-1);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  color: var(--color-text);
+}
+
+.team-detail-page__slack-mapping-row:hover,
+.team-detail-page__slack-mapping-row:focus-within {
+  background: color-mix(in srgb, var(--color-surface-muted) 40%, transparent);
+}
+
+.team-detail-page__slack-mapping-row .settings-input {
+  min-width: 0;
+}
+
+.team-detail-page__slack-mapping-meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.team-detail-page__slack-mapping-verified {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.team-detail-page__slack-mapping-actions-header {
+  text-align: right;
+}
+
+.team-detail-page__slack-mapping-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.team-detail-page__slack-row-action {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.team-detail-page__slack-mapping-row:hover .team-detail-page__slack-row-action,
+.team-detail-page__slack-mapping-row:focus-within .team-detail-page__slack-row-action {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.team-detail-page__slack-row-action:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.team-detail-page__slack-mapping-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.team-detail-page__slack-channel-members-table {
+  display: flex;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  background: transparent;
+  margin-bottom: var(--space-4);
+}
+
+.team-detail-page__slack-channel-members-header,
+.team-detail-page__slack-channel-members-row {
+  display: grid;
+  grid-template-columns:
+    minmax(10rem, 1fr)
+    minmax(9rem, 0.9fr)
+    minmax(12rem, 1fr)
+    minmax(14rem, 1.2fr);
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.team-detail-page__slack-channel-members-header {
+  padding: 0 0 var(--space-2);
+  border-bottom: var(--border-width) solid var(--color-border);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.team-detail-page__slack-channel-members-row {
+  min-height: 3rem;
+  padding: 0 var(--space-1);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.team-detail-page__slack-channel-members-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-4);
+  text-align: center;
+}
+
 .team-pools-page__page-header {
   display: flex;
   flex-direction: column;

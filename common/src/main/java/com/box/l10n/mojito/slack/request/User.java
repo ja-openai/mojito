@@ -6,6 +6,19 @@ public class User {
   String name;
   String real_name;
   String email;
+  Profile profile;
+
+  public static class Profile {
+    String email;
+
+    public String getEmail() {
+      return email;
+    }
+
+    public void setEmail(String email) {
+      this.email = email;
+    }
+  }
 
   public String getId() {
     return id;
@@ -40,10 +53,21 @@ public class User {
   }
 
   public String getEmail() {
-    return email;
+    if (email != null && !email.isBlank()) {
+      return email;
+    }
+    return profile != null ? profile.getEmail() : null;
   }
 
   public void setEmail(String email) {
     this.email = email;
+  }
+
+  public Profile getProfile() {
+    return profile;
+  }
+
+  public void setProfile(Profile profile) {
+    this.profile = profile;
   }
 }

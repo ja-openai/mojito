@@ -21,6 +21,43 @@ export type ApiTeamLocalePoolsResponse = {
   entries: ApiTeamLocalePoolRow[];
 };
 
+export type ApiTeamSlackSettings = {
+  enabled: boolean;
+  slackClientId: string | null;
+  slackChannelId: string | null;
+};
+
+export type ApiTeamSlackUserMappingRow = {
+  mojitoUserId: number;
+  mojitoUsername: string;
+  slackUserId: string;
+  slackUsername: string | null;
+  matchSource: string | null;
+  lastVerifiedAt: string | null;
+};
+
+export type ApiTeamSlackUserMappingsResponse = {
+  entries: ApiTeamSlackUserMappingRow[];
+};
+
+export type ApiTeamSlackChannelMemberRow = {
+  slackUserId: string;
+  slackUsername: string | null;
+  displayName: string | null;
+  email: string | null;
+};
+
+export type ApiTeamSlackChannelMembersResponse = {
+  slackClientId: string;
+  slackChannelId: string;
+  slackChannelName: string | null;
+  entries: ApiTeamSlackChannelMemberRow[];
+};
+
+export type ApiSlackClientIdsResponse = {
+  entries: string[];
+};
+
 const jsonHeaders = {
   'Content-Type': 'application/json',
 };
@@ -235,5 +272,131 @@ export async function updateUserTeamAssignment(
   if (!response.ok) {
     const message = await response.text().catch(() => '');
     throw new Error(message || 'Failed to update team assignment');
+  }
+}
+
+export async function fetchTeamSlackSettings(teamId: number): Promise<ApiTeamSlackSettings> {
+  const response = await fetch(`/api/teams/${teamId}/slack-settings`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load team Slack settings');
+  }
+
+  return (await response.json()) as ApiTeamSlackSettings;
+}
+
+export async function fetchSlackClientIds(): Promise<ApiSlackClientIdsResponse> {
+  const response = await fetch('/api/teams/slack-clients', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load Slack client IDs');
+  }
+
+  return (await response.json()) as ApiSlackClientIdsResponse;
+}
+
+export async function updateTeamSlackSettings(
+  teamId: number,
+  payload: ApiTeamSlackSettings,
+): Promise<ApiTeamSlackSettings> {
+  const response = await fetch(`/api/teams/${teamId}/slack-settings`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to save team Slack settings');
+  }
+
+  return (await response.json()) as ApiTeamSlackSettings;
+}
+
+export async function fetchTeamSlackUserMappings(
+  teamId: number,
+): Promise<ApiTeamSlackUserMappingsResponse> {
+  const response = await fetch(`/api/teams/${teamId}/slack-user-mappings`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load team Slack user mappings');
+  }
+
+  return (await response.json()) as ApiTeamSlackUserMappingsResponse;
+}
+
+export async function replaceTeamSlackUserMappings(
+  teamId: number,
+  entries: ApiTeamSlackUserMappingRow[],
+): Promise<void> {
+  const response = await fetch(`/api/teams/${teamId}/slack-user-mappings`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: jsonHeaders,
+    body: JSON.stringify({ entries }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to save team Slack user mappings');
+  }
+}
+
+export async function fetchTeamSlackChannelMembers(
+  teamId: number,
+): Promise<ApiTeamSlackChannelMembersResponse> {
+  const response = await fetch(`/api/teams/${teamId}/slack-channel-members`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load Slack channel users');
+  }
+
+  return (await response.json()) as ApiTeamSlackChannelMembersResponse;
+}
+
+export async function sendTeamSlackChannelTest(teamId: number): Promise<void> {
+  const response = await fetch(`/api/teams/${teamId}/slack-test-channel`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to send Slack test message');
+  }
+}
+
+export async function sendTeamSlackMentionTest(
+  teamId: number,
+  payload: { slackUserId: string; mojitoUsername?: string | null },
+): Promise<void> {
+  const response = await fetch(`/api/teams/${teamId}/slack-test-mention`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to send Slack test message');
   }
 }

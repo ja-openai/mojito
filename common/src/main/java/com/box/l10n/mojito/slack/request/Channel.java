@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class Channel {
 
   String id;
+  String name;
 
   long created;
 
@@ -38,6 +39,14 @@ public class Channel {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
   }
 
   public long getCreated() {

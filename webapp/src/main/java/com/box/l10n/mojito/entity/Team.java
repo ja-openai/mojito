@@ -19,6 +19,15 @@ public class Team extends AuditableEntity {
   @Column(name = "deleted", nullable = false)
   private Boolean deleted = false;
 
+  @Column(name = "slack_notifications_enabled", nullable = false)
+  private Boolean slackNotificationsEnabled = false;
+
+  @Column(name = "slack_client_id", length = 255)
+  private String slackClientId;
+
+  @Column(name = "slack_channel_id", length = 64)
+  private String slackChannelId;
+
   public String getName() {
     return name;
   }
@@ -33,5 +42,29 @@ public class Team extends AuditableEntity {
 
   public void setDeleted(Boolean deleted) {
     this.deleted = deleted;
+  }
+
+  public Boolean getSlackNotificationsEnabled() {
+    return slackNotificationsEnabled;
+  }
+
+  public void setSlackNotificationsEnabled(Boolean slackNotificationsEnabled) {
+    this.slackNotificationsEnabled = slackNotificationsEnabled;
+  }
+
+  public String getSlackClientId() {
+    return slackClientId;
+  }
+
+  public void setSlackClientId(String slackClientId) {
+    this.slackClientId = slackClientId;
+  }
+
+  public String getSlackChannelId() {
+    return slackChannelId;
+  }
+
+  public void setSlackChannelId(String slackChannelId) {
+    this.slackChannelId = slackChannelId;
   }
 }
