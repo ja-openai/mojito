@@ -4,12 +4,15 @@ import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
+import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.slack.SlackClient;
 import com.box.l10n.mojito.slack.SlackClientException;
 import com.box.l10n.mojito.slack.SlackClients;
 import com.box.l10n.mojito.slack.request.Message;
 import com.box.l10n.mojito.utils.ServerConfig;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -25,6 +28,8 @@ import org.springframework.stereotype.Service;
 public class TeamSlackNotificationService {
 
   private static final Logger logger = LoggerFactory.getLogger(TeamSlackNotificationService.class);
+  private static final DateTimeFormatter SLACK_DUE_DATE_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z");
 
   private final TeamService teamService;
   private final SlackClients slackClients;
@@ -408,6 +413,9 @@ public class TeamSlackNotificationService {
       builder.append("\nOpen: ").append(requestLink);
     }
 
+    appendReviewProjectTypesSummaryLine(builder, projects);
+    appendReviewProjectDueDatesSummaryLine(builder, projects);
+
     builder
         .append("\nProjects: ")
         .append(projects.size())
@@ -436,6 +444,38 @@ public class TeamSlackNotificationService {
         mappingsByUserId);
 
     return builder.toString();
+  }
+
+  private void appendReviewProjectTypesSummaryLine(StringBuilder builder, List<ReviewProject> projects) {
+    Set<String> typeLabels = new LinkedHashSet<>();
+    for (ReviewProject project : projects) {
+      ReviewProjectType type = project != null ? project.getType() : null;
+      if (type != null) {
+        typeLabels.add(formatReviewProjectType(type));
+      }
+    }
+    if (typeLabels.isEmpty()) {
+      return;
+    }
+    builder.append("\n");
+    builder.append(typeLabels.size() == 1 ? "Type: " : "Types: ");
+    builder.append(String.join(", ", typeLabels));
+  }
+
+  private void appendReviewProjectDueDatesSummaryLine(StringBuilder builder, List<ReviewProject> projects) {
+    Set<String> dueLabels = new LinkedHashSet<>();
+    for (ReviewProject project : projects) {
+      ZonedDateTime dueDate = project != null ? project.getDueDate() : null;
+      if (dueDate != null) {
+        dueLabels.add(formatDueDate(dueDate));
+      }
+    }
+    if (dueLabels.isEmpty()) {
+      return;
+    }
+    builder.append("\n");
+    builder.append(dueLabels.size() == 1 ? "Due: " : "Due dates: ");
+    builder.append(String.join(", ", dueLabels));
   }
 
   private void appendUserLine(
@@ -516,6 +556,29 @@ public class TeamSlackNotificationService {
 
   private boolean isBlank(String value) {
     return value == null || value.trim().isEmpty();
+  }
+
+  private String formatReviewProjectType(ReviewProjectType type) {
+    if (type == null) {
+      return "Unknown";
+    }
+    String[] parts = type.name().split("_");
+    List<String> words = new ArrayList<>();
+    for (String part : parts) {
+      if (part == null || part.isBlank()) {
+        continue;
+      }
+      String lower = part.toLowerCase();
+      words.add(Character.toUpperCase(lower.charAt(0)) + lower.substring(1));
+    }
+    return words.isEmpty() ? "Unknown" : String.join(" ", words);
+  }
+
+  private String formatDueDate(ZonedDateTime dueDate) {
+    if (dueDate == null) {
+      return "";
+    }
+    return SLACK_DUE_DATE_FORMATTER.format(dueDate);
   }
 
   private String buildReviewProjectLink(Long projectId) {
