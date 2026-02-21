@@ -89,7 +89,8 @@ public class SlackClient {
 
     if (!userResponse.getOk()) {
       String msg =
-          MessageFormat.format("Cannot lookup user by id: {0} ({1})", userId, userResponse.getError());
+          MessageFormat.format(
+              "Cannot lookup user by id: {0} ({1})", userId, userResponse.getError());
       logger.debug(msg);
       throw new SlackClientException(msg);
     }
@@ -105,7 +106,8 @@ public class SlackClient {
 
     HttpEntity<MultiValueMap<String, Object>> httpEntity = getHttpEntityForPayload(payload);
     ConversationsInfoResponse response =
-        restTemplate.postForObject(getUrl(API_CONVERSATIONS_INFO), httpEntity, ConversationsInfoResponse.class);
+        restTemplate.postForObject(
+            getUrl(API_CONVERSATIONS_INFO), httpEntity, ConversationsInfoResponse.class);
 
     if (!response.getOk()) {
       String msg =
@@ -151,7 +153,9 @@ public class SlackClient {
       }
 
       cursor =
-          response.getResponse_metadata() != null ? response.getResponse_metadata().getNext_cursor() : null;
+          response.getResponse_metadata() != null
+              ? response.getResponse_metadata().getNext_cursor()
+              : null;
     } while (cursor != null && !cursor.isBlank());
 
     return members;

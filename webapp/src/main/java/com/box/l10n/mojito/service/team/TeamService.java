@@ -14,13 +14,13 @@ import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserLocaleRepository;
 import com.box.l10n.mojito.service.security.user.UserLocaleTagProjection;
 import com.box.l10n.mojito.service.security.user.UserRepository;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.time.ZonedDateTime;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -69,8 +69,7 @@ public class TeamService {
 
   public record ReplaceTeamUsersResult(int removedUsersCount, int removedLocalePoolRows) {}
 
-  public record TeamSlackSettings(
-      boolean enabled, String slackClientId, String slackChannelId) {}
+  public record TeamSlackSettings(boolean enabled, String slackClientId, String slackChannelId) {}
 
   public record TeamSlackUserMappingEntry(
       Long mojitoUserId,
@@ -557,11 +556,13 @@ public class TeamService {
     boolean normalizedEnabled = Boolean.TRUE.equals(enabled);
 
     if (normalizedEnabled && normalizedSlackClientId == null) {
-      throw new IllegalArgumentException("Slack client ID is required when Slack notifications are enabled");
+      throw new IllegalArgumentException(
+          "Slack client ID is required when Slack notifications are enabled");
     }
 
     if (normalizedEnabled && normalizedChannelId == null) {
-      throw new IllegalArgumentException("Slack channel ID is required when Slack notifications are enabled");
+      throw new IllegalArgumentException(
+          "Slack channel ID is required when Slack notifications are enabled");
     }
 
     team.setSlackNotificationsEnabled(normalizedEnabled);
@@ -592,14 +593,16 @@ public class TeamService {
   }
 
   @Transactional
-  public void replaceTeamSlackUserMappings(Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
+  public void replaceTeamSlackUserMappings(
+      Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
     Team team = getTeam(teamId);
 
     List<UpsertTeamSlackUserMappingEntry> normalizedEntries =
-        (entries == null ? List.<UpsertTeamSlackUserMappingEntry>of() : entries).stream()
-            .map(this::normalizeSlackUserMappingEntry)
-            .filter(entry -> entry != null)
-            .toList();
+        (entries == null ? List.<UpsertTeamSlackUserMappingEntry>of() : entries)
+            .stream()
+                .map(this::normalizeSlackUserMappingEntry)
+                .filter(entry -> entry != null)
+                .toList();
 
     Map<Long, UpsertTeamSlackUserMappingEntry> entriesByUserId = new LinkedHashMap<>();
     for (UpsertTeamSlackUserMappingEntry entry : normalizedEntries) {
@@ -628,7 +631,9 @@ public class TeamService {
 
     Map<Long, User> usersById = new LinkedHashMap<>();
     if (!entriesByUserId.isEmpty()) {
-      userRepository.findAllById(entriesByUserId.keySet()).forEach(user -> usersById.put(user.getId(), user));
+      userRepository
+          .findAllById(entriesByUserId.keySet())
+          .forEach(user -> usersById.put(user.getId(), user));
       List<Long> missingUserIds =
           entriesByUserId.keySet().stream().filter(id -> !usersById.containsKey(id)).toList();
       if (!missingUserIds.isEmpty()) {

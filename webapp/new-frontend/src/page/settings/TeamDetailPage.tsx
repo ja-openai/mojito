@@ -73,7 +73,9 @@ const normalizeOptionalText = (value: string | null | undefined) => {
   const normalized = value?.trim() ?? '';
   return normalized.length > 0 ? normalized : null;
 };
-const normalizeSlackMappingsForCompare = (rows: SlackMappingDraftRow[] | ApiTeamSlackUserMappingRow[]) =>
+const normalizeSlackMappingsForCompare = (
+  rows: SlackMappingDraftRow[] | ApiTeamSlackUserMappingRow[],
+) =>
   rows
     .map((row) => ({
       mojitoUserId: row.mojitoUserId,
@@ -783,7 +785,10 @@ export function TeamDetailPage() {
   const pageTitle = normalizeTeamName(draftName) || effectiveTeam.name;
   const isNameDirty =
     normalizeTeamName(draftName) !== normalizeTeamName(effectiveTeam?.name ?? draftName);
-  const isPmRosterDirty = !sameIdList(draftPmUserIds, pmRosterQuery.data?.userIds ?? draftPmUserIds);
+  const isPmRosterDirty = !sameIdList(
+    draftPmUserIds,
+    pmRosterQuery.data?.userIds ?? draftPmUserIds,
+  );
   const isTranslatorRosterDirty = !sameIdList(
     draftTranslatorUserIds,
     translatorRosterQuery.data?.userIds ?? draftTranslatorUserIds,
@@ -1012,7 +1017,10 @@ export function TeamDetailPage() {
                   <div role="columnheader">Slack username</div>
                   <div role="columnheader">Source</div>
                   <div role="columnheader">Verified</div>
-                  <div role="columnheader" className="team-detail-page__slack-mapping-actions-header">
+                  <div
+                    role="columnheader"
+                    className="team-detail-page__slack-mapping-actions-header"
+                  >
                     Actions
                   </div>
                 </div>
@@ -1224,7 +1232,9 @@ export function TeamDetailPage() {
                   type="button"
                   className="settings-button settings-button--primary"
                   onClick={handleSaveTranslatorRoster}
-                  disabled={translatorUsersQuery.isLoading || saveTranslatorRosterMutation.isPending}
+                  disabled={
+                    translatorUsersQuery.isLoading || saveTranslatorRosterMutation.isPending
+                  }
                 >
                   Save
                 </button>

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-import { type ApiTeam,fetchTeams } from '../../api/teams';
+import { type ApiTeam, fetchTeams } from '../../api/teams';
 import type { CollectionOption } from '../../components/CollectionSelect';
 import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
 import { useRepositories } from '../../hooks/useRepositories';

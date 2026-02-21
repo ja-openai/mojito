@@ -27,7 +27,9 @@ import java.time.ZonedDateTime;
 public class TeamSlackUserMapping extends AuditableEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "team_id", foreignKey = @ForeignKey(name = "FK__TEAM_SLACK_USER_MAPPING__TEAM"))
+  @JoinColumn(
+      name = "team_id",
+      foreignKey = @ForeignKey(name = "FK__TEAM_SLACK_USER_MAPPING__TEAM"))
   private Team team;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)

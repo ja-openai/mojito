@@ -17,8 +17,8 @@ import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
-import com.box.l10n.mojito.service.team.TeamService;
 import com.box.l10n.mojito.service.team.TeamRepository;
+import com.box.l10n.mojito.service.team.TeamService;
 import com.box.l10n.mojito.service.team.TeamSlackNotificationService;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -802,7 +802,8 @@ public class ReviewProjectService {
     }
 
     recordAssignmentHistory(reviewProject, eventType, note);
-    teamSlackNotificationService.sendReviewProjectAssignmentNotification(reviewProject, eventType, note);
+    teamSlackNotificationService.sendReviewProjectAssignmentNotification(
+        reviewProject, eventType, note);
     return getProjectDetail(projectId);
   }
 
@@ -1118,10 +1119,8 @@ public class ReviewProjectService {
         continue;
       }
       Long translatorUserId =
-          (entry.translatorUserIds() == null ? List.<Long>of() : entry.translatorUserIds()).stream()
-              .filter(id -> id != null && id > 0)
-              .findFirst()
-              .orElse(null);
+          (entry.translatorUserIds() == null ? List.<Long>of() : entry.translatorUserIds())
+              .stream().filter(id -> id != null && id > 0).findFirst().orElse(null);
       if (translatorUserId == null) {
         continue;
       }

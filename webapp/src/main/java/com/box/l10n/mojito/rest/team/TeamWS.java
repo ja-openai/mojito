@@ -1,14 +1,14 @@
 package com.box.l10n.mojito.rest.team;
 
+import com.box.l10n.mojito.entity.Team;
+import com.box.l10n.mojito.entity.TeamUserRole;
+import com.box.l10n.mojito.service.team.TeamService;
 import com.box.l10n.mojito.slack.SlackClient;
 import com.box.l10n.mojito.slack.SlackClientException;
 import com.box.l10n.mojito.slack.SlackClients;
 import com.box.l10n.mojito.slack.request.Channel;
 import com.box.l10n.mojito.slack.request.Message;
 import com.box.l10n.mojito.slack.request.User;
-import com.box.l10n.mojito.entity.Team;
-import com.box.l10n.mojito.entity.TeamUserRole;
-import com.box.l10n.mojito.service.team.TeamService;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -37,6 +37,7 @@ public class TeamWS {
   }
 
   public record TeamResponse(Long id, String name) {}
+
   public record SlackClientIdsResponse(List<String> entries) {}
 
   public record UpsertTeamRequest(String name) {}
@@ -281,7 +282,9 @@ public class TeamWS {
     try {
       teamService.replaceTeamSlackUserMappings(
           teamId,
-          (request == null || request.entries() == null ? List.<TeamSlackUserMappingRow>of() : request.entries())
+          (request == null || request.entries() == null
+                  ? List.<TeamSlackUserMappingRow>of()
+                  : request.entries())
               .stream()
                   .map(
                       row ->
@@ -304,17 +307,18 @@ public class TeamWS {
     String slackClientId = settings.slackClientId();
     String channelId = settings.slackChannelId();
     if (slackClientId == null || slackClientId.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team Slack client ID is not configured");
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Team Slack client ID is not configured");
     }
     if (channelId == null || channelId.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team Slack channel ID is not configured");
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Team Slack channel ID is not configured");
     }
 
     SlackClient slackClient = slackClients.getById(slackClientId);
     if (slackClient == null) {
       throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST,
-          "Unknown Slack client ID in team settings: " + slackClientId);
+          HttpStatus.BAD_REQUEST, "Unknown Slack client ID in team settings: " + slackClientId);
     }
 
     try {
@@ -364,10 +368,12 @@ public class TeamWS {
     String channelId = settings.slackChannelId();
 
     if (slackClientId == null || slackClientId.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team Slack client ID is not configured");
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Team Slack client ID is not configured");
     }
     if (channelId == null || channelId.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team Slack channel ID is not configured");
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Team Slack channel ID is not configured");
     }
 
     SlackClient slackClient = slackClients.getById(slackClientId);
@@ -409,13 +415,15 @@ public class TeamWS {
     String mojitoUsername = request != null ? request.mojitoUsername() : null;
 
     if (slackClientId == null || slackClientId.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team Slack client ID is not configured");
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Team Slack client ID is not configured");
     }
     if (slackUserId == null || slackUserId.isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Slack user ID is required");
     }
     if (channelId == null || channelId.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team Slack channel ID is not configured");
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Team Slack channel ID is not configured");
     }
 
     SlackClient slackClient = slackClients.getById(slackClientId);

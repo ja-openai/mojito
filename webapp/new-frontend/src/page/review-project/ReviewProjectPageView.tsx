@@ -2704,9 +2704,9 @@ function ReviewProjectHeader({
   const [assignmentPmUserIdDraft, setAssignmentPmUserIdDraft] = useState<number | null>(
     project.assignment?.assignedPmUserId ?? null,
   );
-  const [assignmentTranslatorUserIdDraft, setAssignmentTranslatorUserIdDraft] = useState<number | null>(
-    project.assignment?.assignedTranslatorUserId ?? null,
-  );
+  const [assignmentTranslatorUserIdDraft, setAssignmentTranslatorUserIdDraft] = useState<
+    number | null
+  >(project.assignment?.assignedTranslatorUserId ?? null);
   const [assignmentNoteDraft, setAssignmentNoteDraft] = useState('');
   const [assignmentSaveStatus, setAssignmentSaveStatus] = useState<string | null>(null);
   const [assignmentSaveError, setAssignmentSaveError] = useState<string | null>(null);
@@ -2861,7 +2861,7 @@ function ReviewProjectHeader({
           value: id,
           label: user?.commonName
             ? `${user.commonName} (${user.username})`
-            : user?.username ?? `User #${id}`,
+            : (user?.username ?? `User #${id}`),
         };
       });
     if (
@@ -2884,8 +2884,8 @@ function ReviewProjectHeader({
       ) ?? null;
     const sourceIds =
       (localePoolRow?.translatorUserIds?.length ?? 0) > 0
-        ? localePoolRow?.translatorUserIds ?? []
-        : assignmentTranslatorsQuery.data?.userIds ?? [];
+        ? (localePoolRow?.translatorUserIds ?? [])
+        : (assignmentTranslatorsQuery.data?.userIds ?? []);
     const seen = new Set<number>();
     const options = sourceIds
       .filter((id): id is number => Number.isInteger(id) && id > 0)
@@ -2902,7 +2902,7 @@ function ReviewProjectHeader({
           value: id,
           label: user?.commonName
             ? `${user.commonName} (${user.username})`
-            : user?.username ?? `User #${id}`,
+            : (user?.username ?? `User #${id}`),
         };
       });
     if (

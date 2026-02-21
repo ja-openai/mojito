@@ -69,7 +69,8 @@ public class TeamSlackNotificationService {
       return;
     }
 
-    Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId = getMappingsByUserId(team.getId());
+    Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId =
+        getMappingsByUserId(team.getId());
     mappingsByUserId =
         ensureMappingsForUsers(
             team.getId(),
@@ -78,7 +79,8 @@ public class TeamSlackNotificationService {
             List.of(reviewProject.getAssignedPmUser(), reviewProject.getAssignedTranslatorUser()),
             new LinkedHashMap<>(mappingsByUserId));
 
-    String text = buildReviewProjectAssignmentMessage(reviewProject, eventType, note, mappingsByUserId);
+    String text =
+        buildReviewProjectAssignmentMessage(reviewProject, eventType, note, mappingsByUserId);
     if (isBlank(text)) {
       return;
     }
@@ -143,13 +145,19 @@ public class TeamSlackNotificationService {
       }
     }
 
-    Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId = getMappingsByUserId(team.getId());
+    Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId =
+        getMappingsByUserId(team.getId());
     mappingsByUserId =
         ensureMappingsForUsers(
-            team.getId(), settings, slackClient, assignedUsers, new LinkedHashMap<>(mappingsByUserId));
+            team.getId(),
+            settings,
+            slackClient,
+            assignedUsers,
+            new LinkedHashMap<>(mappingsByUserId));
 
     String text =
-        buildReviewProjectCreateRequestMessage(reviewProjectRequest, createdProjects, mappingsByUserId);
+        buildReviewProjectCreateRequestMessage(
+            reviewProjectRequest, createdProjects, mappingsByUserId);
     if (isBlank(text)) {
       return;
     }
@@ -191,14 +199,16 @@ public class TeamSlackNotificationService {
     }
 
     List<User> missingUsers =
-        (candidateUsers == null ? List.<User>of() : candidateUsers).stream()
-            .filter(user -> user != null && user.getId() != null)
-            .filter(
-                user -> {
-                  TeamService.TeamSlackUserMappingEntry mapping = mappingsByUserId.get(user.getId());
-                  return mapping == null || isBlank(mapping.slackUserId());
-                })
-            .toList();
+        (candidateUsers == null ? List.<User>of() : candidateUsers)
+            .stream()
+                .filter(user -> user != null && user.getId() != null)
+                .filter(
+                    user -> {
+                      TeamService.TeamSlackUserMappingEntry mapping =
+                          mappingsByUserId.get(user.getId());
+                      return mapping == null || isBlank(mapping.slackUserId());
+                    })
+                .toList();
     if (missingUsers.isEmpty()) {
       return mappingsByUserId;
     }
@@ -210,14 +220,18 @@ public class TeamSlackNotificationService {
               .map(
                   memberId -> {
                     try {
-                      com.box.l10n.mojito.slack.request.User slackUser = slackClient.getUserById(memberId);
+                      com.box.l10n.mojito.slack.request.User slackUser =
+                          slackClient.getUserById(memberId);
                       return new SlackUserCandidate(
                           memberId,
                           slackUser != null ? slackUser.getName() : null,
                           normalizeKey(slackUser != null ? slackUser.getName() : null),
                           normalizeKey(slackUser != null ? slackUser.getEmail() : null));
                     } catch (SlackClientException ex) {
-                      logger.debug("Skipping Slack member {} during auto-match: {}", memberId, ex.getMessage());
+                      logger.debug(
+                          "Skipping Slack member {} during auto-match: {}",
+                          memberId,
+                          ex.getMessage());
                       return null;
                     }
                   })
@@ -232,7 +246,9 @@ public class TeamSlackNotificationService {
         addSlackCandidateIndex(byEmail, candidate.emailKey(), candidate);
         if (!isBlank(candidate.emailKey()) && candidate.emailKey().contains("@")) {
           addSlackCandidateIndex(
-              byEmailLocal, candidate.emailKey().substring(0, candidate.emailKey().indexOf('@')), candidate);
+              byEmailLocal,
+              candidate.emailKey().substring(0, candidate.emailKey().indexOf('@')),
+              candidate);
         }
       }
 
@@ -245,7 +261,8 @@ public class TeamSlackNotificationService {
               .collect(Collectors.toCollection(LinkedHashSet::new));
 
       for (User mojitoUser : missingUsers) {
-        SlackUserCandidate match = findAutoMatchCandidate(mojitoUser, byEmail, byEmailLocal, byUsername);
+        SlackUserCandidate match =
+            findAutoMatchCandidate(mojitoUser, byEmail, byEmailLocal, byUsername);
         if (match == null || isBlank(match.slackUserId())) {
           continue;
         }
@@ -359,9 +376,14 @@ public class TeamSlackNotificationService {
     String localeTag =
         reviewProject.getLocale() != null ? reviewProject.getLocale().getBcp47Tag() : null;
     String requestName =
-        reviewProject.getReviewProjectRequest() != null ? reviewProject.getReviewProjectRequest().getName() : null;
+        reviewProject.getReviewProjectRequest() != null
+            ? reviewProject.getReviewProjectRequest().getName()
+            : null;
 
     StringBuilder builder = new StringBuilder();
+    if (isEmergencyType(reviewProject.getType())) {
+      builder.append("[EMERGENCY] ");
+    }
     builder.append("Mojito review project ");
     builder.append(eventTypeLabel(eventType));
     builder.append(": #").append(reviewProject.getId());
@@ -373,7 +395,7 @@ public class TeamSlackNotificationService {
     }
     String projectLink = buildReviewProjectLink(reviewProject.getId());
     if (!isBlank(projectLink)) {
-      builder.append("\nOpen: ").append(projectLink);
+      builder.append("\nView project: ").append(projectLink);
     }
     String normalizedNote = note == null ? null : note.trim();
     if (!isBlank(normalizedNote)) {
@@ -381,7 +403,8 @@ public class TeamSlackNotificationService {
     }
 
     appendUserLine(builder, "PM", reviewProject.getAssignedPmUser(), mappingsByUserId);
-    appendUserLine(builder, "Translator", reviewProject.getAssignedTranslatorUser(), mappingsByUserId);
+    appendUserLine(
+        builder, "Translator", reviewProject.getAssignedTranslatorUser(), mappingsByUserId);
 
     return builder.toString();
   }
@@ -391,7 +414,9 @@ public class TeamSlackNotificationService {
       List<ReviewProject> createdProjects,
       Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
     List<ReviewProject> projects =
-        createdProjects.stream().filter(project -> project != null && project.getId() != null).toList();
+        createdProjects.stream()
+            .filter(project -> project != null && project.getId() != null)
+            .toList();
     if (projects.isEmpty()) {
       return null;
     }
@@ -400,6 +425,9 @@ public class TeamSlackNotificationService {
     Long requestId = reviewProjectRequest != null ? reviewProjectRequest.getId() : null;
 
     StringBuilder builder = new StringBuilder();
+    if (projects.stream().anyMatch(project -> isEmergencyType(project.getType()))) {
+      builder.append("[EMERGENCY] ");
+    }
     builder.append("Mojito review request assigned");
     if (requestId != null) {
       builder.append(": #").append(requestId);
@@ -410,7 +438,7 @@ public class TeamSlackNotificationService {
 
     String requestLink = buildReviewProjectRequestLink(requestId);
     if (!isBlank(requestLink)) {
-      builder.append("\nOpen: ").append(requestLink);
+      builder.append("\nView request: ").append(requestLink);
     }
 
     appendReviewProjectTypesSummaryLine(builder, projects);
@@ -446,7 +474,8 @@ public class TeamSlackNotificationService {
     return builder.toString();
   }
 
-  private void appendReviewProjectTypesSummaryLine(StringBuilder builder, List<ReviewProject> projects) {
+  private void appendReviewProjectTypesSummaryLine(
+      StringBuilder builder, List<ReviewProject> projects) {
     Set<String> typeLabels = new LinkedHashSet<>();
     for (ReviewProject project : projects) {
       ReviewProjectType type = project != null ? project.getType() : null;
@@ -462,7 +491,8 @@ public class TeamSlackNotificationService {
     builder.append(String.join(", ", typeLabels));
   }
 
-  private void appendReviewProjectDueDatesSummaryLine(StringBuilder builder, List<ReviewProject> projects) {
+  private void appendReviewProjectDueDatesSummaryLine(
+      StringBuilder builder, List<ReviewProject> projects) {
     Set<String> dueLabels = new LinkedHashSet<>();
     for (ReviewProject project : projects) {
       ZonedDateTime dueDate = project != null ? project.getDueDate() : null;
@@ -526,7 +556,8 @@ public class TeamSlackNotificationService {
     builder.append(String.join(", ", rendered));
   }
 
-  private String renderUser(User user, Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
+  private String renderUser(
+      User user, Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
     if (user == null) {
       return "—";
     }
@@ -556,6 +587,10 @@ public class TeamSlackNotificationService {
 
   private boolean isBlank(String value) {
     return value == null || value.trim().isEmpty();
+  }
+
+  private boolean isEmergencyType(ReviewProjectType type) {
+    return ReviewProjectType.EMERGENCY.equals(type);
   }
 
   private String formatReviewProjectType(ReviewProjectType type) {
