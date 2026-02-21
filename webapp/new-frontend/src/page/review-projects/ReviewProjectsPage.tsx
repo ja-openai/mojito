@@ -462,6 +462,48 @@ export function ReviewProjectsPage() {
   ]);
 
   useEffect(() => {
+    if (!hasHydratedSessionState) {
+      return;
+    }
+    const requestIdParam = urlSearchParams.get('requestId');
+    if (requestIdParam == null || requestIdParam.trim() === '') {
+      return;
+    }
+    const parsedRequestId = Number.parseInt(requestIdParam, 10);
+    if (!Number.isFinite(parsedRequestId) || parsedRequestId <= 0) {
+      return;
+    }
+
+    const requestIdText = String(parsedRequestId);
+    if (searchField !== 'requestId') {
+      setSearchField('requestId');
+    }
+    if (searchType !== 'exact') {
+      setSearchType('exact');
+    }
+    if (searchQuery !== requestIdText) {
+      setSearchQuery(requestIdText);
+    }
+    if (canUseRequestMode && displayMode !== 'requests') {
+      setDisplayMode('requests');
+    }
+
+    // Apply request deep-link once, then remove it so manual filter edits are not re-forced.
+    const nextParams = new URLSearchParams(urlSearchParams);
+    nextParams.delete('requestId');
+    setUrlSearchParams(nextParams, { replace: true });
+  }, [
+    canUseRequestMode,
+    displayMode,
+    hasHydratedSessionState,
+    searchField,
+    searchQuery,
+    searchType,
+    setUrlSearchParams,
+    urlSearchParams,
+  ]);
+
+  useEffect(() => {
     if (!canUseRequestMode && displayMode !== 'list') {
       setDisplayMode('list');
     }
