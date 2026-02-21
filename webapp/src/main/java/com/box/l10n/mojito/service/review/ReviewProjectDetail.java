@@ -18,4 +18,10 @@ public record ReviewProjectDetail(
     Long reviewProjectRequestId,
     String reviewProjectRequestName,
     String reviewProjectRequestNotes,
-    String reviewProjectRequestCreatedByUsername) {}
+    String reviewProjectRequestCreatedByUsername,
+    Long teamId,
+    String teamName,
+    Long assignedPmUserId,
+    String assignedPmUsername,
+    Long assignedTranslatorUserId,
+    String assignedTranslatorUsername) {}
