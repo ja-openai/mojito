@@ -423,51 +423,54 @@ public class TeamSlackNotificationService {
 
     String requestName = reviewProjectRequest != null ? reviewProjectRequest.getName() : null;
     Long requestId = reviewProjectRequest != null ? reviewProjectRequest.getId() : null;
+    List<String> localeTags =
+        projects.stream()
+            .map(
+                project -> {
+                  String localeTag =
+                      project.getLocale() != null ? project.getLocale().getBcp47Tag() : null;
+                  return !isBlank(localeTag) ? localeTag.trim() : null;
+                })
+            .filter(localeTag -> !isBlank(localeTag))
+            .sorted(String.CASE_INSENSITIVE_ORDER)
+            .toList();
 
     StringBuilder builder = new StringBuilder();
+    builder.append("*");
     if (projects.stream().anyMatch(project -> isEmergencyType(project.getType()))) {
-      builder.append("[EMERGENCY] ");
-    }
-    builder.append("Mojito review request assigned");
-    if (requestId != null) {
-      builder.append(": #").append(requestId);
+      builder.append("\uD83D\uDEA8 ");
     }
     if (!isBlank(requestName)) {
-      builder.append(" — ").append(requestName.trim());
+      builder.append(requestName.trim());
+    } else if (requestId != null) {
+      builder.append("Review request #").append(requestId);
+    } else {
+      builder.append("Review request");
     }
+    builder.append("*");
 
     String requestLink = buildReviewProjectRequestLink(requestId);
     if (!isBlank(requestLink)) {
-      builder.append("\nView request: ").append(requestLink);
+      builder.append("\nView request in Mojito: ").append(requestLink);
     }
 
     appendReviewProjectTypesSummaryLine(builder, projects);
     appendReviewProjectDueDatesSummaryLine(builder, projects);
-
-    builder
-        .append("\nProjects: ")
-        .append(projects.size())
-        .append(" (")
-        .append(
-            projects.stream()
-                .map(
-                    project -> {
-                      String localeTag =
-                          project.getLocale() != null ? project.getLocale().getBcp47Tag() : null;
-                      return !isBlank(localeTag) ? localeTag.trim() : ("#" + project.getId());
-                    })
-                .sorted(String.CASE_INSENSITIVE_ORDER)
-                .collect(Collectors.joining(", ")))
-        .append(")");
+    builder.append("\nLocales");
+    if (!localeTags.isEmpty()) {
+      builder.append(" (").append(localeTags.size()).append(")");
+    }
+    builder.append(": ");
+    builder.append(localeTags.isEmpty() ? "—" : String.join(", ", localeTags));
 
     appendDistinctUserSummaryLine(
         builder,
-        "PMs",
+        "Assigned PMs",
         projects.stream().map(ReviewProject::getAssignedPmUser).toList(),
         mappingsByUserId);
     appendDistinctUserSummaryLine(
         builder,
-        "Translators",
+        "Assigned Translators",
         projects.stream().map(ReviewProject::getAssignedTranslatorUser).toList(),
         mappingsByUserId);
 
