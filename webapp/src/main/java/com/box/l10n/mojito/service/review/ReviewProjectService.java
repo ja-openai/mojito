@@ -162,6 +162,7 @@ public class ReviewProjectService {
 
     List<Long> projectIds = new ArrayList<>();
     List<String> createdLocaleTags = new ArrayList<>();
+    List<ReviewProject> createdProjects = new ArrayList<>();
     CreateAssignmentDefaults assignmentDefaults = resolveCreateAssignmentDefaults(request.teamId());
 
     for (LocaleCandidates localeCandidates : localesToCreate) {
@@ -203,12 +204,13 @@ public class ReviewProjectService {
       saved.setWordCount(wordCount);
       saved.setTextUnitCount(textUnitCount);
       recordAssignmentHistory(saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null);
-      teamSlackNotificationService.sendReviewProjectAssignmentNotification(
-          saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null);
-
       projectIds.add(saved.getId());
       createdLocaleTags.add(locale.getBcp47Tag());
+      createdProjects.add(saved);
     }
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        reviewProjectRequest, createdProjects);
 
     return new CreateReviewProjectRequestResult(
         reviewProjectRequest.getId(),
