@@ -8,6 +8,7 @@ import com.box.l10n.mojito.slack.SlackClient;
 import com.box.l10n.mojito.slack.SlackClientException;
 import com.box.l10n.mojito.slack.SlackClients;
 import com.box.l10n.mojito.slack.request.Message;
+import com.box.l10n.mojito.utils.ServerConfig;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -17,7 +18,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,15 +27,13 @@ public class TeamSlackNotificationService {
 
   private final TeamService teamService;
   private final SlackClients slackClients;
-  private final String mojitoServerUrl;
+  private final ServerConfig serverConfig;
 
   public TeamSlackNotificationService(
-      TeamService teamService,
-      SlackClients slackClients,
-      @Value("${l10n.server.url:}") String mojitoServerUrl) {
+      TeamService teamService, SlackClients slackClients, ServerConfig serverConfig) {
     this.teamService = teamService;
     this.slackClients = slackClients;
-    this.mojitoServerUrl = mojitoServerUrl;
+    this.serverConfig = serverConfig;
   }
 
   public void sendReviewProjectAssignmentNotification(
@@ -279,18 +277,10 @@ public class TeamSlackNotificationService {
       ReviewProjectAssignmentEventType eventType,
       String note,
       Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
-    List<String> mentionTokens = new ArrayList<>();
-    collectMentionToken(mentionTokens, reviewProject.getAssignedPmUser(), mappingsByUserId);
-    collectMentionToken(mentionTokens, reviewProject.getAssignedTranslatorUser(), mappingsByUserId);
-
-    String mentionLine =
-        mentionTokens.isEmpty() ? null : String.join(" ", new LinkedHashSet<>(mentionTokens));
-
     String localeTag =
         reviewProject.getLocale() != null ? reviewProject.getLocale().getBcp47Tag() : null;
     String requestName =
         reviewProject.getReviewProjectRequest() != null ? reviewProject.getReviewProjectRequest().getName() : null;
-    String teamName = reviewProject.getTeam() != null ? reviewProject.getTeam().getName() : null;
 
     StringBuilder builder = new StringBuilder();
     builder.append("Mojito review project ");
@@ -302,47 +292,37 @@ public class TeamSlackNotificationService {
     if (!isBlank(localeTag)) {
       builder.append(" [").append(localeTag.trim()).append("]");
     }
-    if (!isBlank(teamName)) {
-      builder.append("\nTeam: ").append(teamName.trim());
-    }
     String projectLink = buildReviewProjectLink(reviewProject.getId());
     if (!isBlank(projectLink)) {
       builder.append("\nOpen: ").append(projectLink);
     }
-
-    appendUserLine(builder, "PM", reviewProject.getAssignedPmUser());
-    appendUserLine(builder, "Translator", reviewProject.getAssignedTranslatorUser());
-
     String normalizedNote = note == null ? null : note.trim();
     if (!isBlank(normalizedNote)) {
       builder.append("\nNote: ").append(normalizedNote);
     }
-    if (!isBlank(mentionLine)) {
-      builder.append("\n").append(mentionLine);
-    }
+
+    appendUserLine(builder, "PM", reviewProject.getAssignedPmUser(), mappingsByUserId);
+    appendUserLine(builder, "Translator", reviewProject.getAssignedTranslatorUser(), mappingsByUserId);
 
     return builder.toString();
   }
 
-  private void collectMentionToken(
-      List<String> mentionTokens,
+  private void appendUserLine(
+      StringBuilder builder,
+      String label,
       User user,
       Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
-    if (user == null || user.getId() == null) {
-      return;
-    }
-    TeamService.TeamSlackUserMappingEntry mapping = mappingsByUserId.get(user.getId());
-    if (mapping == null || isBlank(mapping.slackUserId())) {
-      return;
-    }
-    mentionTokens.add("<@" + mapping.slackUserId().trim() + ">");
-  }
-
-  private void appendUserLine(StringBuilder builder, String label, User user) {
     builder.append("\n").append(label).append(": ");
     if (user == null) {
       builder.append("—");
       return;
+    }
+    if (user.getId() != null) {
+      TeamService.TeamSlackUserMappingEntry mapping = mappingsByUserId.get(user.getId());
+      if (mapping != null && !isBlank(mapping.slackUserId())) {
+        builder.append("<@").append(mapping.slackUserId().trim()).append(">");
+        return;
+      }
     }
     String username = user.getUsername();
     builder.append(!isBlank(username) ? username.trim() : ("user#" + user.getId()));
@@ -364,10 +344,11 @@ public class TeamSlackNotificationService {
   }
 
   private String buildReviewProjectLink(Long projectId) {
-    if (projectId == null || isBlank(mojitoServerUrl)) {
+    String configuredServerUrl = serverConfig != null ? serverConfig.getUrl() : null;
+    if (projectId == null || isBlank(configuredServerUrl)) {
       return null;
     }
-    String base = mojitoServerUrl.trim();
+    String base = configuredServerUrl.trim();
     while (base.endsWith("/")) {
       base = base.substring(0, base.length() - 1);
     }
