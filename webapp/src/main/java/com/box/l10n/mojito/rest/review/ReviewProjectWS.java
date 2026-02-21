@@ -294,6 +294,7 @@ public class ReviewProjectWS {
       Integer wordCount,
       ReviewProjectRequest reviewProjectRequest,
       Locale locale,
+      Assignment assignment,
       List<ReviewProjectTextUnit> reviewProjectTextUnits) {
 
     public record ReviewProjectRequest(
@@ -304,6 +305,14 @@ public class ReviewProjectWS {
         List<String> screenshotImageIds) {}
 
     public record Locale(Long id, String bcp47Tag) {}
+
+    public record Assignment(
+        Long teamId,
+        String teamName,
+        Long assignedPmUserId,
+        String assignedPmUsername,
+        Long assignedTranslatorUserId,
+        String assignedTranslatorUsername) {}
 
     public record ReviewProjectTextUnit(
         Long id,
@@ -433,6 +442,15 @@ public class ReviewProjectWS {
             : null,
         detail.locale() != null
             ? new GetReviewProjectResponse.Locale(detail.locale().id(), detail.locale().bcp47Tag())
+            : null,
+        detail.assignment() != null
+            ? new GetReviewProjectResponse.Assignment(
+                detail.assignment().teamId(),
+                detail.assignment().teamName(),
+                detail.assignment().assignedPmUserId(),
+                detail.assignment().assignedPmUsername(),
+                detail.assignment().assignedTranslatorUserId(),
+                detail.assignment().assignedTranslatorUsername())
             : null,
         detail.reviewProjectTextUnits().stream().map(this::toTextUnitResponse).toList());
   }

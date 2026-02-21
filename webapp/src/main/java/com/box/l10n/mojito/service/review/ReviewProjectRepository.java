@@ -28,12 +28,21 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
         request.id,
         request.name,
         request.notes,
-        requestCreatedBy.username
+        requestCreatedBy.username,
+        team.id,
+        team.name,
+        assignedPm.id,
+        assignedPm.username,
+        assignedTranslator.id,
+        assignedTranslator.username
       )
       from ReviewProject rp
       left join rp.locale locale
       left join rp.reviewProjectRequest request
       left join request.createdByUser requestCreatedBy
+      left join rp.team team
+      left join rp.assignedPmUser assignedPm
+      left join rp.assignedTranslatorUser assignedTranslator
       where rp.id = :id
       """)
   Optional<ReviewProjectDetail> findDetailById(@Param("id") Long id);

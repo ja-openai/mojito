@@ -10,6 +10,7 @@ import type {
 import {
   saveReviewProjectTextUnitDecision,
   setReviewProjectTextUnitDecisionState,
+  updateReviewProjectAssignment,
   updateReviewProjectRequest,
   updateReviewProjectStatus,
 } from '../../api/review-projects';
@@ -50,6 +51,7 @@ export type ReviewProjectMutationControls = {
   isSaving: boolean;
   isProjectStatusSaving: boolean;
   isProjectRequestSaving: boolean;
+  isProjectAssignmentSaving: boolean;
   errorMessage: string | null;
   activeTextUnitId: number | null;
   conflictTextUnit: ApiReviewProjectTextUnit | null;
@@ -68,6 +70,12 @@ export type ReviewProjectMutationControls = {
     type?: ApiReviewProjectType | null;
     dueDate?: string | null;
     screenshotImageIds?: string[] | null;
+  }) => Promise<void>;
+  onRequestProjectAssignmentUpdate: (request: {
+    teamId?: number | null;
+    assignedPmUserId?: number | null;
+    assignedTranslatorUserId?: number | null;
+    note?: string | null;
   }) => Promise<void>;
 };
 
@@ -207,6 +215,38 @@ export function useReviewProjectMutations(
     },
   });
 
+  const projectAssignmentMutation = useMutation<
+    ApiReviewProjectDetail,
+    Error,
+    {
+      teamId?: number | null;
+      assignedPmUserId?: number | null;
+      assignedTranslatorUserId?: number | null;
+      note?: string | null;
+    }
+  >({
+    mutationFn: async (request) => {
+      if (projectId == null) {
+        throw new Error('Missing project id');
+      }
+      return updateReviewProjectAssignment(projectId, request);
+    },
+    onSuccess: (updatedProject) => {
+      if (projectId == null) {
+        return;
+      }
+      queryClient.setQueryData<ApiReviewProjectDetail>(
+        [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
+        updatedProject,
+      );
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      setErrorMessage(null);
+    },
+    onError: (error) => {
+      setErrorMessage(error.message || 'Failed to update project assignment');
+    },
+  });
+
   const executeAction = useCallback(
     async (action: PendingAction, attemptId: number) => {
       if (projectId == null) {
@@ -340,6 +380,21 @@ export function useReviewProjectMutations(
     [projectId, projectRequestMutation],
   );
 
+  const onRequestProjectAssignmentUpdate = useCallback(
+    async (request: {
+      teamId?: number | null;
+      assignedPmUserId?: number | null;
+      assignedTranslatorUserId?: number | null;
+      note?: string | null;
+    }) => {
+      if (projectId == null || projectAssignmentMutation.isPending) {
+        return;
+      }
+      await projectAssignmentMutation.mutateAsync(request);
+    },
+    [projectAssignmentMutation, projectId],
+  );
+
   const onConfirmValidationSave = useCallback(() => {
     if (!pendingValidationSave) {
       return;
@@ -423,6 +478,7 @@ export function useReviewProjectMutations(
       isSaving: mutation.isPending,
       isProjectStatusSaving: projectStatusMutation.isPending,
       isProjectRequestSaving: projectRequestMutation.isPending,
+      isProjectAssignmentSaving: projectAssignmentMutation.isPending,
       errorMessage,
       activeTextUnitId,
       conflictTextUnit,
@@ -436,6 +492,7 @@ export function useReviewProjectMutations(
       onRequestDecisionState,
       onRequestProjectStatus,
       onRequestProjectRequestUpdate,
+      onRequestProjectAssignmentUpdate,
     }),
     [
       activeTextUnitId,
@@ -447,11 +504,13 @@ export function useReviewProjectMutations(
       onOverwriteConflict,
       onRequestDecisionState,
       onRequestProjectRequestUpdate,
+      onRequestProjectAssignmentUpdate,
       onRequestProjectStatus,
       onRequestSaveDecision,
       onUseConflictCurrent,
       pendingValidationSave,
       projectRequestMutation.isPending,
+      projectAssignmentMutation.isPending,
       projectStatusMutation.isPending,
     ],
   );

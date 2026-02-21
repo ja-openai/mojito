@@ -17,6 +17,7 @@ public record GetProjectDetailView(
     Integer wordCount,
     ReviewProjectRequest reviewProjectRequest,
     Locale locale,
+    Assignment assignment,
     List<ReviewProjectTextUnit> reviewProjectTextUnits) {
 
   public record ReviewProjectRequest(
@@ -27,6 +28,14 @@ public record GetProjectDetailView(
       List<String> screenshotImageIds) {}
 
   public record Locale(Long id, String bcp47Tag) {}
+
+  public record Assignment(
+      Long teamId,
+      String teamName,
+      Long assignedPmUserId,
+      String assignedPmUsername,
+      Long assignedTranslatorUserId,
+      String assignedTranslatorUsername) {}
 
   public record ReviewProjectTextUnit(
       Long id,

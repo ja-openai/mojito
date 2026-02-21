@@ -18,6 +18,7 @@ import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.team.TeamRepository;
+import com.box.l10n.mojito.service.team.TeamSlackNotificationService;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
@@ -59,6 +60,7 @@ public class ReviewProjectService {
   private final UserRepository userRepository;
   private final TeamRepository teamRepository;
   private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository;
+  private final TeamSlackNotificationService teamSlackNotificationService;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -77,7 +79,8 @@ public class ReviewProjectService {
       UserService userService,
       UserRepository userRepository,
       TeamRepository teamRepository,
-      ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository) {
+      ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
+      TeamSlackNotificationService teamSlackNotificationService) {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
@@ -93,6 +96,7 @@ public class ReviewProjectService {
     this.userRepository = userRepository;
     this.teamRepository = teamRepository;
     this.reviewProjectAssignmentHistoryRepository = reviewProjectAssignmentHistoryRepository;
+    this.teamSlackNotificationService = teamSlackNotificationService;
   }
 
   @Transactional
@@ -615,6 +619,13 @@ public class ReviewProjectService {
             project.reviewProjectRequestCreatedByUsername(),
             screenshotImageIds),
         new GetProjectDetailView.Locale(project.localeId(), project.localeTag()),
+        new GetProjectDetailView.Assignment(
+            project.teamId(),
+            project.teamName(),
+            project.assignedPmUserId(),
+            project.assignedPmUsername(),
+            project.assignedTranslatorUserId(),
+            project.assignedTranslatorUsername()),
         reviewProjectTextUnits);
   }
 
@@ -773,6 +784,7 @@ public class ReviewProjectService {
     }
 
     recordAssignmentHistory(reviewProject, eventType, note);
+    teamSlackNotificationService.sendReviewProjectAssignmentNotification(reviewProject, eventType, note);
     return getProjectDetail(projectId);
   }
 

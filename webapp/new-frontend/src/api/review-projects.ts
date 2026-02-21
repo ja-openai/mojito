@@ -84,8 +84,33 @@ export type ApiReviewProjectDetail = {
     screenshotImageIds?: string[];
   } | null;
   locale?: { id: number | null; bcp47Tag?: string | null } | null;
+  assignment?: {
+    teamId?: number | null;
+    teamName?: string | null;
+    assignedPmUserId?: number | null;
+    assignedPmUsername?: string | null;
+    assignedTranslatorUserId?: number | null;
+    assignedTranslatorUsername?: string | null;
+  } | null;
   // New canonical field name from WS
   reviewProjectTextUnits?: ApiReviewProjectTextUnit[];
+};
+
+export type ApiReviewProjectAssignmentHistoryEntry = {
+  id: number;
+  createdDate?: string | null;
+  teamId?: number | null;
+  teamName?: string | null;
+  assignedPmUserId?: number | null;
+  assignedPmUsername?: string | null;
+  assignedTranslatorUserId?: number | null;
+  assignedTranslatorUsername?: string | null;
+  eventType: 'CREATED_DEFAULT' | 'ASSIGNED' | 'REASSIGNED' | 'UNASSIGNED';
+  note?: string | null;
+};
+
+export type ApiReviewProjectAssignmentHistoryResponse = {
+  entries: ApiReviewProjectAssignmentHistoryEntry[];
 };
 
 export type SearchReviewProjectsResponse = {
@@ -283,6 +308,47 @@ export const updateReviewProjectRequest = async (
   }
 
   return (await response.json()) as ApiReviewProjectDetail;
+};
+
+export const updateReviewProjectAssignment = async (
+  projectId: number,
+  payload: {
+    teamId?: number | null;
+    assignedPmUserId?: number | null;
+    assignedTranslatorUserId?: number | null;
+    note?: string | null;
+  },
+): Promise<ApiReviewProjectDetail> => {
+  const response = await fetch(`/api/review-projects/${projectId}/assignment`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload ?? {}),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to update review project assignment');
+  }
+
+  return (await response.json()) as ApiReviewProjectDetail;
+};
+
+export const fetchReviewProjectAssignmentHistory = async (
+  projectId: number,
+): Promise<ApiReviewProjectAssignmentHistoryResponse> => {
+  const response = await fetch(`/api/review-projects/${projectId}/assignment-history`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: jsonHeaders,
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load review project assignment history');
+  }
+
+  return (await response.json()) as ApiReviewProjectAssignmentHistoryResponse;
 };
 
 export type AdminBatchActionResponse = {
