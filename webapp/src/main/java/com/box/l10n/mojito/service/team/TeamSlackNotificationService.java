@@ -277,8 +277,8 @@ public class TeamSlackNotificationService {
     collectMentionToken(mentionTokens, reviewProject.getAssignedPmUser(), mappingsByUserId);
     collectMentionToken(mentionTokens, reviewProject.getAssignedTranslatorUser(), mappingsByUserId);
 
-    String mentionPrefix =
-        mentionTokens.isEmpty() ? "" : String.join(" ", new LinkedHashSet<>(mentionTokens)) + " ";
+    String mentionLine =
+        mentionTokens.isEmpty() ? null : String.join(" ", new LinkedHashSet<>(mentionTokens));
 
     String localeTag =
         reviewProject.getLocale() != null ? reviewProject.getLocale().getBcp47Tag() : null;
@@ -287,7 +287,6 @@ public class TeamSlackNotificationService {
     String teamName = reviewProject.getTeam() != null ? reviewProject.getTeam().getName() : null;
 
     StringBuilder builder = new StringBuilder();
-    builder.append(mentionPrefix);
     builder.append("Mojito review project ");
     builder.append(eventTypeLabel(eventType));
     builder.append(": #").append(reviewProject.getId());
@@ -307,6 +306,9 @@ public class TeamSlackNotificationService {
     String normalizedNote = note == null ? null : note.trim();
     if (!isBlank(normalizedNote)) {
       builder.append("\nNote: ").append(normalizedNote);
+    }
+    if (!isBlank(mentionLine)) {
+      builder.append("\n").append(mentionLine);
     }
 
     return builder.toString();
