@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,10 +27,15 @@ public class TeamSlackNotificationService {
 
   private final TeamService teamService;
   private final SlackClients slackClients;
+  private final String mojitoServerUrl;
 
-  public TeamSlackNotificationService(TeamService teamService, SlackClients slackClients) {
+  public TeamSlackNotificationService(
+      TeamService teamService,
+      SlackClients slackClients,
+      @Value("${l10n.server.url:}") String mojitoServerUrl) {
     this.teamService = teamService;
     this.slackClients = slackClients;
+    this.mojitoServerUrl = mojitoServerUrl;
   }
 
   public void sendReviewProjectAssignmentNotification(
@@ -299,6 +305,10 @@ public class TeamSlackNotificationService {
     if (!isBlank(teamName)) {
       builder.append("\nTeam: ").append(teamName.trim());
     }
+    String projectLink = buildReviewProjectLink(reviewProject.getId());
+    if (!isBlank(projectLink)) {
+      builder.append("\nOpen: ").append(projectLink);
+    }
 
     appendUserLine(builder, "PM", reviewProject.getAssignedPmUser());
     appendUserLine(builder, "Translator", reviewProject.getAssignedTranslatorUser());
@@ -351,5 +361,20 @@ public class TeamSlackNotificationService {
 
   private boolean isBlank(String value) {
     return value == null || value.trim().isEmpty();
+  }
+
+  private String buildReviewProjectLink(Long projectId) {
+    if (projectId == null || isBlank(mojitoServerUrl)) {
+      return null;
+    }
+    String base = mojitoServerUrl.trim();
+    while (base.endsWith("/")) {
+      base = base.substring(0, base.length() - 1);
+    }
+    if (base.isEmpty()) {
+      return null;
+    }
+    String url = base + "/n/review-projects/" + projectId;
+    return "<" + url + "|review project #" + projectId + ">";
   }
 }
