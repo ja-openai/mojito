@@ -11,4 +11,5 @@ public record CreateReviewProjectRequestCommand(
     ReviewProjectType type,
     ZonedDateTime dueDate,
     List<String> screenshotImageIds,
-    String name) {}
+    String name,
+    Long teamId) {}

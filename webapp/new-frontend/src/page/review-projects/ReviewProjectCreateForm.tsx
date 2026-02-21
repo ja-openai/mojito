@@ -32,6 +32,7 @@ export type ReviewProjectCreateFormValues = {
   notes: string | null;
   tmTextUnitIds: number[];
   screenshotImageIds: string[];
+  teamId: number | null;
 };
 
 type Props = {
@@ -43,6 +44,9 @@ type Props = {
   collectionOptions?: CollectionOption[];
   selectedCollectionId?: string | null;
   onChangeCollection?: (id: string | null) => void;
+  teamOptions?: Array<{ id: number; name: string }>;
+  selectedTeamId?: number | null;
+  onChangeTeam?: (id: number | null) => void;
   isSubmitting?: boolean;
   errorMessage?: string | null;
   submitLabel?: string;
@@ -59,6 +63,9 @@ export function ReviewProjectCreateForm({
   collectionOptions,
   selectedCollectionId,
   onChangeCollection,
+  teamOptions,
+  selectedTeamId = null,
+  onChangeTeam,
   isSubmitting = false,
   errorMessage,
   submitLabel = 'Create',
@@ -215,6 +222,26 @@ export function ReviewProjectCreateForm({
           />
         </div>
 
+        {teamOptions && onChangeTeam ? (
+          <label className="review-create__field">
+            <span className="review-create__label">Team (optional)</span>
+            <SingleSelectDropdown
+              label="Team"
+              className="review-create__select-dropdown"
+              options={teamOptions.map((team) => ({
+                value: team.id,
+                label: `${team.name} (#${team.id})`,
+              }))}
+              value={selectedTeamId}
+              onChange={onChangeTeam}
+              noneLabel="No team"
+              placeholder="No team"
+              disabled={isSubmitting}
+              buttonAriaLabel="Select team for default assignment"
+            />
+          </label>
+        ) : null}
+
         <div className="review-create__two-up">
           <label className="review-create__field">
             <span className="review-create__label">Type</span>
@@ -306,6 +333,7 @@ export function ReviewProjectCreateForm({
               notes: notes.trim().length > 0 ? notes : null,
               tmTextUnitIds,
               screenshotImageIds: screenshotKeys,
+              teamId: selectedTeamId,
             });
           }}
           disabled={!canSubmit || isSubmitting}

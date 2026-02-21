@@ -176,6 +176,7 @@ export type ReviewProjectCreateRequest = {
   dueDate: string; // ISO string
   screenshotImageIds?: string[] | null;
   name: string;
+  teamId?: number | null;
 };
 
 export type ReviewProjectCreateResponse = {

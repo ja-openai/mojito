@@ -17,6 +17,7 @@ import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
+import com.box.l10n.mojito.service.team.TeamService;
 import com.box.l10n.mojito.service.team.TeamRepository;
 import com.box.l10n.mojito.service.team.TeamSlackNotificationService;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
@@ -58,6 +59,7 @@ public class ReviewProjectService {
   private final WordCountService wordCountService;
   private final UserService userService;
   private final UserRepository userRepository;
+  private final TeamService teamService;
   private final TeamRepository teamRepository;
   private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository;
   private final TeamSlackNotificationService teamSlackNotificationService;
@@ -78,6 +80,7 @@ public class ReviewProjectService {
       WordCountService wordCountService,
       UserService userService,
       UserRepository userRepository,
+      TeamService teamService,
       TeamRepository teamRepository,
       ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
       TeamSlackNotificationService teamSlackNotificationService) {
@@ -94,6 +97,7 @@ public class ReviewProjectService {
     this.wordCountService = wordCountService;
     this.userService = userService;
     this.userRepository = userRepository;
+    this.teamService = teamService;
     this.teamRepository = teamRepository;
     this.reviewProjectAssignmentHistoryRepository = reviewProjectAssignmentHistoryRepository;
     this.teamSlackNotificationService = teamSlackNotificationService;
@@ -158,6 +162,7 @@ public class ReviewProjectService {
 
     List<Long> projectIds = new ArrayList<>();
     List<String> createdLocaleTags = new ArrayList<>();
+    CreateAssignmentDefaults assignmentDefaults = resolveCreateAssignmentDefaults(request.teamId());
 
     for (LocaleCandidates localeCandidates : localesToCreate) {
       Locale locale = localeCandidates.locale();
@@ -167,6 +172,12 @@ public class ReviewProjectService {
       reviewProject.setDueDate(request.dueDate());
       reviewProject.setLocale(locale);
       reviewProject.setReviewProjectRequest(reviewProjectRequest);
+      reviewProject.setTeam(assignmentDefaults.team());
+      reviewProject.setAssignedPmUser(assignmentDefaults.defaultPmUser());
+      String localeTagKey =
+          locale.getBcp47Tag() == null ? "" : locale.getBcp47Tag().trim().toLowerCase();
+      reviewProject.setAssignedTranslatorUser(
+          assignmentDefaults.defaultTranslatorByLocaleTagLowercase().get(localeTagKey));
 
       ReviewProject saved = reviewProjectRepository.save(reviewProject);
 
@@ -192,6 +203,8 @@ public class ReviewProjectService {
       saved.setWordCount(wordCount);
       saved.setTextUnitCount(textUnitCount);
       recordAssignmentHistory(saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null);
+      teamSlackNotificationService.sendReviewProjectAssignmentNotification(
+          saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null);
 
       projectIds.add(saved.getId());
       createdLocaleTags.add(locale.getBcp47Tag());
@@ -206,6 +219,9 @@ public class ReviewProjectService {
   }
 
   private record LocaleCandidates(Locale locale, List<TextUnitDTO> candidates) {}
+
+  private record CreateAssignmentDefaults(
+      Team team, User defaultPmUser, Map<String, User> defaultTranslatorByLocaleTagLowercase) {}
 
   @Transactional(readOnly = true)
   public SearchReviewProjectsView searchReviewProjects(SearchReviewProjectsCriteria request) {
@@ -1076,6 +1092,42 @@ public class ReviewProjectService {
     return teamRepository
         .findByIdAndDeletedFalse(teamId)
         .orElseThrow(() -> new IllegalArgumentException("Unknown team: " + teamId));
+  }
+
+  private CreateAssignmentDefaults resolveCreateAssignmentDefaults(Long teamId) {
+    Team team = resolveTeam(teamId);
+    if (team == null) {
+      return new CreateAssignmentDefaults(null, null, Map.of());
+    }
+    teamService.assertCurrentUserCanAccessTeam(team.getId());
+
+    // Reuse team service access checks and ordering semantics (PM pool / locale pools).
+    List<Long> pmPoolUserIds = teamService.getPmPool(team.getId());
+    User defaultPmUser =
+        pmPoolUserIds.isEmpty() ? null : resolveUser(pmPoolUserIds.get(0), "defaultPmUser");
+
+    Map<String, User> translatorsByLocaleTagLowercase = new LinkedHashMap<>();
+    for (TeamService.LocalePoolEntry entry : teamService.getLocalePools(team.getId())) {
+      if (entry == null || entry.localeTag() == null) {
+        continue;
+      }
+      String localeTagKey = entry.localeTag().trim().toLowerCase();
+      if (localeTagKey.isEmpty() || translatorsByLocaleTagLowercase.containsKey(localeTagKey)) {
+        continue;
+      }
+      Long translatorUserId =
+          (entry.translatorUserIds() == null ? List.<Long>of() : entry.translatorUserIds()).stream()
+              .filter(id -> id != null && id > 0)
+              .findFirst()
+              .orElse(null);
+      if (translatorUserId == null) {
+        continue;
+      }
+      translatorsByLocaleTagLowercase.put(
+          localeTagKey, resolveUser(translatorUserId, "defaultTranslatorUser"));
+    }
+
+    return new CreateAssignmentDefaults(team, defaultPmUser, translatorsByLocaleTagLowercase);
   }
 
   private User resolveUser(Long userId, String fieldName) {

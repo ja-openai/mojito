@@ -1,8 +1,10 @@
 import './review-projects-page.css';
 
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
+import { type ApiTeam,fetchTeams } from '../../api/teams';
 import type { CollectionOption } from '../../components/CollectionSelect';
 import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
 import { useRepositories } from '../../hooks/useRepositories';
@@ -55,8 +57,14 @@ export function ReviewProjectCreatePage() {
   const [prefillName, setPrefillName] = useState('Review project');
   const [prefillDueDate, setPrefillDueDate] = useState<string | null>(null);
   const [prefillCollectionName, setPrefillCollectionName] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
 
   const createReviewProject = useCreateReviewProject();
+  const teamsQuery = useQuery<ApiTeam[]>({
+    queryKey: ['teams', 'review-project-create'],
+    queryFn: fetchTeams,
+    staleTime: 30_000,
+  });
 
   const defaultDueDate = useMemo(
     () => toLocalInput(new Date(Date.now() + 1 * 24 * 60 * 60 * 1000)),
@@ -150,6 +158,7 @@ export function ReviewProjectCreatePage() {
           tmTextUnitIds: tmIds,
           screenshotImageIds: values.screenshotImageIds,
           name: values.name,
+          teamId: values.teamId ?? null,
         },
         {
           onSuccess: (response) => {
@@ -192,6 +201,9 @@ export function ReviewProjectCreatePage() {
                 setPrefillCollectionName(null);
               }
             }}
+            teamOptions={teamsQuery.data ?? []}
+            selectedTeamId={selectedTeamId}
+            onChangeTeam={setSelectedTeamId}
             isSubmitting={createReviewProject.isPending}
             errorMessage={errorMessage}
             submitLabel="Create"

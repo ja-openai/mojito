@@ -73,7 +73,8 @@ public class ReviewProjectWS {
                 request.type(),
                 request.dueDate(),
                 request.screenshotImageIds(),
-                request.name()));
+                request.name(),
+                request.teamId()));
 
     return new CreateReviewProjectRequestResponse(
         result.requestId(),
