@@ -263,10 +263,19 @@ public class ReviewProjectWS {
         ReviewProjectStatus status,
         String createdByUsername,
         Locale locale,
-        ReviewProjectRequest reviewProjectRequest) {
+        ReviewProjectRequest reviewProjectRequest,
+        Assignment assignment) {
       public record Locale(Long id, String bcp47Tag) {}
 
       public record ReviewProjectRequest(Long id, String name, String createdByUsername) {}
+
+      public record Assignment(
+          Long teamId,
+          String teamName,
+          Long assignedPmUserId,
+          String assignedPmUsername,
+          Long assignedTranslatorUserId,
+          String assignedTranslatorUsername) {}
     }
   }
 
@@ -369,6 +378,15 @@ public class ReviewProjectWS {
                 view.reviewProjectRequest().id(),
                 view.reviewProjectRequest().name(),
                 view.reviewProjectRequest().createdByUsername())
+            : null,
+        view.assignment() != null
+            ? new SearchReviewProjectsResponse.ReviewProject.Assignment(
+                view.assignment().teamId(),
+                view.assignment().teamName(),
+                view.assignment().assignedPmUserId(),
+                view.assignment().assignedPmUsername(),
+                view.assignment().assignedTranslatorUserId(),
+                view.assignment().assignedTranslatorUsername())
             : null);
   }
 

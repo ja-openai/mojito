@@ -20,9 +20,18 @@ public record SearchReviewProjectsView(List<ReviewProject> reviewProject) {
       ReviewProjectStatus status,
       String createdByUsername,
       Locale locale,
-      ReviewProjectRequest reviewProjectRequest) {}
+      ReviewProjectRequest reviewProjectRequest,
+      Assignment assignment) {}
 
   public record Locale(Long id, String bcp47Tag) {}
 
   public record ReviewProjectRequest(Long id, String name, String createdByUsername) {}
+
+  public record Assignment(
+      Long teamId,
+      String teamName,
+      Long assignedPmUserId,
+      String assignedPmUsername,
+      Long assignedTranslatorUserId,
+      String assignedTranslatorUsername) {}
 }

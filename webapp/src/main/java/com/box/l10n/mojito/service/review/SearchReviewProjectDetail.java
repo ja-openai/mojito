@@ -19,4 +19,10 @@ public record SearchReviewProjectDetail(
     String localeTag,
     Long requestId,
     String requestName,
-    String requestCreatedByUsername) {}
+    String requestCreatedByUsername,
+    Long teamId,
+    String teamName,
+    Long assignedPmUserId,
+    String assignedPmUsername,
+    Long assignedTranslatorUserId,
+    String assignedTranslatorUsername) {}

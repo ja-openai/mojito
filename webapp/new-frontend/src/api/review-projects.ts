@@ -139,6 +139,14 @@ export type ApiReviewProjectSummary = {
     name?: string | null;
     createdByUsername?: string | null;
   } | null;
+  assignment?: {
+    teamId?: number | null;
+    teamName?: string | null;
+    assignedPmUserId?: number | null;
+    assignedPmUsername?: string | null;
+    assignedTranslatorUserId?: number | null;
+    assignedTranslatorUsername?: string | null;
+  } | null;
 };
 
 export type ApiReviewProjectRequestGroupSummary = {

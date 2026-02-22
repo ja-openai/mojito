@@ -363,6 +363,11 @@ public class ReviewProjectService {
         root.join(ReviewProject_.createdByUser, JoinType.LEFT);
     Join<ReviewProjectRequest, User> requestCreatedByUserJoin =
         requestJoin.join(ReviewProjectRequest_.createdByUser, JoinType.LEFT);
+    Join<ReviewProject, Team> teamJoin = root.join(ReviewProject_.team, JoinType.LEFT);
+    Join<ReviewProject, User> assignedPmJoin =
+        root.join(ReviewProject_.assignedPmUser, JoinType.LEFT);
+    Join<ReviewProject, User> assignedTranslatorJoin =
+        root.join(ReviewProject_.assignedTranslatorUser, JoinType.LEFT);
 
     List<Predicate> predicates =
         buildProjectSearchPredicates(
@@ -388,7 +393,13 @@ public class ReviewProjectService {
                 localeJoin.get(Locale_.bcp47Tag),
                 requestJoin.get(ReviewProjectRequest_.id),
                 requestJoin.get(ReviewProjectRequest_.name),
-                requestCreatedByUserJoin.get(User_.username)))
+                requestCreatedByUserJoin.get(User_.username),
+                teamJoin.get(Team_.id),
+                teamJoin.get(Team_.name),
+                assignedPmJoin.get(User_.id),
+                assignedPmJoin.get(User_.username),
+                assignedTranslatorJoin.get(User_.id),
+                assignedTranslatorJoin.get(User_.username)))
         .distinct(true)
         .orderBy(cb.desc(root.get(ReviewProject_.id)));
 
@@ -439,6 +450,11 @@ public class ReviewProjectService {
         root.join(ReviewProject_.createdByUser, JoinType.LEFT);
     Join<ReviewProjectRequest, User> requestCreatedByUserJoin =
         requestJoin.join(ReviewProjectRequest_.createdByUser, JoinType.LEFT);
+    Join<ReviewProject, Team> teamJoin = root.join(ReviewProject_.team, JoinType.LEFT);
+    Join<ReviewProject, User> assignedPmJoin =
+        root.join(ReviewProject_.assignedPmUser, JoinType.LEFT);
+    Join<ReviewProject, User> assignedTranslatorJoin =
+        root.join(ReviewProject_.assignedTranslatorUser, JoinType.LEFT);
 
     cq.where(requestJoin.get(ReviewProjectRequest_.id).in(requestIds))
         .select(
@@ -458,7 +474,13 @@ public class ReviewProjectService {
                 localeJoin.get(Locale_.bcp47Tag),
                 requestJoin.get(ReviewProjectRequest_.id),
                 requestJoin.get(ReviewProjectRequest_.name),
-                requestCreatedByUserJoin.get(User_.username)))
+                requestCreatedByUserJoin.get(User_.username),
+                teamJoin.get(Team_.id),
+                teamJoin.get(Team_.name),
+                assignedPmJoin.get(User_.id),
+                assignedPmJoin.get(User_.username),
+                assignedTranslatorJoin.get(User_.id),
+                assignedTranslatorJoin.get(User_.username)))
         .distinct(true)
         .orderBy(cb.desc(root.get(ReviewProject_.id)));
 
@@ -506,7 +528,14 @@ public class ReviewProjectService {
                   detail.createdByUsername(),
                   new SearchReviewProjectsView.Locale(detail.localeId(), detail.localeTag()),
                   new SearchReviewProjectsView.ReviewProjectRequest(
-                      detail.requestId(), detail.requestName(), detail.requestCreatedByUsername()));
+                      detail.requestId(), detail.requestName(), detail.requestCreatedByUsername()),
+                  new SearchReviewProjectsView.Assignment(
+                      detail.teamId(),
+                      detail.teamName(),
+                      detail.assignedPmUserId(),
+                      detail.assignedPmUsername(),
+                      detail.assignedTranslatorUserId(),
+                      detail.assignedTranslatorUsername()));
             })
         .toList();
   }

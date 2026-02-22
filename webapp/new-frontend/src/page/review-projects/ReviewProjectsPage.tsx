@@ -164,6 +164,9 @@ const toReviewProjectRow = (project: ApiReviewProjectSummary): ReviewProjectRow 
     wordCount: wordCountRaw,
     dueDate: project.dueDate ?? null,
     closeReason: project.closeReason ?? null,
+    teamName: project.assignment?.teamName ?? null,
+    assignedPmUsername: project.assignment?.assignedPmUsername ?? null,
+    assignedTranslatorUsername: project.assignment?.assignedTranslatorUsername ?? null,
   };
 };
 
@@ -187,12 +190,26 @@ const toReviewProjectRequestGroupRow = (
       projects.map((project) => project.localeTag).filter((tag): tag is string => Boolean(tag)),
     ),
   ).sort((a, b) => a.localeCompare(b));
+  const requestPmUsernames = Array.from(
+    new Set(
+      projects
+        .map((project) => project.assignedPmUsername?.trim() ?? '')
+        .filter((value) => value.length > 0),
+    ),
+  );
+  const assignedPmUsername =
+    requestPmUsernames.length === 0
+      ? null
+      : requestPmUsernames.length === 1
+        ? requestPmUsernames[0]
+        : 'Multiple';
 
   return {
     key,
     requestId: requestGroup.requestId ?? null,
     name: requestGroup.requestName ?? `Request #${fallbackRequestId}`,
     createdByUsername: requestGroup.requestCreatedByUsername ?? null,
+    assignedPmUsername,
     localeTags,
     acceptedCount: Math.max(0, acceptedCountRaw ?? 0),
     textUnitCount: Math.max(0, textUnitCount ?? 0),

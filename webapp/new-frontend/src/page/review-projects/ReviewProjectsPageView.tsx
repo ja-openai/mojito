@@ -63,6 +63,9 @@ export type ReviewProjectRow = {
   name: string;
   requestId: number | null;
   requestCreatedByUsername: string | null;
+  teamName: string | null;
+  assignedPmUsername: string | null;
+  assignedTranslatorUsername: string | null;
   type: ApiReviewProjectType;
   status: ApiReviewProjectStatus;
   localeTag: string | null;
@@ -397,6 +400,7 @@ export type ReviewProjectRequestGroupRow = {
   requestId: number | null;
   name: string;
   createdByUsername: string | null;
+  assignedPmUsername: string | null;
   localeTags: string[];
   acceptedCount: number;
   textUnitCount: number;
@@ -442,6 +446,7 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
         requestId: project.requestId,
         name: project.name,
         createdByUsername: project.requestCreatedByUsername ?? null,
+        assignedPmUsername: project.assignedPmUsername ?? null,
         localeTags: project.localeTag ? [project.localeTag] : [],
         acceptedCount,
         textUnitCount,
@@ -459,6 +464,16 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
     existing.wordCount += wordCount;
     if (!existing.createdByUsername && project.requestCreatedByUsername) {
       existing.createdByUsername = project.requestCreatedByUsername;
+    }
+    if (project.assignedPmUsername) {
+      if (!existing.assignedPmUsername) {
+        existing.assignedPmUsername = project.assignedPmUsername;
+      } else if (
+        existing.assignedPmUsername !== 'Multiple' &&
+        existing.assignedPmUsername !== project.assignedPmUsername
+      ) {
+        existing.assignedPmUsername = 'Multiple';
+      }
     }
     if (project.localeTag && !existing.localeTags.includes(project.localeTag)) {
       existing.localeTags.push(project.localeTag);
@@ -1002,6 +1017,9 @@ function RequestGroupsSection({
                   </div>
                   <div className="review-projects-page__meta">
                     {group.dueDate ? <span>Due {formatDateTime(group.dueDate)}</span> : null}
+                    <span className="review-projects-page__request-assignee">
+                      PM {group.assignedPmUsername?.trim() ? group.assignedPmUsername : '—'}
+                    </span>
                     {group.createdByUsername ? (
                       <span className="review-projects-page__request-created-by">
                         by {group.createdByUsername}
@@ -1079,6 +1097,12 @@ function RequestGroupsSection({
                                   <span className="review-projects-page__request-project-locale-name">
                                     {resolveLocaleDisplayName(project.localeTag) ||
                                       project.localeTag}
+                                  </span>
+                                  <span className="review-projects-page__request-project-assignee">
+                                    Translator:{' '}
+                                    {project.assignedTranslatorUsername?.trim()
+                                      ? project.assignedTranslatorUsername
+                                      : '—'}
                                   </span>
                                 </>
                               ) : (
