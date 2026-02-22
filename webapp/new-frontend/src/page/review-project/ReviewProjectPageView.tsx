@@ -2725,7 +2725,9 @@ function ReviewProjectHeader({
     return `/review-projects?${params.toString()}`;
   }, [reviewProjectsSessionKey]);
 
-  const canEditAssignment = canEditRequest;
+  // Assignment editing is moving to the review-projects request view.
+  // Keeping it off here avoids project-level PM edits, which conflict with the request-level PM model.
+  const canEditAssignment = false;
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams', 'review-project-assignment'],
     queryFn: fetchTeams,
