@@ -316,28 +316,6 @@
   white-space: nowrap;
 }
 
-.review-projects-page__inline-link {
-  border: 0;
-  background: transparent;
-  color: var(--color-accent);
-  padding: 0;
-  font: inherit;
-  font-size: var(--font-size-xs);
-  cursor: pointer;
-  text-align: left;
-}
-
-.review-projects-page__inline-link:hover,
-.review-projects-page__inline-link:focus-visible {
-  text-decoration: underline;
-}
-
-.review-projects-page__inline-link:disabled {
-  opacity: 0.6;
-  cursor: default;
-  text-decoration: none;
-}
-
 .review-projects-page__reassign-modal {
   display: flex;
   flex-direction: column;

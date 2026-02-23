@@ -1516,15 +1516,12 @@ function RequestGroupsSection({
                           ? 'Select project manager'
                           : 'Select translator'
                       }
+                      footerAction={{
+                        label: reassignShowAllTeam ? defaultScopeLabel : 'Show all team',
+                        onClick: () => setReassignShowAllTeam((value) => !value),
+                        disabled: reassignMutation.isPending,
+                      }}
                     />
-                    <button
-                      type="button"
-                      className="review-projects-page__inline-link"
-                      onClick={() => setReassignShowAllTeam((value) => !value)}
-                      disabled={reassignMutation.isPending}
-                    >
-                      {reassignShowAllTeam ? defaultScopeLabel : 'Show all team'}
-                    </button>
                   </div>
                   {reassignTarget.kind === 'pm' ? (
                     <div className="review-projects-page__reassign-modal-help">
