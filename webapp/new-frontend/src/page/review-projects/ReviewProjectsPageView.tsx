@@ -1,6 +1,7 @@
 import '../../components/chip-dropdown.css';
 import './review-projects-page.css';
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type VirtualItem } from '@tanstack/react-virtual';
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -9,19 +10,28 @@ import type { ApiReviewProjectStatus, ApiReviewProjectType } from '../../api/rev
 import {
   REVIEW_PROJECT_STATUS_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
+  updateReviewProjectAssignment,
 } from '../../api/review-projects';
+import { fetchTeamLocalePools, fetchTeamPmPool, fetchTeamTranslators } from '../../api/teams';
+import { type ApiUser, fetchAllUsersAdmin } from '../../api/users';
 import {
   type FilterOption,
   MultiSectionFilterChip,
 } from '../../components/filters/MultiSectionFilterChip';
 import { LocaleMultiSelect, type LocaleOption } from '../../components/LocaleMultiSelect';
 import { LocalePill } from '../../components/LocalePill';
+import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { SearchControl } from '../../components/SearchControl';
+import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import {
+  REVIEW_PROJECT_REQUESTS_QUERY_KEY,
+  REVIEW_PROJECTS_QUERY_KEY,
+} from '../../hooks/useReviewProjects';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from './review-projects-session-state';
@@ -63,8 +73,11 @@ export type ReviewProjectRow = {
   name: string;
   requestId: number | null;
   requestCreatedByUsername: string | null;
+  teamId: number | null;
   teamName: string | null;
+  assignedPmUserId: number | null;
   assignedPmUsername: string | null;
+  assignedTranslatorUserId: number | null;
   assignedTranslatorUsername: string | null;
   type: ApiReviewProjectType;
   status: ApiReviewProjectStatus;
@@ -895,10 +908,233 @@ function RequestGroupsSection({
 }) {
   const resolveLocaleDisplayName = useLocaleDisplayNameResolver();
   const isAdmin = adminControls?.enabled ?? false;
+  const queryClient = useQueryClient();
   const selectedProjectIdSet = useMemo(
     () => new Set(adminControls?.selectedProjectIds ?? []),
     [adminControls?.selectedProjectIds],
   );
+  const [reassignTarget, setReassignTarget] = useState<
+    | {
+        kind: 'pm';
+        requestKey: string;
+        requestName: string;
+        requestId: number | null;
+        projects: ReviewProjectRow[];
+      }
+    | {
+        kind: 'translator';
+        project: ReviewProjectRow;
+      }
+    | null
+  >(null);
+  const [reassignDraftUserId, setReassignDraftUserId] = useState<number | null>(null);
+  const [reassignShowAllTeam, setReassignShowAllTeam] = useState(false);
+  const [reassignError, setReassignError] = useState<string | null>(null);
+
+  const activeTeamId = useMemo(() => {
+    if (!reassignTarget) {
+      return null;
+    }
+    if (reassignTarget.kind === 'translator') {
+      return reassignTarget.project.teamId ?? null;
+    }
+    const uniqueTeamIds = Array.from(
+      new Set(reassignTarget.projects.map((project) => project.teamId).filter((id) => id != null)),
+    );
+    return uniqueTeamIds.length === 1 ? (uniqueTeamIds[0] ?? null) : null;
+  }, [reassignTarget]);
+
+  const hasMixedTeamsForPmTarget =
+    reassignTarget?.kind === 'pm'
+      ? Array.from(
+          new Set(
+            reassignTarget.projects.map((project) => project.teamId).filter((id) => id != null),
+          ),
+        ).length > 1
+      : false;
+
+  useEffect(() => {
+    if (!reassignTarget) {
+      return;
+    }
+    if (reassignTarget.kind === 'translator') {
+      setReassignDraftUserId(reassignTarget.project.assignedTranslatorUserId ?? null);
+    } else {
+      const uniquePmIds = Array.from(
+        new Set(
+          reassignTarget.projects
+            .map((project) => project.assignedPmUserId)
+            .filter((id) => id != null),
+        ),
+      );
+      setReassignDraftUserId(uniquePmIds.length === 1 ? (uniquePmIds[0] ?? null) : null);
+    }
+    setReassignShowAllTeam(false);
+    setReassignError(null);
+  }, [reassignTarget]);
+
+  const reassignUsersQuery = useQuery<ApiUser[]>({
+    queryKey: ['users', 'admin', 'review-projects-reassign'],
+    queryFn: fetchAllUsersAdmin,
+    enabled: isAdmin && reassignTarget != null,
+    staleTime: 30_000,
+  });
+  const reassignPmPoolQuery = useQuery({
+    queryKey: ['team-pm-pool', activeTeamId, 'review-projects-reassign'],
+    queryFn: () => fetchTeamPmPool(activeTeamId as number),
+    enabled: isAdmin && reassignTarget != null && activeTeamId != null,
+    staleTime: 30_000,
+  });
+  const reassignTranslatorsQuery = useQuery({
+    queryKey: ['team-translators', activeTeamId, 'review-projects-reassign'],
+    queryFn: () => fetchTeamTranslators(activeTeamId as number),
+    enabled: isAdmin && reassignTarget != null && activeTeamId != null,
+    staleTime: 30_000,
+  });
+  const reassignLocalePoolsQuery = useQuery({
+    queryKey: ['team-locale-pools', activeTeamId, 'review-projects-reassign'],
+    queryFn: () => fetchTeamLocalePools(activeTeamId as number),
+    enabled:
+      isAdmin &&
+      reassignTarget != null &&
+      reassignTarget.kind === 'translator' &&
+      activeTeamId != null,
+    staleTime: 30_000,
+  });
+
+  const reassignUsersById = useMemo(() => {
+    const map = new Map<number, ApiUser>();
+    (reassignUsersQuery.data ?? []).forEach((user) => {
+      map.set(user.id, user);
+    });
+    return map;
+  }, [reassignUsersQuery.data]);
+
+  const reassignOptionIds = useMemo(() => {
+    if (!reassignTarget || activeTeamId == null) {
+      return [] as number[];
+    }
+    const pmPoolIds = (reassignPmPoolQuery.data?.userIds ?? []).filter(
+      (id): id is number => id > 0,
+    );
+    const translatorIds = (reassignTranslatorsQuery.data?.userIds ?? []).filter(
+      (id): id is number => id > 0,
+    );
+    const allTeamIds = Array.from(new Set([...pmPoolIds, ...translatorIds]));
+
+    let baseIds: number[] = [];
+    if (reassignTarget.kind === 'pm') {
+      baseIds = pmPoolIds;
+    } else {
+      const localeTagKey = (reassignTarget.project.localeTag ?? '').trim().toLowerCase();
+      const localePoolRow =
+        reassignLocalePoolsQuery.data?.entries.find(
+          (entry) => entry.localeTag.trim().toLowerCase() === localeTagKey,
+        ) ?? null;
+      baseIds =
+        (localePoolRow?.translatorUserIds?.filter((id): id is number => id > 0) ?? []).length > 0
+          ? (localePoolRow?.translatorUserIds?.filter((id): id is number => id > 0) ?? [])
+          : translatorIds;
+    }
+
+    const source = reassignShowAllTeam ? allTeamIds : baseIds;
+    const ids = Array.from(new Set(source));
+    if (reassignDraftUserId != null && !ids.includes(reassignDraftUserId)) {
+      ids.unshift(reassignDraftUserId);
+    }
+    return ids;
+  }, [
+    activeTeamId,
+    reassignDraftUserId,
+    reassignLocalePoolsQuery.data?.entries,
+    reassignPmPoolQuery.data?.userIds,
+    reassignShowAllTeam,
+    reassignTarget,
+    reassignTranslatorsQuery.data?.userIds,
+  ]);
+
+  const reassignOptions = useMemo(
+    () =>
+      reassignOptionIds.map((id) => {
+        const user = reassignUsersById.get(id);
+        return {
+          value: id,
+          label: user?.commonName
+            ? `${user.commonName} (${user.username})`
+            : (user?.username ?? `User #${id}`),
+        };
+      }),
+    [reassignOptionIds, reassignUsersById],
+  );
+
+  const reassignMutation = useMutation({
+    mutationFn: async () => {
+      if (!reassignTarget) {
+        return;
+      }
+      if (reassignTarget.kind === 'translator') {
+        const project = reassignTarget.project;
+        await updateReviewProjectAssignment(project.id, {
+          teamId: project.teamId,
+          assignedPmUserId: project.assignedPmUserId,
+          assignedTranslatorUserId: reassignDraftUserId,
+          note: null,
+        });
+        return;
+      }
+
+      for (const project of reassignTarget.projects) {
+        if ((project.assignedPmUserId ?? null) === (reassignDraftUserId ?? null)) {
+          continue;
+        }
+        await updateReviewProjectAssignment(project.id, {
+          teamId: project.teamId,
+          assignedPmUserId: reassignDraftUserId,
+          assignedTranslatorUserId: project.assignedTranslatorUserId,
+          note: null,
+        });
+      }
+    },
+    onSuccess: async () => {
+      setReassignError(null);
+      setReassignTarget(null);
+      await queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      await queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
+    },
+    onError: (error) => {
+      setReassignError(error instanceof Error ? error.message : 'Failed to update assignment');
+    },
+  });
+
+  const openPmReassign = useCallback((group: ReviewProjectRequestGroupRow) => {
+    setReassignTarget({
+      kind: 'pm',
+      requestKey: group.key,
+      requestName: group.name,
+      requestId: group.requestId,
+      projects: group.projects,
+    });
+  }, []);
+
+  const openTranslatorReassign = useCallback((project: ReviewProjectRow) => {
+    setReassignTarget({ kind: 'translator', project });
+  }, []);
+
+  const closeReassignModal = useCallback(() => {
+    if (reassignMutation.isPending) {
+      return;
+    }
+    setReassignTarget(null);
+    setReassignError(null);
+  }, [reassignMutation.isPending]);
+
+  const defaultScopeLabel =
+    reassignTarget?.kind === 'translator' ? 'Locale pool only' : 'PM pool only';
+  const canSaveReassign =
+    reassignTarget != null &&
+    !reassignMutation.isPending &&
+    !hasMixedTeamsForPmTarget &&
+    activeTeamId != null;
 
   if (groups.length === 0) {
     return (
@@ -1029,9 +1265,25 @@ function RequestGroupsSection({
                             ·
                           </span>
                         ) : null}
-                        <span className="review-projects-page__request-assignee">
-                          PM {group.assignedPmUsername?.trim() ? group.assignedPmUsername : '—'}
-                        </span>
+                        {isAdmin ? (
+                          <button
+                            type="button"
+                            className="review-projects-page__inline-action review-projects-page__request-assignee"
+                            data-no-toggle="true"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openPmReassign(group);
+                            }}
+                            disabled={reassignMutation.isPending}
+                            title="Reassign PM for this request"
+                          >
+                            PM {group.assignedPmUsername?.trim() ? group.assignedPmUsername : '—'}
+                          </button>
+                        ) : (
+                          <span className="review-projects-page__request-assignee">
+                            PM {group.assignedPmUsername?.trim() ? group.assignedPmUsername : '—'}
+                          </span>
+                        )}
                       </span>
                     ) : null}
                   </div>
@@ -1112,11 +1364,43 @@ function RequestGroupsSection({
                                 <span className="review-projects-page__muted">No locale</span>
                               )}
                             </div>
-                            <div className="review-projects-page__request-project-translator">
-                              {project.assignedTranslatorUsername?.trim()
-                                ? project.assignedTranslatorUsername
-                                : '—'}
-                            </div>
+                            {isAdmin ? (
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                className="review-projects-page__inline-action review-projects-page__request-project-translator"
+                                data-no-toggle="true"
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  if (!reassignMutation.isPending) {
+                                    openTranslatorReassign(project);
+                                  }
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key !== 'Enter' && event.key !== ' ') {
+                                    return;
+                                  }
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  if (!reassignMutation.isPending) {
+                                    openTranslatorReassign(project);
+                                  }
+                                }}
+                                aria-disabled={reassignMutation.isPending}
+                                title="Reassign translator"
+                              >
+                                {project.assignedTranslatorUsername?.trim()
+                                  ? project.assignedTranslatorUsername
+                                  : '—'}
+                              </span>
+                            ) : (
+                              <div className="review-projects-page__request-project-translator">
+                                {project.assignedTranslatorUsername?.trim()
+                                  ? project.assignedTranslatorUsername
+                                  : '—'}
+                              </div>
+                            )}
                             <div className="review-projects-page__request-project-counts">
                               <CountsInline
                                 words={project.wordCount ?? null}
@@ -1156,6 +1440,129 @@ function RequestGroupsSection({
           })}
         </div>
       </div>
+      <Modal
+        open={reassignTarget != null}
+        size="md"
+        className="review-projects-page__reassign-dialog"
+        ariaLabel={
+          reassignTarget?.kind === 'pm' ? 'Reassign request PM' : 'Reassign project translator'
+        }
+        onClose={closeReassignModal}
+        closeOnBackdrop={!reassignMutation.isPending}
+      >
+        {reassignTarget ? (
+          <>
+            <div className="modal__title">
+              {reassignTarget.kind === 'pm' ? 'Reassign PM' : 'Reassign translator'}
+            </div>
+            <div className="modal__body review-projects-page__reassign-modal">
+              <div className="review-projects-page__reassign-modal-line">
+                {reassignTarget.kind === 'pm' ? (
+                  <>
+                    <span className="review-projects-page__reassign-modal-label">Request</span>
+                    <span className="review-projects-page__reassign-modal-value">
+                      {reassignTarget.requestName}
+                      {reassignTarget.requestId != null ? ` (#${reassignTarget.requestId})` : ''}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="review-projects-page__reassign-modal-label">Project</span>
+                    <span className="review-projects-page__reassign-modal-value">
+                      #{reassignTarget.project.id}
+                      {reassignTarget.project.localeTag
+                        ? ` · ${reassignTarget.project.localeTag}`
+                        : ''}
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="review-projects-page__reassign-modal-line">
+                <span className="review-projects-page__reassign-modal-label">Team</span>
+                <span className="review-projects-page__reassign-modal-value">
+                  {activeTeamId != null
+                    ? reassignTarget.kind === 'pm'
+                      ? (reassignTarget.projects[0]?.teamName ?? `#${activeTeamId}`)
+                      : (reassignTarget.project.teamName ?? `#${activeTeamId}`)
+                    : hasMixedTeamsForPmTarget
+                      ? 'Mixed teams'
+                      : '—'}
+                </span>
+              </div>
+
+              {hasMixedTeamsForPmTarget ? (
+                <div className="review-projects-page__reassign-modal-error">
+                  PM reassignment is disabled for mixed-team requests. Reassign per project for now.
+                </div>
+              ) : activeTeamId == null ? (
+                <div className="review-projects-page__reassign-modal-error">
+                  No team is assigned.
+                </div>
+              ) : (
+                <>
+                  <div className="review-projects-page__reassign-modal-field">
+                    <SingleSelectDropdown<number>
+                      label={reassignTarget.kind === 'pm' ? 'Project manager' : 'Translator'}
+                      options={reassignOptions}
+                      value={reassignDraftUserId}
+                      onChange={(next) => {
+                        setReassignDraftUserId(next);
+                        setReassignError(null);
+                      }}
+                      placeholder={reassignTarget.kind === 'pm' ? 'Select PM' : 'Select translator'}
+                      noneLabel={reassignTarget.kind === 'pm' ? 'No PM' : 'No translator'}
+                      buttonAriaLabel={
+                        reassignTarget.kind === 'pm'
+                          ? 'Select project manager'
+                          : 'Select translator'
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="review-projects-page__inline-link"
+                      onClick={() => setReassignShowAllTeam((value) => !value)}
+                      disabled={reassignMutation.isPending}
+                    >
+                      {reassignShowAllTeam ? defaultScopeLabel : 'Show all team'}
+                    </button>
+                  </div>
+                  {reassignTarget.kind === 'pm' ? (
+                    <div className="review-projects-page__reassign-modal-help">
+                      Applies to all locale projects in this request.
+                    </div>
+                  ) : null}
+                </>
+              )}
+              {reassignError ? (
+                <div className="review-projects-page__reassign-modal-error">{reassignError}</div>
+              ) : null}
+            </div>
+            <div className="modal__actions">
+              <button
+                type="button"
+                className="modal__button"
+                onClick={closeReassignModal}
+                disabled={reassignMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="modal__button modal__button--primary"
+                onClick={() => {
+                  if (!canSaveReassign) {
+                    return;
+                  }
+                  void reassignMutation.mutateAsync();
+                }}
+                disabled={!canSaveReassign}
+              >
+                {reassignMutation.isPending ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </>
+        ) : null}
+      </Modal>
     </div>
   );
 }

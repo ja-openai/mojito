@@ -215,6 +215,28 @@
   min-width: 0;
 }
 
+.review-projects-page__inline-action {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.review-projects-page__inline-action:hover,
+.review-projects-page__inline-action:focus-visible {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.review-projects-page__inline-action[aria-disabled='true'],
+.review-projects-page__inline-action:disabled {
+  opacity: 0.55;
+  cursor: default;
+  text-decoration: none;
+}
+
 .review-projects-page__request-projects {
   margin-top: var(--space-3);
   border-top: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
@@ -292,6 +314,86 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.review-projects-page__inline-link {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  text-align: left;
+}
+
+.review-projects-page__inline-link:hover,
+.review-projects-page__inline-link:focus-visible {
+  text-decoration: underline;
+}
+
+.review-projects-page__inline-link:disabled {
+  opacity: 0.6;
+  cursor: default;
+  text-decoration: none;
+}
+
+.review-projects-page__reassign-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.review-projects-page__reassign-dialog {
+  align-items: flex-start;
+  padding-top: min(10vh, 4.5rem);
+}
+
+.review-projects-page__reassign-dialog .modal__card {
+  overflow: visible;
+}
+
+.review-projects-page__reassign-dialog .modal__body {
+  overflow: visible;
+}
+
+.review-projects-page__reassign-modal-line {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.review-projects-page__reassign-modal-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.review-projects-page__reassign-modal-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-projects-page__reassign-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.review-projects-page__reassign-modal-field .chip-dropdown {
+  width: 100%;
+}
+
+.review-projects-page__reassign-modal-help {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.review-projects-page__reassign-modal-error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
 }
 
 .review-projects-page__request-project-meta {

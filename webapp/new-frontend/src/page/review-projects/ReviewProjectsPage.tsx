@@ -164,8 +164,11 @@ const toReviewProjectRow = (project: ApiReviewProjectSummary): ReviewProjectRow 
     wordCount: wordCountRaw,
     dueDate: project.dueDate ?? null,
     closeReason: project.closeReason ?? null,
+    teamId: project.assignment?.teamId ?? null,
     teamName: project.assignment?.teamName ?? null,
+    assignedPmUserId: project.assignment?.assignedPmUserId ?? null,
     assignedPmUsername: project.assignment?.assignedPmUsername ?? null,
+    assignedTranslatorUserId: project.assignment?.assignedTranslatorUserId ?? null,
     assignedTranslatorUsername: project.assignment?.assignedTranslatorUsername ?? null,
   };
 };
