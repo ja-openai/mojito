@@ -222,8 +222,10 @@ function SummaryBar({
             type="button"
             className={`review-projects-page__summary-toggle${unfinishedLocalesOnly ? ' is-active' : ''}`}
             onClick={onToggleUnfinishedLocalesOnly}
+            aria-pressed={unfinishedLocalesOnly}
+            title="Filter locale rows in request view"
           >
-            {unfinishedLocalesOnly ? 'Unfinished locales only' : 'All locales'}
+            Unfinished only
           </button>
         ) : null}
       </div>

@@ -68,12 +68,19 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .review-projects-page__summary-toggle.is-active {
   color: color-mix(in srgb, var(--color-accent) 78%, var(--color-text));
   border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
   background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+}
+
+.review-projects-page__summary-toggle:hover,
+.review-projects-page__summary-toggle:focus-visible {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  color: color-mix(in srgb, var(--color-accent) 72%, var(--color-text));
 }
 
 .review-projects-page__mode-button {
