@@ -180,6 +180,7 @@ export function MultiSelectChip<T extends string | number>({
   const clearAllText = clearAllLabel ?? 'Clear';
   const onlyText = onlyLabel ?? 'Only';
   const resolvedCustomActions = customActions ?? [];
+  const canOpen = !disabled && (options.length > 0 || resolvedCustomActions.length > 0);
 
   return (
     <div
@@ -191,7 +192,7 @@ export function MultiSelectChip<T extends string | number>({
         type="button"
         className="chip-dropdown__button"
         onClick={() => setIsOpen((previous) => !previous)}
-        disabled={disabled || !options.length}
+        disabled={!canOpen}
         aria-expanded={isOpen}
         aria-label={resolvedButtonAriaLabel}
       >
@@ -278,7 +279,25 @@ export function MultiSelectChip<T extends string | number>({
               </div>
             </>
           ) : (
-            <div className="multi-select-chip__empty">{emptyOptionsLabel}</div>
+            <>
+              {resolvedCustomActions.length ? (
+                <div className="multi-select-chip__actions multi-select-chip__actions--secondary">
+                  {resolvedCustomActions.map((action) => (
+                    <button
+                      type="button"
+                      key={action.label}
+                      className="multi-select-chip__action-button multi-select-chip__action-button--link"
+                      onClick={action.onClick}
+                      disabled={Boolean(action.disabled)}
+                      aria-label={action.ariaLabel ?? action.label}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <div className="multi-select-chip__empty">{emptyOptionsLabel}</div>
+            </>
           )}
         </div>
       ) : null}
