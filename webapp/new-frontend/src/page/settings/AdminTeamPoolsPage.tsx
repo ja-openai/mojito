@@ -849,6 +849,68 @@ export function AdminTeamPoolsPage() {
     });
   };
 
+  const handlePrefillCsvFromTranslatorRoster = () => {
+    if (selectedTeamId == null) {
+      setStatusNotice({ kind: 'error', message: 'Select a team.' });
+      return;
+    }
+
+    if (activeLocaleOptions.length === 0) {
+      setStatusNotice({ kind: 'error', message: 'No locales available to prefill.' });
+      return;
+    }
+
+    if (teamTranslatorUsers.length === 0) {
+      setStatusNotice({ kind: 'error', message: 'No translators in team roster.' });
+      return;
+    }
+
+    const rows = activeLocaleOptions
+      .map((localeOption) => {
+        const localeTagLower = localeOption.tag.toLowerCase();
+        const usernames = teamTranslatorUsers
+          .filter((translator) => {
+            return teamTranslatorLocaleTagSetById.get(translator.id)?.has(localeTagLower) ?? false;
+          })
+          .map((translator) => translator.username);
+
+        return {
+          localeTag: localeOption.tag,
+          usernames,
+        };
+      })
+      .filter((row) => row.usernames.length > 0);
+
+    const csvText = [
+      CSV_BATCH_HEADERS.join(','),
+      ...rows.map((row) => [row.localeTag, row.usernames.join('|')].map(escapeCsvValue).join(',')),
+    ].join('\n');
+
+    setEditorMode('batch');
+    setCsvInput(csvText);
+    setStatusNotice({
+      kind: 'success',
+      message: `Prefilled ${rows.length} locale row${rows.length === 1 ? '' : 's'} with exact-locale translators only.`,
+    });
+  };
+
+  const handlePrefillPmPoolFromRoster = () => {
+    if (selectedTeamId == null) {
+      setPmStatusNotice({ kind: 'error', message: 'Select a team.' });
+      return;
+    }
+
+    const nextPmIds = teamPmRosterUsers.map((entry) => entry.id);
+    setSelectedPmIds(nextPmIds);
+    setPmStatusNotice({
+      kind: 'success',
+      message:
+        nextPmIds.length === 0
+          ? 'No PMs found in team roster.'
+          : `Prefilled ${nextPmIds.length} PM${nextPmIds.length === 1 ? '' : 's'} from team roster.`,
+    });
+  };
+
   useEffect(() => {
     if (!reorderLocaleTag) {
       return;
@@ -1064,6 +1126,18 @@ export function AdminTeamPoolsPage() {
                     disabled={selectedTeamId == null || localePoolsQuery.isLoading}
                   >
                     Prefill from active team
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-button settings-button--ghost team-pools-page__prefill-button"
+                    onClick={handlePrefillCsvFromTranslatorRoster}
+                    disabled={
+                      selectedTeamId == null ||
+                      teamTranslatorsQuery.isLoading ||
+                      teamTranslatorsQuery.isError
+                    }
+                  >
+                    Prefill from translator roster
                   </button>
                 </div>
                 <div className="team-pools-page__csv-input-wrap">
@@ -1332,6 +1406,14 @@ export function AdminTeamPoolsPage() {
           </div>
           <div className="settings-card__footer">
             <div className="settings-actions">
+              <button
+                type="button"
+                className="settings-button settings-button--ghost"
+                onClick={handlePrefillPmPoolFromRoster}
+                disabled={!selectedTeamName || teamPmPoolQuery.isLoading}
+              >
+                Prefill from PM roster
+              </button>
               <button
                 type="button"
                 className="settings-button settings-button--primary"
