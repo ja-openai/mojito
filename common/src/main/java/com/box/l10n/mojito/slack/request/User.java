@@ -6,6 +6,8 @@ public class User {
   String name;
   String real_name;
   String email;
+  boolean deleted;
+  boolean is_bot;
   Profile profile;
 
   public static class Profile {
@@ -61,6 +63,26 @@ public class User {
 
   public void setEmail(String email) {
     this.email = email;
+  }
+
+  public boolean isDeleted() {
+    return deleted;
+  }
+
+  public void setDeleted(boolean deleted) {
+    this.deleted = deleted;
+  }
+
+  public boolean isIs_bot() {
+    return is_bot;
+  }
+
+  public boolean isBot() {
+    return is_bot;
+  }
+
+  public void setIs_bot(boolean is_bot) {
+    this.is_bot = is_bot;
   }
 
   public Profile getProfile() {

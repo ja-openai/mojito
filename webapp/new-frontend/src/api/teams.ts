@@ -50,6 +50,35 @@ export type ApiTeamSlackUserMappingsResponse = {
   entries: ApiTeamSlackUserMappingRow[];
 };
 
+export type ApiSlackChannelImportPreviewRow = {
+  slackUserId: string;
+  slackUsername: string | null;
+  slackRealName: string | null;
+  slackEmail: string | null;
+  slackBot: boolean;
+  slackDeleted: boolean;
+  matchedMojitoUserId: number | null;
+  matchedMojitoUsername: string | null;
+  matchReason: string | null;
+  alreadyMapped: boolean;
+  alreadyPm: boolean;
+  alreadyTranslator: boolean;
+};
+
+export type ApiSlackChannelImportPreviewResponse = {
+  slackChannelId: string;
+  slackChannelName: string | null;
+  rows: ApiSlackChannelImportPreviewRow[];
+};
+
+export type ApiSlackChannelImportApplyResponse = {
+  scannedRows: number;
+  selectedRows: number;
+  matchedRows: number;
+  addedUsersCount: number;
+  mappingsUpsertedCount: number;
+};
+
 export type ApiTeamSlackChannelMemberRow = {
   slackUserId: string;
   slackUsername: string | null;
@@ -383,6 +412,42 @@ export async function replaceTeamSlackUserMappings(
     const message = await response.text().catch(() => '');
     throw new Error(message || 'Failed to save team Slack user mappings');
   }
+}
+
+export async function previewTeamSlackChannelImport(
+  teamId: number,
+): Promise<ApiSlackChannelImportPreviewResponse> {
+  const response = await fetch(`/api/teams/${teamId}/slack-channel-import/preview`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to preview Slack channel import');
+  }
+
+  return (await response.json()) as ApiSlackChannelImportPreviewResponse;
+}
+
+export async function applyTeamSlackChannelImport(
+  teamId: number,
+  payload: { role: 'PM' | 'TRANSLATOR'; slackUserIds?: string[] },
+): Promise<ApiSlackChannelImportApplyResponse> {
+  const response = await fetch(`/api/teams/${teamId}/slack-channel-import/apply`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to apply Slack channel import');
+  }
+
+  return (await response.json()) as ApiSlackChannelImportApplyResponse;
 }
 
 export async function fetchTeamSlackChannelMembers(

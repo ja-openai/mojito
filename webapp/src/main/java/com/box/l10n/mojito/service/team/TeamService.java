@@ -11,11 +11,18 @@ import com.box.l10n.mojito.entity.security.user.Authority;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.security.user.UserAdminSummaryProjection;
 import com.box.l10n.mojito.service.security.user.UserLocaleRepository;
 import com.box.l10n.mojito.service.security.user.UserLocaleTagProjection;
 import com.box.l10n.mojito.service.security.user.UserRepository;
+import com.box.l10n.mojito.slack.SlackClient;
+import com.box.l10n.mojito.slack.SlackClientException;
+import com.box.l10n.mojito.slack.SlackClients;
+import com.box.l10n.mojito.slack.request.Channel;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -43,6 +50,7 @@ public class TeamService {
   private final UserLocaleRepository userLocaleRepository;
   private final LocaleService localeService;
   private final AuditorAwareImpl auditorAwareImpl;
+  private final SlackClients slackClients;
 
   public TeamService(
       TeamRepository teamRepository,
@@ -53,7 +61,8 @@ public class TeamService {
       UserRepository userRepository,
       UserLocaleRepository userLocaleRepository,
       LocaleService localeService,
-      AuditorAwareImpl auditorAwareImpl) {
+      AuditorAwareImpl auditorAwareImpl,
+      SlackClients slackClients) {
     this.teamRepository = teamRepository;
     this.teamUserRepository = teamUserRepository;
     this.teamLocalePoolRepository = teamLocalePoolRepository;
@@ -63,6 +72,7 @@ public class TeamService {
     this.userLocaleRepository = userLocaleRepository;
     this.localeService = localeService;
     this.auditorAwareImpl = auditorAwareImpl;
+    this.slackClients = slackClients;
   }
 
   public record LocalePoolEntry(String localeTag, List<Long> translatorUserIds) {}
@@ -81,6 +91,30 @@ public class TeamService {
 
   public record UpsertTeamSlackUserMappingEntry(
       Long mojitoUserId, String slackUserId, String slackUsername, String matchSource) {}
+
+  public record SlackChannelImportPreviewRow(
+      String slackUserId,
+      String slackUsername,
+      String slackRealName,
+      String slackEmail,
+      boolean slackBot,
+      boolean slackDeleted,
+      Long matchedMojitoUserId,
+      String matchedMojitoUsername,
+      String matchReason,
+      boolean alreadyMapped,
+      boolean alreadyPm,
+      boolean alreadyTranslator) {}
+
+  public record SlackChannelImportPreview(
+      String slackChannelId, String slackChannelName, List<SlackChannelImportPreviewRow> rows) {}
+
+  public record SlackChannelImportApplyResult(
+      int scannedRows,
+      int selectedRows,
+      int matchedRows,
+      int addedUsersCount,
+      int mappingsUpsertedCount) {}
 
   public record TeamUserSummary(Long id, String username, String commonName) {}
 
@@ -695,6 +729,213 @@ public class TeamService {
     teamSlackUserMappingRepository.saveAll(mappings);
   }
 
+  @Transactional
+  public void upsertTeamSlackUserMappings(
+      Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
+    List<UpsertTeamSlackUserMappingEntry> incoming =
+        entries == null ? List.of() : entries.stream().filter(entry -> entry != null).toList();
+    if (incoming.isEmpty()) {
+      return;
+    }
+
+    Map<Long, UpsertTeamSlackUserMappingEntry> mergedByUserId = new LinkedHashMap<>();
+    getTeamSlackUserMappings(teamId)
+        .forEach(
+            existing ->
+                mergedByUserId.put(
+                    existing.mojitoUserId(),
+                    new UpsertTeamSlackUserMappingEntry(
+                        existing.mojitoUserId(),
+                        existing.slackUserId(),
+                        existing.slackUsername(),
+                        existing.matchSource())));
+    incoming.forEach(entry -> mergedByUserId.put(entry.mojitoUserId(), entry));
+    replaceTeamSlackUserMappings(teamId, new ArrayList<>(mergedByUserId.values()));
+  }
+
+  @Transactional
+  public ReplaceTeamUsersResult addTeamUsersByRole(
+      Long teamId, TeamUserRole role, List<Long> userIds) {
+    List<Long> existingUserIds = getTeamUserIdsByRole(teamId, role);
+    List<Long> mergedUserIds =
+        java.util.stream.Stream.concat(
+                existingUserIds.stream(), (userIds == null ? List.<Long>of() : userIds).stream())
+            .filter(id -> id != null && id > 0)
+            .distinct()
+            .toList();
+    return replaceTeamUsersByRole(teamId, role, mergedUserIds);
+  }
+
+  @Transactional(readOnly = true)
+  public SlackChannelImportPreview previewSlackChannelImport(Long teamId) {
+    Team team = getTeam(teamId);
+    SlackClient slackClient = getSlackClientForTeam(team);
+    String channelId = requireConfiguredSlackChannelId(team);
+
+    Channel channel = null;
+    try {
+      channel = slackClient.getConversationById(channelId);
+    } catch (SlackClientException e) {
+      logger.warn("Failed to load Slack channel info for {}: {}", channelId, e.getMessage());
+    }
+
+    List<String> memberIds;
+    try {
+      memberIds = slackClient.getConversationMemberIds(channelId);
+    } catch (SlackClientException e) {
+      throw new IllegalArgumentException(
+          e.getMessage() != null ? e.getMessage() : "Failed to fetch Slack channel members");
+    }
+
+    Map<Long, TeamSlackUserMappingEntry> existingMappingsByMojitoUserId =
+        getTeamSlackUserMappings(teamId).stream()
+            .collect(
+                Collectors.toMap(
+                    TeamSlackUserMappingEntry::mojitoUserId,
+                    m -> m,
+                    (a, b) -> a,
+                    LinkedHashMap::new));
+    Map<String, TeamSlackUserMappingEntry> existingMappingsBySlackUserId =
+        existingMappingsByMojitoUserId.values().stream()
+            .filter(m -> m.slackUserId() != null && !m.slackUserId().isBlank())
+            .collect(
+                Collectors.toMap(
+                    m -> m.slackUserId().toLowerCase(java.util.Locale.ROOT),
+                    m -> m,
+                    (a, b) -> a,
+                    LinkedHashMap::new));
+
+    Set<Long> pmIds = new LinkedHashSet<>(getTeamUserIdsByRole(teamId, TeamUserRole.PM));
+    Set<Long> translatorIds =
+        new LinkedHashSet<>(getTeamUserIdsByRole(teamId, TeamUserRole.TRANSLATOR));
+
+    List<UserAdminSummaryProjection> users = userRepository.findAdminSummaries();
+    Map<String, List<UserAdminSummaryProjection>> usersByUsernameLower = new HashMap<>();
+    users.forEach(
+        u ->
+            usersByUsernameLower
+                .computeIfAbsent(normalizeKey(u.username()), key -> new ArrayList<>())
+                .add(u));
+
+    List<SlackChannelImportPreviewRow> rows = new ArrayList<>();
+    for (String memberId : memberIds) {
+      com.box.l10n.mojito.slack.request.User slackUser;
+      try {
+        slackUser = slackClient.getUserById(memberId);
+      } catch (SlackClientException e) {
+        rows.add(
+            new SlackChannelImportPreviewRow(
+                memberId,
+                null,
+                null,
+                null,
+                false,
+                false,
+                null,
+                null,
+                "slack_lookup_failed",
+                false,
+                false,
+                false));
+        continue;
+      }
+
+      MatchCandidate match =
+          findBestMojitoUserMatch(slackUser, existingMappingsBySlackUserId, usersByUsernameLower);
+
+      Long matchedId = match.user() != null ? match.user().id() : null;
+      boolean alreadyMapped =
+          matchedId != null
+              && existingMappingsByMojitoUserId.containsKey(matchedId)
+              && memberId.equalsIgnoreCase(
+                  existingMappingsByMojitoUserId.get(matchedId).slackUserId());
+
+      rows.add(
+          new SlackChannelImportPreviewRow(
+              slackUser.getId(),
+              slackUser.getName(),
+              slackUser.getReal_name(),
+              slackUser.getEmail(),
+              slackUser.isBot(),
+              slackUser.isDeleted(),
+              matchedId,
+              match.user() != null ? match.user().username() : null,
+              match.reason(),
+              alreadyMapped,
+              matchedId != null && pmIds.contains(matchedId),
+              matchedId != null && translatorIds.contains(matchedId)));
+    }
+
+    rows.sort(
+        Comparator.comparing(
+                (SlackChannelImportPreviewRow row) -> row.slackBot() || row.slackDeleted())
+            .thenComparing(
+                row ->
+                    row.slackUsername() == null
+                        ? ""
+                        : row.slackUsername().toLowerCase(java.util.Locale.ROOT))
+            .thenComparing(row -> row.slackUserId() == null ? "" : row.slackUserId()));
+
+    return new SlackChannelImportPreview(
+        channelId, channel != null ? channel.getName() : null, rows);
+  }
+
+  @Transactional
+  public SlackChannelImportApplyResult applySlackChannelImport(
+      Long teamId, TeamUserRole role, List<String> slackUserIds) {
+    if (role == null) {
+      throw new IllegalArgumentException("Role is required");
+    }
+
+    SlackChannelImportPreview preview = previewSlackChannelImport(teamId);
+    Set<String> selectedSlackUserIds =
+        (slackUserIds == null ? List.<String>of() : slackUserIds)
+            .stream()
+                .map(this::normalizeKey)
+                .filter(key -> key != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+    List<SlackChannelImportPreviewRow> selectedRows =
+        preview.rows().stream()
+            .filter(
+                row ->
+                    selectedSlackUserIds.isEmpty()
+                        || selectedSlackUserIds.contains(normalizeKey(row.slackUserId())))
+            .toList();
+
+    List<SlackChannelImportPreviewRow> matchedRows =
+        selectedRows.stream()
+            .filter(row -> !row.slackBot() && !row.slackDeleted())
+            .filter(row -> row.matchedMojitoUserId() != null)
+            .toList();
+
+    List<Long> userIdsToAdd =
+        matchedRows.stream()
+            .map(SlackChannelImportPreviewRow::matchedMojitoUserId)
+            .distinct()
+            .toList();
+    addTeamUsersByRole(teamId, role, userIdsToAdd);
+
+    List<UpsertTeamSlackUserMappingEntry> mappings =
+        matchedRows.stream()
+            .map(
+                row ->
+                    new UpsertTeamSlackUserMappingEntry(
+                        row.matchedMojitoUserId(),
+                        row.slackUserId(),
+                        row.slackUsername(),
+                        "slack_channel_import"))
+            .toList();
+    upsertTeamSlackUserMappings(teamId, mappings);
+
+    return new SlackChannelImportApplyResult(
+        preview.rows().size(),
+        selectedRows.size(),
+        matchedRows.size(),
+        userIdsToAdd.size(),
+        mappings.size());
+  }
+
   private UpsertTeamSlackUserMappingEntry normalizeSlackUserMappingEntry(
       UpsertTeamSlackUserMappingEntry entry) {
     if (entry == null || entry.mojitoUserId() == null || entry.mojitoUserId() <= 0) {
@@ -725,6 +966,92 @@ public class TeamService {
       throw new IllegalArgumentException("Value exceeds max length " + maxLength);
     }
     return normalized;
+  }
+
+  private SlackClient getSlackClientForTeam(Team team) {
+    String slackClientId = normalizeOptionalSlackValue(team.getSlackClientId(), 255);
+    if (slackClientId == null) {
+      throw new IllegalArgumentException("Team Slack client ID is not configured");
+    }
+
+    SlackClient slackClient = slackClients.getById(slackClientId);
+    if (slackClient == null) {
+      throw new IllegalArgumentException(
+          "Unknown Slack client ID in team settings: " + slackClientId);
+    }
+    return slackClient;
+  }
+
+  private String requireConfiguredSlackChannelId(Team team) {
+    String channelId = normalizeOptionalSlackValue(team.getSlackChannelId(), 64);
+    if (channelId == null) {
+      throw new IllegalArgumentException("Team Slack channel ID is not configured");
+    }
+    return channelId;
+  }
+
+  private record MatchCandidate(UserAdminSummaryProjection user, String reason) {}
+
+  private MatchCandidate findBestMojitoUserMatch(
+      com.box.l10n.mojito.slack.request.User slackUser,
+      Map<String, TeamSlackUserMappingEntry> existingMappingsBySlackUserId,
+      Map<String, List<UserAdminSummaryProjection>> usersByUsernameLower) {
+    if (slackUser == null || slackUser.getId() == null) {
+      return new MatchCandidate(null, null);
+    }
+
+    TeamSlackUserMappingEntry existingMapping =
+        existingMappingsBySlackUserId.get(normalizeKey(slackUser.getId()));
+    if (existingMapping != null) {
+      List<UserAdminSummaryProjection> mappedUsers =
+          usersByUsernameLower.getOrDefault(
+              normalizeKey(existingMapping.mojitoUsername()), List.of());
+      if (!mappedUsers.isEmpty()) {
+        return new MatchCandidate(mappedUsers.get(0), "existing_team_mapping");
+      }
+    }
+
+    String slackUsername = normalizeKey(slackUser.getName());
+    List<UserAdminSummaryProjection> usernameMatches =
+        slackUsername == null
+            ? List.of()
+            : usersByUsernameLower.getOrDefault(slackUsername, List.of());
+    if (usernameMatches.size() == 1) {
+      return new MatchCandidate(usernameMatches.get(0), "username_exact");
+    }
+    if (usernameMatches.size() > 1) {
+      return new MatchCandidate(null, "username_ambiguous");
+    }
+
+    String email = slackUser.getEmail();
+    String emailLocalPart =
+        email != null && email.contains("@")
+            ? normalizeKey(email.substring(0, email.indexOf('@')))
+            : null;
+    List<UserAdminSummaryProjection> emailMatches =
+        emailLocalPart == null
+            ? List.of()
+            : usersByUsernameLower.getOrDefault(emailLocalPart, List.of());
+    if (emailMatches.size() == 1) {
+      return new MatchCandidate(emailMatches.get(0), "email_localpart_username");
+    }
+    if (emailMatches.size() > 1) {
+      return new MatchCandidate(null, "email_localpart_ambiguous");
+    }
+
+    return new MatchCandidate(
+        null, slackUser.isBot() ? "bot" : (slackUser.isDeleted() ? "deleted" : "unmatched"));
+  }
+
+  private String normalizeKey(String value) {
+    if (value == null) {
+      return null;
+    }
+    String normalized = value.trim();
+    if (normalized.isEmpty()) {
+      return null;
+    }
+    return normalized.toLowerCase(java.util.Locale.ROOT);
   }
 
   private boolean canTranslatorTranslateLocale(

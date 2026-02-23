@@ -88,6 +88,10 @@
   color: var(--color-danger);
 }
 
+.team-detail-page__status-meta {
+  color: var(--color-text-muted);
+}
+
 .team-detail-page__danger {
   justify-content: flex-end;
   margin-top: var(--space-3);

@@ -79,6 +79,32 @@ public class TeamWS {
 
   public record TeamSlackUserMappingsResponse(List<TeamSlackUserMappingRow> entries) {}
 
+  public record SlackChannelImportPreviewRow(
+      String slackUserId,
+      String slackUsername,
+      String slackRealName,
+      String slackEmail,
+      boolean slackBot,
+      boolean slackDeleted,
+      Long matchedMojitoUserId,
+      String matchedMojitoUsername,
+      String matchReason,
+      boolean alreadyMapped,
+      boolean alreadyPm,
+      boolean alreadyTranslator) {}
+
+  public record SlackChannelImportPreviewResponse(
+      String slackChannelId, String slackChannelName, List<SlackChannelImportPreviewRow> rows) {}
+
+  public record ApplySlackChannelImportRequest(String role, List<String> slackUserIds) {}
+
+  public record ApplySlackChannelImportResponse(
+      int scannedRows,
+      int selectedRows,
+      int matchedRows,
+      int addedUsersCount,
+      int mappingsUpsertedCount) {}
+
   public record TeamSlackChannelMemberRow(
       String slackUserId, String slackUsername, String displayName, String email) {}
 
@@ -309,6 +335,59 @@ public class TeamWS {
                               row.slackUsername(),
                               row.matchSource()))
                   .toList());
+    } catch (IllegalArgumentException ex) {
+      throw toStatusException(ex);
+    }
+  }
+
+  @PostMapping("/{teamId}/slack-channel-import/preview")
+  public SlackChannelImportPreviewResponse previewSlackChannelImport(@PathVariable Long teamId) {
+    assertCurrentUserIsAdmin();
+    try {
+      TeamService.SlackChannelImportPreview preview = teamService.previewSlackChannelImport(teamId);
+      return new SlackChannelImportPreviewResponse(
+          preview.slackChannelId(),
+          preview.slackChannelName(),
+          preview.rows().stream()
+              .map(
+                  row ->
+                      new SlackChannelImportPreviewRow(
+                          row.slackUserId(),
+                          row.slackUsername(),
+                          row.slackRealName(),
+                          row.slackEmail(),
+                          row.slackBot(),
+                          row.slackDeleted(),
+                          row.matchedMojitoUserId(),
+                          row.matchedMojitoUsername(),
+                          row.matchReason(),
+                          row.alreadyMapped(),
+                          row.alreadyPm(),
+                          row.alreadyTranslator()))
+              .toList());
+    } catch (IllegalArgumentException ex) {
+      throw toStatusException(ex);
+    }
+  }
+
+  @PostMapping("/{teamId}/slack-channel-import/apply")
+  public ApplySlackChannelImportResponse applySlackChannelImport(
+      @PathVariable Long teamId, @RequestBody ApplySlackChannelImportRequest request) {
+    assertCurrentUserIsAdmin();
+    try {
+      TeamUserRole role =
+          request == null || request.role() == null || request.role().isBlank()
+              ? null
+              : TeamUserRole.valueOf(request.role().trim().toUpperCase());
+      TeamService.SlackChannelImportApplyResult result =
+          teamService.applySlackChannelImport(
+              teamId, role, request != null ? request.slackUserIds() : List.of());
+      return new ApplySlackChannelImportResponse(
+          result.scannedRows(),
+          result.selectedRows(),
+          result.matchedRows(),
+          result.addedUsersCount(),
+          result.mappingsUpsertedCount());
     } catch (IllegalArgumentException ex) {
       throw toStatusException(ex);
     }
