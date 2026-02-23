@@ -7,6 +7,16 @@ export type ApiTeamUserIdsResponse = {
   userIds: number[];
 };
 
+export type ApiTeamUserSummary = {
+  id: number;
+  username: string;
+  commonName?: string | null;
+};
+
+export type ApiTeamUsersResponse = {
+  users: ApiTeamUserSummary[];
+};
+
 export type ApiReplaceTeamUsersResponse = {
   removedUsersCount: number;
   removedLocalePoolRows: number;
@@ -146,6 +156,26 @@ export async function fetchTeamProjectManagers(teamId: number): Promise<ApiTeamU
   }
 
   return (await response.json()) as ApiTeamUserIdsResponse;
+}
+
+export async function fetchTeamUsersByRole(
+  teamId: number,
+  role: 'PM' | 'TRANSLATOR',
+): Promise<ApiTeamUsersResponse> {
+  const response = await fetch(
+    `/api/teams/${teamId}/users?${new URLSearchParams({ role }).toString()}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load team users');
+  }
+
+  return (await response.json()) as ApiTeamUsersResponse;
 }
 
 export async function replaceTeamProjectManagers(teamId: number, userIds: number[]): Promise<void> {

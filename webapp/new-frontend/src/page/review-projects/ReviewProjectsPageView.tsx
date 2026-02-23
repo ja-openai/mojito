@@ -12,8 +12,12 @@ import {
   REVIEW_PROJECT_TYPE_LABELS,
   updateReviewProjectAssignment,
 } from '../../api/review-projects';
-import { fetchTeamLocalePools, fetchTeamPmPool, fetchTeamTranslators } from '../../api/teams';
-import { type ApiUser, fetchAllUsersAdmin } from '../../api/users';
+import {
+  fetchTeamLocalePools,
+  fetchTeamPmPool,
+  fetchTeamTranslators,
+  fetchTeamUsersByRole,
+} from '../../api/teams';
 import {
   type FilterOption,
   MultiSectionFilterChip,
@@ -102,6 +106,11 @@ export type ReviewProjectsAdminControls = {
   errorMessage?: string | null;
 };
 
+type ReviewProjectsAssignmentControls = {
+  canReassignPm: boolean;
+  canReassignTranslator: boolean;
+};
+
 type Props = {
   status: 'loading' | 'error' | 'ready';
   errorMessage?: string;
@@ -114,13 +123,29 @@ type Props = {
   onRequestIdClick?: (requestId: number) => void;
   canCreate?: boolean;
   adminControls?: ReviewProjectsAdminControls;
+  assignmentControls?: ReviewProjectsAssignmentControls;
   displayMode?: 'list' | 'requests';
   canUseRequestMode?: boolean;
   onDisplayModeChange?: (mode: 'list' | 'requests') => void;
+  showUnfinishedLocalesOnly?: boolean;
+  onShowUnfinishedLocalesOnlyChange?: (value: boolean) => void;
   expandedRequestKey?: string | null;
   onExpandedRequestKeyChange?: (key: string | null) => void;
   reviewProjectsSessionKey?: string | null;
 };
+
+type AssignmentReassignTarget =
+  | {
+      kind: 'pm';
+      requestKey: string;
+      requestName: string;
+      requestId: number | null;
+      projects: ReviewProjectRow[];
+    }
+  | {
+      kind: 'translator';
+      project: ReviewProjectRow;
+    };
 
 function buildReviewProjectDetailPath(
   projectId: number,
@@ -170,6 +195,9 @@ function SummaryBar({
   showModeToggle = false,
   displayMode = 'list',
   onDisplayModeChange,
+  showUnfinishedToggle = false,
+  unfinishedLocalesOnly = false,
+  onToggleUnfinishedLocalesOnly,
 }: {
   resultCount: number;
   totalWords: number;
@@ -177,6 +205,9 @@ function SummaryBar({
   showModeToggle?: boolean;
   displayMode?: 'list' | 'requests';
   onDisplayModeChange?: (mode: 'list' | 'requests') => void;
+  showUnfinishedToggle?: boolean;
+  unfinishedLocalesOnly?: boolean;
+  onToggleUnfinishedLocalesOnly?: () => void;
 }) {
   return (
     <div className="review-projects-page__summary-bar">
@@ -184,6 +215,15 @@ function SummaryBar({
       <div className="review-projects-page__summary-center">
         {showModeToggle ? (
           <DisplayModeToggle mode={displayMode} onChange={(mode) => onDisplayModeChange?.(mode)} />
+        ) : null}
+        {showUnfinishedToggle ? (
+          <button
+            type="button"
+            className={`review-projects-page__summary-toggle${unfinishedLocalesOnly ? ' is-active' : ''}`}
+            onClick={onToggleUnfinishedLocalesOnly}
+          >
+            {unfinishedLocalesOnly ? 'Unfinished locales only' : 'All locales'}
+          </button>
         ) : null}
       </div>
       <div className="review-projects-page__summary-right">
@@ -267,6 +307,7 @@ function ContentSection({
   totalSize,
   getRowRef,
   adminControls,
+  assignmentControls,
   onRequestIdClick,
   reviewProjectsSessionKey,
 }: {
@@ -276,14 +317,125 @@ function ContentSection({
   totalSize: number;
   getRowRef: (rowId: number) => (element: HTMLDivElement | null) => void;
   adminControls?: ReviewProjectsAdminControls;
+  assignmentControls?: ReviewProjectsAssignmentControls;
   onRequestIdClick?: (requestId: number) => void;
   reviewProjectsSessionKey?: string | null;
 }) {
   const isAdmin = adminControls?.enabled ?? false;
+  const canReassignTranslator = assignmentControls?.canReassignTranslator ?? false;
+  const queryClient = useQueryClient();
   const selectedProjectIdSet = useMemo(
     () => new Set(adminControls?.selectedProjectIds ?? []),
     [adminControls?.selectedProjectIds],
   );
+  const [reassignProject, setReassignProject] = useState<ReviewProjectRow | null>(null);
+  const [reassignDraftTranslatorUserId, setReassignDraftTranslatorUserId] = useState<number | null>(
+    null,
+  );
+  const [reassignShowAllTeam, setReassignShowAllTeam] = useState(false);
+  const [reassignError, setReassignError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!reassignProject) {
+      return;
+    }
+    setReassignDraftTranslatorUserId(reassignProject.assignedTranslatorUserId ?? null);
+    setReassignShowAllTeam(false);
+    setReassignError(null);
+  }, [reassignProject]);
+
+  const activeTeamId = reassignProject?.teamId ?? null;
+  const teamTranslatorUsersQuery = useQuery({
+    queryKey: ['team-users', activeTeamId, 'TRANSLATOR', 'review-projects-list-reassign'],
+    queryFn: () => fetchTeamUsersByRole(activeTeamId as number, 'TRANSLATOR'),
+    enabled: canReassignTranslator && reassignProject != null && activeTeamId != null,
+    staleTime: 30_000,
+  });
+  const teamTranslatorsQuery = useQuery({
+    queryKey: ['team-translators', activeTeamId, 'review-projects-list-reassign'],
+    queryFn: () => fetchTeamTranslators(activeTeamId as number),
+    enabled: canReassignTranslator && reassignProject != null && activeTeamId != null,
+    staleTime: 30_000,
+  });
+  const teamLocalePoolsQuery = useQuery({
+    queryKey: ['team-locale-pools', activeTeamId, 'review-projects-list-reassign'],
+    queryFn: () => fetchTeamLocalePools(activeTeamId as number),
+    enabled: canReassignTranslator && reassignProject != null && activeTeamId != null,
+    staleTime: 30_000,
+  });
+
+  const translatorUsersById = useMemo(() => {
+    const map = new Map<number, { username: string; commonName?: string | null }>();
+    (teamTranslatorUsersQuery.data?.users ?? []).forEach((user) => map.set(user.id, user));
+    return map;
+  }, [teamTranslatorUsersQuery.data?.users]);
+
+  const translatorOptionIds = useMemo(() => {
+    if (!reassignProject || activeTeamId == null) {
+      return [] as number[];
+    }
+    const translatorIds = (teamTranslatorsQuery.data?.userIds ?? []).filter(
+      (id): id is number => id > 0,
+    );
+    const localeTagKey = (reassignProject.localeTag ?? '').trim().toLowerCase();
+    const localePoolRow =
+      teamLocalePoolsQuery.data?.entries.find(
+        (entry) => entry.localeTag.trim().toLowerCase() === localeTagKey,
+      ) ?? null;
+    const localePoolIds =
+      localePoolRow?.translatorUserIds?.filter((id): id is number => id > 0) ?? [];
+    const source =
+      reassignShowAllTeam || localePoolIds.length === 0 ? translatorIds : localePoolIds;
+    const ids = Array.from(new Set(source));
+    if (reassignDraftTranslatorUserId != null && !ids.includes(reassignDraftTranslatorUserId)) {
+      ids.unshift(reassignDraftTranslatorUserId);
+    }
+    return ids;
+  }, [
+    activeTeamId,
+    reassignDraftTranslatorUserId,
+    reassignProject,
+    reassignShowAllTeam,
+    teamLocalePoolsQuery.data?.entries,
+    teamTranslatorsQuery.data?.userIds,
+  ]);
+
+  const translatorOptions = useMemo(
+    () =>
+      translatorOptionIds.map((id) => {
+        const user = translatorUsersById.get(id);
+        return {
+          value: id,
+          label: user?.commonName
+            ? `${user.commonName} (${user.username})`
+            : (user?.username ?? `User #${id}`),
+        };
+      }),
+    [translatorOptionIds, translatorUsersById],
+  );
+
+  const translatorReassignMutation = useMutation({
+    mutationFn: async () => {
+      if (!reassignProject) {
+        return;
+      }
+      await updateReviewProjectAssignment(reassignProject.id, {
+        teamId: reassignProject.teamId,
+        assignedPmUserId: reassignProject.assignedPmUserId,
+        assignedTranslatorUserId: reassignDraftTranslatorUserId,
+        note: null,
+      });
+    },
+    onSuccess: async () => {
+      setReassignError(null);
+      setReassignProject(null);
+      await queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      await queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
+    },
+    onError: (error) => {
+      setReassignError(error instanceof Error ? error.message : 'Failed to update assignment');
+    },
+  });
 
   if (projects.length === 0) {
     return (
@@ -318,6 +470,14 @@ function ContentSection({
                   isAdmin={isAdmin}
                   isSelected={selectedProjectIdSet.has(project.id)}
                   onToggleSelection={adminControls?.onToggleProjectSelection}
+                  canReassignTranslator={canReassignTranslator}
+                  isReassignSaving={translatorReassignMutation.isPending}
+                  onOpenTranslatorReassign={(nextProject) => {
+                    if (!canReassignTranslator) {
+                      return;
+                    }
+                    setReassignProject(nextProject);
+                  }}
                   onRequestIdClick={onRequestIdClick}
                   reviewProjectsSessionKey={reviewProjectsSessionKey}
                 />
@@ -326,6 +486,93 @@ function ContentSection({
           }}
         />
       </div>
+      <Modal
+        open={reassignProject != null}
+        size="md"
+        className="review-projects-page__reassign-dialog"
+        ariaLabel="Reassign translator"
+        onClose={() => {
+          if (translatorReassignMutation.isPending) {
+            return;
+          }
+          setReassignProject(null);
+          setReassignError(null);
+        }}
+        closeOnBackdrop={!translatorReassignMutation.isPending}
+      >
+        {reassignProject ? (
+          <>
+            <div className="modal__title">Reassign translator</div>
+            <div className="modal__body review-projects-page__reassign-modal">
+              <div className="review-projects-page__reassign-modal-line">
+                <span className="review-projects-page__reassign-modal-label">Project</span>
+                <span className="review-projects-page__reassign-modal-value">
+                  #{reassignProject.id}
+                  {reassignProject.localeTag ? ` · ${reassignProject.localeTag}` : ''}
+                </span>
+              </div>
+              <div className="review-projects-page__reassign-modal-line">
+                <span className="review-projects-page__reassign-modal-label">Team</span>
+                <span className="review-projects-page__reassign-modal-value">
+                  {reassignProject.teamName?.trim() ? reassignProject.teamName : '—'}
+                </span>
+              </div>
+              {activeTeamId == null ? (
+                <div className="review-projects-page__reassign-modal-error">
+                  No team is assigned.
+                </div>
+              ) : (
+                <div className="review-projects-page__reassign-modal-field">
+                  <SingleSelectDropdown<number>
+                    label="Translator"
+                    options={translatorOptions}
+                    value={reassignDraftTranslatorUserId}
+                    onChange={(next) => {
+                      setReassignDraftTranslatorUserId(next);
+                      setReassignError(null);
+                    }}
+                    placeholder="Select translator"
+                    noneLabel="No translator"
+                    buttonAriaLabel="Select translator"
+                    footerAction={{
+                      label: reassignShowAllTeam ? 'Locale pool only' : 'Show all team',
+                      onClick: () => setReassignShowAllTeam((value) => !value),
+                      disabled: translatorReassignMutation.isPending,
+                    }}
+                  />
+                </div>
+              )}
+              {reassignError ? (
+                <div className="review-projects-page__reassign-modal-error">{reassignError}</div>
+              ) : null}
+            </div>
+            <div className="modal__actions">
+              <button
+                type="button"
+                className="modal__button"
+                onClick={() => {
+                  if (translatorReassignMutation.isPending) {
+                    return;
+                  }
+                  setReassignProject(null);
+                  setReassignError(null);
+                }}
+                disabled={translatorReassignMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="modal__button modal__button--primary"
+                onClick={() => void translatorReassignMutation.mutateAsync()}
+                disabled={translatorReassignMutation.isPending || activeTeamId == null}
+              >
+                {translatorReassignMutation.isPending ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </>
+        ) : null}
+      </Modal>
     </div>
   );
 }
@@ -403,6 +650,15 @@ const getLanguageCompletionMetrics = (projects: ReviewProjectRow[]) => {
     percentWidth,
     completionLabel: `${completedLanguages}/${totalLanguages}`,
   };
+};
+
+const hasWorkRemaining = (project: ReviewProjectRow) => {
+  if (project.status === 'CLOSED') {
+    return false;
+  }
+  const accepted = toFiniteNonNegative(project.acceptedCount);
+  const total = toFiniteNonNegative(project.textUnitCount ?? 0);
+  return total > 0 && accepted < total;
 };
 
 const TOGGLE_IGNORE_SELECTOR =
@@ -746,6 +1002,9 @@ function ReviewProjectRowView({
   isAdmin,
   isSelected,
   onToggleSelection,
+  canReassignTranslator,
+  isReassignSaving,
+  onOpenTranslatorReassign,
   onRequestIdClick,
   reviewProjectsSessionKey,
 }: {
@@ -753,6 +1012,9 @@ function ReviewProjectRowView({
   isAdmin: boolean;
   isSelected: boolean;
   onToggleSelection?: (projectId: number) => void;
+  canReassignTranslator?: boolean;
+  isReassignSaving?: boolean;
+  onOpenTranslatorReassign?: (project: ReviewProjectRow) => void;
   onRequestIdClick?: (requestId: number) => void;
   reviewProjectsSessionKey?: string | null;
 }) {
@@ -820,6 +1082,43 @@ function ReviewProjectRowView({
           ) : project.dueDate ? (
             <span>Due {formatDateTime(project.dueDate)}</span>
           ) : null}
+          <span className="review-projects-page__request-meta-inline review-projects-page__list-assignment-inline">
+            <span className="review-projects-page__request-created-by">
+              by {project.requestCreatedByUsername?.trim() ? project.requestCreatedByUsername : '—'}
+            </span>
+            <span className="review-projects-page__request-dot" aria-hidden="true">
+              ·
+            </span>
+            <span className="review-projects-page__request-assignee">
+              PM {project.assignedPmUsername?.trim() ? project.assignedPmUsername : '—'}
+            </span>
+            <span className="review-projects-page__request-dot" aria-hidden="true">
+              ·
+            </span>
+            {canReassignTranslator ? (
+              <button
+                type="button"
+                className="review-projects-page__inline-action review-projects-page__request-assignee"
+                onClick={() => {
+                  if (!isReassignSaving) {
+                    onOpenTranslatorReassign?.(project);
+                  }
+                }}
+                disabled={isReassignSaving}
+                title="Reassign translator"
+              >
+                {project.assignedTranslatorUsername?.trim()
+                  ? project.assignedTranslatorUsername
+                  : '—'}
+              </button>
+            ) : (
+              <span className="review-projects-page__request-assignee">
+                {project.assignedTranslatorUsername?.trim()
+                  ? project.assignedTranslatorUsername
+                  : '—'}
+              </span>
+            )}
+          </span>
         </div>
         <div className="review-projects-page__locales">
           {localeTag ? (
@@ -897,6 +1196,8 @@ function RequestGroupsSection({
   onToggleExpanded,
   onFilterByRequest,
   adminControls,
+  assignmentControls,
+  showUnfinishedLocalesOnly = false,
   reviewProjectsSessionKey,
 }: {
   groups: ReviewProjectRequestGroupRow[];
@@ -904,29 +1205,20 @@ function RequestGroupsSection({
   onToggleExpanded: (key: string) => void;
   onFilterByRequest: (requestId: number) => void;
   adminControls?: ReviewProjectsAdminControls;
+  assignmentControls?: ReviewProjectsAssignmentControls;
+  showUnfinishedLocalesOnly?: boolean;
   reviewProjectsSessionKey?: string | null;
 }) {
   const resolveLocaleDisplayName = useLocaleDisplayNameResolver();
   const isAdmin = adminControls?.enabled ?? false;
+  const canReassignPm = assignmentControls?.canReassignPm ?? false;
+  const canReassignTranslator = assignmentControls?.canReassignTranslator ?? false;
   const queryClient = useQueryClient();
   const selectedProjectIdSet = useMemo(
     () => new Set(adminControls?.selectedProjectIds ?? []),
     [adminControls?.selectedProjectIds],
   );
-  const [reassignTarget, setReassignTarget] = useState<
-    | {
-        kind: 'pm';
-        requestKey: string;
-        requestName: string;
-        requestId: number | null;
-        projects: ReviewProjectRow[];
-      }
-    | {
-        kind: 'translator';
-        project: ReviewProjectRow;
-      }
-    | null
-  >(null);
+  const [reassignTarget, setReassignTarget] = useState<AssignmentReassignTarget | null>(null);
   const [reassignDraftUserId, setReassignDraftUserId] = useState<number | null>(null);
   const [reassignShowAllTeam, setReassignShowAllTeam] = useState(false);
   const [reassignError, setReassignError] = useState<string | null>(null);
@@ -973,42 +1265,72 @@ function RequestGroupsSection({
     setReassignError(null);
   }, [reassignTarget]);
 
-  const reassignUsersQuery = useQuery<ApiUser[]>({
-    queryKey: ['users', 'admin', 'review-projects-reassign'],
-    queryFn: fetchAllUsersAdmin,
-    enabled: isAdmin && reassignTarget != null,
+  const reassignPmUsersQuery = useQuery({
+    queryKey: ['team-users', activeTeamId, 'PM', 'review-projects-reassign'],
+    queryFn: () => fetchTeamUsersByRole(activeTeamId as number, 'PM'),
+    enabled:
+      canReassignPm &&
+      reassignTarget != null &&
+      activeTeamId != null &&
+      (reassignTarget.kind === 'pm' || reassignShowAllTeam),
+    staleTime: 30_000,
+  });
+  const reassignTranslatorUsersQuery = useQuery({
+    queryKey: ['team-users', activeTeamId, 'TRANSLATOR', 'review-projects-reassign'],
+    queryFn: () => fetchTeamUsersByRole(activeTeamId as number, 'TRANSLATOR'),
+    enabled:
+      canReassignTranslator &&
+      reassignTarget != null &&
+      activeTeamId != null &&
+      reassignTarget.kind === 'translator',
     staleTime: 30_000,
   });
   const reassignPmPoolQuery = useQuery({
     queryKey: ['team-pm-pool', activeTeamId, 'review-projects-reassign'],
     queryFn: () => fetchTeamPmPool(activeTeamId as number),
-    enabled: isAdmin && reassignTarget != null && activeTeamId != null,
+    enabled:
+      canReassignPm &&
+      reassignTarget != null &&
+      reassignTarget.kind === 'pm' &&
+      activeTeamId != null,
     staleTime: 30_000,
   });
   const reassignTranslatorsQuery = useQuery({
     queryKey: ['team-translators', activeTeamId, 'review-projects-reassign'],
     queryFn: () => fetchTeamTranslators(activeTeamId as number),
-    enabled: isAdmin && reassignTarget != null && activeTeamId != null,
+    enabled:
+      canReassignTranslator &&
+      reassignTarget != null &&
+      reassignTarget.kind === 'translator' &&
+      activeTeamId != null,
     staleTime: 30_000,
   });
   const reassignLocalePoolsQuery = useQuery({
     queryKey: ['team-locale-pools', activeTeamId, 'review-projects-reassign'],
     queryFn: () => fetchTeamLocalePools(activeTeamId as number),
     enabled:
-      isAdmin &&
+      canReassignTranslator &&
       reassignTarget != null &&
       reassignTarget.kind === 'translator' &&
       activeTeamId != null,
     staleTime: 30_000,
   });
 
-  const reassignUsersById = useMemo(() => {
-    const map = new Map<number, ApiUser>();
-    (reassignUsersQuery.data ?? []).forEach((user) => {
+  const reassignPmUsersById = useMemo(() => {
+    const map = new Map<number, { username: string; commonName?: string | null }>();
+    (reassignPmUsersQuery.data?.users ?? []).forEach((user) => {
       map.set(user.id, user);
     });
     return map;
-  }, [reassignUsersQuery.data]);
+  }, [reassignPmUsersQuery.data?.users]);
+
+  const reassignTranslatorUsersById = useMemo(() => {
+    const map = new Map<number, { username: string; commonName?: string | null }>();
+    (reassignTranslatorUsersQuery.data?.users ?? []).forEach((user) => {
+      map.set(user.id, user);
+    });
+    return map;
+  }, [reassignTranslatorUsersQuery.data?.users]);
 
   const reassignOptionIds = useMemo(() => {
     if (!reassignTarget || activeTeamId == null) {
@@ -1020,11 +1342,13 @@ function RequestGroupsSection({
     const translatorIds = (reassignTranslatorsQuery.data?.userIds ?? []).filter(
       (id): id is number => id > 0,
     );
-    const allTeamIds = Array.from(new Set([...pmPoolIds, ...translatorIds]));
-
     let baseIds: number[] = [];
+    let allRoleIds: number[] = [];
     if (reassignTarget.kind === 'pm') {
       baseIds = pmPoolIds;
+      allRoleIds = (reassignPmUsersQuery.data?.users ?? [])
+        .map((user) => user.id)
+        .filter((id): id is number => id > 0);
     } else {
       const localeTagKey = (reassignTarget.project.localeTag ?? '').trim().toLowerCase();
       const localePoolRow =
@@ -1035,9 +1359,10 @@ function RequestGroupsSection({
         (localePoolRow?.translatorUserIds?.filter((id): id is number => id > 0) ?? []).length > 0
           ? (localePoolRow?.translatorUserIds?.filter((id): id is number => id > 0) ?? [])
           : translatorIds;
+      allRoleIds = translatorIds;
     }
 
-    const source = reassignShowAllTeam ? allTeamIds : baseIds;
+    const source = reassignShowAllTeam ? allRoleIds : baseIds;
     const ids = Array.from(new Set(source));
     if (reassignDraftUserId != null && !ids.includes(reassignDraftUserId)) {
       ids.unshift(reassignDraftUserId);
@@ -1047,6 +1372,7 @@ function RequestGroupsSection({
     activeTeamId,
     reassignDraftUserId,
     reassignLocalePoolsQuery.data?.entries,
+    reassignPmUsersQuery.data?.users,
     reassignPmPoolQuery.data?.userIds,
     reassignShowAllTeam,
     reassignTarget,
@@ -1056,7 +1382,10 @@ function RequestGroupsSection({
   const reassignOptions = useMemo(
     () =>
       reassignOptionIds.map((id) => {
-        const user = reassignUsersById.get(id);
+        const user =
+          reassignTarget?.kind === 'pm'
+            ? reassignPmUsersById.get(id)
+            : reassignTranslatorUsersById.get(id);
         return {
           value: id,
           label: user?.commonName
@@ -1064,7 +1393,7 @@ function RequestGroupsSection({
             : (user?.username ?? `User #${id}`),
         };
       }),
-    [reassignOptionIds, reassignUsersById],
+    [reassignOptionIds, reassignPmUsersById, reassignTarget?.kind, reassignTranslatorUsersById],
   );
 
   const reassignMutation = useMutation({
@@ -1132,6 +1461,7 @@ function RequestGroupsSection({
     reassignTarget?.kind === 'translator' ? 'Locale pool only' : 'PM pool only';
   const canSaveReassign =
     reassignTarget != null &&
+    (reassignTarget.kind === 'pm' ? canReassignPm : canReassignTranslator) &&
     !reassignMutation.isPending &&
     !hasMixedTeamsForPmTarget &&
     activeTeamId != null;
@@ -1153,12 +1483,17 @@ function RequestGroupsSection({
           {groups.map((group) => {
             const isExpanded = expandedKey === group.key;
             const groupProjectIds = group.projects.map((project) => project.id);
+            const visibleProjects = showUnfinishedLocalesOnly
+              ? group.projects.filter(hasWorkRemaining)
+              : group.projects;
+            const visibleGroupProjectIds = visibleProjects.map((project) => project.id);
             const requestEditProjectId = group.projects[0]?.id ?? null;
-            const selectedInGroup = groupProjectIds.filter((projectId) =>
+            const selectedInGroup = visibleGroupProjectIds.filter((projectId) =>
               selectedProjectIdSet.has(projectId),
             ).length;
             const allSelectedInGroup =
-              groupProjectIds.length > 0 && selectedInGroup === groupProjectIds.length;
+              visibleGroupProjectIds.length > 0 &&
+              selectedInGroup === visibleGroupProjectIds.length;
             const partiallySelectedInGroup = selectedInGroup > 0 && !allSelectedInGroup;
             const { completedLanguages, totalLanguages, percentWidth, completionLabel } =
               getLanguageCompletionMetrics(group.projects);
@@ -1196,10 +1531,20 @@ function RequestGroupsSection({
                           onChange={() => {
                             const shouldSelect = !allSelectedInGroup;
                             if (adminControls?.onSetProjectSelection) {
+                              if (showUnfinishedLocalesOnly) {
+                                adminControls.onSetProjectSelection(
+                                  visibleGroupProjectIds,
+                                  shouldSelect,
+                                );
+                                return;
+                              }
                               adminControls.onSetProjectSelection(groupProjectIds, shouldSelect);
                               return;
                             }
-                            groupProjectIds.forEach((projectId) => {
+                            (showUnfinishedLocalesOnly
+                              ? visibleGroupProjectIds
+                              : groupProjectIds
+                            ).forEach((projectId) => {
                               const isSelected = selectedProjectIdSet.has(projectId);
                               if (isSelected !== shouldSelect) {
                                 adminControls?.onToggleProjectSelection(projectId);
@@ -1265,7 +1610,7 @@ function RequestGroupsSection({
                             ·
                           </span>
                         ) : null}
-                        {isAdmin ? (
+                        {canReassignPm ? (
                           <button
                             type="button"
                             className="review-projects-page__inline-action review-projects-page__request-assignee"
@@ -1288,21 +1633,10 @@ function RequestGroupsSection({
                     ) : null}
                   </div>
                   <div className="review-projects-page__locales">
-                    <div className="review-projects-page__pill-list">
-                      {group.localeTags.slice(0, 8).map((tag) => (
-                        <LocalePill
-                          key={`${group.key}-${tag}`}
-                          className="review-projects-page__pill review-projects-page__pill--locale"
-                          bcp47Tag={tag}
-                          labelMode="tag"
-                        />
-                      ))}
-                      {group.localeTags.length > 8 ? (
-                        <span className="review-projects-page__muted">
-                          +{group.localeTags.length - 8} more
-                        </span>
-                      ) : null}
-                    </div>
+                    <span className="review-projects-page__request-locale-count">
+                      {group.localeTags.length.toLocaleString()} locale
+                      {group.localeTags.length === 1 ? '' : 's'}
+                    </span>
                   </div>
                   <div className="review-projects-page__progress">
                     <div
@@ -1324,7 +1658,12 @@ function RequestGroupsSection({
                 </div>
                 {isExpanded ? (
                   <div className="review-projects-page__request-projects">
-                    {group.projects.map((project) => {
+                    {visibleProjects.length === 0 ? (
+                      <div className="review-projects-page__request-projects-empty">
+                        No unfinished locales in this request.
+                      </div>
+                    ) : null}
+                    {visibleProjects.map((project) => {
                       const isSelected = selectedProjectIdSet.has(project.id);
                       const {
                         accepted: projectAccepted,
@@ -1364,7 +1703,7 @@ function RequestGroupsSection({
                                 <span className="review-projects-page__muted">No locale</span>
                               )}
                             </div>
-                            {isAdmin ? (
+                            {canReassignTranslator ? (
                               <span
                                 role="button"
                                 tabIndex={0}
@@ -1575,9 +1914,12 @@ export function ReviewProjectsPageView({
   onRequestIdClick,
   canCreate = true,
   adminControls,
+  assignmentControls,
   displayMode = 'list',
   canUseRequestMode = false,
   onDisplayModeChange,
+  showUnfinishedLocalesOnly = false,
+  onShowUnfinishedLocalesOnlyChange,
   expandedRequestKey,
   onExpandedRequestKeyChange,
   reviewProjectsSessionKey,
@@ -1687,6 +2029,11 @@ export function ReviewProjectsPageView({
           showModeToggle={canUseRequestMode}
           displayMode={effectiveDisplayMode}
           onDisplayModeChange={onDisplayModeChange}
+          showUnfinishedToggle={effectiveDisplayMode === 'requests'}
+          unfinishedLocalesOnly={showUnfinishedLocalesOnly}
+          onToggleUnfinishedLocalesOnly={() =>
+            onShowUnfinishedLocalesOnlyChange?.(!showUnfinishedLocalesOnly)
+          }
         />
       ) : null}
       {hasResults && adminControls && adminControls.enabled ? (
@@ -1699,6 +2046,8 @@ export function ReviewProjectsPageView({
           onToggleExpanded={handleToggleRequestGroup}
           onFilterByRequest={handleFilterByRequest}
           adminControls={adminControls}
+          assignmentControls={assignmentControls}
+          showUnfinishedLocalesOnly={showUnfinishedLocalesOnly}
           reviewProjectsSessionKey={reviewProjectsSessionKey}
         />
       ) : (
@@ -1709,6 +2058,7 @@ export function ReviewProjectsPageView({
           totalSize={totalSize}
           getRowRef={getRowRef}
           adminControls={adminControls}
+          assignmentControls={assignmentControls}
           onRequestIdClick={onRequestIdClick}
           reviewProjectsSessionKey={reviewProjectsSessionKey}
         />

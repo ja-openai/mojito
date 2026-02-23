@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -47,6 +48,10 @@ public class TeamWS {
   public record ReplaceTeamUsersResponse(int removedUsersCount, int removedLocalePoolRows) {}
 
   public record TeamUserIdsResponse(List<Long> userIds) {}
+
+  public record TeamUserSummaryRow(Long id, String username, String commonName) {}
+
+  public record TeamUsersResponse(List<TeamUserSummaryRow> users) {}
 
   public record LocalePoolRow(String localeTag, List<Long> translatorUserIds) {}
 
@@ -143,8 +148,18 @@ public class TeamWS {
 
   @GetMapping("/{teamId}/project-managers")
   public TeamUserIdsResponse getProjectManagers(@PathVariable Long teamId) {
-    teamService.assertCurrentUserCanAccessTeam(teamId);
+    teamService.assertCurrentUserCanReadTeam(teamId);
     return new TeamUserIdsResponse(teamService.getTeamUserIdsByRole(teamId, TeamUserRole.PM));
+  }
+
+  @GetMapping("/{teamId}/users")
+  public TeamUsersResponse getTeamUsers(
+      @PathVariable Long teamId, @RequestParam TeamUserRole role) {
+    teamService.assertCurrentUserCanReadTeam(teamId);
+    return new TeamUsersResponse(
+        teamService.getTeamUsersByRole(teamId, role).stream()
+            .map(user -> new TeamUserSummaryRow(user.id(), user.username(), user.commonName()))
+            .toList());
   }
 
   @PutMapping("/{teamId}/project-managers")
@@ -162,7 +177,7 @@ public class TeamWS {
 
   @GetMapping("/{teamId}/pm-pool")
   public TeamUserIdsResponse getPmPool(@PathVariable Long teamId) {
-    teamService.assertCurrentUserCanAccessTeam(teamId);
+    teamService.assertCurrentUserCanReadTeam(teamId);
     return new TeamUserIdsResponse(teamService.getPmPool(teamId));
   }
 
@@ -179,7 +194,7 @@ public class TeamWS {
 
   @GetMapping("/{teamId}/translators")
   public TeamUserIdsResponse getTranslators(@PathVariable Long teamId) {
-    teamService.assertCurrentUserCanAccessTeam(teamId);
+    teamService.assertCurrentUserCanReadTeam(teamId);
     return new TeamUserIdsResponse(
         teamService.getTeamUserIdsByRole(teamId, TeamUserRole.TRANSLATOR));
   }
@@ -201,7 +216,7 @@ public class TeamWS {
 
   @GetMapping("/{teamId}/locale-pools")
   public LocalePoolsResponse getLocalePools(@PathVariable Long teamId) {
-    teamService.assertCurrentUserCanAccessTeam(teamId);
+    teamService.assertCurrentUserCanReadTeam(teamId);
     List<LocalePoolRow> entries =
         teamService.getLocalePools(teamId).stream()
             .map(entry -> new LocalePoolRow(entry.localeTag(), entry.translatorUserIds()))

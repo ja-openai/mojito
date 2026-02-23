@@ -82,6 +82,8 @@ public class TeamService {
   public record UpsertTeamSlackUserMappingEntry(
       Long mojitoUserId, String slackUserId, String slackUsername, String matchSource) {}
 
+  public record TeamUserSummary(Long id, String username, String commonName) {}
+
   private static String normalizeTeamName(String value) {
     return value == null ? "" : value.trim().replaceAll("\\s+", " ");
   }
@@ -109,11 +111,30 @@ public class TeamService {
       return;
     }
     Long currentUserId = getCurrentUserIdOrThrow();
-    boolean canAccess =
-        teamUserRepository.existsByTeam_IdAndUser_IdAndRole(teamId, currentUserId, TeamUserRole.PM);
+    boolean canAccess = isUserInTeamRole(teamId, currentUserId, TeamUserRole.PM);
     if (!canAccess) {
       throw new AccessDeniedException("Team access denied");
     }
+  }
+
+  public void assertCurrentUserCanReadTeam(Long teamId) {
+    if (isCurrentUserAdmin()) {
+      return;
+    }
+    Long currentUserId = getCurrentUserIdOrThrow();
+    boolean canRead =
+        isUserInTeamRole(teamId, currentUserId, TeamUserRole.PM)
+            || isUserInTeamRole(teamId, currentUserId, TeamUserRole.TRANSLATOR);
+    if (!canRead) {
+      throw new AccessDeniedException("Team access denied");
+    }
+  }
+
+  public boolean isUserInTeamRole(Long teamId, Long userId, TeamUserRole role) {
+    if (teamId == null || userId == null || role == null) {
+      return false;
+    }
+    return teamUserRepository.existsByTeam_IdAndUser_IdAndRole(teamId, userId, role);
   }
 
   @Transactional(readOnly = true)
@@ -175,6 +196,8 @@ public class TeamService {
   @Transactional
   public void deleteTeam(Long teamId) {
     Team team = getTeam(teamId);
+    // Soft-delete the team row for auditability/name reuse, but clear dependent roster/config
+    // tables to avoid leaving stale assignments/mappings attached to an inactive team id.
     teamLocalePoolRepository.deleteByTeamId(teamId);
     teamPmPoolRepository.deleteByTeamId(teamId);
     teamSlackUserMappingRepository.deleteByTeamId(teamId);
@@ -192,6 +215,15 @@ public class TeamService {
     return teamUserRepository.findByTeamIdAndRole(teamId, role).stream()
         .map(TeamUser::getUser)
         .map(User::getId)
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<TeamUserSummary> getTeamUsersByRole(Long teamId, TeamUserRole role) {
+    getTeam(teamId);
+    return teamUserRepository.findByTeamIdAndRole(teamId, role).stream()
+        .map(TeamUser::getUser)
+        .map(user -> new TeamUserSummary(user.getId(), user.getUsername(), user.getCommonName()))
         .toList();
   }
 

@@ -231,7 +231,13 @@ export function ReviewProjectsPage() {
   const reviewSessionKey = urlSearchParams.get(REVIEW_PROJECTS_SESSION_QUERY_KEY);
   const queryClient = useQueryClient();
   const isAdmin = user.role === 'ROLE_ADMIN';
+  const isPm = user.role === 'ROLE_PM';
+  const isTranslator = user.role === 'ROLE_TRANSLATOR';
   const canUseRequestMode = isAdmin || user.role === 'ROLE_PM';
+  const assignmentControls = {
+    canReassignPm: isAdmin || isPm,
+    canReassignTranslator: isAdmin || isPm || isTranslator,
+  } as const;
 
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
   const [hasTouchedLocales, setHasTouchedLocales] = useState(false);
@@ -252,6 +258,7 @@ export function ReviewProjectsPage() {
   const [displayMode, setDisplayMode] = useState<'list' | 'requests'>(() =>
     canUseRequestMode ? 'requests' : 'list',
   );
+  const [showUnfinishedLocalesOnly, setShowUnfinishedLocalesOnly] = useState(false);
   const [expandedRequestKey, setExpandedRequestKey] = useState<string | null>(null);
   const [hasHydratedSessionState, setHasHydratedSessionState] = useState(false);
   const hydratedSessionKeyRef = useRef<string | null>(null);
@@ -841,9 +848,12 @@ export function ReviewProjectsPage() {
         onRequestIdClick={handleRequestIdClick}
         canCreate={isAdmin}
         adminControls={adminControls}
+        assignmentControls={assignmentControls}
         displayMode={displayMode}
         canUseRequestMode={canUseRequestMode}
         onDisplayModeChange={setDisplayMode}
+        showUnfinishedLocalesOnly={showUnfinishedLocalesOnly}
+        onShowUnfinishedLocalesOnlyChange={setShowUnfinishedLocalesOnly}
         expandedRequestKey={expandedRequestKey}
         onExpandedRequestKeyChange={setExpandedRequestKey}
         reviewProjectsSessionKey={reviewSessionKey}

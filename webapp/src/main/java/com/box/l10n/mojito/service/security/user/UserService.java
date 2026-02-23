@@ -116,6 +116,18 @@ public class UserService {
   }
 
   public boolean isCurrentUserAdmin() {
+    return hasCurrentUserRole(Role.ROLE_ADMIN);
+  }
+
+  public boolean isCurrentUserPm() {
+    return hasCurrentUserRole(Role.ROLE_PM);
+  }
+
+  public boolean isCurrentUserTranslator() {
+    return hasCurrentUserRole(Role.ROLE_TRANSLATOR);
+  }
+
+  private boolean hasCurrentUserRole(Role expectedRole) {
     Optional<User> currentUser = auditorAwareImpl.getCurrentAuditor();
     if (currentUser.isEmpty()) {
       return false;
@@ -130,7 +142,7 @@ public class UserService {
         .map(Authority::getAuthority)
         .filter(Objects::nonNull)
         .map(this::createRoleFromAuthority)
-        .anyMatch(role -> role == Role.ROLE_ADMIN);
+        .anyMatch(role -> role == expectedRole);
   }
 
   /**

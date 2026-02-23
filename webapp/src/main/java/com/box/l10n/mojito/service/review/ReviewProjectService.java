@@ -787,7 +787,15 @@ public class ReviewProjectService {
                     new IllegalArgumentException(
                         "reviewProject with id: " + projectId + " not found"));
 
-    if (!userService.isCurrentUserAdmin()) {
+    boolean isAdmin = userService.isCurrentUserAdmin();
+    boolean isPm = userService.isCurrentUserPm();
+    boolean isTranslator = userService.isCurrentUserTranslator();
+
+    if (!isAdmin && !isPm && !isTranslator) {
+      throw new AccessDeniedException("Assignment update is not allowed for current role");
+    }
+
+    if (isTranslator) {
       userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
     }
 
@@ -798,6 +806,18 @@ public class ReviewProjectService {
     Team previousTeam = reviewProject.getTeam();
     User previousAssignedPm = reviewProject.getAssignedPmUser();
     User previousAssignedTranslator = reviewProject.getAssignedTranslatorUser();
+
+    validateAssignmentUpdatePermissions(
+        reviewProject,
+        isAdmin,
+        isPm,
+        isTranslator,
+        previousTeam,
+        nextTeam,
+        previousAssignedPm,
+        nextAssignedPm,
+        previousAssignedTranslator,
+        nextAssignedTranslator);
 
     boolean changed =
         !Objects.equals(getEntityId(previousTeam), getEntityId(nextTeam))
@@ -1114,6 +1134,70 @@ public class ReviewProjectService {
   private void requireAdmin() {
     if (!userService.isCurrentUserAdmin()) {
       throw new AccessDeniedException("Admin role required");
+    }
+  }
+
+  private void validateAssignmentUpdatePermissions(
+      ReviewProject reviewProject,
+      boolean isAdmin,
+      boolean isPm,
+      boolean isTranslator,
+      Team previousTeam,
+      Team nextTeam,
+      User previousAssignedPm,
+      User nextAssignedPm,
+      User previousAssignedTranslator,
+      User nextAssignedTranslator) {
+    Long previousTeamId = getEntityId(previousTeam);
+    Long nextTeamId = getEntityId(nextTeam);
+    boolean teamChanged = !Objects.equals(previousTeamId, nextTeamId);
+    boolean pmChanged =
+        !Objects.equals(getEntityId(previousAssignedPm), getEntityId(nextAssignedPm));
+    boolean translatorChanged =
+        !Objects.equals(
+            getEntityId(previousAssignedTranslator), getEntityId(nextAssignedTranslator));
+
+    if (!isAdmin) {
+      if (teamChanged) {
+        throw new AccessDeniedException("Only admins can change assigned team");
+      }
+      if (isTranslator && pmChanged) {
+        throw new AccessDeniedException("Translators can only reassign translator");
+      }
+      if (previousTeamId == null && (pmChanged || translatorChanged)) {
+        throw new AccessDeniedException("Team must be assigned before non-admin reassignment");
+      }
+      if (previousTeamId != null) {
+        if (isPm) {
+          teamService.assertCurrentUserCanAccessTeam(previousTeamId);
+        } else if (isTranslator) {
+          teamService.assertCurrentUserCanReadTeam(previousTeamId);
+        }
+      }
+    }
+
+    Long effectiveTeamId = nextTeamId;
+    if (effectiveTeamId != null) {
+      if (nextAssignedPm != null
+          && !teamService.isUserInTeamRole(
+              effectiveTeamId, nextAssignedPm.getId(), TeamUserRole.PM)) {
+        throw new IllegalArgumentException(
+            "Assigned PM is not a PM member of team "
+                + effectiveTeamId
+                + ": "
+                + nextAssignedPm.getId());
+      }
+      if (nextAssignedTranslator != null
+          && !teamService.isUserInTeamRole(
+              effectiveTeamId, nextAssignedTranslator.getId(), TeamUserRole.TRANSLATOR)) {
+        throw new IllegalArgumentException(
+            "Assigned translator is not a translator member of team "
+                + effectiveTeamId
+                + ": "
+                + nextAssignedTranslator.getId());
+      }
+    } else if (nextAssignedPm != null || nextAssignedTranslator != null) {
+      throw new IllegalArgumentException("Assigned PM/translator requires a team assignment");
     }
   }
 

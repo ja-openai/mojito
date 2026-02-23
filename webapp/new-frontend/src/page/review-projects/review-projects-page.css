@@ -59,6 +59,23 @@
   background: var(--color-surface);
 }
 
+.review-projects-page__summary-toggle {
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-pill);
+  padding: 0.35rem 0.75rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.review-projects-page__summary-toggle.is-active {
+  color: color-mix(in srgb, var(--color-accent) 78%, var(--color-text));
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+}
+
 .review-projects-page__mode-button {
   border: 0;
   background: transparent;
@@ -247,6 +264,12 @@
   gap: 0;
 }
 
+.review-projects-page__request-projects-empty {
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .review-projects-page__request-project-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -314,6 +337,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.review-projects-page__request-locale-count {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .review-projects-page__reassign-modal {
@@ -442,6 +471,10 @@
 }
 
 .review-projects-page__summary-center {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
   justify-self: center;
 }
 
@@ -821,6 +854,12 @@
   gap: var(--space-3);
   color: var(--color-text);
   font-size: var(--font-size-md);
+}
+
+.review-projects-page__list-assignment-inline {
+  flex-wrap: wrap;
+  row-gap: 0;
+  column-gap: var(--space-1);
 }
 
 .review-projects-page__pill-list {
