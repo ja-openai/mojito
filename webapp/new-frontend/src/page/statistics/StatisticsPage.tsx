@@ -77,7 +77,7 @@ function sanitizeTsvCell(value: string | number | null | undefined) {
 export function StatisticsPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
-  const canViewStatistics = isAdmin || user.role === 'ROLE_PM';
+  const canViewStatistics = isAdmin;
 
   const [groupBy, setGroupBy] = useState<IngestionGroupBy>('day');
   const [viewMode, setViewMode] = useState<StatisticsViewMode>('all');

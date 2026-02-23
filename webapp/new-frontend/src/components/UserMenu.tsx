@@ -62,8 +62,7 @@ export function UserMenu() {
   const displayName = user.username || 'Account';
   const roleLabel = formatRole(user.role);
   const isAdmin = user.role === 'ROLE_ADMIN';
-  const isPm = user.role === 'ROLE_PM';
-  const canAccessStatistics = isAdmin || isPm;
+  const canAccessStatistics = isAdmin;
 
   const handleNavigate = (path: string) => {
     setOpen(false);
