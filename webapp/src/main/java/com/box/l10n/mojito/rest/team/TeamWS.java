@@ -37,11 +37,13 @@ public class TeamWS {
     this.slackClients = slackClients;
   }
 
-  public record TeamResponse(Long id, String name) {}
+  public record TeamResponse(Long id, String name, boolean enabled) {}
 
   public record SlackClientIdsResponse(List<String> entries) {}
 
   public record UpsertTeamRequest(String name) {}
+
+  public record UpdateTeamEnabledRequest(Boolean enabled) {}
 
   public record ReplaceUserIdsRequest(List<Long> userIds) {}
 
@@ -117,12 +119,19 @@ public class TeamWS {
   public record SendTeamSlackMentionTestRequest(String slackUserId, String mojitoUsername) {}
 
   @GetMapping
-  public List<TeamResponse> getTeams() {
+  public List<TeamResponse> getTeams(
+      @RequestParam(name = "includeDisabled", required = false, defaultValue = "false")
+          boolean includeDisabled) {
     List<Team> teams =
         teamService.isCurrentUserAdmin()
-            ? teamService.findAll()
+            ? teamService.findAll(includeDisabled)
             : teamService.findCurrentUserTeams();
-    return teams.stream().map(team -> new TeamResponse(team.getId(), team.getName())).toList();
+    return teams.stream()
+        .map(
+            team ->
+                new TeamResponse(
+                    team.getId(), team.getName(), Boolean.TRUE.equals(team.getEnabled())))
+        .toList();
   }
 
   @GetMapping("/slack-clients")
@@ -137,7 +146,7 @@ public class TeamWS {
       teamService.assertCurrentUserCanAccessTeam(teamId);
     }
     Team team = getTeamOr404(teamId);
-    return new TeamResponse(team.getId(), team.getName());
+    return new TeamResponse(team.getId(), team.getName(), Boolean.TRUE.equals(team.getEnabled()));
   }
 
   @PostMapping
@@ -145,7 +154,8 @@ public class TeamWS {
   public TeamResponse createTeam(@RequestBody UpsertTeamRequest request) {
     try {
       Team created = teamService.createTeam(request != null ? request.name() : null);
-      return new TeamResponse(created.getId(), created.getName());
+      return new TeamResponse(
+          created.getId(), created.getName(), Boolean.TRUE.equals(created.getEnabled()));
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
@@ -156,7 +166,22 @@ public class TeamWS {
       @PathVariable Long teamId, @RequestBody UpsertTeamRequest request) {
     try {
       Team updated = teamService.updateTeam(teamId, request != null ? request.name() : null);
-      return new TeamResponse(updated.getId(), updated.getName());
+      return new TeamResponse(
+          updated.getId(), updated.getName(), Boolean.TRUE.equals(updated.getEnabled()));
+    } catch (IllegalArgumentException ex) {
+      throw toStatusException(ex);
+    }
+  }
+
+  @PatchMapping("/{teamId}/enabled")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void updateTeamEnabled(
+      @PathVariable Long teamId, @RequestBody UpdateTeamEnabledRequest request) {
+    try {
+      if (request == null || request.enabled() == null) {
+        throw new IllegalArgumentException("enabled is required");
+      }
+      teamService.updateTeamEnabled(teamId, request.enabled());
     } catch (IllegalArgumentException ex) {
       throw toStatusException(ex);
     }
@@ -169,6 +194,8 @@ public class TeamWS {
       teamService.deleteTeam(teamId);
     } catch (IllegalArgumentException ex) {
       throw toStatusException(ex);
+    } catch (IllegalStateException ex) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getMessage());
     }
   }
 

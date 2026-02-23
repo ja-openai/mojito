@@ -18,7 +18,7 @@ public interface TeamUserRepository extends JpaRepository<TeamUser, Long> {
       from TeamUser vu
       join fetch vu.team v
       where vu.user.id = :userId
-        and v.deleted = false
+        and v.enabled = true
         and vu.role = :role
       order by lower(v.name), v.id
       """)
@@ -63,7 +63,7 @@ public interface TeamUserRepository extends JpaRepository<TeamUser, Long> {
       from TeamUser vu
       join vu.team v
       where vu.user.id = :userId
-        and v.deleted = false
+        and v.enabled = true
       order by lower(v.name), v.id
       """)
   List<UserTeamProjection> findUserTeams(@Param("userId") Long userId);
@@ -74,7 +74,7 @@ public interface TeamUserRepository extends JpaRepository<TeamUser, Long> {
       from TeamUser vu
       join fetch vu.team v
       where vu.user.id = :userId
-        and v.deleted = false
+        and v.enabled = true
       order by lower(v.name), v.id
       """)
   List<TeamUser> findByUserId(@Param("userId") Long userId);
@@ -89,7 +89,7 @@ public interface TeamUserRepository extends JpaRepository<TeamUser, Long> {
       from TeamUser vu
       join vu.team v
       where vu.user.id in :userIds
-        and v.deleted = false
+        and v.enabled = true
       order by vu.user.id, lower(v.name), v.id
       """)
   List<UserTeamByUserProjection> findUserTeamsByUserIds(@Param("userIds") List<Long> userIds);

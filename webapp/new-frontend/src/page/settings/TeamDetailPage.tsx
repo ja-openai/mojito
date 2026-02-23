@@ -28,6 +28,7 @@ import {
   replaceTeamTranslators,
   sendTeamSlackChannelTest,
   sendTeamSlackMentionTest,
+  setTeamEnabled,
   updateTeam,
   updateTeamSlackSettings,
 } from '../../api/teams';
@@ -41,6 +42,8 @@ type StatusNotice = {
   kind: 'success' | 'error';
   message: string;
 };
+
+type TeamDeleteMode = 'disable' | 'hard-delete';
 
 type SlackMappingDraftRow = {
   mojitoUserId: number;
@@ -108,6 +111,7 @@ export function TeamDetailPage() {
   const [translatorStatusNotice, setTranslatorStatusNotice] = useState<StatusNotice | null>(null);
   const [slackStatusNotice, setSlackStatusNotice] = useState<StatusNotice | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [teamDeleteMode, setTeamDeleteMode] = useState<TeamDeleteMode>('disable');
   const [draftSlackEnabled, setDraftSlackEnabled] = useState(false);
   const [draftSlackClientId, setDraftSlackClientId] = useState('');
   const [draftSlackChannelId, setDraftSlackChannelId] = useState('');
@@ -427,6 +431,19 @@ export function TeamDetailPage() {
     onError: (error: Error) => {
       setShowDeleteConfirm(false);
       setStatusNotice({ kind: 'error', message: error.message || 'Failed to delete team.' });
+    },
+  });
+
+  const disableTeamMutation = useMutation({
+    mutationFn: (teamId: number) => setTeamEnabled(teamId, false),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
+      setShowDeleteConfirm(false);
+      void navigate('/settings/admin/teams');
+    },
+    onError: (error: Error) => {
+      setShowDeleteConfirm(false);
+      setStatusNotice({ kind: 'error', message: error.message || 'Failed to disable team.' });
     },
   });
 
@@ -1459,16 +1476,31 @@ export function TeamDetailPage() {
           <button
             type="button"
             className="user-detail-page__delete"
-            onClick={() => setShowDeleteConfirm(true)}
-            disabled={deleteTeamMutation.isPending}
+            onClick={() => {
+              setTeamDeleteMode('disable');
+              setShowDeleteConfirm(true);
+            }}
+            disabled={deleteTeamMutation.isPending || disableTeamMutation.isPending}
           >
-            Delete team
+            Disable
+          </button>
+          <button
+            type="button"
+            className="user-detail-page__delete"
+            onClick={() => {
+              setTeamDeleteMode('hard-delete');
+              setShowDeleteConfirm(true);
+            }}
+            disabled={deleteTeamMutation.isPending || disableTeamMutation.isPending}
+            title="Permanently delete the team if it has no review-project usage"
+          >
+            Delete
           </button>
           {deleteTeamMutation.isError ? (
             <div className="user-detail-page__hint is-error">
               {deleteTeamMutation.error instanceof Error
                 ? deleteTeamMutation.error.message
-                : 'Failed to delete team.'}
+                : 'Failed to disable team.'}
             </div>
           ) : null}
         </div>
@@ -1556,16 +1588,36 @@ export function TeamDetailPage() {
       </Modal>
       <ConfirmModal
         open={showDeleteConfirm}
-        title="Delete team?"
-        body="This will permanently remove the team and its roster/pool assignments."
-        confirmLabel={deleteTeamMutation.isPending ? 'Deleting...' : 'Delete'}
+        title={teamDeleteMode === 'hard-delete' ? 'Delete team?' : 'Disable team?'}
+        body={
+          teamDeleteMode === 'hard-delete'
+            ? 'This permanently deletes the team and its roster/pool/Slack mapping rows. It is only allowed when the team has no review-project usage or assignment history.'
+            : 'This disables the team and hides it from active lists while preserving roster, pool, and Slack mapping data.'
+        }
+        confirmLabel={
+          deleteTeamMutation.isPending || disableTeamMutation.isPending
+            ? teamDeleteMode === 'hard-delete'
+              ? 'Deleting...'
+              : 'Disabling...'
+            : teamDeleteMode === 'hard-delete'
+              ? 'Delete'
+              : 'Disable'
+        }
         cancelLabel="Cancel"
         onCancel={() => setShowDeleteConfirm(false)}
         onConfirm={() => {
-          if (effectiveTeamId == null || deleteTeamMutation.isPending) {
+          if (
+            effectiveTeamId == null ||
+            deleteTeamMutation.isPending ||
+            disableTeamMutation.isPending
+          ) {
             return;
           }
-          deleteTeamMutation.mutate(effectiveTeamId);
+          if (teamDeleteMode === 'hard-delete') {
+            deleteTeamMutation.mutate(effectiveTeamId);
+          } else {
+            disableTeamMutation.mutate(effectiveTeamId);
+          }
         }}
       />
     </div>

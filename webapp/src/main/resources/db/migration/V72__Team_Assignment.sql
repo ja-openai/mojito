@@ -3,7 +3,7 @@ create table team (
     created_date datetime DEFAULT NULL,
     last_modified_date datetime DEFAULT NULL,
     name varchar(255) NOT NULL,
-    deleted bit not null default false,
+    enabled bit not null default true,
     primary key (id)
 );
 

@@ -1,6 +1,7 @@
 export type ApiTeam = {
   id: number;
   name: string;
+  enabled: boolean;
 };
 
 export type ApiTeamUserIdsResponse = {
@@ -102,7 +103,17 @@ const jsonHeaders = {
 };
 
 export async function fetchTeams(): Promise<ApiTeam[]> {
-  const response = await fetch('/api/teams', {
+  return fetchTeamsWithOptions();
+}
+
+export async function fetchTeamsWithOptions(options?: {
+  includeDisabled?: boolean;
+}): Promise<ApiTeam[]> {
+  const params = new URLSearchParams();
+  if (options?.includeDisabled) {
+    params.set('includeDisabled', 'true');
+  }
+  const response = await fetch(`/api/teams${params.size > 0 ? `?${params.toString()}` : ''}`, {
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
   });
@@ -159,6 +170,20 @@ export async function updateTeam(teamId: number, name: string): Promise<ApiTeam>
   }
 
   return (await response.json()) as ApiTeam;
+}
+
+export async function setTeamEnabled(teamId: number, enabled: boolean): Promise<void> {
+  const response = await fetch(`/api/teams/${teamId}/enabled`, {
+    method: 'PATCH',
+    credentials: 'same-origin',
+    headers: jsonHeaders,
+    body: JSON.stringify({ enabled }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to update team');
+  }
 }
 
 export async function deleteTeam(teamId: number): Promise<void> {

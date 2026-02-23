@@ -11,6 +11,8 @@ import com.box.l10n.mojito.entity.security.user.Authority;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.review.ReviewProjectAssignmentHistoryRepository;
+import com.box.l10n.mojito.service.review.ReviewProjectRepository;
 import com.box.l10n.mojito.service.security.user.UserAdminSummaryProjection;
 import com.box.l10n.mojito.service.security.user.UserLocaleRepository;
 import com.box.l10n.mojito.service.security.user.UserLocaleTagProjection;
@@ -49,6 +51,8 @@ public class TeamService {
   private final UserRepository userRepository;
   private final UserLocaleRepository userLocaleRepository;
   private final LocaleService localeService;
+  private final ReviewProjectRepository reviewProjectRepository;
+  private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository;
   private final AuditorAwareImpl auditorAwareImpl;
   private final SlackClients slackClients;
 
@@ -61,6 +65,8 @@ public class TeamService {
       UserRepository userRepository,
       UserLocaleRepository userLocaleRepository,
       LocaleService localeService,
+      ReviewProjectRepository reviewProjectRepository,
+      ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
       AuditorAwareImpl auditorAwareImpl,
       SlackClients slackClients) {
     this.teamRepository = teamRepository;
@@ -71,6 +77,8 @@ public class TeamService {
     this.userRepository = userRepository;
     this.userLocaleRepository = userLocaleRepository;
     this.localeService = localeService;
+    this.reviewProjectRepository = reviewProjectRepository;
+    this.reviewProjectAssignmentHistoryRepository = reviewProjectAssignmentHistoryRepository;
     this.auditorAwareImpl = auditorAwareImpl;
     this.slackClients = slackClients;
   }
@@ -173,7 +181,14 @@ public class TeamService {
 
   @Transactional(readOnly = true)
   public List<Team> findAll() {
-    return teamRepository.findAllOrderedNotDeleted();
+    return teamRepository.findAllOrderedEnabled();
+  }
+
+  @Transactional(readOnly = true)
+  public List<Team> findAll(boolean includeDisabled) {
+    return includeDisabled
+        ? teamRepository.findAllOrdered()
+        : teamRepository.findAllOrderedEnabled();
   }
 
   @Transactional(readOnly = true)
@@ -188,7 +203,7 @@ public class TeamService {
   @Transactional(readOnly = true)
   public Team getTeam(Long teamId) {
     return teamRepository
-        .findByIdAndDeletedFalse(teamId)
+        .findByIdAndEnabledTrue(teamId)
         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + teamId));
   }
 
@@ -198,7 +213,7 @@ public class TeamService {
     if (name.isEmpty()) {
       throw new IllegalArgumentException("Team name is required");
     }
-    if (teamRepository.findByNameIgnoreCaseAndDeletedFalse(name).isPresent()) {
+    if (teamRepository.findByNameIgnoreCaseAndEnabledTrue(name).isPresent()) {
       throw new IllegalArgumentException("Team already exists: " + name);
     }
 
@@ -216,7 +231,7 @@ public class TeamService {
     }
 
     teamRepository
-        .findByNameIgnoreCaseAndDeletedFalse(name)
+        .findByNameIgnoreCaseAndEnabledTrue(name)
         .filter(existing -> !existing.getId().equals(teamId))
         .ifPresent(
             existing -> {
@@ -230,17 +245,38 @@ public class TeamService {
   @Transactional
   public void deleteTeam(Long teamId) {
     Team team = getTeam(teamId);
-    // Soft-delete the team row for auditability/name reuse, but clear dependent roster/config
-    // tables to avoid leaving stale assignments/mappings attached to an inactive team id.
+    hardDeleteTeamIfUnused(team);
+  }
+
+  @Transactional
+  public void updateTeamEnabled(Long teamId, boolean enabled) {
+    if (enabled) {
+      throw new IllegalArgumentException("Re-enabling teams is not supported");
+    }
+
+    Team team = getTeam(teamId);
+    // Disable the team row for auditability/name reuse while preserving team roster/pool/mapping
+    // rows so the team can be analyzed or restored later if needed.
+    String name = "disabled__" + System.currentTimeMillis() + "__" + team.getName();
+    team.setName(StringUtils.abbreviate(name, Team.NAME_MAX_LENGTH));
+    team.setEnabled(false);
+    teamRepository.save(team);
+  }
+
+  private void hardDeleteTeamIfUnused(Team team) {
+    Long teamId = team.getId();
+    if (reviewProjectRepository.existsByTeam_Id(teamId)
+        || reviewProjectAssignmentHistoryRepository.existsByTeam_Id(teamId)) {
+      throw new IllegalStateException(
+          "Team has review-project usage and cannot be hard deleted: " + teamId);
+    }
+
     teamLocalePoolRepository.deleteByTeamId(teamId);
     teamPmPoolRepository.deleteByTeamId(teamId);
     teamSlackUserMappingRepository.deleteByTeamId(teamId);
     teamUserRepository.deleteByTeamIdAndRole(teamId, TeamUserRole.PM);
     teamUserRepository.deleteByTeamIdAndRole(teamId, TeamUserRole.TRANSLATOR);
-    String name = "deleted__" + System.currentTimeMillis() + "__" + team.getName();
-    team.setName(StringUtils.abbreviate(name, Team.NAME_MAX_LENGTH));
-    team.setDeleted(true);
-    teamRepository.save(team);
+    teamRepository.delete(team);
   }
 
   @Transactional(readOnly = true)

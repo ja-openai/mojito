@@ -1283,7 +1283,7 @@ public class ReviewProjectService {
       return null;
     }
     return teamRepository
-        .findByIdAndDeletedFalse(teamId)
+        .findByIdAndEnabledTrue(teamId)
         .orElseThrow(() -> new IllegalArgumentException("Unknown team: " + teamId));
   }
 

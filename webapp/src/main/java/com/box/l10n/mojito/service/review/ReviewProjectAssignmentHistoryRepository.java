@@ -11,6 +11,8 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 public interface ReviewProjectAssignmentHistoryRepository
     extends JpaRepository<ReviewProjectAssignmentHistory, Long> {
 
+  boolean existsByTeam_Id(Long teamId);
+
   @Query(
       """
       select h

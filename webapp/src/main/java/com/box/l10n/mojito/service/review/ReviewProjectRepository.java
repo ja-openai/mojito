@@ -12,6 +12,8 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 @RepositoryRestResource(exported = false)
 public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Long> {
 
+  boolean existsByTeam_Id(Long teamId);
+
   @Query(
       """
       select new com.box.l10n.mojito.service.review.ReviewProjectDetail(

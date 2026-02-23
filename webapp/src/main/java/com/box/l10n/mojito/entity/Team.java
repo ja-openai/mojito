@@ -16,8 +16,8 @@ public class Team extends AuditableEntity {
   @Column(name = "name", nullable = false, length = NAME_MAX_LENGTH)
   private String name;
 
-  @Column(name = "deleted", nullable = false)
-  private Boolean deleted = false;
+  @Column(name = "enabled", nullable = false)
+  private Boolean enabled = true;
 
   @Column(name = "slack_notifications_enabled", nullable = false)
   private Boolean slackNotificationsEnabled = false;
@@ -36,12 +36,12 @@ public class Team extends AuditableEntity {
     this.name = name;
   }
 
-  public Boolean getDeleted() {
-    return deleted;
+  public Boolean getEnabled() {
+    return enabled;
   }
 
-  public void setDeleted(Boolean deleted) {
-    this.deleted = deleted;
+  public void setEnabled(Boolean enabled) {
+    this.enabled = enabled;
   }
 
   public Boolean getSlackNotificationsEnabled() {

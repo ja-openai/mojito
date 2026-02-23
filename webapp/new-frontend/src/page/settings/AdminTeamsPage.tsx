@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 
-import { type ApiTeam, createTeam, fetchTeams } from '../../api/teams';
+import { type ApiTeam, createTeam, fetchTeamsWithOptions } from '../../api/teams';
 import { Modal } from '../../components/Modal';
 import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
@@ -14,6 +14,8 @@ type StatusNotice = {
   kind: 'success' | 'error';
   message: string;
 };
+
+type EnabledFilter = 'enabled' | 'disabled' | 'all';
 
 const normalizeTeamName = (value: string) => value.trim().replace(/\s+/g, ' ');
 
@@ -37,6 +39,7 @@ export function AdminTeamsPage() {
   const canAccess = isAdmin || isPm;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>('enabled');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTeamDraft, setNewTeamDraft] = useState('');
   const [createModalError, setCreateModalError] = useState<string | null>(null);
@@ -44,7 +47,7 @@ export function AdminTeamsPage() {
 
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams'],
-    queryFn: fetchTeams,
+    queryFn: () => fetchTeamsWithOptions({ includeDisabled: isAdmin }),
     enabled: canAccess,
     staleTime: 30_000,
   });
@@ -71,7 +74,8 @@ export function AdminTeamsPage() {
   const teamRows = useMemo(
     () =>
       sortedTeams.map((team) => {
-        const searchText = `${team.id} ${team.name}`.toLowerCase();
+        const searchText =
+          `${team.id} ${team.name} ${team.enabled ? 'enabled' : 'disabled'}`.toLowerCase();
         return {
           team,
           searchText,
@@ -86,9 +90,15 @@ export function AdminTeamsPage() {
       if (normalizedSearch && !row.searchText.includes(normalizedSearch)) {
         return false;
       }
+      if (enabledFilter === 'enabled' && row.team.enabled !== true) {
+        return false;
+      }
+      if (enabledFilter === 'disabled' && row.team.enabled !== false) {
+        return false;
+      }
       return true;
     });
-  }, [normalizedSearch, teamRows]);
+  }, [enabledFilter, normalizedSearch, teamRows]);
 
   if (!canAccess) {
     return <Navigate to="/repositories" replace />;
@@ -124,6 +134,20 @@ export function AdminTeamsPage() {
               placeholder="Search teams"
               className="team-admin-page__search"
             />
+            {isAdmin ? (
+              <label className="team-admin-page__filter">
+                <span className="team-admin-page__filter-label">Status</span>
+                <select
+                  className="settings-input team-admin-page__filter-select"
+                  value={enabledFilter}
+                  onChange={(event) => setEnabledFilter(event.target.value as EnabledFilter)}
+                >
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
+                  <option value="all">All</option>
+                </select>
+              </label>
+            ) : null}
             {isAdmin ? (
               <button
                 type="button"
@@ -165,6 +189,7 @@ export function AdminTeamsPage() {
               <div className="team-admin-page__table-header">
                 <div className="team-admin-page__cell">ID</div>
                 <div className="team-admin-page__cell">Team</div>
+                <div className="team-admin-page__cell">Status</div>
                 <div className="team-admin-page__cell team-admin-page__cell--actions">Actions</div>
               </div>
               {filteredTeamRows.map(({ team }) => {
@@ -181,9 +206,12 @@ export function AdminTeamsPage() {
                         <span className="team-admin-page__name-text">{team.name}</span>
                       </div>
                     </div>
+                    <div className="team-admin-page__cell team-admin-page__cell--muted">
+                      {team.enabled ? 'Enabled' : 'Disabled'}
+                    </div>
                     <div className="team-admin-page__cell team-admin-page__cell--actions">
                       <div className="team-admin-page__actions">
-                        {isAdmin ? (
+                        {isAdmin && team.enabled ? (
                           <Link
                             className="team-admin-page__row-action-link"
                             to={`/settings/admin/teams/${team.id}`}
@@ -191,9 +219,13 @@ export function AdminTeamsPage() {
                             Edit team
                           </Link>
                         ) : null}
-                        <Link className="team-admin-page__row-action-link" to={poolUrl}>
-                          Edit pools
-                        </Link>
+                        {team.enabled ? (
+                          <Link className="team-admin-page__row-action-link" to={poolUrl}>
+                            Edit pools
+                          </Link>
+                        ) : (
+                          <span className="team-admin-page__row-action-muted">Disabled</span>
+                        )}
                       </div>
                     </div>
                   </div>

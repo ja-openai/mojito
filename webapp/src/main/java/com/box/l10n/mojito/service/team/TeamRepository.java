@@ -15,19 +15,27 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
       """
       select v
       from Team v
-      where v.deleted = false
+      where v.enabled = true
       order by lower(v.name), v.id
       """)
-  List<Team> findAllOrderedNotDeleted();
+  List<Team> findAllOrderedEnabled();
 
-  Optional<Team> findByIdAndDeletedFalse(Long id);
+  @Query(
+      """
+      select v
+      from Team v
+      order by lower(v.name), v.id
+      """)
+  List<Team> findAllOrdered();
+
+  Optional<Team> findByIdAndEnabledTrue(Long id);
 
   @Query(
       """
       select v
       from Team v
       where lower(v.name) = lower(:name)
-        and v.deleted = false
+        and v.enabled = true
       """)
-  Optional<Team> findByNameIgnoreCaseAndDeletedFalse(@Param("name") String name);
+  Optional<Team> findByNameIgnoreCaseAndEnabledTrue(@Param("name") String name);
 }
