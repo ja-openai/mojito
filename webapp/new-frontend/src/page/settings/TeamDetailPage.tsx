@@ -1215,14 +1215,14 @@ export function TeamDetailPage() {
               buttonAriaLabel="Select translators"
               customActions={[
                 {
-                  label: showAllTranslatorUsers ? 'Role only' : 'All team users',
+                  label: showAllTranslatorUsers ? 'Role only' : 'All users',
                   onClick: () => {
                     setShowAllTranslatorUsers((current) => !current);
                     setTranslatorStatusNotice(null);
                   },
                   ariaLabel: showAllTranslatorUsers
                     ? 'Show role filtered users only'
-                    : 'Show all team users',
+                    : 'Show all users',
                 },
               ]}
             />
@@ -1278,14 +1278,12 @@ export function TeamDetailPage() {
                 buttonAriaLabel="Select project managers"
                 customActions={[
                   {
-                    label: showAllPmUsers ? 'Role only' : 'All team users',
+                    label: showAllPmUsers ? 'Role only' : 'All users',
                     onClick: () => {
                       setShowAllPmUsers((current) => !current);
                       setPmStatusNotice(null);
                     },
-                    ariaLabel: showAllPmUsers
-                      ? 'Show role filtered users only'
-                      : 'Show all team users',
+                    ariaLabel: showAllPmUsers ? 'Show role filtered users only' : 'Show all users',
                   },
                 ]}
                 summaryFormatter={({ options, selectedValues }) => {

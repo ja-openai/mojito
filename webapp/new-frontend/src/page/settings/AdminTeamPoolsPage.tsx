@@ -1011,14 +1011,14 @@ export function AdminTeamPoolsPage() {
                     buttonAriaLabel="Select translators for assignments"
                     customActions={[
                       {
-                        label: showAllTeamUsers ? 'Role only' : 'All team users',
+                        label: showAllTeamUsers ? 'Role only' : 'All users',
                         onClick: () => {
                           setShowAllTeamUsers((current) => !current);
                           setStatusNotice(null);
                         },
                         ariaLabel: showAllTeamUsers
                           ? 'Show role filtered users only'
-                          : 'Show all team users',
+                          : 'Show all users',
                       },
                     ]}
                   />
