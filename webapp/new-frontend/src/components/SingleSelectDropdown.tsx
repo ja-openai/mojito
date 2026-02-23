@@ -9,6 +9,13 @@ export type SingleSelectOption<T extends string | number> = {
   label: string;
 };
 
+export type SingleSelectFooterAction = {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  closeOnClick?: boolean;
+};
+
 type Props<T extends string | number> = {
   label: string;
   options: Array<SingleSelectOption<T>>;
@@ -24,6 +31,7 @@ type Props<T extends string | number> = {
   noneLabel?: string;
   searchable?: boolean;
   getOptionClassName?: (option: SingleSelectOption<T>) => string | undefined;
+  footerAction?: SingleSelectFooterAction | null;
 };
 
 export function SingleSelectDropdown<T extends string | number>({
@@ -41,6 +49,7 @@ export function SingleSelectDropdown<T extends string | number>({
   noneLabel,
   searchable = true,
   getOptionClassName,
+  footerAction = null,
 }: Props<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
@@ -86,6 +95,8 @@ export function SingleSelectDropdown<T extends string | number>({
 
   const filterInputPlaceholder = searchPlaceholder ?? `Filter ${label.toLowerCase()}`;
   const emptyLabel = noResultsLabel ?? 'No matches';
+  const hasAnyPanelContent =
+    normalizedOptions.length > 0 || noneLabel != null || footerAction != null;
 
   return (
     <div
@@ -108,7 +119,7 @@ export function SingleSelectDropdown<T extends string | number>({
       </button>
       {isOpen ? (
         <div className="chip-dropdown__panel" role="menu">
-          {normalizedOptions.length || noneLabel ? (
+          {hasAnyPanelContent ? (
             <>
               {normalizedOptions.length && searchable ? (
                 <input
@@ -118,6 +129,21 @@ export function SingleSelectDropdown<T extends string | number>({
                   placeholder={filterInputPlaceholder}
                   className="multi-select-chip__search"
                 />
+              ) : null}
+              {footerAction ? (
+                <button
+                  type="button"
+                  className="single-select-dropdown__footer-action single-select-dropdown__footer-action--top"
+                  onClick={() => {
+                    footerAction.onClick();
+                    if (footerAction.closeOnClick) {
+                      setIsOpen(false);
+                    }
+                  }}
+                  disabled={footerAction.disabled}
+                >
+                  {footerAction.label}
+                </button>
               ) : null}
               <div className="single-select-dropdown__options">
                 {noneLabel ? (
