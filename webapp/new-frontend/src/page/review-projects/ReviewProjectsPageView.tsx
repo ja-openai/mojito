@@ -11,6 +11,7 @@ import {
   REVIEW_PROJECT_STATUS_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
   updateReviewProjectAssignment,
+  updateReviewProjectRequestPmAssignment,
 } from '../../api/review-projects';
 import {
   fetchTeamLocalePools,
@@ -1412,17 +1413,13 @@ function RequestGroupsSection({
         return;
       }
 
-      for (const project of reassignTarget.projects) {
-        if ((project.assignedPmUserId ?? null) === (reassignDraftUserId ?? null)) {
-          continue;
-        }
-        await updateReviewProjectAssignment(project.id, {
-          teamId: project.teamId,
-          assignedPmUserId: reassignDraftUserId,
-          assignedTranslatorUserId: project.assignedTranslatorUserId,
-          note: null,
-        });
+      if (reassignTarget.requestId == null) {
+        throw new Error('Request ID is required for PM reassignment');
       }
+      await updateReviewProjectRequestPmAssignment(reassignTarget.requestId, {
+        assignedPmUserId: reassignDraftUserId,
+        note: null,
+      });
     },
     onSuccess: async () => {
       setReassignError(null);
@@ -1617,9 +1614,11 @@ function RequestGroupsSection({
                             data-no-toggle="true"
                             onClick={(event) => {
                               event.stopPropagation();
-                              openPmReassign(group);
+                              if (group.requestId != null) {
+                                openPmReassign(group);
+                              }
                             }}
-                            disabled={reassignMutation.isPending}
+                            disabled={reassignMutation.isPending || group.requestId == null}
                             title="Reassign PM for this request"
                           >
                             PM {group.assignedPmUsername?.trim() ? group.assignedPmUsername : '—'}

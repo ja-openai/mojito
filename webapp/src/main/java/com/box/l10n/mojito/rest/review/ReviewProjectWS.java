@@ -139,6 +139,18 @@ public class ReviewProjectWS {
     return toDetailResponse(projectDetail);
   }
 
+  @PostMapping("/review-project-requests/{requestId}/assignment/pm")
+  public AdminBatchActionResponse updateReviewProjectRequestPmAssignment(
+      @PathVariable Long requestId,
+      @RequestBody UpdateReviewProjectRequestPmAssignmentRequest request) {
+    int affected =
+        reviewProjectService.updateRequestAssignedPm(
+            requestId,
+            request != null ? request.assignedPmUserId() : null,
+            request != null ? request.note() : null);
+    return new AdminBatchActionResponse(affected);
+  }
+
   @GetMapping("/review-projects/{projectId}/assignment-history")
   public ReviewProjectAssignmentHistoryResponse getReviewProjectAssignmentHistory(
       @PathVariable Long projectId) {
@@ -225,6 +237,8 @@ public class ReviewProjectWS {
 
   public record UpdateReviewProjectAssignmentRequest(
       Long teamId, Long assignedPmUserId, Long assignedTranslatorUserId, String note) {}
+
+  public record UpdateReviewProjectRequestPmAssignmentRequest(Long assignedPmUserId, String note) {}
 
   public record ReviewProjectAssignmentHistoryResponse(List<Entry> entries) {
     public record Entry(

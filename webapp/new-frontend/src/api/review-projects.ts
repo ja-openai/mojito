@@ -343,6 +343,28 @@ export const updateReviewProjectAssignment = async (
   return (await response.json()) as ApiReviewProjectDetail;
 };
 
+export const updateReviewProjectRequestPmAssignment = async (
+  requestId: number,
+  payload: {
+    assignedPmUserId?: number | null;
+    note?: string | null;
+  },
+): Promise<AdminBatchActionResponse> => {
+  const response = await fetch(`/api/review-project-requests/${requestId}/assignment/pm`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload ?? {}),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to update request PM assignment');
+  }
+
+  return (await response.json()) as AdminBatchActionResponse;
+};
+
 export const fetchReviewProjectAssignmentHistory = async (
   projectId: number,
 ): Promise<ApiReviewProjectAssignmentHistoryResponse> => {

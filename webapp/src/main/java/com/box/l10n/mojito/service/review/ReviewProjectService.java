@@ -856,6 +856,83 @@ public class ReviewProjectService {
     return getProjectDetail(projectId);
   }
 
+  @Transactional
+  public int updateRequestAssignedPm(Long requestId, Long assignedPmUserId, String note) {
+    if (requestId == null) {
+      throw new IllegalArgumentException("requestId is required");
+    }
+
+    boolean isAdmin = userService.isCurrentUserAdmin();
+    boolean isPm = userService.isCurrentUserPm();
+    if (!isAdmin && !isPm) {
+      throw new AccessDeniedException("Only admins or PMs can reassign PM for a request");
+    }
+
+    List<ReviewProject> projects = reviewProjectRepository.findByRequestIdWithAssignment(requestId);
+    if (projects.isEmpty()) {
+      throw new IllegalArgumentException("Review request not found: " + requestId);
+    }
+
+    ReviewProjectRequest request = projects.get(0).getReviewProjectRequest();
+    User nextAssignedPm = resolveUser(assignedPmUserId, "assignedPmUser");
+
+    Set<Long> teamIds =
+        projects.stream()
+            .map(ReviewProject::getTeam)
+            .map(this::getEntityId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    if (teamIds.size() != 1) {
+      throw new IllegalArgumentException(
+          "Request PM reassignment requires exactly one team across all projects");
+    }
+    Long teamId = teamIds.iterator().next();
+    if (isPm) {
+      teamService.assertCurrentUserCanAccessTeam(teamId);
+    }
+    if (nextAssignedPm != null
+        && !teamService.isUserInTeamRole(teamId, nextAssignedPm.getId(), TeamUserRole.PM)) {
+      throw new IllegalArgumentException(
+          "Assigned PM is not a PM member of team " + teamId + ": " + nextAssignedPm.getId());
+    }
+
+    int changedCount = 0;
+    for (ReviewProject project : projects) {
+      User previousAssignedPm = project.getAssignedPmUser();
+      if (Objects.equals(getEntityId(previousAssignedPm), getEntityId(nextAssignedPm))) {
+        continue;
+      }
+      project.setAssignedPmUser(nextAssignedPm);
+      reviewProjectRepository.save(project);
+
+      boolean hadAssignment =
+          project.getTeam() != null
+              || previousAssignedPm != null
+              || project.getAssignedTranslatorUser() != null;
+      boolean hasAssignment =
+          project.getTeam() != null
+              || project.getAssignedPmUser() != null
+              || project.getAssignedTranslatorUser() != null;
+      ReviewProjectAssignmentEventType eventType;
+      if (!hadAssignment && hasAssignment) {
+        eventType = ReviewProjectAssignmentEventType.ASSIGNED;
+      } else if (hadAssignment && !hasAssignment) {
+        eventType = ReviewProjectAssignmentEventType.UNASSIGNED;
+      } else {
+        eventType = ReviewProjectAssignmentEventType.REASSIGNED;
+      }
+      recordAssignmentHistory(project, eventType, note);
+      changedCount++;
+    }
+
+    if (changedCount > 0) {
+      teamSlackNotificationService.sendReviewProjectRequestAssignmentNotification(
+          request, projects);
+    }
+
+    return changedCount;
+  }
+
   @Transactional(readOnly = true)
   public List<ReviewProjectAssignmentHistory> getProjectAssignmentHistory(Long projectId) {
     if (!reviewProjectRepository.existsById(projectId)) {

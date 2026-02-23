@@ -56,6 +56,20 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
       """)
   List<Long> findRequestIdsByProjectIds(@Param("projectIds") List<Long> projectIds);
 
+  @Query(
+      """
+      select rp
+      from ReviewProject rp
+      join fetch rp.reviewProjectRequest request
+      left join fetch rp.team
+      left join fetch rp.assignedPmUser
+      left join fetch rp.assignedTranslatorUser
+      left join fetch rp.locale
+      where request.id = :requestId
+      order by rp.id
+      """)
+  List<ReviewProject> findByRequestIdWithAssignment(@Param("requestId") Long requestId);
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       """

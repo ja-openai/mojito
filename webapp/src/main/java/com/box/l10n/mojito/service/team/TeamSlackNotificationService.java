@@ -102,12 +102,25 @@ public class TeamSlackNotificationService {
 
   public void sendReviewProjectCreateRequestNotification(
       ReviewProjectRequest reviewProjectRequest, List<ReviewProject> createdProjects) {
-    if (reviewProjectRequest == null || createdProjects == null || createdProjects.isEmpty()) {
+    sendReviewProjectRequestSummaryNotification(reviewProjectRequest, createdProjects, "create");
+  }
+
+  public void sendReviewProjectRequestAssignmentNotification(
+      ReviewProjectRequest reviewProjectRequest, List<ReviewProject> requestProjects) {
+    sendReviewProjectRequestSummaryNotification(
+        reviewProjectRequest, requestProjects, "assignment");
+  }
+
+  private void sendReviewProjectRequestSummaryNotification(
+      ReviewProjectRequest reviewProjectRequest,
+      List<ReviewProject> projectsInput,
+      String context) {
+    if (reviewProjectRequest == null || projectsInput == null || projectsInput.isEmpty()) {
       return;
     }
 
     Team team =
-        createdProjects.stream()
+        projectsInput.stream()
             .map(ReviewProject::getTeam)
             .filter(t -> t != null && t.getId() != null)
             .findFirst()
@@ -133,7 +146,7 @@ public class TeamSlackNotificationService {
     }
 
     List<User> assignedUsers = new ArrayList<>();
-    for (ReviewProject project : createdProjects) {
+    for (ReviewProject project : projectsInput) {
       if (project == null) {
         continue;
       }
@@ -157,7 +170,7 @@ public class TeamSlackNotificationService {
 
     String text =
         buildReviewProjectCreateRequestMessage(
-            reviewProjectRequest, createdProjects, mappingsByUserId);
+            reviewProjectRequest, projectsInput, mappingsByUserId);
     if (isBlank(text)) {
       return;
     }
@@ -169,7 +182,8 @@ public class TeamSlackNotificationService {
       slackClient.sendInstantMessage(message);
     } catch (SlackClientException ex) {
       logger.warn(
-          "Failed to send review project create Slack notification for request {} team {}: {}",
+          "Failed to send review project {} Slack notification for request {} team {}: {}",
+          context,
           reviewProjectRequest.getId(),
           team.getId(),
           ex.getMessage(),
