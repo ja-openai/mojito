@@ -208,6 +208,13 @@
   font-size: var(--font-size-xs);
 }
 
+.review-projects-page__request-meta-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
 .review-projects-page__request-projects {
   margin-top: var(--space-3);
   border-top: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
@@ -228,7 +235,7 @@
 
 .review-projects-page__request-project-link {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 11rem) auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
@@ -277,10 +284,10 @@
   white-space: nowrap;
 }
 
-.review-projects-page__request-project-assignee {
-  grid-column: 1 / -1;
+.review-projects-page__request-project-translator {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+  justify-self: start;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

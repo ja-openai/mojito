@@ -1017,12 +1017,21 @@ function RequestGroupsSection({
                   </div>
                   <div className="review-projects-page__meta">
                     {group.dueDate ? <span>Due {formatDateTime(group.dueDate)}</span> : null}
-                    <span className="review-projects-page__request-assignee">
-                      PM {group.assignedPmUsername?.trim() ? group.assignedPmUsername : '—'}
-                    </span>
-                    {group.createdByUsername ? (
-                      <span className="review-projects-page__request-created-by">
-                        by {group.createdByUsername}
+                    {group.createdByUsername || group.assignedPmUsername ? (
+                      <span className="review-projects-page__request-meta-inline">
+                        {group.createdByUsername ? (
+                          <span className="review-projects-page__request-created-by">
+                            by {group.createdByUsername}
+                          </span>
+                        ) : null}
+                        {group.createdByUsername && group.assignedPmUsername ? (
+                          <span className="review-projects-page__request-dot" aria-hidden="true">
+                            ·
+                          </span>
+                        ) : null}
+                        <span className="review-projects-page__request-assignee">
+                          PM {group.assignedPmUsername?.trim() ? group.assignedPmUsername : '—'}
+                        </span>
                       </span>
                     ) : null}
                   </div>
@@ -1098,16 +1107,15 @@ function RequestGroupsSection({
                                     {resolveLocaleDisplayName(project.localeTag) ||
                                       project.localeTag}
                                   </span>
-                                  <span className="review-projects-page__request-project-assignee">
-                                    Translator:{' '}
-                                    {project.assignedTranslatorUsername?.trim()
-                                      ? project.assignedTranslatorUsername
-                                      : '—'}
-                                  </span>
                                 </>
                               ) : (
                                 <span className="review-projects-page__muted">No locale</span>
                               )}
+                            </div>
+                            <div className="review-projects-page__request-project-translator">
+                              {project.assignedTranslatorUsername?.trim()
+                                ? project.assignedTranslatorUsername
+                                : '—'}
                             </div>
                             <div className="review-projects-page__request-project-counts">
                               <CountsInline
