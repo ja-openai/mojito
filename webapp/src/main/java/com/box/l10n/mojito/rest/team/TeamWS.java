@@ -1,14 +1,14 @@
 package com.box.l10n.mojito.rest.team;
 
+import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamUserRole;
+import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.team.TeamService;
 import com.box.l10n.mojito.slack.SlackClient;
 import com.box.l10n.mojito.slack.SlackClientException;
 import com.box.l10n.mojito.slack.SlackClients;
-import com.box.l10n.mojito.slack.request.Channel;
 import com.box.l10n.mojito.slack.request.Message;
-import com.box.l10n.mojito.slack.request.User;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -107,14 +107,7 @@ public class TeamWS {
       int addedUsersCount,
       int mappingsUpsertedCount) {}
 
-  public record TeamSlackChannelMemberRow(
-      String slackUserId, String slackUsername, String displayName, String email) {}
-
-  public record TeamSlackChannelMembersResponse(
-      String slackClientId,
-      String slackChannelId,
-      String slackChannelName,
-      List<TeamSlackChannelMemberRow> entries) {}
+  public record StartSlackChannelMembersRefreshResponse(long pollableTaskId) {}
 
   public record SendTeamSlackMentionTestRequest(String slackUserId, String mojitoUsername) {}
 
@@ -420,61 +413,19 @@ public class TeamWS {
     }
   }
 
-  @GetMapping("/{teamId}/slack-channel-members")
-  public TeamSlackChannelMembersResponse getTeamSlackChannelMembers(@PathVariable Long teamId) {
+  @PostMapping("/{teamId}/slack-channel-members/refresh")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public StartSlackChannelMembersRefreshResponse startSlackChannelMembersRefresh(
+      @PathVariable Long teamId,
+      @RequestParam(name = "includeProfiles", defaultValue = "true") boolean includeProfiles) {
     assertCurrentUserIsAdmin();
-
-    TeamService.TeamSlackSettings settings = teamService.getTeamSlackSettings(teamId);
-    String slackClientId = settings.slackClientId();
-    String channelId = settings.slackChannelId();
-    if (slackClientId == null || slackClientId.isBlank()) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Team Slack client ID is not configured");
-    }
-    if (channelId == null || channelId.isBlank()) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Team Slack channel ID is not configured");
-    }
-
-    SlackClient slackClient = slackClients.getById(slackClientId);
-    if (slackClient == null) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Unknown Slack client ID in team settings: " + slackClientId);
-    }
-
     try {
-      String channelName = null;
-      try {
-        Channel channel = slackClient.getConversationById(channelId);
-        channelName = channel != null ? channel.getName() : null;
-      } catch (SlackClientException ex) {
-        // Keep member listing usable even if channel metadata lookup fails (e.g. missing scope).
-      }
-
-      List<TeamSlackChannelMemberRow> entries =
-          slackClient.getConversationMemberIds(channelId).stream()
-              .distinct()
-              .sorted()
-              .map(
-                  memberId -> {
-                    try {
-                      User user = slackClient.getUserById(memberId);
-                      String username = user != null ? user.getName() : null;
-                      String displayName = user != null ? user.getReal_name() : null;
-                      String email = user != null ? user.getEmail() : null;
-                      return new TeamSlackChannelMemberRow(memberId, username, displayName, email);
-                    } catch (SlackClientException ex) {
-                      return new TeamSlackChannelMemberRow(memberId, null, null, null);
-                    }
-                  })
-              .toList();
-
-      return new TeamSlackChannelMembersResponse(slackClientId, channelId, channelName, entries);
-    } catch (SlackClientException ex) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST,
-          ex.getMessage() != null ? ex.getMessage() : "Failed to load Slack channel members",
-          ex);
+      PollableFuture<Void> pollableFuture =
+          teamService.refreshSlackConversationMembersAsync(
+              teamId, includeProfiles, PollableTask.INJECT_CURRENT_TASK);
+      return new StartSlackChannelMembersRefreshResponse(pollableFuture.getPollableTask().getId());
+    } catch (IllegalArgumentException ex) {
+      throw toStatusException(ex);
     }
   }
 

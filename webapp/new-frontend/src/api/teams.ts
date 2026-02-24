@@ -1,3 +1,5 @@
+import { isTransientHttpError, poll } from '../utils/poller';
+
 export type ApiTeam = {
   id: number;
   name: string;
@@ -101,6 +103,33 @@ export type ApiSlackClientIdsResponse = {
 const jsonHeaders = {
   'Content-Type': 'application/json',
 };
+
+type PollableTaskStatusResponse = {
+  id: number;
+  isAllFinished?: boolean;
+  allFinished?: boolean;
+  errorMessage?: string | null;
+};
+
+type StartSlackChannelMembersRefreshResponse = {
+  pollableTaskId: number;
+};
+
+type SlackConversationMembersOutput = {
+  slackClientId: string;
+  slackChannelId: string;
+  slackChannelName: string | null;
+  entries: Array<{
+    slackUserId: string;
+    slackUsername: string | null;
+    slackRealName?: string | null;
+    slackEmail?: string | null;
+  }>;
+};
+
+const SLACK_CHANNEL_MEMBERS_POLL_INTERVAL_MS = 500;
+const SLACK_CHANNEL_MEMBERS_MAX_POLL_INTERVAL_MS = 8000;
+const SLACK_CHANNEL_MEMBERS_TIMEOUT_MS = 5 * 60 * 1000;
 
 export async function fetchTeams(): Promise<ApiTeam[]> {
   return fetchTeamsWithOptions();
@@ -478,17 +507,93 @@ export async function applyTeamSlackChannelImport(
 export async function fetchTeamSlackChannelMembers(
   teamId: number,
 ): Promise<ApiTeamSlackChannelMembersResponse> {
-  const response = await fetch(`/api/teams/${teamId}/slack-channel-members`, {
+  const startResponse = await fetch(`/api/teams/${teamId}/slack-channel-members/refresh`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!startResponse.ok) {
+    const message = await startResponse.text().catch(() => '');
+    throw new Error(message || 'Failed to load Slack channel users');
+  }
+
+  const { pollableTaskId } =
+    (await startResponse.json()) as StartSlackChannelMembersRefreshResponse;
+
+  const completedTask = await waitForPollableTaskToFinish(pollableTaskId);
+  const normalizedErrorMessage = normalizePollableTaskErrorMessage(completedTask.errorMessage);
+  if (normalizedErrorMessage) {
+    throw new Error(normalizedErrorMessage);
+  }
+
+  const outputResponse = await fetch(`/api/pollableTasks/${pollableTaskId}/output`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!outputResponse.ok) {
+    const message = await outputResponse.text().catch(() => '');
+    throw new Error(message || 'Failed to load Slack channel users');
+  }
+
+  const output = (await outputResponse.json()) as SlackConversationMembersOutput;
+  return {
+    slackClientId: output.slackClientId,
+    slackChannelId: output.slackChannelId,
+    slackChannelName: output.slackChannelName,
+    entries: (output.entries ?? []).map((entry) => ({
+      slackUserId: entry.slackUserId,
+      slackUsername: entry.slackUsername,
+      displayName: entry.slackRealName ?? null,
+      email: entry.slackEmail ?? null,
+    })),
+  };
+}
+
+async function waitForPollableTaskToFinish(
+  pollableTaskId: number,
+): Promise<PollableTaskStatusResponse> {
+  return poll(() => fetchPollableTask(pollableTaskId), {
+    intervalMs: SLACK_CHANNEL_MEMBERS_POLL_INTERVAL_MS,
+    maxIntervalMs: SLACK_CHANNEL_MEMBERS_MAX_POLL_INTERVAL_MS,
+    timeoutMs: SLACK_CHANNEL_MEMBERS_TIMEOUT_MS,
+    timeoutMessage: 'Timed out while waiting for Slack channel users',
+    isTransientError: isTransientHttpError,
+    shouldStop: (task) => task.isAllFinished ?? task.allFinished ?? false,
+  });
+}
+
+async function fetchPollableTask(pollableTaskId: number): Promise<PollableTaskStatusResponse> {
+  const response = await fetch(`/api/pollableTasks/${pollableTaskId}`, {
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
   });
 
   if (!response.ok) {
     const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load Slack channel users');
+    throw new Error(message || 'Failed to poll Slack channel users refresh status');
   }
 
-  return (await response.json()) as ApiTeamSlackChannelMembersResponse;
+  return (await response.json()) as PollableTaskStatusResponse;
+}
+
+function normalizePollableTaskErrorMessage(rawErrorMessage: string | null | undefined): string {
+  const trimmed = rawErrorMessage?.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as { message?: string };
+    if (typeof parsed?.message === 'string' && parsed.message.trim().length > 0) {
+      return parsed.message.trim();
+    }
+  } catch {
+    // Fall through to return raw message when not JSON.
+  }
+
+  return trimmed;
 }
 
 export async function sendTeamSlackChannelTest(teamId: number): Promise<void> {
