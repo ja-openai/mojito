@@ -186,6 +186,7 @@ export function AdminTeamPoolsPage() {
   const [selectedTranslatorIds, setSelectedTranslatorIds] = useState<number[]>([]);
   const [selectedPmIds, setSelectedPmIds] = useState<number[]>([]);
   const [showAllTeamUsers, setShowAllTeamUsers] = useState(false);
+  const [showAllUsersForPmPool, setShowAllUsersForPmPool] = useState(false);
   const [editorMode, setEditorMode] = useState<TeamPoolEditorMode>('row');
   const [batchApplyMode, setBatchApplyMode] = useState<BatchApplyMode>('merge');
   const [csvInput, setCsvInput] = useState('');
@@ -231,6 +232,7 @@ export function AdminTeamPoolsPage() {
     setSelectedTranslatorIds([]);
     setSelectedPmIds([]);
     setShowAllTeamUsers(false);
+    setShowAllUsersForPmPool(false);
     setEditorMode('row');
     setBatchApplyMode('merge');
     setCsvInput('');
@@ -370,12 +372,13 @@ export function AdminTeamPoolsPage() {
   );
 
   const pmUsersForSelection = useMemo(() => {
-    const baseUserIds = new Set(teamPmRosterUsers.map((entry) => entry.id));
+    const baseUsers = showAllUsersForPmPool ? teamUsers : teamPmRosterUsers;
+    const baseUserIds = new Set(baseUsers.map((entry) => entry.id));
     const selectedExtras = selectedPmIds
       .map((id) => teamUserById.get(id))
       .filter((entry): entry is ApiUser => Boolean(entry))
       .filter((entry) => !baseUserIds.has(entry.id));
-    return [...teamPmRosterUsers, ...selectedExtras]
+    return [...baseUsers, ...selectedExtras]
       .sort((left, right) =>
         getUserLabel(left).localeCompare(getUserLabel(right), undefined, { sensitivity: 'base' }),
       )
@@ -383,7 +386,7 @@ export function AdminTeamPoolsPage() {
         value: entry.id,
         label: getUserLabel(entry),
       }));
-  }, [selectedPmIds, teamPmRosterUsers, teamUserById]);
+  }, [selectedPmIds, showAllUsersForPmPool, teamPmRosterUsers, teamUserById, teamUsers]);
 
   const teamTranslatorLocaleTagSetById = useMemo(
     () => new Map(teamTranslatorUsers.map((entry) => [entry.id, getUserLocaleTagSet(entry)])),
@@ -441,9 +444,9 @@ export function AdminTeamPoolsPage() {
   }, [teamPmPoolQuery.data?.userIds]);
 
   useEffect(() => {
-    const teamPmIds = new Set(teamPmRosterUsers.map((entry) => entry.id));
-    setSelectedPmIds((current) => current.filter((id) => teamPmIds.has(id)));
-  }, [teamPmRosterUsers]);
+    const teamUserIds = new Set(teamUsers.map((entry) => entry.id));
+    setSelectedPmIds((current) => current.filter((id) => teamUserIds.has(id)));
+  }, [teamUsers]);
 
   const translatorNameById = useMemo(
     () => new Map(teamTranslatorUsers.map((entry) => [entry.id, getUserLabel(entry)])),
@@ -451,8 +454,8 @@ export function AdminTeamPoolsPage() {
   );
 
   const pmNameById = useMemo(
-    () => new Map(teamPmRosterUsers.map((entry) => [entry.id, getUserLabel(entry)])),
-    [teamPmRosterUsers],
+    () => new Map(teamUsers.map((entry) => [entry.id, getUserLabel(entry)])),
+    [teamUsers],
   );
 
   const translatorUsernameById = useMemo(
@@ -1391,10 +1394,24 @@ export function AdminTeamPoolsPage() {
                       ? 'Loading PMs…'
                       : selectedTeamId == null
                         ? 'Select a team first'
-                        : 'No PMs in team roster'
+                        : showAllUsersForPmPool
+                          ? 'No users in team roster'
+                          : 'No PMs in team roster'
                   }
                   className="team-pools-page__pm-select"
                   buttonAriaLabel="Select PMs for this team"
+                  customActions={[
+                    {
+                      label: showAllUsersForPmPool ? 'Role only' : 'All users',
+                      onClick: () => {
+                        setShowAllUsersForPmPool((current) => !current);
+                        setPmStatusNotice(null);
+                      },
+                      ariaLabel: showAllUsersForPmPool
+                        ? 'Show role filtered users only'
+                        : 'Show all users',
+                    },
+                  ]}
                 />
                 {selectedPmIds.length > 0 ? (
                   <p className="settings-hint">

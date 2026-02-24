@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -495,7 +496,9 @@ public class TeamService {
             .stream().filter(id -> id != null && id > 0).distinct().toList();
 
     Set<Long> allowedPmIds =
-        teamUserRepository.findByTeamIdAndRole(teamId, TeamUserRole.PM).stream()
+        Stream.concat(
+                teamUserRepository.findByTeamIdAndRole(teamId, TeamUserRole.PM).stream(),
+                teamUserRepository.findByTeamIdAndRole(teamId, TeamUserRole.TRANSLATOR).stream())
             .map(TeamUser::getUser)
             .map(User::getId)
             .collect(Collectors.toCollection(LinkedHashSet::new));
@@ -503,7 +506,7 @@ public class TeamService {
         normalizedIds.stream().filter(id -> !allowedPmIds.contains(id)).toList();
     if (!disallowedPmIds.isEmpty()) {
       throw new IllegalArgumentException(
-          "Cannot assign PMs outside team PM roster: " + disallowedPmIds);
+          "Cannot assign PMs outside team roster: " + disallowedPmIds);
     }
 
     Map<Long, User> usersById = new LinkedHashMap<>();
