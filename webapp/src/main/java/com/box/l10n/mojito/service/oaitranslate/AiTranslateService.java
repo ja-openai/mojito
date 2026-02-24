@@ -414,7 +414,7 @@ public class AiTranslateService {
             ResponsesRequest.builder()
                 .model(model)
                 .instructions(prompt)
-                .addUserText(objectMapper.writeValueAsStringUnchecked(inputAsJsonString))
+                .addUserText(inputAsJsonString)
                 .addJsonSchema(aiTranslateType.getOutputJsonSchemaClass());
 
         Optional.ofNullable(textUnitsByScreenshot.screenshotUUID())
