@@ -164,7 +164,7 @@ public class TeamService {
     return value == null ? "" : value.trim().replaceAll("\\s+", " ");
   }
 
-  private Long getCurrentUserIdOrThrow() {
+  public Long getCurrentUserIdOrThrow() {
     return auditorAwareImpl
         .getCurrentAuditor()
         .map(User::getId)
@@ -183,11 +183,15 @@ public class TeamService {
   }
 
   public void assertCurrentUserCanAccessTeam(Long teamId) {
-    if (isCurrentUserAdmin()) {
+    Long currentUserId = getCurrentUserIdOrThrow();
+    assertUserCanAccessTeam(teamId, currentUserId);
+  }
+
+  public void assertUserCanAccessTeam(Long teamId, Long userId) {
+    if (isAdminUser(userId)) {
       return;
     }
-    Long currentUserId = getCurrentUserIdOrThrow();
-    boolean canAccess = isUserInTeamRole(teamId, currentUserId, TeamUserRole.PM);
+    boolean canAccess = isUserInTeamRole(teamId, userId, TeamUserRole.PM);
     if (!canAccess) {
       throw new AccessDeniedException("Team access denied");
     }
@@ -211,6 +215,20 @@ public class TeamService {
       return false;
     }
     return teamUserRepository.existsByTeam_IdAndUser_IdAndRole(teamId, userId, role);
+  }
+
+  private boolean isAdminUser(Long userId) {
+    if (userId == null) {
+      return false;
+    }
+    return userRepository
+        .findById(userId)
+        .map(
+            user ->
+                user.getAuthorities().stream()
+                    .map(Authority::getAuthority)
+                    .anyMatch("ROLE_ADMIN"::equals))
+        .orElse(false);
   }
 
   @Transactional(readOnly = true)

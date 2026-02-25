@@ -111,11 +111,28 @@ public class ReviewProjectService {
 
   public PollableFuture<CreateReviewProjectRequestResult> createReviewProjectRequestAsync(
       CreateReviewProjectRequestCommand request) {
+    Long requestedByUserId = teamService.getCurrentUserIdOrThrow();
+    if (request.teamId() != null) {
+      teamService.assertUserCanAccessTeam(request.teamId(), requestedByUserId);
+    }
+
+    CreateReviewProjectRequestCommand asyncRequest =
+        new CreateReviewProjectRequestCommand(
+            request.localeTags(),
+            request.notes(),
+            request.tmTextUnitIds(),
+            request.type(),
+            request.dueDate(),
+            request.screenshotImageIds(),
+            request.name(),
+            request.teamId(),
+            requestedByUserId);
+
     QuartzJobInfo<CreateReviewProjectRequestCommand, CreateReviewProjectRequestResult>
         quartzJobInfo =
             QuartzJobInfo.newBuilder(ReviewProjectCreateRequestJob.class)
                 .withInlineInput(false)
-                .withInput(request)
+                .withInput(asyncRequest)
                 .withMessage("Create review project request")
                 .build();
     return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
@@ -185,9 +202,12 @@ public class ReviewProjectService {
       throw new IllegalArgumentException("No text units found for provided locales");
     }
 
+    User requestedByUser = resolveUser(request.requestedByUserId(), "requestedByUser");
+
     ReviewProjectRequest reviewProjectRequest = new ReviewProjectRequest();
     reviewProjectRequest.setName(request.name());
     reviewProjectRequest.setNotes(request.notes());
+    reviewProjectRequest.setCreatedByUser(requestedByUser);
     reviewProjectRequest = reviewProjectRequestRepository.save(reviewProjectRequest);
 
     if (request.screenshotImageIds() != null) {
@@ -202,7 +222,8 @@ public class ReviewProjectService {
     List<Long> projectIds = new ArrayList<>();
     List<String> createdLocaleTags = new ArrayList<>();
     List<ReviewProject> createdProjects = new ArrayList<>();
-    CreateAssignmentDefaults assignmentDefaults = resolveCreateAssignmentDefaults(request.teamId());
+    CreateAssignmentDefaults assignmentDefaults =
+        resolveCreateAssignmentDefaults(request.teamId(), request.requestedByUserId());
 
     for (LocaleCandidates localeCandidates : localesToCreate) {
       Locale locale = localeCandidates.locale();
@@ -214,6 +235,7 @@ public class ReviewProjectService {
       reviewProject.setReviewProjectRequest(reviewProjectRequest);
       reviewProject.setTeam(assignmentDefaults.team());
       reviewProject.setAssignedPmUser(assignmentDefaults.defaultPmUser());
+      reviewProject.setCreatedByUser(requestedByUser);
       String localeTagKey =
           locale.getBcp47Tag() == null ? "" : locale.getBcp47Tag().trim().toLowerCase();
       reviewProject.setAssignedTranslatorUser(
@@ -242,7 +264,8 @@ public class ReviewProjectService {
 
       saved.setWordCount(wordCount);
       saved.setTextUnitCount(textUnitCount);
-      recordAssignmentHistory(saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null);
+      recordAssignmentHistory(
+          saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null, requestedByUser);
       projectIds.add(saved.getId());
       createdLocaleTags.add(locale.getBcp47Tag());
       createdProjects.add(saved);
@@ -1336,12 +1359,17 @@ public class ReviewProjectService {
         .orElseThrow(() -> new IllegalArgumentException("Unknown team: " + teamId));
   }
 
-  private CreateAssignmentDefaults resolveCreateAssignmentDefaults(Long teamId) {
+  private CreateAssignmentDefaults resolveCreateAssignmentDefaults(
+      Long teamId, Long requestedByUserId) {
     Team team = resolveTeam(teamId);
     if (team == null) {
       return new CreateAssignmentDefaults(null, null, Map.of());
     }
-    teamService.assertCurrentUserCanAccessTeam(team.getId());
+    if (requestedByUserId == null) {
+      teamService.assertCurrentUserCanAccessTeam(team.getId());
+    } else {
+      teamService.assertUserCanAccessTeam(team.getId(), requestedByUserId);
+    }
 
     // Reuse team service access checks and ordering semantics (PM pool / locale pools).
     List<Long> pmPoolUserIds = teamService.getPmPool(team.getId());
@@ -1385,12 +1413,21 @@ public class ReviewProjectService {
 
   private void recordAssignmentHistory(
       ReviewProject reviewProject, ReviewProjectAssignmentEventType eventType, String note) {
+    recordAssignmentHistory(reviewProject, eventType, note, null);
+  }
+
+  private void recordAssignmentHistory(
+      ReviewProject reviewProject,
+      ReviewProjectAssignmentEventType eventType,
+      String note,
+      User createdByUser) {
     ReviewProjectAssignmentHistory history = new ReviewProjectAssignmentHistory();
     history.setReviewProject(reviewProject);
     history.setTeam(reviewProject.getTeam());
     history.setAssignedPmUser(reviewProject.getAssignedPmUser());
     history.setAssignedTranslatorUser(reviewProject.getAssignedTranslatorUser());
     history.setEventType(eventType);
+    history.setCreatedByUser(createdByUser);
     String normalizedNote = note == null ? null : note.trim();
     if (normalizedNote != null && normalizedNote.length() > 512) {
       normalizedNote = normalizedNote.substring(0, 512);
