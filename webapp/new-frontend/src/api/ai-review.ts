@@ -7,6 +7,8 @@ export type AiReviewRequest = {
   source?: string;
   target?: string;
   localeTag?: string;
+  sourceDescription?: string;
+  tmTextUnitId?: number;
   messages: AiReviewMessage[];
 };
 

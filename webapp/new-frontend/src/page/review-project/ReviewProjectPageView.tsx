@@ -27,7 +27,10 @@ import {
   fetchTeams,
   fetchTeamTranslators,
 } from '../../api/teams';
-import { type ApiTextUnitHistoryItem, fetchTextUnitHistory } from '../../api/text-units';
+import {
+  type ApiTextUnitHistoryItem,
+  fetchTextUnitHistory,
+} from '../../api/text-units';
 import { type ApiUser, fetchAllUsersAdmin } from '../../api/users';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
@@ -1384,13 +1387,19 @@ function DetailPane({
     const initialWarnings = buildTranslationWarnings(source ?? '', snapshot.target);
     const warningContextMessage = buildAiWarningContextMessage(initialWarnings);
 
-    void requestAiReview({
-      source: source ?? '',
-      target: snapshot.target,
-      localeTag,
-      messages: warningContextMessage ? [warningContextMessage, initialMessage] : [initialMessage],
-    })
-      .then((response) => {
+    void (async () => {
+      try {
+        const contextMessages = [warningContextMessage].filter(
+          (message): message is AiReviewMessage => message != null,
+        );
+        const response = await requestAiReview({
+          source: source ?? '',
+          target: snapshot.target,
+          localeTag,
+          sourceDescription: sourceComment ?? '',
+          tmTextUnitId: workbenchTextUnitId ?? undefined,
+          messages: [...contextMessages, initialMessage],
+        });
         if (cancelled) {
           return;
         }
@@ -1404,8 +1413,7 @@ function DetailPane({
             review: response.review,
           },
         ]);
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         if (cancelled) {
           return;
         }
@@ -1420,17 +1428,17 @@ function DetailPane({
             errorDetail: aiError.detail,
           },
         ]);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) {
           setIsAiResponding(false);
         }
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [aiContextKey, localeTag, snapshot.target, source]);
+  }, [aiContextKey, localeTag, snapshot.target, source, sourceComment, workbenchTextUnitId]);
 
   const draftStatusApi = mapChoiceToApi(draftStatusChoice);
   const snapshotStatusApi = mapChoiceToApi(snapshot.statusChoice);
@@ -1605,12 +1613,17 @@ function DetailPane({
         const warningContextMessage = buildAiWarningContextMessage(
           buildTranslationWarnings(source ?? '', draftTarget),
         );
+        const contextMessages = [warningContextMessage].filter(
+          (message): message is AiReviewMessage => message != null,
+        );
 
         const response = await requestAiReview({
           source: source ?? '',
           target: draftTarget,
           localeTag,
-          messages: warningContextMessage ? [warningContextMessage, ...conversation] : conversation,
+          sourceDescription: sourceComment ?? '',
+          tmTextUnitId: workbenchTextUnitId ?? undefined,
+          messages: [...contextMessages, ...conversation],
         });
 
         const assistantMessage: AiChatReviewMessage = {
@@ -1638,7 +1651,16 @@ function DetailPane({
         setIsAiResponding(false);
       }
     })();
-  }, [aiInput, aiMessages, draftTarget, isAiResponding, localeTag, source]);
+  }, [
+    aiInput,
+    aiMessages,
+    draftTarget,
+    isAiResponding,
+    localeTag,
+    source,
+    sourceComment,
+    workbenchTextUnitId,
+  ]);
 
   const handleRetryAi = useCallback(() => {
     if (isAiResponding || !localeTag) {
@@ -1659,13 +1681,19 @@ function DetailPane({
     );
 
     setIsAiResponding(true);
-    void requestAiReview({
-      source: source ?? '',
-      target: retryTarget,
-      localeTag,
-      messages: warningContextMessage ? [warningContextMessage, ...conversation] : conversation,
-    })
-      .then((response) => {
+    void (async () => {
+      try {
+        const contextMessages = [warningContextMessage].filter(
+          (message): message is AiReviewMessage => message != null,
+        );
+        const response = await requestAiReview({
+          source: source ?? '',
+          target: retryTarget,
+          localeTag,
+          sourceDescription: sourceComment ?? '',
+          tmTextUnitId: workbenchTextUnitId ?? undefined,
+          messages: [...contextMessages, ...conversation],
+        });
         const assistantMessage: AiChatReviewMessage = {
           id: `assistant-${Date.now()}`,
           sender: 'assistant',
@@ -1677,8 +1705,7 @@ function DetailPane({
           ...previous.filter((message) => !message.isError),
           assistantMessage,
         ]);
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         const aiError = formatAiReviewError(error);
         setAiMessages((previous) => [
           ...previous.filter((message) => !message.isError),
@@ -1690,11 +1717,20 @@ function DetailPane({
             errorDetail: aiError.detail,
           },
         ]);
-      })
-      .finally(() => {
+      } finally {
         setIsAiResponding(false);
-      });
-  }, [aiMessages, draftTarget, isAiResponding, localeTag, snapshot.target, source]);
+      }
+    })();
+  }, [
+    aiMessages,
+    draftTarget,
+    isAiResponding,
+    localeTag,
+    snapshot.target,
+    source,
+    sourceComment,
+    workbenchTextUnitId,
+  ]);
 
   const handleUseAiSuggestion = useCallback((suggestion: AiReviewSuggestion) => {
     setDraftTarget(suggestion.content);

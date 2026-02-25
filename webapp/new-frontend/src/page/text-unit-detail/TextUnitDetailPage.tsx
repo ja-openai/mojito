@@ -272,13 +272,16 @@ export function TextUnitDetailPage() {
       content: DEFAULT_AI_REVIEW_PROMPT,
     };
 
-    void requestAiReview({
-      source: activeTextUnit.source ?? '',
-      target: activeTextUnit.target ?? '',
-      localeTag: localeForEditing,
-      messages: [initialMessage],
-    })
-      .then((response) => {
+    void (async () => {
+      try {
+        const response = await requestAiReview({
+          source: activeTextUnit.source ?? '',
+          target: activeTextUnit.target ?? '',
+          localeTag: localeForEditing,
+          sourceDescription: activeTextUnit.comment ?? '',
+          tmTextUnitId: activeTextUnit.tmTextUnitId,
+          messages: [initialMessage],
+        });
         if (cancelled) {
           return;
         }
@@ -292,8 +295,7 @@ export function TextUnitDetailPage() {
             review: response.review,
           },
         ]);
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         if (cancelled) {
           return;
         }
@@ -308,12 +310,12 @@ export function TextUnitDetailPage() {
             errorDetail: aiError.detail,
           },
         ]);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) {
           setIsAiResponding(false);
         }
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -640,6 +642,8 @@ export function TextUnitDetailPage() {
           source: activeTextUnit.source ?? '',
           target: draftTarget,
           localeTag: localeForEditing,
+          sourceDescription: activeTextUnit.comment ?? '',
+          tmTextUnitId: activeTextUnit.tmTextUnitId,
           messages: conversation,
         });
 
@@ -686,13 +690,16 @@ export function TextUnitDetailPage() {
     const retryTarget = baseMessages.length > 0 ? draftTarget : (activeTextUnit.target ?? '');
 
     setIsAiResponding(true);
-    void requestAiReview({
-      source: activeTextUnit.source ?? '',
-      target: retryTarget,
-      localeTag: localeForEditing,
-      messages: conversation,
-    })
-      .then((response) => {
+    void (async () => {
+      try {
+        const response = await requestAiReview({
+          source: activeTextUnit.source ?? '',
+          target: retryTarget,
+          localeTag: localeForEditing,
+          sourceDescription: activeTextUnit.comment ?? '',
+          tmTextUnitId: activeTextUnit.tmTextUnitId,
+          messages: conversation,
+        });
         const assistantMessage: TextUnitDetailAiMessage = {
           id: `assistant-${Date.now()}`,
           sender: 'assistant',
@@ -704,8 +711,7 @@ export function TextUnitDetailPage() {
           ...previous.filter((message) => !message.isError),
           assistantMessage,
         ]);
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         const aiError = formatAiReviewError(error);
         setAiMessages((previous) => [
           ...previous.filter((message) => !message.isError),
@@ -717,10 +723,10 @@ export function TextUnitDetailPage() {
             errorDetail: aiError.detail,
           },
         ]);
-      })
-      .finally(() => {
+      } finally {
         setIsAiResponding(false);
-      });
+      }
+    })();
   }, [activeTextUnit, aiMessages, draftTarget, isAiResponding, localeForEditing]);
 
   const handleUseAiSuggestion = useCallback((suggestion: AiReviewSuggestion) => {

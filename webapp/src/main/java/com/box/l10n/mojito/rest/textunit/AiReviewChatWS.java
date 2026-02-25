@@ -11,13 +11,16 @@ import com.box.l10n.mojito.openai.OpenAIClient;
 import com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest;
 import com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsResponse;
 import com.box.l10n.mojito.rest.textunit.AiReviewType.AiReviewTextUnitVariantOutput;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewService.AiReviewTextUnitVariantInput;
+import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -25,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -39,14 +41,17 @@ public class AiReviewChatWS {
   private final OpenAIClient openAIClient;
   private final AiReviewConfigurationProperties aiReviewConfigurationProperties;
   private final ObjectMapper objectMapper;
+  private final TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService;
 
   public AiReviewChatWS(
       @Qualifier("openAIClientReview") @Nullable OpenAIClient openAIClient,
       AiReviewConfigurationProperties aiReviewConfigurationProperties,
-      @Qualifier("objectMapperReview") ObjectMapper objectMapper) {
+      @Qualifier("objectMapperReview") ObjectMapper objectMapper,
+      TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService) {
     this.openAIClient = openAIClient;
     this.aiReviewConfigurationProperties = Objects.requireNonNull(aiReviewConfigurationProperties);
     this.objectMapper = Objects.requireNonNull(objectMapper);
+    this.tmTextUnitIntegrityCheckService = Objects.requireNonNull(tmTextUnitIntegrityCheckService);
   }
 
   @PostMapping("/api/ai/review")
@@ -57,37 +62,59 @@ public class AiReviewChatWS {
       throw new IllegalArgumentException("messages must not be empty");
     }
 
-    String localeTag = StringUtils.hasText(request.localeTag()) ? request.localeTag() : "en";
-    AiReviewChatMessage lastMessage = request.messages().get(request.messages().size() - 1);
-    if (lastMessage == null || !StringUtils.hasText(lastMessage.content())) {
-      throw new IllegalArgumentException("last message must contain text");
-    }
+    String localeTag = hasText(request.localeTag()) ? request.localeTag().trim() : "en";
 
     if (openAIClient == null) {
       throw new IllegalStateException("openAIClientReview bean must be configured");
     }
 
     AiReviewTextUnitVariantInput.ExistingTarget existingTarget = null;
-    if (StringUtils.hasText(request.target())) {
-      existingTarget = new AiReviewTextUnitVariantInput.ExistingTarget(request.target(), false);
+    String target = normalizeOptionalText(request.target());
+    if (target != null) {
+      existingTarget = new AiReviewTextUnitVariantInput.ExistingTarget(target, false);
     }
+
+    String sourceDescription = normalizeOptionalText(request.sourceDescription());
 
     AiReviewTextUnitVariantInput aiReviewInput =
         new AiReviewTextUnitVariantInput(
-            localeTag, request.source(), lastMessage.content(), existingTarget);
+            localeTag, request.source(), sourceDescription, existingTarget);
 
     String inputPayload = objectMapper.writeValueAsStringUnchecked(aiReviewInput);
 
     List<ChatCompletionsRequest.Message> messages = new ArrayList<>();
     messages.add(systemMessageBuilder().content(AiReviewType.PROMPT_ALL).build());
     messages.add(userMessageBuilder().content(inputPayload).build());
+    String integrityContextMessage = buildIntegrityContextMessage(request.tmTextUnitId(), target);
+    if (hasText(integrityContextMessage)) {
+      messages.add(userMessageBuilder().content(integrityContextMessage).build());
+    }
 
+    List<AiReviewChatMessage> conversationMessages = new ArrayList<>();
     for (AiReviewChatMessage message : request.messages()) {
-      if (message == null || !StringUtils.hasText(message.content())) {
+      if (message == null || !hasText(message.content())) {
         continue;
       }
-      String role = StringUtils.hasText(message.role()) ? message.role() : "user";
-      messages.add(userMessageBuilder().role(role).content(message.content()).build());
+      conversationMessages.add(message);
+    }
+    if (conversationMessages.isEmpty()) {
+      throw new IllegalArgumentException("messages must include at least one non-empty message");
+    }
+
+    boolean hasUserMessage =
+        conversationMessages.stream()
+            .anyMatch(message -> "user".equals(normalizeChatRole(message.role())));
+    if (!hasUserMessage) {
+      conversationMessages.add(
+          0, new AiReviewChatMessage("user", "Review the translation and suggest improvements."));
+    }
+
+    for (AiReviewChatMessage message : conversationMessages) {
+      messages.add(
+          userMessageBuilder()
+              .role(normalizeChatRole(message.role()))
+              .content(message.content())
+              .build());
     }
 
     ChatCompletionsRequest chatCompletionsRequest =
@@ -120,10 +147,10 @@ public class AiReviewChatWS {
         objectMapper.readValueUnchecked(jsonResponse, AiReviewTextUnitVariantOutput.class);
 
     String reply = output.target() != null ? output.target().explanation() : null;
-    if (!StringUtils.hasText(reply) && output.reviewRequired() != null) {
+    if (!hasText(reply) && output.reviewRequired() != null) {
       reply = output.reviewRequired().reason();
     }
-    if (!StringUtils.hasText(reply)) {
+    if (!hasText(reply)) {
       reply = "Here are the latest suggestions.";
     }
 
@@ -164,7 +191,7 @@ public class AiReviewChatWS {
       String content,
       Integer confidenceLevel,
       String explanation) {
-    if (!StringUtils.hasText(content)) {
+    if (!hasText(content)) {
       return;
     }
     if (seen.add(content)) {
@@ -172,8 +199,57 @@ public class AiReviewChatWS {
     }
   }
 
+  private String normalizeChatRole(String role) {
+    if (!hasText(role)) {
+      return "user";
+    }
+    String normalized = role.trim().toLowerCase(Locale.ROOT);
+    return ("assistant".equals(normalized) || "user".equals(normalized)) ? normalized : "user";
+  }
+
+  private String normalizeOptionalText(String value) {
+    if (!hasText(value)) {
+      return null;
+    }
+    return value.trim();
+  }
+
+  private String buildIntegrityContextMessage(Long tmTextUnitId, String target) {
+    if (tmTextUnitId == null || !hasText(target)) {
+      return null;
+    }
+
+    try {
+      tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(tmTextUnitId, target);
+      return null;
+    } catch (IntegrityCheckException e) {
+      String failureDetail =
+          hasText(e.getMessage())
+              ? e.getMessage().trim()
+              : "The integrity checker reported a placeholder/tag mismatch.";
+      return """
+          Context only: placeholder/integrity check failed for the current target text.
+          Issue: %s
+          Prioritize preserving placeholders, tags, and ICU/message-format structure in suggestions.
+          """
+          .formatted(failureDetail);
+    } catch (RuntimeException e) {
+      logger.debug("Failed to run integrity check for AI review", e);
+      return null;
+    }
+  }
+
+  private boolean hasText(String value) {
+    return value != null && !value.trim().isEmpty();
+  }
+
   public record AiReviewChatRequest(
-      String source, String target, String localeTag, List<AiReviewChatMessage> messages) {}
+      String source,
+      String target,
+      String localeTag,
+      String sourceDescription,
+      Long tmTextUnitId,
+      List<AiReviewChatMessage> messages) {}
 
   public record AiReviewChatMessage(String role, String content) {}
 
