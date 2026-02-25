@@ -6,6 +6,7 @@
     <appender name="JSON_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <timeZone>UTC</timeZone>
+            <lineSeparator>UNIX</lineSeparator>
         </encoder>
     </appender>
 

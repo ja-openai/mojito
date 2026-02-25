@@ -205,10 +205,6 @@ public class OpenAIClient {
           JsonNode schemaNode = objectMapper.valueToTree(baseSchema);
           ObjectNode rootNode = (ObjectNode) schemaNode;
           enhanceSchema(rootNode);
-
-          logger.error(
-              com.box.l10n.mojito.json.ObjectMapper.withIndentedOutput()
-                  .writeValueAsStringUnchecked(rootNode));
           return rootNode;
         }
 

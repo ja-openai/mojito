@@ -7,6 +7,7 @@
     <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <timeZone>UTC</timeZone>
+            <lineSeparator>UNIX</lineSeparator>
         </encoder>
         <file>/var/log/mojito/mojito-webapp.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
