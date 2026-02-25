@@ -310,7 +310,7 @@ public enum AiTranslateType {
       String sourceDescription,
       ExistingTarget existingTarget,
       List<GlossaryTerm> glossaryTerms,
-      List<AiTranslateService.RelatedString> relatedStrings) {
+      List<AiTranslateRelatedStringsProvider.RelatedString> relatedStrings) {
     record ExistingTarget(
         String content,
         String comment,

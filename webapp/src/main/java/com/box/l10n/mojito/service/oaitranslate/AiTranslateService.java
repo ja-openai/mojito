@@ -1,27 +1,16 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
 import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionResponseBatchFileLine;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.JsonFormat.JsonSchema.createJsonSchema;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.SystemMessage.systemMessageBuilder;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.UserMessage.userMessageBuilder;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.chatCompletionsRequest;
-import static com.box.l10n.mojito.openai.OpenAIClient.CreateBatchRequest.forChatCompletion;
 import static com.box.l10n.mojito.openai.OpenAIClient.DownloadFileContentRequest;
 import static com.box.l10n.mojito.openai.OpenAIClient.DownloadFileContentResponse;
 import static com.box.l10n.mojito.openai.OpenAIClient.RetrieveBatchRequest;
 import static com.box.l10n.mojito.openai.OpenAIClient.RetrieveBatchResponse;
-import static com.box.l10n.mojito.openai.OpenAIClient.TemperatureHelper.getTemperatureForReasoningModels;
-import static com.box.l10n.mojito.openai.OpenAIClient.UploadFileRequest;
-import static com.box.l10n.mojito.openai.OpenAIClient.UploadFileResponse;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSLATE_WS;
 import static com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 
 import com.box.l10n.mojito.JSR310Migration;
-import com.box.l10n.mojito.entity.AssetTextUnit;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
@@ -66,14 +55,11 @@ import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.util.ImageBytes;
-import com.box.l10n.mojito.utils.FilePosition;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableList;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.io.IOException;
@@ -83,7 +69,6 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -111,6 +96,7 @@ public class AiTranslateService {
   static Logger logger = LoggerFactory.getLogger(AiTranslateService.class);
 
   private final AiTranslateScreenshotService aiTranslateScreenshotService;
+  private final AiTranslateLegacyBatchService aiTranslateLegacyBatchService;
   private final MeterRegistry meterRegistry;
 
   AssetTextUnitRepository assetTextUnitRepository;
@@ -167,7 +153,8 @@ public class AiTranslateService {
       GlossaryService glossaryService,
       MeterRegistry meterRegistry,
       ScreenshotService screenshotService,
-      AiTranslateScreenshotService aiTranslateScreenshotService) {
+      AiTranslateScreenshotService aiTranslateScreenshotService,
+      AiTranslateLegacyBatchService aiTranslateLegacyBatchService) {
     this.textUnitSearcher = textUnitSearcher;
     this.repositoryRepository = repositoryRepository;
     this.repositoryService = repositoryService;
@@ -187,6 +174,7 @@ public class AiTranslateService {
     this.glossaryService = glossaryService;
     this.meterRegistry = meterRegistry;
     this.aiTranslateScreenshotService = aiTranslateScreenshotService;
+    this.aiTranslateLegacyBatchService = aiTranslateLegacyBatchService;
   }
 
   public record AiTranslateInput(
@@ -300,11 +288,6 @@ public class AiTranslateService {
     }
   }
 
-  record TextUnitDTOWithChatCompletionResponse(
-      ChatCompletionsRequest chatCompletionsRequest,
-      TextUnitDTO textUnitDTO,
-      CompletableFuture<ChatCompletionsResponse> chatCompletionsResponseCompletableFuture) {}
-
   record TextextUnitsByScreenshotWithResponsesResponse(
       ResponsesRequest responsesRequest,
       TextUnitsByScreenshot textUnitsByScreenshot,
@@ -323,9 +306,11 @@ public class AiTranslateService {
     Set<RepositoryLocale> filteredRepositoryLocales =
         getFilteredRepositoryLocales(aiTranslateInput, repository);
 
-    RelatedStringsProvider relatedStringsProvider =
-        new RelatedStringsProvider(
-            RelatedStringsProvider.Type.fromString(aiTranslateInput.relatedStringsType()));
+    AiTranslateRelatedStringsProvider relatedStringsProvider =
+        new AiTranslateRelatedStringsProvider(
+            assetTextUnitRepository,
+            AiTranslateRelatedStringsProvider.Type.fromString(
+                aiTranslateInput.relatedStringsType()));
 
     Stopwatch stopwatchForTotal = Stopwatch.createStarted();
 
@@ -870,32 +855,6 @@ public class AiTranslateService {
     return glossaryTrie;
   }
 
-  private ChatCompletionsRequest getChatCompletionsRequest(
-      String model,
-      String prompt,
-      CompletionInput completionInput,
-      AiTranslateType aiTranslateType) {
-    String inputAsJsonString = objectMapper.writeValueAsStringUnchecked(completionInput);
-    ObjectNode jsonSchema = createJsonSchema(aiTranslateType.getOutputJsonSchemaClass());
-
-    ChatCompletionsRequest chatCompletionsRequest =
-        chatCompletionsRequest()
-            .model(model)
-            .maxCompletionTokens(MAX_COMPLETION_TOKENS)
-            .temperature(getTemperatureForReasoningModels(model))
-            .messages(
-                List.of(
-                    systemMessageBuilder().content(prompt).build(),
-                    userMessageBuilder().content(inputAsJsonString).build()))
-            .responseFormat(
-                new ChatCompletionsRequest.JsonFormat(
-                    "json_schema",
-                    new ChatCompletionsRequest.JsonFormat.JsonSchema(
-                        true, "request_json_format", jsonSchema)))
-            .build();
-    return chatCompletionsRequest;
-  }
-
   private boolean isRetryableException(Throwable throwable) {
     Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
     return cause instanceof IOException || cause instanceof TimeoutException;
@@ -904,68 +863,16 @@ public class AiTranslateService {
   public void aiTranslateBatch(AiTranslateInput aiTranslateInput, PollableTask currentTask)
       throws AiTranslateException {
 
-    Repository repository = getRepository(aiTranslateInput);
-
-    logger.debug("Start AI Translation for repository: {}", repository.getName());
-
     try {
+      AiTranslateLegacyBatchService.LegacyBatchCreationResult batchCreationResult =
+          aiTranslateLegacyBatchService.createBatches(aiTranslateInput);
 
-      Set<RepositoryLocale> repositoryLocalesWithoutRootLocale =
-          getFilteredRepositoryLocales(aiTranslateInput, repository);
-
-      logger.debug("Create batches for repository: {}", repository.getName());
-
-      List<CreateBatchResponse> createdBatches = new ArrayList<>();
-      List<String> batchCreationErrors = new ArrayList<>();
-      List<String> skippedLocales = new ArrayList<>();
-
-      RelatedStringsProvider relatedStringsProvider =
-          new RelatedStringsProvider(
-              RelatedStringsProvider.Type.fromString(aiTranslateInput.relatedStringsType()));
-
-      for (RepositoryLocale repositoryLocale : repositoryLocalesWithoutRootLocale) {
-        try {
-          CreateBatchResponse createBatchResponse =
-              createBatchForRepositoryLocale(
-                  repositoryLocale,
-                  repository,
-                  aiTranslateInput.sourceTextMaxCountPerLocale(),
-                  getModel(aiTranslateInput),
-                  aiTranslateInput.tmTextUnitIds(),
-                  aiTranslateInput.promptSuffix(),
-                  StatusFilter.valueOf(aiTranslateInput.statusFilter()),
-                  AiTranslateType.fromString(aiTranslateInput.translateType()),
-                  relatedStringsProvider,
-                  aiTranslateInput.glossaryName(),
-                  aiTranslateInput.glossaryTermSource(),
-                  aiTranslateInput.glossaryTermSourceDescription(),
-                  aiTranslateInput.glossaryTermTarget(),
-                  aiTranslateInput.glossaryTermTargetDescription(),
-                  aiTranslateInput.glossaryTermDoNotTranslate(),
-                  aiTranslateInput.glossaryTermCaseSensitive(),
-                  aiTranslateInput.glossaryOnlyMatchedTextUnits());
-
-          if (createBatchResponse != null) {
-            createdBatches.add(createBatchResponse);
-          } else {
-            skippedLocales.add(repositoryLocale.getLocale().getBcp47Tag());
-          }
-        } catch (Throwable t) {
-          String errorMessage =
-              "Can't create batch for locale: %s. Error: %s"
-                  .formatted(repositoryLocale.getLocale().getBcp47Tag(), t.getMessage());
-          logger.error(errorMessage, t);
-          batchCreationErrors.add(errorMessage);
-        }
-      }
-
-      logger.debug("Start a job to import batches for repository: {}", repository.getName());
       PollableFuture<AiTranslateBatchesImportOutput> aiTranslateBatchesImportOutputPollableFuture =
           aiTranslateBatchesImportAsync(
               new AiTranslateBatchesImportInput(
-                  createdBatches,
-                  skippedLocales,
-                  batchCreationErrors,
+                  batchCreationResult.createdBatches(),
+                  batchCreationResult.skippedLocales(),
+                  batchCreationResult.batchCreationErrors(),
                   List.of(),
                   Map.of(),
                   0,
@@ -1155,8 +1062,6 @@ public class AiTranslateService {
         null);
   }
 
-  record RelatedString(String source, String description) {}
-
   @Pollable(message = "AiTranslateService Retry import for job id: {id}")
   public PollableFuture<Void> retryImport(
       @MsgArg(name = "id") long childPollableTaskId,
@@ -1188,86 +1093,6 @@ public class AiTranslateService {
         aiTranslateBatchesImportOutputPollableFuture.getPollableTask().getId());
 
     return new PollableFutureTaskResult<>();
-  }
-
-  CreateBatchResponse createBatchForRepositoryLocale(
-      RepositoryLocale repositoryLocale,
-      Repository repository,
-      int sourceTextMaxCountPerLocale,
-      String model,
-      List<Long> tmTextUnitIds,
-      String promptSuffix,
-      StatusFilter statusFilter,
-      AiTranslateType aiTranslateType,
-      RelatedStringsProvider relatedStringsProvider,
-      String glossaryName,
-      String glossaryTermSource,
-      String glossaryTermSourceDescription,
-      String glossaryTermTarget,
-      String glossaryTermTargetDescription,
-      boolean glossaryTermDoNotTranslate,
-      boolean glossaryTermCaseSensitive,
-      boolean glossaryOnlyMatchedTextUnits) {
-
-    List<TextUnitDTOWithVariantComments> textUnitDTOWithVariantCommentsList =
-        getTextUnitDTOS(
-            repository, sourceTextMaxCountPerLocale, tmTextUnitIds, repositoryLocale, statusFilter);
-
-    GlossaryTrie glossaryTrie =
-        getGlossaryTrieForLocale(
-            repositoryLocale.getLocale().getBcp47Tag(),
-            glossaryName,
-            glossaryTermSource,
-            glossaryTermSourceDescription,
-            glossaryTermTarget,
-            glossaryTermTargetDescription,
-            glossaryTermDoNotTranslate,
-            glossaryTermCaseSensitive);
-
-    CreateBatchResponse createBatchResponse = null;
-    if (textUnitDTOWithVariantCommentsList.isEmpty()) {
-      logger.debug("Nothing to translate, don't create a batch");
-    } else {
-      logger.debug("Save the TextUnitDTOs in blob storage for later batch import");
-      String batchId =
-          "%s_%s".formatted(repositoryLocale.getLocale().getBcp47Tag(), UUID.randomUUID());
-      structuredBlobStorage.put(
-          AI_TRANSLATE_WS,
-          batchId,
-          objectMapper.writeValueAsStringUnchecked(
-              new AiTranslateBlobStorage(textUnitDTOWithVariantCommentsList)),
-          Retention.MIN_1_DAY);
-
-      logger.debug("Generate the batch file content");
-      String batchFileContent =
-          generateBatchFileContent(
-              textUnitDTOWithVariantCommentsList,
-              model,
-              promptSuffix,
-              aiTranslateType,
-              relatedStringsProvider,
-              glossaryTrie,
-              glossaryOnlyMatchedTextUnits);
-
-      UploadFileResponse uploadFileResponse =
-          getOpenAIClient()
-              .uploadFile(
-                  UploadFileRequest.forBatch("%s.jsonl".formatted(batchId), batchFileContent));
-
-      logger.debug("Create the batch using file: {}", uploadFileResponse);
-      createBatchResponse =
-          getOpenAIClient()
-              .createBatch(
-                  forChatCompletion(
-                      uploadFileResponse.id(), Map.of(METADATA__TEXT_UNIT_DTOS__BLOB_ID, batchId)));
-    }
-
-    logger.info(
-        "Created batch for locale: {} with {} text units",
-        repositoryLocale.getLocale().getBcp47Tag(),
-        textUnitDTOWithVariantCommentsList.size());
-
-    return createBatchResponse;
   }
 
   private List<TextUnitDTOWithVariantComments> getTextUnitDTOS(
@@ -1324,49 +1149,6 @@ public class AiTranslateService {
   record TextUnitDTOWithVariantComments(
       TextUnitDTO textUnitDTO, Set<TMTextUnitVariantComment> tmTextUnitVariantComments) {}
 
-  String generateBatchFileContent(
-      List<TextUnitDTOWithVariantComments> textUnitDTOSUnitDTOWithVariantComments,
-      String model,
-      String promptPrefix,
-      AiTranslateType aiTranslateType,
-      RelatedStringsProvider relatedStringsProvider,
-      GlossaryTrie glossaryTrie,
-      boolean glossaryOnlyMatchedTextUnits) {
-
-    return textUnitDTOSUnitDTOWithVariantComments.stream()
-        .map(
-            textUnitDTOWithVariantComments -> {
-              TextUnitDTO textUnitDTO = textUnitDTOWithVariantComments.textUnitDTO();
-
-              FoundGlossaryTerms foundGlossaryTerms =
-                  findGlossaryTermsOrSkip(
-                      glossaryTrie, glossaryOnlyMatchedTextUnits, textUnitDTOWithVariantComments);
-
-              if (foundGlossaryTerms.shouldSkip()) {
-                return null;
-              }
-
-              CompletionInput completionInput =
-                  getCompletionInput(
-                      textUnitDTOWithVariantComments,
-                      relatedStringsProvider,
-                      foundGlossaryTerms.terms());
-
-              ChatCompletionsRequest chatCompletionsRequest =
-                  getChatCompletionsRequest(
-                      model,
-                      getPrompt(aiTranslateType.getPrompt(), promptPrefix),
-                      completionInput,
-                      aiTranslateType);
-
-              return RequestBatchFileLine.forChatCompletion(
-                  textUnitDTO.getTmTextUnitId().toString(), chatCompletionsRequest);
-            })
-        .filter(Objects::nonNull)
-        .map(objectMapper::writeValueAsStringUnchecked)
-        .collect(joining("\n"));
-  }
-
   record FoundGlossaryTerms(Set<GlossaryService.GlossaryTerm> terms, boolean shouldSkip) {}
 
   FoundGlossaryTerms findGlossaryTermsOrSkip(
@@ -1400,7 +1182,7 @@ public class AiTranslateService {
 
   CompletionInput getCompletionInput(
       TextUnitDTOWithVariantComments textUnitDTOWithVariantComments,
-      RelatedStringsProvider relatedStringsProvider,
+      AiTranslateRelatedStringsProvider relatedStringsProvider,
       Set<GlossaryService.GlossaryTerm> glossaryTerms) {
     TextUnitDTO textUnitDTO = textUnitDTOWithVariantComments.textUnitDTO();
 
@@ -1441,188 +1223,6 @@ public class AiTranslateService {
 
     return new CompletionMultiTextUnitInput.TextUnit.GlossaryTerm(
         gt.source(), gt.comment(), target, gt.targetComment());
-  }
-
-  class RelatedStringsProvider {
-
-    static int CHARACTER_LIMIT = 10000;
-
-    ConcurrentHashMap<Long, List<AssetTextUnit>> assetExtractionMap = new ConcurrentHashMap<>();
-    ConcurrentHashMap<Long, AssetTextUnit> assetTextUnitById = new ConcurrentHashMap<>();
-    ConcurrentHashMap<Long, Map<String, List<AssetTextUnitWithPosition>>> usageMapCache =
-        new ConcurrentHashMap<>();
-    ConcurrentHashMap<Long, Map<String, List<AssetTextUnit>>> idPrefixMapCache =
-        new ConcurrentHashMap<>();
-
-    enum Type {
-      USAGES,
-      ID_PREFIX,
-      NONE;
-
-      public static Type fromString(String type) {
-        Type result = NONE;
-        if (type != null) {
-          result = valueOf(type.toUpperCase());
-        }
-        return result;
-      }
-    }
-
-    Type type;
-
-    public RelatedStringsProvider(Type type) {
-      this.type = type;
-    }
-
-    /**
-     * Everything must be lazy in case we don't use the option. It is very heavy on memory usage but
-     * relatively fast since all asset text units are load per asset, in most case we have one big
-     * asset per repository.
-     */
-    List<RelatedString> getRelatedStrings(TextUnitDTO textUnitDTO) {
-
-      if (Type.NONE.equals(type)) {
-        return ImmutableList.of();
-      }
-
-      initCachesForAssetExtraction(textUnitDTO.getAssetExtractionId());
-
-      AssetTextUnit assetTextUnit = assetTextUnitById.get(textUnitDTO.getAssetTextUnitId());
-
-      if (assetTextUnit != null) {
-        List<RelatedString> relatedStrings =
-            switch (type) {
-              case USAGES -> getRelatedStringsByUsages(assetTextUnit);
-              case ID_PREFIX -> getRelatedStringsByIdPrefix(assetTextUnit);
-              case NONE -> {
-                logger.error("Must have exited earlier to avoid unnecessary computation");
-                yield ImmutableList.of();
-              }
-            };
-        List<RelatedString> filteredByCharLimit =
-            filterByCharLimit(relatedStrings, CHARACTER_LIMIT);
-        logger.debug(
-            "Related strings (type: {}, count: {}, filtered: {}): {}",
-            type,
-            relatedStrings.size(),
-            filteredByCharLimit.size(),
-            relatedStrings);
-        return filteredByCharLimit;
-      } else {
-        logger.warn(
-            "The text unit dto does not have a matching asset text unit in the current asset extraction. This"
-                + "is probably due to concurrent updates, return no related strings.");
-        return ImmutableList.of();
-      }
-    }
-
-    List<RelatedString> getRelatedStringsByIdPrefix(AssetTextUnit assetTextUnit) {
-      Long id = assetTextUnit.getAssetExtraction().getId();
-      initCachesForAssetExtraction(id);
-      String prefix = getPrefix(assetTextUnit.getName());
-      return idPrefixMapCache.get(id).get(prefix).stream()
-          .map(atu -> new RelatedString(atu.getContent(), atu.getComment()))
-          .toList();
-    }
-
-    static String getPrefix(String id) {
-      int dot = id.indexOf('.');
-      return (dot == -1) ? id : id.substring(0, dot);
-    }
-
-    List<RelatedString> getRelatedStringsByUsages(AssetTextUnit assetTextUnit) {
-
-      List<RelatedString> relatedStrings =
-          assetTextUnit.getUsages().stream()
-              .flatMap(
-                  u -> {
-                    FilePosition filePosition = FilePosition.from(u);
-                    return usageMapCache
-                        .get(assetTextUnit.getAssetExtraction().getId())
-                        .getOrDefault(filePosition.path(), List.of())
-                        .stream()
-                        .sorted(Comparator.comparingLong(AssetTextUnitWithPosition::position))
-                        .map(
-                            atu ->
-                                new RelatedString(
-                                    atu.assetTextUnit().getContent(),
-                                    atu.assetTextUnit().getComment()));
-                  })
-              .toList();
-
-      return relatedStrings;
-    }
-
-    void initCachesForAssetExtraction(long assetExtractionId) {
-      assetExtractionMap.computeIfAbsent(
-          assetExtractionId,
-          id -> {
-            List<AssetTextUnit> byAssetExtractionId =
-                assetTextUnitRepository.findByAssetExtractionId(id);
-
-            for (AssetTextUnit atu : byAssetExtractionId) {
-              assetTextUnitById.putIfAbsent(atu.getId(), atu);
-            }
-
-            if (Type.USAGES.equals(type)) {
-              usageMapCache.computeIfAbsent(
-                  assetExtractionId,
-                  __ ->
-                      byAssetExtractionId.stream()
-                          .flatMap(
-                              atu ->
-                                  atu.getUsages().stream()
-                                      .map(
-                                          usage -> {
-                                            FilePosition filePosition = FilePosition.from(usage);
-                                            return Map.entry(
-                                                filePosition.path(),
-                                                new AssetTextUnitWithPosition(
-                                                    atu,
-                                                    filePosition.line() == null
-                                                        ? atu.getId()
-                                                        : filePosition.line()));
-                                          }))
-                          .collect(
-                              Collectors.groupingBy(
-                                  Map.Entry::getKey,
-                                  Collectors.mapping(Map.Entry::getValue, Collectors.toList()))));
-            } else if (Type.ID_PREFIX.equals(type)) {
-              idPrefixMapCache.computeIfAbsent(
-                  assetExtractionId,
-                  __ ->
-                      byAssetExtractionId.stream()
-                          .collect(Collectors.groupingBy(atu -> getPrefix(atu.getName()))));
-            }
-
-            return byAssetExtractionId;
-          });
-    }
-
-    record AssetTextUnitWithPosition(AssetTextUnit assetTextUnit, Long position) {}
-
-    public static List<RelatedString> filterByCharLimit(
-        List<RelatedString> relatedStrings, int charLimit) {
-
-      final int JSON_OVERHEAD = 30;
-      int i = 0;
-      int totalCharCount = 0;
-
-      for (RelatedString rs : relatedStrings) {
-
-        int charCount =
-            (rs.source() == null ? 0 : rs.source().length())
-                + (rs.description() == null ? 0 : rs.description().length())
-                + JSON_OVERHEAD;
-
-        if (totalCharCount + charCount > charLimit) break;
-
-        totalCharCount += charCount;
-        i++;
-      }
-
-      return List.copyOf(relatedStrings.subList(0, i));
-    }
   }
 
   // TODO(ja) duplicated
