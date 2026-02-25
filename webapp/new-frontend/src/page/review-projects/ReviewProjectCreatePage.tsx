@@ -46,6 +46,23 @@ function isReviewProjectNavState(value: unknown): value is ReviewProjectNavState
   );
 }
 
+function getCreateReviewProjectErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return typeof error.message === 'string' ? error.message.trim() : '';
+  }
+  if (typeof error === 'string') {
+    return error.trim();
+  }
+  if (error && typeof error === 'object') {
+    const candidate = error as { message?: unknown; error?: unknown };
+    return (
+      getCreateReviewProjectErrorMessage(candidate.message) ||
+      getCreateReviewProjectErrorMessage(candidate.error)
+    );
+  }
+  return '';
+}
+
 export function ReviewProjectCreatePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -168,8 +185,9 @@ export function ReviewProjectCreatePage() {
             });
           },
           onError: (err: unknown) => {
-            const message = err instanceof Error ? err.message : typeof err === 'string' ? err : '';
-            setErrorMessage(message.trim() || 'Failed to create project');
+            setErrorMessage(
+              getCreateReviewProjectErrorMessage(err) || 'Failed to create project',
+            );
           },
         },
       );
