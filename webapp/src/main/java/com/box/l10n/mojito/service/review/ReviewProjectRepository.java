@@ -30,6 +30,7 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
         request.id,
         request.name,
         request.notes,
+        coalesce(request.createdDate, rp.createdDate),
         requestCreatedBy.username,
         team.id,
         team.name,

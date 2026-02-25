@@ -2710,6 +2710,7 @@ function ReviewProjectHeader({
   const name = project.reviewProjectRequest?.name ?? null;
   const requestId = project.reviewProjectRequest?.id ?? null;
   const description = project.reviewProjectRequest?.notes ?? '';
+  const requestCreatedDate = project.reviewProjectRequest?.createdDate ?? project.createdDate ?? null;
   const requestCreatedBy = project.reviewProjectRequest?.createdByUsername ?? null;
   const requestAttachments = useMemo(
     () => project.reviewProjectRequest?.screenshotImageIds ?? [],
@@ -3465,7 +3466,16 @@ function ReviewProjectHeader({
                       disabled
                     />
                   </label>
-                  <span aria-hidden="true" />
+                  <label className="review-project-page__description-field">
+                    <span className="review-project-page__description-label">Created</span>
+                    <input
+                      className="review-project-page__description-input"
+                      type="text"
+                      value={formatDateTime(requestCreatedDate)}
+                      readOnly
+                      disabled
+                    />
+                  </label>
                 </div>
                 {canEditAssignment ? (
                   <div className="review-project-page__description-assignment">

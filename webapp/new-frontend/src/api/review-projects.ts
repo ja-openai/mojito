@@ -82,6 +82,7 @@ export type ApiReviewProjectDetail = {
     id: number | null;
     name?: string | null;
     notes?: string | null;
+    createdDate?: string | null;
     createdByUsername?: string | null;
     screenshotImageIds?: string[];
   } | null;

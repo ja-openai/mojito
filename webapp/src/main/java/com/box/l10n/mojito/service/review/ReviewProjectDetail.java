@@ -18,6 +18,7 @@ public record ReviewProjectDetail(
     Long reviewProjectRequestId,
     String reviewProjectRequestName,
     String reviewProjectRequestNotes,
+    ZonedDateTime reviewProjectRequestCreatedDate,
     String reviewProjectRequestCreatedByUsername,
     Long teamId,
     String teamName,

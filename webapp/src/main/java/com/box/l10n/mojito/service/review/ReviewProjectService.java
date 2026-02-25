@@ -710,6 +710,7 @@ public class ReviewProjectService {
             project.reviewProjectRequestId(),
             project.reviewProjectRequestName(),
             project.reviewProjectRequestNotes(),
+            project.reviewProjectRequestCreatedDate(),
             project.reviewProjectRequestCreatedByUsername(),
             screenshotImageIds),
         new GetProjectDetailView.Locale(project.localeId(), project.localeTag()),

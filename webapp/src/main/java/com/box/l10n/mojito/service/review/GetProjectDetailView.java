@@ -24,6 +24,7 @@ public record GetProjectDetailView(
       Long id,
       String name,
       String notes,
+      ZonedDateTime createdDate,
       String createdByUsername,
       List<String> screenshotImageIds) {}
 

@@ -305,6 +305,7 @@ public class ReviewProjectWS {
         Long id,
         String name,
         String notes,
+        ZonedDateTime createdDate,
         String createdByUsername,
         List<String> screenshotImageIds) {}
 
@@ -467,6 +468,7 @@ public class ReviewProjectWS {
                 detail.reviewProjectRequest().id(),
                 detail.reviewProjectRequest().name(),
                 detail.reviewProjectRequest().notes(),
+                detail.reviewProjectRequest().createdDate(),
                 detail.reviewProjectRequest().createdByUsername(),
                 detail.reviewProjectRequest().screenshotImageIds())
             : null,
