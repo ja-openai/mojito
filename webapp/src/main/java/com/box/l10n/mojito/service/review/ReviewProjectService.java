@@ -1033,6 +1033,7 @@ public class ReviewProjectService {
 
     List<Long> requestIds = reviewProjectRepository.findRequestIdsByProjectIds(distinctIds);
 
+    reviewProjectAssignmentHistoryRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitDecisionRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitRepository.deleteByReviewProjectIds(distinctIds);
     int deletedProjects = reviewProjectRepository.deleteByProjectIds(distinctIds);
