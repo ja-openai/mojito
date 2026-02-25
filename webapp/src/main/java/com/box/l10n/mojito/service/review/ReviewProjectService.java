@@ -161,6 +161,10 @@ public class ReviewProjectService {
       throw new IllegalArgumentException("type must be provided");
     }
 
+    if (request.requestedByUserId() == null) {
+      throw new IllegalArgumentException("requestedByUserId must be provided");
+    }
+
     logger.info(
         "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}",
         request.name(),
@@ -1365,11 +1369,7 @@ public class ReviewProjectService {
     if (team == null) {
       return new CreateAssignmentDefaults(null, null, Map.of());
     }
-    if (requestedByUserId == null) {
-      teamService.assertCurrentUserCanAccessTeam(team.getId());
-    } else {
-      teamService.assertUserCanAccessTeam(team.getId(), requestedByUserId);
-    }
+    teamService.assertUserCanAccessTeam(team.getId(), requestedByUserId);
 
     // Reuse team service access checks and ordering semantics (PM pool / locale pools).
     List<Long> pmPoolUserIds = teamService.getPmPool(team.getId());
