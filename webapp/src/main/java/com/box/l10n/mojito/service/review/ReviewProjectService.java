@@ -12,9 +12,12 @@ import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionS
 import com.box.l10n.mojito.entity.review.ReviewProject_;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.entity.security.user.User_;
+import com.box.l10n.mojito.quartz.QuartzJobInfo;
+import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.team.TeamRepository;
@@ -63,6 +66,7 @@ public class ReviewProjectService {
   private final TeamRepository teamRepository;
   private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository;
   private final TeamSlackNotificationService teamSlackNotificationService;
+  private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -83,7 +87,8 @@ public class ReviewProjectService {
       TeamService teamService,
       TeamRepository teamRepository,
       ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
-      TeamSlackNotificationService teamSlackNotificationService) {
+      TeamSlackNotificationService teamSlackNotificationService,
+      QuartzPollableTaskScheduler quartzPollableTaskScheduler) {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
@@ -101,6 +106,19 @@ public class ReviewProjectService {
     this.teamRepository = teamRepository;
     this.reviewProjectAssignmentHistoryRepository = reviewProjectAssignmentHistoryRepository;
     this.teamSlackNotificationService = teamSlackNotificationService;
+    this.quartzPollableTaskScheduler = quartzPollableTaskScheduler;
+  }
+
+  public PollableFuture<CreateReviewProjectRequestResult> createReviewProjectRequestAsync(
+      CreateReviewProjectRequestCommand request) {
+    QuartzJobInfo<CreateReviewProjectRequestCommand, CreateReviewProjectRequestResult>
+        quartzJobInfo =
+            QuartzJobInfo.newBuilder(ReviewProjectCreateRequestJob.class)
+                .withInlineInput(false)
+                .withInput(request)
+                .withMessage("Create review project request")
+                .build();
+    return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
   }
 
   @Transactional
@@ -126,6 +144,13 @@ public class ReviewProjectService {
       throw new IllegalArgumentException("type must be provided");
     }
 
+    logger.info(
+        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}",
+        request.name(),
+        request.teamId(),
+        request.localeTags(),
+        request.tmTextUnitIds().size());
+
     List<LocaleCandidates> localesToCreate = new ArrayList<>();
     for (String localeTag : new LinkedHashSet<>(request.localeTags())) {
       Locale locale = localeService.findByBcp47Tag(localeTag);
@@ -136,13 +161,27 @@ public class ReviewProjectService {
 
       List<TextUnitDTO> candidates = searchReviewCandidates(request.tmTextUnitIds(), locale);
       if (candidates.isEmpty()) {
+        logger.info(
+            "Skipping review project locale '{}' for request '{}' because no text units matched",
+            localeTag,
+            request.name());
         continue;
       }
+      logger.info(
+          "Prepared review project locale '{}' for request '{}' with {} matched text units",
+          locale.getBcp47Tag(),
+          request.name(),
+          candidates.size());
 
       localesToCreate.add(new LocaleCandidates(locale, candidates));
     }
 
     if (localesToCreate.isEmpty()) {
+      logger.warn(
+          "No review project locales could be created: name='{}', teamId={}, requestedLocales={}",
+          request.name(),
+          request.teamId(),
+          request.localeTags());
       throw new IllegalArgumentException("No text units found for provided locales");
     }
 
@@ -211,6 +250,14 @@ public class ReviewProjectService {
 
     teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
         reviewProjectRequest, createdProjects);
+
+    logger.info(
+        "Created review project request id={} name='{}' with {} locales {} and {} projects",
+        reviewProjectRequest.getId(),
+        reviewProjectRequest.getName(),
+        createdLocaleTags.size(),
+        createdLocaleTags,
+        projectIds.size());
 
     return new CreateReviewProjectRequestResult(
         reviewProjectRequest.getId(),

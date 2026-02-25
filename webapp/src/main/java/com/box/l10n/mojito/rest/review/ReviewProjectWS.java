@@ -6,8 +6,8 @@ import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.rest.EntityWithIdNotFoundException;
+import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.review.CreateReviewProjectRequestCommand;
-import com.box.l10n.mojito.service.review.CreateReviewProjectRequestResult;
 import com.box.l10n.mojito.service.review.GetProjectDetailView;
 import com.box.l10n.mojito.service.review.ReviewProjectCurrentVariantConflictException;
 import com.box.l10n.mojito.service.review.ReviewProjectService;
@@ -61,27 +61,13 @@ public class ReviewProjectWS {
   }
 
   @PostMapping("/review-project-requests")
-  @ResponseStatus(HttpStatus.CREATED)
-  public CreateReviewProjectRequestResponse createReviewProjectRequest(
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public CreateReviewProjectRequestStartResponse createReviewProjectRequest(
       @RequestBody CreateReviewProjectRequestRequest request) {
-    CreateReviewProjectRequestResult result =
-        reviewProjectService.createReviewProjectRequest(
-            new CreateReviewProjectRequestCommand(
-                request.localeTags(),
-                request.notes(),
-                request.tmTextUnitIds(),
-                request.type(),
-                request.dueDate(),
-                request.screenshotImageIds(),
-                request.name(),
-                request.teamId()));
-
-    return new CreateReviewProjectRequestResponse(
-        result.requestId(),
-        result.requestName(),
-        result.localeTags(),
-        result.dueDate(),
-        result.projectIds());
+    PollableFuture<?> pollableFuture =
+        reviewProjectService.createReviewProjectRequestAsync(
+            toCreateReviewProjectRequestCommand(request));
+    return new CreateReviewProjectRequestStartResponse(pollableFuture.getPollableTask().getId());
   }
 
   @GetMapping("/review-projects/{projectId}")
@@ -218,13 +204,7 @@ public class ReviewProjectWS {
     }
   }
 
-  /** Response contract for create review project request (minimal payload). */
-  public record CreateReviewProjectRequestResponse(
-      Long requestId,
-      String requestName,
-      List<String> localeTags,
-      ZonedDateTime dueDate,
-      List<Long> projectIds) {}
+  public record CreateReviewProjectRequestStartResponse(Long pollableTaskId) {}
 
   public record UpdateReviewProjectStatusRequest(ReviewProjectStatus status, String closeReason) {}
 
@@ -418,6 +398,23 @@ public class ReviewProjectWS {
         view.acceptedCount(),
         view.dueDate(),
         view.reviewProjects().stream().map(this::toSearchReviewProjectsResponse).toList());
+  }
+
+  private CreateReviewProjectRequestCommand toCreateReviewProjectRequestCommand(
+      CreateReviewProjectRequestRequest request) {
+    if (request == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "request body is required");
+    }
+
+    return new CreateReviewProjectRequestCommand(
+        request.localeTags(),
+        request.notes(),
+        request.tmTextUnitIds(),
+        request.type(),
+        request.dueDate(),
+        request.screenshotImageIds(),
+        request.name(),
+        request.teamId());
   }
 
   private SearchReviewProjectsCriteria toCriteria(SearchReviewProjectsRequest request) {

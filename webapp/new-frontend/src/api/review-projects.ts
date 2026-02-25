@@ -1,3 +1,5 @@
+import { isTransientHttpError, poll } from '../utils/poller';
+
 // Keep in sync with com.box.l10n.mojito.entity.review.ReviewProjectStatus
 export const REVIEW_PROJECT_STATUSES = ['OPEN', 'CLOSED'] as const;
 export type ApiReviewProjectStatus = (typeof REVIEW_PROJECT_STATUSES)[number];
@@ -199,6 +201,21 @@ const jsonHeaders = {
   'Content-Type': 'application/json',
 };
 
+type StartCreateReviewProjectRequestResponse = {
+  pollableTaskId: number;
+};
+
+type PollableTaskStatusResponse = {
+  id: number;
+  isAllFinished?: boolean;
+  allFinished?: boolean;
+  errorMessage?: string | null;
+};
+
+const REVIEW_PROJECT_CREATE_POLL_INTERVAL_MS = 500;
+const REVIEW_PROJECT_CREATE_MAX_POLL_INTERVAL_MS = 8_000;
+const REVIEW_PROJECT_CREATE_TIMEOUT_MS = 120_000;
+
 export const searchReviewProjects = async (
   params: ReviewProjectsSearchRequest,
 ): Promise<SearchReviewProjectsResponse> => {
@@ -243,20 +260,86 @@ export const fetchReviewProjects = async (): Promise<ApiReviewProjectSummary[]> 
 export const createReviewProjectRequest = async (
   payload: ReviewProjectCreateRequest,
 ): Promise<ReviewProjectCreateResponse> => {
-  const response = await fetch('/api/review-project-requests', {
+  const startResponse = await fetch('/api/review-project-requests', {
     method: 'POST',
     credentials: 'include',
     headers: jsonHeaders,
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    const message = await response.text().catch(() => '');
+  if (!startResponse.ok) {
+    const message = await startResponse.text().catch(() => '');
     throw new Error(message || 'Failed to create review project');
   }
 
-  return (await response.json()) as ReviewProjectCreateResponse;
+  const { pollableTaskId } =
+    (await startResponse.json()) as StartCreateReviewProjectRequestResponse;
+
+  const completedTask = await waitForCreateReviewProjectTaskToFinish(pollableTaskId);
+  const normalizedErrorMessage = normalizePollableTaskErrorMessage(completedTask.errorMessage);
+  if (normalizedErrorMessage) {
+    throw new Error(normalizedErrorMessage);
+  }
+
+  const outputResponse = await fetch(`/api/pollableTasks/${pollableTaskId}/output`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!outputResponse.ok) {
+    const message = await outputResponse.text().catch(() => '');
+    throw new Error(message || 'Failed to create review project');
+  }
+
+  return (await outputResponse.json()) as ReviewProjectCreateResponse;
 };
+
+async function waitForCreateReviewProjectTaskToFinish(
+  pollableTaskId: number,
+): Promise<PollableTaskStatusResponse> {
+  return poll(() => fetchPollableTaskStatus(pollableTaskId), {
+    intervalMs: REVIEW_PROJECT_CREATE_POLL_INTERVAL_MS,
+    maxIntervalMs: REVIEW_PROJECT_CREATE_MAX_POLL_INTERVAL_MS,
+    timeoutMs: REVIEW_PROJECT_CREATE_TIMEOUT_MS,
+    timeoutMessage: 'Timed out while creating review project',
+    isTransientError: isTransientHttpError,
+    shouldStop: (task) => task.isAllFinished ?? task.allFinished ?? false,
+  });
+}
+
+async function fetchPollableTaskStatus(pollableTaskId: number): Promise<PollableTaskStatusResponse> {
+  const response = await fetch(`/api/pollableTasks/${pollableTaskId}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to poll review project creation status');
+  }
+
+  return (await response.json()) as PollableTaskStatusResponse;
+}
+
+function normalizePollableTaskErrorMessage(rawErrorMessage: string | null | undefined): string {
+  const trimmed = rawErrorMessage?.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as { message?: string };
+    if (typeof parsed?.message === 'string' && parsed.message.trim().length > 0) {
+      return parsed.message.trim();
+    }
+  } catch {
+    // Fall through to return raw message when not JSON.
+  }
+
+  return trimmed;
+}
 
 export const fetchReviewProjectDetail = async (
   projectId: number,
