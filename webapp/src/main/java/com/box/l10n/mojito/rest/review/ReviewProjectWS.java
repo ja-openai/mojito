@@ -415,7 +415,8 @@ public class ReviewProjectWS {
         request.dueDate(),
         request.screenshotImageIds(),
         request.name(),
-        request.teamId());
+        request.teamId(),
+        null);
   }
 
   private SearchReviewProjectsCriteria toCriteria(SearchReviewProjectsRequest request) {
