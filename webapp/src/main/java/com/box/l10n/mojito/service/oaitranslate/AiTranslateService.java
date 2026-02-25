@@ -100,7 +100,6 @@ public class AiTranslateService {
 
   static final String METADATA__TEXT_UNIT_DTOS__BLOB_ID = "textUnitDTOs";
   static final Integer MAX_COMPLETION_TOKENS = null;
-  static final int CHAT_COMPLETION_REQUEST_TIMEOUT = 15;
   static final String METRIC_PREFIX = "AiTranslateService";
   static final String MODE_BATCH = "batch";
   static final String MODE_NO_BATCH = "no_batch";
@@ -403,6 +402,7 @@ public class AiTranslateService {
           CompletionMultiTextUnitInput.Builder builder =
               CompletionMultiTextUnitInput.builder(bcp47Tag);
           int requestTextUnitCount = 0;
+          int requestSourceCharCount = 0;
 
           for (TextUnitDTOWithVariantComments textUnitDTOWithVariantComments :
               textUnitsByScreenshot.textUnitDTOWithVariantCommentsList()) {
@@ -422,6 +422,7 @@ public class AiTranslateService {
             }
 
             requestTextUnitCount++;
+            requestSourceCharCount += safeLength(textUnitDTO.getSource());
             builder.addTextUnit(
                 new TextUnit(
                     textUnitDTO.getTmTextUnitId(),
@@ -473,9 +474,11 @@ public class AiTranslateService {
                   Boolean.toString(hasScreenshot));
 
           int timeout =
-              aiTranslateInput.timeoutSeconds() == null
-                  ? CHAT_COMPLETION_REQUEST_TIMEOUT
-                  : aiTranslateInput.timeoutSeconds();
+              resolveNoBatchTimeoutSeconds(
+                  aiTranslateInput.timeoutSeconds(),
+                  requestTextUnitCount,
+                  requestSourceCharCount,
+                  hasScreenshot);
 
           CompletableFuture<ResponsesResponse> responsesResponseCompletableFuture =
               openAIClientPool.submit(
@@ -1739,5 +1742,48 @@ public class AiTranslateService {
   private boolean isTimeoutException(Throwable throwable) {
     Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
     return cause instanceof TimeoutException;
+  }
+
+  private int resolveNoBatchTimeoutSeconds(
+      Integer overrideTimeoutSeconds,
+      int requestTextUnitCount,
+      int requestSourceCharCount,
+      boolean hasScreenshot) {
+    if (overrideTimeoutSeconds != null) {
+      return overrideTimeoutSeconds;
+    }
+
+    AiTranslateConfigurationProperties.NoBatchProperties.TimeoutProperties timeoutProperties =
+        aiTranslateConfigurationProperties.getNoBatch().getTimeout();
+    int baseTimeout = timeoutProperties.getBaseSeconds();
+    int additionalTextUnitTimeout =
+        Math.max(0, requestTextUnitCount - 1) * timeoutProperties.getPerAdditionalTextUnitSeconds();
+    int sourceCharTimeout =
+        ceilDiv(requestSourceCharCount, 1000) * timeoutProperties.getPer1000SourceCharsSeconds();
+    int screenshotTimeout = hasScreenshot ? timeoutProperties.getScreenshotPenaltySeconds() : 0;
+
+    int timeout = baseTimeout + additionalTextUnitTimeout + sourceCharTimeout + screenshotTimeout;
+
+    int minTimeout = timeoutProperties.getMinSeconds();
+    int maxTimeout = timeoutProperties.getMaxSeconds();
+    if (maxTimeout > 0) {
+      timeout = Math.min(timeout, maxTimeout);
+    }
+    if (minTimeout > 0) {
+      timeout = Math.max(timeout, minTimeout);
+    }
+
+    return timeout;
+  }
+
+  private int ceilDiv(int dividend, int divisor) {
+    if (dividend <= 0 || divisor <= 0) {
+      return 0;
+    }
+    return (dividend + divisor - 1) / divisor;
+  }
+
+  private int safeLength(String value) {
+    return value == null ? 0 : value.length();
   }
 }
