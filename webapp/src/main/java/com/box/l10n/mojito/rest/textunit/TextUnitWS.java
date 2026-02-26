@@ -378,6 +378,7 @@ public class TextUnitWS {
     textUnitSearcherParameters.setRepositoryIds(textUnitSearchBody.getRepositoryIds());
     textUnitSearcherParameters.setRepositoryNames(textUnitSearchBody.getRepositoryNames());
     textUnitSearcherParameters.setTmTextUnitIds(textUnitSearchBody.getTmTextUnitIds());
+    textUnitSearcherParameters.setTextSearch(textUnitSearchBody.getTextSearch());
     textUnitSearcherParameters.setName(textUnitSearchBody.getName());
     textUnitSearcherParameters.setSource(
         emptyOrString(textUnitSearchBody.getSource(), textUnitSearchBody.searchType));
