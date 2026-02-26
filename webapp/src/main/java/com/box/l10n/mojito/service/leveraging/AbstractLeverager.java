@@ -5,7 +5,9 @@ import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.assetExtraction.AssetMappingService;
+import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentService;
@@ -33,6 +35,8 @@ public abstract class AbstractLeverager {
   @Autowired protected TextUnitSearcher textUnitSearcher;
 
   @Autowired TMService tmService;
+
+  @Autowired UserService userService;
 
   @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
@@ -138,6 +142,7 @@ public abstract class AbstractLeverager {
       boolean uniqueTMTextUnitMatched) {
 
     logger.debug("Add leveraged translations in tmTextUnit, id: {}", tmTextUnit.getId());
+    User leverageUser = userService.findOrCreateLeverageUser();
 
     for (TextUnitDTO translation : translations) {
 
@@ -151,7 +156,8 @@ public abstract class AbstractLeverager {
                   ? TMTextUnitVariant.Status.TRANSLATION_NEEDED
                   : translation.getStatus(),
               translation.isIncludedInLocalizedFile(),
-              null);
+              null,
+              leverageUser);
 
       TMTextUnitCurrentVariant addTMTextUnitCurrentVariant =
           addTMTextUnitCurrentVariantWithResult.getTmTextUnitCurrentVariant();

@@ -49,6 +49,7 @@ public class UserService {
   static Logger logger = getLogger(UserService.class);
 
   public static final String SYSTEM_USERNAME = "system";
+  public static final String LEVERAGE_USERNAME = "leverage";
 
   @Autowired UserRepository userRepository;
 
@@ -355,6 +356,11 @@ public class UserService {
     return userRepository.findByUsername(SYSTEM_USERNAME);
   }
 
+  @Transactional
+  public User findOrCreateLeverageUser() {
+    return findOrCreateBasicUser(LEVERAGE_USERNAME, null, null, "Leverage", true, false);
+  }
+
   /**
    * Update {@link User#createdByUser}. This is useful for when the {@link User} was created without
    * an authenticated context, hence, the {@link org.springframework.data.domain.AuditorAware} will
@@ -488,12 +494,24 @@ public class UserService {
    * @return
    */
   public User getOrCreatePartialBasicUser(String username) {
+    return findOrCreateBasicUser(username, null, null, null, true, true);
+  }
 
+  private User findOrCreateBasicUser(
+      String username,
+      String givenName,
+      String surname,
+      String commonName,
+      boolean partiallyCreated,
+      boolean enabled) {
     User user = userRepository.findByUsername(username);
 
     if (user == null) {
-      return createBasicUser(username, null, null, null, true);
+      user = createBasicUser(username, givenName, surname, commonName, partiallyCreated);
+      user.setEnabled(enabled);
+      user = userRepository.save(user);
     }
+
     return user;
   }
 
