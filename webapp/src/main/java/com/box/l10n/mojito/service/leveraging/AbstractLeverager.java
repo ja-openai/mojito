@@ -38,6 +38,8 @@ public abstract class AbstractLeverager {
 
   @Autowired UserService userService;
 
+  @Autowired TMTextUnitVariantLeveragingService tmTextUnitVariantLeveragingService;
+
   @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
   /**
@@ -174,6 +176,13 @@ public abstract class AbstractLeverager {
             TMTextUnitVariantComment.Type.LEVERAGING,
             TMTextUnitVariantComment.Severity.INFO,
             getLeverageComment(translation, uniqueTMTextUnitMatched));
+
+        tmTextUnitVariantLeveragingService.saveLeveraging(
+            addTMTextUnitCurrentVariant.getTmTextUnitVariant(),
+            translation.getTmTextUnitId(),
+            translation.getTmTextUnitVariantId(),
+            getType(),
+            uniqueTMTextUnitMatched);
       }
 
       logger.debug("Added leveraged translation, id: {}", addTMTextUnitCurrentVariant.getId());

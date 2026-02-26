@@ -94,6 +94,13 @@ export type ApiTextUnitHistoryComment = {
   type?: string | null;
 };
 
+export type ApiTextUnitHistoryLeveraging = {
+  sourceTmTextUnitId?: number | null;
+  sourceTmTextUnitVariantId?: number | null;
+  leveragingType?: string | null;
+  uniqueMatch?: boolean | null;
+};
+
 export type ApiTextUnitHistoryItem = {
   id: number;
   createdDate?: string | null;
@@ -105,6 +112,7 @@ export type ApiTextUnitHistoryItem = {
     id?: number | null;
     username?: string | null;
   } | null;
+  leveraging?: ApiTextUnitHistoryLeveraging | null;
   tmTextUnitVariantComments?: ApiTextUnitHistoryComment[] | null;
 };
 

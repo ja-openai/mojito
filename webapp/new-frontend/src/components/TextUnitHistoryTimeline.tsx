@@ -1,4 +1,5 @@
 import './text-unit-history-timeline.css';
+import { Link, type To } from 'react-router-dom';
 
 export type TextUnitHistoryTimelineComment = {
   key: string;
@@ -16,6 +17,11 @@ export type TextUnitHistoryTimelineEntry = {
   status: string;
   comments: TextUnitHistoryTimelineComment[];
   badges?: string[];
+  sourceLink?: {
+    label: string;
+    to: To;
+    title?: string;
+  } | null;
 };
 
 type TextUnitHistoryTimelineProps = {
@@ -122,6 +128,13 @@ export function TextUnitHistoryTimeline({
               <time className="text-unit-history__timeline-time">{item.date}</time>
             </div>
             <pre className="text-unit-history__timeline-content">{item.translation}</pre>
+            {item.sourceLink ? (
+              <div className="text-unit-history__timeline-source">
+                <Link to={item.sourceLink.to} title={item.sourceLink.title}>
+                  {item.sourceLink.label}
+                </Link>
+              </div>
+            ) : null}
             {item.comments.length > 0 ? (
               <table className="text-unit-history__comment-table">
                 <thead>

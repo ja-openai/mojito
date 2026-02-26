@@ -163,3 +163,13 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.text-unit-history__timeline-source {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+}
+
+.text-unit-history__timeline-source a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}

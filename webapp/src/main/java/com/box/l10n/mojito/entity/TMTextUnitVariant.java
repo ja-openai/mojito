@@ -18,6 +18,7 @@ import jakarta.persistence.NamedAttributeNode;
 import jakarta.persistence.NamedEntityGraph;
 import jakarta.persistence.NamedEntityGraphs;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.HashSet;
 import java.util.Set;
@@ -38,7 +39,8 @@ import org.springframework.data.annotation.CreatedBy;
         @NamedAttributeNode("tmTextUnit"),
         @NamedAttributeNode("locale"),
         @NamedAttributeNode("createdByUser"),
-        @NamedAttributeNode("tmTextUnitVariantComments")
+        @NamedAttributeNode("tmTextUnitVariantComments"),
+        @NamedAttributeNode("leveraging")
       }),
   @NamedEntityGraph(
       name = "TMTextUnitVariant.withComments",
@@ -146,6 +148,10 @@ public class TMTextUnitVariant extends SettableAuditableEntity {
   @JsonView(View.TranslationHistorySummary.class)
   private Set<TMTextUnitVariantComment> tmTextUnitVariantComments = new HashSet<>();
 
+  @OneToOne(mappedBy = "tmTextUnitVariant", fetch = FetchType.LAZY)
+  @JsonView(View.TranslationHistorySummary.class)
+  private TMTextUnitVariantLeveraging leveraging;
+
   public String getContent() {
     return content;
   }
@@ -201,6 +207,14 @@ public class TMTextUnitVariant extends SettableAuditableEntity {
   public void setTmTextUnitVariantComments(
       Set<TMTextUnitVariantComment> tmTextUnitVariantComments) {
     this.tmTextUnitVariantComments = tmTextUnitVariantComments;
+  }
+
+  public TMTextUnitVariantLeveraging getLeveraging() {
+    return leveraging;
+  }
+
+  public void setLeveraging(TMTextUnitVariantLeveraging leveraging) {
+    this.leveraging = leveraging;
   }
 
   public Status getStatus() {
