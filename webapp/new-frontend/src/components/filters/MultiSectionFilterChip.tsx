@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { resultSizePresets, WORKSET_SIZE_MIN } from '../../page/workbench/workbench-constants';
 
@@ -108,7 +109,10 @@ export function MultiSectionFilterChip({
   );
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const sizeInputRef = useRef<HTMLInputElement | null>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>();
 
   const sizeSection = sections.find((section): section is SizeSection => section.kind === 'size');
   const sizeOptions =
@@ -136,6 +140,35 @@ export function MultiSectionFilterChip({
     }
   }, [sizeDraft, sizeMin, sizeSection]);
 
+  const updatePanelPosition = useCallback(() => {
+    if (!buttonRef.current) {
+      return;
+    }
+    const rect = buttonRef.current.getBoundingClientRect();
+    const viewportPadding = 16;
+    const gap = 8;
+    const maxWidth = Math.min(460, window.innerWidth - viewportPadding * 2);
+
+    setPanelStyle({
+      position: 'fixed',
+      top: Math.min(rect.bottom + gap, window.innerHeight - viewportPadding),
+      left:
+        align === 'right'
+          ? undefined
+          : Math.max(
+              viewportPadding,
+              Math.min(rect.left, window.innerWidth - maxWidth - viewportPadding),
+            ),
+      right:
+        align === 'right'
+          ? Math.max(viewportPadding, window.innerWidth - rect.right)
+          : undefined,
+      minWidth: rect.width,
+      maxWidth,
+      zIndex: 1000,
+    });
+  }, [align]);
+
   useEffect(() => {
     if (disabled && isOpen) {
       commitSizeDraft();
@@ -146,14 +179,24 @@ export function MultiSectionFilterChip({
   useEffect(() => {
     if (!isOpen) return;
     const handlePointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         commitSizeDraft();
         setIsOpen(false);
       }
     };
+    const handleReposition = () => updatePanelPosition();
+
+    updatePanelPosition();
     window.addEventListener('pointerdown', handlePointerDown);
-    return () => window.removeEventListener('pointerdown', handlePointerDown);
-  }, [commitSizeDraft, isOpen]);
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [commitSizeDraft, isOpen, updatePanelPosition]);
 
   useEffect(() => {
     if (!hasSizeSection) {
@@ -216,12 +259,14 @@ export function MultiSectionFilterChip({
         aria-expanded={isOpen}
         aria-label={ariaLabel}
         disabled={disabled}
+        ref={buttonRef}
       >
         <span className="chip-dropdown__summary">{computedSummary}</span>
         <span className="chip-dropdown__chevron" aria-hidden="true" />
       </button>
-      {isOpen ? (
-        <div className={panelClassName} role="menu">
+      {isOpen
+        ? createPortal(
+            <div className={panelClassName} role="menu" ref={panelRef} style={panelStyle}>
           {sections.map((section, index) => {
             if (section.kind === 'radio') {
               return (
@@ -400,8 +445,10 @@ export function MultiSectionFilterChip({
             }
             return null;
           })}
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
