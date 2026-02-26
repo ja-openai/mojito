@@ -409,6 +409,7 @@ export function TextUnitDetailPage() {
   ]);
 
   const historyRows = useMemo<TextUnitDetailHistoryRow[]>(() => {
+    const historyLocaleTag = localeTag ?? activeTextUnit?.targetLocale ?? null;
     return sortedHistoryItems.map((item) => {
       const comments: TextUnitDetailHistoryComment[] = (item.tmTextUnitVariantComments ?? []).map(
         (comment, index) => ({
@@ -421,6 +422,11 @@ export function TextUnitDetailPage() {
           content: formatValue(comment.content),
         }),
       );
+      const sourceTmTextUnitId = item.leveraging?.sourceTmTextUnitId;
+      const sourceTmTextUnitVariantId = item.leveraging?.sourceTmTextUnitVariantId;
+      const leveragingType = item.leveraging?.leveragingType?.trim() || null;
+      const isLeveraged =
+        typeof sourceTmTextUnitId === 'number' && typeof sourceTmTextUnitVariantId === 'number';
 
       return {
         key: String(item.id),
@@ -430,9 +436,22 @@ export function TextUnitDetailPage() {
         date: formatDateTime(item.createdDate),
         status: formatValue(formatHistoryStatus(item.status, item.includedInLocalizedFile)),
         comments,
+        badges: isLeveraged ? ['Leveraged'] : undefined,
+        sourceLink: isLeveraged
+          ? {
+              label: `Source variant #${sourceTmTextUnitVariantId}`,
+              to: {
+                pathname: `/text-units/${sourceTmTextUnitId}`,
+                search: historyLocaleTag
+                  ? `?locale=${encodeURIComponent(historyLocaleTag)}`
+                  : '',
+              },
+              title: leveragingType ?? 'Open leveraged source',
+            }
+          : null,
       };
     });
-  }, [sortedHistoryItems]);
+  }, [activeTextUnit?.targetLocale, localeTag, sortedHistoryItems]);
 
   const handleBack = () => {
     if (locationState?.workbenchSearch) {

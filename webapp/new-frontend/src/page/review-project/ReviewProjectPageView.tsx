@@ -1332,6 +1332,11 @@ function DetailPane({
         const statusKey =
           item.includedInLocalizedFile === false ? 'REJECTED' : (item.status ?? null);
         const statusLabel = statusKey != null ? statusKeyToLabel(statusKey) : '-';
+        const sourceTmTextUnitId = item.leveraging?.sourceTmTextUnitId;
+        const sourceTmTextUnitVariantId = item.leveraging?.sourceTmTextUnitVariantId;
+        const leveragingType = item.leveraging?.leveragingType?.trim() || null;
+        const isLeveraged =
+          typeof sourceTmTextUnitId === 'number' && typeof sourceTmTextUnitVariantId === 'number';
         const userName =
           (
             isAcceptedItem ? decision?.lastModifiedByUsername : item.createdByUser?.username
@@ -1352,7 +1357,18 @@ function DetailPane({
           badges: [
             ...(item.id === baselineVariant?.id ? ['Baseline'] : []),
             ...(item.id === decisionVariantId ? ['Accepted'] : []),
+            ...(isLeveraged ? ['Leveraged'] : []),
           ],
+          sourceLink: isLeveraged
+            ? {
+                label: `Source variant #${sourceTmTextUnitVariantId}`,
+                to: {
+                  pathname: `/text-units/${sourceTmTextUnitId}`,
+                  search: localeTag ? `?locale=${encodeURIComponent(localeTag)}` : '',
+                },
+                title: leveragingType ?? 'Open leveraged source',
+              }
+            : null,
           comments: (item.tmTextUnitVariantComments ?? []).map((comment, index) => ({
             key:
               comment.id != null
