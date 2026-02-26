@@ -32,4 +32,6 @@ public record ReviewProjectTextUnitDetail(
     String decisionVariantComment,
     Long reviewedTmTextUnitVariantId,
     String decisionNotes,
-    DecisionState decisionState) {}
+    DecisionState decisionState,
+    ZonedDateTime decisionLastModifiedDate,
+    String decisionLastModifiedByUsername) {}

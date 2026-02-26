@@ -65,5 +65,7 @@ public record GetProjectDetailView(
       Long reviewedTmTextUnitVariantId,
       String notes,
       DecisionState decisionState,
-      TmTextUnitVariant decisionTmTextUnitVariant) {}
+      TmTextUnitVariant decisionTmTextUnitVariant,
+      ZonedDateTime lastModifiedDate,
+      String lastModifiedByUsername) {}
 }

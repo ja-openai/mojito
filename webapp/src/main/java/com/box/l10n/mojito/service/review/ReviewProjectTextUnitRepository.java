@@ -43,7 +43,9 @@ public interface ReviewProjectTextUnitRepository
         decisionTtuv.comment,
         rptud.reviewedVariant.id,
         rptud.notes,
-        rptud.decisionState
+        rptud.decisionState,
+        rptud.lastModifiedDate,
+        decisionModifiedBy.username
       )
       from ReviewProjectTextUnit rptu
       join rptu.reviewProject rp
@@ -57,6 +59,7 @@ public interface ReviewProjectTextUnitRepository
       left join ttucv.tmTextUnitVariant currentTtuv
       left join ReviewProjectTextUnitDecision rptud
         on rptud.reviewProjectTextUnit = rptu
+      left join rptud.lastModifiedByUser decisionModifiedBy
       left join rptud.decisionVariant decisionTtuv
       where rp.id = :reviewProjectId
       order by rptu.id
@@ -94,7 +97,9 @@ public interface ReviewProjectTextUnitRepository
         decisionTtuv.comment,
         rptud.reviewedVariant.id,
         rptud.notes,
-        rptud.decisionState
+        rptud.decisionState,
+        rptud.lastModifiedDate,
+        decisionModifiedBy.username
       )
       from ReviewProjectTextUnit rptu
       join rptu.reviewProject rp
@@ -108,6 +113,7 @@ public interface ReviewProjectTextUnitRepository
       left join ttucv.tmTextUnitVariant currentTtuv
       left join ReviewProjectTextUnitDecision rptud
         on rptud.reviewProjectTextUnit = rptu
+      left join rptud.lastModifiedByUser decisionModifiedBy
       left join rptud.decisionVariant decisionTtuv
       where rptu.id = :reviewProjectTextUnitId
       """)

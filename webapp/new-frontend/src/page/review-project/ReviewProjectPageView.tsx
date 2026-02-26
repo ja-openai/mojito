@@ -1309,55 +1309,74 @@ function DetailPane({
     },
   });
 
-  const historyItems = useMemo(() => {
-    return [...(historyQuery.data ?? [])]
-      .sort((a, b) => {
-        const dateDelta =
-          (Date.parse(b.createdDate ?? '') || 0) - (Date.parse(a.createdDate ?? '') || 0);
-        if (dateDelta !== 0) {
-          return dateDelta;
-        }
-        return (b.id ?? 0) - (a.id ?? 0);
-      })
-      .slice(0, 8);
-  }, [historyQuery.data]);
-
   const historyErrorMessage =
     historyQuery.error instanceof Error ? historyQuery.error.message : 'Unable to load history.';
 
   const historyRows = useMemo<TextUnitHistoryTimelineEntry[]>(() => {
-    return historyItems.map((item) => {
-      const statusKey = item.includedInLocalizedFile === false ? 'REJECTED' : (item.status ?? null);
-      const statusLabel = statusKey != null ? statusKeyToLabel(statusKey) : '-';
-      return {
-        key: String(item.id),
-        variantId: String(item.id),
-        userName: item.createdByUser?.username?.trim() || 'Unknown user',
-        translation: item.content ?? '—',
-        date: formatDateTime(item.createdDate),
-        status: statusLabel,
-        badges: [
-          ...(item.id === baselineVariant?.id ? ['Baseline'] : []),
-          ...(item.id === decisionVariantId ? ['Accepted'] : []),
-        ],
-        comments: (item.tmTextUnitVariantComments ?? []).map((comment, index) => ({
-          key:
-            comment.id != null
-              ? String(comment.id)
-              : String(comment.type ?? '') +
-                '-' +
-                String(comment.severity ?? '') +
-                '-' +
-                String(comment.content ?? '') +
-                '-' +
-                String(index),
-          type: comment.type ?? '-',
-          severity: comment.severity ?? '-',
-          content: comment.content ?? '-',
-        })),
-      };
-    });
-  }, [baselineVariant?.id, decisionVariantId, historyItems]);
+    return [...(historyQuery.data ?? [])]
+      .sort((a, b) => {
+        const aTimestamp =
+          (a.id === decisionVariantId ? Date.parse(decision?.lastModifiedDate ?? '') || 0 : 0) ||
+          (Date.parse(a.createdDate ?? '') || 0);
+        const bTimestamp =
+          (b.id === decisionVariantId ? Date.parse(decision?.lastModifiedDate ?? '') || 0 : 0) ||
+          (Date.parse(b.createdDate ?? '') || 0);
+        if (bTimestamp !== aTimestamp) {
+          return bTimestamp - aTimestamp;
+        }
+        return (b.id ?? 0) - (a.id ?? 0);
+      })
+      .slice(0, 8)
+      .map((item) => {
+        const isAcceptedItem = item.id === decisionVariantId;
+        const statusKey =
+          item.includedInLocalizedFile === false ? 'REJECTED' : (item.status ?? null);
+        const statusLabel = statusKey != null ? statusKeyToLabel(statusKey) : '-';
+        const userName =
+          (
+            isAcceptedItem ? decision?.lastModifiedByUsername : item.createdByUser?.username
+          )?.trim() ||
+          item.createdByUser?.username?.trim() ||
+          'Unknown user';
+        const displayDate =
+          isAcceptedItem && decision?.lastModifiedDate
+            ? formatDateTime(decision.lastModifiedDate)
+            : formatDateTime(item.createdDate);
+        return {
+          key: String(item.id),
+          variantId: String(item.id),
+          userName,
+          translation: item.content ?? '—',
+          date: displayDate,
+          status: statusLabel,
+          badges: [
+            ...(item.id === baselineVariant?.id ? ['Baseline'] : []),
+            ...(item.id === decisionVariantId ? ['Accepted'] : []),
+          ],
+          comments: (item.tmTextUnitVariantComments ?? []).map((comment, index) => ({
+            key:
+              comment.id != null
+                ? String(comment.id)
+                : String(comment.type ?? '') +
+                  '-' +
+                  String(comment.severity ?? '') +
+                  '-' +
+                  String(comment.content ?? '') +
+                  '-' +
+                  String(index),
+            type: comment.type ?? '-',
+            severity: comment.severity ?? '-',
+            content: comment.content ?? '-',
+          })),
+        };
+      });
+  }, [
+    baselineVariant?.id,
+    decision?.lastModifiedByUsername,
+    decision?.lastModifiedDate,
+    decisionVariantId,
+    historyQuery.data,
+  ]);
 
   useEffect(() => {
     setDraftTarget(snapshot.target);

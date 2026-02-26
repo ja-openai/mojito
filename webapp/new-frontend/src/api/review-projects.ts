@@ -60,6 +60,8 @@ export type ApiReviewProjectTextUnit = {
     reviewedTmTextUnitVariantId?: number | null;
     notes?: string | null;
     decisionState?: string | null;
+    lastModifiedDate?: string | null;
+    lastModifiedByUsername?: string | null;
     decisionTmTextUnitVariant?: {
       id?: number | null;
       content?: string | null;

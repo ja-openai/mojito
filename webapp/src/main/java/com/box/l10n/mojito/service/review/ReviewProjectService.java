@@ -1264,7 +1264,9 @@ public class ReviewProjectService {
                 detail.reviewedTmTextUnitVariantId(),
                 detail.decisionNotes(),
                 detail.decisionState(),
-                decisionTmTextUnitVariantView)
+                decisionTmTextUnitVariantView,
+                detail.decisionLastModifiedDate(),
+                detail.decisionLastModifiedByUsername())
             : null;
     return new GetProjectDetailView.ReviewProjectTextUnit(
         detail.reviewProjectTextUnitId(),
