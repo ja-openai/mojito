@@ -1,4 +1,9 @@
-import type { TextUnitSearchRequest } from '../../api/text-units';
+import type {
+  SearchAttribute,
+  SearchType,
+  TextSearchOperator,
+  TextUnitSearchRequest,
+} from '../../api/text-units';
 
 export type WorkbenchRow = {
   id: string;
@@ -30,6 +35,15 @@ export type StatusFilterValue =
   | 'REJECTED'
   | 'NOT_REJECTED'
   | 'APPROVED_AND_NOT_REJECTED';
+
+export type WorkbenchTextSearchCondition = {
+  id: string;
+  field: SearchAttribute;
+  searchType: SearchType;
+  value: string;
+};
+
+export type WorkbenchTextSearchOperator = TextSearchOperator;
 
 export type WorkbenchDiffModalData = {
   rowId: string;

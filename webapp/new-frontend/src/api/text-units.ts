@@ -10,6 +10,16 @@ export type SearchAttribute =
   | 'tmTextUnitIds';
 
 export type SearchType = 'exact' | 'contains' | 'ilike' | 'regex';
+export type TextSearchOperator = 'AND' | 'OR';
+export type TextSearchPredicate = {
+  field: SearchAttribute;
+  searchType: SearchType;
+  value: string;
+};
+export type TextSearch = {
+  operator: TextSearchOperator;
+  predicates: TextSearchPredicate[];
+};
 
 // Backend-defined status values for a translation variant.
 // Note: untranslated rows can still appear in results, but will have `target: null` (and `status` may be null/undefined).
@@ -53,9 +63,11 @@ const MAX_POLL_INTERVAL_MS = 8000;
 export type TextUnitSearchRequest = {
   repositoryIds: number[];
   localeTags: string[];
-  searchAttribute: SearchAttribute;
-  searchType: SearchType;
-  searchText: string;
+  tmTextUnitIds?: number[];
+  textSearch?: TextSearch;
+  searchAttribute?: SearchAttribute;
+  searchType?: SearchType;
+  searchText?: string;
   offset?: number;
   limit?: number;
   statusFilter?: string;
@@ -156,6 +168,14 @@ type SearchTextUnitsHybridResponse = {
 type TextUnitSearchBody = {
   repositoryIds: number[];
   localeTags: string[];
+  textSearch?: {
+    operator: TextSearchOperator;
+    predicates: Array<{
+      field: SearchAttribute;
+      searchType: string;
+      value: string;
+    }>;
+  };
   tmTextUnitIds?: number[];
   name?: string;
   source?: string;
@@ -249,10 +269,78 @@ export async function fetchGitBlameWithUsages(
   return getJson<ApiGitBlameWithUsage[]>(`/api/textunits/gitBlameWithUsages?${params.toString()}`);
 }
 
+export function normalizeTextSearch(textSearch?: TextSearch | null): TextSearch | undefined {
+  if (!textSearch) {
+    return undefined;
+  }
+
+  const predicates = textSearch.predicates
+    .map((predicate) => ({
+      field: predicate.field,
+      searchType: predicate.searchType,
+      value: predicate.value.trim(),
+    }))
+    .filter((predicate) => predicate.value.length > 0);
+
+  if (!predicates.length) {
+    return undefined;
+  }
+
+  return {
+    operator: textSearch.operator === 'OR' ? 'OR' : 'AND',
+    predicates,
+  };
+}
+
+export function getCanonicalTextSearch(
+  request: Pick<TextUnitSearchRequest, 'textSearch' | 'searchAttribute' | 'searchType' | 'searchText'>,
+): TextSearch | undefined {
+  const normalizedTextSearch = normalizeTextSearch(request.textSearch);
+  if (normalizedTextSearch) {
+    return normalizedTextSearch;
+  }
+
+  const legacySearchText = request.searchText?.trim();
+  if (!legacySearchText) {
+    return undefined;
+  }
+
+  return {
+    operator: 'AND',
+    predicates: [
+      {
+        field: request.searchAttribute ?? 'target',
+        searchType: request.searchType ?? 'contains',
+        value: legacySearchText,
+      },
+    ],
+  };
+}
+
+function parseTmTextUnitIds(value: string): number[] {
+  return value
+    .split(/[,\s]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0)
+    .map((token) => Number(token))
+    .filter((token) => Number.isInteger(token) && token > 0);
+}
+
 function buildSearchBody(request: TextUnitSearchRequest): TextUnitSearchBody {
   const limit = request.limit ?? DEFAULT_SEARCH_LIMIT;
   const offset = request.offset ?? 0;
-  const searchText = request.searchText?.trim();
+  const textSearch = getCanonicalTextSearch(request);
+  const legacyTmTextUnitIds =
+    request.searchAttribute === 'tmTextUnitIds' && request.searchText
+      ? parseTmTextUnitIds(request.searchText)
+      : [];
+  const textSearchTmTextUnitIds =
+    textSearch?.predicates
+      .filter((predicate) => predicate.field === 'tmTextUnitIds')
+      .flatMap((predicate) => parseTmTextUnitIds(predicate.value)) ?? [];
+  const tmTextUnitIds = Array.from(
+    new Set([...(request.tmTextUnitIds ?? []), ...legacyTmTextUnitIds, ...textSearchTmTextUnitIds]),
+  );
 
   const body: TextUnitSearchBody = {
     repositoryIds: request.repositoryIds,
@@ -262,6 +350,10 @@ function buildSearchBody(request: TextUnitSearchRequest): TextUnitSearchBody {
     limit,
     offset,
   };
+
+  if (tmTextUnitIds.length > 0) {
+    body.tmTextUnitIds = tmTextUnitIds;
+  }
 
   if (request.statusFilter) {
     body.statusFilter = request.statusFilter;
@@ -291,42 +383,18 @@ function buildSearchBody(request: TextUnitSearchRequest): TextUnitSearchBody {
     body.tmTextUnitVariantCreatedAfter = request.tmTextUnitVariantCreatedAfter;
   }
 
-  if (searchText) {
-    body.searchType = request.searchType.toUpperCase();
-    switch (request.searchAttribute) {
-      case 'source':
-        body.source = searchText;
-        break;
-      case 'target':
-        body.target = searchText;
-        break;
-      case 'asset':
-        body.assetPath = searchText;
-        break;
-      case 'location':
-        body.assetTextUnitUsages = searchText;
-        break;
-      case 'pluralFormOther':
-        body.pluralFormOther = searchText;
-        break;
-      case 'tmTextUnitIds':
-        body.tmTextUnitIds = extractNumericIds(searchText);
-        break;
-      case 'stringId':
-      default:
-        body.name = searchText;
-        break;
-    }
+  if (textSearch) {
+    body.textSearch = {
+      operator: textSearch.operator,
+      predicates: textSearch.predicates.map((predicate) => ({
+        field: predicate.field,
+        searchType: predicate.searchType.toUpperCase(),
+        value: predicate.value,
+      })),
+    };
   }
 
   return body;
-}
-
-function extractNumericIds(input: string): number[] {
-  return input
-    .split(/[,\s]+/)
-    .map((value) => parseInt(value, 10))
-    .filter((value) => !Number.isNaN(value));
 }
 
 async function pollForHybridResults(pollingToken: {

@@ -4,7 +4,7 @@ import './workbench-page.css';
 import { type RefObject, useState } from 'react';
 
 import type { ApiRepository } from '../../api/repositories';
-import type { SearchAttribute, SearchType, TextUnitSearchRequest } from '../../api/text-units';
+import type { TextUnitSearchRequest } from '../../api/text-units';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
@@ -15,6 +15,8 @@ import type {
   WorkbenchDiffModalData,
   WorkbenchRow,
   WorkbenchShareOverrides,
+  WorkbenchTextSearchCondition,
+  WorkbenchTextSearchOperator,
 } from './workbench-types';
 import { DiffModal, WorkbenchBody } from './WorkbenchBody';
 import { WorkbenchHeader } from './WorkbenchHeader';
@@ -53,15 +55,24 @@ type Props = {
   onDismissDiscardEditing: () => void;
   translationInputRef: RefObject<HTMLTextAreaElement>;
   registerRowRef: (rowId: string, element: HTMLDivElement | null) => void;
-  searchAttribute: SearchAttribute;
-  searchType: SearchType;
+  searchAttribute: WorkbenchTextSearchCondition['field'];
+  searchType: WorkbenchTextSearchCondition['searchType'];
   searchInputValue: string;
+  onChangeSearchAttribute: (value: WorkbenchTextSearchCondition['field']) => void;
+  onChangeSearchType: (value: WorkbenchTextSearchCondition['searchType']) => void;
   onChangeSearchInput: (value: string) => void;
+  textSearchOperator: WorkbenchTextSearchOperator;
+  textSearchConditions: WorkbenchTextSearchCondition[];
+  onChangeTextSearchOperator: (value: WorkbenchTextSearchOperator) => void;
+  onChangeTextSearchCondition: (
+    id: string,
+    patch: Partial<Pick<WorkbenchTextSearchCondition, 'field' | 'searchType' | 'value'>>,
+  ) => void;
+  onAddTextSearchCondition: () => void;
+  onRemoveTextSearchCondition: (id: string) => void;
   onSubmitSearch: () => void;
-  onResetWorkbench: () => void;
-  onChangeSearchAttribute: (value: SearchAttribute) => void;
-  onChangeSearchType: (value: SearchType) => void;
   onRefreshWorkset: () => void;
+  onResetWorkbench: () => void;
   repositoryOptions: RepositorySelectionOption[];
   selectedRepositoryIds: number[];
   onChangeRepositorySelection: (next: number[]) => void;
@@ -183,12 +194,18 @@ export function WorkbenchPageView({
   searchAttribute,
   searchType,
   searchInputValue,
-  onChangeSearchInput,
-  onSubmitSearch,
-  onResetWorkbench,
   onChangeSearchAttribute,
   onChangeSearchType,
+  onChangeSearchInput,
+  textSearchOperator,
+  textSearchConditions,
+  onChangeTextSearchOperator,
+  onChangeTextSearchCondition,
+  onAddTextSearchCondition,
+  onRemoveTextSearchCondition,
+  onSubmitSearch,
   onRefreshWorkset,
+  onResetWorkbench,
   repositoryOptions,
   selectedRepositoryIds,
   onChangeRepositorySelection,
@@ -269,12 +286,17 @@ export function WorkbenchPageView({
         isLimitedTranslator={isLimitedTranslator}
         searchAttribute={searchAttribute}
         searchType={searchType}
+        searchInputValue={searchInputValue}
         onChangeSearchAttribute={onChangeSearchAttribute}
         onChangeSearchType={onChangeSearchType}
-        searchInputValue={searchInputValue}
         onChangeSearchInput={onChangeSearchInput}
+        textSearchOperator={textSearchOperator}
+        textSearchConditions={textSearchConditions}
+        onChangeTextSearchOperator={onChangeTextSearchOperator}
+        onChangeTextSearchCondition={onChangeTextSearchCondition}
+        onAddTextSearchCondition={onAddTextSearchCondition}
+        onRemoveTextSearchCondition={onRemoveTextSearchCondition}
         onSubmitSearch={onSubmitSearch}
-        onResetWorkbench={onResetWorkbench}
         statusFilter={statusFilter}
         includeUsed={includeUsed}
         includeUnused={includeUnused}

@@ -2,11 +2,13 @@ import './chip-dropdown.css';
 import './multi-select-chip.css';
 import './single-select-dropdown.css';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export type SingleSelectOption<T extends string | number> = {
   value: T;
   label: string;
+  helper?: string;
 };
 
 export type SingleSelectFooterAction = {
@@ -54,6 +56,35 @@ export function SingleSelectDropdown<T extends string | number>({
   const [isOpen, setIsOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>();
+
+  const updatePanelPosition = useCallback(() => {
+    if (!buttonRef.current) {
+      return;
+    }
+    const rect = buttonRef.current.getBoundingClientRect();
+    const viewportPadding = 16;
+    const gap = 8;
+    const maxWidth = Math.min(448, window.innerWidth - viewportPadding * 2);
+
+    setPanelStyle({
+      position: 'fixed',
+      top: Math.min(rect.bottom + gap, window.innerHeight - viewportPadding),
+      left:
+        align === 'right'
+          ? undefined
+          : Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - maxWidth - viewportPadding)),
+      right:
+        align === 'right'
+          ? Math.max(viewportPadding, window.innerWidth - rect.right)
+          : undefined,
+      minWidth: rect.width,
+      maxWidth,
+      zIndex: 1000,
+    });
+  }, [align]);
 
   useEffect(() => {
     if (disabled && isOpen) {
@@ -66,14 +97,23 @@ export function SingleSelectDropdown<T extends string | number>({
     }
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         setIsOpen(false);
       }
     };
+    const handleReposition = () => updatePanelPosition();
 
+    updatePanelPosition();
     window.addEventListener('pointerdown', handlePointerDown);
-    return () => window.removeEventListener('pointerdown', handlePointerDown);
-  }, [disabled, isOpen]);
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [disabled, isOpen, updatePanelPosition]);
 
   const normalizedOptions = useMemo(
     () => options.map((option) => ({ ...option, label: String(option.label) })),
@@ -111,14 +151,16 @@ export function SingleSelectDropdown<T extends string | number>({
         disabled={isDisabled}
         aria-expanded={isOpen}
         aria-label={buttonAriaLabel ?? label}
+        ref={buttonRef}
       >
         <span className={`chip-dropdown__summary${isPlaceholder ? ' is-placeholder' : ''}`}>
           {summary}
         </span>
         <span className="chip-dropdown__chevron" aria-hidden="true" />
       </button>
-      {isOpen ? (
-        <div className="chip-dropdown__panel" role="menu">
+      {isOpen
+        ? createPortal(
+            <div className="chip-dropdown__panel" role="menu" ref={panelRef} style={panelStyle}>
           {hasAnyPanelContent ? (
             <>
               {normalizedOptions.length && searchable ? (
@@ -178,7 +220,14 @@ export function SingleSelectDropdown<T extends string | number>({
                           setIsOpen(false);
                         }}
                       >
-                        {option.label}
+                        <span className="single-select-dropdown__option-copy">
+                          <span>{option.label}</span>
+                          {option.helper ? (
+                            <span className="single-select-dropdown__option-helper">
+                              {option.helper}
+                            </span>
+                          ) : null}
+                        </span>
                       </button>
                     ))
                   ) : (
@@ -192,8 +241,10 @@ export function SingleSelectDropdown<T extends string | number>({
           ) : (
             <div className="single-select-dropdown__empty">{resolvedPlaceholder}</div>
           )}
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

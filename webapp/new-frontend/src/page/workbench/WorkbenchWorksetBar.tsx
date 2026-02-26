@@ -105,20 +105,21 @@ export function WorkbenchWorksetBar({
         Refresh
       </button>,
     );
-    parts.push(
-      <button
-        key="reset"
-        type="button"
-        className="workbench-worksetbar__button"
-        onClick={() => {
-          onResetWorkbench();
-        }}
-        disabled={disabled}
-      >
-        Reset
-      </button>,
-    );
   }
+
+  parts.push(
+    <button
+      key="reset"
+      type="button"
+      className="workbench-worksetbar__button"
+      onClick={() => {
+        onResetWorkbench();
+      }}
+      disabled={disabled}
+    >
+      Reset
+    </button>,
+  );
 
   parts.push(
     <CollectionDropdown

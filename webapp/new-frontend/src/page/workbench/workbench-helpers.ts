@@ -1,6 +1,6 @@
 import type { InfiniteData } from '@tanstack/react-query';
 
-import type { ApiTextUnit, TextUnitSearchRequest } from '../../api/text-units';
+import { getCanonicalTextSearch, type ApiTextUnit, type TextUnitSearchRequest } from '../../api/text-units';
 import { WORKSET_SIZE_DEFAULT, WORKSET_SIZE_MIN } from './workbench-constants';
 import type { WorkbenchRow } from './workbench-types';
 
@@ -25,6 +25,8 @@ export function updateInfiniteData<T>(
 }
 
 export function serializeSearchRequest(request: TextUnitSearchRequest): string {
+  const canonicalTextSearch = getCanonicalTextSearch(request) ?? null;
+
   // Normalize array ordering so equality checks are stable.
   const normalized: TextUnitSearchRequest = {
     ...request,
@@ -36,9 +38,7 @@ export function serializeSearchRequest(request: TextUnitSearchRequest): string {
   const stable = {
     repositoryIds: normalized.repositoryIds,
     localeTags: normalized.localeTags,
-    searchAttribute: normalized.searchAttribute,
-    searchType: normalized.searchType,
-    searchText: normalized.searchText,
+    textSearch: canonicalTextSearch,
     statusFilter: normalized.statusFilter ?? null,
     usedFilter: normalized.usedFilter ?? null,
     doNotTranslateFilter:
