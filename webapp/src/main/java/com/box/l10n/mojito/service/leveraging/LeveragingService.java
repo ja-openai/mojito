@@ -4,6 +4,7 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.rest.asset.AssetWithIdNotFoundException;
 import com.box.l10n.mojito.rest.leveraging.CopyTmConfig;
 import com.box.l10n.mojito.rest.repository.RepositoryWithIdNotFoundException;
@@ -13,6 +14,7 @@ import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
@@ -64,6 +66,8 @@ public class LeveragingService {
   @Autowired TextUnitSearcher textUnitSearcher;
 
   @Autowired TMService tmService;
+
+  @Autowired UserService userService;
 
   @Autowired AssetTextUnitToTMTextUnitRepository assetTextUnitToTMTextUnitRepository;
 
@@ -183,6 +187,7 @@ public class LeveragingService {
 
   void copyTranslationsBetweenTextUnits(Long sourceTmTextUnitId, Long targetTmTextUnitId) {
     logger.debug("Copy translations from: {} to {}", sourceTmTextUnitId, targetTmTextUnitId);
+    User leverageUser = userService.findOrCreateLeverageUser();
     TextUnitSearcherParameters textUnitSearcherParameters = new TextUnitSearcherParameters();
     textUnitSearcherParameters.setTmTextUnitIds(sourceTmTextUnitId);
     textUnitSearcherParameters.setRootLocaleExcluded(true);
@@ -190,12 +195,15 @@ public class LeveragingService {
     List<TextUnitDTO> textUnitDTOS = textUnitSearcher.search(textUnitSearcherParameters);
 
     for (TextUnitDTO textUnitDTO : textUnitDTOS) {
-      tmService.addCurrentTMTextUnitVariant(
+      tmService.addTMTextUnitCurrentVariantWithResult(
           targetTmTextUnitId,
           textUnitDTO.getLocaleId(),
           textUnitDTO.getTarget(),
+          null,
           textUnitDTO.getStatus(),
-          textUnitDTO.isIncludedInLocalizedFile());
+          textUnitDTO.isIncludedInLocalizedFile(),
+          null,
+          leverageUser);
     }
   }
 

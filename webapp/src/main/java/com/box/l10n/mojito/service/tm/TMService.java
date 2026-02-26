@@ -533,6 +533,45 @@ public class TMService {
         createdBy);
   }
 
+  public AddTMTextUnitCurrentVariantResult addTMTextUnitCurrentVariantWithResult(
+      Long tmTextUnitId,
+      Long localeId,
+      String content,
+      String comment,
+      TMTextUnitVariant.Status status,
+      boolean includedInLocalizedFile,
+      ZonedDateTime createdDate,
+      User createdBy) {
+
+    logger.debug("Check if there is a current TMTextUnitVariant");
+    TMTextUnitCurrentVariant currentTmTextUnitCurrentVariant =
+        tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(localeId, tmTextUnitId);
+
+    TMTextUnit tmTextUnit = tmTextUnitRepository.findById(tmTextUnitId).orElse(null);
+
+    if (tmTextUnit == null) {
+      String msg =
+          MessageFormat.format(
+              "Unable to find the TMTextUnit with ID: {0}. The TMTextUnitVariant and "
+                  + "TMTextUnitCurrentVariant will not be created.",
+              tmTextUnitId);
+      throw new RuntimeException(msg);
+    }
+
+    return addTMTextUnitCurrentVariantWithResult(
+        currentTmTextUnitCurrentVariant,
+        tmTextUnit.getTm().getId(),
+        tmTextUnit.getAsset().getId(),
+        tmTextUnitId,
+        localeId,
+        content,
+        comment,
+        status,
+        includedInLocalizedFile,
+        createdDate,
+        createdBy);
+  }
+
   /**
    * Adds a current {@link TMTextUnitVariant} in a {@link TMTextUnit} for a locale other than the
    * default locale.
