@@ -346,7 +346,9 @@ public class ReviewProjectWS {
         Long reviewedTmTextUnitVariantId,
         String notes,
         String decisionState,
-        TmTextUnitVariant decisionTmTextUnitVariant) {}
+        TmTextUnitVariant decisionTmTextUnitVariant,
+        ZonedDateTime lastModifiedDate,
+        String lastModifiedByUsername) {}
   }
 
   // Mapping helpers
@@ -537,7 +539,9 @@ public class ReviewProjectWS {
                 decision.reviewedTmTextUnitVariantId(),
                 decision.notes(),
                 decisionStateName,
-                decisionVariant));
+                decisionVariant,
+                decision.lastModifiedDate(),
+                decision.lastModifiedByUsername()));
   }
 
   private GetReviewProjectResponse.ReviewProjectTextUnit toTextUnitResponse(
@@ -600,7 +604,9 @@ public class ReviewProjectWS {
                 detail.reviewedTmTextUnitVariantId(),
                 detail.decisionNotes(),
                 decisionStateName,
-                decisionVariant)
+                decisionVariant,
+                detail.decisionLastModifiedDate(),
+                detail.decisionLastModifiedByUsername())
             : null;
 
     return new GetReviewProjectResponse.ReviewProjectTextUnit(
