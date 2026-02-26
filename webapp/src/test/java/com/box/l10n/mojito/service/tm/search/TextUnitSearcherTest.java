@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.tm.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -848,6 +849,73 @@ public class TextUnitSearcherTest extends ServiceTestBase {
             "Content2 fr-CA",
             "Content3 fr-CA",
             "Content3 fr-FR"));
+  }
+
+  @Transactional
+  @Test
+  public void testCompoundAndTextSearch() {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+
+    TextUnitTextSearchPredicate sourcePredicate = new TextUnitTextSearchPredicate();
+    sourcePredicate.setField(TextUnitTextSearchField.SOURCE);
+    sourcePredicate.setSearchType(SearchType.EXACT);
+    sourcePredicate.setValue("Please enter a valid state, region or province");
+
+    TextUnitTextSearchPredicate targetPredicate = new TextUnitTextSearchPredicate();
+    targetPredicate.setField(TextUnitTextSearchField.TARGET);
+    targetPredicate.setSearchType(SearchType.CONTAINS);
+    targetPredicate.setValue("시/도");
+
+    TextUnitTextSearch textSearch = new TextUnitTextSearch();
+    textSearch.setOperator(TextUnitTextSearchBooleanOperator.AND);
+    textSearch.setPredicates(Arrays.asList(sourcePredicate, targetPredicate));
+
+    TextUnitSearcherParameters textUnitSearcherParameters =
+        new TextUnitSearcherParametersForTesting();
+    textUnitSearcherParameters.setRepositoryIds(tmTestData.repository.getId());
+    textUnitSearcherParameters.setLocaleTags(Arrays.asList("ko-KR", "fr-FR", "fr-CA"));
+    textUnitSearcherParameters.setTextSearch(textSearch);
+
+    List<TextUnitDTO> textUnitDTOs = textUnitSearcher.search(textUnitSearcherParameters);
+
+    assertThat(textUnitDTOs).hasSize(1);
+    assertThat(textUnitDTOs.get(0).getTargetLocale()).isEqualTo("ko-KR");
+    assertThat(textUnitDTOs.get(0).getTarget()).contains("시/도");
+  }
+
+  @Transactional
+  @Test
+  public void testCompoundOrTextSearch() {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+
+    TextUnitTextSearchPredicate sourcePredicate = new TextUnitTextSearchPredicate();
+    sourcePredicate.setField(TextUnitTextSearchField.SOURCE);
+    sourcePredicate.setSearchType(SearchType.EXACT);
+    sourcePredicate.setValue("Content3");
+
+    TextUnitTextSearchPredicate targetPredicate = new TextUnitTextSearchPredicate();
+    targetPredicate.setField(TextUnitTextSearchField.TARGET);
+    targetPredicate.setSearchType(SearchType.EXACT);
+    targetPredicate.setValue("올바른 국가, 지역 또는 시/도를 입력하십시오.");
+
+    TextUnitTextSearch textSearch = new TextUnitTextSearch();
+    textSearch.setOperator(TextUnitTextSearchBooleanOperator.OR);
+    textSearch.setPredicates(Arrays.asList(sourcePredicate, targetPredicate));
+
+    TextUnitSearcherParameters textUnitSearcherParameters =
+        new TextUnitSearcherParametersForTesting();
+    textUnitSearcherParameters.setRepositoryIds(tmTestData.repository.getId());
+    textUnitSearcherParameters.setLocaleTags(Arrays.asList("ko-KR", "fr-FR"));
+    textUnitSearcherParameters.setStatusFilter(StatusFilter.TRANSLATED);
+    textUnitSearcherParameters.setTextSearch(textSearch);
+
+    List<TextUnitDTO> textUnitDTOs = textUnitSearcher.search(textUnitSearcherParameters);
+
+    assertThat(textUnitDTOs)
+        .extracting(TextUnitDTO::getTargetLocale, TextUnitDTO::getSource)
+        .containsExactlyInAnyOrder(
+            tuple("ko-KR", "Please enter a valid state, region or province"),
+            tuple("fr-FR", "Content3"));
   }
 
   public void testSearchText(

@@ -52,6 +52,7 @@ public class TextUnitSearcherParameters {
   String skipTextUnitWithPattern;
   String includeTextUnitsWithPattern;
   String skipAssetPathWithPattern;
+  TextUnitTextSearch textSearch;
 
   Long tmTextUnitVariantId;
 
@@ -354,5 +355,13 @@ public class TextUnitSearcherParameters {
 
   public void setOrderByTextUnitID(boolean ordered) {
     isOrderedByTextUnitID = ordered;
+  }
+
+  public TextUnitTextSearch getTextSearch() {
+    return textSearch;
+  }
+
+  public void setTextSearch(TextUnitTextSearch textSearch) {
+    this.textSearch = textSearch;
   }
 }

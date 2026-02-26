@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.tm.search;
 
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.nativecriteria.*;
+import com.box.l10n.mojito.service.NormalizationUtils;
 import com.github.pnowy.nc.core.CriteriaResult;
 import com.github.pnowy.nc.core.NativeCriteria;
 import com.github.pnowy.nc.core.NativeExps;
@@ -14,8 +15,12 @@ import com.github.pnowy.nc.core.expressions.NativeOrderExp;
 import com.github.pnowy.nc.core.expressions.NativeProjection;
 import com.github.pnowy.nc.core.mappers.CriteriaResultTransformer;
 import com.google.common.base.Preconditions;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,7 +178,9 @@ public class TextUnitSearcher {
 
     c.addJoin(NativeExps.leftJoin("asset_text_unit", "atu", "atu.id", "map.asset_text_unit_id"));
 
-    if (searchParameters.getAssetTextUnitUsages() != null) {
+    boolean usesAssetTextUnitUsages = usesAssetTextUnitUsages(searchParameters);
+
+    if (usesAssetTextUnitUsages) {
       // Requires GROUP_BY
       c.addJoin(
           NativeExps.leftJoin(
@@ -194,7 +201,7 @@ public class TextUnitSearcher {
     // TODO(P1) Might want to some of those projection as optional for perf reason
     NativeProjection projection;
 
-    if (searchParameters.getAssetTextUnitUsages() == null) {
+    if (!usesAssetTextUnitUsages) {
       projection =
           NativeExps.projection()
               .addProjection("tu.id", "tmTextUnitId")
@@ -283,40 +290,13 @@ public class TextUnitSearcher {
       conjunction.add(new NativeInExpFix("r.name", searchParameters.getRepositoryNames()));
     }
 
-    if (searchParameters.getName() != null) {
-      conjunction.add(
-          getSearchTypeNativeExp(
-              searchParameters.getSearchType(), "tu.name", searchParameters.getName()));
-    }
-
-    if (searchParameters.getSource() != null) {
-      conjunction.add(
-          getSearchTypeNativeExp(
-              searchParameters.getSearchType(),
-              "tu.content",
-              "tu.content_md5",
-              searchParameters.getSource()));
+    NativeExp textSearchExp = getTextSearchNativeExp(searchParameters);
+    if (textSearchExp != null) {
+      conjunction.add(textSearchExp);
     }
 
     if (searchParameters.getMd5() != null) {
       conjunction.add(new NativeEqExpFix("tu.md5", searchParameters.getMd5()));
-    }
-
-    if (searchParameters.getPluralFormOther() != null) {
-      conjunction.add(
-          getSearchTypeNativeExp(
-              searchParameters.getSearchType(),
-              "tu.plural_form_other",
-              searchParameters.getPluralFormOther()));
-    }
-
-    if (searchParameters.getTarget() != null) {
-      conjunction.add(
-          getSearchTypeNativeExp(
-              searchParameters.getSearchType(),
-              "tuv.content",
-              "tuv.content_md5",
-              searchParameters.getTarget()));
     }
 
     if (searchParameters.getAssetTextUnitUsages() != null) {
@@ -588,6 +568,155 @@ public class TextUnitSearcher {
     }
 
     return nativeExp;
+  }
+
+  NativeExp getTextSearchNativeExp(TextUnitSearcherParameters searchParameters) {
+    if (searchParameters.getTextSearch() != null
+        && searchParameters.getTextSearch().getPredicates() != null
+        && !searchParameters.getTextSearch().getPredicates().isEmpty()) {
+      return getTextSearchNativeExp(searchParameters.getTextSearch());
+    }
+
+    List<TextUnitTextSearchPredicate> predicates = new ArrayList<>();
+    SearchType legacySearchType =
+        searchParameters.getSearchType() == null
+            ? SearchType.EXACT
+            : searchParameters.getSearchType();
+
+    addLegacyPredicate(
+        predicates,
+        TextUnitTextSearchField.STRING_ID,
+        legacySearchType,
+        searchParameters.getName());
+    addLegacyPredicate(
+        predicates, TextUnitTextSearchField.SOURCE, legacySearchType, searchParameters.getSource());
+    addLegacyPredicate(
+        predicates, TextUnitTextSearchField.TARGET, legacySearchType, searchParameters.getTarget());
+    addLegacyPredicate(
+        predicates,
+        TextUnitTextSearchField.PLURAL_FORM_OTHER,
+        legacySearchType,
+        searchParameters.getPluralFormOther());
+
+    if (predicates.isEmpty()) {
+      return null;
+    }
+
+    TextUnitTextSearch textSearch = new TextUnitTextSearch();
+    textSearch.setPredicates(predicates);
+    return getTextSearchNativeExp(textSearch);
+  }
+
+  private void addLegacyPredicate(
+      List<TextUnitTextSearchPredicate> predicates,
+      TextUnitTextSearchField field,
+      SearchType searchType,
+      String value) {
+    if (value == null) {
+      return;
+    }
+
+    TextUnitTextSearchPredicate predicate = new TextUnitTextSearchPredicate();
+    predicate.setField(field);
+    predicate.setSearchType(searchType);
+    predicate.setValue(value);
+    predicates.add(predicate);
+  }
+
+  NativeExp getTextSearchNativeExp(TextUnitTextSearch textSearch) {
+    NativeJunctionExp junction =
+        TextUnitTextSearchBooleanOperator.OR.equals(textSearch.getOperator())
+            ? NativeExps.disjunction()
+            : NativeExps.conjunction();
+
+    List<TextUnitTextSearchPredicate> predicates =
+        textSearch.getPredicates() == null ? Collections.emptyList() : textSearch.getPredicates();
+
+    predicates.stream()
+        .map(this::getTextSearchPredicateNativeExp)
+        .filter(Objects::nonNull)
+        .forEach(junction::add);
+
+    return junction.toSQL().isEmpty() ? null : junction;
+  }
+
+  NativeExp getTextSearchPredicateNativeExp(TextUnitTextSearchPredicate predicate) {
+    if (predicate == null || predicate.getField() == null || predicate.getValue() == null) {
+      return null;
+    }
+
+    SearchType searchType =
+        predicate.getSearchType() == null ? SearchType.EXACT : predicate.getSearchType();
+    String value = normalizeTextSearchValue(predicate);
+
+    switch (predicate.getField()) {
+      case STRING_ID:
+        return getSearchTypeNativeExp(searchType, "tu.name", value);
+      case SOURCE:
+        return getSearchTypeNativeExp(searchType, "tu.content", "tu.content_md5", value);
+      case TARGET:
+        return getSearchTypeNativeExp(searchType, "tuv.content", "tuv.content_md5", value);
+      case ASSET:
+        return getSearchTypeNativeExp(searchType, "a.path", value);
+      case LOCATION:
+        return getSearchTypeNativeExp(searchType, "atuu.usages", value);
+      case PLURAL_FORM_OTHER:
+        return getSearchTypeNativeExp(searchType, "tu.plural_form_other", value);
+      case TM_TEXT_UNIT_IDS:
+        return new NativeInExpFix("tu.id", parseTextUnitIds(value));
+      default:
+        return null;
+    }
+  }
+
+  private String normalizeTextSearchValue(TextUnitTextSearchPredicate predicate) {
+    String value = predicate.getValue();
+    SearchType searchType =
+        predicate.getSearchType() == null ? SearchType.EXACT : predicate.getSearchType();
+
+    switch (predicate.getField()) {
+      case SOURCE:
+      case TARGET:
+        return SearchType.EXACT.equals(searchType) && "\\u0000".equals(value)
+            ? ""
+            : NormalizationUtils.normalize(value);
+      default:
+        return value;
+    }
+  }
+
+  private List<Long> parseTextUnitIds(String value) {
+    List<Long> ids =
+        Arrays.stream(value.split("[,\\s]+"))
+            .map(String::trim)
+            .filter(token -> !token.isEmpty())
+            .map(
+                token -> {
+                  try {
+                    return Long.parseLong(token);
+                  } catch (NumberFormatException e) {
+                    return null;
+                  }
+                })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    return ids.isEmpty() ? Collections.singletonList(0L) : ids;
+  }
+
+  private boolean usesAssetTextUnitUsages(TextUnitSearcherParameters searchParameters) {
+    if (searchParameters.getAssetTextUnitUsages() != null) {
+      return true;
+    }
+
+    TextUnitTextSearch textSearch = searchParameters.getTextSearch();
+    return textSearch != null
+        && textSearch.getPredicates() != null
+        && textSearch.getPredicates().stream()
+            .anyMatch(
+                predicate ->
+                    predicate != null
+                        && TextUnitTextSearchField.LOCATION.equals(predicate.getField()));
   }
 
   private static class CriteriaResultTransformerTextUnitAndWordCount

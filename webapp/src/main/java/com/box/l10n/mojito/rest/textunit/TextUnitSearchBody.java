@@ -2,6 +2,7 @@ package com.box.l10n.mojito.rest.textunit;
 
 import com.box.l10n.mojito.service.tm.search.SearchType;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
+import com.box.l10n.mojito.service.tm.search.TextUnitTextSearch;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ class TextUnitSearchBody {
   String assetPath;
   String assetTextUnitUsages;
   String pluralFormOther;
+  TextUnitTextSearch textSearch;
   boolean pluralFormFiltered = true;
   boolean pluralFormExcluded = false;
   SearchType searchType = SearchType.EXACT;
@@ -101,6 +103,14 @@ class TextUnitSearchBody {
 
   public void setPluralFormOther(String pluralFormOther) {
     this.pluralFormOther = pluralFormOther;
+  }
+
+  public TextUnitTextSearch getTextSearch() {
+    return textSearch;
+  }
+
+  public void setTextSearch(TextUnitTextSearch textSearch) {
+    this.textSearch = textSearch;
   }
 
   public boolean isPluralFormFiltered() {
