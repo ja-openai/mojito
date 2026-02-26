@@ -36,8 +36,13 @@ public class AiTranslateConfig {
     if (openaiClientToken == null) {
       return null;
     }
+    AiTranslateConfigurationProperties.PoolProperties poolProperties =
+        aiTranslateConfigurationProperties.getPool();
     return new OpenAIClientPool(
-        20, 100, 1, aiTranslateConfigurationProperties.getOpenaiClientToken());
+        poolProperties.getMaxConnections(),
+        poolProperties.getMaxPendingAcquires(),
+        poolProperties.getAcquireTimeoutSeconds(),
+        aiTranslateConfigurationProperties.getOpenaiClientToken());
   }
 
   @Bean
@@ -51,6 +56,11 @@ public class AiTranslateConfig {
   @Bean
   @Qualifier("AiTranslate")
   RetryBackoffSpec retryBackoffSpec() {
-    return Retry.backoff(5, Duration.ofMillis(500)).maxBackoff(Duration.ofSeconds(5));
+    AiTranslateConfigurationProperties.RetryProperties retryProperties =
+        aiTranslateConfigurationProperties.getRetry();
+    return Retry.backoff(
+            retryProperties.getMaxAttempts(),
+            Duration.ofMillis(retryProperties.getInitialBackoffMillis()))
+        .maxBackoff(Duration.ofSeconds(retryProperties.getMaxBackoffSeconds()));
   }
 }
