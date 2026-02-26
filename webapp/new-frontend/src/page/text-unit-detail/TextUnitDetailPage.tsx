@@ -425,7 +425,7 @@ export function TextUnitDetailPage() {
       return {
         key: String(item.id),
         variantId: String(item.id),
-        userName: formatValue(item.createdByUser?.username ?? '<no user>'),
+        userName: formatValue(item.createdByUser?.username ?? 'Unknown user'),
         translation: formatHistoryTranslation(item.content),
         date: formatDateTime(item.createdDate),
         status: formatValue(formatHistoryStatus(item.status, item.includedInLocalizedFile)),

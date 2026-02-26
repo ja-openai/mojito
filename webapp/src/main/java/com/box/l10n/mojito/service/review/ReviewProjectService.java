@@ -1117,6 +1117,10 @@ public class ReviewProjectService {
 
     ReviewProject project = textUnit.getReviewProject();
     userService.checkUserCanEditLocale(project.getLocale().getId());
+    User currentUser =
+        userRepository
+            .findById(teamService.getCurrentUserIdOrThrow())
+            .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
 
     TMTextUnitVariant baselineVariant = textUnit.getTmTextUnitVariant();
     TMTextUnit tmTextUnit = textUnit.getTmTextUnit();
@@ -1172,7 +1176,7 @@ public class ReviewProjectService {
               statusEnum,
               includedInLocalizedFile,
               null,
-              null);
+              currentUser);
       TMTextUnitVariant decidedVariant =
           addResult.getTmTextUnitCurrentVariant().getTmTextUnitVariant();
 
