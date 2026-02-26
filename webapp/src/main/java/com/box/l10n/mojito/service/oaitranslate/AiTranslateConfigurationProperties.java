@@ -10,6 +10,8 @@ public class AiTranslateConfigurationProperties {
   String openaiClientToken;
   String schedulerName = QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
   String modelName = "gpt-4o-2024-08-06";
+  PoolProperties pool = new PoolProperties();
+  RetryProperties retry = new RetryProperties();
   NoBatchProperties noBatch = new NoBatchProperties();
 
   public String getOpenaiClientToken() {
@@ -34,6 +36,22 @@ public class AiTranslateConfigurationProperties {
 
   public void setModelName(String modelName) {
     this.modelName = modelName;
+  }
+
+  public PoolProperties getPool() {
+    return pool;
+  }
+
+  public void setPool(PoolProperties pool) {
+    this.pool = pool;
+  }
+
+  public RetryProperties getRetry() {
+    return retry;
+  }
+
+  public void setRetry(RetryProperties retry) {
+    this.retry = retry;
   }
 
   public NoBatchProperties getNoBatch() {
@@ -110,6 +128,66 @@ public class AiTranslateConfigurationProperties {
       public void setMaxSeconds(int maxSeconds) {
         this.maxSeconds = maxSeconds;
       }
+    }
+  }
+
+  public static class PoolProperties {
+    int maxConnections = 20;
+    int maxPendingAcquires = 100;
+    int acquireTimeoutSeconds = 1;
+
+    public int getMaxConnections() {
+      return maxConnections;
+    }
+
+    public void setMaxConnections(int maxConnections) {
+      this.maxConnections = maxConnections;
+    }
+
+    public int getMaxPendingAcquires() {
+      return maxPendingAcquires;
+    }
+
+    public void setMaxPendingAcquires(int maxPendingAcquires) {
+      this.maxPendingAcquires = maxPendingAcquires;
+    }
+
+    public int getAcquireTimeoutSeconds() {
+      return acquireTimeoutSeconds;
+    }
+
+    public void setAcquireTimeoutSeconds(int acquireTimeoutSeconds) {
+      this.acquireTimeoutSeconds = acquireTimeoutSeconds;
+    }
+  }
+
+  public static class RetryProperties {
+    int maxAttempts = 5;
+    int initialBackoffMillis = 500;
+    int maxBackoffSeconds = 5;
+
+    public int getMaxAttempts() {
+      return maxAttempts;
+    }
+
+    public void setMaxAttempts(int maxAttempts) {
+      this.maxAttempts = maxAttempts;
+    }
+
+    public int getInitialBackoffMillis() {
+      return initialBackoffMillis;
+    }
+
+    public void setInitialBackoffMillis(int initialBackoffMillis) {
+      this.initialBackoffMillis = initialBackoffMillis;
+    }
+
+    public int getMaxBackoffSeconds() {
+      return maxBackoffSeconds;
+    }
+
+    public void setMaxBackoffSeconds(int maxBackoffSeconds) {
+      this.maxBackoffSeconds = maxBackoffSeconds;
     }
   }
 }
