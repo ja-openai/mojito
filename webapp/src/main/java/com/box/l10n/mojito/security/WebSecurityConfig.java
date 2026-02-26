@@ -171,6 +171,8 @@ public class WebSecurityConfig {
                 .hasAnyRole("PM", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/teams/*/project-managers")
                 .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/teams/*/users")
+                .hasAnyRole("PM", "ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/teams/*/project-managers")
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/teams/*/pm-pool")

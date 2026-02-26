@@ -148,6 +148,29 @@ type AssignmentReassignTarget =
       project: ReviewProjectRow;
     };
 
+type TeamUserSummaryOption = {
+  username: string;
+  commonName?: string | null;
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function buildTeamUserSummaryMap(
+  ...groups: Array<Array<{ id: number; username: string; commonName?: string | null }> | undefined>
+) {
+  const map = new Map<number, TeamUserSummaryOption>();
+  groups.forEach((users) => {
+    (users ?? []).forEach((user) => {
+      if (!map.has(user.id)) {
+        map.set(user.id, { username: user.username, commonName: user.commonName ?? null });
+      }
+    });
+  });
+  return map;
+}
+
 function buildReviewProjectDetailPath(
   projectId: number,
   reviewProjectsSessionKey?: string | null,
@@ -407,15 +430,30 @@ function ContentSection({
     () =>
       translatorOptionIds.map((id) => {
         const user = translatorUsersById.get(id);
+        const fallbackUsername =
+          reassignProject?.assignedTranslatorUserId === id
+            ? reassignProject.assignedTranslatorUsername
+            : null;
         return {
           value: id,
           label: user?.commonName
             ? `${user.commonName} (${user.username})`
-            : (user?.username ?? `User #${id}`),
+            : (user?.username ?? fallbackUsername ?? `User #${id}`),
         };
       }),
-    [translatorOptionIds, translatorUsersById],
+    [reassignProject, translatorOptionIds, translatorUsersById],
   );
+
+  const reassignLoadError =
+    activeTeamId == null
+      ? null
+      : teamTranslatorUsersQuery.error != null
+        ? getErrorMessage(teamTranslatorUsersQuery.error, 'Failed to load translators')
+        : teamTranslatorsQuery.error != null
+          ? getErrorMessage(teamTranslatorsQuery.error, 'Failed to load team translators')
+          : teamLocalePoolsQuery.error != null
+            ? getErrorMessage(teamLocalePoolsQuery.error, 'Failed to load locale pools')
+            : null;
 
   const translatorReassignMutation = useMutation({
     mutationFn: async () => {
@@ -524,6 +562,10 @@ function ContentSection({
                 <div className="review-projects-page__reassign-modal-error">
                   No team is assigned.
                 </div>
+              ) : reassignLoadError ? (
+                <div className="review-projects-page__reassign-modal-error">
+                  {reassignLoadError}
+                </div>
               ) : (
                 <div className="review-projects-page__reassign-modal-field">
                   <SingleSelectDropdown<number>
@@ -568,7 +610,11 @@ function ContentSection({
                 type="button"
                 className="modal__button modal__button--primary"
                 onClick={() => void translatorReassignMutation.mutateAsync()}
-                disabled={translatorReassignMutation.isPending || activeTeamId == null}
+                disabled={
+                  translatorReassignMutation.isPending ||
+                  activeTeamId == null ||
+                  reassignLoadError != null
+                }
               >
                 {translatorReassignMutation.isPending ? 'Saving…' : 'Save'}
               </button>
@@ -1320,19 +1366,11 @@ function RequestGroupsSection({
   });
 
   const reassignPmUsersById = useMemo(() => {
-    const map = new Map<number, { username: string; commonName?: string | null }>();
-    (reassignPmUsersQuery.data?.users ?? []).forEach((user) => {
-      map.set(user.id, user);
-    });
-    return map;
+    return buildTeamUserSummaryMap(reassignPmUsersQuery.data?.users);
   }, [reassignPmUsersQuery.data?.users]);
 
   const reassignTranslatorUsersById = useMemo(() => {
-    const map = new Map<number, { username: string; commonName?: string | null }>();
-    (reassignTranslatorUsersQuery.data?.users ?? []).forEach((user) => {
-      map.set(user.id, user);
-    });
-    return map;
+    return buildTeamUserSummaryMap(reassignTranslatorUsersQuery.data?.users);
   }, [reassignTranslatorUsersQuery.data?.users]);
 
   const reassignOptionIds = useMemo(() => {
@@ -1389,15 +1427,47 @@ function RequestGroupsSection({
           reassignTarget?.kind === 'pm'
             ? reassignPmUsersById.get(id)
             : reassignTranslatorUsersById.get(id);
+        const fallbackUsername =
+          reassignTarget?.kind === 'pm'
+            ? reassignTarget.projects
+                .map((project) =>
+                  project.assignedPmUserId === id ? project.assignedPmUsername : null,
+                )
+                .find((value): value is string => Boolean(value && value.trim()))
+            : reassignTarget?.project.assignedTranslatorUserId === id
+              ? reassignTarget.project.assignedTranslatorUsername
+              : null;
         return {
           value: id,
           label: user?.commonName
             ? `${user.commonName} (${user.username})`
-            : (user?.username ?? `User #${id}`),
+            : (user?.username ?? fallbackUsername ?? `User #${id}`),
         };
       }),
-    [reassignOptionIds, reassignPmUsersById, reassignTarget?.kind, reassignTranslatorUsersById],
+    [
+      reassignOptionIds,
+      reassignPmUsersById,
+      reassignTarget,
+      reassignTranslatorUsersById,
+    ],
   );
+
+  const reassignLoadError =
+    activeTeamId == null || reassignTarget == null
+      ? null
+      : reassignTarget.kind === 'pm'
+        ? reassignPmUsersQuery.error != null
+          ? getErrorMessage(reassignPmUsersQuery.error, 'Failed to load project managers')
+          : reassignPmPoolQuery.error != null
+            ? getErrorMessage(reassignPmPoolQuery.error, 'Failed to load PM pool')
+            : null
+        : reassignTranslatorUsersQuery.error != null
+          ? getErrorMessage(reassignTranslatorUsersQuery.error, 'Failed to load translators')
+          : reassignTranslatorsQuery.error != null
+            ? getErrorMessage(reassignTranslatorsQuery.error, 'Failed to load team translators')
+            : reassignLocalePoolsQuery.error != null
+              ? getErrorMessage(reassignLocalePoolsQuery.error, 'Failed to load locale pools')
+              : null;
 
   const reassignMutation = useMutation({
     mutationFn: async () => {
@@ -1838,6 +1908,10 @@ function RequestGroupsSection({
                 <div className="review-projects-page__reassign-modal-error">
                   No team is assigned.
                 </div>
+              ) : reassignLoadError ? (
+                <div className="review-projects-page__reassign-modal-error">
+                  {reassignLoadError}
+                </div>
               ) : (
                 <>
                   <div className="review-projects-page__reassign-modal-field">
@@ -1892,7 +1966,7 @@ function RequestGroupsSection({
                   }
                   void reassignMutation.mutateAsync();
                 }}
-                disabled={!canSaveReassign}
+                disabled={!canSaveReassign || reassignLoadError != null}
               >
                 {reassignMutation.isPending ? 'Saving…' : 'Save'}
               </button>
