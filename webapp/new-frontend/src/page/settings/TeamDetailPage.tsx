@@ -7,13 +7,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import {
-  type ApiSlackChannelImportPreviewResponse,
   type ApiSlackClientIdsResponse,
   type ApiTeam,
   type ApiTeamSlackChannelMembersResponse,
   type ApiTeamSlackSettings,
   type ApiTeamSlackUserMappingRow,
-  applyTeamSlackChannelImport,
   deleteTeam,
   fetchSlackClientIds,
   fetchTeam,
@@ -22,7 +20,6 @@ import {
   fetchTeamSlackSettings,
   fetchTeamSlackUserMappings,
   fetchTeamTranslators,
-  previewTeamSlackChannelImport,
   replaceTeamProjectManagers,
   replaceTeamSlackUserMappings,
   replaceTeamTranslators,
@@ -197,9 +194,6 @@ export function TeamDetailPage() {
     null,
   );
   const [isSlackChannelMembersModalOpen, setIsSlackChannelMembersModalOpen] = useState(false);
-  const [slackImportStatusNotice, setSlackImportStatusNotice] = useState<StatusNotice | null>(null);
-  const [slackImportPreview, setSlackImportPreview] =
-    useState<ApiSlackChannelImportPreviewResponse | null>(null);
 
   const parsedTeamId = useMemo(() => {
     const raw = params.teamId?.trim();
@@ -603,47 +597,6 @@ export function TeamDetailPage() {
       setSlackMappingsStatusNotice({
         kind: 'error',
         message: error.message || 'Failed to save Slack user mappings.',
-      });
-    },
-  });
-
-  const previewSlackImportMutation = useMutation({
-    mutationFn: (teamId: number) => previewTeamSlackChannelImport(teamId),
-    onSuccess: (preview) => {
-      setSlackImportPreview(preview);
-      const matchedCount = preview.rows.filter((row) => row.matchedMojitoUserId != null).length;
-      setSlackImportStatusNotice({
-        kind: 'success',
-        message: `Preview loaded: ${preview.rows.length} members, ${matchedCount} matched.`,
-      });
-    },
-    onError: (error: Error) => {
-      setSlackImportStatusNotice({
-        kind: 'error',
-        message: error.message || 'Failed to preview Slack import.',
-      });
-    },
-  });
-
-  const applySlackImportMutation = useMutation({
-    mutationFn: ({ teamId, role }: { teamId: number; role: 'PM' | 'TRANSLATOR' }) =>
-      applyTeamSlackChannelImport(teamId, { role }),
-    onSuccess: async (result, variables) => {
-      if (effectiveTeamId != null) {
-        await Promise.all([
-          variables.role === 'PM' ? pmRosterQuery.refetch() : translatorRosterQuery.refetch(),
-          slackMappingsQuery.refetch(),
-        ]);
-      }
-      setSlackImportStatusNotice({
-        kind: 'success',
-        message: `Imported ${result.addedUsersCount} ${variables.role === 'PM' ? 'PM' : 'translator'} user(s); ${result.mappingsUpsertedCount} mappings updated.`,
-      });
-    },
-    onError: (error: Error) => {
-      setSlackImportStatusNotice({
-        kind: 'error',
-        message: error.message || 'Failed to import team users from Slack channel.',
       });
     },
   });
@@ -1059,22 +1012,6 @@ export function TeamDetailPage() {
     }
   };
 
-  const handlePreviewSlackImport = () => {
-    if (!isAdmin || effectiveTeamId == null) {
-      return;
-    }
-    setSlackImportStatusNotice(null);
-    previewSlackImportMutation.mutate(effectiveTeamId);
-  };
-
-  const handleApplySlackImport = (role: 'PM' | 'TRANSLATOR') => {
-    if (!isAdmin || effectiveTeamId == null) {
-      return;
-    }
-    setSlackImportStatusNotice(null);
-    applySlackImportMutation.mutate({ teamId: effectiveTeamId, role });
-  };
-
   const pageTitle = normalizeTeamName(draftName) || effectiveTeam.name;
   const isNameDirty =
     normalizeTeamName(draftName) !== normalizeTeamName(effectiveTeam?.name ?? draftName);
@@ -1230,48 +1167,6 @@ export function TeamDetailPage() {
                 backend.
               </div>
               <div className="user-detail-page__actions">
-                <button
-                  type="button"
-                  className="settings-button settings-button--ghost"
-                  onClick={handlePreviewSlackImport}
-                  disabled={
-                    previewSlackImportMutation.isPending ||
-                    applySlackImportMutation.isPending ||
-                    isAutoMatchingSlackMappings ||
-                    isRefreshingSlackMappings ||
-                    slackMappingsQuery.isLoading
-                  }
-                >
-                  {previewSlackImportMutation.isPending ? 'Previewing…' : 'Preview import'}
-                </button>
-                <button
-                  type="button"
-                  className="settings-button settings-button--ghost"
-                  onClick={() => handleApplySlackImport('TRANSLATOR')}
-                  disabled={
-                    previewSlackImportMutation.isPending ||
-                    applySlackImportMutation.isPending ||
-                    isAutoMatchingSlackMappings ||
-                    isRefreshingSlackMappings ||
-                    slackMappingsQuery.isLoading
-                  }
-                >
-                  {applySlackImportMutation.isPending ? 'Importing…' : 'Import translators'}
-                </button>
-                <button
-                  type="button"
-                  className="settings-button settings-button--ghost"
-                  onClick={() => handleApplySlackImport('PM')}
-                  disabled={
-                    previewSlackImportMutation.isPending ||
-                    applySlackImportMutation.isPending ||
-                    isAutoMatchingSlackMappings ||
-                    isRefreshingSlackMappings ||
-                    slackMappingsQuery.isLoading
-                  }
-                >
-                  {applySlackImportMutation.isPending ? 'Importing…' : 'Import PMs'}
-                </button>
                 <button
                   type="button"
                   className="settings-button settings-button--ghost"
@@ -1506,33 +1401,10 @@ export function TeamDetailPage() {
                 ) : null}
                 {slackMappingsQuery.isLoading ? (
                   <span className="user-detail-page__status">Loading…</span>
-                ) : previewSlackImportMutation.isPending ? (
-                  <span className="user-detail-page__status">Previewing…</span>
-                ) : applySlackImportMutation.isPending ? (
-                  <span className="user-detail-page__status">Importing…</span>
                 ) : isAutoMatchingSlackMappings ? (
                   <span className="user-detail-page__status">Matching…</span>
                 ) : isRefreshingSlackMappings ? (
                   <span className="user-detail-page__status">Refreshing…</span>
-                ) : null}
-                {slackImportStatusNotice ? (
-                  <span
-                    className={`user-detail-page__status${
-                      slackImportStatusNotice.kind === 'error'
-                        ? ' team-detail-page__status--error'
-                        : ''
-                    }`}
-                  >
-                    {slackImportStatusNotice.message}
-                  </span>
-                ) : null}
-                {slackImportPreview ? (
-                  <span className="user-detail-page__status team-detail-page__status-meta">
-                    {`Members ${slackImportPreview.rows.length}, matched ${
-                      slackImportPreview.rows.filter((row) => row.matchedMojitoUserId != null)
-                        .length
-                    }`}
-                  </span>
                 ) : null}
                 {slackMappingsStatusNotice ? (
                   <span
