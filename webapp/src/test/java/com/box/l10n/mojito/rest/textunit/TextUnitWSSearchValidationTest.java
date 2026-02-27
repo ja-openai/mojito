@@ -48,19 +48,26 @@ public class TextUnitWSSearchValidationTest {
     targetPredicate.setField(TextUnitTextSearchField.TARGET);
     targetPredicate.setValue("target text");
 
+    TextUnitTextSearchPredicate commentPredicate = new TextUnitTextSearchPredicate();
+    commentPredicate.setField(TextUnitTextSearchField.COMMENT);
+    commentPredicate.setValue("comment text");
+
     TextUnitTextSearch textSearch = new TextUnitTextSearch();
     textSearch.setOperator(TextUnitTextSearchBooleanOperator.OR);
-    textSearch.setPredicates(Arrays.asList(sourcePredicate, targetPredicate));
+    textSearch.setPredicates(Arrays.asList(sourcePredicate, targetPredicate, commentPredicate));
     body.setTextSearch(textSearch);
 
     TextUnitSearcherParameters parameters =
         textUnitWS.textUnitSearchBodyToTextUnitSearcherParameters(body);
 
     assertEquals(TextUnitTextSearchBooleanOperator.OR, parameters.getTextSearch().getOperator());
-    assertEquals(2, parameters.getTextSearch().getPredicates().size());
+    assertEquals(3, parameters.getTextSearch().getPredicates().size());
     assertEquals(
         TextUnitTextSearchField.SOURCE,
         parameters.getTextSearch().getPredicates().get(0).getField());
     assertEquals("target text", parameters.getTextSearch().getPredicates().get(1).getValue());
+    assertEquals(
+        TextUnitTextSearchField.COMMENT,
+        parameters.getTextSearch().getPredicates().get(2).getField());
   }
 }

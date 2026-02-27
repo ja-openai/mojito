@@ -27,6 +27,7 @@ type StatusFilterOption = { value: StatusFilterValue; label: string };
 const searchAttributeOptions: SearchAttributeOption[] = [
   { value: 'target', label: 'Translation' },
   { value: 'source', label: 'Source' },
+  { value: 'comment', label: 'Comment' },
   { value: 'stringId', label: 'String ID' },
   { value: 'asset', label: 'Asset path' },
   { value: 'location', label: 'Location' },
@@ -87,6 +88,8 @@ function getSearchPlaceholder(searchAttribute: SearchAttribute) {
       return 'Search translation';
     case 'source':
       return 'Search source text';
+    case 'comment':
+      return 'Search comment';
     case 'stringId':
       return 'Search string ID';
     case 'asset':

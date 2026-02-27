@@ -656,6 +656,8 @@ public class TextUnitSearcher {
         return getSearchTypeNativeExp(searchType, "tu.content", "tu.content_md5", value);
       case TARGET:
         return getSearchTypeNativeExp(searchType, "tuv.content", "tuv.content_md5", value);
+      case COMMENT:
+        return getSearchTypeNativeExp(searchType, "tu.comment", value);
       case ASSET:
         return getSearchTypeNativeExp(searchType, "a.path", value);
       case LOCATION:
