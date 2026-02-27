@@ -2060,7 +2060,7 @@ function DetailPane({
                     screenshotImages[currentScreenshotIdx],
                     'review-project-detail__gallery-image review-project-detail__gallery-image--interactive',
                     {
-                      controls: false,
+                      controls: isVideoAttachmentKey(screenshotImages[currentScreenshotIdx]),
                       muted: true,
                       loop: true,
                       preload: 'metadata',
