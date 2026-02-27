@@ -1,7 +1,26 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
+import { MultiSectionFilterChip } from '../../components/filters/MultiSectionFilterChip';
 import { resultSizePresets } from './workbench-constants';
-import type { WorkbenchCollection } from './workbench-types';
+import type {
+  WorkbenchCollection,
+  WorkbenchResultSortDirection,
+  WorkbenchResultSortField,
+} from './workbench-types';
+
+const resultSortFieldOptions = [
+  { value: 'tmTextUnitId' as const, label: 'ID' },
+  { value: 'source' as const, label: 'Source' },
+  { value: 'translation' as const, label: 'Translation' },
+  { value: 'assetPath' as const, label: 'Asset' },
+  { value: 'comment' as const, label: 'Comment' },
+];
+
+const resultSortDirectionOptions = [
+  { value: 'default' as const, label: 'Default' },
+  { value: 'asc' as const, label: 'A to Z' },
+  { value: 'desc' as const, label: 'Z to A' },
+];
 
 type WorkbenchWorksetBarProps = {
   disabled: boolean;
@@ -11,6 +30,10 @@ type WorkbenchWorksetBarProps = {
   hasMoreResults: boolean;
   worksetSize: number;
   onChangeWorksetSize: (value: number) => void;
+  resultSortField: WorkbenchResultSortField;
+  onChangeResultSortField: (value: WorkbenchResultSortField) => void;
+  resultSortDirection: WorkbenchResultSortDirection;
+  onChangeResultSortDirection: (value: WorkbenchResultSortDirection) => void;
   editedCount: number;
   onRefreshWorkset: () => void;
   onResetWorkbench: () => void;
@@ -40,6 +63,10 @@ export function WorkbenchWorksetBar({
   hasMoreResults,
   worksetSize,
   onChangeWorksetSize,
+  resultSortField,
+  onChangeResultSortField,
+  resultSortDirection,
+  onChangeResultSortDirection,
   editedCount,
   onRefreshWorkset,
   onResetWorkbench,
@@ -80,6 +107,19 @@ export function WorkbenchWorksetBar({
         />,
       ]
     : [];
+
+  if (hasSearched) {
+    parts.push(
+      <SortControls
+        key="sort"
+        disabled={disabled}
+        resultSortField={resultSortField}
+        onChangeResultSortField={onChangeResultSortField}
+        resultSortDirection={resultSortDirection}
+        onChangeResultSortDirection={onChangeResultSortDirection}
+      />,
+    );
+  }
 
   if (editedCount > 0) {
     parts.push(
@@ -165,6 +205,56 @@ export function WorkbenchWorksetBar({
     <div className="workbench-worksetbar">
       <div className="workbench-worksetbar__cluster">{content}</div>
     </div>
+  );
+}
+
+function SortControls({
+  disabled,
+  resultSortField,
+  onChangeResultSortField,
+  resultSortDirection,
+  onChangeResultSortDirection,
+}: {
+  disabled: boolean;
+  resultSortField: WorkbenchResultSortField;
+  onChangeResultSortField: (value: WorkbenchResultSortField) => void;
+  resultSortDirection: WorkbenchResultSortDirection;
+  onChangeResultSortDirection: (value: WorkbenchResultSortDirection) => void;
+}) {
+  const resultSortFieldLabel =
+    resultSortFieldOptions.find((option) => option.value === resultSortField)?.label ?? 'Source';
+  const resultSortDirectionLabel =
+    resultSortDirectionOptions.find((option) => option.value === resultSortDirection)?.label ??
+    'Default';
+
+  return (
+    <MultiSectionFilterChip
+      align="left"
+      ariaLabel="Sort loaded results"
+      className="workbench-worksetbar__sortchip"
+      classNames={{
+        button: 'workbench-worksetbar__sortbutton',
+        panel: 'workbench-worksetbar__panel',
+      }}
+      disabled={disabled}
+      summary={`Sort: ${resultSortFieldLabel} · ${resultSortDirectionLabel}`}
+      sections={[
+        {
+          kind: 'radio',
+          label: 'Sort by',
+          options: resultSortFieldOptions,
+          value: resultSortField,
+          onChange: (value) => onChangeResultSortField(value as WorkbenchResultSortField),
+        },
+        {
+          kind: 'radio',
+          label: 'Order',
+          options: resultSortDirectionOptions,
+          value: resultSortDirection,
+          onChange: (value) => onChangeResultSortDirection(value as WorkbenchResultSortDirection),
+        },
+      ]}
+    />
   );
 }
 

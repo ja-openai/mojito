@@ -201,6 +201,43 @@
   cursor: not-allowed;
 }
 
+.workbench-worksetbar__sortchip {
+  min-width: 0;
+}
+
+.workbench-worksetbar__sortbutton {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-subtle);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  padding: 0 var(--space-1);
+  min-height: 26px;
+  width: auto;
+  box-shadow: none;
+}
+
+.workbench-worksetbar__sortbutton:not(:disabled):hover,
+.workbench-worksetbar__sortbutton:not(:disabled):focus-visible {
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  box-shadow: none;
+  text-decoration: underline;
+}
+
+.workbench-worksetbar__sortbutton:disabled {
+  opacity: 0.5;
+}
+
+.workbench-worksetbar__sortbutton .chip-dropdown__chevron {
+  margin-left: 4px;
+}
+
+.workbench-worksetbar__sortchip .workbench-worksetbar__panel {
+  min-width: 14rem;
+}
+
 .workbench-worksetbar__collection {
   min-width: 220px;
 }
@@ -533,7 +570,8 @@
 }
 
 .workbench-searchbuilder .single-select-dropdown__option-helper,
-.workbench-searchrow .single-select-dropdown__option-helper {
+.workbench-searchrow .single-select-dropdown__option-helper,
+.workbench-worksetbar .single-select-dropdown__option-helper {
   color: var(--color-text-subtle);
 }
 

@@ -526,6 +526,10 @@ export function WorkbenchPage() {
         hasSearched={hasSearched}
         worksetSize={search.worksetSize}
         onChangeWorksetSize={search.onChangeWorksetSize}
+        resultSortField={search.resultSortField}
+        onChangeResultSortField={search.onChangeResultSortField}
+        resultSortDirection={search.resultSortDirection}
+        onChangeResultSortDirection={search.onChangeResultSortDirection}
         editedRowIds={edits.editedRowIds}
         statusSavingRowIds={edits.statusSavingRowIds}
         diffModal={edits.diffModal}
