@@ -45,6 +45,15 @@ export type WorkbenchTextSearchCondition = {
 
 export type WorkbenchTextSearchOperator = TextSearchOperator;
 
+export type WorkbenchResultSortField =
+  | 'tmTextUnitId'
+  | 'source'
+  | 'translation'
+  | 'assetPath'
+  | 'comment';
+
+export type WorkbenchResultSortDirection = 'default' | 'asc' | 'desc';
+
 export type WorkbenchDiffModalData = {
   rowId: string;
   textUnitName: string;

@@ -10,6 +10,8 @@ import { Modal } from '../../components/Modal';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import type { RepositorySelectionOption } from '../../utils/repositorySelection';
 import type {
+  WorkbenchResultSortDirection,
+  WorkbenchResultSortField,
   StatusFilterValue,
   WorkbenchCollection,
   WorkbenchDiffModalData,
@@ -27,6 +29,10 @@ type Props = {
   hasSearched: boolean;
   worksetSize: number;
   onChangeWorksetSize: (value: number) => void;
+  resultSortField: WorkbenchResultSortField;
+  onChangeResultSortField: (value: WorkbenchResultSortField) => void;
+  resultSortDirection: WorkbenchResultSortDirection;
+  onChangeResultSortDirection: (value: WorkbenchResultSortDirection) => void;
   editedRowIds: Set<string>;
   statusSavingRowIds: Set<string>;
   diffModal: WorkbenchDiffModalData | null;
@@ -163,6 +169,10 @@ export function WorkbenchPageView({
   hasSearched,
   worksetSize,
   onChangeWorksetSize,
+  resultSortField,
+  onChangeResultSortField,
+  resultSortDirection,
+  onChangeResultSortDirection,
   editedRowIds,
   statusSavingRowIds,
   diffModal,
@@ -324,6 +334,10 @@ export function WorkbenchPageView({
         hasMoreResults={hasMoreResults}
         worksetSize={worksetSize}
         onChangeWorksetSize={onChangeWorksetSize}
+        resultSortField={resultSortField}
+        onChangeResultSortField={onChangeResultSortField}
+        resultSortDirection={resultSortDirection}
+        onChangeResultSortDirection={onChangeResultSortDirection}
         editedCount={editedCount}
         onRefreshWorkset={onRefreshWorkset}
         onResetWorkbench={onResetWorkbench}

@@ -24,6 +24,8 @@ import { WORKSET_SIZE_DEFAULT } from './workbench-constants';
 import { clampWorksetSize, mapApiTextUnitToRow, serializeSearchRequest } from './workbench-helpers';
 import { loadPreferredWorksetSize } from './workbench-preferences';
 import type {
+  WorkbenchResultSortDirection,
+  WorkbenchResultSortField,
   StatusFilterValue,
   WorkbenchRow,
   WorkbenchTextSearchCondition,
@@ -83,6 +85,10 @@ type SearchState = {
   onChangeTranslationCreatedAfter: (value: string | null) => void;
   worksetSize: number;
   onChangeWorksetSize: (value: number) => void;
+  resultSortField: WorkbenchResultSortField;
+  onChangeResultSortField: (value: WorkbenchResultSortField) => void;
+  resultSortDirection: WorkbenchResultSortDirection;
+  onChangeResultSortDirection: (value: WorkbenchResultSortDirection) => void;
   canSearch: boolean;
   activeSearchRequest: TextUnitSearchRequest | null;
   isSearchLoading: boolean;
@@ -111,6 +117,26 @@ type SearchRequestInputs = {
 };
 
 let nextTextSearchConditionId = 0;
+const workbenchRowSortCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: 'base',
+});
+
+function getWorkbenchRowSortValue(row: WorkbenchRow, field: WorkbenchResultSortField): string | number {
+  switch (field) {
+    case 'tmTextUnitId':
+      return row.tmTextUnitId;
+    case 'translation':
+      return row.translation ?? '';
+    case 'assetPath':
+      return row.assetPath ?? '';
+    case 'comment':
+      return row.comment ?? '';
+    case 'source':
+    default:
+      return row.source;
+  }
+}
 
 function createTextSearchCondition(
   overrides: Partial<Omit<WorkbenchTextSearchCondition, 'id'>> = {},
@@ -293,6 +319,9 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   const [worksetSize, setWorksetSize] = useState<number>(
     () => loadPreferredWorksetSize() ?? WORKSET_SIZE_DEFAULT,
   );
+  const [resultSortField, setResultSortField] = useState<WorkbenchResultSortField>('source');
+  const [resultSortDirection, setResultSortDirection] =
+    useState<WorkbenchResultSortDirection>('default');
   const hydratedSearchSignatureRef = useRef<string | null>(null);
   const lastHydratedRequestRef = useRef<TextUnitSearchRequest | null>(null);
   const [hasHydratedSearch, setHasHydratedSearch] = useState(initialSearchRequest == null);
@@ -515,6 +544,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     setTranslationCreatedBefore(null);
     setTranslationCreatedAfter(null);
     setWorksetSize(nextWorksetSize);
+    setResultSortField('source');
+    setResultSortDirection('default');
     setActiveSearchRequestIfChanged(null);
     lastAppliedNonTextSignatureRef.current = null;
     lastSuccessfulSearchDataRef.current = undefined;
@@ -596,8 +627,36 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     const limit = clampWorksetSize(activeSearchRequest?.limit ?? searchLimit);
     const flatResults = searchQuery.data?.pages.flat() ?? [];
     const visibleResults = flatResults.slice(0, limit);
-    return visibleResults.map((item) => mapApiTextUnitToRow(item, canEditLocale));
-  }, [activeSearchRequest?.limit, canEditLocale, searchLimit, searchQuery.data]);
+    const mappedRows = visibleResults.map((item) => mapApiTextUnitToRow(item, canEditLocale));
+    if (resultSortDirection === 'default') {
+      return mappedRows;
+    }
+
+    return mappedRows
+      .map((row, index) => ({ row, index }))
+      .sort((left, right) => {
+        const direction = resultSortDirection === 'desc' ? -1 : 1;
+        const leftValue = getWorkbenchRowSortValue(left.row, resultSortField);
+        const rightValue = getWorkbenchRowSortValue(right.row, resultSortField);
+
+        const compareValue =
+          typeof leftValue === 'number' && typeof rightValue === 'number'
+            ? (leftValue - rightValue) * direction
+            : workbenchRowSortCollator.compare(String(leftValue), String(rightValue)) * direction;
+        if (compareValue !== 0) {
+          return compareValue;
+        }
+        return left.index - right.index;
+      })
+      .map(({ row }) => row);
+  }, [
+    activeSearchRequest?.limit,
+    canEditLocale,
+    resultSortDirection,
+    resultSortField,
+    searchLimit,
+    searchQuery.data,
+  ]);
 
   const hasMoreResults = useMemo(() => {
     if (!activeSearchRequest) {
@@ -758,6 +817,10 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     onChangeTranslationCreatedAfter: setTranslationCreatedAfter,
     worksetSize,
     onChangeWorksetSize,
+    resultSortField,
+    onChangeResultSortField: setResultSortField,
+    resultSortDirection,
+    onChangeResultSortDirection: setResultSortDirection,
     canSearch,
     activeSearchRequest,
     isSearchLoading,
