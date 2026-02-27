@@ -8,6 +8,7 @@ public enum TextUnitTextSearchField {
   STRING_ID("stringId"),
   SOURCE("source"),
   TARGET("target"),
+  COMMENT("comment"),
   ASSET("asset"),
   LOCATION("location"),
   PLURAL_FORM_OTHER("pluralFormOther"),

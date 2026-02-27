@@ -4,6 +4,7 @@ export type SearchAttribute =
   | 'stringId'
   | 'source'
   | 'target'
+  | 'comment'
   | 'asset'
   | 'location'
   | 'pluralFormOther'

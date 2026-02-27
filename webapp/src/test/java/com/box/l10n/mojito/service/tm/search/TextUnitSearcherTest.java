@@ -918,6 +918,33 @@ public class TextUnitSearcherTest extends ServiceTestBase {
             tuple("fr-FR", "Content3"));
   }
 
+  @Transactional
+  @Test
+  public void testCommentTextSearch() {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+
+    TextUnitTextSearchPredicate commentPredicate = new TextUnitTextSearchPredicate();
+    commentPredicate.setField(TextUnitTextSearchField.COMMENT);
+    commentPredicate.setSearchType(SearchType.EXACT);
+    commentPredicate.setValue("Comment3");
+
+    TextUnitTextSearch textSearch = new TextUnitTextSearch();
+    textSearch.setPredicates(Arrays.asList(commentPredicate));
+
+    TextUnitSearcherParameters textUnitSearcherParameters =
+        new TextUnitSearcherParametersForTesting();
+    textUnitSearcherParameters.setRepositoryIds(tmTestData.repository.getId());
+    textUnitSearcherParameters.setLocaleTags(Arrays.asList("fr-FR", "ko-KR"));
+    textUnitSearcherParameters.setStatusFilter(StatusFilter.TRANSLATED);
+    textUnitSearcherParameters.setTextSearch(textSearch);
+
+    List<TextUnitDTO> textUnitDTOs = textUnitSearcher.search(textUnitSearcherParameters);
+
+    assertThat(textUnitDTOs)
+        .extracting(TextUnitDTO::getComment, TextUnitDTO::getSource, TextUnitDTO::getTargetLocale)
+        .containsExactly(tuple("Comment3", "Content3", "fr-FR"));
+  }
+
   public void testSearchText(
       String attribute, String value, SearchType searchType, List<String> expectedNames) {
     TMTestData tmTestData = new TMTestData(testIdWatcher);
