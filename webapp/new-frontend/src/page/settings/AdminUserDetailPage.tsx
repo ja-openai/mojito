@@ -212,7 +212,7 @@ export function AdminUserDetailPage() {
       setSaveStatus(null);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [USERS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
       setSaveStatus('saved');
     },
   });
@@ -226,7 +226,7 @@ export function AdminUserDetailPage() {
     },
     onSuccess: () => {
       setShowDeleteConfirm(false);
-      void queryClient.invalidateQueries({ queryKey: [USERS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
       void navigate('/settings/admin/users');
     },
   });

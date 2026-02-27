@@ -374,7 +374,7 @@ export function AdminUserBatchPage() {
       }
     }
 
-    void queryClient.invalidateQueries({ queryKey: [USERS_QUERY_KEY] });
+    void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
     setIsSubmitting(false);
   };
 

@@ -25,7 +25,7 @@ export type ApiUser = {
   surname?: string | null;
   commonName?: string | null;
   enabled?: boolean | null;
-  createdDate?: string | null;
+  createdDate?: string | number | null;
   canTranslateAllLocales: boolean;
   authorities?: ApiAuthority[] | null;
   userLocales?: ApiUserLocale[] | null;

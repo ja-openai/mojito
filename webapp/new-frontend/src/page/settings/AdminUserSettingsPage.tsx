@@ -66,10 +66,21 @@ type UserRow = {
   localeSummary: string;
   disabledLabel: string;
   enabled: boolean | null;
-  createdDate: string | null;
+  createdDate: string | number | null;
   createdTimestamp: number | null;
   isSelf: boolean;
   searchText: string;
+};
+
+const parseCreatedDate = (value: string | number | null | undefined) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
 };
 
 const ROLE_OPTIONS = [
@@ -137,8 +148,7 @@ export function AdminUserSettingsPage() {
       const disabledLabel =
         entry.enabled === false ? 'Disabled' : entry.enabled === true ? 'Enabled' : '—';
       const createdDate = entry.createdDate ?? null;
-      const createdTimestamp =
-        createdDate && !Number.isNaN(Date.parse(createdDate)) ? Date.parse(createdDate) : null;
+      const createdTimestamp = parseCreatedDate(createdDate);
       const searchText = [
         entry.id,
         entry.username,
@@ -264,7 +274,7 @@ export function AdminUserSettingsPage() {
     },
     onMutate: async (ids) => {
       setActionError(null);
-      await queryClient.cancelQueries({ queryKey: [USERS_QUERY_KEY] });
+      await queryClient.cancelQueries({ queryKey: USERS_QUERY_KEY });
       const previousUsers = queryClient.getQueryData<ApiUser[]>(USERS_QUERY_KEY);
       const previousSelectedIds = new Set(selectedIds);
       const deletedIds = new Set(ids);
@@ -295,7 +305,7 @@ export function AdminUserSettingsPage() {
       setActionError(error instanceof Error ? error.message : 'Failed to delete selected users.');
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [USERS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
       setSelectedIds(new Set());
       setShowDeleteConfirm(false);
     },
@@ -336,7 +346,7 @@ export function AdminUserSettingsPage() {
     },
     onMutate: async (ids) => {
       setActionError(null);
-      await queryClient.cancelQueries({ queryKey: [USERS_QUERY_KEY] });
+      await queryClient.cancelQueries({ queryKey: USERS_QUERY_KEY });
       const previousUsers = queryClient.getQueryData<ApiUser[]>(USERS_QUERY_KEY);
       const previousSelectedIds = new Set(selectedIds);
       const disabledIds = new Set(ids);
@@ -374,7 +384,7 @@ export function AdminUserSettingsPage() {
       setActionError(error instanceof Error ? error.message : 'Failed to disable selected users.');
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [USERS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
       setSelectedIds(new Set());
       setShowDisableConfirm(false);
     },
