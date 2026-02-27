@@ -77,6 +77,7 @@ type TextSearchConditionControlProps = {
   condition: WorkbenchTextSearchCondition;
   leading: ReactNode;
   after?: ReactNode;
+  trailing?: ReactNode;
   className?: string;
   onChangeValue: (value: string) => void;
   onSubmitSearch: () => void;
@@ -110,6 +111,7 @@ function TextSearchConditionControl({
   condition,
   leading,
   after,
+  trailing,
   className,
   onChangeValue,
   onSubmitSearch,
@@ -127,6 +129,7 @@ function TextSearchConditionControl({
         inputAriaLabel={placeholder}
         className={className}
         leading={leading}
+        trailing={trailing}
       />
       {after ? <div className="workbench-searchrow__after">{after}</div> : null}
     </div>
@@ -201,7 +204,7 @@ function CompoundTextSearchBuilder({
 }: CompoundTextSearchBuilderProps) {
   return (
     <div className="workbench-searchbuilder">
-      <div className="workbench-searchbuilder__toolbar">
+      <div className="workbench-searchbuilder__meta">
         <label className="workbench-searchbuilder__toggle">
           <span>Match</span>
           <SingleSelectDropdown<WorkbenchTextSearchOperator>
@@ -455,21 +458,19 @@ export function WorkbenchHeader({
                   onChangeSearchType={onChangeSearchType}
                 />
               }
-              after={
-                <button
-                  type="button"
-                  className="workbench-searchcontrol__add"
-                  onClick={onAddTextSearchCondition}
-                  disabled={searchControlsDisabled || !canAddCompoundCondition}
-                  aria-hidden={!canAddCompoundCondition}
-                  tabIndex={canAddCompoundCondition ? undefined : -1}
-                  style={{
-                    visibility: canAddCompoundCondition ? 'visible' : 'hidden',
-                    pointerEvents: canAddCompoundCondition ? undefined : 'none',
-                  }}
-                >
-                  Add
-                </button>
+              trailing={
+                canAddCompoundCondition ? (
+                  <button
+                    type="button"
+                    className="workbench-searchcontrol__add"
+                    onClick={onAddTextSearchCondition}
+                    disabled={searchControlsDisabled}
+                    aria-label="Add search condition"
+                    title="Add search condition"
+                  >
+                    Add
+                  </button>
+                ) : null
               }
             />
           )}
