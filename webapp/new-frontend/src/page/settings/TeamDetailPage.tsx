@@ -44,6 +44,7 @@ type StatusNotice = {
 };
 
 type TeamDeleteMode = 'disable' | 'hard-delete';
+type BatchApplyMode = 'merge' | 'replace';
 
 type SlackMappingDraftRow = {
   mojitoUserId: number;
@@ -52,6 +53,14 @@ type SlackMappingDraftRow = {
   slackUsername: string;
   matchSource: string;
   lastVerifiedAt: string | null;
+};
+
+type BatchApplyResult = {
+  nextIds: number[];
+  matchedCount: number;
+  addedCount: number;
+  unknownUsernames: string[];
+  duplicateUsernames: string[];
 };
 
 const getUserRole = (entry: ApiUser) => entry.authorities?.[0]?.authority ?? 'ROLE_USER';
@@ -79,6 +88,64 @@ const normalizeOptionalText = (value: string | null | undefined) => {
   const normalized = value?.trim() ?? '';
   return normalized.length > 0 ? normalized : null;
 };
+const parseBatchUsernames = (value: string) =>
+  value
+    .split(/[\s,;]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const buildUserIdsByUsername = (users: ApiUser[]) => {
+  const byUsername = new Map<string, number[]>();
+  users.forEach((entry) => {
+    const key = entry.username.trim().toLowerCase();
+    const current = byUsername.get(key);
+    if (current) {
+      current.push(entry.id);
+    } else {
+      byUsername.set(key, [entry.id]);
+    }
+  });
+  return byUsername;
+};
+
+const applyBatchUsernames = (
+  input: string,
+  usersByUsername: Map<string, number[]>,
+  currentIds: number[],
+  mode: BatchApplyMode,
+): BatchApplyResult => {
+  const nextIds = new Set(mode === 'merge' ? currentIds : []);
+  const unknownUsernames: string[] = [];
+  const duplicateUsernames: string[] = [];
+  let matchedCount = 0;
+  let addedCount = 0;
+
+  parseBatchUsernames(input).forEach((username) => {
+    const ids = usersByUsername.get(username.toLowerCase());
+    if (!ids || ids.length === 0) {
+      unknownUsernames.push(username);
+      return;
+    }
+    if (ids.length > 1) {
+      duplicateUsernames.push(username);
+      return;
+    }
+    const userId = ids[0];
+    matchedCount += 1;
+    if (!nextIds.has(userId)) {
+      nextIds.add(userId);
+      addedCount += 1;
+    }
+  });
+
+  return {
+    nextIds: Array.from(nextIds).sort((left, right) => left - right),
+    matchedCount,
+    addedCount,
+    unknownUsernames,
+    duplicateUsernames,
+  };
+};
 const normalizeSlackMappingsForCompare = (
   rows: SlackMappingDraftRow[] | ApiTeamSlackUserMappingRow[],
 ) =>
@@ -104,6 +171,11 @@ export function TeamDetailPage() {
   const [draftName, setDraftName] = useState('');
   const [draftPmUserIds, setDraftPmUserIds] = useState<number[]>([]);
   const [draftTranslatorUserIds, setDraftTranslatorUserIds] = useState<number[]>([]);
+  const [draftPmBatchInput, setDraftPmBatchInput] = useState('');
+  const [draftTranslatorBatchInput, setDraftTranslatorBatchInput] = useState('');
+  const [pmBatchApplyMode, setPmBatchApplyMode] = useState<BatchApplyMode>('merge');
+  const [translatorBatchApplyMode, setTranslatorBatchApplyMode] =
+    useState<BatchApplyMode>('merge');
   const [showAllPmUsers, setShowAllPmUsers] = useState(false);
   const [showAllTranslatorUsers, setShowAllTranslatorUsers] = useState(false);
   const [statusNotice, setStatusNotice] = useState<StatusNotice | null>(null);
@@ -225,6 +297,10 @@ export function TeamDetailPage() {
   useEffect(() => {
     setShowAllPmUsers(false);
     setShowAllTranslatorUsers(false);
+    setDraftPmBatchInput('');
+    setDraftTranslatorBatchInput('');
+    setPmBatchApplyMode('merge');
+    setTranslatorBatchApplyMode('merge');
   }, [effectiveTeamId]);
 
   useEffect(() => {
@@ -265,6 +341,7 @@ export function TeamDetailPage() {
     () => new Map(allPmUsers.map((entry) => [entry.id, entry])),
     [allPmUsers],
   );
+  const allPmUsersByUsername = useMemo(() => buildUserIdsByUsername(allPmUsers), [allPmUsers]);
 
   const pmOptions = useMemo(() => {
     const baseUsers = showAllPmUsers
@@ -338,6 +415,10 @@ export function TeamDetailPage() {
 
   const allTranslatorUsersById = useMemo(
     () => new Map(allTranslatorUsers.map((entry) => [entry.id, entry])),
+    [allTranslatorUsers],
+  );
+  const allTranslatorUsersByUsername = useMemo(
+    () => buildUserIdsByUsername(allTranslatorUsers),
     [allTranslatorUsers],
   );
 
@@ -633,6 +714,138 @@ export function TeamDetailPage() {
       (left, right) => left - right,
     );
     saveTranslatorRosterMutation.mutate({ teamId: effectiveTeamId, userIds: normalizedIds });
+  };
+
+  const handleAddPmBatch = () => {
+    const parsedUsernames = parseBatchUsernames(draftPmBatchInput);
+    if (parsedUsernames.length === 0) {
+      setPmStatusNotice({ kind: 'error', message: 'Paste PM usernames first.' });
+      return;
+    }
+
+    const result = applyBatchUsernames(
+      draftPmBatchInput,
+      allPmUsersByUsername,
+      draftPmUserIds,
+      pmBatchApplyMode,
+    );
+    setDraftPmUserIds(result.nextIds);
+
+    const issueParts: string[] = [];
+    if (result.unknownUsernames.length > 0) {
+      issueParts.push(`Unknown: ${result.unknownUsernames.join(', ')}`);
+    }
+    if (result.duplicateUsernames.length > 0) {
+      issueParts.push(`Ambiguous: ${result.duplicateUsernames.join(', ')}`);
+    }
+
+    setPmStatusNotice({
+      kind: issueParts.length > 0 ? 'error' : 'success',
+      message:
+        result.matchedCount > 0
+          ? `${
+              pmBatchApplyMode === 'merge'
+                ? `Added ${result.addedCount} PM${result.addedCount === 1 ? '' : 's'} to draft.`
+                : `Replaced draft with ${result.nextIds.length} PM${result.nextIds.length === 1 ? '' : 's'}.`
+            }${issueParts.length > 0 ? ` ${issueParts.join('. ')}.` : ''}`
+          : issueParts.length > 0
+            ? issueParts.join('. ')
+            : 'No new PMs were added.',
+    });
+    if (issueParts.length === 0) {
+      setDraftPmBatchInput('');
+    }
+  };
+
+  const handleAddTranslatorBatch = () => {
+    const parsedUsernames = parseBatchUsernames(draftTranslatorBatchInput);
+    if (parsedUsernames.length === 0) {
+      setTranslatorStatusNotice({ kind: 'error', message: 'Paste translator usernames first.' });
+      return;
+    }
+
+    const result = applyBatchUsernames(
+      draftTranslatorBatchInput,
+      allTranslatorUsersByUsername,
+      draftTranslatorUserIds,
+      translatorBatchApplyMode,
+    );
+    setDraftTranslatorUserIds(result.nextIds);
+
+    const issueParts: string[] = [];
+    if (result.unknownUsernames.length > 0) {
+      issueParts.push(`Unknown: ${result.unknownUsernames.join(', ')}`);
+    }
+    if (result.duplicateUsernames.length > 0) {
+      issueParts.push(`Ambiguous: ${result.duplicateUsernames.join(', ')}`);
+    }
+
+    setTranslatorStatusNotice({
+      kind: issueParts.length > 0 ? 'error' : 'success',
+      message:
+        result.matchedCount > 0
+          ? `${
+              translatorBatchApplyMode === 'merge'
+                ? `Added ${result.addedCount} translator${result.addedCount === 1 ? '' : 's'} to draft.`
+                : `Replaced draft with ${result.nextIds.length} translator${result.nextIds.length === 1 ? '' : 's'}.`
+            }${issueParts.length > 0 ? ` ${issueParts.join('. ')}.` : ''}`
+          : issueParts.length > 0
+            ? issueParts.join('. ')
+            : 'No new translators were added.',
+    });
+    if (issueParts.length === 0) {
+      setDraftTranslatorBatchInput('');
+    }
+  };
+
+  const handleReloadPmDraftFromDb = async () => {
+    if (!isAdmin || effectiveTeamId == null) {
+      return;
+    }
+    setPmStatusNotice({ kind: 'success', message: 'Reloading from DB…' });
+    const result = await pmRosterQuery.refetch();
+    if (result.error) {
+      setPmStatusNotice({
+        kind: 'error',
+        message: result.error.message || 'Failed to reload project managers from DB.',
+      });
+      return;
+    }
+    const normalized = normalizeIdList(result.data?.userIds ?? []);
+    const wasDirty = !sameIdList(draftPmUserIds, normalized);
+    setDraftPmUserIds(normalized);
+    setDraftPmBatchInput('');
+    setPmStatusNotice({
+      kind: 'success',
+      message: wasDirty
+        ? `Reloaded ${normalized.length} PM${normalized.length === 1 ? '' : 's'} from DB.`
+        : `Draft already matches DB (${normalized.length} PM${normalized.length === 1 ? '' : 's'}).`,
+    });
+  };
+
+  const handleReloadTranslatorDraftFromDb = async () => {
+    if (effectiveTeamId == null) {
+      return;
+    }
+    setTranslatorStatusNotice({ kind: 'success', message: 'Reloading from DB…' });
+    const result = await translatorRosterQuery.refetch();
+    if (result.error) {
+      setTranslatorStatusNotice({
+        kind: 'error',
+        message: result.error.message || 'Failed to reload translators from DB.',
+      });
+      return;
+    }
+    const normalized = normalizeIdList(result.data?.userIds ?? []);
+    const wasDirty = !sameIdList(draftTranslatorUserIds, normalized);
+    setDraftTranslatorUserIds(normalized);
+    setDraftTranslatorBatchInput('');
+    setTranslatorStatusNotice({
+      kind: 'success',
+      message: wasDirty
+        ? `Reloaded ${normalized.length} translator${normalized.length === 1 ? '' : 's'} from DB.`
+        : `Draft already matches DB (${normalized.length} translator${normalized.length === 1 ? '' : 's'}).`,
+    });
   };
 
   const handleSaveSlackSettings = () => {
@@ -1371,6 +1584,80 @@ export function TeamDetailPage() {
                 },
               ]}
             />
+            <div className="user-detail-page__hint">
+              Add one by one above, or paste usernames below separated by commas or new lines.
+              Changes stay in draft until you save.
+            </div>
+            <div className="settings-field__header team-pools-page__batch-controls">
+              <div
+                className="team-pools-page__mode-toggle"
+                role="group"
+                aria-label="Translator batch apply mode"
+              >
+                <button
+                  type="button"
+                  className={`team-pools-page__mode-option${
+                    translatorBatchApplyMode === 'merge' ? ' is-active' : ''
+                  }`}
+                  onClick={() => {
+                    setTranslatorBatchApplyMode('merge');
+                    setTranslatorStatusNotice(null);
+                  }}
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  className={`team-pools-page__mode-option${
+                    translatorBatchApplyMode === 'replace' ? ' is-active' : ''
+                  }`}
+                  onClick={() => {
+                    setTranslatorBatchApplyMode('replace');
+                    setTranslatorStatusNotice(null);
+                  }}
+                >
+                  Replace
+                </button>
+              </div>
+              <button
+                type="button"
+                className="settings-button settings-button--ghost team-pools-page__prefill-button"
+                onClick={() => {
+                  void handleReloadTranslatorDraftFromDb();
+                }}
+                disabled={
+                  translatorRosterQuery.isLoading ||
+                  translatorRosterQuery.isRefetching ||
+                  saveTranslatorRosterMutation.isPending
+                }
+              >
+                {translatorRosterQuery.isRefetching ? 'Reloading…' : 'Reload from DB'}
+              </button>
+            </div>
+            <div className="team-detail-page__batch-add">
+              <textarea
+                className="team-detail-page__batch-textarea"
+                value={draftTranslatorBatchInput}
+                onChange={(event) => {
+                  setDraftTranslatorBatchInput(event.target.value);
+                  setTranslatorStatusNotice(null);
+                }}
+                placeholder="translator.one&#10;translator.two"
+                aria-label="Batch add translators by username"
+              />
+              <button
+                type="button"
+                className="settings-button settings-button--ghost"
+                onClick={handleAddTranslatorBatch}
+                disabled={
+                  translatorUsersQuery.isLoading ||
+                  saveTranslatorRosterMutation.isPending ||
+                  translatorRosterQuery.isRefetching
+                }
+              >
+                Apply
+              </button>
+            </div>
             <div className="user-detail-page__actions">
               {isTranslatorRosterDirty ? (
                 <button
@@ -1447,6 +1734,80 @@ export function TeamDetailPage() {
                   return `${selectedValues.length} selected`;
                 }}
               />
+              <div className="user-detail-page__hint">
+                Add one by one above, or paste usernames below separated by commas or new lines.
+                Changes stay in draft until you save.
+              </div>
+              <div className="settings-field__header team-pools-page__batch-controls">
+                <div
+                  className="team-pools-page__mode-toggle"
+                  role="group"
+                  aria-label="Project manager batch apply mode"
+                >
+                  <button
+                    type="button"
+                    className={`team-pools-page__mode-option${
+                      pmBatchApplyMode === 'merge' ? ' is-active' : ''
+                    }`}
+                    onClick={() => {
+                      setPmBatchApplyMode('merge');
+                      setPmStatusNotice(null);
+                    }}
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    className={`team-pools-page__mode-option${
+                      pmBatchApplyMode === 'replace' ? ' is-active' : ''
+                    }`}
+                    onClick={() => {
+                      setPmBatchApplyMode('replace');
+                      setPmStatusNotice(null);
+                    }}
+                  >
+                    Replace
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="settings-button settings-button--ghost team-pools-page__prefill-button"
+                  onClick={() => {
+                    void handleReloadPmDraftFromDb();
+                  }}
+                  disabled={
+                    pmRosterQuery.isLoading ||
+                    pmRosterQuery.isRefetching ||
+                    savePmRosterMutation.isPending
+                  }
+                >
+                  {pmRosterQuery.isRefetching ? 'Reloading…' : 'Reload from DB'}
+                </button>
+              </div>
+              <div className="team-detail-page__batch-add">
+                <textarea
+                  className="team-detail-page__batch-textarea"
+                  value={draftPmBatchInput}
+                  onChange={(event) => {
+                    setDraftPmBatchInput(event.target.value);
+                    setPmStatusNotice(null);
+                  }}
+                  placeholder="pm.one&#10;pm.two"
+                  aria-label="Batch add project managers by username"
+                />
+                <button
+                  type="button"
+                  className="settings-button settings-button--ghost"
+                  onClick={handleAddPmBatch}
+                  disabled={
+                    pmUsersQuery.isLoading ||
+                    savePmRosterMutation.isPending ||
+                    pmRosterQuery.isRefetching
+                  }
+                >
+                  Apply
+                </button>
+              </div>
               <div className="user-detail-page__actions">
                 {isPmRosterDirty ? (
                   <button
