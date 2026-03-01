@@ -105,6 +105,12 @@ const buildUserIdsByUsername = (users: ApiUser[]) => {
   return byUsername;
 };
 
+const formatBatchUsernames = (userIds: number[], usersById: Map<number, ApiUser>) =>
+  userIds
+    .map((userId) => usersById.get(userId)?.username?.trim() ?? '')
+    .filter(Boolean)
+    .join('\n');
+
 const applyBatchUsernames = (
   input: string,
   usersByUsername: Map<string, number[]>,
@@ -194,6 +200,9 @@ export function TeamDetailPage() {
     null,
   );
   const [isSlackChannelMembersModalOpen, setIsSlackChannelMembersModalOpen] = useState(false);
+  const [slackChannelMembersCopyStatus, setSlackChannelMembersCopyStatus] = useState<
+    StatusNotice | null
+  >(null);
 
   const parsedTeamId = useMemo(() => {
     const raw = params.teamId?.trim();
@@ -296,6 +305,12 @@ export function TeamDetailPage() {
     setPmBatchApplyMode('merge');
     setTranslatorBatchApplyMode('merge');
   }, [effectiveTeamId]);
+
+  useEffect(() => {
+    if (!isSlackChannelMembersModalOpen) {
+      setSlackChannelMembersCopyStatus(null);
+    }
+  }, [isSlackChannelMembersModalOpen]);
 
   useEffect(() => {
     const settings = slackSettingsQuery.data;
@@ -767,7 +782,7 @@ export function TeamDetailPage() {
     const normalized = normalizeIdList(result.data?.userIds ?? []);
     const wasDirty = !sameIdList(draftPmUserIds, normalized);
     setDraftPmUserIds(normalized);
-    setDraftPmBatchInput('');
+    setDraftPmBatchInput(formatBatchUsernames(normalized, allPmUsersById));
     setPmStatusNotice({
       kind: 'success',
       message: wasDirty
@@ -792,7 +807,7 @@ export function TeamDetailPage() {
     const normalized = normalizeIdList(result.data?.userIds ?? []);
     const wasDirty = !sameIdList(draftTranslatorUserIds, normalized);
     setDraftTranslatorUserIds(normalized);
-    setDraftTranslatorBatchInput('');
+    setDraftTranslatorBatchInput(formatBatchUsernames(normalized, allTranslatorUsersById));
     setTranslatorStatusNotice({
       kind: 'success',
       message: wasDirty
@@ -856,6 +871,33 @@ export function TeamDetailPage() {
       });
     } finally {
       setIsRefreshingSlackMappings(false);
+    }
+  };
+
+  const handleCopySlackChannelUsernames = async () => {
+    const usernames = (slackChannelMembersQuery.data?.entries ?? [])
+      .map((entry) => entry.slackUsername?.trim() ?? '')
+      .filter(Boolean);
+
+    if (usernames.length === 0) {
+      setSlackChannelMembersCopyStatus({
+        kind: 'error',
+        message: 'No Slack usernames available to copy.',
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(usernames.join('\n'));
+      setSlackChannelMembersCopyStatus({
+        kind: 'success',
+        message: `Copied ${usernames.length} username${usernames.length === 1 ? '' : 's'}.`,
+      });
+    } catch (error) {
+      setSlackChannelMembersCopyStatus({
+        kind: 'error',
+        message: error instanceof Error ? error.message : 'Failed to copy usernames.',
+      });
     }
   };
 
@@ -1800,10 +1842,32 @@ export function TeamDetailPage() {
         </div>
 
         <div className="modal__actions">
+          {slackChannelMembersCopyStatus ? (
+            <span
+              className={`user-detail-page__status${
+                slackChannelMembersCopyStatus.kind === 'error'
+                  ? ' team-detail-page__status--error'
+                  : ''
+              }`}
+            >
+              {slackChannelMembersCopyStatus.message}
+            </span>
+          ) : null}
           <button
             type="button"
             className="modal__button"
             onClick={() => {
+              void handleCopySlackChannelUsernames();
+            }}
+            disabled={slackChannelMembersQuery.isFetching}
+          >
+            Copy usernames
+          </button>
+          <button
+            type="button"
+            className="modal__button"
+            onClick={() => {
+              setSlackChannelMembersCopyStatus(null);
               void slackChannelMembersQuery.refetch();
             }}
             disabled={slackChannelMembersQuery.isFetching}
