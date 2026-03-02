@@ -5,6 +5,8 @@ import './single-select-dropdown.css';
 import { createPortal } from 'react-dom';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { getAnchoredDropdownPanelStyle } from './dropdownPosition';
+
 export type SingleSelectOption<T extends string | number> = {
   value: T;
   label: string;
@@ -69,21 +71,15 @@ export function SingleSelectDropdown<T extends string | number>({
     const gap = 8;
     const maxWidth = Math.min(448, window.innerWidth - viewportPadding * 2);
 
-    setPanelStyle({
-      position: 'fixed',
-      top: Math.min(rect.bottom + gap, window.innerHeight - viewportPadding),
-      left:
-        align === 'right'
-          ? undefined
-          : Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - maxWidth - viewportPadding)),
-      right:
-        align === 'right'
-          ? Math.max(viewportPadding, window.innerWidth - rect.right)
-          : undefined,
-      minWidth: rect.width,
-      maxWidth,
-      zIndex: 1000,
-    });
+    setPanelStyle(
+      getAnchoredDropdownPanelStyle({
+        rect,
+        align,
+        viewportPadding,
+        gap,
+        maxWidth,
+      }),
+    );
   }, [align]);
 
   useEffect(() => {

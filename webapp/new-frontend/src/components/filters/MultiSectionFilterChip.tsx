@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { getAnchoredDropdownPanelStyle } from '../dropdownPosition';
 import { resultSizePresets, WORKSET_SIZE_MIN } from '../../page/workbench/workbench-constants';
 
 export type FilterOption<T extends string | number> = { value: T; label: string; helper?: string };
@@ -149,24 +150,15 @@ export function MultiSectionFilterChip({
     const gap = 8;
     const maxWidth = Math.min(460, window.innerWidth - viewportPadding * 2);
 
-    setPanelStyle({
-      position: 'fixed',
-      top: Math.min(rect.bottom + gap, window.innerHeight - viewportPadding),
-      left:
-        align === 'right'
-          ? undefined
-          : Math.max(
-              viewportPadding,
-              Math.min(rect.left, window.innerWidth - maxWidth - viewportPadding),
-            ),
-      right:
-        align === 'right'
-          ? Math.max(viewportPadding, window.innerWidth - rect.right)
-          : undefined,
-      minWidth: rect.width,
-      maxWidth,
-      zIndex: 1000,
-    });
+    setPanelStyle(
+      getAnchoredDropdownPanelStyle({
+        rect,
+        align,
+        viewportPadding,
+        gap,
+        maxWidth,
+      }),
+    );
   }, [align]);
 
   useEffect(() => {
