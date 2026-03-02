@@ -92,6 +92,10 @@ public class AiTranslateService {
   static final String HAS_SCREENSHOT_NA = "n/a";
   static final String TAG_UNKNOWN = "unknown";
 
+  private static String metricName(String suffix) {
+    return METRIC_PREFIX + "." + suffix;
+  }
+
   /** logger */
   static Logger logger = LoggerFactory.getLogger(AiTranslateService.class);
 
@@ -273,7 +277,7 @@ public class AiTranslateService {
     String model = getModel(aiTranslateInput);
     Tags jobTags =
         metricTags(mode, aiTranslateInput.repositoryName(), model, LOCALE_ALL, HAS_SCREENSHOT_NA);
-    incrementCounter("%s.jobs".formatted(METRIC_PREFIX), jobTags.and("result", "started"));
+    incrementCounter(metricName("jobs"), jobTags.and("result", "started"));
 
     try {
       if (aiTranslateInput.useBatch()) {
@@ -281,9 +285,9 @@ public class AiTranslateService {
       } else {
         aiTranslateNoBatch(aiTranslateInput, currentTask);
       }
-      incrementCounter("%s.jobs".formatted(METRIC_PREFIX), jobTags.and("result", "completed"));
+      incrementCounter(metricName("jobs"), jobTags.and("result", "completed"));
     } catch (AiTranslateException | RuntimeException e) {
-      incrementCounter("%s.jobs".formatted(METRIC_PREFIX), jobTags.and("result", "failed"));
+      incrementCounter(metricName("jobs"), jobTags.and("result", "failed"));
       throw e;
     }
   }
@@ -324,8 +328,7 @@ public class AiTranslateService {
           "Start AI Translation (no batch) for repository: {} and locale: {}",
           repository.getName(),
           bcp47Tag);
-      incrementCounter(
-          "%s.localeRuns".formatted(METRIC_PREFIX), localeTags.and("result", "started"));
+      incrementCounter(metricName("localeRuns"), localeTags.and("result", "started"));
 
       Stopwatch stopwatchForLocale = Stopwatch.createStarted();
       try {
@@ -339,16 +342,15 @@ public class AiTranslateService {
 
         if (textUnitDTOWithVariantCommentsList.isEmpty()) {
           logger.debug("Nothing to translate for locale: {}", bcp47Tag);
-          incrementCounter(
-              "%s.localeRuns".formatted(METRIC_PREFIX), localeTags.and("result", "skipped"));
+          incrementCounter(metricName("localeRuns"), localeTags.and("result", "skipped"));
           meterRegistry
-              .timer("%s.localeDuration".formatted(METRIC_PREFIX), localeTags)
+              .timer(metricName("localeDuration"), localeTags)
               .record(stopwatchForLocale.elapsed());
           continue;
         }
 
         incrementCounter(
-            "%s.textUnits".formatted(METRIC_PREFIX),
+            metricName("textUnits"),
             localeTags.and("result", "attempted"),
             textUnitDTOWithVariantCommentsList.size());
 
@@ -470,7 +472,7 @@ public class AiTranslateService {
                   openAIClient ->
                       openAIClient.getResponses(responsesRequest, Duration.ofSeconds(timeout)));
 
-          incrementCounter("%s.groupedRequests".formatted(METRIC_PREFIX), requestTags);
+          incrementCounter(metricName("groupedRequests"), requestTags);
           groupedRequestCount++;
 
           TextextUnitsByScreenshotWithResponsesResponse
@@ -507,7 +509,7 @@ public class AiTranslateService {
                             "Error when getting the responsesResponse: %s"
                                 .formatted(t.getMessage());
                         if (isTimeoutException(t)) {
-                          incrementCounter("%s.timeouts".formatted(METRIC_PREFIX), requestTags);
+                          incrementCounter(metricName("timeouts"), requestTags);
                         }
                         logger.error(
                             errorMessage + ", skipping tmTextUnits: {}, locale: {}",
@@ -548,7 +550,7 @@ public class AiTranslateService {
                         String errorMessage =
                             "Error trying to parse the JSON completion output: %s"
                                 .formatted(t.getMessage());
-                        incrementCounter("%s.parseFailures".formatted(METRIC_PREFIX), requestTags);
+                        incrementCounter(metricName("parseFailures"), requestTags);
                         logger.debug(errorMessage, t);
 
                         return textUnitsByScreenshotWithResponsesResponse
@@ -632,21 +634,15 @@ public class AiTranslateService {
         long importedTextUnitCount = importResultByTmTextUnitId.size();
 
         incrementCounter(
-            "%s.textUnits".formatted(METRIC_PREFIX),
-            localeTags.and("result", "skipped"),
-            skippedTextUnitCount);
+            metricName("textUnits"), localeTags.and("result", "skipped"), skippedTextUnitCount);
         incrementCounter(
-            "%s.textUnits".formatted(METRIC_PREFIX),
+            metricName("textUnits"),
             localeTags.and("result", "successful"),
             successfulTextUnitCount);
         incrementCounter(
-            "%s.textUnits".formatted(METRIC_PREFIX),
-            localeTags.and("result", "failed"),
-            failedTextUnitCount);
+            metricName("textUnits"), localeTags.and("result", "failed"), failedTextUnitCount);
         incrementCounter(
-            "%s.textUnits".formatted(METRIC_PREFIX),
-            localeTags.and("result", "imported"),
-            importedTextUnitCount);
+            metricName("textUnits"), localeTags.and("result", "imported"), importedTextUnitCount);
 
         logger.info(
             "AI translate locale summary repository={}, locale={}, model={}, attemptedTextUnits={}, groupedRequests={}, successfulTextUnits={}, importedTextUnits={}, skippedTextUnits={}, failedTextUnits={}, duration={}",
@@ -720,16 +716,12 @@ public class AiTranslateService {
                 .toList();
 
         putReportContentLocale(currentTask, bcp47Tag, importReportLines, reportFilenames);
-        incrementCounter(
-            "%s.localeRuns".formatted(METRIC_PREFIX), localeTags.and("result", "completed"));
-        meterRegistry
-            .timer("%s.localeDuration".formatted(METRIC_PREFIX), localeTags)
-            .record(elapsed);
+        incrementCounter(metricName("localeRuns"), localeTags.and("result", "completed"));
+        meterRegistry.timer(metricName("localeDuration"), localeTags).record(elapsed);
       } catch (RuntimeException e) {
-        incrementCounter(
-            "%s.localeRuns".formatted(METRIC_PREFIX), localeTags.and("result", "failed"));
+        incrementCounter(metricName("localeRuns"), localeTags.and("result", "failed"));
         meterRegistry
-            .timer("%s.localeDuration".formatted(METRIC_PREFIX), localeTags)
+            .timer(metricName("localeDuration"), localeTags)
             .record(stopwatchForLocale.elapsed());
         throw e;
       }
@@ -1234,7 +1226,7 @@ public class AiTranslateService {
             retryBackoffSpec.doBeforeRetry(
                 doBeforeRetry -> {
                   incrementCounter(
-                      "%s.retries".formatted(METRIC_PREFIX),
+                      metricName("retries"),
                       metricTags(
                           MODE_BATCH, TAG_UNKNOWN, TAG_UNKNOWN, LOCALE_ALL, HAS_SCREENSHOT_NA));
                   logger.info("Retrying retrieving batch: {}", batch.id());
