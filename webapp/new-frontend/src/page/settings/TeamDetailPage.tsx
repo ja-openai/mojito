@@ -58,9 +58,11 @@ type BatchInputParseResult = {
   duplicateUsernames: string[];
 };
 
+const getUserDisplayName = (entry: ApiUser) =>
+  entry.commonName || [entry.givenName, entry.surname].filter((part) => Boolean(part)).join(' ');
+
 const getUserLabel = (entry: ApiUser) => {
-  const fullName =
-    entry.commonName || [entry.givenName, entry.surname].filter((part) => Boolean(part)).join(' ');
+  const fullName = getUserDisplayName(entry);
   if (fullName) {
     return `${fullName} (${entry.username})`;
   }
@@ -107,6 +109,11 @@ const formatBatchUsernames = (userIds: number[], usersById: Map<number, ApiUser>
     .filter(Boolean)
     .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }))
     .join('\n');
+
+const getBatchTextareaRows = (input: string, fallbackCount: number) => {
+  const entryCount = Math.max(parseBatchUsernames(input).length, fallbackCount, 1);
+  return Math.min(Math.max(entryCount + 1, 6), 18);
+};
 
 const normalizeBatchInput = (value: string) =>
   parseBatchUsernames(value)
@@ -342,6 +349,18 @@ export function TeamDetailPage() {
     [allPmUsers],
   );
   const allPmUsersByUsername = useMemo(() => buildUserIdsByUsername(allPmUsers), [allPmUsers]);
+  const draftPmUsers = useMemo(
+    () =>
+      draftPmUserIds
+        .map((id) => allPmUsersById.get(id))
+        .filter((entry): entry is ApiUser => Boolean(entry))
+        .sort((left, right) =>
+          getUserLabel(left).localeCompare(getUserLabel(right), undefined, {
+            sensitivity: 'base',
+          }),
+        ),
+    [allPmUsersById, draftPmUserIds],
+  );
   const pmOptions = useMemo(() => {
     const baseUsers = showAllPmUsers
       ? allPmUsers
@@ -432,6 +451,18 @@ export function TeamDetailPage() {
   const allTranslatorUsersByUsername = useMemo(
     () => buildUserIdsByUsername(allTranslatorUsers),
     [allTranslatorUsers],
+  );
+  const draftTranslatorUsers = useMemo(
+    () =>
+      draftTranslatorUserIds
+        .map((id) => allTranslatorUsersById.get(id))
+        .filter((entry): entry is ApiUser => Boolean(entry))
+        .sort((left, right) =>
+          getUserLabel(left).localeCompare(getUserLabel(right), undefined, {
+            sensitivity: 'base',
+          }),
+        ),
+    [allTranslatorUsersById, draftTranslatorUserIds],
   );
   const translatorOptions = useMemo(() => {
     const baseUsers = showAllTranslatorUsers
@@ -1147,9 +1178,11 @@ export function TeamDetailPage() {
         </section>
 
         {isAdmin ? (
-          <section className="user-detail-page__section">
+          <section className="user-detail-page__section team-detail-page__slack-section">
             <div className="user-detail-page__field">
-              <div className="user-detail-page__label">Slack Notifications</div>
+              <div className="settings-card__header">
+                <h2>Slack Notifications</h2>
+              </div>
               <label className="settings-hint" style={{ display: 'inline-flex', gap: '0.5rem' }}>
                 <input
                   type="checkbox"
@@ -1263,9 +1296,11 @@ export function TeamDetailPage() {
         ) : null}
 
         {isAdmin ? (
-          <section className="user-detail-page__section">
+          <section className="user-detail-page__section team-detail-page__slack-section">
             <div className="user-detail-page__field">
-              <div className="user-detail-page__label">Slack User ID Mappings</div>
+              <div className="settings-card__header">
+                <h2>Slack User ID Mappings</h2>
+              </div>
               <div className="user-detail-page__hint">
                 Map Mojito team users to Slack `U...` IDs for this team channel. Blank rows are
                 ignored on save.
@@ -1458,8 +1493,8 @@ export function TeamDetailPage() {
 
         <section className="user-detail-page__section">
           <div className="user-detail-page__field">
-            <div className="settings-field__header team-pools-page__batch-controls">
-              <div className="user-detail-page__label">Translators</div>
+            <div className="settings-card__header team-pools-page__card-header">
+              <h2>Translators</h2>
               <div className="team-pools-page__mode-toggle" role="group" aria-label="Translator editor mode">
                 <button
                   type="button"
@@ -1514,6 +1549,37 @@ export function TeamDetailPage() {
                 <div className="user-detail-page__hint">
                   Choose translators one by one, or switch to Batch to edit usernames directly.
                 </div>
+                {draftTranslatorUsers.length > 0 ? (
+                  <div className="team-detail-page__roster-table">
+                    <div className="team-detail-page__roster-header">
+                      <div>Username</div>
+                      <div>Name</div>
+                      <div>Actions</div>
+                    </div>
+                    {draftTranslatorUsers.map((entry) => (
+                      <div key={entry.id} className="team-detail-page__roster-row">
+                        <div className="team-detail-page__roster-username">{entry.username}</div>
+                        <div>{getUserDisplayName(entry) || '—'}</div>
+                        <div className="team-detail-page__roster-actions">
+                          <button
+                            type="button"
+                            className="settings-button settings-button--ghost"
+                            onClick={() => {
+                              const next = draftTranslatorUserIds.filter((id) => id !== entry.id);
+                              setDraftTranslatorUserIds(next);
+                              setDraftTranslatorBatchInput(
+                                formatBatchUsernames(next, allTranslatorUsersById),
+                              );
+                              setTranslatorStatusNotice(null);
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </>
             ) : (
               <>
@@ -1523,6 +1589,10 @@ export function TeamDetailPage() {
                 </div>
                 <textarea
                   className="team-detail-page__batch-textarea"
+                  rows={getBatchTextareaRows(
+                    draftTranslatorBatchInput,
+                    draftTranslatorUserIds.length,
+                  )}
                   value={draftTranslatorBatchInput}
                   onChange={(event) => {
                     setDraftTranslatorBatchInput(event.target.value);
@@ -1578,8 +1648,8 @@ export function TeamDetailPage() {
         {isAdmin ? (
           <section className="user-detail-page__section">
             <div className="user-detail-page__field">
-              <div className="settings-field__header team-pools-page__batch-controls">
-                <div className="user-detail-page__label">PMs</div>
+              <div className="settings-card__header team-pools-page__card-header">
+                <h2>PMs</h2>
                 <div className="team-pools-page__mode-toggle" role="group" aria-label="Project manager editor mode">
                   <button
                     type="button"
@@ -1649,6 +1719,35 @@ export function TeamDetailPage() {
                   <div className="user-detail-page__hint">
                     Choose project managers one by one, or switch to Batch to edit usernames directly.
                   </div>
+                  {draftPmUsers.length > 0 ? (
+                    <div className="team-detail-page__roster-table">
+                      <div className="team-detail-page__roster-header">
+                        <div>Username</div>
+                        <div>Name</div>
+                        <div>Actions</div>
+                      </div>
+                      {draftPmUsers.map((entry) => (
+                        <div key={entry.id} className="team-detail-page__roster-row">
+                          <div className="team-detail-page__roster-username">{entry.username}</div>
+                          <div>{getUserDisplayName(entry) || '—'}</div>
+                          <div className="team-detail-page__roster-actions">
+                            <button
+                              type="button"
+                              className="settings-button settings-button--ghost"
+                              onClick={() => {
+                                const next = draftPmUserIds.filter((id) => id !== entry.id);
+                                setDraftPmUserIds(next);
+                                setDraftPmBatchInput(formatBatchUsernames(next, allPmUsersById));
+                                setPmStatusNotice(null);
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -1658,6 +1757,7 @@ export function TeamDetailPage() {
                   </div>
                   <textarea
                     className="team-detail-page__batch-textarea"
+                    rows={getBatchTextareaRows(draftPmBatchInput, draftPmUserIds.length)}
                     value={draftPmBatchInput}
                     onChange={(event) => {
                       setDraftPmBatchInput(event.target.value);

@@ -109,6 +109,61 @@
   outline-offset: 0.125rem;
 }
 
+.team-detail-page__roster-table {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.team-detail-page__roster-header,
+.team-detail-page__roster-row {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.4fr) minmax(10rem, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.team-detail-page__roster-header {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.team-detail-page__roster-row {
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.team-detail-page__roster-header > :last-child,
+.team-detail-page__roster-row > :last-child {
+  justify-self: end;
+}
+
+.team-detail-page__roster-username {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+}
+
+.team-detail-page__roster-actions {
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.team-detail-page__roster-row:hover .team-detail-page__roster-actions,
+.team-detail-page__roster-row:focus-within .team-detail-page__roster-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .team-detail-page__status--error {
   color: var(--color-danger);
 }
@@ -122,6 +177,11 @@
   margin-top: var(--space-3);
   padding-top: var(--space-3);
   border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  order: 2;
+}
+
+.team-detail-page__slack-section {
+  order: 1;
 }
 
 .team-detail-page__slack-setting-field {
@@ -669,10 +729,21 @@
 
   .team-pools-page__team-row-item,
   .team-pools-page__row,
-  .team-pools-page__csv-preview-row {
+  .team-pools-page__csv-preview-row,
+  .team-detail-page__roster-row {
     grid-template-columns: 1fr;
     gap: var(--space-1);
     padding: var(--space-3) 0;
+  }
+
+  .team-detail-page__roster-header {
+    display: none;
+  }
+
+  .team-detail-page__roster-actions {
+    justify-content: flex-start;
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .team-pools-page__actions {
