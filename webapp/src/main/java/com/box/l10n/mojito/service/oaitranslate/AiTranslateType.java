@@ -251,7 +251,8 @@ public enum AiTranslateType {
         String source,
         String sourceDescription,
         ExistingTarget existingTarget,
-        List<GlossaryTerm> glossaryTerms) {
+        List<GlossaryTerm> glossaryTerms,
+        List<AiTranslateRelatedStringsProvider.RelatedString> relatedStrings) {
 
       public record ExistingTarget(
           String content,

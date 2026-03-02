@@ -430,7 +430,8 @@ public class AiTranslateService {
                                 .toList()),
                     glossaryTermsOrSkip.terms().stream()
                         .map(AiTranslateService::convertGlossaryTermForMulti)
-                        .toList()));
+                        .toList(),
+                    relatedStringsProvider.getRelatedStrings(textUnitDTO)));
           }
 
           CompletionMultiTextUnitInput completionMultiTextUnitInput = builder.build();
