@@ -41,7 +41,7 @@ type StatusNotice = {
 };
 
 type TeamDeleteMode = 'disable' | 'hard-delete';
-type BatchApplyMode = 'merge' | 'replace';
+type RosterEditorMode = 'form' | 'batch';
 
 type SlackMappingDraftRow = {
   mojitoUserId: number;
@@ -52,15 +52,11 @@ type SlackMappingDraftRow = {
   lastVerifiedAt: string | null;
 };
 
-type BatchApplyResult = {
+type BatchInputParseResult = {
   nextIds: number[];
-  matchedCount: number;
-  addedCount: number;
   unknownUsernames: string[];
   duplicateUsernames: string[];
 };
-
-const getUserRole = (entry: ApiUser) => entry.authorities?.[0]?.authority ?? 'ROLE_USER';
 
 const getUserLabel = (entry: ApiUser) => {
   const fullName =
@@ -109,19 +105,21 @@ const formatBatchUsernames = (userIds: number[], usersById: Map<number, ApiUser>
   userIds
     .map((userId) => usersById.get(userId)?.username?.trim() ?? '')
     .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }))
     .join('\n');
 
-const applyBatchUsernames = (
+const normalizeBatchInput = (value: string) =>
+  parseBatchUsernames(value)
+    .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }))
+    .join('\n');
+
+const parseBatchInput = (
   input: string,
   usersByUsername: Map<string, number[]>,
-  currentIds: number[],
-  mode: BatchApplyMode,
-): BatchApplyResult => {
-  const nextIds = new Set(mode === 'merge' ? currentIds : []);
+): BatchInputParseResult => {
+  const nextIds = new Set<number>();
   const unknownUsernames: string[] = [];
   const duplicateUsernames: string[] = [];
-  let matchedCount = 0;
-  let addedCount = 0;
 
   parseBatchUsernames(input).forEach((username) => {
     const ids = usersByUsername.get(username.toLowerCase());
@@ -133,22 +131,28 @@ const applyBatchUsernames = (
       duplicateUsernames.push(username);
       return;
     }
-    const userId = ids[0];
-    matchedCount += 1;
-    if (!nextIds.has(userId)) {
-      nextIds.add(userId);
-      addedCount += 1;
-    }
+    nextIds.add(ids[0]);
   });
 
   return {
     nextIds: Array.from(nextIds).sort((left, right) => left - right),
-    matchedCount,
-    addedCount,
     unknownUsernames,
     duplicateUsernames,
   };
 };
+
+const buildBatchInputIssues = (result: BatchInputParseResult) => {
+  const issueParts: string[] = [];
+  if (result.unknownUsernames.length > 0) {
+    issueParts.push(`Unknown: ${result.unknownUsernames.join(', ')}`);
+  }
+  if (result.duplicateUsernames.length > 0) {
+    issueParts.push(`Ambiguous: ${result.duplicateUsernames.join(', ')}`);
+  }
+  return issueParts;
+};
+
+const getUserRole = (entry: ApiUser) => entry.authorities?.[0]?.authority ?? 'ROLE_USER';
 const normalizeSlackMappingsForCompare = (
   rows: SlackMappingDraftRow[] | ApiTeamSlackUserMappingRow[],
 ) =>
@@ -176,9 +180,8 @@ export function TeamDetailPage() {
   const [draftTranslatorUserIds, setDraftTranslatorUserIds] = useState<number[]>([]);
   const [draftPmBatchInput, setDraftPmBatchInput] = useState('');
   const [draftTranslatorBatchInput, setDraftTranslatorBatchInput] = useState('');
-  const [pmBatchApplyMode, setPmBatchApplyMode] = useState<BatchApplyMode>('merge');
-  const [translatorBatchApplyMode, setTranslatorBatchApplyMode] =
-    useState<BatchApplyMode>('merge');
+  const [pmEditorMode, setPmEditorMode] = useState<RosterEditorMode>('form');
+  const [translatorEditorMode, setTranslatorEditorMode] = useState<RosterEditorMode>('form');
   const [showAllPmUsers, setShowAllPmUsers] = useState(false);
   const [showAllTranslatorUsers, setShowAllTranslatorUsers] = useState(false);
   const [statusNotice, setStatusNotice] = useState<StatusNotice | null>(null);
@@ -286,24 +289,12 @@ export function TeamDetailPage() {
   }, [effectiveTeam?.id, effectiveTeam?.name]);
 
   useEffect(() => {
-    const fromApi = pmRosterQuery.data?.userIds ?? [];
-    const normalized = Array.from(new Set(fromApi)).sort((left, right) => left - right);
-    setDraftPmUserIds(normalized);
-  }, [pmRosterQuery.data?.userIds]);
-
-  useEffect(() => {
-    const fromApi = translatorRosterQuery.data?.userIds ?? [];
-    const normalized = Array.from(new Set(fromApi)).sort((left, right) => left - right);
-    setDraftTranslatorUserIds(normalized);
-  }, [translatorRosterQuery.data?.userIds]);
-
-  useEffect(() => {
-    setShowAllPmUsers(false);
-    setShowAllTranslatorUsers(false);
     setDraftPmBatchInput('');
     setDraftTranslatorBatchInput('');
-    setPmBatchApplyMode('merge');
-    setTranslatorBatchApplyMode('merge');
+    setPmEditorMode('form');
+    setTranslatorEditorMode('form');
+    setShowAllPmUsers(false);
+    setShowAllTranslatorUsers(false);
   }, [effectiveTeamId]);
 
   useEffect(() => {
@@ -351,7 +342,6 @@ export function TeamDetailPage() {
     [allPmUsers],
   );
   const allPmUsersByUsername = useMemo(() => buildUserIdsByUsername(allPmUsers), [allPmUsers]);
-
   const pmOptions = useMemo(() => {
     const baseUsers = showAllPmUsers
       ? allPmUsers
@@ -372,9 +362,22 @@ export function TeamDetailPage() {
   }, [allPmUsers, allPmUsersById, draftPmUserIds, showAllPmUsers]);
 
   useEffect(() => {
+    const fromApi = pmRosterQuery.data?.userIds ?? [];
+    const normalized = Array.from(new Set(fromApi)).sort((left, right) => left - right);
+    setDraftPmUserIds(normalized);
+    setDraftPmBatchInput(formatBatchUsernames(normalized, allPmUsersById));
+  }, [allPmUsersById, pmRosterQuery.data?.userIds]);
+
+  useEffect(() => {
     const validIds = new Set(allPmUsers.map((entry) => entry.id));
-    setDraftPmUserIds((current) => current.filter((id) => validIds.has(id)));
-  }, [allPmUsers]);
+    setDraftPmUserIds((current) => {
+      const next = current.filter((id) => validIds.has(id));
+      if (next.length !== current.length) {
+        setDraftPmBatchInput(formatBatchUsernames(next, allPmUsersById));
+      }
+      return next;
+    });
+  }, [allPmUsers, allPmUsersById]);
 
   const allTranslatorUsers = useMemo(
     () => (translatorUsersQuery.data ?? []).filter((entry) => entry.enabled !== false),
@@ -430,7 +433,6 @@ export function TeamDetailPage() {
     () => buildUserIdsByUsername(allTranslatorUsers),
     [allTranslatorUsers],
   );
-
   const translatorOptions = useMemo(() => {
     const baseUsers = showAllTranslatorUsers
       ? allTranslatorUsers
@@ -451,9 +453,22 @@ export function TeamDetailPage() {
   }, [allTranslatorUsers, allTranslatorUsersById, draftTranslatorUserIds, showAllTranslatorUsers]);
 
   useEffect(() => {
+    const fromApi = translatorRosterQuery.data?.userIds ?? [];
+    const normalized = Array.from(new Set(fromApi)).sort((left, right) => left - right);
+    setDraftTranslatorUserIds(normalized);
+    setDraftTranslatorBatchInput(formatBatchUsernames(normalized, allTranslatorUsersById));
+  }, [allTranslatorUsersById, translatorRosterQuery.data?.userIds]);
+
+  useEffect(() => {
     const validIds = new Set(allTranslatorUsers.map((entry) => entry.id));
-    setDraftTranslatorUserIds((current) => current.filter((id) => validIds.has(id)));
-  }, [allTranslatorUsers]);
+    setDraftTranslatorUserIds((current) => {
+      const next = current.filter((id) => validIds.has(id));
+      if (next.length !== current.length) {
+        setDraftTranslatorBatchInput(formatBatchUsernames(next, allTranslatorUsersById));
+      }
+      return next;
+    });
+  }, [allTranslatorUsers, allTranslatorUsersById]);
 
   const saveTeamNameMutation = useMutation({
     mutationFn: ({ teamId, name }: { teamId: number; name: string }) => updateTeam(teamId, name),
@@ -670,100 +685,74 @@ export function TeamDetailPage() {
     if (!isAdmin || effectiveTeamId == null) {
       return;
     }
-    const normalizedIds = Array.from(new Set(draftPmUserIds)).sort((left, right) => left - right);
-    savePmRosterMutation.mutate({ teamId: effectiveTeamId, userIds: normalizedIds });
+    const result = parseBatchInput(draftPmBatchInput, allPmUsersByUsername);
+    const issueParts = buildBatchInputIssues(result);
+    if (issueParts.length > 0) {
+      setPmStatusNotice({ kind: 'error', message: issueParts.join('. ') });
+      return;
+    }
+    setDraftPmUserIds(result.nextIds);
+    setDraftPmBatchInput(formatBatchUsernames(result.nextIds, allPmUsersById));
+    savePmRosterMutation.mutate({ teamId: effectiveTeamId, userIds: result.nextIds });
   };
 
   const handleSaveTranslatorRoster = () => {
     if (effectiveTeamId == null) {
       return;
     }
-    const normalizedIds = Array.from(new Set(draftTranslatorUserIds)).sort(
-      (left, right) => left - right,
-    );
-    saveTranslatorRosterMutation.mutate({ teamId: effectiveTeamId, userIds: normalizedIds });
-  };
-
-  const handleAddPmBatch = () => {
-    const parsedUsernames = parseBatchUsernames(draftPmBatchInput);
-    if (parsedUsernames.length === 0) {
-      setPmStatusNotice({ kind: 'error', message: 'Paste PM usernames first.' });
+    const result = parseBatchInput(draftTranslatorBatchInput, allTranslatorUsersByUsername);
+    const issueParts = buildBatchInputIssues(result);
+    if (issueParts.length > 0) {
+      setTranslatorStatusNotice({ kind: 'error', message: issueParts.join('. ') });
       return;
     }
-
-    const result = applyBatchUsernames(
-      draftPmBatchInput,
-      allPmUsersByUsername,
-      draftPmUserIds,
-      pmBatchApplyMode,
-    );
-    setDraftPmUserIds(result.nextIds);
-
-    const issueParts: string[] = [];
-    if (result.unknownUsernames.length > 0) {
-      issueParts.push(`Unknown: ${result.unknownUsernames.join(', ')}`);
-    }
-    if (result.duplicateUsernames.length > 0) {
-      issueParts.push(`Ambiguous: ${result.duplicateUsernames.join(', ')}`);
-    }
-
-    setPmStatusNotice({
-      kind: issueParts.length > 0 ? 'error' : 'success',
-      message:
-        result.matchedCount > 0
-          ? `${
-              pmBatchApplyMode === 'merge'
-                ? `Added ${result.addedCount} PM${result.addedCount === 1 ? '' : 's'} to draft.`
-                : `Replaced draft with ${result.nextIds.length} PM${result.nextIds.length === 1 ? '' : 's'}.`
-            }${issueParts.length > 0 ? ` ${issueParts.join('. ')}.` : ''}`
-          : issueParts.length > 0
-            ? issueParts.join('. ')
-            : 'No new PMs were added.',
-    });
-    if (issueParts.length === 0) {
-      setDraftPmBatchInput('');
-    }
-  };
-
-  const handleAddTranslatorBatch = () => {
-    const parsedUsernames = parseBatchUsernames(draftTranslatorBatchInput);
-    if (parsedUsernames.length === 0) {
-      setTranslatorStatusNotice({ kind: 'error', message: 'Paste translator usernames first.' });
-      return;
-    }
-
-    const result = applyBatchUsernames(
-      draftTranslatorBatchInput,
-      allTranslatorUsersByUsername,
-      draftTranslatorUserIds,
-      translatorBatchApplyMode,
-    );
     setDraftTranslatorUserIds(result.nextIds);
+    setDraftTranslatorBatchInput(formatBatchUsernames(result.nextIds, allTranslatorUsersById));
+    saveTranslatorRosterMutation.mutate({ teamId: effectiveTeamId, userIds: result.nextIds });
+  };
 
-    const issueParts: string[] = [];
-    if (result.unknownUsernames.length > 0) {
-      issueParts.push(`Unknown: ${result.unknownUsernames.join(', ')}`);
+  const handleSwitchPmEditorMode = (nextMode: RosterEditorMode) => {
+    if (nextMode === pmEditorMode) {
+      return;
     }
-    if (result.duplicateUsernames.length > 0) {
-      issueParts.push(`Ambiguous: ${result.duplicateUsernames.join(', ')}`);
+    if (nextMode === 'batch') {
+      setDraftPmBatchInput(formatBatchUsernames(draftPmUserIds, allPmUsersById));
+      setPmEditorMode('batch');
+      setPmStatusNotice(null);
+      return;
     }
+    const result = parseBatchInput(draftPmBatchInput, allPmUsersByUsername);
+    const issueParts = buildBatchInputIssues(result);
+    if (issueParts.length > 0) {
+      setPmStatusNotice({ kind: 'error', message: issueParts.join('. ') });
+      return;
+    }
+    setDraftPmUserIds(result.nextIds);
+    setDraftPmBatchInput(formatBatchUsernames(result.nextIds, allPmUsersById));
+    setPmEditorMode('form');
+    setPmStatusNotice(null);
+  };
 
-    setTranslatorStatusNotice({
-      kind: issueParts.length > 0 ? 'error' : 'success',
-      message:
-        result.matchedCount > 0
-          ? `${
-              translatorBatchApplyMode === 'merge'
-                ? `Added ${result.addedCount} translator${result.addedCount === 1 ? '' : 's'} to draft.`
-                : `Replaced draft with ${result.nextIds.length} translator${result.nextIds.length === 1 ? '' : 's'}.`
-            }${issueParts.length > 0 ? ` ${issueParts.join('. ')}.` : ''}`
-          : issueParts.length > 0
-            ? issueParts.join('. ')
-            : 'No new translators were added.',
-    });
-    if (issueParts.length === 0) {
-      setDraftTranslatorBatchInput('');
+  const handleSwitchTranslatorEditorMode = (nextMode: RosterEditorMode) => {
+    if (nextMode === translatorEditorMode) {
+      return;
     }
+    if (nextMode === 'batch') {
+      setDraftTranslatorBatchInput(formatBatchUsernames(draftTranslatorUserIds, allTranslatorUsersById));
+      setTranslatorEditorMode('batch');
+      setTranslatorStatusNotice(null);
+      return;
+    }
+    const result = parseBatchInput(draftTranslatorBatchInput, allTranslatorUsersByUsername);
+    const issueParts = buildBatchInputIssues(result);
+    if (issueParts.length > 0) {
+      setTranslatorStatusNotice({ kind: 'error', message: issueParts.join('. ') });
+      return;
+    }
+    setDraftTranslatorUserIds(result.nextIds);
+    setDraftTranslatorBatchInput(formatBatchUsernames(result.nextIds, allTranslatorUsersById));
+    setTranslatorEditorMode('form');
+    setTranslatorStatusNotice(null);
   };
 
   const handleReloadPmDraftFromDb = async () => {
@@ -1055,16 +1044,19 @@ export function TeamDetailPage() {
   };
 
   const pageTitle = normalizeTeamName(draftName) || effectiveTeam.name;
+  const currentPmBatchInput = formatBatchUsernames(
+    normalizeIdList(pmRosterQuery.data?.userIds ?? []),
+    allPmUsersById,
+  );
+  const currentTranslatorBatchInput = formatBatchUsernames(
+    normalizeIdList(translatorRosterQuery.data?.userIds ?? []),
+    allTranslatorUsersById,
+  );
   const isNameDirty =
     normalizeTeamName(draftName) !== normalizeTeamName(effectiveTeam?.name ?? draftName);
-  const isPmRosterDirty = !sameIdList(
-    draftPmUserIds,
-    pmRosterQuery.data?.userIds ?? draftPmUserIds,
-  );
-  const isTranslatorRosterDirty = !sameIdList(
-    draftTranslatorUserIds,
-    translatorRosterQuery.data?.userIds ?? draftTranslatorUserIds,
-  );
+  const isPmRosterDirty = normalizeBatchInput(draftPmBatchInput) !== normalizeBatchInput(currentPmBatchInput);
+  const isTranslatorRosterDirty =
+    normalizeBatchInput(draftTranslatorBatchInput) !== normalizeBatchInput(currentTranslatorBatchInput);
   const isSlackSettingsDirty =
     Boolean(draftSlackEnabled) !== Boolean(slackSettingsQuery.data?.enabled ?? draftSlackEnabled) ||
     normalizeOptionalText(draftSlackClientId) !==
@@ -1466,76 +1458,85 @@ export function TeamDetailPage() {
 
         <section className="user-detail-page__section">
           <div className="user-detail-page__field">
-            <div className="user-detail-page__label">Translators</div>
-            <MultiSelectChip
-              label="Translators"
-              options={translatorOptions}
-              selectedValues={draftTranslatorUserIds}
-              onChange={(next) => {
-                setDraftTranslatorUserIds(next);
-                setTranslatorStatusNotice(null);
-              }}
-              placeholder="Select translators"
-              emptyOptionsLabel={
-                translatorUsersQuery.isLoading
-                  ? 'Loading translators…'
-                  : showAllTranslatorUsers
-                    ? 'No users available'
-                    : 'No translators available'
-              }
-              className="user-detail-page__select team-detail-page__select"
-              buttonAriaLabel="Select translators"
-              customActions={[
-                {
-                  label: showAllTranslatorUsers ? 'Role only' : 'All users',
-                  onClick: () => {
-                    setShowAllTranslatorUsers((current) => !current);
-                    setTranslatorStatusNotice(null);
-                  },
-                  ariaLabel: showAllTranslatorUsers
-                    ? 'Show role filtered users only'
-                    : 'Show all users',
-                },
-              ]}
-            />
-            <div className="user-detail-page__hint">
-              Add one by one above, or paste usernames below separated by commas or new lines.
-              Changes stay in draft until you save.
-            </div>
             <div className="settings-field__header team-pools-page__batch-controls">
-              <div
-                className="team-pools-page__mode-toggle"
-                role="group"
-                aria-label="Translator batch apply mode"
-              >
+              <div className="user-detail-page__label">Translators</div>
+              <div className="team-pools-page__mode-toggle" role="group" aria-label="Translator editor mode">
                 <button
                   type="button"
-                  className={`team-pools-page__mode-option${
-                    translatorBatchApplyMode === 'merge' ? ' is-active' : ''
-                  }`}
-                  onClick={() => {
-                    setTranslatorBatchApplyMode('merge');
-                    setTranslatorStatusNotice(null);
-                  }}
+                  className={`team-pools-page__mode-option${translatorEditorMode === 'form' ? ' is-active' : ''}`}
+                  onClick={() => handleSwitchTranslatorEditorMode('form')}
                 >
-                  Add
+                  Form
                 </button>
                 <button
                   type="button"
-                  className={`team-pools-page__mode-option${
-                    translatorBatchApplyMode === 'replace' ? ' is-active' : ''
-                  }`}
-                  onClick={() => {
-                    setTranslatorBatchApplyMode('replace');
-                    setTranslatorStatusNotice(null);
-                  }}
+                  className={`team-pools-page__mode-option${translatorEditorMode === 'batch' ? ' is-active' : ''}`}
+                  onClick={() => handleSwitchTranslatorEditorMode('batch')}
                 >
-                  Replace
+                  Batch
                 </button>
               </div>
+            </div>
+            {translatorEditorMode === 'form' ? (
+              <>
+                <MultiSelectChip
+                  label="Translators"
+                  options={translatorOptions}
+                  selectedValues={draftTranslatorUserIds}
+                  onChange={(next) => {
+                    setDraftTranslatorUserIds(next);
+                    setDraftTranslatorBatchInput(formatBatchUsernames(next, allTranslatorUsersById));
+                    setTranslatorStatusNotice(null);
+                  }}
+                  placeholder="Select translators"
+                  emptyOptionsLabel={
+                    translatorUsersQuery.isLoading
+                      ? 'Loading translators…'
+                      : showAllTranslatorUsers
+                        ? 'No users available'
+                        : 'No translators available'
+                  }
+                  className="user-detail-page__select team-detail-page__select"
+                  buttonAriaLabel="Select translators"
+                  customActions={[
+                    {
+                      label: showAllTranslatorUsers ? 'Role only' : 'All users',
+                      onClick: () => {
+                        setShowAllTranslatorUsers((current) => !current);
+                        setTranslatorStatusNotice(null);
+                      },
+                      ariaLabel: showAllTranslatorUsers
+                        ? 'Show role filtered users only'
+                        : 'Show all users',
+                    },
+                  ]}
+                />
+                <div className="user-detail-page__hint">
+                  Choose translators one by one, or switch to Batch to edit usernames directly.
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="user-detail-page__hint">
+                  Edit one username per line. The current team roster is loaded here and you can
+                  add or remove usernames directly before saving.
+                </div>
+                <textarea
+                  className="team-detail-page__batch-textarea"
+                  value={draftTranslatorBatchInput}
+                  onChange={(event) => {
+                    setDraftTranslatorBatchInput(event.target.value);
+                    setTranslatorStatusNotice(null);
+                  }}
+                  placeholder="translator.one&#10;translator.two"
+                  aria-label="Translator usernames"
+                />
+              </>
+            )}
+            <div className="user-detail-page__actions">
               <button
                 type="button"
-                className="settings-button settings-button--ghost team-pools-page__prefill-button"
+                className="settings-button settings-button--ghost"
                 onClick={() => {
                   void handleReloadTranslatorDraftFromDb();
                 }}
@@ -1545,34 +1546,8 @@ export function TeamDetailPage() {
                   saveTranslatorRosterMutation.isPending
                 }
               >
-                {translatorRosterQuery.isRefetching ? 'Reloading…' : 'Reload from DB'}
+                {translatorRosterQuery.isRefetching ? 'Loading…' : 'Load current'}
               </button>
-            </div>
-            <div className="team-detail-page__batch-add">
-              <textarea
-                className="team-detail-page__batch-textarea"
-                value={draftTranslatorBatchInput}
-                onChange={(event) => {
-                  setDraftTranslatorBatchInput(event.target.value);
-                  setTranslatorStatusNotice(null);
-                }}
-                placeholder="translator.one&#10;translator.two"
-                aria-label="Batch add translators by username"
-              />
-              <button
-                type="button"
-                className="settings-button settings-button--ghost"
-                onClick={handleAddTranslatorBatch}
-                disabled={
-                  translatorUsersQuery.isLoading ||
-                  saveTranslatorRosterMutation.isPending ||
-                  translatorRosterQuery.isRefetching
-                }
-              >
-                Apply
-              </button>
-            </div>
-            <div className="user-detail-page__actions">
               {isTranslatorRosterDirty ? (
                 <button
                   type="button"
@@ -1603,89 +1578,100 @@ export function TeamDetailPage() {
         {isAdmin ? (
           <section className="user-detail-page__section">
             <div className="user-detail-page__field">
-              <div className="user-detail-page__label">PMs</div>
-              <MultiSelectChip
-                label="Project managers"
-                options={pmOptions}
-                selectedValues={draftPmUserIds}
-                onChange={(next) => {
-                  setDraftPmUserIds(next);
-                  setPmStatusNotice(null);
-                }}
-                placeholder="Select project managers"
-                emptyOptionsLabel={
-                  pmUsersQuery.isLoading
-                    ? 'Loading project managers…'
-                    : showAllPmUsers
-                      ? 'No users available'
-                      : 'No project managers available'
-                }
-                className="user-detail-page__select team-detail-page__select"
-                buttonAriaLabel="Select project managers"
-                customActions={[
-                  {
-                    label: showAllPmUsers ? 'Role only' : 'All users',
-                    onClick: () => {
-                      setShowAllPmUsers((current) => !current);
-                      setPmStatusNotice(null);
-                    },
-                    ariaLabel: showAllPmUsers ? 'Show role filtered users only' : 'Show all users',
-                  },
-                ]}
-                summaryFormatter={({ options, selectedValues }) => {
-                  if (!options.length) {
-                    return 'No project managers';
-                  }
-                  if (!selectedValues.length) {
-                    return 'Select project managers';
-                  }
-                  if (selectedValues.length === options.length) {
-                    return 'All selected';
-                  }
-                  if (selectedValues.length === 1) {
-                    return '1 selected';
-                  }
-                  return `${selectedValues.length} selected`;
-                }}
-              />
-              <div className="user-detail-page__hint">
-                Add one by one above, or paste usernames below separated by commas or new lines.
-                Changes stay in draft until you save.
-              </div>
               <div className="settings-field__header team-pools-page__batch-controls">
-                <div
-                  className="team-pools-page__mode-toggle"
-                  role="group"
-                  aria-label="Project manager batch apply mode"
-                >
+                <div className="user-detail-page__label">PMs</div>
+                <div className="team-pools-page__mode-toggle" role="group" aria-label="Project manager editor mode">
                   <button
                     type="button"
-                    className={`team-pools-page__mode-option${
-                      pmBatchApplyMode === 'merge' ? ' is-active' : ''
-                    }`}
-                    onClick={() => {
-                      setPmBatchApplyMode('merge');
-                      setPmStatusNotice(null);
-                    }}
+                    className={`team-pools-page__mode-option${pmEditorMode === 'form' ? ' is-active' : ''}`}
+                    onClick={() => handleSwitchPmEditorMode('form')}
                   >
-                    Add
+                    Form
                   </button>
                   <button
                     type="button"
-                    className={`team-pools-page__mode-option${
-                      pmBatchApplyMode === 'replace' ? ' is-active' : ''
-                    }`}
-                    onClick={() => {
-                      setPmBatchApplyMode('replace');
-                      setPmStatusNotice(null);
-                    }}
+                    className={`team-pools-page__mode-option${pmEditorMode === 'batch' ? ' is-active' : ''}`}
+                    onClick={() => handleSwitchPmEditorMode('batch')}
                   >
-                    Replace
+                    Batch
                   </button>
                 </div>
+              </div>
+              {pmEditorMode === 'form' ? (
+                <>
+                  <MultiSelectChip
+                    label="Project managers"
+                    options={pmOptions}
+                    selectedValues={draftPmUserIds}
+                    onChange={(next) => {
+                      setDraftPmUserIds(next);
+                      setDraftPmBatchInput(formatBatchUsernames(next, allPmUsersById));
+                      setPmStatusNotice(null);
+                    }}
+                    placeholder="Select project managers"
+                    emptyOptionsLabel={
+                      pmUsersQuery.isLoading
+                        ? 'Loading project managers…'
+                        : showAllPmUsers
+                          ? 'No users available'
+                          : 'No project managers available'
+                    }
+                    className="user-detail-page__select team-detail-page__select"
+                    buttonAriaLabel="Select project managers"
+                    customActions={[
+                      {
+                        label: showAllPmUsers ? 'Role only' : 'All users',
+                        onClick: () => {
+                          setShowAllPmUsers((current) => !current);
+                          setPmStatusNotice(null);
+                        },
+                        ariaLabel: showAllPmUsers
+                          ? 'Show role filtered users only'
+                          : 'Show all users',
+                      },
+                    ]}
+                    summaryFormatter={({ options, selectedValues }) => {
+                      if (!options.length) {
+                        return 'No project managers';
+                      }
+                      if (!selectedValues.length) {
+                        return 'Select project managers';
+                      }
+                      if (selectedValues.length === options.length) {
+                        return 'All selected';
+                      }
+                      if (selectedValues.length === 1) {
+                        return '1 selected';
+                      }
+                      return `${selectedValues.length} selected`;
+                    }}
+                  />
+                  <div className="user-detail-page__hint">
+                    Choose project managers one by one, or switch to Batch to edit usernames directly.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="user-detail-page__hint">
+                    Edit one username per line. The current team roster is loaded here and you can
+                    add or remove usernames directly before saving.
+                  </div>
+                  <textarea
+                    className="team-detail-page__batch-textarea"
+                    value={draftPmBatchInput}
+                    onChange={(event) => {
+                      setDraftPmBatchInput(event.target.value);
+                      setPmStatusNotice(null);
+                    }}
+                    placeholder="pm.one&#10;pm.two"
+                    aria-label="Project manager usernames"
+                  />
+                </>
+              )}
+              <div className="user-detail-page__actions">
                 <button
                   type="button"
-                  className="settings-button settings-button--ghost team-pools-page__prefill-button"
+                  className="settings-button settings-button--ghost"
                   onClick={() => {
                     void handleReloadPmDraftFromDb();
                   }}
@@ -1695,34 +1681,8 @@ export function TeamDetailPage() {
                     savePmRosterMutation.isPending
                   }
                 >
-                  {pmRosterQuery.isRefetching ? 'Reloading…' : 'Reload from DB'}
+                  {pmRosterQuery.isRefetching ? 'Loading…' : 'Load current'}
                 </button>
-              </div>
-              <div className="team-detail-page__batch-add">
-                <textarea
-                  className="team-detail-page__batch-textarea"
-                  value={draftPmBatchInput}
-                  onChange={(event) => {
-                    setDraftPmBatchInput(event.target.value);
-                    setPmStatusNotice(null);
-                  }}
-                  placeholder="pm.one&#10;pm.two"
-                  aria-label="Batch add project managers by username"
-                />
-                <button
-                  type="button"
-                  className="settings-button settings-button--ghost"
-                  onClick={handleAddPmBatch}
-                  disabled={
-                    pmUsersQuery.isLoading ||
-                    savePmRosterMutation.isPending ||
-                    pmRosterQuery.isRefetching
-                  }
-                >
-                  Apply
-                </button>
-              </div>
-              <div className="user-detail-page__actions">
                 {isPmRosterDirty ? (
                   <button
                     type="button"
