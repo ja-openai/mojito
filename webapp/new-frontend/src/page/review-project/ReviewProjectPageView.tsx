@@ -27,10 +27,7 @@ import {
   fetchTeams,
   fetchTeamTranslators,
 } from '../../api/teams';
-import {
-  type ApiTextUnitHistoryItem,
-  fetchTextUnitHistory,
-} from '../../api/text-units';
+import { type ApiTextUnitHistoryItem, fetchTextUnitHistory } from '../../api/text-units';
 import { type ApiUser, fetchAllUsersAdmin } from '../../api/users';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
@@ -1317,10 +1314,12 @@ function DetailPane({
       .sort((a, b) => {
         const aTimestamp =
           (a.id === decisionVariantId ? Date.parse(decision?.lastModifiedDate ?? '') || 0 : 0) ||
-          (Date.parse(a.createdDate ?? '') || 0);
+          Date.parse(a.createdDate ?? '') ||
+          0;
         const bTimestamp =
           (b.id === decisionVariantId ? Date.parse(decision?.lastModifiedDate ?? '') || 0 : 0) ||
-          (Date.parse(b.createdDate ?? '') || 0);
+          Date.parse(b.createdDate ?? '') ||
+          0;
         if (bTimestamp !== aTimestamp) {
           return bTimestamp - aTimestamp;
         }
@@ -1338,8 +1337,9 @@ function DetailPane({
         const isLeveraged =
           typeof sourceTmTextUnitId === 'number' && typeof sourceTmTextUnitVariantId === 'number';
         const userName =
-          (
-            isAcceptedItem ? decision?.lastModifiedByUsername : item.createdByUser?.username
+          (isAcceptedItem
+            ? decision?.lastModifiedByUsername
+            : item.createdByUser?.username
           )?.trim() ||
           item.createdByUser?.username?.trim() ||
           'Unknown user';
@@ -1392,6 +1392,7 @@ function DetailPane({
     decision?.lastModifiedDate,
     decisionVariantId,
     historyQuery.data,
+    localeTag,
   ]);
 
   useEffect(() => {
@@ -2745,7 +2746,8 @@ function ReviewProjectHeader({
   const name = project.reviewProjectRequest?.name ?? null;
   const requestId = project.reviewProjectRequest?.id ?? null;
   const description = project.reviewProjectRequest?.notes ?? '';
-  const requestCreatedDate = project.reviewProjectRequest?.createdDate ?? project.createdDate ?? null;
+  const requestCreatedDate =
+    project.reviewProjectRequest?.createdDate ?? project.createdDate ?? null;
   const requestCreatedBy = project.reviewProjectRequest?.createdByUsername ?? null;
   const requestAttachments = useMemo(
     () => project.reviewProjectRequest?.screenshotImageIds ?? [],

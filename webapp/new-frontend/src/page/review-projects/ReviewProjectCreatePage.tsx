@@ -185,9 +185,7 @@ export function ReviewProjectCreatePage() {
             });
           },
           onError: (err: unknown) => {
-            setErrorMessage(
-              getCreateReviewProjectErrorMessage(err) || 'Failed to create project',
-            );
+            setErrorMessage(getCreateReviewProjectErrorMessage(err) || 'Failed to create project');
           },
         },
       );

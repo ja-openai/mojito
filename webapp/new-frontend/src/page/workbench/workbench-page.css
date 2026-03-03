@@ -424,12 +424,11 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
   border-radius: var(--radius-3);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-surface-elevated) 88%, white),
-      var(--color-surface)
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-surface-elevated) 88%, white),
+    var(--color-surface)
+  );
   box-shadow: 0 0 0 1px color-mix(in srgb, white 55%, transparent) inset;
 }
 

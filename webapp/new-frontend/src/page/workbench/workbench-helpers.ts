@@ -1,6 +1,10 @@
 import type { InfiniteData } from '@tanstack/react-query';
 
-import { getCanonicalTextSearch, type ApiTextUnit, type TextUnitSearchRequest } from '../../api/text-units';
+import {
+  type ApiTextUnit,
+  getCanonicalTextSearch,
+  type TextUnitSearchRequest,
+} from '../../api/text-units';
 import { WORKSET_SIZE_DEFAULT, WORKSET_SIZE_MIN } from './workbench-constants';
 import type { WorkbenchRow } from './workbench-types';
 

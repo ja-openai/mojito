@@ -1,5 +1,5 @@
-import { isTransientHttpError, poll } from '../utils/poller';
 import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
+import { isTransientHttpError, poll } from '../utils/poller';
 
 // Keep in sync with com.box.l10n.mojito.entity.review.ReviewProjectStatus
 export const REVIEW_PROJECT_STATUSES = ['OPEN', 'CLOSED'] as const;
@@ -312,7 +312,9 @@ async function waitForCreateReviewProjectTaskToFinish(
   });
 }
 
-async function fetchPollableTaskStatus(pollableTaskId: number): Promise<PollableTaskStatusResponse> {
+async function fetchPollableTaskStatus(
+  pollableTaskId: number,
+): Promise<PollableTaskStatusResponse> {
   const response = await fetch(`/api/pollableTasks/${pollableTaskId}`, {
     method: 'GET',
     credentials: 'include',

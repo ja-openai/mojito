@@ -294,7 +294,10 @@ export function normalizeTextSearch(textSearch?: TextSearch | null): TextSearch 
 }
 
 export function getCanonicalTextSearch(
-  request: Pick<TextUnitSearchRequest, 'textSearch' | 'searchAttribute' | 'searchType' | 'searchText'>,
+  request: Pick<
+    TextUnitSearchRequest,
+    'textSearch' | 'searchAttribute' | 'searchType' | 'searchText'
+  >,
 ): TextSearch | undefined {
   const normalizedTextSearch = normalizeTextSearch(request.textSearch);
   if (normalizedTextSearch) {

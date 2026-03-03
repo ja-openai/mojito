@@ -1444,12 +1444,7 @@ function RequestGroupsSection({
             : (user?.username ?? fallbackUsername ?? `User #${id}`),
         };
       }),
-    [
-      reassignOptionIds,
-      reassignPmUsersById,
-      reassignTarget,
-      reassignTranslatorUsersById,
-    ],
+    [reassignOptionIds, reassignPmUsersById, reassignTarget, reassignTranslatorUsersById],
   );
 
   const reassignLoadError =

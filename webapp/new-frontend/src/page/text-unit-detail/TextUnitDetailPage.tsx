@@ -442,9 +442,7 @@ export function TextUnitDetailPage() {
               label: `Source variant #${sourceTmTextUnitVariantId}`,
               to: {
                 pathname: `/text-units/${sourceTmTextUnitId}`,
-                search: historyLocaleTag
-                  ? `?locale=${encodeURIComponent(historyLocaleTag)}`
-                  : '',
+                search: historyLocaleTag ? `?locale=${encodeURIComponent(historyLocaleTag)}` : '',
               },
               title: leveragingType ?? 'Open leveraged source',
             }

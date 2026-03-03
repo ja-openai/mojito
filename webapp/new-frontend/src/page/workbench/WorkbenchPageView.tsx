@@ -10,11 +10,11 @@ import { Modal } from '../../components/Modal';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import type { RepositorySelectionOption } from '../../utils/repositorySelection';
 import type {
-  WorkbenchResultSortDirection,
-  WorkbenchResultSortField,
   StatusFilterValue,
   WorkbenchCollection,
   WorkbenchDiffModalData,
+  WorkbenchResultSortDirection,
+  WorkbenchResultSortField,
   WorkbenchRow,
   WorkbenchShareOverrides,
   WorkbenchTextSearchCondition,

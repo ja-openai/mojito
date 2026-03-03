@@ -27,8 +27,7 @@ export function getAnchoredDropdownPanelStyle({
             viewportPadding,
             Math.min(rect.left, window.innerWidth - maxWidth - viewportPadding),
           ),
-    right:
-      align === 'right' ? Math.max(viewportPadding, window.innerWidth - rect.right) : 'auto',
+    right: align === 'right' ? Math.max(viewportPadding, window.innerWidth - rect.right) : 'auto',
     minWidth: rect.width,
     maxWidth,
     zIndex: 1000,

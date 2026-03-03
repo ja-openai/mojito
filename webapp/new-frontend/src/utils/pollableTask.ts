@@ -28,5 +28,14 @@ export function normalizePollableTaskErrorMessage(rawErrorMessage: unknown): str
     }
   }
 
-  return String(rawErrorMessage).trim();
+  if (
+    typeof rawErrorMessage === 'number' ||
+    typeof rawErrorMessage === 'boolean' ||
+    typeof rawErrorMessage === 'bigint' ||
+    typeof rawErrorMessage === 'symbol'
+  ) {
+    return String(rawErrorMessage).trim();
+  }
+
+  return '';
 }

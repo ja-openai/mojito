@@ -136,7 +136,9 @@ function TextSearchConditionControl({
   );
 }
 
-function getSearchConditionSummary(condition: Pick<WorkbenchTextSearchCondition, 'field' | 'searchType'>) {
+function getSearchConditionSummary(
+  condition: Pick<WorkbenchTextSearchCondition, 'field' | 'searchType'>,
+) {
   return [
     searchAttributeOptions.find((option) => option.value === condition.field)?.label,
     searchTypeOptions.find((option) => option.value === condition.searchType)?.label,

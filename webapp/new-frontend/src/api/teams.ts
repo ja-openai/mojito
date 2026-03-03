@@ -1,5 +1,5 @@
-import { isTransientHttpError, poll } from '../utils/poller';
 import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
+import { isTransientHttpError, poll } from '../utils/poller';
 
 export type ApiTeam = {
   id: number;

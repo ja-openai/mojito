@@ -210,9 +210,8 @@ export function TeamDetailPage() {
     null,
   );
   const [isSlackChannelMembersModalOpen, setIsSlackChannelMembersModalOpen] = useState(false);
-  const [slackChannelMembersCopyStatus, setSlackChannelMembersCopyStatus] = useState<
-    StatusNotice | null
-  >(null);
+  const [slackChannelMembersCopyStatus, setSlackChannelMembersCopyStatus] =
+    useState<StatusNotice | null>(null);
 
   const parsedTeamId = useMemo(() => {
     const raw = params.teamId?.trim();
@@ -769,7 +768,9 @@ export function TeamDetailPage() {
       return;
     }
     if (nextMode === 'batch') {
-      setDraftTranslatorBatchInput(formatBatchUsernames(draftTranslatorUserIds, allTranslatorUsersById));
+      setDraftTranslatorBatchInput(
+        formatBatchUsernames(draftTranslatorUserIds, allTranslatorUsersById),
+      );
       setTranslatorEditorMode('batch');
       setTranslatorStatusNotice(null);
       return;
@@ -1085,9 +1086,11 @@ export function TeamDetailPage() {
   );
   const isNameDirty =
     normalizeTeamName(draftName) !== normalizeTeamName(effectiveTeam?.name ?? draftName);
-  const isPmRosterDirty = normalizeBatchInput(draftPmBatchInput) !== normalizeBatchInput(currentPmBatchInput);
+  const isPmRosterDirty =
+    normalizeBatchInput(draftPmBatchInput) !== normalizeBatchInput(currentPmBatchInput);
   const isTranslatorRosterDirty =
-    normalizeBatchInput(draftTranslatorBatchInput) !== normalizeBatchInput(currentTranslatorBatchInput);
+    normalizeBatchInput(draftTranslatorBatchInput) !==
+    normalizeBatchInput(currentTranslatorBatchInput);
   const isSlackSettingsDirty =
     Boolean(draftSlackEnabled) !== Boolean(slackSettingsQuery.data?.enabled ?? draftSlackEnabled) ||
     normalizeOptionalText(draftSlackClientId) !==
@@ -1495,7 +1498,11 @@ export function TeamDetailPage() {
           <div className="user-detail-page__field">
             <div className="settings-card__header team-pools-page__card-header">
               <h2>Translators</h2>
-              <div className="team-pools-page__mode-toggle" role="group" aria-label="Translator editor mode">
+              <div
+                className="team-pools-page__mode-toggle"
+                role="group"
+                aria-label="Translator editor mode"
+              >
                 <button
                   type="button"
                   className={`team-pools-page__mode-option${translatorEditorMode === 'form' ? ' is-active' : ''}`}
@@ -1520,7 +1527,9 @@ export function TeamDetailPage() {
                   selectedValues={draftTranslatorUserIds}
                   onChange={(next) => {
                     setDraftTranslatorUserIds(next);
-                    setDraftTranslatorBatchInput(formatBatchUsernames(next, allTranslatorUsersById));
+                    setDraftTranslatorBatchInput(
+                      formatBatchUsernames(next, allTranslatorUsersById),
+                    );
                     setTranslatorStatusNotice(null);
                   }}
                   placeholder="Select translators"
@@ -1584,8 +1593,8 @@ export function TeamDetailPage() {
             ) : (
               <>
                 <div className="user-detail-page__hint">
-                  Edit one username per line. The current team roster is loaded here and you can
-                  add or remove usernames directly before saving.
+                  Edit one username per line. The current team roster is loaded here and you can add
+                  or remove usernames directly before saving.
                 </div>
                 <textarea
                   className="team-detail-page__batch-textarea"
@@ -1650,7 +1659,11 @@ export function TeamDetailPage() {
             <div className="user-detail-page__field">
               <div className="settings-card__header team-pools-page__card-header">
                 <h2>PMs</h2>
-                <div className="team-pools-page__mode-toggle" role="group" aria-label="Project manager editor mode">
+                <div
+                  className="team-pools-page__mode-toggle"
+                  role="group"
+                  aria-label="Project manager editor mode"
+                >
                   <button
                     type="button"
                     className={`team-pools-page__mode-option${pmEditorMode === 'form' ? ' is-active' : ''}`}
@@ -1717,7 +1730,8 @@ export function TeamDetailPage() {
                     }}
                   />
                   <div className="user-detail-page__hint">
-                    Choose project managers one by one, or switch to Batch to edit usernames directly.
+                    Choose project managers one by one, or switch to Batch to edit usernames
+                    directly.
                   </div>
                   {draftPmUsers.length > 0 ? (
                     <div className="team-detail-page__roster-table">

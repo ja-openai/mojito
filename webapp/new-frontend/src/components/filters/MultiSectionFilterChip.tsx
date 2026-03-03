@@ -1,8 +1,8 @@
-import { createPortal } from 'react-dom';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
-import { getAnchoredDropdownPanelStyle } from '../dropdownPosition';
 import { resultSizePresets, WORKSET_SIZE_MIN } from '../../page/workbench/workbench-constants';
+import { getAnchoredDropdownPanelStyle } from '../dropdownPosition';
 
 export type FilterOption<T extends string | number> = { value: T; label: string; helper?: string };
 
@@ -259,184 +259,184 @@ export function MultiSectionFilterChip({
       {isOpen
         ? createPortal(
             <div className={panelClassName} role="menu" ref={panelRef} style={panelStyle}>
-          {sections.map((section, index) => {
-            if (section.kind === 'radio') {
-              return (
-                <div className={mergedClassNames.section} key={`radio-${index}`}>
-                  <div className={mergedClassNames.label}>{section.label}</div>
-                  <div className={mergedClassNames.list}>
-                    {section.options.map((option) => (
-                      <button
-                        type="button"
-                        key={String(option.value)}
-                        className={`${mergedClassNames.option}${
-                          option.value === section.value ? ' is-active' : ''
-                        }`}
-                        onClick={() => {
-                          section.onChange(option.value);
-                          if (closeOnSelection) {
-                            setIsOpen(false);
-                          }
-                        }}
-                      >
-                        <span>{option.label}</span>
-                        {option.helper ? (
-                          <span className={mergedClassNames.helper}>{option.helper}</span>
-                        ) : null}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
-            if (section.kind === 'size') {
-              return (
-                <div className={mergedClassNames.section} key={`size-${index}`}>
-                  <div className={mergedClassNames.label}>{section.label}</div>
-                  <div className={mergedClassNames.pills}>
-                    {sizeOptions.map((option) => (
-                      <button
-                        type="button"
-                        key={option.value}
-                        className={`${mergedClassNames.quickChip}${
-                          option.value === section.value ? ' is-active' : ''
-                        }`}
-                        onClick={() => {
-                          section.onChange(option.value);
-                          setShowCustomSize(false);
-                          if (closeOnSelection) {
-                            setIsOpen(false);
-                          }
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                    {showCustomSize ? (
-                      <div className={`${mergedClassNames.custom} is-active`}>
-                        <span className={mergedClassNames.customLabel}>Custom</span>
-                        <input
-                          ref={sizeInputRef}
-                          className={mergedClassNames.customInput}
-                          type="number"
-                          inputMode="numeric"
-                          min={sizeMin}
-                          value={sizeDraft}
-                          onChange={(event) => setSizeDraft(event.target.value)}
-                          onBlur={() => {
-                            commitSizeDraft();
-                            if (closeOnSelection) {
-                              setIsOpen(false);
-                            }
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              commitSizeDraft();
+              {sections.map((section, index) => {
+                if (section.kind === 'radio') {
+                  return (
+                    <div className={mergedClassNames.section} key={`radio-${index}`}>
+                      <div className={mergedClassNames.label}>{section.label}</div>
+                      <div className={mergedClassNames.list}>
+                        {section.options.map((option) => (
+                          <button
+                            type="button"
+                            key={String(option.value)}
+                            className={`${mergedClassNames.option}${
+                              option.value === section.value ? ' is-active' : ''
+                            }`}
+                            onClick={() => {
+                              section.onChange(option.value);
                               if (closeOnSelection) {
                                 setIsOpen(false);
                               }
-                            }
-                            if (event.key === 'Escape') {
-                              setSizeDraft(String(section.value ?? ''));
-                              setShowCustomSize(false);
-                            }
-                          }}
-                        />
+                            }}
+                          >
+                            <span>{option.label}</span>
+                            {option.helper ? (
+                              <span className={mergedClassNames.helper}>{option.helper}</span>
+                            ) : null}
+                          </button>
+                        ))}
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className={mergedClassNames.quickChip}
-                        onClick={() => {
-                          setShowCustomSize(true);
-                          setSizeDraft(String(section.value ?? ''));
-                        }}
-                      >
-                        Custom…
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-            if (section.kind === 'date') {
-              const hasQuickRanges = Boolean(section.quickRanges?.length);
-              const showClearButton =
-                Boolean(section.onClear) && Boolean(section.after || section.before);
-              const afterLabel = section.afterLabel ?? `${section.label} after`;
-              const beforeLabel = section.beforeLabel ?? `${section.label} before`;
-              return (
-                <div className={mergedClassNames.section} key={`date-${index}`}>
-                  <div className={mergedClassNames.label}>{section.label}</div>
-                  <div className={mergedClassNames.list}>
-                    {section.onChangeAfter ? (
-                      <input
-                        type="datetime-local"
-                        value={section.after ? isoToLocalInput(section.after) : ''}
-                        onChange={(event) =>
-                          section.onChangeAfter?.(
-                            event.target.value ? localInputToIso(event.target.value) : null,
-                          )
-                        }
-                        className={mergedClassNames.dateInput}
-                        aria-label={afterLabel}
-                        title={afterLabel}
-                      />
-                    ) : null}
-                    {section.onChangeBefore ? (
-                      <input
-                        type="datetime-local"
-                        value={section.before ? isoToLocalInput(section.before) : ''}
-                        onChange={(event) =>
-                          section.onChangeBefore?.(
-                            event.target.value ? localInputToIso(event.target.value) : null,
-                          )
-                        }
-                        className={mergedClassNames.dateInput}
-                        aria-label={beforeLabel}
-                        title={beforeLabel}
-                      />
-                    ) : null}
-                  </div>
-                  {hasQuickRanges || showClearButton ? (
-                    <div className={mergedClassNames.quick}>
-                      {section.quickRanges?.map((range) => (
-                        <button
-                          type="button"
-                          key={range.label}
-                          className={mergedClassNames.quickChip}
-                          onClick={() => {
-                            section.onChangeAfter?.(range.after ?? null);
-                            section.onChangeBefore?.(range.before ?? null);
-                            if (closeOnSelection) {
-                              setIsOpen(false);
+                    </div>
+                  );
+                }
+                if (section.kind === 'size') {
+                  return (
+                    <div className={mergedClassNames.section} key={`size-${index}`}>
+                      <div className={mergedClassNames.label}>{section.label}</div>
+                      <div className={mergedClassNames.pills}>
+                        {sizeOptions.map((option) => (
+                          <button
+                            type="button"
+                            key={option.value}
+                            className={`${mergedClassNames.quickChip}${
+                              option.value === section.value ? ' is-active' : ''
+                            }`}
+                            onClick={() => {
+                              section.onChange(option.value);
+                              setShowCustomSize(false);
+                              if (closeOnSelection) {
+                                setIsOpen(false);
+                              }
+                            }}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                        {showCustomSize ? (
+                          <div className={`${mergedClassNames.custom} is-active`}>
+                            <span className={mergedClassNames.customLabel}>Custom</span>
+                            <input
+                              ref={sizeInputRef}
+                              className={mergedClassNames.customInput}
+                              type="number"
+                              inputMode="numeric"
+                              min={sizeMin}
+                              value={sizeDraft}
+                              onChange={(event) => setSizeDraft(event.target.value)}
+                              onBlur={() => {
+                                commitSizeDraft();
+                                if (closeOnSelection) {
+                                  setIsOpen(false);
+                                }
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  commitSizeDraft();
+                                  if (closeOnSelection) {
+                                    setIsOpen(false);
+                                  }
+                                }
+                                if (event.key === 'Escape') {
+                                  setSizeDraft(String(section.value ?? ''));
+                                  setShowCustomSize(false);
+                                }
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className={mergedClassNames.quickChip}
+                            onClick={() => {
+                              setShowCustomSize(true);
+                              setSizeDraft(String(section.value ?? ''));
+                            }}
+                          >
+                            Custom…
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+                if (section.kind === 'date') {
+                  const hasQuickRanges = Boolean(section.quickRanges?.length);
+                  const showClearButton =
+                    Boolean(section.onClear) && Boolean(section.after || section.before);
+                  const afterLabel = section.afterLabel ?? `${section.label} after`;
+                  const beforeLabel = section.beforeLabel ?? `${section.label} before`;
+                  return (
+                    <div className={mergedClassNames.section} key={`date-${index}`}>
+                      <div className={mergedClassNames.label}>{section.label}</div>
+                      <div className={mergedClassNames.list}>
+                        {section.onChangeAfter ? (
+                          <input
+                            type="datetime-local"
+                            value={section.after ? isoToLocalInput(section.after) : ''}
+                            onChange={(event) =>
+                              section.onChangeAfter?.(
+                                event.target.value ? localInputToIso(event.target.value) : null,
+                              )
                             }
-                          }}
-                        >
-                          {range.label}
-                        </button>
-                      ))}
-                      {showClearButton ? (
-                        <button
-                          type="button"
-                          className={mergedClassNames.clear}
-                          onClick={() => {
-                            section.onClear?.();
-                            if (closeOnSelection) {
-                              setIsOpen(false);
+                            className={mergedClassNames.dateInput}
+                            aria-label={afterLabel}
+                            title={afterLabel}
+                          />
+                        ) : null}
+                        {section.onChangeBefore ? (
+                          <input
+                            type="datetime-local"
+                            value={section.before ? isoToLocalInput(section.before) : ''}
+                            onChange={(event) =>
+                              section.onChangeBefore?.(
+                                event.target.value ? localInputToIso(event.target.value) : null,
+                              )
                             }
-                          }}
-                        >
-                          {section.clearLabel ?? 'Clear'}
-                        </button>
+                            className={mergedClassNames.dateInput}
+                            aria-label={beforeLabel}
+                            title={beforeLabel}
+                          />
+                        ) : null}
+                      </div>
+                      {hasQuickRanges || showClearButton ? (
+                        <div className={mergedClassNames.quick}>
+                          {section.quickRanges?.map((range) => (
+                            <button
+                              type="button"
+                              key={range.label}
+                              className={mergedClassNames.quickChip}
+                              onClick={() => {
+                                section.onChangeAfter?.(range.after ?? null);
+                                section.onChangeBefore?.(range.before ?? null);
+                                if (closeOnSelection) {
+                                  setIsOpen(false);
+                                }
+                              }}
+                            >
+                              {range.label}
+                            </button>
+                          ))}
+                          {showClearButton ? (
+                            <button
+                              type="button"
+                              className={mergedClassNames.clear}
+                              onClick={() => {
+                                section.onClear?.();
+                                if (closeOnSelection) {
+                                  setIsOpen(false);
+                                }
+                              }}
+                            >
+                              {section.clearLabel ?? 'Clear'}
+                            </button>
+                          ) : null}
+                        </div>
                       ) : null}
                     </div>
-                  ) : null}
-                </div>
-              );
-            }
-            return null;
-          })}
+                  );
+                }
+                return null;
+              })}
             </div>,
             document.body,
           )

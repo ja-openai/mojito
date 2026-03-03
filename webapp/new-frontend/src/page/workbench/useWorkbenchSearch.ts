@@ -24,9 +24,9 @@ import { WORKSET_SIZE_DEFAULT } from './workbench-constants';
 import { clampWorksetSize, mapApiTextUnitToRow, serializeSearchRequest } from './workbench-helpers';
 import { loadPreferredWorksetSize } from './workbench-preferences';
 import type {
+  StatusFilterValue,
   WorkbenchResultSortDirection,
   WorkbenchResultSortField,
-  StatusFilterValue,
   WorkbenchRow,
   WorkbenchTextSearchCondition,
   WorkbenchTextSearchOperator,
@@ -122,7 +122,10 @@ const workbenchRowSortCollator = new Intl.Collator(undefined, {
   sensitivity: 'base',
 });
 
-function getWorkbenchRowSortValue(row: WorkbenchRow, field: WorkbenchResultSortField): string | number {
+function getWorkbenchRowSortValue(
+  row: WorkbenchRow,
+  field: WorkbenchResultSortField,
+): string | number {
   switch (field) {
     case 'tmTextUnitId':
       return row.tmTextUnitId;
@@ -157,15 +160,7 @@ function createSimpleTextSearchCondition(
   return createTextSearchCondition({ searchType: 'contains', ...overrides });
 }
 
-function createAdvancedTextSearchCondition(
-  overrides: Partial<Omit<WorkbenchTextSearchCondition, 'id'>> = {},
-): WorkbenchTextSearchCondition {
-  return createTextSearchCondition({ searchType: 'regex', ...overrides });
-}
-
-function toEditableTextSearchConditions(
-  textSearch?: TextSearch,
-): WorkbenchTextSearchCondition[] {
+function toEditableTextSearchConditions(textSearch?: TextSearch): WorkbenchTextSearchCondition[] {
   const normalizedTextSearch = normalizeTextSearch(textSearch);
   if (!normalizedTextSearch) {
     return [createSimpleTextSearchCondition()];
@@ -679,11 +674,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
   }, []);
 
   const ensureFirstTextSearchCondition = useCallback(
-    (
-      updater: (
-        current: WorkbenchTextSearchCondition,
-      ) => WorkbenchTextSearchCondition,
-    ) => {
+    (updater: (current: WorkbenchTextSearchCondition) => WorkbenchTextSearchCondition) => {
       setTextSearchConditions((current) => {
         const [firstCondition, ...rest] = current;
         return [updater(firstCondition ?? createSimpleTextSearchCondition()), ...rest];
@@ -719,9 +710,7 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
       patch: Partial<Pick<WorkbenchTextSearchCondition, 'field' | 'searchType' | 'value'>>,
     ) => {
       setTextSearchConditions((current) =>
-        current.map((condition) =>
-          condition.id === id ? { ...condition, ...patch } : condition,
-        ),
+        current.map((condition) => (condition.id === id ? { ...condition, ...patch } : condition)),
       );
     },
     [],

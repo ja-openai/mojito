@@ -2,8 +2,8 @@ import './chip-dropdown.css';
 import './multi-select-chip.css';
 import './single-select-dropdown.css';
 
-import { createPortal } from 'react-dom';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { getAnchoredDropdownPanelStyle } from './dropdownPosition';
 
@@ -157,86 +157,86 @@ export function SingleSelectDropdown<T extends string | number>({
       {isOpen
         ? createPortal(
             <div className="chip-dropdown__panel" role="menu" ref={panelRef} style={panelStyle}>
-          {hasAnyPanelContent ? (
-            <>
-              {normalizedOptions.length && searchable ? (
-                <input
-                  type="search"
-                  value={filterQuery}
-                  onChange={(event) => setFilterQuery(event.target.value)}
-                  placeholder={filterInputPlaceholder}
-                  className="multi-select-chip__search"
-                />
-              ) : null}
-              {footerAction ? (
-                <button
-                  type="button"
-                  className="single-select-dropdown__footer-action single-select-dropdown__footer-action--top"
-                  onClick={() => {
-                    footerAction.onClick();
-                    if (footerAction.closeOnClick) {
-                      setIsOpen(false);
-                    }
-                  }}
-                  disabled={footerAction.disabled}
-                >
-                  {footerAction.label}
-                </button>
-              ) : null}
-              <div className="single-select-dropdown__options">
-                {noneLabel ? (
-                  <button
-                    type="button"
-                    className={`single-select-dropdown__option${
-                      value === null ? ' is-selected' : ''
-                    }`}
-                    onClick={() => {
-                      onChange(null);
-                      setIsOpen(false);
-                    }}
-                  >
-                    {noneLabel}
-                  </button>
-                ) : null}
-                {normalizedOptions.length ? (
-                  visibleOptions.length ? (
-                    visibleOptions.map((option) => (
+              {hasAnyPanelContent ? (
+                <>
+                  {normalizedOptions.length && searchable ? (
+                    <input
+                      type="search"
+                      value={filterQuery}
+                      onChange={(event) => setFilterQuery(event.target.value)}
+                      placeholder={filterInputPlaceholder}
+                      className="multi-select-chip__search"
+                    />
+                  ) : null}
+                  {footerAction ? (
+                    <button
+                      type="button"
+                      className="single-select-dropdown__footer-action single-select-dropdown__footer-action--top"
+                      onClick={() => {
+                        footerAction.onClick();
+                        if (footerAction.closeOnClick) {
+                          setIsOpen(false);
+                        }
+                      }}
+                      disabled={footerAction.disabled}
+                    >
+                      {footerAction.label}
+                    </button>
+                  ) : null}
+                  <div className="single-select-dropdown__options">
+                    {noneLabel ? (
                       <button
                         type="button"
-                        key={String(option.value)}
-                        className={[
-                          'single-select-dropdown__option',
-                          option.value === value ? 'is-selected' : '',
-                          getOptionClassName?.(option) ?? '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
+                        className={`single-select-dropdown__option${
+                          value === null ? ' is-selected' : ''
+                        }`}
                         onClick={() => {
-                          onChange(option.value);
+                          onChange(null);
                           setIsOpen(false);
                         }}
                       >
-                        <span className="single-select-dropdown__option-copy">
-                          <span>{option.label}</span>
-                          {option.helper ? (
-                            <span className="single-select-dropdown__option-helper">
-                              {option.helper}
-                            </span>
-                          ) : null}
-                        </span>
+                        {noneLabel}
                       </button>
-                    ))
-                  ) : (
-                    <div className="single-select-dropdown__empty">{emptyLabel}</div>
-                  )
-                ) : (
-                  <div className="single-select-dropdown__empty">{resolvedPlaceholder}</div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="single-select-dropdown__empty">{resolvedPlaceholder}</div>
-          )}
+                    ) : null}
+                    {normalizedOptions.length ? (
+                      visibleOptions.length ? (
+                        visibleOptions.map((option) => (
+                          <button
+                            type="button"
+                            key={String(option.value)}
+                            className={[
+                              'single-select-dropdown__option',
+                              option.value === value ? 'is-selected' : '',
+                              getOptionClassName?.(option) ?? '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            onClick={() => {
+                              onChange(option.value);
+                              setIsOpen(false);
+                            }}
+                          >
+                            <span className="single-select-dropdown__option-copy">
+                              <span>{option.label}</span>
+                              {option.helper ? (
+                                <span className="single-select-dropdown__option-helper">
+                                  {option.helper}
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="single-select-dropdown__empty">{emptyLabel}</div>
+                      )
+                    ) : (
+                      <div className="single-select-dropdown__empty">{resolvedPlaceholder}</div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="single-select-dropdown__empty">{resolvedPlaceholder}</div>
+              )}
             </div>,
             document.body,
           )
