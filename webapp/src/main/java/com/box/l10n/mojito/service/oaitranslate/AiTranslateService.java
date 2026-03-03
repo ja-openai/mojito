@@ -97,6 +97,14 @@ public class AiTranslateService {
     return METRIC_PREFIX + "." + suffix;
   }
 
+  private record ResponsesUsageTotals(
+      long inputTokens, long cachedInputTokens, long outputTokens, long reasoningTokens) {
+
+    long totalTokens() {
+      return inputTokens + outputTokens;
+    }
+  }
+
   /** logger */
   static Logger logger = LoggerFactory.getLogger(AiTranslateService.class);
 
@@ -660,6 +668,13 @@ public class AiTranslateService {
                 .filter(t -> t.error() != null)
                 .count();
         long importedTextUnitCount = importResultByTmTextUnitId.size();
+        ResponsesUsageTotals responsesUsageTotals =
+            sumResponsesUsage(
+                textUnitsByScreenshotWithResponsesResponseList.stream()
+                    .map(
+                        TextextUnitsByScreenshotWithResponsesResponse
+                            ::responsesResponseCompletableFuture)
+                    .toList());
 
         incrementCounter(
             metricName("textUnits"), localeTags.and("result", "skipped"), skippedTextUnitCount);
@@ -673,7 +688,7 @@ public class AiTranslateService {
             metricName("textUnits"), localeTags.and("result", "imported"), importedTextUnitCount);
 
         logger.info(
-            "AI translate locale summary repository={}, locale={}, model={}, attemptedTextUnits={}, groupedRequests={}, successfulTextUnits={}, importedTextUnits={}, skippedTextUnits={}, failedTextUnits={}, duration={}",
+            "AI translate locale summary repository={}, locale={}, model={}, attemptedTextUnits={}, groupedRequests={}, successfulTextUnits={}, importedTextUnits={}, skippedTextUnits={}, failedTextUnits={}, inputTokens={}, cachedInputTokens={}, outputTokens={}, reasoningTokens={}, totalTokens={}, estimatedCostUsd={}, duration={}",
             repository.getName(),
             bcp47Tag,
             model,
@@ -683,6 +698,12 @@ public class AiTranslateService {
             importedTextUnitCount,
             skippedTextUnitCount,
             failedTextUnitCount,
+            responsesUsageTotals.inputTokens(),
+            responsesUsageTotals.cachedInputTokens(),
+            responsesUsageTotals.outputTokens(),
+            responsesUsageTotals.reasoningTokens(),
+            responsesUsageTotals.totalTokens(),
+            formatEstimatedCostUsd(responsesUsageTotals),
             elapsed);
 
         List<ImportReport.ImportReportLine> importReportLines =
@@ -1370,6 +1391,69 @@ public class AiTranslateService {
   private boolean isTimeoutException(Throwable throwable) {
     Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
     return cause instanceof TimeoutException;
+  }
+
+  private ResponsesUsageTotals sumResponsesUsage(
+      List<CompletableFuture<ResponsesResponse>> responsesResponseCompletableFutures) {
+    long inputTokens = 0L;
+    long cachedInputTokens = 0L;
+    long outputTokens = 0L;
+    long reasoningTokens = 0L;
+
+    for (CompletableFuture<ResponsesResponse> responsesResponseCompletableFuture :
+        responsesResponseCompletableFutures) {
+      if (!responsesResponseCompletableFuture.isDone()
+          || responsesResponseCompletableFuture.isCompletedExceptionally()) {
+        continue;
+      }
+
+      ResponsesResponse responsesResponse;
+      try {
+        responsesResponse = responsesResponseCompletableFuture.join();
+      } catch (Throwable ignored) {
+        continue;
+      }
+
+      if (responsesResponse == null || responsesResponse.usage() == null) {
+        continue;
+      }
+
+      ResponsesResponse.Usage usage = responsesResponse.usage();
+      inputTokens += nullToZero(usage.inputTokens());
+      outputTokens += nullToZero(usage.outputTokens());
+
+      if (usage.inputTokensDetails() != null) {
+        cachedInputTokens += nullToZero(usage.inputTokensDetails().cachedTokens());
+      }
+
+      if (usage.outputTokensDetails() != null) {
+        reasoningTokens += nullToZero(usage.outputTokensDetails().reasoningTokens());
+      }
+    }
+
+    return new ResponsesUsageTotals(inputTokens, cachedInputTokens, outputTokens, reasoningTokens);
+  }
+
+  private long nullToZero(Integer value) {
+    return value == null ? 0L : value.longValue();
+  }
+
+  private String formatEstimatedCostUsd(ResponsesUsageTotals usageTotals) {
+    AiTranslateConfigurationProperties.PricingProperties pricing =
+        aiTranslateConfigurationProperties.getPricing();
+    if (pricing == null) {
+      return "n/a";
+    }
+
+    long nonCachedInputTokens =
+        Math.max(0L, usageTotals.inputTokens() - usageTotals.cachedInputTokens());
+    double estimatedCostUsd =
+        (nonCachedInputTokens / 1_000_000d) * pricing.getInputCostPerMillion()
+            + (usageTotals.cachedInputTokens() / 1_000_000d)
+                * pricing.getCachedInputCostPerMillion()
+            + (usageTotals.outputTokens() / 1_000_000d) * pricing.getOutputCostPerMillion();
+
+    return String.format(Locale.ROOT, "%.6f", estimatedCostUsd);
   }
 
   private int resolveNoBatchTimeoutSeconds(

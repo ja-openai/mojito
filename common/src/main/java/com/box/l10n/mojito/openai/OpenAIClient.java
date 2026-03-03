@@ -376,6 +376,7 @@ public class OpenAIClient {
       @JsonProperty("incomplete_details") IncompleteDetails incompleteDetails,
       String model,
       List<Output> output,
+      Usage usage,
       Map<String, String> metadata) {
 
     public String outputText() {
@@ -394,6 +395,17 @@ public class OpenAIClient {
         String id, String type, String status, List<Content> content, String role) {}
 
     public record Content(String type, String text) {}
+
+    public record Usage(
+        @JsonProperty("input_tokens") Integer inputTokens,
+        @JsonProperty("output_tokens") Integer outputTokens,
+        @JsonProperty("total_tokens") Integer totalTokens,
+        @JsonProperty("input_tokens_details") InputTokensDetails inputTokensDetails,
+        @JsonProperty("output_tokens_details") OutputTokensDetails outputTokensDetails) {}
+
+    public record InputTokensDetails(@JsonProperty("cached_tokens") Integer cachedTokens) {}
+
+    public record OutputTokensDetails(@JsonProperty("reasoning_tokens") Integer reasoningTokens) {}
   }
 
   public CompletableFuture<ChatCompletionsResponse> getChatCompletions(

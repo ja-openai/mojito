@@ -13,6 +13,7 @@ public class AiTranslateConfigurationProperties {
   PoolProperties pool = new PoolProperties();
   RetryProperties retry = new RetryProperties();
   NoBatchProperties noBatch = new NoBatchProperties();
+  PricingProperties pricing = new PricingProperties();
 
   public String getOpenaiClientToken() {
     return openaiClientToken;
@@ -60,6 +61,14 @@ public class AiTranslateConfigurationProperties {
 
   public void setNoBatch(NoBatchProperties noBatch) {
     this.noBatch = noBatch;
+  }
+
+  public PricingProperties getPricing() {
+    return pricing;
+  }
+
+  public void setPricing(PricingProperties pricing) {
+    this.pricing = pricing;
   }
 
   public static class NoBatchProperties {
@@ -158,6 +167,37 @@ public class AiTranslateConfigurationProperties {
 
     public void setAcquireTimeoutSeconds(int acquireTimeoutSeconds) {
       this.acquireTimeoutSeconds = acquireTimeoutSeconds;
+    }
+  }
+
+  public static class PricingProperties {
+    // Rough defaults for the current default model; keep raw token usage as the source of truth.
+    double inputCostPerMillion = 1.75d;
+    double cachedInputCostPerMillion = 0.175d;
+    double outputCostPerMillion = 14.0d;
+
+    public double getInputCostPerMillion() {
+      return inputCostPerMillion;
+    }
+
+    public void setInputCostPerMillion(double inputCostPerMillion) {
+      this.inputCostPerMillion = inputCostPerMillion;
+    }
+
+    public double getCachedInputCostPerMillion() {
+      return cachedInputCostPerMillion;
+    }
+
+    public void setCachedInputCostPerMillion(double cachedInputCostPerMillion) {
+      this.cachedInputCostPerMillion = cachedInputCostPerMillion;
+    }
+
+    public double getOutputCostPerMillion() {
+      return outputCostPerMillion;
+    }
+
+    public void setOutputCostPerMillion(double outputCostPerMillion) {
+      this.outputCostPerMillion = outputCostPerMillion;
     }
   }
 
