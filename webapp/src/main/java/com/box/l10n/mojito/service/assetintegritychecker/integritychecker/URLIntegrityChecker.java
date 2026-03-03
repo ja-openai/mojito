@@ -1,5 +1,8 @@
 package com.box.l10n.mojito.service.assetintegritychecker.integritychecker;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
  * Checks for URLs in plain text.
  *
@@ -11,6 +14,15 @@ package com.box.l10n.mojito.service.assetintegritychecker.integritychecker;
  * @author jaurambault
  */
 public class URLIntegrityChecker extends RegexIntegrityChecker {
+
+  @Override
+  Set<String> getPlaceholders(String string) {
+    Set<String> normalizedPlaceholders = new LinkedHashSet<>();
+    for (String placeholder : super.getPlaceholders(string)) {
+      normalizedPlaceholders.add(trimTrailingSentencePunctuation(placeholder));
+    }
+    return normalizedPlaceholders;
+  }
 
   @Override
   public String getRegex() {
@@ -25,5 +37,18 @@ public class URLIntegrityChecker extends RegexIntegrityChecker {
     } catch (RegexCheckerException rce) {
       throw new URLIntegrityCheckerException("URLs in source and target are different");
     }
+  }
+
+  private String trimTrailingSentencePunctuation(String placeholder) {
+    int end = placeholder.length();
+    while (end > 0) {
+      char c = placeholder.charAt(end - 1);
+      if (c == '.' || c == '。') {
+        end--;
+      } else {
+        break;
+      }
+    }
+    return placeholder.substring(0, end);
   }
 }

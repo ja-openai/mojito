@@ -48,6 +48,13 @@ public class URLIntegrityCheckerTest {
     checker.check(source, target);
   }
 
+  @Test
+  public void validUrlTrailingSentencePunctuation() {
+    String source = "See more details at https://example.org/path/to/resource.";
+    String target = "詳細はこちら：https://example.org/path/to/resource。";
+    checker.check(source, target);
+  }
+
   @Test(expected = URLIntegrityCheckerException.class)
   public void missingUrl() {
     String source = "Visit our site at https://example.org";
