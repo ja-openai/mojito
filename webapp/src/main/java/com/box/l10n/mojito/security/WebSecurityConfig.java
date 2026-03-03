@@ -204,6 +204,12 @@ public class WebSecurityConfig {
                 .hasRole("ADMIN")
                 .requestMatchers("/api/monitoring/**")
                 .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/ai-translate/automation")
+                .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/ai-translate/automation")
+                .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/ai-translate/automation/run")
+                .hasRole("ADMIN")
                 // Read-only access is OK for users
                 .requestMatchers(HttpMethod.GET, "/api/textunits/**")
                 .authenticated()

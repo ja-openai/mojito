@@ -101,10 +101,57 @@
   border-color: var(--color-focus-border);
 }
 
+.settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.settings-toggle input {
+  margin: 0;
+}
+
 .settings-actions {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.settings-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.settings-pill {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-pill);
+  padding: 0.2rem 0.6rem;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.settings-pill:hover,
+.settings-pill:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.settings-pill.is-active {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  color: var(--color-accent);
+}
+
+.settings-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .settings-button {
@@ -155,6 +202,13 @@
   justify-content: flex-start;
 }
 
+.settings-card__footer-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
 .settings-button--primary {
   background: var(--color-accent);
   border-color: var(--color-accent);
@@ -175,5 +229,9 @@
 }
 
 .settings-locale-select.chip-dropdown {
+  width: 100%;
+}
+
+.settings-repository-select.chip-dropdown {
   width: 100%;
 }

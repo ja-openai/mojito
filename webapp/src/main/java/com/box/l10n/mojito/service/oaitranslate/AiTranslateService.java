@@ -218,12 +218,17 @@ public class AiTranslateService {
       Integer timeoutSeconds) {}
 
   public PollableFuture<Void> aiTranslateAsync(AiTranslateInput aiTranslateInput) {
+    return aiTranslateAsync(aiTranslateInput, null);
+  }
+
+  public PollableFuture<Void> aiTranslateAsync(AiTranslateInput aiTranslateInput, String uniqueId) {
 
     QuartzJobInfo<AiTranslateInput, Void> quartzJobInfo =
         QuartzJobInfo.newBuilder(AiTranslateJob.class)
             .withInlineInput(false)
             .withInput(aiTranslateInput)
             .withScheduler(aiTranslateConfigurationProperties.getSchedulerName())
+            .withUniqueId(uniqueId)
             .build();
 
     return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);

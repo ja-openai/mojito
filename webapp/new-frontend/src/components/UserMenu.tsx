@@ -83,6 +83,7 @@ export function UserMenu() {
   const adminLinks = isAdmin
     ? [
         { label: 'Admin settings', path: '/settings/admin' },
+        { label: 'AI translate automation', path: '/settings/admin/ai-translate' },
         { label: 'Database monitoring', path: '/monitoring' },
       ]
     : [];

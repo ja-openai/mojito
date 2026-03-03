@@ -21,6 +21,7 @@ import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
 import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
+import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
 import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { AdminTeamPoolsPage } from './page/settings/AdminTeamPoolsPage';
 import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
@@ -121,6 +122,10 @@ export function App() {
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
             <Route path="/screenshots" element={<ScreenshotsDropzonePage />} />
             <Route path="/settings/admin" element={<AdminSettingsPage />} />
+            <Route
+              path="/settings/admin/ai-translate"
+              element={<AdminAiTranslateAutomationPage />}
+            />
             <Route path="/settings/admin/teams" element={<AdminTeamsPage />} />
             <Route path="/settings/admin/users" element={<AdminUserSettingsPage />} />
             <Route path="/settings/teams" element={<AdminTeamsPage />} />
