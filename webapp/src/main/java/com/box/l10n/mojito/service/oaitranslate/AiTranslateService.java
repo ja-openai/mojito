@@ -70,6 +70,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -102,6 +103,7 @@ public class AiTranslateService {
   private final AiTranslateScreenshotService aiTranslateScreenshotService;
   private final AiTranslateLegacyBatchService aiTranslateLegacyBatchService;
   private final MeterRegistry meterRegistry;
+  private final AtomicInteger noBatchRequestsInFlight;
 
   AssetTextUnitRepository assetTextUnitRepository;
 
@@ -179,6 +181,9 @@ public class AiTranslateService {
     this.meterRegistry = meterRegistry;
     this.aiTranslateScreenshotService = aiTranslateScreenshotService;
     this.aiTranslateLegacyBatchService = aiTranslateLegacyBatchService;
+    this.noBatchRequestsInFlight =
+        meterRegistry.gauge(
+            metricName("requestsInFlight"), Tags.of("mode", MODE_NO_BATCH), new AtomicInteger());
   }
 
   public record AiTranslateInput(
@@ -468,10 +473,32 @@ public class AiTranslateService {
                   requestSourceCharCount,
                   hasScreenshot);
 
+          incrementCounter(
+              metricName("groupedRequestTextUnits"), requestTags, requestTextUnitCount);
+          incrementCounter(
+              metricName("groupedRequestSourceChars"), requestTags, requestSourceCharCount);
+          incrementCounter(metricName("groupedRequestTimeoutSeconds"), requestTags, timeout);
+
+          Stopwatch stopwatchForRequest = Stopwatch.createStarted();
+          noBatchRequestsInFlight.incrementAndGet();
+
           CompletableFuture<ResponsesResponse> responsesResponseCompletableFuture =
-              openAIClientPool.submit(
-                  openAIClient ->
-                      openAIClient.getResponses(responsesRequest, Duration.ofSeconds(timeout)));
+              openAIClientPool
+                  .submit(
+                      openAIClient ->
+                          openAIClient.getResponses(responsesRequest, Duration.ofSeconds(timeout)))
+                  .whenComplete(
+                      (response, throwable) -> {
+                        try {
+                          meterRegistry
+                              .timer(
+                                  metricName("requestDuration"),
+                                  requestTags.and("result", getRequestResultTag(throwable)))
+                              .record(stopwatchForRequest.elapsed());
+                        } finally {
+                          noBatchRequestsInFlight.decrementAndGet();
+                        }
+                      });
 
           incrementCounter(metricName("groupedRequests"), requestTags);
           groupedRequestCount++;
@@ -1308,6 +1335,14 @@ public class AiTranslateService {
       return;
     }
     meterRegistry.counter(metricName, tags).increment(amount);
+  }
+
+  private String getRequestResultTag(Throwable throwable) {
+    if (throwable == null) {
+      return "completed";
+    }
+
+    return isTimeoutException(throwable) ? "timeout" : "failed";
   }
 
   private Tags metricTags(
