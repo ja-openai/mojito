@@ -101,6 +101,7 @@ class AiTranslateRelatedStringsProvider {
     initCachesForAssetExtraction(id);
     String prefix = getPrefix(assetTextUnit.getName());
     return idPrefixMapCache.get(id).get(prefix).stream()
+        .filter(atu -> !atu.getId().equals(assetTextUnit.getId()))
         .map(atu -> new RelatedString(atu.getContent(), atu.getComment()))
         .toList();
   }
@@ -121,6 +122,7 @@ class AiTranslateRelatedStringsProvider {
                   .getOrDefault(filePosition.path(), List.of())
                   .stream()
                   .sorted(Comparator.comparingLong(AssetTextUnitWithPosition::position))
+                  .filter(atu -> !atu.assetTextUnit().getId().equals(assetTextUnit.getId()))
                   .map(
                       atu ->
                           new RelatedString(
