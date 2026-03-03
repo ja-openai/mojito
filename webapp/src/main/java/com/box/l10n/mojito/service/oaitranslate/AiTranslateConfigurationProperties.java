@@ -9,11 +9,12 @@ import org.springframework.stereotype.Component;
 public class AiTranslateConfigurationProperties {
   String openaiClientToken;
   String schedulerName = QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
-  String modelName = "gpt-4o-2024-08-06";
+  String modelName = "gpt-5.2";
   PoolProperties pool = new PoolProperties();
   RetryProperties retry = new RetryProperties();
   NoBatchProperties noBatch = new NoBatchProperties();
   PricingProperties pricing = new PricingProperties();
+  ResponsesProperties responses = new ResponsesProperties();
 
   public String getOpenaiClientToken() {
     return openaiClientToken;
@@ -69,6 +70,14 @@ public class AiTranslateConfigurationProperties {
 
   public void setPricing(PricingProperties pricing) {
     this.pricing = pricing;
+  }
+
+  public ResponsesProperties getResponses() {
+    return responses;
+  }
+
+  public void setResponses(ResponsesProperties responses) {
+    this.responses = responses;
   }
 
   public static class NoBatchProperties {
@@ -198,6 +207,27 @@ public class AiTranslateConfigurationProperties {
 
     public void setOutputCostPerMillion(double outputCostPerMillion) {
       this.outputCostPerMillion = outputCostPerMillion;
+    }
+  }
+
+  public static class ResponsesProperties {
+    String reasoningEffort = "none";
+    String textVerbosity = "low";
+
+    public String getReasoningEffort() {
+      return reasoningEffort;
+    }
+
+    public void setReasoningEffort(String reasoningEffort) {
+      this.reasoningEffort = reasoningEffort;
+    }
+
+    public String getTextVerbosity() {
+      return textVerbosity;
+    }
+
+    public void setTextVerbosity(String textVerbosity) {
+      this.textVerbosity = textVerbosity;
     }
   }
 

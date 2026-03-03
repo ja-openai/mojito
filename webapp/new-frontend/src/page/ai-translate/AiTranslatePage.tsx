@@ -67,7 +67,7 @@ export function AiTranslatePage() {
   const [selectedLocales, setSelectedLocales] = useState<string[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [sourceTextMaxCount, setSourceTextMaxCount] = useState(String(DEFAULT_SOURCE_TEXT_MAX));
-  const [useModel, setUseModel] = useState('gpt-4.1');
+  const [useModel, setUseModel] = useState('gpt-5.2');
   const [promptSuffix, setPromptSuffix] = useState('');
   const [relatedStrings, setRelatedStrings] = useState('NONE');
   const [translateType, setTranslateType] = useState('TARGET_ONLY_NEW');

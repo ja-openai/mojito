@@ -182,10 +182,13 @@ public class OpenAIClient {
       String model,
       String instructions,
       List<InputMessage> input,
+      Reasoning reasoning,
       TextContainer text,
       Map<String, String> metadata) {
 
-    public record TextContainer(JsonSchema format) {
+    public record Reasoning(String effort) {}
+
+    public record TextContainer(JsonSchema format, String verbosity) {
 
       public record JsonSchema(String name, Object schema, boolean strict) {
 
@@ -289,6 +292,7 @@ public class OpenAIClient {
       private String model;
       private String instructions;
       private List<InputMessage> input = new ArrayList<>();
+      private Reasoning reasoning;
       private TextContainer textContainer;
       private Map<String, String> metadata = new HashMap<>();
 
@@ -299,6 +303,11 @@ public class OpenAIClient {
 
       public Builder instructions(String instruction) {
         this.instructions = instruction;
+        return this;
+      }
+
+      public Builder reasoningEffort(String effort) {
+        this.reasoning = effort == null ? null : new Reasoning(effort);
         return this;
       }
 
@@ -326,8 +335,16 @@ public class OpenAIClient {
       }
 
       public Builder addJsonSchema(Class<?> type) {
+        String verbosity = textContainer == null ? null : textContainer.verbosity();
         this.textContainer =
-            new TextContainer(new JsonSchema("output_json_schema", createJsonSchema(type), true));
+            new TextContainer(
+                new JsonSchema("output_json_schema", createJsonSchema(type), true), verbosity);
+        return this;
+      }
+
+      public Builder textVerbosity(String verbosity) {
+        JsonSchema jsonSchema = textContainer == null ? null : textContainer.format();
+        this.textContainer = new TextContainer(jsonSchema, verbosity);
         return this;
       }
 
@@ -357,6 +374,7 @@ public class OpenAIClient {
             model,
             instructions,
             input,
+            reasoning,
             textContainer,
             this.metadata.isEmpty() ? null : this.metadata);
       }

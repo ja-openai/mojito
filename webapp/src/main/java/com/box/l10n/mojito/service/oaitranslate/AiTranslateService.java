@@ -461,6 +461,10 @@ public class AiTranslateService {
               ResponsesRequest.builder()
                   .model(model)
                   .instructions(prompt)
+                  .reasoningEffort(
+                      aiTranslateConfigurationProperties.getResponses().getReasoningEffort())
+                  .textVerbosity(
+                      aiTranslateConfigurationProperties.getResponses().getTextVerbosity())
                   .addUserText(inputAsJsonString)
                   .addJsonSchema(aiTranslateType.getOutputJsonSchemaClass());
 
