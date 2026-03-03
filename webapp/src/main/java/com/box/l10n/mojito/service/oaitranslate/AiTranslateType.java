@@ -40,7 +40,16 @@ public enum AiTranslateType {
 
         **Output:**
         Return a single JSON object:
-          { "content": "[your translation here]" }
+          {
+            "targets": [
+              {
+                "tmTextUnitId": 123,
+                "target": "[your translation here]"
+              }
+            ]
+          }
+
+        Return exactly one target object for each input text unit, using the same "tmTextUnitId".
 
         Do not include any explanation or commentary—just the translated text.
         """,
