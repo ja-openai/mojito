@@ -69,12 +69,14 @@ public record ImageBytes(String filename, byte[] content, String contentType) {
         if (isPng(bytes)) {
           return "image/png";
         }
-        ;
         if (isJpeg(bytes)) {
           return "image/jpeg";
         }
         if (isGif(bytes)) {
           return "image/gif";
+        }
+        if (isWebp(bytes)) {
+          return "image/webp";
         }
         return "application/octet-stream";
     }
@@ -104,5 +106,17 @@ public record ImageBytes(String filename, byte[] content, String contentType) {
         && b[3] == '8'
         && (b[4] == '7' || b[4] == '9')
         && b[5] == 'a';
+  }
+
+  private static boolean isWebp(byte[] b) {
+    return b.length >= 12
+        && b[0] == 'R'
+        && b[1] == 'I'
+        && b[2] == 'F'
+        && b[3] == 'F'
+        && b[8] == 'W'
+        && b[9] == 'E'
+        && b[10] == 'B'
+        && b[11] == 'P';
   }
 }

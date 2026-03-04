@@ -55,12 +55,13 @@ import {
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import { toHtmlLangTag } from '../../utils/localeTag';
 import {
   buildRequestAttachmentUploadQueueEntries,
+  canUploadRequestAttachmentFile,
   isImageAttachmentKey,
   isPdfAttachmentKey,
-  isSupportedRequestAttachmentFile,
   isVideoAttachmentKey,
   resolveAttachmentUrl,
   revokeRequestAttachmentUploadQueuePreviews,
@@ -2773,6 +2774,7 @@ function ReviewProjectHeader({
     RequestAttachmentUploadQueueItem[]
   >([]);
   const attachmentUploadPreviewUrlsRef = useRef<Set<string>>(new Set());
+  const [optimizeImagesBeforeUpload, setOptimizeImagesBeforeUpload] = useState(true);
   const [isAttachmentUploading, setIsAttachmentUploading] = useState(false);
   const [attachmentUploadError, setAttachmentUploadError] = useState<string | null>(null);
   const [requestSaveError, setRequestSaveError] = useState<string | null>(null);
@@ -3132,19 +3134,31 @@ function ReviewProjectHeader({
       setAttachmentUploadError(null);
       setIsAttachmentUploading(true);
 
-      const fileList = Array.from(files);
-      const queueEntries = buildRequestAttachmentUploadQueueEntries(fileList);
+      const preparedFiles = await Promise.all(
+        Array.from(files).map(async (file) =>
+          prepareDbBackedUploadFile(file, { optimizeImages: optimizeImagesBeforeUpload }),
+        ),
+      );
+      const queueEntries = buildRequestAttachmentUploadQueueEntries(
+        preparedFiles.map((prepared) => ({
+          file: prepared.file,
+          displayName: prepared.displayName,
+          warning: prepared.warning,
+        })),
+      );
       setAttachmentUploadQueue((current) => [...queueEntries, ...current]);
 
       const uploaded: string[] = [];
       const failed: string[] = [];
 
-      for (const [index, file] of fileList.entries()) {
+      for (const [index, preparedFile] of preparedFiles.entries()) {
+        const file = preparedFile.file;
         const queueEntry = queueEntries[index];
-        if (!queueEntry || !isSupportedRequestAttachmentFile(file)) {
-          if (!isSupportedRequestAttachmentFile(file)) {
-            failed.push(`Unsupported file type: ${file.name}`);
+        if (!queueEntry || !canUploadRequestAttachmentFile(file)) {
+          if (!queueEntry) {
+            continue;
           }
+          failed.push(queueEntry.error ?? `Failed to upload ${file.name}`);
           continue;
         }
         try {
@@ -3173,7 +3187,12 @@ function ReviewProjectHeader({
       setIsAttachmentUploading(false);
       return uploaded;
     },
-    [addAttachmentKeys, isAttachmentUploading, mutations.isProjectRequestSaving],
+    [
+      addAttachmentKeys,
+      isAttachmentUploading,
+      mutations.isProjectRequestSaving,
+      optimizeImagesBeforeUpload,
+    ],
   );
   const attachmentsDisabled =
     !canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading;
@@ -3475,9 +3494,7 @@ function ReviewProjectHeader({
             />
           </label>
           {projectDueDateSaveError ? (
-            <div className="review-project-page__description-error">
-              {projectDueDateSaveError}
-            </div>
+            <div className="review-project-page__description-error">{projectDueDateSaveError}</div>
           ) : null}
         </div>
         <div className="modal__actions">
@@ -3782,6 +3799,8 @@ function ReviewProjectHeader({
                     uploadQueue={attachmentUploadQueue}
                     disabled={attachmentsDisabled}
                     isUploading={isAttachmentUploading}
+                    optimizeImages={optimizeImagesBeforeUpload}
+                    onToggleOptimizeImages={setOptimizeImagesBeforeUpload}
                     onFilesSelected={async (files) => {
                       await handleAttachmentFiles(files);
                     }}

@@ -1,3 +1,9 @@
+import {
+  canUploadDbBackedFile,
+  getDbBackedUploadSizeError,
+  getDbBackedUploadSizeWarning,
+} from './upload-size';
+
 export type RequestAttachmentKind = 'image' | 'video' | 'pdf' | 'file';
 
 export type RequestAttachmentUploadQueueItem = {
@@ -7,6 +13,13 @@ export type RequestAttachmentUploadQueueItem = {
   kind: RequestAttachmentKind;
   preview?: string | null;
   error?: string;
+  warning?: string;
+};
+
+export type RequestAttachmentUploadSource = {
+  file: File;
+  displayName?: string;
+  warning?: string | null;
 };
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif'];
@@ -149,19 +162,33 @@ export const getAttachmentKindFromFile = (file: File): RequestAttachmentKind => 
 export const isSupportedRequestAttachmentFile = (file: File) =>
   getAttachmentKindFromFile(file) !== 'file';
 
+export const getRequestAttachmentFileError = (file: File) => {
+  if (!isSupportedRequestAttachmentFile(file)) {
+    return 'Unsupported file type';
+  }
+  return getDbBackedUploadSizeError(file);
+};
+
+export const getRequestAttachmentFileWarning = (file: File) => getDbBackedUploadSizeWarning(file);
+
+export const canUploadRequestAttachmentFile = (file: File) =>
+  isSupportedRequestAttachmentFile(file) && canUploadDbBackedFile(file);
+
 export const buildRequestAttachmentUploadQueueEntries = (
-  files: File[],
+  files: RequestAttachmentUploadSource[],
 ): RequestAttachmentUploadQueueItem[] => {
-  return files.map((file) => {
+  return files.map(({ file, displayName, warning }) => {
     const kind = getAttachmentKindFromFile(file);
-    const isSupported = isSupportedRequestAttachmentFile(file);
+    const error = getRequestAttachmentFileError(file);
     return {
       key: createUploadQueueItemKey(file),
-      name: file.name,
-      status: isSupported ? ('uploading' as const) : ('error' as const),
+      name: displayName ?? file.name,
+      status: error == null ? ('uploading' as const) : ('error' as const),
       kind,
-      preview: isSupported && isPreviewKind(kind) ? URL.createObjectURL(file) : null,
-      error: isSupported ? undefined : 'Unsupported file type',
+      preview: error == null && isPreviewKind(kind) ? URL.createObjectURL(file) : null,
+      error: error ?? undefined,
+      warning:
+        error == null ? (warning ?? getRequestAttachmentFileWarning(file) ?? undefined) : undefined,
     };
   });
 };

@@ -1,0 +1,31 @@
+.image-upload-optimization {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.image-upload-optimization--disabled {
+  opacity: 0.7;
+}
+
+.image-upload-optimization__checkbox {
+  margin-top: 0.1rem;
+}
+
+.image-upload-optimization__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.image-upload-optimization__label {
+  font-weight: var(--font-weight-medium);
+}
+
+.image-upload-optimization__hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}

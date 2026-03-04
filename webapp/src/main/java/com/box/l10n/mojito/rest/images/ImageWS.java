@@ -4,6 +4,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 import com.box.l10n.mojito.entity.Image;
 import com.box.l10n.mojito.service.image.ImageService;
+import com.box.l10n.mojito.util.ImageBytes;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -52,7 +53,7 @@ public class ImageWS {
 
   ResponseEntity<byte[]> toImageResponse(String imageName, Image image) {
     byte[] content = image.getContent();
-    MediaType mediaType = getMediaTypeFromImageName(imageName);
+    MediaType mediaType = getMediaTypeFromImageContent(imageName, content);
     boolean inferredPdf = mediaType == MediaType.APPLICATION_OCTET_STREAM && isPdfContent(content);
     if (inferredPdf) {
       mediaType = MediaType.APPLICATION_PDF;
@@ -127,6 +128,11 @@ public class ImageWS {
     }
 
     return mediaType;
+  }
+
+  MediaType getMediaTypeFromImageContent(String imageName, byte[] content) {
+    String contentType = ImageBytes.fromBytes(imageName, content).contentType();
+    return MediaType.parseMediaType(contentType);
   }
 
   boolean isPdfContent(byte[] content) {

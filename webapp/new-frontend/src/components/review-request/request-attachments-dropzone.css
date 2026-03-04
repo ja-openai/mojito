@@ -110,6 +110,14 @@
   gap: var(--space-2);
 }
 
+.request-attachments__upload-meta {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
 .request-attachments__upload-row--attached {
   border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
   border-radius: var(--radius-2);
@@ -193,4 +201,9 @@
 
 .request-attachments__upload-status-label.status-error {
   color: var(--color-danger);
+}
+
+.request-attachments__upload-warning {
+  color: color-mix(in srgb, var(--color-warning, #b7791f) 88%, var(--color-text-muted));
+  font-size: var(--font-size-xs);
 }

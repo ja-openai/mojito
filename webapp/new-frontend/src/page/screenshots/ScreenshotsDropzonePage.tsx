@@ -2,7 +2,10 @@ import './screenshots-page.css';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ImageUploadOptimizationToggle } from '../../components/ImageUploadOptimizationToggle';
 import { Modal } from '../../components/Modal';
+import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
+import { getDbBackedUploadSizeError, getDbBackedUploadSizeWarning } from '../../utils/upload-size';
 
 type UploadStatus = 'uploading' | 'done' | 'error';
 
@@ -13,9 +16,10 @@ type UploadItem = {
   status: UploadStatus;
   uuid?: string;
   error?: string;
+  warning?: string;
 };
 
-const SUPPORTED_EXTENSIONS = ['png', 'jpg', 'jpeg'];
+const SUPPORTED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'];
 
 const createUuid = () => {
   if (typeof crypto !== 'undefined') {
@@ -38,7 +42,7 @@ const createUuid = () => {
 
 const isSupportedImage = (file: File) => {
   if (file.type) {
-    return file.type === 'image/png' || file.type === 'image/jpeg';
+    return file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'image/webp';
   }
   const lower = file.name.toLowerCase();
   return SUPPORTED_EXTENSIONS.some((ext) => lower.endsWith(`.${ext}`));
@@ -63,6 +67,7 @@ async function uploadImage(uuid: string, file: File, signal?: AbortSignal) {
 
 export function ScreenshotsDropzonePage() {
   const [items, setItems] = useState<UploadItem[]>([]);
+  const [optimizeImagesBeforeUpload, setOptimizeImagesBeforeUpload] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [zoomItem, setZoomItem] = useState<{ src: string; name: string } | null>(null);
@@ -126,11 +131,16 @@ export function ScreenshotsDropzonePage() {
   }, []);
 
   const handleFiles = useCallback(
-    (files: FileList | null) => {
+    async (files: FileList | null) => {
       if (!files || files.length === 0) return;
-      const fileArr = Array.from(files);
-      fileArr.forEach((file) => {
+      const preparedFiles = await Promise.all(
+        Array.from(files).map(async (file) =>
+          prepareDbBackedUploadFile(file, { optimizeImages: optimizeImagesBeforeUpload }),
+        ),
+      );
+      preparedFiles.forEach(({ file, displayName, warning }) => {
         const supported = isSupportedImage(file);
+        const sizeError = getDbBackedUploadSizeError(file);
         const previewUrl = supported ? URL.createObjectURL(file) : null;
         const id = createItemId();
 
@@ -138,10 +148,24 @@ export function ScreenshotsDropzonePage() {
           setItems((prev) => [
             {
               id,
-              fileName: file.name,
+              fileName: displayName,
               previewUrl: null,
               status: 'error',
-              error: 'Unsupported file type. Use PNG or JPG.',
+              error: 'Unsupported file type. Use PNG, JPG, or WEBP.',
+            },
+            ...prev,
+          ]);
+          return;
+        }
+
+        if (sizeError) {
+          setItems((prev) => [
+            {
+              id,
+              fileName: displayName,
+              previewUrl: null,
+              status: 'error',
+              error: sizeError,
             },
             ...prev,
           ]);
@@ -152,10 +176,11 @@ export function ScreenshotsDropzonePage() {
         setItems((prev) => [
           {
             id,
-            fileName: file.name,
+            fileName: displayName,
             previewUrl,
             status: 'uploading',
             uuid,
+            warning: warning ?? getDbBackedUploadSizeWarning(file) ?? undefined,
           },
           ...prev,
         ]);
@@ -181,7 +206,7 @@ export function ScreenshotsDropzonePage() {
         fileInputRef.current.value = '';
       }
     },
-    [updateItem],
+    [optimizeImagesBeforeUpload, updateItem],
   );
 
   useEffect(() => {
@@ -246,7 +271,7 @@ export function ScreenshotsDropzonePage() {
           event.preventDefault();
           dragCounter.current = 0;
           setDragging(false);
-          handleFiles(event.dataTransfer.files);
+          void handleFiles(event.dataTransfer.files);
         }}
         onClick={() => fileInputRef.current?.click()}
         onKeyDown={(event) => {
@@ -263,7 +288,19 @@ export function ScreenshotsDropzonePage() {
         <div className="screenshots-dropzone__title">
           {anyUploading ? 'Uploading screenshots...' : 'Drag screenshots here'}
         </div>
-        <div className="screenshots-dropzone__hint">PNG or JPG. You can drop multiple files.</div>
+        <div className="screenshots-dropzone__hint">PNG, JPG, or WEBP. Drop one or more files.</div>
+        <div
+          className="screenshots-dropzone__toggle"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <ImageUploadOptimizationToggle
+            checked={optimizeImagesBeforeUpload}
+            disabled={anyUploading}
+            onChange={setOptimizeImagesBeforeUpload}
+            label="Optimize large screenshots before upload"
+          />
+        </div>
         <button
           type="button"
           className="screenshots-page__button screenshots-page__button--primary"
@@ -278,10 +315,10 @@ export function ScreenshotsDropzonePage() {
           ref={fileInputRef}
           type="file"
           className="screenshots-dropzone__file-input"
-          accept="image/png,image/jpeg"
+          accept="image/png,image/jpeg,image/webp"
           multiple
           onChange={(event) => {
-            handleFiles(event.target.files);
+            void handleFiles(event.target.files);
           }}
         />
       </div>
@@ -326,6 +363,9 @@ export function ScreenshotsDropzonePage() {
                   </div>
                   <div className="screenshots-item__meta">
                     <div className="screenshots-item__name">{item.fileName}</div>
+                    {item.warning ? (
+                      <div className="screenshots-item__warning">{item.warning}</div>
+                    ) : null}
                     {item.status === 'done' && item.uuid ? (
                       <div className="screenshots-item__uuid">
                         <code>{`s:${item.uuid}`}</code>

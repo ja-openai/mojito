@@ -125,6 +125,13 @@
   font-size: var(--font-size-sm);
 }
 
+.screenshots-dropzone__toggle {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-1);
+}
+
 .screenshots-dropzone__file-input {
   display: none;
 }
@@ -282,6 +289,11 @@
 .screenshots-item__error {
   font-size: var(--font-size-xs);
   color: var(--color-danger);
+}
+
+.screenshots-item__warning {
+  font-size: var(--font-size-xs);
+  color: color-mix(in srgb, var(--color-warning, #b7791f) 88%, var(--color-text-muted));
 }
 
 .screenshots-item__actions {

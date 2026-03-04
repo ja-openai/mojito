@@ -15,10 +15,11 @@ import {
 } from '../../components/review-request/RequestAttachmentsDropzone';
 import { RequestDescriptionEditor } from '../../components/review-request/RequestDescriptionEditor';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import {
   buildRequestAttachmentUploadQueueEntries,
-  isSupportedRequestAttachmentFile,
+  canUploadRequestAttachmentFile,
   revokeRequestAttachmentUploadQueuePreviews,
   toDescriptionAttachmentMarkdown,
   uploadRequestAttachmentFile,
@@ -79,6 +80,7 @@ export function ReviewProjectCreateForm({
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
   const [uploadQueue, setUploadQueue] = useState<RequestAttachmentUploadQueueItem[]>([]);
+  const [optimizeImagesBeforeUpload, setOptimizeImagesBeforeUpload] = useState(true);
   const previewUrlsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => setName(defaultName), [defaultName]);
@@ -146,15 +148,28 @@ export function ReviewProjectCreateForm({
     if (!files || files.length === 0) {
       return [];
     }
-    const fileArr = Array.from(files);
-    const queueEntries = buildRequestAttachmentUploadQueueEntries(fileArr);
+    const preparedFiles = await Promise.all(
+      Array.from(files).map(async (file) =>
+        prepareDbBackedUploadFile(file, { optimizeImages: optimizeImagesBeforeUpload }),
+      ),
+    );
+    const queueEntries = buildRequestAttachmentUploadQueueEntries(
+      preparedFiles.map((prepared) => ({
+        file: prepared.file,
+        displayName: prepared.displayName,
+        warning: prepared.warning,
+      })),
+    );
     setUploadQueue((prev) => [...queueEntries, ...prev]);
     const uploadedKeys: string[] = [];
 
     await Promise.all(
       queueEntries.map(async (entry, index) => {
-        const file = fileArr[index];
-        if (!isSupportedRequestAttachmentFile(file)) {
+        const file = preparedFiles[index]?.file;
+        if (!file) {
+          return;
+        }
+        if (!canUploadRequestAttachmentFile(file)) {
           return;
         }
         try {
@@ -302,6 +317,8 @@ export function ReviewProjectCreateForm({
             uploadQueue={uploadQueue}
             disabled={isSubmitting}
             isUploading={uploadQueue.some((item) => item.status === 'uploading')}
+            optimizeImages={optimizeImagesBeforeUpload}
+            onToggleOptimizeImages={setOptimizeImagesBeforeUpload}
             onFilesSelected={async (files) => {
               await handleFiles(files);
             }}

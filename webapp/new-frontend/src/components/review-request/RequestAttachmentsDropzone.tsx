@@ -11,6 +11,7 @@ import {
   resolveAttachmentUrl,
   toDescriptionAttachmentMarkdown,
 } from '../../utils/request-attachments';
+import { ImageUploadOptimizationToggle } from '../ImageUploadOptimizationToggle';
 
 export type { RequestAttachmentUploadQueueItem } from '../../utils/request-attachments';
 
@@ -22,6 +23,8 @@ type Props = {
   emptyLabel?: string;
   uploadButtonLabel?: string;
   dropHint?: string;
+  optimizeImages?: boolean;
+  onToggleOptimizeImages?: (checked: boolean) => void;
   keys: string[];
   uploadQueue?: RequestAttachmentUploadQueueItem[];
   disabled?: boolean;
@@ -36,6 +39,8 @@ export function RequestAttachmentsDropzone({
   emptyLabel = 'No attachments',
   uploadButtonLabel = 'Drop files or click to upload',
   dropHint = 'or drop files here',
+  optimizeImages = true,
+  onToggleOptimizeImages,
   keys,
   uploadQueue = [],
   disabled = false,
@@ -130,6 +135,14 @@ export function RequestAttachmentsDropzone({
         <span className="request-attachments__label">{label}</span>
         <span className="request-attachments__hint">{hint}</span>
       </div>
+
+      {onToggleOptimizeImages ? (
+        <ImageUploadOptimizationToggle
+          checked={optimizeImages}
+          disabled={disabled || isUploading}
+          onChange={onToggleOptimizeImages}
+        />
+      ) : null}
 
       <div
         className={`request-attachments__dropzone${
@@ -279,9 +292,14 @@ export function RequestAttachmentsDropzone({
                 </span>
               )}
               <span className="request-attachments__upload-name">{item.name}</span>
-              <span className={`request-attachments__upload-status-label status-${item.status}`}>
-                {item.status === 'uploading' ? 'Uploading…' : item.error || 'Failed'}
-              </span>
+              <div className="request-attachments__upload-meta">
+                <span className={`request-attachments__upload-status-label status-${item.status}`}>
+                  {item.status === 'uploading' ? 'Uploading…' : item.error || 'Failed'}
+                </span>
+                {item.warning ? (
+                  <span className="request-attachments__upload-warning">{item.warning}</span>
+                ) : null}
+              </div>
             </div>
           ))}
         </div>
