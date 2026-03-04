@@ -1661,7 +1661,11 @@ function RequestGroupsSection({
                     </Pill>
                   </div>
                   <div className="review-projects-page__meta">
-                    {group.dueDate ? <span>Due {formatDateTime(group.dueDate)}</span> : null}
+                    {group.dueDate ? (
+                      <span title="Earliest due date across projects in this request">
+                        Earliest due* {formatDateTime(group.dueDate)}
+                      </span>
+                    ) : null}
                     {group.createdByUsername || group.assignedPmUsername ? (
                       <span className="review-projects-page__request-meta-inline">
                         {group.createdByUsername ? (

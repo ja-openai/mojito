@@ -16,7 +16,10 @@ import {
 } from '../../api/review-projects';
 import { checkTextUnitIntegrity, type TextUnitIntegrityCheckResult } from '../../api/text-units';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
-import { REVIEW_PROJECTS_QUERY_KEY } from '../../hooks/useReviewProjects';
+import {
+  REVIEW_PROJECT_REQUESTS_QUERY_KEY,
+  REVIEW_PROJECTS_QUERY_KEY,
+} from '../../hooks/useReviewProjects';
 
 export type SaveDecisionRequest = {
   textUnitId: number;
@@ -174,7 +177,8 @@ export function useReviewProjectMutations(
         [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
         updatedProject,
       );
-      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECT_REQUESTS_QUERY_KEY });
       setErrorMessage(null);
     },
     onError: (error) => {
@@ -207,7 +211,8 @@ export function useReviewProjectMutations(
         [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
         updatedProject,
       );
-      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECT_REQUESTS_QUERY_KEY });
       setErrorMessage(null);
     },
     onError: (error) => {
@@ -239,7 +244,8 @@ export function useReviewProjectMutations(
         [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
         updatedProject,
       );
-      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECT_REQUESTS_QUERY_KEY });
       setErrorMessage(null);
     },
     onError: (error) => {

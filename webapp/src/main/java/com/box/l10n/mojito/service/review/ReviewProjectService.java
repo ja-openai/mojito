@@ -818,13 +818,20 @@ public class ReviewProjectService {
     request.setNotes(trimmedNotes == null || trimmedNotes.isEmpty() ? null : trimmedNotes);
     reviewProjectRequestRepository.save(request);
 
-    if (type != null) {
-      reviewProject.setType(type);
+    if (type != null || dueDate != null) {
+      reviewProjectRepository
+          .findByRequestIdWithAssignment(request.getId())
+          .forEach(
+              project -> {
+                if (type != null) {
+                  project.setType(type);
+                }
+                if (dueDate != null) {
+                  project.setDueDate(dueDate);
+                }
+              });
     }
-    if (dueDate != null) {
-      reviewProject.setDueDate(dueDate);
-    }
-    reviewProjectRepository.save(reviewProject);
+    reviewProjectRepository.flush();
 
     if (screenshotImageIds != null) {
       reviewProjectScreenshotRepository.deleteByReviewProjectRequestId(request.getId());

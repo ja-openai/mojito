@@ -3480,7 +3480,7 @@ function ReviewProjectHeader({
                     />
                   </label>
                   <label className="review-project-page__description-field">
-                    <span className="review-project-page__description-label">Due date</span>
+                    <span className="review-project-page__description-label">Request due date</span>
                     <input
                       className="review-project-page__description-input"
                       type="datetime-local"
@@ -3490,6 +3490,11 @@ function ReviewProjectHeader({
                         !canEditRequest || mutations.isProjectRequestSaving || isAttachmentUploading
                       }
                     />
+                    {canEditRequest ? (
+                      <span className="review-project-page__description-help">
+                        Applies to all projects in this request.
+                      </span>
+                    ) : null}
                   </label>
                 </div>
                 <div className="review-project-page__description-two-up">
