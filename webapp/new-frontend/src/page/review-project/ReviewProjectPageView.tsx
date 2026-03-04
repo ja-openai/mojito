@@ -2760,10 +2760,14 @@ function ReviewProjectHeader({
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
+  const [isProjectDueDateModalOpen, setIsProjectDueDateModalOpen] = useState(false);
   const [requestNameDraft, setRequestNameDraft] = useState(name ?? '');
   const [descriptionDraft, setDescriptionDraft] = useState(description);
   const [projectTypeDraft, setProjectTypeDraft] = useState<ApiReviewProjectType>(type);
   const [dueDateDraft, setDueDateDraft] = useState(toDateTimeLocalInputValue(dueDate));
+  const [projectDueDateDraft, setProjectDueDateDraft] = useState(
+    toDateTimeLocalInputValue(dueDate),
+  );
   const [attachmentDrafts, setAttachmentDrafts] = useState<string[]>(requestAttachments);
   const [attachmentUploadQueue, setAttachmentUploadQueue] = useState<
     RequestAttachmentUploadQueueItem[]
@@ -2772,6 +2776,7 @@ function ReviewProjectHeader({
   const [isAttachmentUploading, setIsAttachmentUploading] = useState(false);
   const [attachmentUploadError, setAttachmentUploadError] = useState<string | null>(null);
   const [requestSaveError, setRequestSaveError] = useState<string | null>(null);
+  const [projectDueDateSaveError, setProjectDueDateSaveError] = useState<string | null>(null);
   const [assignmentTeamIdDraft, setAssignmentTeamIdDraft] = useState<number | null>(
     project.assignment?.teamId ?? null,
   );
@@ -2877,11 +2882,13 @@ function ReviewProjectHeader({
     setDescriptionDraft(description);
     setProjectTypeDraft(type);
     setDueDateDraft(toDateTimeLocalInputValue(dueDate));
+    setProjectDueDateDraft(toDateTimeLocalInputValue(dueDate));
     setAttachmentDrafts(requestAttachments);
     setAttachmentUploadQueue([]);
     setIsAttachmentUploading(false);
     setAttachmentUploadError(null);
     setRequestSaveError(null);
+    setProjectDueDateSaveError(null);
     setAssignmentTeamIdDraft(project.assignment?.teamId ?? null);
     setAssignmentPmUserIdDraft(project.assignment?.assignedPmUserId ?? null);
     setAssignmentTranslatorUserIdDraft(project.assignment?.assignedTranslatorUserId ?? null);
@@ -3082,6 +3089,15 @@ function ReviewProjectHeader({
     shouldReturnToReviewProjects,
   ]);
 
+  const closeProjectDueDateModal = useCallback(() => {
+    if (mutations.isProjectDueDateSaving) {
+      return;
+    }
+    setIsProjectDueDateModalOpen(false);
+    setProjectDueDateDraft(toDateTimeLocalInputValue(dueDate));
+    setProjectDueDateSaveError(null);
+  }, [dueDate, mutations.isProjectDueDateSaving]);
+
   const addAttachmentKeys = useCallback((raw: string[]) => {
     const next = raw
       .map((item) => item.trim())
@@ -3255,6 +3271,31 @@ function ReviewProjectHeader({
     mutations,
   ]);
 
+  const saveProjectDueDate = useCallback(async () => {
+    if (!canEditRequest) {
+      return;
+    }
+    if (!projectDueDateDraft) {
+      setProjectDueDateSaveError('Due date is required.');
+      return;
+    }
+    const dueDateParsed = new Date(projectDueDateDraft);
+    if (Number.isNaN(dueDateParsed.getTime())) {
+      setProjectDueDateSaveError('Due date is invalid.');
+      return;
+    }
+
+    try {
+      setProjectDueDateSaveError(null);
+      await mutations.onRequestProjectDueDateUpdate(dueDateParsed.toISOString());
+      setIsProjectDueDateModalOpen(false);
+    } catch (error) {
+      setProjectDueDateSaveError(
+        error instanceof Error ? error.message : 'Failed to update project due date.',
+      );
+    }
+  }, [canEditRequest, mutations, projectDueDateDraft]);
+
   const handleReviewPending = useCallback(() => {
     setShowCloseWarning(false);
     onReviewPending();
@@ -3344,7 +3385,22 @@ function ReviewProjectHeader({
                 •
               </span>
             ) : null}
-            <span>Due {formatDate(dueDate)}</span>
+            {canEditRequest ? (
+              <button
+                type="button"
+                className="review-project-page__header-link"
+                onClick={() => {
+                  setProjectDueDateDraft(toDateTimeLocalInputValue(dueDate));
+                  setProjectDueDateSaveError(null);
+                  setIsProjectDueDateModalOpen(true);
+                }}
+                title="Edit this project due date only"
+              >
+                Due {formatDate(dueDate)}
+              </button>
+            ) : (
+              <span>Due {formatDate(dueDate)}</span>
+            )}
             <button
               type="button"
               className="review-project-page__header-help"
@@ -3397,6 +3453,51 @@ function ReviewProjectHeader({
             onClick={confirmCloseProject}
           >
             Close project
+          </button>
+        </div>
+      </Modal>
+      <Modal
+        open={isProjectDueDateModalOpen}
+        size="sm"
+        role="dialog"
+        ariaLabel="Edit project due date"
+      >
+        <div className="modal__title">Edit project due date</div>
+        <div className="modal__body">
+          <label className="review-project-page__description-field">
+            <span className="review-project-page__description-label">Project due date</span>
+            <input
+              className="review-project-page__description-input"
+              type="datetime-local"
+              value={projectDueDateDraft}
+              onChange={(event) => setProjectDueDateDraft(event.target.value)}
+              disabled={mutations.isProjectDueDateSaving}
+            />
+          </label>
+          {projectDueDateSaveError ? (
+            <div className="review-project-page__description-error">
+              {projectDueDateSaveError}
+            </div>
+          ) : null}
+        </div>
+        <div className="modal__actions">
+          <button
+            type="button"
+            className="modal__button"
+            onClick={closeProjectDueDateModal}
+            disabled={mutations.isProjectDueDateSaving}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="modal__button modal__button--primary"
+            onClick={() => {
+              void saveProjectDueDate();
+            }}
+            disabled={mutations.isProjectDueDateSaving}
+          >
+            {mutations.isProjectDueDateSaving ? 'Saving…' : 'Save'}
           </button>
         </div>
       </Modal>

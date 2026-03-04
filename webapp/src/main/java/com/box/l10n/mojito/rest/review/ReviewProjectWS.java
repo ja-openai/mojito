@@ -125,6 +125,18 @@ public class ReviewProjectWS {
     return toDetailResponse(projectDetail);
   }
 
+  @PostMapping("/review-projects/{projectId}/due-date")
+  public GetReviewProjectResponse updateReviewProjectDueDate(
+      @PathVariable Long projectId, @RequestBody UpdateReviewProjectDueDateRequest request) {
+    if (request == null || request.dueDate() == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dueDate is required");
+    }
+
+    GetProjectDetailView projectDetail =
+        reviewProjectService.updateProjectDueDate(projectId, request.dueDate());
+    return toDetailResponse(projectDetail);
+  }
+
   @PostMapping("/review-project-requests/{requestId}/assignment/pm")
   public AdminBatchActionResponse updateReviewProjectRequestPmAssignment(
       @PathVariable Long requestId,
@@ -214,6 +226,8 @@ public class ReviewProjectWS {
       ReviewProjectType type,
       ZonedDateTime dueDate,
       List<String> screenshotImageIds) {}
+
+  public record UpdateReviewProjectDueDateRequest(ZonedDateTime dueDate) {}
 
   public record UpdateReviewProjectAssignmentRequest(
       Long teamId, Long assignedPmUserId, Long assignedTranslatorUserId, String note) {}

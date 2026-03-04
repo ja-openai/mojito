@@ -11,6 +11,7 @@ import {
   saveReviewProjectTextUnitDecision,
   setReviewProjectTextUnitDecisionState,
   updateReviewProjectAssignment,
+  updateReviewProjectDueDate,
   updateReviewProjectRequest,
   updateReviewProjectStatus,
 } from '../../api/review-projects';
@@ -55,6 +56,7 @@ export type ReviewProjectMutationControls = {
   isProjectStatusSaving: boolean;
   isProjectRequestSaving: boolean;
   isProjectAssignmentSaving: boolean;
+  isProjectDueDateSaving: boolean;
   errorMessage: string | null;
   activeTextUnitId: number | null;
   conflictTextUnit: ApiReviewProjectTextUnit | null;
@@ -80,6 +82,7 @@ export type ReviewProjectMutationControls = {
     assignedTranslatorUserId?: number | null;
     note?: string | null;
   }) => Promise<void>;
+  onRequestProjectDueDateUpdate: (dueDate: string) => Promise<void>;
 };
 
 type MutationError = Error & { status?: number; data?: ApiReviewProjectTextUnit | null };
@@ -253,6 +256,30 @@ export function useReviewProjectMutations(
     },
   });
 
+  const projectDueDateMutation = useMutation<ApiReviewProjectDetail, Error, string>({
+    mutationFn: async (dueDate) => {
+      if (projectId == null) {
+        throw new Error('Missing project id');
+      }
+      return updateReviewProjectDueDate(projectId, dueDate);
+    },
+    onSuccess: (updatedProject) => {
+      if (projectId == null) {
+        return;
+      }
+      queryClient.setQueryData<ApiReviewProjectDetail>(
+        [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
+        updatedProject,
+      );
+      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECT_REQUESTS_QUERY_KEY });
+      setErrorMessage(null);
+    },
+    onError: (error) => {
+      setErrorMessage(error.message || 'Failed to update project due date');
+    },
+  });
+
   const executeAction = useCallback(
     async (action: PendingAction, attemptId: number) => {
       if (projectId == null) {
@@ -401,6 +428,16 @@ export function useReviewProjectMutations(
     [projectAssignmentMutation, projectId],
   );
 
+  const onRequestProjectDueDateUpdate = useCallback(
+    async (dueDate: string) => {
+      if (projectId == null || projectDueDateMutation.isPending) {
+        return;
+      }
+      await projectDueDateMutation.mutateAsync(dueDate);
+    },
+    [projectDueDateMutation, projectId],
+  );
+
   const onConfirmValidationSave = useCallback(() => {
     if (!pendingValidationSave) {
       return;
@@ -485,6 +522,7 @@ export function useReviewProjectMutations(
       isProjectStatusSaving: projectStatusMutation.isPending,
       isProjectRequestSaving: projectRequestMutation.isPending,
       isProjectAssignmentSaving: projectAssignmentMutation.isPending,
+      isProjectDueDateSaving: projectDueDateMutation.isPending,
       errorMessage,
       activeTextUnitId,
       conflictTextUnit,
@@ -499,6 +537,7 @@ export function useReviewProjectMutations(
       onRequestProjectStatus,
       onRequestProjectRequestUpdate,
       onRequestProjectAssignmentUpdate,
+      onRequestProjectDueDateUpdate,
     }),
     [
       activeTextUnitId,
@@ -509,12 +548,14 @@ export function useReviewProjectMutations(
       onDismissValidationSave,
       onOverwriteConflict,
       onRequestDecisionState,
+      onRequestProjectDueDateUpdate,
       onRequestProjectRequestUpdate,
       onRequestProjectAssignmentUpdate,
       onRequestProjectStatus,
       onRequestSaveDecision,
       onUseConflictCurrent,
       pendingValidationSave,
+      projectDueDateMutation.isPending,
       projectRequestMutation.isPending,
       projectAssignmentMutation.isPending,
       projectStatusMutation.isPending,

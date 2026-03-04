@@ -390,6 +390,25 @@ export const updateReviewProjectRequest = async (
   return (await response.json()) as ApiReviewProjectDetail;
 };
 
+export const updateReviewProjectDueDate = async (
+  projectId: number,
+  dueDate: string,
+): Promise<ApiReviewProjectDetail> => {
+  const response = await fetch(`/api/review-projects/${projectId}/due-date`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify({ dueDate }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to update review project due date');
+  }
+
+  return (await response.json()) as ApiReviewProjectDetail;
+};
+
 export const updateReviewProjectAssignment = async (
   projectId: number,
   payload: {

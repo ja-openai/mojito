@@ -939,6 +939,29 @@ public class ReviewProjectService {
   }
 
   @Transactional
+  public GetProjectDetailView updateProjectDueDate(Long projectId, ZonedDateTime dueDate) {
+    if (dueDate == null) {
+      throw new IllegalArgumentException("dueDate must be provided");
+    }
+
+    ReviewProject reviewProject =
+        reviewProjectRepository
+            .findById(projectId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProject with id: " + projectId + " not found"));
+
+    if (!userService.isCurrentUserAdmin()) {
+      userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
+    }
+
+    reviewProject.setDueDate(dueDate);
+    reviewProjectRepository.save(reviewProject);
+    return getProjectDetail(projectId);
+  }
+
+  @Transactional
   public int updateRequestAssignedPm(Long requestId, Long assignedPmUserId, String note) {
     if (requestId == null) {
       throw new IllegalArgumentException("requestId is required");
