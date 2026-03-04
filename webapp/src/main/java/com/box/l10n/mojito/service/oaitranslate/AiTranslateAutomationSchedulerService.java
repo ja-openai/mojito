@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
+import com.box.l10n.mojito.entity.AiTranslateRun;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService.AiTranslateInput;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
@@ -24,22 +25,33 @@ public class AiTranslateAutomationSchedulerService {
   private static final String IMPORT_STATUS = "REVIEW_NEEDED";
 
   private final AiTranslateAutomationConfigService aiTranslateAutomationConfigService;
+  private final AiTranslateConfigurationProperties aiTranslateConfigurationProperties;
   private final AiTranslateService aiTranslateService;
+  private final AiTranslateRunService aiTranslateRunService;
   private final RepositoryRepository repositoryRepository;
   private final MeterRegistry meterRegistry;
 
   public AiTranslateAutomationSchedulerService(
       AiTranslateAutomationConfigService aiTranslateAutomationConfigService,
+      AiTranslateConfigurationProperties aiTranslateConfigurationProperties,
       AiTranslateService aiTranslateService,
+      AiTranslateRunService aiTranslateRunService,
       RepositoryRepository repositoryRepository,
       MeterRegistry meterRegistry) {
     this.aiTranslateAutomationConfigService = aiTranslateAutomationConfigService;
+    this.aiTranslateConfigurationProperties = aiTranslateConfigurationProperties;
     this.aiTranslateService = aiTranslateService;
+    this.aiTranslateRunService = aiTranslateRunService;
     this.repositoryRepository = repositoryRepository;
     this.meterRegistry = meterRegistry;
   }
 
   public RunResult scheduleConfiguredRepositories(String triggerSource, boolean requireEnabled) {
+    return scheduleConfiguredRepositories(triggerSource, requireEnabled, null);
+  }
+
+  public RunResult scheduleConfiguredRepositories(
+      String triggerSource, boolean requireEnabled, Long requestedByUserId) {
     incrementCounter("runs", Tags.of("result", "started"));
     try {
       var config = aiTranslateAutomationConfigService.getConfig();
@@ -81,7 +93,7 @@ public class AiTranslateAutomationSchedulerService {
 
         Repository repository = repositoryOptional.get();
         String uniqueId = UNIQUE_ID_PREFIX + repository.getId();
-        aiTranslateService.aiTranslateAsync(
+        AiTranslateInput aiTranslateInput =
             new AiTranslateInput(
                 repository.getName(),
                 null,
@@ -103,8 +115,19 @@ public class AiTranslateAutomationSchedulerService {
                 false,
                 false,
                 false,
-                null),
-            uniqueId);
+                null);
+        var pollableFuture = aiTranslateService.aiTranslateAsync(aiTranslateInput, uniqueId);
+        aiTranslateRunService.createScheduledRun(
+            "manual".equalsIgnoreCase(triggerSource)
+                ? AiTranslateRun.TriggerSource.MANUAL
+                : AiTranslateRun.TriggerSource.CRON,
+            repository,
+            requestedByUserId,
+            pollableFuture.getPollableTask(),
+            aiTranslateConfigurationProperties.getModelName(),
+            TRANSLATE_TYPE,
+            RELATED_STRINGS_TYPE,
+            config.sourceTextMaxCountPerLocale());
         logger.info(
             "AI translate automation repository scheduled: source={}, repositoryId={}, repositoryName={}, uniqueId={}",
             triggerSource,

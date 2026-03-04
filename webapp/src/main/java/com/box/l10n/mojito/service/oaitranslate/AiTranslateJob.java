@@ -18,10 +18,20 @@ public class AiTranslateJob extends QuartzPollableJob<AiTranslateInput, Void> {
   static Logger logger = LoggerFactory.getLogger(AiTranslateJob.class);
 
   @Autowired AiTranslateService aiTranslateService;
+  @Autowired AiTranslateRunService aiTranslateRunService;
 
   @Override
   public Void call(AiTranslateInput aiTranslateJobInput) throws Exception {
-    aiTranslateService.aiTranslate(aiTranslateJobInput, getCurrentPollableTask());
-    return null;
+    Long pollableTaskId = getCurrentPollableTask().getId();
+    aiTranslateRunService.markRunning(pollableTaskId);
+    try {
+      AiTranslateService.AiTranslateRunTotals totals =
+          aiTranslateService.aiTranslate(aiTranslateJobInput, getCurrentPollableTask());
+      aiTranslateRunService.markCompleted(pollableTaskId, totals);
+      return null;
+    } catch (Exception e) {
+      aiTranslateRunService.markFailed(pollableTaskId);
+      throw e;
+    }
   }
 }

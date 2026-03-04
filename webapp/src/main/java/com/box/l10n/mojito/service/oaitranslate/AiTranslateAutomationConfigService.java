@@ -39,7 +39,7 @@ public class AiTranslateAutomationConfigService {
         entity.isEnabled(),
         decodeRepositoryIds(entity.getRepositoryIdsJson()),
         normalizeSourceTextMaxCountPerLocale(entity.getSourceTextMaxCountPerLocale()),
-        normalizeCronExpression(entity.getCronExpression()));
+        sanitizeStoredCronExpression(entity.getCronExpression()));
   }
 
   @Transactional
@@ -101,6 +101,19 @@ public class AiTranslateAutomationConfigService {
     if (!CronExpression.isValidExpression(trimmed)) {
       throw new IllegalArgumentException("Invalid cron expression");
     }
+    return trimmed;
+  }
+
+  private String sanitizeStoredCronExpression(String cronExpression) {
+    if (cronExpression == null) {
+      return null;
+    }
+
+    String trimmed = cronExpression.trim();
+    if (trimmed.isEmpty()) {
+      return null;
+    }
+
     return trimmed;
   }
 }

@@ -6,7 +6,9 @@ import { Navigate } from 'react-router-dom';
 
 import {
   type ApiAiTranslateAutomationConfig,
+  type ApiAiTranslateAutomationRun,
   fetchAiTranslateAutomationConfig,
+  fetchAiTranslateAutomationRuns,
   runAiTranslateAutomationNow,
   updateAiTranslateAutomationConfig,
 } from '../../api/ai-translate-automation';
@@ -39,6 +41,12 @@ export function AdminAiTranslateAutomationPage() {
     staleTime: 30_000,
     enabled: isAdmin,
   });
+  const automationRunsQuery = useQuery<ApiAiTranslateAutomationRun[]>({
+    queryKey: ['ai-translate-automation-runs'],
+    queryFn: fetchAiTranslateAutomationRuns,
+    staleTime: 10_000,
+    enabled: isAdmin,
+  });
 
   const saveAutomationMutation = useMutation({
     mutationFn: updateAiTranslateAutomationConfig,
@@ -49,11 +57,15 @@ export function AdminAiTranslateAutomationPage() {
       setAutomationRepositoryIdsDraft(nextConfig.repositoryIds);
       setAutomationSourceTextMaxDraft(String(nextConfig.sourceTextMaxCountPerLocale));
       setAutomationCronExpressionDraft(nextConfig.cronExpression ?? '');
+      await queryClient.invalidateQueries({ queryKey: ['ai-translate-automation-runs'] });
     },
   });
 
   const runAutomationMutation = useMutation({
     mutationFn: runAiTranslateAutomationNow,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['ai-translate-automation-runs'] });
+    },
   });
 
   useEffect(() => {
@@ -305,6 +317,92 @@ export function AdminAiTranslateAutomationPage() {
           </div>
         </div>
       </section>
+
+      <section className="settings-card" aria-labelledby="settings-ai-translate-runs">
+        <div className="settings-card__header">
+          <h2 id="settings-ai-translate-runs">Recent runs</h2>
+        </div>
+        {automationRunsQuery.error ? (
+          <p className="settings-hint is-error">
+            {automationRunsQuery.error instanceof Error
+              ? automationRunsQuery.error.message
+              : 'Failed to load recent AI translate runs.'}
+          </p>
+        ) : null}
+        <div className="settings-hint">
+          Repository-level AI translate jobs scheduled by automation or manual runs.
+        </div>
+        <div className="settings-table-wrapper">
+          <table className="settings-table">
+            <thead>
+              <tr>
+                <th>Created</th>
+                <th>Source</th>
+                <th>Repository</th>
+                <th>Status</th>
+                <th>Pollable task</th>
+                <th>Model</th>
+                <th>Batch</th>
+                <th>Tokens</th>
+                <th>Est. cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {automationRunsQuery.data?.length ? (
+                automationRunsQuery.data.map((run) => (
+                  <tr key={run.id}>
+                    <td>{formatDateTime(run.createdAt)}</td>
+                    <td>{run.triggerSource.toLowerCase()}</td>
+                    <td>{run.repositoryName}</td>
+                    <td>{formatStatus(run.status)}</td>
+                    <td>{run.pollableTaskId ?? '—'}</td>
+                    <td>{run.model}</td>
+                    <td>{run.sourceTextMaxCountPerLocale}</td>
+                    <td>{formatTotalTokens(run)}</td>
+                    <td>{formatEstimatedCostUsd(run.estimatedCostUsd)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={9}>
+                    {automationRunsQuery.isLoading ? 'Loading runs…' : 'No runs recorded yet.'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return '—';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
+}
+
+function formatStatus(value: string) {
+  return value.toLowerCase().split('_').join(' ');
+}
+
+function formatTotalTokens(run: ApiAiTranslateAutomationRun) {
+  return run.inputTokens + run.outputTokens;
+}
+
+function formatEstimatedCostUsd(value: string | null) {
+  if (value == null) {
+    return '—';
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return '—';
+  }
+  return `$${parsed.toFixed(6)}`;
 }

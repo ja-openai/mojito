@@ -235,3 +235,32 @@
 .settings-repository-select.chip-dropdown {
   width: 100%;
 }
+
+.settings-table-wrapper {
+  overflow-x: auto;
+}
+
+.settings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.settings-table th,
+.settings-table td {
+  padding: var(--space-2) var(--space-1);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  text-align: left;
+  vertical-align: top;
+}
+
+.settings-table th {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.settings-table td {
+  color: var(--color-text);
+}

@@ -206,6 +206,8 @@ public class WebSecurityConfig {
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/ai-translate/automation")
                 .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/ai-translate/automation/runs")
+                .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/ai-translate/automation")
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/ai-translate/automation/run")

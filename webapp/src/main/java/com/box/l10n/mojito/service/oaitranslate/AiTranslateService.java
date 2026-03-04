@@ -64,6 +64,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -104,6 +106,13 @@ public class AiTranslateService {
       return inputTokens + outputTokens;
     }
   }
+
+  public record AiTranslateRunTotals(
+      long inputTokens,
+      long cachedInputTokens,
+      long outputTokens,
+      long reasoningTokens,
+      BigDecimal estimatedCostUsd) {}
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(AiTranslateService.class);
@@ -289,8 +298,8 @@ public class AiTranslateService {
     return groups;
   }
 
-  public void aiTranslate(AiTranslateInput aiTranslateInput, PollableTask currentTask)
-      throws AiTranslateException {
+  public AiTranslateRunTotals aiTranslate(
+      AiTranslateInput aiTranslateInput, PollableTask currentTask) throws AiTranslateException {
     String mode = aiTranslateInput.useBatch() ? MODE_BATCH : MODE_NO_BATCH;
     String model = getModel(aiTranslateInput);
     Tags jobTags =
@@ -299,11 +308,14 @@ public class AiTranslateService {
 
     try {
       if (aiTranslateInput.useBatch()) {
-        aiTranslateBatch(aiTranslateInput, currentTask);
+        AiTranslateRunTotals totals = aiTranslateBatch(aiTranslateInput, currentTask);
+        incrementCounter(metricName("jobs"), jobTags.and("result", "completed"));
+        return totals;
       } else {
-        aiTranslateNoBatch(aiTranslateInput, currentTask);
+        AiTranslateRunTotals totals = aiTranslateNoBatch(aiTranslateInput, currentTask);
+        incrementCounter(metricName("jobs"), jobTags.and("result", "completed"));
+        return totals;
       }
-      incrementCounter(metricName("jobs"), jobTags.and("result", "completed"));
     } catch (AiTranslateException | RuntimeException e) {
       incrementCounter(metricName("jobs"), jobTags.and("result", "failed"));
       throw e;
@@ -320,7 +332,8 @@ public class AiTranslateService {
       TextUnitDTO textUnitDTO,
       CompletableFuture<ResponsesResponse> responsesResponseCompletableFuture) {}
 
-  public void aiTranslateNoBatch(AiTranslateInput aiTranslateInput, PollableTask currentTask) {
+  public AiTranslateRunTotals aiTranslateNoBatch(
+      AiTranslateInput aiTranslateInput, PollableTask currentTask) {
     Repository repository = getRepository(aiTranslateInput);
 
     logger.info("Start AI Translation (no batch) for repository: {}", repository.getName());
@@ -335,6 +348,10 @@ public class AiTranslateService {
                 aiTranslateInput.relatedStringsType()));
 
     Stopwatch stopwatchForTotal = Stopwatch.createStarted();
+    long runInputTokens = 0L;
+    long runCachedInputTokens = 0L;
+    long runOutputTokens = 0L;
+    long runReasoningTokens = 0L;
 
     List<String> reportFilenames = new ArrayList<>();
     for (RepositoryLocale repositoryLocale : filteredRepositoryLocales) {
@@ -684,6 +701,10 @@ public class AiTranslateService {
                         TextextUnitsByScreenshotWithResponsesResponse
                             ::responsesResponseCompletableFuture)
                     .toList());
+        runInputTokens += responsesUsageTotals.inputTokens();
+        runCachedInputTokens += responsesUsageTotals.cachedInputTokens();
+        runOutputTokens += responsesUsageTotals.outputTokens();
+        runReasoningTokens += responsesUsageTotals.reasoningTokens();
 
         incrementCounter(
             metricName("textUnits"), localeTags.and("result", "skipped"), skippedTextUnitCount);
@@ -791,6 +812,15 @@ public class AiTranslateService {
         "Done with AI Translation (no batch) for repository: {}, total time: {}",
         repository.getName(),
         stopwatchForTotal);
+    ResponsesUsageTotals runUsageTotals =
+        new ResponsesUsageTotals(
+            runInputTokens, runCachedInputTokens, runOutputTokens, runReasoningTokens);
+    return new AiTranslateRunTotals(
+        runUsageTotals.inputTokens(),
+        runUsageTotals.cachedInputTokens(),
+        runUsageTotals.outputTokens(),
+        runUsageTotals.reasoningTokens(),
+        estimateCostUsd(runUsageTotals));
   }
 
   void putReportContent(PollableTask currentTask, List<String> reportFilenames) {
@@ -910,8 +940,8 @@ public class AiTranslateService {
     return cause instanceof IOException || cause instanceof TimeoutException;
   }
 
-  public void aiTranslateBatch(AiTranslateInput aiTranslateInput, PollableTask currentTask)
-      throws AiTranslateException {
+  public AiTranslateRunTotals aiTranslateBatch(
+      AiTranslateInput aiTranslateInput, PollableTask currentTask) throws AiTranslateException {
 
     try {
       AiTranslateLegacyBatchService.LegacyBatchCreationResult batchCreationResult =
@@ -933,6 +963,7 @@ public class AiTranslateService {
       logger.info(
           "Schedule AiTranslateBatchesImportJob, id: {}",
           aiTranslateBatchesImportOutputPollableFuture.getPollableTask().getId());
+      return new AiTranslateRunTotals(0L, 0L, 0L, 0L, BigDecimal.ZERO.setScale(6));
 
     } catch (OpenAIClient.OpenAIClientResponseException openAIClientResponseException) {
       logger.error(
@@ -1447,22 +1478,32 @@ public class AiTranslateService {
     return value == null ? 0L : value.longValue();
   }
 
-  private String formatEstimatedCostUsd(ResponsesUsageTotals usageTotals) {
+  private BigDecimal estimateCostUsd(ResponsesUsageTotals usageTotals) {
     AiTranslateConfigurationProperties.PricingProperties pricing =
         aiTranslateConfigurationProperties.getPricing();
     if (pricing == null) {
-      return "n/a";
+      return null;
     }
 
     long nonCachedInputTokens =
         Math.max(0L, usageTotals.inputTokens() - usageTotals.cachedInputTokens());
-    double estimatedCostUsd =
-        (nonCachedInputTokens / 1_000_000d) * pricing.getInputCostPerMillion()
-            + (usageTotals.cachedInputTokens() / 1_000_000d)
-                * pricing.getCachedInputCostPerMillion()
-            + (usageTotals.outputTokens() / 1_000_000d) * pricing.getOutputCostPerMillion();
+    return BigDecimal.valueOf(nonCachedInputTokens)
+        .multiply(BigDecimal.valueOf(pricing.getInputCostPerMillion()))
+        .add(
+            BigDecimal.valueOf(usageTotals.cachedInputTokens())
+                .multiply(BigDecimal.valueOf(pricing.getCachedInputCostPerMillion())))
+        .add(
+            BigDecimal.valueOf(usageTotals.outputTokens())
+                .multiply(BigDecimal.valueOf(pricing.getOutputCostPerMillion())))
+        .divide(BigDecimal.valueOf(1_000_000L), 6, RoundingMode.HALF_UP);
+  }
 
-    return String.format(Locale.ROOT, "%.6f", estimatedCostUsd);
+  private String formatEstimatedCostUsd(ResponsesUsageTotals usageTotals) {
+    BigDecimal estimatedCostUsd = estimateCostUsd(usageTotals);
+    if (estimatedCostUsd == null) {
+      return "n/a";
+    }
+    return estimatedCostUsd.toPlainString();
   }
 
   private int resolveNoBatchTimeoutSeconds(

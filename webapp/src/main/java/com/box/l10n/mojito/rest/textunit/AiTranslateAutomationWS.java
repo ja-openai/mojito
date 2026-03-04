@@ -3,6 +3,8 @@ package com.box.l10n.mojito.rest.textunit;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateAutomationConfigService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateAutomationCronSchedulerService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateAutomationSchedulerService;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateRunService;
+import com.box.l10n.mojito.service.team.TeamService;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,14 +19,20 @@ public class AiTranslateAutomationWS {
   private final AiTranslateAutomationConfigService aiTranslateAutomationConfigService;
   private final AiTranslateAutomationCronSchedulerService aiTranslateAutomationCronSchedulerService;
   private final AiTranslateAutomationSchedulerService aiTranslateAutomationSchedulerService;
+  private final AiTranslateRunService aiTranslateRunService;
+  private final TeamService teamService;
 
   public AiTranslateAutomationWS(
       AiTranslateAutomationConfigService aiTranslateAutomationConfigService,
       AiTranslateAutomationCronSchedulerService aiTranslateAutomationCronSchedulerService,
-      AiTranslateAutomationSchedulerService aiTranslateAutomationSchedulerService) {
+      AiTranslateAutomationSchedulerService aiTranslateAutomationSchedulerService,
+      AiTranslateRunService aiTranslateRunService,
+      TeamService teamService) {
     this.aiTranslateAutomationConfigService = aiTranslateAutomationConfigService;
     this.aiTranslateAutomationCronSchedulerService = aiTranslateAutomationCronSchedulerService;
     this.aiTranslateAutomationSchedulerService = aiTranslateAutomationSchedulerService;
+    this.aiTranslateRunService = aiTranslateRunService;
+    this.teamService = teamService;
   }
 
   @RequestMapping(method = RequestMethod.GET, value = "/api/ai-translate/automation")
@@ -61,8 +69,38 @@ public class AiTranslateAutomationWS {
   @ResponseStatus(HttpStatus.OK)
   public RunAutomationResponse runAutomationNow() {
     var result =
-        aiTranslateAutomationSchedulerService.scheduleConfiguredRepositories("manual", false);
+        aiTranslateAutomationSchedulerService.scheduleConfiguredRepositories(
+            "manual", false, teamService.getCurrentUserIdOrThrow());
     return new RunAutomationResponse(result.scheduledRepositoryCount());
+  }
+
+  @RequestMapping(method = RequestMethod.GET, value = "/api/ai-translate/automation/runs")
+  @ResponseStatus(HttpStatus.OK)
+  public List<AutomationRunResponse> getAutomationRuns() {
+    return aiTranslateRunService.getRecentRuns().stream()
+        .map(
+            run ->
+                new AutomationRunResponse(
+                    run.id(),
+                    run.triggerSource(),
+                    run.repositoryId(),
+                    run.repositoryName(),
+                    run.requestedByUserId(),
+                    run.pollableTaskId(),
+                    run.model(),
+                    run.translateType(),
+                    run.relatedStringsType(),
+                    run.sourceTextMaxCountPerLocale(),
+                    run.status(),
+                    run.createdAt() == null ? null : run.createdAt().toString(),
+                    run.startedAt() == null ? null : run.startedAt().toString(),
+                    run.finishedAt() == null ? null : run.finishedAt().toString(),
+                    run.inputTokens(),
+                    run.cachedInputTokens(),
+                    run.outputTokens(),
+                    run.reasoningTokens(),
+                    run.estimatedCostUsd()))
+        .toList();
   }
 
   public record AutomationConfigRequest(
@@ -78,4 +116,25 @@ public class AiTranslateAutomationWS {
       String cronExpression) {}
 
   public record RunAutomationResponse(int scheduledRepositoryCount) {}
+
+  public record AutomationRunResponse(
+      Long id,
+      String triggerSource,
+      Long repositoryId,
+      String repositoryName,
+      Long requestedByUserId,
+      Long pollableTaskId,
+      String model,
+      String translateType,
+      String relatedStringsType,
+      int sourceTextMaxCountPerLocale,
+      String status,
+      String createdAt,
+      String startedAt,
+      String finishedAt,
+      long inputTokens,
+      long cachedInputTokens,
+      long outputTokens,
+      long reasoningTokens,
+      java.math.BigDecimal estimatedCostUsd) {}
 }
