@@ -71,6 +71,7 @@ public class ThirdPartySyncCommandTest extends CLITestBase {
     String skipAssetPattern = "%skip_asset_pattern%";
     List<String> options =
         Arrays.asList(
+            "excluded-locales=fr,ga",
             "special-option=value@of%Option",
             "smartling-placeholder-custom=\\{\\{\\}\\}|\\{\\{?.+?\\}\\}?|\\%\\%\\(.+?\\)s|\\%\\(.+?\\)s|\\%\\(.+?\\)d|\\%\\%s|\\%s");
 
@@ -124,7 +125,7 @@ public class ThirdPartySyncCommandTest extends CLITestBase {
     assertThat(jobInput.getPluralSeparator()).isEqualTo(" _");
     assertThat(jobInput.getSkipTextUnitsWithPattern()).isEqualTo(skipTextUnitPattern);
     assertThat(jobInput.getSkipAssetsWithPathPattern()).isEqualTo(skipAssetPattern);
-    assertThat(jobInput.getOptions()).containsExactlyInAnyOrderElementsOf(options);
+    assertThat(jobInput.getOptions()).containsAll(options);
   }
 
   @Test

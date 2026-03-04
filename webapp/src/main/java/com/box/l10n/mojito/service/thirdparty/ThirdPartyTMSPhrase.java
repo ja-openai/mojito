@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -52,6 +53,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ThirdPartyTMSPhrase implements ThirdPartyTMS {
 
+  static final String EXCLUDED_LOCALES_OPTION = "excluded-locales";
   static final String TAG_PREFIX = "push_";
   static final String TAG_PREFIX_WITH_REPOSITORY = "push_%s";
   static final String TAG_DATE_FORMAT = "yyyy_MM_dd_HH_mm_ss_SSS";
@@ -376,6 +378,7 @@ public class ThirdPartyTMSPhrase implements ThirdPartyTMS {
     String currentTags = getCurrentTagsForRepository(repository, projectId);
 
     OptionsParser optionsParser = new OptionsParser(optionList);
+    Set<String> excludedLocaleTags = getExcludedLocaleTags(optionList);
 
     AtomicReference<IntegrityChecksType> integrityChecksType =
         new AtomicReference<>(IntegrityChecksType.KEEP_STATUS_IF_SAME_TARGET_AND_NOT_INCLUDED);
@@ -386,6 +389,7 @@ public class ThirdPartyTMSPhrase implements ThirdPartyTMS {
     // though.
     // but 4 qps is very low to download 64 locales.
     repositoryLocalesWithoutRootLocale.parallelStream()
+        .filter(locale -> !isExcluded(locale, excludedLocaleTags))
         .forEach(
             locale ->
                 pullLocaleTimed(
@@ -546,6 +550,7 @@ public class ThirdPartyTMSPhrase implements ThirdPartyTMS {
       List<String> optionList) {
 
     OptionsParser optionsParser = new OptionsParser(optionList);
+    Set<String> excludedLocaleTags = getExcludedLocaleTags(optionList);
     Boolean nativeClient = optionsParser.getBoolean("nativeClient", NATIVE_CLIENT_DEFAULT_VALUE);
     Map<String, String> formatOptions = getFormatOptions(optionsParser);
 
@@ -589,6 +594,12 @@ public class ThirdPartyTMSPhrase implements ThirdPartyTMS {
         repositoryService.getRepositoryLocalesWithoutRootLocale(repository);
 
     for (RepositoryLocale repositoryLocale : repositoryLocalesWithoutRootLocale) {
+      if (isExcluded(repositoryLocale, excludedLocaleTags)) {
+        logger.info(
+            "Skipping push translations for excluded locale: {}",
+            repositoryLocale.getLocale().getBcp47Tag());
+        continue;
+      }
       List<TextUnitDTO> textUnitDTOS =
           getTextUnitDTOSForLocale(
               repository,
@@ -672,6 +683,26 @@ public class ThirdPartyTMSPhrase implements ThirdPartyTMS {
       List<String> optionList,
       Map<String, String> localeMapping) {
     throw new UnsupportedOperationException("Pull source is not supported");
+  }
+
+  static Set<String> getExcludedLocaleTags(List<String> optionList) {
+    AtomicReference<String> excludedLocales = new AtomicReference<>();
+    new OptionsParser(optionList).getString(EXCLUDED_LOCALES_OPTION, excludedLocales::set);
+
+    if (excludedLocales.get() == null || excludedLocales.get().isBlank()) {
+      return Set.of();
+    }
+
+    return Arrays.stream(excludedLocales.get().split(","))
+        .map(String::trim)
+        .filter(localeTag -> !localeTag.isEmpty())
+        .map(localeTag -> localeTag.toLowerCase(Locale.ROOT))
+        .collect(Collectors.toSet());
+  }
+
+  private boolean isExcluded(RepositoryLocale repositoryLocale, Set<String> excludedLocaleTags) {
+    return excludedLocaleTags.contains(
+        repositoryLocale.getLocale().getBcp47Tag().toLowerCase(Locale.ROOT));
   }
 
   private static Map<String, String> getFormatOptions(OptionsParser optionsParser) {

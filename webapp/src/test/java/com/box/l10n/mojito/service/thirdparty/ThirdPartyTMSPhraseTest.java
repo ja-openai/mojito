@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.thirdparty;
 
 import static com.box.l10n.mojito.service.thirdparty.ThirdPartyTMSPhrase.areTagsWithin5Minutes;
 import static com.box.l10n.mojito.service.thirdparty.ThirdPartyTMSPhrase.uploadTagToLocalDateTime;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
@@ -136,5 +137,15 @@ public class ThirdPartyTMSPhraseTest extends ServiceTestBase {
     String tag1 = "push_test_2024_11_21_18_55_38_004_502";
     String tag2 = "push_test_2024_11_21_18_49_30_123_456";
     assertFalse(areTagsWithin5Minutes(tag1, tag2));
+  }
+
+  @Test
+  public void getExcludedLocaleTags() {
+    assertThat(ThirdPartyTMSPhrase.getExcludedLocaleTags(null)).isEmpty();
+    assertThat(ThirdPartyTMSPhrase.getExcludedLocaleTags(List.of())).isEmpty();
+    assertThat(
+            ThirdPartyTMSPhrase.getExcludedLocaleTags(
+                List.of("excluded-locales=fr, GA , ,zh-Hant")))
+        .containsExactlyInAnyOrder("fr", "ga", "zh-hant");
   }
 }
