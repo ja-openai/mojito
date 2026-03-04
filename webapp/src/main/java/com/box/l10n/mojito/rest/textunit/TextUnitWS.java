@@ -504,6 +504,27 @@ public class TextUnitWS {
     tmTextUnitCurrentVariantService.removeCurrentVariant(textUnitId);
   }
 
+  @RequestMapping(method = RequestMethod.POST, value = "/api/textunits/current-variants/delete-batch")
+  public DeleteTMTextUnitCurrentVariantsResponse deleteTMTextUnitCurrentVariants(
+      @RequestBody DeleteTMTextUnitCurrentVariantsBody body) {
+    int deletedCount =
+        tmTextUnitCurrentVariantService.removeCurrentVariants(body.tmTextUnitCurrentVariantIds());
+    return new DeleteTMTextUnitCurrentVariantsResponse(deletedCount);
+  }
+
+  @RequestMapping(
+      method = RequestMethod.POST,
+      value = "/api/textunits/current-variants/update-status-batch")
+  public UpdateTMTextUnitCurrentVariantsStatusResponse updateTMTextUnitCurrentVariantsStatus(
+      @RequestBody UpdateTMTextUnitCurrentVariantsStatusBody body) {
+    int updatedCount =
+        tmTextUnitCurrentVariantService.updateCurrentVariantStatuses(
+            body.tmTextUnitCurrentVariantIds(),
+            body.status(),
+            body.includedInLocalizedFile());
+    return new UpdateTMTextUnitCurrentVariantsStatusResponse(updatedCount);
+  }
+
   @RequestMapping(method = RequestMethod.POST, value = "/api/textunits/check")
   public TMTextUnitIntegrityCheckResult checkTMTextUnit(
       @RequestBody TextUnitCheckBody textUnitCheckBody) {
@@ -655,4 +676,15 @@ public class TextUnitWS {
         gitBlameService.saveGitBlameWithUsages(gitBlameWithUsages);
     return pollableFuture.getPollableTask();
   }
+
+  public record DeleteTMTextUnitCurrentVariantsBody(List<Long> tmTextUnitCurrentVariantIds) {}
+
+  public record DeleteTMTextUnitCurrentVariantsResponse(int deletedCount) {}
+
+  public record UpdateTMTextUnitCurrentVariantsStatusBody(
+      List<Long> tmTextUnitCurrentVariantIds,
+      TMTextUnitVariant.Status status,
+      boolean includedInLocalizedFile) {}
+
+  public record UpdateTMTextUnitCurrentVariantsStatusResponse(int updatedCount) {}
 }

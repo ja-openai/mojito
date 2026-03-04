@@ -5,10 +5,12 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 import {
   type ApiTextUnit,
   checkTextUnitIntegrity,
+  deleteTextUnitCurrentVariants,
   saveTextUnit,
   type SaveTextUnitRequest,
   type TextUnitIntegrityCheckResult,
   type TextUnitSearchRequest,
+  updateTextUnitCurrentVariantsStatus,
 } from '../../api/text-units';
 import { formatStatus, mapUiStatusToApi, updateInfiniteData } from './workbench-helpers';
 import type { WorkbenchRow } from './workbench-types';
@@ -35,6 +37,10 @@ type WorksetEditEntry = {
   latestStatusLabel: string;
   updatedAt: number;
 };
+
+type PendingBulkAction =
+  | { kind: 'delete'; count: number }
+  | { kind: 'status'; count: number; statusLabel: string };
 
 type Params = {
   apiRows: WorkbenchRow[];
@@ -73,6 +79,14 @@ type UseWorkbenchEditsResult = {
   translationInputRef: RefObject<HTMLTextAreaElement>;
   registerRowRef: (rowId: string, element: HTMLDivElement | null) => void;
   isSaving: boolean;
+  isApplyingBulkAction: boolean;
+  bulkActionRowCount: number;
+  bulkActionErrorMessage: string | null;
+  pendingBulkAction: PendingBulkAction | null;
+  requestDeleteAll: () => void;
+  requestBulkStatusChange: (statusLabel: string) => void;
+  confirmBulkAction: () => void;
+  dismissBulkAction: () => void;
   saveErrorMessage: string | null;
   pendingValidationSave: { request: SaveTextUnitMutationVars; body: string } | null;
   confirmValidationSave: () => void;
@@ -96,10 +110,12 @@ export function useWorkbenchEdits({
     translation: string | null;
   } | null>(null);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+  const [bulkActionErrorMessage, setBulkActionErrorMessage] = useState<string | null>(null);
   const [pendingValidationSave, setPendingValidationSave] = useState<{
     request: SaveTextUnitMutationVars;
     body: string;
   } | null>(null);
+  const [pendingBulkAction, setPendingBulkAction] = useState<PendingBulkAction | null>(null);
   const [statusSavingRowIds, setStatusSavingRowIds] = useState<Set<string>>(() => new Set());
   const [worksetEdits, setWorksetEdits] = useState<Map<string, WorksetEditEntry>>(() => new Map());
   const [diffRowId, setDiffRowId] = useState<string | null>(null);
@@ -266,6 +282,83 @@ export function useWorkbenchEdits({
     },
   });
 
+  const deletableCurrentVariantIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          apiRows
+            .filter(
+              (row) =>
+                row.canEdit && typeof row.tmTextUnitCurrentVariantId === 'number',
+            )
+            .map((row) => row.tmTextUnitCurrentVariantId as number),
+        ),
+      ),
+    [apiRows],
+  );
+
+  const deleteAllMutation = useMutation<
+    { deletedCount: number },
+    Error,
+    number[]
+  >({
+    mutationFn: (tmTextUnitCurrentVariantIds) =>
+      deleteTextUnitCurrentVariants(tmTextUnitCurrentVariantIds),
+    onMutate: async () => {
+      setBulkActionErrorMessage(null);
+      await queryClient.cancelQueries({ queryKey: ['workbench-search'] });
+    },
+    onSuccess: async () => {
+      saveAttemptRef.current += 1;
+      setPendingBulkAction(null);
+      setEditingRowId(null);
+      setEditingValue('');
+      setEditingInitialValue('');
+      setPendingEditingTarget(null);
+      setPendingValidationSave(null);
+      setSaveErrorMessage(null);
+      setStatusSavingRowIds(new Set());
+      clearWorksetEdits();
+      await queryClient.refetchQueries({ queryKey: ['workbench-search'], type: 'active' });
+    },
+    onError: (error) => {
+      setBulkActionErrorMessage(error.message || 'Failed to delete loaded translations.');
+    },
+  });
+
+  const updateAllStatusesMutation = useMutation<
+    { updatedCount: number },
+    Error,
+    { tmTextUnitCurrentVariantIds: number[]; status: NonNullable<SaveTextUnitRequest['status']>; includedInLocalizedFile: boolean }
+  >({
+    mutationFn: ({ tmTextUnitCurrentVariantIds, status, includedInLocalizedFile }) =>
+      updateTextUnitCurrentVariantsStatus(
+        tmTextUnitCurrentVariantIds,
+        status,
+        includedInLocalizedFile,
+      ),
+    onMutate: async () => {
+      setBulkActionErrorMessage(null);
+      await queryClient.cancelQueries({ queryKey: ['workbench-search'] });
+    },
+    onSuccess: async () => {
+      saveAttemptRef.current += 1;
+      setPendingBulkAction(null);
+      setEditingRowId(null);
+      setEditingValue('');
+      setEditingInitialValue('');
+      setPendingEditingTarget(null);
+      setPendingValidationSave(null);
+      setSaveErrorMessage(null);
+      setStatusSavingRowIds(new Set());
+      clearWorksetEdits();
+      await queryClient.refetchQueries({ queryKey: ['workbench-search'], type: 'active' });
+    },
+    onError: (error) => {
+      setBulkActionErrorMessage(error.message || 'Failed to update loaded translations.');
+    },
+  });
+
   const registerRowRef = useCallback((rowId: string, element: HTMLDivElement | null) => {
     if (!element) {
       delete rowRefs.current[rowId];
@@ -281,6 +374,7 @@ export function useWorkbenchEdits({
     setEditingValue(nextValue);
     setEditingInitialValue(nextValue);
     setSaveErrorMessage(null);
+    setBulkActionErrorMessage(null);
     setPendingValidationSave(null);
     setPendingEditingTarget(null);
   }, []);
@@ -294,6 +388,7 @@ export function useWorkbenchEdits({
     setEditingValue('');
     setEditingInitialValue('');
     setSaveErrorMessage(null);
+    setBulkActionErrorMessage(null);
     setPendingValidationSave(null);
     setPendingEditingTarget(null);
   }, []);
@@ -526,6 +621,65 @@ export function useWorkbenchEdits({
     setWorksetEdits(new Map());
   }, []);
 
+  const requestDeleteAll = useCallback(() => {
+    if (!deletableCurrentVariantIds.length) {
+      return;
+    }
+    setBulkActionErrorMessage(null);
+    setPendingBulkAction({ kind: 'delete', count: deletableCurrentVariantIds.length });
+  }, [deletableCurrentVariantIds.length]);
+
+  const requestBulkStatusChange = useCallback(
+    (statusLabel: string) => {
+      if (!deletableCurrentVariantIds.length) {
+        return;
+      }
+      if (!mapUiStatusToApi(statusLabel)?.status) {
+        return;
+      }
+      setBulkActionErrorMessage(null);
+      setPendingBulkAction({
+        kind: 'status',
+        count: deletableCurrentVariantIds.length,
+        statusLabel,
+      });
+    },
+    [deletableCurrentVariantIds.length],
+  );
+
+  const confirmBulkAction = useCallback(() => {
+    if (!pendingBulkAction || !deletableCurrentVariantIds.length) {
+      setPendingBulkAction(null);
+      return;
+    }
+
+    if (pendingBulkAction.kind === 'delete') {
+      void deleteAllMutation.mutateAsync(deletableCurrentVariantIds);
+      return;
+    }
+
+    const statusUpdate = mapUiStatusToApi(pendingBulkAction.statusLabel);
+    if (!statusUpdate?.status) {
+      setPendingBulkAction(null);
+      return;
+    }
+
+    void updateAllStatusesMutation.mutateAsync({
+      tmTextUnitCurrentVariantIds: deletableCurrentVariantIds,
+      status: statusUpdate.status,
+      includedInLocalizedFile: statusUpdate.includedInLocalizedFile,
+    });
+  }, [
+    deleteAllMutation,
+    deletableCurrentVariantIds,
+    pendingBulkAction,
+    updateAllStatusesMutation,
+  ]);
+
+  const dismissBulkAction = useCallback(() => {
+    setPendingBulkAction(null);
+  }, []);
+
   useEffect(() => {
     if (canSearch) {
       return;
@@ -581,6 +735,14 @@ export function useWorkbenchEdits({
     translationInputRef,
     registerRowRef,
     isSaving: saveTextUnitMutation.isPending,
+    isApplyingBulkAction: deleteAllMutation.isPending || updateAllStatusesMutation.isPending,
+    bulkActionRowCount: deletableCurrentVariantIds.length,
+    bulkActionErrorMessage,
+    pendingBulkAction,
+    requestDeleteAll,
+    requestBulkStatusChange,
+    confirmBulkAction,
+    dismissBulkAction,
     saveErrorMessage,
     pendingValidationSave,
     confirmValidationSave,

@@ -548,7 +548,7 @@ export function WorkbenchPage() {
         statusOptions={statusOptions}
         headerDisabled={headerDisabled}
         isSaving={edits.isSaving}
-        saveErrorMessage={edits.saveErrorMessage}
+        saveErrorMessage={edits.bulkActionErrorMessage ?? edits.saveErrorMessage}
         showValidationDialog={edits.pendingValidationSave !== null}
         validationDialogBody={edits.pendingValidationSave?.body ?? ''}
         onConfirmValidationSave={edits.confirmValidationSave}
@@ -573,6 +573,45 @@ export function WorkbenchPage() {
         onSubmitSearch={search.onSubmitSearch}
         onRefreshWorkset={handleRefreshWorkset}
         onResetWorkbench={handleResetWorkbench}
+        bulkActionRowCount={edits.bulkActionRowCount}
+        isApplyingBulkAction={edits.isApplyingBulkAction}
+        showBulkActionDialog={edits.pendingBulkAction !== null}
+        bulkActionDialogTitle={
+          edits.pendingBulkAction?.kind === 'status'
+            ? 'Update loaded translations'
+            : 'Delete loaded translations'
+        }
+        bulkActionDialogBody={
+          edits.pendingBulkAction?.kind === 'status'
+            ? `This updates the status for ${edits.pendingBulkAction.count} loaded result${
+                edits.pendingBulkAction.count === 1 ? '' : 's'
+              } to "${edits.pendingBulkAction.statusLabel}".`
+            : edits.pendingBulkAction
+              ? `This removes the current translation for ${edits.pendingBulkAction.count} loaded result${
+                  edits.pendingBulkAction.count === 1 ? '' : 's'
+                }. Translation history will be preserved.`
+              : ''
+        }
+        bulkActionConfirmLabel={
+          edits.pendingBulkAction?.kind === 'status'
+            ? edits.isApplyingBulkAction
+              ? 'Updating…'
+              : 'Update all'
+            : edits.isApplyingBulkAction
+              ? 'Deleting…'
+              : 'Delete all'
+        }
+        bulkActionConfirmVariant={
+          edits.pendingBulkAction?.kind === 'status' ? 'primary' : 'danger'
+        }
+        bulkActionRequireText={edits.pendingBulkAction ? 'I understand' : undefined}
+        bulkActionRequireTextLabel={
+          edits.pendingBulkAction ? 'Type "I understand" to confirm.' : undefined
+        }
+        onRequestDeleteAll={edits.requestDeleteAll}
+        onRequestBulkStatusChange={edits.requestBulkStatusChange}
+        onConfirmBulkAction={edits.confirmBulkAction}
+        onDismissBulkAction={edits.dismissBulkAction}
         repositoryOptions={search.repositoryOptions}
         selectedRepositoryIds={search.selectedRepositoryIds}
         onChangeRepositorySelection={search.onChangeRepositorySelection}

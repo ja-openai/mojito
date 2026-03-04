@@ -245,6 +245,29 @@ export async function deleteTextUnitCurrentVariant(
   }
 }
 
+export async function deleteTextUnitCurrentVariants(
+  textUnitCurrentVariantIds: number[],
+): Promise<{ deletedCount: number }> {
+  return postJson<{ deletedCount: number }>('/api/textunits/current-variants/delete-batch', {
+    tmTextUnitCurrentVariantIds: textUnitCurrentVariantIds,
+  });
+}
+
+export async function updateTextUnitCurrentVariantsStatus(
+  textUnitCurrentVariantIds: number[],
+  status: ApiTextUnitStatus,
+  includedInLocalizedFile: boolean,
+): Promise<{ updatedCount: number }> {
+  return postJson<{ updatedCount: number }>(
+    '/api/textunits/current-variants/update-status-batch',
+    {
+      tmTextUnitCurrentVariantIds: textUnitCurrentVariantIds,
+      status,
+      includedInLocalizedFile,
+    },
+  );
+}
+
 export async function checkTextUnitIntegrity(
   request: TextUnitIntegrityCheckRequest,
 ): Promise<TextUnitIntegrityCheckResult> {

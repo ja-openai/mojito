@@ -37,6 +37,10 @@ type WorkbenchWorksetBarProps = {
   editedCount: number;
   onRefreshWorkset: () => void;
   onResetWorkbench: () => void;
+  bulkActionRowCount: number;
+  isApplyingBulkAction: boolean;
+  onRequestDeleteAll: () => void;
+  onRequestBulkStatusChange: (status: string) => void;
   onOpenShareModal: () => void;
   collections: WorkbenchCollection[];
   activeCollectionId: string | null;
@@ -70,6 +74,10 @@ export function WorkbenchWorksetBar({
   editedCount,
   onRefreshWorkset,
   onResetWorkbench,
+  bulkActionRowCount,
+  isApplyingBulkAction,
+  onRequestDeleteAll,
+  onRequestBulkStatusChange,
   onOpenShareModal,
   collections,
   activeCollectionId,
@@ -147,6 +155,20 @@ export function WorkbenchWorksetBar({
     );
   }
 
+  if (hasSearched && bulkActionRowCount > 0) {
+    parts.push(
+      <BulkActionsDropdown
+        key="bulk"
+        disabled={disabled}
+        isSearchLoading={isSearchLoading}
+        isApplyingBulkAction={isApplyingBulkAction}
+        bulkActionRowCount={bulkActionRowCount}
+        onRequestDeleteAll={onRequestDeleteAll}
+        onRequestBulkStatusChange={onRequestBulkStatusChange}
+      />,
+    );
+  }
+
   parts.push(
     <button
       key="reset"
@@ -204,6 +226,123 @@ export function WorkbenchWorksetBar({
   return (
     <div className="workbench-worksetbar">
       <div className="workbench-worksetbar__cluster">{content}</div>
+    </div>
+  );
+}
+
+function BulkActionsDropdown({
+  disabled,
+  isSearchLoading,
+  isApplyingBulkAction,
+  bulkActionRowCount,
+  onRequestDeleteAll,
+  onRequestBulkStatusChange,
+}: {
+  disabled: boolean;
+  isSearchLoading: boolean;
+  isApplyingBulkAction: boolean;
+  bulkActionRowCount: number;
+  onRequestDeleteAll: () => void;
+  onRequestBulkStatusChange: (status: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const canOpen = !disabled && !isSearchLoading && !isApplyingBulkAction && bulkActionRowCount > 0;
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsStatusMenuOpen(false);
+      return;
+    }
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => window.removeEventListener('pointerdown', handlePointerDown);
+  }, [isOpen]);
+
+  const requestStatusChange = (status: string) => {
+    setIsStatusMenuOpen(false);
+    setIsOpen(false);
+    onRequestBulkStatusChange(status);
+  };
+
+  return (
+    <div className="chip-dropdown" ref={containerRef}>
+      <button
+        type="button"
+        className="workbench-worksetbar__countbutton"
+        onClick={() => {
+          if (canOpen) {
+            setIsOpen((previous) => !previous);
+          }
+        }}
+        aria-expanded={isOpen}
+        disabled={!canOpen}
+      >
+        <span>{`Bulk: ${bulkActionRowCount}`}</span>
+        <span className="chip-dropdown__chevron" aria-hidden="true" />
+      </button>
+      {isOpen ? (
+        <div className="chip-dropdown__panel workbench-worksetbar__panel" role="menu">
+          <div className="workbench-searchmode__section">
+            <div className="workbench-searchmode__label">Bulk actions</div>
+            <button
+              type="button"
+              className="workbench-worksetbar__button"
+              onClick={() => setIsStatusMenuOpen((previous) => !previous)}
+            >
+              <span>Change status</span>
+              <span className="chip-dropdown__chevron" aria-hidden="true" />
+            </button>
+            {isStatusMenuOpen ? (
+              <div className="workbench-searchmode__section">
+                <button
+                  type="button"
+                  className="workbench-worksetbar__button"
+                  onClick={() => requestStatusChange('Accepted')}
+                >
+                  Accepted
+                </button>
+                <button
+                  type="button"
+                  className="workbench-worksetbar__button"
+                  onClick={() => requestStatusChange('To review')}
+                >
+                  To review
+                </button>
+                <button
+                  type="button"
+                  className="workbench-worksetbar__button"
+                  onClick={() => requestStatusChange('To translate')}
+                >
+                  To translate
+                </button>
+                <button
+                  type="button"
+                  className="workbench-worksetbar__button"
+                  onClick={() => requestStatusChange('Rejected')}
+                >
+                  Rejected
+                </button>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="workbench-worksetbar__button"
+              onClick={() => {
+                setIsOpen(false);
+                onRequestDeleteAll();
+              }}
+            >
+              Delete loaded translations
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

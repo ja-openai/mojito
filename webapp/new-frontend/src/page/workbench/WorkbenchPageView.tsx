@@ -79,6 +79,19 @@ type Props = {
   onSubmitSearch: () => void;
   onRefreshWorkset: () => void;
   onResetWorkbench: () => void;
+  bulkActionRowCount: number;
+  isApplyingBulkAction: boolean;
+  showBulkActionDialog: boolean;
+  bulkActionDialogTitle: string;
+  bulkActionDialogBody: string;
+  bulkActionConfirmLabel: string;
+  bulkActionConfirmVariant: 'danger' | 'primary';
+  bulkActionRequireText?: string;
+  bulkActionRequireTextLabel?: string;
+  onRequestDeleteAll: () => void;
+  onRequestBulkStatusChange: (status: string) => void;
+  onConfirmBulkAction: () => void;
+  onDismissBulkAction: () => void;
   repositoryOptions: RepositorySelectionOption[];
   selectedRepositoryIds: number[];
   onChangeRepositorySelection: (next: number[]) => void;
@@ -216,6 +229,19 @@ export function WorkbenchPageView({
   onSubmitSearch,
   onRefreshWorkset,
   onResetWorkbench,
+  bulkActionRowCount,
+  isApplyingBulkAction,
+  showBulkActionDialog,
+  bulkActionDialogTitle,
+  bulkActionDialogBody,
+  bulkActionConfirmLabel,
+  bulkActionConfirmVariant,
+  bulkActionRequireText,
+  bulkActionRequireTextLabel,
+  onRequestDeleteAll,
+  onRequestBulkStatusChange,
+  onConfirmBulkAction,
+  onDismissBulkAction,
   repositoryOptions,
   selectedRepositoryIds,
   onChangeRepositorySelection,
@@ -341,6 +367,10 @@ export function WorkbenchPageView({
         editedCount={editedCount}
         onRefreshWorkset={onRefreshWorkset}
         onResetWorkbench={onResetWorkbench}
+        bulkActionRowCount={bulkActionRowCount}
+        isApplyingBulkAction={isApplyingBulkAction}
+        onRequestDeleteAll={onRequestDeleteAll}
+        onRequestBulkStatusChange={onRequestBulkStatusChange}
         collections={collections}
         activeCollectionId={activeCollectionId}
         activeCollectionName={activeCollectionName}
@@ -403,6 +433,18 @@ export function WorkbenchPageView({
         onRestoreScrollConsumed={onRestoreScrollConsumed}
       />
       <HydrationModal data={hydrationModal} onClose={onDismissHydrationModal} />
+      <ConfirmModal
+        open={showBulkActionDialog}
+        title={bulkActionDialogTitle}
+        body={bulkActionDialogBody}
+        confirmLabel={bulkActionConfirmLabel}
+        cancelLabel="Cancel"
+        confirmVariant={bulkActionConfirmVariant}
+        requireText={bulkActionRequireText}
+        requireTextLabel={bulkActionRequireTextLabel}
+        onConfirm={onConfirmBulkAction}
+        onCancel={onDismissBulkAction}
+      />
       <ConfirmModal
         open={showValidationDialog}
         title="Translation check failed"
