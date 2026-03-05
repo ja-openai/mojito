@@ -86,7 +86,6 @@ export function AiTranslatePage() {
 
   const requestRef = useRef(0);
   const objectUrlsRef = useRef<string[]>([]);
-
   useEffect(() => {
     return () => {
       objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -275,6 +274,11 @@ export function AiTranslatePage() {
       return;
     }
 
+    if (selectedLocales.length === 0) {
+      setJobError('Select at least one target locale before starting the translation.');
+      return;
+    }
+
     let parsedSourceTextMaxCount: number;
     let parsedTimeoutSeconds: number | null;
 
@@ -314,7 +318,7 @@ export function AiTranslatePage() {
     try {
       const pollable = await translateRepository({
         repositoryName: selectedRepository.name,
-        targetBcp47tags: selectedLocales.length ? selectedLocales : null,
+        targetBcp47tags: selectedLocales,
         sourceTextMaxCountPerLocale: parsedSourceTextMaxCount,
         tmTextUnitIds,
         useBatch: false,
@@ -474,7 +478,9 @@ export function AiTranslatePage() {
                   onChange={setSelectedLocales}
                   disabled={disableForm || !selectedRepository}
                 />
-                <div className="review-create__hint">Leave empty to translate all locales.</div>
+                <div className="review-create__hint">
+                  Select one or more locales. Use Select all to translate every locale.
+                </div>
               </div>
 
               <div className="review-create__field">
@@ -702,11 +708,11 @@ export function AiTranslatePage() {
                 </div>
               ) : null}
             </div>
-            <button
-              type="submit"
-              className="review-create__cta"
-              disabled={disableForm || !selectedRepository}
-            >
+              <button
+                type="submit"
+                className="review-create__cta"
+                disabled={disableForm || !selectedRepository || selectedLocales.length === 0}
+              >
               {isSubmitting ? (
                 <>
                   <span className="spinner" aria-hidden="true" /> Submitting...
