@@ -758,7 +758,7 @@ public class RepositoryService {
     if (newName != null) {
       // check duplicated name
       Repository existingRepository = repositoryRepository.findByName(newName);
-      if (existingRepository != null && repository.getId().equals(existingRepository.getId())) {
+      if (existingRepository != null && !repository.getId().equals(existingRepository.getId())) {
         throw new RepositoryNameAlreadyUsedException(newName + " is used by other repository");
       }
       repository.setName(newName);
