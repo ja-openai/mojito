@@ -702,9 +702,6 @@ const getLanguageCompletionMetrics = (projects: ReviewProjectRow[]) => {
 };
 
 const hasWorkRemaining = (project: ReviewProjectRow) => {
-  if (project.status === 'CLOSED') {
-    return false;
-  }
   const accepted = toFiniteNonNegative(project.acceptedCount);
   const total = toFiniteNonNegative(project.textUnitCount ?? 0);
   return total > 0 && accepted < total;
