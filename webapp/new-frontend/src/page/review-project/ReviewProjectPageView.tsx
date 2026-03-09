@@ -102,6 +102,8 @@ type DecisionStateChoice = 'PENDING' | 'DECIDED';
 type DecisionStateFilter = DecisionStateChoice | 'all';
 type StatusFilter = 'all' | 'APPROVED' | 'REVIEW_NEEDED' | 'TRANSLATION_NEEDED' | 'REJECTED';
 type EditedFilter = 'all' | 'edited' | 'notEdited';
+type SortByFilter = 'none' | 'id' | 'source' | 'translation' | 'location' | 'assetPath';
+type SortOrderFilter = 'asc' | 'desc';
 type EditKind = 'translation' | 'status' | 'comment';
 
 const SAVING_INDICATOR_MIN_MS = 600;
@@ -212,6 +214,57 @@ const EDITED_FILTER_OPTIONS: Array<FilterOption<EditedFilter>> = [
   { value: 'edited', label: 'Edited' },
   { value: 'notEdited', label: 'Non-edited' },
 ];
+
+const SORT_BY_FILTER_OPTIONS: Array<FilterOption<SortByFilter>> = [
+  { value: 'none', label: 'None' },
+  { value: 'id', label: 'ID' },
+  { value: 'source', label: 'Source' },
+  { value: 'translation', label: 'Translation' },
+  { value: 'location', label: 'Location' },
+  { value: 'assetPath', label: 'Asset path' },
+];
+
+const SORT_ORDER_FILTER_OPTIONS: Array<FilterOption<SortOrderFilter>> = [
+  { value: 'asc', label: 'Ascending' },
+  { value: 'desc', label: 'Descending' },
+];
+
+const reviewProjectListSortCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: 'base',
+});
+
+function compareNullableStrings(a?: string | null, b?: string | null): number {
+  const left = (a ?? '').trim();
+  const right = (b ?? '').trim();
+  if (!left && !right) {
+    return 0;
+  }
+  if (!left) {
+    return 1;
+  }
+  if (!right) {
+    return -1;
+  }
+  return reviewProjectListSortCollator.compare(left, right);
+}
+
+function getTextUnitSortStringValue(textUnit: ApiReviewProjectTextUnit, sortBy: SortByFilter) {
+  switch (sortBy) {
+    case 'source':
+      return textUnit.tmTextUnit?.content;
+    case 'translation':
+      return getEffectiveVariant(textUnit)?.content;
+    case 'location':
+      return textUnit.tmTextUnit?.name != null ? String(textUnit.tmTextUnit.name) : null;
+    case 'assetPath':
+      return textUnit.tmTextUnit?.asset?.assetPath != null
+        ? String(textUnit.tmTextUnit.asset.assetPath)
+        : null;
+    default:
+      return null;
+  }
+}
 
 function normalizeOptional(value: string): string | null {
   return value === '' ? null : value;
@@ -571,6 +624,8 @@ export function ReviewProjectPageView({
     parseDecisionStateFilter(searchParams.get('state')),
   );
   const [editedFilter, setEditedFilter] = useState<EditedFilter>('all');
+  const [sortByFilter, setSortByFilter] = useState<SortByFilter>('none');
+  const [sortOrderFilter, setSortOrderFilter] = useState<SortOrderFilter>('asc');
   const [selectedTextUnitId, setSelectedTextUnitId] = useState<number | null>(null);
   const [detailIsDirty, setDetailIsDirty] = useState(false);
   const [focusTranslationKey, setFocusTranslationKey] = useState(0);
@@ -592,7 +647,7 @@ export function ReviewProjectPageView({
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return textUnits.filter((tu) => {
+    const filteredRows = textUnits.filter((tu) => {
       if (!tu) return false;
       const statusKey = getStatusKey(getEffectiveVariant(tu));
       if (statusFilter !== 'all' && statusKey !== statusFilter) {
@@ -624,7 +679,27 @@ export function ReviewProjectPageView({
         .map((s) => String(s).toLowerCase());
       return haystacks.some((h) => h.includes(term));
     });
-  }, [editedFilter, search, stateFilter, statusFilter, textUnits]);
+
+    if (sortByFilter === 'none') {
+      return filteredRows;
+    }
+
+    const sortDirection = sortOrderFilter === 'asc' ? 1 : -1;
+    return [...filteredRows].sort((left, right) => {
+      if (sortByFilter === 'id') {
+        return sortDirection * (left.id - right.id);
+      }
+
+      const leftValue = getTextUnitSortStringValue(left, sortByFilter);
+      const rightValue = getTextUnitSortStringValue(right, sortByFilter);
+      const compare = compareNullableStrings(leftValue, rightValue);
+      if (compare !== 0) {
+        return sortDirection * compare;
+      }
+      // Keep ordering stable when sort values are equal.
+      return left.id - right.id;
+    });
+  }, [editedFilter, search, sortByFilter, sortOrderFilter, stateFilter, statusFilter, textUnits]);
 
   const screenshotImages = useMemo(
     () => project?.reviewProjectRequest?.screenshotImageIds ?? [],
@@ -1018,6 +1093,20 @@ export function ReviewProjectPageView({
                   options: EDITED_FILTER_OPTIONS as Array<FilterOption<string | number>>,
                   value: editedFilter,
                   onChange: (value) => setEditedFilter(value as EditedFilter),
+                },
+                {
+                  kind: 'radio',
+                  label: 'Sort by',
+                  options: SORT_BY_FILTER_OPTIONS as Array<FilterOption<string | number>>,
+                  value: sortByFilter,
+                  onChange: (value) => setSortByFilter(value as SortByFilter),
+                },
+                {
+                  kind: 'radio',
+                  label: 'Order',
+                  options: SORT_ORDER_FILTER_OPTIONS as Array<FilterOption<string | number>>,
+                  value: sortOrderFilter,
+                  onChange: (value) => setSortOrderFilter(value as SortOrderFilter),
                 },
               ]}
             />
