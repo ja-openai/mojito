@@ -6,8 +6,9 @@ import { type VirtualItem } from '@tanstack/react-virtual';
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import type { ApiReviewProjectStatus, ApiReviewProjectType } from '../../api/review-projects';
 import {
+  type ApiReviewProjectStatus,
+  type ApiReviewProjectType,
   REVIEW_PROJECT_STATUS_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
   updateReviewProjectAssignment,
@@ -38,6 +39,10 @@ import {
   REVIEW_PROJECTS_QUERY_KEY,
 } from '../../hooks/useReviewProjects';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
+import {
+  formatLocalDateTime as formatDateTime,
+  getLocalAndUtcDateTimeTooltip,
+} from '../../utils/dateTime';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from './review-projects-session-state';
 
@@ -626,27 +631,25 @@ function ContentSection({
   );
 }
 
-const formatDateTime = (value: string | null) => {
-  if (!value) {
-    return '—';
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-  });
-};
-
 const formatNumber = (value: number | null) => {
   if (value == null) {
     return '—';
   }
   return value.toLocaleString();
+};
+
+const buildDueDateTitle = (value: string | null, includeEarliestDueHint = false) => {
+  const baseTitle = includeEarliestDueHint
+    ? 'Earliest due date across projects in this request'
+    : '';
+  const tooltip = getLocalAndUtcDateTimeTooltip(value);
+  if (!baseTitle) {
+    return tooltip;
+  }
+  if (!tooltip) {
+    return baseTitle;
+  }
+  return `${baseTitle}\n${tooltip}`;
 };
 
 const toFiniteNonNegative = (value: unknown) => {
@@ -1126,7 +1129,9 @@ function ReviewProjectRowView({
               {REVIEW_PROJECT_STATUS_LABELS[project.status]}
             </Pill>
           ) : project.dueDate ? (
-            <span>Due {formatDateTime(project.dueDate)}</span>
+            <span title={buildDueDateTitle(project.dueDate)}>
+              Due {formatDateTime(project.dueDate)}
+            </span>
           ) : null}
           <span className="review-projects-page__request-meta-inline review-projects-page__list-assignment-inline">
             <span className="review-projects-page__request-created-by">
@@ -1659,7 +1664,7 @@ function RequestGroupsSection({
                   </div>
                   <div className="review-projects-page__meta">
                     {group.dueDate ? (
-                      <span title="Earliest due date across projects in this request">
+                      <span title={buildDueDateTitle(group.dueDate, true)}>
                         Earliest due* {formatDateTime(group.dueDate)}
                       </span>
                     ) : null}

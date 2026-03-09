@@ -55,6 +55,13 @@ import {
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import {
+  formatLocalDate as formatDate,
+  formatLocalDateTime as formatDateTime,
+  getLocalAndUtcDateTimeTooltip,
+  localDateTimeInputToIso,
+  toDateTimeLocalInputValue,
+} from '../../utils/dateTime';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import { toHtmlLangTag } from '../../utils/localeTag';
 import {
@@ -3312,12 +3319,11 @@ function ReviewProjectHeader({
       setRequestSaveError('Due date is required.');
       return;
     }
-    const dueDateParsed = new Date(dueDateDraft);
-    if (Number.isNaN(dueDateParsed.getTime())) {
+    const dueDateIso = localDateTimeInputToIso(dueDateDraft);
+    if (!dueDateIso) {
       setRequestSaveError('Due date is invalid.');
       return;
     }
-    const dueDateIso = dueDateParsed.toISOString();
 
     try {
       setRequestSaveError(null);
@@ -3392,15 +3398,15 @@ function ReviewProjectHeader({
       setProjectDueDateSaveError('Due date is required.');
       return;
     }
-    const dueDateParsed = new Date(projectDueDateDraft);
-    if (Number.isNaN(dueDateParsed.getTime())) {
+    const dueDateIso = localDateTimeInputToIso(projectDueDateDraft);
+    if (!dueDateIso) {
       setProjectDueDateSaveError('Due date is invalid.');
       return;
     }
 
     try {
       setProjectDueDateSaveError(null);
-      await mutations.onRequestProjectDueDateUpdate(dueDateParsed.toISOString());
+      await mutations.onRequestProjectDueDateUpdate(dueDateIso);
       setIsProjectDueDateModalOpen(false);
     } catch (error) {
       setProjectDueDateSaveError(
@@ -3413,6 +3419,7 @@ function ReviewProjectHeader({
     setShowCloseWarning(false);
     onReviewPending();
   }, [onReviewPending]);
+  const dueDateTooltip = getLocalAndUtcDateTimeTooltip(dueDate);
 
   return (
     <>
@@ -3507,12 +3514,16 @@ function ReviewProjectHeader({
                   setProjectDueDateSaveError(null);
                   setIsProjectDueDateModalOpen(true);
                 }}
-                title="Edit this project due date only"
+                title={
+                  dueDateTooltip
+                    ? `Edit this project due date only\n${dueDateTooltip}`
+                    : 'Edit this project due date only'
+                }
               >
                 Due {formatDate(dueDate)}
               </button>
             ) : (
-              <span>Due {formatDate(dueDate)}</span>
+              <span title={dueDateTooltip}>Due {formatDate(dueDate)}</span>
             )}
             <button
               type="button"
@@ -3986,52 +3997,6 @@ const formatNumber = (value: number | null | undefined) => {
     return '—';
   }
   return value.toLocaleString();
-};
-
-const formatDate = (value: string | null | undefined) => {
-  if (!value) {
-    return '—';
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-};
-
-const formatDateTime = (value: string | null | undefined) => {
-  if (!value) {
-    return '—';
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const toDateTimeLocalInputValue = (value: string | null | undefined) => {
-  if (!value) {
-    return '';
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return '';
-  }
-  const pad = (num: number) => String(num).padStart(2, '0');
-  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(
-    parsed.getHours(),
-  )}:${pad(parsed.getMinutes())}`;
 };
 
 const toAttachmentLabel = (key: string) => {

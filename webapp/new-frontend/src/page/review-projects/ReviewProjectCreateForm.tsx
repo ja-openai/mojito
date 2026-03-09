@@ -15,6 +15,7 @@ import {
 } from '../../components/review-request/RequestAttachmentsDropzone';
 import { RequestDescriptionEditor } from '../../components/review-request/RequestDescriptionEditor';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import { localDateTimeInputToIso } from '../../utils/dateTime';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import {
@@ -341,7 +342,10 @@ export function ReviewProjectCreateForm({
           className="review-create__cta"
           onClick={() => {
             if (!canSubmit || isSubmitting) return;
-            const dueIso = new Date(dueDate).toISOString();
+            const dueIso = localDateTimeInputToIso(dueDate);
+            if (!dueIso) {
+              return;
+            }
             onSubmit({
               name: name.trim(),
               dueDate: dueIso,

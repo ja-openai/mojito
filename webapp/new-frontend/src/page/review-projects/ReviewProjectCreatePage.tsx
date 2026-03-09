@@ -8,16 +8,11 @@ import { type ApiTeam, fetchTeams } from '../../api/teams';
 import type { CollectionOption } from '../../components/CollectionSelect';
 import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
 import { useRepositories } from '../../hooks/useRepositories';
+import { toDateTimeLocalInputValue } from '../../utils/dateTime';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { useWorkbenchCollections } from '../workbench/useWorkbenchCollections';
 import type { ReviewProjectCreateFormValues } from './ReviewProjectCreateForm';
 import { ReviewProjectCreateForm } from './ReviewProjectCreateForm';
-
-function toLocalInput(value: Date) {
-  const tzOffset = value.getTimezoneOffset() * 60000;
-  const local = new Date(value.getTime() - tzOffset);
-  return local.toISOString().slice(0, 16);
-}
 
 type ReviewProjectNavState = {
   tmTextUnitIds?: number[];
@@ -84,7 +79,7 @@ export function ReviewProjectCreatePage() {
   });
 
   const defaultDueDate = useMemo(
-    () => toLocalInput(new Date(Date.now() + 1 * 24 * 60 * 60 * 1000)),
+    () => toDateTimeLocalInputValue(new Date(Date.now() + 1 * 24 * 60 * 60 * 1000)),
     [],
   );
 
