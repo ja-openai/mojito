@@ -612,8 +612,13 @@ export function ReviewProjectPageView({
       const haystacks = [
         tu.tmTextUnit?.name,
         tu.tmTextUnit?.content,
+        tu.tmTextUnit?.comment,
         tu.baselineTmTextUnitVariant?.content,
+        tu.baselineTmTextUnitVariant?.comment,
         tu.currentTmTextUnitVariant?.content,
+        tu.currentTmTextUnitVariant?.comment,
+        tu.reviewProjectTextUnitDecision?.decisionTmTextUnitVariant?.comment,
+        tu.reviewProjectTextUnitDecision?.notes,
       ]
         .filter(Boolean)
         .map((s) => String(s).toLowerCase());
@@ -975,7 +980,7 @@ export function ReviewProjectPageView({
             <input
               className="review-project-page__search-input"
               type="search"
-              placeholder="Search source, translation, or id"
+              placeholder="Search source, translation, comments, or id"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
