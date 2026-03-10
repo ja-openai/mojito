@@ -11,6 +11,8 @@ import com.box.l10n.mojito.slack.SlackClientException;
 import com.box.l10n.mojito.slack.SlackClients;
 import com.box.l10n.mojito.slack.request.Message;
 import com.box.l10n.mojito.utils.ServerConfig;
+import java.time.DateTimeException;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -22,24 +24,36 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TeamSlackNotificationService {
 
   private static final Logger logger = LoggerFactory.getLogger(TeamSlackNotificationService.class);
+  private static final String DEFAULT_DUE_DATE_TIME_ZONE_ID = "America/Los_Angeles";
   private static final DateTimeFormatter SLACK_DUE_DATE_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z");
 
   private final TeamService teamService;
   private final SlackClients slackClients;
   private final ServerConfig serverConfig;
+  private final ZoneId reviewProjectDueDateTimeZone;
 
   public TeamSlackNotificationService(
-      TeamService teamService, SlackClients slackClients, ServerConfig serverConfig) {
+      TeamService teamService,
+      SlackClients slackClients,
+      ServerConfig serverConfig,
+      @Value(
+              "${l10n.review-project.notifications.due-date-timezone:"
+                  + DEFAULT_DUE_DATE_TIME_ZONE_ID
+                  + "}")
+          String reviewProjectDueDateTimeZoneId) {
     this.teamService = teamService;
     this.slackClients = slackClients;
     this.serverConfig = serverConfig;
+    this.reviewProjectDueDateTimeZone =
+        toDueDateTimeZoneOrDefault(reviewProjectDueDateTimeZoneId);
   }
 
   public void sendReviewProjectAssignmentNotification(
@@ -420,7 +434,24 @@ public class TeamSlackNotificationService {
     if (dueDate == null) {
       return "";
     }
-    return SLACK_DUE_DATE_FORMATTER.format(dueDate);
+    return SLACK_DUE_DATE_FORMATTER.format(
+        dueDate.withZoneSameInstant(reviewProjectDueDateTimeZone));
+  }
+
+  private ZoneId toDueDateTimeZoneOrDefault(String zoneId) {
+    String candidate = zoneId == null ? "" : zoneId.trim();
+    if (candidate.isEmpty()) {
+      return ZoneId.of(DEFAULT_DUE_DATE_TIME_ZONE_ID);
+    }
+    try {
+      return ZoneId.of(candidate);
+    } catch (DateTimeException ex) {
+      logger.warn(
+          "Invalid review project due date timezone '{}', falling back to {}",
+          candidate,
+          DEFAULT_DUE_DATE_TIME_ZONE_ID);
+      return ZoneId.of(DEFAULT_DUE_DATE_TIME_ZONE_ID);
+    }
   }
 
   private String buildReviewProjectLink(Long projectId) {
