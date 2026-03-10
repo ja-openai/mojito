@@ -5,6 +5,12 @@ import {
   REVIEW_PROJECT_TYPES,
 } from '../../api/review-projects';
 import { loadSessionTokenPayload, saveSessionTokenPayload } from '../../utils/sessionTokenStore';
+import {
+  COMPLETION_FILTERS,
+  type CompletionFilter,
+  REQUEST_STATUS_FILTERS,
+  type RequestStatusFilter,
+} from './review-projects-filters';
 
 const STORAGE_PREFIX = 'review-projects.searchState.v1:';
 const STORAGE_MAX_ENTRIES = 48;
@@ -24,7 +30,11 @@ export type ReviewProjectsSessionState = {
   selectedLocaleTags: string[];
   hasTouchedLocales: boolean;
   typeFilter: ApiReviewProjectType | 'all';
-  statusFilter: ApiReviewProjectStatus | 'all';
+  listProjectStatusFilter: ApiReviewProjectStatus | 'all';
+  requestProjectStatusFilter: ApiReviewProjectStatus | 'all';
+  requestStatusFilter: RequestStatusFilter;
+  listCompletionFilter: CompletionFilter;
+  requestProjectCompletionFilter: CompletionFilter;
   limit: number;
   searchQuery: string;
   searchField: SearchField;
@@ -42,7 +52,11 @@ const DEFAULT_STATE: ReviewProjectsSessionState = {
   selectedLocaleTags: [],
   hasTouchedLocales: false,
   typeFilter: 'all',
-  statusFilter: 'OPEN',
+  listProjectStatusFilter: 'OPEN',
+  requestProjectStatusFilter: 'all',
+  requestStatusFilter: 'open',
+  listCompletionFilter: 'all',
+  requestProjectCompletionFilter: 'not_100',
   limit: 1000,
   searchQuery: '',
   searchField: 'name',
@@ -102,15 +116,40 @@ export function normalizeReviewProjectsSessionState(
     return null;
   }
 
-  const statusFilter = sanitizeEnum(
+  const legacyStatusFilter = sanitizeEnum(
     input.statusFilter,
     [...REVIEW_PROJECT_STATUSES, 'all'] as const,
-    DEFAULT_STATE.statusFilter,
+    DEFAULT_STATE.listProjectStatusFilter,
+  );
+  const listProjectStatusFilter = sanitizeEnum(
+    input.listProjectStatusFilter,
+    [...REVIEW_PROJECT_STATUSES, 'all'] as const,
+    legacyStatusFilter,
+  );
+  const requestProjectStatusFilter = sanitizeEnum(
+    input.requestProjectStatusFilter,
+    [...REVIEW_PROJECT_STATUSES, 'all'] as const,
+    legacyStatusFilter,
   );
   const typeFilter = sanitizeEnum(
     input.typeFilter,
     [...REVIEW_PROJECT_TYPES, 'all'] as const,
     DEFAULT_STATE.typeFilter,
+  );
+  const requestStatusFilter = sanitizeEnum(
+    input.requestStatusFilter,
+    REQUEST_STATUS_FILTERS,
+    DEFAULT_STATE.requestStatusFilter,
+  );
+  const listCompletionFilter = sanitizeEnum(
+    input.listCompletionFilter,
+    COMPLETION_FILTERS,
+    DEFAULT_STATE.listCompletionFilter,
+  );
+  const requestProjectCompletionFilter = sanitizeEnum(
+    input.requestProjectCompletionFilter ?? input.requestCompletionFilter,
+    COMPLETION_FILTERS,
+    DEFAULT_STATE.requestProjectCompletionFilter,
   );
 
   return {
@@ -120,7 +159,11 @@ export function normalizeReviewProjectsSessionState(
         ? input.hasTouchedLocales
         : DEFAULT_STATE.hasTouchedLocales,
     typeFilter,
-    statusFilter,
+    listProjectStatusFilter,
+    requestProjectStatusFilter,
+    requestStatusFilter,
+    listCompletionFilter,
+    requestProjectCompletionFilter,
     limit: sanitizeNumber(input.limit, DEFAULT_STATE.limit),
     searchQuery:
       typeof input.searchQuery === 'string' ? input.searchQuery : DEFAULT_STATE.searchQuery,

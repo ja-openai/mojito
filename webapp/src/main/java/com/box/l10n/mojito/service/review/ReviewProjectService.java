@@ -420,7 +420,7 @@ public class ReviewProjectService {
 
   private List<ReviewProjectStatus> getRequestModeStatuses(List<ReviewProjectStatus> statuses) {
     if (statuses == null || statuses.isEmpty()) {
-      return List.of(ReviewProjectStatus.OPEN);
+      return List.of(ReviewProjectStatus.OPEN, ReviewProjectStatus.CLOSED);
     }
     return statuses;
   }

@@ -42,6 +42,15 @@ import {
   type ReviewProjectsAdminControls,
   ReviewProjectsPageView,
 } from './ReviewProjectsPageView';
+import {
+  type CompletionFilter,
+  COMPLETION_FILTERS,
+  getVisibleProjectsForRequest,
+  matchesCompletionFilter,
+  matchesRequestStatusFilter,
+  type RequestStatusFilter,
+  REQUEST_STATUS_FILTERS,
+} from './review-projects-filters';
 
 type FilterOption<T extends string | number> = { value: T; label: string };
 
@@ -131,6 +140,18 @@ const statusOptions: FilterOption<ApiReviewProjectStatus | 'all'>[] = [
   })),
 ];
 
+const requestStatusOptions: FilterOption<RequestStatusFilter>[] = REQUEST_STATUS_FILTERS.map(
+  (status) => ({
+    value: status,
+    label: status === 'all' ? 'All' : status === 'open' ? 'Open' : 'Closed',
+  }),
+);
+
+const completionOptions: FilterOption<CompletionFilter>[] = COMPLETION_FILTERS.map((value) => ({
+  value,
+  label: value === 'all' ? 'All' : value === 'not_100' ? 'Not 100%' : '100%',
+}));
+
 const limitOptions: FilterOption<number>[] = [
   { value: 10, label: '10' },
   { value: 100, label: '100' },
@@ -213,6 +234,8 @@ const toReviewProjectRequestGroupRow = (
     name: requestGroup.requestName ?? `Request #${fallbackRequestId}`,
     createdByUsername: requestGroup.requestCreatedByUsername ?? null,
     assignedPmUsername,
+    openProjectCount: Math.max(0, toFiniteNumberOrNull(requestGroup.openProjectCount) ?? 0),
+    closedProjectCount: Math.max(0, toFiniteNumberOrNull(requestGroup.closedProjectCount) ?? 0),
     localeTags,
     acceptedCount: Math.max(0, acceptedCountRaw ?? 0),
     textUnitCount: Math.max(0, textUnitCount ?? 0),
@@ -242,7 +265,16 @@ export function ReviewProjectsPage() {
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
   const [hasTouchedLocales, setHasTouchedLocales] = useState(false);
   const [typeFilter, setTypeFilter] = useState<ApiReviewProjectType | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<ApiReviewProjectStatus | 'all'>('OPEN');
+  const [listProjectStatusFilter, setListProjectStatusFilter] = useState<
+    ApiReviewProjectStatus | 'all'
+  >('OPEN');
+  const [requestProjectStatusFilter, setRequestProjectStatusFilter] = useState<
+    ApiReviewProjectStatus | 'all'
+  >('all');
+  const [requestStatusFilter, setRequestStatusFilter] = useState<RequestStatusFilter>('open');
+  const [listCompletionFilter, setListCompletionFilter] = useState<CompletionFilter>('all');
+  const [requestProjectCompletionFilter, setRequestProjectCompletionFilter] =
+    useState<CompletionFilter>('not_100');
   const [limit, setLimit] = useState<number>(1000);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchField, setSearchField] = useState<'name' | 'id' | 'requestId' | 'createdBy'>('name');
@@ -258,7 +290,6 @@ export function ReviewProjectsPage() {
   const [displayMode, setDisplayMode] = useState<'list' | 'requests'>(() =>
     canUseRequestMode ? 'requests' : 'list',
   );
-  const [showUnfinishedLocalesOnly, setShowUnfinishedLocalesOnly] = useState(false);
   const [expandedRequestKey, setExpandedRequestKey] = useState<string | null>(null);
   const [hasHydratedSessionState, setHasHydratedSessionState] = useState(false);
   const hydratedSessionKeyRef = useRef<string | null>(null);
@@ -293,7 +324,11 @@ export function ReviewProjectsPage() {
       selectedLocaleTags,
       hasTouchedLocales,
       typeFilter,
-      statusFilter,
+      listProjectStatusFilter,
+      requestProjectStatusFilter,
+      requestStatusFilter,
+      listCompletionFilter,
+      requestProjectCompletionFilter,
       limit,
       searchQuery,
       searchField,
@@ -317,11 +352,15 @@ export function ReviewProjectsPage() {
       expandedRequestKey,
       hasTouchedLocales,
       limit,
+      listCompletionFilter,
+      listProjectStatusFilter,
+      requestProjectCompletionFilter,
+      requestProjectStatusFilter,
+      requestStatusFilter,
       searchField,
       searchQuery,
       searchType,
       selectedLocaleTags,
-      statusFilter,
       typeFilter,
     ],
   );
@@ -361,7 +400,11 @@ export function ReviewProjectsPage() {
     setSelectedLocaleTags(normalizedState.selectedLocaleTags);
     setHasTouchedLocales(normalizedState.hasTouchedLocales);
     setTypeFilter(normalizedState.typeFilter);
-    setStatusFilter(normalizedState.statusFilter);
+    setListProjectStatusFilter(normalizedState.listProjectStatusFilter);
+    setRequestProjectStatusFilter(normalizedState.requestProjectStatusFilter);
+    setRequestStatusFilter(normalizedState.requestStatusFilter);
+    setListCompletionFilter(normalizedState.listCompletionFilter);
+    setRequestProjectCompletionFilter(normalizedState.requestProjectCompletionFilter);
     setLimit(normalizedState.limit);
     setSearchQuery(normalizedState.searchQuery);
     setSearchField(normalizedState.searchField);
@@ -409,7 +452,7 @@ export function ReviewProjectsPage() {
     setUrlSearchParams(nextParams, { replace: false });
   }, [hasHydratedSessionState, sessionState, setUrlSearchParams, urlSearchParams]);
 
-  const apiSearchParams = useMemo<ReviewProjectsSearchRequest>(() => {
+  const baseSearchParams = useMemo<ReviewProjectsSearchRequest>(() => {
     const searchFieldValue: ReviewProjectsSearchRequest['searchField'] =
       searchField === 'requestId'
         ? 'REQUEST_ID'
@@ -433,7 +476,6 @@ export function ReviewProjectsPage() {
 
     return {
       localeTags,
-      statuses: statusFilter === 'all' ? undefined : [statusFilter],
       types: typeFilter === 'all' ? undefined : [typeFilter],
       createdAfter,
       createdBefore,
@@ -455,16 +497,23 @@ export function ReviewProjectsPage() {
     searchQuery,
     searchType,
     selectedLocaleTags,
-    statusFilter,
     typeFilter,
     isLimitedTranslator,
   ]);
 
+  const listSearchParams = useMemo<ReviewProjectsSearchRequest>(
+    () => ({
+      ...baseSearchParams,
+      statuses:
+        listProjectStatusFilter === 'all' ? undefined : [listProjectStatusFilter],
+    }),
+    [baseSearchParams, listProjectStatusFilter],
+  );
   const requestSearchParams = useMemo<ReviewProjectsSearchRequest>(
     () => ({
-      ...apiSearchParams,
+      ...baseSearchParams,
     }),
-    [apiSearchParams],
+    [baseSearchParams],
   );
 
   useEffect(() => {
@@ -567,7 +616,7 @@ export function ReviewProjectsPage() {
     isError: isErrorList,
     error: listError,
     refetch: refetchList,
-  } = useReviewProjects(apiSearchParams, { enabled: hasHydratedSessionState && !isRequestMode });
+  } = useReviewProjects(listSearchParams, { enabled: hasHydratedSessionState && !isRequestMode });
   const {
     data: requestGroupsData,
     isLoading: isLoadingRequestGroups,
@@ -613,16 +662,39 @@ export function ReviewProjectsPage() {
   const userClearedLocales = hasTouchedLocales && selectedLocaleTags.length === 0;
 
   const listRows = useMemo<ReviewProjectRow[]>(
-    () => (userClearedLocales ? [] : projects.map(toReviewProjectRow)),
-    [projects, userClearedLocales],
+    () =>
+      userClearedLocales
+        ? []
+        : projects
+            .map(toReviewProjectRow)
+            .filter((project) =>
+              matchesCompletionFilter(
+                project.acceptedCount,
+                project.textUnitCount ?? 0,
+                listCompletionFilter,
+              ),
+            ),
+    [listCompletionFilter, projects, userClearedLocales],
   );
   const requestGroupRows = useMemo<ReviewProjectRequestGroupRow[]>(
-    () => requestGroups.map(toReviewProjectRequestGroupRow),
-    [requestGroups],
+    () =>
+      userClearedLocales
+        ? []
+        : requestGroups
+            .map(toReviewProjectRequestGroupRow)
+            .filter((group) => matchesRequestStatusFilter(group, requestStatusFilter)),
+    [requestGroups, requestStatusFilter, userClearedLocales],
   );
   const requestModeRows = useMemo(
-    () => requestGroupRows.flatMap((group) => group.projects),
-    [requestGroupRows],
+    () =>
+      requestGroupRows.flatMap((group) =>
+        getVisibleProjectsForRequest(
+          group.projects,
+          requestProjectStatusFilter,
+          requestProjectCompletionFilter,
+        ),
+      ),
+    [requestGroupRows, requestProjectCompletionFilter, requestProjectStatusFilter],
   );
   const rows = isRequestMode ? requestModeRows : listRows;
 
@@ -822,9 +894,23 @@ export function ReviewProjectsPage() {
           typeOptions,
           typeValue: typeFilter,
           onTypeChange: setTypeFilter,
-          statusOptions,
-          statusValue: statusFilter,
-          onStatusChange: setStatusFilter,
+          projectStatusOptions: statusOptions,
+          projectStatusValue: isRequestMode
+            ? requestProjectStatusFilter
+            : listProjectStatusFilter,
+          onProjectStatusChange: isRequestMode
+            ? setRequestProjectStatusFilter
+            : setListProjectStatusFilter,
+          requestStatusOptions,
+          requestStatusValue: requestStatusFilter,
+          onRequestStatusChange: setRequestStatusFilter,
+          projectCompletionOptions: completionOptions,
+          projectCompletionValue: isRequestMode
+            ? requestProjectCompletionFilter
+            : listCompletionFilter,
+          onProjectCompletionChange: isRequestMode
+            ? setRequestProjectCompletionFilter
+            : setListCompletionFilter,
           limitOptions,
           limitValue: limit,
           onLimitChange: setLimit,
@@ -852,8 +938,6 @@ export function ReviewProjectsPage() {
         displayMode={displayMode}
         canUseRequestMode={canUseRequestMode}
         onDisplayModeChange={setDisplayMode}
-        showUnfinishedLocalesOnly={showUnfinishedLocalesOnly}
-        onShowUnfinishedLocalesOnlyChange={setShowUnfinishedLocalesOnly}
         expandedRequestKey={expandedRequestKey}
         onExpandedRequestKeyChange={setExpandedRequestKey}
         reviewProjectsSessionKey={reviewSessionKey}

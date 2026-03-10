@@ -44,6 +44,12 @@ import {
   getLocalAndUtcDateTimeTooltip,
 } from '../../utils/dateTime';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
+import {
+  type CompletionFilter,
+  getCompletionState,
+  getVisibleProjectsForRequest,
+  type RequestStatusFilter,
+} from './review-projects-filters';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from './review-projects-session-state';
 
 type FiltersProps = {
@@ -54,9 +60,15 @@ type FiltersProps = {
   typeOptions: FilterOption<ApiReviewProjectType | 'all'>[];
   typeValue: ApiReviewProjectType | 'all';
   onTypeChange: (value: ApiReviewProjectType | 'all') => void;
-  statusOptions: FilterOption<ApiReviewProjectStatus | 'all'>[];
-  statusValue: ApiReviewProjectStatus | 'all';
-  onStatusChange: (value: ApiReviewProjectStatus | 'all') => void;
+  projectStatusOptions: FilterOption<ApiReviewProjectStatus | 'all'>[];
+  projectStatusValue: ApiReviewProjectStatus | 'all';
+  onProjectStatusChange: (value: ApiReviewProjectStatus | 'all') => void;
+  requestStatusOptions: FilterOption<RequestStatusFilter>[];
+  requestStatusValue: RequestStatusFilter;
+  onRequestStatusChange: (value: RequestStatusFilter) => void;
+  projectCompletionOptions: FilterOption<CompletionFilter>[];
+  projectCompletionValue: CompletionFilter;
+  onProjectCompletionChange: (value: CompletionFilter) => void;
   limitOptions: FilterOption<number>[];
   limitValue: number;
   onLimitChange: (value: number) => void;
@@ -133,8 +145,6 @@ type Props = {
   displayMode?: 'list' | 'requests';
   canUseRequestMode?: boolean;
   onDisplayModeChange?: (mode: 'list' | 'requests') => void;
-  showUnfinishedLocalesOnly?: boolean;
-  onShowUnfinishedLocalesOnlyChange?: (value: boolean) => void;
   expandedRequestKey?: string | null;
   onExpandedRequestKeyChange?: (key: string | null) => void;
   reviewProjectsSessionKey?: string | null;
@@ -224,9 +234,6 @@ function SummaryBar({
   showModeToggle = false,
   displayMode = 'list',
   onDisplayModeChange,
-  showUnfinishedToggle = false,
-  unfinishedLocalesOnly = false,
-  onToggleUnfinishedLocalesOnly,
 }: {
   resultCount: number;
   totalWords: number;
@@ -234,9 +241,6 @@ function SummaryBar({
   showModeToggle?: boolean;
   displayMode?: 'list' | 'requests';
   onDisplayModeChange?: (mode: 'list' | 'requests') => void;
-  showUnfinishedToggle?: boolean;
-  unfinishedLocalesOnly?: boolean;
-  onToggleUnfinishedLocalesOnly?: () => void;
 }) {
   return (
     <div className="review-projects-page__summary-bar">
@@ -244,17 +248,6 @@ function SummaryBar({
       <div className="review-projects-page__summary-center">
         {showModeToggle ? (
           <DisplayModeToggle mode={displayMode} onChange={(mode) => onDisplayModeChange?.(mode)} />
-        ) : null}
-        {showUnfinishedToggle ? (
-          <button
-            type="button"
-            className={`review-projects-page__summary-toggle${unfinishedLocalesOnly ? ' is-active' : ''}`}
-            onClick={onToggleUnfinishedLocalesOnly}
-            aria-pressed={unfinishedLocalesOnly}
-            title="Filter locale rows in request view"
-          >
-            Unfinished only
-          </button>
         ) : null}
       </div>
       <div className="review-projects-page__summary-right">
@@ -685,12 +678,15 @@ const getProgressMetrics = (acceptedValue: unknown, totalValue: unknown) => {
   };
 };
 
+const getProjectCompletionState = (project: ReviewProjectRow) => {
+  return getCompletionState(project.acceptedCount, project.textUnitCount ?? 0);
+};
+
 const getLanguageCompletionMetrics = (projects: ReviewProjectRow[]) => {
   const totalLanguages = projects.length;
   const completedLanguages = projects.reduce((sum, project) => {
-    const accepted = toFiniteNonNegative(project.acceptedCount);
-    const total = toFiniteNonNegative(project.textUnitCount ?? 0);
-    return sum + (total === 0 || accepted >= total ? 1 : 0);
+    const { isComplete } = getProjectCompletionState(project);
+    return sum + (isComplete ? 1 : 0);
   }, 0);
   const rawPercent = totalLanguages === 0 ? 0 : (completedLanguages / totalLanguages) * 100;
   const percentValue = Math.max(0, Math.min(100, rawPercent));
@@ -704,12 +700,6 @@ const getLanguageCompletionMetrics = (projects: ReviewProjectRow[]) => {
   };
 };
 
-const hasWorkRemaining = (project: ReviewProjectRow) => {
-  const accepted = toFiniteNonNegative(project.acceptedCount);
-  const total = toFiniteNonNegative(project.textUnitCount ?? 0);
-  return total > 0 && accepted < total;
-};
-
 const TOGGLE_IGNORE_SELECTOR =
   'a,button,input,select,textarea,label,[role="button"],[role="link"],[data-no-toggle="true"]';
 
@@ -719,6 +709,8 @@ export type ReviewProjectRequestGroupRow = {
   name: string;
   createdByUsername: string | null;
   assignedPmUsername: string | null;
+  openProjectCount: number;
+  closedProjectCount: number;
   localeTags: string[];
   acceptedCount: number;
   textUnitCount: number;
@@ -765,6 +757,8 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
         name: project.name,
         createdByUsername: project.requestCreatedByUsername ?? null,
         assignedPmUsername: project.assignedPmUsername ?? null,
+        openProjectCount: project.status === 'OPEN' ? 1 : 0,
+        closedProjectCount: project.status === 'CLOSED' ? 1 : 0,
         localeTags: project.localeTag ? [project.localeTag] : [],
         acceptedCount,
         textUnitCount,
@@ -777,6 +771,8 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
     }
 
     existing.projects.push(project);
+    existing.openProjectCount += project.status === 'OPEN' ? 1 : 0;
+    existing.closedProjectCount += project.status === 'CLOSED' ? 1 : 0;
     existing.acceptedCount += acceptedCount;
     existing.textUnitCount += textUnitCount;
     existing.wordCount += wordCount;
@@ -853,8 +849,62 @@ function DisplayModeToggle({
   );
 }
 
-function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCreate: boolean }) {
+function FilterControls({
+  filters,
+  canCreate,
+  displayMode,
+}: {
+  filters: FiltersProps;
+  canCreate: boolean;
+  displayMode: 'list' | 'requests';
+}) {
   const dateQuickRanges = getStandardDateQuickRanges();
+  const modeSpecificSections =
+    displayMode === 'requests'
+      ? [
+          {
+            kind: 'radio' as const,
+            label: 'Request status',
+            options: filters.requestStatusOptions as Array<FilterOption<string | number>>,
+            value: filters.requestStatusValue,
+            onChange: (value: string | number) =>
+              filters.onRequestStatusChange(value as RequestStatusFilter),
+          },
+          {
+            kind: 'radio' as const,
+            label: 'Project status',
+            options: filters.projectStatusOptions as Array<FilterOption<string | number>>,
+            value: filters.projectStatusValue as string,
+            onChange: (value: string | number) =>
+              filters.onProjectStatusChange(value as ApiReviewProjectStatus | 'all'),
+          },
+          {
+            kind: 'radio' as const,
+            label: 'Project completion',
+            options: filters.projectCompletionOptions as Array<FilterOption<string | number>>,
+            value: filters.projectCompletionValue,
+            onChange: (value: string | number) =>
+              filters.onProjectCompletionChange(value as CompletionFilter),
+          },
+        ]
+      : [
+          {
+            kind: 'radio' as const,
+            label: 'Project status',
+            options: filters.projectStatusOptions as Array<FilterOption<string | number>>,
+            value: filters.projectStatusValue as string,
+            onChange: (value: string | number) =>
+              filters.onProjectStatusChange(value as ApiReviewProjectStatus | 'all'),
+          },
+          {
+            kind: 'radio' as const,
+            label: 'Project completion',
+            options: filters.projectCompletionOptions as Array<FilterOption<string | number>>,
+            value: filters.projectCompletionValue,
+            onChange: (value: string | number) =>
+              filters.onProjectCompletionChange(value as CompletionFilter),
+          },
+        ];
 
   return (
     <div className="review-projects-page__bar">
@@ -952,7 +1002,7 @@ function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCrea
         }
       />
       <MultiSectionFilterChip
-        ariaLabel="Filter by status, type, size, and date"
+        ariaLabel="Filter by type, request status, project status, project completion, size, and date"
         align="right"
         className="review-projects-page__filter-chip"
         sections={[
@@ -963,13 +1013,7 @@ function FilterControls({ filters, canCreate }: { filters: FiltersProps; canCrea
             value: filters.typeValue as string,
             onChange: (value) => filters.onTypeChange(value as ApiReviewProjectType | 'all'),
           },
-          {
-            kind: 'radio',
-            label: 'Status',
-            options: filters.statusOptions as Array<FilterOption<string | number>>,
-            value: filters.statusValue as string,
-            onChange: (value) => filters.onStatusChange(value as ApiReviewProjectStatus | 'all'),
-          },
+          ...modeSpecificSections,
           {
             kind: 'size',
             label: 'Result size limit',
@@ -1040,7 +1084,8 @@ function EmptyState() {
   return (
     <div className="review-projects-page__empty">
       <div className="review-projects-page__empty-copy hint">
-        No review projects match these filters. Adjust locale, type, status, limit, or search.
+        No review projects match these filters. Adjust locale, type, status, completion, date, or
+        search.
       </div>
     </div>
   );
@@ -1248,7 +1293,8 @@ function RequestGroupsSection({
   onFilterByRequest,
   adminControls,
   assignmentControls,
-  showUnfinishedLocalesOnly = false,
+  projectStatusFilter = 'all',
+  projectCompletionFilter = 'all',
   reviewProjectsSessionKey,
 }: {
   groups: ReviewProjectRequestGroupRow[];
@@ -1257,7 +1303,8 @@ function RequestGroupsSection({
   onFilterByRequest: (requestId: number) => void;
   adminControls?: ReviewProjectsAdminControls;
   assignmentControls?: ReviewProjectsAssignmentControls;
-  showUnfinishedLocalesOnly?: boolean;
+  projectStatusFilter?: ApiReviewProjectStatus | 'all';
+  projectCompletionFilter?: CompletionFilter;
   reviewProjectsSessionKey?: string | null;
 }) {
   const resolveLocaleDisplayName = useLocaleDisplayNameResolver();
@@ -1548,10 +1595,11 @@ function RequestGroupsSection({
         <div className="review-projects-page__rows">
           {groups.map((group) => {
             const isExpanded = expandedKey === group.key;
-            const groupProjectIds = group.projects.map((project) => project.id);
-            const visibleProjects = showUnfinishedLocalesOnly
-              ? group.projects.filter(hasWorkRemaining)
-              : group.projects;
+            const visibleProjects = getVisibleProjectsForRequest(
+              group.projects,
+              projectStatusFilter,
+              projectCompletionFilter,
+            );
             const visibleGroupProjectIds = visibleProjects.map((project) => project.id);
             const requestEditProjectId = group.projects[0]?.id ?? null;
             const selectedInGroup = visibleGroupProjectIds.filter((projectId) =>
@@ -1592,25 +1640,18 @@ function RequestGroupsSection({
                           className="review-projects-page__select--request-group"
                           checked={allSelectedInGroup}
                           indeterminate={partiallySelectedInGroup}
-                          disabled={adminControls?.isSaving}
+                          disabled={adminControls?.isSaving || visibleGroupProjectIds.length === 0}
                           ariaLabel={`Select all projects in ${group.name}`}
                           onChange={() => {
                             const shouldSelect = !allSelectedInGroup;
                             if (adminControls?.onSetProjectSelection) {
-                              if (showUnfinishedLocalesOnly) {
-                                adminControls.onSetProjectSelection(
-                                  visibleGroupProjectIds,
-                                  shouldSelect,
-                                );
-                                return;
-                              }
-                              adminControls.onSetProjectSelection(groupProjectIds, shouldSelect);
+                              adminControls.onSetProjectSelection(
+                                visibleGroupProjectIds,
+                                shouldSelect,
+                              );
                               return;
                             }
-                            (showUnfinishedLocalesOnly
-                              ? visibleGroupProjectIds
-                              : groupProjectIds
-                            ).forEach((projectId) => {
+                            visibleGroupProjectIds.forEach((projectId) => {
                               const isSelected = selectedProjectIdSet.has(projectId);
                               if (isSelected !== shouldSelect) {
                                 adminControls?.onToggleProjectSelection(projectId);
@@ -1732,7 +1773,7 @@ function RequestGroupsSection({
                   <div className="review-projects-page__request-projects">
                     {visibleProjects.length === 0 ? (
                       <div className="review-projects-page__request-projects-empty">
-                        No unfinished locales in this request.
+                        No projects match the current project status or project completion filter.
                       </div>
                     ) : null}
                     {visibleProjects.map((project) => {
@@ -1994,8 +2035,6 @@ export function ReviewProjectsPageView({
   displayMode = 'list',
   canUseRequestMode = false,
   onDisplayModeChange,
-  showUnfinishedLocalesOnly = false,
-  onShowUnfinishedLocalesOnlyChange,
   expandedRequestKey,
   onExpandedRequestKeyChange,
   reviewProjectsSessionKey,
@@ -2094,7 +2133,11 @@ export function ReviewProjectsPageView({
           </button>
         </div>
       ) : null}
-      <FilterControls filters={filters} canCreate={canCreate} />
+      <FilterControls
+        filters={filters}
+        canCreate={canCreate}
+        displayMode={effectiveDisplayMode}
+      />
       {hasResults ? (
         <SummaryBar
           resultCount={
@@ -2105,11 +2148,6 @@ export function ReviewProjectsPageView({
           showModeToggle={canUseRequestMode}
           displayMode={effectiveDisplayMode}
           onDisplayModeChange={onDisplayModeChange}
-          showUnfinishedToggle={effectiveDisplayMode === 'requests'}
-          unfinishedLocalesOnly={showUnfinishedLocalesOnly}
-          onToggleUnfinishedLocalesOnly={() =>
-            onShowUnfinishedLocalesOnlyChange?.(!showUnfinishedLocalesOnly)
-          }
         />
       ) : null}
       {hasResults && adminControls && adminControls.enabled ? (
@@ -2123,7 +2161,8 @@ export function ReviewProjectsPageView({
           onFilterByRequest={handleFilterByRequest}
           adminControls={adminControls}
           assignmentControls={assignmentControls}
-          showUnfinishedLocalesOnly={showUnfinishedLocalesOnly}
+          projectStatusFilter={filters.projectStatusValue}
+          projectCompletionFilter={filters.projectCompletionValue}
           reviewProjectsSessionKey={reviewProjectsSessionKey}
         />
       ) : (
