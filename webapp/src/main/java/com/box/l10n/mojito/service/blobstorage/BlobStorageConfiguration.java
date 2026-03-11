@@ -1,13 +1,18 @@
 package com.box.l10n.mojito.service.blobstorage;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.box.l10n.mojito.retry.DataIntegrityViolationExceptionRetryTemplate;
+import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage;
+import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorageCleanupJob;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorage;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorageConfigurationProperties;
+import com.google.common.base.Preconditions;
 import java.time.Duration;
 import org.quartz.JobDetail;
 import org.quartz.SimpleTrigger;
@@ -15,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,8 +34,9 @@ import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
  * <p>{@link DatabaseBlobStorage} is the default implementation but it should be use only for
  * testing or deployments with limited load.
  *
- * <p>Consider using {@link S3BlobStorage} for larger deployment. An {@link AmazonS3} client must be
- * configured first, and then the storage enabled with the `l10n.blob-storage.type=s3` property
+ * <p>Consider using {@link S3BlobStorage} or {@link AzureBlobStorage} for larger deployments. S3
+ * storage requires an {@link AmazonS3} client and `l10n.blob-storage.type=s3`. Azure storage
+ * requires `l10n.blob-storage.type=azure` and `l10n.blob-storage.azure.*` properties.
  */
 @Configuration
 public class BlobStorageConfiguration {
@@ -48,6 +55,33 @@ public class BlobStorageConfiguration {
     public S3BlobStorage s3BlobStorage() {
       logger.info("Configure S3BlobStorage");
       return new S3BlobStorage(amazonS3, s3BlobStorageConfigurationProperties);
+    }
+  }
+
+  @ConditionalOnProperty(value = "l10n.blob-storage.type", havingValue = "azure")
+  @Configuration
+  static class AzureBlobStorageConfiguration {
+
+    @Autowired AzureBlobStorageConfigurationProperties azureBlobStorageConfigurationProperties;
+
+    @Bean
+    @ConditionalOnMissingBean(BlobContainerClient.class)
+    public BlobContainerClient azureBlobContainerClient() {
+      logger.info("Configure Azure BlobContainerClient");
+      Preconditions.checkNotNull(
+          azureBlobStorageConfigurationProperties.getConnectionString(),
+          "l10n.blob-storage.azure.connection-string must be configured");
+      return new BlobContainerClientBuilder()
+          .connectionString(azureBlobStorageConfigurationProperties.getConnectionString())
+          .containerName(azureBlobStorageConfigurationProperties.getContainer())
+          .buildClient();
+    }
+
+    @Bean
+    public AzureBlobStorage azureBlobStorage(BlobContainerClient azureBlobContainerClient) {
+      logger.info("Configure AzureBlobStorage");
+      return new AzureBlobStorage(
+          azureBlobContainerClient, azureBlobStorageConfigurationProperties);
     }
   }
 
