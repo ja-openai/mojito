@@ -23,6 +23,7 @@ import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.team.TeamRepository;
 import com.box.l10n.mojito.service.team.TeamService;
 import com.box.l10n.mojito.service.team.TeamSlackNotificationService;
+import com.box.l10n.mojito.service.team.TeamUserRepository;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
@@ -64,6 +65,7 @@ public class ReviewProjectService {
   private final UserRepository userRepository;
   private final TeamService teamService;
   private final TeamRepository teamRepository;
+  private final TeamUserRepository teamUserRepository;
   private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository;
   private final TeamSlackNotificationService teamSlackNotificationService;
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
@@ -86,6 +88,7 @@ public class ReviewProjectService {
       UserRepository userRepository,
       TeamService teamService,
       TeamRepository teamRepository,
+      TeamUserRepository teamUserRepository,
       ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
       TeamSlackNotificationService teamSlackNotificationService,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler) {
@@ -104,6 +107,7 @@ public class ReviewProjectService {
     this.userRepository = userRepository;
     this.teamService = teamService;
     this.teamRepository = teamRepository;
+    this.teamUserRepository = teamUserRepository;
     this.reviewProjectAssignmentHistoryRepository = reviewProjectAssignmentHistoryRepository;
     this.teamSlackNotificationService = teamSlackNotificationService;
     this.quartzPollableTaskScheduler = quartzPollableTaskScheduler;
@@ -299,13 +303,24 @@ public class ReviewProjectService {
   private record CreateAssignmentDefaults(
       Team team, User defaultPmUser, Map<String, User> defaultTranslatorByLocaleTagLowercase) {}
 
+  private record ProjectAccessContext(
+      Long userId,
+      boolean admin,
+      boolean pm,
+      boolean translator,
+      Set<Long> pmTeamIds,
+      Set<Long> translatorTeamIds,
+      Set<Long> editableLocaleIds,
+      boolean canTranslateAllLocales) {}
+
   @Transactional(readOnly = true)
   public SearchReviewProjectsView searchReviewProjects(SearchReviewProjectsCriteria request) {
     if (request == null) {
       throw new IllegalArgumentException("request must not be null");
     }
 
-    List<SearchReviewProjectDetail> projectDetails = getProjectDetailsByCriteria(request);
+    ProjectAccessContext accessContext = createProjectAccessContext();
+    List<SearchReviewProjectDetail> projectDetails = getProjectDetailsByCriteria(request, accessContext);
     Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
     List<SearchReviewProjectsView.ReviewProject> reviewProjects =
         toReviewProjectViews(projectDetails, acceptedCountByProjectId);
@@ -319,17 +334,19 @@ public class ReviewProjectService {
     if (request == null) {
       throw new IllegalArgumentException("request must not be null");
     }
+    ProjectAccessContext accessContext = createProjectAccessContext();
 
     List<ReviewProjectStatus> requestedStatuses = getRequestModeStatuses(request.statuses());
     boolean includeOpen = requestedStatuses.contains(ReviewProjectStatus.OPEN);
     boolean includeClosed = requestedStatuses.contains(ReviewProjectStatus.CLOSED);
 
-    List<Long> requestIds = findRequestIdsByStatuses(request, requestedStatuses);
+    List<Long> requestIds = findRequestIdsByStatuses(request, requestedStatuses, accessContext);
     if (requestIds.isEmpty()) {
       return new SearchReviewProjectRequestsView(List.of());
     }
 
-    List<SearchReviewProjectDetail> projectDetails = getProjectDetailsByRequestIds(requestIds);
+    List<SearchReviewProjectDetail> projectDetails =
+        getProjectDetailsByRequestIds(requestIds, request, accessContext);
     Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
     List<SearchReviewProjectsView.ReviewProject> reviewProjects =
         toReviewProjectViews(projectDetails, acceptedCountByProjectId);
@@ -426,7 +443,7 @@ public class ReviewProjectService {
   }
 
   private List<SearchReviewProjectDetail> getProjectDetailsByCriteria(
-      SearchReviewProjectsCriteria request) {
+      SearchReviewProjectsCriteria request, ProjectAccessContext accessContext) {
     CriteriaBuilder cb = entityManager.getCriteriaBuilder();
     CriteriaQuery<SearchReviewProjectDetail> cq = cb.createQuery(SearchReviewProjectDetail.class);
     Root<ReviewProject> root = cq.from(ReviewProject.class);
@@ -445,7 +462,17 @@ public class ReviewProjectService {
 
     List<Predicate> predicates =
         buildProjectSearchPredicates(
-            cb, root, localeJoin, requestJoin, createdByUserJoin, request, request.statuses());
+            cb,
+            root,
+            localeJoin,
+            requestJoin,
+            createdByUserJoin,
+            teamJoin,
+            assignedPmJoin,
+            assignedTranslatorJoin,
+            request,
+            request.statuses(),
+            accessContext);
 
     Predicate[] predicateArray = predicates.toArray(Predicate[]::new);
 
@@ -484,7 +511,9 @@ public class ReviewProjectService {
   }
 
   private List<Long> findRequestIdsByStatuses(
-      SearchReviewProjectsCriteria request, List<ReviewProjectStatus> statuses) {
+      SearchReviewProjectsCriteria request,
+      List<ReviewProjectStatus> statuses,
+      ProjectAccessContext accessContext) {
     CriteriaBuilder cb = entityManager.getCriteriaBuilder();
     CriteriaQuery<Long> cq = cb.createQuery(Long.class);
     Root<ReviewProject> root = cq.from(ReviewProject.class);
@@ -493,10 +522,25 @@ public class ReviewProjectService {
         root.join(ReviewProject_.reviewProjectRequest, JoinType.LEFT);
     Join<ReviewProject, User> createdByUserJoin =
         root.join(ReviewProject_.createdByUser, JoinType.LEFT);
+    Join<ReviewProject, Team> teamJoin = root.join(ReviewProject_.team, JoinType.LEFT);
+    Join<ReviewProject, User> assignedPmJoin =
+        root.join(ReviewProject_.assignedPmUser, JoinType.LEFT);
+    Join<ReviewProject, User> assignedTranslatorJoin =
+        root.join(ReviewProject_.assignedTranslatorUser, JoinType.LEFT);
 
     List<Predicate> predicates =
         buildProjectSearchPredicates(
-            cb, root, localeJoin, requestJoin, createdByUserJoin, request, statuses);
+            cb,
+            root,
+            localeJoin,
+            requestJoin,
+            createdByUserJoin,
+            teamJoin,
+            assignedPmJoin,
+            assignedTranslatorJoin,
+            request,
+            statuses,
+            accessContext);
     predicates.add(cb.isNotNull(requestJoin.get(ReviewProjectRequest_.id)));
 
     cq.where(predicates.toArray(Predicate[]::new))
@@ -509,7 +553,8 @@ public class ReviewProjectService {
     return query.getResultList();
   }
 
-  private List<SearchReviewProjectDetail> getProjectDetailsByRequestIds(List<Long> requestIds) {
+  private List<SearchReviewProjectDetail> getProjectDetailsByRequestIds(
+      List<Long> requestIds, SearchReviewProjectsCriteria request, ProjectAccessContext accessContext) {
     if (requestIds == null || requestIds.isEmpty()) {
       return List.of();
     }
@@ -530,7 +575,13 @@ public class ReviewProjectService {
     Join<ReviewProject, User> assignedTranslatorJoin =
         root.join(ReviewProject_.assignedTranslatorUser, JoinType.LEFT);
 
-    cq.where(requestJoin.get(ReviewProjectRequest_.id).in(requestIds))
+    List<Predicate> predicates = new ArrayList<>();
+    predicates.add(requestJoin.get(ReviewProjectRequest_.id).in(requestIds));
+    predicates.add(
+        buildScopePredicate(
+            cb, localeJoin, teamJoin, assignedPmJoin, assignedTranslatorJoin, request, accessContext));
+
+    cq.where(predicates.toArray(Predicate[]::new))
         .select(
             cb.construct(
                 SearchReviewProjectDetail.class,
@@ -620,8 +671,12 @@ public class ReviewProjectService {
       Join<ReviewProject, Locale> localeJoin,
       Join<ReviewProject, ReviewProjectRequest> requestJoin,
       Join<ReviewProject, User> createdByUserJoin,
+      Join<ReviewProject, Team> teamJoin,
+      Join<ReviewProject, User> assignedPmJoin,
+      Join<ReviewProject, User> assignedTranslatorJoin,
       SearchReviewProjectsCriteria request,
-      List<ReviewProjectStatus> statuses) {
+      List<ReviewProjectStatus> statuses,
+      ProjectAccessContext accessContext) {
     List<Predicate> predicates = new ArrayList<>();
 
     if (statuses != null && !statuses.isEmpty()) {
@@ -655,7 +710,164 @@ public class ReviewProjectService {
       predicates.add(buildSearchPredicate(cb, root, requestJoin, createdByUserJoin, request));
     }
 
+    predicates.add(
+        buildScopePredicate(
+            cb, localeJoin, teamJoin, assignedPmJoin, assignedTranslatorJoin, request, accessContext));
+
     return predicates;
+  }
+
+  private Predicate buildScopePredicate(
+      CriteriaBuilder cb,
+      Join<ReviewProject, Locale> localeJoin,
+      Join<ReviewProject, Team> teamJoin,
+      Join<ReviewProject, User> assignedPmJoin,
+      Join<ReviewProject, User> assignedTranslatorJoin,
+      SearchReviewProjectsCriteria request,
+      ProjectAccessContext accessContext) {
+    if (accessContext.admin()) {
+      return cb.conjunction();
+    }
+
+    SearchReviewProjectsCriteria.AssignedScope assignedScope =
+        request.assignedScope() != null
+            ? request.assignedScope()
+            : SearchReviewProjectsCriteria.AssignedScope.TO_ME;
+
+    List<Predicate> visibilityPredicates = new ArrayList<>();
+
+    if (assignedScope == SearchReviewProjectsCriteria.AssignedScope.TO_ME) {
+      if (accessContext.pm()) {
+        visibilityPredicates.add(cb.equal(assignedPmJoin.get(User_.id), accessContext.userId()));
+      }
+      if (accessContext.translator()) {
+        visibilityPredicates.add(
+            cb.equal(assignedTranslatorJoin.get(User_.id), accessContext.userId()));
+      }
+    } else if (assignedScope == SearchReviewProjectsCriteria.AssignedScope.TO_TEAM) {
+      if (accessContext.pm() && !accessContext.pmTeamIds().isEmpty()) {
+        visibilityPredicates.add(teamJoin.get(Team_.id).in(accessContext.pmTeamIds()));
+      }
+      if (accessContext.translator() && !accessContext.translatorTeamIds().isEmpty()) {
+        Predicate teamPredicate = teamJoin.get(Team_.id).in(accessContext.translatorTeamIds());
+        Predicate localePredicate =
+            accessContext.canTranslateAllLocales()
+                ? cb.conjunction()
+                : accessContext.editableLocaleIds().isEmpty()
+                    ? cb.disjunction()
+                    : localeJoin.get(Locale_.id).in(accessContext.editableLocaleIds());
+        visibilityPredicates.add(cb.and(teamPredicate, localePredicate));
+      }
+    }
+
+    if (visibilityPredicates.isEmpty()) {
+      return cb.disjunction();
+    }
+    if (visibilityPredicates.size() == 1) {
+      return visibilityPredicates.get(0);
+    }
+    return cb.or(visibilityPredicates.toArray(Predicate[]::new));
+  }
+
+  private ProjectAccessContext createProjectAccessContext() {
+    Long userId = teamService.getCurrentUserIdOrThrow();
+    boolean admin = userService.isCurrentUserAdmin();
+    boolean pm = userService.isCurrentUserPm();
+    boolean translator = userService.isCurrentUserTranslator();
+
+    if (!admin && !pm && !translator) {
+      throw new AccessDeniedException("Review project access is not allowed for current role");
+    }
+
+    Set<Long> pmTeamIds =
+        pm
+            ? teamUserRepository.findByUserIdAndRole(userId, TeamUserRole.PM).stream()
+                .map(teamUser -> teamUser.getTeam().getId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new))
+            : Set.of();
+
+    Set<Long> translatorTeamIds =
+        translator
+            ? teamUserRepository.findByUserIdAndRole(userId, TeamUserRole.TRANSLATOR).stream()
+                .map(teamUser -> teamUser.getTeam().getId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new))
+            : Set.of();
+
+    User currentUser =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+
+    boolean canTranslateAllLocales = currentUser.getCanTranslateAllLocales();
+    Set<Long> editableLocaleIds =
+        canTranslateAllLocales
+            ? Set.of()
+            : currentUser.getUserLocales().stream()
+                .map(userLocale -> userLocale.getLocale().getId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+    return new ProjectAccessContext(
+        userId,
+        admin,
+        pm,
+        translator,
+        pmTeamIds,
+        translatorTeamIds,
+        editableLocaleIds,
+        canTranslateAllLocales);
+  }
+
+  private void assertCurrentUserCanReadProject(ReviewProject reviewProject) {
+    if (reviewProject == null) {
+      throw new IllegalArgumentException("reviewProject must not be null");
+    }
+    ProjectAccessContext accessContext = createProjectAccessContext();
+    if (!canReadProject(reviewProject, accessContext)) {
+      throw new AccessDeniedException("Review project access denied");
+    }
+  }
+
+  private boolean canReadProject(ReviewProject reviewProject, ProjectAccessContext accessContext) {
+    if (accessContext.admin()) {
+      return true;
+    }
+
+    Long teamId = reviewProject.getTeam() != null ? reviewProject.getTeam().getId() : null;
+    Long localeId = reviewProject.getLocale() != null ? reviewProject.getLocale().getId() : null;
+    Long assignedPmUserId =
+        reviewProject.getAssignedPmUser() != null ? reviewProject.getAssignedPmUser().getId() : null;
+    Long assignedTranslatorUserId =
+        reviewProject.getAssignedTranslatorUser() != null
+            ? reviewProject.getAssignedTranslatorUser().getId()
+            : null;
+
+    if (accessContext.pm()) {
+      if (Objects.equals(assignedPmUserId, accessContext.userId())) {
+        return true;
+      }
+      if (teamId != null && accessContext.pmTeamIds().contains(teamId)) {
+        return true;
+      }
+    }
+
+    if (accessContext.translator()) {
+      if (Objects.equals(assignedTranslatorUserId, accessContext.userId())) {
+        return true;
+      }
+      boolean localeAllowed =
+          accessContext.canTranslateAllLocales()
+              || (localeId != null && accessContext.editableLocaleIds().contains(localeId));
+      if (localeAllowed
+          && teamId != null
+          && accessContext.translatorTeamIds().contains(teamId)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private Predicate buildStringPredicate(
@@ -704,6 +916,15 @@ public class ReviewProjectService {
 
   @Transactional(readOnly = true)
   public GetProjectDetailView getProjectDetail(Long projectId) {
+    ReviewProject reviewProject =
+        reviewProjectRepository
+            .findById(projectId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProject with id: " + projectId + " not found"));
+    assertCurrentUserCanReadProject(reviewProject);
+
     ReviewProjectDetail project =
         reviewProjectRepository
             .findDetailById(projectId)
@@ -765,6 +986,7 @@ public class ReviewProjectService {
                 () ->
                     new IllegalArgumentException(
                         "reviewProject with id: " + projectId + " not found"));
+    assertCurrentUserCanReadProject(reviewProject);
 
     if (!userService.isCurrentUserAdmin()) {
       userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
@@ -802,6 +1024,7 @@ public class ReviewProjectService {
                 () ->
                     new IllegalArgumentException(
                         "reviewProject with id: " + projectId + " not found"));
+    assertCurrentUserCanReadProject(reviewProject);
 
     if (!userService.isCurrentUserAdmin()) {
       userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
@@ -868,6 +1091,7 @@ public class ReviewProjectService {
                 () ->
                     new IllegalArgumentException(
                         "reviewProject with id: " + projectId + " not found"));
+    assertCurrentUserCanReadProject(reviewProject);
 
     boolean isAdmin = userService.isCurrentUserAdmin();
     boolean isPm = userService.isCurrentUserPm();
@@ -951,6 +1175,7 @@ public class ReviewProjectService {
                 () ->
                     new IllegalArgumentException(
                         "reviewProject with id: " + projectId + " not found"));
+    assertCurrentUserCanReadProject(reviewProject);
 
     if (!userService.isCurrentUserAdmin()) {
       userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
@@ -1040,9 +1265,14 @@ public class ReviewProjectService {
 
   @Transactional(readOnly = true)
   public List<ReviewProjectAssignmentHistory> getProjectAssignmentHistory(Long projectId) {
-    if (!reviewProjectRepository.existsById(projectId)) {
-      throw new IllegalArgumentException("reviewProject with id: " + projectId + " not found");
-    }
+    ReviewProject reviewProject =
+        reviewProjectRepository
+            .findById(projectId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProject with id: " + projectId + " not found"));
+    assertCurrentUserCanReadProject(reviewProject);
     return reviewProjectAssignmentHistoryRepository.findByProjectId(projectId);
   }
 
@@ -1146,6 +1376,7 @@ public class ReviewProjectService {
                             + " not found"));
 
     ReviewProject project = textUnit.getReviewProject();
+    assertCurrentUserCanReadProject(project);
     userService.checkUserCanEditLocale(project.getLocale().getId());
     User currentUser =
         userRepository

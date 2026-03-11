@@ -9,6 +9,7 @@ public record SearchReviewProjectsRequest(
     List<String> localeTags,
     List<ReviewProjectStatus> statuses,
     List<ReviewProjectType> types,
+    AssignedScope assignedScope,
     ZonedDateTime createdAfter,
     ZonedDateTime createdBefore,
     ZonedDateTime dueAfter,
@@ -29,5 +30,10 @@ public record SearchReviewProjectsRequest(
     CONTAINS,
     EXACT,
     ILIKE
+  }
+
+  public enum AssignedScope {
+    TO_ME,
+    TO_TEAM
   }
 }

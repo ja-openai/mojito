@@ -12,6 +12,7 @@ public record SearchReviewProjectsCriteria(
     List<ReviewProjectStatus> statuses,
     List<ReviewProjectType> types,
     List<String> localeTags,
+    AssignedScope assignedScope,
     ZonedDateTime createdAfter,
     ZonedDateTime createdBefore,
     ZonedDateTime dueAfter,
@@ -58,5 +59,10 @@ public record SearchReviewProjectsCriteria(
     CONTAINS,
     EXACT,
     ILIKE
+  }
+
+  public enum AssignedScope {
+    TO_ME,
+    TO_TEAM
   }
 }

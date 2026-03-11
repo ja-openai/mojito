@@ -1,6 +1,8 @@
 import {
+  type ApiReviewProjectAssignedScope,
   type ApiReviewProjectStatus,
   type ApiReviewProjectType,
+  REVIEW_PROJECT_ASSIGNED_SCOPES,
   REVIEW_PROJECT_STATUSES,
   REVIEW_PROJECT_TYPES,
 } from '../../api/review-projects';
@@ -40,6 +42,7 @@ export type ReviewProjectsSessionState = {
   searchField: SearchField;
   searchType: SearchType;
   creatorFilter: CreatorFilter;
+  assignedScope: ApiReviewProjectAssignedScope;
   createdAfter: string | null;
   createdBefore: string | null;
   dueAfter: string | null;
@@ -62,6 +65,7 @@ const DEFAULT_STATE: ReviewProjectsSessionState = {
   searchField: 'name',
   searchType: 'contains',
   creatorFilter: 'all',
+  assignedScope: 'TO_ME',
   createdAfter: null,
   createdBefore: null,
   dueAfter: null,
@@ -170,6 +174,11 @@ export function normalizeReviewProjectsSessionState(
     searchField: sanitizeEnum(input.searchField, SEARCH_FIELDS, DEFAULT_STATE.searchField),
     searchType: sanitizeEnum(input.searchType, SEARCH_TYPES, DEFAULT_STATE.searchType),
     creatorFilter: sanitizeEnum(input.creatorFilter, CREATOR_FILTERS, DEFAULT_STATE.creatorFilter),
+    assignedScope: sanitizeEnum(
+      input.assignedScope,
+      REVIEW_PROJECT_ASSIGNED_SCOPES,
+      DEFAULT_STATE.assignedScope,
+    ),
     createdAfter: sanitizeNullableString(input.createdAfter),
     createdBefore: sanitizeNullableString(input.createdBefore),
     dueAfter: sanitizeNullableString(input.dueAfter),

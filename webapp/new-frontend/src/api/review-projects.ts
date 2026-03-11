@@ -28,6 +28,9 @@ export const REVIEW_PROJECT_TYPE_LABELS: Record<ApiReviewProjectType, string> = 
   UNKNOWN: 'Unknown',
 };
 
+export const REVIEW_PROJECT_ASSIGNED_SCOPES = ['TO_ME', 'TO_TEAM'] as const;
+export type ApiReviewProjectAssignedScope = (typeof REVIEW_PROJECT_ASSIGNED_SCOPES)[number];
+
 export type ApiReviewProjectTextUnit = {
   id: number;
   tmTextUnit: {
@@ -172,6 +175,7 @@ export type ReviewProjectsSearchRequest = {
   localeTags?: string[];
   statuses?: ApiReviewProjectStatus[];
   types?: ApiReviewProjectType[];
+  assignedScope?: ApiReviewProjectAssignedScope;
   createdAfter?: string | null;
   createdBefore?: string | null;
   dueAfter?: string | null;

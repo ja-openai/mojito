@@ -7,6 +7,7 @@ import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } fr
 import { Link } from 'react-router-dom';
 
 import {
+  type ApiReviewProjectAssignedScope,
   type ApiReviewProjectStatus,
   type ApiReviewProjectType,
   REVIEW_PROJECT_STATUS_LABELS,
@@ -88,6 +89,8 @@ type FiltersProps = {
   onSearchTypeChange: (value: 'contains' | 'exact' | 'ilike') => void;
   creatorFilter: 'all' | 'mine';
   onCreatorFilterChange: (value: 'all' | 'mine') => void;
+  assignedScope: ApiReviewProjectAssignedScope;
+  onAssignedScopeChange: (value: ApiReviewProjectAssignedScope) => void;
 };
 
 export type ReviewProjectRow = {
@@ -1006,6 +1009,16 @@ function FilterControls({
         align="right"
         className="review-projects-page__filter-chip"
         sections={[
+          {
+            kind: 'radio',
+            label: 'Assigned',
+            options: [
+              { value: 'TO_ME', label: 'To me' },
+              { value: 'TO_TEAM', label: 'To team' },
+            ],
+            value: filters.assignedScope,
+            onChange: (value) => filters.onAssignedScopeChange(value as ApiReviewProjectAssignedScope),
+          },
           {
             kind: 'radio',
             label: 'Type',

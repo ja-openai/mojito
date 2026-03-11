@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import type {
+  ApiReviewProjectAssignedScope,
   ApiReviewProjectRequestGroupSummary,
   ApiReviewProjectStatus,
   ApiReviewProjectSummary,
@@ -280,6 +281,7 @@ export function ReviewProjectsPage() {
   const [searchField, setSearchField] = useState<'name' | 'id' | 'requestId' | 'createdBy'>('name');
   const [searchType, setSearchType] = useState<'contains' | 'exact' | 'ilike'>('contains');
   const [creatorFilter, setCreatorFilter] = useState<'all' | 'mine'>('all');
+  const [assignedScope, setAssignedScope] = useState<ApiReviewProjectAssignedScope>('TO_ME');
   const [createdAfter, setCreatedAfter] = useState<string | null>(null);
   const [createdBefore, setCreatedBefore] = useState<string | null>(null);
   const [dueAfter, setDueAfter] = useState<string | null>(null);
@@ -334,6 +336,7 @@ export function ReviewProjectsPage() {
       searchField,
       searchType,
       creatorFilter,
+      assignedScope,
       createdAfter,
       createdBefore,
       dueAfter,
@@ -346,6 +349,7 @@ export function ReviewProjectsPage() {
       createdAfter,
       createdBefore,
       creatorFilter,
+      assignedScope,
       displayMode,
       dueAfter,
       dueBefore,
@@ -410,6 +414,7 @@ export function ReviewProjectsPage() {
     setSearchField(normalizedState.searchField);
     setSearchType(normalizedState.searchType);
     setCreatorFilter(normalizedState.creatorFilter);
+    setAssignedScope(normalizedState.assignedScope);
     setCreatedAfter(normalizedState.createdAfter);
     setCreatedBefore(normalizedState.createdBefore);
     setDueAfter(normalizedState.dueAfter);
@@ -477,6 +482,7 @@ export function ReviewProjectsPage() {
     return {
       localeTags,
       types: typeFilter === 'all' ? undefined : [typeFilter],
+      assignedScope,
       createdAfter,
       createdBefore,
       dueAfter,
@@ -492,6 +498,7 @@ export function ReviewProjectsPage() {
     createdBefore,
     dueAfter,
     dueBefore,
+    assignedScope,
     limit,
     searchField,
     searchQuery,
@@ -930,6 +937,8 @@ export function ReviewProjectsPage() {
           onSearchTypeChange: setSearchType,
           creatorFilter,
           onCreatorFilterChange: setCreatorFilter,
+          assignedScope,
+          onAssignedScopeChange: setAssignedScope,
         }}
         onRequestIdClick={handleRequestIdClick}
         canCreate={isAdmin}

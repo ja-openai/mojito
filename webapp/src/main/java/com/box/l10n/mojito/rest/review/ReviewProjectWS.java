@@ -443,6 +443,14 @@ public class ReviewProjectWS {
         request.statuses(),
         request.types(),
         request.localeTags(),
+        Optional.ofNullable(request.assignedScope())
+            .map(
+                scope ->
+                    switch (scope) {
+                      case TO_ME -> SearchReviewProjectsCriteria.AssignedScope.TO_ME;
+                      case TO_TEAM -> SearchReviewProjectsCriteria.AssignedScope.TO_TEAM;
+                    })
+            .orElse(null),
         request.createdAfter(),
         request.createdBefore(),
         request.dueAfter(),
