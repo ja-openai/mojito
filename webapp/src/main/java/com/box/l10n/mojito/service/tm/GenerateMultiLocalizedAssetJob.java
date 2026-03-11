@@ -14,6 +14,7 @@ import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 public class GenerateMultiLocalizedAssetJob
     extends QuartzPollableJob<MultiLocalizedAssetBody, MultiLocalizedAssetBody> {
@@ -25,6 +26,15 @@ public class GenerateMultiLocalizedAssetJob
   @Autowired RepositoryLocaleRepository repositoryLocaleRepository;
 
   @Autowired MeterRegistry meterRegistry;
+
+  /**
+   * Optional scheduler override for locale child jobs.
+   *
+   * <p>Used as a stop-gap to decouple parent job submission scheduler (API->worker handoff) from
+   * child fan-out scheduler. If unset, child jobs keep legacy behavior and use parent scheduler.
+   */
+  @Value("${l10n.assetWS.quartz.childSchedulerName:}")
+  String childSchedulerName;
 
   @Override
   public MultiLocalizedAssetBody call(MultiLocalizedAssetBody multiLocalizedAssetBody)
@@ -55,7 +65,7 @@ public class GenerateMultiLocalizedAssetJob
                 .withInlineInput(false)
                 .withParentId(getParentId())
                 .withInput(createLocalizedAssetBody(localeInfo, multiLocalizedAssetBody))
-                .withScheduler(multiLocalizedAssetBody.getSchedulerName())
+                .withScheduler(getChildSchedulerName(multiLocalizedAssetBody))
                 .withMessage(
                     "Generate localized asset for locale: "
                         + outputTag
@@ -73,6 +83,13 @@ public class GenerateMultiLocalizedAssetJob
 
   protected long getParentId() {
     return getCurrentPollableTask().getId();
+  }
+
+  String getChildSchedulerName(MultiLocalizedAssetBody multiLocalizedAssetBody) {
+    if (childSchedulerName == null || childSchedulerName.trim().isEmpty()) {
+      return multiLocalizedAssetBody.getSchedulerName();
+    }
+    return childSchedulerName;
   }
 
   private LocalizedAssetBody createLocalizedAssetBody(

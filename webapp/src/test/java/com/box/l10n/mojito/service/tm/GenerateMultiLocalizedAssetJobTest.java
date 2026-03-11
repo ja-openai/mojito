@@ -105,6 +105,8 @@ public class GenerateMultiLocalizedAssetJobTest {
     verify(quartzPollableTaskSchedulerMock, times(2)).scheduleJob(quartzJobInfoCaptor.capture());
     List<QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody>> allValues =
         quartzJobInfoCaptor.getAllValues();
+    assertThat(allValues.stream().map(QuartzJobInfo::getScheduler))
+        .containsOnly(multiLocalizedAssetBody.getSchedulerName());
     assertThat(allValues.stream().filter(q -> q.getParentId() == 1L).count()).isEqualTo(2);
     assertThat(allValues.stream().map(QuartzJobInfo::getInput))
         .extracting("localeId")
@@ -112,5 +114,15 @@ public class GenerateMultiLocalizedAssetJobTest {
     assertThat(output.getGenerateLocalizedAssetJobIds().size()).isEqualTo(2);
     assertThat(output.getGenerateLocalizedAssetJobIds().get("fr-FR")).isEqualTo(1L);
     assertThat(output.getGenerateLocalizedAssetJobIds().get("ga-IE")).isEqualTo(2L);
+  }
+
+  @Test
+  public void testChildSchedulerNameOverridesParentSchedulerName() throws Exception {
+    generateMultiLocalizedAssetJob.childSchedulerName = "assetlocalize";
+    generateMultiLocalizedAssetJob.call(multiLocalizedAssetBody);
+    verify(quartzPollableTaskSchedulerMock, times(2)).scheduleJob(quartzJobInfoCaptor.capture());
+    List<QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody>> allValues =
+        quartzJobInfoCaptor.getAllValues();
+    assertThat(allValues.stream().map(QuartzJobInfo::getScheduler)).containsOnly("assetlocalize");
   }
 }
