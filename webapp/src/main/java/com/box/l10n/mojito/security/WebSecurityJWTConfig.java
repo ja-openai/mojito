@@ -2,6 +2,7 @@ package com.box.l10n.mojito.security;
 
 import com.box.l10n.mojito.entity.security.user.Authority;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,6 +36,8 @@ public class WebSecurityJWTConfig {
 
   UserService userService;
 
+  UserRepository userRepository;
+
   SecurityConfig securityConfig;
 
   @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:}")
@@ -45,8 +48,10 @@ public class WebSecurityJWTConfig {
 
   private final DefaultBearerTokenResolver defaultBearerTokenResolver;
 
-  public WebSecurityJWTConfig(UserService userService, SecurityConfig securityConfig) {
+  public WebSecurityJWTConfig(
+      UserService userService, UserRepository userRepository, SecurityConfig securityConfig) {
     this.userService = userService;
+    this.userRepository = userRepository;
     this.securityConfig = securityConfig;
     this.defaultBearerTokenResolver = new DefaultBearerTokenResolver();
   }
@@ -153,59 +158,29 @@ public class WebSecurityJWTConfig {
     String emailLocalPart = localPart(email);
     String upnLocalPart = localPart(upn);
 
+    String oldUsername;
     String username;
-    String usernameSource;
+
     switch (providerType) {
       case AZURE_AD -> {
-        username = firstNonBlank(upnLocalPart, emailLocalPart, sub, oid);
-        usernameSource =
-            firstNonBlankLabeled(
-                "preferred_username_local_part",
-                upnLocalPart,
-                "email_local_part",
-                emailLocalPart,
-                "sub",
-                sub,
-                "oid",
-                oid);
+        oldUsername = firstNonBlank(upnLocalPart, emailLocalPart, sub, oid, jwt.getTokenValue());
+        username =
+            firstNonBlank(email, upnLocalPart, emailLocalPart, sub, oid, jwt.getTokenValue());
       }
       case CLOUDFLARE -> {
-        username = firstNonBlank(emailLocalPart, sub, oid, commonName, upnLocalPart);
-        usernameSource =
-            firstNonBlankLabeled(
-                "email_local_part",
-                emailLocalPart,
-                "sub",
-                sub,
-                "oid",
-                oid,
-                "common_name",
-                commonName,
-                "preferred_username_local_part",
-                upnLocalPart);
+        oldUsername =
+            firstNonBlank(emailLocalPart, sub, oid, commonName, upnLocalPart, jwt.getTokenValue());
+        username =
+            firstNonBlank(
+                email, emailLocalPart, sub, oid, commonName, upnLocalPart, jwt.getTokenValue());
       }
       case AUTO -> {
-        username = firstNonBlank(emailLocalPart, upnLocalPart, sub, oid);
-        usernameSource =
-            firstNonBlankLabeled(
-                "email_local_part",
-                emailLocalPart,
-                "preferred_username_local_part",
-                upnLocalPart,
-                "sub",
-                sub,
-                "oid",
-                oid);
+        oldUsername = firstNonBlank(emailLocalPart, upnLocalPart, sub, oid, jwt.getTokenValue());
+        username =
+            firstNonBlank(email, emailLocalPart, upnLocalPart, sub, oid, jwt.getTokenValue());
       }
-      default -> throw new IllegalStateException("Unsupported identity provider type: " + providerType);
-    }
-
-    if (!StringUtils.hasText(username)) {
-      username = firstNonBlank(sub, oid, jwt.getTokenValue());
-      usernameSource = firstNonBlankLabeled("sub", sub, "oid", oid);
-      if (!StringUtils.hasText(usernameSource)) {
-        usernameSource = "token_value";
-      }
+      default ->
+          throw new IllegalStateException("Unsupported identity provider type: " + providerType);
     }
 
     if (!StringUtils.hasText(name)) {
@@ -214,7 +189,7 @@ public class WebSecurityJWTConfig {
     }
 
     logger.debug(
-        "JWT identity resolution: providerType={}, issuer={}, email={}, emailLocalPart={}, preferredUsername={}, preferredUsernameLocalPart={}, sub={}, oid={}, commonName={}, resolvedUsername={}, usernameSource={}",
+        "JWT identity resolution: providerType={}, issuer={}, email={}, emailLocalPart={}, preferredUsername={}, preferredUsernameLocalPart={}, sub={}, oid={}, commonName={}, oldUsername={}, newUsername={}",
         providerType,
         issuer,
         email,
@@ -224,10 +199,19 @@ public class WebSecurityJWTConfig {
         sub,
         oid,
         commonName,
-        username,
-        usernameSource);
+        oldUsername,
+        username);
 
-    return userService.getOrCreateOrUpdateBasicUser(username, given, family, name);
+    User user = userRepository.findByUsername(username);
+
+    if (user == null) {
+      user = userRepository.findByUsername(oldUsername);
+    }
+
+    if (user == null) {
+      user = userService.getOrCreateOrUpdateBasicUser(username, given, family, name);
+    }
+    return user;
   }
 
   private String resolveAccessToken(HttpServletRequest request) {
