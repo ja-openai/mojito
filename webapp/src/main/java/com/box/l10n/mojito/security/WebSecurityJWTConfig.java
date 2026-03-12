@@ -150,22 +150,82 @@ public class WebSecurityJWTConfig {
     String given = jwt.getClaimAsString("given_name");
     String family = jwt.getClaimAsString("family_name");
     String commonName = jwt.getClaimAsString("common_name");
+    String emailLocalPart = localPart(email);
+    String upnLocalPart = localPart(upn);
 
-    String username =
-        switch (providerType) {
-          case AZURE_AD -> firstNonBlank(localPart(upn), localPart(email), sub, oid);
-          case CLOUDFLARE -> firstNonBlank(localPart(email), sub, oid, commonName, localPart(upn));
-          case AUTO -> firstNonBlank(localPart(email), localPart(upn), sub, oid);
-        };
+    String username;
+    String usernameSource;
+    switch (providerType) {
+      case AZURE_AD -> {
+        username = firstNonBlank(upnLocalPart, emailLocalPart, sub, oid);
+        usernameSource =
+            firstNonBlankLabeled(
+                "preferred_username_local_part",
+                upnLocalPart,
+                "email_local_part",
+                emailLocalPart,
+                "sub",
+                sub,
+                "oid",
+                oid);
+      }
+      case CLOUDFLARE -> {
+        username = firstNonBlank(emailLocalPart, sub, oid, commonName, upnLocalPart);
+        usernameSource =
+            firstNonBlankLabeled(
+                "email_local_part",
+                emailLocalPart,
+                "sub",
+                sub,
+                "oid",
+                oid,
+                "common_name",
+                commonName,
+                "preferred_username_local_part",
+                upnLocalPart);
+      }
+      case AUTO -> {
+        username = firstNonBlank(emailLocalPart, upnLocalPart, sub, oid);
+        usernameSource =
+            firstNonBlankLabeled(
+                "email_local_part",
+                emailLocalPart,
+                "preferred_username_local_part",
+                upnLocalPart,
+                "sub",
+                sub,
+                "oid",
+                oid);
+      }
+      default -> throw new IllegalStateException("Unsupported identity provider type: " + providerType);
+    }
 
     if (!StringUtils.hasText(username)) {
       username = firstNonBlank(sub, oid, jwt.getTokenValue());
+      usernameSource = firstNonBlankLabeled("sub", sub, "oid", oid);
+      if (!StringUtils.hasText(usernameSource)) {
+        usernameSource = "token_value";
+      }
     }
 
     if (!StringUtils.hasText(name)) {
       String built = ((given != null ? given : "") + " " + (family != null ? family : "")).trim();
       name = StringUtils.hasText(built) ? built : username;
     }
+
+    logger.debug(
+        "JWT identity resolution: providerType={}, issuer={}, email={}, emailLocalPart={}, preferredUsername={}, preferredUsernameLocalPart={}, sub={}, oid={}, commonName={}, resolvedUsername={}, usernameSource={}",
+        providerType,
+        issuer,
+        email,
+        emailLocalPart,
+        upn,
+        upnLocalPart,
+        sub,
+        oid,
+        commonName,
+        username,
+        usernameSource);
 
     return userService.getOrCreateOrUpdateBasicUser(username, given, family, name);
   }
@@ -254,6 +314,20 @@ public class WebSecurityJWTConfig {
     for (String value : values) {
       if (StringUtils.hasText(value)) {
         return value;
+      }
+    }
+    return null;
+  }
+
+  private String firstNonBlankLabeled(String... labelValuePairs) {
+    if (labelValuePairs == null) {
+      return null;
+    }
+    for (int i = 0; i + 1 < labelValuePairs.length; i += 2) {
+      String label = labelValuePairs[i];
+      String value = labelValuePairs[i + 1];
+      if (StringUtils.hasText(value)) {
+        return label;
       }
     }
     return null;
