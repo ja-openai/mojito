@@ -189,6 +189,23 @@ function buildTeamUserSummaryMap(
   return map;
 }
 
+function getCompactUserDisplayName(username: string | null | undefined) {
+  const trimmed = username?.trim() ?? '';
+  if (!trimmed) {
+    return '—';
+  }
+  const atIndex = trimmed.indexOf('@');
+  if (atIndex > 0 && atIndex === trimmed.lastIndexOf('@')) {
+    return trimmed.slice(0, atIndex);
+  }
+  return trimmed;
+}
+
+function getUserTitle(username: string | null | undefined) {
+  const trimmed = username?.trim() ?? '';
+  return trimmed || undefined;
+}
+
 function buildReviewProjectDetailPath(
   projectId: number,
   reviewProjectsSessionKey?: string | null,
@@ -1192,14 +1209,20 @@ function ReviewProjectRowView({
             </span>
           ) : null}
           <span className="review-projects-page__request-meta-inline review-projects-page__list-assignment-inline">
-            <span className="review-projects-page__request-created-by">
-              by {project.requestCreatedByUsername?.trim() ? project.requestCreatedByUsername : '—'}
+            <span
+              className="review-projects-page__request-created-by"
+              title={getUserTitle(project.requestCreatedByUsername)}
+            >
+              by {getCompactUserDisplayName(project.requestCreatedByUsername)}
             </span>
             <span className="review-projects-page__request-dot" aria-hidden="true">
               ·
             </span>
-            <span className="review-projects-page__request-assignee">
-              PM {project.assignedPmUsername?.trim() ? project.assignedPmUsername : '—'}
+            <span
+              className="review-projects-page__request-assignee"
+              title={getUserTitle(project.assignedPmUsername)}
+            >
+              PM {getCompactUserDisplayName(project.assignedPmUsername)}
             </span>
             <span className="review-projects-page__request-dot" aria-hidden="true">
               ·
@@ -1214,17 +1237,17 @@ function ReviewProjectRowView({
                   }
                 }}
                 disabled={isReassignSaving}
-                title="Reassign translator"
+                aria-label="Reassign translator"
+                title={getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'}
               >
-                {project.assignedTranslatorUsername?.trim()
-                  ? project.assignedTranslatorUsername
-                  : '—'}
+                {getCompactUserDisplayName(project.assignedTranslatorUsername)}
               </button>
             ) : (
-              <span className="review-projects-page__request-assignee">
-                {project.assignedTranslatorUsername?.trim()
-                  ? project.assignedTranslatorUsername
-                  : '—'}
+              <span
+                className="review-projects-page__request-assignee"
+                title={getUserTitle(project.assignedTranslatorUsername)}
+              >
+                {getCompactUserDisplayName(project.assignedTranslatorUsername)}
               </span>
             )}
           </span>
@@ -1725,8 +1748,11 @@ function RequestGroupsSection({
                     {group.createdByUsername || group.assignedPmUsername ? (
                       <span className="review-projects-page__request-meta-inline">
                         {group.createdByUsername ? (
-                          <span className="review-projects-page__request-created-by">
-                            by {group.createdByUsername}
+                          <span
+                            className="review-projects-page__request-created-by"
+                            title={getUserTitle(group.createdByUsername)}
+                          >
+                            by {getCompactUserDisplayName(group.createdByUsername)}
                           </span>
                         ) : null}
                         {group.createdByUsername && group.assignedPmUsername ? (
@@ -1746,13 +1772,17 @@ function RequestGroupsSection({
                               }
                             }}
                             disabled={reassignMutation.isPending || group.requestId == null}
-                            title="Reassign PM for this request"
+                            aria-label="Reassign PM for this request"
+                            title={getUserTitle(group.assignedPmUsername) ?? 'Unassigned'}
                           >
-                            PM {group.assignedPmUsername?.trim() ? group.assignedPmUsername : '—'}
+                            PM {getCompactUserDisplayName(group.assignedPmUsername)}
                           </button>
                         ) : (
-                          <span className="review-projects-page__request-assignee">
-                            PM {group.assignedPmUsername?.trim() ? group.assignedPmUsername : '—'}
+                          <span
+                            className="review-projects-page__request-assignee"
+                            title={getUserTitle(group.assignedPmUsername)}
+                          >
+                            PM {getCompactUserDisplayName(group.assignedPmUsername)}
                           </span>
                         )}
                       </span>
@@ -1853,17 +1883,17 @@ function RequestGroupsSection({
                                   }
                                 }}
                                 aria-disabled={reassignMutation.isPending}
-                                title="Reassign translator"
+                                aria-label="Reassign translator"
+                                title={getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'}
                               >
-                                {project.assignedTranslatorUsername?.trim()
-                                  ? project.assignedTranslatorUsername
-                                  : '—'}
+                                {getCompactUserDisplayName(project.assignedTranslatorUsername)}
                               </span>
                             ) : (
-                              <div className="review-projects-page__request-project-translator">
-                                {project.assignedTranslatorUsername?.trim()
-                                  ? project.assignedTranslatorUsername
-                                  : '—'}
+                              <div
+                                className="review-projects-page__request-project-translator"
+                                title={getUserTitle(project.assignedTranslatorUsername)}
+                              >
+                                {getCompactUserDisplayName(project.assignedTranslatorUsername)}
                               </div>
                             )}
                             <div className="review-projects-page__request-project-counts">
