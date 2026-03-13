@@ -504,7 +504,9 @@ public class TextUnitWS {
     tmTextUnitCurrentVariantService.removeCurrentVariant(textUnitId);
   }
 
-  @RequestMapping(method = RequestMethod.POST, value = "/api/textunits/current-variants/delete-batch")
+  @RequestMapping(
+      method = RequestMethod.POST,
+      value = "/api/textunits/current-variants/delete-batch")
   public DeleteTMTextUnitCurrentVariantsResponse deleteTMTextUnitCurrentVariants(
       @RequestBody DeleteTMTextUnitCurrentVariantsBody body) {
     int deletedCount =
@@ -519,9 +521,7 @@ public class TextUnitWS {
       @RequestBody UpdateTMTextUnitCurrentVariantsStatusBody body) {
     int updatedCount =
         tmTextUnitCurrentVariantService.updateCurrentVariantStatuses(
-            body.tmTextUnitCurrentVariantIds(),
-            body.status(),
-            body.includedInLocalizedFile());
+            body.tmTextUnitCurrentVariantIds(), body.status(), body.includedInLocalizedFile());
     return new UpdateTMTextUnitCurrentVariantsStatusResponse(updatedCount);
   }
 

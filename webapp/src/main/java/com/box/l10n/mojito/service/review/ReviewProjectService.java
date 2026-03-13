@@ -320,7 +320,8 @@ public class ReviewProjectService {
     }
 
     ProjectAccessContext accessContext = createProjectAccessContext();
-    List<SearchReviewProjectDetail> projectDetails = getProjectDetailsByCriteria(request, accessContext);
+    List<SearchReviewProjectDetail> projectDetails =
+        getProjectDetailsByCriteria(request, accessContext);
     Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
     List<SearchReviewProjectsView.ReviewProject> reviewProjects =
         toReviewProjectViews(projectDetails, acceptedCountByProjectId);
@@ -554,7 +555,9 @@ public class ReviewProjectService {
   }
 
   private List<SearchReviewProjectDetail> getProjectDetailsByRequestIds(
-      List<Long> requestIds, SearchReviewProjectsCriteria request, ProjectAccessContext accessContext) {
+      List<Long> requestIds,
+      SearchReviewProjectsCriteria request,
+      ProjectAccessContext accessContext) {
     if (requestIds == null || requestIds.isEmpty()) {
       return List.of();
     }
@@ -579,7 +582,13 @@ public class ReviewProjectService {
     predicates.add(requestJoin.get(ReviewProjectRequest_.id).in(requestIds));
     predicates.add(
         buildScopePredicate(
-            cb, localeJoin, teamJoin, assignedPmJoin, assignedTranslatorJoin, request, accessContext));
+            cb,
+            localeJoin,
+            teamJoin,
+            assignedPmJoin,
+            assignedTranslatorJoin,
+            request,
+            accessContext));
 
     cq.where(predicates.toArray(Predicate[]::new))
         .select(
@@ -712,7 +721,13 @@ public class ReviewProjectService {
 
     predicates.add(
         buildScopePredicate(
-            cb, localeJoin, teamJoin, assignedPmJoin, assignedTranslatorJoin, request, accessContext));
+            cb,
+            localeJoin,
+            teamJoin,
+            assignedPmJoin,
+            assignedTranslatorJoin,
+            request,
+            accessContext));
 
     return predicates;
   }
@@ -838,7 +853,9 @@ public class ReviewProjectService {
     Long teamId = reviewProject.getTeam() != null ? reviewProject.getTeam().getId() : null;
     Long localeId = reviewProject.getLocale() != null ? reviewProject.getLocale().getId() : null;
     Long assignedPmUserId =
-        reviewProject.getAssignedPmUser() != null ? reviewProject.getAssignedPmUser().getId() : null;
+        reviewProject.getAssignedPmUser() != null
+            ? reviewProject.getAssignedPmUser().getId()
+            : null;
     Long assignedTranslatorUserId =
         reviewProject.getAssignedTranslatorUser() != null
             ? reviewProject.getAssignedTranslatorUser().getId()
@@ -860,9 +877,7 @@ public class ReviewProjectService {
       boolean localeAllowed =
           accessContext.canTranslateAllLocales()
               || (localeId != null && accessContext.editableLocaleIds().contains(localeId));
-      if (localeAllowed
-          && teamId != null
-          && accessContext.translatorTeamIds().contains(teamId)) {
+      if (localeAllowed && teamId != null && accessContext.translatorTeamIds().contains(teamId)) {
         return true;
       }
     }

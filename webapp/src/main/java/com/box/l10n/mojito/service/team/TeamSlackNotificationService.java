@@ -52,8 +52,7 @@ public class TeamSlackNotificationService {
     this.teamService = teamService;
     this.slackClients = slackClients;
     this.serverConfig = serverConfig;
-    this.reviewProjectDueDateTimeZone =
-        toDueDateTimeZoneOrDefault(reviewProjectDueDateTimeZoneId);
+    this.reviewProjectDueDateTimeZone = toDueDateTimeZoneOrDefault(reviewProjectDueDateTimeZoneId);
   }
 
   public void sendReviewProjectAssignmentNotification(
