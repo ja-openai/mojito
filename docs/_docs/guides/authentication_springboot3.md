@@ -131,4 +131,4 @@ l10n.security.stateless.type=MSAL   # or CLOUDFLARE
   The UI attaches this value to API requests only when present so production traffic continues to rely on the
   proxy-managed header.
 
-  Similarly on the CLI, use `export L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_JWT_ASSERTION=<value>` 
+  Similarly on the CLI, use `export L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_TOKEN=<value>` 

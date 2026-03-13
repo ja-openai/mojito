@@ -72,6 +72,10 @@ export L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_CLIENT_ID=<client-id>
 export L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_CLIENT_SECRET=<client-secret>
 source /dev/stdin <<< "$(curl -L -N -s -H \"CF-Access-Client-Id: ${L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_CLIENT_ID}\" -H \"CF-Access-Client-Secret: ${L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_CLIENT_SECRET}\" http://localhost:8080/cli/install.sh?authMode=CF_SERVICE_TOKEN)"
 
+# Or use a user token issued by Cloudflare Access:
+export L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_TOKEN=<token>
+source /dev/stdin <<< "$(curl -L -N -s -H \"CF-Access-Token: ${L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_TOKEN}\" http://localhost:8080/cli/install.sh?authMode=CF_JWT)"
+
 The install script automatically exports `L10N_RESTTEMPLATE_AUTHENTICATION_MODE=HEADER` when these
 headers are present.
 ```

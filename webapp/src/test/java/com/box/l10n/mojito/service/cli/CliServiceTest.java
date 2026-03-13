@@ -88,6 +88,21 @@ public class CliServiceTest extends ServiceTestBase {
   }
 
   @Test
+  public void generateInstallCliScriptWithCfJwtHeader() throws IOException {
+    String installScript =
+        cliService.generateInstallCliScript(
+            "http://localhost:8080/cli/install.sh",
+            "${PWD}/.mojito",
+            CliService.AUTHENTICATION_MODE_CF_JWT);
+
+    String expected =
+        Resources.toString(
+            Resources.getResource("com/box/l10n/mojito/service/cli/install_with_cf_jwt_header.sh"),
+            StandardCharsets.UTF_8);
+    assertEquals(expected, installScript);
+  }
+
+  @Test
   public void getInstallCliContext() {
     InstallCliContext installCliContext =
         cliService.getInstallCliContext(

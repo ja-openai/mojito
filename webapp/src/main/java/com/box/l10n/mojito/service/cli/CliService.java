@@ -33,8 +33,10 @@ public class CliService {
   static final String INSTALL_CLI_TEMPLATE = "cli/install.sh";
   static Logger logger = LoggerFactory.getLogger(CliService.class);
   public static final String AUTHENTICATION_MODE_CF_SERVICE_TOKEN = "CF_SERVICE_TOKEN";
+  public static final String AUTHENTICATION_MODE_CF_JWT = "CF_JWT";
 
   static final Map<String, String> CF_SERVICE_TOKEN_HEADER_TO_ENV_VAR = cfServiceTokenHeaders();
+  static final Map<String, String> CF_JWT_HEADER_TO_ENV_VAR = cfJwtHeaders();
 
   @Value("${info.build.version}")
   String version;
@@ -139,6 +141,10 @@ public class CliService {
         && AUTHENTICATION_MODE_CF_SERVICE_TOKEN.equalsIgnoreCase(authenticationMode)) {
       return CF_SERVICE_TOKEN_HEADER_TO_ENV_VAR;
     }
+    if (authenticationMode != null
+        && AUTHENTICATION_MODE_CF_JWT.equalsIgnoreCase(authenticationMode)) {
+      return CF_JWT_HEADER_TO_ENV_VAR;
+    }
     return Collections.emptyMap();
   }
 
@@ -148,6 +154,12 @@ public class CliService {
         "CF-Access-Client-Id", "L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_CLIENT_ID");
     headerToEnvVar.put(
         "CF-Access-Client-Secret", "L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_CLIENT_SECRET");
+    return Collections.unmodifiableMap(headerToEnvVar);
+  }
+
+  private static Map<String, String> cfJwtHeaders() {
+    Map<String, String> headerToEnvVar = new LinkedHashMap<>();
+    headerToEnvVar.put("CF-Access-Token", "L10N_RESTTEMPLATE_HEADER_HEADERS_CF_ACCESS_TOKEN");
     return Collections.unmodifiableMap(headerToEnvVar);
   }
 
