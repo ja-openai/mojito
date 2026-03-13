@@ -2,7 +2,6 @@ package com.box.l10n.mojito.security;
 
 import com.box.l10n.mojito.entity.security.user.Authority;
 import com.box.l10n.mojito.entity.security.user.User;
-import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,8 +35,6 @@ public class WebSecurityJWTConfig {
 
   UserService userService;
 
-  UserRepository userRepository;
-
   SecurityConfig securityConfig;
 
   @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:}")
@@ -48,10 +45,8 @@ public class WebSecurityJWTConfig {
 
   private final DefaultBearerTokenResolver defaultBearerTokenResolver;
 
-  public WebSecurityJWTConfig(
-      UserService userService, UserRepository userRepository, SecurityConfig securityConfig) {
+  public WebSecurityJWTConfig(UserService userService, SecurityConfig securityConfig) {
     this.userService = userService;
-    this.userRepository = userRepository;
     this.securityConfig = securityConfig;
     this.defaultBearerTokenResolver = new DefaultBearerTokenResolver();
   }
@@ -158,24 +153,20 @@ public class WebSecurityJWTConfig {
     String emailLocalPart = localPart(email);
     String upnLocalPart = localPart(upn);
 
-    String oldUsername;
     String username;
 
     switch (providerType) {
       case AZURE_AD -> {
-        oldUsername = firstNonBlank(upnLocalPart, emailLocalPart, sub, oid, jwt.getTokenValue());
         username =
             firstNonBlank(email, upnLocalPart, emailLocalPart, sub, oid, jwt.getTokenValue());
       }
       case CLOUDFLARE -> {
-        oldUsername =
-            firstNonBlank(emailLocalPart, sub, oid, commonName, upnLocalPart, jwt.getTokenValue());
+        // service token use commonName
         username =
             firstNonBlank(
                 email, emailLocalPart, sub, oid, commonName, upnLocalPart, jwt.getTokenValue());
       }
       case AUTO -> {
-        oldUsername = firstNonBlank(emailLocalPart, upnLocalPart, sub, oid, jwt.getTokenValue());
         username =
             firstNonBlank(email, emailLocalPart, upnLocalPart, sub, oid, jwt.getTokenValue());
       }
@@ -189,7 +180,7 @@ public class WebSecurityJWTConfig {
     }
 
     logger.debug(
-        "JWT identity resolution: providerType={}, issuer={}, email={}, emailLocalPart={}, preferredUsername={}, preferredUsernameLocalPart={}, sub={}, oid={}, commonName={}, oldUsername={}, newUsername={}",
+        "JWT identity resolution: providerType={}, issuer={}, email={}, emailLocalPart={}, preferredUsername={}, preferredUsernameLocalPart={}, sub={}, oid={}, commonName={}, newUsername={}",
         providerType,
         issuer,
         email,
@@ -199,19 +190,9 @@ public class WebSecurityJWTConfig {
         sub,
         oid,
         commonName,
-        oldUsername,
         username);
 
-    User user = userRepository.findByUsername(username);
-
-    if (user == null) {
-      user = userRepository.findByUsername(oldUsername);
-    }
-
-    if (user == null) {
-      user = userService.getOrCreateOrUpdateBasicUser(username, given, family, name);
-    }
-    return user;
+    return userService.getOrCreateOrUpdateBasicUser(username, given, family, name);
   }
 
   private String resolveAccessToken(HttpServletRequest request) {
