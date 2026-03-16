@@ -30,9 +30,7 @@ public class AiTranslateLocalePromptSuffixWS {
   @ResponseStatus(HttpStatus.OK)
   public List<LocalePromptSuffixResponse> getLocalePromptSuffixes() {
     assertCurrentUserIsAdmin();
-    return aiTranslateLocalePromptSuffixService.getAll().stream()
-        .map(this::toResponse)
-        .toList();
+    return aiTranslateLocalePromptSuffixService.getAll().stream().map(this::toResponse).toList();
   }
 
   @RequestMapping(method = RequestMethod.PUT)

@@ -119,6 +119,7 @@ public class AiTranslateService {
 
   private final AiTranslateScreenshotService aiTranslateScreenshotService;
   private final AiTranslateLegacyBatchService aiTranslateLegacyBatchService;
+  private final AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService;
   private final MeterRegistry meterRegistry;
   private final AtomicInteger noBatchRequestsInFlight;
 
@@ -177,7 +178,8 @@ public class AiTranslateService {
       MeterRegistry meterRegistry,
       ScreenshotService screenshotService,
       AiTranslateScreenshotService aiTranslateScreenshotService,
-      AiTranslateLegacyBatchService aiTranslateLegacyBatchService) {
+      AiTranslateLegacyBatchService aiTranslateLegacyBatchService,
+      AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService) {
     this.textUnitSearcher = textUnitSearcher;
     this.repositoryRepository = repositoryRepository;
     this.repositoryService = repositoryService;
@@ -198,6 +200,7 @@ public class AiTranslateService {
     this.meterRegistry = meterRegistry;
     this.aiTranslateScreenshotService = aiTranslateScreenshotService;
     this.aiTranslateLegacyBatchService = aiTranslateLegacyBatchService;
+    this.aiTranslateLocalePromptSuffixService = aiTranslateLocalePromptSuffixService;
     this.noBatchRequestsInFlight =
         meterRegistry.gauge(
             metricName("requestsInFlight"), Tags.of("mode", MODE_NO_BATCH), new AtomicInteger());
@@ -408,7 +411,11 @@ public class AiTranslateService {
 
         AiTranslateType aiTranslateType =
             AiTranslateType.fromString(aiTranslateInput.translateType());
-        String prompt = getPrompt(aiTranslateType.getPrompt(), aiTranslateInput.promptSuffix());
+        String prompt =
+            getPrompt(
+                aiTranslateType.getPrompt(),
+                aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix(
+                    bcp47Tag, aiTranslateInput.promptSuffix()));
         Status importStatus = Status.valueOf(aiTranslateInput.importStatus());
 
         int groupedRequestCount = 0;

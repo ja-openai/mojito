@@ -28,6 +28,20 @@ public class AiTranslateLocalePromptSuffixService {
     return repository.findAllByOrderByLocaleBcp47TagAsc().stream().map(this::toRecord).toList();
   }
 
+  @Transactional(readOnly = true)
+  public String getEffectivePromptSuffix(String localeTag, String requestPromptSuffix) {
+    String normalizedLocaleTag = requireLocaleTag(localeTag);
+    String savedPromptSuffix = null;
+
+    AiTranslateLocalePromptSuffixEntity entity =
+        repository.findByLocaleBcp47TagIgnoreCase(normalizedLocaleTag);
+    if (entity != null) {
+      savedPromptSuffix = normalizeOptionalPromptSuffix(entity.getPromptSuffix());
+    }
+
+    return combinePromptSuffixes(savedPromptSuffix, requestPromptSuffix);
+  }
+
   @Transactional
   public LocalePromptSuffix upsert(String localeTag, String promptSuffix) {
     String normalizedLocaleTag = requireLocaleTag(localeTag);
@@ -81,5 +95,21 @@ public class AiTranslateLocalePromptSuffixService {
       throw new IllegalArgumentException("Prompt suffix is required");
     }
     return promptSuffix.trim();
+  }
+
+  static String combinePromptSuffixes(String... suffixes) {
+    return java.util.Arrays.stream(suffixes)
+        .map(AiTranslateLocalePromptSuffixService::normalizeOptionalPromptSuffix)
+        .filter(java.util.Objects::nonNull)
+        .reduce((left, right) -> "%s %s".formatted(left, right))
+        .orElse(null);
+  }
+
+  private static String normalizeOptionalPromptSuffix(String promptSuffix) {
+    if (promptSuffix == null) {
+      return null;
+    }
+    String normalized = promptSuffix.trim();
+    return normalized.isEmpty() ? null : normalized;
   }
 }

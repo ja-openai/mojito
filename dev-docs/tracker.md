@@ -19,4 +19,3 @@ Backlog
 - FRONTEND-02a — Build container: React Query fetch/search/filter, selection state, scroll-to-selected, keyboard nav, and tanstack virtualization hooks (estimate/measure) without UI markup.
 - FRONTEND-02b — Implement pure view: virtualized repos table with sticky header and inline search, selection highlight, metric link callbacks, and locales pane layout that mirrors the prototype.
 - FRONTEND-02c — Locale data & accessibility: map selected repo to localeDetails or call `onLoadLocales(repoId)`, handle loading/error/empty states, add scope/aria labels and focusable selected row, and keep CSS state classes minimal.
-- AI-01 — Apply saved AI locale prompt suffixes during translation execution so manual runs and automation both append the persisted per-locale guidance. Keep room for future repository-level additive overrides instead of replacement-only behavior.
