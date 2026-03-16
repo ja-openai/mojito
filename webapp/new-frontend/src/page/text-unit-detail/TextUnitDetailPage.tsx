@@ -452,6 +452,11 @@ export function TextUnitDetailPage() {
   }, [activeTextUnit?.targetLocale, localeTag, sortedHistoryItems]);
 
   const handleBack = () => {
+    if (locationState?.from === '/workbench' && window.history.length > 1) {
+      void navigate(-1);
+      return;
+    }
+
     if (locationState?.workbenchSearch) {
       void navigate('/workbench', {
         state: {
@@ -460,11 +465,6 @@ export function TextUnitDetailPage() {
           workbenchRowId: locationState.workbenchRowId ?? null,
         },
       });
-      return;
-    }
-
-    if (window.history.length > 1) {
-      void navigate(-1);
       return;
     }
     void navigate(locationState?.from ?? '/workbench');
