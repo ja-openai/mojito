@@ -21,6 +21,7 @@ import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
 import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
+import { AdminAiLocalePromptSuffixPage } from './page/settings/AdminAiLocalePromptSuffixPage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
 import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { AdminTeamPoolsPage } from './page/settings/AdminTeamPoolsPage';
@@ -125,6 +126,10 @@ export function App() {
             <Route
               path="/settings/admin/ai-translate"
               element={<AdminAiTranslateAutomationPage />}
+            />
+            <Route
+              path="/settings/admin/ai-translate/prompt-suffixes"
+              element={<AdminAiLocalePromptSuffixPage />}
             />
             <Route path="/settings/admin/teams" element={<AdminTeamsPage />} />
             <Route path="/settings/admin/users" element={<AdminUserSettingsPage />} />

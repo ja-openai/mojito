@@ -84,6 +84,10 @@ export function UserMenu() {
     ? [
         { label: 'Admin settings', path: '/settings/admin' },
         { label: 'AI translate automation', path: '/settings/admin/ai-translate' },
+        {
+          label: 'AI prompt suffixes',
+          path: '/settings/admin/ai-translate/prompt-suffixes',
+        },
         { label: 'Database monitoring', path: '/monitoring' },
       ]
     : [];
