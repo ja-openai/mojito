@@ -144,6 +144,16 @@ public class PullCommandParallel extends PullCommand {
         .println();
   }
 
+  @Override
+  synchronized void printSkippedEmptyOutputToConsole(Path relativeTargetFilePath) {
+    consoleWriter
+        .a(" --> ")
+        .fg(Ansi.Color.MAGENTA)
+        .a("skipped empty content: ")
+        .a(relativeTargetFilePath.toString())
+        .println();
+  }
+
   private PollableTask generateLocalizedFilesParallel(
       Repository repository, FileMatch sourceFileMatch, List<String> filterOptions) {
     Asset assetByPathAndRepositoryId;

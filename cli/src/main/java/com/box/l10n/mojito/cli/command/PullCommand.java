@@ -463,14 +463,18 @@ public class PullCommand extends Command {
     }
 
     Path relativeTargetFilePath = commandDirectories.relativizeWithUserDirectory(targetPath);
+    printSkippedEmptyOutputToConsole(relativeTargetFilePath);
+
+    return true;
+  }
+
+  void printSkippedEmptyOutputToConsole(Path relativeTargetFilePath) {
     consoleWriter
         .a(" --> ")
         .fg(Color.MAGENTA)
         .a("skipped empty content: ")
         .a(relativeTargetFilePath.toString())
         .println();
-
-    return true;
   }
 
   LocalizedAssetBody getLocalizedAsset(

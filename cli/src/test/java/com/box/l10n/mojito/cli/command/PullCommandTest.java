@@ -714,6 +714,40 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void pullAndroidStringsSkipEmptyParallel() throws Exception {
+
+    Repository repository = createTestRepoUsingRepoService();
+
+    getL10nJCommander()
+        .run(
+            "push",
+            "-r",
+            repository.getName(),
+            "-s",
+            getInputResourcesTestDir("source").getAbsolutePath());
+
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            getInputResourcesTestDir("source").getAbsolutePath(),
+            "-t",
+            getTargetTestDir("target").getAbsolutePath(),
+            "-fo",
+            "postEmptyResourcesToEmptyFile=true",
+            "postRemoveTranslatableFalse=true",
+            "removeDescription=true",
+            "--inheritance-mode",
+            "REMOVE_UNTRANSLATED",
+            "--skip-empty-output",
+            "--parallel");
+
+    checkExpectedGeneratedResources();
+  }
+
+  @Test
   public void pullMacStrings() throws Exception {
 
     Repository repository = createTestRepoUsingRepoService();
