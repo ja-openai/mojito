@@ -1,0 +1,379 @@
+package com.box.l10n.mojito.queue;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import java.time.Instant;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+/** Adaptive poll loop + local executor runtime for one queue on one pod. */
+class AsyncJobQueueRuntime {
+
+  static Logger logger = LoggerFactory.getLogger(AsyncJobQueueRuntime.class);
+
+  private final String queueName;
+  private final AsyncJobStore asyncJobStore;
+  private final AsyncJobQueueProperties.QueueSettings queueSettings;
+  private final AsyncJobHandler asyncJobHandler;
+  private final TaskScheduler taskScheduler;
+  private final ThreadPoolTaskExecutor executor;
+  private final MeterRegistry meterRegistry;
+  private final String workerId;
+
+  private final Object scheduleLock = new Object();
+  private final AtomicInteger inFlightCount = new AtomicInteger();
+  private final AtomicBoolean pollInProgress = new AtomicBoolean();
+  private final AtomicBoolean wakeRequested = new AtomicBoolean();
+
+  private volatile ScheduledFuture<?> nextPollFuture;
+  private volatile boolean started;
+  private volatile long currentPollDelayMs;
+  private long scheduledPollSequence;
+
+  AsyncJobQueueRuntime(
+      String queueName,
+      AsyncJobStore asyncJobStore,
+      AsyncJobQueueProperties.QueueSettings queueSettings,
+      AsyncJobHandler asyncJobHandler,
+      TaskScheduler taskScheduler,
+      ThreadPoolTaskExecutor executor,
+      MeterRegistry meterRegistry,
+      String workerId) {
+    this.queueName = Objects.requireNonNull(queueName);
+    this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
+    this.queueSettings = Objects.requireNonNull(queueSettings);
+    this.asyncJobHandler = Objects.requireNonNull(asyncJobHandler);
+    this.taskScheduler = Objects.requireNonNull(taskScheduler);
+    this.executor = Objects.requireNonNull(executor);
+    this.meterRegistry = Objects.requireNonNull(meterRegistry);
+    this.workerId = Objects.requireNonNull(workerId);
+    validateQueueSettings(queueSettings);
+    this.currentPollDelayMs = basePollDelayMs();
+    meterRegistry.gauge(
+        "asyncJobQueue.inflight",
+        Tags.of("queueName", queueName),
+        this,
+        AsyncJobQueueRuntime::inFlightCount);
+  }
+
+  void start() {
+    synchronized (scheduleLock) {
+      if (started) {
+        return;
+      }
+      started = true;
+      scheduleNextPoll(0);
+    }
+  }
+
+  void stop() {
+    synchronized (scheduleLock) {
+      started = false;
+      if (nextPollFuture != null) {
+        nextPollFuture.cancel(false);
+        nextPollFuture = null;
+      }
+    }
+    executor.shutdown();
+  }
+
+  void triggerPollNow() {
+    synchronized (scheduleLock) {
+      if (!started) {
+        return;
+      }
+      if (pollInProgress.get()) {
+        wakeRequested.set(true);
+        return;
+      }
+      wakeRequested.set(false);
+      if (nextPollFuture != null) {
+        nextPollFuture.cancel(false);
+      }
+      scheduleNextPoll(0);
+    }
+  }
+
+  PollCycleResult pollOnce() {
+    int freeCapacity = freeCapacity();
+    if (freeCapacity <= 0) {
+      meterRegistry
+          .counter("asyncJobQueue.poll.skippedSaturated", "queueName", queueName)
+          .increment();
+      return PollCycleResult.saturated(basePollDelayMs());
+    }
+
+    int claimLimit = Math.min(queueSettings.getClaimBatchSize(), freeCapacity);
+    List<AsyncJobRecord> claimedJobs =
+        asyncJobStore.claimNextJobs(
+            queueName,
+            claimLimit,
+            workerId,
+            java.time.Duration.ofMillis(queueSettings.getLeaseDurationMs()));
+
+    if (claimedJobs.isEmpty()) {
+      currentPollDelayMs = nextEmptyPollDelayMs();
+      meterRegistry.counter("asyncJobQueue.poll.empty", "queueName", queueName).increment();
+      return PollCycleResult.empty(currentPollDelayMs);
+    }
+
+    currentPollDelayMs = basePollDelayMs();
+    meterRegistry
+        .counter("asyncJobQueue.claimed", "queueName", queueName)
+        .increment(claimedJobs.size());
+
+    for (AsyncJobRecord claimedJob : claimedJobs) {
+      submitClaimedJob(claimedJob);
+    }
+
+    boolean continueImmediately = freeCapacity() > 0 && claimedJobs.size() == claimLimit;
+    return PollCycleResult.claimed(
+        claimedJobs.size(), continueImmediately ? 0 : basePollDelayMs(), continueImmediately);
+  }
+
+  int inFlightCount() {
+    return inFlightCount.get();
+  }
+
+  private void runScheduledPoll(long pollSequence) {
+    synchronized (scheduleLock) {
+      if (!started) {
+        return;
+      }
+      if (pollSequence != scheduledPollSequence) {
+        return;
+      }
+      nextPollFuture = null;
+      if (!pollInProgress.compareAndSet(false, true)) {
+        return;
+      }
+    }
+
+    PollCycleResult pollCycleResult;
+    try {
+      pollCycleResult = pollOnce();
+    } catch (RuntimeException e) {
+      logger.error("Async queue poll failed for queue {}", queueName, e);
+      meterRegistry.counter("asyncJobQueue.poll.failed", "queueName", queueName).increment();
+      pollCycleResult = PollCycleResult.failed(basePollDelayMs());
+    }
+
+    synchronized (scheduleLock) {
+      pollInProgress.set(false);
+      if (wakeRequested.getAndSet(false)) {
+        pollCycleResult = PollCycleResult.wakeup();
+      }
+      if (started) {
+        scheduleNextPoll(pollCycleResult.nextDelayMs());
+      }
+    }
+  }
+
+  private void scheduleNextPoll(long delayMs) {
+    long boundedDelayMs = Math.max(0, delayMs);
+    long pollSequence = ++scheduledPollSequence;
+    nextPollFuture =
+        taskScheduler.schedule(
+            () -> runScheduledPoll(pollSequence),
+            Date.from(Instant.now().plusMillis(boundedDelayMs)));
+  }
+
+  private void submitClaimedJob(AsyncJobRecord asyncJobRecord) {
+    inFlightCount.incrementAndGet();
+    try {
+      executor.execute(() -> processClaimedJob(asyncJobRecord));
+    } catch (RejectedExecutionException e) {
+      inFlightCount.decrementAndGet();
+      logger.warn(
+          "Queue executor rejected claimed job {} for queue {}", asyncJobRecord.id(), queueName, e);
+      boolean requeued =
+          asyncJobStore.requeue(
+              queueName,
+              asyncJobRecord.id(),
+              asyncJobRecord.workerId(),
+              asyncJobRecord.leaseToken(),
+              Instant.now(),
+              null);
+      if (!requeued) {
+        logger.warn(
+            "Failed to requeue rejected job {} for queue {}", asyncJobRecord.id(), queueName);
+      }
+    }
+  }
+
+  private void processClaimedJob(AsyncJobRecord asyncJobRecord) {
+    ScheduledFuture<?> heartbeatFuture = scheduleHeartbeat(asyncJobRecord);
+    try {
+      AsyncJobHandlerResult asyncJobHandlerResult = asyncJobHandler.process(asyncJobRecord);
+      if (asyncJobHandlerResult == null) {
+        asyncJobHandlerResult = AsyncJobHandlerResult.done();
+      }
+      applyHandlerResult(asyncJobRecord, asyncJobHandlerResult);
+    } catch (Exception e) {
+      logger.error(
+          "Async job handler failed for queue {}, job {}; requeueing with base delay",
+          queueName,
+          asyncJobRecord.id(),
+          e);
+      meterRegistry.counter("asyncJobQueue.handler.failed", "queueName", queueName).increment();
+      requeueWithDelay(asyncJobRecord, basePollDelayMs(), null);
+    } finally {
+      if (heartbeatFuture != null) {
+        heartbeatFuture.cancel(false);
+      }
+      inFlightCount.decrementAndGet();
+      triggerPollNow();
+    }
+  }
+
+  private void applyHandlerResult(
+      AsyncJobRecord asyncJobRecord, AsyncJobHandlerResult asyncJobHandlerResult) {
+    switch (asyncJobHandlerResult.action()) {
+      case DONE -> {
+        boolean markedDone =
+            asyncJobStore.markDone(
+                queueName,
+                asyncJobRecord.id(),
+                asyncJobRecord.workerId(),
+                asyncJobRecord.leaseToken(),
+                asyncJobHandlerResult.jobData());
+        if (!markedDone) {
+          logger.warn(
+              "Failed to mark async job {} done for queue {}", asyncJobRecord.id(), queueName);
+        } else {
+          meterRegistry.counter("asyncJobQueue.completed", "queueName", queueName).increment();
+        }
+      }
+      case REQUEUE -> {
+        Instant availableAt =
+            asyncJobHandlerResult.availableAt() != null
+                ? asyncJobHandlerResult.availableAt()
+                : Instant.now().plusMillis(basePollDelayMs());
+        boolean requeued =
+            asyncJobStore.requeue(
+                queueName,
+                asyncJobRecord.id(),
+                asyncJobRecord.workerId(),
+                asyncJobRecord.leaseToken(),
+                availableAt,
+                asyncJobHandlerResult.jobData());
+        if (!requeued) {
+          logger.warn(
+              "Failed to requeue async job {} for queue {}", asyncJobRecord.id(), queueName);
+        } else {
+          meterRegistry.counter("asyncJobQueue.requeued", "queueName", queueName).increment();
+        }
+      }
+    }
+  }
+
+  private void requeueWithDelay(AsyncJobRecord asyncJobRecord, long delayMs, String jobData) {
+    boolean requeued =
+        asyncJobStore.requeue(
+            queueName,
+            asyncJobRecord.id(),
+            asyncJobRecord.workerId(),
+            asyncJobRecord.leaseToken(),
+            Instant.now().plusMillis(Math.max(0, delayMs)),
+            jobData);
+    if (!requeued) {
+      logger.warn(
+          "Failed to requeue async job {} after handler failure for queue {}",
+          asyncJobRecord.id(),
+          queueName);
+    }
+  }
+
+  private ScheduledFuture<?> scheduleHeartbeat(AsyncJobRecord asyncJobRecord) {
+    if (queueSettings.getHeartbeatIntervalMs() <= 0) {
+      return null;
+    }
+
+    return taskScheduler.scheduleAtFixedRate(
+        () -> heartbeat(asyncJobRecord),
+        Date.from(Instant.now().plusMillis(queueSettings.getHeartbeatIntervalMs())),
+        queueSettings.getHeartbeatIntervalMs());
+  }
+
+  private void heartbeat(AsyncJobRecord asyncJobRecord) {
+    boolean renewed =
+        asyncJobStore.heartbeat(
+            queueName,
+            asyncJobRecord.id(),
+            asyncJobRecord.workerId(),
+            asyncJobRecord.leaseToken(),
+            java.time.Duration.ofMillis(queueSettings.getLeaseDurationMs()));
+    if (!renewed) {
+      logger.warn("Failed to renew heartbeat for queue {}, job {}", queueName, asyncJobRecord.id());
+      meterRegistry.counter("asyncJobQueue.heartbeat.failed", "queueName", queueName).increment();
+    }
+  }
+
+  private long nextEmptyPollDelayMs() {
+    long base = basePollDelayMs();
+    long max = Math.max(base, queueSettings.getMaxPollIntervalMs());
+    long current = Math.max(base, currentPollDelayMs);
+    return Math.min(max, current >= max ? max : current * 2);
+  }
+
+  private int freeCapacity() {
+    return Math.max(0, queueSettings.getMaxConcurrency() - inFlightCount.get());
+  }
+
+  private long basePollDelayMs() {
+    return Math.max(1, queueSettings.getPollIntervalMs());
+  }
+
+  private void validateQueueSettings(AsyncJobQueueProperties.QueueSettings queueSettings) {
+    if (queueSettings.getClaimBatchSize() <= 0) {
+      throw new IllegalArgumentException("claimBatchSize must be > 0");
+    }
+    if (queueSettings.getMaxConcurrency() <= 0) {
+      throw new IllegalArgumentException("maxConcurrency must be > 0");
+    }
+    if (queueSettings.getLeaseDurationMs() <= 0) {
+      throw new IllegalArgumentException("leaseDurationMs must be > 0");
+    }
+    if (queueSettings.getMaxPollIntervalMs() < queueSettings.getPollIntervalMs()) {
+      throw new IllegalArgumentException("maxPollIntervalMs must be >= pollIntervalMs");
+    }
+    if (queueSettings.getHeartbeatIntervalMs() >= queueSettings.getLeaseDurationMs()
+        && queueSettings.getHeartbeatIntervalMs() > 0) {
+      throw new IllegalArgumentException("heartbeatIntervalMs must be < leaseDurationMs");
+    }
+  }
+
+  record PollCycleResult(
+      int claimedCount, boolean skippedSaturated, boolean continueImmediately, long nextDelayMs) {
+
+    static PollCycleResult empty(long nextDelayMs) {
+      return new PollCycleResult(0, false, false, nextDelayMs);
+    }
+
+    static PollCycleResult saturated(long nextDelayMs) {
+      return new PollCycleResult(0, true, false, nextDelayMs);
+    }
+
+    static PollCycleResult claimed(
+        int claimedCount, long nextDelayMs, boolean continueImmediately) {
+      return new PollCycleResult(claimedCount, false, continueImmediately, nextDelayMs);
+    }
+
+    static PollCycleResult failed(long nextDelayMs) {
+      return new PollCycleResult(0, false, false, nextDelayMs);
+    }
+
+    static PollCycleResult wakeup() {
+      return new PollCycleResult(0, false, true, 0);
+    }
+  }
+}

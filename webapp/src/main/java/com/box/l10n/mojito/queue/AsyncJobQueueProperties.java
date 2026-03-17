@@ -27,8 +27,7 @@ public class AsyncJobQueueProperties {
    * Active async job store backend implementation.
    *
    * <p>Defaults to {@code in-memory} so local or HSQL-backed runs can enable the feature without
-   * requiring MySQL queue-table support. Production deployments should explicitly set
-   * {@code jdbc}.
+   * requiring MySQL queue-table support. Production deployments should explicitly set {@code jdbc}.
    */
   private String store = "in-memory";
 
@@ -53,6 +52,7 @@ public class AsyncJobQueueProperties {
   /** Runtime settings for one logical async job queue. */
   public static class QueueSettings {
     private long pollIntervalMs = 250;
+    private long maxPollIntervalMs = 5_000;
     private int claimBatchSize = 20;
     private int maxConcurrency = 10;
     private long leaseDurationMs = 120_000;
@@ -64,6 +64,14 @@ public class AsyncJobQueueProperties {
 
     public void setPollIntervalMs(long pollIntervalMs) {
       this.pollIntervalMs = pollIntervalMs;
+    }
+
+    public long getMaxPollIntervalMs() {
+      return maxPollIntervalMs;
+    }
+
+    public void setMaxPollIntervalMs(long maxPollIntervalMs) {
+      this.maxPollIntervalMs = maxPollIntervalMs;
     }
 
     public int getClaimBatchSize() {
