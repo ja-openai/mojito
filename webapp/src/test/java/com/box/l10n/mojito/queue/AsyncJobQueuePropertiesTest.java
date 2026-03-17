@@ -17,6 +17,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
       "l10n.org.async-job-queue.enabled=true",
       "l10n.org.async-job-queue.store=jdbc",
       "l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=300",
+      "l10n.org.async-job-queue.queues.assetlocalize.max-poll-interval-ms=4000",
       "l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=32",
       "l10n.org.async-job-queue.queues.assetlocalize.max-concurrency=12",
       "l10n.org.async-job-queue.queues.assetlocalize.lease-duration-ms=180000",
@@ -33,13 +34,13 @@ public class AsyncJobQueuePropertiesTest {
   public void testQueueConfigMapBinding() {
     assertThat(asyncJobQueueProperties.getStore()).isEqualTo("jdbc");
 
-    Map<String, AsyncJobQueueProperties.QueueSettings> queues =
-        asyncJobQueueProperties.getQueues();
+    Map<String, AsyncJobQueueProperties.QueueSettings> queues = asyncJobQueueProperties.getQueues();
 
     assertThat(queues).containsOnlyKeys("assetlocalize", "stats");
 
     AsyncJobQueueProperties.QueueSettings assetlocalize = queues.get("assetlocalize");
     assertThat(assetlocalize.getPollIntervalMs()).isEqualTo(300);
+    assertThat(assetlocalize.getMaxPollIntervalMs()).isEqualTo(4000);
     assertThat(assetlocalize.getClaimBatchSize()).isEqualTo(32);
     assertThat(assetlocalize.getMaxConcurrency()).isEqualTo(12);
     assertThat(assetlocalize.getLeaseDurationMs()).isEqualTo(180000);
@@ -47,6 +48,7 @@ public class AsyncJobQueuePropertiesTest {
 
     AsyncJobQueueProperties.QueueSettings stats = queues.get("stats");
     assertThat(stats.getPollIntervalMs()).isEqualTo(1000);
+    assertThat(stats.getMaxPollIntervalMs()).isEqualTo(5000);
     assertThat(stats.getMaxConcurrency()).isEqualTo(2);
     assertThat(stats.getClaimBatchSize()).isEqualTo(20);
     assertThat(stats.getLeaseDurationMs()).isEqualTo(120000);
