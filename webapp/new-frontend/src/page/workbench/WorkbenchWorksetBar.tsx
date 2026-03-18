@@ -1,6 +1,7 @@
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { MultiSectionFilterChip } from '../../components/filters/MultiSectionFilterChip';
+import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { resultSizePresets } from './workbench-constants';
 import type {
   WorkbenchCollection,
@@ -408,141 +409,27 @@ function ResultSizeDropdown({
   worksetSize: number;
   onChangeWorksetSize: (value: number) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [draft, setDraft] = useState(String(worksetSize));
-  const [showCustomInput, setShowCustomInput] = useState(false);
-
   const presetOptions = resultSizePresets.filter((option) => option.value >= worksetSize);
-  const isPreset = presetOptions.some((option) => option.value === worksetSize);
-  const isCustomActive = showCustomInput || !isPreset;
-
-  const commitDraft = useCallback(() => {
-    const trimmed = draft.trim();
-    if (!trimmed) {
-      setDraft(String(worksetSize));
-      return;
-    }
-    const next = parseInt(trimmed, 10);
-    if (Number.isNaN(next) || next < 1) {
-      setDraft(String(worksetSize));
-      return;
-    }
-    if (next === worksetSize) {
-      return;
-    }
-    onChangeWorksetSize(next);
-  }, [draft, onChangeWorksetSize, worksetSize]);
-
-  useEffect(() => {
-    if (disabled && isOpen) {
-      if (isCustomActive) {
-        commitDraft();
-      }
-      setIsOpen(false);
-    }
-  }, [commitDraft, disabled, isCustomActive, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    setDraft(String(worksetSize));
-    setShowCustomInput(false);
-  }, [isOpen, worksetSize]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        if (isCustomActive) {
-          commitDraft();
-        }
-        setIsOpen(false);
-      }
-    };
-    window.addEventListener('pointerdown', handlePointerDown);
-    return () => window.removeEventListener('pointerdown', handlePointerDown);
-  }, [commitDraft, isCustomActive, isOpen]);
-
   return (
-    <div className="chip-dropdown workbench-worksetbar__count" ref={containerRef}>
-      <button
-        type="button"
-        className="workbench-worksetbar__countbutton"
-        onClick={() => setIsOpen((previous) => !previous)}
-        aria-expanded={isOpen}
-        disabled={disabled}
-      >
-        <span>{countLabel}</span>
-        <span className="chip-dropdown__chevron" aria-hidden="true" />
-      </button>
-      {isOpen ? (
-        <div className="chip-dropdown__panel workbench-worksetbar__panel" role="menu">
-          <div className="workbench-searchmode__section">
-            <div className="workbench-searchmode__label">Result size limit</div>
-            <div className="workbench-filterchip__pills workbench-worksetbar__pills">
-              {presetOptions.map((option) => (
-                <button
-                  type="button"
-                  key={option.value}
-                  className={`workbench-datefilter__quick-chip${
-                    option.value === worksetSize ? ' is-active' : ''
-                  }`}
-                  onClick={() => onChangeWorksetSize(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-              {isCustomActive ? (
-                <div className="workbench-worksetcustom is-active">
-                  <span className="workbench-worksetcustom__label">Custom</span>
-                  <input
-                    ref={inputRef}
-                    className="workbench-worksetcustom__input"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                    onBlur={() => {
-                      commitDraft();
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        commitDraft();
-                      }
-                      if (event.key === 'Escape') {
-                        setDraft(String(worksetSize));
-                        setShowCustomInput(false);
-                      }
-                    }}
-                  />
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="workbench-datefilter__quick-chip"
-                  onClick={() => {
-                    setShowCustomInput(true);
-                    setDraft(String(worksetSize));
-                    queueMicrotask(() => {
-                      inputRef.current?.focus();
-                      inputRef.current?.select();
-                    });
-                  }}
-                >
-                  Custom…
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </div>
+    <NumericPresetDropdown
+      value={worksetSize}
+      buttonLabel={countLabel}
+      menuLabel="Result size limit"
+      presetOptions={presetOptions}
+      onChange={onChangeWorksetSize}
+      disabled={disabled}
+      className="workbench-worksetbar__count"
+      buttonClassName="workbench-worksetbar__countbutton"
+      panelClassName="workbench-worksetbar__panel"
+      pillsClassName="workbench-filterchip__pills workbench-worksetbar__pills"
+      optionClassName="workbench-datefilter__quick-chip"
+      optionActiveClassName="is-active"
+      customClassName="workbench-worksetcustom"
+      customActiveClassName="is-active"
+      customLabelClassName="workbench-worksetcustom__label"
+      customInputClassName="workbench-worksetcustom__input"
+      customButtonClassName="workbench-datefilter__quick-chip"
+    />
   );
 }
 

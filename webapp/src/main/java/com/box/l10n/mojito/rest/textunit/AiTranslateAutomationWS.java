@@ -10,8 +10,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 public class AiTranslateAutomationWS {
@@ -76,8 +78,15 @@ public class AiTranslateAutomationWS {
 
   @RequestMapping(method = RequestMethod.GET, value = "/api/ai-translate/automation/runs")
   @ResponseStatus(HttpStatus.OK)
-  public List<AutomationRunResponse> getAutomationRuns() {
-    return aiTranslateRunService.getRecentRuns().stream()
+  public List<AutomationRunResponse> getAutomationRuns(
+      @RequestParam(value = "repositoryIds", required = false) List<Long> repositoryIds,
+      @RequestParam(value = "limit", required = false) Integer limit) {
+    int resolvedLimit = limit == null ? AiTranslateRunService.DEFAULT_RECENT_RUN_LIMIT : limit;
+    if (resolvedLimit < 1) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be at least 1");
+    }
+
+    return aiTranslateRunService.getRecentRuns(repositoryIds, resolvedLimit).stream()
         .map(
             run ->
                 new AutomationRunResponse(

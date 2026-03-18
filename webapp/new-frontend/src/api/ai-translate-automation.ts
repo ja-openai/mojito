@@ -31,6 +31,11 @@ export type ApiAiTranslateAutomationRun = {
   estimatedCostUsd: string | null;
 };
 
+export type FetchAiTranslateAutomationRunsParams = {
+  repositoryIds?: number[];
+  limit?: number;
+};
+
 export const fetchAiTranslateAutomationConfig =
   async (): Promise<ApiAiTranslateAutomationConfig> => {
     const response = await fetch('/api/ai-translate/automation', {
@@ -80,8 +85,20 @@ export const runAiTranslateAutomationNow = async (): Promise<ApiAiTranslateAutom
   return (await response.json()) as ApiAiTranslateAutomationRunResult;
 };
 
-export const fetchAiTranslateAutomationRuns = async (): Promise<ApiAiTranslateAutomationRun[]> => {
-  const response = await fetch('/api/ai-translate/automation/runs', {
+export const fetchAiTranslateAutomationRuns = async ({
+  repositoryIds = [],
+  limit,
+}: FetchAiTranslateAutomationRunsParams = {}): Promise<ApiAiTranslateAutomationRun[]> => {
+  const params = new URLSearchParams();
+  for (const repositoryId of repositoryIds) {
+    params.append('repositoryIds', String(repositoryId));
+  }
+  if (typeof limit === 'number') {
+    params.set('limit', String(limit));
+  }
+
+  const query = params.toString();
+  const response = await fetch(`/api/ai-translate/automation/runs${query ? `?${query}` : ''}`, {
     method: 'GET',
     credentials: 'same-origin',
   });

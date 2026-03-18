@@ -60,6 +60,12 @@
   gap: var(--space-2);
 }
 
+.settings-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
 .settings-field__label {
   font-size: var(--font-size-sm);
   color: var(--color-text);
@@ -263,4 +269,11 @@
 
 .settings-table td {
   color: var(--color-text);
+}
+
+@media (min-width: 48rem) {
+  .settings-filter-grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
 }

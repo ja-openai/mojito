@@ -8,6 +8,7 @@ import com.box.l10n.mojito.service.security.user.UserRepository;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,8 @@ public class AiTranslateRunService {
       long outputTokens,
       long reasoningTokens,
       BigDecimal estimatedCostUsd) {}
+
+  public static final int DEFAULT_RECENT_RUN_LIMIT = 50;
 
   private final AiTranslateRunRepository aiTranslateRunRepository;
   private final UserRepository userRepository;
@@ -114,30 +117,36 @@ public class AiTranslateRunService {
   }
 
   @Transactional(readOnly = true)
-  public List<RunSummary> getRecentRuns() {
-    return aiTranslateRunRepository.findTop50ByOrderByCreatedDateDesc().stream()
+  public List<RunSummary> getRecentRuns(List<Long> repositoryIds, int limit) {
+    List<AiTranslateRunSummaryRow> rows =
+        repositoryIds == null || repositoryIds.isEmpty()
+            ? aiTranslateRunRepository.findRecentRunRows(PageRequest.of(0, limit))
+            : aiTranslateRunRepository.findRecentRunRowsByRepositoryIds(
+                repositoryIds, PageRequest.of(0, limit));
+
+    return rows.stream()
         .map(
-            run ->
+            row ->
                 new RunSummary(
-                    run.getId(),
-                    run.getTriggerSource().name(),
-                    run.getRepository().getId(),
-                    run.getRepository().getName(),
-                    run.getRequestedByUser() == null ? null : run.getRequestedByUser().getId(),
-                    run.getPollableTask() == null ? null : run.getPollableTask().getId(),
-                    run.getModel(),
-                    run.getTranslateType(),
-                    run.getRelatedStringsType(),
-                    run.getSourceTextMaxCountPerLocale(),
-                    run.getStatus().name(),
-                    run.getCreatedDate(),
-                    run.getStartedAt(),
-                    run.getFinishedAt(),
-                    run.getInputTokens(),
-                    run.getCachedInputTokens(),
-                    run.getOutputTokens(),
-                    run.getReasoningTokens(),
-                    run.getEstimatedCostUsd()))
+                    row.id(),
+                    row.triggerSource().name(),
+                    row.repositoryId(),
+                    row.repositoryName(),
+                    row.requestedByUserId(),
+                    row.pollableTaskId(),
+                    row.model(),
+                    row.translateType(),
+                    row.relatedStringsType(),
+                    row.sourceTextMaxCountPerLocale(),
+                    row.status().name(),
+                    row.createdAt(),
+                    row.startedAt(),
+                    row.finishedAt(),
+                    row.inputTokens(),
+                    row.cachedInputTokens(),
+                    row.outputTokens(),
+                    row.reasoningTokens(),
+                    row.estimatedCostUsd()))
         .toList();
   }
 

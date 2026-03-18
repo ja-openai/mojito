@@ -12,6 +12,7 @@ import {
   runAiTranslateAutomationNow,
   updateAiTranslateAutomationConfig,
 } from '../../api/ai-translate-automation';
+import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
@@ -24,6 +25,10 @@ const CRON_PRESETS = [
   { label: 'Hourly', value: '0 0 * * * ?' },
 ];
 
+const RECENT_RUN_LIMIT_PRESETS = [20, 50, 100];
+const DEFAULT_RECENT_RUN_LIMIT = 20;
+const CUSTOM_RECENT_RUN_LIMIT_INITIAL_VALUE = 50;
+
 export function AdminAiTranslateAutomationPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
@@ -34,6 +39,10 @@ export function AdminAiTranslateAutomationPage() {
   const [automationRepositoryIdsDraft, setAutomationRepositoryIdsDraft] = useState<number[]>([]);
   const [automationSourceTextMaxDraft, setAutomationSourceTextMaxDraft] = useState('100');
   const [automationCronExpressionDraft, setAutomationCronExpressionDraft] = useState('');
+  const [runHistoryRepositoryIds, setRunHistoryRepositoryIds] = useState<number[]>([]);
+  const [runHistoryLimit, setRunHistoryLimit] = useState(DEFAULT_RECENT_RUN_LIMIT);
+  const [hasInitializedRunHistoryRepositories, setHasInitializedRunHistoryRepositories] =
+    useState(false);
 
   const automationConfigQuery = useQuery<ApiAiTranslateAutomationConfig>({
     queryKey: ['ai-translate-automation-config'],
@@ -42,10 +51,14 @@ export function AdminAiTranslateAutomationPage() {
     enabled: isAdmin,
   });
   const automationRunsQuery = useQuery<ApiAiTranslateAutomationRun[]>({
-    queryKey: ['ai-translate-automation-runs'],
-    queryFn: fetchAiTranslateAutomationRuns,
+    queryKey: ['ai-translate-automation-runs', runHistoryRepositoryIds, runHistoryLimit],
+    queryFn: () =>
+      fetchAiTranslateAutomationRuns({
+        repositoryIds: runHistoryRepositoryIds,
+        limit: runHistoryLimit,
+      }),
     staleTime: 10_000,
-    enabled: isAdmin,
+    enabled: isAdmin && runHistoryRepositoryIds.length > 0,
   });
 
   const saveAutomationMutation = useMutation({
@@ -78,6 +91,17 @@ export function AdminAiTranslateAutomationPage() {
     setAutomationSourceTextMaxDraft(String(config.sourceTextMaxCountPerLocale));
     setAutomationCronExpressionDraft(config.cronExpression ?? '');
   }, [automationConfigQuery.data]);
+
+  useEffect(() => {
+    if (hasInitializedRunHistoryRepositories) {
+      return;
+    }
+    if (!repositorySelectionOptions.length) {
+      return;
+    }
+    setRunHistoryRepositoryIds(repositorySelectionOptions.map((option) => option.id));
+    setHasInitializedRunHistoryRepositories(true);
+  }, [hasInitializedRunHistoryRepositories, repositorySelectionOptions]);
 
   const automationSourceTextMax = useMemo(() => {
     const trimmed = automationSourceTextMaxDraft.trim();
@@ -332,6 +356,39 @@ export function AdminAiTranslateAutomationPage() {
         <div className="settings-hint">
           Repository-level AI translate jobs scheduled by automation or manual runs.
         </div>
+        <div className="settings-filter-grid">
+          <div className="settings-field">
+            <RepositoryMultiSelect
+              label="Repositories"
+              options={repositorySelectionOptions}
+              selectedIds={runHistoryRepositoryIds}
+              onChange={(next) => setRunHistoryRepositoryIds([...next].sort((a, b) => a - b))}
+              className="settings-repository-select"
+              buttonAriaLabel="Filter recent AI translate runs by repository"
+              disabled={automationRunsQuery.isLoading}
+            />
+          </div>
+          <div className="settings-field">
+            <NumericPresetDropdown
+              value={runHistoryLimit}
+              buttonLabel={`${runHistoryLimit} rows`}
+              menuLabel="Recent run row count"
+              presetOptions={RECENT_RUN_LIMIT_PRESETS.map((size) => ({
+                value: size,
+                label: String(size),
+              }))}
+              onChange={setRunHistoryLimit}
+              disabled={automationRunsQuery.isLoading}
+              ariaLabel="Recent run row count"
+              pillsClassName="settings-pills"
+              optionClassName="settings-pill"
+              optionActiveClassName="is-active"
+              customActiveClassName="is-active"
+              customButtonClassName="settings-pill"
+              customInitialValue={CUSTOM_RECENT_RUN_LIMIT_INITIAL_VALUE}
+            />
+          </div>
+        </div>
         <div className="settings-table-wrapper">
           <table className="settings-table">
             <thead>
@@ -365,7 +422,11 @@ export function AdminAiTranslateAutomationPage() {
               ) : (
                 <tr>
                   <td colSpan={9}>
-                    {automationRunsQuery.isLoading ? 'Loading runs…' : 'No runs recorded yet.'}
+                    {runHistoryRepositoryIds.length === 0
+                      ? 'No repositories selected.'
+                      : automationRunsQuery.isLoading
+                        ? 'Loading runs…'
+                        : 'No runs recorded yet.'}
                   </td>
                 </tr>
               )}

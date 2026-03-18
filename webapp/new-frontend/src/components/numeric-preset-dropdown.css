@@ -1,0 +1,116 @@
+.numeric-preset-dropdown__button {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: inherit;
+  height: 26px;
+  padding: 0 var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  gap: var(--space-1);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.numeric-preset-dropdown__button:not(:disabled):hover,
+.numeric-preset-dropdown__button:not(:disabled):focus-visible {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.numeric-preset-dropdown__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.numeric-preset-dropdown__panel {
+  min-width: 27.5rem;
+  align-items: stretch;
+}
+
+.numeric-preset-dropdown__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.numeric-preset-dropdown__label {
+  text-align: left;
+  width: 100%;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.numeric-preset-dropdown__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.numeric-preset-dropdown__option {
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-pill);
+  padding: 0.2rem 0.6rem;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.numeric-preset-dropdown__option:hover,
+.numeric-preset-dropdown__option:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.numeric-preset-dropdown__option.is-active {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  color: var(--color-accent);
+}
+
+.numeric-preset-dropdown__custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.numeric-preset-dropdown__custom.is-active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.numeric-preset-dropdown__custom-label {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-subtle);
+}
+
+.numeric-preset-dropdown__custom-input {
+  width: 88px;
+  border: 0;
+  padding: 0;
+  height: 22px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-2xs);
+  text-align: right;
+  outline: none;
+}
+
+.numeric-preset-dropdown__custom:focus-within {
+  border-color: var(--color-focus-border);
+  box-shadow: 0 0 0 2px var(--color-focus-outline);
+}
