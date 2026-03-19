@@ -23,6 +23,9 @@ import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
 import { AdminAiLocalePromptSuffixPage } from './page/settings/AdminAiLocalePromptSuffixPage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
+import { AdminReviewFeatureBatchPage } from './page/settings/AdminReviewFeatureBatchPage';
+import { AdminReviewFeatureDetailPage } from './page/settings/AdminReviewFeatureDetailPage';
+import { AdminReviewFeaturesPage } from './page/settings/AdminReviewFeaturesPage';
 import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { AdminTeamPoolsPage } from './page/settings/AdminTeamPoolsPage';
 import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
@@ -60,6 +63,7 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
       ? [
           { to: '/settings/admin/users', label: 'Users' },
           { to: '/settings/admin/teams', label: 'Teams' },
+          { to: '/settings/admin/review-features', label: 'Review Features' },
         ]
       : user.role === 'ROLE_PM'
         ? [{ to: '/settings/teams', label: 'Teams' }]
@@ -80,6 +84,8 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
                     const isTeamsSection =
                       (to === '/settings/admin/teams' &&
                         location.pathname.startsWith('/settings/admin/team-pools')) ||
+                      (to === '/settings/admin/review-features' &&
+                        location.pathname.startsWith('/settings/admin/review-features')) ||
                       (to === '/settings/teams' &&
                         (location.pathname.startsWith('/settings/team') ||
                           location.pathname.startsWith('/settings/teams')));
@@ -127,6 +133,7 @@ export function App() {
               path="/settings/admin/ai-translate"
               element={<AdminAiTranslateAutomationPage />}
             />
+            <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
             <Route
               path="/settings/admin/ai-translate/prompt-suffixes"
               element={<AdminAiLocalePromptSuffixPage />}
@@ -152,6 +159,14 @@ export function App() {
             <Route path="/settings/admin/users/batch" element={<AdminUserBatchPage />} />
             <Route path="/settings/admin/teams/:teamId" element={<TeamDetailPage />} />
             <Route path="/settings/admin/team-pools" element={<AdminTeamPoolsPage />} />
+            <Route
+              path="/settings/admin/review-features/batch"
+              element={<AdminReviewFeatureBatchPage />}
+            />
+            <Route
+              path="/settings/admin/review-features/:featureId"
+              element={<AdminReviewFeatureDetailPage />}
+            />
           </Route>
         </Routes>
       </BrowserRouter>

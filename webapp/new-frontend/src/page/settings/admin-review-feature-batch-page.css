@@ -1,0 +1,146 @@
+.review-feature-batch-page__topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--app-shell-header-height);
+  min-height: var(--app-shell-header-height);
+  padding: 0 var(--space-6);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: var(--color-surface);
+}
+
+.review-feature-batch-page__topbar-back {
+  width: var(--app-shell-header-height);
+  height: var(--app-shell-header-height);
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  line-height: 1;
+  flex-shrink: 0;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.review-feature-batch-page__topbar-back:hover {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.review-feature-batch-page__topbar-back:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.review-feature-batch-page__topbar-back-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: block;
+}
+
+.review-feature-batch-page__topbar-title {
+  display: inline-flex;
+  align-items: center;
+  height: var(--app-shell-header-height);
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  box-shadow: inset 0 -0.125rem color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+
+.review-feature-batch-page__grid {
+  grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.85fr);
+  grid-template-rows: none;
+  align-items: start;
+}
+
+.review-feature-batch-page__editor-column {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.review-feature-batch-page__docs-column {
+  display: grid;
+  gap: var(--space-3);
+  align-self: start;
+}
+
+.review-feature-batch-page__docs-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.review-feature-batch-page__docs-list {
+  margin-top: 0;
+}
+
+.review-feature-batch-page__mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  width: fit-content;
+}
+
+.review-feature-batch-page__mode-option {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+
+.review-feature-batch-page__mode-option + .review-feature-batch-page__mode-option {
+  border-left: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.review-feature-batch-page__mode-option.is-active {
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.review-feature-batch-page__mode-option:focus-visible {
+  outline: 0.125rem solid var(--color-focus-outline);
+  outline-offset: -0.125rem;
+}
+
+.review-feature-batch-page__batch-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.review-feature-batch-page__prefill-button {
+  padding: var(--space-1) var(--space-2);
+}
+
+.review-feature-batch-page__load-note {
+  margin-top: var(--space-1);
+}
+
+.review-feature-batch-page__textarea {
+  min-height: 16rem;
+}
+
+@media (max-width: 72rem) {
+  .review-feature-batch-page__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 60rem) {
+  .review-feature-batch-page__batch-controls {
+    width: 100%;
+  }
+}

@@ -38,6 +38,8 @@ public interface RepositoryRepository
       findByDeletedFalseAndCheckSLATrueAndRepositoryStatisticOoslaTextUnitCountGreaterThanOrderByNameAsc(
           long statisticsOoslaTextUnitCount);
 
+  List<Repository> findByIdInAndDeletedFalseOrderByNameAsc(List<Long> ids);
+
   @Query(
       """
       select new com.box.l10n.mojito.service.repository.RepositorySummaryRow(

@@ -1,7 +1,7 @@
 import './settings-page.css';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import { useUser } from '../../components/RequireUser';
@@ -21,6 +21,7 @@ import {
 export function AdminSettingsPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
+  const navigate = useNavigate();
   const { data: repositories } = useRepositories();
   const resolveLocaleName = useLocaleDisplayNameResolver();
   const [savedWorkset, setSavedWorkset] = useState<number | null>(() => loadPreferredWorksetSize());
@@ -189,6 +190,30 @@ export function AdminSettingsPage() {
               disabled={!canResetWorkset}
             >
               Reset
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="settings-card" aria-labelledby="settings-review-features">
+        <div className="settings-card__header">
+          <h2 id="settings-review-features">Review features</h2>
+        </div>
+        <p className="settings-note">
+          Manage repository grouping for automated review-project creation. Features are the current
+          admin-owned unit for grouping repositories before automation and assignment logic are
+          layered on top.
+        </p>
+        <div className="settings-card__footer">
+          <div className="settings-actions">
+            <button
+              type="button"
+              className="settings-button settings-button--primary"
+              onClick={() => {
+                void navigate('/settings/admin/review-features');
+              }}
+            >
+              Open review features
             </button>
           </div>
         </div>

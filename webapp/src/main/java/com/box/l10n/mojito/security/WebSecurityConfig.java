@@ -212,6 +212,15 @@ public class WebSecurityConfig {
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/ai-translate/automation/run")
                 .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/review-features", "/api/review-features/*")
+                .hasRole("ADMIN")
+                .requestMatchers(
+                    HttpMethod.POST, "/api/review-features", "/api/review-features/batch-upsert")
+                .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/review-features/*")
+                .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/review-features/*")
+                .hasRole("ADMIN")
                 // Read-only access is OK for users
                 .requestMatchers(HttpMethod.GET, "/api/textunits/**")
                 .authenticated()
