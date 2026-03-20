@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
+import static com.box.l10n.mojito.quartz.QuartzConfig.DYNAMIC_GROUP_NAME;
 import static com.box.l10n.mojito.quartz.QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
 
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
@@ -24,7 +25,7 @@ public class AiTranslateAutomationCronSchedulerService {
       LoggerFactory.getLogger(AiTranslateAutomationCronSchedulerService.class);
 
   private static final TriggerKey TRIGGER_KEY =
-      TriggerKey.triggerKey("triggerAiTranslateAutomationCron");
+      TriggerKey.triggerKey("triggerAiTranslateAutomationCron", DYNAMIC_GROUP_NAME);
 
   private final QuartzSchedulerManager quartzSchedulerManager;
   private final JobDetail aiTranslateAutomationCronJobDetail;
