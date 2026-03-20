@@ -25,14 +25,17 @@ public class ReviewFeatureService {
   public static final int MAX_LIMIT = 200;
 
   private final ReviewFeatureRepository reviewFeatureRepository;
+  private final ReviewAutomationRepository reviewAutomationRepository;
   private final RepositoryRepository repositoryRepository;
   private final UserService userService;
 
   public ReviewFeatureService(
       ReviewFeatureRepository reviewFeatureRepository,
+      ReviewAutomationRepository reviewAutomationRepository,
       RepositoryRepository repositoryRepository,
       UserService userService) {
     this.reviewFeatureRepository = reviewFeatureRepository;
+    this.reviewAutomationRepository = reviewAutomationRepository;
     this.repositoryRepository = repositoryRepository;
     this.userService = userService;
   }
@@ -158,6 +161,7 @@ public class ReviewFeatureService {
             .findById(featureId)
             .orElseThrow(
                 () -> new IllegalArgumentException("Review feature not found: " + featureId));
+    ensureNotUsedByAutomation(reviewFeature.getId());
     reviewFeatureRepository.delete(reviewFeature);
   }
 
@@ -285,6 +289,20 @@ public class ReviewFeatureService {
               throw new IllegalArgumentException(
                   "Review feature already exists: " + normalizedName);
             });
+  }
+
+  private void ensureNotUsedByAutomation(Long featureId) {
+    List<ReviewAutomationOptionRow> automations =
+        reviewAutomationRepository.findOptionRowsByFeatureId(featureId);
+    if (automations.isEmpty()) {
+      return;
+    }
+    String names =
+        automations.stream()
+            .map(ReviewAutomationOptionRow::name)
+            .distinct()
+            .collect(java.util.stream.Collectors.joining(", "));
+    throw new IllegalArgumentException("Review feature is used by review automation(s): " + names);
   }
 
   private int normalizeLimit(Integer limit) {

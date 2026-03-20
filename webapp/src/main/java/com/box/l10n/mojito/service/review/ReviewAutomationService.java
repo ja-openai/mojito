@@ -1,0 +1,483 @@
+package com.box.l10n.mojito.service.review;
+
+import com.box.l10n.mojito.entity.review.ReviewAutomation;
+import com.box.l10n.mojito.entity.review.ReviewFeature;
+import com.box.l10n.mojito.service.security.user.UserService;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import org.quartz.CronExpression;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class ReviewAutomationService {
+
+  public static final int DEFAULT_LIMIT = 50;
+  public static final int MAX_LIMIT = 200;
+  public static final int DEFAULT_MAX_WORD_COUNT_PER_PROJECT = 2000;
+  public static final String DEFAULT_TIME_ZONE = "UTC";
+
+  private final ReviewAutomationRepository reviewAutomationRepository;
+  private final ReviewFeatureRepository reviewFeatureRepository;
+  private final UserService userService;
+
+  public ReviewAutomationService(
+      ReviewAutomationRepository reviewAutomationRepository,
+      ReviewFeatureRepository reviewFeatureRepository,
+      UserService userService) {
+    this.reviewAutomationRepository = reviewAutomationRepository;
+    this.reviewFeatureRepository = reviewFeatureRepository;
+    this.userService = userService;
+  }
+
+  @Transactional(readOnly = true)
+  public SearchReviewAutomationsView searchReviewAutomations(
+      String searchQuery, Boolean enabled, Integer limit) {
+    requireAdmin();
+    int resolvedLimit = normalizeLimit(limit);
+    Page<ReviewAutomationSummaryRow> page =
+        reviewAutomationRepository.searchSummaryRows(
+            normalizeSearchQuery(searchQuery), enabled, PageRequest.of(0, resolvedLimit));
+    return new SearchReviewAutomationsView(
+        toSummaryViews(page.getContent(), loadFeaturesByAutomationId(page.getContent())),
+        page.getTotalElements());
+  }
+
+  @Transactional(readOnly = true)
+  public List<ReviewAutomationOption> getReviewAutomationOptions() {
+    requireAdmin();
+    return reviewAutomationRepository.findAllOptionRows().stream()
+        .map(
+            row ->
+                new ReviewAutomationOption(
+                    row.id(), row.name(), Boolean.TRUE.equals(row.enabled())))
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<ReviewAutomationBatchExportRow> getReviewAutomationBatchExportRows() {
+    requireAdmin();
+    List<ReviewAutomationOptionRow> optionRows = reviewAutomationRepository.findAllOptionRows();
+    if (optionRows.isEmpty()) {
+      return List.of();
+    }
+
+    List<Long> automationIds = optionRows.stream().map(ReviewAutomationOptionRow::id).toList();
+    Map<Long, ReviewAutomation> automationsById =
+        reviewAutomationRepository.findAllById(automationIds).stream()
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    ReviewAutomation::getId, automation -> automation));
+
+    Map<Long, List<String>> featureNamesByAutomationId = new LinkedHashMap<>();
+    for (ReviewAutomationFeatureRow row :
+        reviewAutomationRepository.findFeatureRowsByAutomationIds(automationIds)) {
+      featureNamesByAutomationId
+          .computeIfAbsent(row.reviewAutomationId(), ignored -> new ArrayList<>())
+          .add(row.name());
+    }
+
+    return optionRows.stream()
+        .map(
+            row -> {
+              ReviewAutomation automation = automationsById.get(row.id());
+              return new ReviewAutomationBatchExportRow(
+                  row.id(),
+                  row.name(),
+                  Boolean.TRUE.equals(row.enabled()),
+                  automation != null ? automation.getCronExpression() : null,
+                  automation != null
+                      ? normalizeTimeZone(automation.getTimeZone())
+                      : DEFAULT_TIME_ZONE,
+                  normalizeMaxWordCountPerProject(
+                      automation != null ? automation.getMaxWordCountPerProject() : null),
+                  featureNamesByAutomationId.getOrDefault(row.id(), List.of()));
+            })
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public ReviewAutomationDetail getReviewAutomation(Long automationId) {
+    requireAdmin();
+    ReviewAutomation reviewAutomation =
+        reviewAutomationRepository
+            .findByIdWithFeatures(automationId)
+            .orElseThrow(
+                () -> new IllegalArgumentException("Review automation not found: " + automationId));
+    List<ReviewAutomationDetail.FeatureRef> features =
+        reviewAutomation.getFeatures().stream()
+            .sorted(
+                java.util.Comparator.comparing(
+                        ReviewFeature::getName, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(ReviewFeature::getId))
+            .map(
+                feature ->
+                    new ReviewAutomationDetail.FeatureRef(feature.getId(), feature.getName()))
+            .toList();
+    return new ReviewAutomationDetail(
+        reviewAutomation.getId(),
+        reviewAutomation.getCreatedDate(),
+        reviewAutomation.getLastModifiedDate(),
+        reviewAutomation.getName(),
+        Boolean.TRUE.equals(reviewAutomation.getEnabled()),
+        reviewAutomation.getCronExpression(),
+        normalizeTimeZone(reviewAutomation.getTimeZone()),
+        normalizeMaxWordCountPerProject(reviewAutomation.getMaxWordCountPerProject()),
+        features);
+  }
+
+  @Transactional
+  public ReviewAutomationDetail createReviewAutomation(
+      String name,
+      Boolean enabled,
+      String cronExpression,
+      String timeZone,
+      Integer maxWordCountPerProject,
+      List<Long> featureIds) {
+    requireAdmin();
+    String normalizedName = normalizeName(name);
+    ensureNameAvailable(normalizedName, null);
+    List<Long> normalizedFeatureIds = normalizeFeatureIds(featureIds);
+    ensureFeaturesAvailableToEnabledAutomation(
+        enabled == null ? Boolean.TRUE : enabled, normalizedFeatureIds, null);
+
+    ReviewAutomation reviewAutomation = new ReviewAutomation();
+    reviewAutomation.setName(normalizedName);
+    reviewAutomation.setEnabled(enabled == null ? Boolean.TRUE : enabled);
+    reviewAutomation.setCronExpression(normalizeCronExpression(cronExpression));
+    reviewAutomation.setTimeZone(normalizeTimeZone(timeZone));
+    reviewAutomation.setMaxWordCountPerProject(
+        normalizeMaxWordCountPerProject(maxWordCountPerProject));
+    reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
+    ReviewAutomation saved = reviewAutomationRepository.save(reviewAutomation);
+    return getReviewAutomation(saved.getId());
+  }
+
+  @Transactional
+  public ReviewAutomationDetail updateReviewAutomation(
+      Long automationId,
+      String name,
+      Boolean enabled,
+      String cronExpression,
+      String timeZone,
+      Integer maxWordCountPerProject,
+      List<Long> featureIds) {
+    requireAdmin();
+    ReviewAutomation reviewAutomation =
+        reviewAutomationRepository
+            .findByIdWithFeatures(automationId)
+            .orElseThrow(
+                () -> new IllegalArgumentException("Review automation not found: " + automationId));
+
+    String normalizedName = normalizeName(name);
+    ensureNameAvailable(normalizedName, reviewAutomation.getId());
+    List<Long> normalizedFeatureIds = normalizeFeatureIds(featureIds);
+    ensureFeaturesAvailableToEnabledAutomation(
+        enabled == null ? Boolean.TRUE : enabled, normalizedFeatureIds, reviewAutomation.getId());
+
+    reviewAutomation.setName(normalizedName);
+    reviewAutomation.setEnabled(enabled == null ? Boolean.TRUE : enabled);
+    reviewAutomation.setCronExpression(normalizeCronExpression(cronExpression));
+    reviewAutomation.setTimeZone(normalizeTimeZone(timeZone));
+    reviewAutomation.setMaxWordCountPerProject(
+        normalizeMaxWordCountPerProject(maxWordCountPerProject));
+    reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
+    reviewAutomationRepository.save(reviewAutomation);
+    return getReviewAutomation(reviewAutomation.getId());
+  }
+
+  @Transactional
+  public void deleteReviewAutomation(Long automationId) {
+    requireAdmin();
+    ReviewAutomation reviewAutomation =
+        reviewAutomationRepository
+            .findById(automationId)
+            .orElseThrow(
+                () -> new IllegalArgumentException("Review automation not found: " + automationId));
+    reviewAutomationRepository.delete(reviewAutomation);
+  }
+
+  @Transactional
+  public BatchUpsertResult batchUpsert(List<BatchUpsertRow> rows) {
+    requireAdmin();
+    if (rows == null || rows.isEmpty()) {
+      return new BatchUpsertResult(0, 0);
+    }
+
+    Set<String> seenNames = new LinkedHashSet<>();
+    Set<Long> seenIds = new LinkedHashSet<>();
+    int createdCount = 0;
+    int updatedCount = 0;
+
+    for (BatchUpsertRow row : rows) {
+      if (row == null) {
+        continue;
+      }
+      String normalizedName = normalizeName(row.name());
+      String normalizedKey = normalizedName.toLowerCase();
+      if (!seenNames.add(normalizedKey)) {
+        throw new IllegalArgumentException(
+            "Duplicate review automation name in batch: " + normalizedName);
+      }
+      if (row.id() != null && !seenIds.add(row.id())) {
+        throw new IllegalArgumentException("Duplicate review automation id in batch: " + row.id());
+      }
+
+      ReviewAutomation reviewAutomation;
+      if (row.id() != null) {
+        reviewAutomation =
+            reviewAutomationRepository
+                .findByIdWithFeatures(row.id())
+                .orElseThrow(
+                    () -> new IllegalArgumentException("Review automation not found: " + row.id()));
+        ensureNameAvailable(normalizedName, reviewAutomation.getId());
+        updatedCount++;
+      } else {
+        reviewAutomation =
+            reviewAutomationRepository.findByNameIgnoreCase(normalizedName).orElse(null);
+        if (reviewAutomation == null) {
+          reviewAutomation = new ReviewAutomation();
+          createdCount++;
+        } else {
+          updatedCount++;
+        }
+        ensureNameAvailable(normalizedName, reviewAutomation.getId());
+      }
+
+      List<Long> normalizedFeatureIds = normalizeFeatureIds(row.featureIds());
+      boolean normalizedEnabled = row.enabled() == null ? Boolean.TRUE : row.enabled();
+      ensureFeaturesAvailableToEnabledAutomation(
+          normalizedEnabled, normalizedFeatureIds, reviewAutomation.getId());
+
+      reviewAutomation.setName(normalizedName);
+      reviewAutomation.setEnabled(normalizedEnabled);
+      reviewAutomation.setCronExpression(normalizeCronExpression(row.cronExpression()));
+      reviewAutomation.setTimeZone(normalizeTimeZone(row.timeZone()));
+      reviewAutomation.setMaxWordCountPerProject(
+          normalizeMaxWordCountPerProject(row.maxWordCountPerProject()));
+      reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
+      reviewAutomationRepository.save(reviewAutomation);
+    }
+
+    return new BatchUpsertResult(createdCount, updatedCount);
+  }
+
+  private Map<Long, List<SearchReviewAutomationsView.FeatureSummary>> loadFeaturesByAutomationId(
+      List<ReviewAutomationSummaryRow> rows) {
+    Map<Long, List<SearchReviewAutomationsView.FeatureSummary>> featuresByAutomationId =
+        new LinkedHashMap<>();
+    if (rows == null || rows.isEmpty()) {
+      return featuresByAutomationId;
+    }
+
+    List<Long> automationIds =
+        rows.stream().map(ReviewAutomationSummaryRow::id).filter(Objects::nonNull).toList();
+    for (ReviewAutomationFeatureRow row :
+        reviewAutomationRepository.findFeatureRowsByAutomationIds(automationIds)) {
+      featuresByAutomationId
+          .computeIfAbsent(row.reviewAutomationId(), ignored -> new ArrayList<>())
+          .add(new SearchReviewAutomationsView.FeatureSummary(row.reviewFeatureId(), row.name()));
+    }
+    return featuresByAutomationId;
+  }
+
+  private List<SearchReviewAutomationsView.ReviewAutomationSummary> toSummaryViews(
+      List<ReviewAutomationSummaryRow> rows,
+      Map<Long, List<SearchReviewAutomationsView.FeatureSummary>> featuresByAutomationId) {
+    if (rows == null || rows.isEmpty()) {
+      return List.of();
+    }
+    return rows.stream()
+        .map(
+            row ->
+                new SearchReviewAutomationsView.ReviewAutomationSummary(
+                    row.id(),
+                    row.createdDate(),
+                    row.lastModifiedDate(),
+                    row.name(),
+                    Boolean.TRUE.equals(row.enabled()),
+                    row.cronExpression(),
+                    normalizeTimeZone(row.timeZone()),
+                    normalizeMaxWordCountPerProject(row.maxWordCountPerProject()),
+                    row.featureCount(),
+                    featuresByAutomationId.getOrDefault(row.id(), List.of())))
+        .toList();
+  }
+
+  private Set<ReviewFeature> resolveFeatures(List<Long> featureIds) {
+    if (featureIds == null || featureIds.isEmpty()) {
+      return new LinkedHashSet<>();
+    }
+
+    List<ReviewFeature> features = reviewFeatureRepository.findByIdInOrderByNameAsc(featureIds);
+    if (features.size() != featureIds.size()) {
+      Set<Long> foundIds =
+          features.stream().map(ReviewFeature::getId).collect(java.util.stream.Collectors.toSet());
+      List<Long> missingIds = featureIds.stream().filter(id -> !foundIds.contains(id)).toList();
+      throw new IllegalArgumentException("Unknown review features: " + missingIds);
+    }
+    return new LinkedHashSet<>(features);
+  }
+
+  private List<Long> normalizeFeatureIds(List<Long> featureIds) {
+    return (featureIds == null ? List.<Long>of() : featureIds)
+        .stream().filter(id -> id != null && id > 0).distinct().toList();
+  }
+
+  private void ensureFeaturesAvailableToEnabledAutomation(
+      boolean enabled, List<Long> featureIds, Long currentAutomationId) {
+    if (!enabled || featureIds == null || featureIds.isEmpty()) {
+      return;
+    }
+
+    List<ReviewAutomationFeatureAssignmentRow> assignments =
+        reviewAutomationRepository.findEnabledFeatureAssignments(featureIds, currentAutomationId);
+    if (assignments.isEmpty()) {
+      return;
+    }
+
+    String conflicts =
+        assignments.stream()
+            .map(
+                assignment ->
+                    assignment.reviewFeatureName() + " -> " + assignment.reviewAutomationName())
+            .distinct()
+            .collect(java.util.stream.Collectors.joining("; "));
+    throw new IllegalArgumentException(
+        "Review features already belong to another enabled automation: " + conflicts);
+  }
+
+  private void ensureNameAvailable(String normalizedName, Long currentId) {
+    reviewAutomationRepository
+        .findByNameIgnoreCase(normalizedName)
+        .filter(existing -> !Objects.equals(existing.getId(), currentId))
+        .ifPresent(
+            existing -> {
+              throw new IllegalArgumentException(
+                  "Review automation already exists: " + normalizedName);
+            });
+  }
+
+  private int normalizeLimit(Integer limit) {
+    if (limit == null) {
+      return DEFAULT_LIMIT;
+    }
+    return Math.max(1, Math.min(MAX_LIMIT, limit));
+  }
+
+  private String normalizeSearchQuery(String searchQuery) {
+    if (searchQuery == null) {
+      return null;
+    }
+    String trimmed = searchQuery.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  private String normalizeName(String name) {
+    String normalized = name == null ? "" : name.trim().replaceAll("\\s+", " ");
+    if (normalized.isEmpty()) {
+      throw new IllegalArgumentException("Review automation name is required");
+    }
+    if (normalized.length() > ReviewAutomation.NAME_MAX_LENGTH) {
+      throw new IllegalArgumentException(
+          "Review automation name must be at most "
+              + ReviewAutomation.NAME_MAX_LENGTH
+              + " characters");
+    }
+    return normalized;
+  }
+
+  private String normalizeCronExpression(String cronExpression) {
+    String trimmed = cronExpression == null ? "" : cronExpression.trim();
+    if (trimmed.isEmpty()) {
+      throw new IllegalArgumentException("Cron expression is required");
+    }
+    if (trimmed.length() > ReviewAutomation.CRON_EXPRESSION_MAX_LENGTH) {
+      throw new IllegalArgumentException(
+          "Cron expression must be at most "
+              + ReviewAutomation.CRON_EXPRESSION_MAX_LENGTH
+              + " characters");
+    }
+    if (!CronExpression.isValidExpression(trimmed)) {
+      throw new IllegalArgumentException("Invalid cron expression");
+    }
+    return trimmed;
+  }
+
+  private String normalizeTimeZone(String timeZone) {
+    String trimmed = timeZone == null ? "" : timeZone.trim();
+    if (trimmed.isEmpty()) {
+      return DEFAULT_TIME_ZONE;
+    }
+    if (trimmed.length() > ReviewAutomation.TIME_ZONE_MAX_LENGTH) {
+      throw new IllegalArgumentException(
+          "Time zone must be at most " + ReviewAutomation.TIME_ZONE_MAX_LENGTH + " characters");
+    }
+    try {
+      return ZoneId.of(trimmed).getId();
+    } catch (Exception ex) {
+      throw new IllegalArgumentException("Invalid time zone");
+    }
+  }
+
+  private int normalizeMaxWordCountPerProject(Integer maxWordCountPerProject) {
+    if (maxWordCountPerProject == null) {
+      return DEFAULT_MAX_WORD_COUNT_PER_PROJECT;
+    }
+    if (maxWordCountPerProject < 1) {
+      throw new IllegalArgumentException("Max word count per project must be positive");
+    }
+    return maxWordCountPerProject;
+  }
+
+  private void requireAdmin() {
+    if (!userService.isCurrentUserAdmin()) {
+      throw new AccessDeniedException("Admin role required");
+    }
+  }
+
+  public record ReviewAutomationDetail(
+      Long id,
+      ZonedDateTime createdDate,
+      ZonedDateTime lastModifiedDate,
+      String name,
+      boolean enabled,
+      String cronExpression,
+      String timeZone,
+      int maxWordCountPerProject,
+      List<FeatureRef> features) {
+    public record FeatureRef(Long id, String name) {}
+  }
+
+  public record ReviewAutomationOption(Long id, String name, boolean enabled) {}
+
+  public record ReviewAutomationBatchExportRow(
+      Long id,
+      String name,
+      boolean enabled,
+      String cronExpression,
+      String timeZone,
+      int maxWordCountPerProject,
+      List<String> featureNames) {}
+
+  public record BatchUpsertRow(
+      Long id,
+      String name,
+      Boolean enabled,
+      String cronExpression,
+      String timeZone,
+      Integer maxWordCountPerProject,
+      List<Long> featureIds) {}
+
+  public record BatchUpsertResult(int createdCount, int updatedCount) {}
+}

@@ -219,6 +219,29 @@ export function AdminSettingsPage() {
         </div>
       </section>
 
+      <section className="settings-card" aria-labelledby="settings-review-automations">
+        <div className="settings-card__header">
+          <h2 id="settings-review-automations">Review automations</h2>
+        </div>
+        <p className="settings-note">
+          Manage recurring review schedules. Each automation has a cron expression, max project
+          size, and a list of review features to process together when automation execution lands.
+        </p>
+        <div className="settings-card__footer">
+          <div className="settings-actions">
+            <button
+              type="button"
+              className="settings-button settings-button--primary"
+              onClick={() => {
+                void navigate('/settings/admin/review-automations');
+              }}
+            >
+              Open review automations
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section className="settings-card" aria-labelledby="settings-preferred-locales">
         <div className="settings-card__header">
           <h2 id="settings-preferred-locales">Preferred locales</h2>

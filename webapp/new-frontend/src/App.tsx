@@ -23,6 +23,9 @@ import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
 import { AdminAiLocalePromptSuffixPage } from './page/settings/AdminAiLocalePromptSuffixPage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
+import { AdminReviewAutomationBatchPage } from './page/settings/AdminReviewAutomationBatchPage';
+import { AdminReviewAutomationDetailPage } from './page/settings/AdminReviewAutomationDetailPage';
+import { AdminReviewAutomationsPage } from './page/settings/AdminReviewAutomationsPage';
 import { AdminReviewFeatureBatchPage } from './page/settings/AdminReviewFeatureBatchPage';
 import { AdminReviewFeatureDetailPage } from './page/settings/AdminReviewFeatureDetailPage';
 import { AdminReviewFeaturesPage } from './page/settings/AdminReviewFeaturesPage';
@@ -64,6 +67,7 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
           { to: '/settings/admin/users', label: 'Users' },
           { to: '/settings/admin/teams', label: 'Teams' },
           { to: '/settings/admin/review-features', label: 'Review Features' },
+          { to: '/settings/admin/review-automations', label: 'Review Automations' },
         ]
       : user.role === 'ROLE_PM'
         ? [{ to: '/settings/teams', label: 'Teams' }]
@@ -86,6 +90,8 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
                         location.pathname.startsWith('/settings/admin/team-pools')) ||
                       (to === '/settings/admin/review-features' &&
                         location.pathname.startsWith('/settings/admin/review-features')) ||
+                      (to === '/settings/admin/review-automations' &&
+                        location.pathname.startsWith('/settings/admin/review-automations')) ||
                       (to === '/settings/teams' &&
                         (location.pathname.startsWith('/settings/team') ||
                           location.pathname.startsWith('/settings/teams')));
@@ -135,6 +141,10 @@ export function App() {
             />
             <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
             <Route
+              path="/settings/admin/review-automations"
+              element={<AdminReviewAutomationsPage />}
+            />
+            <Route
               path="/settings/admin/ai-translate/prompt-suffixes"
               element={<AdminAiLocalePromptSuffixPage />}
             />
@@ -166,6 +176,14 @@ export function App() {
             <Route
               path="/settings/admin/review-features/:featureId"
               element={<AdminReviewFeatureDetailPage />}
+            />
+            <Route
+              path="/settings/admin/review-automations/batch"
+              element={<AdminReviewAutomationBatchPage />}
+            />
+            <Route
+              path="/settings/admin/review-automations/:automationId"
+              element={<AdminReviewAutomationDetailPage />}
             />
           </Route>
         </Routes>

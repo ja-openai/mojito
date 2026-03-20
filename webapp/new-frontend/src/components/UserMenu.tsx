@@ -84,6 +84,7 @@ export function UserMenu() {
     ? [
         { label: 'Admin settings', path: '/settings/admin' },
         { label: 'Review features', path: '/settings/admin/review-features' },
+        { label: 'Review automations', path: '/settings/admin/review-automations' },
         { label: 'AI translate automation', path: '/settings/admin/ai-translate' },
         {
           label: 'AI prompt suffixes',

@@ -16,6 +16,8 @@ public interface ReviewFeatureRepository extends JpaRepository<ReviewFeature, Lo
 
   Optional<ReviewFeature> findByNameIgnoreCase(String name);
 
+  List<ReviewFeature> findByIdInOrderByNameAsc(List<Long> ids);
+
   @Query(
       """
       select new com.box.l10n.mojito.service.review.ReviewFeatureOptionRow(
