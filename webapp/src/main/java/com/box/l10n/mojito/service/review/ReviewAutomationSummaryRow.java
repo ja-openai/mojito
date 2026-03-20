@@ -10,5 +10,8 @@ public record ReviewAutomationSummaryRow(
     Boolean enabled,
     String cronExpression,
     String timeZone,
+    Long teamId,
+    String teamName,
+    Integer dueDateOffsetDays,
     Integer maxWordCountPerProject,
     long featureCount) {}

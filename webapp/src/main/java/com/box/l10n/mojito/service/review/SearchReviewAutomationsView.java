@@ -14,9 +14,13 @@ public record SearchReviewAutomationsView(
       Boolean enabled,
       String cronExpression,
       String timeZone,
+      TeamRef team,
+      int dueDateOffsetDays,
       int maxWordCountPerProject,
       long featureCount,
       List<FeatureSummary> features) {}
 
   public record FeatureSummary(Long id, String name) {}
+
+  public record TeamRef(Long id, String name) {}
 }

@@ -11,6 +11,8 @@ export type ApiReviewAutomationSummary = {
   enabled: boolean;
   cronExpression: string;
   timeZone: string;
+  team: { id: number; name: string } | null;
+  dueDateOffsetDays: number;
   maxWordCountPerProject: number;
   featureCount: number;
   features: ApiReviewAutomationFeature[];
@@ -24,6 +26,8 @@ export type ApiReviewAutomation = {
   enabled: boolean;
   cronExpression: string;
   timeZone: string;
+  team: { id: number; name: string } | null;
+  dueDateOffsetDays: number;
   maxWordCountPerProject: number;
   features: ApiReviewAutomationFeature[];
 };
@@ -40,6 +44,8 @@ export type ApiReviewAutomationBatchExportRow = {
   enabled: boolean;
   cronExpression: string;
   timeZone: string;
+  teamName: string | null;
+  dueDateOffsetDays: number;
   maxWordCountPerProject: number;
   featureNames: string[];
 };
@@ -54,6 +60,8 @@ type UpsertReviewAutomationPayload = {
   enabled: boolean;
   cronExpression: string;
   timeZone: string;
+  teamId: number;
+  dueDateOffsetDays: number;
   maxWordCountPerProject: number;
   featureIds: number[];
 };
@@ -65,6 +73,8 @@ type BatchUpsertPayload = {
     enabled: boolean;
     cronExpression: string;
     timeZone: string;
+    teamId: number;
+    dueDateOffsetDays: number;
     maxWordCountPerProject: number;
     featureIds: number[];
   }>;

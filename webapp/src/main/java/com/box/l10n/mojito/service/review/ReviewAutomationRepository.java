@@ -28,7 +28,7 @@ public interface ReviewAutomationRepository extends JpaRepository<ReviewAutomati
       """)
   List<ReviewAutomationOptionRow> findAllOptionRows();
 
-  @EntityGraph(attributePaths = "features")
+  @EntityGraph(attributePaths = {"features", "team"})
   @Query("select ra from ReviewAutomation ra where ra.id = :id")
   Optional<ReviewAutomation> findByIdWithFeatures(@Param("id") Long id);
 
@@ -43,10 +43,14 @@ public interface ReviewAutomationRepository extends JpaRepository<ReviewAutomati
             ra.enabled,
             ra.cronExpression,
             ra.timeZone,
+            team.id,
+            team.name,
+            ra.dueDateOffsetDays,
             ra.maxWordCountPerProject,
             count(distinct rf.id)
           )
           from ReviewAutomation ra
+          left join ra.team team
           left join ra.features rf
           where (:enabled is null or ra.enabled = :enabled)
             and (:searchQuery is null or trim(:searchQuery) = '' or lower(ra.name) like concat('%', lower(:searchQuery), '%'))
@@ -58,6 +62,9 @@ public interface ReviewAutomationRepository extends JpaRepository<ReviewAutomati
             ra.enabled,
             ra.cronExpression,
             ra.timeZone,
+            team.id,
+            team.name,
+            ra.dueDateOffsetDays,
             ra.maxWordCountPerProject
           order by lower(ra.name) asc, ra.id asc
           """,

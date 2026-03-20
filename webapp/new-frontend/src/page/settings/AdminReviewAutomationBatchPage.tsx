@@ -12,6 +12,7 @@ import {
   fetchReviewAutomationOptions,
 } from '../../api/review-automations';
 import { fetchReviewFeatureOptions } from '../../api/review-features';
+import { fetchTeams } from '../../api/teams';
 import { useUser } from '../../components/RequireUser';
 import {
   DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
@@ -27,6 +28,9 @@ type ParsedRow = {
   enabled: boolean;
   cronExpression: string;
   timeZone: string;
+  teamId: number;
+  teamName: string;
+  dueDateOffsetDays: number;
   maxWordCountPerProject: number;
   featureIds: number[];
   featureNames: string[];
@@ -35,8 +39,8 @@ type ParsedRow = {
 
 const DEFAULT_MAX_WORD_COUNT = 2000;
 
-const EXAMPLE_INPUT = `Payments daily | enabled | 0 0 0 * * ? | America/Los_Angeles | 2000 | Payments
-Vendor catch-up | disabled | 0 30 6 * * ? | UTC | 1500 | Billing, Checkout`;
+const EXAMPLE_INPUT = `Payments daily | enabled | 0 0 0 * * ? | America/Los_Angeles | Core Localization | 1 | 2000 | Payments
+Vendor catch-up | disabled | 0 30 6 * * ? | UTC | Vendor Team | 2 | 1500 | Billing, Checkout`;
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
 
@@ -45,10 +49,12 @@ const formatBatchExportRow = (row: {
   enabled: boolean;
   cronExpression: string;
   timeZone: string;
+  teamName: string | null;
+  dueDateOffsetDays: number;
   maxWordCountPerProject: number;
   featureNames: string[];
 }) =>
-  `${row.name} | ${row.enabled ? 'enabled' : 'disabled'} | ${row.cronExpression} | ${row.timeZone} | ${row.maxWordCountPerProject} | ${row.featureNames.join(', ')}`;
+  `${row.name} | ${row.enabled ? 'enabled' : 'disabled'} | ${row.cronExpression} | ${row.timeZone} | ${row.teamName ?? ''} | ${row.dueDateOffsetDays} | ${row.maxWordCountPerProject} | ${row.featureNames.join(', ')}`;
 
 const normalizeEnabled = (value?: string | null) => {
   const trimmed = (value ?? '').trim().toLowerCase();
@@ -76,6 +82,18 @@ const normalizeMaxWordCount = (value?: string | null) => {
   return parsed;
 };
 
+const normalizeDueDateOffsetDays = (value?: string | null) => {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed) {
+    return 1;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
+    return null;
+  }
+  return parsed;
+};
+
 const normalizeTimeZone = (value?: string | null) => {
   const trimmed = (value ?? '').trim();
   return trimmed || DEFAULT_REVIEW_AUTOMATION_TIME_ZONE;
@@ -86,6 +104,8 @@ function parseBatchInput(
   featureIdsByName: Map<string, number>,
   featureDisplayNamesByName: Map<string, string>,
   existingAutomationsByName: Map<string, { id: number }>,
+  teamIdsByName: Map<string, number>,
+  teamDisplayNamesByName: Map<string, string>,
 ): ParsedRow[] {
   const rows = input
     .split(/\r?\n/)
@@ -97,9 +117,11 @@ function parseBatchInput(
       const enabled = normalizeEnabled(parts[1] ?? '');
       const cronExpression = (parts[2] ?? '').trim();
       const timeZone = normalizeTimeZone(parts[3] ?? '');
-      const maxWordCountPerProject = normalizeMaxWordCount(parts[4] ?? '');
+      const teamName = (parts[4] ?? '').trim();
+      const dueDateOffsetDays = normalizeDueDateOffsetDays(parts[5] ?? '');
+      const maxWordCountPerProject = normalizeMaxWordCount(parts[6] ?? '');
       const featureNames =
-        parts[5]
+        parts[7]
           ?.split(/[;,]+/)
           .map((part) => part.trim())
           .filter(Boolean) ?? [];
@@ -113,6 +135,14 @@ function parseBatchInput(
       }
       if (!cronExpression) {
         errors.push('Missing cron expression');
+      }
+      const normalizedTeamKey = teamName.toLowerCase();
+      const teamId = normalizedTeamKey ? teamIdsByName.get(normalizedTeamKey) : null;
+      if (teamId == null) {
+        errors.push(`Unknown team: ${teamName || '(blank)'}`);
+      }
+      if (dueDateOffsetDays == null) {
+        errors.push('Invalid due date offset days');
       }
       if (maxWordCountPerProject == null) {
         errors.push('Invalid max word count');
@@ -150,6 +180,9 @@ function parseBatchInput(
         enabled: enabled ?? true,
         cronExpression,
         timeZone,
+        teamId: teamId ?? -1,
+        teamName: teamDisplayNamesByName.get(normalizedTeamKey) ?? teamName,
+        dueDateOffsetDays: dueDateOffsetDays ?? 1,
         maxWordCountPerProject: maxWordCountPerProject ?? DEFAULT_MAX_WORD_COUNT,
         featureIds: resolvedFeatureIds.sort((left, right) => left - right),
         featureNames: resolvedFeatureNames,
@@ -205,6 +238,12 @@ export function AdminReviewAutomationBatchPage() {
     enabled: isAdmin,
     staleTime: 30_000,
   });
+  const teamsQuery = useQuery({
+    queryKey: ['teams', 'review-automation-batch'],
+    queryFn: fetchTeams,
+    enabled: isAdmin,
+    staleTime: 30_000,
+  });
 
   const batchMutation = useMutation({
     mutationFn: batchUpsertReviewAutomations,
@@ -239,6 +278,22 @@ export function AdminReviewAutomationBatchPage() {
     return next;
   }, [reviewFeaturesQuery.data]);
 
+  const teamIdsByName = useMemo(() => {
+    const next = new Map<string, number>();
+    for (const team of teamsQuery.data ?? []) {
+      next.set(team.name.toLowerCase(), team.id);
+    }
+    return next;
+  }, [teamsQuery.data]);
+
+  const teamDisplayNamesByName = useMemo(() => {
+    const next = new Map<string, string>();
+    for (const team of teamsQuery.data ?? []) {
+      next.set(team.name.toLowerCase(), team.name);
+    }
+    return next;
+  }, [teamsQuery.data]);
+
   const existingAutomationsByName = useMemo(() => {
     const next = new Map<string, { id: number }>();
     for (const automation of reviewAutomationsQuery.data ?? []) {
@@ -254,16 +309,27 @@ export function AdminReviewAutomationBatchPage() {
         featureIdsByName,
         featureDisplayNamesByName,
         existingAutomationsByName,
+        teamIdsByName,
+        teamDisplayNamesByName,
       ),
-    [existingAutomationsByName, featureDisplayNamesByName, featureIdsByName, input],
+    [
+      existingAutomationsByName,
+      featureDisplayNamesByName,
+      featureIdsByName,
+      input,
+      teamDisplayNamesByName,
+      teamIdsByName,
+    ],
   );
 
   const validRows = parsedRows.filter((row) => row.errors.length === 0);
   const invalidRows = parsedRows.filter((row) => row.errors.length > 0);
-  const isSourceLoading = reviewAutomationsQuery.isLoading || reviewFeaturesQuery.isLoading;
+  const isSourceLoading =
+    reviewAutomationsQuery.isLoading || reviewFeaturesQuery.isLoading || teamsQuery.isLoading;
   const sourceError =
     (reviewAutomationsQuery.error instanceof Error && reviewAutomationsQuery.error.message) ||
     (reviewFeaturesQuery.error instanceof Error && reviewFeaturesQuery.error.message) ||
+    (teamsQuery.error instanceof Error && teamsQuery.error.message) ||
     null;
   const loadExistingError =
     (batchExportQuery.error instanceof Error && batchExportQuery.error.message) || null;
@@ -292,6 +358,8 @@ export function AdminReviewAutomationBatchPage() {
         enabled: row.enabled,
         cronExpression: row.cronExpression,
         timeZone: row.timeZone,
+        teamId: row.teamId,
+        dueDateOffsetDays: row.dueDateOffsetDays,
         maxWordCountPerProject: row.maxWordCountPerProject,
         featureIds: row.featureIds,
       })),
@@ -304,6 +372,8 @@ export function AdminReviewAutomationBatchPage() {
       enabled: boolean;
       cronExpression: string;
       timeZone: string;
+      teamName: string | null;
+      dueDateOffsetDays: number;
       maxWordCountPerProject: number;
       featureNames: string[];
     }>,
@@ -330,7 +400,7 @@ export function AdminReviewAutomationBatchPage() {
       return;
     }
 
-    const nextText = rowsToLoad.map(formatBatchExportRow).join('\n');
+    const nextText = rowsToLoad.map((row) => formatBatchExportRow(row)).join('\n');
     setInput((previous) => {
       if (prefillMode === 'replace' || !previous.trim()) {
         return nextText;
@@ -360,6 +430,8 @@ export function AdminReviewAutomationBatchPage() {
         enabled: false,
         cronExpression: DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
         timeZone: DEFAULT_REVIEW_AUTOMATION_TIME_ZONE,
+        teamName: '',
+        dueDateOffsetDays: 1,
         maxWordCountPerProject: DEFAULT_MAX_WORD_COUNT,
         featureNames: [feature.name],
       })),
@@ -473,10 +545,12 @@ export function AdminReviewAutomationBatchPage() {
             <pre className="user-batch-page__example-code">{EXAMPLE_INPUT}</pre>
             <ul className="user-batch-page__intro-list review-automation-batch-page__docs-list">
               <li>
-                `name | enabled|disabled | cron | timezone | max-word-count | feature-a, feature-b`
+                `name | enabled|disabled | cron | timezone | team | due-date-offset-days | max-word-count | feature-a, feature-b`
               </li>
               <li>Blank status defaults to enabled.</li>
               <li>Blank timezone defaults to UTC.</li>
+              <li>Team name must match an existing enabled team.</li>
+              <li>Blank due date offset defaults to 1 day.</li>
               <li>Blank max word count defaults to 2000.</li>
               <li>Review feature names can be comma- or semicolon-separated.</li>
               <li>Merge skips automation names already present in the editor.</li>
@@ -506,6 +580,8 @@ export function AdminReviewAutomationBatchPage() {
               <div>Status</div>
               <div>Cron</div>
               <div>TZ</div>
+              <div>Team</div>
+              <div>Due in</div>
               <div>Max size</div>
               <div>Features</div>
               <div>Errors</div>
@@ -519,6 +595,8 @@ export function AdminReviewAutomationBatchPage() {
                   <div>{row.enabled ? 'Enabled' : 'Disabled'}</div>
                   <div className="user-batch-page__cell--muted">{row.cronExpression || '—'}</div>
                   <div className="user-batch-page__cell--muted">{row.timeZone}</div>
+                  <div className="user-batch-page__cell--muted">{row.teamName || '—'}</div>
+                  <div className="user-batch-page__cell--muted">{row.dueDateOffsetDays}d</div>
                   <div className="user-batch-page__cell--muted">{row.maxWordCountPerProject}</div>
                   <div className="user-batch-page__cell--muted">
                     {row.featureNames.length ? row.featureNames.join(', ') : 'No review features'}

@@ -6,9 +6,11 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import { fetchReviewAutomation, updateReviewAutomation } from '../../api/review-automations';
 import { fetchReviewFeatureOptions } from '../../api/review-features';
+import { fetchTeams } from '../../api/teams';
 import { useUser } from '../../components/RequireUser';
 import { ReviewAutomationScheduleBuilderModal } from '../../components/ReviewAutomationScheduleBuilderModal';
 import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSelect';
+import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getReviewAutomationTimeZoneOptions } from '../../utils/reviewAutomationSchedule';
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
@@ -20,6 +22,18 @@ const parsePositiveIntegerDraft = (value: string) => {
   }
   const parsed = Number(trimmed);
   if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+    return { value: null as number | null, valid: false };
+  }
+  return { value: parsed, valid: true };
+};
+
+const parseNonNegativeIntegerDraft = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { value: null as number | null, valid: false };
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
     return { value: null as number | null, valid: false };
   }
   return { value: parsed, valid: true };
@@ -37,6 +51,8 @@ export function AdminReviewAutomationDetailPage() {
   const [isScheduleBuilderOpen, setIsScheduleBuilderOpen] = useState(false);
   const [timeZoneDraft, setTimeZoneDraft] = useState('UTC');
   const [cronExpressionDraft, setCronExpressionDraft] = useState('');
+  const [teamIdDraft, setTeamIdDraft] = useState<number | null>(null);
+  const [dueDateOffsetDaysDraft, setDueDateOffsetDaysDraft] = useState('');
   const [maxWordCountDraft, setMaxWordCountDraft] = useState('');
   const [featureIdsDraft, setFeatureIdsDraft] = useState<number[]>([]);
   const [statusNotice, setStatusNotice] = useState<{
@@ -59,6 +75,12 @@ export function AdminReviewAutomationDetailPage() {
     enabled: isAdmin,
     staleTime: 30_000,
   });
+  const teamsQuery = useQuery({
+    queryKey: ['teams', 'review-automation-detail'],
+    queryFn: fetchTeams,
+    enabled: isAdmin,
+    staleTime: 30_000,
+  });
 
   const automationQuery = useQuery({
     queryKey: ['review-automation', parsedAutomationId],
@@ -73,6 +95,8 @@ export function AdminReviewAutomationDetailPage() {
       enabled: boolean;
       cronExpression: string;
       timeZone: string;
+      teamId: number;
+      dueDateOffsetDays: number;
       maxWordCountPerProject: number;
       featureIds: number[];
     }) => updateReviewAutomation(parsedAutomationId as number, payload),
@@ -102,6 +126,8 @@ export function AdminReviewAutomationDetailPage() {
     setEnabledDraft(automation.enabled);
     setTimeZoneDraft(automation.timeZone);
     setCronExpressionDraft(automation.cronExpression);
+    setTeamIdDraft(automation.team?.id ?? null);
+    setDueDateOffsetDaysDraft(String(automation.dueDateOffsetDays));
     setMaxWordCountDraft(String(automation.maxWordCountPerProject));
     setFeatureIdsDraft(automation.features.map((feature) => feature.id).sort((a, b) => a - b));
   }, [automationQuery.data]);
@@ -109,6 +135,10 @@ export function AdminReviewAutomationDetailPage() {
   const maxWordCount = useMemo(
     () => parsePositiveIntegerDraft(maxWordCountDraft),
     [maxWordCountDraft],
+  );
+  const dueDateOffsetDays = useMemo(
+    () => parsePositiveIntegerDraft(dueDateOffsetDaysDraft),
+    [dueDateOffsetDaysDraft],
   );
   const timeZoneOptions = useMemo(
     () => getReviewAutomationTimeZoneOptions(timeZoneDraft),
@@ -133,6 +163,12 @@ export function AdminReviewAutomationDetailPage() {
     if (timeZoneDraft !== automation.timeZone) {
       return true;
     }
+    if (teamIdDraft !== (automation.team?.id ?? null)) {
+      return true;
+    }
+    if (dueDateOffsetDays.valid && dueDateOffsetDays.value !== automation.dueDateOffsetDays) {
+      return true;
+    }
     if (maxWordCount.valid && maxWordCount.value !== automation.maxWordCountPerProject) {
       return true;
     }
@@ -146,9 +182,12 @@ export function AdminReviewAutomationDetailPage() {
     cronExpressionDraft,
     enabledDraft,
     featureIdsDraft,
+    dueDateOffsetDays.valid,
+    dueDateOffsetDays.value,
     maxWordCount.valid,
     maxWordCount.value,
     nameDraft,
+    teamIdDraft,
     timeZoneDraft,
   ]);
 
@@ -170,6 +209,17 @@ export function AdminReviewAutomationDetailPage() {
       setStatusNotice({ kind: 'error', message: 'Cron expression is required.' });
       return;
     }
+    if (teamIdDraft == null) {
+      setStatusNotice({ kind: 'error', message: 'Team is required.' });
+      return;
+    }
+    if (!dueDateOffsetDays.valid) {
+      setStatusNotice({
+        kind: 'error',
+        message: 'Due date offset days must be zero or a positive whole number.',
+      });
+      return;
+    }
     if (!maxWordCount.valid) {
       setStatusNotice({
         kind: 'error',
@@ -183,6 +233,8 @@ export function AdminReviewAutomationDetailPage() {
       enabled: enabledDraft,
       cronExpression: cronExpressionDraft.trim(),
       timeZone: timeZoneDraft,
+      teamId: teamIdDraft,
+      dueDateOffsetDays: dueDateOffsetDays.value as number,
       maxWordCountPerProject: maxWordCount.value as number,
       featureIds: [...featureIdsDraft].sort((a, b) => a - b),
     });
@@ -285,6 +337,44 @@ export function AdminReviewAutomationDetailPage() {
                   <option key={timeZone} value={timeZone} />
                 ))}
               </datalist>
+            </div>
+            <div className="settings-grid settings-grid--two-column">
+              <div className="settings-field">
+                <label className="settings-field__label">Team</label>
+                <SingleSelectDropdown
+                  label="Team"
+                  options={(teamsQuery.data ?? []).map((team) => ({
+                    value: team.id,
+                    label: team.name,
+                  }))}
+                  value={teamIdDraft}
+                  onChange={(value) => {
+                    setTeamIdDraft(value);
+                    setStatusNotice(null);
+                  }}
+                  noneLabel="Select team"
+                  placeholder="Select team"
+                  disabled={teamsQuery.isLoading}
+                  buttonAriaLabel="Select review automation team"
+                />
+              </div>
+              <div className="settings-field">
+                <label className="settings-field__label" htmlFor="review-automation-due-offset">
+                  Due date offset days
+                </label>
+                <input
+                  id="review-automation-due-offset"
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  className="settings-input"
+                  value={dueDateOffsetDaysDraft}
+                  onChange={(event) => {
+                    setDueDateOffsetDaysDraft(event.target.value);
+                    setStatusNotice(null);
+                  }}
+                />
+              </div>
             </div>
             <div className="settings-field">
               <label className="settings-field__label" htmlFor="review-automation-max-word-count">

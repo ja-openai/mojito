@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.entity.review;
 
 import com.box.l10n.mojito.entity.AuditableEntity;
+import com.box.l10n.mojito.entity.Team;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -8,6 +9,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.util.LinkedHashSet;
@@ -37,6 +39,15 @@ public class ReviewAutomation extends AuditableEntity {
 
   @Column(name = "max_word_count_per_project", nullable = false)
   private Integer maxWordCountPerProject;
+
+  @Column(name = "due_date_offset_days", nullable = false)
+  private Integer dueDateOffsetDays = 1;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(
+      name = "team_id",
+      foreignKey = @jakarta.persistence.ForeignKey(name = "FK__REVIEW_AUTOMATION__TEAM"))
+  private Team team;
 
   @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(
@@ -97,6 +108,22 @@ public class ReviewAutomation extends AuditableEntity {
 
   public void setMaxWordCountPerProject(Integer maxWordCountPerProject) {
     this.maxWordCountPerProject = maxWordCountPerProject;
+  }
+
+  public Integer getDueDateOffsetDays() {
+    return dueDateOffsetDays;
+  }
+
+  public void setDueDateOffsetDays(Integer dueDateOffsetDays) {
+    this.dueDateOffsetDays = dueDateOffsetDays;
+  }
+
+  public Team getTeam() {
+    return team;
+  }
+
+  public void setTeam(Team team) {
+    this.team = team;
   }
 
   public Set<ReviewFeature> getFeatures() {

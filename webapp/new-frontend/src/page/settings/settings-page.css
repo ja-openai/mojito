@@ -66,6 +66,15 @@
   gap: var(--space-3);
 }
 
+.settings-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.settings-grid--two-column {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
 .settings-field__label {
   font-size: var(--font-size-sm);
   color: var(--color-text);

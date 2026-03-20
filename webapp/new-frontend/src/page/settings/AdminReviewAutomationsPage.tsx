@@ -12,6 +12,7 @@ import {
   fetchReviewAutomations,
 } from '../../api/review-automations';
 import { fetchReviewFeatureOptions } from '../../api/review-features';
+import { fetchTeams } from '../../api/teams';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
@@ -19,6 +20,7 @@ import { useUser } from '../../components/RequireUser';
 import { ReviewAutomationScheduleBuilderModal } from '../../components/ReviewAutomationScheduleBuilderModal';
 import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSelect';
 import { SearchControl } from '../../components/SearchControl';
+import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import {
   DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
   formatReviewAutomationSchedule,
@@ -35,6 +37,7 @@ type EnabledFilter = 'enabled' | 'disabled' | 'all';
 
 const LIMIT_PRESETS = [25, 50, 100];
 const DEFAULT_MAX_WORD_COUNT = 2000;
+const DEFAULT_DUE_DATE_OFFSET_DAYS = 1;
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
 
@@ -45,6 +48,18 @@ const parsePositiveIntegerDraft = (value: string) => {
   }
   const parsed = Number(trimmed);
   if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+    return { value: null as number | null, valid: false };
+  }
+  return { value: parsed, valid: true };
+};
+
+const parseNonNegativeIntegerDraft = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { value: null as number | null, valid: false };
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
     return { value: null as number | null, valid: false };
   }
   return { value: parsed, valid: true };
@@ -67,6 +82,10 @@ export function AdminReviewAutomationsPage() {
   const [newCronExpressionDraft, setNewCronExpressionDraft] = useState(
     DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
   );
+  const [newTeamIdDraft, setNewTeamIdDraft] = useState<number | null>(null);
+  const [newDueDateOffsetDaysDraft, setNewDueDateOffsetDaysDraft] = useState(
+    String(DEFAULT_DUE_DATE_OFFSET_DAYS),
+  );
   const [newMaxWordCountDraft, setNewMaxWordCountDraft] = useState(String(DEFAULT_MAX_WORD_COUNT));
   const [newFeatureIdsDraft, setNewFeatureIdsDraft] = useState<number[]>([]);
   const [createModalError, setCreateModalError] = useState<string | null>(null);
@@ -77,6 +96,12 @@ export function AdminReviewAutomationsPage() {
   const reviewFeaturesQuery = useQuery({
     queryKey: ['review-features', 'options'],
     queryFn: fetchReviewFeatureOptions,
+    enabled: isAdmin,
+    staleTime: 30_000,
+  });
+  const teamsQuery = useQuery({
+    queryKey: ['teams', 'review-automation-create'],
+    queryFn: fetchTeams,
     enabled: isAdmin,
     staleTime: 30_000,
   });
@@ -137,6 +162,10 @@ export function AdminReviewAutomationsPage() {
     () => parsePositiveIntegerDraft(newMaxWordCountDraft),
     [newMaxWordCountDraft],
   );
+  const dueDateOffsetDaysDraft = useMemo(
+    () => parseNonNegativeIntegerDraft(newDueDateOffsetDaysDraft),
+    [newDueDateOffsetDaysDraft],
+  );
 
   const visibleCountLabel = useMemo(() => {
     if (automations.length === totalCount) {
@@ -155,6 +184,8 @@ export function AdminReviewAutomationsPage() {
     setNewEnabledDraft(true);
     setNewTimeZoneDraft(getDefaultReviewAutomationTimeZone());
     setNewCronExpressionDraft(DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION);
+    setNewTeamIdDraft(null);
+    setNewDueDateOffsetDaysDraft(String(DEFAULT_DUE_DATE_OFFSET_DAYS));
     setNewMaxWordCountDraft(String(DEFAULT_MAX_WORD_COUNT));
     setNewFeatureIdsDraft([]);
     setCreateModalError(null);
@@ -174,6 +205,14 @@ export function AdminReviewAutomationsPage() {
       setCreateModalError('Cron expression is required.');
       return;
     }
+    if (newTeamIdDraft == null) {
+      setCreateModalError('Team is required.');
+      return;
+    }
+    if (!dueDateOffsetDaysDraft.valid) {
+      setCreateModalError('Due date offset days must be zero or a positive whole number.');
+      return;
+    }
     if (!maxWordCountDraft.valid) {
       setCreateModalError('Max word count per project must be a positive whole number.');
       return;
@@ -183,6 +222,8 @@ export function AdminReviewAutomationsPage() {
       enabled: newEnabledDraft,
       cronExpression: newCronExpressionDraft.trim(),
       timeZone: newTimeZoneDraft,
+      teamId: newTeamIdDraft,
+      dueDateOffsetDays: dueDateOffsetDaysDraft.value as number,
       maxWordCountPerProject: maxWordCountDraft.value as number,
       featureIds: [...newFeatureIdsDraft].sort((a, b) => a - b),
     });
@@ -283,6 +324,8 @@ export function AdminReviewAutomationsPage() {
                 <div className="review-automation-admin-page__cell">Automation</div>
                 <div className="review-automation-admin-page__cell">Status</div>
                 <div className="review-automation-admin-page__cell">Schedule</div>
+                <div className="review-automation-admin-page__cell">Team</div>
+                <div className="review-automation-admin-page__cell">Due in</div>
                 <div className="review-automation-admin-page__cell">Max size</div>
                 <div className="review-automation-admin-page__cell">Features</div>
                 <div className="review-automation-admin-page__cell">Updated</div>
@@ -390,6 +433,44 @@ export function AdminReviewAutomationsPage() {
                 <option key={timeZone} value={timeZone} />
               ))}
             </datalist>
+          </div>
+          <div className="settings-grid settings-grid--two-column">
+            <div className="settings-field">
+              <label className="settings-field__label">Team</label>
+              <SingleSelectDropdown
+                label="Team"
+                options={(teamsQuery.data ?? []).map((team) => ({
+                  value: team.id,
+                  label: team.name,
+                }))}
+                value={newTeamIdDraft}
+                onChange={(value) => {
+                  setNewTeamIdDraft(value);
+                  setCreateModalError(null);
+                }}
+                noneLabel="Select team"
+                placeholder="Select team"
+                disabled={teamsQuery.isLoading}
+                buttonAriaLabel="Select review automation team"
+              />
+            </div>
+            <div className="settings-field">
+              <label className="settings-field__label" htmlFor="create-review-automation-due-offset">
+                Due date offset days
+              </label>
+              <input
+                id="create-review-automation-due-offset"
+                type="number"
+                min={0}
+                inputMode="numeric"
+                className="settings-input"
+                value={newDueDateOffsetDaysDraft}
+                onChange={(event) => {
+                  setNewDueDateOffsetDaysDraft(event.target.value);
+                  setCreateModalError(null);
+                }}
+              />
+            </div>
           </div>
           <div className="settings-field">
             <label
@@ -533,6 +614,12 @@ function AutomationRow({
         {formatReviewAutomationSchedule(automation.cronExpression, automation.timeZone)}
       </div>
       <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
+        {automation.team?.name ?? '—'}
+      </div>
+      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
+        {formatDueDateOffsetDays(automation.dueDateOffsetDays)}
+      </div>
+      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
         {automation.maxWordCountPerProject}
       </div>
       <div
@@ -574,4 +661,8 @@ function formatDateTime(value?: string | null) {
     return value;
   }
   return new Date(parsed).toLocaleString();
+}
+
+function formatDueDateOffsetDays(value: number) {
+  return `${value}d`;
 }

@@ -37,6 +37,8 @@ public class ReviewAutomationWS {
         boolean enabled,
         String cronExpression,
         String timeZone,
+        TeamRef team,
+        int dueDateOffsetDays,
         int maxWordCountPerProject,
         long featureCount,
         List<FeatureRef> features) {}
@@ -50,16 +52,22 @@ public class ReviewAutomationWS {
       boolean enabled,
       String cronExpression,
       String timeZone,
+      TeamRef team,
+      int dueDateOffsetDays,
       int maxWordCountPerProject,
       List<FeatureRef> features) {}
 
   public record FeatureRef(Long id, String name) {}
+
+  public record TeamRef(Long id, String name) {}
 
   public record UpsertReviewAutomationRequest(
       String name,
       Boolean enabled,
       String cronExpression,
       String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
       List<Long> featureIds) {}
 
@@ -70,6 +78,8 @@ public class ReviewAutomationWS {
         Boolean enabled,
         String cronExpression,
         String timeZone,
+        Long teamId,
+        Integer dueDateOffsetDays,
         Integer maxWordCountPerProject,
         List<Long> featureIds) {}
   }
@@ -82,6 +92,8 @@ public class ReviewAutomationWS {
       boolean enabled,
       String cronExpression,
       String timeZone,
+      String teamName,
+      int dueDateOffsetDays,
       int maxWordCountPerProject,
       List<String> featureNames) {}
 
@@ -132,6 +144,8 @@ public class ReviewAutomationWS {
                     row.enabled(),
                     row.cronExpression(),
                     row.timeZone(),
+                    row.teamName(),
+                    row.dueDateOffsetDays(),
                     row.maxWordCountPerProject(),
                     row.featureNames()))
         .toList();
@@ -148,6 +162,8 @@ public class ReviewAutomationWS {
               request != null ? request.enabled() : null,
               request != null ? request.cronExpression() : null,
               request != null ? request.timeZone() : null,
+              request != null ? request.teamId() : null,
+              request != null ? request.dueDateOffsetDays() : null,
               request != null ? request.maxWordCountPerProject() : null,
               request != null ? request.featureIds() : List.of()));
     } catch (IllegalArgumentException ex) {
@@ -166,6 +182,8 @@ public class ReviewAutomationWS {
               request != null ? request.enabled() : null,
               request != null ? request.cronExpression() : null,
               request != null ? request.timeZone() : null,
+              request != null ? request.teamId() : null,
+              request != null ? request.dueDateOffsetDays() : null,
               request != null ? request.maxWordCountPerProject() : null,
               request != null ? request.featureIds() : List.of()));
     } catch (IllegalArgumentException ex) {
@@ -204,6 +222,8 @@ public class ReviewAutomationWS {
                                   row.enabled(),
                                   row.cronExpression(),
                                   row.timeZone(),
+                                  row.teamId(),
+                                  row.dueDateOffsetDays(),
                                   row.maxWordCountPerProject(),
                                   row.featureIds()))
                       .toList());
@@ -223,6 +243,8 @@ public class ReviewAutomationWS {
         Boolean.TRUE.equals(view.enabled()),
         view.cronExpression(),
         view.timeZone(),
+        view.team() == null ? null : new TeamRef(view.team().id(), view.team().name()),
+        view.dueDateOffsetDays(),
         view.maxWordCountPerProject(),
         view.featureCount(),
         view.features().stream()
@@ -240,6 +262,8 @@ public class ReviewAutomationWS {
         detail.enabled(),
         detail.cronExpression(),
         detail.timeZone(),
+        detail.team() == null ? null : new TeamRef(detail.team().id(), detail.team().name()),
+        detail.dueDateOffsetDays(),
         detail.maxWordCountPerProject(),
         detail.features().stream()
             .map(feature -> new FeatureRef(feature.id(), feature.name()))

@@ -2,7 +2,9 @@ package com.box.l10n.mojito.service.review;
 
 import com.box.l10n.mojito.entity.review.ReviewAutomation;
 import com.box.l10n.mojito.entity.review.ReviewFeature;
+import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.service.security.user.UserService;
+import com.box.l10n.mojito.service.team.TeamRepository;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -26,17 +28,21 @@ public class ReviewAutomationService {
   public static final int MAX_LIMIT = 200;
   public static final int DEFAULT_MAX_WORD_COUNT_PER_PROJECT = 2000;
   public static final String DEFAULT_TIME_ZONE = "UTC";
+  public static final int DEFAULT_DUE_DATE_OFFSET_DAYS = 1;
 
   private final ReviewAutomationRepository reviewAutomationRepository;
   private final ReviewFeatureRepository reviewFeatureRepository;
+  private final TeamRepository teamRepository;
   private final UserService userService;
 
   public ReviewAutomationService(
       ReviewAutomationRepository reviewAutomationRepository,
       ReviewFeatureRepository reviewFeatureRepository,
+      TeamRepository teamRepository,
       UserService userService) {
     this.reviewAutomationRepository = reviewAutomationRepository;
     this.reviewFeatureRepository = reviewFeatureRepository;
+    this.teamRepository = teamRepository;
     this.userService = userService;
   }
 
@@ -99,6 +105,11 @@ public class ReviewAutomationService {
                   automation != null
                       ? normalizeTimeZone(automation.getTimeZone())
                       : DEFAULT_TIME_ZONE,
+                  automation != null && automation.getTeam() != null
+                      ? automation.getTeam().getName()
+                      : null,
+                  normalizeDueDateOffsetDays(
+                      automation != null ? automation.getDueDateOffsetDays() : null),
                   normalizeMaxWordCountPerProject(
                       automation != null ? automation.getMaxWordCountPerProject() : null),
                   featureNamesByAutomationId.getOrDefault(row.id(), List.of()));
@@ -132,6 +143,8 @@ public class ReviewAutomationService {
         Boolean.TRUE.equals(reviewAutomation.getEnabled()),
         reviewAutomation.getCronExpression(),
         normalizeTimeZone(reviewAutomation.getTimeZone()),
+        toTeamRef(reviewAutomation.getTeam()),
+        normalizeDueDateOffsetDays(reviewAutomation.getDueDateOffsetDays()),
         normalizeMaxWordCountPerProject(reviewAutomation.getMaxWordCountPerProject()),
         features);
   }
@@ -142,6 +155,8 @@ public class ReviewAutomationService {
       Boolean enabled,
       String cronExpression,
       String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
       List<Long> featureIds) {
     requireAdmin();
@@ -156,6 +171,8 @@ public class ReviewAutomationService {
     reviewAutomation.setEnabled(enabled == null ? Boolean.TRUE : enabled);
     reviewAutomation.setCronExpression(normalizeCronExpression(cronExpression));
     reviewAutomation.setTimeZone(normalizeTimeZone(timeZone));
+    reviewAutomation.setTeam(resolveTeam(teamId));
+    reviewAutomation.setDueDateOffsetDays(normalizeDueDateOffsetDays(dueDateOffsetDays));
     reviewAutomation.setMaxWordCountPerProject(
         normalizeMaxWordCountPerProject(maxWordCountPerProject));
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
@@ -170,6 +187,8 @@ public class ReviewAutomationService {
       Boolean enabled,
       String cronExpression,
       String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
       List<Long> featureIds) {
     requireAdmin();
@@ -189,6 +208,8 @@ public class ReviewAutomationService {
     reviewAutomation.setEnabled(enabled == null ? Boolean.TRUE : enabled);
     reviewAutomation.setCronExpression(normalizeCronExpression(cronExpression));
     reviewAutomation.setTimeZone(normalizeTimeZone(timeZone));
+    reviewAutomation.setTeam(resolveTeam(teamId));
+    reviewAutomation.setDueDateOffsetDays(normalizeDueDateOffsetDays(dueDateOffsetDays));
     reviewAutomation.setMaxWordCountPerProject(
         normalizeMaxWordCountPerProject(maxWordCountPerProject));
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
@@ -263,6 +284,8 @@ public class ReviewAutomationService {
       reviewAutomation.setEnabled(normalizedEnabled);
       reviewAutomation.setCronExpression(normalizeCronExpression(row.cronExpression()));
       reviewAutomation.setTimeZone(normalizeTimeZone(row.timeZone()));
+      reviewAutomation.setTeam(resolveTeam(row.teamId()));
+      reviewAutomation.setDueDateOffsetDays(normalizeDueDateOffsetDays(row.dueDateOffsetDays()));
       reviewAutomation.setMaxWordCountPerProject(
           normalizeMaxWordCountPerProject(row.maxWordCountPerProject()));
       reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
@@ -308,10 +331,20 @@ public class ReviewAutomationService {
                     Boolean.TRUE.equals(row.enabled()),
                     row.cronExpression(),
                     normalizeTimeZone(row.timeZone()),
+                    toTeamRef(row.teamId(), row.teamName()),
+                    normalizeDueDateOffsetDays(row.dueDateOffsetDays()),
                     normalizeMaxWordCountPerProject(row.maxWordCountPerProject()),
                     row.featureCount(),
                     featuresByAutomationId.getOrDefault(row.id(), List.of())))
         .toList();
+  }
+
+  private ReviewAutomationDetail.TeamRef toTeamRef(Team team) {
+    return team == null ? null : new ReviewAutomationDetail.TeamRef(team.getId(), team.getName());
+  }
+
+  private SearchReviewAutomationsView.TeamRef toTeamRef(Long teamId, String teamName) {
+    return teamId == null ? null : new SearchReviewAutomationsView.TeamRef(teamId, teamName);
   }
 
   private Set<ReviewFeature> resolveFeatures(List<Long> featureIds) {
@@ -430,6 +463,25 @@ public class ReviewAutomationService {
     }
   }
 
+  private Team resolveTeam(Long teamId) {
+    if (teamId == null) {
+      throw new IllegalArgumentException("Team is required");
+    }
+    return teamRepository
+        .findById(teamId)
+        .orElseThrow(() -> new IllegalArgumentException("Unknown team: " + teamId));
+  }
+
+  private int normalizeDueDateOffsetDays(Integer dueDateOffsetDays) {
+    if (dueDateOffsetDays == null) {
+      return DEFAULT_DUE_DATE_OFFSET_DAYS;
+    }
+    if (dueDateOffsetDays < 0) {
+      throw new IllegalArgumentException("Due date offset days must be zero or positive");
+    }
+    return dueDateOffsetDays;
+  }
+
   private int normalizeMaxWordCountPerProject(Integer maxWordCountPerProject) {
     if (maxWordCountPerProject == null) {
       return DEFAULT_MAX_WORD_COUNT_PER_PROJECT;
@@ -454,8 +506,11 @@ public class ReviewAutomationService {
       boolean enabled,
       String cronExpression,
       String timeZone,
+      TeamRef team,
+      int dueDateOffsetDays,
       int maxWordCountPerProject,
       List<FeatureRef> features) {
+    public record TeamRef(Long id, String name) {}
     public record FeatureRef(Long id, String name) {}
   }
 
@@ -467,6 +522,8 @@ public class ReviewAutomationService {
       boolean enabled,
       String cronExpression,
       String timeZone,
+      String teamName,
+      int dueDateOffsetDays,
       int maxWordCountPerProject,
       List<String> featureNames) {}
 
@@ -476,6 +533,8 @@ public class ReviewAutomationService {
       Boolean enabled,
       String cronExpression,
       String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
       List<Long> featureIds) {}
 
