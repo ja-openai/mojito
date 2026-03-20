@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.review;
 
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
+import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -127,4 +128,18 @@ public interface ReviewProjectTextUnitRepository
       where rptu.reviewProject.id in :projectIds
       """)
   int deleteByReviewProjectIds(@Param("projectIds") List<Long> projectIds);
+
+  @Query(
+      """
+      select distinct rptu.tmTextUnit.id
+      from ReviewProjectTextUnit rptu
+      join rptu.reviewProject rp
+      where rp.status = :status
+        and rp.locale.id = :localeId
+        and rptu.tmTextUnit.id in :tmTextUnitIds
+      """)
+  List<Long> findTmTextUnitIdsByReviewProjectStatusAndLocaleIdAndTmTextUnitIds(
+      @Param("status") ReviewProjectStatus status,
+      @Param("localeId") Long localeId,
+      @Param("tmTextUnitIds") List<Long> tmTextUnitIds);
 }

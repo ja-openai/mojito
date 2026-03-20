@@ -428,6 +428,7 @@ public class ReviewProjectWS {
         request.notes(),
         request.tmTextUnitIds(),
         request.reviewFeatureId(),
+        request.skipTextUnitsInOpenProjects(),
         request.type(),
         request.dueDate(),
         request.screenshotImageIds(),

@@ -130,6 +130,7 @@ public class ReviewProjectService {
             request.notes(),
             request.tmTextUnitIds(),
             request.reviewFeatureId(),
+            request.skipTextUnitsInOpenProjects(),
             request.type(),
             request.dueDate(),
             request.screenshotImageIds(),
@@ -179,12 +180,13 @@ public class ReviewProjectService {
     }
 
     logger.info(
-        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}, reviewFeatureId={}",
+        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}, reviewFeatureId={}, skipTextUnitsInOpenProjects={}",
         request.name(),
         request.teamId(),
         request.localeTags(),
         hasTmTextUnitIds ? request.tmTextUnitIds().size() : null,
-        request.reviewFeatureId());
+        request.reviewFeatureId(),
+        Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects()));
 
     List<LocaleCandidates> localesToCreate = new ArrayList<>();
     ReviewFeature reviewFeature =
@@ -200,6 +202,16 @@ public class ReviewProjectService {
           hasTmTextUnitIds
               ? searchReviewCandidates(request.tmTextUnitIds(), locale)
               : searchReviewFeatureCandidates(reviewFeature, locale);
+      if (Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects())) {
+        int originalCandidateCount = candidates.size();
+        candidates = excludeOpenReviewProjectTextUnits(candidates, locale);
+        if (originalCandidateCount != candidates.size()) {
+          logger.info(
+              "Excluded {} text units already covered by open review projects for locale '{}'",
+              originalCandidateCount - candidates.size(),
+              locale.getBcp47Tag());
+        }
+      }
       if (candidates.isEmpty()) {
         logger.info(
             "Skipping review project locale '{}' for request '{}' because no text units matched",
@@ -1607,6 +1619,36 @@ public class ReviewProjectService {
     params.setStatusFilter(StatusFilter.REVIEW_NEEDED);
 
     return textUnitSearcher.search(params);
+  }
+
+  private List<TextUnitDTO> excludeOpenReviewProjectTextUnits(
+      List<TextUnitDTO> candidates, Locale locale) {
+    if (CollectionUtils.isEmpty(candidates) || locale == null || locale.getId() == null) {
+      return candidates;
+    }
+
+    List<Long> tmTextUnitIds =
+        candidates.stream()
+            .map(TextUnitDTO::getTmTextUnitId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+    if (tmTextUnitIds.isEmpty()) {
+      return candidates;
+    }
+
+    Set<Long> excludedTmTextUnitIds =
+        new HashSet<>(
+            reviewProjectTextUnitRepository
+                .findTmTextUnitIdsByReviewProjectStatusAndLocaleIdAndTmTextUnitIds(
+                    ReviewProjectStatus.OPEN, locale.getId(), tmTextUnitIds));
+    if (excludedTmTextUnitIds.isEmpty()) {
+      return candidates;
+    }
+
+    return candidates.stream()
+        .filter(candidate -> !excludedTmTextUnitIds.contains(candidate.getTmTextUnitId()))
+        .toList();
   }
 
   private ReviewFeature getReviewFeatureOrThrow(Long reviewFeatureId) {

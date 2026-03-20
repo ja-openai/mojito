@@ -200,6 +200,7 @@ export function ReviewProjectCreatePage() {
           dueDate: values.dueDate,
           tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmIds : null,
           reviewFeatureId: sourceMode === 'REVIEW_FEATURE' ? values.reviewFeatureId : null,
+          skipTextUnitsInOpenProjects: values.skipTextUnitsInOpenProjects,
           screenshotImageIds: values.screenshotImageIds,
           name: values.name,
           teamId: values.teamId ?? null,

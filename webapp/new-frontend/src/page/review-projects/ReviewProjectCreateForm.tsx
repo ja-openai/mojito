@@ -35,6 +35,7 @@ export type ReviewProjectCreateFormValues = {
   notes: string | null;
   tmTextUnitIds?: number[] | null;
   reviewFeatureId?: number | null;
+  skipTextUnitsInOpenProjects: boolean;
   screenshotImageIds: string[];
   teamId: number | null;
 };
@@ -92,6 +93,7 @@ export function ReviewProjectCreateForm({
   const [dueDate, setDueDate] = useState(defaultDueDate);
   const [type, setType] = useState<ApiReviewProjectType>('NORMAL');
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);
+  const [skipTextUnitsInOpenProjects, setSkipTextUnitsInOpenProjects] = useState(true);
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
   const [uploadQueue, setUploadQueue] = useState<RequestAttachmentUploadQueueItem[]>([]);
@@ -308,6 +310,16 @@ export function ReviewProjectCreateForm({
           </span>
         </div>
 
+        <label className="review-create__checkbox">
+          <input
+            type="checkbox"
+            checked={skipTextUnitsInOpenProjects}
+            onChange={(event) => setSkipTextUnitsInOpenProjects(event.target.checked)}
+            disabled={isSubmitting}
+          />
+          <span>Skip text units already in active review projects</span>
+        </label>
+
         <div className="review-create__field">
           <span className="review-create__label">Locales</span>
           <LocaleMultiSelect
@@ -436,6 +448,7 @@ export function ReviewProjectCreateForm({
               notes: notes.trim().length > 0 ? notes : null,
               tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmTextUnitIds : null,
               reviewFeatureId: sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureId : null,
+              skipTextUnitsInOpenProjects,
               screenshotImageIds: screenshotKeys,
               teamId: selectedTeamId,
             });

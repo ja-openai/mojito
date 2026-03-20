@@ -9,6 +9,7 @@ public record CreateReviewProjectRequestRequest(
     String notes,
     List<Long> tmTextUnitIds,
     Long reviewFeatureId,
+    Boolean skipTextUnitsInOpenProjects,
     ReviewProjectType type,
     ZonedDateTime dueDate,
     List<String> screenshotImageIds,

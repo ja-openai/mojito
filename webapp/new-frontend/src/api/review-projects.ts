@@ -191,6 +191,7 @@ export type ReviewProjectCreateRequest = {
   notes?: string | null;
   tmTextUnitIds?: number[] | null;
   reviewFeatureId?: number | null;
+  skipTextUnitsInOpenProjects?: boolean | null;
   type?: ApiReviewProjectType | null;
   dueDate: string; // ISO string
   screenshotImageIds?: string[] | null;
