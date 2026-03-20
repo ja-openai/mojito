@@ -1,16 +1,18 @@
-Product & Tech Tracker
-======================
+# Product & Tech Tracker
 
 Purpose
+
 - Capture improvement ideas and technical debt so we can prioritize intentionally instead of chasing every idea immediately.
 - Treat this as a lightweight backlog: write down the idea, rationale, and any quick notes. Pull items into workstreams as capacity allows.
 
 How to use
+
 - Add new entries to the bottom with a unique identifier (e.g., `FRONTEND-01`).
 - Keep notes concise: what problem it solves, rough scope/impact, and dependencies.
 - When an item becomes active, move it to a dedicated design doc (see `dev-docs/design/`) or ticket system.
 
 Backlog
+
 - FRONTEND-01 — Add ESLint/Prettier/Vitest to `webapp/new-frontend` for consistent code quality.
 - DEV-01 — Evaluate upgrading repository-wide Node version to 22 LTS and update Maven/legacy UI accordingly.
 - DEV-02 — Replace `npm install` with `npm ci` in Maven plugin executions for reproducible builds.
@@ -19,4 +21,4 @@ Backlog
 - FRONTEND-02a — Build container: React Query fetch/search/filter, selection state, scroll-to-selected, keyboard nav, and tanstack virtualization hooks (estimate/measure) without UI markup.
 - FRONTEND-02b — Implement pure view: virtualized repos table with sticky header and inline search, selection highlight, metric link callbacks, and locales pane layout that mirrors the prototype.
 - FRONTEND-02c — Locale data & accessibility: map selected repo to localeDetails or call `onLoadLocales(repoId)`, handle loading/error/empty states, add scope/aria labels and focusable selected row, and keep CSS state classes minimal.
-- REVIEW-01 — Execute scheduled review-project creation on top of `ReviewAutomation`: collect `REVIEW_NEEDED` strings by feature, support multi-repository project creation, exclude content already in open review projects, and decide whether initial ownership is team queue, vendor queue, or soft person auto-assignment.
+- REVIEW-01 — Evolve review automation beyond the MVP executor: add business-day due-date handling, optional team/vendor delivery pools, and final assignment/claim strategy on top of the existing feature-based project creation and open-project exclusion.

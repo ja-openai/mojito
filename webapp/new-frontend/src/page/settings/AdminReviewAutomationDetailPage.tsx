@@ -4,9 +4,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 
-import { fetchReviewAutomation, updateReviewAutomation } from '../../api/review-automations';
+import {
+  type ApiReviewAutomationRun,
+  fetchReviewAutomation,
+  fetchReviewAutomationRuns,
+  runReviewAutomationNow,
+  updateReviewAutomation,
+} from '../../api/review-automations';
 import { fetchReviewFeatureOptions } from '../../api/review-features';
 import { fetchTeams } from '../../api/teams';
+import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { useUser } from '../../components/RequireUser';
 import { ReviewAutomationScheduleBuilderModal } from '../../components/ReviewAutomationScheduleBuilderModal';
 import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSelect';
@@ -15,6 +22,7 @@ import { getReviewAutomationTimeZoneOptions } from '../../utils/reviewAutomation
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
+const RUN_HISTORY_LIMIT_PRESETS = [20, 50, 100];
 
 const parsePositiveIntegerDraft = (value: string) => {
   const trimmed = value.trim();
@@ -23,6 +31,18 @@ const parsePositiveIntegerDraft = (value: string) => {
   }
   const parsed = Number(trimmed);
   if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+    return { value: null as number | null, valid: false };
+  }
+  return { value: parsed, valid: true };
+};
+
+const parseNonNegativeIntegerDraft = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { value: null as number | null, valid: false };
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
     return { value: null as number | null, valid: false };
   }
   return { value: parsed, valid: true };
@@ -43,6 +63,7 @@ export function AdminReviewAutomationDetailPage() {
   const [dueDateOffsetDaysDraft, setDueDateOffsetDaysDraft] = useState('');
   const [maxWordCountDraft, setMaxWordCountDraft] = useState('');
   const [featureIdsDraft, setFeatureIdsDraft] = useState<number[]>([]);
+  const [runHistoryLimit, setRunHistoryLimit] = useState(20);
   const [statusNotice, setStatusNotice] = useState<{
     kind: 'success' | 'error';
     message: string;
@@ -76,6 +97,16 @@ export function AdminReviewAutomationDetailPage() {
     enabled: isAdmin && parsedAutomationId != null,
     staleTime: 30_000,
   });
+  const automationRunsQuery = useQuery<ApiReviewAutomationRun[]>({
+    queryKey: ['review-automation-runs', parsedAutomationId, runHistoryLimit],
+    queryFn: () =>
+      fetchReviewAutomationRuns({
+        automationIds: [parsedAutomationId as number],
+        limit: runHistoryLimit,
+      }),
+    enabled: isAdmin && parsedAutomationId != null,
+    staleTime: 10_000,
+  });
 
   const updateMutation = useMutation({
     mutationFn: (payload: {
@@ -104,6 +135,24 @@ export function AdminReviewAutomationDetailPage() {
       });
     },
   });
+  const runNowMutation = useMutation({
+    mutationFn: () => runReviewAutomationNow(parsedAutomationId as number),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['review-automation-runs', parsedAutomationId],
+      });
+      setStatusNotice({
+        kind: 'success',
+        message: `Ran ${result.automationName}: created ${result.createdProjectRequestCount} request${result.createdProjectRequestCount === 1 ? '' : 's'} and ${result.createdProjectCount} project${result.createdProjectCount === 1 ? '' : 's'}.`,
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to run review automation.',
+      });
+    },
+  });
 
   useEffect(() => {
     const automation = automationQuery.data;
@@ -125,7 +174,7 @@ export function AdminReviewAutomationDetailPage() {
     [maxWordCountDraft],
   );
   const dueDateOffsetDays = useMemo(
-    () => parsePositiveIntegerDraft(dueDateOffsetDaysDraft),
+    () => parseNonNegativeIntegerDraft(dueDateOffsetDaysDraft),
     [dueDateOffsetDaysDraft],
   );
   const timeZoneOptions = useMemo(
@@ -411,15 +460,92 @@ export function AdminReviewAutomationDetailPage() {
                 <div className="settings-actions">
                   <button
                     type="button"
+                    className="settings-button"
+                    onClick={() => runNowMutation.mutate()}
+                    disabled={updateMutation.isPending || runNowMutation.isPending}
+                  >
+                    Run now
+                  </button>
+                  <button
+                    type="button"
                     className="settings-button settings-button--primary"
                     onClick={handleSave}
-                    disabled={updateMutation.isPending || !isDirty}
+                    disabled={updateMutation.isPending || runNowMutation.isPending || !isDirty}
                   >
                     Save
                   </button>
                 </div>
               </div>
             </>
+          )}
+        </section>
+
+        <section className="settings-card">
+          <div className="settings-card__header">
+            <h2>Recent runs</h2>
+            <NumericPresetDropdown
+              value={runHistoryLimit}
+              buttonLabel={`${runHistoryLimit} rows`}
+              menuLabel="Run history size"
+              presetOptions={RUN_HISTORY_LIMIT_PRESETS.map((size) => ({
+                value: size,
+                label: String(size),
+              }))}
+              onChange={setRunHistoryLimit}
+              ariaLabel="Review automation run history size"
+              pillsClassName="settings-pills"
+              optionClassName="settings-pill"
+              optionActiveClassName="is-active"
+              customActiveClassName="is-active"
+              customButtonClassName="settings-pill"
+              customInitialValue={50}
+            />
+          </div>
+          <p className="settings-hint">
+            Run history reflects the saved automation configuration. Manual runs use the current
+            saved values, not unsaved edits on this page.
+          </p>
+          {automationRunsQuery.isError ? (
+            <p className="settings-hint is-error">
+              {automationRunsQuery.error instanceof Error
+                ? automationRunsQuery.error.message
+                : 'Could not load review automation runs.'}
+            </p>
+          ) : automationRunsQuery.isLoading ? (
+            <p className="settings-hint">Loading review automation runs…</p>
+          ) : (automationRunsQuery.data ?? []).length === 0 ? (
+            <p className="settings-hint">No runs recorded yet.</p>
+          ) : (
+            <div className="settings-table-wrapper">
+              <table className="settings-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Source</th>
+                    <th>Requests</th>
+                    <th>Projects</th>
+                    <th>Features</th>
+                    <th>Started</th>
+                    <th>Finished</th>
+                    <th>Requested by</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(automationRunsQuery.data ?? []).map((run) => (
+                    <tr key={run.id}>
+                      <td>{formatRunStatus(run)}</td>
+                      <td>{formatRunSource(run.triggerSource)}</td>
+                      <td>{run.createdProjectRequestCount}</td>
+                      <td>{run.createdProjectCount}</td>
+                      <td>{run.featureCount}</td>
+                      <td>{formatDateTime(run.startedAt ?? run.createdAt)}</td>
+                      <td>{formatDateTime(run.finishedAt)}</td>
+                      <td>{formatRequestedBy(run)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
 
@@ -440,4 +566,40 @@ export function AdminReviewAutomationDetailPage() {
       </div>
     </div>
   );
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return '-';
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString();
+}
+
+function formatRequestedBy(run: ApiReviewAutomationRun) {
+  if (run.requestedByUsername?.trim()) {
+    return run.requestedByUsername;
+  }
+  if (typeof run.requestedByUserId === 'number') {
+    return `User #${run.requestedByUserId}`;
+  }
+  return '-';
+}
+
+function formatRunSource(triggerSource: string) {
+  return triggerSource === 'CRON' ? 'Cron' : triggerSource === 'MANUAL' ? 'Manual' : triggerSource;
+}
+
+function formatRunStatus(run: ApiReviewAutomationRun) {
+  if (run.status === 'FAILED' && run.errorMessage?.trim()) {
+    return `Failed: ${run.errorMessage}`;
+  }
+  return run.status === 'COMPLETED'
+    ? 'Completed'
+    : run.status === 'RUNNING'
+      ? 'Running'
+      : run.status;
 }

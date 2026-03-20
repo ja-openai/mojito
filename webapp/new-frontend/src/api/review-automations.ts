@@ -50,6 +50,32 @@ export type ApiReviewAutomationBatchExportRow = {
   featureNames: string[];
 };
 
+export type ApiReviewAutomationRunResult = {
+  runId: number | null;
+  automationId: number;
+  automationName: string;
+  featureCount: number;
+  createdProjectRequestCount: number;
+  createdProjectCount: number;
+};
+
+export type ApiReviewAutomationRun = {
+  id: number;
+  automationId: number;
+  automationName: string;
+  triggerSource: string;
+  requestedByUserId: number | null;
+  requestedByUsername: string | null;
+  status: string;
+  createdAt: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  featureCount: number;
+  createdProjectRequestCount: number;
+  createdProjectCount: number;
+  errorMessage: string | null;
+};
+
 export type ApiReviewAutomationsResponse = {
   reviewAutomations: ApiReviewAutomationSummary[];
   totalCount: number;
@@ -230,4 +256,51 @@ export async function batchUpsertReviewAutomations(
   }
 
   return (await response.json()) as ApiBatchUpsertReviewAutomationsResponse;
+}
+
+export async function runReviewAutomationNow(
+  automationId: number,
+): Promise<ApiReviewAutomationRunResult> {
+  const response = await fetch(`/api/review-automations/${automationId}/run`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to run review automation');
+  }
+
+  return (await response.json()) as ApiReviewAutomationRunResult;
+}
+
+export async function fetchReviewAutomationRuns(options?: {
+  automationIds?: number[];
+  limit?: number;
+}): Promise<ApiReviewAutomationRun[]> {
+  const params = new URLSearchParams();
+  for (const automationId of options?.automationIds ?? []) {
+    if (Number.isInteger(automationId) && automationId > 0) {
+      params.append('automationIds', String(automationId));
+    }
+  }
+  if (typeof options?.limit === 'number' && Number.isFinite(options.limit)) {
+    params.set('limit', String(options.limit));
+  }
+
+  const response = await fetch(
+    `/api/review-automations/runs${params.size ? `?${params.toString()}` : ''}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load review automation runs');
+  }
+
+  return (await response.json()) as ApiReviewAutomationRun[];
 }
