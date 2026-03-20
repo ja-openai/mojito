@@ -427,6 +427,7 @@ public class ReviewProjectWS {
         request.localeTags(),
         request.notes(),
         request.tmTextUnitIds(),
+        request.reviewFeatureId(),
         request.type(),
         request.dueDate(),
         request.screenshotImageIds(),

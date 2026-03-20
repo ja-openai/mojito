@@ -2,6 +2,7 @@ import './review-projects-page.css';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import type { ApiReviewFeatureOption } from '../../api/review-features';
 import {
   type ApiReviewProjectType,
   REVIEW_PROJECT_TYPE_LABELS,
@@ -32,20 +33,28 @@ export type ReviewProjectCreateFormValues = {
   type: ApiReviewProjectType;
   localeTags: string[];
   notes: string | null;
-  tmTextUnitIds: number[];
+  tmTextUnitIds?: number[] | null;
+  reviewFeatureId?: number | null;
   screenshotImageIds: string[];
   teamId: number | null;
 };
+
+export type ReviewProjectSourceMode = 'TEXT_UNITS' | 'REVIEW_FEATURE';
 
 type Props = {
   defaultName: string;
   defaultDueDate: string;
   localeOptions: LocaleSelectionOption[];
   tmTextUnitIds: number[];
+  sourceMode: ReviewProjectSourceMode;
+  onChangeSourceMode: (mode: ReviewProjectSourceMode) => void;
   collectionName?: string | null;
   collectionOptions?: CollectionOption[];
   selectedCollectionId?: string | null;
   onChangeCollection?: (id: string | null) => void;
+  reviewFeatureOptions?: ApiReviewFeatureOption[];
+  selectedReviewFeatureId?: number | null;
+  onChangeReviewFeature?: (id: number | null) => void;
   teamOptions?: Array<{ id: number; name: string }>;
   selectedTeamId?: number | null;
   onChangeTeam?: (id: number | null) => void;
@@ -61,10 +70,15 @@ export function ReviewProjectCreateForm({
   defaultDueDate,
   localeOptions,
   tmTextUnitIds,
+  sourceMode,
+  onChangeSourceMode,
   collectionName,
   collectionOptions,
   selectedCollectionId,
   onChangeCollection,
+  reviewFeatureOptions,
+  selectedReviewFeatureId = null,
+  onChangeReviewFeature,
   teamOptions,
   selectedTeamId = null,
   onChangeTeam,
@@ -120,10 +134,18 @@ export function ReviewProjectCreateForm({
     () =>
       Boolean(name.trim()) &&
       Boolean(dueDate) &&
-      tmTextUnitIds.length > 0 &&
+      (sourceMode === 'TEXT_UNITS' ? tmTextUnitIds.length > 0 : selectedReviewFeatureId != null) &&
       selectedLocaleTags.length > 0 &&
       uploadQueue.every((item) => item.status !== 'uploading'),
-    [dueDate, name, selectedLocaleTags.length, tmTextUnitIds.length, uploadQueue],
+    [
+      dueDate,
+      name,
+      selectedLocaleTags.length,
+      selectedReviewFeatureId,
+      sourceMode,
+      tmTextUnitIds.length,
+      uploadQueue,
+    ],
   );
 
   const addScreenshotKeys = (raw: string[]) => {
@@ -208,7 +230,37 @@ export function ReviewProjectCreateForm({
           />
         </label>
 
-        {collectionOptions && onChangeCollection ? (
+        <div className="review-create__field">
+          <span className="review-create__label">Scope</span>
+          <div
+            className="review-projects-page__mode-toggle"
+            role="group"
+            aria-label="Project scope"
+          >
+            <button
+              type="button"
+              className={`review-projects-page__summary-toggle${
+                sourceMode === 'TEXT_UNITS' ? ' is-active' : ''
+              }`}
+              onClick={() => onChangeSourceMode('TEXT_UNITS')}
+              disabled={isSubmitting || !collectionOptions?.length}
+            >
+              Selected text units
+            </button>
+            <button
+              type="button"
+              className={`review-projects-page__summary-toggle${
+                sourceMode === 'REVIEW_FEATURE' ? ' is-active' : ''
+              }`}
+              onClick={() => onChangeSourceMode('REVIEW_FEATURE')}
+              disabled={isSubmitting || !reviewFeatureOptions?.length}
+            >
+              Review feature
+            </button>
+          </div>
+        </div>
+
+        {sourceMode === 'TEXT_UNITS' && collectionOptions && onChangeCollection ? (
           <label className="review-create__field">
             <span className="review-create__label">Collection</span>
             <CollectionSelect
@@ -219,12 +271,42 @@ export function ReviewProjectCreateForm({
               className="review-create__select"
             />
           </label>
-        ) : collectionName ? (
+        ) : null}
+
+        {sourceMode === 'TEXT_UNITS' && !collectionOptions && collectionName ? (
           <div className="review-create__field">
             <span className="review-create__label">Collection</span>
             <div className="review-create__pill">{collectionName}</div>
           </div>
         ) : null}
+
+        {sourceMode === 'REVIEW_FEATURE' && reviewFeatureOptions && onChangeReviewFeature ? (
+          <label className="review-create__field">
+            <span className="review-create__label">Review feature</span>
+            <SingleSelectDropdown
+              label="Review feature"
+              className="review-create__select-dropdown"
+              options={reviewFeatureOptions.map((feature) => ({
+                value: feature.id,
+                label: feature.name,
+              }))}
+              value={selectedReviewFeatureId}
+              onChange={onChangeReviewFeature}
+              noneLabel="Select review feature"
+              placeholder="Select review feature"
+              disabled={isSubmitting}
+              buttonAriaLabel="Select review feature"
+            />
+          </label>
+        ) : null}
+
+        <div className="review-create__field">
+          <span className="review-create__hint">
+            {sourceMode === 'TEXT_UNITS'
+              ? `${tmTextUnitIds.length} selected text unit${tmTextUnitIds.length === 1 ? '' : 's'}`
+              : 'Creates projects from review-needed strings in the selected feature.'}
+          </span>
+        </div>
 
         <div className="review-create__field">
           <span className="review-create__label">Locales</span>
@@ -352,7 +434,8 @@ export function ReviewProjectCreateForm({
               type,
               localeTags: selectedLocaleTags,
               notes: notes.trim().length > 0 ? notes : null,
-              tmTextUnitIds,
+              tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmTextUnitIds : null,
+              reviewFeatureId: sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureId : null,
               screenshotImageIds: screenshotKeys,
               teamId: selectedTeamId,
             });

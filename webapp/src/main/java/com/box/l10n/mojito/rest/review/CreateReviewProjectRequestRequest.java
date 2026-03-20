@@ -8,6 +8,7 @@ public record CreateReviewProjectRequestRequest(
     List<String> localeTags,
     String notes,
     List<Long> tmTextUnitIds,
+    Long reviewFeatureId,
     ReviewProjectType type,
     ZonedDateTime dueDate,
     List<String> screenshotImageIds,

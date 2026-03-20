@@ -4,6 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
+import {
+  fetchReviewFeatureOptions,
+  type ApiReviewFeatureOption,
+} from '../../api/review-features';
 import { type ApiTeam, fetchTeams } from '../../api/teams';
 import type { CollectionOption } from '../../components/CollectionSelect';
 import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
@@ -11,7 +15,10 @@ import { useRepositories } from '../../hooks/useRepositories';
 import { toDateTimeLocalInputValue } from '../../utils/dateTime';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { useWorkbenchCollections } from '../workbench/useWorkbenchCollections';
-import type { ReviewProjectCreateFormValues } from './ReviewProjectCreateForm';
+import type {
+  ReviewProjectCreateFormValues,
+  ReviewProjectSourceMode,
+} from './ReviewProjectCreateForm';
 import { ReviewProjectCreateForm } from './ReviewProjectCreateForm';
 
 type ReviewProjectNavState = {
@@ -65,6 +72,8 @@ export function ReviewProjectCreatePage() {
   const { collections, activeCollection } = useWorkbenchCollections();
   const [tmIds, setTmIds] = useState<number[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  const [sourceMode, setSourceMode] = useState<ReviewProjectSourceMode>('TEXT_UNITS');
+  const [selectedReviewFeatureId, setSelectedReviewFeatureId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [prefillName, setPrefillName] = useState('Review project');
   const [prefillDueDate, setPrefillDueDate] = useState<string | null>(null);
@@ -75,6 +84,11 @@ export function ReviewProjectCreatePage() {
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams', 'review-project-create'],
     queryFn: fetchTeams,
+    staleTime: 30_000,
+  });
+  const reviewFeatureOptionsQuery = useQuery<ApiReviewFeatureOption[]>({
+    queryKey: ['review-feature-options', 'review-project-create'],
+    queryFn: fetchReviewFeatureOptions,
     staleTime: 30_000,
   });
 
@@ -96,7 +110,10 @@ export function ReviewProjectCreatePage() {
         })),
     [collections],
   );
+  const reviewFeatureOptions = reviewFeatureOptionsQuery.data ?? [];
   const hasCollections = collectionOptions.length > 0;
+  const hasReviewFeatures = reviewFeatureOptions.length > 0;
+  const showCreateForm = hasCollections || hasReviewFeatures;
   const navState = isReviewProjectNavState(location.state) ? location.state : null;
 
   useEffect(() => {
@@ -121,6 +138,16 @@ export function ReviewProjectCreatePage() {
       setPrefillDueDate(state.defaultDueDate);
     }
   }, [navState]);
+
+  useEffect(() => {
+    if (!hasCollections && hasReviewFeatures) {
+      setSourceMode('REVIEW_FEATURE');
+      return;
+    }
+    if (!hasReviewFeatures && hasCollections) {
+      setSourceMode('TEXT_UNITS');
+    }
+  }, [hasCollections, hasReviewFeatures]);
 
   useEffect(() => {
     if (selectedCollectionId === null) {
@@ -156,8 +183,12 @@ export function ReviewProjectCreatePage() {
   const handleSubmit = useCallback(
     (values: ReviewProjectCreateFormValues) => {
       if (createReviewProject.isPending) return;
-      if (!tmIds.length) {
+      if (sourceMode === 'TEXT_UNITS' && !tmIds.length) {
         setErrorMessage('Add at least one text unit id.');
+        return;
+      }
+      if (sourceMode === 'REVIEW_FEATURE' && values.reviewFeatureId == null) {
+        setErrorMessage('Select a review feature.');
         return;
       }
       setErrorMessage(null);
@@ -167,7 +198,8 @@ export function ReviewProjectCreatePage() {
           notes: values.notes,
           type: values.type,
           dueDate: values.dueDate,
-          tmTextUnitIds: tmIds,
+          tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmIds : null,
+          reviewFeatureId: sourceMode === 'REVIEW_FEATURE' ? values.reviewFeatureId : null,
           screenshotImageIds: values.screenshotImageIds,
           name: values.name,
           teamId: values.teamId ?? null,
@@ -185,7 +217,7 @@ export function ReviewProjectCreatePage() {
         },
       );
     },
-    [createReviewProject, navigate, tmIds],
+    [createReviewProject, navigate, sourceMode, tmIds],
   );
 
   return (
@@ -197,12 +229,14 @@ export function ReviewProjectCreatePage() {
       </div>
 
       <div className="review-create__page-shell">
-        {hasCollections ? (
+        {showCreateForm ? (
           <ReviewProjectCreateForm
             defaultName={prefillName || 'Review project'}
             defaultDueDate={prefillDueDate ?? defaultDueDate}
             localeOptions={localeOptions}
             tmTextUnitIds={tmIds}
+            sourceMode={sourceMode}
+            onChangeSourceMode={setSourceMode}
             collectionName={prefillCollectionName ?? null}
             collectionOptions={collectionOptions}
             selectedCollectionId={selectedCollectionId}
@@ -212,6 +246,9 @@ export function ReviewProjectCreatePage() {
                 setPrefillCollectionName(null);
               }
             }}
+            reviewFeatureOptions={reviewFeatureOptions}
+            selectedReviewFeatureId={selectedReviewFeatureId}
+            onChangeReviewFeature={setSelectedReviewFeatureId}
             teamOptions={teamsQuery.data ?? []}
             selectedTeamId={selectedTeamId}
             onChangeTeam={setSelectedTeamId}
@@ -225,9 +262,9 @@ export function ReviewProjectCreatePage() {
           />
         ) : (
           <div className="review-create__empty">
-            <div className="review-create__empty-title">No collections yet</div>
+            <div className="review-create__empty-title">No collections or review features yet</div>
             <div className="review-create__empty-body">
-              Review projects are created from Workbench collections.
+              Review projects can be created from Workbench collections or review features.
             </div>
             <Link className="review-create__empty-cta" to="/workbench">
               Open Workbench

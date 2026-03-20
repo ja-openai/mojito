@@ -190,6 +190,7 @@ export type ReviewProjectCreateRequest = {
   localeTags: string[];
   notes?: string | null;
   tmTextUnitIds?: number[] | null;
+  reviewFeatureId?: number | null;
   type?: ApiReviewProjectType | null;
   dueDate: string; // ISO string
   screenshotImageIds?: string[] | null;

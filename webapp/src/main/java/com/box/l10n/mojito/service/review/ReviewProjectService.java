@@ -28,6 +28,7 @@ import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
@@ -69,6 +70,7 @@ public class ReviewProjectService {
   private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository;
   private final TeamSlackNotificationService teamSlackNotificationService;
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
+  private final ReviewFeatureRepository reviewFeatureRepository;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -91,7 +93,8 @@ public class ReviewProjectService {
       TeamUserRepository teamUserRepository,
       ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
       TeamSlackNotificationService teamSlackNotificationService,
-      QuartzPollableTaskScheduler quartzPollableTaskScheduler) {
+      QuartzPollableTaskScheduler quartzPollableTaskScheduler,
+      ReviewFeatureRepository reviewFeatureRepository) {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
@@ -111,6 +114,7 @@ public class ReviewProjectService {
     this.reviewProjectAssignmentHistoryRepository = reviewProjectAssignmentHistoryRepository;
     this.teamSlackNotificationService = teamSlackNotificationService;
     this.quartzPollableTaskScheduler = quartzPollableTaskScheduler;
+    this.reviewFeatureRepository = reviewFeatureRepository;
   }
 
   public PollableFuture<CreateReviewProjectRequestResult> createReviewProjectRequestAsync(
@@ -125,6 +129,7 @@ public class ReviewProjectService {
             request.localeTags(),
             request.notes(),
             request.tmTextUnitIds(),
+            request.reviewFeatureId(),
             request.type(),
             request.dueDate(),
             request.screenshotImageIds(),
@@ -157,8 +162,12 @@ public class ReviewProjectService {
       throw new IllegalArgumentException("Name must be provided");
     }
 
-    if (request.tmTextUnitIds() == null || request.tmTextUnitIds().isEmpty()) {
-      throw new IllegalArgumentException("tmTextUnitIds must be provided");
+    boolean hasTmTextUnitIds =
+        request.tmTextUnitIds() != null && !request.tmTextUnitIds().isEmpty();
+    boolean hasReviewFeatureId = request.reviewFeatureId() != null;
+    if (hasTmTextUnitIds == hasReviewFeatureId) {
+      throw new IllegalArgumentException(
+          "Exactly one of tmTextUnitIds or reviewFeatureId must be provided");
     }
 
     if (request.type() == null) {
@@ -170,13 +179,16 @@ public class ReviewProjectService {
     }
 
     logger.info(
-        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}",
+        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}, reviewFeatureId={}",
         request.name(),
         request.teamId(),
         request.localeTags(),
-        request.tmTextUnitIds().size());
+        hasTmTextUnitIds ? request.tmTextUnitIds().size() : null,
+        request.reviewFeatureId());
 
     List<LocaleCandidates> localesToCreate = new ArrayList<>();
+    ReviewFeature reviewFeature =
+        hasReviewFeatureId ? getReviewFeatureOrThrow(request.reviewFeatureId()) : null;
     for (String localeTag : new LinkedHashSet<>(request.localeTags())) {
       Locale locale = localeService.findByBcp47Tag(localeTag);
 
@@ -184,7 +196,10 @@ public class ReviewProjectService {
         throw new IllegalArgumentException("Unknown locale: " + localeTag);
       }
 
-      List<TextUnitDTO> candidates = searchReviewCandidates(request.tmTextUnitIds(), locale);
+      List<TextUnitDTO> candidates =
+          hasTmTextUnitIds
+              ? searchReviewCandidates(request.tmTextUnitIds(), locale)
+              : searchReviewFeatureCandidates(reviewFeature, locale);
       if (candidates.isEmpty()) {
         logger.info(
             "Skipping review project locale '{}' for request '{}' because no text units matched",
@@ -1564,6 +1579,41 @@ public class ReviewProjectService {
     params.setLimit(tmTextUnitIds.size());
 
     return textUnitSearcher.search(params);
+  }
+
+  private List<TextUnitDTO> searchReviewFeatureCandidates(
+      ReviewFeature reviewFeature, Locale locale) {
+    if (reviewFeature == null) {
+      throw new IllegalArgumentException("reviewFeature must be provided");
+    }
+
+    List<Long> repositoryIds =
+        reviewFeature.getRepositories().stream()
+            .filter(repository -> !Boolean.TRUE.equals(repository.getDeleted()))
+            .map(Repository::getId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+
+    if (repositoryIds.isEmpty()) {
+      throw new IllegalArgumentException(
+          "Review feature has no active repositories: " + reviewFeature.getName());
+    }
+
+    TextUnitSearcherParameters params = new TextUnitSearcherParameters();
+    params.setRepositoryIds(repositoryIds);
+    params.setLocaleId(locale.getId());
+    params.setPluralFormsFiltered(false);
+    params.setStatusFilter(StatusFilter.REVIEW_NEEDED);
+
+    return textUnitSearcher.search(params);
+  }
+
+  private ReviewFeature getReviewFeatureOrThrow(Long reviewFeatureId) {
+    return reviewFeatureRepository
+        .findByIdWithRepositories(reviewFeatureId)
+        .orElseThrow(
+            () -> new IllegalArgumentException("Review feature not found: " + reviewFeatureId));
   }
 
   private void requireAdmin() {

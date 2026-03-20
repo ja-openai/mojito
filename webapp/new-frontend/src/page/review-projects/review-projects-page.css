@@ -83,6 +83,11 @@
   color: color-mix(in srgb, var(--color-accent) 72%, var(--color-text));
 }
 
+.review-projects-page__summary-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .review-projects-page__mode-button {
   border: 0;
   background: transparent;
@@ -277,6 +282,11 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+.review-create__hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .review-projects-page__request-projects-empty {
