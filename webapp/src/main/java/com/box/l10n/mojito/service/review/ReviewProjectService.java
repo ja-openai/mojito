@@ -188,144 +188,203 @@ public class ReviewProjectService {
         request.reviewFeatureId(),
         Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects()));
 
-    List<LocaleCandidates> localesToCreate = new ArrayList<>();
+    List<LocalePlan> localePlans = new ArrayList<>();
     ReviewFeature reviewFeature =
         hasReviewFeatureId ? getReviewFeatureOrThrow(request.reviewFeatureId()) : null;
     for (String localeTag : new LinkedHashSet<>(request.localeTags())) {
       Locale locale = localeService.findByBcp47Tag(localeTag);
-
       if (locale == null) {
-        throw new IllegalArgumentException("Unknown locale: " + localeTag);
-      }
-
-      List<TextUnitDTO> candidates =
-          hasTmTextUnitIds
-              ? searchReviewCandidates(request.tmTextUnitIds(), locale)
-              : searchReviewFeatureCandidates(reviewFeature, locale);
-      if (Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects())) {
-        int originalCandidateCount = candidates.size();
-        candidates = excludeOpenReviewProjectTextUnits(candidates, locale);
-        if (originalCandidateCount != candidates.size()) {
-          logger.info(
-              "Excluded {} text units already covered by open review projects for locale '{}'",
-              originalCandidateCount - candidates.size(),
-              locale.getBcp47Tag());
-        }
-      }
-      if (candidates.isEmpty()) {
-        logger.info(
-            "Skipping review project locale '{}' for request '{}' because no text units matched",
-            localeTag,
-            request.name());
+        localePlans.add(errorLocalePlan(localeTag, "Unknown locale: " + localeTag));
         continue;
       }
-      logger.info(
-          "Prepared review project locale '{}' for request '{}' with {} matched text units",
-          locale.getBcp47Tag(),
-          request.name(),
-          candidates.size());
 
-      localesToCreate.add(new LocaleCandidates(locale, candidates));
+      try {
+        List<TextUnitDTO> candidates =
+            hasTmTextUnitIds
+                ? searchReviewCandidates(request.tmTextUnitIds(), locale)
+                : searchReviewFeatureCandidates(reviewFeature, locale);
+        if (Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects())) {
+          int originalCandidateCount = candidates.size();
+          candidates = excludeOpenReviewProjectTextUnits(candidates, locale);
+          if (originalCandidateCount != candidates.size()) {
+            logger.info(
+                "Excluded {} text units already covered by open review projects for locale '{}'",
+                originalCandidateCount - candidates.size(),
+                locale.getBcp47Tag());
+          }
+        }
+        if (candidates.isEmpty()) {
+          logger.info(
+              "Skipping review project locale '{}' for request '{}' because no text units matched",
+              localeTag,
+              request.name());
+          localePlans.add(skippedLocalePlan(localeTag));
+          continue;
+        }
+        logger.info(
+            "Prepared review project locale '{}' for request '{}' with {} matched text units",
+            locale.getBcp47Tag(),
+            request.name(),
+            candidates.size());
+
+        localePlans.add(preparedLocalePlan(locale.getBcp47Tag(), locale, candidates, 1, null));
+      } catch (RuntimeException e) {
+        logger.warn(
+            "Failed to prepare review project locale '{}' for request '{}': {}",
+            localeTag,
+            request.name(),
+            e.getMessage());
+        localePlans.add(errorLocalePlan(localeTag, e.getMessage()));
+      }
     }
 
+    List<LocaleCandidates> localesToCreate = getPreparedLocales(localePlans);
     if (localesToCreate.isEmpty()) {
-      logger.warn(
-          "No review project locales could be created: name='{}', teamId={}, requestedLocales={}",
+      logger.info(
+          "No review project locales created: name='{}', teamId={}, requestedLocales={}",
           request.name(),
           request.teamId(),
           request.localeTags());
-      throw new IllegalArgumentException("No text units found for provided locales");
+      return buildCreateReviewProjectRequestResult(
+          null, request.name(), request.dueDate(), List.of(), request.localeTags(), localePlans);
     }
 
-    User requestedByUser = resolveUser(request.requestedByUserId(), "requestedByUser");
+    PersistedReviewProjectRequest persistedReviewProjectRequest =
+        persistPreparedReviewProjectRequest(
+            request.name(),
+            request.notes(),
+            request.screenshotImageIds(),
+            request.type(),
+            request.dueDate(),
+            request.teamId(),
+            request.requestedByUserId(),
+            localesToCreate);
 
-    ReviewProjectRequest reviewProjectRequest = new ReviewProjectRequest();
-    reviewProjectRequest.setName(request.name());
-    reviewProjectRequest.setNotes(request.notes());
-    reviewProjectRequest.setCreatedByUser(requestedByUser);
-    reviewProjectRequest = reviewProjectRequestRepository.save(reviewProjectRequest);
+    return buildCreateReviewProjectRequestResult(
+        persistedReviewProjectRequest, request.localeTags(), localePlans);
+  }
 
-    if (request.screenshotImageIds() != null) {
-      for (String screenshotImageId : request.screenshotImageIds()) {
-        ReviewProjectRequestScreenshot screenshot = new ReviewProjectRequestScreenshot();
-        screenshot.setReviewProjectRequest(reviewProjectRequest);
-        screenshot.setImageName(screenshotImageId);
-        reviewProjectScreenshotRepository.save(screenshot);
-      }
+  @Transactional
+  public CreateReviewProjectRequestResult createAutomatedReviewProjectRequest(
+      CreateAutomatedReviewProjectRequestCommand request) {
+    if (request == null) {
+      throw new IllegalArgumentException("request must be provided");
+    }
+    if (request.reviewFeatureId() == null) {
+      throw new IllegalArgumentException("reviewFeatureId must be provided");
+    }
+    if (request.teamId() == null) {
+      throw new IllegalArgumentException("teamId must be provided");
+    }
+    if (request.requestedByUserId() == null) {
+      throw new IllegalArgumentException("requestedByUserId must be provided");
+    }
+    if (request.dueDate() == null) {
+      throw new IllegalArgumentException("dueDate must be provided");
+    }
+    if (request.name() == null || request.name().trim().isEmpty()) {
+      throw new IllegalArgumentException("name must be provided");
     }
 
-    List<Long> projectIds = new ArrayList<>();
-    List<String> createdLocaleTags = new ArrayList<>();
-    List<ReviewProject> createdProjects = new ArrayList<>();
-    CreateAssignmentDefaults assignmentDefaults =
-        resolveCreateAssignmentDefaults(request.teamId(), request.requestedByUserId());
+    ReviewFeature reviewFeature = getReviewFeatureOrThrow(request.reviewFeatureId());
+    int maxWordCountPerProject =
+        request.maxWordCountPerProject() == null
+            ? Integer.MAX_VALUE
+            : request.maxWordCountPerProject();
+    if (maxWordCountPerProject < 1) {
+      throw new IllegalArgumentException("maxWordCountPerProject must be positive");
+    }
 
-    for (LocaleCandidates localeCandidates : localesToCreate) {
-      Locale locale = localeCandidates.locale();
-      ReviewProject reviewProject = new ReviewProject();
-      reviewProject.setType(request.type());
-      reviewProject.setStatus(ReviewProjectStatus.OPEN);
-      reviewProject.setDueDate(request.dueDate());
-      reviewProject.setLocale(locale);
-      reviewProject.setReviewProjectRequest(reviewProjectRequest);
-      reviewProject.setTeam(assignmentDefaults.team());
-      reviewProject.setAssignedPmUser(assignmentDefaults.defaultPmUser());
-      reviewProject.setCreatedByUser(requestedByUser);
-      String localeTagKey =
-          locale.getBcp47Tag() == null ? "" : locale.getBcp47Tag().trim().toLowerCase();
-      reviewProject.setAssignedTranslatorUser(
-          assignmentDefaults.defaultTranslatorByLocaleTagLowercase().get(localeTagKey));
-
-      ReviewProject saved = reviewProjectRepository.save(reviewProject);
-
-      int wordCount = 0;
-      int textUnitCount = 0;
-
-      for (TextUnitDTO textUnitDTO : localeCandidates.candidates()) {
-        ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
-        reviewProjectTextUnit.setReviewProject(reviewProject);
-        reviewProjectTextUnit.setTmTextUnit(
-            entityManager.getReference(TMTextUnit.class, textUnitDTO.getTmTextUnitId()));
-        if (textUnitDTO.getTmTextUnitVariantId() != null) {
-          reviewProjectTextUnit.setTmTextUnitVariant(
-              entityManager.getReference(
-                  TMTextUnitVariant.class, textUnitDTO.getTmTextUnitVariantId()));
+    List<LocalePlan> localePlans = new ArrayList<>();
+    for (Locale locale : getReviewFeatureLocales(reviewFeature)) {
+      try {
+        List<TextUnitDTO> candidates = searchReviewFeatureCandidates(reviewFeature, locale);
+        candidates = excludeOpenReviewProjectTextUnits(candidates, locale);
+        if (candidates.isEmpty()) {
+          localePlans.add(skippedLocalePlan(locale.getBcp47Tag()));
+          continue;
         }
-        reviewProjectTextUnitRepository.save(reviewProjectTextUnit);
 
-        textUnitCount++;
-        wordCount += wordCountService.getEnglishWordCount(textUnitDTO.getSource());
+        int chunkCount = 0;
+        for (List<TextUnitDTO> chunk :
+            splitCandidatesByMaxWordCount(candidates, maxWordCountPerProject)) {
+          if (chunk.isEmpty()) {
+            continue;
+          }
+          chunkCount++;
+        }
+        localePlans.add(
+            preparedLocalePlan(locale.getBcp47Tag(), locale, candidates, chunkCount, null));
+        logger.info(
+            "Prepared automated review project locale '{}' for feature '{}' with {} candidates across {} chunk(s)",
+            locale.getBcp47Tag(),
+            reviewFeature.getName(),
+            candidates.size(),
+            chunkCount);
+      } catch (RuntimeException e) {
+        logger.warn(
+            "Failed to prepare automated review project locale '{}' for feature '{}': {}",
+            locale.getBcp47Tag(),
+            reviewFeature.getName(),
+            e.getMessage());
+        localePlans.add(errorLocalePlan(locale.getBcp47Tag(), e.getMessage()));
       }
-
-      saved.setWordCount(wordCount);
-      saved.setTextUnitCount(textUnitCount);
-      recordAssignmentHistory(
-          saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null, requestedByUser);
-      projectIds.add(saved.getId());
-      createdLocaleTags.add(locale.getBcp47Tag());
-      createdProjects.add(saved);
     }
 
-    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
-        reviewProjectRequest, createdProjects);
+    List<LocaleCandidates> localesToCreate =
+        getPreparedLocalesWithChunks(localePlans, maxWordCountPerProject);
+    if (localesToCreate.isEmpty()) {
+      logger.info(
+          "No automated review project request created for feature '{}' because no eligible text units were found",
+          reviewFeature.getName());
+      return buildCreateReviewProjectRequestResult(
+          null,
+          request.name().trim(),
+          request.dueDate(),
+          List.of(),
+          getReviewFeatureLocales(reviewFeature).stream().map(Locale::getBcp47Tag).toList(),
+          localePlans);
+    }
 
-    logger.info(
-        "Created review project request id={} name='{}' with {} locales {} and {} projects",
-        reviewProjectRequest.getId(),
-        reviewProjectRequest.getName(),
-        createdLocaleTags.size(),
-        createdLocaleTags,
-        projectIds.size());
+    PersistedReviewProjectRequest persistedReviewProjectRequest =
+        persistPreparedReviewProjectRequest(
+            request.name().trim(),
+            request.notes(),
+            null,
+            ReviewProjectType.NORMAL,
+            request.dueDate(),
+            request.teamId(),
+            request.requestedByUserId(),
+            localesToCreate);
 
-    return new CreateReviewProjectRequestResult(
-        reviewProjectRequest.getId(),
-        reviewProjectRequest.getName(),
-        createdLocaleTags,
-        request.dueDate(),
-        projectIds);
+    return buildCreateReviewProjectRequestResult(
+        persistedReviewProjectRequest,
+        getReviewFeatureLocales(reviewFeature).stream().map(Locale::getBcp47Tag).toList(),
+        localePlans);
   }
 
   private record LocaleCandidates(Locale locale, List<TextUnitDTO> candidates) {}
+
+  private enum LocalePlanStatus {
+    PREPARED,
+    SKIPPED_NO_TEXT_UNITS,
+    ERROR
+  }
+
+  private record LocalePlan(
+      String localeTag,
+      Locale locale,
+      List<TextUnitDTO> candidates,
+      int projectCount,
+      LocalePlanStatus status,
+      String message) {}
+
+  private record PersistedReviewProjectRequest(
+      Long requestId,
+      String requestName,
+      List<String> localeTags,
+      ZonedDateTime dueDate,
+      List<Long> projectIds) {}
 
   private record CreateAssignmentDefaults(
       Team team, User defaultPmUser, Map<String, User> defaultTranslatorByLocaleTagLowercase) {}
@@ -1649,6 +1708,306 @@ public class ReviewProjectService {
     return candidates.stream()
         .filter(candidate -> !excludedTmTextUnitIds.contains(candidate.getTmTextUnitId()))
         .toList();
+  }
+
+  private List<Locale> getReviewFeatureLocales(ReviewFeature reviewFeature) {
+    if (reviewFeature == null || CollectionUtils.isEmpty(reviewFeature.getRepositories())) {
+      return List.of();
+    }
+
+    return reviewFeature.getRepositories().stream()
+        .filter(repository -> !Boolean.TRUE.equals(repository.getDeleted()))
+        .flatMap(repository -> repository.getRepositoryLocales().stream())
+        .filter(repositoryLocale -> repositoryLocale.getParentLocale() != null)
+        .map(RepositoryLocale::getLocale)
+        .filter(Objects::nonNull)
+        .collect(
+            Collectors.toMap(
+                Locale::getId, locale -> locale, (left, right) -> left, LinkedHashMap::new))
+        .values()
+        .stream()
+        .sorted(
+            Comparator.comparing(
+                    (Locale locale) -> locale.getBcp47Tag() == null ? "" : locale.getBcp47Tag(),
+                    String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(Locale::getId))
+        .toList();
+  }
+
+  private List<List<TextUnitDTO>> splitCandidatesByMaxWordCount(
+      List<TextUnitDTO> candidates, int maxWordCountPerProject) {
+    if (CollectionUtils.isEmpty(candidates)) {
+      return List.of();
+    }
+    if (maxWordCountPerProject == Integer.MAX_VALUE) {
+      return List.of(candidates);
+    }
+
+    List<List<TextUnitDTO>> chunks = new ArrayList<>();
+    List<TextUnitDTO> currentChunk = new ArrayList<>();
+    int currentWordCount = 0;
+    for (TextUnitDTO candidate : candidates) {
+      int candidateWordCount = wordCountService.getEnglishWordCount(candidate.getSource());
+      boolean wouldOverflow =
+          !currentChunk.isEmpty() && currentWordCount + candidateWordCount > maxWordCountPerProject;
+      if (wouldOverflow) {
+        chunks.add(List.copyOf(currentChunk));
+        currentChunk.clear();
+        currentWordCount = 0;
+      }
+      currentChunk.add(candidate);
+      currentWordCount += candidateWordCount;
+    }
+    if (!currentChunk.isEmpty()) {
+      chunks.add(List.copyOf(currentChunk));
+    }
+    return chunks;
+  }
+
+  private LocalePlan preparedLocalePlan(
+      String localeTag,
+      Locale locale,
+      List<TextUnitDTO> candidates,
+      int projectCount,
+      String message) {
+    return new LocalePlan(
+        localeTag,
+        locale,
+        List.copyOf(candidates),
+        projectCount,
+        LocalePlanStatus.PREPARED,
+        message);
+  }
+
+  private LocalePlan skippedLocalePlan(String localeTag) {
+    return new LocalePlan(
+        localeTag,
+        null,
+        List.of(),
+        0,
+        LocalePlanStatus.SKIPPED_NO_TEXT_UNITS,
+        "No text units matched for this locale");
+  }
+
+  private LocalePlan errorLocalePlan(String localeTag, String message) {
+    return new LocalePlan(
+        localeTag,
+        null,
+        List.of(),
+        0,
+        LocalePlanStatus.ERROR,
+        message == null || message.isBlank() ? "Unexpected error while preparing locale" : message);
+  }
+
+  private List<LocaleCandidates> getPreparedLocales(List<LocalePlan> localePlans) {
+    return localePlans.stream()
+        .filter(localePlan -> localePlan.status() == LocalePlanStatus.PREPARED)
+        .map(localePlan -> new LocaleCandidates(localePlan.locale(), localePlan.candidates()))
+        .toList();
+  }
+
+  private List<LocaleCandidates> getPreparedLocalesWithChunks(
+      List<LocalePlan> localePlans, int maxWordCountPerProject) {
+    List<LocaleCandidates> localesToCreate = new ArrayList<>();
+    for (LocalePlan localePlan : localePlans) {
+      if (localePlan.status() != LocalePlanStatus.PREPARED || localePlan.locale() == null) {
+        continue;
+      }
+      for (List<TextUnitDTO> chunk :
+          splitCandidatesByMaxWordCount(localePlan.candidates(), maxWordCountPerProject)) {
+        if (chunk.isEmpty()) {
+          continue;
+        }
+        localesToCreate.add(new LocaleCandidates(localePlan.locale(), chunk));
+      }
+    }
+    return localesToCreate;
+  }
+
+  private CreateReviewProjectRequestResult buildCreateReviewProjectRequestResult(
+      PersistedReviewProjectRequest persistedReviewProjectRequest,
+      List<String> requestedLocaleTags,
+      List<LocalePlan> localePlans) {
+    return buildCreateReviewProjectRequestResult(
+        persistedReviewProjectRequest == null ? null : persistedReviewProjectRequest.requestId(),
+        persistedReviewProjectRequest == null ? null : persistedReviewProjectRequest.requestName(),
+        persistedReviewProjectRequest == null ? null : persistedReviewProjectRequest.dueDate(),
+        persistedReviewProjectRequest == null
+            ? List.of()
+            : persistedReviewProjectRequest.projectIds(),
+        requestedLocaleTags,
+        localePlans);
+  }
+
+  private CreateReviewProjectRequestResult buildCreateReviewProjectRequestResult(
+      Long requestId,
+      String requestName,
+      ZonedDateTime dueDate,
+      List<Long> projectIds,
+      List<String> requestedLocaleTags,
+      List<LocalePlan> localePlans) {
+    List<CreateReviewProjectRequestResult.LocaleResult> localeResults =
+        localePlans.stream()
+            .map(
+                localePlan ->
+                    new CreateReviewProjectRequestResult.LocaleResult(
+                        localePlan.localeTag(),
+                        switch (localePlan.status()) {
+                          case PREPARED ->
+                              CreateReviewProjectRequestResult.LocaleResultStatus.CREATED;
+                          case SKIPPED_NO_TEXT_UNITS ->
+                              CreateReviewProjectRequestResult.LocaleResultStatus
+                                  .SKIPPED_NO_TEXT_UNITS;
+                          case ERROR -> CreateReviewProjectRequestResult.LocaleResultStatus.ERROR;
+                        },
+                        localePlan.candidates().size(),
+                        localePlan.projectCount(),
+                        localePlan.message()))
+            .toList();
+    int createdLocaleCount =
+        (int)
+            localeResults.stream()
+                .filter(
+                    localeResult ->
+                        localeResult.status()
+                            == CreateReviewProjectRequestResult.LocaleResultStatus.CREATED)
+                .count();
+    int skippedLocaleCount =
+        (int)
+            localeResults.stream()
+                .filter(
+                    localeResult ->
+                        localeResult.status()
+                            == CreateReviewProjectRequestResult.LocaleResultStatus
+                                .SKIPPED_NO_TEXT_UNITS)
+                .count();
+    int erroredLocaleCount =
+        (int)
+            localeResults.stream()
+                .filter(
+                    localeResult ->
+                        localeResult.status()
+                            == CreateReviewProjectRequestResult.LocaleResultStatus.ERROR)
+                .count();
+    List<String> createdLocaleTags =
+        localeResults.stream()
+            .filter(
+                localeResult ->
+                    localeResult.status()
+                        == CreateReviewProjectRequestResult.LocaleResultStatus.CREATED)
+            .map(CreateReviewProjectRequestResult.LocaleResult::localeTag)
+            .toList();
+
+    return new CreateReviewProjectRequestResult(
+        requestId,
+        requestName,
+        createdLocaleTags,
+        dueDate,
+        projectIds,
+        requestedLocaleTags == null ? 0 : new LinkedHashSet<>(requestedLocaleTags).size(),
+        createdLocaleCount,
+        skippedLocaleCount,
+        erroredLocaleCount,
+        localeResults);
+  }
+
+  private PersistedReviewProjectRequest persistPreparedReviewProjectRequest(
+      String name,
+      String notes,
+      List<String> screenshotImageIds,
+      ReviewProjectType type,
+      ZonedDateTime dueDate,
+      Long teamId,
+      Long requestedByUserId,
+      List<LocaleCandidates> localesToCreate) {
+    User requestedByUser = resolveUser(requestedByUserId, "requestedByUser");
+
+    ReviewProjectRequest reviewProjectRequest = new ReviewProjectRequest();
+    reviewProjectRequest.setName(name);
+    reviewProjectRequest.setNotes(notes);
+    reviewProjectRequest.setCreatedByUser(requestedByUser);
+    reviewProjectRequest = reviewProjectRequestRepository.save(reviewProjectRequest);
+
+    if (screenshotImageIds != null) {
+      for (String screenshotImageId : screenshotImageIds) {
+        ReviewProjectRequestScreenshot screenshot = new ReviewProjectRequestScreenshot();
+        screenshot.setReviewProjectRequest(reviewProjectRequest);
+        screenshot.setImageName(screenshotImageId);
+        reviewProjectScreenshotRepository.save(screenshot);
+      }
+    }
+
+    List<Long> projectIds = new ArrayList<>();
+    List<String> createdLocaleTags = new ArrayList<>();
+    List<ReviewProject> createdProjects = new ArrayList<>();
+    CreateAssignmentDefaults assignmentDefaults =
+        resolveCreateAssignmentDefaults(teamId, requestedByUserId);
+
+    for (LocaleCandidates localeCandidates : localesToCreate) {
+      Locale locale = localeCandidates.locale();
+      ReviewProject reviewProject = new ReviewProject();
+      reviewProject.setType(type);
+      reviewProject.setStatus(ReviewProjectStatus.OPEN);
+      reviewProject.setDueDate(dueDate);
+      reviewProject.setLocale(locale);
+      reviewProject.setReviewProjectRequest(reviewProjectRequest);
+      reviewProject.setTeam(assignmentDefaults.team());
+      reviewProject.setAssignedPmUser(assignmentDefaults.defaultPmUser());
+      reviewProject.setCreatedByUser(requestedByUser);
+      String localeTagKey =
+          locale.getBcp47Tag() == null ? "" : locale.getBcp47Tag().trim().toLowerCase();
+      reviewProject.setAssignedTranslatorUser(
+          assignmentDefaults.defaultTranslatorByLocaleTagLowercase().get(localeTagKey));
+
+      ReviewProject saved = reviewProjectRepository.save(reviewProject);
+
+      int wordCount = 0;
+      int textUnitCount = 0;
+
+      for (TextUnitDTO textUnitDTO : localeCandidates.candidates()) {
+        ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+        reviewProjectTextUnit.setReviewProject(reviewProject);
+        reviewProjectTextUnit.setTmTextUnit(
+            entityManager.getReference(TMTextUnit.class, textUnitDTO.getTmTextUnitId()));
+        if (textUnitDTO.getTmTextUnitVariantId() != null) {
+          reviewProjectTextUnit.setTmTextUnitVariant(
+              entityManager.getReference(
+                  TMTextUnitVariant.class, textUnitDTO.getTmTextUnitVariantId()));
+        }
+        reviewProjectTextUnitRepository.save(reviewProjectTextUnit);
+
+        textUnitCount++;
+        wordCount += wordCountService.getEnglishWordCount(textUnitDTO.getSource());
+      }
+
+      saved.setWordCount(wordCount);
+      saved.setTextUnitCount(textUnitCount);
+      recordAssignmentHistory(
+          saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null, requestedByUser);
+      projectIds.add(saved.getId());
+      createdLocaleTags.add(locale.getBcp47Tag());
+      createdProjects.add(saved);
+    }
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        reviewProjectRequest, createdProjects);
+
+    List<String> distinctCreatedLocaleTags =
+        new ArrayList<>(new LinkedHashSet<>(createdLocaleTags));
+    logger.info(
+        "Created review project request id={} name='{}' with {} locales {} and {} projects",
+        reviewProjectRequest.getId(),
+        reviewProjectRequest.getName(),
+        distinctCreatedLocaleTags.size(),
+        distinctCreatedLocaleTags,
+        projectIds.size());
+
+    return new PersistedReviewProjectRequest(
+        reviewProjectRequest.getId(),
+        reviewProjectRequest.getName(),
+        distinctCreatedLocaleTags,
+        dueDate,
+        projectIds);
   }
 
   private ReviewFeature getReviewFeatureOrThrow(Long reviewFeatureId) {

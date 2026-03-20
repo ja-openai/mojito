@@ -1,10 +1,14 @@
 package com.box.l10n.mojito.rest.review;
 
+import com.box.l10n.mojito.service.review.ReviewAutomationRunService;
+import com.box.l10n.mojito.service.review.ReviewAutomationSchedulerService;
 import com.box.l10n.mojito.service.review.ReviewAutomationService;
 import com.box.l10n.mojito.service.review.SearchReviewAutomationsView;
+import com.box.l10n.mojito.service.team.TeamService;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,9 +26,19 @@ import org.springframework.web.server.ResponseStatusException;
 public class ReviewAutomationWS {
 
   private final ReviewAutomationService reviewAutomationService;
+  private final ReviewAutomationSchedulerService reviewAutomationSchedulerService;
+  private final ReviewAutomationRunService reviewAutomationRunService;
+  private final TeamService teamService;
 
-  public ReviewAutomationWS(ReviewAutomationService reviewAutomationService) {
+  public ReviewAutomationWS(
+      ReviewAutomationService reviewAutomationService,
+      ReviewAutomationSchedulerService reviewAutomationSchedulerService,
+      ReviewAutomationRunService reviewAutomationRunService,
+      TeamService teamService) {
     this.reviewAutomationService = reviewAutomationService;
+    this.reviewAutomationSchedulerService = reviewAutomationSchedulerService;
+    this.reviewAutomationRunService = reviewAutomationRunService;
+    this.teamService = teamService;
   }
 
   public record SearchReviewAutomationsResponse(
@@ -97,6 +111,36 @@ public class ReviewAutomationWS {
       int maxWordCountPerProject,
       List<String> featureNames) {}
 
+  public record RunAutomationResponse(
+      Long runId,
+      Long automationId,
+      String automationName,
+      int featureCount,
+      int createdProjectRequestCount,
+      int createdProjectCount,
+      int createdLocaleCount,
+      int skippedLocaleCount,
+      int erroredLocaleCount) {}
+
+  public record ReviewAutomationRunResponse(
+      Long id,
+      Long automationId,
+      String automationName,
+      String triggerSource,
+      Long requestedByUserId,
+      String requestedByUsername,
+      String status,
+      String createdAt,
+      String startedAt,
+      String finishedAt,
+      int featureCount,
+      int createdProjectRequestCount,
+      int createdProjectCount,
+      int createdLocaleCount,
+      int skippedLocaleCount,
+      int erroredLocaleCount,
+      String errorMessage) {}
+
   public record BatchUpsertReviewAutomationsResponse(int createdCount, int updatedCount) {}
 
   @GetMapping
@@ -148,6 +192,66 @@ public class ReviewAutomationWS {
                     row.dueDateOffsetDays(),
                     row.maxWordCountPerProject(),
                     row.featureNames()))
+        .toList();
+  }
+
+  @PostMapping("/{automationId}/run")
+  public RunAutomationResponse runReviewAutomationNow(@PathVariable Long automationId) {
+    requireAdmin();
+    try {
+      ReviewAutomationSchedulerService.RunResult result =
+          reviewAutomationSchedulerService.runAutomationNow(
+              automationId, teamService.getCurrentUserIdOrThrow());
+      return new RunAutomationResponse(
+          result.runId(),
+          result.automationId(),
+          result.automationName(),
+          result.featureCount(),
+          result.createdProjectRequestCount(),
+          result.createdProjectCount(),
+          result.createdLocaleCount(),
+          result.skippedLocaleCount(),
+          result.erroredLocaleCount());
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Review automation not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @GetMapping("/runs")
+  public List<ReviewAutomationRunResponse> getReviewAutomationRuns(
+      @RequestParam(name = "automationIds", required = false) List<Long> automationIds,
+      @RequestParam(name = "limit", required = false) Integer limit) {
+    requireAdmin();
+    int resolvedLimit = limit == null ? ReviewAutomationRunService.DEFAULT_RECENT_RUN_LIMIT : limit;
+    if (resolvedLimit < 1) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be at least 1");
+    }
+
+    return reviewAutomationRunService.getRecentRuns(automationIds, resolvedLimit).stream()
+        .map(
+            run ->
+                new ReviewAutomationRunResponse(
+                    run.id(),
+                    run.automationId(),
+                    run.automationName(),
+                    run.triggerSource(),
+                    run.requestedByUserId(),
+                    run.requestedByUsername(),
+                    run.status(),
+                    run.createdAt() == null ? null : run.createdAt().toString(),
+                    run.startedAt() == null ? null : run.startedAt().toString(),
+                    run.finishedAt() == null ? null : run.finishedAt().toString(),
+                    run.featureCount(),
+                    run.createdProjectRequestCount(),
+                    run.createdProjectCount(),
+                    run.createdLocaleCount(),
+                    run.skippedLocaleCount(),
+                    run.erroredLocaleCount(),
+                    run.errorMessage()))
         .toList();
   }
 
@@ -268,5 +372,11 @@ public class ReviewAutomationWS {
         detail.features().stream()
             .map(feature -> new FeatureRef(feature.id(), feature.name()))
             .toList());
+  }
+
+  private void requireAdmin() {
+    if (!teamService.isCurrentUserAdmin()) {
+      throw new AccessDeniedException("Admin role required");
+    }
   }
 }

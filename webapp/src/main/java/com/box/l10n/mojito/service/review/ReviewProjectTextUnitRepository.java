@@ -1,7 +1,7 @@
 package com.box.l10n.mojito.service.review;
 
-import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
+import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

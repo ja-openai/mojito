@@ -446,8 +446,7 @@ export function ReviewProjectCreateForm({
               localeTags: selectedLocaleTags,
               notes: notes.trim().length > 0 ? notes : null,
               tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmTextUnitIds : null,
-              reviewFeatureIds:
-                sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureIds : null,
+              reviewFeatureIds: sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureIds : null,
               skipTextUnitsInOpenProjects,
               screenshotImageIds: screenshotKeys,
               teamId: selectedTeamId,

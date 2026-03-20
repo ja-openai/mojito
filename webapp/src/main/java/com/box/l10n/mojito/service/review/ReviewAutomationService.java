@@ -1,8 +1,8 @@
 package com.box.l10n.mojito.service.review;
 
+import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.review.ReviewAutomation;
 import com.box.l10n.mojito.entity.review.ReviewFeature;
-import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.team.TeamRepository;
 import java.time.ZoneId;
@@ -15,11 +15,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.quartz.CronExpression;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class ReviewAutomationService {
@@ -34,16 +37,22 @@ public class ReviewAutomationService {
   private final ReviewFeatureRepository reviewFeatureRepository;
   private final TeamRepository teamRepository;
   private final UserService userService;
+  private final ObjectProvider<ReviewAutomationCronSchedulerService>
+      reviewAutomationCronSchedulerServiceProvider;
 
   public ReviewAutomationService(
       ReviewAutomationRepository reviewAutomationRepository,
       ReviewFeatureRepository reviewFeatureRepository,
       TeamRepository teamRepository,
-      UserService userService) {
+      UserService userService,
+      ObjectProvider<ReviewAutomationCronSchedulerService>
+          reviewAutomationCronSchedulerServiceProvider) {
     this.reviewAutomationRepository = reviewAutomationRepository;
     this.reviewFeatureRepository = reviewFeatureRepository;
     this.teamRepository = teamRepository;
     this.userService = userService;
+    this.reviewAutomationCronSchedulerServiceProvider =
+        reviewAutomationCronSchedulerServiceProvider;
   }
 
   @Transactional(readOnly = true)
@@ -177,6 +186,7 @@ public class ReviewAutomationService {
         normalizeMaxWordCountPerProject(maxWordCountPerProject));
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
     ReviewAutomation saved = reviewAutomationRepository.save(reviewAutomation);
+    syncSchedulerAfterCommit();
     return getReviewAutomation(saved.getId());
   }
 
@@ -214,6 +224,7 @@ public class ReviewAutomationService {
         normalizeMaxWordCountPerProject(maxWordCountPerProject));
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
     reviewAutomationRepository.save(reviewAutomation);
+    syncSchedulerAfterCommit();
     return getReviewAutomation(reviewAutomation.getId());
   }
 
@@ -226,6 +237,7 @@ public class ReviewAutomationService {
             .orElseThrow(
                 () -> new IllegalArgumentException("Review automation not found: " + automationId));
     reviewAutomationRepository.delete(reviewAutomation);
+    syncSchedulerAfterCommit();
   }
 
   @Transactional
@@ -292,7 +304,29 @@ public class ReviewAutomationService {
       reviewAutomationRepository.save(reviewAutomation);
     }
 
+    syncSchedulerAfterCommit();
     return new BatchUpsertResult(createdCount, updatedCount);
+  }
+
+  private void syncSchedulerAfterCommit() {
+    if (reviewAutomationCronSchedulerServiceProvider.getIfAvailable() == null) {
+      return;
+    }
+
+    Runnable syncRunnable =
+        () -> reviewAutomationCronSchedulerServiceProvider.getObject().syncAll();
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      syncRunnable.run();
+      return;
+    }
+
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            syncRunnable.run();
+          }
+        });
   }
 
   private Map<Long, List<SearchReviewAutomationsView.FeatureSummary>> loadFeaturesByAutomationId(
@@ -511,6 +545,7 @@ public class ReviewAutomationService {
       int maxWordCountPerProject,
       List<FeatureRef> features) {
     public record TeamRef(Long id, String name) {}
+
     public record FeatureRef(Long id, String name) {}
   }
 

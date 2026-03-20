@@ -4,10 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-import {
-  type ApiReviewFeatureOption,
-  fetchReviewFeatureOptions,
-} from '../../api/review-features';
+import { type ApiReviewFeatureOption, fetchReviewFeatureOptions } from '../../api/review-features';
+import { type ReviewProjectCreateResponse } from '../../api/review-projects';
 import { type ApiTeam, fetchTeams } from '../../api/teams';
 import type { CollectionOption } from '../../components/CollectionSelect';
 import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
@@ -74,6 +72,44 @@ function buildFeatureScopedRequestName(baseName: string, featureName: string) {
   return `${trimmedBaseName} · ${trimmedFeatureName}`;
 }
 
+type CreateSubmissionReport = {
+  createdRequestIds: number[];
+  createdProjectRequestCount: number;
+  createdProjectCount: number;
+  createdLocaleCount: number;
+  skippedLocaleCount: number;
+  erroredLocaleCount: number;
+  responses: ReviewProjectCreateResponse[];
+};
+
+function buildCreateSubmissionReport(
+  responses: ReviewProjectCreateResponse[],
+): CreateSubmissionReport {
+  return {
+    createdRequestIds: responses.flatMap((response) =>
+      response.requestId == null ? [] : [response.requestId],
+    ),
+    createdProjectRequestCount: responses.filter((response) => response.requestId != null).length,
+    createdProjectCount: responses.reduce(
+      (total, response) => total + response.projectIds.length,
+      0,
+    ),
+    createdLocaleCount: responses.reduce(
+      (total, response) => total + response.createdLocaleCount,
+      0,
+    ),
+    skippedLocaleCount: responses.reduce(
+      (total, response) => total + response.skippedLocaleCount,
+      0,
+    ),
+    erroredLocaleCount: responses.reduce(
+      (total, response) => total + response.erroredLocaleCount,
+      0,
+    ),
+    responses,
+  };
+}
+
 export function ReviewProjectCreatePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -88,6 +124,7 @@ export function ReviewProjectCreatePage() {
   const [prefillDueDate, setPrefillDueDate] = useState<string | null>(null);
   const [prefillCollectionName, setPrefillCollectionName] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [submissionReport, setSubmissionReport] = useState<CreateSubmissionReport | null>(null);
 
   const createReviewProject = useCreateReviewProject();
   const teamsQuery = useQuery<ApiTeam[]>({
@@ -201,13 +238,16 @@ export function ReviewProjectCreatePage() {
       if (createReviewProject.isPending) return;
       if (sourceMode === 'TEXT_UNITS' && !tmIds.length) {
         setErrorMessage('Add at least one text unit id.');
+        setSubmissionReport(null);
         return;
       }
       if (sourceMode === 'REVIEW_FEATURE' && !values.reviewFeatureIds?.length) {
         setErrorMessage('Select at least one review feature.');
+        setSubmissionReport(null);
         return;
       }
       setErrorMessage(null);
+      setSubmissionReport(null);
       void (async () => {
         try {
           if (sourceMode === 'TEXT_UNITS') {
@@ -223,14 +263,19 @@ export function ReviewProjectCreatePage() {
               name: values.name,
               teamId: values.teamId ?? null,
             });
-            const requestId = response.requestId ?? null;
-            void navigate('/review-projects', {
-              state: { requestId },
-            });
+            const report = buildCreateSubmissionReport([response]);
+            if (report.skippedLocaleCount === 0 && report.erroredLocaleCount === 0) {
+              const requestId = response.requestId ?? null;
+              void navigate('/review-projects', {
+                state: { requestId },
+              });
+              return;
+            }
+            setSubmissionReport(report);
             return;
           }
 
-          const createdRequestIds: number[] = [];
+          const responses: ReviewProjectCreateResponse[] = [];
           for (const reviewFeatureId of values.reviewFeatureIds ?? []) {
             const feature = reviewFeaturesById.get(reviewFeatureId);
             const response = await createReviewProject.mutateAsync({
@@ -245,16 +290,22 @@ export function ReviewProjectCreatePage() {
               name: buildFeatureScopedRequestName(values.name, feature?.name ?? ''),
               teamId: values.teamId ?? null,
             });
-            if (response.requestId != null) {
-              createdRequestIds.push(response.requestId);
-            }
+            responses.push(response);
           }
-          void navigate('/review-projects', {
-            state:
-              createdRequestIds.length === 1 ? { requestId: createdRequestIds[0] } : undefined,
-          });
+          const report = buildCreateSubmissionReport(responses);
+          if (report.skippedLocaleCount === 0 && report.erroredLocaleCount === 0) {
+            void navigate('/review-projects', {
+              state:
+                report.createdRequestIds.length === 1
+                  ? { requestId: report.createdRequestIds[0] }
+                  : undefined,
+            });
+            return;
+          }
+          setSubmissionReport(report);
         } catch (err: unknown) {
           setErrorMessage(getCreateReviewProjectErrorMessage(err) || 'Failed to create project');
+          setSubmissionReport(null);
         }
       })();
     },
@@ -271,36 +322,125 @@ export function ReviewProjectCreatePage() {
 
       <div className="review-create__page-shell">
         {showCreateForm ? (
-          <ReviewProjectCreateForm
-            defaultName={prefillName || 'Review project'}
-            defaultDueDate={prefillDueDate ?? defaultDueDate}
-            localeOptions={localeOptions}
-            tmTextUnitIds={tmIds}
-            sourceMode={sourceMode}
-            onChangeSourceMode={setSourceMode}
-            collectionName={prefillCollectionName ?? null}
-            collectionOptions={collectionOptions}
-            selectedCollectionId={selectedCollectionId}
-            onChangeCollection={(id) => {
-              setSelectedCollectionId(id);
-              if (!id) {
-                setPrefillCollectionName(null);
-              }
-            }}
-            reviewFeatureOptions={reviewFeatureOptions}
-            selectedReviewFeatureIds={selectedReviewFeatureIds}
-            onChangeReviewFeatures={setSelectedReviewFeatureIds}
-            teamOptions={teamsQuery.data ?? []}
-            selectedTeamId={selectedTeamId}
-            onChangeTeam={setSelectedTeamId}
-            isSubmitting={createReviewProject.isPending}
-            errorMessage={errorMessage}
-            submitLabel="Create"
-            onSubmit={handleSubmit}
-            onCancel={() => {
-              void navigate(-1);
-            }}
-          />
+          <>
+            <ReviewProjectCreateForm
+              defaultName={prefillName || 'Review project'}
+              defaultDueDate={prefillDueDate ?? defaultDueDate}
+              localeOptions={localeOptions}
+              tmTextUnitIds={tmIds}
+              sourceMode={sourceMode}
+              onChangeSourceMode={setSourceMode}
+              collectionName={prefillCollectionName ?? null}
+              collectionOptions={collectionOptions}
+              selectedCollectionId={selectedCollectionId}
+              onChangeCollection={(id) => {
+                setSelectedCollectionId(id);
+                if (!id) {
+                  setPrefillCollectionName(null);
+                }
+              }}
+              reviewFeatureOptions={reviewFeatureOptions}
+              selectedReviewFeatureIds={selectedReviewFeatureIds}
+              onChangeReviewFeatures={setSelectedReviewFeatureIds}
+              teamOptions={teamsQuery.data ?? []}
+              selectedTeamId={selectedTeamId}
+              onChangeTeam={setSelectedTeamId}
+              isSubmitting={createReviewProject.isPending}
+              errorMessage={errorMessage}
+              submitLabel="Create"
+              onSubmit={handleSubmit}
+              onCancel={() => {
+                void navigate(-1);
+              }}
+            />
+            {submissionReport ? (
+              <div
+                className={`review-create__report${
+                  submissionReport.erroredLocaleCount > 0 ? ' is-error' : ''
+                }`}
+              >
+                <div className="review-create__report-title">Creation report</div>
+                <div className="review-create__report-summary">
+                  Created {submissionReport.createdProjectRequestCount} request
+                  {submissionReport.createdProjectRequestCount === 1 ? '' : 's'},{' '}
+                  {submissionReport.createdProjectCount} project
+                  {submissionReport.createdProjectCount === 1 ? '' : 's'} across{' '}
+                  {submissionReport.createdLocaleCount} locale
+                  {submissionReport.createdLocaleCount === 1 ? '' : 's'}.
+                </div>
+                {submissionReport.skippedLocaleCount > 0 ? (
+                  <div className="review-create__report-summary">
+                    Skipped {submissionReport.skippedLocaleCount} locale
+                    {submissionReport.skippedLocaleCount === 1 ? '' : 's'} with no matching text
+                    units.
+                  </div>
+                ) : null}
+                {submissionReport.erroredLocaleCount > 0 ? (
+                  <div className="review-create__report-summary">
+                    Encountered errors in {submissionReport.erroredLocaleCount} locale
+                    {submissionReport.erroredLocaleCount === 1 ? '' : 's'}.
+                  </div>
+                ) : null}
+                {submissionReport.createdRequestIds.length === 1 ? (
+                  <div className="review-create__report-actions">
+                    <button
+                      type="button"
+                      className="review-create__ghost"
+                      onClick={() =>
+                        void navigate('/review-projects', {
+                          state: { requestId: submissionReport.createdRequestIds[0] },
+                        })
+                      }
+                    >
+                      Open created request
+                    </button>
+                  </div>
+                ) : submissionReport.createdRequestIds.length > 1 ? (
+                  <div className="review-create__report-actions">
+                    <button
+                      type="button"
+                      className="review-create__ghost"
+                      onClick={() => void navigate('/review-projects')}
+                    >
+                      Open review projects
+                    </button>
+                  </div>
+                ) : null}
+                <div className="review-create__report-list">
+                  {submissionReport.responses.map((response, index) => {
+                    const notableLocaleResults = response.localeResults.filter(
+                      (localeResult) => localeResult.status !== 'CREATED',
+                    );
+                    if (notableLocaleResults.length === 0) {
+                      return null;
+                    }
+                    return (
+                      <div key={`${response.requestName ?? 'request'}-${index}`}>
+                        <div className="review-create__report-request-name">
+                          {response.requestName ?? 'Review project'}
+                        </div>
+                        {notableLocaleResults.map((localeResult) => (
+                          <div
+                            key={`${response.requestName ?? 'request'}-${localeResult.localeTag}-${localeResult.status}`}
+                            className="review-create__report-item"
+                          >
+                            <span className="review-create__report-locale">
+                              {localeResult.localeTag}
+                            </span>
+                            <span className="review-create__report-message">
+                              {localeResult.status === 'SKIPPED_NO_TEXT_UNITS'
+                                ? 'No matching text units'
+                                : (localeResult.message ?? 'Unexpected error')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </>
         ) : (
           <div className="review-create__empty">
             <div className="review-create__empty-title">No collections or review features yet</div>

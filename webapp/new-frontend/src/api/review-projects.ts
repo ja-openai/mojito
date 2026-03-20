@@ -200,11 +200,22 @@ export type ReviewProjectCreateRequest = {
 };
 
 export type ReviewProjectCreateResponse = {
-  requestId: number;
+  requestId: number | null;
   requestName?: string | null;
   localeTags: string[];
   dueDate: string;
   projectIds: number[];
+  requestedLocaleCount: number;
+  createdLocaleCount: number;
+  skippedLocaleCount: number;
+  erroredLocaleCount: number;
+  localeResults: Array<{
+    localeTag: string;
+    status: 'CREATED' | 'SKIPPED_NO_TEXT_UNITS' | 'ERROR';
+    textUnitCount: number;
+    projectCount: number;
+    message?: string | null;
+  }>;
 };
 
 const jsonHeaders = {
