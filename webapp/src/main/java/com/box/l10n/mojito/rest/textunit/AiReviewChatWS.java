@@ -14,6 +14,7 @@ import com.box.l10n.mojito.rest.textunit.AiReviewType.AiReviewTextUnitVariantOut
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewService.AiReviewTextUnitVariantInput;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -42,16 +43,20 @@ public class AiReviewChatWS {
   private final AiReviewConfigurationProperties aiReviewConfigurationProperties;
   private final ObjectMapper objectMapper;
   private final TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService;
+  private final AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService;
 
   public AiReviewChatWS(
       @Qualifier("openAIClientReview") @Nullable OpenAIClient openAIClient,
       AiReviewConfigurationProperties aiReviewConfigurationProperties,
       @Qualifier("objectMapperReview") ObjectMapper objectMapper,
-      TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService) {
+      TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService,
+      AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService) {
     this.openAIClient = openAIClient;
     this.aiReviewConfigurationProperties = Objects.requireNonNull(aiReviewConfigurationProperties);
     this.objectMapper = Objects.requireNonNull(objectMapper);
     this.tmTextUnitIntegrityCheckService = Objects.requireNonNull(tmTextUnitIntegrityCheckService);
+    this.aiTranslateLocalePromptSuffixService =
+        Objects.requireNonNull(aiTranslateLocalePromptSuffixService);
   }
 
   @PostMapping("/api/ai/review")
@@ -83,7 +88,7 @@ public class AiReviewChatWS {
     String inputPayload = objectMapper.writeValueAsStringUnchecked(aiReviewInput);
 
     List<ChatCompletionsRequest.Message> messages = new ArrayList<>();
-    messages.add(systemMessageBuilder().content(AiReviewType.PROMPT_ALL).build());
+    messages.add(systemMessageBuilder().content(getPrompt(localeTag)).build());
     messages.add(userMessageBuilder().content(inputPayload).build());
     String integrityContextMessage = buildIntegrityContextMessage(request.tmTextUnitId(), target);
     if (hasText(integrityContextMessage)) {
@@ -212,6 +217,14 @@ public class AiReviewChatWS {
       return null;
     }
     return value.trim();
+  }
+
+  private String getPrompt(String localeTag) {
+    String promptSuffix =
+        aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix(localeTag, null);
+    return promptSuffix == null
+        ? AiReviewType.PROMPT_ALL
+        : "%s %s".formatted(AiReviewType.PROMPT_ALL, promptSuffix);
   }
 
   private String buildIntegrityContextMessage(Long tmTextUnitId, String target) {
