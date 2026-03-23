@@ -15,6 +15,7 @@ import {
   type RequestAttachmentUploadQueueItem,
 } from '../../components/review-request/RequestAttachmentsDropzone';
 import { RequestDescriptionEditor } from '../../components/review-request/RequestDescriptionEditor';
+import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSelect';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { localDateTimeInputToIso } from '../../utils/dateTime';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
@@ -34,7 +35,7 @@ export type ReviewProjectCreateFormValues = {
   localeTags: string[];
   notes: string | null;
   tmTextUnitIds?: number[] | null;
-  reviewFeatureId?: number | null;
+  reviewFeatureIds?: number[] | null;
   skipTextUnitsInOpenProjects: boolean;
   screenshotImageIds: string[];
   teamId: number | null;
@@ -54,8 +55,8 @@ type Props = {
   selectedCollectionId?: string | null;
   onChangeCollection?: (id: string | null) => void;
   reviewFeatureOptions?: ApiReviewFeatureOption[];
-  selectedReviewFeatureId?: number | null;
-  onChangeReviewFeature?: (id: number | null) => void;
+  selectedReviewFeatureIds?: number[];
+  onChangeReviewFeatures?: (ids: number[]) => void;
   teamOptions?: Array<{ id: number; name: string }>;
   selectedTeamId?: number | null;
   onChangeTeam?: (id: number | null) => void;
@@ -78,8 +79,8 @@ export function ReviewProjectCreateForm({
   selectedCollectionId,
   onChangeCollection,
   reviewFeatureOptions,
-  selectedReviewFeatureId = null,
-  onChangeReviewFeature,
+  selectedReviewFeatureIds = [],
+  onChangeReviewFeatures,
   teamOptions,
   selectedTeamId = null,
   onChangeTeam,
@@ -136,14 +137,16 @@ export function ReviewProjectCreateForm({
     () =>
       Boolean(name.trim()) &&
       Boolean(dueDate) &&
-      (sourceMode === 'TEXT_UNITS' ? tmTextUnitIds.length > 0 : selectedReviewFeatureId != null) &&
+      (sourceMode === 'TEXT_UNITS'
+        ? tmTextUnitIds.length > 0
+        : selectedReviewFeatureIds.length > 0) &&
       selectedLocaleTags.length > 0 &&
       uploadQueue.every((item) => item.status !== 'uploading'),
     [
       dueDate,
       name,
       selectedLocaleTags.length,
-      selectedReviewFeatureId,
+      selectedReviewFeatureIds.length,
       sourceMode,
       tmTextUnitIds.length,
       uploadQueue,
@@ -241,7 +244,7 @@ export function ReviewProjectCreateForm({
           >
             <button
               type="button"
-              className={`review-projects-page__summary-toggle${
+              className={`review-projects-page__mode-button${
                 sourceMode === 'TEXT_UNITS' ? ' is-active' : ''
               }`}
               onClick={() => onChangeSourceMode('TEXT_UNITS')}
@@ -251,7 +254,7 @@ export function ReviewProjectCreateForm({
             </button>
             <button
               type="button"
-              className={`review-projects-page__summary-toggle${
+              className={`review-projects-page__mode-button${
                 sourceMode === 'REVIEW_FEATURE' ? ' is-active' : ''
               }`}
               onClick={() => onChangeSourceMode('REVIEW_FEATURE')}
@@ -282,31 +285,27 @@ export function ReviewProjectCreateForm({
           </div>
         ) : null}
 
-        {sourceMode === 'REVIEW_FEATURE' && reviewFeatureOptions && onChangeReviewFeature ? (
-          <label className="review-create__field">
-            <span className="review-create__label">Review feature</span>
-            <SingleSelectDropdown
-              label="Review feature"
+        {sourceMode === 'REVIEW_FEATURE' && reviewFeatureOptions && onChangeReviewFeatures ? (
+          <div className="review-create__field">
+            <span className="review-create__label">Review features</span>
+            <ReviewFeatureMultiSelect
+              label="Review features"
               className="review-create__select-dropdown"
-              options={reviewFeatureOptions.map((feature) => ({
-                value: feature.id,
-                label: feature.name,
-              }))}
-              value={selectedReviewFeatureId}
-              onChange={onChangeReviewFeature}
-              noneLabel="Select review feature"
-              placeholder="Select review feature"
+              options={reviewFeatureOptions}
+              selectedIds={selectedReviewFeatureIds}
+              onChange={(next) => onChangeReviewFeatures([...next].sort((a, b) => a - b))}
               disabled={isSubmitting}
-              buttonAriaLabel="Select review feature"
+              buttonAriaLabel="Select review features"
+              enabledOnlyByDefault
             />
-          </label>
+          </div>
         ) : null}
 
         <div className="review-create__field">
           <span className="review-create__hint">
             {sourceMode === 'TEXT_UNITS'
               ? `${tmTextUnitIds.length} selected text unit${tmTextUnitIds.length === 1 ? '' : 's'}`
-              : 'Creates projects from review-needed strings in the selected feature.'}
+              : `Creates one request per selected feature from review-needed strings (${selectedReviewFeatureIds.length} selected).`}
           </span>
         </div>
 
@@ -447,7 +446,8 @@ export function ReviewProjectCreateForm({
               localeTags: selectedLocaleTags,
               notes: notes.trim().length > 0 ? notes : null,
               tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmTextUnitIds : null,
-              reviewFeatureId: sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureId : null,
+              reviewFeatureIds:
+                sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureIds : null,
               skipTextUnitsInOpenProjects,
               screenshotImageIds: screenshotKeys,
               teamId: selectedTeamId,

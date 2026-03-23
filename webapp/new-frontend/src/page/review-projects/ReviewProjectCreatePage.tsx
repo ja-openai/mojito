@@ -5,8 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import {
-  fetchReviewFeatureOptions,
   type ApiReviewFeatureOption,
+  fetchReviewFeatureOptions,
 } from '../../api/review-features';
 import { type ApiTeam, fetchTeams } from '../../api/teams';
 import type { CollectionOption } from '../../components/CollectionSelect';
@@ -65,6 +65,15 @@ function getCreateReviewProjectErrorMessage(error: unknown): string {
   return '';
 }
 
+function buildFeatureScopedRequestName(baseName: string, featureName: string) {
+  const trimmedBaseName = baseName.trim();
+  const trimmedFeatureName = featureName.trim();
+  if (!trimmedFeatureName) {
+    return trimmedBaseName;
+  }
+  return `${trimmedBaseName} · ${trimmedFeatureName}`;
+}
+
 export function ReviewProjectCreatePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -73,7 +82,7 @@ export function ReviewProjectCreatePage() {
   const [tmIds, setTmIds] = useState<number[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<ReviewProjectSourceMode>('TEXT_UNITS');
-  const [selectedReviewFeatureId, setSelectedReviewFeatureId] = useState<number | null>(null);
+  const [selectedReviewFeatureIds, setSelectedReviewFeatureIds] = useState<number[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [prefillName, setPrefillName] = useState('Review project');
   const [prefillDueDate, setPrefillDueDate] = useState<string | null>(null);
@@ -110,7 +119,14 @@ export function ReviewProjectCreatePage() {
         })),
     [collections],
   );
-  const reviewFeatureOptions = reviewFeatureOptionsQuery.data ?? [];
+  const reviewFeatureOptions = useMemo(
+    () => reviewFeatureOptionsQuery.data ?? [],
+    [reviewFeatureOptionsQuery.data],
+  );
+  const reviewFeaturesById = useMemo(
+    () => new Map(reviewFeatureOptions.map((feature) => [feature.id, feature])),
+    [reviewFeatureOptions],
+  );
   const hasCollections = collectionOptions.length > 0;
   const hasReviewFeatures = reviewFeatureOptions.length > 0;
   const showCreateForm = hasCollections || hasReviewFeatures;
@@ -187,38 +203,62 @@ export function ReviewProjectCreatePage() {
         setErrorMessage('Add at least one text unit id.');
         return;
       }
-      if (sourceMode === 'REVIEW_FEATURE' && values.reviewFeatureId == null) {
-        setErrorMessage('Select a review feature.');
+      if (sourceMode === 'REVIEW_FEATURE' && !values.reviewFeatureIds?.length) {
+        setErrorMessage('Select at least one review feature.');
         return;
       }
       setErrorMessage(null);
-      createReviewProject.mutate(
-        {
-          localeTags: values.localeTags,
-          notes: values.notes,
-          type: values.type,
-          dueDate: values.dueDate,
-          tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmIds : null,
-          reviewFeatureId: sourceMode === 'REVIEW_FEATURE' ? values.reviewFeatureId : null,
-          skipTextUnitsInOpenProjects: values.skipTextUnitsInOpenProjects,
-          screenshotImageIds: values.screenshotImageIds,
-          name: values.name,
-          teamId: values.teamId ?? null,
-        },
-        {
-          onSuccess: (response) => {
+      void (async () => {
+        try {
+          if (sourceMode === 'TEXT_UNITS') {
+            const response = await createReviewProject.mutateAsync({
+              localeTags: values.localeTags,
+              notes: values.notes,
+              type: values.type,
+              dueDate: values.dueDate,
+              tmTextUnitIds: tmIds,
+              reviewFeatureId: null,
+              skipTextUnitsInOpenProjects: values.skipTextUnitsInOpenProjects,
+              screenshotImageIds: values.screenshotImageIds,
+              name: values.name,
+              teamId: values.teamId ?? null,
+            });
             const requestId = response.requestId ?? null;
             void navigate('/review-projects', {
               state: { requestId },
             });
-          },
-          onError: (err: unknown) => {
-            setErrorMessage(getCreateReviewProjectErrorMessage(err) || 'Failed to create project');
-          },
-        },
-      );
+            return;
+          }
+
+          const createdRequestIds: number[] = [];
+          for (const reviewFeatureId of values.reviewFeatureIds ?? []) {
+            const feature = reviewFeaturesById.get(reviewFeatureId);
+            const response = await createReviewProject.mutateAsync({
+              localeTags: values.localeTags,
+              notes: values.notes,
+              type: values.type,
+              dueDate: values.dueDate,
+              tmTextUnitIds: null,
+              reviewFeatureId,
+              skipTextUnitsInOpenProjects: values.skipTextUnitsInOpenProjects,
+              screenshotImageIds: values.screenshotImageIds,
+              name: buildFeatureScopedRequestName(values.name, feature?.name ?? ''),
+              teamId: values.teamId ?? null,
+            });
+            if (response.requestId != null) {
+              createdRequestIds.push(response.requestId);
+            }
+          }
+          void navigate('/review-projects', {
+            state:
+              createdRequestIds.length === 1 ? { requestId: createdRequestIds[0] } : undefined,
+          });
+        } catch (err: unknown) {
+          setErrorMessage(getCreateReviewProjectErrorMessage(err) || 'Failed to create project');
+        }
+      })();
     },
-    [createReviewProject, navigate, sourceMode, tmIds],
+    [createReviewProject, navigate, reviewFeaturesById, sourceMode, tmIds],
   );
 
   return (
@@ -248,8 +288,8 @@ export function ReviewProjectCreatePage() {
               }
             }}
             reviewFeatureOptions={reviewFeatureOptions}
-            selectedReviewFeatureId={selectedReviewFeatureId}
-            onChangeReviewFeature={setSelectedReviewFeatureId}
+            selectedReviewFeatureIds={selectedReviewFeatureIds}
+            onChangeReviewFeatures={setSelectedReviewFeatureIds}
             teamOptions={teamsQuery.data ?? []}
             selectedTeamId={selectedTeamId}
             onChangeTeam={setSelectedTeamId}
