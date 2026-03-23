@@ -455,7 +455,10 @@ export function AdminReviewAutomationsPage() {
               />
             </div>
             <div className="settings-field">
-              <label className="settings-field__label" htmlFor="create-review-automation-due-offset">
+              <label
+                className="settings-field__label"
+                htmlFor="create-review-automation-due-offset"
+              >
                 Due date offset days
               </label>
               <input
@@ -505,6 +508,7 @@ export function AdminReviewAutomationsPage() {
               className="settings-repository-select"
               buttonAriaLabel="Select review features for new review automation"
               disabled={reviewFeaturesQuery.isLoading}
+              enabledOnlyByDefault
             />
             <p className="settings-hint">
               Features stay exclusive across enabled automations to avoid duplicate project

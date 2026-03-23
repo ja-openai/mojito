@@ -27,18 +27,6 @@ const parsePositiveIntegerDraft = (value: string) => {
   return { value: parsed, valid: true };
 };
 
-const parseNonNegativeIntegerDraft = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { value: null as number | null, valid: false };
-  }
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
-    return { value: null as number | null, valid: false };
-  }
-  return { value: parsed, valid: true };
-};
-
 export function AdminReviewAutomationDetailPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
@@ -408,6 +396,7 @@ export function AdminReviewAutomationDetailPage() {
                 className="settings-repository-select"
                 buttonAriaLabel="Select review features for review automation"
                 disabled={reviewFeaturesQuery.isLoading}
+                enabledOnlyByDefault
               />
               <p className="settings-hint">
                 Automations can span multiple repositories indirectly through review features.

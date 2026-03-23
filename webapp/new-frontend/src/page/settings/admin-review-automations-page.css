@@ -80,7 +80,7 @@
 .review-automation-admin-page__table-header,
 .review-automation-admin-page__row {
   display: grid;
-  grid-template-columns: 4.5rem 1.2fr 6rem 11rem 7rem 1.35fr 10rem 6rem;
+  grid-template-columns: 4.5rem 1.2fr 6rem 11rem 7rem 6rem 7rem 1.35fr 10rem 6rem;
   gap: var(--space-2);
   align-items: center;
 }

@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react';
+
 import type { MultiSelectOption } from './MultiSelectChip';
 import { MultiSelectChip } from './MultiSelectChip';
 
@@ -16,6 +18,7 @@ type Props = {
   disabled?: boolean;
   align?: 'left' | 'right';
   buttonAriaLabel?: string;
+  enabledOnlyByDefault?: boolean;
 };
 
 export function ReviewFeatureMultiSelect({
@@ -27,13 +30,41 @@ export function ReviewFeatureMultiSelect({
   disabled = false,
   align = 'left',
   buttonAriaLabel,
+  enabledOnlyByDefault = false,
 }: Props) {
-  const multiOptions: Array<MultiSelectOption<number>> = options.map((option) => ({
-    value: option.id,
-    label: option.enabled ? option.name : `${option.name} (disabled)`,
-  }));
+  const [showAllOptions, setShowAllOptions] = useState(!enabledOnlyByDefault);
+
+  const visibleOptions = useMemo(
+    () => (showAllOptions ? options : options.filter((option) => option.enabled)),
+    [options, showAllOptions],
+  );
+
+  const selectedOptionIds = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  const visibleOptionIds = useMemo(
+    () => new Set(visibleOptions.map((option) => option.id)),
+    [visibleOptions],
+  );
+
+  const hiddenSelectedOptions = useMemo(
+    () =>
+      options.filter(
+        (option) => selectedOptionIds.has(option.id) && !visibleOptionIds.has(option.id),
+      ),
+    [options, selectedOptionIds, visibleOptionIds],
+  );
+
+  const multiOptions: Array<MultiSelectOption<number>> = useMemo(
+    () =>
+      [...visibleOptions, ...hiddenSelectedOptions].map((option) => ({
+        value: option.id,
+        label: option.enabled ? option.name : `${option.name} (disabled)`,
+      })),
+    [hiddenSelectedOptions, visibleOptions],
+  );
 
   const resolvedLabel = label ?? 'Review features';
+  const hasDisabledOptions = options.some((option) => !option.enabled);
 
   return (
     <MultiSelectChip
@@ -47,6 +78,19 @@ export function ReviewFeatureMultiSelect({
       align={align}
       disabled={disabled}
       buttonAriaLabel={buttonAriaLabel ?? resolvedLabel}
+      customActions={
+        enabledOnlyByDefault && hasDisabledOptions
+          ? [
+              {
+                label: showAllOptions ? 'Enabled only' : 'Show all',
+                onClick: () => setShowAllOptions((current) => !current),
+                ariaLabel: showAllOptions
+                  ? 'Show enabled review features only'
+                  : 'Show all review features',
+              },
+            ]
+          : undefined
+      }
       summaryFormatter={({ options: opts, selectedValues }) => {
         if (!opts.length) {
           return resolvedLabel;
