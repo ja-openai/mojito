@@ -31,6 +31,10 @@ export type ApiUser = {
   userLocales?: ApiUserLocale[] | null;
   teamIds?: number[] | null;
   teamNames?: string[] | null;
+  pmTeamId?: number | null;
+  pmTeamName?: string | null;
+  translatorTeamId?: number | null;
+  translatorTeamName?: string | null;
 };
 
 export type UpdateUserPayload = {

@@ -84,7 +84,8 @@ public interface TeamUserRepository extends JpaRepository<TeamUser, Long> {
       select new com.box.l10n.mojito.service.team.UserTeamByUserProjection(
         vu.user.id,
         v.id,
-        v.name
+        v.name,
+        vu.role
       )
       from TeamUser vu
       join vu.team v

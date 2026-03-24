@@ -4,6 +4,7 @@ import static java.util.Locale.ROOT;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import com.box.l10n.mojito.entity.Locale;
+import com.box.l10n.mojito.entity.TeamUserRole;
 import com.box.l10n.mojito.entity.security.user.Authority;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.entity.security.user.UserLocale;
@@ -578,6 +579,8 @@ public class UserService {
     }
 
     Map<Long, LinkedHashMap<Long, String>> userTeamsByUserId = new HashMap<>();
+    Map<Long, UserTeamByUserProjection> pmTeamByUserId = new HashMap<>();
+    Map<Long, UserTeamByUserProjection> translatorTeamByUserId = new HashMap<>();
     for (UserTeamByUserProjection row : teamUserRepository.findUserTeamsByUserIds(userIds)) {
       if (row.userId() == null || row.teamId() == null) {
         continue;
@@ -585,6 +588,12 @@ public class UserService {
       userTeamsByUserId
           .computeIfAbsent(row.userId(), (key) -> new LinkedHashMap<>())
           .putIfAbsent(row.teamId(), row.teamName());
+      if (row.role() == TeamUserRole.PM) {
+        pmTeamByUserId.putIfAbsent(row.userId(), row);
+      }
+      if (row.role() == TeamUserRole.TRANSLATOR) {
+        translatorTeamByUserId.putIfAbsent(row.userId(), row);
+      }
     }
 
     return summaries.stream()
@@ -592,6 +601,8 @@ public class UserService {
             summary -> {
               LinkedHashMap<Long, String> teamMap =
                   userTeamsByUserId.getOrDefault(summary.id(), new LinkedHashMap<>());
+              UserTeamByUserProjection pmTeam = pmTeamByUserId.get(summary.id());
+              UserTeamByUserProjection translatorTeam = translatorTeamByUserId.get(summary.id());
               return new UserAdminSummary(
                   summary.id(),
                   summary.username(),
@@ -604,7 +615,11 @@ public class UserService {
                   authoritiesByUserId.getOrDefault(summary.id(), List.of()),
                   userLocalesByUserId.getOrDefault(summary.id(), List.of()),
                   new ArrayList<>(teamMap.keySet()),
-                  new ArrayList<>(teamMap.values()));
+                  new ArrayList<>(teamMap.values()),
+                  pmTeam != null ? pmTeam.teamId() : null,
+                  pmTeam != null ? pmTeam.teamName() : null,
+                  translatorTeam != null ? translatorTeam.teamId() : null,
+                  translatorTeam != null ? translatorTeam.teamName() : null);
             })
         .toList();
   }

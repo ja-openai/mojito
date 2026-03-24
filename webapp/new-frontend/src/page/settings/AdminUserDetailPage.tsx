@@ -76,7 +76,8 @@ export function AdminUserDetailPage() {
   const [commonNameDraft, setCommonNameDraft] = useState('');
   const [passwordDraft, setPasswordDraft] = useState('');
   const [enabledDraft, setEnabledDraft] = useState(true);
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [pmTeamIdDraft, setPmTeamIdDraft] = useState<number | null>(null);
+  const [translatorTeamIdDraft, setTranslatorTeamIdDraft] = useState<number | null>(null);
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams'],
     queryFn: fetchTeams,
@@ -96,9 +97,8 @@ export function AdminUserDetailPage() {
     setLocaleDraft(getLocaleTags(userRecord));
     setEnabledDraft(userRecord.enabled ?? true);
     setPasswordDraft('');
-    const initialTeamId =
-      (userRecord.teamIds ?? []).find((id): id is number => Number.isInteger(id) && id > 0) ?? null;
-    setSelectedTeamId(initialTeamId);
+    setPmTeamIdDraft(userRecord.pmTeamId ?? null);
+    setTranslatorTeamIdDraft(userRecord.translatorTeamId ?? null);
   }, [userRecord]);
 
   const localeOptions = useMemo(() => {
@@ -137,8 +137,8 @@ export function AdminUserDetailPage() {
         .map((team) => ({ value: team.id, label: `${team.name} (#${team.id})` })),
     [teamsQuery.data],
   );
-  const savedTeamId =
-    (userRecord?.teamIds ?? []).find((id): id is number => Number.isInteger(id) && id > 0) ?? null;
+  const savedPmTeamId = userRecord?.pmTeamId ?? null;
+  const savedTranslatorTeamId = userRecord?.translatorTeamId ?? null;
 
   const isLocaleDirty = useMemo(() => {
     if (normalizedDraftLocales.length !== normalizedSavedLocales.length) {
@@ -157,8 +157,8 @@ export function AdminUserDetailPage() {
   const normalizedPassword = passwordDraft;
   const usernameMissing = normalizedUsername.length === 0;
   const passwordDirty = normalizedPassword.length > 0;
-  const roleRequiresTeam = roleDraft === 'ROLE_PM' || roleDraft === 'ROLE_TRANSLATOR';
-  const isTeamDirty = roleRequiresTeam ? selectedTeamId !== savedTeamId : savedTeamId !== null;
+  const isTeamDirty =
+    pmTeamIdDraft !== savedPmTeamId || translatorTeamIdDraft !== savedTranslatorTeamId;
 
   const isDirty = Boolean(
     userRecord &&
@@ -204,9 +204,10 @@ export function AdminUserDetailPage() {
         ...(normalizedPassword ? { password: normalizedPassword } : {}),
       };
       return updateUser(userRecord.id, payload).then(async () => {
-        const pmTeamId = roleDraft === 'ROLE_PM' ? selectedTeamId : null;
-        const translatorTeamId = roleDraft === 'ROLE_TRANSLATOR' ? selectedTeamId : null;
-        await updateUserTeamAssignment(userRecord.id, { pmTeamId, translatorTeamId });
+        await updateUserTeamAssignment(userRecord.id, {
+          pmTeamId: pmTeamIdDraft,
+          translatorTeamId: translatorTeamIdDraft,
+        });
       });
     },
     onMutate: () => {
@@ -272,6 +273,8 @@ export function AdminUserDetailPage() {
     Boolean(name && name.trim()),
   );
   const teamSummary = teamNames.length > 0 ? teamNames.join(', ') : '—';
+  const pmTeamSummary = userRecord.pmTeamName?.trim() || '—';
+  const translatorTeamSummary = userRecord.translatorTeamName?.trim() || '—';
 
   const handleReset = () => {
     setUsernameDraft(userRecord.username ?? '');
@@ -283,7 +286,8 @@ export function AdminUserDetailPage() {
     setLocaleDraft(getLocaleTags(userRecord));
     setEnabledDraft(userRecord.enabled ?? true);
     setPasswordDraft('');
-    setSelectedTeamId(savedTeamId);
+    setPmTeamIdDraft(savedPmTeamId);
+    setTranslatorTeamIdDraft(savedTranslatorTeamId);
   };
 
   return (
@@ -383,21 +387,39 @@ export function AdminUserDetailPage() {
 
           <div className="user-detail-page__field">
             <div className="user-detail-page__label">Teams</div>
-            <SingleSelectDropdown
-              label="Team"
-              options={teamOptions}
-              value={selectedTeamId}
-              onChange={(next) => setSelectedTeamId(next)}
-              className="user-detail-page__select"
-              noneLabel="No team assignment"
-              placeholder="No team assignment"
-              noResultsLabel={teamsQuery.isLoading ? 'Loading teams…' : 'No teams found'}
-            />
-            <div className="user-detail-page__hint">
-              {roleRequiresTeam
-                ? `Current saved value: ${teamSummary}.`
-                : 'Only PM and Translator roles use team assignment. Saving another role clears assignment.'}
+            <div className="settings-grid settings-grid--two-column">
+              <div className="user-detail-page__field">
+                <div className="user-detail-page__label">PM team</div>
+                <SingleSelectDropdown
+                  label="PM team"
+                  options={teamOptions}
+                  value={pmTeamIdDraft}
+                  onChange={(next) => setPmTeamIdDraft(next)}
+                  className="user-detail-page__select"
+                  noneLabel="No PM team"
+                  placeholder="No PM team"
+                  noResultsLabel={teamsQuery.isLoading ? 'Loading teams…' : 'No teams found'}
+                />
+                <div className="user-detail-page__hint">Current saved value: {pmTeamSummary}.</div>
+              </div>
+              <div className="user-detail-page__field">
+                <div className="user-detail-page__label">Translator team</div>
+                <SingleSelectDropdown
+                  label="Translator team"
+                  options={teamOptions}
+                  value={translatorTeamIdDraft}
+                  onChange={(next) => setTranslatorTeamIdDraft(next)}
+                  className="user-detail-page__select"
+                  noneLabel="No translator team"
+                  placeholder="No translator team"
+                  noResultsLabel={teamsQuery.isLoading ? 'Loading teams…' : 'No teams found'}
+                />
+                <div className="user-detail-page__hint">
+                  Current saved value: {translatorTeamSummary}.
+                </div>
+              </div>
             </div>
+            <div className="user-detail-page__hint">Combined team memberships: {teamSummary}.</div>
           </div>
 
           <div className="user-detail-page__field">

@@ -17,6 +17,10 @@ public class UserAdminSummary {
   List<UserAdminLocale> userLocales;
   List<Long> teamIds;
   List<String> teamNames;
+  Long pmTeamId;
+  String pmTeamName;
+  Long translatorTeamId;
+  String translatorTeamName;
 
   public UserAdminSummary(
       Long id,
@@ -30,7 +34,11 @@ public class UserAdminSummary {
       List<UserAdminAuthority> authorities,
       List<UserAdminLocale> userLocales,
       List<Long> teamIds,
-      List<String> teamNames) {
+      List<String> teamNames,
+      Long pmTeamId,
+      String pmTeamName,
+      Long translatorTeamId,
+      String translatorTeamName) {
     this.id = id;
     this.username = username;
     this.givenName = givenName;
@@ -43,6 +51,10 @@ public class UserAdminSummary {
     this.userLocales = userLocales;
     this.teamIds = teamIds;
     this.teamNames = teamNames;
+    this.pmTeamId = pmTeamId;
+    this.pmTeamName = pmTeamName;
+    this.translatorTeamId = translatorTeamId;
+    this.translatorTeamName = translatorTeamName;
   }
 
   public Long getId() {
@@ -91,6 +103,22 @@ public class UserAdminSummary {
 
   public List<String> getTeamNames() {
     return teamNames;
+  }
+
+  public Long getPmTeamId() {
+    return pmTeamId;
+  }
+
+  public String getPmTeamName() {
+    return pmTeamName;
+  }
+
+  public Long getTranslatorTeamId() {
+    return translatorTeamId;
+  }
+
+  public String getTranslatorTeamName() {
+    return translatorTeamName;
   }
 
   public static UserAdminAuthority authority(String authority) {
