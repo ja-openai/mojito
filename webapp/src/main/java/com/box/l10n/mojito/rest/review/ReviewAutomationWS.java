@@ -141,6 +141,8 @@ public class ReviewAutomationWS {
       int erroredLocaleCount,
       String errorMessage) {}
 
+  public record ReviewAutomationSchedulePreviewResponse(String timeZone, List<String> nextRuns) {}
+
   public record BatchUpsertReviewAutomationsResponse(int createdCount, int updatedCount) {}
 
   @GetMapping
@@ -253,6 +255,27 @@ public class ReviewAutomationWS {
                     run.erroredLocaleCount(),
                     run.errorMessage()))
         .toList();
+  }
+
+  @GetMapping("/schedule-preview")
+  public ReviewAutomationSchedulePreviewResponse getSchedulePreview(
+      @RequestParam(name = "cronExpression") String cronExpression,
+      @RequestParam(name = "timeZone", required = false) String timeZone,
+      @RequestParam(name = "count", required = false) Integer count) {
+    requireAdmin();
+    try {
+      String resolvedTimeZone =
+          timeZone == null || timeZone.trim().isEmpty()
+              ? ReviewAutomationService.DEFAULT_TIME_ZONE
+              : timeZone.trim();
+      return new ReviewAutomationSchedulePreviewResponse(
+          resolvedTimeZone,
+          reviewAutomationService.previewSchedule(cronExpression, resolvedTimeZone, count).stream()
+              .map(nextRun -> nextRun.toOffsetDateTime().toString())
+              .toList());
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
   }
 
   @PostMapping

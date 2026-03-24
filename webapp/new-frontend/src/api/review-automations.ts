@@ -76,6 +76,11 @@ export type ApiReviewAutomationRun = {
   errorMessage: string | null;
 };
 
+export type ApiReviewAutomationSchedulePreview = {
+  timeZone: string;
+  nextRuns: string[];
+};
+
 export type ApiReviewAutomationsResponse = {
   reviewAutomations: ApiReviewAutomationSummary[];
   totalCount: number;
@@ -303,4 +308,31 @@ export async function fetchReviewAutomationRuns(options?: {
   }
 
   return (await response.json()) as ApiReviewAutomationRun[];
+}
+
+export async function fetchReviewAutomationSchedulePreview(options: {
+  cronExpression: string;
+  timeZone?: string | null;
+  count?: number;
+}): Promise<ApiReviewAutomationSchedulePreview> {
+  const params = new URLSearchParams();
+  params.set('cronExpression', options.cronExpression);
+  if (options.timeZone?.trim()) {
+    params.set('timeZone', options.timeZone.trim());
+  }
+  if (typeof options.count === 'number' && Number.isFinite(options.count)) {
+    params.set('count', String(options.count));
+  }
+
+  const response = await fetch(`/api/review-automations/schedule-preview?${params.toString()}`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to preview review automation schedule');
+  }
+
+  return (await response.json()) as ApiReviewAutomationSchedulePreview;
 }

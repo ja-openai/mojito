@@ -1,10 +1,14 @@
 import './review-automation-schedule-builder.css';
 
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
+import { fetchReviewAutomationSchedulePreview } from '../api/review-automations';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import {
   buildReviewAutomationCronExpression,
   DEFAULT_REVIEW_AUTOMATION_TIME_OF_DAY,
+  DEFAULT_REVIEW_AUTOMATION_TIME_ZONE,
   deriveReviewAutomationScheduleHelper,
   formatReviewAutomationSchedule,
   getReviewAutomationTimeZoneOptions,
@@ -34,7 +38,7 @@ export function ReviewAutomationScheduleBuilderModal({
 }: Props) {
   const [scheduleModeDraft, setScheduleModeDraft] = useState<ReviewAutomationScheduleMode>('daily');
   const [timeOfDayDraft, setTimeOfDayDraft] = useState(DEFAULT_REVIEW_AUTOMATION_TIME_OF_DAY);
-  const [timeZoneDraft, setTimeZoneDraft] = useState('UTC');
+  const [timeZoneDraft, setTimeZoneDraft] = useState(DEFAULT_REVIEW_AUTOMATION_TIME_ZONE);
   const [cronExpressionDraft, setCronExpressionDraft] = useState('');
 
   useEffect(() => {
@@ -52,12 +56,40 @@ export function ReviewAutomationScheduleBuilderModal({
     () => getReviewAutomationTimeZoneOptions(timeZoneDraft),
     [timeZoneDraft],
   );
+  const debouncedCronExpression = useDebouncedValue(cronExpressionDraft.trim(), 250);
+  const debouncedTimeZone = useDebouncedValue(timeZoneDraft.trim(), 250);
+
+  const previewQuery = useQuery({
+    queryKey: ['review-automation-schedule-preview', debouncedCronExpression, debouncedTimeZone],
+    queryFn: () =>
+      fetchReviewAutomationSchedulePreview({
+        cronExpression: debouncedCronExpression,
+        timeZone: debouncedTimeZone,
+        count: 5,
+      }),
+    enabled: open && Boolean(debouncedCronExpression),
+    staleTime: 15_000,
+    retry: false,
+  });
+
+  const formattedPreviewRuns = useMemo(() => {
+    const timeZone = previewQuery.data?.timeZone?.trim() || timeZoneDraft.trim();
+    return (previewQuery.data?.nextRuns ?? []).map((nextRun) => ({
+      raw: nextRun,
+      label: new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'medium',
+        timeZone: timeZone || DEFAULT_REVIEW_AUTOMATION_TIME_ZONE,
+      }).format(new Date(nextRun)),
+    }));
+  }, [previewQuery.data?.nextRuns, previewQuery.data?.timeZone, timeZoneDraft]);
 
   const applyPreset = (preset: (typeof REVIEW_AUTOMATION_SCHEDULE_PRESETS)[number]) => {
     setScheduleModeDraft(preset.mode);
     setTimeOfDayDraft(preset.timeOfDay);
     setTimeZoneDraft(preset.timeZone);
-    const nextCron = buildReviewAutomationCronExpression(preset.mode, preset.timeOfDay);
+    const nextCron =
+      preset.cronExpression ?? buildReviewAutomationCronExpression(preset.mode, preset.timeOfDay);
     if (nextCron) {
       setCronExpressionDraft(nextCron);
     }
@@ -164,6 +196,26 @@ export function ReviewAutomationScheduleBuilderModal({
           Quartz timezone is stored next to the cron expression and applied when the trigger is
           built.
         </p>
+        <div className="review-automation-schedule__preview">
+          <div className="review-automation-schedule__preview-title">Next runs</div>
+          {previewQuery.isFetching ? (
+            <div className="settings-hint">Loading preview…</div>
+          ) : previewQuery.isError ? (
+            <div className="settings-hint is-error">
+              {previewQuery.error instanceof Error
+                ? previewQuery.error.message
+                : 'Unable to preview next runs.'}
+            </div>
+          ) : formattedPreviewRuns.length > 0 ? (
+            <ol className="review-automation-schedule__preview-list">
+              {formattedPreviewRuns.map((nextRun) => (
+                <li key={nextRun.raw}>{nextRun.label}</li>
+              ))}
+            </ol>
+          ) : (
+            <div className="settings-hint">No upcoming runs found for this schedule.</div>
+          )}
+        </div>
         <div className="review-automation-schedule__docs">
           <div className="review-automation-schedule__docs-title">Quartz cron reference</div>
           <ul className="review-automation-schedule__docs-list">
@@ -181,6 +233,12 @@ export function ReviewAutomationScheduleBuilderModal({
             </li>
             <li>
               First day of month at 6:30am: <code>0 30 6 1 * ?</code>
+            </li>
+            <li>
+              Every minute: <code>0 * * * * ?</code>
+            </li>
+            <li>
+              Every 30 seconds: <code>0/30 * * * * ?</code>
             </li>
           </ul>
         </div>

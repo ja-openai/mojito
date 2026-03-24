@@ -5,9 +5,11 @@ import com.box.l10n.mojito.entity.review.ReviewAutomation;
 import com.box.l10n.mojito.entity.review.ReviewFeature;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.team.TeamRepository;
+import java.text.ParseException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,6 +31,8 @@ public class ReviewAutomationService {
 
   public static final int DEFAULT_LIMIT = 50;
   public static final int MAX_LIMIT = 200;
+  public static final int DEFAULT_SCHEDULE_PREVIEW_COUNT = 5;
+  public static final int MAX_SCHEDULE_PREVIEW_COUNT = 10;
   public static final int DEFAULT_MAX_WORD_COUNT_PER_PROJECT = 2000;
   public static final String DEFAULT_TIME_ZONE = "UTC";
   public static final int DEFAULT_DUE_DATE_OFFSET_DAYS = 1;
@@ -308,6 +312,37 @@ public class ReviewAutomationService {
     return new BatchUpsertResult(createdCount, updatedCount);
   }
 
+  @Transactional(readOnly = true)
+  public List<ZonedDateTime> previewSchedule(
+      String cronExpression, String timeZone, Integer previewCount) {
+    requireAdmin();
+    String normalizedCronExpression = normalizeCronExpression(cronExpression);
+    String normalizedTimeZone = normalizeTimeZone(timeZone);
+    int resolvedPreviewCount = normalizeSchedulePreviewCount(previewCount);
+    ZoneId zoneId = ZoneId.of(normalizedTimeZone);
+
+    CronExpression quartzCronExpression;
+    try {
+      quartzCronExpression = new CronExpression(normalizedCronExpression);
+    } catch (ParseException ex) {
+      throw new IllegalArgumentException("Invalid cron expression", ex);
+    }
+    quartzCronExpression.setTimeZone(java.util.TimeZone.getTimeZone(zoneId));
+
+    List<ZonedDateTime> nextRuns = new ArrayList<>();
+    Date cursor = Date.from(ZonedDateTime.now(zoneId).toInstant());
+    for (int index = 0; index < resolvedPreviewCount; index++) {
+      Date nextValidTime = quartzCronExpression.getNextValidTimeAfter(cursor);
+      if (nextValidTime == null) {
+        break;
+      }
+      nextRuns.add(ZonedDateTime.ofInstant(nextValidTime.toInstant(), zoneId));
+      cursor = nextValidTime;
+    }
+
+    return nextRuns;
+  }
+
   private void syncSchedulerAfterCommit() {
     if (reviewAutomationCronSchedulerServiceProvider.getIfAvailable() == null) {
       return;
@@ -440,6 +475,13 @@ public class ReviewAutomationService {
       return DEFAULT_LIMIT;
     }
     return Math.max(1, Math.min(MAX_LIMIT, limit));
+  }
+
+  private int normalizeSchedulePreviewCount(Integer previewCount) {
+    if (previewCount == null) {
+      return DEFAULT_SCHEDULE_PREVIEW_COUNT;
+    }
+    return Math.max(1, Math.min(MAX_SCHEDULE_PREVIEW_COUNT, previewCount));
   }
 
   private String normalizeSearchQuery(String searchQuery) {

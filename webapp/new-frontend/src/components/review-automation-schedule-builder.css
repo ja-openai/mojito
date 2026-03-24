@@ -44,6 +44,30 @@
   background: color-mix(in srgb, var(--color-surface-muted) 38%, transparent);
 }
 
+.review-automation-schedule__preview {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface-muted) 24%, transparent);
+}
+
+.review-automation-schedule__preview-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.review-automation-schedule__preview-list {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .review-automation-schedule__docs-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
