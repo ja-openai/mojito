@@ -5,64 +5,9 @@
   background: var(--color-surface);
 }
 
-.team-pools-page__topbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  height: var(--app-shell-header-height);
-  min-height: var(--app-shell-header-height);
-  padding: 0 var(--space-6);
-  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
-  background: var(--color-surface);
-}
-
-.team-pools-page__topbar-back {
-  width: var(--app-shell-header-height);
-  height: var(--app-shell-header-height);
-  border: none;
-  background: transparent;
-  color: var(--color-text);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  line-height: 1;
-  flex-shrink: 0;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
-}
-
-.team-pools-page__topbar-back:hover {
-  color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-}
-
-.team-pools-page__topbar-back:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
-  outline-offset: 2px;
-}
-
-.team-pools-page__topbar-back-icon {
-  width: 1.2rem;
-  height: 1.2rem;
-  display: block;
-}
-
-.team-pools-page__topbar-title {
-  display: inline-flex;
-  align-items: center;
-  height: var(--app-shell-header-height);
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
-  box-shadow: inset 0 -0.125rem color-mix(in srgb, var(--color-accent) 40%, transparent);
-}
-
 .team-pools-page__content {
   width: 100%;
-  max-width: 76rem;
+  max-width: 96rem;
   margin: 0 auto;
   padding: var(--space-6) var(--space-7);
   display: flex;

@@ -12,7 +12,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 
-import { RequireUser, useUser } from './components/RequireUser';
+import { RequireUser } from './components/RequireUser';
 import { UserMenu } from './components/UserMenu';
 import { AiTranslatePage } from './page/ai-translate/AiTranslatePage';
 import { MonitoringPage } from './page/monitoring/MonitoringPage';
@@ -35,6 +35,7 @@ import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
 import { AdminUserBatchPage } from './page/settings/AdminUserBatchPage';
 import { AdminUserDetailPage } from './page/settings/AdminUserDetailPage';
 import { AdminUserSettingsPage } from './page/settings/AdminUserSettingsPage';
+import { SettingsPage } from './page/settings/SettingsPage';
 import { TeamDetailPage } from './page/settings/TeamDetailPage';
 import { StatisticsPage } from './page/statistics/StatisticsPage';
 import { TextUnitDetailPage } from './page/text-unit-detail/TextUnitDetailPage';
@@ -52,26 +53,15 @@ const navItems: NavItem[] = [
   { to: '/repositories', label: 'Repositories', element: <RepositoriesPage /> },
   { to: '/workbench', label: 'Workbench', element: <WorkbenchPage /> },
   { to: '/review-projects', label: 'Review Projects', element: <ReviewProjectsPage /> },
-  { to: '/screenshots', label: 'Screenshots', element: <ScreenshotsDropzonePage /> },
 ];
 
 const queryClient = new QueryClient();
 
 function AppLayout({ showHeader }: { showHeader: boolean }) {
-  const user = useUser();
   const location = useLocation();
   const headerNavItems = [
     ...navItems.map(({ to, label }) => ({ to, label })),
-    ...(user.role === 'ROLE_ADMIN'
-      ? [
-          { to: '/settings/admin/users', label: 'Users' },
-          { to: '/settings/admin/teams', label: 'Teams' },
-          { to: '/settings/admin/review-features', label: 'Review Features' },
-          { to: '/settings/admin/review-automations', label: 'Review Automations' },
-        ]
-      : user.role === 'ROLE_PM'
-        ? [{ to: '/settings/teams', label: 'Teams' }]
-        : []),
+    { to: '/settings/system', label: 'Settings' },
   ];
 
   return (
@@ -85,17 +75,9 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
                   key={to}
                   to={to}
                   className={({ isActive }) => {
-                    const isTeamsSection =
-                      (to === '/settings/admin/teams' &&
-                        location.pathname.startsWith('/settings/admin/team-pools')) ||
-                      (to === '/settings/admin/review-features' &&
-                        location.pathname.startsWith('/settings/admin/review-features')) ||
-                      (to === '/settings/admin/review-automations' &&
-                        location.pathname.startsWith('/settings/admin/review-automations')) ||
-                      (to === '/settings/teams' &&
-                        (location.pathname.startsWith('/settings/team') ||
-                          location.pathname.startsWith('/settings/teams')));
-                    return `app-shell__nav-link${isActive || isTeamsSection ? ' is-active' : ''}`;
+                    const isSettingsSection =
+                      to === '/settings/system' && location.pathname.startsWith('/settings/');
+                    return `app-shell__nav-link${isActive || isSettingsSection ? ' is-active' : ''}`;
                   }}
                 >
                   {label}
@@ -134,24 +116,15 @@ export function App() {
             <Route path="/statistics" element={<StatisticsPage />} />
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
             <Route path="/screenshots" element={<ScreenshotsDropzonePage />} />
-            <Route path="/settings/admin" element={<AdminSettingsPage />} />
-            <Route
-              path="/settings/admin/ai-translate"
-              element={<AdminAiTranslateAutomationPage />}
-            />
-            <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
-            <Route
-              path="/settings/admin/review-automations"
-              element={<AdminReviewAutomationsPage />}
-            />
-            <Route
-              path="/settings/admin/ai-translate/prompt-suffixes"
-              element={<AdminAiLocalePromptSuffixPage />}
-            />
-            <Route path="/settings/admin/teams" element={<AdminTeamsPage />} />
-            <Route path="/settings/admin/users" element={<AdminUserSettingsPage />} />
+            <Route path="/settings" element={<Navigate to="/settings/me" replace />} />
+            <Route path="/settings/me" element={<SettingsPage />} />
+            <Route path="/settings/admin" element={<Navigate to="/settings/system" replace />} />
+            <Route path="/settings/system" element={<AdminSettingsPage />} />
             <Route path="/settings/teams" element={<AdminTeamsPage />} />
-            <Route path="/settings/team" element={<AdminTeamPoolsPage />} />
+            <Route
+              path="/settings/team"
+              element={<Navigate to="/settings/system/team-pools" replace />}
+            />
             <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
             <Route path="/tools/icu-preview" element={<IcuMessagePreviewPage />} />
             <Route path="*" element={<Navigate to="/repositories" replace />} />
@@ -165,12 +138,50 @@ export function App() {
           >
             <Route path="/review-projects/:projectId" element={<ReviewProjectPage />} />
             <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
+            <Route
+              path="/settings/admin/ai-translate"
+              element={<AdminAiTranslateAutomationPage />}
+            />
+            <Route
+              path="/settings/system/ai-translate"
+              element={<AdminAiTranslateAutomationPage />}
+            />
+            <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
+            <Route path="/settings/system/review-features" element={<AdminReviewFeaturesPage />} />
+            <Route
+              path="/settings/admin/review-automations"
+              element={<AdminReviewAutomationsPage />}
+            />
+            <Route
+              path="/settings/system/review-automations"
+              element={<AdminReviewAutomationsPage />}
+            />
+            <Route
+              path="/settings/admin/ai-translate/prompt-suffixes"
+              element={<AdminAiLocalePromptSuffixPage />}
+            />
+            <Route
+              path="/settings/system/ai-translate/prompt-suffixes"
+              element={<AdminAiLocalePromptSuffixPage />}
+            />
+            <Route path="/settings/admin/teams" element={<AdminTeamsPage />} />
+            <Route path="/settings/admin/users" element={<AdminUserSettingsPage />} />
+            <Route path="/settings/system/teams" element={<AdminTeamsPage />} />
+            <Route path="/settings/system/users" element={<AdminUserSettingsPage />} />
             <Route path="/settings/admin/users/:userId" element={<AdminUserDetailPage />} />
             <Route path="/settings/admin/users/batch" element={<AdminUserBatchPage />} />
             <Route path="/settings/admin/teams/:teamId" element={<TeamDetailPage />} />
             <Route path="/settings/admin/team-pools" element={<AdminTeamPoolsPage />} />
+            <Route path="/settings/system/users/:userId" element={<AdminUserDetailPage />} />
+            <Route path="/settings/system/users/batch" element={<AdminUserBatchPage />} />
+            <Route path="/settings/system/teams/:teamId" element={<TeamDetailPage />} />
+            <Route path="/settings/system/team-pools" element={<AdminTeamPoolsPage />} />
             <Route
               path="/settings/admin/review-features/batch"
+              element={<AdminReviewFeatureBatchPage />}
+            />
+            <Route
+              path="/settings/system/review-features/batch"
               element={<AdminReviewFeatureBatchPage />}
             />
             <Route
@@ -178,11 +189,23 @@ export function App() {
               element={<AdminReviewFeatureDetailPage />}
             />
             <Route
+              path="/settings/system/review-features/:featureId"
+              element={<AdminReviewFeatureDetailPage />}
+            />
+            <Route
               path="/settings/admin/review-automations/batch"
               element={<AdminReviewAutomationBatchPage />}
             />
             <Route
+              path="/settings/system/review-automations/batch"
+              element={<AdminReviewAutomationBatchPage />}
+            />
+            <Route
               path="/settings/admin/review-automations/:automationId"
+              element={<AdminReviewAutomationDetailPage />}
+            />
+            <Route
+              path="/settings/system/review-automations/:automationId"
               element={<AdminReviewAutomationDetailPage />}
             />
           </Route>

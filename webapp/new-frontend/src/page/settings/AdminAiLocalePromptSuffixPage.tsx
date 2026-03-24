@@ -20,6 +20,7 @@ import { useLocales } from '../../hooks/useLocales';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {
   kind: 'success' | 'error';
@@ -259,8 +260,7 @@ export function AdminAiLocalePromptSuffixPage() {
     editorMode === 'edit'
       ? (() => {
           const matchingOptions = localeOptions.filter(
-            (option) =>
-              option.tag.toLowerCase() === (editorOriginalLocaleTag ?? '').toLowerCase(),
+            (option) => option.tag.toLowerCase() === (editorOriginalLocaleTag ?? '').toLowerCase(),
           );
           if (matchingOptions.length > 0 || !editorOriginalLocaleTag) {
             return matchingOptions;
@@ -285,189 +285,199 @@ export function AdminAiLocalePromptSuffixPage() {
     : undefined;
 
   return (
-    <div className="ai-locale-prompt-page">
-      <section className="settings-card">
-        <div className="settings-card__content">
-          <div className="ai-locale-prompt-page__toolbar">
-            <SearchControl
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search suffixes"
-              className="ai-locale-prompt-page__search"
-            />
-            <LocaleMultiSelect
-              label="Locales"
-              options={localeOptions}
-              selectedTags={selectedFilterTags}
-              onChange={setSelectedFilterTags}
-              className="ai-locale-prompt-page__filter"
-              buttonAriaLabel="Filter suffixes by locale"
-              customActions={localeSelectorActions}
-            />
-            <button
-              type="button"
-              className="settings-button settings-button--primary ai-locale-prompt-page__create"
-              onClick={openCreateEditor}
-              disabled={localeOptions.length === 0}
-            >
-              Add suffix
-            </button>
-          </div>
-
-          <div className="ai-locale-prompt-page__count">
-            <span className="ai-locale-prompt-page__count-text">
-              {filteredRows.length} {filteredRows.length === 1 ? 'suffix' : 'suffixes'}
-            </span>
-            {statusNotice ? (
-              <span
-                className={`settings-hint ai-locale-prompt-page__status${
-                  statusNotice.kind === 'error' ? ' is-error' : ''
-                }`}
+    <div className="settings-subpage">
+      <SettingsSubpageHeader
+        backTo="/settings/system"
+        backLabel="Back to settings"
+        context="Settings"
+        title="AI prompt suffixes"
+      />
+      <div className="settings-page settings-page--wide ai-locale-prompt-page">
+        <section className="settings-card">
+          <div className="settings-card__content">
+            <div className="ai-locale-prompt-page__toolbar">
+              <SearchControl
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search suffixes"
+                className="ai-locale-prompt-page__search"
+              />
+              <LocaleMultiSelect
+                label="Locales"
+                options={localeOptions}
+                selectedTags={selectedFilterTags}
+                onChange={setSelectedFilterTags}
+                className="ai-locale-prompt-page__filter"
+                buttonAriaLabel="Filter suffixes by locale"
+                customActions={localeSelectorActions}
+              />
+              <button
+                type="button"
+                className="settings-button settings-button--primary ai-locale-prompt-page__create"
+                onClick={openCreateEditor}
+                disabled={localeOptions.length === 0}
               >
-                {statusNotice.message}
-              </span>
-            ) : null}
-          </div>
+                Add suffix
+              </button>
+            </div>
 
-          {localePromptSuffixesQuery.isError ? (
-            <p className="ai-locale-prompt-page__empty">Could not load suffixes.</p>
-          ) : localePromptSuffixesQuery.isLoading ? (
-            <p className="ai-locale-prompt-page__empty">Loading suffixes…</p>
-          ) : rows.length === 0 ? (
-            <p className="ai-locale-prompt-page__empty">No suffixes yet.</p>
-          ) : filteredRows.length === 0 ? (
-            <p className="ai-locale-prompt-page__empty">No suffixes match the current filters.</p>
-          ) : (
-            <div className="ai-locale-prompt-page__table">
-              <div className="ai-locale-prompt-page__table-header">
-                <div className="ai-locale-prompt-page__cell">Locale</div>
-                <div className="ai-locale-prompt-page__cell">Suffix</div>
-                <div className="ai-locale-prompt-page__cell">Updated</div>
-                <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--actions">
-                  Actions
-                </div>
-              </div>
-              {filteredRows.map((row) => (
-                <div
-                  key={row.localeTag}
-                  className="ai-locale-prompt-page__row"
-                  onClick={() => openEditEditor(row)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      openEditEditor(row);
-                    }
-                  }}
+            <div className="ai-locale-prompt-page__count">
+              <span className="ai-locale-prompt-page__count-text">
+                {filteredRows.length} {filteredRows.length === 1 ? 'suffix' : 'suffixes'}
+              </span>
+              {statusNotice ? (
+                <span
+                  className={`settings-hint ai-locale-prompt-page__status${
+                    statusNotice.kind === 'error' ? ' is-error' : ''
+                  }`}
                 >
-                  <div className="ai-locale-prompt-page__cell">
-                    <div className="ai-locale-prompt-page__locale-cell">
-                      <span className="ai-locale-prompt-page__locale-name">{row.localeLabel}</span>
-                      <span className="ai-locale-prompt-page__locale-tag">{row.localeTag}</span>
+                  {statusNotice.message}
+                </span>
+              ) : null}
+            </div>
+
+            {localePromptSuffixesQuery.isError ? (
+              <p className="ai-locale-prompt-page__empty">Could not load suffixes.</p>
+            ) : localePromptSuffixesQuery.isLoading ? (
+              <p className="ai-locale-prompt-page__empty">Loading suffixes…</p>
+            ) : rows.length === 0 ? (
+              <p className="ai-locale-prompt-page__empty">No suffixes yet.</p>
+            ) : filteredRows.length === 0 ? (
+              <p className="ai-locale-prompt-page__empty">No suffixes match the current filters.</p>
+            ) : (
+              <div className="ai-locale-prompt-page__table">
+                <div className="ai-locale-prompt-page__table-header">
+                  <div className="ai-locale-prompt-page__cell">Locale</div>
+                  <div className="ai-locale-prompt-page__cell">Suffix</div>
+                  <div className="ai-locale-prompt-page__cell">Updated</div>
+                  <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--actions">
+                    Actions
+                  </div>
+                </div>
+                {filteredRows.map((row) => (
+                  <div
+                    key={row.localeTag}
+                    className="ai-locale-prompt-page__row"
+                    onClick={() => openEditEditor(row)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openEditEditor(row);
+                      }
+                    }}
+                  >
+                    <div className="ai-locale-prompt-page__cell">
+                      <div className="ai-locale-prompt-page__locale-cell">
+                        <span className="ai-locale-prompt-page__locale-name">
+                          {row.localeLabel}
+                        </span>
+                        <span className="ai-locale-prompt-page__locale-tag">{row.localeTag}</span>
+                      </div>
+                    </div>
+                    <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--suffix">
+                      {row.promptSuffix}
+                    </div>
+                    <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--muted">
+                      {formatDateTime(row.updatedAt)}
+                    </div>
+                    <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--actions">
+                      <button
+                        type="button"
+                        className="ai-locale-prompt-page__row-action"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openEditEditor(row);
+                        }}
+                      >
+                        Edit
+                      </button>
                     </div>
                   </div>
-                  <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--suffix">
-                    {row.promptSuffix}
-                  </div>
-                  <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--muted">
-                    {formatDateTime(row.updatedAt)}
-                  </div>
-                  <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--actions">
-                    <button
-                      type="button"
-                      className="ai-locale-prompt-page__row-action"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openEditEditor(row);
-                      }}
-                    >
-                      Edit
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
-      <Modal
-        open={isEditorOpen}
-        size="md"
-        ariaLabel={editorMode === 'create' ? 'Add locale suffix' : 'Edit locale suffix'}
-        onClose={handleCloseEditor}
-        closeOnBackdrop
-      >
-        <div className="modal__title">
-          {editorMode === 'create' ? 'Add suffix' : editorOriginalLocaleTag}
-        </div>
-        <div className="ai-locale-prompt-page__modal-fields">
-          <div className="settings-field">
-            <div className="settings-field__label">Locale</div>
-            <LocaleMultiSelect
-              label="Locale"
-              options={editorLocaleOptions}
-              selectedTags={editorLocaleTags}
-              onChange={handleEditorLocaleChange}
-              className="ai-locale-prompt-page__modal-locale"
-              buttonAriaLabel="Select locale"
-              disabled={editorMode === 'edit'}
-              customActions={editorMode === 'create' ? localeSelectorActions : undefined}
-            />
+        <Modal
+          open={isEditorOpen}
+          size="md"
+          ariaLabel={editorMode === 'create' ? 'Add locale suffix' : 'Edit locale suffix'}
+          onClose={handleCloseEditor}
+          closeOnBackdrop
+        >
+          <div className="modal__title">
+            {editorMode === 'create' ? 'Add suffix' : editorOriginalLocaleTag}
           </div>
-          <div className="settings-field">
-            <label className="settings-field__label" htmlFor="ai-locale-prompt-suffix-editor">
-              Suffix
-            </label>
-            <AutoTextarea
-              id="ai-locale-prompt-suffix-editor"
-              className="settings-input ai-locale-prompt-page__textarea"
-              value={editorPromptSuffix}
-              onChange={(event) => handleEditorPromptSuffixChange(event.target.value)}
-              minRows={5}
-              maxRows={12}
-            />
+          <div className="ai-locale-prompt-page__modal-fields">
+            <div className="settings-field">
+              <div className="settings-field__label">Locale</div>
+              <LocaleMultiSelect
+                label="Locale"
+                options={editorLocaleOptions}
+                selectedTags={editorLocaleTags}
+                onChange={handleEditorLocaleChange}
+                className="ai-locale-prompt-page__modal-locale"
+                buttonAriaLabel="Select locale"
+                disabled={editorMode === 'edit'}
+                customActions={editorMode === 'create' ? localeSelectorActions : undefined}
+              />
+            </div>
+            <div className="settings-field">
+              <label className="settings-field__label" htmlFor="ai-locale-prompt-suffix-editor">
+                Suffix
+              </label>
+              <AutoTextarea
+                id="ai-locale-prompt-suffix-editor"
+                className="settings-input ai-locale-prompt-page__textarea"
+                value={editorPromptSuffix}
+                onChange={(event) => handleEditorPromptSuffixChange(event.target.value)}
+                minRows={5}
+                maxRows={12}
+              />
+            </div>
+            {saveMutation.error ? (
+              <p className="settings-hint is-error">
+                {saveMutation.error instanceof Error
+                  ? saveMutation.error.message
+                  : 'Failed to save suffix.'}
+              </p>
+            ) : null}
+            {deleteMutation.error ? (
+              <p className="settings-hint is-error">
+                {deleteMutation.error instanceof Error
+                  ? deleteMutation.error.message
+                  : 'Failed to delete suffix.'}
+              </p>
+            ) : null}
           </div>
-          {saveMutation.error ? (
-            <p className="settings-hint is-error">
-              {saveMutation.error instanceof Error
-                ? saveMutation.error.message
-                : 'Failed to save suffix.'}
-            </p>
-          ) : null}
-          {deleteMutation.error ? (
-            <p className="settings-hint is-error">
-              {deleteMutation.error instanceof Error
-                ? deleteMutation.error.message
-                : 'Failed to delete suffix.'}
-            </p>
-          ) : null}
-        </div>
-        <div className="modal__actions ai-locale-prompt-page__modal-actions">
-          <button type="button" className="modal__button" onClick={handleCloseEditor}>
-            Cancel
-          </button>
-          {editorMode === 'edit' ? (
+          <div className="modal__actions ai-locale-prompt-page__modal-actions">
+            <button type="button" className="modal__button" onClick={handleCloseEditor}>
+              Cancel
+            </button>
+            {editorMode === 'edit' ? (
+              <button
+                type="button"
+                className="modal__button modal__button--danger"
+                onClick={handleDelete}
+                disabled={saveMutation.isPending || deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+              </button>
+            ) : null}
             <button
               type="button"
-              className="modal__button modal__button--danger"
-              onClick={handleDelete}
-              disabled={saveMutation.isPending || deleteMutation.isPending}
+              className="modal__button modal__button--primary"
+              onClick={handleSave}
+              disabled={!canSave}
             >
-              {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+              {saveMutation.isPending ? 'Saving…' : 'Save'}
             </button>
-          ) : null}
-          <button
-            type="button"
-            className="modal__button modal__button--primary"
-            onClick={handleSave}
-            disabled={!canSave}
-          >
-            {saveMutation.isPending ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </Modal>
+          </div>
+        </Modal>
+      </div>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
   DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
   DEFAULT_REVIEW_AUTOMATION_TIME_ZONE,
 } from '../../utils/reviewAutomationSchedule';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type ParsedRow = {
   lineNumber: number;
@@ -444,21 +445,12 @@ export function AdminReviewAutomationBatchPage() {
 
   return (
     <div className="user-batch-page">
-      <header className="review-automation-batch-page__topbar">
-        <button
-          type="button"
-          className="review-automation-batch-page__topbar-back"
-          onClick={() => void navigate('/settings/admin/review-automations')}
-          aria-label="Back to review automations"
-        >
-          <span className="review-automation-batch-page__topbar-back-icon" aria-hidden="true">
-            ←
-          </span>
-        </button>
-        <h1 className="review-automation-batch-page__topbar-title">
-          Batch update review automations
-        </h1>
-      </header>
+      <SettingsSubpageHeader
+        backTo="/settings/system/review-automations"
+        backLabel="Back to review automations"
+        context="Settings > Review automations"
+        title="Batch update review automations"
+      />
 
       <div className="user-batch-page__content">
         <section className="user-batch-page__grid review-automation-batch-page__grid">
@@ -545,7 +537,8 @@ export function AdminReviewAutomationBatchPage() {
             <pre className="user-batch-page__example-code">{EXAMPLE_INPUT}</pre>
             <ul className="user-batch-page__intro-list review-automation-batch-page__docs-list">
               <li>
-                `name | enabled|disabled | cron | timezone | team | due-date-offset-days | max-word-count | feature-a, feature-b`
+                `name | enabled|disabled | cron | timezone | team | due-date-offset-days |
+                max-word-count | feature-a, feature-b`
               </li>
               <li>Blank status defaults to enabled.</li>
               <li>Blank timezone defaults to UTC.</li>
@@ -622,7 +615,7 @@ export function AdminReviewAutomationBatchPage() {
           <button
             type="button"
             className="settings-button settings-button--ghost"
-            onClick={() => void navigate('/settings/admin/review-automations')}
+            onClick={() => void navigate('/settings/system/review-automations')}
           >
             Back
           </button>

@@ -25,6 +25,7 @@ import { useRepositories } from '../../hooks/useRepositories';
 import { useUsers } from '../../hooks/useUsers';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {
   kind: 'success' | 'error';
@@ -941,33 +942,18 @@ export function AdminTeamPoolsPage() {
 
   return (
     <div className="team-pools-page">
-      {isAdmin ? (
-        <div className="team-pools-page__topbar">
-          <Link
-            to="/settings/admin/teams"
-            className="team-pools-page__topbar-back"
-            aria-label="Back to teams"
-          >
-            <svg
-              className="team-pools-page__topbar-back-icon"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                d="M20 12H6m0 0l5-5m-5 5l5 5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
-          <h1 className="team-pools-page__topbar-title">
-            {selectedTeamName ? `${selectedTeamName} · Team pools` : 'Team pools'}
-          </h1>
-        </div>
-      ) : null}
+      <SettingsSubpageHeader
+        backTo="/settings/system/teams"
+        backLabel="Back to teams"
+        context="Settings > Teams > Team pools"
+        title={
+          selectedTeamName
+            ? selectedTeamName
+            : requestedTeamId != null
+              ? `Team #${requestedTeamId}`
+              : 'Team pools'
+        }
+      />
 
       <div className="team-pools-page__content">
         <section className="settings-card" aria-label="Team pools editor">
@@ -1000,8 +986,7 @@ export function AdminTeamPoolsPage() {
           <div className="settings-card__content team-pools-page__editor">
             {requestedTeamId == null ? (
               <p className="settings-hint is-error">
-                Select a team from{' '}
-                <Link to={isAdmin ? '/settings/admin/teams' : '/settings/teams'}>Teams</Link>.
+                Select a team from <Link to="/settings/system/teams">Teams</Link>.
               </p>
             ) : null}
             {requestedTeamId != null && !selectedTeamName && !isTeamLoading ? (

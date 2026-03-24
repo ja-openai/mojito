@@ -34,6 +34,7 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import { MultiSelectChip } from '../../components/MultiSelectChip';
 import { useUser } from '../../components/RequireUser';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {
   kind: 'success' | 'error';
@@ -561,7 +562,7 @@ export function TeamDetailPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
       setShowDeleteConfirm(false);
-      void navigate('/settings/admin/teams');
+      void navigate('/settings/system/teams');
     },
     onError: (error: Error) => {
       setShowDeleteConfirm(false);
@@ -574,7 +575,7 @@ export function TeamDetailPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
       setShowDeleteConfirm(false);
-      void navigate('/settings/admin/teams');
+      void navigate('/settings/system/teams');
     },
     onError: (error: Error) => {
       setShowDeleteConfirm(false);
@@ -666,7 +667,7 @@ export function TeamDetailPage() {
   }
 
   if (isPm) {
-    return <Navigate to="/settings/teams" replace />;
+    return <Navigate to="/settings/system/teams" replace />;
   }
 
   if (teamByIdQuery.isLoading) {
@@ -688,7 +689,7 @@ export function TeamDetailPage() {
           type="button"
           className="settings-button settings-button--ghost"
           onClick={() => {
-            void navigate('/settings/admin/teams');
+            void navigate('/settings/system/teams');
           }}
         >
           Back to teams
@@ -1105,43 +1106,19 @@ export function TeamDetailPage() {
 
   return (
     <div className="user-detail-page team-detail-page">
-      <header className="user-detail-page__header">
-        <div className="user-detail-page__header-row">
-          <div className="user-detail-page__header-group user-detail-page__header-group--left">
-            <button
-              type="button"
-              className="user-detail-page__header-back"
-              onClick={() => {
-                void navigate('/settings/admin/teams');
-              }}
-              aria-label="Back to teams"
-              title="Back to teams"
-            >
-              <svg
-                className="user-detail-page__header-back-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  d="M20 12H6m0 0l5-5m-5 5l5 5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <span className="user-detail-page__header-name">{pageTitle}</span>
-          </div>
-          <div className="user-detail-page__header-group user-detail-page__header-group--center">
-            <span className="user-detail-page__header-meta">ID</span>
-            <span className="user-detail-page__header-dot">#</span>
-            <span className="user-detail-page__header-meta">{effectiveTeam.id}</span>
-          </div>
-        </div>
-      </header>
+      <SettingsSubpageHeader
+        backTo="/settings/system/teams"
+        backLabel="Back to teams"
+        context="Settings > Teams"
+        title={pageTitle}
+        centerContent={
+          <>
+            <span className="settings-subpage__topbar-meta">ID</span>
+            <span className="settings-subpage__topbar-dot">#</span>
+            <span className="settings-subpage__topbar-meta">{effectiveTeam.id}</span>
+          </>
+        }
+      />
 
       <div className="user-detail-page__content team-detail-page__content">
         <section className="user-detail-page__section">

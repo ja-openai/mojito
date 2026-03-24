@@ -27,6 +27,7 @@ import {
   getDefaultReviewAutomationTimeZone,
   getReviewAutomationTimeZoneOptions,
 } from '../../utils/reviewAutomationSchedule';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {
   kind: 'success' | 'error';
@@ -230,354 +231,364 @@ export function AdminReviewAutomationsPage() {
   };
 
   return (
-    <div className="review-automation-admin-page">
-      <section className="settings-card">
-        <div className="settings-card__content">
-          <div className="review-automation-admin-page__toolbar">
-            <SearchControl
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search review automations"
-              className="review-automation-admin-page__search"
-            />
-            <label className="review-automation-admin-page__filter">
-              <span className="review-automation-admin-page__filter-label">Status</span>
-              <select
-                className="settings-input review-automation-admin-page__filter-select"
-                value={enabledFilter}
-                onChange={(event) => setEnabledFilter(event.target.value as EnabledFilter)}
-              >
-                <option value="enabled">Enabled</option>
-                <option value="disabled">Disabled</option>
-                <option value="all">All</option>
-              </select>
-            </label>
-            <NumericPresetDropdown
-              value={limit}
-              buttonLabel={`${limit} rows`}
-              menuLabel="Result size"
-              presetOptions={LIMIT_PRESETS.map((size) => ({
-                value: size,
-                label: String(size),
-              }))}
-              onChange={setLimit}
-              ariaLabel="Review automation result size"
-              pillsClassName="settings-pills"
-              optionClassName="settings-pill"
-              optionActiveClassName="is-active"
-              customActiveClassName="is-active"
-              customButtonClassName="settings-pill"
-              customInitialValue={50}
-            />
-            <div className="review-automation-admin-page__toolbar-actions">
-              <button
-                type="button"
-                className="settings-button"
-                onClick={() => void navigate('/settings/admin/review-automations/batch')}
-              >
-                Batch update
-              </button>
-              <button
-                type="button"
-                className="settings-button settings-button--primary"
-                onClick={() => {
-                  setIsCreateModalOpen(true);
-                  setIsCreateScheduleBuilderOpen(false);
-                  resetCreateDrafts();
-                  setStatusNotice(null);
-                }}
-              >
-                Create automation
-              </button>
-            </div>
-          </div>
-
-          <div className="review-automation-admin-page__count">
-            <span className="review-automation-admin-page__count-text">{visibleCountLabel}</span>
-            {statusNotice ? (
-              <span
-                className={`settings-hint review-automation-admin-page__status${
-                  statusNotice.kind === 'error' ? ' is-error' : ''
-                }`}
-              >
-                {statusNotice.message}
-              </span>
-            ) : null}
-          </div>
-
-          {reviewAutomationsQuery.isError ? (
-            <p className="review-automation-admin-page__empty">
-              {reviewAutomationsQuery.error instanceof Error
-                ? reviewAutomationsQuery.error.message
-                : 'Could not load review automations.'}
-            </p>
-          ) : reviewAutomationsQuery.isLoading ? (
-            <p className="review-automation-admin-page__empty">Loading review automations…</p>
-          ) : automations.length === 0 ? (
-            <p className="review-automation-admin-page__empty">
-              No review automations match the current filters.
-            </p>
-          ) : (
-            <div className="review-automation-admin-page__table">
-              <div className="review-automation-admin-page__table-header">
-                <div className="review-automation-admin-page__cell">ID</div>
-                <div className="review-automation-admin-page__cell">Automation</div>
-                <div className="review-automation-admin-page__cell">Status</div>
-                <div className="review-automation-admin-page__cell">Schedule</div>
-                <div className="review-automation-admin-page__cell">Team</div>
-                <div className="review-automation-admin-page__cell">Due in</div>
-                <div className="review-automation-admin-page__cell">Max size</div>
-                <div className="review-automation-admin-page__cell">Features</div>
-                <div className="review-automation-admin-page__cell">Updated</div>
-                <div className="review-automation-admin-page__cell review-automation-admin-page__cell--actions">
-                  Actions
-                </div>
-              </div>
-              {automations.map((automation) => (
-                <AutomationRow
-                  key={automation.id}
-                  automation={automation}
-                  onDelete={() => {
-                    setAutomationPendingDelete(automation);
+    <div className="settings-subpage">
+      <SettingsSubpageHeader
+        backTo="/settings/system"
+        backLabel="Back to settings"
+        context="Settings"
+        title="Review automations"
+      />
+      <div className="settings-page settings-page--wide review-automation-admin-page">
+        <section className="settings-card">
+          <div className="settings-card__content">
+            <div className="review-automation-admin-page__toolbar">
+              <SearchControl
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search review automations"
+                className="review-automation-admin-page__search"
+              />
+              <label className="review-automation-admin-page__filter">
+                <span className="review-automation-admin-page__filter-label">Status</span>
+                <select
+                  className="settings-input review-automation-admin-page__filter-select"
+                  value={enabledFilter}
+                  onChange={(event) => setEnabledFilter(event.target.value as EnabledFilter)}
+                >
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
+                  <option value="all">All</option>
+                </select>
+              </label>
+              <NumericPresetDropdown
+                value={limit}
+                buttonLabel={`${limit} rows`}
+                menuLabel="Result size"
+                presetOptions={LIMIT_PRESETS.map((size) => ({
+                  value: size,
+                  label: String(size),
+                }))}
+                onChange={setLimit}
+                ariaLabel="Review automation result size"
+                pillsClassName="settings-pills"
+                optionClassName="settings-pill"
+                optionActiveClassName="is-active"
+                customActiveClassName="is-active"
+                customButtonClassName="settings-pill"
+                customInitialValue={50}
+              />
+              <div className="review-automation-admin-page__toolbar-actions">
+                <button
+                  type="button"
+                  className="settings-button"
+                  onClick={() => void navigate('/settings/system/review-automations/batch')}
+                >
+                  Batch update
+                </button>
+                <button
+                  type="button"
+                  className="settings-button settings-button--primary"
+                  onClick={() => {
+                    setIsCreateModalOpen(true);
+                    setIsCreateScheduleBuilderOpen(false);
+                    resetCreateDrafts();
                     setStatusNotice(null);
                   }}
-                />
-              ))}
+                >
+                  Create automation
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      </section>
 
-      <Modal
-        open={isCreateModalOpen}
-        size="lg"
-        ariaLabel="Create review automation"
-        onClose={() => setIsCreateModalOpen(false)}
-        closeOnBackdrop
-        className="review-automation-admin-page__create-dialog"
-      >
-        <div className="review-automation-admin-page__create-modal">
-          <div className="modal__title">Create review automation</div>
-          <div className="settings-field">
-            <label className="settings-field__label" htmlFor="create-review-automation-name">
-              Name
-            </label>
-            <input
-              id="create-review-automation-name"
-              type="text"
-              className="settings-input"
-              value={newNameDraft}
-              onChange={(event) => {
-                setNewNameDraft(event.target.value);
-                setCreateModalError(null);
-              }}
-              placeholder="Review automation name"
-            />
-          </div>
-          <div className="settings-field">
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={newEnabledDraft}
-                onChange={(event) => setNewEnabledDraft(event.target.checked)}
-              />
-              <span>Enable this review automation</span>
-            </label>
-          </div>
-          <div className="settings-field">
-            <div className="settings-field__header">
-              <div className="settings-field__label">Schedule</div>
+            <div className="review-automation-admin-page__count">
+              <span className="review-automation-admin-page__count-text">{visibleCountLabel}</span>
+              {statusNotice ? (
+                <span
+                  className={`settings-hint review-automation-admin-page__status${
+                    statusNotice.kind === 'error' ? ' is-error' : ''
+                  }`}
+                >
+                  {statusNotice.message}
+                </span>
+              ) : null}
             </div>
-            <div className="review-automation-schedule__row">
-              <label className="settings-field">
-                <span className="settings-field__label">Cron expression</span>
-                <input
-                  id="create-review-automation-cron"
-                  type="text"
-                  className="settings-input"
-                  value={newCronExpressionDraft}
-                  onChange={(event) => {
-                    setNewCronExpressionDraft(event.target.value);
-                    setCreateModalError(null);
-                  }}
-                  placeholder="0 0 0 * * ?"
-                />
-              </label>
-              <label className="settings-field">
-                <span className="settings-field__label">Timezone</span>
-                <input
-                  type="text"
-                  className="settings-input"
-                  value={newTimeZoneDraft}
-                  list="review-automation-time-zone-options"
-                  onChange={(event) => {
-                    setNewTimeZoneDraft(event.target.value);
-                    setCreateModalError(null);
-                  }}
-                  placeholder="America/Los_Angeles"
-                  spellCheck={false}
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                />
-              </label>
-              <button
-                type="button"
-                className="settings-button review-automation-schedule__row-action"
-                onClick={() => setIsCreateScheduleBuilderOpen(true)}
-              >
-                Generate cron
-              </button>
-            </div>
-            <datalist id="review-automation-time-zone-options">
-              {timeZoneOptions.map((timeZone) => (
-                <option key={timeZone} value={timeZone} />
-              ))}
-            </datalist>
+
+            {reviewAutomationsQuery.isError ? (
+              <p className="review-automation-admin-page__empty">
+                {reviewAutomationsQuery.error instanceof Error
+                  ? reviewAutomationsQuery.error.message
+                  : 'Could not load review automations.'}
+              </p>
+            ) : reviewAutomationsQuery.isLoading ? (
+              <p className="review-automation-admin-page__empty">Loading review automations…</p>
+            ) : automations.length === 0 ? (
+              <p className="review-automation-admin-page__empty">
+                No review automations match the current filters.
+              </p>
+            ) : (
+              <div className="review-automation-admin-page__table">
+                <div className="review-automation-admin-page__table-header">
+                  <div className="review-automation-admin-page__cell">ID</div>
+                  <div className="review-automation-admin-page__cell">Automation</div>
+                  <div className="review-automation-admin-page__cell">Status</div>
+                  <div className="review-automation-admin-page__cell">Schedule</div>
+                  <div className="review-automation-admin-page__cell">Team</div>
+                  <div className="review-automation-admin-page__cell">Due in</div>
+                  <div className="review-automation-admin-page__cell">Max size</div>
+                  <div className="review-automation-admin-page__cell">Features</div>
+                  <div className="review-automation-admin-page__cell">Updated</div>
+                  <div className="review-automation-admin-page__cell review-automation-admin-page__cell--actions">
+                    Actions
+                  </div>
+                </div>
+                {automations.map((automation) => (
+                  <AutomationRow
+                    key={automation.id}
+                    automation={automation}
+                    onDelete={() => {
+                      setAutomationPendingDelete(automation);
+                      setStatusNotice(null);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-          <div className="settings-grid settings-grid--two-column">
+        </section>
+
+        <Modal
+          open={isCreateModalOpen}
+          size="lg"
+          ariaLabel="Create review automation"
+          onClose={() => setIsCreateModalOpen(false)}
+          closeOnBackdrop
+          className="review-automation-admin-page__create-dialog"
+        >
+          <div className="review-automation-admin-page__create-modal">
+            <div className="modal__title">Create review automation</div>
             <div className="settings-field">
-              <label className="settings-field__label">Team</label>
-              <SingleSelectDropdown
-                label="Team"
-                options={(teamsQuery.data ?? []).map((team) => ({
-                  value: team.id,
-                  label: team.name,
-                }))}
-                value={newTeamIdDraft}
-                onChange={(value) => {
-                  setNewTeamIdDraft(value);
+              <label className="settings-field__label" htmlFor="create-review-automation-name">
+                Name
+              </label>
+              <input
+                id="create-review-automation-name"
+                type="text"
+                className="settings-input"
+                value={newNameDraft}
+                onChange={(event) => {
+                  setNewNameDraft(event.target.value);
                   setCreateModalError(null);
                 }}
-                noneLabel="Select team"
-                placeholder="Select team"
-                disabled={teamsQuery.isLoading}
-                buttonAriaLabel="Select review automation team"
+                placeholder="Review automation name"
               />
+            </div>
+            <div className="settings-field">
+              <label className="settings-toggle">
+                <input
+                  type="checkbox"
+                  checked={newEnabledDraft}
+                  onChange={(event) => setNewEnabledDraft(event.target.checked)}
+                />
+                <span>Enable this review automation</span>
+              </label>
+            </div>
+            <div className="settings-field">
+              <div className="settings-field__header">
+                <div className="settings-field__label">Schedule</div>
+              </div>
+              <div className="review-automation-schedule__row">
+                <label className="settings-field">
+                  <span className="settings-field__label">Cron expression</span>
+                  <input
+                    id="create-review-automation-cron"
+                    type="text"
+                    className="settings-input"
+                    value={newCronExpressionDraft}
+                    onChange={(event) => {
+                      setNewCronExpressionDraft(event.target.value);
+                      setCreateModalError(null);
+                    }}
+                    placeholder="0 0 0 * * ?"
+                  />
+                </label>
+                <label className="settings-field">
+                  <span className="settings-field__label">Timezone</span>
+                  <input
+                    type="text"
+                    className="settings-input"
+                    value={newTimeZoneDraft}
+                    list="review-automation-time-zone-options"
+                    onChange={(event) => {
+                      setNewTimeZoneDraft(event.target.value);
+                      setCreateModalError(null);
+                    }}
+                    placeholder="America/Los_Angeles"
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="settings-button review-automation-schedule__row-action"
+                  onClick={() => setIsCreateScheduleBuilderOpen(true)}
+                >
+                  Generate cron
+                </button>
+              </div>
+              <datalist id="review-automation-time-zone-options">
+                {timeZoneOptions.map((timeZone) => (
+                  <option key={timeZone} value={timeZone} />
+                ))}
+              </datalist>
+            </div>
+            <div className="settings-grid settings-grid--two-column">
+              <div className="settings-field">
+                <label className="settings-field__label">Team</label>
+                <SingleSelectDropdown
+                  label="Team"
+                  options={(teamsQuery.data ?? []).map((team) => ({
+                    value: team.id,
+                    label: team.name,
+                  }))}
+                  value={newTeamIdDraft}
+                  onChange={(value) => {
+                    setNewTeamIdDraft(value);
+                    setCreateModalError(null);
+                  }}
+                  noneLabel="Select team"
+                  placeholder="Select team"
+                  disabled={teamsQuery.isLoading}
+                  buttonAriaLabel="Select review automation team"
+                />
+              </div>
+              <div className="settings-field">
+                <label
+                  className="settings-field__label"
+                  htmlFor="create-review-automation-due-offset"
+                >
+                  Due date offset days
+                </label>
+                <input
+                  id="create-review-automation-due-offset"
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  className="settings-input"
+                  value={newDueDateOffsetDaysDraft}
+                  onChange={(event) => {
+                    setNewDueDateOffsetDaysDraft(event.target.value);
+                    setCreateModalError(null);
+                  }}
+                />
+              </div>
             </div>
             <div className="settings-field">
               <label
                 className="settings-field__label"
-                htmlFor="create-review-automation-due-offset"
+                htmlFor="create-review-automation-max-word-count"
               >
-                Due date offset days
+                Max word count per project
               </label>
               <input
-                id="create-review-automation-due-offset"
+                id="create-review-automation-max-word-count"
                 type="number"
-                min={0}
+                min={1}
                 inputMode="numeric"
                 className="settings-input"
-                value={newDueDateOffsetDaysDraft}
+                value={newMaxWordCountDraft}
                 onChange={(event) => {
-                  setNewDueDateOffsetDaysDraft(event.target.value);
+                  setNewMaxWordCountDraft(event.target.value);
                   setCreateModalError(null);
                 }}
+                placeholder={String(DEFAULT_MAX_WORD_COUNT)}
               />
             </div>
+            <div className="settings-field">
+              <div className="settings-field__header">
+                <div className="settings-field__label">Review features</div>
+              </div>
+              <ReviewFeatureMultiSelect
+                label="Review features"
+                options={reviewFeaturesQuery.data ?? []}
+                selectedIds={newFeatureIdsDraft}
+                onChange={(next) => setNewFeatureIdsDraft([...next].sort((a, b) => a - b))}
+                className="settings-repository-select"
+                buttonAriaLabel="Select review features for new review automation"
+                disabled={reviewFeaturesQuery.isLoading}
+                enabledOnlyByDefault
+              />
+              <p className="settings-hint">
+                Features stay exclusive across enabled automations to avoid duplicate project
+                creation.
+              </p>
+              {createModalError ? (
+                <p className="settings-hint is-error">{createModalError}</p>
+              ) : null}
+            </div>
           </div>
-          <div className="settings-field">
-            <label
-              className="settings-field__label"
-              htmlFor="create-review-automation-max-word-count"
-            >
-              Max word count per project
-            </label>
-            <input
-              id="create-review-automation-max-word-count"
-              type="number"
-              min={1}
-              inputMode="numeric"
-              className="settings-input"
-              value={newMaxWordCountDraft}
-              onChange={(event) => {
-                setNewMaxWordCountDraft(event.target.value);
+          <div className="modal__actions">
+            <button
+              type="button"
+              className="modal__button"
+              onClick={() => {
+                setIsCreateModalOpen(false);
                 setCreateModalError(null);
               }}
-              placeholder={String(DEFAULT_MAX_WORD_COUNT)}
-            />
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="modal__button modal__button--primary"
+              onClick={handleCreateAutomation}
+              disabled={createAutomationMutation.isPending}
+            >
+              Create
+            </button>
           </div>
-          <div className="settings-field">
-            <div className="settings-field__header">
-              <div className="settings-field__label">Review features</div>
-            </div>
-            <ReviewFeatureMultiSelect
-              label="Review features"
-              options={reviewFeaturesQuery.data ?? []}
-              selectedIds={newFeatureIdsDraft}
-              onChange={(next) => setNewFeatureIdsDraft([...next].sort((a, b) => a - b))}
-              className="settings-repository-select"
-              buttonAriaLabel="Select review features for new review automation"
-              disabled={reviewFeaturesQuery.isLoading}
-              enabledOnlyByDefault
-            />
-            <p className="settings-hint">
-              Features stay exclusive across enabled automations to avoid duplicate project
-              creation.
-            </p>
-            {createModalError ? <p className="settings-hint is-error">{createModalError}</p> : null}
-          </div>
-        </div>
-        <div className="modal__actions">
-          <button
-            type="button"
-            className="modal__button"
-            onClick={() => {
-              setIsCreateModalOpen(false);
-              setCreateModalError(null);
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="modal__button modal__button--primary"
-            onClick={handleCreateAutomation}
-            disabled={createAutomationMutation.isPending}
-          >
-            Create
-          </button>
-        </div>
-      </Modal>
+        </Modal>
 
-      <ReviewAutomationScheduleBuilderModal
-        open={isCreateScheduleBuilderOpen}
-        title="Generate cron schedule"
-        ariaLabel="Generate review automation cron schedule"
-        initialCronExpression={newCronExpressionDraft}
-        initialTimeZone={newTimeZoneDraft}
-        onClose={() => setIsCreateScheduleBuilderOpen(false)}
-        onApply={({ cronExpression, timeZone }) => {
-          setNewCronExpressionDraft(cronExpression);
-          setNewTimeZoneDraft(timeZone);
-          setCreateModalError(null);
-          setIsCreateScheduleBuilderOpen(false);
-        }}
-      />
+        <ReviewAutomationScheduleBuilderModal
+          open={isCreateScheduleBuilderOpen}
+          title="Generate cron schedule"
+          ariaLabel="Generate review automation cron schedule"
+          initialCronExpression={newCronExpressionDraft}
+          initialTimeZone={newTimeZoneDraft}
+          onClose={() => setIsCreateScheduleBuilderOpen(false)}
+          onApply={({ cronExpression, timeZone }) => {
+            setNewCronExpressionDraft(cronExpression);
+            setNewTimeZoneDraft(timeZone);
+            setCreateModalError(null);
+            setIsCreateScheduleBuilderOpen(false);
+          }}
+        />
 
-      <ConfirmModal
-        open={automationPendingDelete != null}
-        title="Delete review automation"
-        body={
-          automationPendingDelete == null
-            ? ''
-            : `Delete ${automationPendingDelete.name}? This only removes the automation configuration.`
-        }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        onConfirm={() => {
-          if (automationPendingDelete == null) {
-            return;
+        <ConfirmModal
+          open={automationPendingDelete != null}
+          title="Delete review automation"
+          body={
+            automationPendingDelete == null
+              ? ''
+              : `Delete ${automationPendingDelete.name}? This only removes the automation configuration.`
           }
-          deleteAutomationMutation.mutate(automationPendingDelete.id);
-        }}
-        onCancel={() => {
-          if (!deleteAutomationMutation.isPending) {
-            setAutomationPendingDelete(null);
-          }
-        }}
-        requireText={automationPendingDelete?.name}
-        requireTextLabel="Type the automation name to confirm deletion."
-      />
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          onConfirm={() => {
+            if (automationPendingDelete == null) {
+              return;
+            }
+            deleteAutomationMutation.mutate(automationPendingDelete.id);
+          }}
+          onCancel={() => {
+            if (!deleteAutomationMutation.isPending) {
+              setAutomationPendingDelete(null);
+            }
+          }}
+          requireText={automationPendingDelete?.name}
+          requireTextLabel="Type the automation name to confirm deletion."
+        />
+      </div>
     </div>
   );
 }
@@ -639,7 +650,7 @@ function AutomationRow({
         <div className="review-automation-admin-page__actions">
           <Link
             className="review-automation-admin-page__row-action-link"
-            to={`/settings/admin/review-automations/${automation.id}`}
+            to={`/settings/system/review-automations/${automation.id}`}
           >
             Edit
           </Link>

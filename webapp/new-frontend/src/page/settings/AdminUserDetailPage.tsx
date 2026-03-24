@@ -16,6 +16,7 @@ import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { useLocales } from '../../hooks/useLocales';
 import { USERS_QUERY_KEY, useUsers } from '../../hooks/useUsers';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const normalizeLocaleList = (tags: string[]) =>
   [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))].sort((a, b) =>
@@ -227,7 +228,7 @@ export function AdminUserDetailPage() {
     onSuccess: () => {
       setShowDeleteConfirm(false);
       void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
-      void navigate('/settings/admin/users');
+      void navigate('/settings/system/users');
     },
   });
 
@@ -252,7 +253,7 @@ export function AdminUserDetailPage() {
           type="button"
           className="user-detail-page__back"
           onClick={() => {
-            void navigate('/settings/admin/users');
+            void navigate('/settings/system/users');
           }}
         >
           Back to users
@@ -287,43 +288,19 @@ export function AdminUserDetailPage() {
 
   return (
     <div className="user-detail-page">
-      <header className="user-detail-page__header">
-        <div className="user-detail-page__header-row">
-          <div className="user-detail-page__header-group user-detail-page__header-group--left">
-            <button
-              type="button"
-              className="user-detail-page__header-back"
-              onClick={() => {
-                void navigate('/settings/admin/users');
-              }}
-              aria-label="Back to users"
-              title="Back to users"
-            >
-              <svg
-                className="user-detail-page__header-back-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  d="M20 12H6m0 0l5-5m-5 5l5 5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <span className="user-detail-page__header-name">{displayNamePreview}</span>
-          </div>
-          <div className="user-detail-page__header-group user-detail-page__header-group--center">
-            <span className="user-detail-page__header-meta">ID</span>
-            <span className="user-detail-page__header-dot">#</span>
-            <span className="user-detail-page__header-meta">{userRecord.id}</span>
-          </div>
-        </div>
-      </header>
+      <SettingsSubpageHeader
+        backTo="/settings/system/users"
+        backLabel="Back to users"
+        context="Settings > Users"
+        title={displayNamePreview}
+        centerContent={
+          <>
+            <span className="settings-subpage__topbar-meta">ID</span>
+            <span className="settings-subpage__topbar-dot">#</span>
+            <span className="settings-subpage__topbar-meta">{userRecord.id}</span>
+          </>
+        }
+      />
 
       <div className="user-detail-page__content">
         <section className="user-detail-page__section">

@@ -2,20 +2,20 @@ import './settings-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 
 import { fetchReviewFeature, updateReviewFeature } from '../../api/review-features';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const normalizeFeatureName = (value: string) => value.trim().replace(/\s+/g, ' ');
 
 export function AdminReviewFeatureDetailPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const params = useParams<{ featureId?: string }>();
   const { data: repositories } = useRepositories();
@@ -103,7 +103,7 @@ export function AdminReviewFeatureDetailPage() {
   }
 
   if (parsedFeatureId == null) {
-    return <Navigate to="/settings/admin/review-features" replace />;
+    return <Navigate to="/settings/system/review-features" replace />;
   }
 
   const handleSave = () => {
@@ -120,99 +120,93 @@ export function AdminReviewFeatureDetailPage() {
   };
 
   return (
-    <div className="settings-page">
-      <div className="settings-page__header">
-        <h1>Review feature</h1>
-      </div>
-
-      <section className="settings-card">
-        <div className="settings-card__header">
-          <h2>Configuration</h2>
-        </div>
-        {featureQuery.isError ? (
-          <p className="settings-hint is-error">
-            {featureQuery.error instanceof Error
-              ? featureQuery.error.message
-              : 'Could not load review feature.'}
-          </p>
-        ) : featureQuery.isLoading ? (
-          <p className="settings-hint">Loading review feature…</p>
-        ) : (
-          <>
-            <div className="settings-field">
-              <label className="settings-field__label" htmlFor="review-feature-name">
-                Name
-              </label>
-              <input
-                id="review-feature-name"
-                type="text"
-                className="settings-input"
-                value={nameDraft}
-                onChange={(event) => {
-                  setNameDraft(event.target.value);
-                  setStatusNotice(null);
-                }}
-              />
-            </div>
-            <div className="settings-field">
-              <label className="settings-toggle">
+    <div className="settings-subpage">
+      <SettingsSubpageHeader
+        backTo="/settings/system/review-features"
+        backLabel="Back to review features"
+        context="Settings > Review features > Review feature"
+        title={featureQuery.data?.name || `Feature #${parsedFeatureId}`}
+      />
+      <div className="settings-page">
+        <section className="settings-card">
+          {featureQuery.isError ? (
+            <p className="settings-hint is-error">
+              {featureQuery.error instanceof Error
+                ? featureQuery.error.message
+                : 'Could not load review feature.'}
+            </p>
+          ) : featureQuery.isLoading ? (
+            <p className="settings-hint">Loading review feature…</p>
+          ) : (
+            <>
+              <div className="settings-field">
+                <label className="settings-field__label" htmlFor="review-feature-name">
+                  Name
+                </label>
                 <input
-                  type="checkbox"
-                  checked={enabledDraft}
+                  id="review-feature-name"
+                  type="text"
+                  className="settings-input"
+                  value={nameDraft}
                   onChange={(event) => {
-                    setEnabledDraft(event.target.checked);
+                    setNameDraft(event.target.value);
                     setStatusNotice(null);
                   }}
                 />
-                <span>Enable this review feature</span>
-              </label>
-            </div>
-            <div className="settings-field">
-              <div className="settings-field__header">
-                <div className="settings-field__label">Repositories</div>
               </div>
-              <RepositoryMultiSelect
-                label="Repositories"
-                options={repositoryOptions}
-                selectedIds={repositoryIdsDraft}
-                onChange={(next) => {
-                  setRepositoryIdsDraft([...next].sort((a, b) => a - b));
-                  setStatusNotice(null);
-                }}
-                className="settings-repository-select"
-                buttonAriaLabel="Select repositories for review feature"
-              />
-              <p className="settings-hint">
-                This defines the current feature scope for automated grouping.
-              </p>
-            </div>
-            {statusNotice ? (
-              <p className={`settings-hint${statusNotice.kind === 'error' ? ' is-error' : ''}`}>
-                {statusNotice.message}
-              </p>
-            ) : null}
-            <div className="settings-card__footer">
-              <div className="settings-actions">
-                <button
-                  type="button"
-                  className="settings-button settings-button--ghost"
-                  onClick={() => void navigate('/settings/admin/review-features')}
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  className="settings-button settings-button--primary"
-                  onClick={handleSave}
-                  disabled={updateMutation.isPending || !isDirty}
-                >
-                  Save
-                </button>
+              <div className="settings-field">
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={enabledDraft}
+                    onChange={(event) => {
+                      setEnabledDraft(event.target.checked);
+                      setStatusNotice(null);
+                    }}
+                  />
+                  <span>Enable this review feature</span>
+                </label>
               </div>
-            </div>
-          </>
-        )}
-      </section>
+              <div className="settings-field">
+                <div className="settings-field__header">
+                  <div className="settings-field__label">Repositories</div>
+                </div>
+                <RepositoryMultiSelect
+                  label="Repositories"
+                  options={repositoryOptions}
+                  selectedIds={repositoryIdsDraft}
+                  onChange={(next) => {
+                    setRepositoryIdsDraft([...next].sort((a, b) => a - b));
+                    setStatusNotice(null);
+                  }}
+                  className="settings-repository-select"
+                  buttonAriaLabel="Select repositories for review feature"
+                />
+                <p className="settings-hint">
+                  This defines the current feature scope for automated grouping.
+                </p>
+              </div>
+              {statusNotice ? (
+                <p className={`settings-hint${statusNotice.kind === 'error' ? ' is-error' : ''}`}>
+                  {statusNotice.message}
+                </p>
+              ) : null}
+              <div className="settings-card__footer">
+                <div className="settings-actions">
+                  <button
+                    type="button"
+                    className="settings-button settings-button--primary"
+                    onClick={handleSave}
+                    disabled={updateMutation.isPending || !isDirty}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

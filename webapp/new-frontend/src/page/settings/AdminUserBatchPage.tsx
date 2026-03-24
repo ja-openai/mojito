@@ -3,7 +3,7 @@ import '../../components/chip-dropdown.css';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 import {
   type ApiTeam,
@@ -18,6 +18,7 @@ import { createUser } from '../../api/users';
 import { useUser } from '../../components/RequireUser';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { USERS_QUERY_KEY } from '../../hooks/useUsers';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const ROLE_OPTIONS = [
   { value: 'ROLE_ADMIN', label: 'Admin' },
@@ -211,7 +212,6 @@ const getRowPasswordKey = (row: ParsedRow) => `${row.lineNumber}:${row.raw}`;
 export function AdminUserBatchPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [input, setInput] = useState('');
   const [defaultRole, setDefaultRole] = useState('ROLE_USER');
@@ -394,40 +394,12 @@ export function AdminUserBatchPage() {
 
   return (
     <div className="user-batch-page">
-      <header className="user-batch-page__header">
-        <div className="user-batch-page__header-row">
-          <div className="user-batch-page__header-group user-batch-page__header-group--left">
-            <button
-              type="button"
-              className="user-batch-page__header-back"
-              onClick={() => {
-                void navigate('/settings/admin/users');
-              }}
-              aria-label="Back to users"
-              title="Back to users"
-            >
-              <svg
-                className="user-batch-page__header-back-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  d="M20 12H6m0 0l5-5m-5 5l5 5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <span className="user-batch-page__header-name">Create users</span>
-          </div>
-          <div className="user-batch-page__header-group user-batch-page__header-group--center" />
-          <div className="user-batch-page__header-group user-batch-page__header-group--right" />
-        </div>
-      </header>
+      <SettingsSubpageHeader
+        backTo="/settings/system/users"
+        backLabel="Back to users"
+        context="Settings > Users"
+        title="Create users"
+      />
 
       <div className="user-batch-page__content">
         <section className="user-batch-page__grid">

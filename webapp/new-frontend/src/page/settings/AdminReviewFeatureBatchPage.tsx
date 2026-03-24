@@ -13,6 +13,7 @@ import {
 } from '../../api/review-features';
 import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type ParsedRow = {
   lineNumber: number;
@@ -308,19 +309,12 @@ export function AdminReviewFeatureBatchPage() {
 
   return (
     <div className="user-batch-page">
-      <header className="review-feature-batch-page__topbar">
-        <button
-          type="button"
-          className="review-feature-batch-page__topbar-back"
-          onClick={() => void navigate('/settings/admin/review-features')}
-          aria-label="Back to review features"
-        >
-          <span className="review-feature-batch-page__topbar-back-icon" aria-hidden="true">
-            ←
-          </span>
-        </button>
-        <h1 className="review-feature-batch-page__topbar-title">Batch update review features</h1>
-      </header>
+      <SettingsSubpageHeader
+        backTo="/settings/system/review-features"
+        backLabel="Back to review features"
+        context="Settings > Review features"
+        title="Batch update review features"
+      />
 
       <div className="user-batch-page__content">
         <section className="user-batch-page__grid review-feature-batch-page__grid">
@@ -467,7 +461,7 @@ export function AdminReviewFeatureBatchPage() {
           <button
             type="button"
             className="settings-button settings-button--ghost"
-            onClick={() => void navigate('/settings/admin/review-features')}
+            onClick={() => void navigate('/settings/system/review-features')}
           >
             Back
           </button>

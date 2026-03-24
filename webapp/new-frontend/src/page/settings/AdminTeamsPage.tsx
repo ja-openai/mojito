@@ -9,6 +9,7 @@ import { type ApiTeam, createTeam, fetchTeamsWithOptions } from '../../api/teams
 import { Modal } from '../../components/Modal';
 import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
+import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {
   kind: 'success' | 'error';
@@ -124,177 +125,187 @@ export function AdminTeamsPage() {
   const hasLoadError = teamsQuery.isError;
 
   return (
-    <div className="team-admin-page">
-      <section className="settings-card">
-        <div className="settings-card__content">
-          <div className="team-admin-page__toolbar">
-            <SearchControl
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search teams"
-              className="team-admin-page__search"
-            />
-            {isAdmin ? (
-              <label className="team-admin-page__filter">
-                <span className="team-admin-page__filter-label">Status</span>
-                <select
-                  className="settings-input team-admin-page__filter-select"
-                  value={enabledFilter}
-                  onChange={(event) => setEnabledFilter(event.target.value as EnabledFilter)}
-                >
-                  <option value="enabled">Enabled</option>
-                  <option value="disabled">Disabled</option>
-                  <option value="all">All</option>
-                </select>
-              </label>
-            ) : null}
-            {isAdmin ? (
-              <button
-                type="button"
-                className="settings-button settings-button--primary team-admin-page__create"
-                onClick={() => {
-                  setIsCreateModalOpen(true);
-                  setCreateModalError(null);
-                  setStatusNotice(null);
-                }}
-              >
-                Create team
-              </button>
-            ) : null}
-          </div>
-
-          <div className="team-admin-page__count">
-            <span className="team-admin-page__count-text">{filteredTeamRows.length} teams</span>
-            {statusNotice ? (
-              <span
-                className={`settings-hint team-admin-page__status${
-                  statusNotice.kind === 'error' ? ' is-error' : ''
-                }`}
-              >
-                {statusNotice.message}
-              </span>
-            ) : null}
-          </div>
-
-          {hasLoadError ? (
-            <p className="team-admin-page__empty">Could not load teams from backend.</p>
-          ) : isLoading ? (
-            <p className="team-admin-page__empty">Loading teams…</p>
-          ) : teamRows.length === 0 ? (
-            <p className="team-admin-page__empty">No teams yet.</p>
-          ) : filteredTeamRows.length === 0 ? (
-            <p className="team-admin-page__empty">No teams match the current search.</p>
-          ) : (
-            <div className="team-admin-page__table">
-              <div className="team-admin-page__table-header">
-                <div className="team-admin-page__cell">ID</div>
-                <div className="team-admin-page__cell">Team</div>
-                <div className="team-admin-page__cell">Status</div>
-                <div className="team-admin-page__cell team-admin-page__cell--actions">Actions</div>
-              </div>
-              {filteredTeamRows.map(({ team }) => {
-                const poolUrl = isAdmin
-                  ? `/settings/admin/team-pools?teamId=${team.id}`
-                  : `/settings/team?teamId=${team.id}`;
-                return (
-                  <div key={team.id} className="team-admin-page__row">
-                    <div className="team-admin-page__cell team-admin-page__cell--muted">
-                      {team.id}
-                    </div>
-                    <div className="team-admin-page__cell">
-                      <div className="team-admin-page__name-cell">
-                        <span className="team-admin-page__name-text">{team.name}</span>
-                      </div>
-                    </div>
-                    <div className="team-admin-page__cell team-admin-page__cell--muted">
-                      {team.enabled ? 'Enabled' : 'Disabled'}
-                    </div>
-                    <div className="team-admin-page__cell team-admin-page__cell--actions">
-                      <div className="team-admin-page__actions">
-                        {isAdmin && team.enabled ? (
-                          <Link
-                            className="team-admin-page__row-action-link"
-                            to={`/settings/admin/teams/${team.id}`}
-                          >
-                            Edit team
-                          </Link>
-                        ) : null}
-                        {team.enabled ? (
-                          <Link className="team-admin-page__row-action-link" to={poolUrl}>
-                            Edit pools
-                          </Link>
-                        ) : (
-                          <span className="team-admin-page__row-action-muted">Disabled</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {isAdmin ? (
-        <Modal
-          open={isCreateModalOpen}
-          size="sm"
-          ariaLabel="Create team"
-          onClose={() => setIsCreateModalOpen(false)}
-          closeOnBackdrop
-        >
-          <div className="team-admin-page__create-modal">
-            <div className="modal__title">Create team</div>
-            <div className="settings-field">
-              <label className="settings-field__label" htmlFor="create-team-name">
-                Name
-              </label>
-              <input
-                id="create-team-name"
-                type="text"
-                className="settings-input"
-                value={newTeamDraft}
-                onChange={(event) => {
-                  setNewTeamDraft(event.target.value);
-                  setCreateModalError(null);
-                }}
-                placeholder="Team name"
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter') {
-                    return;
-                  }
-                  event.preventDefault();
-                  handleCreateTeam();
-                }}
+    <div className="settings-subpage">
+      <SettingsSubpageHeader
+        backTo="/settings/system"
+        backLabel="Back to settings"
+        context="Settings"
+        title="Teams"
+      />
+      <div className="settings-page settings-page--wide team-admin-page">
+        <section className="settings-card">
+          <div className="settings-card__content">
+            <div className="team-admin-page__toolbar">
+              <SearchControl
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search teams"
+                className="team-admin-page__search"
               />
-              {createModalError ? (
-                <p className="settings-hint is-error">{createModalError}</p>
+              {isAdmin ? (
+                <label className="team-admin-page__filter">
+                  <span className="team-admin-page__filter-label">Status</span>
+                  <select
+                    className="settings-input team-admin-page__filter-select"
+                    value={enabledFilter}
+                    onChange={(event) => setEnabledFilter(event.target.value as EnabledFilter)}
+                  >
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                    <option value="all">All</option>
+                  </select>
+                </label>
+              ) : null}
+              {isAdmin ? (
+                <button
+                  type="button"
+                  className="settings-button settings-button--primary team-admin-page__create"
+                  onClick={() => {
+                    setIsCreateModalOpen(true);
+                    setCreateModalError(null);
+                    setStatusNotice(null);
+                  }}
+                >
+                  Create team
+                </button>
               ) : null}
             </div>
+
+            <div className="team-admin-page__count">
+              <span className="team-admin-page__count-text">{filteredTeamRows.length} teams</span>
+              {statusNotice ? (
+                <span
+                  className={`settings-hint team-admin-page__status${
+                    statusNotice.kind === 'error' ? ' is-error' : ''
+                  }`}
+                >
+                  {statusNotice.message}
+                </span>
+              ) : null}
+            </div>
+
+            {hasLoadError ? (
+              <p className="team-admin-page__empty">Could not load teams from backend.</p>
+            ) : isLoading ? (
+              <p className="team-admin-page__empty">Loading teams…</p>
+            ) : teamRows.length === 0 ? (
+              <p className="team-admin-page__empty">No teams yet.</p>
+            ) : filteredTeamRows.length === 0 ? (
+              <p className="team-admin-page__empty">No teams match the current search.</p>
+            ) : (
+              <div className="team-admin-page__table">
+                <div className="team-admin-page__table-header">
+                  <div className="team-admin-page__cell">ID</div>
+                  <div className="team-admin-page__cell">Team</div>
+                  <div className="team-admin-page__cell">Status</div>
+                  <div className="team-admin-page__cell team-admin-page__cell--actions">
+                    Actions
+                  </div>
+                </div>
+                {filteredTeamRows.map(({ team }) => {
+                  const poolUrl = isAdmin
+                    ? `/settings/system/team-pools?teamId=${team.id}`
+                    : `/settings/system/team-pools?teamId=${team.id}`;
+                  return (
+                    <div key={team.id} className="team-admin-page__row">
+                      <div className="team-admin-page__cell team-admin-page__cell--muted">
+                        {team.id}
+                      </div>
+                      <div className="team-admin-page__cell">
+                        <div className="team-admin-page__name-cell">
+                          <span className="team-admin-page__name-text">{team.name}</span>
+                        </div>
+                      </div>
+                      <div className="team-admin-page__cell team-admin-page__cell--muted">
+                        {team.enabled ? 'Enabled' : 'Disabled'}
+                      </div>
+                      <div className="team-admin-page__cell team-admin-page__cell--actions">
+                        <div className="team-admin-page__actions">
+                          {isAdmin && team.enabled ? (
+                            <Link
+                              className="team-admin-page__row-action-link"
+                              to={`/settings/system/teams/${team.id}`}
+                            >
+                              Edit team
+                            </Link>
+                          ) : null}
+                          {team.enabled ? (
+                            <Link className="team-admin-page__row-action-link" to={poolUrl}>
+                              Edit pools
+                            </Link>
+                          ) : (
+                            <span className="team-admin-page__row-action-muted">Disabled</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div className="modal__actions">
-            <button
-              type="button"
-              className="modal__button"
-              onClick={() => {
-                setIsCreateModalOpen(false);
-                setCreateModalError(null);
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="modal__button modal__button--primary"
-              onClick={handleCreateTeam}
-              disabled={createTeamMutation.isPending}
-            >
-              Create
-            </button>
-          </div>
-        </Modal>
-      ) : null}
+        </section>
+
+        {isAdmin ? (
+          <Modal
+            open={isCreateModalOpen}
+            size="sm"
+            ariaLabel="Create team"
+            onClose={() => setIsCreateModalOpen(false)}
+            closeOnBackdrop
+          >
+            <div className="team-admin-page__create-modal">
+              <div className="modal__title">Create team</div>
+              <div className="settings-field">
+                <label className="settings-field__label" htmlFor="create-team-name">
+                  Name
+                </label>
+                <input
+                  id="create-team-name"
+                  type="text"
+                  className="settings-input"
+                  value={newTeamDraft}
+                  onChange={(event) => {
+                    setNewTeamDraft(event.target.value);
+                    setCreateModalError(null);
+                  }}
+                  placeholder="Team name"
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') {
+                      return;
+                    }
+                    event.preventDefault();
+                    handleCreateTeam();
+                  }}
+                />
+                {createModalError ? (
+                  <p className="settings-hint is-error">{createModalError}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="modal__actions">
+              <button
+                type="button"
+                className="modal__button"
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  setCreateModalError(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="modal__button modal__button--primary"
+                onClick={handleCreateTeam}
+                disabled={createTeamMutation.isPending}
+              >
+                Create
+              </button>
+            </div>
+          </Modal>
+        ) : null}
+      </div>
     </div>
   );
 }

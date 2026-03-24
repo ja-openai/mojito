@@ -69,7 +69,12 @@ export function UserMenu() {
     void navigate(path);
   };
 
-  const insightsLinks = canAccessStatistics ? [{ label: 'Statistics', path: '/statistics' }] : [];
+  const insightsLinks = canAccessStatistics
+    ? [
+        { label: 'Statistics', path: '/statistics' },
+        { label: 'Database monitoring', path: '/monitoring' },
+      ]
+    : [];
 
   const toolLinks = isAdmin
     ? [
@@ -78,21 +83,10 @@ export function UserMenu() {
       ]
     : [];
 
+  const accountLinks = [{ label: 'My Settings', path: '/settings/me' }];
   const operationsLinks: Array<{ label: string; path: string }> = [];
 
-  const adminLinks = isAdmin
-    ? [
-        { label: 'Admin settings', path: '/settings/admin' },
-        { label: 'Review features', path: '/settings/admin/review-features' },
-        { label: 'Review automations', path: '/settings/admin/review-automations' },
-        { label: 'AI translate automation', path: '/settings/admin/ai-translate' },
-        {
-          label: 'AI prompt suffixes',
-          path: '/settings/admin/ai-translate/prompt-suffixes',
-        },
-        { label: 'Database monitoring', path: '/monitoring' },
-      ]
-    : [];
+  const adminLinks = isAdmin ? [{ label: 'System Settings', path: '/settings/system' }] : [];
 
   return (
     <div className="user-menu" ref={containerRef}>
@@ -157,6 +151,24 @@ export function UserMenu() {
                   <div className="user-menu__section-label">Operations</div>
                   <div className="user-menu__actions" role="none">
                     {operationsLinks.map((item) => (
+                      <button
+                        key={item.path}
+                        type="button"
+                        className="user-menu__action"
+                        role="menuitem"
+                        onClick={() => handleNavigate(item.path)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+              {accountLinks.length > 0 ? (
+                <>
+                  <div className="user-menu__section-label">Account</div>
+                  <div className="user-menu__actions" role="none">
+                    {accountLinks.map((item) => (
                       <button
                         key={item.path}
                         type="button"

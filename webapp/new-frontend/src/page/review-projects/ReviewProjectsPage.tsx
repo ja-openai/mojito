@@ -31,6 +31,15 @@ import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';
 import { loadPreferredLocales } from '../workbench/workbench-preferences';
 import {
+  COMPLETION_FILTERS,
+  type CompletionFilter,
+  getVisibleProjectsForRequest,
+  matchesCompletionFilter,
+  matchesRequestStatusFilter,
+  REQUEST_STATUS_FILTERS,
+  type RequestStatusFilter,
+} from './review-projects-filters';
+import {
   loadReviewProjectsSessionState,
   REVIEW_PROJECTS_SESSION_QUERY_KEY,
   type ReviewProjectsSessionState,
@@ -43,15 +52,6 @@ import {
   type ReviewProjectsAdminControls,
   ReviewProjectsPageView,
 } from './ReviewProjectsPageView';
-import {
-  type CompletionFilter,
-  COMPLETION_FILTERS,
-  getVisibleProjectsForRequest,
-  matchesCompletionFilter,
-  matchesRequestStatusFilter,
-  type RequestStatusFilter,
-  REQUEST_STATUS_FILTERS,
-} from './review-projects-filters';
 
 type FilterOption<T extends string | number> = { value: T; label: string };
 
