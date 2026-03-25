@@ -1,11 +1,13 @@
 package com.box.l10n.mojito.service.team;
 
 import com.box.l10n.mojito.entity.Team;
+import com.box.l10n.mojito.entity.review.ReviewAutomation;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.service.review.ReviewAutomationCronSchedulerService;
 import com.box.l10n.mojito.slack.SlackClient;
 import com.box.l10n.mojito.slack.SlackClientException;
 import com.box.l10n.mojito.slack.SlackClients;
@@ -109,6 +111,58 @@ public class TeamSlackNotificationService {
   public void sendReviewProjectCreateRequestNotification(
       ReviewProjectRequest reviewProjectRequest, List<ReviewProject> createdProjects) {
     sendReviewProjectRequestSummaryNotification(reviewProjectRequest, createdProjects, "create");
+  }
+
+  public boolean sendReviewAutomationTriggerAlert(
+      ReviewAutomation reviewAutomation,
+      ReviewAutomationCronSchedulerService.TriggerHealth triggerHealth,
+      String failureReason) {
+    if (reviewAutomation == null || reviewAutomation.getId() == null) {
+      return false;
+    }
+
+    Team team = reviewAutomation.getTeam();
+    if (team == null || team.getId() == null) {
+      return false;
+    }
+
+    TeamService.TeamSlackSettings settings = teamService.getTeamSlackSettings(team.getId());
+    if (!settings.enabled()
+        || isBlank(settings.slackClientId())
+        || isBlank(settings.slackChannelId())) {
+      return false;
+    }
+
+    SlackClient slackClient = slackClients.getById(settings.slackClientId());
+    if (slackClient == null) {
+      logger.warn(
+          "Skipping review automation Slack alert: unknown Slack client id {} for team {}",
+          settings.slackClientId(),
+          team.getId());
+      return false;
+    }
+
+    String text =
+        buildReviewAutomationTriggerAlertMessage(reviewAutomation, triggerHealth, failureReason);
+    if (isBlank(text)) {
+      return false;
+    }
+
+    try {
+      Message message = new Message();
+      message.setChannel(settings.slackChannelId());
+      message.setText(text);
+      slackClient.sendInstantMessage(message);
+      return true;
+    } catch (SlackClientException ex) {
+      logger.warn(
+          "Failed to send review automation Slack alert for automation {} team {}: {}",
+          reviewAutomation.getId(),
+          team.getId(),
+          ex.getMessage(),
+          ex);
+      return false;
+    }
   }
 
   public void sendReviewProjectRequestAssignmentNotification(
@@ -223,6 +277,39 @@ public class TeamSlackNotificationService {
     appendUserLine(
         builder, "Translator", reviewProject.getAssignedTranslatorUser(), mappingsByUserId);
 
+    return builder.toString();
+  }
+
+  private String buildReviewAutomationTriggerAlertMessage(
+      ReviewAutomation reviewAutomation,
+      ReviewAutomationCronSchedulerService.TriggerHealth triggerHealth,
+      String failureReason) {
+    if (reviewAutomation == null || triggerHealth == null) {
+      return null;
+    }
+
+    StringBuilder builder = new StringBuilder();
+    builder.append(":warning: Mojito review automation trigger needs attention");
+    builder.append("\nAutomation: #").append(reviewAutomation.getId());
+    if (!isBlank(reviewAutomation.getName())) {
+      builder.append(" — ").append(reviewAutomation.getName().trim());
+    }
+    builder.append("\nStatus: ").append(triggerHealth.status());
+    if (!isBlank(triggerHealth.quartzState())) {
+      builder.append(" (Quartz: ").append(triggerHealth.quartzState().trim()).append(")");
+    }
+    if (triggerHealth.nextRunAt() != null) {
+      builder
+          .append("\nNext run: ")
+          .append(triggerHealth.nextRunAt().format(SLACK_DUE_DATE_FORMATTER));
+    }
+    if (!isBlank(failureReason)) {
+      builder.append("\nReason: ").append(failureReason.trim());
+    }
+    String settingsLink = buildReviewAutomationLink(reviewAutomation.getId());
+    if (!isBlank(settingsLink)) {
+      builder.append("\nOpen automation: ").append(settingsLink);
+    }
     return builder.toString();
   }
 
@@ -483,5 +570,21 @@ public class TeamSlackNotificationService {
     }
     String url = base + "/n/review-projects?requestId=" + requestId;
     return "<" + url + "|request #" + requestId + ">";
+  }
+
+  private String buildReviewAutomationLink(Long automationId) {
+    String configuredServerUrl = serverConfig != null ? serverConfig.getUrl() : null;
+    if (automationId == null || isBlank(configuredServerUrl)) {
+      return null;
+    }
+    String base = configuredServerUrl.trim();
+    while (base.endsWith("/")) {
+      base = base.substring(0, base.length() - 1);
+    }
+    if (base.isEmpty()) {
+      return null;
+    }
+    String url = base + "/n/settings/system/review-automations/" + automationId;
+    return "<" + url + "|automation #" + automationId + ">";
   }
 }
