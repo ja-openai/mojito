@@ -138,14 +138,14 @@ public class AiReviewChatWS {
                         createJsonSchema(AiReviewTextUnitVariantOutput.class))))
             .build();
 
-    logger.info(objectMapper.writeValueAsStringUnchecked(chatCompletionsRequest));
+    logger.debug(objectMapper.writeValueAsStringUnchecked(chatCompletionsRequest));
 
     ChatCompletionsResponse chatCompletionsResponse =
         openAIClient
             .getChatCompletions(chatCompletionsRequest, Duration.of(15, ChronoUnit.SECONDS))
             .join();
 
-    logger.info(objectMapper.writeValueAsStringUnchecked(chatCompletionsResponse));
+    logger.debug(objectMapper.writeValueAsStringUnchecked(chatCompletionsResponse));
 
     String jsonResponse = chatCompletionsResponse.choices().getFirst().message().content();
     AiReviewTextUnitVariantOutput output =
