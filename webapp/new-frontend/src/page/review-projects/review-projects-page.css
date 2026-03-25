@@ -318,7 +318,7 @@
 
 .review-projects-page__request-project-link {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 11rem) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(3.5rem, auto) minmax(0, 11rem) auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
@@ -375,6 +375,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.review-projects-page__request-project-id {
+  justify-self: start;
 }
 
 .review-projects-page__request-locale-count {
@@ -446,6 +450,13 @@
   align-items: center;
   gap: var(--space-2);
   justify-content: flex-start;
+}
+
+.review-projects-page__project-info-id {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
 }
 
 .review-projects-page__request-project-counts {

@@ -771,12 +771,6 @@ export function ReviewProjectsPage() {
     }
   }, [isRequestMode, refetchList, refetchRequestGroups]);
 
-  const handleRequestIdClick = useCallback((requestId: number) => {
-    setSearchField('requestId');
-    setSearchType('exact');
-    setSearchQuery(String(requestId));
-  }, []);
-
   const handleSearchChange = useCallback(
     (value: string) => {
       if (creatorFilter === 'mine') {
@@ -940,7 +934,6 @@ export function ReviewProjectsPage() {
           assignedScope,
           onAssignedScopeChange: setAssignedScope,
         }}
-        onRequestIdClick={handleRequestIdClick}
         canCreate={isAdmin}
         adminControls={adminControls}
         assignmentControls={assignmentControls}

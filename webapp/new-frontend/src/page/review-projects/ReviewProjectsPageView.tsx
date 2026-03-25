@@ -141,7 +141,6 @@ type Props = {
   requestGroups?: ReviewProjectRequestGroupRow[];
   filters: FiltersProps;
   requestFilter?: { requestId: number | null; onClear: () => void };
-  onRequestIdClick?: (requestId: number) => void;
   canCreate?: boolean;
   adminControls?: ReviewProjectsAdminControls;
   assignmentControls?: ReviewProjectsAssignmentControls;
@@ -352,7 +351,6 @@ function ContentSection({
   getRowRef,
   adminControls,
   assignmentControls,
-  onRequestIdClick,
   reviewProjectsSessionKey,
 }: {
   projects: ReviewProjectRow[];
@@ -362,7 +360,6 @@ function ContentSection({
   getRowRef: (rowId: number) => (element: HTMLDivElement | null) => void;
   adminControls?: ReviewProjectsAdminControls;
   assignmentControls?: ReviewProjectsAssignmentControls;
-  onRequestIdClick?: (requestId: number) => void;
   reviewProjectsSessionKey?: string | null;
 }) {
   const isAdmin = adminControls?.enabled ?? false;
@@ -537,7 +534,6 @@ function ContentSection({
                     }
                     setReassignProject(nextProject);
                   }}
-                  onRequestIdClick={onRequestIdClick}
                   reviewProjectsSessionKey={reviewProjectsSessionKey}
                 />
               ),
@@ -1034,7 +1030,8 @@ function FilterControls({
               { value: 'TO_TEAM', label: 'To team' },
             ],
             value: filters.assignedScope,
-            onChange: (value) => filters.onAssignedScopeChange(value as ApiReviewProjectAssignedScope),
+            onChange: (value) =>
+              filters.onAssignedScopeChange(value as ApiReviewProjectAssignedScope),
           },
           {
             kind: 'radio',
@@ -1129,7 +1126,6 @@ function ReviewProjectRowView({
   canReassignTranslator,
   isReassignSaving,
   onOpenTranslatorReassign,
-  onRequestIdClick,
   reviewProjectsSessionKey,
 }: {
   project: ReviewProjectRow;
@@ -1139,7 +1135,6 @@ function ReviewProjectRowView({
   canReassignTranslator?: boolean;
   isReassignSaving?: boolean;
   onOpenTranslatorReassign?: (project: ReviewProjectRow) => void;
-  onRequestIdClick?: (requestId: number) => void;
   reviewProjectsSessionKey?: string | null;
 }) {
   const { accepted, total, percentWidth, percentLabel } = getProgressMetrics(
@@ -1147,7 +1142,6 @@ function ReviewProjectRowView({
     project.textUnitCount ?? 0,
   );
   const localeTag = project.localeTag;
-  const requestId = project.requestId;
   const typeClass =
     project.type === 'EMERGENCY'
       ? 'review-projects-page__type-pill--emergency'
@@ -1175,19 +1169,7 @@ function ReviewProjectRowView({
             >
               <span className="review-projects-page__project-name">{project.name}</span>
             </Link>
-            {requestId != null ? (
-              onRequestIdClick ? (
-                <button
-                  type="button"
-                  className="review-projects-page__request-id review-projects-page__request-id-button"
-                  onClick={() => onRequestIdClick(requestId)}
-                >
-                  Request #{requestId}
-                </button>
-              ) : (
-                <span className="review-projects-page__request-id">Request #{requestId}</span>
-              )
-            ) : null}
+            <span className="review-projects-page__project-info-id">#{project.id}</span>
           </div>
         </div>
         <div className="review-projects-page__counts">
@@ -1326,7 +1308,6 @@ function RequestGroupsSection({
   groups,
   expandedKey,
   onToggleExpanded,
-  onFilterByRequest,
   adminControls,
   assignmentControls,
   projectStatusFilter = 'all',
@@ -1336,7 +1317,6 @@ function RequestGroupsSection({
   groups: ReviewProjectRequestGroupRow[];
   expandedKey: string | null;
   onToggleExpanded: (key: string) => void;
-  onFilterByRequest: (requestId: number) => void;
   adminControls?: ReviewProjectsAdminControls;
   assignmentControls?: ReviewProjectsAssignmentControls;
   projectStatusFilter?: ApiReviewProjectStatus | 'all';
@@ -1654,8 +1634,6 @@ function RequestGroupsSection({
               group.projects.map((project) => project.textUnitCount),
             );
             const typeBadge = getRequestGroupTypeBadge(group);
-            const requestLabel =
-              group.requestId != null ? `Request #${group.requestId}` : 'Request';
             const onCardToggleClick = (event: MouseEvent<HTMLElement>) => {
               const target = event.target as HTMLElement | null;
               if (target && target.closest(TOGGLE_IGNORE_SELECTOR)) {
@@ -1700,33 +1678,17 @@ function RequestGroupsSection({
                         <span className="review-projects-page__project-name">{group.name}</span>
                       </span>
                       <span className="review-projects-page__request-secondary">
-                        {group.requestId != null ? (
-                          <button
-                            type="button"
-                            className="review-projects-page__request-id review-projects-page__request-id-button"
-                            onClick={() => onFilterByRequest(group.requestId as number)}
-                          >
-                            {requestLabel}
-                          </button>
-                        ) : (
-                          <span className="review-projects-page__request-id">{requestLabel}</span>
-                        )}
                         {isAdmin && requestEditProjectId != null ? (
-                          <>
-                            <span className="review-projects-page__request-dot" aria-hidden="true">
-                              ·
-                            </span>
-                            <Link
-                              to={buildReviewProjectDetailPath(
-                                requestEditProjectId,
-                                reviewProjectsSessionKey,
-                                { requestDetails: true, requestSource: 'list' },
-                              )}
-                              className="review-projects-page__request-link review-projects-page__link"
-                            >
-                              Edit
-                            </Link>
-                          </>
+                          <Link
+                            to={buildReviewProjectDetailPath(
+                              requestEditProjectId,
+                              reviewProjectsSessionKey,
+                              { requestDetails: true, requestSource: 'list' },
+                            )}
+                            className="review-projects-page__request-link review-projects-page__link"
+                          >
+                            Edit
+                          </Link>
                         ) : null}
                       </span>
                     </div>
@@ -1859,6 +1821,11 @@ function RequestGroupsSection({
                                 <span className="review-projects-page__muted">No locale</span>
                               )}
                             </div>
+                            <div className="review-projects-page__request-project-id">
+                              <span className="review-projects-page__project-info-id">
+                                #{project.id}
+                              </span>
+                            </div>
                             {canReassignTranslator ? (
                               <span
                                 role="button"
@@ -1884,7 +1851,9 @@ function RequestGroupsSection({
                                 }}
                                 aria-disabled={reassignMutation.isPending}
                                 aria-label="Reassign translator"
-                                title={getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'}
+                                title={
+                                  getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'
+                                }
                               >
                                 {getCompactUserDisplayName(project.assignedTranslatorUsername)}
                               </span>
@@ -2071,7 +2040,6 @@ export function ReviewProjectsPageView({
   requestGroups,
   filters,
   requestFilter,
-  onRequestIdClick,
   canCreate = true,
   adminControls,
   assignmentControls,
@@ -2145,13 +2113,6 @@ export function ReviewProjectsPageView({
     [effectiveExpandedRequestKey, setExpandedRequestKey],
   );
 
-  const handleFilterByRequest = useCallback(
-    (requestId: number) => {
-      onRequestIdClick?.(requestId);
-    },
-    [onRequestIdClick],
-  );
-
   if (status === 'loading') {
     return <LoadingState />;
   }
@@ -2176,11 +2137,7 @@ export function ReviewProjectsPageView({
           </button>
         </div>
       ) : null}
-      <FilterControls
-        filters={filters}
-        canCreate={canCreate}
-        displayMode={effectiveDisplayMode}
-      />
+      <FilterControls filters={filters} canCreate={canCreate} displayMode={effectiveDisplayMode} />
       {hasResults ? (
         <SummaryBar
           resultCount={
@@ -2201,7 +2158,6 @@ export function ReviewProjectsPageView({
           groups={groupedRequestRows}
           expandedKey={effectiveExpandedRequestKey}
           onToggleExpanded={handleToggleRequestGroup}
-          onFilterByRequest={handleFilterByRequest}
           adminControls={adminControls}
           assignmentControls={assignmentControls}
           projectStatusFilter={filters.projectStatusValue}
@@ -2217,7 +2173,6 @@ export function ReviewProjectsPageView({
           getRowRef={getRowRef}
           adminControls={adminControls}
           assignmentControls={assignmentControls}
-          onRequestIdClick={onRequestIdClick}
           reviewProjectsSessionKey={reviewProjectsSessionKey}
         />
       )}
