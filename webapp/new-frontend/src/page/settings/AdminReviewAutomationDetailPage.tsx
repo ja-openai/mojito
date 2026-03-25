@@ -705,6 +705,6 @@ function formatTriggerStatus(value?: string | null) {
     case 'MISSING':
       return 'Missing';
     default:
-      return 'Unknown';
+      return 'Missing';
   }
 }
