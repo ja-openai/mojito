@@ -157,9 +157,9 @@
 }
 
 .review-automation-admin-page__trigger-badge.is-healthy {
-  color: #0f6b46;
-  background: color-mix(in srgb, #2f8f5b 12%, white);
-  border-color: color-mix(in srgb, #2f8f5b 28%, transparent);
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, white);
+  border-color: color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
 .review-automation-admin-page__trigger-badge.is-error {
