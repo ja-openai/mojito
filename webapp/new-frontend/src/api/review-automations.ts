@@ -57,6 +57,9 @@ export type ApiReviewAutomationRunResult = {
   featureCount: number;
   createdProjectRequestCount: number;
   createdProjectCount: number;
+  createdLocaleCount: number;
+  skippedLocaleCount: number;
+  erroredLocaleCount: number;
 };
 
 export type ApiReviewAutomationRun = {
@@ -120,6 +123,27 @@ const jsonHeaders = {
   'Content-Type': 'application/json',
 };
 
+async function getErrorMessage(response: Response, fallbackMessage: string) {
+  const text = await response.text().catch(() => '');
+  if (!text) {
+    return fallbackMessage;
+  }
+
+  try {
+    const parsed = JSON.parse(text) as { message?: string; error?: string };
+    if (parsed.message?.trim()) {
+      return parsed.message.trim();
+    }
+    if (parsed.error?.trim()) {
+      return parsed.error.trim();
+    }
+  } catch {
+    // Fall back to raw text for non-JSON responses.
+  }
+
+  return text || fallbackMessage;
+}
+
 export async function fetchReviewAutomations(options?: {
   search?: string;
   enabled?: boolean | null;
@@ -145,8 +169,7 @@ export async function fetchReviewAutomations(options?: {
   );
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load review automations');
+    throw new Error(await getErrorMessage(response, 'Failed to load review automations'));
   }
 
   return (await response.json()) as ApiReviewAutomationsResponse;
@@ -159,8 +182,7 @@ export async function fetchReviewAutomation(automationId: number): Promise<ApiRe
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load review automation');
+    throw new Error(await getErrorMessage(response, 'Failed to load review automation'));
   }
 
   return (await response.json()) as ApiReviewAutomation;
@@ -173,8 +195,7 @@ export async function fetchReviewAutomationOptions(): Promise<ApiReviewAutomatio
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load review automation options');
+    throw new Error(await getErrorMessage(response, 'Failed to load review automation options'));
   }
 
   return (await response.json()) as ApiReviewAutomationOption[];
@@ -189,8 +210,9 @@ export async function fetchReviewAutomationBatchExport(): Promise<
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load review automation batch export');
+    throw new Error(
+      await getErrorMessage(response, 'Failed to load review automation batch export'),
+    );
   }
 
   return (await response.json()) as ApiReviewAutomationBatchExportRow[];
@@ -207,8 +229,7 @@ export async function createReviewAutomation(
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to create review automation');
+    throw new Error(await getErrorMessage(response, 'Failed to create review automation'));
   }
 
   return (await response.json()) as ApiReviewAutomation;
@@ -226,8 +247,7 @@ export async function updateReviewAutomation(
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to update review automation');
+    throw new Error(await getErrorMessage(response, 'Failed to update review automation'));
   }
 
   return (await response.json()) as ApiReviewAutomation;
@@ -240,8 +260,7 @@ export async function deleteReviewAutomation(automationId: number): Promise<void
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to delete review automation');
+    throw new Error(await getErrorMessage(response, 'Failed to delete review automation'));
   }
 }
 
@@ -256,8 +275,7 @@ export async function batchUpsertReviewAutomations(
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to batch update review automations');
+    throw new Error(await getErrorMessage(response, 'Failed to batch update review automations'));
   }
 
   return (await response.json()) as ApiBatchUpsertReviewAutomationsResponse;
@@ -273,8 +291,7 @@ export async function runReviewAutomationNow(
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to run review automation');
+    throw new Error(await getErrorMessage(response, 'Failed to run review automation'));
   }
 
   return (await response.json()) as ApiReviewAutomationRunResult;
@@ -303,8 +320,7 @@ export async function fetchReviewAutomationRuns(options?: {
   );
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load review automation runs');
+    throw new Error(await getErrorMessage(response, 'Failed to load review automation runs'));
   }
 
   return (await response.json()) as ApiReviewAutomationRun[];
@@ -330,8 +346,9 @@ export async function fetchReviewAutomationSchedulePreview(options: {
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to preview review automation schedule');
+    throw new Error(
+      await getErrorMessage(response, 'Failed to preview review automation schedule'),
+    );
   }
 
   return (await response.json()) as ApiReviewAutomationSchedulePreview;

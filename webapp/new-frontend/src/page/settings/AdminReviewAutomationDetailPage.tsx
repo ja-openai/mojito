@@ -137,13 +137,19 @@ export function AdminReviewAutomationDetailPage() {
   });
   const runNowMutation = useMutation({
     mutationFn: () => runReviewAutomationNow(parsedAutomationId as number),
+    onMutate: () => {
+      setStatusNotice({
+        kind: 'success',
+        message: 'Running review automation…',
+      });
+    },
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({
         queryKey: ['review-automation-runs', parsedAutomationId],
       });
       setStatusNotice({
         kind: 'success',
-        message: `Ran ${result.automationName}: created ${result.createdProjectRequestCount} request${result.createdProjectRequestCount === 1 ? '' : 's'} and ${result.createdProjectCount} project${result.createdProjectCount === 1 ? '' : 's'}.`,
+        message: `Ran ${result.automationName}: created ${result.createdProjectRequestCount} request${result.createdProjectRequestCount === 1 ? '' : 's'}, ${result.createdProjectCount} project${result.createdProjectCount === 1 ? '' : 's'}, ${result.createdLocaleCount} locale${result.createdLocaleCount === 1 ? '' : 's'}, skipped ${result.skippedLocaleCount}, errors ${result.erroredLocaleCount}.`,
       });
     },
     onError: (error: Error) => {
@@ -464,7 +470,7 @@ export function AdminReviewAutomationDetailPage() {
                     onClick={() => runNowMutation.mutate()}
                     disabled={updateMutation.isPending || runNowMutation.isPending}
                   >
-                    Run now
+                    {runNowMutation.isPending ? 'Running…' : 'Run now'}
                   </button>
                   <button
                     type="button"
