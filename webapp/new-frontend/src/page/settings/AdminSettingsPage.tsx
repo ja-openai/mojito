@@ -82,9 +82,9 @@ export function AdminSettingsPage() {
             </div>
           </section>
 
-          <section className="settings-card" aria-labelledby="settings-other">
+          <section className="settings-card" aria-labelledby="settings-user-management">
             <div className="settings-card__header">
-              <h2 id="settings-other">Other</h2>
+              <h2 id="settings-user-management">User management</h2>
             </div>
             <div className="settings-directory">
               <button
