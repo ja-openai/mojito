@@ -8,6 +8,7 @@ import {
   type ApiReviewAutomationRun,
   fetchReviewAutomation,
   fetchReviewAutomationRuns,
+  repairReviewAutomationTrigger,
   runReviewAutomationNow,
   updateReviewAutomation,
 } from '../../api/review-automations';
@@ -156,6 +157,25 @@ export function AdminReviewAutomationDetailPage() {
       setStatusNotice({
         kind: 'error',
         message: error.message || 'Failed to run review automation.',
+      });
+    },
+  });
+  const repairTriggerMutation = useMutation({
+    mutationFn: () => repairReviewAutomationTrigger(parsedAutomationId as number),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['review-automation', parsedAutomationId] }),
+        queryClient.invalidateQueries({ queryKey: ['review-automations'] }),
+      ]);
+      setStatusNotice({
+        kind: 'success',
+        message: 'Repaired review automation trigger.',
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to repair review automation trigger.',
       });
     },
   });
@@ -381,6 +401,48 @@ export function AdminReviewAutomationDetailPage() {
                   ))}
                 </datalist>
               </div>
+              <div className="settings-card">
+                <div className="settings-card__header">
+                  <h2>Trigger health</h2>
+                </div>
+                <div className="settings-grid settings-grid--two-column">
+                  <div className="settings-field">
+                    <span className="settings-field__label">Trigger status</span>
+                    <span>{formatTriggerStatus(automationQuery.data?.trigger?.status)}</span>
+                  </div>
+                  <div className="settings-field">
+                    <span className="settings-field__label">Quartz state</span>
+                    <span>{automationQuery.data?.trigger?.quartzState || 'NONE'}</span>
+                  </div>
+                  <div className="settings-field">
+                    <span className="settings-field__label">Next run</span>
+                    <span>{formatDateTime(automationQuery.data?.trigger?.nextRunAt)}</span>
+                  </div>
+                  <div className="settings-field">
+                    <span className="settings-field__label">Previous fire</span>
+                    <span>{formatDateTime(automationQuery.data?.trigger?.previousRunAt)}</span>
+                  </div>
+                  <div className="settings-field">
+                    <span className="settings-field__label">Last run</span>
+                    <span>{formatDateTime(automationQuery.data?.trigger?.lastRunAt)}</span>
+                  </div>
+                  <div className="settings-field">
+                    <span className="settings-field__label">Last successful run</span>
+                    <span>
+                      {formatDateTime(automationQuery.data?.trigger?.lastSuccessfulRunAt)}
+                    </span>
+                  </div>
+                </div>
+                {automationQuery.data?.trigger?.repairRecommended ? (
+                  <p className="settings-hint is-error">
+                    This automation trigger needs repair before scheduled runs can resume.
+                  </p>
+                ) : (
+                  <p className="settings-hint">
+                    Scheduled runs use the saved automation configuration and Quartz trigger state.
+                  </p>
+                )}
+              </div>
               <div className="settings-grid settings-grid--two-column">
                 <div className="settings-field">
                   <label className="settings-field__label">Team</label>
@@ -467,8 +529,25 @@ export function AdminReviewAutomationDetailPage() {
                   <button
                     type="button"
                     className="settings-button"
+                    onClick={() => repairTriggerMutation.mutate()}
+                    disabled={
+                      updateMutation.isPending ||
+                      runNowMutation.isPending ||
+                      repairTriggerMutation.isPending ||
+                      !automationQuery.data?.trigger?.repairRecommended
+                    }
+                  >
+                    {repairTriggerMutation.isPending ? 'Repairing…' : 'Repair trigger'}
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-button"
                     onClick={() => runNowMutation.mutate()}
-                    disabled={updateMutation.isPending || runNowMutation.isPending}
+                    disabled={
+                      updateMutation.isPending ||
+                      runNowMutation.isPending ||
+                      repairTriggerMutation.isPending
+                    }
                   >
                     {runNowMutation.isPending ? 'Running…' : 'Run now'}
                   </button>
@@ -476,7 +555,12 @@ export function AdminReviewAutomationDetailPage() {
                     type="button"
                     className="settings-button settings-button--primary"
                     onClick={handleSave}
-                    disabled={updateMutation.isPending || runNowMutation.isPending || !isDirty}
+                    disabled={
+                      updateMutation.isPending ||
+                      runNowMutation.isPending ||
+                      repairTriggerMutation.isPending ||
+                      !isDirty
+                    }
                   >
                     Save
                   </button>
@@ -608,4 +692,19 @@ function formatRunStatus(run: ApiReviewAutomationRun) {
     : run.status === 'RUNNING'
       ? 'Running'
       : run.status;
+}
+
+function formatTriggerStatus(value?: string | null) {
+  switch (value) {
+    case 'HEALTHY':
+      return 'Healthy';
+    case 'ERROR':
+      return 'Error';
+    case 'PAUSED':
+      return 'Paused';
+    case 'MISSING':
+      return 'Missing';
+    default:
+      return 'Unknown';
+  }
 }

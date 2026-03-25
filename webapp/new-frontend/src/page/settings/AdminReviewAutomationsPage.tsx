@@ -330,7 +330,9 @@ export function AdminReviewAutomationsPage() {
                 <div className="review-automation-admin-page__table-header">
                   <div className="review-automation-admin-page__cell">ID</div>
                   <div className="review-automation-admin-page__cell">Automation</div>
-                  <div className="review-automation-admin-page__cell">Status</div>
+                  <div className="review-automation-admin-page__cell">Enabled</div>
+                  <div className="review-automation-admin-page__cell">Trigger</div>
+                  <div className="review-automation-admin-page__cell">Next run</div>
                   <div className="review-automation-admin-page__cell">Schedule</div>
                   <div className="review-automation-admin-page__cell">Team</div>
                   <div className="review-automation-admin-page__cell">Due in</div>
@@ -622,6 +624,17 @@ function AutomationRow({
       <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
         {automation.enabled ? 'Enabled' : 'Disabled'}
       </div>
+      <div className="review-automation-admin-page__cell">
+        <span
+          className={`review-automation-admin-page__trigger-badge ${getTriggerStatusClassName(automation.trigger?.status)}`}
+          title={automation.trigger?.quartzState ?? 'No trigger'}
+        >
+          {formatTriggerStatus(automation.trigger?.status)}
+        </span>
+      </div>
+      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
+        {formatDateTime(automation.trigger?.nextRunAt ?? null)}
+      </div>
       <div
         className="review-automation-admin-page__cell review-automation-admin-page__cell--muted"
         title={`${automation.cronExpression} · ${automation.timeZone}`}
@@ -680,4 +693,34 @@ function formatDateTime(value?: string | null) {
 
 function formatDueDateOffsetDays(value: number) {
   return `${value}d`;
+}
+
+function formatTriggerStatus(value?: string | null) {
+  switch (value) {
+    case 'HEALTHY':
+      return 'Healthy';
+    case 'ERROR':
+      return 'Error';
+    case 'PAUSED':
+      return 'Paused';
+    case 'MISSING':
+      return 'Missing';
+    default:
+      return 'Unknown';
+  }
+}
+
+function getTriggerStatusClassName(value?: string | null) {
+  switch (value) {
+    case 'HEALTHY':
+      return 'is-healthy';
+    case 'ERROR':
+      return 'is-error';
+    case 'PAUSED':
+      return 'is-paused';
+    case 'MISSING':
+      return 'is-missing';
+    default:
+      return 'is-missing';
+  }
 }

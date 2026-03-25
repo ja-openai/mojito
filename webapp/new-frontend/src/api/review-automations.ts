@@ -3,6 +3,16 @@ export type ApiReviewAutomationFeature = {
   name: string;
 };
 
+export type ApiReviewAutomationTrigger = {
+  status: string;
+  quartzState: string;
+  nextRunAt: string | null;
+  previousRunAt: string | null;
+  lastRunAt: string | null;
+  lastSuccessfulRunAt: string | null;
+  repairRecommended: boolean;
+};
+
 export type ApiReviewAutomationSummary = {
   id: number;
   createdDate?: string | null;
@@ -14,6 +24,7 @@ export type ApiReviewAutomationSummary = {
   team: { id: number; name: string } | null;
   dueDateOffsetDays: number;
   maxWordCountPerProject: number;
+  trigger: ApiReviewAutomationTrigger | null;
   featureCount: number;
   features: ApiReviewAutomationFeature[];
 };
@@ -29,6 +40,7 @@ export type ApiReviewAutomation = {
   team: { id: number; name: string } | null;
   dueDateOffsetDays: number;
   maxWordCountPerProject: number;
+  trigger: ApiReviewAutomationTrigger | null;
   features: ApiReviewAutomationFeature[];
 };
 
@@ -82,6 +94,11 @@ export type ApiReviewAutomationRun = {
 export type ApiReviewAutomationSchedulePreview = {
   timeZone: string;
   nextRuns: string[];
+};
+
+export type ApiReviewAutomationTriggerRepairResult = {
+  automationId: number;
+  trigger: ApiReviewAutomationTrigger | null;
 };
 
 export type ApiReviewAutomationsResponse = {
@@ -295,6 +312,22 @@ export async function runReviewAutomationNow(
   }
 
   return (await response.json()) as ApiReviewAutomationRunResult;
+}
+
+export async function repairReviewAutomationTrigger(
+  automationId: number,
+): Promise<ApiReviewAutomationTriggerRepairResult> {
+  const response = await fetch(`/api/review-automations/${automationId}/repair-trigger`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to repair review automation trigger'));
+  }
+
+  return (await response.json()) as ApiReviewAutomationTriggerRepairResult;
 }
 
 export async function fetchReviewAutomationRuns(options?: {

@@ -1,8 +1,10 @@
 package com.box.l10n.mojito.rest.review;
 
+import com.box.l10n.mojito.service.review.ReviewAutomationCronSchedulerService;
 import com.box.l10n.mojito.service.review.ReviewAutomationRunService;
 import com.box.l10n.mojito.service.review.ReviewAutomationSchedulerService;
 import com.box.l10n.mojito.service.review.ReviewAutomationService;
+import com.box.l10n.mojito.service.review.ReviewAutomationTriggerStatusView;
 import com.box.l10n.mojito.service.review.SearchReviewAutomationsView;
 import com.box.l10n.mojito.service.team.TeamService;
 import java.time.ZonedDateTime;
@@ -54,6 +56,7 @@ public class ReviewAutomationWS {
         TeamRef team,
         int dueDateOffsetDays,
         int maxWordCountPerProject,
+        TriggerStatusRef trigger,
         long featureCount,
         List<FeatureRef> features) {}
   }
@@ -69,11 +72,21 @@ public class ReviewAutomationWS {
       TeamRef team,
       int dueDateOffsetDays,
       int maxWordCountPerProject,
+      TriggerStatusRef trigger,
       List<FeatureRef> features) {}
 
   public record FeatureRef(Long id, String name) {}
 
   public record TeamRef(Long id, String name) {}
+
+  public record TriggerStatusRef(
+      String status,
+      String quartzState,
+      String nextRunAt,
+      String previousRunAt,
+      String lastRunAt,
+      String lastSuccessfulRunAt,
+      boolean repairRecommended) {}
 
   public record UpsertReviewAutomationRequest(
       String name,
@@ -142,6 +155,9 @@ public class ReviewAutomationWS {
       String errorMessage) {}
 
   public record ReviewAutomationSchedulePreviewResponse(String timeZone, List<String> nextRuns) {}
+
+  public record RepairReviewAutomationTriggerResponse(
+      Long automationId, TriggerStatusRef trigger) {}
 
   public record BatchUpsertReviewAutomationsResponse(int createdCount, int updatedCount) {}
 
@@ -214,6 +230,24 @@ public class ReviewAutomationWS {
           result.createdLocaleCount(),
           result.skippedLocaleCount(),
           result.erroredLocaleCount());
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Review automation not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{automationId}/repair-trigger")
+  public RepairReviewAutomationTriggerResponse repairReviewAutomationTrigger(
+      @PathVariable Long automationId) {
+    requireAdmin();
+    try {
+      ReviewAutomationCronSchedulerService.TriggerHealth triggerHealth =
+          reviewAutomationService.repairTrigger(automationId);
+      return new RepairReviewAutomationTriggerResponse(
+          automationId, toTriggerStatusRef(toTriggerStatusView(triggerHealth, null, null)));
     } catch (IllegalArgumentException ex) {
       HttpStatus status =
           ex.getMessage() != null && ex.getMessage().startsWith("Review automation not found:")
@@ -373,6 +407,7 @@ public class ReviewAutomationWS {
         view.team() == null ? null : new TeamRef(view.team().id(), view.team().name()),
         view.dueDateOffsetDays(),
         view.maxWordCountPerProject(),
+        toTriggerStatusRef(view.trigger()),
         view.featureCount(),
         view.features().stream()
             .map(feature -> new FeatureRef(feature.id(), feature.name()))
@@ -392,9 +427,42 @@ public class ReviewAutomationWS {
         detail.team() == null ? null : new TeamRef(detail.team().id(), detail.team().name()),
         detail.dueDateOffsetDays(),
         detail.maxWordCountPerProject(),
+        toTriggerStatusRef(detail.trigger()),
         detail.features().stream()
             .map(feature -> new FeatureRef(feature.id(), feature.name()))
             .toList());
+  }
+
+  private TriggerStatusRef toTriggerStatusRef(ReviewAutomationTriggerStatusView trigger) {
+    if (trigger == null) {
+      return null;
+    }
+    return new TriggerStatusRef(
+        trigger.status(),
+        trigger.quartzState(),
+        trigger.nextRunAt() == null ? null : trigger.nextRunAt().toOffsetDateTime().toString(),
+        trigger.previousRunAt() == null
+            ? null
+            : trigger.previousRunAt().toOffsetDateTime().toString(),
+        trigger.lastRunAt() == null ? null : trigger.lastRunAt().toOffsetDateTime().toString(),
+        trigger.lastSuccessfulRunAt() == null
+            ? null
+            : trigger.lastSuccessfulRunAt().toOffsetDateTime().toString(),
+        trigger.repairRecommended());
+  }
+
+  private ReviewAutomationTriggerStatusView toTriggerStatusView(
+      ReviewAutomationCronSchedulerService.TriggerHealth triggerHealth,
+      ZonedDateTime lastRunAt,
+      ZonedDateTime lastSuccessfulRunAt) {
+    return new ReviewAutomationTriggerStatusView(
+        triggerHealth.status().name(),
+        triggerHealth.quartzState(),
+        triggerHealth.nextRunAt(),
+        triggerHealth.previousRunAt(),
+        lastRunAt,
+        lastSuccessfulRunAt,
+        triggerHealth.repairRecommended());
   }
 
   private void requireAdmin() {

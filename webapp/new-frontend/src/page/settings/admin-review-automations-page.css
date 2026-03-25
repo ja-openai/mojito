@@ -74,7 +74,7 @@
 .review-automation-admin-page__table-header,
 .review-automation-admin-page__row {
   display: grid;
-  grid-template-columns: 4.5rem 1.2fr 6rem 11rem 7rem 6rem 7rem 1.35fr 10rem 6rem;
+  grid-template-columns: 4.5rem 1.15fr 5.5rem 7rem 10rem 11rem 7rem 6rem 7rem 1.25fr 10rem 6rem;
   gap: var(--space-2);
   align-items: center;
 }
@@ -142,6 +142,42 @@
   justify-content: flex-end;
   align-items: center;
   gap: var(--space-3);
+}
+
+.review-automation-admin-page__trigger-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5.5rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  border: var(--border-width) solid transparent;
+}
+
+.review-automation-admin-page__trigger-badge.is-healthy {
+  color: #0f6b46;
+  background: color-mix(in srgb, #2f8f5b 12%, white);
+  border-color: color-mix(in srgb, #2f8f5b 28%, transparent);
+}
+
+.review-automation-admin-page__trigger-badge.is-error {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, white);
+  border-color: color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+
+.review-automation-admin-page__trigger-badge.is-paused {
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-border);
+}
+
+.review-automation-admin-page__trigger-badge.is-missing {
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-surface-muted) 70%, white);
+  border-color: color-mix(in srgb, var(--color-border) 80%, transparent);
 }
 
 .review-automation-admin-page__row-action-link {

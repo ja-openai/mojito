@@ -32,6 +32,14 @@ public interface ReviewAutomationRepository extends JpaRepository<ReviewAutomati
   @Query("select ra from ReviewAutomation ra where ra.id = :id")
   Optional<ReviewAutomation> findByIdWithFeatures(@Param("id") Long id);
 
+  @EntityGraph(attributePaths = {"team"})
+  @Query("select ra from ReviewAutomation ra where ra.id in :ids")
+  List<ReviewAutomation> findAllByIdsWithTeam(@Param("ids") List<Long> ids);
+
+  @EntityGraph(attributePaths = {"team"})
+  @Query("select ra from ReviewAutomation ra where ra.enabled = true")
+  List<ReviewAutomation> findAllEnabledWithTeam();
+
   @Query(
       value =
           """

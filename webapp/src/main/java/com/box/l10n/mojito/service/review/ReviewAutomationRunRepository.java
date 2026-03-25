@@ -66,4 +66,34 @@ public interface ReviewAutomationRunRepository extends JpaRepository<ReviewAutom
       """)
   List<ReviewAutomationRunSummaryRow> findRecentRunRowsByAutomationIds(
       @Param("automationIds") List<Long> automationIds, Pageable pageable);
+
+  @Query(
+      """
+      select new com.box.l10n.mojito.service.review.ReviewAutomationRunTimestampRow(
+        automation.id,
+        max(coalesce(run.startedAt, run.createdDate))
+      )
+      from ReviewAutomationRun run
+      join run.reviewAutomation automation
+      where automation.id in :automationIds
+      group by automation.id
+      """)
+  List<ReviewAutomationRunTimestampRow> findLatestRunTimestampsByAutomationIds(
+      @Param("automationIds") List<Long> automationIds);
+
+  @Query(
+      """
+      select new com.box.l10n.mojito.service.review.ReviewAutomationRunTimestampRow(
+        automation.id,
+        max(coalesce(run.finishedAt, run.startedAt, run.createdDate))
+      )
+      from ReviewAutomationRun run
+      join run.reviewAutomation automation
+      where automation.id in :automationIds
+        and run.status in :statuses
+      group by automation.id
+      """)
+  List<ReviewAutomationRunTimestampRow> findLatestSuccessfulRunTimestampsByAutomationIds(
+      @Param("automationIds") List<Long> automationIds,
+      @Param("statuses") List<ReviewAutomationRun.Status> statuses);
 }

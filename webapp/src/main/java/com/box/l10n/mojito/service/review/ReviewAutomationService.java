@@ -39,6 +39,7 @@ public class ReviewAutomationService {
 
   private final ReviewAutomationRepository reviewAutomationRepository;
   private final ReviewFeatureRepository reviewFeatureRepository;
+  private final ReviewAutomationRunRepository reviewAutomationRunRepository;
   private final TeamRepository teamRepository;
   private final UserService userService;
   private final ObjectProvider<ReviewAutomationCronSchedulerService>
@@ -47,12 +48,14 @@ public class ReviewAutomationService {
   public ReviewAutomationService(
       ReviewAutomationRepository reviewAutomationRepository,
       ReviewFeatureRepository reviewFeatureRepository,
+      ReviewAutomationRunRepository reviewAutomationRunRepository,
       TeamRepository teamRepository,
       UserService userService,
       ObjectProvider<ReviewAutomationCronSchedulerService>
           reviewAutomationCronSchedulerServiceProvider) {
     this.reviewAutomationRepository = reviewAutomationRepository;
     this.reviewFeatureRepository = reviewFeatureRepository;
+    this.reviewAutomationRunRepository = reviewAutomationRunRepository;
     this.teamRepository = teamRepository;
     this.userService = userService;
     this.reviewAutomationCronSchedulerServiceProvider =
@@ -67,8 +70,13 @@ public class ReviewAutomationService {
     Page<ReviewAutomationSummaryRow> page =
         reviewAutomationRepository.searchSummaryRows(
             normalizeSearchQuery(searchQuery), enabled, PageRequest.of(0, resolvedLimit));
+    List<Long> automationIds =
+        page.getContent().stream().map(ReviewAutomationSummaryRow::id).toList();
     return new SearchReviewAutomationsView(
-        toSummaryViews(page.getContent(), loadFeaturesByAutomationId(page.getContent())),
+        toSummaryViews(
+            page.getContent(),
+            loadFeaturesByAutomationId(page.getContent()),
+            loadTriggerStatusByAutomationId(automationIds)),
         page.getTotalElements());
   }
 
@@ -159,7 +167,20 @@ public class ReviewAutomationService {
         toTeamRef(reviewAutomation.getTeam()),
         normalizeDueDateOffsetDays(reviewAutomation.getDueDateOffsetDays()),
         normalizeMaxWordCountPerProject(reviewAutomation.getMaxWordCountPerProject()),
+        loadTriggerStatusByAutomationId(List.of(reviewAutomation.getId()))
+            .getOrDefault(reviewAutomation.getId(), defaultTriggerStatusView()),
         features);
+  }
+
+  @Transactional(readOnly = true)
+  public ReviewAutomationCronSchedulerService.TriggerHealth repairTrigger(Long automationId) {
+    requireAdmin();
+    ReviewAutomationCronSchedulerService cronSchedulerService =
+        reviewAutomationCronSchedulerServiceProvider.getIfAvailable();
+    if (cronSchedulerService == null) {
+      throw new IllegalStateException("Review automation scheduler is not available");
+    }
+    return cronSchedulerService.repairTrigger(automationId);
   }
 
   @Transactional
@@ -385,7 +406,8 @@ public class ReviewAutomationService {
 
   private List<SearchReviewAutomationsView.ReviewAutomationSummary> toSummaryViews(
       List<ReviewAutomationSummaryRow> rows,
-      Map<Long, List<SearchReviewAutomationsView.FeatureSummary>> featuresByAutomationId) {
+      Map<Long, List<SearchReviewAutomationsView.FeatureSummary>> featuresByAutomationId,
+      Map<Long, ReviewAutomationTriggerStatusView> triggerStatusByAutomationId) {
     if (rows == null || rows.isEmpty()) {
       return List.of();
     }
@@ -403,9 +425,65 @@ public class ReviewAutomationService {
                     toTeamRef(row.teamId(), row.teamName()),
                     normalizeDueDateOffsetDays(row.dueDateOffsetDays()),
                     normalizeMaxWordCountPerProject(row.maxWordCountPerProject()),
+                    triggerStatusByAutomationId.getOrDefault(row.id(), defaultTriggerStatusView()),
                     row.featureCount(),
                     featuresByAutomationId.getOrDefault(row.id(), List.of())))
         .toList();
+  }
+
+  private Map<Long, ReviewAutomationTriggerStatusView> loadTriggerStatusByAutomationId(
+      List<Long> automationIds) {
+    if (automationIds == null || automationIds.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<Long, ZonedDateTime> lastRunAtByAutomationId =
+        reviewAutomationRunRepository.findLatestRunTimestampsByAutomationIds(automationIds).stream()
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    ReviewAutomationRunTimestampRow::automationId,
+                    ReviewAutomationRunTimestampRow::timestamp));
+    Map<Long, ZonedDateTime> lastSuccessfulRunAtByAutomationId =
+        reviewAutomationRunRepository
+            .findLatestSuccessfulRunTimestampsByAutomationIds(
+                automationIds,
+                List.of(
+                    com.box.l10n.mojito.entity.review.ReviewAutomationRun.Status.COMPLETED,
+                    com.box.l10n.mojito.entity.review.ReviewAutomationRun.Status
+                        .COMPLETED_WITH_ERRORS))
+            .stream()
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    ReviewAutomationRunTimestampRow::automationId,
+                    ReviewAutomationRunTimestampRow::timestamp));
+
+    ReviewAutomationCronSchedulerService cronSchedulerService =
+        reviewAutomationCronSchedulerServiceProvider.getIfAvailable();
+    Map<Long, ReviewAutomationCronSchedulerService.TriggerHealth> triggerHealthByAutomationId =
+        cronSchedulerService == null
+            ? Map.of()
+            : cronSchedulerService.getTriggerHealths(automationIds);
+
+    Map<Long, ReviewAutomationTriggerStatusView> result = new LinkedHashMap<>();
+    for (Long automationId : automationIds) {
+      ReviewAutomationCronSchedulerService.TriggerHealth triggerHealth =
+          triggerHealthByAutomationId.get(automationId);
+      result.put(
+          automationId,
+          new ReviewAutomationTriggerStatusView(
+              triggerHealth == null ? "MISSING" : triggerHealth.status().name(),
+              triggerHealth == null ? "NONE" : triggerHealth.quartzState(),
+              triggerHealth == null ? null : triggerHealth.nextRunAt(),
+              triggerHealth == null ? null : triggerHealth.previousRunAt(),
+              lastRunAtByAutomationId.get(automationId),
+              lastSuccessfulRunAtByAutomationId.get(automationId),
+              triggerHealth == null || triggerHealth.repairRecommended()));
+    }
+    return result;
+  }
+
+  private ReviewAutomationTriggerStatusView defaultTriggerStatusView() {
+    return new ReviewAutomationTriggerStatusView("MISSING", "NONE", null, null, null, null, true);
   }
 
   private ReviewAutomationDetail.TeamRef toTeamRef(Team team) {
@@ -585,6 +663,7 @@ public class ReviewAutomationService {
       TeamRef team,
       int dueDateOffsetDays,
       int maxWordCountPerProject,
+      ReviewAutomationTriggerStatusView trigger,
       List<FeatureRef> features) {
     public record TeamRef(Long id, String name) {}
 
