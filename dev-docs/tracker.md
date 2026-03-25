@@ -22,3 +22,4 @@ Backlog
 - FRONTEND-02b — Implement pure view: virtualized repos table with sticky header and inline search, selection highlight, metric link callbacks, and locales pane layout that mirrors the prototype.
 - FRONTEND-02c — Locale data & accessibility: map selected repo to localeDetails or call `onLoadLocales(repoId)`, handle loading/error/empty states, add scope/aria labels and focusable selected row, and keep CSS state classes minimal.
 - REVIEW-01 — Evolve review automation beyond the MVP executor: add business-day due-date handling, optional team/vendor delivery pools, and final assignment/claim strategy on top of the existing feature-based project creation and open-project exclusion.
+- REVIEW-02 — Add review automation trigger health/status in UI plus repair/alerting: show Quartz trigger state and next run, allow PM-safe trigger repair, emit trigger error metrics, and add low-frequency Slack-backed notification/repair for stuck `ERROR` triggers.

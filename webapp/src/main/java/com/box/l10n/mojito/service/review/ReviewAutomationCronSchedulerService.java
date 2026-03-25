@@ -15,6 +15,7 @@ import org.quartz.JobDetail;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
+import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
 import org.quartz.impl.matchers.GroupMatcher;
@@ -65,12 +66,23 @@ public class ReviewAutomationCronSchedulerService {
         CronTrigger trigger = buildTrigger(automation, jobKey);
 
         if (scheduler.checkExists(triggerKey)) {
-          scheduler.rescheduleJob(triggerKey, trigger);
-          logger.info(
-              "Review automation cron rescheduled: automationId={}, cron={}, timeZone={}",
-              automation.getId(),
-              automation.getCronExpression(),
-              automation.getTimeZone());
+          Trigger.TriggerState triggerState = scheduler.getTriggerState(triggerKey);
+          if (Trigger.TriggerState.ERROR.equals(triggerState)) {
+            scheduler.unscheduleJob(triggerKey);
+            scheduler.scheduleJob(trigger);
+            logger.info(
+                "Review automation cron recreated from error state: automationId={}, cron={}, timeZone={}",
+                automation.getId(),
+                automation.getCronExpression(),
+                automation.getTimeZone());
+          } else {
+            scheduler.rescheduleJob(triggerKey, trigger);
+            logger.info(
+                "Review automation cron rescheduled: automationId={}, cron={}, timeZone={}",
+                automation.getId(),
+                automation.getCronExpression(),
+                automation.getTimeZone());
+          }
         } else {
           scheduler.scheduleJob(trigger);
           logger.info(
