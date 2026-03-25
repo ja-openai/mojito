@@ -25,6 +25,7 @@ import { AdminAiLocalePromptSuffixPage } from './page/settings/AdminAiLocaleProm
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
 import { AdminReviewAutomationBatchPage } from './page/settings/AdminReviewAutomationBatchPage';
 import { AdminReviewAutomationDetailPage } from './page/settings/AdminReviewAutomationDetailPage';
+import { AdminReviewAutomationRunsPage } from './page/settings/AdminReviewAutomationRunsPage';
 import { AdminReviewAutomationsPage } from './page/settings/AdminReviewAutomationsPage';
 import { AdminReviewFeatureBatchPage } from './page/settings/AdminReviewFeatureBatchPage';
 import { AdminReviewFeatureDetailPage } from './page/settings/AdminReviewFeatureDetailPage';
@@ -155,6 +156,14 @@ export function App() {
             <Route
               path="/settings/system/review-automations"
               element={<AdminReviewAutomationsPage />}
+            />
+            <Route
+              path="/settings/admin/review-automation-runs"
+              element={<AdminReviewAutomationRunsPage />}
+            />
+            <Route
+              path="/settings/system/review-automation-runs"
+              element={<AdminReviewAutomationRunsPage />}
             />
             <Route
               path="/settings/admin/ai-translate/prompt-suffixes"

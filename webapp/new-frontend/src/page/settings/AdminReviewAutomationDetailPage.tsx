@@ -2,7 +2,7 @@ import './settings-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 
 import {
   type ApiReviewAutomationRun,
@@ -16,10 +16,12 @@ import { fetchReviewFeatureOptions } from '../../api/review-features';
 import { fetchTeams } from '../../api/teams';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { useUser } from '../../components/RequireUser';
+import { ReviewAutomationRunsTable } from '../../components/ReviewAutomationRunsTable';
 import { ReviewAutomationScheduleBuilderModal } from '../../components/ReviewAutomationScheduleBuilderModal';
 import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSelect';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getReviewAutomationTimeZoneOptions } from '../../utils/reviewAutomationSchedule';
+import { formatDateTime } from './reviewAutomationRunFormatting';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
@@ -573,23 +575,28 @@ export function AdminReviewAutomationDetailPage() {
         <section className="settings-card">
           <div className="settings-card__header">
             <h2>Recent runs</h2>
-            <NumericPresetDropdown
-              value={runHistoryLimit}
-              buttonLabel={`${runHistoryLimit} rows`}
-              menuLabel="Run history size"
-              presetOptions={RUN_HISTORY_LIMIT_PRESETS.map((size) => ({
-                value: size,
-                label: String(size),
-              }))}
-              onChange={setRunHistoryLimit}
-              ariaLabel="Review automation run history size"
-              pillsClassName="settings-pills"
-              optionClassName="settings-pill"
-              optionActiveClassName="is-active"
-              customActiveClassName="is-active"
-              customButtonClassName="settings-pill"
-              customInitialValue={50}
-            />
+            <div className="settings-actions">
+              <Link to="/settings/system/review-automation-runs" className="settings-button">
+                View all automation runs
+              </Link>
+              <NumericPresetDropdown
+                value={runHistoryLimit}
+                buttonLabel={`${runHistoryLimit} rows`}
+                menuLabel="Run history size"
+                presetOptions={RUN_HISTORY_LIMIT_PRESETS.map((size) => ({
+                  value: size,
+                  label: String(size),
+                }))}
+                onChange={setRunHistoryLimit}
+                ariaLabel="Review automation run history size"
+                pillsClassName="settings-pills"
+                optionClassName="settings-pill"
+                optionActiveClassName="is-active"
+                customActiveClassName="is-active"
+                customButtonClassName="settings-pill"
+                customInitialValue={50}
+              />
+            </div>
           </div>
           <p className="settings-hint">
             Run history reflects the saved automation configuration. Manual runs use the current
@@ -606,36 +613,7 @@ export function AdminReviewAutomationDetailPage() {
           ) : (automationRunsQuery.data ?? []).length === 0 ? (
             <p className="settings-hint">No runs recorded yet.</p>
           ) : (
-            <div className="settings-table-wrapper">
-              <table className="settings-table">
-                <thead>
-                  <tr>
-                    <th>Status</th>
-                    <th>Source</th>
-                    <th>Requests</th>
-                    <th>Projects</th>
-                    <th>Features</th>
-                    <th>Started</th>
-                    <th>Finished</th>
-                    <th>Requested by</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(automationRunsQuery.data ?? []).map((run) => (
-                    <tr key={run.id}>
-                      <td>{formatRunStatus(run)}</td>
-                      <td>{formatRunSource(run.triggerSource)}</td>
-                      <td>{run.createdProjectRequestCount}</td>
-                      <td>{run.createdProjectCount}</td>
-                      <td>{run.featureCount}</td>
-                      <td>{formatDateTime(run.startedAt ?? run.createdAt)}</td>
-                      <td>{formatDateTime(run.finishedAt)}</td>
-                      <td>{formatRequestedBy(run)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ReviewAutomationRunsTable runs={automationRunsQuery.data ?? []} />
           )}
         </section>
 
@@ -656,42 +634,6 @@ export function AdminReviewAutomationDetailPage() {
       </div>
     </div>
   );
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) {
-    return '-';
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString();
-}
-
-function formatRequestedBy(run: ApiReviewAutomationRun) {
-  if (run.requestedByUsername?.trim()) {
-    return run.requestedByUsername;
-  }
-  if (typeof run.requestedByUserId === 'number') {
-    return `User #${run.requestedByUserId}`;
-  }
-  return '-';
-}
-
-function formatRunSource(triggerSource: string) {
-  return triggerSource === 'CRON' ? 'Cron' : triggerSource === 'MANUAL' ? 'Manual' : triggerSource;
-}
-
-function formatRunStatus(run: ApiReviewAutomationRun) {
-  if (run.status === 'FAILED' && run.errorMessage?.trim()) {
-    return `Failed: ${run.errorMessage}`;
-  }
-  return run.status === 'COMPLETED'
-    ? 'Completed'
-    : run.status === 'RUNNING'
-      ? 'Running'
-      : run.status;
 }
 
 function formatTriggerStatus(value?: string | null) {

@@ -79,6 +79,18 @@ export function AdminSettingsPage() {
                   Manage schedules and automated review runs.
                 </div>
               </button>
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/review-automation-runs');
+                }}
+              >
+                <div className="settings-directory__title">Automation runs</div>
+                <div className="settings-directory__description">
+                  Review recent manual and scheduled automation runs.
+                </div>
+              </button>
             </div>
           </section>
 

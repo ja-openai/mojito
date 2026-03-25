@@ -88,6 +88,9 @@ export type ApiReviewAutomationRun = {
   featureCount: number;
   createdProjectRequestCount: number;
   createdProjectCount: number;
+  createdLocaleCount: number;
+  skippedLocaleCount: number;
+  erroredLocaleCount: number;
   errorMessage: string | null;
 };
 
