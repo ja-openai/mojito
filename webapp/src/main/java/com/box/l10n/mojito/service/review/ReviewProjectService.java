@@ -1241,6 +1241,11 @@ public class ReviewProjectService {
     reviewProject.setAssignedTranslatorUser(nextAssignedTranslator);
     reviewProjectRepository.save(reviewProject);
 
+    boolean teamChanged = !Objects.equals(getEntityId(previousTeam), getEntityId(nextTeam));
+    boolean translatorChanged =
+        !Objects.equals(
+            getEntityId(previousAssignedTranslator), getEntityId(nextAssignedTranslator));
+
     boolean hadAssignment =
         previousTeam != null || previousAssignedPm != null || previousAssignedTranslator != null;
     boolean hasAssignment =
@@ -1258,8 +1263,10 @@ public class ReviewProjectService {
     }
 
     recordAssignmentHistory(reviewProject, eventType, note);
-    teamSlackNotificationService.sendReviewProjectAssignmentNotification(
-        reviewProject, eventType, note);
+    if (teamChanged || translatorChanged) {
+      teamSlackNotificationService.sendReviewProjectAssignmentNotification(
+          reviewProject, eventType, note);
+    }
     return getProjectDetail(projectId);
   }
 

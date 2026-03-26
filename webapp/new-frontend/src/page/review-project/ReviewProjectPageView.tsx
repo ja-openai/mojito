@@ -3365,6 +3365,9 @@ function ReviewProjectHeader({
     if (!canEditAssignment) {
       return;
     }
+    const triggersSlackNotification =
+      assignmentTeamIdDraft !== (project.assignment?.teamId ?? null) ||
+      assignmentTranslatorUserIdDraft !== (project.assignment?.assignedTranslatorUserId ?? null);
     try {
       setAssignmentSaveError(null);
       setAssignmentSaveStatus(null);
@@ -3375,7 +3378,11 @@ function ReviewProjectHeader({
         note: assignmentNoteDraft.trim() || null,
       });
       setAssignmentNoteDraft('');
-      setAssignmentSaveStatus('Saved. Team Slack notification is attempted when configured.');
+      setAssignmentSaveStatus(
+        triggersSlackNotification
+          ? 'Saved. Team Slack notification is attempted when configured.'
+          : 'Saved.',
+      );
     } catch (error) {
       setAssignmentSaveError(
         error instanceof Error ? error.message : 'Failed to update project assignment.',
@@ -3388,6 +3395,8 @@ function ReviewProjectHeader({
     assignmentTranslatorUserIdDraft,
     canEditAssignment,
     mutations,
+    project.assignment?.assignedTranslatorUserId,
+    project.assignment?.teamId,
   ]);
 
   const saveProjectDueDate = useCallback(async () => {
@@ -3838,8 +3847,8 @@ function ReviewProjectHeader({
                       </label>
                     </div>
                     <div className="review-project-page__description-assignment-help">
-                      Saving assignment posts a Slack notification to the selected team channel when
-                      configured.
+                      Saving team or translator assignment posts a Slack notification to the
+                      selected team channel when configured.
                     </div>
                     {teamsQuery.isError ||
                     assignmentUsersQuery.isError ||
