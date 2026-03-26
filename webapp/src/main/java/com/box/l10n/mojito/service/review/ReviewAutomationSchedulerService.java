@@ -24,8 +24,8 @@ public class ReviewAutomationSchedulerService {
       LoggerFactory.getLogger(ReviewAutomationSchedulerService.class);
 
   private static final String METRIC_PREFIX = "ReviewAutomation";
-  private static final DateTimeFormatter REQUEST_NAME_TIMESTAMP_FORMAT =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z");
+  private static final DateTimeFormatter REQUEST_NAME_DATE_FORMAT =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   private final ReviewAutomationRepository reviewAutomationRepository;
   private final ReviewProjectService reviewProjectService;
@@ -186,9 +186,7 @@ public class ReviewAutomationSchedulerService {
   }
 
   private String buildRequestName(ReviewFeature feature, ZonedDateTime startedAt) {
-    return feature.getName().trim()
-        + " review - "
-        + REQUEST_NAME_TIMESTAMP_FORMAT.format(startedAt);
+    return feature.getName().trim() + " review - " + REQUEST_NAME_DATE_FORMAT.format(startedAt);
   }
 
   private String buildRequestNotes(
