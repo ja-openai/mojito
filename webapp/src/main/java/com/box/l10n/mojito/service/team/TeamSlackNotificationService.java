@@ -5,13 +5,16 @@ import com.box.l10n.mojito.entity.review.ReviewAutomation;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
+import com.box.l10n.mojito.entity.review.ReviewProjectRequestSlackThread;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.review.ReviewAutomationCronSchedulerService;
+import com.box.l10n.mojito.service.review.ReviewProjectRequestSlackThreadRepository;
 import com.box.l10n.mojito.slack.SlackClient;
 import com.box.l10n.mojito.slack.SlackClientException;
 import com.box.l10n.mojito.slack.SlackClients;
 import com.box.l10n.mojito.slack.request.Message;
+import com.box.l10n.mojito.slack.response.ChatPostMessageResponse;
 import com.box.l10n.mojito.utils.ServerConfig;
 import java.time.DateTimeException;
 import java.time.ZoneId;
@@ -39,12 +42,14 @@ public class TeamSlackNotificationService {
 
   private final TeamService teamService;
   private final SlackClients slackClients;
+  private final ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository;
   private final ServerConfig serverConfig;
   private final ZoneId reviewProjectDueDateTimeZone;
 
   public TeamSlackNotificationService(
       TeamService teamService,
       SlackClients slackClients,
+      ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository,
       ServerConfig serverConfig,
       @Value(
               "${l10n.review-project.notifications.due-date-timezone:"
@@ -53,6 +58,7 @@ public class TeamSlackNotificationService {
           String reviewProjectDueDateTimeZoneId) {
     this.teamService = teamService;
     this.slackClients = slackClients;
+    this.reviewProjectRequestSlackThreadRepository = reviewProjectRequestSlackThreadRepository;
     this.serverConfig = serverConfig;
     this.reviewProjectDueDateTimeZone = toDueDateTimeZoneOrDefault(reviewProjectDueDateTimeZoneId);
   }
@@ -94,10 +100,7 @@ public class TeamSlackNotificationService {
     }
 
     try {
-      Message message = new Message();
-      message.setChannel(settings.slackChannelId());
-      message.setText(text);
-      slackClient.sendInstantMessage(message);
+      sendSlackMessage(slackClient, settings, text, reviewProject.getReviewProjectRequest(), true);
     } catch (SlackClientException ex) {
       logger.warn(
           "Failed to send review project assignment Slack notification for project {} team {}: {}",
@@ -216,10 +219,7 @@ public class TeamSlackNotificationService {
     }
 
     try {
-      Message message = new Message();
-      message.setChannel(settings.slackChannelId());
-      message.setText(text);
-      slackClient.sendInstantMessage(message);
+      sendSlackMessage(slackClient, settings, text, reviewProjectRequest, false);
     } catch (SlackClientException ex) {
       logger.warn(
           "Failed to send review project {} Slack notification for request {} team {}: {}",
@@ -586,5 +586,68 @@ public class TeamSlackNotificationService {
     }
     String url = base + "/n/settings/system/review-automations/" + automationId;
     return "<" + url + "|automation #" + automationId + ">";
+  }
+
+  private void sendSlackMessage(
+      SlackClient slackClient,
+      TeamService.TeamSlackSettings settings,
+      String text,
+      ReviewProjectRequest reviewProjectRequest,
+      boolean preferExistingRequestThread)
+      throws SlackClientException {
+    Message message = new Message();
+    message.setChannel(settings.slackChannelId());
+    message.setText(text);
+
+    if (preferExistingRequestThread
+        && reviewProjectRequest != null
+        && reviewProjectRequest.getId() != null) {
+      reviewProjectRequestSlackThreadRepository
+          .findByReviewProjectRequest_Id(reviewProjectRequest.getId())
+          .filter(thread -> matchesSlackDestination(thread, settings))
+          .map(ReviewProjectRequestSlackThread::getThreadTs)
+          .filter(threadTs -> !isBlank(threadTs))
+          .ifPresent(message::setThreadTs);
+    }
+
+    ChatPostMessageResponse response = slackClient.sendInstantMessage(message);
+    if (isBlank(message.getThreadTs())) {
+      saveRequestSlackThread(
+          reviewProjectRequest, settings, response != null ? response.getTs() : null);
+    }
+  }
+
+  private boolean matchesSlackDestination(
+      ReviewProjectRequestSlackThread thread, TeamService.TeamSlackSettings settings) {
+    return thread != null
+        && settings != null
+        && !isBlank(thread.getSlackClientId())
+        && !isBlank(thread.getSlackChannelId())
+        && thread.getSlackClientId().trim().equals(settings.slackClientId().trim())
+        && thread.getSlackChannelId().trim().equals(settings.slackChannelId().trim());
+  }
+
+  private void saveRequestSlackThread(
+      ReviewProjectRequest reviewProjectRequest,
+      TeamService.TeamSlackSettings settings,
+      String threadTs) {
+    if (reviewProjectRequest == null
+        || reviewProjectRequest.getId() == null
+        || settings == null
+        || isBlank(settings.slackClientId())
+        || isBlank(settings.slackChannelId())
+        || isBlank(threadTs)) {
+      return;
+    }
+
+    ReviewProjectRequestSlackThread thread =
+        reviewProjectRequestSlackThreadRepository
+            .findByReviewProjectRequest_Id(reviewProjectRequest.getId())
+            .orElseGet(ReviewProjectRequestSlackThread::new);
+    thread.setReviewProjectRequest(reviewProjectRequest);
+    thread.setSlackClientId(settings.slackClientId().trim());
+    thread.setSlackChannelId(settings.slackChannelId().trim());
+    thread.setThreadTs(threadTs.trim());
+    reviewProjectRequestSlackThreadRepository.save(thread);
   }
 }
