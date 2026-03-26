@@ -1308,6 +1308,7 @@ function RequestGroupsSection({
   groups,
   expandedKey,
   onToggleExpanded,
+  onFilterByRequest,
   adminControls,
   assignmentControls,
   projectStatusFilter = 'all',
@@ -1317,6 +1318,7 @@ function RequestGroupsSection({
   groups: ReviewProjectRequestGroupRow[];
   expandedKey: string | null;
   onToggleExpanded: (key: string) => void;
+  onFilterByRequest: (requestId: number) => void;
   adminControls?: ReviewProjectsAdminControls;
   assignmentControls?: ReviewProjectsAssignmentControls;
   projectStatusFilter?: ApiReviewProjectStatus | 'all';
@@ -1678,6 +1680,20 @@ function RequestGroupsSection({
                         <span className="review-projects-page__project-name">{group.name}</span>
                       </span>
                       <span className="review-projects-page__request-secondary">
+                        {group.requestId != null ? (
+                          <button
+                            type="button"
+                            className="review-projects-page__request-id review-projects-page__request-id-button"
+                            onClick={() => onFilterByRequest(group.requestId as number)}
+                          >
+                            Request #{group.requestId}
+                          </button>
+                        ) : null}
+                        {group.requestId != null && isAdmin && requestEditProjectId != null ? (
+                          <span className="review-projects-page__request-dot" aria-hidden="true">
+                            ·
+                          </span>
+                        ) : null}
                         {isAdmin && requestEditProjectId != null ? (
                           <Link
                             to={buildReviewProjectDetailPath(
@@ -2113,6 +2129,15 @@ export function ReviewProjectsPageView({
     [effectiveExpandedRequestKey, setExpandedRequestKey],
   );
 
+  const handleFilterByRequest = useCallback(
+    (requestId: number) => {
+      filters.onSearchFieldChange('requestId');
+      filters.onSearchTypeChange('exact');
+      filters.onSearchChange(String(requestId));
+    },
+    [filters],
+  );
+
   if (status === 'loading') {
     return <LoadingState />;
   }
@@ -2158,6 +2183,7 @@ export function ReviewProjectsPageView({
           groups={groupedRequestRows}
           expandedKey={effectiveExpandedRequestKey}
           onToggleExpanded={handleToggleRequestGroup}
+          onFilterByRequest={handleFilterByRequest}
           adminControls={adminControls}
           assignmentControls={assignmentControls}
           projectStatusFilter={filters.projectStatusValue}
