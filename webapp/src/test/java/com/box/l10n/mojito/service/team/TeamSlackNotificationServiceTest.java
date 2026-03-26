@@ -130,6 +130,54 @@ public class TeamSlackNotificationServiceTest {
     assertThat(threadCaptor.getValue().getThreadTs()).isEqualTo("171.005");
   }
 
+  @Test
+  public void requestAssignmentNotificationRepliesInExistingRequestThread() throws Exception {
+    ReviewProjectRequest request = reviewProjectRequest(47L, "Web refresh");
+    ReviewProject projectA = reviewProject(94L, request, team(7L), "fr-FR");
+    ReviewProject projectB = reviewProject(95L, request, team(7L), "fr-FR");
+    ReviewProjectRequestSlackThread requestThread =
+        requestThread(request, "client-1", "channel-1", "171.006");
+
+    when(teamService.getTeamSlackSettings(7L))
+        .thenReturn(new TeamService.TeamSlackSettings(true, "client-1", "channel-1"));
+    when(teamService.getTeamSlackUserMappings(7L)).thenReturn(List.of());
+    when(slackClients.getById("client-1")).thenReturn(slackClient);
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.007"));
+    when(requestSlackThreadRepository.findByReviewProjectRequest_Id(47L))
+        .thenReturn(Optional.of(requestThread));
+
+    teamSlackNotificationService.sendReviewProjectRequestAssignmentNotification(
+        request, List.of(projectA, projectB));
+
+    ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+    verify(slackClient).sendInstantMessage(messageCaptor.capture());
+    assertThat(messageCaptor.getValue().getThreadTs()).isEqualTo("171.006");
+    verify(requestSlackThreadRepository, never()).save(any(ReviewProjectRequestSlackThread.class));
+  }
+
+  @Test
+  public void createRequestNotificationRepliesInExistingRequestThread() throws Exception {
+    ReviewProjectRequest request = reviewProjectRequest(48L, "Catalog refresh");
+    ReviewProject project = reviewProject(96L, request, team(7L), "ja-JP");
+    ReviewProjectRequestSlackThread requestThread =
+        requestThread(request, "client-1", "channel-1", "171.008");
+
+    when(teamService.getTeamSlackSettings(7L))
+        .thenReturn(new TeamService.TeamSlackSettings(true, "client-1", "channel-1"));
+    when(teamService.getTeamSlackUserMappings(7L)).thenReturn(List.of());
+    when(slackClients.getById("client-1")).thenReturn(slackClient);
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.009"));
+    when(requestSlackThreadRepository.findByReviewProjectRequest_Id(48L))
+        .thenReturn(Optional.of(requestThread));
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(request, List.of(project));
+
+    ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+    verify(slackClient).sendInstantMessage(messageCaptor.capture());
+    assertThat(messageCaptor.getValue().getThreadTs()).isEqualTo("171.008");
+    verify(requestSlackThreadRepository, never()).save(any(ReviewProjectRequestSlackThread.class));
+  }
+
   private ReviewProjectRequest reviewProjectRequest(Long id, String name) {
     ReviewProjectRequest request = new ReviewProjectRequest();
     request.setId(id);

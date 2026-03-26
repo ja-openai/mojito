@@ -219,7 +219,7 @@ public class TeamSlackNotificationService {
     }
 
     try {
-      sendSlackMessage(slackClient, settings, text, reviewProjectRequest, false);
+      sendSlackMessage(slackClient, settings, text, reviewProjectRequest, true);
     } catch (SlackClientException ex) {
       logger.warn(
           "Failed to send review project {} Slack notification for request {} team {}: {}",
