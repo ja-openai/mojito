@@ -1,3 +1,4 @@
+import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
 import { isTransientHttpError, poll } from '../utils/poller';
 
 export type SearchAttribute =
@@ -87,6 +88,47 @@ export type SaveTextUnitRequest = {
   targetComment?: string | null;
   status: ApiTextUnitStatus;
   includedInLocalizedFile: boolean;
+};
+
+export type ImportTextUnitBatchRow = {
+  repositoryName: string;
+  assetPath: string;
+  targetLocale: string;
+  target: string;
+  tmTextUnitId?: number | null;
+  name?: string | null;
+  comment?: string | null;
+  targetComment?: string | null;
+  status?: string | null;
+  includedInLocalizedFile?: boolean;
+  doNotTranslate?: boolean;
+  pluralForm?: string | null;
+  pluralFormOther?: string | null;
+  branchId?: number | null;
+  tmTextUnitVariantId?: number | null;
+  localeId?: number | null;
+  assetId?: number | null;
+  createdDate?: string | null;
+  tmTextUnitCreatedDate?: string | null;
+};
+
+export type ImportTextUnitsBatchRequest = {
+  integrityCheckSkipped?: boolean;
+  integrityCheckKeepStatusIfFailedAndSameTarget?: boolean;
+  textUnits: ImportTextUnitBatchRow[];
+};
+
+type PollableTaskResponse = {
+  id: number;
+  isAllFinished?: boolean;
+  allFinished?: boolean;
+  errorMessage?: unknown;
+};
+
+export type ApiPollableTask = {
+  id: number;
+  isAllFinished: boolean;
+  errorMessage: string;
 };
 
 export type TextUnitIntegrityCheckRequest = {
@@ -258,20 +300,28 @@ export async function updateTextUnitCurrentVariantsStatus(
   status: ApiTextUnitStatus,
   includedInLocalizedFile: boolean,
 ): Promise<{ updatedCount: number }> {
-  return postJson<{ updatedCount: number }>(
-    '/api/textunits/current-variants/update-status-batch',
-    {
-      tmTextUnitCurrentVariantIds: textUnitCurrentVariantIds,
-      status,
-      includedInLocalizedFile,
-    },
-  );
+  return postJson<{ updatedCount: number }>('/api/textunits/current-variants/update-status-batch', {
+    tmTextUnitCurrentVariantIds: textUnitCurrentVariantIds,
+    status,
+    includedInLocalizedFile,
+  });
 }
 
 export async function checkTextUnitIntegrity(
   request: TextUnitIntegrityCheckRequest,
 ): Promise<TextUnitIntegrityCheckResult> {
   return postJson<TextUnitIntegrityCheckResult>('/api/textunits/check', request);
+}
+
+export async function importTextUnitsBatch(
+  request: ImportTextUnitsBatchRequest,
+): Promise<ApiPollableTask> {
+  const response = await postJson<PollableTaskResponse>('/api/textunitsBatch', request);
+  const completedTask = await waitForPollableTaskToFinish(response.id);
+  if (completedTask.errorMessage) {
+    throw new Error(completedTask.errorMessage);
+  }
+  return completedTask;
 }
 
 export async function fetchTextUnitHistory(
@@ -509,3 +559,27 @@ const createNonTransientError = (message: string) => {
   error.isTransient = false;
   return error;
 };
+
+async function fetchPollableTask(taskId: number): Promise<ApiPollableTask> {
+  const response = await getJson<PollableTaskResponse>(`/api/pollableTasks/${taskId}`);
+  return normalizePollableTask(response);
+}
+
+async function waitForPollableTaskToFinish(taskId: number): Promise<ApiPollableTask> {
+  return poll(() => fetchPollableTask(taskId), {
+    intervalMs: DEFAULT_POLL_INTERVAL_MS,
+    maxIntervalMs: MAX_POLL_INTERVAL_MS,
+    timeoutMs: ASYNC_POLL_TIMEOUT_MS,
+    timeoutMessage: 'Timed out while waiting for import to finish',
+    isTransientError: isTransientHttpError,
+    shouldStop: (task) => task.isAllFinished,
+  });
+}
+
+function normalizePollableTask(task: PollableTaskResponse): ApiPollableTask {
+  return {
+    id: task.id,
+    isAllFinished: task.isAllFinished ?? task.allFinished ?? false,
+    errorMessage: normalizePollableTaskErrorMessage(task.errorMessage),
+  };
+}

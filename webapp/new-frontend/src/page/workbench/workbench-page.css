@@ -658,6 +658,97 @@
   cursor: not-allowed;
 }
 
+.workbench-importexport {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.workbench-importexport__intro {
+  margin: 0;
+  color: var(--color-text-subtle);
+}
+
+.workbench-importexport__help {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--color-text-subtle);
+}
+
+.workbench-importexport__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.workbench-importexport__label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-subtle);
+}
+
+.workbench-importexport__input {
+  width: 100%;
+}
+
+.workbench-importexport__input--multi {
+  min-height: 8rem;
+}
+
+.workbench-importexport__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-2);
+}
+
+.workbench-importexport__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+
+.workbench-importexport__dropzone {
+  border: 2px dashed color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: var(--radius-3);
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--color-text-subtle);
+  background: color-mix(in srgb, var(--color-surface-elevated) 80%, white);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.workbench-importexport__dropzone.is-active {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface-elevated));
+}
+
+.workbench-importexport__dropzone.is-disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.workbench-importexport__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+}
+
+.workbench-importexport__alert-title {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-2);
+}
+
+.workbench-importexport__errors {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
 .workbench-filterchip__clear-link {
   border: 0;
   background: transparent;

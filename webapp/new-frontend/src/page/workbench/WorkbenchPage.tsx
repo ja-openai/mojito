@@ -523,6 +523,7 @@ export function WorkbenchPage() {
   return (
     <>
       <WorkbenchPageView
+        isAdmin={currentUser.role === 'ROLE_ADMIN'}
         hasSearched={hasSearched}
         worksetSize={search.worksetSize}
         onChangeWorksetSize={search.onChangeWorksetSize}
@@ -601,9 +602,7 @@ export function WorkbenchPage() {
               ? 'Deleting…'
               : 'Delete all'
         }
-        bulkActionConfirmVariant={
-          edits.pendingBulkAction?.kind === 'status' ? 'primary' : 'danger'
-        }
+        bulkActionConfirmVariant={edits.pendingBulkAction?.kind === 'status' ? 'primary' : 'danger'}
         bulkActionRequireText={edits.pendingBulkAction ? 'I understand' : undefined}
         bulkActionRequireTextLabel={
           edits.pendingBulkAction ? 'Type "I understand" to confirm.' : undefined

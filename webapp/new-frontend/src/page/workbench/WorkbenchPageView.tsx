@@ -21,11 +21,14 @@ import type {
   WorkbenchTextSearchOperator,
 } from './workbench-types';
 import { DiffModal, WorkbenchBody } from './WorkbenchBody';
+import { WorkbenchExportModal } from './WorkbenchExportModal';
 import { WorkbenchHeader } from './WorkbenchHeader';
+import { WorkbenchImportModal } from './WorkbenchImportModal';
 import { WorkbenchShareModal } from './WorkbenchShareModal';
 import { WorkbenchWorksetBar } from './WorkbenchWorksetBar';
 
 type Props = {
+  isAdmin: boolean;
   hasSearched: boolean;
   worksetSize: number;
   onChangeWorksetSize: (value: number) => void;
@@ -179,6 +182,7 @@ function HydrationModal({
 }
 
 export function WorkbenchPageView({
+  isAdmin,
   hasSearched,
   worksetSize,
   onChangeWorksetSize,
@@ -303,6 +307,8 @@ export function WorkbenchPageView({
   onRestoreScrollConsumed,
 }: Props) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const editedCount = editedRowIds.size;
   const rowCount = rows.length;
   return (
@@ -354,6 +360,7 @@ export function WorkbenchPageView({
       />
       <WorkbenchWorksetBar
         disabled={headerDisabled}
+        isAdmin={isAdmin}
         isSearchLoading={isSearchLoading}
         hasSearched={hasSearched}
         rowCount={rowCount}
@@ -371,6 +378,8 @@ export function WorkbenchPageView({
         isApplyingBulkAction={isApplyingBulkAction}
         onRequestDeleteAll={onRequestDeleteAll}
         onRequestBulkStatusChange={onRequestBulkStatusChange}
+        onOpenExportModal={() => setIsExportModalOpen(true)}
+        onOpenImportModal={() => setIsImportModalOpen(true)}
         collections={collections}
         activeCollectionId={activeCollectionId}
         activeCollectionName={activeCollectionName}
@@ -471,6 +480,21 @@ export function WorkbenchPageView({
         rows={rows}
         availableLocales={selectedLocaleTags}
         overrides={shareOverrides ?? undefined}
+      />
+      <WorkbenchExportModal
+        open={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        activeSearchRequest={activeSearchRequest}
+        repositories={repositories}
+      />
+      <WorkbenchImportModal
+        open={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImported={() => {
+          if (activeSearchRequest) {
+            onRefreshWorkset();
+          }
+        }}
       />
     </div>
   );

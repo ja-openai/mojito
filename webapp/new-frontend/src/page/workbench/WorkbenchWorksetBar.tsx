@@ -25,6 +25,7 @@ const resultSortDirectionOptions = [
 
 type WorkbenchWorksetBarProps = {
   disabled: boolean;
+  isAdmin: boolean;
   isSearchLoading: boolean;
   hasSearched: boolean;
   rowCount: number;
@@ -42,6 +43,8 @@ type WorkbenchWorksetBarProps = {
   isApplyingBulkAction: boolean;
   onRequestDeleteAll: () => void;
   onRequestBulkStatusChange: (status: string) => void;
+  onOpenExportModal: () => void;
+  onOpenImportModal: () => void;
   onOpenShareModal: () => void;
   collections: WorkbenchCollection[];
   activeCollectionId: string | null;
@@ -62,6 +65,7 @@ type WorkbenchWorksetBarProps = {
 
 export function WorkbenchWorksetBar({
   disabled,
+  isAdmin,
   isSearchLoading,
   hasSearched,
   rowCount,
@@ -79,6 +83,8 @@ export function WorkbenchWorksetBar({
   isApplyingBulkAction,
   onRequestDeleteAll,
   onRequestBulkStatusChange,
+  onOpenExportModal,
+  onOpenImportModal,
   onOpenShareModal,
   collections,
   activeCollectionId,
@@ -208,6 +214,34 @@ export function WorkbenchWorksetBar({
       onOpenAiTranslate={onOpenAiTranslate}
     />,
   );
+
+  if (isAdmin) {
+    parts.push(
+      <button
+        key="import"
+        type="button"
+        className="workbench-worksetbar__button"
+        onClick={onOpenImportModal}
+        disabled={disabled}
+      >
+        Import
+      </button>,
+    );
+  }
+
+  if (hasSearched) {
+    parts.push(
+      <button
+        key="export"
+        type="button"
+        className="workbench-worksetbar__button"
+        onClick={onOpenExportModal}
+        disabled={disabled}
+      >
+        Export
+      </button>,
+    );
+  }
 
   if (hasSearched) {
     parts.push(<SearchShareButton key="share" onClick={onOpenShareModal} disabled={!canShare} />);
