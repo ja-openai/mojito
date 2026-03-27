@@ -10,6 +10,7 @@ import com.box.l10n.mojito.rest.WSTestDataFactory;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
@@ -37,6 +38,8 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
   @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
   @Autowired TMTextUnitVariantCommentRepository tmTextUnitVariantCommentRepository;
+
+  @Autowired PollableTaskBlobStorage pollableTaskBlobStorage;
 
   @Autowired TMService tmService;
 
@@ -125,11 +128,15 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
             List.of(repository.getId()),
             null);
 
-    PollableFuture<TemporaryBulkTranslationAcceptService.TaskResponse> pollableFuture =
-        service.dryRunAsync(request);
+    PollableFuture<Void> pollableFuture =
+        service.dryRunAsync(request, com.box.l10n.mojito.entity.PollableTask.INJECT_CURRENT_TASK);
 
     Assert.assertNotNull(pollableFuture.getPollableTask());
-    TemporaryBulkTranslationAcceptService.TaskResponse result = pollableFuture.get();
+    pollableFuture.get();
+    TemporaryBulkTranslationAcceptService.TaskResponse result =
+        pollableTaskBlobStorage.getOutput(
+            pollableFuture.getPollableTask().getId(),
+            TemporaryBulkTranslationAcceptService.TaskResponse.class);
     Assert.assertEquals(1L, result.totalCount());
     Assert.assertEquals(1, result.repositoryCounts().size());
   }

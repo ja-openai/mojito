@@ -29,12 +29,16 @@ public class TemporaryBulkTranslationAcceptWS {
 
   @PostMapping("/dry-run")
   public PollableTask dryRun(@RequestBody Request request) {
-    return service.dryRunAsync(toServiceRequest(request)).getPollableTask();
+    return service
+        .dryRunAsync(toServiceRequest(request), PollableTask.INJECT_CURRENT_TASK)
+        .getPollableTask();
   }
 
   @PostMapping("/execute")
   public PollableTask execute(@RequestBody Request request) {
-    return service.executeAsync(toServiceRequest(request)).getPollableTask();
+    return service
+        .executeAsync(toServiceRequest(request), PollableTask.INJECT_CURRENT_TASK)
+        .getPollableTask();
   }
 
   private TemporaryBulkTranslationAcceptService.Request toServiceRequest(Request request) {

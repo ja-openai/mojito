@@ -43,6 +43,8 @@ const jsonHeaders = {
 const DEFAULT_POLL_INTERVAL_MS = 500;
 const MAX_POLL_INTERVAL_MS = 8000;
 const BULK_TRANSLATION_ACCEPT_TIMEOUT_MS = 30 * 60 * 1000;
+const BULK_TRANSLATION_ACCEPT_OUTPUT_TIMEOUT_MS = 30 * 1000;
+const MISSING_OUTPUT_MESSAGE = "Can't get the output json for:";
 
 async function startBulkTranslationAccept(
   path: 'dry-run' | 'execute',
@@ -100,10 +102,29 @@ async function fetchBulkTranslationAcceptOutput(
 
   if (!response.ok) {
     const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load bulk translation accept output');
+    const error = new Error(message || 'Failed to load bulk translation accept output') as Error & {
+      status?: number;
+      isTransient?: boolean;
+    };
+    error.status = response.status;
+    error.isTransient = response.status === 500 && message.includes(MISSING_OUTPUT_MESSAGE);
+    throw error;
   }
 
   return (await response.json()) as BulkTranslationAcceptResponse;
+}
+
+async function waitForBulkTranslationAcceptOutput(
+  taskId: number,
+): Promise<BulkTranslationAcceptResponse> {
+  return poll(() => fetchBulkTranslationAcceptOutput(taskId), {
+    intervalMs: DEFAULT_POLL_INTERVAL_MS,
+    maxIntervalMs: MAX_POLL_INTERVAL_MS,
+    timeoutMs: BULK_TRANSLATION_ACCEPT_OUTPUT_TIMEOUT_MS,
+    timeoutMessage: 'Timed out while loading bulk translation accept output',
+    isTransientError: isTransientHttpError,
+    shouldStop: () => true,
+  });
 }
 
 function normalizePollableTask(task: PollableTaskResponse): PollableTask {
@@ -135,5 +156,5 @@ async function runBulkTranslationAccept(
   if (completedTask.errorMessage) {
     throw new Error(completedTask.errorMessage);
   }
-  return fetchBulkTranslationAcceptOutput(completedTask.id);
+  return waitForBulkTranslationAcceptOutput(completedTask.id);
 }

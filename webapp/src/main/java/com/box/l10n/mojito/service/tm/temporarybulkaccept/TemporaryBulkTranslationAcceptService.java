@@ -1,12 +1,15 @@
 package com.box.l10n.mojito.service.tm.temporarybulkaccept;
 
+import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
+import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
 import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -58,6 +61,7 @@ public class TemporaryBulkTranslationAcceptService {
   private final TransactionTemplate transactionTemplate;
   private final UserService userService;
   private final AuditorAwareImpl auditorAwareImpl;
+  private final PollableTaskBlobStorage pollableTaskBlobStorage;
 
   public TemporaryBulkTranslationAcceptService(
       TemporaryBulkTranslationAcceptRepository repository,
@@ -65,13 +69,15 @@ public class TemporaryBulkTranslationAcceptService {
       TMTextUnitVariantCommentService tmTextUnitVariantCommentService,
       TransactionTemplate transactionTemplate,
       UserService userService,
-      AuditorAwareImpl auditorAwareImpl) {
+      AuditorAwareImpl auditorAwareImpl,
+      PollableTaskBlobStorage pollableTaskBlobStorage) {
     this.repository = Objects.requireNonNull(repository);
     this.tmService = Objects.requireNonNull(tmService);
     this.tmTextUnitVariantCommentService = Objects.requireNonNull(tmTextUnitVariantCommentService);
     this.transactionTemplate = Objects.requireNonNull(transactionTemplate);
     this.userService = Objects.requireNonNull(userService);
     this.auditorAwareImpl = Objects.requireNonNull(auditorAwareImpl);
+    this.pollableTaskBlobStorage = Objects.requireNonNull(pollableTaskBlobStorage);
   }
 
   public DryRunResult dryRun(Request request) {
@@ -82,8 +88,11 @@ public class TemporaryBulkTranslationAcceptService {
   }
 
   @Pollable(async = true, message = "Run temporary bulk translation accept dry run")
-  public PollableFuture<TaskResponse> dryRunAsync(Request request) {
-    return new PollableFutureTaskResult<>(toTaskResponse(dryRun(request)));
+  public PollableFuture<Void> dryRunAsync(
+      Request request, @InjectCurrentTask PollableTask currentTask) {
+    savePollableInput(currentTask, request);
+    pollableTaskBlobStorage.saveOutput(currentTask.getId(), toTaskResponse(dryRun(request)));
+    return new PollableFutureTaskResult<>();
   }
 
   public ExecuteResult execute(Request request) {
@@ -117,8 +126,11 @@ public class TemporaryBulkTranslationAcceptService {
   }
 
   @Pollable(async = true, message = "Execute temporary bulk translation accept")
-  public PollableFuture<TaskResponse> executeAsync(Request request) {
-    return new PollableFutureTaskResult<>(toTaskResponse(execute(request)));
+  public PollableFuture<Void> executeAsync(
+      Request request, @InjectCurrentTask PollableTask currentTask) {
+    savePollableInput(currentTask, request);
+    pollableTaskBlobStorage.saveOutput(currentTask.getId(), toTaskResponse(execute(request)));
+    return new PollableFutureTaskResult<>();
   }
 
   private void processChunk(
@@ -226,6 +238,13 @@ public class TemporaryBulkTranslationAcceptService {
 
   private TaskResponse toTaskResponse(ExecuteResult result) {
     return new TaskResponse(result.processedCount(), result.repositoryCounts());
+  }
+
+  private void savePollableInput(PollableTask currentTask, Request request) {
+    if (currentTask == null || currentTask.getId() == null) {
+      throw new IllegalStateException("Current pollable task is missing");
+    }
+    pollableTaskBlobStorage.saveInput(currentTask.getId(), request);
   }
 
   private ValidatedRequest validate(Request request) {
