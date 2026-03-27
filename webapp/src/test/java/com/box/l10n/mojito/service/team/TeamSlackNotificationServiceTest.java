@@ -12,6 +12,7 @@ import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequestSlackThread;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.review.ReviewProjectRequestSlackThreadRepository;
 import com.box.l10n.mojito.slack.SlackClient;
 import com.box.l10n.mojito.slack.SlackClients;
@@ -75,6 +76,74 @@ public class TeamSlackNotificationServiceTest {
     assertThat(threadCaptor.getValue().getSlackClientId()).isEqualTo("client-1");
     assertThat(threadCaptor.getValue().getSlackChannelId()).isEqualTo("channel-1");
     assertThat(threadCaptor.getValue().getThreadTs()).isEqualTo("171.001");
+  }
+
+  @Test
+  public void createRequestNotificationSummarizesDescriptionLocalesAndTranslators()
+      throws Exception {
+    ReviewProjectRequest request =
+        reviewProjectRequest(
+            49L,
+            "Checkout review",
+            "Check wording in the checkout flow. Keep CTA language consistent across locales.");
+    ReviewProject projectA = reviewProject(101L, request, team(7L), "fr-FR");
+    ReviewProject projectB = reviewProject(102L, request, team(7L), "ca");
+    ReviewProject projectC = reviewProject(103L, request, team(7L), "ca");
+    projectA.setAssignedTranslatorUser(user(301L, "translator_fr1"));
+    projectB.setAssignedTranslatorUser(user(302L, "translator_es2"));
+    projectC.setAssignedTranslatorUser(user(302L, "translator_es2"));
+
+    when(teamService.getTeamSlackSettings(7L))
+        .thenReturn(new TeamService.TeamSlackSettings(true, "client-1", "channel-1"));
+    when(teamService.getTeamSlackUserMappings(7L)).thenReturn(List.of());
+    when(slackClients.getById("client-1")).thenReturn(slackClient);
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.010"));
+    when(requestSlackThreadRepository.findByReviewProjectRequest_Id(49L))
+        .thenReturn(Optional.empty());
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        request, List.of(projectA, projectB, projectC));
+
+    ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+    verify(slackClient).sendInstantMessage(messageCaptor.capture());
+    assertThat(messageCaptor.getValue().getText())
+        .contains("Description: Check wording in the checkout flow.")
+        .contains("Locales (2): ca, fr-FR")
+        .contains("Assigned Translators: translator_fr1 (fr-FR), translator_es2 (ca)");
+  }
+
+  @Test
+  public void createRequestNotificationShowsAutomationSourceAndTruncatedLocales() throws Exception {
+    ReviewProjectRequest request =
+        reviewProjectRequest(
+            50L, "Nightly web review", "Created by review automation Web nightly sweep (cron)");
+    List<ReviewProject> projects =
+        List.of(
+            reviewProject(201L, request, team(7L), "am"),
+            reviewProject(202L, request, team(7L), "bn"),
+            reviewProject(203L, request, team(7L), "bs"),
+            reviewProject(204L, request, team(7L), "ca"),
+            reviewProject(205L, request, team(7L), "cs"),
+            reviewProject(206L, request, team(7L), "da"),
+            reviewProject(207L, request, team(7L), "de"),
+            reviewProject(208L, request, team(7L), "de"));
+
+    when(teamService.getTeamSlackSettings(7L))
+        .thenReturn(new TeamService.TeamSlackSettings(true, "client-1", "channel-1"));
+    when(teamService.getTeamSlackUserMappings(7L)).thenReturn(List.of());
+    when(slackClients.getById("client-1")).thenReturn(slackClient);
+    when(slackClient.sendInstantMessage(any(Message.class))).thenReturn(chatResponse("171.011"));
+    when(requestSlackThreadRepository.findByReviewProjectRequest_Id(50L))
+        .thenReturn(Optional.empty());
+
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(request, projects);
+
+    ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+    verify(slackClient).sendInstantMessage(messageCaptor.capture());
+    assertThat(messageCaptor.getValue().getText())
+        .contains("Source: Automation — Web nightly sweep (cron)")
+        .contains("Locales (7): am, bn, bs, ca, cs, da, +1 more")
+        .doesNotContain("Description:");
   }
 
   @Test
@@ -170,7 +239,8 @@ public class TeamSlackNotificationServiceTest {
     when(requestSlackThreadRepository.findByReviewProjectRequest_Id(48L))
         .thenReturn(Optional.of(requestThread));
 
-    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(request, List.of(project));
+    teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
+        request, List.of(project));
 
     ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
     verify(slackClient).sendInstantMessage(messageCaptor.capture());
@@ -179,9 +249,14 @@ public class TeamSlackNotificationServiceTest {
   }
 
   private ReviewProjectRequest reviewProjectRequest(Long id, String name) {
+    return reviewProjectRequest(id, name, null);
+  }
+
+  private ReviewProjectRequest reviewProjectRequest(Long id, String name, String notes) {
     ReviewProjectRequest request = new ReviewProjectRequest();
     request.setId(id);
     request.setName(name);
+    request.setNotes(notes);
     return request;
   }
 
@@ -202,6 +277,13 @@ public class TeamSlackNotificationServiceTest {
     Team team = new Team();
     team.setId(id);
     return team;
+  }
+
+  private User user(Long id, String username) {
+    User user = new User();
+    user.setId(id);
+    user.setUsername(username);
+    return user;
   }
 
   private ReviewProjectRequestSlackThread requestThread(

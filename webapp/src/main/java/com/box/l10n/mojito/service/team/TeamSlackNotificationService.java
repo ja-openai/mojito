@@ -37,6 +37,9 @@ public class TeamSlackNotificationService {
 
   private static final Logger logger = LoggerFactory.getLogger(TeamSlackNotificationService.class);
   private static final String DEFAULT_DUE_DATE_TIME_ZONE_ID = "America/Los_Angeles";
+  private static final String AUTOMATION_NOTES_PREFIX = "Created by review automation ";
+  private static final int MAX_SUMMARY_LOCALE_TAGS = 6;
+  private static final int MAX_REQUEST_DESCRIPTION_LENGTH = 160;
   private static final DateTimeFormatter SLACK_DUE_DATE_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z");
 
@@ -327,17 +330,8 @@ public class TeamSlackNotificationService {
 
     String requestName = reviewProjectRequest != null ? reviewProjectRequest.getName() : null;
     Long requestId = reviewProjectRequest != null ? reviewProjectRequest.getId() : null;
-    List<String> localeTags =
-        projects.stream()
-            .map(
-                project -> {
-                  String localeTag =
-                      project.getLocale() != null ? project.getLocale().getBcp47Tag() : null;
-                  return !isBlank(localeTag) ? localeTag.trim() : null;
-                })
-            .filter(localeTag -> !isBlank(localeTag))
-            .sorted(String.CASE_INSENSITIVE_ORDER)
-            .toList();
+    String requestNotes = reviewProjectRequest != null ? reviewProjectRequest.getNotes() : null;
+    List<String> localeTags = collectDistinctLocaleTags(projects);
 
     StringBuilder builder = new StringBuilder();
     builder.append("*");
@@ -360,23 +354,20 @@ public class TeamSlackNotificationService {
 
     appendReviewProjectTypesSummaryLine(builder, projects);
     appendReviewProjectDueDatesSummaryLine(builder, projects);
+    appendRequestContextSummaryLine(builder, requestNotes);
     builder.append("\nLocales");
     if (!localeTags.isEmpty()) {
       builder.append(" (").append(localeTags.size()).append(")");
     }
     builder.append(": ");
-    builder.append(localeTags.isEmpty() ? "—" : String.join(", ", localeTags));
+    builder.append(localeTags.isEmpty() ? "—" : formatLocaleTagSummary(localeTags));
 
     appendDistinctUserSummaryLine(
         builder,
         "Assigned PMs",
         projects.stream().map(ReviewProject::getAssignedPmUser).toList(),
         mappingsByUserId);
-    appendDistinctUserSummaryLine(
-        builder,
-        "Assigned Translators",
-        projects.stream().map(ReviewProject::getAssignedTranslatorUser).toList(),
-        mappingsByUserId);
+    appendTranslatorSummaryLine(builder, projects, mappingsByUserId);
 
     return builder.toString();
   }
@@ -463,6 +454,50 @@ public class TeamSlackNotificationService {
     builder.append(String.join(", ", rendered));
   }
 
+  private void appendTranslatorSummaryLine(
+      StringBuilder builder,
+      List<ReviewProject> projects,
+      Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
+    builder.append("\nAssigned Translators: ");
+    if (projects == null || projects.isEmpty()) {
+      builder.append("—");
+      return;
+    }
+
+    Map<String, Set<String>> localeTagsByTranslator = new LinkedHashMap<>();
+    for (ReviewProject project : projects) {
+      if (project == null) {
+        continue;
+      }
+      String translatorLabel =
+          project.getAssignedTranslatorUser() == null
+              ? "Unassigned"
+              : renderUser(project.getAssignedTranslatorUser(), mappingsByUserId);
+      localeTagsByTranslator.computeIfAbsent(translatorLabel, ignored -> new LinkedHashSet<>());
+
+      String localeTag = project.getLocale() != null ? project.getLocale().getBcp47Tag() : null;
+      if (!isBlank(localeTag)) {
+        localeTagsByTranslator.get(translatorLabel).add(localeTag.trim());
+      }
+    }
+
+    if (localeTagsByTranslator.isEmpty()) {
+      builder.append("—");
+      return;
+    }
+
+    List<String> rendered = new ArrayList<>();
+    for (Map.Entry<String, Set<String>> entry : localeTagsByTranslator.entrySet()) {
+      List<String> localeTags = sortLocaleTags(entry.getValue());
+      if (localeTags.isEmpty()) {
+        rendered.add(entry.getKey());
+      } else {
+        rendered.add(entry.getKey() + " (" + formatLocaleTagSummary(localeTags) + ")");
+      }
+    }
+    builder.append(String.join(", ", rendered));
+  }
+
   private String renderUser(
       User user, Map<Long, TeamService.TeamSlackUserMappingEntry> mappingsByUserId) {
     if (user == null) {
@@ -479,6 +514,96 @@ public class TeamSlackNotificationService {
       return username.trim();
     }
     return user.getId() != null ? ("user#" + user.getId()) : "—";
+  }
+
+  private void appendRequestContextSummaryLine(StringBuilder builder, String requestNotes) {
+    String automationSource = extractAutomationSource(requestNotes);
+    if (!isBlank(automationSource)) {
+      builder.append("\nSource: Automation");
+      builder.append(" — ").append(automationSource);
+      return;
+    }
+
+    String descriptionExcerpt = summarizeRequestDescription(requestNotes);
+    if (!isBlank(descriptionExcerpt)) {
+      builder.append("\nDescription: ").append(descriptionExcerpt);
+    }
+  }
+
+  private String extractAutomationSource(String requestNotes) {
+    String normalized = normalizeWhitespace(requestNotes);
+    if (isBlank(normalized) || !normalized.startsWith(AUTOMATION_NOTES_PREFIX)) {
+      return null;
+    }
+    String source = normalized.substring(AUTOMATION_NOTES_PREFIX.length()).trim();
+    return source.isEmpty() ? null : source;
+  }
+
+  private String summarizeRequestDescription(String requestNotes) {
+    String normalized = normalizeWhitespace(requestNotes);
+    if (isBlank(normalized)) {
+      return null;
+    }
+    int sentenceEnd = findSentenceBoundary(normalized);
+    String summary =
+        sentenceEnd >= 0 ? normalized.substring(0, sentenceEnd + 1).trim() : normalized;
+    return abbreviate(summary, MAX_REQUEST_DESCRIPTION_LENGTH);
+  }
+
+  private int findSentenceBoundary(String text) {
+    for (int i = 0; i < text.length(); i++) {
+      char current = text.charAt(i);
+      if ((current == '.' || current == '!' || current == '?')
+          && (i + 1 == text.length() || Character.isWhitespace(text.charAt(i + 1)))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private String normalizeWhitespace(String value) {
+    return value == null ? null : value.trim().replaceAll("\\s+", " ");
+  }
+
+  private String abbreviate(String value, int maxLength) {
+    if (isBlank(value) || value.length() <= maxLength) {
+      return value;
+    }
+    if (maxLength <= 1) {
+      return value.substring(0, maxLength);
+    }
+    return value.substring(0, maxLength - 1).trim() + "…";
+  }
+
+  private List<String> collectDistinctLocaleTags(List<ReviewProject> projects) {
+    if (projects == null || projects.isEmpty()) {
+      return List.of();
+    }
+    Set<String> localeTags = new LinkedHashSet<>();
+    for (ReviewProject project : projects) {
+      String localeTag =
+          project != null && project.getLocale() != null ? project.getLocale().getBcp47Tag() : null;
+      if (!isBlank(localeTag)) {
+        localeTags.add(localeTag.trim());
+      }
+    }
+    return sortLocaleTags(localeTags);
+  }
+
+  private List<String> sortLocaleTags(Set<String> localeTags) {
+    return localeTags.stream().sorted(String.CASE_INSENSITIVE_ORDER).toList();
+  }
+
+  private String formatLocaleTagSummary(List<String> localeTags) {
+    if (localeTags == null || localeTags.isEmpty()) {
+      return "—";
+    }
+    int limit = Math.min(localeTags.size(), MAX_SUMMARY_LOCALE_TAGS);
+    List<String> visible = localeTags.subList(0, limit);
+    if (localeTags.size() <= MAX_SUMMARY_LOCALE_TAGS) {
+      return String.join(", ", visible);
+    }
+    return String.join(", ", visible) + ", +" + (localeTags.size() - limit) + " more";
   }
 
   private String eventTypeLabel(ReviewProjectAssignmentEventType eventType) {
