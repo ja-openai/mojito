@@ -318,7 +318,12 @@
 
 .review-projects-page__request-project-link {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(3.5rem, auto) minmax(0, 11rem) auto minmax(0, 1fr);
+  grid-template-columns:
+    minmax(0, 1fr)
+    4.5rem
+    minmax(8rem, 11rem)
+    12rem
+    minmax(12rem, 1fr);
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
@@ -372,6 +377,7 @@
   color: var(--color-text-muted);
   justify-self: start;
   min-width: 0;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -379,6 +385,7 @@
 
 .review-projects-page__request-project-id {
   justify-self: start;
+  width: 100%;
 }
 
 .review-projects-page__request-locale-count {
@@ -460,16 +467,17 @@
 }
 
 .review-projects-page__request-project-counts {
-  justify-self: center;
+  justify-self: start;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-width: 0;
+  width: 100%;
 }
 
 .review-projects-page__request-project-counts .review-projects-page__count-line {
   white-space: nowrap;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .review-projects-page__request-project-counts .review-projects-page__count,
