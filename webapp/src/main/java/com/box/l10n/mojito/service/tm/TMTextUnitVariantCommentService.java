@@ -8,6 +8,7 @@ import com.google.common.collect.Multimap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,37 @@ public class TMTextUnitVariantCommentService {
           comment.getType(),
           comment.getSeverity(),
           comment.getContent());
+    }
+  }
+
+  @Transactional
+  public void copyCommentsBatch(Map<Long, TMTextUnitVariant> targetVariantsBySourceVariantId) {
+    if (targetVariantsBySourceVariantId == null || targetVariantsBySourceVariantId.isEmpty()) {
+      return;
+    }
+
+    List<TMTextUnitVariantComment> commentsToSave = new ArrayList<>();
+    List<TMTextUnitVariantComment> sourceComments =
+        tmTextUnitVariantCommentRepository.findByTmTextUnitVariantIdIn(
+            new ArrayList<>(targetVariantsBySourceVariantId.keySet()));
+
+    for (TMTextUnitVariantComment sourceComment : sourceComments) {
+      TMTextUnitVariant targetVariant =
+          targetVariantsBySourceVariantId.get(sourceComment.getTmTextUnitVariant().getId());
+      if (targetVariant == null) {
+        continue;
+      }
+
+      TMTextUnitVariantComment copiedComment = new TMTextUnitVariantComment();
+      copiedComment.setTmTextUnitVariant(targetVariant);
+      copiedComment.setType(sourceComment.getType());
+      copiedComment.setSeverity(sourceComment.getSeverity());
+      copiedComment.setContent(sourceComment.getContent());
+      commentsToSave.add(copiedComment);
+    }
+
+    if (!commentsToSave.isEmpty()) {
+      tmTextUnitVariantCommentRepository.saveAll(commentsToSave);
     }
   }
 

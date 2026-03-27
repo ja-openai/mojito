@@ -40,6 +40,19 @@ public interface TemporaryBulkTranslationAcceptRepository
 
   @Query(
       """
+      select cv
+      from TMTextUnitCurrentVariant cv
+      join fetch cv.tm tm
+      join fetch cv.asset asset
+      join fetch cv.tmTextUnit tmTextUnit
+      join fetch cv.tmTextUnitVariant variant
+      join fetch cv.locale locale
+      where cv.id in :ids
+      """)
+  List<TMTextUnitCurrentVariant> findAllForProcessingByIdIn(@Param("ids") List<Long> ids);
+
+  @Query(
+      """
       select distinct
         cv.id as tmTextUnitCurrentVariantId,
         repo.id as repositoryId,

@@ -138,9 +138,23 @@ public class TemporaryBulkTranslationAcceptService {
       Map<Long, MutableRepositoryCount> processedByRepositoryId) {
     transactionTemplate.executeWithoutResult(
         transactionStatus -> {
+          Map<Long, TMTextUnitCurrentVariant> currentVariantsById =
+              repository
+                  .findAllForProcessingByIdIn(
+                      chunk.stream()
+                          .map(
+                              TemporaryBulkTranslationAcceptRepository.CandidateRow
+                                  ::getTmTextUnitCurrentVariantId)
+                          .toList())
+                  .stream()
+                  .collect(
+                      java.util.stream.Collectors.toMap(
+                          TMTextUnitCurrentVariant::getId, currentVariant -> currentVariant));
+          Map<Long, TMTextUnitVariant> commentCopyTargetsBySourceVariantId = new LinkedHashMap<>();
+
           for (TemporaryBulkTranslationAcceptRepository.CandidateRow candidate : chunk) {
             TMTextUnitCurrentVariant currentVariant =
-                repository.findById(candidate.getTmTextUnitCurrentVariantId()).orElse(null);
+                currentVariantsById.get(candidate.getTmTextUnitCurrentVariantId());
             if (currentVariant == null || currentVariant.getTmTextUnitVariant() == null) {
               continue;
             }
@@ -175,7 +189,8 @@ public class TemporaryBulkTranslationAcceptService {
             Long targetVariantId =
                 result.getTmTextUnitCurrentVariant().getTmTextUnitVariant().getId();
             if (!Objects.equals(sourceVariantId, targetVariantId)) {
-              tmTextUnitVariantCommentService.copyComments(sourceVariantId, targetVariantId);
+              commentCopyTargetsBySourceVariantId.put(
+                  sourceVariantId, result.getTmTextUnitCurrentVariant().getTmTextUnitVariant());
             }
 
             processedByRepositoryId.computeIfAbsent(
@@ -186,6 +201,8 @@ public class TemporaryBulkTranslationAcceptService {
                     .matchedCount +=
                 1;
           }
+
+          tmTextUnitVariantCommentService.copyCommentsBatch(commentCopyTargetsBySourceVariantId);
         });
   }
 
