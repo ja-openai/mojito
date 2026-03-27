@@ -33,6 +33,7 @@ import { AdminReviewFeaturesPage } from './page/settings/AdminReviewFeaturesPage
 import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { AdminTeamPoolsPage } from './page/settings/AdminTeamPoolsPage';
 import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
+import { AdminTemporaryBulkTranslationAcceptPage } from './page/settings/AdminTemporaryBulkTranslationAcceptPage';
 import { AdminUserBatchPage } from './page/settings/AdminUserBatchPage';
 import { AdminUserDetailPage } from './page/settings/AdminUserDetailPage';
 import { AdminUserSettingsPage } from './page/settings/AdminUserSettingsPage';
@@ -216,6 +217,14 @@ export function App() {
             <Route
               path="/settings/system/review-automations/:automationId"
               element={<AdminReviewAutomationDetailPage />}
+            />
+            <Route
+              path="/settings/admin/temporary-bulk-translation-accept"
+              element={<AdminTemporaryBulkTranslationAcceptPage />}
+            />
+            <Route
+              path="/settings/system/temporary-bulk-translation-accept"
+              element={<AdminTemporaryBulkTranslationAcceptPage />}
             />
           </Route>
         </Routes>

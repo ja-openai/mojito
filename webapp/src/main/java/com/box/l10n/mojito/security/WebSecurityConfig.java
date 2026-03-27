@@ -212,6 +212,8 @@ public class WebSecurityConfig {
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/ai-translate/automation/run")
                 .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/admin/temporary-bulk-translation-accept/**")
+                .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/review-features", "/api/review-features/*")
                 .hasRole("ADMIN")
                 .requestMatchers(

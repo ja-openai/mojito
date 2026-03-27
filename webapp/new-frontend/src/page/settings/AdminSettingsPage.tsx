@@ -125,6 +125,26 @@ export function AdminSettingsPage() {
               </button>
             </div>
           </section>
+
+          <section className="settings-card" aria-labelledby="settings-temporary-tools">
+            <div className="settings-card__header">
+              <h2 id="settings-temporary-tools">Temporary tools</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/temporary-bulk-translation-accept');
+                }}
+              >
+                <div className="settings-directory__title">Bulk translation accept</div>
+                <div className="settings-directory__description">
+                  One-off admin tool to accept Phrase-imported or older review-needed translations.
+                </div>
+              </button>
+            </div>
+          </section>
         </>
       ) : null}
 
