@@ -9,6 +9,7 @@ import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.rest.WSTestDataFactory;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
@@ -94,6 +95,43 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
     Assert.assertEquals(
         TMTextUnitVariantComment.Type.THIRD_PARTY_TMS_PULL,
         currentVariantComments.get(0).getType());
+  }
+
+  @Test
+  public void phraseImportedNeedsReviewDryRunAsyncReturnsTaskResponse() throws Exception {
+    Repository repository = wsTestDataFactory.createRepoAndAssetAndTextUnits(testIdWatcher);
+    Locale frFrLocale = localeService.findByBcp47Tag("fr-FR");
+    TMTextUnit tmTextUnit = tmTextUnitRepository.findByTm_id(repository.getTm().getId()).get(0);
+
+    TMTextUnitCurrentVariant currentVariant =
+        tmService.addTMTextUnitCurrentVariant(
+            tmTextUnit.getId(),
+            frFrLocale.getId(),
+            "Phrase imported async review variant",
+            null,
+            TMTextUnitVariant.Status.REVIEW_NEEDED,
+            true,
+            ZonedDateTime.now().minusDays(1));
+
+    tmTextUnitVariantCommentService.addComment(
+        currentVariant.getTmTextUnitVariant().getId(),
+        TMTextUnitVariantComment.Type.THIRD_PARTY_TMS_PULL,
+        TMTextUnitVariantComment.Severity.INFO,
+        "Import from Phrase Strings");
+
+    TemporaryBulkTranslationAcceptService.Request request =
+        new TemporaryBulkTranslationAcceptService.Request(
+            TemporaryBulkTranslationAcceptService.Selector.PHRASE_IMPORTED_NEEDS_REVIEW,
+            List.of(repository.getId()),
+            null);
+
+    PollableFuture<TemporaryBulkTranslationAcceptService.TaskResponse> pollableFuture =
+        service.dryRunAsync(request);
+
+    Assert.assertNotNull(pollableFuture.getPollableTask());
+    TemporaryBulkTranslationAcceptService.TaskResponse result = pollableFuture.get();
+    Assert.assertEquals(1L, result.totalCount());
+    Assert.assertEquals(1, result.repositoryCounts().size());
   }
 
   @Test

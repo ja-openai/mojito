@@ -4,6 +4,9 @@ import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
+import com.box.l10n.mojito.service.pollableTask.Pollable;
+import com.box.l10n.mojito.service.pollableTask.PollableFuture;
+import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -47,6 +50,8 @@ public class TemporaryBulkTranslationAcceptService {
 
   public record ExecuteResult(long processedCount, List<RepositoryCount> repositoryCounts) {}
 
+  public record TaskResponse(long totalCount, List<RepositoryCount> repositoryCounts) {}
+
   private final TemporaryBulkTranslationAcceptRepository repository;
   private final TMService tmService;
   private final TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
@@ -74,6 +79,11 @@ public class TemporaryBulkTranslationAcceptService {
     List<RepositoryCount> counts = getRepositoryCounts(validatedRequest);
     long totalMatchedCount = counts.stream().mapToLong(RepositoryCount::matchedCount).sum();
     return new DryRunResult(totalMatchedCount, counts);
+  }
+
+  @Pollable(async = true, message = "Run temporary bulk translation accept dry run")
+  public PollableFuture<TaskResponse> dryRunAsync(Request request) {
+    return new PollableFutureTaskResult<>(toTaskResponse(dryRun(request)));
   }
 
   public ExecuteResult execute(Request request) {
@@ -104,6 +114,11 @@ public class TemporaryBulkTranslationAcceptService {
             .toList();
     long processedCount = repositoryCounts.stream().mapToLong(RepositoryCount::matchedCount).sum();
     return new ExecuteResult(processedCount, repositoryCounts);
+  }
+
+  @Pollable(async = true, message = "Execute temporary bulk translation accept")
+  public PollableFuture<TaskResponse> executeAsync(Request request) {
+    return new PollableFutureTaskResult<>(toTaskResponse(execute(request)));
   }
 
   private void processChunk(
@@ -203,6 +218,14 @@ public class TemporaryBulkTranslationAcceptService {
                 new RepositoryCount(
                     row.getRepositoryId(), row.getRepositoryName(), row.getMatchedCount()))
         .toList();
+  }
+
+  private TaskResponse toTaskResponse(DryRunResult result) {
+    return new TaskResponse(result.totalMatchedCount(), result.repositoryCounts());
+  }
+
+  private TaskResponse toTaskResponse(ExecuteResult result) {
+    return new TaskResponse(result.processedCount(), result.repositoryCounts());
   }
 
   private ValidatedRequest validate(Request request) {
