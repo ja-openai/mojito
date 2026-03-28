@@ -38,6 +38,7 @@
   grid-template-columns:
     auto minmax(12rem, 16rem)
     auto minmax(9rem, 12rem)
+    auto minmax(10rem, 12rem)
     auto minmax(10rem, 1fr)
     auto minmax(10rem, 1fr);
   gap: var(--space-2);

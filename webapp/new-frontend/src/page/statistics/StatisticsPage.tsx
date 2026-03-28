@@ -14,6 +14,7 @@ import {
 import { useUser } from '../../components/RequireUser';
 
 type StatisticsViewMode = 'all' | 'repository';
+type StatisticsMetric = 'textUnits' | 'words';
 
 const GROUP_BY_OPTIONS: { value: IngestionGroupBy; label: string }[] = [
   { value: 'day', label: 'Day' },
@@ -24,6 +25,11 @@ const GROUP_BY_OPTIONS: { value: IngestionGroupBy; label: string }[] = [
 const VIEW_MODE_OPTIONS: { value: StatisticsViewMode; label: string }[] = [
   { value: 'all', label: 'All repositories' },
   { value: 'repository', label: 'Grouped by repository' },
+];
+
+const METRIC_OPTIONS: { value: StatisticsMetric; label: string }[] = [
+  { value: 'textUnits', label: 'Text unit count' },
+  { value: 'words', label: 'Word count' },
 ];
 
 function getErrorMessage(error: unknown) {
@@ -81,6 +87,7 @@ export function StatisticsPage() {
 
   const [groupBy, setGroupBy] = useState<IngestionGroupBy>('day');
   const [viewMode, setViewMode] = useState<StatisticsViewMode>('all');
+  const [metric, setMetric] = useState<StatisticsMetric>('textUnits');
   const [fromDayInput, setFromDayInput] = useState('');
   const [toDayInput, setToDayInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -95,6 +102,7 @@ export function StatisticsPage() {
   const numberFormatter = useMemo(() => new Intl.NumberFormat(), []);
   const isGroupedByRepository = viewMode === 'repository';
   const rows = useMemo(() => snapshot?.rows ?? [], [snapshot?.rows]);
+  const metricLabel = metric === 'words' ? 'Words added' : 'Text units added';
 
   const loadSnapshot = useCallback(async () => {
     if (!canViewStatistics) {
@@ -148,8 +156,8 @@ export function StatisticsPage() {
     }
 
     const header = isGroupedByRepository
-      ? ['Repository', 'Period', 'Strings added', 'Words added']
-      : ['Period', 'Strings added', 'Words added'];
+      ? ['Repository', 'Period', metricLabel]
+      : ['Period', metricLabel];
 
     const lines = rows.map((row) => {
       const repositoryLabel =
@@ -157,8 +165,8 @@ export function StatisticsPage() {
         (row.repositoryId != null ? `Repository #${row.repositoryId}` : 'All repositories');
 
       const values = isGroupedByRepository
-        ? [repositoryLabel, row.period, row.stringCount, row.wordCount]
-        : [row.period, row.stringCount, row.wordCount];
+        ? [repositoryLabel, row.period, metric === 'words' ? row.wordCount : row.stringCount]
+        : [row.period, metric === 'words' ? row.wordCount : row.stringCount];
 
       return values.map((value) => sanitizeTsvCell(value)).join('\t');
     });
@@ -169,7 +177,7 @@ export function StatisticsPage() {
     } catch {
       setError('Failed to copy table to clipboard.');
     }
-  }, [isGroupedByRepository, rows]);
+  }, [isGroupedByRepository, metric, metricLabel, rows]);
 
   useEffect(() => {
     if (!canViewStatistics) {
@@ -272,6 +280,25 @@ export function StatisticsPage() {
               ))}
             </select>
 
+            <label className="settings-field__label" htmlFor="statistics-metric">
+              Metric
+            </label>
+            <select
+              id="statistics-metric"
+              className="settings-input statistics-page__select"
+              value={metric}
+              onChange={(event) =>
+                setMetric(event.target.value === 'words' ? 'words' : 'textUnits')
+              }
+              disabled={loading || recomputing}
+            >
+              {METRIC_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
             <label className="settings-field__label" htmlFor="statistics-from-day">
               From
             </label>
@@ -337,8 +364,7 @@ export function StatisticsPage() {
                 <tr>
                   {isGroupedByRepository ? <th>Repository</th> : null}
                   <th>Period</th>
-                  <th>Strings added</th>
-                  <th>Words added</th>
+                  <th>{metricLabel}</th>
                 </tr>
               </thead>
               <tbody>
@@ -354,8 +380,11 @@ export function StatisticsPage() {
                     <tr key={rowKey}>
                       {isGroupedByRepository ? <td>{repositoryLabel}</td> : null}
                       <td>{row.period}</td>
-                      <td>{numberFormatter.format(row.stringCount)}</td>
-                      <td>{numberFormatter.format(row.wordCount)}</td>
+                      <td>
+                        {numberFormatter.format(
+                          metric === 'words' ? row.wordCount : row.stringCount,
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
