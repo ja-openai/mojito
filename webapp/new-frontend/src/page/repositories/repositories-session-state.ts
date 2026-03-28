@@ -1,5 +1,5 @@
 import { loadSessionTokenPayload, saveSessionTokenPayload } from '../../utils/sessionTokenStore';
-import type { RepositoryStatusFilter } from './RepositoriesPageView';
+import type { RepositoryMetric, RepositoryStatusFilter } from './RepositoriesPageView';
 
 const STORAGE_PREFIX = 'repositories.searchState.v1:';
 const STORAGE_MAX_ENTRIES = 24;
@@ -10,6 +10,7 @@ const STATUS_FILTER_VALUES: ReadonlySet<RepositoryStatusFilter> = new Set([
   'needs-translation',
   'needs-review',
 ]);
+const METRIC_VALUES: ReadonlySet<RepositoryMetric> = new Set(['textUnits', 'words']);
 
 export const REPOSITORIES_SESSION_QUERY_KEY = 'rs';
 
@@ -20,6 +21,7 @@ export type RepositoriesSessionState = {
   selectedLocaleTags: string[];
   localeSelectionTouched: boolean;
   statusFilter: RepositoryStatusFilter;
+  metric: RepositoryMetric;
 };
 
 function normalizeRepositoryIds(values: unknown): number[] {
@@ -70,6 +72,13 @@ function normalizeStatusFilter(value: unknown): RepositoryStatusFilter {
   return 'all';
 }
 
+function normalizeMetric(value: unknown): RepositoryMetric {
+  if (typeof value === 'string' && METRIC_VALUES.has(value as RepositoryMetric)) {
+    return value as RepositoryMetric;
+  }
+  return 'textUnits';
+}
+
 function normalizeSelectedRepositoryId(value: unknown): number | null {
   const next = typeof value === 'number' ? value : Number(value);
   if (Number.isInteger(next) && next > 0) {
@@ -91,6 +100,7 @@ function normalizeState(value: unknown): RepositoriesSessionState | null {
     selectedLocaleTags: normalizeLocaleTags(candidate.selectedLocaleTags),
     localeSelectionTouched: Boolean(candidate.localeSelectionTouched),
     statusFilter: normalizeStatusFilter(candidate.statusFilter),
+    metric: normalizeMetric(candidate.metric),
   };
 }
 
@@ -102,6 +112,7 @@ function normalizeStateForStorage(state: RepositoriesSessionState): Repositories
     selectedLocaleTags: normalizeLocaleTags(state.selectedLocaleTags),
     localeSelectionTouched: Boolean(state.localeSelectionTouched),
     statusFilter: normalizeStatusFilter(state.statusFilter),
+    metric: normalizeMetric(state.metric),
   };
 }
 

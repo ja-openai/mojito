@@ -35,7 +35,12 @@ import {
   saveRepositoriesSessionState,
   serializeRepositoriesSessionState,
 } from './repositories-session-state';
-import type { LocaleRow, RepositoryRow, RepositoryStatusFilter } from './RepositoriesPageView';
+import type {
+  LocaleRow,
+  RepositoryMetric,
+  RepositoryRow,
+  RepositoryStatusFilter,
+} from './RepositoriesPageView';
 import { RepositoriesPageView } from './RepositoriesPageView';
 
 const getLocaleTag = (locale: ApiLocale | null) => locale?.bcp47Tag ?? '';
@@ -43,6 +48,13 @@ const getLocaleTag = (locale: ApiLocale | null) => locale?.bcp47Tag ?? '';
 const getRejectedCount = (localeStat: ApiRepositoryLocaleStatistic) => {
   const translated = localeStat.translatedCount ?? 0;
   const includeInFile = localeStat.includeInFileCount ?? 0;
+  const rejected = translated - includeInFile;
+  return rejected > 0 ? rejected : 0;
+};
+
+const getRejectedWordCount = (localeStat: ApiRepositoryLocaleStatistic) => {
+  const translated = localeStat.translatedWordCount ?? 0;
+  const includeInFile = localeStat.includeInFileWordCount ?? 0;
   const rejected = translated - includeInFile;
   return rejected > 0 ? rejected : 0;
 };
@@ -57,6 +69,8 @@ const getFullyTranslatedLocaleTags = (repository: ApiRepository) => {
   return new Set(tags);
 };
 
+const getMetricValue = (count: number, words: number) => ({ count, words });
+
 const buildRepositoryRow = (
   repository: ApiRepository,
   selectedRepositoryId: number | null,
@@ -67,9 +81,9 @@ const buildRepositoryRow = (
   return {
     id: repository.id,
     name: repository.name,
-    rejected: summary.rejected,
-    needsTranslation: summary.needsTranslation,
-    needsReview: summary.needsReview,
+    rejected: getMetricValue(summary.rejected, summary.rejectedWords),
+    needsTranslation: getMetricValue(summary.needsTranslation, summary.needsTranslationWords),
+    needsReview: getMetricValue(summary.needsReview, summary.needsReviewWords),
     selected: repository.id === selectedRepositoryId,
   };
 };
@@ -88,8 +102,11 @@ const getRepositorySummary = (repository: ApiRepository, allowedLocaleTags?: Set
   const localeStats = repository.repositoryStatistic?.repositoryLocaleStatistics ?? [];
 
   let rejected = 0;
+  let rejectedWords = 0;
   let needsTranslation = 0;
+  let needsTranslationWords = 0;
   let needsReview = 0;
+  let needsReviewWords = 0;
 
   localeStats.forEach((localeStat) => {
     const localeTag = getLocaleTag(localeStat.locale);
@@ -97,14 +114,24 @@ const getRepositorySummary = (repository: ApiRepository, allowedLocaleTags?: Set
       return;
     }
     rejected += getRejectedCount(localeStat);
+    rejectedWords += getRejectedWordCount(localeStat);
     needsReview += localeStat.reviewNeededCount ?? 0;
+    needsReviewWords += localeStat.reviewNeededWordCount ?? 0;
 
     if (localeTag && fullyTranslatedTags.has(localeTag)) {
       needsTranslation += localeStat.forTranslationCount ?? 0;
+      needsTranslationWords += localeStat.forTranslationWordCount ?? 0;
     }
   });
 
-  return { rejected, needsTranslation, needsReview };
+  return {
+    rejected,
+    rejectedWords,
+    needsTranslation,
+    needsTranslationWords,
+    needsReview,
+    needsReviewWords,
+  };
 };
 
 const buildLocaleRows = (
@@ -128,9 +155,15 @@ const buildLocaleRows = (
       return {
         id: localeTag || `locale-${index}`,
         name: resolveLocaleName(localeTag),
-        rejected: getRejectedCount(localeStat),
-        needsTranslation: localeStat.forTranslationCount ?? 0,
-        needsReview: localeStat.reviewNeededCount ?? 0,
+        rejected: getMetricValue(getRejectedCount(localeStat), getRejectedWordCount(localeStat)),
+        needsTranslation: getMetricValue(
+          localeStat.forTranslationCount ?? 0,
+          localeStat.forTranslationWordCount ?? 0,
+        ),
+        needsReview: getMetricValue(
+          localeStat.reviewNeededCount ?? 0,
+          localeStat.reviewNeededWordCount ?? 0,
+        ),
       };
     })
     .filter((localeRow): localeRow is LocaleRow => Boolean(localeRow))
@@ -157,6 +190,7 @@ export function RepositoriesPage() {
   const rsId = searchParams.get(REPOSITORIES_SESSION_QUERY_KEY);
   const [selectedRepositoryId, setSelectedRepositoryId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<RepositoryStatusFilter>('all');
+  const [metric, setMetric] = useState<RepositoryMetric>('textUnits');
   const [preferredLocales, setPreferredLocales] = useState<string[]>(() => loadPreferredLocales());
   const [hydratedSession, setHydratedSession] = useState<{
     key: string;
@@ -270,6 +304,7 @@ export function RepositoriesPage() {
     }
     setSelectedRepositoryId(hydratedSession.state.selectedRepositoryId);
     setStatusFilter(hydratedSession.state.statusFilter);
+    setMetric(hydratedSession.state.metric);
     setRepositorySelection(hydratedSession.state.selectedRepositoryIds, {
       touched: hydratedSession.state.repositorySelectionTouched,
     });
@@ -294,6 +329,7 @@ export function RepositoriesPage() {
       selectedLocaleTags,
       localeSelectionTouched: hasTouchedLocaleSelection,
       statusFilter,
+      metric,
     }),
     [
       hasTouchedLocaleSelection,
@@ -302,6 +338,7 @@ export function RepositoriesPage() {
       selectedRepositoryId,
       selectedRepositoryIds,
       statusFilter,
+      metric,
     ],
   );
 
@@ -557,6 +594,8 @@ export function RepositoriesPage() {
       selectedLocaleTags={selectedLocaleTags}
       onChangeLocaleSelection={handleChangeLocaleSelection}
       myLocaleSelections={myLocaleSelections}
+      metric={metric}
+      onMetricChange={setMetric}
       statusFilter={statusFilter}
       onStatusFilterChange={setStatusFilter}
       onSelectRepository={handleSelectRepository}

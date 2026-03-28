@@ -17,21 +17,28 @@ import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs'
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 
+export type RepositoryMetric = 'textUnits' | 'words';
+
+export type RepositoryMetricValue = {
+  count: number;
+  words: number;
+};
+
 export type RepositoryRow = {
   id: number;
   name: string;
-  rejected: number;
-  needsTranslation: number;
-  needsReview: number;
+  rejected: RepositoryMetricValue;
+  needsTranslation: RepositoryMetricValue;
+  needsReview: RepositoryMetricValue;
   selected: boolean;
 };
 
 export type LocaleRow = {
   id: string;
   name: string;
-  rejected: number;
-  needsTranslation: number;
-  needsReview: number;
+  rejected: RepositoryMetricValue;
+  needsTranslation: RepositoryMetricValue;
+  needsReview: RepositoryMetricValue;
 };
 
 export type RepositoryStatusFilter = 'all' | 'rejected' | 'needs-translation' | 'needs-review';
@@ -41,6 +48,10 @@ const statusFilterOptions: Array<{ value: RepositoryStatusFilter; label: string 
   { value: 'rejected', label: 'Rejected' },
   { value: 'needs-translation', label: 'To translate' },
   { value: 'needs-review', label: 'To review' },
+];
+const metricOptions: Array<{ value: RepositoryMetric; label: string }> = [
+  { value: 'textUnits', label: 'Text unit count' },
+  { value: 'words', label: 'Word count' },
 ];
 
 type Props = {
@@ -58,6 +69,8 @@ type Props = {
   selectedLocaleTags: string[];
   onChangeLocaleSelection: (next: string[]) => void;
   myLocaleSelections: string[];
+  metric: RepositoryMetric;
+  onMetricChange: (value: RepositoryMetric) => void;
   statusFilter: RepositoryStatusFilter;
   onStatusFilterChange: (value: RepositoryStatusFilter) => void;
   onSelectRepository: (id: number) => void;
@@ -72,9 +85,24 @@ type Props = {
 };
 
 const formatCount = (value: number) => (value === 0 ? '' : value);
+const getMetricNumber = (value: RepositoryMetricValue, metric: RepositoryMetric) =>
+  metric === 'words' ? value.words : value.count;
+const getAlternateMetricTitle = (value: RepositoryMetricValue, metric: RepositoryMetric) => {
+  const alternateMetric = metric === 'words' ? 'textUnits' : 'words';
+  const alternateValue = getMetricNumber(value, alternateMetric);
+
+  if (alternateValue === 0) {
+    return '';
+  }
+
+  return alternateMetric === 'words'
+    ? `${formatCount(alternateValue)} words`
+    : `${formatCount(alternateValue)} text units`;
+};
 
 type RepositoryTableProps = {
   repositories: RepositoryRow[];
+  metric: RepositoryMetric;
   isRepositorySelectionEmpty: boolean;
   onSelectRepository: (id: number) => void;
   onOpenAiTranslate: (id: number) => void;
@@ -88,6 +116,7 @@ type RepositoryTableProps = {
 
 type LocaleTableProps = {
   locales: LocaleRow[];
+  metric: RepositoryMetric;
   hasSelection: boolean;
   repositoryId: number | null;
   onOpenWorkbench: (params: {
@@ -119,6 +148,11 @@ type StatusFilterDropdownProps = {
   onChange: (value: RepositoryStatusFilter) => void;
 };
 
+type MetricDropdownProps = {
+  value: RepositoryMetric;
+  onChange: (value: RepositoryMetric) => void;
+};
+
 function StatusFilterDropdown({ value, onChange }: StatusFilterDropdownProps) {
   const selectedLabel =
     statusFilterOptions.find((option) => option.value === value)?.label ?? 'All statuses';
@@ -145,6 +179,38 @@ function StatusFilterDropdown({ value, onChange }: StatusFilterDropdownProps) {
           options: statusFilterOptions,
           value,
           onChange: (next) => onChange(next as RepositoryStatusFilter),
+        },
+      ]}
+    />
+  );
+}
+
+function MetricDropdown({ value, onChange }: MetricDropdownProps) {
+  const selectedLabel =
+    metricOptions.find((option) => option.value === value)?.label ?? 'Text unit count';
+
+  return (
+    <MultiSectionFilterChip
+      align="left"
+      ariaLabel="Choose repository metric"
+      className="filter-chip repositories-page__metric-filter"
+      classNames={{
+        button: 'filter-chip__button',
+        panel: 'filter-chip__panel',
+        section: 'filter-chip__section',
+        label: 'filter-chip__label',
+        list: 'filter-chip__list',
+        option: 'filter-chip__option',
+      }}
+      closeOnSelection
+      summary={selectedLabel}
+      sections={[
+        {
+          kind: 'radio',
+          label: 'Metric',
+          options: metricOptions,
+          value,
+          onChange: (next) => onChange(next as RepositoryMetric),
         },
       ]}
     />
@@ -215,6 +281,7 @@ function ErrorState({ message, onRetry }: ErrorStateProps) {
 
 function RepositoryTable({
   repositories,
+  metric,
   isRepositorySelectionEmpty,
   onSelectRepository,
   onOpenAiTranslate,
@@ -336,69 +403,56 @@ function RepositoryTable({
                 </div>
                 <div className="repositories-page__cell repositories-page__cell--number">
                   <CellLink
-                    muted={repo.rejected === 0}
+                    muted={repo.rejected.count === 0}
                     stopPropagation
                     onClick={() =>
                       onOpenWorkbench({
                         repositoryId: repo.id,
                         status: 'REJECTED',
-                        count: repo.rejected,
+                        count: repo.rejected.count,
                         usedFilter: 'USED',
                       })
                     }
                     ariaLabel={`Open rejected units for ${repo.name} in workbench`}
+                    title={getAlternateMetricTitle(repo.rejected, metric)}
                   >
-                    {formatCount(repo.rejected) || '-'}
+                    {formatCount(getMetricNumber(repo.rejected, metric)) || '-'}
                   </CellLink>
                 </div>
-                <div
-                  className="repositories-page__cell repositories-page__cell--number"
-                  title={
-                    repo.needsTranslation
-                      ? `${formatCount(repo.needsTranslation)} units\n${formatCount(
-                          repo.needsTranslation * 20,
-                        )} words`
-                      : ''
-                  }
-                >
+                <div className="repositories-page__cell repositories-page__cell--number">
                   <CellLink
-                    muted={repo.needsTranslation === 0}
+                    muted={repo.needsTranslation.count === 0}
                     stopPropagation
                     onClick={() =>
                       onOpenWorkbench({
                         repositoryId: repo.id,
                         status: 'FOR_TRANSLATION',
-                        count: repo.needsTranslation,
+                        count: repo.needsTranslation.count,
                         usedFilter: 'USED',
                       })
                     }
                     ariaLabel={`Open "to translate" units for ${repo.name} in workbench`}
+                    title={getAlternateMetricTitle(repo.needsTranslation, metric)}
                   >
-                    {formatCount(repo.needsTranslation) || '-'}
+                    {formatCount(getMetricNumber(repo.needsTranslation, metric)) || '-'}
                   </CellLink>
                 </div>
-                <div
-                  className="repositories-page__cell repositories-page__cell--number"
-                  title={
-                    repo.needsReview
-                      ? `${formatCount(repo.needsReview)} units\n${formatCount(repo.needsReview * 15)} words`
-                      : ''
-                  }
-                >
+                <div className="repositories-page__cell repositories-page__cell--number">
                   <CellLink
-                    muted={repo.needsReview === 0}
+                    muted={repo.needsReview.count === 0}
                     stopPropagation
                     onClick={() =>
                       onOpenWorkbench({
                         repositoryId: repo.id,
                         status: 'REVIEW_NEEDED',
-                        count: repo.needsReview,
+                        count: repo.needsReview.count,
                         usedFilter: 'USED',
                       })
                     }
                     ariaLabel={`Open "to review" units for ${repo.name} in workbench`}
+                    title={getAlternateMetricTitle(repo.needsReview, metric)}
                   >
-                    {formatCount(repo.needsReview) || '-'}
+                    {formatCount(getMetricNumber(repo.needsReview, metric)) || '-'}
                   </CellLink>
                 </div>
               </>
@@ -410,7 +464,13 @@ function RepositoryTable({
   );
 }
 
-function LocaleTable({ locales, hasSelection, repositoryId, onOpenWorkbench }: LocaleTableProps) {
+function LocaleTable({
+  locales,
+  metric,
+  hasSelection,
+  repositoryId,
+  onOpenWorkbench,
+}: LocaleTableProps) {
   if (!hasSelection) {
     return (
       <div className="repositories-page__pane">
@@ -459,63 +519,56 @@ function LocaleTable({ locales, hasSelection, repositoryId, onOpenWorkbench }: L
               </div>
               <div className="repositories-page__cell repositories-page__cell--number">
                 <CellLink
-                  muted={locale.rejected === 0}
+                  muted={locale.rejected.count === 0}
                   onClick={() =>
                     onOpenWorkbench({
                       repositoryId: repositoryId ?? -1,
                       status: 'REJECTED',
                       localeTag: locale.id,
-                      count: locale.rejected,
+                      count: locale.rejected.count,
                       usedFilter: 'USED',
                     })
                   }
                   ariaLabel={`Open rejected units for ${locale.name} in workbench`}
+                  title={getAlternateMetricTitle(locale.rejected, metric)}
                 >
-                  {formatCount(locale.rejected) || '-'}
+                  {formatCount(getMetricNumber(locale.rejected, metric)) || '-'}
                 </CellLink>
               </div>
               <div className="repositories-page__cell repositories-page__cell--number">
                 <CellLink
-                  muted={locale.needsTranslation === 0}
+                  muted={locale.needsTranslation.count === 0}
                   onClick={() =>
                     onOpenWorkbench({
                       repositoryId: repositoryId ?? -1,
                       status: 'FOR_TRANSLATION',
                       localeTag: locale.id,
-                      count: locale.needsTranslation,
+                      count: locale.needsTranslation.count,
                       usedFilter: 'USED',
                     })
                   }
                   ariaLabel={`Open "to translate" units for ${locale.name} in workbench`}
-                  title={
-                    locale.needsTranslation
-                      ? `${formatCount(locale.needsTranslation)} units\n${formatCount(locale.needsTranslation * 10)} words`
-                      : ''
-                  }
+                  title={getAlternateMetricTitle(locale.needsTranslation, metric)}
                 >
-                  {formatCount(locale.needsTranslation) || '-'}
+                  {formatCount(getMetricNumber(locale.needsTranslation, metric)) || '-'}
                 </CellLink>
               </div>
               <div className="repositories-page__cell repositories-page__cell--number">
                 <CellLink
-                  muted={locale.needsReview === 0}
+                  muted={locale.needsReview.count === 0}
                   onClick={() =>
                     onOpenWorkbench({
                       repositoryId: repositoryId ?? -1,
                       status: 'REVIEW_NEEDED',
                       localeTag: locale.id,
-                      count: locale.needsReview,
+                      count: locale.needsReview.count,
                       usedFilter: 'USED',
                     })
                   }
                   ariaLabel={`Open "to review" units for ${locale.name} in workbench`}
-                  title={
-                    locale.needsReview
-                      ? `${formatCount(locale.needsReview)} units\n${formatCount(locale.needsReview * 8)} words`
-                      : ''
-                  }
+                  title={getAlternateMetricTitle(locale.needsReview, metric)}
                 >
-                  {formatCount(locale.needsReview) || '-'}
+                  {formatCount(getMetricNumber(locale.needsReview, metric)) || '-'}
                 </CellLink>
               </div>
             </div>
@@ -541,6 +594,8 @@ export function RepositoriesPageView({
   selectedLocaleTags,
   onChangeLocaleSelection,
   myLocaleSelections,
+  metric,
+  onMetricChange,
   statusFilter,
   onStatusFilterChange,
   onSelectRepository,
@@ -577,12 +632,14 @@ export function RepositoriesPageView({
               myLocaleTags={myLocaleSelections}
             />
             <StatusFilterDropdown value={statusFilter} onChange={onStatusFilterChange} />
+            <MetricDropdown value={metric} onChange={onMetricChange} />
           </div>
         </div>
       </div>
       <div className="repositories-page__content repositories-page--split">
         <RepositoryTable
           repositories={repositories}
+          metric={metric}
           isRepositorySelectionEmpty={isRepositorySelectionEmpty}
           onSelectRepository={onSelectRepository}
           onOpenAiTranslate={onOpenAiTranslate}
@@ -606,6 +663,7 @@ export function RepositoriesPageView({
         </div>
         <LocaleTable
           locales={locales}
+          metric={metric}
           hasSelection={hasSelection}
           repositoryId={selectedRepoId}
           onOpenWorkbench={onOpenWorkbench}

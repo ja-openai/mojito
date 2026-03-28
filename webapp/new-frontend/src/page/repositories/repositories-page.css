@@ -81,6 +81,11 @@
   min-width: 0;
 }
 
+.repositories-page__metric-filter {
+  width: clamp(var(--chip-width-sm-min), var(--chip-width-sm-fluid), var(--chip-width-sm-max));
+  min-width: 0;
+}
+
 .repositories-page__filter-button {
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 75%, transparent);
   border-radius: var(--radius-pill);
