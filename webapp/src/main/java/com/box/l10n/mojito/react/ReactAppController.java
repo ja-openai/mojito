@@ -70,17 +70,11 @@ public class ReactAppController {
 
   // TODO(P1) For now, client routes must be copied in this controller
   @RequestMapping({
-    "/",
     "/login",
     "/auth/callback",
-    "repositories",
     "project-requests",
-    "workbench",
     "branches",
-    "screenshots",
     "screenshots-legacy",
-    "ai-translate",
-    "settings",
     "settings/user-management",
     "settings/box",
   })

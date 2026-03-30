@@ -677,7 +677,7 @@ public class TeamSlackNotificationService {
     if (base.isEmpty()) {
       return null;
     }
-    String url = base + "/n/review-projects/" + projectId;
+    String url = base + "/review-projects/" + projectId;
     return "<" + url + "|review project #" + projectId + ">";
   }
 
@@ -693,7 +693,7 @@ public class TeamSlackNotificationService {
     if (base.isEmpty()) {
       return null;
     }
-    String url = base + "/n/review-projects?requestId=" + requestId;
+    String url = base + "/review-projects?requestId=" + requestId;
     return "<" + url + "|request #" + requestId + ">";
   }
 
@@ -709,7 +709,7 @@ public class TeamSlackNotificationService {
     if (base.isEmpty()) {
       return null;
     }
-    String url = base + "/n/settings/system/review-automations/" + automationId;
+    String url = base + "/settings/system/review-automations/" + automationId;
     return "<" + url + "|automation #" + automationId + ">";
   }
 

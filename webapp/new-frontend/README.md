@@ -1,9 +1,10 @@
-# Mojito New Frontend (/n)
+# Mojito New Frontend
 
 Overview
 
 - React + Vite + TypeScript app that builds into Spring Boot static resources.
-- Served under the path `/n/` by the Mojito webapp module.
+- Served from `/` by the Mojito webapp module.
+- Legacy `/n/...` links are redirected to their root-path equivalents.
 
 Dev Environment
 
@@ -18,10 +19,10 @@ Dev Environment
 
 Build & Integration
 
-- `npm run build` writes to `webapp/target/classes/public/n`.
-- Spring Boot serves static content from `classpath:/public`, so visit `http://localhost:8080/n/`.
+- `npm run build` writes to `webapp/target/classes/public`.
+- Spring Boot serves static content from `classpath:/public`, so visit `http://localhost:8080/`.
 
 Maven Integration (packaging)
 
 - The `webapp` Maven module runs an additional `frontend-maven-plugin` execution in `new-frontend` to build assets during `compile`.
-- Result is included automatically in the Spring Boot jar under `public/n`.
+- Result is included automatically in the Spring Boot jar under `public`.

@@ -133,7 +133,9 @@ public class WebSecurityConfig {
             List.of(
                 "/intl/*",
                 "/img/*",
+                "/assets/**",
                 "/login/**",
+                "/index.html",
                 "/favicon.ico",
                 "/fonts/*",
                 "/cli/**",

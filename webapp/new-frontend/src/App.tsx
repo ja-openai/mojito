@@ -100,7 +100,7 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter basename="/n">
+      <BrowserRouter>
         <Routes>
           <Route
             element={

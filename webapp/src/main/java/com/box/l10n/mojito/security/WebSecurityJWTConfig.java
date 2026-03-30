@@ -105,7 +105,7 @@ public class WebSecurityJWTConfig {
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-    // Make sure all these URLs are also declared in ReactAppController.
+    // Make sure these URLs are also declared in the SPA forwarding controllers.
     //
     // Stateful mode:
     //   Accessing these URLs triggers a 302 redirect to the authentication endpoint.
@@ -125,10 +125,16 @@ public class WebSecurityJWTConfig {
                 "/review-projects/**",
                 "/workbench",
                 "/branches",
+                "/monitoring",
+                "/statistics",
                 "/screenshots",
                 "/screenshots-legacy",
                 "/ai-translate",
-                "/settings/**"));
+                "/settings/**",
+                "/text-units/**",
+                "/tools/**",
+                "/n",
+                "/n/**"));
 
     // forwarding was for the old implementation and is not needed anymore so
     // hardcoded to false.

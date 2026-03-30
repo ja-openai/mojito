@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 
-// Build into Spring Boot's static resources so it serves at /n/
+// Build into Spring Boot's static resources so it serves at /
 export default defineConfig({
-  base: '/n/',
+  base: '/',
   plugins: [react()],
   server: {
     port: Number(process.env.VITE_PORT ?? 5173),
@@ -21,9 +21,10 @@ export default defineConfig({
     },
   },
   build: {
-    // Output to webapp/target/classes/public/n so Spring Boot serves it
-    outDir: '../target/classes/public/n',
-    emptyOutDir: true,
+    // Output to webapp/target/classes/public so Spring Boot serves it from the web root.
+    // Keep existing legacy assets because some routes still use the old frontend.
+    outDir: '../target/classes/public',
+    emptyOutDir: false,
   },
   test: {
     environment: 'jsdom',
