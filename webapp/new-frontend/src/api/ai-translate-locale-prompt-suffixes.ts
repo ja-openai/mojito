@@ -10,20 +10,21 @@ type UpsertAiTranslateLocalePromptSuffixRequest = {
   promptSuffix: string;
 };
 
-export const fetchAiTranslateLocalePromptSuffixes =
-  async (): Promise<ApiAiTranslateLocalePromptSuffix[]> => {
-    const response = await fetch('/api/ai-translate/locale-prompt-suffixes', {
-      method: 'GET',
-      credentials: 'same-origin',
-    });
+export const fetchAiTranslateLocalePromptSuffixes = async (): Promise<
+  ApiAiTranslateLocalePromptSuffix[]
+> => {
+  const response = await fetch('/api/ai-translate/locale-prompt-suffixes', {
+    method: 'GET',
+    credentials: 'same-origin',
+  });
 
-    if (!response.ok) {
-      const message = await response.text().catch(() => '');
-      throw new Error(message || 'Failed to load AI locale prompt suffixes');
-    }
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load AI locale prompt suffixes');
+  }
 
-    return (await response.json()) as ApiAiTranslateLocalePromptSuffix[];
-  };
+  return (await response.json()) as ApiAiTranslateLocalePromptSuffix[];
+};
 
 export const upsertAiTranslateLocalePromptSuffix = async (
   payload: UpsertAiTranslateLocalePromptSuffixRequest,
@@ -46,10 +47,13 @@ export const upsertAiTranslateLocalePromptSuffix = async (
 };
 
 export const deleteAiTranslateLocalePromptSuffix = async (localeTag: string): Promise<void> => {
-  const response = await fetch(`/api/ai-translate/locale-prompt-suffixes/${encodeURIComponent(localeTag)}`, {
-    method: 'DELETE',
-    credentials: 'same-origin',
-  });
+  const response = await fetch(
+    `/api/ai-translate/locale-prompt-suffixes/${encodeURIComponent(localeTag)}`,
+    {
+      method: 'DELETE',
+      credentials: 'same-origin',
+    },
+  );
 
   if (!response.ok) {
     const message = await response.text().catch(() => '');

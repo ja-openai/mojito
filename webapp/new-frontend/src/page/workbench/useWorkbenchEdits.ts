@@ -287,21 +287,14 @@ export function useWorkbenchEdits({
       Array.from(
         new Set(
           apiRows
-            .filter(
-              (row) =>
-                row.canEdit && typeof row.tmTextUnitCurrentVariantId === 'number',
-            )
+            .filter((row) => row.canEdit && typeof row.tmTextUnitCurrentVariantId === 'number')
             .map((row) => row.tmTextUnitCurrentVariantId as number),
         ),
       ),
     [apiRows],
   );
 
-  const deleteAllMutation = useMutation<
-    { deletedCount: number },
-    Error,
-    number[]
-  >({
+  const deleteAllMutation = useMutation<{ deletedCount: number }, Error, number[]>({
     mutationFn: (tmTextUnitCurrentVariantIds) =>
       deleteTextUnitCurrentVariants(tmTextUnitCurrentVariantIds),
     onMutate: async () => {
@@ -329,7 +322,11 @@ export function useWorkbenchEdits({
   const updateAllStatusesMutation = useMutation<
     { updatedCount: number },
     Error,
-    { tmTextUnitCurrentVariantIds: number[]; status: NonNullable<SaveTextUnitRequest['status']>; includedInLocalizedFile: boolean }
+    {
+      tmTextUnitCurrentVariantIds: number[];
+      status: NonNullable<SaveTextUnitRequest['status']>;
+      includedInLocalizedFile: boolean;
+    }
   >({
     mutationFn: ({ tmTextUnitCurrentVariantIds, status, includedInLocalizedFile }) =>
       updateTextUnitCurrentVariantsStatus(
@@ -669,12 +666,7 @@ export function useWorkbenchEdits({
       status: statusUpdate.status,
       includedInLocalizedFile: statusUpdate.includedInLocalizedFile,
     });
-  }, [
-    deleteAllMutation,
-    deletableCurrentVariantIds,
-    pendingBulkAction,
-    updateAllStatusesMutation,
-  ]);
+  }, [deleteAllMutation, deletableCurrentVariantIds, pendingBulkAction, updateAllStatusesMutation]);
 
   const dismissBulkAction = useCallback(() => {
     setPendingBulkAction(null);

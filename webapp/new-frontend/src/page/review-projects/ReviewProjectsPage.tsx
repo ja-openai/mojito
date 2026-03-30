@@ -511,8 +511,7 @@ export function ReviewProjectsPage() {
   const listSearchParams = useMemo<ReviewProjectsSearchRequest>(
     () => ({
       ...baseSearchParams,
-      statuses:
-        listProjectStatusFilter === 'all' ? undefined : [listProjectStatusFilter],
+      statuses: listProjectStatusFilter === 'all' ? undefined : [listProjectStatusFilter],
     }),
     [baseSearchParams, listProjectStatusFilter],
   );
@@ -896,9 +895,7 @@ export function ReviewProjectsPage() {
           typeValue: typeFilter,
           onTypeChange: setTypeFilter,
           projectStatusOptions: statusOptions,
-          projectStatusValue: isRequestMode
-            ? requestProjectStatusFilter
-            : listProjectStatusFilter,
+          projectStatusValue: isRequestMode ? requestProjectStatusFilter : listProjectStatusFilter,
           onProjectStatusChange: isRequestMode
             ? setRequestProjectStatusFilter
             : setListProjectStatusFilter,

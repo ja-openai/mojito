@@ -708,11 +708,11 @@ export function AiTranslatePage() {
                 </div>
               ) : null}
             </div>
-              <button
-                type="submit"
-                className="review-create__cta"
-                disabled={disableForm || !selectedRepository || selectedLocales.length === 0}
-              >
+            <button
+              type="submit"
+              className="review-create__cta"
+              disabled={disableForm || !selectedRepository || selectedLocales.length === 0}
+            >
               {isSubmitting ? (
                 <>
                   <span className="spinner" aria-hidden="true" /> Submitting...

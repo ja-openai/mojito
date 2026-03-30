@@ -79,7 +79,6 @@ export const matchesRequestStatusFilter = (
   const isClosed =
     totalProjectCount > 0
       ? group.openProjectCount === 0
-      : group.projects.length > 0 &&
-        group.projects.every((project) => project.status === 'CLOSED');
+      : group.projects.length > 0 && group.projects.every((project) => project.status === 'CLOSED');
   return filter === 'closed' ? isClosed : !isClosed;
 };
