@@ -47,6 +47,9 @@ public class ReviewProjectServiceTest {
       Mockito.mock(ReviewProjectRequestRepository.class);
   private final ReviewProjectRequestScreenshotRepository reviewProjectRequestScreenshotRepository =
       Mockito.mock(ReviewProjectRequestScreenshotRepository.class);
+  private final ReviewProjectRequestSlackThreadRepository
+      reviewProjectRequestSlackThreadRepository =
+          Mockito.mock(ReviewProjectRequestSlackThreadRepository.class);
   private final LocaleService localeService = Mockito.mock(LocaleService.class);
   private final TextUnitSearcher textUnitSearcher = Mockito.mock(TextUnitSearcher.class);
   private final TMTextUnitRepository tmTextUnitRepository =
@@ -82,6 +85,7 @@ public class ReviewProjectServiceTest {
                 reviewProjectTextUnitDecisionRepository,
                 reviewProjectRequestRepository,
                 reviewProjectRequestScreenshotRepository,
+                reviewProjectRequestSlackThreadRepository,
                 localeService,
                 textUnitSearcher,
                 tmTextUnitRepository,
@@ -175,6 +179,25 @@ public class ReviewProjectServiceTest {
         .save(any(ReviewProjectAssignmentHistory.class));
     verify(teamSlackNotificationService)
         .sendReviewProjectRequestAssignmentNotification(request, List.of(projectA, projectB));
+  }
+
+  @Test
+  public void adminBatchDeleteProjectsDeletesOrphanRequestSlackThreads() {
+    when(reviewProjectRepository.findRequestIdsByProjectIds(List.of(11L, 12L)))
+        .thenReturn(List.of(44L));
+    when(reviewProjectRepository.deleteByProjectIds(List.of(11L, 12L))).thenReturn(2);
+    when(reviewProjectRequestRepository.findOrphanRequestIds(List.of(44L)))
+        .thenReturn(List.of(44L));
+
+    reviewProjectService.adminBatchDeleteProjects(List.of(11L, 12L));
+
+    verify(reviewProjectAssignmentHistoryRepository).deleteByReviewProjectIds(List.of(11L, 12L));
+    verify(reviewProjectTextUnitDecisionRepository).deleteByReviewProjectIds(List.of(11L, 12L));
+    verify(reviewProjectTextUnitRepository).deleteByReviewProjectIds(List.of(11L, 12L));
+    verify(reviewProjectRequestScreenshotRepository).deleteByReviewProjectRequestIdIn(List.of(44L));
+    verify(reviewProjectRequestSlackThreadRepository)
+        .deleteByReviewProjectRequestIdIn(List.of(44L));
+    verify(reviewProjectRequestRepository).deleteAllById(List.of(44L));
   }
 
   private ReviewProject project(

@@ -10,4 +10,6 @@ public interface ReviewProjectRequestSlackThreadRepository
     extends JpaRepository<ReviewProjectRequestSlackThread, Long> {
 
   Optional<ReviewProjectRequestSlackThread> findByReviewProjectRequest_Id(Long requestId);
+
+  void deleteByReviewProjectRequestIdIn(Iterable<Long> requestIds);
 }

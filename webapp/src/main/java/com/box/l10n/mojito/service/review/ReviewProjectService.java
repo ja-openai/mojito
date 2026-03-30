@@ -56,6 +56,7 @@ public class ReviewProjectService {
   private final ReviewProjectTextUnitDecisionRepository reviewProjectTextUnitDecisionRepository;
   private final ReviewProjectRequestRepository reviewProjectRequestRepository;
   private final ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository;
+  private final ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository;
   private final LocaleService localeService;
   private final TextUnitSearcher textUnitSearcher;
   private final TMTextUnitRepository tmTextUnitRepository;
@@ -80,6 +81,7 @@ public class ReviewProjectService {
       ReviewProjectTextUnitDecisionRepository reviewProjectTextUnitDecisionRepository,
       ReviewProjectRequestRepository reviewProjectRequestRepository,
       ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository,
+      ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository,
       LocaleService localeService,
       TextUnitSearcher textUnitSearcher,
       TMTextUnitRepository tmTextUnitRepository,
@@ -100,6 +102,7 @@ public class ReviewProjectService {
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
     this.reviewProjectRequestRepository = reviewProjectRequestRepository;
     this.reviewProjectScreenshotRepository = reviewProjectScreenshotRepository;
+    this.reviewProjectRequestSlackThreadRepository = reviewProjectRequestSlackThreadRepository;
     this.localeService = localeService;
     this.textUnitSearcher = textUnitSearcher;
     this.tmTextUnitRepository = tmTextUnitRepository;
@@ -1438,6 +1441,8 @@ public class ReviewProjectService {
       List<Long> orphanRequestIds = reviewProjectRequestRepository.findOrphanRequestIds(requestIds);
       if (!CollectionUtils.isEmpty(orphanRequestIds)) {
         reviewProjectScreenshotRepository.deleteByReviewProjectRequestIdIn(orphanRequestIds);
+        reviewProjectRequestSlackThreadRepository.deleteByReviewProjectRequestIdIn(
+            orphanRequestIds);
         reviewProjectRequestRepository.deleteAllById(orphanRequestIds);
       }
     }
