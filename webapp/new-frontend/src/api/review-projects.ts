@@ -235,7 +235,7 @@ type PollableTaskStatusResponse = {
 
 const REVIEW_PROJECT_CREATE_POLL_INTERVAL_MS = 500;
 const REVIEW_PROJECT_CREATE_MAX_POLL_INTERVAL_MS = 8_000;
-const REVIEW_PROJECT_CREATE_TIMEOUT_MS = 120_000;
+const REVIEW_PROJECT_CREATE_TIMEOUT_MS = 60 * 60 * 1000;
 
 export const searchReviewProjects = async (
   params: ReviewProjectsSearchRequest,
