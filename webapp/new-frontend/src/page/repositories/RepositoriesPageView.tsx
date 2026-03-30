@@ -119,6 +119,7 @@ type LocaleTableProps = {
   metric: RepositoryMetric;
   hasSelection: boolean;
   repositoryId: number | null;
+  repositoryName: string | null;
   onOpenWorkbench: (params: {
     repositoryId: number;
     status?: string | null;
@@ -377,19 +378,24 @@ function RepositoryTable({
                   }`}
                 ></div>
                 <div className="repositories-page__cell repositories-page__cell--name">
-                  <CellLink
-                    className="repositories-page__cell-link--name"
-                    stopPropagation
-                    onClick={() =>
-                      onOpenWorkbench({
-                        repositoryId: repo.id,
-                        status: null,
-                        usedFilter: 'USED',
-                      })
-                    }
-                  >
-                    {repo.name}
-                  </CellLink>
+                  <div className="repositories-page__name-group">
+                    <CellLink
+                      className="repositories-page__cell-link--name"
+                      stopPropagation
+                      onClick={() =>
+                        onOpenWorkbench({
+                          repositoryId: repo.id,
+                          status: null,
+                          usedFilter: 'USED',
+                        })
+                      }
+                    >
+                      {repo.name}
+                    </CellLink>
+                    <span className="repositories-page__repo-id" aria-hidden="true">
+                      #{repo.id}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     className="repositories-page__row-action"
@@ -469,6 +475,7 @@ function LocaleTable({
   metric,
   hasSelection,
   repositoryId,
+  repositoryName,
   onOpenWorkbench,
 }: LocaleTableProps) {
   if (!hasSelection) {
@@ -484,7 +491,15 @@ function LocaleTable({
   return (
     <div className="repositories-page__pane">
       <div className="repositories-page__header repositories-page__header--locale">
-        <div className="repositories-page__header-cell">Locale</div>
+        <div className="repositories-page__header-cell repositories-page__header-cell--locale">
+          <span>Locale</span>
+          {repositoryId != null && repositoryName ? (
+            <span className="repositories-page__selected-repo">
+              <span className="repositories-page__selected-repo-name">{repositoryName}</span>{' '}
+              <span className="repositories-page__selected-repo-id">#{repositoryId}</span>
+            </span>
+          ) : null}
+        </div>
         <div className="repositories-page__header-cell repositories-page__header-cell--number">
           Rejected
         </div>
@@ -610,7 +625,9 @@ export function RepositoriesPageView({
     return <ErrorState message={errorMessage} onRetry={errorOnRetry} />;
   }
 
-  const selectedRepoId = repositories.find((repo) => repo.selected)?.id ?? null;
+  const selectedRepo = repositories.find((repo) => repo.selected) ?? null;
+  const selectedRepoId = selectedRepo?.id ?? null;
+  const selectedRepoName = selectedRepo?.name ?? null;
 
   return (
     <div className="repositories-page">
@@ -666,6 +683,7 @@ export function RepositoriesPageView({
           metric={metric}
           hasSelection={hasSelection}
           repositoryId={selectedRepoId}
+          repositoryName={selectedRepoName}
           onOpenWorkbench={onOpenWorkbench}
         />
       </div>

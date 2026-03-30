@@ -217,6 +217,58 @@
   gap: var(--space-3);
 }
 
+.repositories-page__name-group {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.repositories-page__repo-id {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.repositories-page__repo-scroll-row:hover .repositories-page__repo-id,
+.repositories-page__repo-scroll-row:focus-within .repositories-page__repo-id,
+.repositories-page__repo-scroll-row--selected .repositories-page__repo-id {
+  opacity: 1;
+}
+
+.repositories-page__header-cell--locale {
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.repositories-page__selected-repo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.repositories-page__selected-repo-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repositories-page__selected-repo-id {
+  color: var(--color-text-subtle);
+  flex: none;
+}
+
 .repositories-page__row-action {
   border: 0;
   background: transparent;
@@ -258,6 +310,11 @@
 
 .repositories-page__cell-link--name {
   text-align: start;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .repositories-page__cell-link.is-muted {
