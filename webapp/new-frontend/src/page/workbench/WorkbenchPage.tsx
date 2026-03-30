@@ -434,10 +434,11 @@ export function WorkbenchPage() {
           collectionName: collection.name,
           defaultName,
           defaultDueDate,
+          statusFilter: search.statusFilter === 'ALL' ? null : search.statusFilter,
         },
       });
     },
-    [collections.collections, navigate],
+    [collections.collections, navigate, search.statusFilter],
   );
 
   const handleOpenAiTranslateFromCollection = useCallback(

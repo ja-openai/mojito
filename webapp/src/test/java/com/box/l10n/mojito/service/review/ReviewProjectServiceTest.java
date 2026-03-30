@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.review;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doReturn;
@@ -9,12 +10,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.Locale;
+import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamUserRole;
+import com.box.l10n.mojito.entity.review.ReviewFeature;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
+import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.WordCountService;
@@ -28,11 +32,16 @@ import com.box.l10n.mojito.service.team.TeamUserRepository;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
+import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 public class ReviewProjectServiceTest {
@@ -200,6 +209,93 @@ public class ReviewProjectServiceTest {
     verify(reviewProjectRequestRepository).deleteAllById(List.of(44L));
   }
 
+  @Test
+  public void createReviewProjectRequestFiltersSelectedTextUnitsByStatus() {
+    Locale locale = locale(41L, "ar");
+    when(localeService.findByBcp47Tag("ar")).thenReturn(locale);
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class))).thenReturn(List.of());
+
+    reviewProjectService.createReviewProjectRequest(
+        new CreateReviewProjectRequestCommand(
+            List.of("ar"),
+            null,
+            List.of(1001L, 1002L),
+            null,
+            StatusFilter.NOT_ACCEPTED,
+            false,
+            ReviewProjectType.NORMAL,
+            ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+            List.of(),
+            "Manual selected ids",
+            null,
+            99L));
+
+    ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =
+        ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
+    verify(textUnitSearcher).search(parametersCaptor.capture());
+    assertEquals(StatusFilter.NOT_ACCEPTED, parametersCaptor.getValue().getStatusFilter());
+    assertEquals(List.of(1001L, 1002L), parametersCaptor.getValue().getTmTextUnitIds());
+  }
+
+  @Test
+  public void createReviewProjectRequestUsesExplicitStatusFilterForReviewFeature() {
+    Locale locale = locale(42L, "am");
+    when(localeService.findByBcp47Tag("am")).thenReturn(locale);
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class))).thenReturn(List.of());
+    when(reviewFeatureRepository.findByIdWithRepositories(51L))
+        .thenReturn(Optional.of(reviewFeature(51L, "Feature A", repository(71L))));
+
+    reviewProjectService.createReviewProjectRequest(
+        new CreateReviewProjectRequestCommand(
+            List.of("am"),
+            null,
+            null,
+            51L,
+            StatusFilter.APPROVED_AND_NOT_REJECTED,
+            false,
+            ReviewProjectType.NORMAL,
+            ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+            List.of(),
+            "Manual feature",
+            null,
+            99L));
+
+    ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =
+        ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
+    verify(textUnitSearcher).search(parametersCaptor.capture());
+    assertEquals(
+        StatusFilter.APPROVED_AND_NOT_REJECTED, parametersCaptor.getValue().getStatusFilter());
+  }
+
+  @Test
+  public void createReviewProjectRequestDefaultsReviewFeatureStatusFilterToReviewNeeded() {
+    Locale locale = locale(43L, "fr-FR");
+    when(localeService.findByBcp47Tag("fr-FR")).thenReturn(locale);
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class))).thenReturn(List.of());
+    when(reviewFeatureRepository.findByIdWithRepositories(52L))
+        .thenReturn(Optional.of(reviewFeature(52L, "Feature B", repository(72L))));
+
+    reviewProjectService.createReviewProjectRequest(
+        new CreateReviewProjectRequestCommand(
+            List.of("fr-FR"),
+            null,
+            null,
+            52L,
+            null,
+            false,
+            ReviewProjectType.NORMAL,
+            ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+            List.of(),
+            "Manual feature default",
+            null,
+            99L));
+
+    ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =
+        ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
+    verify(textUnitSearcher).search(parametersCaptor.capture());
+    assertEquals(StatusFilter.REVIEW_NEEDED, parametersCaptor.getValue().getStatusFilter());
+  }
+
   private ReviewProject project(
       Long id, Team team, Locale locale, User assignedPmUser, User assignedTranslatorUser) {
     ReviewProject project = new ReviewProject();
@@ -222,6 +318,21 @@ public class ReviewProjectServiceTest {
     Team team = new Team();
     team.setId(id);
     return team;
+  }
+
+  private ReviewFeature reviewFeature(Long id, String name, Repository... repositories) {
+    ReviewFeature reviewFeature = new ReviewFeature();
+    reviewFeature.setId(id);
+    reviewFeature.setName(name);
+    reviewFeature.setRepositories(Set.of(repositories));
+    return reviewFeature;
+  }
+
+  private Repository repository(Long id) {
+    Repository repository = new Repository();
+    repository.setId(id);
+    repository.setDeleted(false);
+    return repository;
   }
 
   private Locale locale(Long id, String bcp47Tag) {

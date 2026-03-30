@@ -133,6 +133,7 @@ public class ReviewProjectService {
             request.notes(),
             request.tmTextUnitIds(),
             request.reviewFeatureId(),
+            request.statusFilter(),
             request.skipTextUnitsInOpenProjects(),
             request.type(),
             request.dueDate(),
@@ -183,12 +184,13 @@ public class ReviewProjectService {
     }
 
     logger.info(
-        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}, reviewFeatureId={}, skipTextUnitsInOpenProjects={}",
+        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}, reviewFeatureId={}, statusFilter={}, skipTextUnitsInOpenProjects={}",
         request.name(),
         request.teamId(),
         request.localeTags(),
         hasTmTextUnitIds ? request.tmTextUnitIds().size() : null,
         request.reviewFeatureId(),
+        request.statusFilter(),
         Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects()));
 
     List<LocalePlan> localePlans = new ArrayList<>();
@@ -204,8 +206,11 @@ public class ReviewProjectService {
       try {
         List<TextUnitDTO> candidates =
             hasTmTextUnitIds
-                ? searchReviewCandidates(request.tmTextUnitIds(), locale)
-                : searchReviewFeatureCandidates(reviewFeature, locale);
+                ? searchReviewCandidates(request.tmTextUnitIds(), locale, request.statusFilter())
+                : searchReviewFeatureCandidates(
+                    reviewFeature,
+                    locale,
+                    getManualReviewFeatureStatusFilter(request.statusFilter()));
         if (Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects())) {
           int originalCandidateCount = candidates.size();
           candidates = excludeOpenReviewProjectTextUnits(candidates, locale);
@@ -301,7 +306,8 @@ public class ReviewProjectService {
     List<LocalePlan> localePlans = new ArrayList<>();
     for (Locale locale : getReviewFeatureLocales(reviewFeature)) {
       try {
-        List<TextUnitDTO> candidates = searchReviewFeatureCandidates(reviewFeature, locale);
+        List<TextUnitDTO> candidates =
+            searchReviewFeatureCandidates(reviewFeature, locale, StatusFilter.REVIEW_NEEDED);
         candidates = excludeOpenReviewProjectTextUnits(candidates, locale);
         if (candidates.isEmpty()) {
           localePlans.add(skippedLocalePlan(locale.getBcp47Tag()));
@@ -1650,7 +1656,8 @@ public class ReviewProjectService {
         reviewProjectTextUnitDecision);
   }
 
-  private List<TextUnitDTO> searchReviewCandidates(List<Long> tmTextUnitIds, Locale locale) {
+  private List<TextUnitDTO> searchReviewCandidates(
+      List<Long> tmTextUnitIds, Locale locale, StatusFilter statusFilter) {
     if (tmTextUnitIds == null || tmTextUnitIds.isEmpty()) {
       throw new IllegalArgumentException("tmTextUnitIds must be provided");
     }
@@ -1660,12 +1667,13 @@ public class ReviewProjectService {
     params.setLocaleId(locale.getId());
     params.setPluralFormsFiltered(false);
     params.setLimit(tmTextUnitIds.size());
+    params.setStatusFilter(statusFilter);
 
     return textUnitSearcher.search(params);
   }
 
   private List<TextUnitDTO> searchReviewFeatureCandidates(
-      ReviewFeature reviewFeature, Locale locale) {
+      ReviewFeature reviewFeature, Locale locale, StatusFilter statusFilter) {
     if (reviewFeature == null) {
       throw new IllegalArgumentException("reviewFeature must be provided");
     }
@@ -1687,9 +1695,13 @@ public class ReviewProjectService {
     params.setRepositoryIds(repositoryIds);
     params.setLocaleId(locale.getId());
     params.setPluralFormsFiltered(false);
-    params.setStatusFilter(StatusFilter.REVIEW_NEEDED);
+    params.setStatusFilter(statusFilter);
 
     return textUnitSearcher.search(params);
+  }
+
+  private StatusFilter getManualReviewFeatureStatusFilter(StatusFilter statusFilter) {
+    return statusFilter == null ? StatusFilter.REVIEW_NEEDED : statusFilter;
   }
 
   private List<TextUnitDTO> excludeOpenReviewProjectTextUnits(

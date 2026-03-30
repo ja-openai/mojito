@@ -5,8 +5,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ApiReviewFeatureOption } from '../../api/review-features';
 import {
   type ApiReviewProjectType,
+  REVIEW_PROJECT_CREATE_STATUS_FILTER_LABELS,
+  REVIEW_PROJECT_CREATE_STATUS_FILTERS,
   REVIEW_PROJECT_TYPE_LABELS,
   REVIEW_PROJECT_TYPES,
+  type ReviewProjectCreateStatusFilter,
 } from '../../api/review-projects';
 import { type CollectionOption, CollectionSelect } from '../../components/CollectionSelect';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
@@ -36,6 +39,7 @@ export type ReviewProjectCreateFormValues = {
   notes: string | null;
   tmTextUnitIds?: number[] | null;
   reviewFeatureIds?: number[] | null;
+  statusFilter: ReviewProjectCreateStatusFilter;
   skipTextUnitsInOpenProjects: boolean;
   screenshotImageIds: string[];
   teamId: number | null;
@@ -60,6 +64,8 @@ type Props = {
   teamOptions?: Array<{ id: number; name: string }>;
   selectedTeamId?: number | null;
   onChangeTeam?: (id: number | null) => void;
+  selectedStatusFilter: ReviewProjectCreateStatusFilter;
+  onChangeStatusFilter: (value: ReviewProjectCreateStatusFilter) => void;
   isSubmitting?: boolean;
   errorMessage?: string | null;
   submitLabel?: string;
@@ -84,6 +90,8 @@ export function ReviewProjectCreateForm({
   teamOptions,
   selectedTeamId = null,
   onChangeTeam,
+  selectedStatusFilter,
+  onChangeStatusFilter,
   isSubmitting = false,
   errorMessage,
   submitLabel = 'Create',
@@ -309,6 +317,27 @@ export function ReviewProjectCreateForm({
           </span>
         </div>
 
+        <label className="review-create__field">
+          <span className="review-create__label">Status filter</span>
+          <SingleSelectDropdown
+            label="Status filter"
+            className="review-create__select-dropdown"
+            options={REVIEW_PROJECT_CREATE_STATUS_FILTERS.map((option) => ({
+              value: option,
+              label: REVIEW_PROJECT_CREATE_STATUS_FILTER_LABELS[option],
+            }))}
+            value={selectedStatusFilter}
+            onChange={(next) => {
+              if (next == null) {
+                return;
+              }
+              onChangeStatusFilter(next);
+            }}
+            disabled={isSubmitting}
+            searchable={false}
+          />
+        </label>
+
         <label className="review-create__checkbox">
           <input
             type="checkbox"
@@ -447,6 +476,7 @@ export function ReviewProjectCreateForm({
               notes: notes.trim().length > 0 ? notes : null,
               tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmTextUnitIds : null,
               reviewFeatureIds: sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureIds : null,
+              statusFilter: selectedStatusFilter,
               skipTextUnitsInOpenProjects,
               screenshotImageIds: screenshotKeys,
               teamId: selectedTeamId,

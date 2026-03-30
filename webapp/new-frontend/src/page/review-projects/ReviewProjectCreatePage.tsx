@@ -5,7 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { type ApiReviewFeatureOption, fetchReviewFeatureOptions } from '../../api/review-features';
-import { type ReviewProjectCreateResponse } from '../../api/review-projects';
+import {
+  REVIEW_PROJECT_CREATE_STATUS_FILTERS,
+  type ReviewProjectCreateResponse,
+  type ReviewProjectCreateStatusFilter,
+} from '../../api/review-projects';
 import { type ApiTeam, fetchTeams } from '../../api/teams';
 import type { CollectionOption } from '../../components/CollectionSelect';
 import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
@@ -25,6 +29,7 @@ type ReviewProjectNavState = {
   collectionId?: string | null;
   defaultName?: string;
   defaultDueDate?: string;
+  statusFilter?: ReviewProjectCreateStatusFilter | null;
 };
 
 function isReviewProjectNavState(value: unknown): value is ReviewProjectNavState {
@@ -36,13 +41,21 @@ function isReviewProjectNavState(value: unknown): value is ReviewProjectNavState
     Array.isArray(input) && input.every((item) => typeof item === 'number');
   const isOptionalString = (input: unknown): input is string | null | undefined =>
     input === undefined || input === null || typeof input === 'string';
+  const isOptionalStatusFilter = (
+    input: unknown,
+  ): input is ReviewProjectCreateStatusFilter | null | undefined =>
+    input === undefined ||
+    input === null ||
+    (typeof input === 'string' &&
+      (REVIEW_PROJECT_CREATE_STATUS_FILTERS as readonly string[]).includes(input));
 
   return (
     (candidate.tmTextUnitIds === undefined || isNumberArray(candidate.tmTextUnitIds)) &&
     isOptionalString(candidate.collectionName) &&
     isOptionalString(candidate.collectionId) &&
     (candidate.defaultName === undefined || typeof candidate.defaultName === 'string') &&
-    (candidate.defaultDueDate === undefined || typeof candidate.defaultDueDate === 'string')
+    (candidate.defaultDueDate === undefined || typeof candidate.defaultDueDate === 'string') &&
+    isOptionalStatusFilter(candidate.statusFilter)
   );
 }
 
@@ -124,6 +137,9 @@ export function ReviewProjectCreatePage() {
   const [prefillDueDate, setPrefillDueDate] = useState<string | null>(null);
   const [prefillCollectionName, setPrefillCollectionName] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [selectedStatusFilter, setSelectedStatusFilter] =
+    useState<ReviewProjectCreateStatusFilter>('ALL');
+  const [statusFilterWasCustomized, setStatusFilterWasCustomized] = useState(false);
   const [submissionReport, setSubmissionReport] = useState<CreateSubmissionReport | null>(null);
 
   const createReviewProject = useCreateReviewProject();
@@ -190,6 +206,10 @@ export function ReviewProjectCreatePage() {
     if (state.defaultDueDate) {
       setPrefillDueDate(state.defaultDueDate);
     }
+    if (state.statusFilter) {
+      setSelectedStatusFilter(state.statusFilter);
+      setStatusFilterWasCustomized(true);
+    }
   }, [navState]);
 
   useEffect(() => {
@@ -201,6 +221,13 @@ export function ReviewProjectCreatePage() {
       setSourceMode('TEXT_UNITS');
     }
   }, [hasCollections, hasReviewFeatures]);
+
+  useEffect(() => {
+    if (statusFilterWasCustomized) {
+      return;
+    }
+    setSelectedStatusFilter(sourceMode === 'REVIEW_FEATURE' ? 'REVIEW_NEEDED' : 'ALL');
+  }, [sourceMode, statusFilterWasCustomized]);
 
   useEffect(() => {
     if (selectedCollectionId === null) {
@@ -258,6 +285,7 @@ export function ReviewProjectCreatePage() {
               dueDate: values.dueDate,
               tmTextUnitIds: tmIds,
               reviewFeatureId: null,
+              statusFilter: values.statusFilter,
               skipTextUnitsInOpenProjects: values.skipTextUnitsInOpenProjects,
               screenshotImageIds: values.screenshotImageIds,
               name: values.name,
@@ -285,6 +313,7 @@ export function ReviewProjectCreatePage() {
               dueDate: values.dueDate,
               tmTextUnitIds: null,
               reviewFeatureId,
+              statusFilter: values.statusFilter,
               skipTextUnitsInOpenProjects: values.skipTextUnitsInOpenProjects,
               screenshotImageIds: values.screenshotImageIds,
               name: buildFeatureScopedRequestName(values.name, feature?.name ?? ''),
@@ -345,6 +374,11 @@ export function ReviewProjectCreatePage() {
               teamOptions={teamsQuery.data ?? []}
               selectedTeamId={selectedTeamId}
               onChangeTeam={setSelectedTeamId}
+              selectedStatusFilter={selectedStatusFilter}
+              onChangeStatusFilter={(next) => {
+                setSelectedStatusFilter(next);
+                setStatusFilterWasCustomized(true);
+              }}
               isSubmitting={createReviewProject.isPending}
               errorMessage={errorMessage}
               submitLabel="Create"

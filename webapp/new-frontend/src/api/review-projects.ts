@@ -15,6 +15,19 @@ export const REVIEW_PROJECT_TYPES = [
 ] as const;
 export type ApiReviewProjectType = (typeof REVIEW_PROJECT_TYPES)[number];
 
+// Keep in sync with com.box.l10n.mojito.service.tm.search.StatusFilter
+export const REVIEW_PROJECT_CREATE_STATUS_FILTERS = [
+  'ALL',
+  'NOT_ACCEPTED',
+  'TRANSLATED',
+  'UNTRANSLATED',
+  'FOR_TRANSLATION',
+  'REVIEW_NEEDED',
+  'REJECTED',
+  'APPROVED_AND_NOT_REJECTED',
+] as const;
+export type ReviewProjectCreateStatusFilter = (typeof REVIEW_PROJECT_CREATE_STATUS_FILTERS)[number];
+
 export const REVIEW_PROJECT_STATUS_LABELS: Record<ApiReviewProjectStatus, string> = {
   OPEN: 'Open',
   CLOSED: 'Closed',
@@ -26,6 +39,20 @@ export const REVIEW_PROJECT_TYPE_LABELS: Record<ApiReviewProjectType, string> = 
   BUG_FIXES: 'Bug fixes',
   TERMINOLOGY: 'Terminology',
   UNKNOWN: 'Unknown',
+};
+
+export const REVIEW_PROJECT_CREATE_STATUS_FILTER_LABELS: Record<
+  ReviewProjectCreateStatusFilter,
+  string
+> = {
+  ALL: 'All statuses',
+  NOT_ACCEPTED: 'Not accepted',
+  TRANSLATED: 'Translated',
+  UNTRANSLATED: 'Untranslated',
+  FOR_TRANSLATION: 'To translate',
+  REVIEW_NEEDED: 'To review',
+  REJECTED: 'Rejected',
+  APPROVED_AND_NOT_REJECTED: 'Accepted',
 };
 
 export const REVIEW_PROJECT_ASSIGNED_SCOPES = ['TO_ME', 'TO_TEAM'] as const;
@@ -191,6 +218,7 @@ export type ReviewProjectCreateRequest = {
   notes?: string | null;
   tmTextUnitIds?: number[] | null;
   reviewFeatureId?: number | null;
+  statusFilter?: ReviewProjectCreateStatusFilter | null;
   skipTextUnitsInOpenProjects?: boolean | null;
   type?: ApiReviewProjectType | null;
   dueDate: string; // ISO string
