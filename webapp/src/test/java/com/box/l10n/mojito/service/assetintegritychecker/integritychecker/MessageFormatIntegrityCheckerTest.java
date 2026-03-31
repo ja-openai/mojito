@@ -133,6 +133,23 @@ public class MessageFormatIntegrityCheckerTest {
     }
   }
 
+  /**
+   * ICU4J accepts duplicate selectors in a select clause, while FormatJS rejects them.
+   *
+   * <p>This documents the current Mojito behavior so the gap is explicit in tests.
+   */
+  @Test
+  public void testDuplicateSelectSelectorsAreAccepted()
+      throws MessageFormatIntegrityCheckerException {
+
+    MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
+    String source = "{itemType, select, primary {Primary} secondary {Secondary} other {Unknown}}";
+    String target =
+        "{itemType, select, primary {Principal} secondary {Secondaire} secondary {Alt} other {Inconnu}}";
+
+    checker.check(source, target);
+  }
+
   @Test(expected = IntegrityCheckException.class)
   public void testQuoteCurlyEscaping() throws MessageFormatIntegrityCheckerException {
     // ' with character are rendered by if it is a special character like {, it will escape it ....
