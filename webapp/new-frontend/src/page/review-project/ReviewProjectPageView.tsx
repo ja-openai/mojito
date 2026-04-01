@@ -648,6 +648,7 @@ export function ReviewProjectPageView({
   const previousSelectedRef = useRef<number | null>(null);
   const pendingQueryAutoScrollIdRef = useRef<number | null>(null);
   const lastAppliedQueryIdRef = useRef<number | null>(null);
+  const pendingQuerySelectionIdRef = useRef<number | null>(null);
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const [selectedScreenshotIdx, setSelectedScreenshotIdx] = useState<number>(0);
   const { onDismissValidationSave, showValidationDialog } = mutations;
@@ -729,6 +730,7 @@ export function ReviewProjectPageView({
   useEffect(() => {
     if (selectedTextUnitQueryId == null) {
       lastAppliedQueryIdRef.current = null;
+      pendingQuerySelectionIdRef.current = null;
       return;
     }
     if (lastAppliedQueryIdRef.current === selectedTextUnitQueryId) {
@@ -744,6 +746,7 @@ export function ReviewProjectPageView({
       return;
     }
     lastAppliedQueryIdRef.current = selectedTextUnitQueryId;
+    pendingQuerySelectionIdRef.current = matchedId;
     if (selectedTextUnitId !== matchedId) {
       pendingQueryAutoScrollIdRef.current = matchedId;
     }
@@ -783,6 +786,17 @@ export function ReviewProjectPageView({
       // Wait until we resolve the query-param selection before rewriting URL.
       return;
     }
+    if (
+      selectedTextUnitQueryId != null &&
+      pendingQuerySelectionIdRef.current != null &&
+      selectedTextUnit?.id !== pendingQuerySelectionIdRef.current
+    ) {
+      // A browser back/forward navigation updated ?tu= while local selection still points to the
+      // previous row. Wait for that selection update before syncing the URL back out.
+      return;
+    }
+
+    pendingQuerySelectionIdRef.current = null;
     const nextQueryId = selectedTextUnit?.tmTextUnit?.id ?? selectedTextUnit?.id ?? null;
     const shouldReplace = selectedTextUnitQueryId == null || nextQueryId == null;
     onSelectedTextUnitIdChange(nextQueryId, { replace: shouldReplace });
