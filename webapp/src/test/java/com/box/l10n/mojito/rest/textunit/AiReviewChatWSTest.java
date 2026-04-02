@@ -1,8 +1,10 @@
 package com.box.l10n.mojito.rest.textunit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,6 +15,8 @@ import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
+import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.Before;
@@ -21,6 +25,8 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @RunWith(MockitoJUnitRunner.class)
 public class AiReviewChatWSTest {
@@ -152,6 +158,60 @@ public class AiReviewChatWSTest {
 
     assertEquals(AiReviewType.PROMPT_ALL, requestCaptor.getValue().instructions());
     verify(aiTranslateLocalePromptSuffixService).getEffectivePromptSuffix("ja-JP", null);
+  }
+
+  @Test
+  public void chatMapsTimeoutToGatewayTimeout() {
+    CompletableFuture<OpenAIClient.ResponsesResponse> failedResponse = new CompletableFuture<>();
+    failedResponse.completeExceptionally(new HttpTimeoutException("request timed out"));
+    when(openAIClient.getResponses(any(), any())).thenReturn(failedResponse);
+
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                aiReviewChatWS.chat(
+                    new AiReviewChatWS.AiReviewChatRequest(
+                        "Save",
+                        null,
+                        "ja-JP",
+                        null,
+                        null,
+                        List.of(
+                            new AiReviewChatWS.AiReviewChatMessage(
+                                "user", "Review this translation.")))));
+
+    assertEquals(HttpStatus.GATEWAY_TIMEOUT, exception.getStatusCode());
+    assertEquals(
+        "AI review request timed out after 15 seconds. Please retry.", exception.getReason());
+  }
+
+  @Test
+  public void chatMapsProviderFailureToBadGateway() {
+    HttpResponse<String> httpResponse = mock(HttpResponse.class);
+    when(httpResponse.body()).thenReturn("{\"error\":\"boom\"}");
+    CompletableFuture<OpenAIClient.ResponsesResponse> failedResponse = new CompletableFuture<>();
+    failedResponse.completeExceptionally(
+        new OpenAIClient.OpenAIClientResponseException("Responses API failed", httpResponse));
+    when(openAIClient.getResponses(any(), any())).thenReturn(failedResponse);
+
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                aiReviewChatWS.chat(
+                    new AiReviewChatWS.AiReviewChatRequest(
+                        "Save",
+                        null,
+                        "ja-JP",
+                        null,
+                        null,
+                        List.of(
+                            new AiReviewChatWS.AiReviewChatMessage(
+                                "user", "Review this translation.")))));
+
+    assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatusCode());
+    assertEquals("AI review provider request failed. Please retry.", exception.getReason());
   }
 
   private OpenAIClient.ResponsesResponse.Output responseOutput(String text) {

@@ -2,6 +2,7 @@ package com.box.l10n.mojito.rest.textunit;
 
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.openai.OpenAIClient;
+import com.box.l10n.mojito.openai.OpenAIClient.OpenAIClientResponseException;
 import com.box.l10n.mojito.openai.OpenAIClient.ResponsesRequest;
 import com.box.l10n.mojito.openai.OpenAIClient.ResponsesResponse;
 import com.box.l10n.mojito.rest.textunit.AiReviewType.AiReviewTextUnitVariantOutput;
@@ -10,6 +11,7 @@ import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewService.AiReviewTextUnitVariantInput;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,11 +30,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 public class AiReviewChatWS {
 
   static Logger logger = LoggerFactory.getLogger(AiReviewChatWS.class);
+  private static final Duration AI_REVIEW_REQUEST_TIMEOUT = Duration.of(15, ChronoUnit.SECONDS);
 
   private final OpenAIClient openAIClient;
   private final AiReviewConfigurationProperties aiReviewConfigurationProperties;
@@ -121,8 +126,13 @@ public class AiReviewChatWS {
 
     logger.debug(objectMapper.writeValueAsStringUnchecked(responsesRequest));
 
-    ResponsesResponse responsesResponse =
-        openAIClient.getResponses(responsesRequest, Duration.of(15, ChronoUnit.SECONDS)).join();
+    ResponsesResponse responsesResponse;
+    try {
+      responsesResponse =
+          openAIClient.getResponses(responsesRequest, AI_REVIEW_REQUEST_TIMEOUT).join();
+    } catch (CompletionException e) {
+      throw toResponseStatusException(e);
+    }
 
     logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
 
@@ -233,6 +243,28 @@ public class AiReviewChatWS {
 
   private boolean hasText(String value) {
     return value != null && !value.trim().isEmpty();
+  }
+
+  private ResponseStatusException toResponseStatusException(CompletionException e) {
+    Throwable cause = e.getCause() != null ? e.getCause() : e;
+    if (cause instanceof HttpTimeoutException) {
+      long timeoutSeconds = AI_REVIEW_REQUEST_TIMEOUT.toSeconds();
+      logger.warn("AI review request timed out, timeoutSeconds={}", timeoutSeconds, cause);
+      return new ResponseStatusException(
+          HttpStatus.GATEWAY_TIMEOUT,
+          "AI review request timed out after %d seconds. Please retry.".formatted(timeoutSeconds),
+          cause);
+    }
+    if (cause instanceof OpenAIClientResponseException) {
+      logger.warn("AI review provider request failed", cause);
+      return new ResponseStatusException(
+          HttpStatus.BAD_GATEWAY, "AI review provider request failed. Please retry.", cause);
+    }
+    logger.warn("AI review request failed unexpectedly", cause);
+    return new ResponseStatusException(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "AI review request failed unexpectedly. Please retry.",
+        cause);
   }
 
   public record AiReviewChatRequest(
