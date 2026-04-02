@@ -330,6 +330,7 @@ public class AiTranslateService {
   record TextextUnitsByScreenshotWithResponsesResponse(
       ResponsesRequest responsesRequest,
       TextUnitsByScreenshot textUnitsByScreenshot,
+      int timeoutSeconds,
       CompletableFuture<ResponsesResponse> responsesResponseCompletableFuture) {}
 
   record TextUnitDTOWithResponsesResponse(
@@ -547,7 +548,10 @@ public class AiTranslateService {
           TextextUnitsByScreenshotWithResponsesResponse
               textextUnitsByScreenshotWithResponsesResponse =
                   new TextextUnitsByScreenshotWithResponsesResponse(
-                      responsesRequest, textUnitsByScreenshot, responsesResponseCompletableFuture);
+                      responsesRequest,
+                      textUnitsByScreenshot,
+                      timeout,
+                      responsesResponseCompletableFuture);
           textUnitsByScreenshotWithResponsesResponseList.add(
               textextUnitsByScreenshotWithResponsesResponse);
         }
@@ -581,7 +585,8 @@ public class AiTranslateService {
                           incrementCounter(metricName("timeouts"), requestTags);
                         }
                         logger.error(
-                            errorMessage + ", skipping tmTextUnits: {}, locale: {}",
+                            errorMessage
+                                + ", skipping tmTextUnits: {}, locale: {}, timeoutSeconds: {}",
                             textUnitsByScreenshotWithResponsesResponse
                                 .textUnitsByScreenshot()
                                 .textUnitDTOWithVariantCommentsList
@@ -590,6 +595,7 @@ public class AiTranslateService {
                                 .map(TextUnitDTO::getTmTextUnitId)
                                 .toList(),
                             repositoryLocale.getLocale().getBcp47Tag(),
+                            textUnitsByScreenshotWithResponsesResponse.timeoutSeconds(),
                             t);
 
                         return textUnitsByScreenshotWithResponsesResponse
