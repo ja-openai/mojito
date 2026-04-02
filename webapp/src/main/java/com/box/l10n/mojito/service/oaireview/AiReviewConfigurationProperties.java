@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.oaireview;
 
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
 import java.time.Duration;
+import java.util.Locale;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -81,6 +82,10 @@ public class AiReviewConfigurationProperties {
     int per1000TextCharsSeconds = 2;
     int minSeconds = 15;
     int maxSeconds = 300;
+    double reasoningNoneMultiplier = 1.0;
+    double reasoningLowMultiplier = 1.5;
+    double reasoningMediumMultiplier = 2.5;
+    double reasoningHighMultiplier = 4.0;
 
     public int getBaseSeconds() {
       return baseSeconds;
@@ -122,11 +127,46 @@ public class AiReviewConfigurationProperties {
       this.maxSeconds = maxSeconds;
     }
 
-    public Duration resolveRequestTimeout(int messageCount, int textCharCount) {
+    public double getReasoningNoneMultiplier() {
+      return reasoningNoneMultiplier;
+    }
+
+    public void setReasoningNoneMultiplier(double reasoningNoneMultiplier) {
+      this.reasoningNoneMultiplier = reasoningNoneMultiplier;
+    }
+
+    public double getReasoningLowMultiplier() {
+      return reasoningLowMultiplier;
+    }
+
+    public void setReasoningLowMultiplier(double reasoningLowMultiplier) {
+      this.reasoningLowMultiplier = reasoningLowMultiplier;
+    }
+
+    public double getReasoningMediumMultiplier() {
+      return reasoningMediumMultiplier;
+    }
+
+    public void setReasoningMediumMultiplier(double reasoningMediumMultiplier) {
+      this.reasoningMediumMultiplier = reasoningMediumMultiplier;
+    }
+
+    public double getReasoningHighMultiplier() {
+      return reasoningHighMultiplier;
+    }
+
+    public void setReasoningHighMultiplier(double reasoningHighMultiplier) {
+      this.reasoningHighMultiplier = reasoningHighMultiplier;
+    }
+
+    public Duration resolveRequestTimeout(
+        int messageCount, int textCharCount, String reasoningEffort) {
       int timeoutSeconds =
           baseSeconds
               + (Math.max(0, messageCount - 1) * perAdditionalMessageSeconds)
               + (ceilDiv(textCharCount, 1000) * per1000TextCharsSeconds);
+      timeoutSeconds =
+          (int) Math.ceil(timeoutSeconds * getReasoningEffortMultiplier(reasoningEffort));
 
       if (maxSeconds > 0) {
         timeoutSeconds = Math.min(timeoutSeconds, maxSeconds);
@@ -136,6 +176,18 @@ public class AiReviewConfigurationProperties {
       }
 
       return Duration.ofSeconds(timeoutSeconds);
+    }
+
+    private double getReasoningEffortMultiplier(String reasoningEffort) {
+      if (reasoningEffort == null || reasoningEffort.isBlank()) {
+        return reasoningNoneMultiplier;
+      }
+      return switch (reasoningEffort.trim().toLowerCase(Locale.ROOT)) {
+        case "low" -> reasoningLowMultiplier;
+        case "medium" -> reasoningMediumMultiplier;
+        case "high" -> reasoningHighMultiplier;
+        default -> reasoningNoneMultiplier;
+      };
     }
 
     private int ceilDiv(int dividend, int divisor) {

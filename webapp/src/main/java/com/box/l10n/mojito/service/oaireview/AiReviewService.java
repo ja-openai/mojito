@@ -865,7 +865,10 @@ public class AiReviewService {
         safeLength(input.source())
             + safeLength(input.sourceDescription())
             + safeLength(input.existingTarget() == null ? null : input.existingTarget().content());
-    return aiReviewConfigurationProperties.getTimeout().resolveRequestTimeout(1, textCharCount);
+    return aiReviewConfigurationProperties
+        .getTimeout()
+        .resolveRequestTimeout(
+            1, textCharCount, aiReviewConfigurationProperties.getResponses().getReasoningEffort());
   }
 
   private int safeLength(String value) {

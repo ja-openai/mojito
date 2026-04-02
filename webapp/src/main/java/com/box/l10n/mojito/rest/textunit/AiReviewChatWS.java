@@ -270,7 +270,10 @@ public class AiReviewChatWS {
                 .sum();
     return aiReviewConfigurationProperties
         .getTimeout()
-        .resolveRequestTimeout(conversationMessages.size(), textCharCount);
+        .resolveRequestTimeout(
+            conversationMessages.size(),
+            textCharCount,
+            aiReviewConfigurationProperties.getResponses().getReasoningEffort());
   }
 
   private ResponseStatusException toResponseStatusException(

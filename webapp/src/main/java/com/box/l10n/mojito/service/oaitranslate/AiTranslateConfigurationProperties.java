@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
+import java.util.Locale;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -98,6 +99,10 @@ public class AiTranslateConfigurationProperties {
       int screenshotPenaltySeconds = 5;
       int minSeconds = 15;
       int maxSeconds = 300;
+      double reasoningNoneMultiplier = 1.0;
+      double reasoningLowMultiplier = 1.5;
+      double reasoningMediumMultiplier = 2.5;
+      double reasoningHighMultiplier = 4.0;
 
       public int getBaseSeconds() {
         return baseSeconds;
@@ -145,6 +150,54 @@ public class AiTranslateConfigurationProperties {
 
       public void setMaxSeconds(int maxSeconds) {
         this.maxSeconds = maxSeconds;
+      }
+
+      public double getReasoningNoneMultiplier() {
+        return reasoningNoneMultiplier;
+      }
+
+      public void setReasoningNoneMultiplier(double reasoningNoneMultiplier) {
+        this.reasoningNoneMultiplier = reasoningNoneMultiplier;
+      }
+
+      public double getReasoningLowMultiplier() {
+        return reasoningLowMultiplier;
+      }
+
+      public void setReasoningLowMultiplier(double reasoningLowMultiplier) {
+        this.reasoningLowMultiplier = reasoningLowMultiplier;
+      }
+
+      public double getReasoningMediumMultiplier() {
+        return reasoningMediumMultiplier;
+      }
+
+      public void setReasoningMediumMultiplier(double reasoningMediumMultiplier) {
+        this.reasoningMediumMultiplier = reasoningMediumMultiplier;
+      }
+
+      public double getReasoningHighMultiplier() {
+        return reasoningHighMultiplier;
+      }
+
+      public void setReasoningHighMultiplier(double reasoningHighMultiplier) {
+        this.reasoningHighMultiplier = reasoningHighMultiplier;
+      }
+
+      public int applyReasoningEffortMultiplier(int timeoutSeconds, String reasoningEffort) {
+        return (int) Math.ceil(timeoutSeconds * getReasoningEffortMultiplier(reasoningEffort));
+      }
+
+      private double getReasoningEffortMultiplier(String reasoningEffort) {
+        if (reasoningEffort == null || reasoningEffort.isBlank()) {
+          return reasoningNoneMultiplier;
+        }
+        return switch (reasoningEffort.trim().toLowerCase(Locale.ROOT)) {
+          case "low" -> reasoningLowMultiplier;
+          case "medium" -> reasoningMediumMultiplier;
+          case "high" -> reasoningHighMultiplier;
+          default -> reasoningNoneMultiplier;
+        };
       }
     }
   }

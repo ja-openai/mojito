@@ -513,7 +513,8 @@ public class AiTranslateService {
                   aiTranslateInput.timeoutSeconds(),
                   requestTextUnitCount,
                   requestSourceCharCount,
-                  hasScreenshot);
+                  hasScreenshot,
+                  getReasoningEffort(aiTranslateInput));
 
           incrementCounter(
               metricName("groupedRequestTextUnits"), requestTags, requestTextUnitCount);
@@ -1536,7 +1537,8 @@ public class AiTranslateService {
       Integer overrideTimeoutSeconds,
       int requestTextUnitCount,
       int requestSourceCharCount,
-      boolean hasScreenshot) {
+      boolean hasScreenshot,
+      String reasoningEffort) {
     if (overrideTimeoutSeconds != null) {
       return overrideTimeoutSeconds;
     }
@@ -1551,6 +1553,7 @@ public class AiTranslateService {
     int screenshotTimeout = hasScreenshot ? timeoutProperties.getScreenshotPenaltySeconds() : 0;
 
     int timeout = baseTimeout + additionalTextUnitTimeout + sourceCharTimeout + screenshotTimeout;
+    timeout = timeoutProperties.applyReasoningEffortMultiplier(timeout, reasoningEffort);
 
     int minTimeout = timeoutProperties.getMinSeconds();
     int maxTimeout = timeoutProperties.getMaxSeconds();
