@@ -111,6 +111,8 @@ public class AiTranslateAutomationSchedulerService {
                 null,
                 null,
                 null,
+                null,
+                null,
                 false,
                 false,
                 false,

@@ -12,6 +12,8 @@ export type AiTranslateRequest = {
   translateType: string;
   statusFilter: string;
   importStatus: string;
+  reasoningEffort: string | null;
+  textVerbosity: string | null;
   glossaryName: string | null;
   glossaryTermSource: string | null;
   glossaryTermSourceDescription: string | null;
@@ -49,12 +51,22 @@ export type AiTranslateReportLocaleResponse = {
   content?: string | null;
 };
 
+export type AiTranslateConfig = {
+  modelName: string;
+  reasoningEffort: string;
+  textVerbosity: string;
+};
+
 const DEFAULT_POLL_INTERVAL_MS = 500;
 const MAX_POLL_INTERVAL_MS = 8000;
 
 export async function translateRepository(request: AiTranslateRequest): Promise<PollableTask> {
   const response = await postJson<AiTranslateResponse>('/api/proto-ai-translate', request);
   return normalizePollableTask(response.pollableTask);
+}
+
+export async function fetchAiTranslateConfig(): Promise<AiTranslateConfig> {
+  return getJson<AiTranslateConfig>('/api/proto-ai-translate/config');
 }
 
 export async function fetchPollableTask(pollableTaskId: number): Promise<PollableTask> {

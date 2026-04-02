@@ -218,6 +218,8 @@ public class AiTranslateService {
       String translateType,
       String statusFilter,
       String importStatus,
+      String reasoningEffort,
+      String textVerbosity,
       String glossaryName,
       String glossaryTermSource,
       String glossaryTermSourceDescription,
@@ -485,10 +487,8 @@ public class AiTranslateService {
               ResponsesRequest.builder()
                   .model(model)
                   .instructions(prompt)
-                  .reasoningEffort(
-                      aiTranslateConfigurationProperties.getResponses().getReasoningEffort())
-                  .textVerbosity(
-                      aiTranslateConfigurationProperties.getResponses().getTextVerbosity())
+                  .reasoningEffort(getReasoningEffort(aiTranslateInput))
+                  .textVerbosity(getTextVerbosity(aiTranslateInput))
                   .addUserText(inputAsJsonString)
                   .addJsonSchema(aiTranslateType.getOutputJsonSchemaClass());
 
@@ -1364,6 +1364,19 @@ public class AiTranslateService {
     return aiTranslateInput.useModel() != null
         ? aiTranslateInput.useModel()
         : aiTranslateConfigurationProperties.getModelName();
+  }
+
+  private String getReasoningEffort(AiTranslateInput aiTranslateInput) {
+    return aiTranslateInput.reasoningEffort() != null
+            && !aiTranslateInput.reasoningEffort().isBlank()
+        ? aiTranslateInput.reasoningEffort()
+        : aiTranslateConfigurationProperties.getResponses().getReasoningEffort();
+  }
+
+  private String getTextVerbosity(AiTranslateInput aiTranslateInput) {
+    return aiTranslateInput.textVerbosity() != null && !aiTranslateInput.textVerbosity().isBlank()
+        ? aiTranslateInput.textVerbosity()
+        : aiTranslateConfigurationProperties.getResponses().getTextVerbosity();
   }
 
   /**

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import {
+  fetchAiTranslateConfig,
   fetchAiTranslateReport,
   fetchAiTranslateReportLocale,
   fetchAiTranslateReportPath,
@@ -25,6 +26,8 @@ const RELATED_STRINGS_OPTIONS = ['NONE', 'USAGES', 'ID_PREFIX'];
 const TRANSLATE_TYPE_OPTIONS = ['WITH_REVIEW', 'TARGET_ONLY', 'TARGET_ONLY_NEW'];
 const STATUS_FILTER_OPTIONS = ['FOR_TRANSLATION', 'ALL'];
 const IMPORT_STATUS_OPTIONS = ['REVIEW_NEEDED', 'APPROVED', 'TRANSLATION_NEEDED'];
+const REASONING_EFFORT_OPTIONS = ['none', 'low', 'medium', 'high'];
+const TEXT_VERBOSITY_OPTIONS = ['low', 'medium', 'high'];
 const SOURCE_TEXT_SIZES = [
   { value: 50, label: '50' },
   { value: 100, label: '100' },
@@ -67,7 +70,9 @@ export function AiTranslatePage() {
   const [selectedLocales, setSelectedLocales] = useState<string[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [sourceTextMaxCount, setSourceTextMaxCount] = useState(String(DEFAULT_SOURCE_TEXT_MAX));
-  const [useModel, setUseModel] = useState('gpt-5.2');
+  const [useModel, setUseModel] = useState('');
+  const [reasoningEffort, setReasoningEffort] = useState('');
+  const [textVerbosity, setTextVerbosity] = useState('');
   const [promptSuffix, setPromptSuffix] = useState('');
   const [relatedStrings, setRelatedStrings] = useState('NONE');
   const [translateType, setTranslateType] = useState('TARGET_ONLY_NEW');
@@ -80,6 +85,7 @@ export function AiTranslatePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const [jobError, setJobError] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
   const [isFetchingReport, setIsFetchingReport] = useState(false);
   const [reportDownloads, setReportDownloads] = useState<ReportDownload[]>([]);
@@ -90,6 +96,33 @@ export function AiTranslatePage() {
     return () => {
       objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
       objectUrlsRef.current = [];
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void fetchAiTranslateConfig()
+      .then((config) => {
+        if (!isMounted) {
+          return;
+        }
+        setUseModel((current) => current || config.modelName);
+        setReasoningEffort((current) => current || config.reasoningEffort);
+        setTextVerbosity((current) => current || config.textVerbosity);
+        setConfigError(null);
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+        setConfigError(
+          error instanceof Error ? error.message : 'Unable to load AI translate configuration.',
+        );
+      });
+
+    return () => {
+      isMounted = false;
     };
   }, []);
 
@@ -328,6 +361,8 @@ export function AiTranslatePage() {
         translateType,
         statusFilter,
         importStatus,
+        reasoningEffort: reasoningEffort.trim() ? reasoningEffort.trim() : null,
+        textVerbosity: textVerbosity.trim() ? textVerbosity.trim() : null,
         glossaryName: null,
         glossaryTermSource: null,
         glossaryTermSourceDescription: null,
@@ -557,6 +592,43 @@ export function AiTranslatePage() {
                   onChange={(event) => setUseModel(event.target.value)}
                   disabled={disableForm}
                 />
+                {configError ? (
+                  <div className="review-create__hint ai-translate-hint-error">{configError}</div>
+                ) : null}
+              </label>
+
+              <label className="review-create__field" htmlFor="reasoningEffort">
+                <span className="review-create__label">Reasoning effort</span>
+                <select
+                  id="reasoningEffort"
+                  className="review-create__select"
+                  value={reasoningEffort}
+                  onChange={(event) => setReasoningEffort(event.target.value)}
+                  disabled={disableForm}
+                >
+                  {REASONING_EFFORT_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="review-create__field" htmlFor="textVerbosity">
+                <span className="review-create__label">Text verbosity</span>
+                <select
+                  id="textVerbosity"
+                  className="review-create__select"
+                  value={textVerbosity}
+                  onChange={(event) => setTextVerbosity(event.target.value)}
+                  disabled={disableForm}
+                >
+                  {TEXT_VERBOSITY_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="review-create__field" htmlFor="promptSuffix">

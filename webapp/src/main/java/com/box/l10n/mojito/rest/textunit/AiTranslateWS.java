@@ -36,6 +36,15 @@ public class AiTranslateWS {
 
   @Autowired StructuredBlobStorage structuredBlobStorage;
 
+  @RequestMapping(method = RequestMethod.GET, value = "/api/proto-ai-translate/config")
+  @ResponseStatus(HttpStatus.OK)
+  public ProtoAiTranslateConfigResponse getConfig() {
+    return new ProtoAiTranslateConfigResponse(
+        aiTranslateConfigurationProperties.getModelName(),
+        aiTranslateConfigurationProperties.getResponses().getReasoningEffort(),
+        aiTranslateConfigurationProperties.getResponses().getTextVerbosity());
+  }
+
   @RequestMapping(method = RequestMethod.POST, value = "/api/proto-ai-translate")
   @ResponseStatus(HttpStatus.OK)
   public ProtoAiTranslateResponse aiTranslate(
@@ -55,6 +64,8 @@ public class AiTranslateWS {
                 protoAiTranslateRequest.translateType(),
                 protoAiTranslateRequest.statusFilter(),
                 protoAiTranslateRequest.importStatus(),
+                protoAiTranslateRequest.reasoningEffort(),
+                protoAiTranslateRequest.textVerbosity(),
                 protoAiTranslateRequest.glossaryName(),
                 protoAiTranslateRequest.glossaryTermSource(),
                 protoAiTranslateRequest.glossaryTermSourceDescription(),
@@ -81,6 +92,8 @@ public class AiTranslateWS {
       String translateType,
       String statusFilter,
       String importStatus,
+      String reasoningEffort,
+      String textVerbosity,
       String glossaryName,
       String glossaryTermSource,
       String glossaryTermSourceDescription,
@@ -93,6 +106,9 @@ public class AiTranslateWS {
       Integer timeoutSeconds) {}
 
   public record ProtoAiTranslateResponse(PollableTask pollableTask) {}
+
+  public record ProtoAiTranslateConfigResponse(
+      String modelName, String reasoningEffort, String textVerbosity) {}
 
   @RequestMapping(method = RequestMethod.POST, value = "/api/proto-ai-translate/retry-import")
   @ResponseStatus(HttpStatus.OK)
