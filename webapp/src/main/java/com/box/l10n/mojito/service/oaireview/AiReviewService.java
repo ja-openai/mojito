@@ -52,7 +52,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -463,12 +462,14 @@ public class AiReviewService {
         getResponsesRequest(
             AiReviewType.PROMPT_ALL, inputAsJsonString, model, AiReviewTextUnitVariantOutput.class);
 
-    CompletableFuture<ResponsesResponse> futureResult =
-        openAIClientPool.submit(
-            (openAIClient) ->
-                openAIClient.getResponses(
-                    responsesRequest, resolveRequestTimeout(aiReviewTextUnitVariantInput)));
-    return Mono.fromFuture(futureResult)
+    return Mono.defer(
+            () ->
+                Mono.fromFuture(
+                    openAIClientPool.submit(
+                        openAIClient ->
+                            openAIClient.getResponses(
+                                responsesRequest,
+                                resolveRequestTimeout(aiReviewTextUnitVariantInput)))))
         .handle(
             (responsesResponse, sink) -> {
               String jsonReview = responsesResponse.outputText();
@@ -486,7 +487,13 @@ public class AiReviewService {
 
   private boolean isRetryableException(Throwable throwable) {
     Throwable cause = unwrapCompletionException(throwable);
-    return cause instanceof IOException || cause instanceof TimeoutException;
+    if (cause instanceof IOException || cause instanceof TimeoutException) {
+      return true;
+    }
+    if (cause instanceof OpenAIClient.OpenAIClientResponseException openAIClientResponseException) {
+      return isRetryableProviderStatus(openAIClientResponseException.getStatusCode());
+    }
+    return false;
   }
 
   private boolean isTimeoutException(Throwable throwable) {
@@ -498,6 +505,10 @@ public class AiReviewService {
     return throwable instanceof CompletionException completionException
         ? Objects.requireNonNullElse(completionException.getCause(), completionException)
         : throwable;
+  }
+
+  private boolean isRetryableProviderStatus(int statusCode) {
+    return statusCode == 408 || statusCode == 429 || statusCode >= 500;
   }
 
   public void aiReviewBatch(AiReviewInput aiReviewInput, PollableTask currentTask)

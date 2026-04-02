@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -223,6 +224,7 @@ public class AiReviewChatWSTest {
   @Test
   public void chatMapsProviderFailureToBadGateway() {
     HttpResponse<String> httpResponse = mock(HttpResponse.class);
+    when(httpResponse.statusCode()).thenReturn(400);
     when(httpResponse.body()).thenReturn("{\"error\":\"boom\"}");
     CompletableFuture<OpenAIClient.ResponsesResponse> failedResponse = new CompletableFuture<>();
     failedResponse.completeExceptionally(
@@ -246,6 +248,36 @@ public class AiReviewChatWSTest {
 
     assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatusCode());
     assertEquals("AI review provider request failed. Please retry.", exception.getReason());
+    verify(openAIClient).getResponses(any(), any());
+  }
+
+  @Test
+  public void chatRetriesRetryableProviderFailure() {
+    HttpResponse<String> httpResponse = mock(HttpResponse.class);
+    when(httpResponse.statusCode()).thenReturn(503);
+    when(httpResponse.body()).thenReturn("{\"error\":\"unavailable\"}");
+
+    CompletableFuture<OpenAIClient.ResponsesResponse> failedResponse = new CompletableFuture<>();
+    failedResponse.completeExceptionally(
+        new OpenAIClient.OpenAIClientResponseException("Responses API failed", httpResponse));
+
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(failedResponse)
+        .thenReturn(CompletableFuture.completedFuture(successResponse("Retry succeeded.")));
+
+    AiReviewChatWS.AiReviewChatResponse response =
+        aiReviewChatWS.chat(
+            new AiReviewChatWS.AiReviewChatRequest(
+                "Save",
+                null,
+                "ja-JP",
+                null,
+                null,
+                List.of(
+                    new AiReviewChatWS.AiReviewChatMessage("user", "Review this translation."))));
+
+    assertEquals("Retry succeeded.", response.message().content());
+    verify(openAIClient, times(2)).getResponses(any(), any());
   }
 
   private OpenAIClient.ResponsesResponse.Output responseOutput(String text) {

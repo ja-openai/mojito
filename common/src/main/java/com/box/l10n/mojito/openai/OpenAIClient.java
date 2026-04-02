@@ -1293,6 +1293,10 @@ public class OpenAIClient {
       this.httpResponse = Objects.requireNonNull(httpResponse);
     }
 
+    public int getStatusCode() {
+      return httpResponse.statusCode();
+    }
+
     @Override
     public String toString() {
 

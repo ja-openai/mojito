@@ -36,6 +36,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 public class AiReviewChatWS {
 
+  static final int MAX_RETRYABLE_PROVIDER_ATTEMPTS = 3;
+
   static Logger logger = LoggerFactory.getLogger(AiReviewChatWS.class);
 
   private final OpenAIClient openAIClient;
@@ -136,12 +138,8 @@ public class AiReviewChatWS {
             target,
             integrityContextMessage,
             conversationMessages);
-    ResponsesResponse responsesResponse;
-    try {
-      responsesResponse = openAIClient.getResponses(responsesRequest, requestTimeout).join();
-    } catch (CompletionException e) {
-      throw toResponseStatusException(e, localeTag, requestTimeout);
-    }
+    ResponsesResponse responsesResponse =
+        getResponsesWithRetry(responsesRequest, localeTag, requestTimeout);
 
     logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
 
@@ -278,7 +276,7 @@ public class AiReviewChatWS {
 
   private ResponseStatusException toResponseStatusException(
       CompletionException e, String localeTag, Duration requestTimeout) {
-    Throwable cause = e.getCause() != null ? e.getCause() : e;
+    Throwable cause = unwrapCompletionException(e);
     if (cause instanceof HttpTimeoutException) {
       long timeoutSeconds = requestTimeout.toSeconds();
       meterRegistry
@@ -310,6 +308,39 @@ public class AiReviewChatWS {
 
   private int safeLength(String value) {
     return value == null ? 0 : value.length();
+  }
+
+  private ResponsesResponse getResponsesWithRetry(
+      ResponsesRequest responsesRequest, String localeTag, Duration requestTimeout) {
+    CompletionException lastFailure = null;
+    for (int attempt = 1; attempt <= MAX_RETRYABLE_PROVIDER_ATTEMPTS; attempt++) {
+      try {
+        return openAIClient.getResponses(responsesRequest, requestTimeout).join();
+      } catch (CompletionException e) {
+        lastFailure = e;
+        Throwable cause = unwrapCompletionException(e);
+        if (!(cause instanceof OpenAIClientResponseException openAIClientResponseException)
+            || !isRetryableProviderStatus(openAIClientResponseException.getStatusCode())
+            || attempt == MAX_RETRYABLE_PROVIDER_ATTEMPTS) {
+          throw toResponseStatusException(e, localeTag, requestTimeout);
+        }
+        logger.warn(
+            "Retrying AI review provider request after statusCode={}, attempt={}",
+            openAIClientResponseException.getStatusCode(),
+            attempt);
+      }
+    }
+    throw toResponseStatusException(lastFailure, localeTag, requestTimeout);
+  }
+
+  private Throwable unwrapCompletionException(Throwable throwable) {
+    return throwable instanceof CompletionException completionException
+        ? Objects.requireNonNullElse(completionException.getCause(), completionException)
+        : throwable;
+  }
+
+  private boolean isRetryableProviderStatus(int statusCode) {
+    return statusCode == 408 || statusCode == 429 || statusCode >= 500;
   }
 
   private String sanitizeTagValue(String value) {
