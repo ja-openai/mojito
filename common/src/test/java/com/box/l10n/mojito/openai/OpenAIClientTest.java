@@ -597,6 +597,28 @@ public class OpenAIClientTest {
         "data:image/png;base64,AAA", input.get(3).get("content").get(0).get("image_url").asText());
   }
 
+  @Test
+  public void testResponseBatchHelpersUseResponsesEndpoint() {
+    OpenAIClient.ResponsesRequest responsesRequest =
+        OpenAIClient.ResponsesRequest.builder()
+            .model("gpt-5.4")
+            .instructions("Review this translation.")
+            .addUserText("{\"source\":\"Save\"}")
+            .build();
+
+    OpenAIClient.RequestBatchFileLine batchFileLine =
+        OpenAIClient.RequestBatchFileLine.forResponse("42", responsesRequest);
+    OpenAIClient.CreateBatchRequest createBatchRequest =
+        OpenAIClient.CreateBatchRequest.forResponse("file-123", Map.of("k1", "v1"));
+
+    assertEquals("42", batchFileLine.customId());
+    assertEquals("/v1/responses", batchFileLine.url());
+    assertEquals(responsesRequest, batchFileLine.body());
+    assertEquals("/v1/responses", createBatchRequest.endpoint());
+    assertEquals("file-123", createBatchRequest.inputFileId());
+    assertEquals("v1", createBatchRequest.metadata().get("k1"));
+  }
+
   private static String bodyPublisherToString(BodyPublisher bodyPublisher) {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     bodyPublisher.subscribe(

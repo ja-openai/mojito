@@ -316,12 +316,16 @@ public class OpenAIClient {
         return this;
       }
 
+      public Builder addText(String role, String text) {
+        return addInputMessage(role, List.of(new InputMessage.Text(text)));
+      }
+
       public Builder addUserText(String text) {
-        return addInputMessage("user", List.of(new InputMessage.Text(text)));
+        return addText("user", text);
       }
 
       public Builder addDeveloperText(String text) {
-        return addInputMessage("developer", List.of(new InputMessage.Text(text)));
+        return addText("developer", text);
       }
 
       public Builder addUserImageFileId(String fileId) {
@@ -1074,6 +1078,11 @@ public class OpenAIClient {
       return new RequestBatchFileLine(
           customId, "POST", "/v1/chat/completions", chatCompletionsRequest);
     }
+
+    public static RequestBatchFileLine forResponse(
+        String customId, ResponsesRequest responsesRequest) {
+      return new RequestBatchFileLine(customId, "POST", "/v1/responses", responsesRequest);
+    }
   }
 
   public record ChatCompletionResponseBatchFileLine(
@@ -1082,6 +1091,14 @@ public class OpenAIClient {
         @JsonProperty("status_code") int statusCode,
         @JsonProperty("request_id") String requestId,
         @JsonProperty("body") ChatCompletionsResponse chatCompletionsResponse) {}
+  }
+
+  public record ResponsesResponseBatchFileLine(
+      String id, @JsonProperty("custom_id") String customId, Response response) {
+    public record Response(
+        @JsonProperty("status_code") int statusCode,
+        @JsonProperty("request_id") String requestId,
+        @JsonProperty("body") ResponsesResponse responsesResponse) {}
   }
 
   public DownloadFileContentResponse downloadFileContent(
@@ -1169,6 +1186,10 @@ public class OpenAIClient {
     public static CreateBatchRequest forChatCompletion(
         String fileId, Map<String, String> metadata) {
       return new CreateBatchRequest(fileId, "/v1/chat/completions", "24h", metadata);
+    }
+
+    public static CreateBatchRequest forResponse(String fileId, Map<String, String> metadata) {
+      return new CreateBatchRequest(fileId, "/v1/responses", "24h", metadata);
     }
   }
 

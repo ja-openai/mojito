@@ -1,15 +1,9 @@
 package com.box.l10n.mojito.rest.textunit;
 
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.JsonFormat.JsonSchema.createJsonSchema;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.SystemMessage.systemMessageBuilder;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.UserMessage.userMessageBuilder;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.chatCompletionsRequest;
-import static com.box.l10n.mojito.openai.OpenAIClient.TemperatureHelper.getTemperatureForReasoningModels;
-
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.openai.OpenAIClient;
-import com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest;
-import com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsResponse;
+import com.box.l10n.mojito.openai.OpenAIClient.ResponsesRequest;
+import com.box.l10n.mojito.openai.OpenAIClient.ResponsesResponse;
 import com.box.l10n.mojito.rest.textunit.AiReviewType.AiReviewTextUnitVariantOutput;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
@@ -87,12 +81,17 @@ public class AiReviewChatWS {
 
     String inputPayload = objectMapper.writeValueAsStringUnchecked(aiReviewInput);
 
-    List<ChatCompletionsRequest.Message> messages = new ArrayList<>();
-    messages.add(systemMessageBuilder().content(getPrompt(localeTag)).build());
-    messages.add(userMessageBuilder().content(inputPayload).build());
+    ResponsesRequest.Builder requestBuilder =
+        ResponsesRequest.builder()
+            .model(aiReviewConfigurationProperties.getModelName())
+            .instructions(getPrompt(localeTag))
+            .reasoningEffort(aiReviewConfigurationProperties.getResponses().getReasoningEffort())
+            .textVerbosity(aiReviewConfigurationProperties.getResponses().getTextVerbosity())
+            .addUserText(inputPayload)
+            .addJsonSchema(AiReviewTextUnitVariantOutput.class);
     String integrityContextMessage = buildIntegrityContextMessage(request.tmTextUnitId(), target);
     if (hasText(integrityContextMessage)) {
-      messages.add(userMessageBuilder().content(integrityContextMessage).build());
+      requestBuilder.addUserText(integrityContextMessage);
     }
 
     List<AiReviewChatMessage> conversationMessages = new ArrayList<>();
@@ -115,39 +114,19 @@ public class AiReviewChatWS {
     }
 
     for (AiReviewChatMessage message : conversationMessages) {
-      messages.add(
-          userMessageBuilder()
-              .role(normalizeChatRole(message.role()))
-              .content(message.content())
-              .build());
+      requestBuilder.addText(normalizeChatRole(message.role()), message.content());
     }
 
-    ChatCompletionsRequest chatCompletionsRequest =
-        chatCompletionsRequest()
-            .model(aiReviewConfigurationProperties.getModelName())
-            .temperature(
-                getTemperatureForReasoningModels(aiReviewConfigurationProperties.getModelName()))
-            .maxCompletionTokens(null)
-            .messages(messages)
-            .responseFormat(
-                new OpenAIClient.ChatCompletionsRequest.JsonFormat(
-                    "json_schema",
-                    new OpenAIClient.ChatCompletionsRequest.JsonFormat.JsonSchema(
-                        true,
-                        "request_json_format",
-                        createJsonSchema(AiReviewTextUnitVariantOutput.class))))
-            .build();
+    ResponsesRequest responsesRequest = requestBuilder.build();
 
-    logger.debug(objectMapper.writeValueAsStringUnchecked(chatCompletionsRequest));
+    logger.debug(objectMapper.writeValueAsStringUnchecked(responsesRequest));
 
-    ChatCompletionsResponse chatCompletionsResponse =
-        openAIClient
-            .getChatCompletions(chatCompletionsRequest, Duration.of(15, ChronoUnit.SECONDS))
-            .join();
+    ResponsesResponse responsesResponse =
+        openAIClient.getResponses(responsesRequest, Duration.of(15, ChronoUnit.SECONDS)).join();
 
-    logger.debug(objectMapper.writeValueAsStringUnchecked(chatCompletionsResponse));
+    logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
 
-    String jsonResponse = chatCompletionsResponse.choices().getFirst().message().content();
+    String jsonResponse = responsesResponse.outputText();
     AiReviewTextUnitVariantOutput output =
         objectMapper.readValueUnchecked(jsonResponse, AiReviewTextUnitVariantOutput.class);
 

@@ -1,12 +1,6 @@
 package com.box.l10n.mojito.service.oaireview;
 
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.JsonFormat.JsonSchema.createJsonSchema;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.SystemMessage.systemMessageBuilder;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.UserMessage.userMessageBuilder;
-import static com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsRequest.chatCompletionsRequest;
-import static com.box.l10n.mojito.openai.OpenAIClient.CreateBatchRequest.forChatCompletion;
-import static com.box.l10n.mojito.openai.OpenAIClient.TemperatureHelper.getTemperatureForReasoningModels;
+import static com.box.l10n.mojito.openai.OpenAIClient.CreateBatchRequest.forResponse;
 import static java.util.stream.Collectors.joining;
 
 import com.box.l10n.mojito.JSR310Migration;
@@ -16,7 +10,8 @@ import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.openai.OpenAIClient;
-import com.box.l10n.mojito.openai.OpenAIClient.ChatCompletionsResponse;
+import com.box.l10n.mojito.openai.OpenAIClient.ResponsesRequest;
+import com.box.l10n.mojito.openai.OpenAIClient.ResponsesResponse;
 import com.box.l10n.mojito.openai.OpenAIClientPool;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
@@ -44,7 +39,6 @@ import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -76,8 +70,6 @@ import reactor.util.retry.RetryBackoffSpec;
 public class AiReviewService {
 
   static final String METADATA__TEXT_UNIT_DTOS__BLOB_ID = "textUnitDTOs";
-
-  static final Integer MAX_COMPLETION_TOKENS = null;
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(AiReviewService.class);
@@ -166,40 +158,26 @@ public class AiReviewService {
     ObjectMapper objectMapper = ObjectMapper.withIndentedOutput();
     String inputAsJsonString = objectMapper.writeValueAsStringUnchecked(input);
 
-    ObjectNode jsonSchema = createJsonSchema(AiReviewTextUnitVariantOutput.class);
+    ResponsesRequest responsesRequest =
+        getResponsesRequest(
+            AiReviewType.PROMPT_ALL,
+            inputAsJsonString,
+            aiReviewConfigurationProperties.getModelName(),
+            AiReviewTextUnitVariantOutput.class);
 
-    OpenAIClient.ChatCompletionsRequest chatCompletionsRequest =
-        chatCompletionsRequest()
-            .model(aiReviewConfigurationProperties.getModelName())
-            .temperature(
-                getTemperatureForReasoningModels(aiReviewConfigurationProperties.getModelName()))
-            .maxCompletionTokens(MAX_COMPLETION_TOKENS)
-            .messages(
-                List.of(
-                    systemMessageBuilder().content(AiReviewType.PROMPT_ALL).build(),
-                    userMessageBuilder().content(inputAsJsonString).build()))
-            .responseFormat(
-                new OpenAIClient.ChatCompletionsRequest.JsonFormat(
-                    "json_schema",
-                    new OpenAIClient.ChatCompletionsRequest.JsonFormat.JsonSchema(
-                        true, "request_json_format", jsonSchema)))
-            .build();
-
-    logger.info(objectMapper.writeValueAsStringUnchecked(chatCompletionsRequest));
+    logger.info(objectMapper.writeValueAsStringUnchecked(responsesRequest));
 
     OpenAIClient openAIClient =
         OpenAIClient.builder()
             .apiKey(aiReviewConfigurationProperties.getOpenaiClientToken())
             .build();
 
-    OpenAIClient.ChatCompletionsResponse chatCompletionsResponse =
-        openAIClient
-            .getChatCompletions(chatCompletionsRequest, Duration.of(15, ChronoUnit.SECONDS))
-            .join();
+    ResponsesResponse responsesResponse =
+        openAIClient.getResponses(responsesRequest, Duration.of(15, ChronoUnit.SECONDS)).join();
 
-    logger.info(objectMapper.writeValueAsStringUnchecked(chatCompletionsResponse));
+    logger.info(objectMapper.writeValueAsStringUnchecked(responsesResponse));
 
-    String jsonResponse = chatCompletionsResponse.choices().getFirst().message().content();
+    String jsonResponse = responsesResponse.outputText();
     AiReviewTextUnitVariantOutput aiReviewTextUnitVariantOutput =
         objectMapper.readValueUnchecked(jsonResponse, AiReviewTextUnitVariantOutput.class);
     return aiReviewTextUnitVariantOutput;
@@ -313,7 +291,7 @@ public class AiReviewService {
                 Flux.fromIterable(batch)
                     .flatMap(
                         textUnitDTO ->
-                            getChatCompletionForTextUnitDTO(textUnitDTO, model, openAIClientPool)
+                            getResponseForTextUnitDTO(textUnitDTO, model, openAIClientPool)
                                 .retryWhen(
                                     Retry.backoff(5, Duration.ofSeconds(1))
                                         .filter(this::isRetryableException)
@@ -390,7 +368,7 @@ public class AiReviewService {
     return textUnitDTOS;
   }
 
-  record MyRecord(TextUnitDTO textUnitDTO, ChatCompletionsResponse chatCompletionsResponse) {}
+  record MyRecord(TextUnitDTO textUnitDTO, ResponsesResponse responsesResponse) {}
 
   private <T> Mono<Void> submitForSave(
       String runName, List<MyRecord> results, Class<T> outputClass) {
@@ -401,11 +379,9 @@ public class AiReviewService {
             .map(
                 myRecord -> {
                   TextUnitDTO textUnitDTO = myRecord.textUnitDTO();
-                  ChatCompletionsResponse chatCompletionsResponse =
-                      myRecord.chatCompletionsResponse();
+                  ResponsesResponse responsesResponse = myRecord.responsesResponse();
 
-                  String completionOutputAsJson =
-                      chatCompletionsResponse.choices().getFirst().message().content();
+                  String completionOutputAsJson = responsesResponse.outputText();
 
                   // this is just to check the format right now since we save the json anyway.
                   T completionOutput =
@@ -444,7 +420,7 @@ public class AiReviewService {
     aiReviewProtoRepository.saveAll(aiReviewProtos);
   }
 
-  private Mono<MyRecord> getChatCompletionForTextUnitDTO(
+  private Mono<MyRecord> getResponseForTextUnitDTO(
       TextUnitDTO textUnitDTO, String model, OpenAIClientPool openAIClientPool) {
 
     AiReviewTextUnitVariantInput aiReviewTextUnitVariantInput =
@@ -457,33 +433,17 @@ public class AiReviewService {
 
     String inputAsJsonString =
         objectMapper.writeValueAsStringUnchecked(aiReviewTextUnitVariantInput);
-    ObjectNode jsonSchema = createJsonSchema(AiReviewTextUnitVariantOutput.class);
+    ResponsesRequest responsesRequest =
+        getResponsesRequest(
+            AiReviewType.PROMPT_ALL, inputAsJsonString, model, AiReviewTextUnitVariantOutput.class);
 
-    ChatCompletionsRequest chatCompletionsRequest =
-        chatCompletionsRequest()
-            .model(model)
-            .temperature(getTemperatureForReasoningModels(model))
-            .maxCompletionTokens(MAX_COMPLETION_TOKENS)
-            .messages(
-                List.of(
-                    systemMessageBuilder().content(AiReviewType.PROMPT_ALL).build(),
-                    userMessageBuilder().content(inputAsJsonString).build()))
-            .responseFormat(
-                new ChatCompletionsRequest.JsonFormat(
-                    "json_schema",
-                    new ChatCompletionsRequest.JsonFormat.JsonSchema(
-                        true, "request_json_format", jsonSchema)))
-            .build();
-
-    CompletableFuture<ChatCompletionsResponse> futureResult =
+    CompletableFuture<ResponsesResponse> futureResult =
         openAIClientPool.submit(
-            (openAIClient) ->
-                openAIClient.getChatCompletions(
-                    chatCompletionsRequest, Duration.of(5, ChronoUnit.SECONDS)));
+            (openAIClient) -> openAIClient.getResponses(responsesRequest, Duration.ofSeconds(5)));
     return Mono.fromFuture(futureResult)
         .handle(
-            (chatCompletionsResponse, sink) -> {
-              String jsonReview = chatCompletionsResponse.choices().getFirst().message().content();
+            (responsesResponse, sink) -> {
+              String jsonReview = responsesResponse.outputText();
               try {
                 objectMapper.readValueUnchecked(jsonReview, AiReviewTextUnitVariantOutput.class);
               } catch (UncheckedIOException e) {
@@ -492,7 +452,7 @@ public class AiReviewService {
                 sink.error(e);
                 return;
               }
-              sink.next(new MyRecord(textUnitDTO, chatCompletionsResponse));
+              sink.next(new MyRecord(textUnitDTO, responsesResponse));
             });
   }
 
@@ -589,24 +549,18 @@ public class AiReviewService {
             .lines()
             .map(
                 line -> {
-                  OpenAIClient.ChatCompletionResponseBatchFileLine
-                      chatCompletionResponseBatchFileLine =
-                          objectMapper.readValueUnchecked(
-                              line, OpenAIClient.ChatCompletionResponseBatchFileLine.class);
+                  OpenAIClient.ResponsesResponseBatchFileLine responsesResponseBatchFileLine =
+                      objectMapper.readValueUnchecked(
+                          line, OpenAIClient.ResponsesResponseBatchFileLine.class);
 
-                  if (chatCompletionResponseBatchFileLine.response().statusCode() != 200) {
+                  if (responsesResponseBatchFileLine.response().statusCode() != 200) {
                     throw new RuntimeException(
-                        "Response batch file line failed: " + chatCompletionResponseBatchFileLine);
+                        "Response batch file line failed: " + responsesResponseBatchFileLine);
                   }
 
                   String completionOutputAsJson =
-                      chatCompletionResponseBatchFileLine
-                          .response()
-                          .chatCompletionsResponse()
-                          .choices()
-                          .getFirst()
-                          .message()
-                          .content();
+                      getBatchLineOutputAsJson(
+                          retrieveBatchResponse.endpoint(), line, responsesResponseBatchFileLine);
 
                   try {
                     objectMapper.readValueUnchecked(
@@ -618,7 +572,7 @@ public class AiReviewService {
                   }
 
                   Long tmTextUnitVariantId =
-                      Long.valueOf(chatCompletionResponseBatchFileLine.customId());
+                      Long.valueOf(responsesResponseBatchFileLine.customId());
                   AiReviewProto aiReviewProto = new AiReviewProto();
                   aiReviewProto.setRunName(runName);
                   aiReviewProto.setTmTextUnitVariant(
@@ -711,7 +665,7 @@ public class AiReviewService {
       createBatchResponse =
           getOpenAIClient()
               .createBatch(
-                  forChatCompletion(
+                  forResponse(
                       uploadFileResponse.id(), Map.of(METADATA__TEXT_UNIT_DTOS__BLOB_ID, batchId)));
 
       logger.info("Create batch at {}: {}", ZonedDateTime.now(), createBatchResponse);
@@ -755,29 +709,47 @@ public class AiReviewService {
                 inputAsJsonString = objectMapper.writeValueAsStringUnchecked(aiReviewTextUnitInput);
               }
 
-              ObjectNode jsonSchema = createJsonSchema(outputJsonSchemaClass);
+              ResponsesRequest responsesRequest =
+                  getResponsesRequest(
+                      prompt, inputAsJsonString, getModel(model), outputJsonSchemaClass);
 
-              ChatCompletionsRequest chatCompletionsRequest =
-                  chatCompletionsRequest()
-                      .model(getModel(model))
-                      .maxCompletionTokens(MAX_COMPLETION_TOKENS)
-                      .temperature(getTemperatureForReasoningModels(model))
-                      .messages(
-                          List.of(
-                              systemMessageBuilder().content(prompt).build(),
-                              userMessageBuilder().content(inputAsJsonString).build()))
-                      .responseFormat(
-                          new ChatCompletionsRequest.JsonFormat(
-                              "json_schema",
-                              new ChatCompletionsRequest.JsonFormat.JsonSchema(
-                                  true, "request_json_format", jsonSchema)))
-                      .build();
-
-              return OpenAIClient.RequestBatchFileLine.forChatCompletion(
-                  textUnitDTO.getTmTextUnitVariantId().toString(), chatCompletionsRequest);
+              return OpenAIClient.RequestBatchFileLine.forResponse(
+                  textUnitDTO.getTmTextUnitVariantId().toString(), responsesRequest);
             })
         .map(objectMapper::writeValueAsStringUnchecked)
         .collect(joining("\n"));
+  }
+
+  ResponsesRequest getResponsesRequest(
+      String prompt, String inputAsJsonString, String model, Class<?> outputJsonSchemaClass) {
+    return ResponsesRequest.builder()
+        .model(model)
+        .instructions(prompt)
+        .reasoningEffort(aiReviewConfigurationProperties.getResponses().getReasoningEffort())
+        .textVerbosity(aiReviewConfigurationProperties.getResponses().getTextVerbosity())
+        .addUserText(inputAsJsonString)
+        .addJsonSchema(outputJsonSchemaClass)
+        .build();
+  }
+
+  private String getBatchLineOutputAsJson(
+      String batchEndpoint,
+      String line,
+      OpenAIClient.ResponsesResponseBatchFileLine responsesResponseBatchFileLine) {
+    if (Objects.equals(batchEndpoint, "/v1/responses")) {
+      return responsesResponseBatchFileLine.response().responsesResponse().outputText();
+    }
+
+    OpenAIClient.ChatCompletionResponseBatchFileLine chatCompletionResponseBatchFileLine =
+        objectMapper.readValueUnchecked(
+            line, OpenAIClient.ChatCompletionResponseBatchFileLine.class);
+    return chatCompletionResponseBatchFileLine
+        .response()
+        .chatCompletionsResponse()
+        .choices()
+        .getFirst()
+        .message()
+        .content();
   }
 
   // TODO this is not review specific move

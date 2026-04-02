@@ -9,7 +9,8 @@ import org.springframework.stereotype.Component;
 public class AiReviewConfigurationProperties {
   String openaiClientToken;
   String schedulerName = QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
-  String modelName = "gpt-4o-2024-08-06";
+  String modelName = "gpt-5.4";
+  ResponsesProperties responses = new ResponsesProperties();
 
   public String getOpenaiClientToken() {
     return openaiClientToken;
@@ -33,5 +34,34 @@ public class AiReviewConfigurationProperties {
 
   public void setModelName(String modelName) {
     this.modelName = modelName;
+  }
+
+  public ResponsesProperties getResponses() {
+    return responses;
+  }
+
+  public void setResponses(ResponsesProperties responses) {
+    this.responses = responses;
+  }
+
+  public static class ResponsesProperties {
+    String reasoningEffort = "none";
+    String textVerbosity = "low";
+
+    public String getReasoningEffort() {
+      return reasoningEffort;
+    }
+
+    public void setReasoningEffort(String reasoningEffort) {
+      this.reasoningEffort = reasoningEffort;
+    }
+
+    public String getTextVerbosity() {
+      return textVerbosity;
+    }
+
+    public void setTextVerbosity(String textVerbosity) {
+      this.textVerbosity = textVerbosity;
+    }
   }
 }
