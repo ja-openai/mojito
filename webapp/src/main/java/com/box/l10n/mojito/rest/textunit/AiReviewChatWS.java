@@ -13,7 +13,6 @@ import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixSer
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -36,7 +35,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class AiReviewChatWS {
 
   static Logger logger = LoggerFactory.getLogger(AiReviewChatWS.class);
-  private static final Duration AI_REVIEW_REQUEST_TIMEOUT = Duration.of(15, ChronoUnit.SECONDS);
 
   private final OpenAIClient openAIClient;
   private final AiReviewConfigurationProperties aiReviewConfigurationProperties;
@@ -126,12 +124,18 @@ public class AiReviewChatWS {
 
     logger.debug(objectMapper.writeValueAsStringUnchecked(responsesRequest));
 
+    Duration requestTimeout =
+        resolveRequestTimeout(
+            request.source(),
+            sourceDescription,
+            target,
+            integrityContextMessage,
+            conversationMessages);
     ResponsesResponse responsesResponse;
     try {
-      responsesResponse =
-          openAIClient.getResponses(responsesRequest, AI_REVIEW_REQUEST_TIMEOUT).join();
+      responsesResponse = openAIClient.getResponses(responsesRequest, requestTimeout).join();
     } catch (CompletionException e) {
-      throw toResponseStatusException(e);
+      throw toResponseStatusException(e, requestTimeout);
     }
 
     logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
@@ -245,10 +249,30 @@ public class AiReviewChatWS {
     return value != null && !value.trim().isEmpty();
   }
 
-  private ResponseStatusException toResponseStatusException(CompletionException e) {
+  private Duration resolveRequestTimeout(
+      String source,
+      String sourceDescription,
+      String target,
+      String integrityContextMessage,
+      List<AiReviewChatMessage> conversationMessages) {
+    int textCharCount =
+        safeLength(source)
+            + safeLength(sourceDescription)
+            + safeLength(target)
+            + safeLength(integrityContextMessage)
+            + conversationMessages.stream()
+                .mapToInt(message -> safeLength(message.content()))
+                .sum();
+    return aiReviewConfigurationProperties
+        .getTimeout()
+        .resolveRequestTimeout(conversationMessages.size(), textCharCount);
+  }
+
+  private ResponseStatusException toResponseStatusException(
+      CompletionException e, Duration requestTimeout) {
     Throwable cause = e.getCause() != null ? e.getCause() : e;
     if (cause instanceof HttpTimeoutException) {
-      long timeoutSeconds = AI_REVIEW_REQUEST_TIMEOUT.toSeconds();
+      long timeoutSeconds = requestTimeout.toSeconds();
       logger.warn("AI review request timed out, timeoutSeconds={}", timeoutSeconds, cause);
       return new ResponseStatusException(
           HttpStatus.GATEWAY_TIMEOUT,
@@ -265,6 +289,10 @@ public class AiReviewChatWS {
         HttpStatus.INTERNAL_SERVER_ERROR,
         "AI review request failed unexpectedly. Please retry.",
         cause);
+  }
+
+  private int safeLength(String value) {
+    return value == null ? 0 : value.length();
   }
 
   public record AiReviewChatRequest(

@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -173,7 +172,7 @@ public class AiReviewService {
             .build();
 
     ResponsesResponse responsesResponse =
-        openAIClient.getResponses(responsesRequest, Duration.of(15, ChronoUnit.SECONDS)).join();
+        openAIClient.getResponses(responsesRequest, resolveRequestTimeout(input)).join();
 
     logger.info(objectMapper.writeValueAsStringUnchecked(responsesResponse));
 
@@ -439,7 +438,9 @@ public class AiReviewService {
 
     CompletableFuture<ResponsesResponse> futureResult =
         openAIClientPool.submit(
-            (openAIClient) -> openAIClient.getResponses(responsesRequest, Duration.ofSeconds(5)));
+            (openAIClient) ->
+                openAIClient.getResponses(
+                    responsesRequest, resolveRequestTimeout(aiReviewTextUnitVariantInput)));
     return Mono.fromFuture(futureResult)
         .handle(
             (responsesResponse, sink) -> {
@@ -792,6 +793,18 @@ public class AiReviewService {
 
   private String getModel(String useModel) {
     return useModel != null ? useModel : aiReviewConfigurationProperties.getModelName();
+  }
+
+  private Duration resolveRequestTimeout(AiReviewTextUnitVariantInput input) {
+    int textCharCount =
+        safeLength(input.source())
+            + safeLength(input.sourceDescription())
+            + safeLength(input.existingTarget() == null ? null : input.existingTarget().content());
+    return aiReviewConfigurationProperties.getTimeout().resolveRequestTimeout(1, textCharCount);
+  }
+
+  private int safeLength(String value) {
+    return value == null ? 0 : value.length();
   }
 
   /**

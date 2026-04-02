@@ -17,6 +17,7 @@ import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixSer
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.Before;
@@ -161,6 +162,28 @@ public class AiReviewChatWSTest {
   }
 
   @Test
+  public void chatUsesAdaptiveRequestTimeout() {
+    when(aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix("ja-JP", null))
+        .thenReturn(null);
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(successResponse("Natural imperative.")));
+
+    aiReviewChatWS.chat(
+        new AiReviewChatWS.AiReviewChatRequest(
+            "x".repeat(2000),
+            null,
+            "ja-JP",
+            null,
+            null,
+            List.of(new AiReviewChatWS.AiReviewChatMessage("user", "go"))));
+
+    ArgumentCaptor<Duration> timeoutCaptor = ArgumentCaptor.forClass(Duration.class);
+    verify(openAIClient).getResponses(any(), timeoutCaptor.capture());
+
+    assertEquals(Duration.ofSeconds(21), timeoutCaptor.getValue());
+  }
+
+  @Test
   public void chatMapsTimeoutToGatewayTimeout() {
     CompletableFuture<OpenAIClient.ResponsesResponse> failedResponse = new CompletableFuture<>();
     failedResponse.completeExceptionally(new HttpTimeoutException("request timed out"));
@@ -183,7 +206,7 @@ public class AiReviewChatWSTest {
 
     assertEquals(HttpStatus.GATEWAY_TIMEOUT, exception.getStatusCode());
     assertEquals(
-        "AI review request timed out after 15 seconds. Please retry.", exception.getReason());
+        "AI review request timed out after 17 seconds. Please retry.", exception.getReason());
   }
 
   @Test
@@ -221,5 +244,30 @@ public class AiReviewChatWSTest {
         "completed",
         List.of(new OpenAIClient.ResponsesResponse.Content("output_text", text)),
         "assistant");
+  }
+
+  private OpenAIClient.ResponsesResponse successResponse(String reply) {
+    return new OpenAIClient.ResponsesResponse(
+        "resp-success",
+        "response",
+        1712975853L,
+        "completed",
+        null,
+        null,
+        "gpt-5.4",
+        List.of(
+            responseOutput(
+                """
+                {
+                  "target": {
+                    "content": "保存",
+                    "explanation": "%s",
+                    "confidenceLevel": 88
+                  }
+                }
+                """
+                    .formatted(reply))),
+        null,
+        null);
   }
 }
