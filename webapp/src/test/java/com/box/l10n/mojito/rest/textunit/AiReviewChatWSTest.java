@@ -186,7 +186,7 @@ public class AiReviewChatWSTest {
     ArgumentCaptor<Duration> timeoutCaptor = ArgumentCaptor.forClass(Duration.class);
     verify(openAIClient).getResponses(any(), timeoutCaptor.capture());
 
-    assertEquals(Duration.ofSeconds(32), timeoutCaptor.getValue());
+    assertEquals(Duration.ofSeconds(53), timeoutCaptor.getValue());
   }
 
   @Test
@@ -212,7 +212,7 @@ public class AiReviewChatWSTest {
 
     assertEquals(HttpStatus.GATEWAY_TIMEOUT, exception.getStatusCode());
     assertEquals(
-        "AI review request timed out after 26 seconds. Please retry.", exception.getReason());
+        "AI review request timed out after 43 seconds. Please retry.", exception.getReason());
     assertEquals(
         1.0,
         meterRegistry

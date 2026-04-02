@@ -100,9 +100,9 @@ public class AiTranslateConfigurationProperties {
       int minSeconds = 15;
       int maxSeconds = 300;
       double reasoningNoneMultiplier = 1.0;
-      double reasoningLowMultiplier = 1.5;
-      double reasoningMediumMultiplier = 2.5;
-      double reasoningHighMultiplier = 4.0;
+      double reasoningLowMultiplier = 2.5;
+      double reasoningMediumMultiplier = 4.0;
+      double reasoningHighMultiplier = 6.0;
 
       public int getBaseSeconds() {
         return baseSeconds;
