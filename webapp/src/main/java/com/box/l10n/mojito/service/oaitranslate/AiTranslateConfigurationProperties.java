@@ -97,7 +97,7 @@ public class AiTranslateConfigurationProperties {
       int per1000SourceCharsSeconds = 2;
       int screenshotPenaltySeconds = 5;
       int minSeconds = 15;
-      int maxSeconds = 60;
+      int maxSeconds = 300;
 
       public int getBaseSeconds() {
         return baseSeconds;
