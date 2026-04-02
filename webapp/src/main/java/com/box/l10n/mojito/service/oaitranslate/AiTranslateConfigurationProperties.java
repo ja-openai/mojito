@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 public class AiTranslateConfigurationProperties {
   String openaiClientToken;
   String schedulerName = QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
-  String modelName = "gpt-5.2";
+  String modelName = "gpt-5.4";
   PoolProperties pool = new PoolProperties();
   RetryProperties retry = new RetryProperties();
   NoBatchProperties noBatch = new NoBatchProperties();
