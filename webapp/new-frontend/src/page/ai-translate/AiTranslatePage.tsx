@@ -711,7 +711,7 @@ export function AiTranslatePage() {
               </label>
 
               <label className="review-create__field" htmlFor="timeoutSeconds">
-                <span className="review-create__label">Request timeout (seconds)</span>
+                <span className="review-create__label">Request timeout override (seconds)</span>
                 <input
                   id="timeoutSeconds"
                   type="number"
@@ -721,6 +721,10 @@ export function AiTranslatePage() {
                   onChange={(event) => setTimeoutSeconds(event.target.value)}
                   disabled={disableForm}
                 />
+                <div className="review-create__hint">
+                  Leave blank to use the server-side automatic timeout based on request size and
+                  screenshots.
+                </div>
               </label>
 
               <div className="review-create__field ai-translate-toggle-row">
