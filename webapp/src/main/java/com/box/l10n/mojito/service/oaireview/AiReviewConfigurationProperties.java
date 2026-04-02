@@ -56,7 +56,7 @@ public class AiReviewConfigurationProperties {
   }
 
   public static class ResponsesProperties {
-    String reasoningEffort = "medium";
+    String reasoningEffort = "low";
     String textVerbosity = "low";
 
     public String getReasoningEffort() {
