@@ -11,6 +11,8 @@ import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewService.AiReviewTextUnitVariantInput;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -41,19 +43,22 @@ public class AiReviewChatWS {
   private final ObjectMapper objectMapper;
   private final TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService;
   private final AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService;
+  private final MeterRegistry meterRegistry;
 
   public AiReviewChatWS(
       @Qualifier("openAIClientReview") @Nullable OpenAIClient openAIClient,
       AiReviewConfigurationProperties aiReviewConfigurationProperties,
       @Qualifier("objectMapperReview") ObjectMapper objectMapper,
       TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService,
-      AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService) {
+      AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService,
+      MeterRegistry meterRegistry) {
     this.openAIClient = openAIClient;
     this.aiReviewConfigurationProperties = Objects.requireNonNull(aiReviewConfigurationProperties);
     this.objectMapper = Objects.requireNonNull(objectMapper);
     this.tmTextUnitIntegrityCheckService = Objects.requireNonNull(tmTextUnitIntegrityCheckService);
     this.aiTranslateLocalePromptSuffixService =
         Objects.requireNonNull(aiTranslateLocalePromptSuffixService);
+    this.meterRegistry = Objects.requireNonNull(meterRegistry);
   }
 
   @PostMapping("/api/ai/review")
@@ -135,7 +140,7 @@ public class AiReviewChatWS {
     try {
       responsesResponse = openAIClient.getResponses(responsesRequest, requestTimeout).join();
     } catch (CompletionException e) {
-      throw toResponseStatusException(e, requestTimeout);
+      throw toResponseStatusException(e, localeTag, requestTimeout);
     }
 
     logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
@@ -269,10 +274,19 @@ public class AiReviewChatWS {
   }
 
   private ResponseStatusException toResponseStatusException(
-      CompletionException e, Duration requestTimeout) {
+      CompletionException e, String localeTag, Duration requestTimeout) {
     Throwable cause = e.getCause() != null ? e.getCause() : e;
     if (cause instanceof HttpTimeoutException) {
       long timeoutSeconds = requestTimeout.toSeconds();
+      meterRegistry
+          .counter(
+              "AiReviewChatWS.timeouts",
+              Tags.of(
+                  "model",
+                  sanitizeTagValue(aiReviewConfigurationProperties.getModelName()),
+                  "locale",
+                  sanitizeTagValue(localeTag)))
+          .increment();
       logger.warn("AI review request timed out, timeoutSeconds={}", timeoutSeconds, cause);
       return new ResponseStatusException(
           HttpStatus.GATEWAY_TIMEOUT,
@@ -293,6 +307,13 @@ public class AiReviewChatWS {
 
   private int safeLength(String value) {
     return value == null ? 0 : value.length();
+  }
+
+  private String sanitizeTagValue(String value) {
+    if (value == null || value.isBlank()) {
+      return "unknown";
+    }
+    return value;
   }
 
   public record AiReviewChatRequest(

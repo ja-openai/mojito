@@ -40,6 +40,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;
@@ -69,6 +71,7 @@ import reactor.util.retry.RetryBackoffSpec;
 public class AiReviewService {
 
   static final String METADATA__TEXT_UNIT_DTOS__BLOB_ID = "textUnitDTOs";
+  static final String TAG_UNKNOWN = "unknown";
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(AiReviewService.class);
@@ -99,6 +102,8 @@ public class AiReviewService {
 
   PollableTaskBlobStorage pollableTaskBlobStorage;
 
+  MeterRegistry meterRegistry;
+
   /**
    * openAIClient and openAIClientPool are nullable. The public API will check for the client if
    * they are not configured will throw an exception (keeping code minimal for now, could split into
@@ -118,7 +123,8 @@ public class AiReviewService {
       @Qualifier("retryBackoffSpecReview") RetryBackoffSpec retryBackoffSpec,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
       PollableTaskBlobStorage pollableTaskBlobStorage,
-      PollableTaskService pollableTaskService) {
+      PollableTaskService pollableTaskService,
+      MeterRegistry meterRegistry) {
     this.textUnitSearcher = Objects.requireNonNull(textUnitSearcher);
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.textUnitVariantRepository = Objects.requireNonNull(textUnitVariantRepository);
@@ -132,6 +138,7 @@ public class AiReviewService {
     this.quartzPollableTaskScheduler = Objects.requireNonNull(quartzPollableTaskScheduler);
     this.pollableTaskBlobStorage = pollableTaskBlobStorage;
     this.pollableTaskService = pollableTaskService;
+    this.meterRegistry = Objects.requireNonNull(meterRegistry);
   }
 
   public record AiReviewInput(
@@ -171,8 +178,19 @@ public class AiReviewService {
             .apiKey(aiReviewConfigurationProperties.getOpenaiClientToken())
             .build();
 
-    ResponsesResponse responsesResponse =
-        openAIClient.getResponses(responsesRequest, resolveRequestTimeout(input)).join();
+    ResponsesResponse responsesResponse;
+    try {
+      responsesResponse =
+          openAIClient.getResponses(responsesRequest, resolveRequestTimeout(input)).join();
+    } catch (CompletionException e) {
+      if (isTimeoutException(e)) {
+        incrementCounter(
+            metricName("timeouts"),
+            metricTags(
+                "single", null, aiReviewConfigurationProperties.getModelName(), input.locale()));
+      }
+      throw e;
+    }
 
     logger.info(objectMapper.writeValueAsStringUnchecked(responsesResponse));
 
@@ -303,6 +321,15 @@ public class AiReviewService {
                                             }))
                                 .onErrorResume(
                                     error -> {
+                                      if (isTimeoutException(error)) {
+                                        incrementCounter(
+                                            metricName("timeouts"),
+                                            metricTags(
+                                                "noBatch",
+                                                repositoryLocale.getRepository().getName(),
+                                                model,
+                                                repositoryLocale.getLocale().getBcp47Tag()));
+                                      }
                                       logger.error(
                                           "Request for TextUnitDTO {} failed after retries: {}",
                                           textUnitDTO.getTmTextUnitId(),
@@ -458,8 +485,19 @@ public class AiReviewService {
   }
 
   private boolean isRetryableException(Throwable throwable) {
-    Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
+    Throwable cause = unwrapCompletionException(throwable);
     return cause instanceof IOException || cause instanceof TimeoutException;
+  }
+
+  private boolean isTimeoutException(Throwable throwable) {
+    Throwable cause = unwrapCompletionException(throwable);
+    return cause instanceof java.net.http.HttpTimeoutException || cause instanceof TimeoutException;
+  }
+
+  private Throwable unwrapCompletionException(Throwable throwable) {
+    return throwable instanceof CompletionException completionException
+        ? Objects.requireNonNullElse(completionException.getCause(), completionException)
+        : throwable;
   }
 
   public void aiReviewBatch(AiReviewInput aiReviewInput, PollableTask currentTask)
@@ -793,6 +831,33 @@ public class AiReviewService {
 
   private String getModel(String useModel) {
     return useModel != null ? useModel : aiReviewConfigurationProperties.getModelName();
+  }
+
+  private void incrementCounter(String metricName, Tags tags) {
+    meterRegistry.counter(metricName, tags).increment();
+  }
+
+  private Tags metricTags(String mode, String repositoryName, String model, String locale) {
+    return Tags.of(
+        "mode",
+        sanitizeTagValue(mode),
+        "repository",
+        sanitizeTagValue(repositoryName),
+        "model",
+        sanitizeTagValue(model),
+        "locale",
+        sanitizeTagValue(locale));
+  }
+
+  private String metricName(String name) {
+    return "%s.%s".formatted(getClass().getSimpleName(), name);
+  }
+
+  private String sanitizeTagValue(String value) {
+    if (value == null || value.isBlank()) {
+      return TAG_UNKNOWN;
+    }
+    return value;
   }
 
   private Duration resolveRequestTimeout(AiReviewTextUnitVariantInput input) {

@@ -15,6 +15,7 @@ import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
@@ -40,12 +41,15 @@ public class AiReviewChatWSTest {
 
   private AiReviewChatWS aiReviewChatWS;
 
+  private SimpleMeterRegistry meterRegistry;
+
   @Before
   public void setUp() {
     AiReviewConfigurationProperties configurationProperties = new AiReviewConfigurationProperties();
 
     ObjectMapper objectMapper = new ObjectMapper();
     AiReviewService.configureObjectMapper(objectMapper);
+    meterRegistry = new SimpleMeterRegistry();
 
     aiReviewChatWS =
         new AiReviewChatWS(
@@ -53,7 +57,8 @@ public class AiReviewChatWSTest {
             configurationProperties,
             objectMapper,
             tmTextUnitIntegrityCheckService,
-            aiTranslateLocalePromptSuffixService);
+            aiTranslateLocalePromptSuffixService,
+            meterRegistry);
   }
 
   @Test
@@ -207,6 +212,12 @@ public class AiReviewChatWSTest {
     assertEquals(HttpStatus.GATEWAY_TIMEOUT, exception.getStatusCode());
     assertEquals(
         "AI review request timed out after 17 seconds. Please retry.", exception.getReason());
+    assertEquals(
+        1.0,
+        meterRegistry
+            .counter("AiReviewChatWS.timeouts", "model", "gpt-5.4", "locale", "ja-JP")
+            .count(),
+        0.0);
   }
 
   @Test
