@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.oaireview;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.openai.OpenAIClient;
 import com.box.l10n.mojito.openai.OpenAIClientPool;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,12 +29,18 @@ public class AiReviewConfig {
   }
 
   @Bean("openAIClientPoolReview")
-  OpenAIClientPool openAIClientPool() {
+  OpenAIClientPool openAIClientPool(MeterRegistry meterRegistry) {
     String openaiClientToken = aiReviewConfigurationProperties.getOpenaiClientToken();
     if (openaiClientToken == null) {
       return null;
     }
-    return new OpenAIClientPool(10, 10, 5, aiReviewConfigurationProperties.getOpenaiClientToken());
+    return new OpenAIClientPool(
+        10,
+        10,
+        5,
+        aiReviewConfigurationProperties.getOpenaiClientToken(),
+        "ai-review",
+        meterRegistry);
   }
 
   @Bean("objectMapperReview")
