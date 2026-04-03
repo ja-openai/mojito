@@ -580,25 +580,38 @@ public class AiTranslateService {
                                 .responsesResponseCompletableFuture()
                                 .join();
                       } catch (Throwable t) {
-                        String errorMessage =
-                            "Error when getting the responsesResponse: %s"
-                                .formatted(t.getMessage());
-                        if (isTimeoutException(t)) {
-                          incrementCounter(metricName("timeouts"), requestTags);
-                        }
-                        logger.error(
-                            errorMessage
-                                + ", skipping tmTextUnits: {}, locale: {}, timeoutSeconds: {}",
+                        List<Long> failedTmTextUnitIds =
                             textUnitsByScreenshotWithResponsesResponse
                                 .textUnitsByScreenshot()
                                 .textUnitDTOWithVariantCommentsList
                                 .stream()
                                 .map(TextUnitDTOWithVariantComments::textUnitDTO)
                                 .map(TextUnitDTO::getTmTextUnitId)
-                                .toList(),
-                            repositoryLocale.getLocale().getBcp47Tag(),
-                            textUnitsByScreenshotWithResponsesResponse.timeoutSeconds(),
-                            t);
+                                .toList();
+                        String locale = repositoryLocale.getLocale().getBcp47Tag();
+                        int timeoutSeconds =
+                            textUnitsByScreenshotWithResponsesResponse.timeoutSeconds();
+
+                        String errorMessage =
+                            "Error when getting the responsesResponse: %s"
+                                .formatted(t.getMessage());
+                        if (isTimeoutException(t)) {
+                          incrementCounter(metricName("timeouts"), requestTags);
+                          logger.error(
+                              "AI translate request timed out, skipping tmTextUnits: {}, locale: {}, timeoutSeconds: {}",
+                              failedTmTextUnitIds,
+                              locale,
+                              timeoutSeconds,
+                              t);
+                        } else {
+                          logger.error(
+                              errorMessage
+                                  + ", skipping tmTextUnits: {}, locale: {}, timeoutSeconds: {}",
+                              failedTmTextUnitIds,
+                              locale,
+                              timeoutSeconds,
+                              t);
+                        }
 
                         return textUnitsByScreenshotWithResponsesResponse
                             .textUnitsByScreenshot()

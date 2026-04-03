@@ -320,6 +320,7 @@ public class AiReviewService {
                                             }))
                                 .onErrorResume(
                                     error -> {
+                                      String locale = repositoryLocale.getLocale().getBcp47Tag();
                                       if (isTimeoutException(error)) {
                                         incrementCounter(
                                             metricName("timeouts"),
@@ -327,12 +328,22 @@ public class AiReviewService {
                                                 "noBatch",
                                                 repositoryLocale.getRepository().getName(),
                                                 model,
-                                                repositoryLocale.getLocale().getBcp47Tag()));
+                                                locale));
+                                        logger.error(
+                                            "AI review request timed out after retries, tmTextUnitId={}, locale={}, model={}",
+                                            textUnitDTO.getTmTextUnitId(),
+                                            locale,
+                                            model,
+                                            error);
+                                      } else {
+                                        logger.error(
+                                            "Request for TextUnitDTO {} failed after retries, locale={}, model={}: {}",
+                                            textUnitDTO.getTmTextUnitId(),
+                                            locale,
+                                            model,
+                                            error.getMessage(),
+                                            error);
                                       }
-                                      logger.error(
-                                          "Request for TextUnitDTO {} failed after retries: {}",
-                                          textUnitDTO.getTmTextUnitId(),
-                                          error.getMessage());
                                       return Mono.empty();
                                     }))
                     .collectList()
