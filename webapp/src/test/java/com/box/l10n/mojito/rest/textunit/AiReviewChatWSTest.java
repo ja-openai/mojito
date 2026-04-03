@@ -272,6 +272,31 @@ public class AiReviewChatWSTest {
 
     assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatusCode());
     assertEquals("AI review provider request failed. Please retry.", exception.getReason());
+    assertEquals(
+        1.0,
+        meterRegistry
+            .counter(
+                "AiReviewChatWS.providerFailures",
+                "model",
+                "gpt-5.4",
+                "locale",
+                "ja-JP",
+                "statusCode",
+                "400")
+            .count(),
+        0.0);
+    assertEquals(
+        1L,
+        meterRegistry
+            .timer(
+                "AiReviewChatWS.requestDuration",
+                "model",
+                "gpt-5.4",
+                "locale",
+                "ja-JP",
+                "result",
+                "provider_failed")
+            .count());
     verify(openAIClient).getResponses(any(), any());
   }
 

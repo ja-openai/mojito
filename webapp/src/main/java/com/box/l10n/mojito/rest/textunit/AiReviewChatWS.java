@@ -302,8 +302,24 @@ public class AiReviewChatWS {
           "AI review request timed out after %d seconds. Please retry.".formatted(timeoutSeconds),
           cause);
     }
-    if (cause instanceof OpenAIClientResponseException) {
-      logger.warn("AI review provider request failed", cause);
+    if (cause instanceof OpenAIClientResponseException openAIClientResponseException) {
+      meterRegistry
+          .counter(
+              "AiReviewChatWS.providerFailures",
+              Tags.of(
+                  "model",
+                  sanitizeTagValue(aiReviewConfigurationProperties.getModelName()),
+                  "locale",
+                  sanitizeTagValue(localeTag),
+                  "statusCode",
+                  Integer.toString(openAIClientResponseException.getStatusCode())))
+          .increment();
+      logger.warn(
+          "AI review provider request failed, statusCode={}, model={}, locale={}",
+          openAIClientResponseException.getStatusCode(),
+          aiReviewConfigurationProperties.getModelName(),
+          localeTag,
+          cause);
       return new ResponseStatusException(
           HttpStatus.BAD_GATEWAY, "AI review provider request failed. Please retry.", cause);
     }
@@ -333,9 +349,11 @@ public class AiReviewChatWS {
           throw toResponseStatusException(e, localeTag, requestTimeout);
         }
         logger.warn(
-            "Retrying AI review provider request after statusCode={}, attempt={}",
+            "Retrying AI review provider request after statusCode={}, attempt={}, model={}, locale={}",
             openAIClientResponseException.getStatusCode(),
-            attempt);
+            attempt,
+            aiReviewConfigurationProperties.getModelName(),
+            localeTag);
       }
     }
     throw toResponseStatusException(lastFailure, localeTag, requestTimeout);

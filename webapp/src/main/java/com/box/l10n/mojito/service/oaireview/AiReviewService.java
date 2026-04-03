@@ -10,6 +10,7 @@ import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.openai.OpenAIClient;
+import com.box.l10n.mojito.openai.OpenAIClient.OpenAIClientResponseException;
 import com.box.l10n.mojito.openai.OpenAIClient.ResponsesRequest;
 import com.box.l10n.mojito.openai.OpenAIClient.ResponsesResponse;
 import com.box.l10n.mojito.openai.OpenAIClientPool;
@@ -189,6 +190,7 @@ public class AiReviewService {
       if (isTimeoutException(e)) {
         incrementCounter(metricName("timeouts"), requestTags);
       }
+      incrementProviderFailureCounter(requestTags, e);
       recordRequestDuration(requestTags, e, requestStopwatch);
       throw e;
     }
@@ -339,11 +341,19 @@ public class AiReviewService {
                                             model,
                                             error);
                                       } else {
+                                        incrementProviderFailureCounter(
+                                            metricTags(
+                                                "noBatch",
+                                                repositoryLocale.getRepository().getName(),
+                                                model,
+                                                locale),
+                                            error);
                                         logger.error(
-                                            "Request for TextUnitDTO {} failed after retries, locale={}, model={}: {}",
+                                            "Request for TextUnitDTO {} failed after retries, locale={}, model={}, statusCode={}: {}",
                                             textUnitDTO.getTmTextUnitId(),
                                             locale,
                                             model,
+                                            getProviderStatusCode(error),
                                             error.getMessage(),
                                             error);
                                       }
@@ -514,7 +524,7 @@ public class AiReviewService {
     if (cause instanceof IOException || cause instanceof TimeoutException) {
       return true;
     }
-    if (cause instanceof OpenAIClient.OpenAIClientResponseException openAIClientResponseException) {
+    if (cause instanceof OpenAIClientResponseException openAIClientResponseException) {
       return isRetryableProviderStatus(openAIClientResponseException.getStatusCode());
     }
     return false;
@@ -872,6 +882,16 @@ public class AiReviewService {
     meterRegistry.counter(metricName, tags).increment();
   }
 
+  private void incrementProviderFailureCounter(Tags requestTags, Throwable throwable) {
+    Integer statusCode = getProviderStatusCode(throwable);
+    if (statusCode == null) {
+      return;
+    }
+
+    incrementCounter(
+        metricName("providerFailures"), requestTags.and("statusCode", statusCode.toString()));
+  }
+
   private Tags metricTags(String mode, String repositoryName, String model, String locale) {
     return Tags.of(
         "mode",
@@ -911,10 +931,18 @@ public class AiReviewService {
       return "timeout";
     }
     Throwable cause = unwrapCompletionException(throwable);
-    if (cause instanceof OpenAIClient.OpenAIClientResponseException) {
+    if (cause instanceof OpenAIClientResponseException) {
       return "provider_failed";
     }
     return "failed";
+  }
+
+  private Integer getProviderStatusCode(Throwable throwable) {
+    Throwable cause = unwrapCompletionException(throwable);
+    if (cause instanceof OpenAIClientResponseException openAIClientResponseException) {
+      return openAIClientResponseException.getStatusCode();
+    }
+    return null;
   }
 
   private Duration resolveRequestTimeout(AiReviewTextUnitVariantInput input) {

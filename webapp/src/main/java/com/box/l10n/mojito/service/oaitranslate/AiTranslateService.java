@@ -539,6 +539,7 @@ public class AiTranslateService {
                                   metricName("requestDuration"),
                                   requestTags.and("result", getRequestResultTag(throwable)))
                               .record(stopwatchForRequest.elapsed());
+                          incrementProviderFailureCounter(requestTags, throwable);
                         } finally {
                           noBatchRequestsInFlight.decrementAndGet();
                         }
@@ -604,12 +605,15 @@ public class AiTranslateService {
                               timeoutSeconds,
                               t);
                         } else {
+                          Integer statusCode = getProviderStatusCode(t);
+                          incrementProviderFailureCounter(requestTags, t);
                           logger.error(
                               errorMessage
-                                  + ", skipping tmTextUnits: {}, locale: {}, timeoutSeconds: {}",
+                                  + ", skipping tmTextUnits: {}, locale: {}, timeoutSeconds: {}, statusCode: {}",
                               failedTmTextUnitIds,
                               locale,
                               timeoutSeconds,
+                              statusCode,
                               t);
                         }
 
@@ -1444,7 +1448,13 @@ public class AiTranslateService {
       return "completed";
     }
 
-    return isTimeoutException(throwable) ? "timeout" : "failed";
+    if (isTimeoutException(throwable)) {
+      return "timeout";
+    }
+    if (getProviderStatusCode(throwable) != null) {
+      return "provider_failed";
+    }
+    return "failed";
   }
 
   private Tags metricTags(
@@ -1470,8 +1480,32 @@ public class AiTranslateService {
   }
 
   private boolean isTimeoutException(Throwable throwable) {
-    Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
+    Throwable cause = unwrapCompletionException(throwable);
     return cause instanceof HttpTimeoutException || cause instanceof TimeoutException;
+  }
+
+  private void incrementProviderFailureCounter(Tags requestTags, Throwable throwable) {
+    Integer statusCode = getProviderStatusCode(throwable);
+    if (statusCode == null) {
+      return;
+    }
+
+    incrementCounter(
+        metricName("providerFailures"), requestTags.and("statusCode", statusCode.toString()));
+  }
+
+  private Integer getProviderStatusCode(Throwable throwable) {
+    Throwable cause = unwrapCompletionException(throwable);
+    if (cause instanceof OpenAIClientResponseException openAIClientResponseException) {
+      return openAIClientResponseException.getStatusCode();
+    }
+    return null;
+  }
+
+  private Throwable unwrapCompletionException(Throwable throwable) {
+    return throwable instanceof CompletionException completionException
+        ? Objects.requireNonNullElse(completionException.getCause(), completionException)
+        : throwable;
   }
 
   private ResponsesUsageTotals sumResponsesUsage(
