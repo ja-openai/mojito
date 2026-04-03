@@ -11,6 +11,7 @@ import com.box.l10n.mojito.service.oaireview.AiReviewConfigurationProperties;
 import com.box.l10n.mojito.service.oaireview.AiReviewService.AiReviewTextUnitVariantInput;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateLocalePromptSuffixService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
+import com.google.common.base.Stopwatch;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.net.http.HttpTimeoutException;
@@ -138,8 +139,15 @@ public class AiReviewChatWS {
             target,
             integrityContextMessage,
             conversationMessages);
-    ResponsesResponse responsesResponse =
-        getResponsesWithRetry(responsesRequest, localeTag, requestTimeout);
+    Stopwatch requestStopwatch = Stopwatch.createStarted();
+    ResponsesResponse responsesResponse;
+    try {
+      responsesResponse = getResponsesWithRetry(responsesRequest, localeTag, requestTimeout);
+    } catch (RuntimeException e) {
+      recordRequestDuration(localeTag, e, requestStopwatch);
+      throw e;
+    }
+    recordRequestDuration(localeTag, null, requestStopwatch);
 
     logger.debug(objectMapper.writeValueAsStringUnchecked(responsesResponse));
 
@@ -348,6 +356,36 @@ public class AiReviewChatWS {
       return "unknown";
     }
     return value;
+  }
+
+  private void recordRequestDuration(
+      String localeTag, RuntimeException failure, Stopwatch requestStopwatch) {
+    meterRegistry
+        .timer(
+            "AiReviewChatWS.requestDuration",
+            Tags.of(
+                "model",
+                sanitizeTagValue(aiReviewConfigurationProperties.getModelName()),
+                "locale",
+                sanitizeTagValue(localeTag),
+                "result",
+                getRequestResultTag(failure)))
+        .record(requestStopwatch.elapsed());
+  }
+
+  private String getRequestResultTag(RuntimeException failure) {
+    if (failure == null) {
+      return "completed";
+    }
+    if (failure instanceof ResponseStatusException responseStatusException) {
+      if (HttpStatus.GATEWAY_TIMEOUT.equals(responseStatusException.getStatusCode())) {
+        return "timeout";
+      }
+      if (HttpStatus.BAD_GATEWAY.equals(responseStatusException.getStatusCode())) {
+        return "provider_failed";
+      }
+    }
+    return "failed";
   }
 
   public record AiReviewChatRequest(

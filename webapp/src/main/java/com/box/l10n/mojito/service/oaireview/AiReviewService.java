@@ -40,6 +40,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.google.common.base.Stopwatch;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.io.IOException;
@@ -177,19 +178,21 @@ public class AiReviewService {
             .apiKey(aiReviewConfigurationProperties.getOpenaiClientToken())
             .build();
 
+    String model = aiReviewConfigurationProperties.getModelName();
+    Tags requestTags = metricTags("single", null, model, input.locale());
+    Stopwatch requestStopwatch = Stopwatch.createStarted();
     ResponsesResponse responsesResponse;
     try {
       responsesResponse =
           openAIClient.getResponses(responsesRequest, resolveRequestTimeout(input)).join();
     } catch (CompletionException e) {
       if (isTimeoutException(e)) {
-        incrementCounter(
-            metricName("timeouts"),
-            metricTags(
-                "single", null, aiReviewConfigurationProperties.getModelName(), input.locale()));
+        incrementCounter(metricName("timeouts"), requestTags);
       }
+      recordRequestDuration(requestTags, e, requestStopwatch);
       throw e;
     }
+    recordRequestDuration(requestTags, null, requestStopwatch);
 
     logger.info(objectMapper.writeValueAsStringUnchecked(responsesResponse));
 
@@ -473,14 +476,24 @@ public class AiReviewService {
         getResponsesRequest(
             AiReviewType.PROMPT_ALL, inputAsJsonString, model, AiReviewTextUnitVariantOutput.class);
 
+    Tags requestTags =
+        metricTags(
+            "noBatch", textUnitDTO.getRepositoryName(), model, textUnitDTO.getTargetLocale());
+
     return Mono.defer(
-            () ->
-                Mono.fromFuture(
-                    openAIClientPool.submit(
-                        openAIClient ->
-                            openAIClient.getResponses(
-                                responsesRequest,
-                                resolveRequestTimeout(aiReviewTextUnitVariantInput)))))
+            () -> {
+              Stopwatch requestStopwatch = Stopwatch.createStarted();
+              return Mono.fromFuture(
+                  openAIClientPool
+                      .submit(
+                          openAIClient ->
+                              openAIClient.getResponses(
+                                  responsesRequest,
+                                  resolveRequestTimeout(aiReviewTextUnitVariantInput)))
+                      .whenComplete(
+                          (responsesResponse, throwable) ->
+                              recordRequestDuration(requestTags, throwable, requestStopwatch)));
+            })
         .handle(
             (responsesResponse, sink) -> {
               String jsonReview = responsesResponse.outputText();
@@ -880,6 +893,28 @@ public class AiReviewService {
       return TAG_UNKNOWN;
     }
     return value;
+  }
+
+  private void recordRequestDuration(Tags requestTags, Throwable throwable, Stopwatch stopwatch) {
+    meterRegistry
+        .timer(
+            metricName("requestDuration"),
+            requestTags.and("result", getRequestResultTag(throwable)))
+        .record(stopwatch.elapsed());
+  }
+
+  private String getRequestResultTag(Throwable throwable) {
+    if (throwable == null) {
+      return "completed";
+    }
+    if (isTimeoutException(throwable)) {
+      return "timeout";
+    }
+    Throwable cause = unwrapCompletionException(throwable);
+    if (cause instanceof OpenAIClient.OpenAIClientResponseException) {
+      return "provider_failed";
+    }
+    return "failed";
   }
 
   private Duration resolveRequestTimeout(AiReviewTextUnitVariantInput input) {

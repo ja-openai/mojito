@@ -116,6 +116,18 @@ public class AiReviewChatWSTest {
     assertEquals("gpt-5.4", requestCaptor.getValue().model());
     assertEquals("Prefer the accepted locale phrasing.", response.message().content());
     assertEquals("Bonjour", response.suggestions().getFirst().content());
+    assertEquals(
+        1L,
+        meterRegistry
+            .timer(
+                "AiReviewChatWS.requestDuration",
+                "model",
+                "gpt-5.4",
+                "locale",
+                "fr-FR",
+                "result",
+                "completed")
+            .count());
     verify(aiTranslateLocalePromptSuffixService).getEffectivePromptSuffix("fr-FR", null);
     verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, "Bonjour");
   }
@@ -219,6 +231,18 @@ public class AiReviewChatWSTest {
             .counter("AiReviewChatWS.timeouts", "model", "gpt-5.4", "locale", "ja-JP")
             .count(),
         0.0);
+    assertEquals(
+        1L,
+        meterRegistry
+            .timer(
+                "AiReviewChatWS.requestDuration",
+                "model",
+                "gpt-5.4",
+                "locale",
+                "ja-JP",
+                "result",
+                "timeout")
+            .count());
   }
 
   @Test
