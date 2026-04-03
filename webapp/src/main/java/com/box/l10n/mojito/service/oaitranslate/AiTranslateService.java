@@ -66,6 +66,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -1457,7 +1458,7 @@ public class AiTranslateService {
 
   private boolean isTimeoutException(Throwable throwable) {
     Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
-    return cause instanceof TimeoutException;
+    return cause instanceof HttpTimeoutException || cause instanceof TimeoutException;
   }
 
   private ResponsesUsageTotals sumResponsesUsage(
