@@ -150,6 +150,26 @@ public class MessageFormatIntegrityCheckerTest {
     checker.check(source, target);
   }
 
+  /**
+   * ICU4J also accepts duplicate selectors in a plural clause, while FormatJS rejects them with
+   * DUPLICATE_PLURAL_ARGUMENT_SELECTOR.
+   *
+   * <p>This documents the current backend gap with neutral strings so we can fix the checker
+   * intentionally.
+   */
+  @Test
+  public void testDuplicatePluralSelectorsAreAccepted()
+      throws MessageFormatIntegrityCheckerException {
+
+    MessageFormatIntegrityChecker checker = new MessageFormatIntegrityChecker();
+    String source =
+        "Handled {itemCount, plural, one {# request} other {# requests}} in {durationMinutes} min";
+    String target =
+        "Processed {itemCount, plural, one {# record} few {# records} other {# records} other {# record}} in {durationMinutes} min";
+
+    checker.check(source, target);
+  }
+
   @Test(expected = IntegrityCheckException.class)
   public void testQuoteCurlyEscaping() throws MessageFormatIntegrityCheckerException {
     // ' with character are rendered by if it is a special character like {, it will escape it ....

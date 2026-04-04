@@ -35,6 +35,13 @@ describe('parseIcuMessage', () => {
   it('throws for invalid ICU messages', () => {
     expect(() => parseIcuMessage('Hello {name')).toThrow();
   });
+
+  it('throws for duplicate plural selectors', () => {
+    const message =
+      'Processed {itemCount, plural, one {# record} few {# records} other {# records} other {# record}} in {durationMinutes} min';
+
+    expect(() => parseIcuMessage(message)).toThrow('DUPLICATE_PLURAL_ARGUMENT_SELECTOR');
+  });
 });
 
 describe('buildIcuExampleValueSets', () => {
