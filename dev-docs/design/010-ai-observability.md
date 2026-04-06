@@ -60,14 +60,35 @@ Use `AiReviewChatWS_requestDuration_seconds_*` for interactive review chat laten
 `AiReviewService_requestDuration_seconds_*` for async/legacy review request latency. Both expose a
 `result` tag with `completed`, `timeout`, `provider_failed`, or `failed`.
 
-Interactive review p95 latency by locale:
+Prometheus currently exposes the AI Review timers as `*_sum`, `*_count`, and `*_max`, not as
+histogram buckets. Use average/max panels instead of `histogram_quantile(...)` unless buckets are
+enabled later.
+
+Interactive review average latency by locale:
 
 ```promql
-histogram_quantile(
-  0.95,
-  sum by (le, locale) (
-    rate(AiReviewChatWS_requestDuration_seconds_bucket[$__rate_interval])
-  )
+sum by (locale) (
+  rate(AiReviewChatWS_requestDuration_seconds_sum[$__rate_interval])
+)
+/
+sum by (locale) (
+  rate(AiReviewChatWS_requestDuration_seconds_count[$__rate_interval])
+)
+```
+
+Interactive review max observed latency by locale:
+
+```promql
+max by (locale) (
+  AiReviewChatWS_requestDuration_seconds_max
+)
+```
+
+Interactive review request count by locale:
+
+```promql
+sum by (locale) (
+  increase(AiReviewChatWS_requestDuration_seconds_count[$__range])
 )
 ```
 
@@ -85,14 +106,31 @@ sum by (statusCode, locale) (
 )
 ```
 
-Async review p95 latency by locale:
+Async review average latency by locale:
 
 ```promql
-histogram_quantile(
-  0.95,
-  sum by (le, locale) (
-    rate(AiReviewService_requestDuration_seconds_bucket{mode="noBatch"}[$__rate_interval])
-  )
+sum by (locale) (
+  rate(AiReviewService_requestDuration_seconds_sum{mode="noBatch"}[$__rate_interval])
+)
+/
+sum by (locale) (
+  rate(AiReviewService_requestDuration_seconds_count{mode="noBatch"}[$__rate_interval])
+)
+```
+
+Async review max observed latency by locale:
+
+```promql
+max by (locale) (
+  AiReviewService_requestDuration_seconds_max{mode="noBatch"}
+)
+```
+
+Async review request count by locale:
+
+```promql
+sum by (locale) (
+  increase(AiReviewService_requestDuration_seconds_count{mode="noBatch"}[$__range])
 )
 ```
 
