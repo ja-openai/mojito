@@ -4,14 +4,20 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import {
   type ApiTextUnit,
-  checkTextUnitIntegrity,
   deleteTextUnitCurrentVariants,
   saveTextUnit,
   type SaveTextUnitRequest,
-  type TextUnitIntegrityCheckResult,
   type TextUnitSearchRequest,
   updateTextUnitCurrentVariantsStatus,
 } from '../../api/text-units';
+import {
+  buildIntegrityCheckErrorReport,
+  checkTextUnitIntegrityWithRetry,
+  INTEGRITY_CHECK_FAILURE_MESSAGE,
+  INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
+  INTEGRITY_CHECK_UNAVAILABLE_TITLE,
+} from '../../utils/integrityCheck';
+import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
 import { formatStatus, mapUiStatusToApi, updateInfiniteData } from './workbench-helpers';
 import type { WorkbenchRow } from './workbench-types';
 
@@ -46,6 +52,7 @@ type Params = {
   apiRows: WorkbenchRow[];
   canSearch: boolean;
   activeSearchRequest: TextUnitSearchRequest | null;
+  canBypassIntegrityCheck: boolean;
 };
 
 type UseWorkbenchEditsResult = {
@@ -88,8 +95,18 @@ type UseWorkbenchEditsResult = {
   confirmBulkAction: () => void;
   dismissBulkAction: () => void;
   saveErrorMessage: string | null;
-  pendingValidationSave: { request: SaveTextUnitMutationVars; body: string } | null;
+  pendingValidationSave: {
+    request: SaveTextUnitMutationVars;
+    title: string;
+    body: string;
+    failureDetail?: string | null;
+    reportMessage?: string | null;
+    reportHtml?: string | null;
+    canBypass?: boolean;
+    canRetry?: boolean;
+  } | null;
   confirmValidationSave: () => void;
+  retryValidationSave: () => void;
   dismissValidationSave: () => void;
   pendingEditingTarget: { rowId: string; translation: string | null } | null;
   confirmDiscardEditing: () => void;
@@ -101,6 +118,7 @@ export function useWorkbenchEdits({
   apiRows,
   canSearch,
   activeSearchRequest,
+  canBypassIntegrityCheck,
 }: Params): UseWorkbenchEditsResult {
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
@@ -113,7 +131,13 @@ export function useWorkbenchEdits({
   const [bulkActionErrorMessage, setBulkActionErrorMessage] = useState<string | null>(null);
   const [pendingValidationSave, setPendingValidationSave] = useState<{
     request: SaveTextUnitMutationVars;
+    title: string;
     body: string;
+    failureDetail?: string | null;
+    reportMessage?: string | null;
+    reportHtml?: string | null;
+    canBypass?: boolean;
+    canRetry?: boolean;
   } | null>(null);
   const [pendingBulkAction, setPendingBulkAction] = useState<PendingBulkAction | null>(null);
   const [statusSavingRowIds, setStatusSavingRowIds] = useState<Set<string>>(() => new Set());
@@ -434,19 +458,86 @@ export function useWorkbenchEdits({
     setPendingEditingTarget(null);
   }, []);
 
+  const saveAfterValidation = useCallback(
+    (request: SaveTextUnitMutationVars) => {
+      setPendingValidationSave(null);
+      setSaveErrorMessage(null);
+
+      void saveTextUnitMutation.mutateAsync(request).then(() => {
+        handleCancelEditing();
+      });
+    },
+    [handleCancelEditing, saveTextUnitMutation],
+  );
+
+  const runIntegrityCheckAndSave = useCallback(
+    (request: SaveTextUnitMutationVars, attemptId: number) => {
+      void checkTextUnitIntegrityWithRetry({
+        tmTextUnitId: request.tmTextUnitId,
+        content: request.target,
+      })
+        .then((result) => {
+          if (saveAttemptRef.current !== attemptId) {
+            return;
+          }
+          if (result?.checkResult === false) {
+            const failureDetail = result.failureDetail?.trim() || null;
+            const report = buildIntegrityCheckErrorReport({
+              url: buildTextUnitDetailUrl(request.tmTextUnitId, request.__targetLocale),
+              suggestedTranslation: request.target.trim() || '(empty translation)',
+              errorMessage: failureDetail ?? 'Unavailable',
+            });
+            setPendingValidationSave({
+              request,
+              title: 'Unable to save translation',
+              body: INTEGRITY_CHECK_FAILURE_MESSAGE,
+              failureDetail,
+              reportMessage: report.reportMessage,
+              reportHtml: report.reportHtml,
+              canBypass: canBypassIntegrityCheck,
+            });
+            return;
+          }
+          saveAfterValidation(request);
+        })
+        .catch(() => {
+          if (saveAttemptRef.current !== attemptId) {
+            return;
+          }
+          setPendingValidationSave({
+            request,
+            title: INTEGRITY_CHECK_UNAVAILABLE_TITLE,
+            body: INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
+            canRetry: true,
+          });
+        });
+    },
+    [canBypassIntegrityCheck, saveAfterValidation],
+  );
+
   const confirmValidationSave = useCallback(() => {
-    if (!pendingValidationSave) {
+    if (
+      !pendingValidationSave ||
+      pendingValidationSave.canRetry ||
+      !pendingValidationSave.canBypass
+    ) {
       return;
     }
 
+    saveAfterValidation(pendingValidationSave.request);
+  }, [pendingValidationSave, saveAfterValidation]);
+
+  const retryValidationSave = useCallback(() => {
+    if (!pendingValidationSave?.canRetry) {
+      return;
+    }
+
+    const attemptId = (saveAttemptRef.current += 1);
     const request = pendingValidationSave.request;
     setPendingValidationSave(null);
     setSaveErrorMessage(null);
-
-    void saveTextUnitMutation.mutateAsync(request).then(() => {
-      handleCancelEditing();
-    });
-  }, [handleCancelEditing, pendingValidationSave, saveTextUnitMutation]);
+    runIntegrityCheckAndSave(request, attemptId);
+  }, [pendingValidationSave, runIntegrityCheckAndSave]);
 
   const dismissValidationSave = useCallback(() => {
     setPendingValidationSave(null);
@@ -491,45 +582,14 @@ export function useWorkbenchEdits({
       __rowId: row.id,
     };
 
-    const formatCheckFailureBody = (result: TextUnitIntegrityCheckResult | null) => {
-      const detail = result?.failureDetail?.trim();
-      if (detail) {
-        return `This translation failed the placeholder/integrity check:\n\n${detail}\n\nDo you want to save it anyway?`;
-      }
-      return 'This translation failed the placeholder/integrity check. Do you want to save it anyway?';
-    };
-
-    void checkTextUnitIntegrity({ tmTextUnitId: row.tmTextUnitId, content: editingValue })
-      .then((result) => {
-        if (saveAttemptRef.current !== attemptId) {
-          return;
-        }
-        if (result?.checkResult === false) {
-          setPendingValidationSave({ request, body: formatCheckFailureBody(result) });
-          return;
-        }
-        void saveTextUnitMutation.mutateAsync(request).then(() => {
-          handleCancelEditing();
-        });
-      })
-      .catch((error: unknown) => {
-        if (saveAttemptRef.current !== attemptId) {
-          return;
-        }
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        setPendingValidationSave({
-          request,
-          body: `Unable to validate placeholders (${message}). Do you want to save it anyway?`,
-        });
-      });
+    runIntegrityCheckAndSave(request, attemptId);
   }, [
     apiRows,
     editingInitialValue,
     editingRowId,
     editingValue,
     ensureBaselineEdit,
-    handleCancelEditing,
-    saveTextUnitMutation,
+    runIntegrityCheckAndSave,
   ]);
 
   const handleChangeStatus = useCallback(
@@ -738,6 +798,7 @@ export function useWorkbenchEdits({
     saveErrorMessage,
     pendingValidationSave,
     confirmValidationSave,
+    retryValidationSave,
     dismissValidationSave,
     pendingEditingTarget,
     confirmDiscardEditing,

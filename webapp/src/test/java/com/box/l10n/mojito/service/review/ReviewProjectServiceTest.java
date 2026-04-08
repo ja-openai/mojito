@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.review;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -362,14 +363,24 @@ public class ReviewProjectServiceTest {
       fail("Expected AccessDeniedException");
     } catch (AccessDeniedException e) {
       assertEquals(
-          "You're not authorized to bypass integrity check, please reach out to your PM or admin",
+          "This translation failed the placeholder/integrity check. "
+              + "Please fix the translation and try saving again.",
           e.getMessage());
     }
 
     verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(eq(321L), eq("Bonjour %"));
     verify(tmService, never())
         .addTMTextUnitCurrentVariantWithResult(
-            any(), anyLong(), anyLong(), anyLong(), anyLong(), any(), any(), any(), any(), any(),
+            any(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            anyBoolean(),
+            any(),
             any());
   }
 

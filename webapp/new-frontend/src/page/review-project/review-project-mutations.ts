@@ -15,17 +15,25 @@ import {
   updateReviewProjectRequest,
   updateReviewProjectStatus,
 } from '../../api/review-projects';
-import { checkTextUnitIntegrity, type TextUnitIntegrityCheckResult } from '../../api/text-units';
+import type { TextUnitIntegrityCheckResult } from '../../api/text-units';
 import { useUser } from '../../components/RequireUser';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import {
   REVIEW_PROJECT_REQUESTS_QUERY_KEY,
   REVIEW_PROJECTS_QUERY_KEY,
 } from '../../hooks/useReviewProjects';
+import {
+  buildIntegrityCheckErrorReport,
+  checkTextUnitIntegrityWithRetry,
+  INTEGRITY_CHECK_FAILURE_MESSAGE,
+  INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
+  INTEGRITY_CHECK_UNAVAILABLE_TITLE,
+} from '../../utils/integrityCheck';
 
 export type SaveDecisionRequest = {
   textUnitId: number;
   tmTextUnitId: number | null;
+  reportUrl?: string | null;
   target: string;
   comment: string | null;
   status: string;
@@ -51,6 +59,11 @@ export type PendingValidationSave = {
   title: string;
   body: string;
   action?: PendingAction;
+  retryAction?: PendingAction;
+  failureDetail?: string | null;
+  reportUrl?: string | null;
+  reportMessage?: string | null;
+  reportHtml?: string | null;
 };
 
 export type ReviewProjectMutationControls = {
@@ -65,8 +78,13 @@ export type ReviewProjectMutationControls = {
   showValidationDialog: boolean;
   validationDialogTitle: string;
   validationDialogBody: string;
+  validationDialogFailureDetail: string | null;
+  validationDialogReportMessage: string | null;
+  validationDialogReportHtml: string | null;
   validationDialogRequiresConfirmation: boolean;
+  validationDialogCanRetry: boolean;
   onConfirmValidationSave: () => void;
+  onRetryValidationSave: () => void;
   onDismissValidationSave: () => void;
   onUseConflictCurrent: () => void;
   onOverwriteConflict: () => void;
@@ -90,8 +108,6 @@ export type ReviewProjectMutationControls = {
 };
 
 type MutationError = Error & { status?: number; data?: ApiReviewProjectTextUnit | null };
-const TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE =
-  "You're not authorized to bypass integrity check, please reach out to your PM or admin";
 
 export function useReviewProjectMutations(
   projectId: number | undefined,
@@ -128,13 +144,31 @@ export function useReviewProjectMutations(
     [projectId, queryClient],
   );
 
-  const formatCheckFailureBody = useCallback((result: TextUnitIntegrityCheckResult | null) => {
-    const detail = result?.failureDetail?.trim();
-    if (detail) {
-      return `This translation failed the placeholder/integrity check:\n\n${detail}\n\nDo you want to save it anyway?`;
-    }
-    return 'This translation failed the placeholder/integrity check. Do you want to save it anyway?';
-  }, []);
+  const buildTranslatorCheckFailure = useCallback(
+    (
+      action: Extract<PendingAction, { kind: 'save-decision' }>,
+      result: TextUnitIntegrityCheckResult | null,
+    ) => {
+      const detail = result?.failureDetail?.trim();
+      const reportUrl = action.request.reportUrl?.trim() || window.location.href;
+      const attemptedTranslation = action.request.target.trim() || '(empty translation)';
+      const errorMessage = detail || 'Unavailable';
+      const report = buildIntegrityCheckErrorReport({
+        url: reportUrl,
+        suggestedTranslation: attemptedTranslation,
+        errorMessage,
+      });
+
+      return {
+        body: INTEGRITY_CHECK_FAILURE_MESSAGE,
+        failureDetail: detail ?? null,
+        reportUrl,
+        reportMessage: report.reportMessage,
+        reportHtml: report.reportHtml,
+      };
+    },
+    [],
+  );
 
   const shouldRetry = useCallback((failureCount: number, error: MutationError) => {
     const status = error?.status;
@@ -346,7 +380,7 @@ export function useReviewProjectMutations(
         !skipIntegrityCheck &&
         action.request.tmTextUnitId != null
       ) {
-        void checkTextUnitIntegrity({
+        void checkTextUnitIntegrityWithRetry({
           tmTextUnitId: action.request.tmTextUnitId,
           content: action.request.target,
         })
@@ -356,30 +390,43 @@ export function useReviewProjectMutations(
             }
             if (result?.checkResult === false) {
               if (user.role === 'ROLE_TRANSLATOR') {
+                const failure = buildTranslatorCheckFailure(action, result);
                 setPendingValidationSave({
-                  title: 'Integrity check override not allowed',
-                  body: TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE,
+                  title: 'Unable to save translation',
+                  body: failure.body,
+                  failureDetail: failure.failureDetail,
+                  reportUrl: failure.reportUrl,
+                  reportMessage: failure.reportMessage,
+                  reportHtml: failure.reportHtml,
                 });
                 return;
               }
+              const detail = result.failureDetail?.trim();
+              const report = buildIntegrityCheckErrorReport({
+                url: action.request.reportUrl?.trim() || window.location.href,
+                suggestedTranslation: action.request.target.trim() || '(empty translation)',
+                errorMessage: detail || 'Unavailable',
+              });
               setPendingValidationSave({
-                title: 'Translation check failed',
-                body: formatCheckFailureBody(result),
+                title: 'Unable to save translation',
+                body: INTEGRITY_CHECK_FAILURE_MESSAGE,
+                failureDetail: detail ?? null,
+                reportMessage: report.reportMessage,
+                reportHtml: report.reportHtml,
                 action,
               });
               return;
             }
             void executeAction(action, attemptId);
           })
-          .catch((error: unknown) => {
+          .catch(() => {
             if (attemptId !== actionAttemptRef.current) {
               return;
             }
-            const message = error instanceof Error ? error.message : 'Unknown error';
             setPendingValidationSave({
-              title: 'Unable to validate placeholders',
-              body: `Unable to validate placeholders (${message}). Do you want to save it anyway?`,
-              action,
+              title: INTEGRITY_CHECK_UNAVAILABLE_TITLE,
+              body: INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
+              retryAction: action,
             });
           });
         return;
@@ -387,7 +434,7 @@ export function useReviewProjectMutations(
 
       void executeAction(action, attemptId);
     },
-    [executeAction, formatCheckFailureBody, projectId, user.role],
+    [buildTranslatorCheckFailure, executeAction, projectId, user.role],
   );
 
   const onRequestSaveDecision = useCallback(
@@ -460,6 +507,13 @@ export function useReviewProjectMutations(
       return;
     }
     performAction(pendingValidationSave.action, true);
+  }, [pendingValidationSave, performAction]);
+
+  const onRetryValidationSave = useCallback(() => {
+    if (!pendingValidationSave?.retryAction) {
+      return;
+    }
+    performAction(pendingValidationSave.retryAction);
   }, [pendingValidationSave, performAction]);
 
   const onDismissValidationSave = useCallback(() => {
@@ -546,8 +600,13 @@ export function useReviewProjectMutations(
       showValidationDialog: pendingValidationSave != null,
       validationDialogTitle: pendingValidationSave?.title ?? '',
       validationDialogBody: pendingValidationSave?.body ?? '',
+      validationDialogFailureDetail: pendingValidationSave?.failureDetail ?? null,
+      validationDialogReportMessage: pendingValidationSave?.reportMessage ?? null,
+      validationDialogReportHtml: pendingValidationSave?.reportHtml ?? null,
       validationDialogRequiresConfirmation: pendingValidationSave?.action != null,
+      validationDialogCanRetry: pendingValidationSave?.retryAction != null,
       onConfirmValidationSave,
+      onRetryValidationSave,
       onDismissValidationSave,
       onUseConflictCurrent,
       onOverwriteConflict,
@@ -573,6 +632,7 @@ export function useReviewProjectMutations(
       onRequestProjectStatus,
       onRequestSaveDecision,
       onUseConflictCurrent,
+      onRetryValidationSave,
       pendingValidationSave,
       projectDueDateMutation.isPending,
       projectRequestMutation.isPending,

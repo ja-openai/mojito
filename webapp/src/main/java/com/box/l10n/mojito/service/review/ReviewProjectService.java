@@ -61,7 +61,8 @@ public class ReviewProjectService {
   private static final long SEARCH_PHASE_SLOW_LOG_THRESHOLD_MS = 250;
   private static final long SEARCH_TOTAL_SLOW_LOG_THRESHOLD_MS = 1_000;
   private static final String TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE =
-      "You're not authorized to bypass integrity check, please reach out to your PM or admin";
+      "This translation failed the placeholder/integrity check. "
+          + "Please fix the translation and try saving again.";
 
   private final ReviewProjectRepository reviewProjectRepository;
   private final ReviewProjectTextUnitRepository reviewProjectTextUnitRepository;

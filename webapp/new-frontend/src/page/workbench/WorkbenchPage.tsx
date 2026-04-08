@@ -281,6 +281,7 @@ export function WorkbenchPage() {
     apiRows: search.rows,
     canSearch: search.canSearch,
     activeSearchRequest: search.activeSearchRequest,
+    canBypassIntegrityCheck: currentUser.role !== 'ROLE_TRANSLATOR',
   });
   const { clearWorksetEdits } = edits;
   const { refetchSearch, resetSearch } = search;
@@ -552,8 +553,15 @@ export function WorkbenchPage() {
         isSaving={edits.isSaving}
         saveErrorMessage={edits.bulkActionErrorMessage ?? edits.saveErrorMessage}
         showValidationDialog={edits.pendingValidationSave !== null}
+        validationDialogTitle={edits.pendingValidationSave?.title ?? ''}
         validationDialogBody={edits.pendingValidationSave?.body ?? ''}
+        validationDialogFailureDetail={edits.pendingValidationSave?.failureDetail ?? null}
+        validationDialogReportMessage={edits.pendingValidationSave?.reportMessage ?? null}
+        validationDialogReportHtml={edits.pendingValidationSave?.reportHtml ?? null}
+        validationDialogCanBypass={edits.pendingValidationSave?.canBypass === true}
+        validationDialogCanRetry={edits.pendingValidationSave?.canRetry === true}
         onConfirmValidationSave={edits.confirmValidationSave}
+        onRetryValidationSave={edits.retryValidationSave}
         onDismissValidationDialog={edits.dismissValidationSave}
         showDiscardDialog={edits.pendingEditingTarget !== null}
         onConfirmDiscardEditing={edits.confirmDiscardEditing}
