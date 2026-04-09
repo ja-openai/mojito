@@ -8,6 +8,7 @@ import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatR
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
+import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
 import {
@@ -86,8 +87,15 @@ type TextUnitDetailPageViewProps = {
   historyInitialDate: string;
   showDeletedHistoryEntry: boolean;
   showValidationDialog: boolean;
+  validationDialogTitle: string;
   validationDialogBody: string;
+  validationDialogFailureDetail: string | null;
+  validationDialogReportMessage: string | null;
+  validationDialogReportHtml: string | null;
+  validationDialogCanBypass: boolean;
+  validationDialogCanRetry: boolean;
   onConfirmValidationSave: () => void;
+  onRetryValidationSave: () => void;
   onDismissValidationDialog: () => void;
   showDeleteDialog: boolean;
   deleteDialogBody: string;
@@ -134,8 +142,15 @@ export function TextUnitDetailPageView({
   historyInitialDate,
   showDeletedHistoryEntry,
   showValidationDialog,
+  validationDialogTitle,
   validationDialogBody,
+  validationDialogFailureDetail,
+  validationDialogReportMessage,
+  validationDialogReportHtml,
+  validationDialogCanBypass,
+  validationDialogCanRetry,
   onConfirmValidationSave,
+  onRetryValidationSave,
   onDismissValidationDialog,
   showDeleteDialog,
   deleteDialogBody,
@@ -379,14 +394,33 @@ export function TextUnitDetailPageView({
         </div>
       </div>
 
-      <ConfirmModal
+      <IntegrityCheckAlertModal
         open={showValidationDialog}
-        title="Translation check failed"
+        title={validationDialogTitle}
         body={validationDialogBody}
-        confirmLabel="Save anyway"
-        cancelLabel="Keep editing"
-        onConfirm={onConfirmValidationSave}
-        onCancel={onDismissValidationDialog}
+        failureDetail={validationDialogFailureDetail}
+        reportMessage={validationDialogReportMessage}
+        reportHtml={validationDialogReportHtml}
+        primaryLabel={
+          validationDialogCanRetry ? 'Try again' : validationDialogCanBypass ? 'Save anyway' : 'OK'
+        }
+        primaryVariant={validationDialogCanBypass ? 'danger' : 'primary'}
+        onPrimary={
+          validationDialogCanRetry
+            ? onRetryValidationSave
+            : validationDialogCanBypass
+              ? onConfirmValidationSave
+              : onDismissValidationDialog
+        }
+        secondaryLabel={
+          validationDialogCanRetry
+            ? 'Close'
+            : validationDialogCanBypass
+              ? 'Keep editing'
+              : undefined
+        }
+        onSecondary={onDismissValidationDialog}
+        onClose={onDismissValidationDialog}
       />
       <ConfirmModal
         open={showDeleteDialog}

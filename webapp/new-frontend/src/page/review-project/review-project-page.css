@@ -708,7 +708,7 @@
 
 .review-project-row__name {
   min-width: 0;
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-regular);
   color: var(--color-text-subtle);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -753,7 +753,7 @@
 
 .review-project-row__string-text--target {
   color: var(--color-text);
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-regular);
 }
 
 .review-project-page__detail-pane {

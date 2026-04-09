@@ -14,6 +14,13 @@ import {
   formatAiReviewError,
   requestAiReview,
 } from '../../api/ai-review';
+import {
+  type ApiGlossaryTerm,
+  type ApiMatchedGlossaryTerm,
+  fetchGlossaries,
+  fetchGlossaryTerms,
+  matchGlossaryTerms,
+} from '../../api/glossaries';
 import type {
   ApiReviewProjectDetail,
   ApiReviewProjectTextUnit,
@@ -36,7 +43,9 @@ import {
   type FilterOption,
   MultiSectionFilterChip,
 } from '../../components/filters/MultiSectionFilterChip';
+import { GlossaryMatchesPanel } from '../../components/GlossaryMatchesPanel';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
+import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { LocalePill } from '../../components/LocalePill';
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
@@ -62,6 +71,15 @@ import {
   localDateTimeInputToIso,
   toDateTimeLocalInputValue,
 } from '../../utils/dateTime';
+import {
+  buildGlossaryContextMessage,
+  filterSelfGlossaryMatches,
+  sortGlossaryMatches,
+} from '../../utils/glossary-matches';
+import {
+  findGlossaryTargetForTextUnit,
+  findGlossaryTermByTmTextUnitId,
+} from '../../utils/glossaryTermLookup';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import { toHtmlLangTag } from '../../utils/localeTag';
 import {
@@ -75,6 +93,7 @@ import {
   toDescriptionAttachmentMarkdown,
   uploadRequestAttachmentFile,
 } from '../../utils/request-attachments';
+import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
 
@@ -115,6 +134,9 @@ type EditKind = 'translation' | 'status' | 'comment';
 
 const SAVING_INDICATOR_MIN_MS = 600;
 const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
+
+const formatGlossaryMetadataValue = (value?: string | null) =>
+  value?.trim() ? value.trim().toLowerCase().replace(/_/g, ' ') : null;
 
 function mapChoiceToApi(choice: StatusChoice): {
   status: string;
@@ -1214,38 +1236,38 @@ export function ReviewProjectPageView({
           onClose={() => setIsScreenshotModalOpen(false)}
         />
       ) : null}
-      {mutations.validationDialogRequiresConfirmation ? (
-        <ConfirmModal
-          open={mutations.showValidationDialog}
-          title={mutations.validationDialogTitle}
-          body={mutations.validationDialogBody}
-          confirmLabel="Save anyway"
-          cancelLabel="Keep editing"
-          onConfirm={mutations.onConfirmValidationSave}
-          onCancel={mutations.onDismissValidationSave}
-        />
-      ) : (
-        <Modal
-          open={mutations.showValidationDialog}
-          size="sm"
-          role="alertdialog"
-          ariaLabel={mutations.validationDialogTitle}
-          onClose={mutations.onDismissValidationSave}
-          closeOnBackdrop
-        >
-          <div className="modal__title">{mutations.validationDialogTitle}</div>
-          <div className="modal__body">{mutations.validationDialogBody}</div>
-          <div className="modal__actions">
-            <button
-              type="button"
-              className="modal__button modal__button--primary"
-              onClick={mutations.onDismissValidationSave}
-            >
-              OK
-            </button>
-          </div>
-        </Modal>
-      )}
+      <IntegrityCheckAlertModal
+        open={mutations.showValidationDialog}
+        title={mutations.validationDialogTitle}
+        body={mutations.validationDialogBody}
+        failureDetail={mutations.validationDialogFailureDetail}
+        reportMessage={mutations.validationDialogReportMessage}
+        reportHtml={mutations.validationDialogReportHtml}
+        primaryLabel={
+          mutations.validationDialogRequiresConfirmation
+            ? 'Save anyway'
+            : mutations.validationDialogCanRetry
+              ? 'Try again'
+              : 'OK'
+        }
+        primaryVariant={mutations.validationDialogRequiresConfirmation ? 'danger' : 'primary'}
+        onPrimary={
+          mutations.validationDialogRequiresConfirmation
+            ? mutations.onConfirmValidationSave
+            : mutations.validationDialogCanRetry
+              ? mutations.onRetryValidationSave
+              : mutations.onDismissValidationSave
+        }
+        secondaryLabel={
+          mutations.validationDialogRequiresConfirmation
+            ? 'Keep editing'
+            : mutations.validationDialogCanRetry
+              ? 'Close'
+              : undefined
+        }
+        onSecondary={mutations.onDismissValidationSave}
+        onClose={mutations.onDismissValidationSave}
+      />
       <ConfirmModal
         open={pendingSelection != null}
         title="Discard changes?"
@@ -1385,6 +1407,7 @@ function DetailPane({
 
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
   const [isIcuCollapsed, setIsIcuCollapsed] = useState(true);
+  const [isGlossaryCollapsed, setIsGlossaryCollapsed] = useState(false);
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
@@ -1400,6 +1423,11 @@ function DetailPane({
   const savingIndicatorTimeoutRef = useRef<number | null>(null);
   const workbenchTextUnitId = textUnit.tmTextUnit?.id ?? null;
   const repositoryId = textUnit.tmTextUnit?.asset?.repository?.id ?? null;
+  const repositoryName = textUnit.tmTextUnit?.asset?.repository?.name ?? null;
+  const assetPath =
+    textUnit.tmTextUnit?.asset?.assetPath != null
+      ? String(textUnit.tmTextUnit.asset.assetPath)
+      : null;
   const textUnitName = textUnit.tmTextUnit?.name ?? `Text unit ${textUnit.id}`;
   const source = textUnit.tmTextUnit?.content ?? null;
   const sourceComment = textUnit.tmTextUnit?.comment ?? null;
@@ -1431,6 +1459,83 @@ function DetailPane({
   const decisionVariant = decision?.decisionTmTextUnitVariant ?? null;
   const decisionVariantId = decisionVariant?.id ?? null;
   const translationLang = toHtmlLangTag(localeTag);
+  const glossaryTargetsQuery = useQuery({
+    queryKey: ['review-project-glossary-targets'],
+    enabled: Boolean(assetPath) && (repositoryId != null || Boolean(repositoryName?.trim())),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: () => fetchGlossaries({ limit: 200 }),
+  });
+  const glossaryTermTarget = useMemo(
+    () =>
+      findGlossaryTargetForTextUnit(glossaryTargetsQuery.data?.glossaries ?? [], {
+        repositoryId,
+        repositoryName,
+        assetPath,
+      }),
+    [assetPath, glossaryTargetsQuery.data?.glossaries, repositoryId, repositoryName],
+  );
+  const glossaryTermQuery = useQuery({
+    queryKey: [
+      'review-project-glossary-term',
+      glossaryTermTarget?.glossaryId ?? null,
+      workbenchTextUnitId,
+      source,
+      localeTag,
+    ],
+    enabled: glossaryTermTarget != null && workbenchTextUnitId != null && Boolean(source?.trim()),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (glossaryTermTarget == null || workbenchTextUnitId == null || !source?.trim()) {
+        return null as ApiGlossaryTerm | null;
+      }
+      const response = await fetchGlossaryTerms(glossaryTermTarget.glossaryId, {
+        search: source,
+        localeTags: localeTag ? [localeTag] : [],
+        limit: 25,
+      });
+      return findGlossaryTermByTmTextUnitId(response.terms, workbenchTextUnitId);
+    },
+  });
+  const glossaryTerm = glossaryTermQuery.data ?? null;
+  const glossaryTermHref = glossaryTermTarget
+    ? `/glossaries/${glossaryTermTarget.glossaryId}${
+        glossaryTerm ? `?termId=${glossaryTerm.tmTextUnitId}` : ''
+      }`
+    : null;
+  const glossaryTermComment =
+    glossaryTerm?.definition?.trim() || glossaryTerm?.sourceComment?.trim() || sourceComment;
+  const glossaryPartOfSpeech = formatGlossaryMetadataValue(glossaryTerm?.partOfSpeech);
+  const glossaryTermType = formatGlossaryMetadataValue(glossaryTerm?.termType);
+  const glossaryMatchesQuery = useQuery({
+    queryKey: [
+      'review-project-glossary-matches',
+      repositoryId,
+      localeTag,
+      source,
+      workbenchTextUnitId,
+    ],
+    enabled: repositoryId != null && Boolean(localeTag) && Boolean(source?.trim()),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (repositoryId == null || !localeTag || !source?.trim()) {
+        return [] as ApiMatchedGlossaryTerm[];
+      }
+
+      const response = await matchGlossaryTerms({
+        repositoryId,
+        localeTag,
+        sourceText: source,
+        excludeTmTextUnitId: workbenchTextUnitId,
+      });
+
+      return sortGlossaryMatches(
+        filterSelfGlossaryMatches(response.matchedTerms, workbenchTextUnitId),
+      );
+    },
+  });
 
   const historyQuery = useQuery({
     queryKey: ['review-project-text-unit-history', workbenchTextUnitId, localeTag],
@@ -1561,10 +1666,11 @@ function DetailPane({
     };
     const initialWarnings = buildTranslationWarnings(source ?? '', snapshot.target);
     const warningContextMessage = buildAiWarningContextMessage(initialWarnings);
+    const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
     void (async () => {
       try {
-        const contextMessages = [warningContextMessage].filter(
+        const contextMessages = [warningContextMessage, glossaryContextMessage].filter(
           (message): message is AiReviewMessage => message != null,
         );
         const response = await requestAiReview({
@@ -1613,7 +1719,15 @@ function DetailPane({
     return () => {
       cancelled = true;
     };
-  }, [aiContextKey, localeTag, snapshot.target, source, sourceComment, workbenchTextUnitId]);
+  }, [
+    aiContextKey,
+    glossaryMatchesQuery.data,
+    localeTag,
+    snapshot.target,
+    source,
+    sourceComment,
+    workbenchTextUnitId,
+  ]);
 
   const draftStatusApi = mapChoiceToApi(draftStatusChoice);
   const snapshotStatusApi = mapChoiceToApi(snapshot.statusChoice);
@@ -1672,6 +1786,10 @@ function DetailPane({
       mutations.onRequestSaveDecision({
         textUnitId: textUnit.id,
         tmTextUnitId: workbenchTextUnitId,
+        reportUrl:
+          workbenchTextUnitId != null
+            ? buildTextUnitDetailUrl(workbenchTextUnitId, localeTag)
+            : window.location.href,
         target: nextTarget,
         comment: commentOverride ?? draftCommentNormalized,
         status: nextStatusApi.status,
@@ -1689,6 +1807,7 @@ function DetailPane({
       mutations,
       snapshot.expectedCurrentVariantId,
       textUnit.id,
+      localeTag,
       workbenchTextUnitId,
     ],
   );
@@ -1788,7 +1907,8 @@ function DetailPane({
         const warningContextMessage = buildAiWarningContextMessage(
           buildTranslationWarnings(source ?? '', draftTarget),
         );
-        const contextMessages = [warningContextMessage].filter(
+        const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
+        const contextMessages = [warningContextMessage, glossaryContextMessage].filter(
           (message): message is AiReviewMessage => message != null,
         );
 
@@ -1830,6 +1950,7 @@ function DetailPane({
     aiInput,
     aiMessages,
     draftTarget,
+    glossaryMatchesQuery.data,
     isAiResponding,
     localeTag,
     source,
@@ -1854,11 +1975,12 @@ function DetailPane({
     const warningContextMessage = buildAiWarningContextMessage(
       buildTranslationWarnings(source ?? '', retryTarget),
     );
+    const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
     setIsAiResponding(true);
     void (async () => {
       try {
-        const contextMessages = [warningContextMessage].filter(
+        const contextMessages = [warningContextMessage, glossaryContextMessage].filter(
           (message): message is AiReviewMessage => message != null,
         );
         const response = await requestAiReview({
@@ -1899,6 +2021,7 @@ function DetailPane({
   }, [
     aiMessages,
     draftTarget,
+    glossaryMatchesQuery.data,
     isAiResponding,
     localeTag,
     snapshot.target,
@@ -2582,7 +2705,14 @@ function DetailPane({
 
         <div className="review-project-detail__side">
           <div className="review-project-detail__field review-project-detail__field--source">
-            <div className="review-project-detail__label">Source</div>
+            <div className="review-project-detail__label">
+              <span>Source</span>
+              {glossaryTermHref ? (
+                <Link className="review-project-detail__source-affordance" to={glossaryTermHref}>
+                  <Pill>Glossary term</Pill>
+                </Link>
+              ) : null}
+            </div>
             <div className="review-project-detail__value review-project-detail__value--source">
               {source || '—'}
             </div>
@@ -2590,7 +2720,48 @@ function DetailPane({
 
           <div className="review-project-detail__field">
             <div className="review-project-detail__label">Comment</div>
-            <div className="review-project-detail__value">{sourceComment ?? '—'}</div>
+            <div className="review-project-detail__value">{glossaryTermComment ?? '—'}</div>
+          </div>
+
+          {glossaryTermTarget && glossaryPartOfSpeech ? (
+            <div className="review-project-detail__field">
+              <div className="review-project-detail__label">POS</div>
+              <div className="review-project-detail__value">{glossaryPartOfSpeech}</div>
+            </div>
+          ) : null}
+
+          {glossaryTermTarget && glossaryTermType ? (
+            <div className="review-project-detail__field">
+              <div className="review-project-detail__label">Type</div>
+              <div className="review-project-detail__value">{glossaryTermType}</div>
+            </div>
+          ) : null}
+
+          <div className="review-project-detail__field">
+            <button
+              type="button"
+              className="review-project-detail__history-toggle"
+              onClick={() => setIsGlossaryCollapsed((current) => !current)}
+              aria-expanded={!isGlossaryCollapsed}
+            >
+              <span className="review-project-detail__label">Glossary</span>
+              <span className="review-project-detail__baseline-toggle review-project-detail__label-actions--fade">
+                {isGlossaryCollapsed ? 'Show' : 'Hide'}
+              </span>
+            </button>
+            {!isGlossaryCollapsed ? (
+              <GlossaryMatchesPanel
+                matches={glossaryMatchesQuery.data ?? []}
+                isLoading={glossaryMatchesQuery.isLoading}
+                errorMessage={
+                  glossaryMatchesQuery.error instanceof Error
+                    ? glossaryMatchesQuery.error.message
+                    : null
+                }
+                currentTarget={draftTarget}
+                showHeader={false}
+              />
+            ) : null}
           </div>
 
           <div className="review-project-detail__field">

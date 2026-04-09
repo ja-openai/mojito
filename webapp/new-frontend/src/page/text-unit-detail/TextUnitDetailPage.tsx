@@ -11,18 +11,24 @@ import {
 import {
   type ApiGitBlameWithUsage,
   type ApiTextUnitHistoryItem,
-  checkTextUnitIntegrity,
   deleteTextUnitCurrentVariant,
   fetchGitBlameWithUsages,
   fetchTextUnitHistory,
   saveTextUnit,
   type SaveTextUnitRequest,
   searchTextUnits,
-  type TextUnitIntegrityCheckResult,
   type TextUnitSearchRequest,
 } from '../../api/text-units';
 import { useUser } from '../../components/RequireUser';
+import {
+  buildIntegrityCheckErrorReport,
+  checkTextUnitIntegrityWithRetry,
+  INTEGRITY_CHECK_FAILURE_MESSAGE,
+  INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
+  INTEGRITY_CHECK_UNAVAILABLE_TITLE,
+} from '../../utils/integrityCheck';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
+import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
 import { formatStatus, mapUiStatusToApi } from '../workbench/workbench-helpers';
 import {
   type TextUnitDetailAiMessage,
@@ -73,7 +79,13 @@ export function TextUnitDetailPage() {
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [pendingValidationSave, setPendingValidationSave] = useState<{
     request: SaveTextUnitRequest;
+    title: string;
     body: string;
+    failureDetail?: string | null;
+    reportMessage?: string | null;
+    reportHtml?: string | null;
+    canBypass?: boolean;
+    canRetry?: boolean;
   } | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -507,6 +519,49 @@ export function TextUnitDetailPage() {
     [activeTextUnit, draftStatus],
   );
 
+  const saveRequestWithIntegrityCheck = useCallback(
+    async (request: SaveTextUnitRequest) => {
+      setSaveErrorMessage(null);
+
+      try {
+        const integrityResult = await checkTextUnitIntegrityWithRetry({
+          tmTextUnitId: request.tmTextUnitId,
+          content: request.target,
+        });
+
+        if (integrityResult?.checkResult === false) {
+          const failureDetail = integrityResult.failureDetail?.trim() || null;
+          const report = buildIntegrityCheckErrorReport({
+            url: buildTextUnitDetailUrl(request.tmTextUnitId, localeForEditing),
+            suggestedTranslation: request.target.trim() || '(empty translation)',
+            errorMessage: failureDetail ?? 'Unavailable',
+          });
+          setPendingValidationSave({
+            request,
+            title: 'Unable to save translation',
+            body: INTEGRITY_CHECK_FAILURE_MESSAGE,
+            failureDetail,
+            reportMessage: report.reportMessage,
+            reportHtml: report.reportHtml,
+            canBypass: currentUser.role !== 'ROLE_TRANSLATOR',
+          });
+          return;
+        }
+      } catch {
+        setPendingValidationSave({
+          request,
+          title: INTEGRITY_CHECK_UNAVAILABLE_TITLE,
+          body: INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
+          canRetry: true,
+        });
+        return;
+      }
+
+      await saveMutation.mutateAsync(request);
+    },
+    [currentUser.role, localeForEditing, saveMutation],
+  );
+
   const saveDraft = useCallback(
     async (targetOverride?: string) => {
       if (!canEdit) {
@@ -525,32 +580,7 @@ export function TextUnitDetailPage() {
         return;
       }
 
-      setSaveErrorMessage(null);
-
-      let integrityResult: TextUnitIntegrityCheckResult;
-      try {
-        integrityResult = await checkTextUnitIntegrity({
-          tmTextUnitId: request.tmTextUnitId,
-          content: request.target,
-        });
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        setPendingValidationSave({
-          request,
-          body: `Unable to validate placeholders (${message}). Do you want to save it anyway?`,
-        });
-        return;
-      }
-
-      if (integrityResult?.checkResult === false) {
-        setPendingValidationSave({
-          request,
-          body: formatCheckFailureBody(integrityResult),
-        });
-        return;
-      }
-
-      await saveMutation.mutateAsync(request);
+      await saveRequestWithIntegrityCheck(request);
     },
     [
       baselineStatus,
@@ -559,7 +589,7 @@ export function TextUnitDetailPage() {
       canEdit,
       draftStatus,
       draftTarget,
-      saveMutation,
+      saveRequestWithIntegrityCheck,
     ],
   );
 
@@ -613,7 +643,11 @@ export function TextUnitDetailPage() {
   }, [deleteMutation.isPending]);
 
   const handleConfirmValidationSave = useCallback(() => {
-    if (!pendingValidationSave) {
+    if (
+      !pendingValidationSave ||
+      pendingValidationSave.canRetry ||
+      !pendingValidationSave.canBypass
+    ) {
       return;
     }
 
@@ -622,6 +656,17 @@ export function TextUnitDetailPage() {
     setSaveErrorMessage(null);
     void saveMutation.mutateAsync(request);
   }, [pendingValidationSave, saveMutation]);
+
+  const handleRetryValidationSave = useCallback(() => {
+    if (!pendingValidationSave?.canRetry) {
+      return;
+    }
+
+    const request = pendingValidationSave.request;
+    setPendingValidationSave(null);
+    setSaveErrorMessage(null);
+    void saveRequestWithIntegrityCheck(request);
+  }, [pendingValidationSave, saveRequestWithIntegrityCheck]);
 
   const handleDismissValidationDialog = useCallback(() => {
     setPendingValidationSave(null);
@@ -834,8 +879,15 @@ export function TextUnitDetailPage() {
       historyInitialDate={formatDateTime(textUnitQuery.data?.tmTextUnitCreatedDate)}
       showDeletedHistoryEntry={showDeletedHistoryEntry}
       showValidationDialog={pendingValidationSave !== null}
+      validationDialogTitle={pendingValidationSave?.title ?? ''}
       validationDialogBody={pendingValidationSave?.body ?? ''}
+      validationDialogFailureDetail={pendingValidationSave?.failureDetail ?? null}
+      validationDialogReportMessage={pendingValidationSave?.reportMessage ?? null}
+      validationDialogReportHtml={pendingValidationSave?.reportHtml ?? null}
+      validationDialogCanBypass={pendingValidationSave?.canBypass === true}
+      validationDialogCanRetry={pendingValidationSave?.canRetry === true}
       onConfirmValidationSave={handleConfirmValidationSave}
+      onRetryValidationSave={handleRetryValidationSave}
       onDismissValidationDialog={handleDismissValidationDialog}
       showDeleteDialog={showDeleteDialog}
       deleteDialogBody={
@@ -861,14 +913,6 @@ const normalizeEditorStatus = (
     return value;
   }
   return 'To translate';
-};
-
-const formatCheckFailureBody = (result: TextUnitIntegrityCheckResult | null) => {
-  const detail = result?.failureDetail?.trim();
-  if (detail) {
-    return `This translation failed the placeholder/integrity check:\n\n${detail}\n\nDo you want to save it anyway?`;
-  }
-  return 'This translation failed the placeholder/integrity check. Do you want to save it anyway?';
 };
 
 const safeDateValue = (value?: string | null) => {

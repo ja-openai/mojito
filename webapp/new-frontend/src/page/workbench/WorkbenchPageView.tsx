@@ -6,6 +6,7 @@ import { type RefObject, useState } from 'react';
 import type { ApiRepository } from '../../api/repositories';
 import type { TextUnitSearchRequest } from '../../api/text-units';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { Modal } from '../../components/Modal';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import type { RepositorySelectionOption } from '../../utils/repositorySelection';
@@ -56,8 +57,15 @@ type Props = {
   isSaving: boolean;
   saveErrorMessage: string | null;
   showValidationDialog: boolean;
+  validationDialogTitle: string;
   validationDialogBody: string;
+  validationDialogFailureDetail: string | null;
+  validationDialogReportMessage: string | null;
+  validationDialogReportHtml: string | null;
+  validationDialogCanBypass: boolean;
+  validationDialogCanRetry: boolean;
   onConfirmValidationSave: () => void;
+  onRetryValidationSave: () => void;
   onDismissValidationDialog: () => void;
   showDiscardDialog: boolean;
   onConfirmDiscardEditing: () => void;
@@ -210,8 +218,15 @@ export function WorkbenchPageView({
   isSaving,
   saveErrorMessage,
   showValidationDialog,
+  validationDialogTitle,
   validationDialogBody,
+  validationDialogFailureDetail,
+  validationDialogReportMessage,
+  validationDialogReportHtml,
+  validationDialogCanBypass,
+  validationDialogCanRetry,
   onConfirmValidationSave,
+  onRetryValidationSave,
   onDismissValidationDialog,
   showDiscardDialog,
   onConfirmDiscardEditing,
@@ -454,14 +469,33 @@ export function WorkbenchPageView({
         onConfirm={onConfirmBulkAction}
         onCancel={onDismissBulkAction}
       />
-      <ConfirmModal
+      <IntegrityCheckAlertModal
         open={showValidationDialog}
-        title="Translation check failed"
+        title={validationDialogTitle}
         body={validationDialogBody}
-        confirmLabel="Save anyway"
-        cancelLabel="Keep editing"
-        onConfirm={onConfirmValidationSave}
-        onCancel={onDismissValidationDialog}
+        failureDetail={validationDialogFailureDetail}
+        reportMessage={validationDialogReportMessage}
+        reportHtml={validationDialogReportHtml}
+        primaryLabel={
+          validationDialogCanRetry ? 'Try again' : validationDialogCanBypass ? 'Save anyway' : 'OK'
+        }
+        primaryVariant={validationDialogCanBypass ? 'danger' : 'primary'}
+        onPrimary={
+          validationDialogCanRetry
+            ? onRetryValidationSave
+            : validationDialogCanBypass
+              ? onConfirmValidationSave
+              : onDismissValidationDialog
+        }
+        secondaryLabel={
+          validationDialogCanRetry
+            ? 'Close'
+            : validationDialogCanBypass
+              ? 'Keep editing'
+              : undefined
+        }
+        onSecondary={onDismissValidationDialog}
+        onClose={onDismissValidationDialog}
       />
       <ConfirmModal
         open={showDiscardDialog}
