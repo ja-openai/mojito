@@ -38,6 +38,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class AiReviewChatWS {
 
   static final int MAX_RETRYABLE_PROVIDER_ATTEMPTS = 3;
+  static final String DEFAULT_REVIEW_PROMPT = "Review the translation and suggest improvements.";
 
   static Logger logger = LoggerFactory.getLogger(AiReviewChatWS.class);
 
@@ -110,18 +111,12 @@ public class AiReviewChatWS {
       if (message == null || !hasText(message.content())) {
         continue;
       }
-      conversationMessages.add(message);
+      if ("user".equals(normalizeChatRole(message.role()))) {
+        conversationMessages.add(message);
+      }
     }
     if (conversationMessages.isEmpty()) {
-      throw new IllegalArgumentException("messages must include at least one non-empty message");
-    }
-
-    boolean hasUserMessage =
-        conversationMessages.stream()
-            .anyMatch(message -> "user".equals(normalizeChatRole(message.role())));
-    if (!hasUserMessage) {
-      conversationMessages.add(
-          0, new AiReviewChatMessage("user", "Review the translation and suggest improvements."));
+      conversationMessages.add(new AiReviewChatMessage("user", DEFAULT_REVIEW_PROMPT));
     }
 
     for (AiReviewChatMessage message : conversationMessages) {

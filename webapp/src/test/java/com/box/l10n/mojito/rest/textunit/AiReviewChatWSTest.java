@@ -329,6 +329,36 @@ public class AiReviewChatWSTest {
     verify(openAIClient, times(2)).getResponses(any(), any());
   }
 
+  @Test
+  public void chatIgnoresAssistantOnlyHistoryAndFallsBackToDefaultPrompt() {
+    when(aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix("ja-JP", null))
+        .thenReturn(null);
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(successResponse("Retry succeeded.")));
+
+    aiReviewChatWS.chat(
+        new AiReviewChatWS.AiReviewChatRequest(
+            "Save",
+            null,
+            "ja-JP",
+            null,
+            null,
+            List.of(new AiReviewChatWS.AiReviewChatMessage("assistant", "Previous AI reply."))));
+
+    ArgumentCaptor<OpenAIClient.ResponsesRequest> requestCaptor =
+        ArgumentCaptor.forClass(OpenAIClient.ResponsesRequest.class);
+    verify(openAIClient).getResponses(requestCaptor.capture(), any());
+
+    List<OpenAIClient.ResponsesRequest.InputMessage> input = requestCaptor.getValue().input();
+    assertEquals(2, input.size());
+    assertEquals("user", input.get(0).role());
+    assertEquals("user", input.get(1).role());
+    assertEquals(
+        AiReviewChatWS.DEFAULT_REVIEW_PROMPT,
+        ((OpenAIClient.ResponsesRequest.InputMessage.Text) input.get(1).content().getFirst())
+            .text());
+  }
+
   private OpenAIClient.ResponsesResponse.Output responseOutput(String text) {
     return new OpenAIClient.ResponsesResponse.Output(
         "msg-1",
