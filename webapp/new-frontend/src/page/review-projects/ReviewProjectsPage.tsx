@@ -518,8 +518,12 @@ export function ReviewProjectsPage() {
   const requestSearchParams = useMemo<ReviewProjectsSearchRequest>(
     () => ({
       ...baseSearchParams,
+      statuses:
+        requestStatusFilter === 'all'
+          ? undefined
+          : [requestStatusFilter === 'open' ? 'OPEN' : 'CLOSED'],
     }),
-    [baseSearchParams],
+    [baseSearchParams, requestStatusFilter],
   );
 
   useEffect(() => {
