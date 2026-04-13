@@ -7,8 +7,8 @@ import type {
 } from '../api/review-projects';
 import { searchReviewProjectRequests, searchReviewProjects } from '../api/review-projects';
 
-const REVIEW_PROJECTS_QUERY_KEY = ['review-projects'];
-const REVIEW_PROJECT_REQUESTS_QUERY_KEY = ['review-project-requests'];
+const REVIEW_PROJECTS_QUERY_KEY = 'review-projects';
+const REVIEW_PROJECT_REQUESTS_QUERY_KEY = 'review-project-requests';
 
 type UseReviewProjectsOptions = {
   enabled?: boolean;

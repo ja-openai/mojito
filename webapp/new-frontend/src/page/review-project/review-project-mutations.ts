@@ -180,8 +180,8 @@ export function useReviewProjectMutations(
         [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
         updatedProject,
       );
-      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECTS_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECT_REQUESTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
       setErrorMessage(null);
     },
     onError: (error) => {
@@ -214,8 +214,8 @@ export function useReviewProjectMutations(
         [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
         updatedProject,
       );
-      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECTS_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECT_REQUESTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
       setErrorMessage(null);
     },
     onError: (error) => {
@@ -247,8 +247,8 @@ export function useReviewProjectMutations(
         [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
         updatedProject,
       );
-      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECTS_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECT_REQUESTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
       setErrorMessage(null);
     },
     onError: (error) => {
@@ -271,8 +271,8 @@ export function useReviewProjectMutations(
         [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
         updatedProject,
       );
-      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECTS_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: REVIEW_PROJECT_REQUESTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
       setErrorMessage(null);
     },
     onError: (error) => {
@@ -292,6 +292,7 @@ export function useReviewProjectMutations(
         }
         updateTextUnitInCache(updated);
         void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+        void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
         void queryClient.invalidateQueries({
           queryKey: ['review-project-text-unit-history'],
         });

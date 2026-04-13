@@ -254,6 +254,8 @@ public class WebSecurityConfig {
                 .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/review-project-requests/search")
                 .authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/review-project-requests/search-hybrid")
+                .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/*/status")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/*/assignment")

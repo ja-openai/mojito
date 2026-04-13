@@ -5,7 +5,10 @@ import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
+import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.EntityWithIdNotFoundException;
+import com.box.l10n.mojito.service.blobstorage.Retention;
+import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.review.CreateReviewProjectRequestCommand;
 import com.box.l10n.mojito.service.review.GetProjectDetailView;
@@ -15,9 +18,19 @@ import com.box.l10n.mojito.service.review.ReviewProjectTextUnitDetail;
 import com.box.l10n.mojito.service.review.SearchReviewProjectRequestsView;
 import com.box.l10n.mojito.service.review.SearchReviewProjectsCriteria;
 import com.box.l10n.mojito.service.review.SearchReviewProjectsView;
+import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,9 +47,24 @@ import org.springframework.web.server.ResponseStatusException;
 public class ReviewProjectWS {
 
   private final ReviewProjectService reviewProjectService;
+  private final StructuredBlobStorage structuredBlobStorage;
+  private final ObjectMapper objectMapper;
+  private final SearchReviewProjectRequestsHybridProperties
+      searchReviewProjectRequestsHybridProperties;
+  private final AsyncTaskExecutor searchReviewProjectRequestsHybridExecutor;
 
-  public ReviewProjectWS(ReviewProjectService reviewProjectService) {
+  public ReviewProjectWS(
+      ReviewProjectService reviewProjectService,
+      StructuredBlobStorage structuredBlobStorage,
+      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
+      SearchReviewProjectRequestsHybridProperties searchReviewProjectRequestsHybridProperties,
+      @Qualifier("searchReviewProjectRequestsHybridExecutor")
+          AsyncTaskExecutor searchReviewProjectRequestsHybridExecutor) {
     this.reviewProjectService = reviewProjectService;
+    this.structuredBlobStorage = structuredBlobStorage;
+    this.objectMapper = objectMapper;
+    this.searchReviewProjectRequestsHybridProperties = searchReviewProjectRequestsHybridProperties;
+    this.searchReviewProjectRequestsHybridExecutor = searchReviewProjectRequestsHybridExecutor;
   }
 
   @PostMapping("/review-projects/search")
@@ -51,13 +79,98 @@ public class ReviewProjectWS {
   @PostMapping("/review-project-requests/search")
   public SearchReviewProjectRequestsResponse searchReviewProjectRequests(
       @RequestBody SearchReviewProjectsRequest request) {
-    SearchReviewProjectRequestsView view =
-        reviewProjectService.searchReviewProjectRequests(toCriteria(request));
-    List<SearchReviewProjectRequestsResponse.ReviewProjectRequestGroup> requestGroups =
-        view.reviewProjectRequests().stream()
-            .map(this::toSearchReviewProjectRequestsResponse)
-            .toList();
-    return new SearchReviewProjectRequestsResponse(requestGroups);
+    return searchReviewProjectRequestsResponse(request);
+  }
+
+  @PostMapping("/review-project-requests/search-hybrid")
+  public ResponseEntity<SearchReviewProjectRequestsHybridResponse>
+      searchReviewProjectRequestsHybrid(@RequestBody SearchReviewProjectsRequest request) {
+    final UUID requestId = UUID.randomUUID();
+    final AtomicBoolean forceAsyncPersistence = new AtomicBoolean(false);
+    final long searchStartedAtNanos = System.nanoTime();
+
+    Future<SearchReviewProjectRequestsResponse> searchFuture =
+        searchReviewProjectRequestsHybridExecutor.submit(
+            () -> {
+              SearchReviewProjectRequestsResponse results;
+              try {
+                results = searchReviewProjectRequestsResponse(request);
+              } catch (Exception e) {
+                if (forceAsyncPersistence.get()) {
+                  persistSearchReviewProjectRequestsHybridResponse(
+                      requestId,
+                      new SearchReviewProjectRequestsHybridResponse(
+                          null,
+                          null,
+                          new SearchReviewProjectRequestsHybridResponse.HybridSearchError(
+                              e.getClass().getName(),
+                              e.getMessage(),
+                              Throwables.getStackTraceAsString(e),
+                              isExpectedHybridSearchError(e))));
+                }
+                throw e;
+              }
+
+              long searchCompletedAtNanos = System.nanoTime();
+              if (forceAsyncPersistence.get()
+                  || searchCompletedAtNanos - searchStartedAtNanos
+                      >= searchReviewProjectRequestsHybridProperties
+                          .convertToAsyncAfter()
+                          .toNanos()) {
+                persistSearchReviewProjectRequestsHybridResponse(
+                    requestId, new SearchReviewProjectRequestsHybridResponse(results, null, null));
+              }
+              return results;
+            });
+
+    try {
+      SearchReviewProjectRequestsResponse results =
+          searchFuture.get(
+              searchReviewProjectRequestsHybridProperties.convertToAsyncAfter().toNanos(),
+              TimeUnit.NANOSECONDS);
+      return ResponseEntity.ok(new SearchReviewProjectRequestsHybridResponse(results, null, null));
+    } catch (TimeoutException e) {
+      forceAsyncPersistence.set(true);
+      SearchReviewProjectRequestsHybridResponse response =
+          new SearchReviewProjectRequestsHybridResponse(
+              null, buildSearchReviewProjectRequestsPollingToken(requestId), null);
+      return ResponseEntity.accepted().body(response);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof ResponseStatusException responseStatusException) {
+        throw responseStatusException;
+      }
+      throw new UncheckedExecutionException(e);
+    } catch (InterruptedException e) {
+      searchFuture.cancel(true);
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+  }
+
+  @GetMapping("/review-project-requests/search-hybrid/results/{requestId}")
+  public ResponseEntity<SearchReviewProjectRequestsHybridResponse>
+      getSearchReviewProjectRequestsHybridResults(@PathVariable UUID requestId) {
+    Optional<String> storedResult =
+        structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.REVIEW_PROJECT_REQUEST_SEARCH_ASYNC, requestId.toString());
+
+    if (storedResult.isEmpty()) {
+      SearchReviewProjectRequestsHybridResponse response =
+          new SearchReviewProjectRequestsHybridResponse(
+              null, buildSearchReviewProjectRequestsPollingToken(requestId), null);
+      return ResponseEntity.accepted().body(response);
+    }
+
+    SearchReviewProjectRequestsHybridResponse response =
+        objectMapper.readValueUnchecked(
+            storedResult.get(), SearchReviewProjectRequestsHybridResponse.class);
+    if (response.error() == null) {
+      return ResponseEntity.ok(response);
+    }
+    if (response.error().expected()) {
+      return ResponseEntity.badRequest().body(response);
+    }
+    return ResponseEntity.internalServerError().body(response);
   }
 
   @PostMapping("/review-project-requests")
@@ -301,6 +414,16 @@ public class ReviewProjectWS {
         List<SearchReviewProjectsResponse.ReviewProject> reviewProjects) {}
   }
 
+  public record SearchReviewProjectRequestsHybridResponse(
+      SearchReviewProjectRequestsResponse results,
+      PollingToken pollingToken,
+      HybridSearchError error) {
+    public record PollingToken(UUID requestId, long recommendedPollingDurationMillis) {}
+
+    public record HybridSearchError(
+        String type, String message, String stackTrace, boolean expected) {}
+  }
+
   public record GetReviewProjectResponse(
       Long id,
       ReviewProjectType type,
@@ -415,6 +538,40 @@ public class ReviewProjectWS {
         view.acceptedCount(),
         view.dueDate(),
         view.reviewProjects().stream().map(this::toSearchReviewProjectsResponse).toList());
+  }
+
+  private SearchReviewProjectRequestsResponse searchReviewProjectRequestsResponse(
+      SearchReviewProjectsRequest request) {
+    SearchReviewProjectRequestsView view =
+        reviewProjectService.searchReviewProjectRequests(toCriteria(request));
+    List<SearchReviewProjectRequestsResponse.ReviewProjectRequestGroup> requestGroups =
+        view.reviewProjectRequests().stream()
+            .map(this::toSearchReviewProjectRequestsResponse)
+            .toList();
+    return new SearchReviewProjectRequestsResponse(requestGroups);
+  }
+
+  private void persistSearchReviewProjectRequestsHybridResponse(
+      UUID requestId, SearchReviewProjectRequestsHybridResponse response) {
+    String payloadJson = objectMapper.writeValueAsStringUnchecked(response);
+    structuredBlobStorage.put(
+        StructuredBlobStorage.Prefix.REVIEW_PROJECT_REQUEST_SEARCH_ASYNC,
+        requestId.toString(),
+        payloadJson,
+        Retention.MIN_1_DAY);
+  }
+
+  private SearchReviewProjectRequestsHybridResponse.PollingToken
+      buildSearchReviewProjectRequestsPollingToken(UUID requestId) {
+    return new SearchReviewProjectRequestsHybridResponse.PollingToken(
+        requestId,
+        searchReviewProjectRequestsHybridProperties.recommendedPollingDuration().toMillis());
+  }
+
+  private boolean isExpectedHybridSearchError(Exception e) {
+    return e instanceof IllegalArgumentException
+        || e instanceof ResponseStatusException responseStatusException
+            && responseStatusException.getStatusCode().is4xxClientError();
   }
 
   private CreateReviewProjectRequestCommand toCreateReviewProjectRequestCommand(

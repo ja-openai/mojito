@@ -5,7 +5,7 @@ import type {
   ReviewProjectCreateResponse,
 } from '../api/review-projects';
 import { createReviewProjectRequest } from '../api/review-projects';
-import { REVIEW_PROJECTS_QUERY_KEY } from './useReviewProjects';
+import { REVIEW_PROJECT_REQUESTS_QUERY_KEY, REVIEW_PROJECTS_QUERY_KEY } from './useReviewProjects';
 
 export function useCreateReviewProject() {
   const queryClient = useQueryClient();
@@ -13,6 +13,7 @@ export function useCreateReviewProject() {
     mutationFn: (payload) => createReviewProjectRequest(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
     },
   });
 }

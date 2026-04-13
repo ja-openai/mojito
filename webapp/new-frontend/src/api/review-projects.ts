@@ -157,6 +157,17 @@ export type SearchReviewProjectRequestsResponse = {
   requestGroups: ApiReviewProjectRequestGroupSummary[];
 };
 
+type SearchReviewProjectRequestsHybridResponse = {
+  results?: SearchReviewProjectRequestsResponse | null;
+  pollingToken?: {
+    requestId: string;
+    recommendedPollingDurationMillis?: number;
+  } | null;
+  error?: {
+    message?: string | null;
+  } | null;
+};
+
 export type ApiReviewProjectSummary = {
   id: number;
   createdDate?: string | null;
@@ -265,6 +276,9 @@ type PollableTaskStatusResponse = {
 const REVIEW_PROJECT_CREATE_POLL_INTERVAL_MS = 500;
 const REVIEW_PROJECT_CREATE_MAX_POLL_INTERVAL_MS = 8_000;
 const REVIEW_PROJECT_CREATE_TIMEOUT_MS = 60 * 60 * 1000;
+const REVIEW_PROJECT_REQUEST_SEARCH_POLL_INTERVAL_MS = 1000;
+const REVIEW_PROJECT_REQUEST_SEARCH_MAX_POLL_INTERVAL_MS = 8_000;
+const REVIEW_PROJECT_REQUEST_SEARCH_TIMEOUT_MS = 120_000;
 
 export const searchReviewProjects = async (
   params: ReviewProjectsSearchRequest,
@@ -287,7 +301,7 @@ export const searchReviewProjects = async (
 export const searchReviewProjectRequests = async (
   params: ReviewProjectsSearchRequest,
 ): Promise<SearchReviewProjectRequestsResponse> => {
-  const response = await fetch('/api/review-project-requests/search', {
+  const response = await fetch('/api/review-project-requests/search-hybrid', {
     method: 'POST',
     credentials: 'include',
     headers: jsonHeaders,
@@ -299,7 +313,99 @@ export const searchReviewProjectRequests = async (
     throw new Error(message || 'Failed to load review project requests');
   }
 
-  return (await response.json()) as SearchReviewProjectRequestsResponse;
+  const hybridResponse = (await response.json()) as SearchReviewProjectRequestsHybridResponse;
+  if (hybridResponse.results) {
+    return hybridResponse.results;
+  }
+  if (hybridResponse.error) {
+    throw new Error(hybridResponse.error.message || 'Failed to load review project requests');
+  }
+  if (hybridResponse.pollingToken) {
+    return pollForReviewProjectRequestSearchResults(hybridResponse.pollingToken);
+  }
+
+  throw new Error('Unexpected review project request search response');
+};
+
+async function pollForReviewProjectRequestSearchResults(pollingToken: {
+  requestId: string;
+  recommendedPollingDurationMillis?: number;
+}): Promise<SearchReviewProjectRequestsResponse> {
+  const timeoutMs = getReviewProjectRequestSearchPollingTimeoutMs(
+    pollingToken.recommendedPollingDurationMillis,
+  );
+
+  const results = await poll<SearchReviewProjectRequestsResponse | null>(
+    async () => {
+      const response = await fetch(
+        `/api/review-project-requests/search-hybrid/results/${pollingToken.requestId}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        },
+      );
+      const text = await response.text();
+      const hybridResponse = parseSearchReviewProjectRequestsHybridResponse(text);
+
+      if (!response.ok) {
+        if (hybridResponse?.error) {
+          throw createNonTransientError(
+            hybridResponse.error.message || 'Failed to load review project requests',
+          );
+        }
+        const error: Error & { status?: number } = new Error(
+          text || `Request failed with status ${response.status}`,
+        );
+        error.status = response.status;
+        throw error;
+      }
+
+      if (hybridResponse?.results) {
+        return hybridResponse.results;
+      }
+      if (hybridResponse?.error) {
+        throw createNonTransientError(
+          hybridResponse.error.message || 'Failed to load review project requests',
+        );
+      }
+      return null;
+    },
+    {
+      intervalMs: REVIEW_PROJECT_REQUEST_SEARCH_POLL_INTERVAL_MS,
+      maxIntervalMs: REVIEW_PROJECT_REQUEST_SEARCH_MAX_POLL_INTERVAL_MS,
+      timeoutMs,
+      timeoutMessage: 'Timed out while loading review project requests',
+      isTransientError: isTransientHttpError,
+      shouldStop: (response) => response !== null,
+    },
+  );
+
+  return results ?? { requestGroups: [] };
+}
+
+const getReviewProjectRequestSearchPollingTimeoutMs = (recommended?: number) => {
+  if (!Number.isFinite(recommended) || typeof recommended !== 'number' || recommended <= 0) {
+    return REVIEW_PROJECT_REQUEST_SEARCH_TIMEOUT_MS;
+  }
+  return recommended;
+};
+
+const parseSearchReviewProjectRequestsHybridResponse = (text: string) => {
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text) as SearchReviewProjectRequestsHybridResponse;
+  } catch {
+    return null;
+  }
+};
+
+const createNonTransientError = (message: string) => {
+  const error: Error & { isTransient?: boolean } = new Error(message);
+  error.isTransient = false;
+  return error;
 };
 
 export const fetchReviewProjects = async (): Promise<ApiReviewProjectSummary[]> => {
