@@ -201,6 +201,7 @@ export type ApiReviewProjectRequestGroupSummary = {
 export type ReviewProjectsSearchRequest = {
   localeTags?: string[];
   statuses?: ApiReviewProjectStatus[];
+  projectStatuses?: ApiReviewProjectStatus[];
   types?: ApiReviewProjectType[];
   assignedScope?: ApiReviewProjectAssignedScope;
   createdAfter?: string | null;

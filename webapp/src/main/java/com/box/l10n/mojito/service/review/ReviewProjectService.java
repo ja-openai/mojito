@@ -433,6 +433,7 @@ public class ReviewProjectService {
     ProjectAccessContext accessContext = createProjectAccessContext();
 
     List<ReviewProjectStatus> requestedStatuses = getRequestModeStatuses(request.statuses());
+    List<ReviewProjectStatus> projectStatuses = getRequestModeStatuses(request.projectStatuses());
     boolean includeOpen = requestedStatuses.contains(ReviewProjectStatus.OPEN);
     boolean includeClosed = requestedStatuses.contains(ReviewProjectStatus.CLOSED);
 
@@ -442,7 +443,7 @@ public class ReviewProjectService {
     }
 
     List<SearchReviewProjectDetail> projectDetails =
-        getProjectDetailsByRequestIds(requestIds, request, accessContext);
+        getProjectDetailsByRequestIds(requestIds, projectStatuses, request, accessContext);
     Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
     List<SearchReviewProjectsView.ReviewProject> reviewProjects =
         toReviewProjectViews(projectDetails, acceptedCountByProjectId);
@@ -651,6 +652,7 @@ public class ReviewProjectService {
 
   private List<SearchReviewProjectDetail> getProjectDetailsByRequestIds(
       List<Long> requestIds,
+      List<ReviewProjectStatus> projectStatuses,
       SearchReviewProjectsCriteria request,
       ProjectAccessContext accessContext) {
     if (requestIds == null || requestIds.isEmpty()) {
@@ -675,6 +677,9 @@ public class ReviewProjectService {
 
     List<Predicate> predicates = new ArrayList<>();
     predicates.add(requestJoin.get(ReviewProjectRequest_.id).in(requestIds));
+    if (projectStatuses != null && !projectStatuses.isEmpty()) {
+      predicates.add(root.get(ReviewProject_.status).in(projectStatuses));
+    }
     predicates.add(
         buildScopePredicate(
             cb,

@@ -522,8 +522,10 @@ export function ReviewProjectsPage() {
         requestStatusFilter === 'all'
           ? undefined
           : [requestStatusFilter === 'open' ? 'OPEN' : 'CLOSED'],
+      projectStatuses:
+        requestProjectStatusFilter === 'all' ? undefined : [requestProjectStatusFilter],
     }),
-    [baseSearchParams, requestStatusFilter],
+    [baseSearchParams, requestProjectStatusFilter, requestStatusFilter],
   );
 
   useEffect(() => {

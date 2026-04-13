@@ -10,6 +10,7 @@ import java.util.List;
  */
 public record SearchReviewProjectsCriteria(
     List<ReviewProjectStatus> statuses,
+    List<ReviewProjectStatus> projectStatuses,
     List<ReviewProjectType> types,
     List<String> localeTags,
     AssignedScope assignedScope,

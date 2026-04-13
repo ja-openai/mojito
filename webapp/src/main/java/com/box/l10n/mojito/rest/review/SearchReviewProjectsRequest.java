@@ -8,6 +8,7 @@ import java.util.List;
 public record SearchReviewProjectsRequest(
     List<String> localeTags,
     List<ReviewProjectStatus> statuses,
+    List<ReviewProjectStatus> projectStatuses,
     List<ReviewProjectType> types,
     AssignedScope assignedScope,
     ZonedDateTime createdAfter,

@@ -444,6 +444,7 @@ public class ReviewProjectWS {
     }
     return new SearchReviewProjectsCriteria(
         request.statuses(),
+        request.projectStatuses(),
         request.types(),
         request.localeTags(),
         Optional.ofNullable(request.assignedScope())
