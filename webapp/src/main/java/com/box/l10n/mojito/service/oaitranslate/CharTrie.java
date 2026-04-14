@@ -31,7 +31,15 @@ public class CharTrie<T extends CharTrie.Term> {
 
   public Set<T> findTerms(String text) {
     Set<T> terms = new HashSet<>();
+    for (Match<T> match : findMatches(text)) {
+      terms.add(match.term());
+    }
+    return terms;
+  }
 
+  public List<Match<T>> findMatches(String text) {
+    List<Match<T>> matches = new ArrayList<>();
+    String originalText = text;
     if (!caseSensitive) {
       text = text.toLowerCase();
     }
@@ -42,16 +50,21 @@ public class CharTrie<T extends CharTrie.Term> {
         cur = cur.child().get(text.charAt(j));
         if (cur == null) break;
         if (!cur.terms().isEmpty()) {
-          terms.addAll(cur.terms());
+          String matchedText = originalText.substring(i, j + 1);
+          for (T term : cur.terms()) {
+            matches.add(new Match<>(term, i, j + 1, matchedText));
+          }
         }
       }
     }
-    return terms;
+    return matches;
   }
 
   public interface Term {
     String text();
   }
+
+  public record Match<T>(T term, int startIndex, int endIndex, String matchedText) {}
 
   private record Node<T>(Character c, List<T> terms, Map<Character, Node<T>> child) {}
 }
