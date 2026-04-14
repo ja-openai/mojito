@@ -15,7 +15,7 @@ public record SearchReviewProjectsView(List<ReviewProject> reviewProject) {
       String closeReason,
       Integer textUnitCount,
       Integer wordCount,
-      Long acceptedCount,
+      Long decidedCount,
       ReviewProjectType type,
       ReviewProjectStatus status,
       String createdByUsername,

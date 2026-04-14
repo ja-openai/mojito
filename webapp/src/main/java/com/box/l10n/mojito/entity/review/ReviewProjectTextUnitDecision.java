@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.LastModifiedBy;
 
@@ -57,6 +58,10 @@ public class ReviewProjectTextUnitDecision extends AuditableEntity {
   @Enumerated(EnumType.STRING)
   @Column(name = "decision_state", nullable = false, length = 16)
   private DecisionState decisionState = DecisionState.PENDING;
+
+  @Version
+  @Column(name = "version")
+  private Long version = 0L;
 
   @CreatedBy
   @ManyToOne(fetch = FetchType.LAZY)
@@ -127,6 +132,14 @@ public class ReviewProjectTextUnitDecision extends AuditableEntity {
 
   public void setDecisionState(DecisionState decisionState) {
     this.decisionState = decisionState;
+  }
+
+  public Long getVersion() {
+    return version;
+  }
+
+  public void setVersion(Long version) {
+    this.version = version;
   }
 
   public User getCreatedByUser() {

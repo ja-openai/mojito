@@ -1,7 +1,6 @@
 package com.box.l10n.mojito.service.review;
 
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision;
-import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,19 +26,4 @@ public interface ReviewProjectTextUnitDecisionRepository
       where d.reviewProjectTextUnit.reviewProject.id in :projectIds
       """)
   int deleteByReviewProjectIds(@Param("projectIds") List<Long> projectIds);
-
-  @Query(
-      """
-      select new com.box.l10n.mojito.service.review.ReviewProjectAcceptedCountRow(
-        rptu.reviewProject.id,
-        count(rptud.id)
-      )
-      from ReviewProjectTextUnitDecision rptud
-      join rptud.reviewProjectTextUnit rptu
-      where rptu.reviewProject.id in :projectIds and rptud.decisionState = :decisionState
-      group by rptu.reviewProject.id
-      """)
-  List<ReviewProjectAcceptedCountRow> countAcceptedByProjectIdsAndDecisionState(
-      @Param("projectIds") List<Long> projectIds,
-      @Param("decisionState") DecisionState decisionState);
 }

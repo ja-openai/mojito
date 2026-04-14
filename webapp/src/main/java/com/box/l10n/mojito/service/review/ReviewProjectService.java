@@ -440,13 +440,8 @@ public class ReviewProjectService {
         SEARCH_MODE_PROJECTS, "getProjectDetails", phaseStopwatch, projectDetails.size());
 
     phaseStopwatch = Stopwatch.createStarted();
-    Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
-    recordSearchPhase(
-        SEARCH_MODE_PROJECTS, "getAcceptedCounts", phaseStopwatch, acceptedCountByProjectId.size());
-
-    phaseStopwatch = Stopwatch.createStarted();
     List<SearchReviewProjectsView.ReviewProject> reviewProjects =
-        toReviewProjectViews(projectDetails, acceptedCountByProjectId);
+        toReviewProjectViews(projectDetails);
     recordSearchPhase(SEARCH_MODE_PROJECTS, "buildResponse", phaseStopwatch, reviewProjects.size());
     recordSearchPhase(SEARCH_MODE_PROJECTS, "total", totalStopwatch, reviewProjects.size());
 
@@ -484,13 +479,8 @@ public class ReviewProjectService {
         SEARCH_MODE_REQUESTS, "getProjectDetails", phaseStopwatch, projectDetails.size());
 
     phaseStopwatch = Stopwatch.createStarted();
-    Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
-    recordSearchPhase(
-        SEARCH_MODE_REQUESTS, "getAcceptedCounts", phaseStopwatch, acceptedCountByProjectId.size());
-
-    phaseStopwatch = Stopwatch.createStarted();
     List<SearchReviewProjectsView.ReviewProject> reviewProjects =
-        toReviewProjectViews(projectDetails, acceptedCountByProjectId);
+        toReviewProjectViews(projectDetails);
     recordSearchPhase(
         SEARCH_MODE_REQUESTS, "buildProjectViews", phaseStopwatch, reviewProjects.size());
 
@@ -547,9 +537,9 @@ public class ReviewProjectService {
           sortedProjects.stream()
               .mapToInt(project -> Optional.ofNullable(project.wordCount()).orElse(0))
               .sum();
-      long acceptedCount =
+      long decidedCount =
           sortedProjects.stream()
-              .mapToLong(project -> Optional.ofNullable(project.acceptedCount()).orElse(0L))
+              .mapToLong(project -> Optional.ofNullable(project.decidedCount()).orElse(0L))
               .sum();
       ZonedDateTime dueDate =
           sortedProjects.stream()
@@ -571,7 +561,7 @@ public class ReviewProjectService {
               closedProjectCount,
               textUnitCount,
               wordCount,
-              acceptedCount,
+              decidedCount,
               dueDate,
               sortedProjects));
     }
@@ -664,6 +654,7 @@ public class ReviewProjectService {
                 root.get(ReviewProject_.closeReason),
                 root.get(ReviewProject_.textUnitCount),
                 root.get(ReviewProject_.wordCount),
+                root.get(ReviewProject_.decidedCount),
                 root.get(ReviewProject_.type),
                 root.get(ReviewProject_.status),
                 createdByUserJoin.get(User_.username),
@@ -781,6 +772,7 @@ public class ReviewProjectService {
                 root.get(ReviewProject_.closeReason),
                 root.get(ReviewProject_.textUnitCount),
                 root.get(ReviewProject_.wordCount),
+                root.get(ReviewProject_.decidedCount),
                 root.get(ReviewProject_.type),
                 root.get(ReviewProject_.status),
                 createdByUserJoin.get(User_.username),
@@ -801,25 +793,8 @@ public class ReviewProjectService {
     return entityManager.createQuery(cq).getResultList();
   }
 
-  private Map<Long, Long> getAcceptedCountByProjectId(
-      List<SearchReviewProjectDetail> projectDetails) {
-    Map<Long, Long> acceptedCountByProjectId = new HashMap<>();
-    if (projectDetails == null || projectDetails.isEmpty()) {
-      return acceptedCountByProjectId;
-    }
-
-    List<Long> projectIds = projectDetails.stream().map(SearchReviewProjectDetail::id).toList();
-    List<ReviewProjectAcceptedCountRow> acceptedCounts =
-        reviewProjectTextUnitDecisionRepository.countAcceptedByProjectIdsAndDecisionState(
-            projectIds, DecisionState.DECIDED);
-    for (ReviewProjectAcceptedCountRow acceptedCount : acceptedCounts) {
-      acceptedCountByProjectId.put(acceptedCount.projectId(), acceptedCount.acceptedCount());
-    }
-    return acceptedCountByProjectId;
-  }
-
   private List<SearchReviewProjectsView.ReviewProject> toReviewProjectViews(
-      List<SearchReviewProjectDetail> projectDetails, Map<Long, Long> acceptedCountByProjectId) {
+      List<SearchReviewProjectDetail> projectDetails) {
     if (projectDetails == null || projectDetails.isEmpty()) {
       return List.of();
     }
@@ -827,7 +802,6 @@ public class ReviewProjectService {
     return projectDetails.stream()
         .map(
             detail -> {
-              long acceptedCount = acceptedCountByProjectId.getOrDefault(detail.id(), 0L);
               return new SearchReviewProjectsView.ReviewProject(
                   detail.id(),
                   detail.createdDate(),
@@ -836,7 +810,7 @@ public class ReviewProjectService {
                   detail.closeReason(),
                   detail.textUnitCount(),
                   detail.wordCount(),
-                  acceptedCount,
+                  Optional.ofNullable(detail.decidedCount()).orElse(0L),
                   detail.type(),
                   detail.status(),
                   detail.createdByUsername(),
@@ -1510,6 +1484,15 @@ public class ReviewProjectService {
   }
 
   @Transactional
+  public int adminRecomputeRequestDecidedCounts(Long requestId) {
+    requireAdmin();
+    if (requestId == null) {
+      throw new IllegalArgumentException("requestId is required");
+    }
+    return reviewProjectRepository.recomputeDecidedCountsByRequestId(requestId);
+  }
+
+  @Transactional
   public int adminBatchDeleteProjects(List<Long> projectIds) {
     requireAdmin();
     if (CollectionUtils.isEmpty(projectIds)) {
@@ -1611,6 +1594,10 @@ public class ReviewProjectService {
     Optional<ReviewProjectTextUnitDecision> existingDecision =
         reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(
             reviewProjectTextUnitId);
+    boolean wasDecided =
+        existingDecision
+            .map(decision -> decision.getDecisionState() == DecisionState.DECIDED)
+            .orElse(false);
     if (!hasTarget && decisionState == DecisionState.PENDING && existingDecision.isEmpty()) {
       return fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId);
     }
@@ -1656,8 +1643,20 @@ public class ReviewProjectService {
     }
 
     decision.setDecisionState(decisionState);
-    reviewProjectTextUnitDecisionRepository.save(decision);
+    reviewProjectTextUnitDecisionRepository.saveAndFlush(decision);
+    updateProjectDecidedCount(project.getId(), wasDecided, decisionState == DecisionState.DECIDED);
     return fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId);
+  }
+
+  private void updateProjectDecidedCount(Long projectId, boolean wasDecided, boolean isDecided) {
+    if (wasDecided == isDecided) {
+      return;
+    }
+    if (isDecided) {
+      reviewProjectRepository.incrementDecidedCount(projectId);
+    } else {
+      reviewProjectRepository.decrementDecidedCount(projectId);
+    }
   }
 
   private ReviewProjectTextUnitDetail fetchReviewProjectTextUnitDetail(

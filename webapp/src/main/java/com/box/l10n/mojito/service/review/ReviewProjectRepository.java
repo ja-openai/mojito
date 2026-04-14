@@ -75,6 +75,48 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
+      value =
+          """
+          update review_project rp
+          left join (
+            select rptu.review_project_id, count(rptud.id) decided_count
+            from review_project_text_unit rptu
+            join review_project_text_unit_decision rptud
+              on rptud.review_project_text_unit_id = rptu.id
+              and rptud.decision_state = 'DECIDED'
+            group by rptu.review_project_id
+          ) decided_counts
+            on decided_counts.review_project_id = rp.id
+          set rp.decided_count = coalesce(decided_counts.decided_count, 0)
+          where rp.review_project_request_id = :requestId
+          """,
+      nativeQuery = true)
+  int recomputeDecidedCountsByRequestId(@Param("requestId") Long requestId);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      """
+      update ReviewProject rp
+      set rp.decidedCount = rp.decidedCount + 1
+      where rp.id = :projectId
+      """)
+  int incrementDecidedCount(@Param("projectId") Long projectId);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      """
+      update ReviewProject rp
+      set rp.decidedCount =
+        case
+          when rp.decidedCount > 0 then rp.decidedCount - 1
+          else 0
+        end
+      where rp.id = :projectId
+      """)
+  int decrementDecidedCount(@Param("projectId") Long projectId);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
       """
       delete from ReviewProject rp
       where rp.id in :projectIds

@@ -13,6 +13,7 @@ import type {
 import {
   adminBatchDeleteReviewProjects,
   adminBatchUpdateReviewProjectStatus,
+  adminRecomputeReviewProjectRequestDecidedCounts,
   REVIEW_PROJECT_STATUS_LABELS,
   REVIEW_PROJECT_STATUSES,
   REVIEW_PROJECT_TYPE_LABELS,
@@ -169,7 +170,7 @@ const toFiniteNumberOrNull = (value: unknown) => {
 };
 
 const toReviewProjectRow = (project: ApiReviewProjectSummary): ReviewProjectRow => {
-  const acceptedCountRaw = Number(project.acceptedCount ?? 0);
+  const decidedCountRaw = Number(project.decidedCount ?? 0);
   const textUnitCountRaw = toFiniteNumberOrNull(project.textUnitCount);
   const wordCountRaw = toFiniteNumberOrNull(project.wordCount);
 
@@ -181,7 +182,7 @@ const toReviewProjectRow = (project: ApiReviewProjectSummary): ReviewProjectRow 
     type: project.type,
     status: project.status,
     localeTag: project.locale?.bcp47Tag ?? null,
-    acceptedCount: Number.isFinite(acceptedCountRaw) ? acceptedCountRaw : 0,
+    decidedCount: Number.isFinite(decidedCountRaw) ? decidedCountRaw : 0,
     textUnitCount: textUnitCountRaw,
     wordCount: wordCountRaw,
     dueDate: project.dueDate ?? null,
@@ -207,9 +208,9 @@ const toReviewProjectRequestGroupRow = (
   const wordCount =
     toFiniteNumberOrNull(requestGroup.wordCount) ??
     projects.reduce((sum, project) => sum + (project.wordCount ?? 0), 0);
-  const acceptedCountRaw =
-    toFiniteNumberOrNull(requestGroup.acceptedCount) ??
-    projects.reduce((sum, project) => sum + project.acceptedCount, 0);
+  const decidedCountRaw =
+    toFiniteNumberOrNull(requestGroup.decidedCount) ??
+    projects.reduce((sum, project) => sum + project.decidedCount, 0);
   const localeTags = Array.from(
     new Set(
       projects.map((project) => project.localeTag).filter((tag): tag is string => Boolean(tag)),
@@ -238,7 +239,7 @@ const toReviewProjectRequestGroupRow = (
     openProjectCount: Math.max(0, toFiniteNumberOrNull(requestGroup.openProjectCount) ?? 0),
     closedProjectCount: Math.max(0, toFiniteNumberOrNull(requestGroup.closedProjectCount) ?? 0),
     localeTags,
-    acceptedCount: Math.max(0, acceptedCountRaw ?? 0),
+    decidedCount: Math.max(0, decidedCountRaw ?? 0),
     textUnitCount: Math.max(0, textUnitCount ?? 0),
     wordCount: Math.max(0, wordCount ?? 0),
     dueDate: requestGroup.dueDate ?? null,
@@ -681,7 +682,7 @@ export function ReviewProjectsPage() {
             .map(toReviewProjectRow)
             .filter((project) =>
               matchesCompletionFilter(
-                project.acceptedCount,
+                project.decidedCount,
                 project.textUnitCount ?? 0,
                 listCompletionFilter,
               ),
@@ -766,7 +767,25 @@ export function ReviewProjectsPage() {
     },
   });
 
-  const isBatchSaving = batchStatusMutation.isPending || batchDeleteMutation.isPending;
+  const recomputeRequestStatsMutation = useMutation({
+    mutationFn: async ({ requestId }: { requestId: number }) =>
+      adminRecomputeReviewProjectRequestDecidedCounts(requestId),
+    onSuccess: () => {
+      setAdminErrorMessage(null);
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
+      void refetchList();
+      void refetchRequestGroups();
+    },
+    onError: (error) => {
+      setAdminErrorMessage(error instanceof Error ? error.message : 'Failed to recompute stats');
+    },
+  });
+
+  const isBatchSaving =
+    batchStatusMutation.isPending ||
+    batchDeleteMutation.isPending ||
+    recomputeRequestStatsMutation.isPending;
 
   const handleRetry = useCallback(() => {
     if (isRequestMode) {
@@ -858,6 +877,16 @@ export function ReviewProjectsPage() {
     setDeleteConfirmOpen(false);
   }, []);
 
+  const handleRecomputeRequestStats = useCallback(
+    (requestId: number) => {
+      if (!isAdmin || isBatchSaving) {
+        return;
+      }
+      recomputeRequestStatsMutation.mutate({ requestId });
+    },
+    [isAdmin, isBatchSaving, recomputeRequestStatsMutation],
+  );
+
   const adminControls: ReviewProjectsAdminControls | undefined = isAdmin
     ? {
         enabled: true,
@@ -868,6 +897,10 @@ export function ReviewProjectsPage() {
         onClearSelection: clearProjectSelection,
         onBatchStatus: requestBatchStatus,
         onBatchDelete: requestBatchDelete,
+        onRecomputeRequestStats: handleRecomputeRequestStats,
+        recomputingRequestId: recomputeRequestStatsMutation.isPending
+          ? (recomputeRequestStatsMutation.variables?.requestId ?? null)
+          : null,
         isSaving: isBatchSaving,
         errorMessage: adminErrorMessage,
       }

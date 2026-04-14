@@ -12,6 +12,7 @@ public record SearchReviewProjectDetail(
     String closeReason,
     Integer textUnitCount,
     Integer wordCount,
+    Long decidedCount,
     ReviewProjectType type,
     ReviewProjectStatus status,
     String createdByUsername,

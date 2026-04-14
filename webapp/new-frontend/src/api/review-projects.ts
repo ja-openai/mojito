@@ -177,7 +177,7 @@ export type ApiReviewProjectSummary = {
   closeReason?: string | null;
   textUnitCount?: number | null;
   wordCount?: number | null;
-  acceptedCount?: number | null;
+  decidedCount?: number | null;
   type: ApiReviewProjectType;
   status: ApiReviewProjectStatus;
   locale?: { id: number | null; bcp47Tag?: string | null } | null;
@@ -204,7 +204,7 @@ export type ApiReviewProjectRequestGroupSummary = {
   closedProjectCount?: number | null;
   textUnitCount?: number | null;
   wordCount?: number | null;
-  acceptedCount?: number | null;
+  decidedCount?: number | null;
   dueDate?: string | null;
   reviewProjects?: ApiReviewProjectSummary[] | null;
 };
@@ -661,6 +661,26 @@ export const adminBatchDeleteReviewProjects = async (
   if (!response.ok) {
     const message = await response.text().catch(() => '');
     throw new Error(message || 'Failed to delete review projects');
+  }
+
+  return (await response.json()) as AdminBatchActionResponse;
+};
+
+export const adminRecomputeReviewProjectRequestDecidedCounts = async (
+  requestId: number,
+): Promise<AdminBatchActionResponse> => {
+  const response = await fetch(
+    `/api/admin/review-project-requests/${requestId}/decided-counts/recompute`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: jsonHeaders,
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to recompute request stats');
   }
 
   return (await response.json()) as AdminBatchActionResponse;

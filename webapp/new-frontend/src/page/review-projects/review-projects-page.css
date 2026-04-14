@@ -939,6 +939,11 @@
   transition: opacity 150ms ease;
 }
 
+.review-projects-page__request-action:disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
 .review-projects-page__row-card:hover .review-projects-page__request-link,
 .review-projects-page__row-card:hover .review-projects-page__request-link {
   opacity: 1;

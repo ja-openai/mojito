@@ -299,6 +299,13 @@ public class ReviewProjectWS {
     return new AdminBatchActionResponse(affected);
   }
 
+  @PostMapping("/admin/review-project-requests/{requestId}/decided-counts/recompute")
+  public AdminBatchActionResponse adminRecomputeReviewProjectRequestDecidedCounts(
+      @PathVariable Long requestId) {
+    int affected = reviewProjectService.adminRecomputeRequestDecidedCounts(requestId);
+    return new AdminBatchActionResponse(affected);
+  }
+
   @PostMapping("/review-project-text-units/{textUnitId}/decision")
   public ResponseEntity<GetReviewProjectResponse.ReviewProjectTextUnit> saveDecision(
       @PathVariable Long textUnitId, @RequestBody ReviewProjectTextUnitDecisionRequest request)
@@ -379,7 +386,7 @@ public class ReviewProjectWS {
         String closeReason,
         Integer textUnitCount,
         Integer wordCount,
-        Long acceptedCount,
+        Long decidedCount,
         ReviewProjectType type,
         ReviewProjectStatus status,
         String createdByUsername,
@@ -409,7 +416,7 @@ public class ReviewProjectWS {
         Integer closedProjectCount,
         Integer textUnitCount,
         Integer wordCount,
-        Long acceptedCount,
+        Long decidedCount,
         ZonedDateTime dueDate,
         List<SearchReviewProjectsResponse.ReviewProject> reviewProjects) {}
   }
@@ -499,7 +506,7 @@ public class ReviewProjectWS {
         view.closeReason(),
         view.textUnitCount(),
         view.wordCount(),
-        view.acceptedCount(),
+        view.decidedCount(),
         view.type(),
         view.status(),
         view.createdByUsername(),
@@ -535,7 +542,7 @@ public class ReviewProjectWS {
         view.closedProjectCount(),
         view.textUnitCount(),
         view.wordCount(),
-        view.acceptedCount(),
+        view.decidedCount(),
         view.dueDate(),
         view.reviewProjects().stream().map(this::toSearchReviewProjectsResponse).toList());
   }

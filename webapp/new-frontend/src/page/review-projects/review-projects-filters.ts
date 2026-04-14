@@ -7,7 +7,7 @@ export const COMPLETION_FILTERS = ['all', 'not_100', '100'] as const;
 export type CompletionFilter = (typeof COMPLETION_FILTERS)[number];
 
 type ProgressSource = {
-  acceptedCount: number;
+  decidedCount: number;
   textUnitCount: number | null;
 };
 
@@ -29,26 +29,26 @@ const toFiniteNonNegative = (value: unknown) => {
   return parsed < 0 ? 0 : parsed;
 };
 
-export const getCompletionState = (acceptedValue: unknown, totalValue: unknown) => {
-  const accepted = toFiniteNonNegative(acceptedValue);
+export const getCompletionState = (decidedValue: unknown, totalValue: unknown) => {
+  const decided = toFiniteNonNegative(decidedValue);
   const total = toFiniteNonNegative(totalValue);
   return {
-    accepted,
+    decided,
     total,
-    isComplete: total === 0 || accepted >= total,
-    hasWorkRemaining: total > 0 && accepted < total,
+    isComplete: total === 0 || decided >= total,
+    hasWorkRemaining: total > 0 && decided < total,
   };
 };
 
 export const matchesCompletionFilter = (
-  acceptedValue: unknown,
+  decidedValue: unknown,
   totalValue: unknown,
   filter: CompletionFilter,
 ) => {
   if (filter === 'all') {
     return true;
   }
-  const { isComplete } = getCompletionState(acceptedValue, totalValue);
+  const { isComplete } = getCompletionState(decidedValue, totalValue);
   return filter === '100' ? isComplete : !isComplete;
 };
 
@@ -65,7 +65,7 @@ export const getVisibleProjectsForRequest = <T extends ProjectStatusSource>(
   projects.filter(
     (project) =>
       matchesProjectStatusFilter(project.status, statusFilter) &&
-      matchesCompletionFilter(project.acceptedCount, project.textUnitCount, completionFilter),
+      matchesCompletionFilter(project.decidedCount, project.textUnitCount, completionFilter),
   );
 
 export const matchesRequestStatusFilter = (

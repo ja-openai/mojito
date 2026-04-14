@@ -107,7 +107,7 @@ export type ReviewProjectRow = {
   type: ApiReviewProjectType;
   status: ApiReviewProjectStatus;
   localeTag: string | null;
-  acceptedCount: number;
+  decidedCount: number;
   textUnitCount: number | null;
   wordCount: number | null;
   dueDate: string | null;
@@ -123,6 +123,8 @@ export type ReviewProjectsAdminControls = {
   onClearSelection: () => void;
   onBatchStatus: (status: ApiReviewProjectStatus) => void;
   onBatchDelete: () => void;
+  onRecomputeRequestStats?: (requestId: number) => void;
+  recomputingRequestId?: number | null;
   isSaving: boolean;
   errorMessage?: string | null;
 };
@@ -677,16 +679,16 @@ const getAverageCount = (values: Array<number | null | undefined>) => {
   return Math.round(total / values.length);
 };
 
-const getProgressMetrics = (acceptedValue: unknown, totalValue: unknown) => {
-  const accepted = toFiniteNonNegative(acceptedValue);
+const getProgressMetrics = (decidedValue: unknown, totalValue: unknown) => {
+  const decided = toFiniteNonNegative(decidedValue);
   const total = toFiniteNonNegative(totalValue);
-  const rawPercent = total === 0 ? 0 : (accepted / total) * 100;
+  const rawPercent = total === 0 ? 0 : (decided / total) * 100;
   const percentValue = Math.max(0, Math.min(100, rawPercent));
   const roundedPercent = Math.round(percentValue);
   const percentWidth =
-    accepted > 0 && percentValue > 0 && percentValue < 1 ? '2px' : `${percentValue}%`;
+    decided > 0 && percentValue > 0 && percentValue < 1 ? '2px' : `${percentValue}%`;
   return {
-    accepted,
+    decided,
     total,
     percentValue,
     percentWidth,
@@ -695,7 +697,7 @@ const getProgressMetrics = (acceptedValue: unknown, totalValue: unknown) => {
 };
 
 const getProjectCompletionState = (project: ReviewProjectRow) => {
-  return getCompletionState(project.acceptedCount, project.textUnitCount ?? 0);
+  return getCompletionState(project.decidedCount, project.textUnitCount ?? 0);
 };
 
 const getLanguageCompletionMetrics = (projects: ReviewProjectRow[]) => {
@@ -728,7 +730,7 @@ export type ReviewProjectRequestGroupRow = {
   openProjectCount: number;
   closedProjectCount: number;
   localeTags: string[];
-  acceptedCount: number;
+  decidedCount: number;
   textUnitCount: number;
   wordCount: number;
   dueDate: string | null;
@@ -760,7 +762,7 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
   const groups = new Map<string, ReviewProjectRequestGroupRow>();
   const dueByKey = new Map<string, number | null>();
   for (const project of projects) {
-    const acceptedCount = toFiniteNonNegative(project.acceptedCount);
+    const decidedCount = toFiniteNonNegative(project.decidedCount);
     const textUnitCount = toFiniteNonNegative(project.textUnitCount ?? 0);
     const wordCount = toFiniteNonNegative(project.wordCount ?? 0);
     const key =
@@ -776,7 +778,7 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
         openProjectCount: project.status === 'OPEN' ? 1 : 0,
         closedProjectCount: project.status === 'CLOSED' ? 1 : 0,
         localeTags: project.localeTag ? [project.localeTag] : [],
-        acceptedCount,
+        decidedCount,
         textUnitCount,
         wordCount,
         dueDate: project.dueDate ?? null,
@@ -789,7 +791,7 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
     existing.projects.push(project);
     existing.openProjectCount += project.status === 'OPEN' ? 1 : 0;
     existing.closedProjectCount += project.status === 'CLOSED' ? 1 : 0;
-    existing.acceptedCount += acceptedCount;
+    existing.decidedCount += decidedCount;
     existing.textUnitCount += textUnitCount;
     existing.wordCount += wordCount;
     if (!existing.createdByUsername && project.requestCreatedByUsername) {
@@ -1137,8 +1139,8 @@ function ReviewProjectRowView({
   onOpenTranslatorReassign?: (project: ReviewProjectRow) => void;
   reviewProjectsSessionKey?: string | null;
 }) {
-  const { accepted, total, percentWidth, percentLabel } = getProgressMetrics(
-    project.acceptedCount,
+  const { decided, total, percentWidth, percentLabel } = getProgressMetrics(
+    project.decidedCount,
     project.textUnitCount ?? 0,
   );
   const localeTag = project.localeTag;
@@ -1250,7 +1252,7 @@ function ReviewProjectRowView({
         <div className="review-projects-page__progress">
           <div
             className="review-projects-page__progress-bar"
-            title={`${formatNumber(accepted)} of ${formatNumber(total)} processed`}
+            title={`${formatNumber(decided)} of ${formatNumber(total)} processed`}
           >
             <div
               className="review-projects-page__progress-fill"
@@ -1689,7 +1691,7 @@ function RequestGroupsSection({
                             Request #{group.requestId}
                           </button>
                         ) : null}
-                        {group.requestId != null && isAdmin && requestEditProjectId != null ? (
+                        {isAdmin && requestEditProjectId != null ? (
                           <span className="review-projects-page__request-dot" aria-hidden="true">
                             ·
                           </span>
@@ -1705,6 +1707,28 @@ function RequestGroupsSection({
                           >
                             Edit
                           </Link>
+                        ) : null}
+                        {group.requestId != null && isAdmin ? (
+                          <span className="review-projects-page__request-dot" aria-hidden="true">
+                            ·
+                          </span>
+                        ) : null}
+                        {group.requestId != null && isAdmin ? (
+                          <button
+                            type="button"
+                            className="review-projects-page__request-link review-projects-page__request-action"
+                            data-no-toggle="true"
+                            disabled={adminControls?.isSaving}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              adminControls?.onRecomputeRequestStats?.(group.requestId as number);
+                            }}
+                            title="Recompute decided counts for this request"
+                          >
+                            {adminControls?.recomputingRequestId === group.requestId
+                              ? 'Repairing'
+                              : 'Repair count'}
+                          </button>
                         ) : null}
                       </span>
                     </div>
@@ -1800,11 +1824,11 @@ function RequestGroupsSection({
                     {visibleProjects.map((project) => {
                       const isSelected = selectedProjectIdSet.has(project.id);
                       const {
-                        accepted: projectAccepted,
+                        decided: projectDecided,
                         total: projectTotal,
                         percentWidth: projectPercentWidth,
                         percentLabel: projectPercentLabel,
-                      } = getProgressMetrics(project.acceptedCount, project.textUnitCount ?? 0);
+                      } = getProgressMetrics(project.decidedCount, project.textUnitCount ?? 0);
                       return (
                         <div key={project.id} className="review-projects-page__request-project-row">
                           {isAdmin ? (
@@ -1897,7 +1921,7 @@ function RequestGroupsSection({
                               </div>
                               <div
                                 className="review-projects-page__progress-bar"
-                                title={`${formatNumber(projectAccepted)} of ${formatNumber(projectTotal)} processed`}
+                                title={`${formatNumber(projectDecided)} of ${formatNumber(projectTotal)} processed`}
                               >
                                 <div
                                   className="review-projects-page__progress-fill"

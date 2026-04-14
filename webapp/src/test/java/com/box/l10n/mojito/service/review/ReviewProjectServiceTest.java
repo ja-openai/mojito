@@ -213,6 +213,16 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void adminRecomputeRequestDecidedCountsDelegatesToRepository() {
+    when(reviewProjectRepository.recomputeDecidedCountsByRequestId(44L)).thenReturn(2);
+
+    int affected = reviewProjectService.adminRecomputeRequestDecidedCounts(44L);
+
+    assertEquals(2, affected);
+    verify(reviewProjectRepository).recomputeDecidedCountsByRequestId(44L);
+  }
+
+  @Test
   public void createReviewProjectRequestFiltersSelectedTextUnitsByStatus() {
     Locale locale = locale(41L, "ar");
     when(localeService.findByBcp47Tag("ar")).thenReturn(locale);
