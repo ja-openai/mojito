@@ -256,23 +256,15 @@ export function AdminAiLocalePromptSuffixPage() {
     deleteMutation.mutate(editorOriginalLocaleTag);
   };
 
-  const editorLocaleOptions =
-    editorMode === 'edit'
-      ? (() => {
-          const matchingOptions = localeOptions.filter(
-            (option) => option.tag.toLowerCase() === (editorOriginalLocaleTag ?? '').toLowerCase(),
-          );
-          if (matchingOptions.length > 0 || !editorOriginalLocaleTag) {
-            return matchingOptions;
-          }
-          return [
-            {
-              tag: editorOriginalLocaleTag,
-              label: resolveLocaleName(editorOriginalLocaleTag),
-            },
-          ];
-        })()
-      : localeOptions;
+  const editorLocaleLabel = editorOriginalLocaleTag
+    ? resolveLocaleName(editorOriginalLocaleTag)
+    : null;
+  const editorTitle =
+    editorMode === 'create'
+      ? 'Add suffix'
+      : editorOriginalLocaleTag
+        ? `Edit suffix - ${formatLocaleTitle(editorLocaleLabel, editorOriginalLocaleTag)}`
+        : 'Edit suffix';
 
   const localeSelectorActions = canShowAllLocales
     ? [
@@ -405,23 +397,22 @@ export function AdminAiLocalePromptSuffixPage() {
           onClose={handleCloseEditor}
           closeOnBackdrop
         >
-          <div className="modal__title">
-            {editorMode === 'create' ? 'Add suffix' : editorOriginalLocaleTag}
-          </div>
+          <div className="modal__title">{editorTitle}</div>
           <div className="ai-locale-prompt-page__modal-fields">
-            <div className="settings-field">
-              <div className="settings-field__label">Locale</div>
-              <LocaleMultiSelect
-                label="Locale"
-                options={editorLocaleOptions}
-                selectedTags={editorLocaleTags}
-                onChange={handleEditorLocaleChange}
-                className="ai-locale-prompt-page__modal-locale"
-                buttonAriaLabel="Select locale"
-                disabled={editorMode === 'edit'}
-                customActions={editorMode === 'create' ? localeSelectorActions : undefined}
-              />
-            </div>
+            {editorMode === 'create' ? (
+              <div className="settings-field">
+                <div className="settings-field__label">Locale</div>
+                <LocaleMultiSelect
+                  label="Locale"
+                  options={localeOptions}
+                  selectedTags={editorLocaleTags}
+                  onChange={handleEditorLocaleChange}
+                  className="ai-locale-prompt-page__modal-locale"
+                  buttonAriaLabel="Select locale"
+                  customActions={localeSelectorActions}
+                />
+              </div>
+            ) : null}
             <div className="settings-field">
               <label className="settings-field__label" htmlFor="ai-locale-prompt-suffix-editor">
                 Suffix
@@ -477,6 +468,16 @@ export function AdminAiLocalePromptSuffixPage() {
       </div>
     </div>
   );
+}
+
+function formatLocaleTitle(label: string | null, tag: string | null) {
+  if (!tag) {
+    return '';
+  }
+  if (!label || label.toLowerCase() === tag.toLowerCase()) {
+    return tag;
+  }
+  return `${label} (${tag})`;
 }
 
 function formatDateTime(value: string | null) {
