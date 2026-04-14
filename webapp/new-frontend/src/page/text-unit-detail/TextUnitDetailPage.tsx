@@ -8,6 +8,7 @@ import {
   formatAiReviewError,
   requestAiReview,
 } from '../../api/ai-review';
+import { type ApiMatchedGlossaryTerm, matchGlossaryTerms } from '../../api/glossaries';
 import {
   type ApiGitBlameWithUsage,
   type ApiTextUnitHistoryItem,
@@ -27,6 +28,11 @@ import {
   INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
   INTEGRITY_CHECK_UNAVAILABLE_TITLE,
 } from '../../utils/integrityCheck';
+import {
+  buildGlossaryContextMessage,
+  filterSelfGlossaryMatches,
+  sortGlossaryMatches,
+} from '../../utils/glossary-matches';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
 import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
 import { formatStatus, mapUiStatusToApi } from '../workbench/workbench-helpers';
@@ -145,6 +151,45 @@ export function TextUnitDetailPage() {
     },
   });
 
+  const activeTextUnit = textUnitQuery.data;
+  const localeForEditing = localeTag ?? activeTextUnit?.targetLocale ?? null;
+
+  const glossaryMatchesQuery = useQuery({
+    queryKey: [
+      'text-unit-glossary-matches',
+      activeTextUnit?.repositoryName ?? null,
+      localeForEditing,
+      activeTextUnit?.source ?? null,
+      activeTextUnit?.tmTextUnitId ?? null,
+    ],
+    enabled:
+      Boolean(activeTextUnit?.repositoryName?.trim()) &&
+      Boolean(localeForEditing) &&
+      Boolean(activeTextUnit?.source?.trim()),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (
+        !activeTextUnit?.repositoryName?.trim() ||
+        !localeForEditing ||
+        !activeTextUnit?.source?.trim()
+      ) {
+        return [] as ApiMatchedGlossaryTerm[];
+      }
+
+      const response = await matchGlossaryTerms({
+        repositoryName: activeTextUnit.repositoryName,
+        localeTag: localeForEditing,
+        sourceText: activeTextUnit.source,
+        excludeTmTextUnitId: activeTextUnit.tmTextUnitId,
+      });
+
+      return sortGlossaryMatches(
+        filterSelfGlossaryMatches(response.matchedTerms, activeTextUnit.tmTextUnitId),
+      );
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: (request: SaveTextUnitRequest) => saveTextUnit(request),
     onSuccess: (saved, request) => {
@@ -211,8 +256,6 @@ export function TextUnitDetailPage() {
     },
   });
 
-  const activeTextUnit = textUnitQuery.data;
-  const localeForEditing = localeTag ?? activeTextUnit?.targetLocale ?? null;
   const canEdit = localeForEditing ? canEditLocaleForUser(currentUser, localeForEditing) : false;
 
   const editorSeedKey = useMemo(() => {
@@ -283,6 +326,7 @@ export function TextUnitDetailPage() {
       role: 'user',
       content: DEFAULT_AI_REVIEW_PROMPT,
     };
+    const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
     void (async () => {
       try {
@@ -292,7 +336,9 @@ export function TextUnitDetailPage() {
           localeTag: localeForEditing,
           sourceDescription: activeTextUnit.comment ?? '',
           tmTextUnitId: activeTextUnit.tmTextUnitId,
-          messages: [initialMessage],
+          messages: [glossaryContextMessage, initialMessage].filter(
+            (message): message is AiReviewMessage => message != null,
+          ),
         });
         if (cancelled) {
           return;
@@ -332,7 +378,7 @@ export function TextUnitDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTextUnit, aiContextKey, localeForEditing]);
+  }, [activeTextUnit, aiContextKey, glossaryMatchesQuery.data, localeForEditing]);
 
   const sortedHistoryItems = useMemo(() => {
     return [...(historyQuery.data ?? [])].sort((a, b) => {
@@ -699,6 +745,7 @@ export function TextUnitDetailPage() {
           role: message.sender,
           content: message.content,
         }));
+        const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
         const response = await requestAiReview({
           source: activeTextUnit.source ?? '',
@@ -706,7 +753,9 @@ export function TextUnitDetailPage() {
           localeTag: localeForEditing,
           sourceDescription: activeTextUnit.comment ?? '',
           tmTextUnitId: activeTextUnit.tmTextUnitId,
-          messages: conversation,
+          messages: [glossaryContextMessage, ...conversation].filter(
+            (message): message is AiReviewMessage => message != null,
+          ),
         });
 
         const assistantMessage: TextUnitDetailAiMessage = {
@@ -734,7 +783,15 @@ export function TextUnitDetailPage() {
         setIsAiResponding(false);
       }
     })();
-  }, [activeTextUnit, aiInput, aiMessages, draftTarget, isAiResponding, localeForEditing]);
+  }, [
+    activeTextUnit,
+    aiInput,
+    aiMessages,
+    draftTarget,
+    glossaryMatchesQuery.data,
+    isAiResponding,
+    localeForEditing,
+  ]);
 
   const handleRetryAi = useCallback(() => {
     if (isAiResponding || !activeTextUnit || !localeForEditing) {
@@ -750,6 +807,7 @@ export function TextUnitDetailPage() {
           }))
         : [{ role: 'user', content: DEFAULT_AI_REVIEW_PROMPT }];
     const retryTarget = baseMessages.length > 0 ? draftTarget : (activeTextUnit.target ?? '');
+    const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
     setIsAiResponding(true);
     void (async () => {
@@ -760,7 +818,9 @@ export function TextUnitDetailPage() {
           localeTag: localeForEditing,
           sourceDescription: activeTextUnit.comment ?? '',
           tmTextUnitId: activeTextUnit.tmTextUnitId,
-          messages: conversation,
+          messages: [glossaryContextMessage, ...conversation].filter(
+            (message): message is AiReviewMessage => message != null,
+          ),
         });
         const assistantMessage: TextUnitDetailAiMessage = {
           id: `assistant-${Date.now()}`,
@@ -789,7 +849,14 @@ export function TextUnitDetailPage() {
         setIsAiResponding(false);
       }
     })();
-  }, [activeTextUnit, aiMessages, draftTarget, isAiResponding, localeForEditing]);
+  }, [
+    activeTextUnit,
+    aiMessages,
+    draftTarget,
+    glossaryMatchesQuery.data,
+    isAiResponding,
+    localeForEditing,
+  ]);
 
   const handleUseAiSuggestion = useCallback((suggestion: AiReviewSuggestion) => {
     setDraftTarget(suggestion.content);
@@ -856,6 +923,9 @@ export function TextUnitDetailPage() {
       onRetryAi={handleRetryAi}
       onUseAiSuggestion={handleUseAiSuggestion}
       isAiResponding={isAiResponding}
+      glossaryMatches={glossaryMatchesQuery.data ?? []}
+      isGlossaryLoading={glossaryMatchesQuery.isLoading}
+      glossaryErrorMessage={getQueryErrorMessage(glossaryMatchesQuery.error)}
       isMetaCollapsed={isMetaCollapsed}
       onToggleMetaCollapsed={() => setIsMetaCollapsed((current) => !current)}
       isMetaLoading={textUnitQuery.isLoading}

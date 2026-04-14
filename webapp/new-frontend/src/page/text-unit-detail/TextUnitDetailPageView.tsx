@@ -4,9 +4,11 @@ import './text-unit-detail-page.css';
 import { type ReactNode } from 'react';
 
 import type { AiReviewSuggestion } from '../../api/ai-review';
+import type { ApiMatchedGlossaryTerm } from '../../api/glossaries';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { GlossaryMatchesPanel } from '../../components/GlossaryMatchesPanel';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
 import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { Pill } from '../../components/Pill';
@@ -72,6 +74,9 @@ type TextUnitDetailPageViewProps = {
   onRetryAi: () => void;
   onUseAiSuggestion: (suggestion: AiReviewSuggestion) => void;
   isAiResponding: boolean;
+  glossaryMatches: ApiMatchedGlossaryTerm[];
+  isGlossaryLoading: boolean;
+  glossaryErrorMessage: string | null;
   isMetaCollapsed: boolean;
   onToggleMetaCollapsed: () => void;
   isMetaLoading: boolean;
@@ -127,6 +132,9 @@ export function TextUnitDetailPageView({
   onRetryAi,
   onUseAiSuggestion,
   isAiResponding,
+  glossaryMatches,
+  isGlossaryLoading,
+  glossaryErrorMessage,
   isMetaCollapsed,
   onToggleMetaCollapsed,
   isMetaLoading,
@@ -338,6 +346,15 @@ export function TextUnitDetailPageView({
                   </dd>
                 </div>
               </dl>
+            </section>
+
+            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+              <GlossaryMatchesPanel
+                matches={glossaryMatches}
+                isLoading={isGlossaryLoading}
+                errorMessage={glossaryErrorMessage}
+                currentTarget={editorInfo.target}
+              />
             </section>
 
             <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
