@@ -73,7 +73,7 @@
 .ai-locale-prompt-page__table-header,
 .ai-locale-prompt-page__row {
   display: grid;
-  grid-template-columns: minmax(10rem, 1fr) minmax(0, 2fr) 9rem 5rem;
+  grid-template-columns: minmax(10rem, 1fr) minmax(0, 2fr) 9rem;
   align-items: center;
   gap: var(--space-2);
 }
@@ -129,14 +129,19 @@
   white-space: nowrap;
 }
 
-.ai-locale-prompt-page__cell--actions {
-  text-align: right;
+.ai-locale-prompt-page__locale-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
-.ai-locale-prompt-page__locale-cell {
+.ai-locale-prompt-page__locale-group {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow: hidden;
 }
 
 .ai-locale-prompt-page__locale-name,
@@ -151,7 +156,7 @@
   border: none;
   background: none;
   padding: 0;
-  color: var(--color-text-muted);
+  color: var(--color-accent);
   font: inherit;
   font-size: var(--font-size-sm);
   cursor: pointer;
@@ -162,8 +167,7 @@
 
 .ai-locale-prompt-page__row-action:hover,
 .ai-locale-prompt-page__row-action:focus-visible {
-  color: var(--color-text);
-  text-decoration: underline;
+  color: color-mix(in srgb, var(--color-accent) 84%, var(--color-text));
 }
 
 .ai-locale-prompt-page__row:hover .ai-locale-prompt-page__row-action,
@@ -221,10 +225,6 @@
     grid-template-columns: 1fr;
     gap: var(--space-1);
     padding: var(--space-3) var(--space-1);
-  }
-
-  .ai-locale-prompt-page__cell--actions {
-    text-align: left;
   }
 
   .ai-locale-prompt-page__row-action {

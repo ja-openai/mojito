@@ -74,7 +74,7 @@
 .review-feature-admin-page__table-header,
 .review-feature-admin-page__row {
   display: grid;
-  grid-template-columns: 4.5rem 1.5fr 6rem 1.5fr 10rem 6rem;
+  grid-template-columns: minmax(0, 1.5fr) 6rem minmax(0, 1.5fr) 10rem;
   gap: var(--space-2);
   align-items: center;
 }
@@ -119,14 +119,11 @@
   color: var(--color-text-muted);
 }
 
-.review-feature-admin-page__cell--actions {
-  text-align: right;
-}
-
 .review-feature-admin-page__name-cell {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--space-2);
+  justify-content: space-between;
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -137,15 +134,29 @@
   white-space: nowrap;
 }
 
+.review-feature-admin-page__name-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.review-feature-admin-page__id-text {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  flex: none;
+}
+
 .review-feature-admin-page__actions {
   display: inline-flex;
-  justify-content: flex-end;
-  align-items: center;
   gap: var(--space-3);
+  align-items: center;
+  flex: none;
 }
 
 .review-feature-admin-page__row-action-link {
-  color: var(--color-text-muted);
+  color: var(--color-accent);
   text-decoration: none;
   font-size: var(--font-size-sm);
   opacity: 0;
@@ -155,8 +166,7 @@
 
 .review-feature-admin-page__row-action-link:hover,
 .review-feature-admin-page__row-action-link:focus-visible {
-  color: var(--color-text);
-  text-decoration: underline;
+  color: color-mix(in srgb, var(--color-accent) 84%, var(--color-text));
 }
 
 .review-feature-admin-page__row-action-button {
@@ -241,16 +251,8 @@
     padding: var(--space-3) var(--space-1);
   }
 
-  .review-feature-admin-page__cell--actions {
-    text-align: left;
-  }
-
   .review-feature-admin-page__row-action-link {
     opacity: 1;
     pointer-events: auto;
-  }
-
-  .review-feature-admin-page__actions {
-    justify-content: flex-start;
   }
 }

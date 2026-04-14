@@ -18,6 +18,7 @@ import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
 import { useRepositories } from '../../hooks/useRepositories';
+import { formatLocalDateTime as formatDateTime } from '../../utils/dateTime';
 import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
@@ -227,14 +228,10 @@ export function AdminReviewFeaturesPage() {
             ) : (
               <div className="review-feature-admin-page__table">
                 <div className="review-feature-admin-page__table-header">
-                  <div className="review-feature-admin-page__cell">ID</div>
                   <div className="review-feature-admin-page__cell">Feature</div>
                   <div className="review-feature-admin-page__cell">Status</div>
                   <div className="review-feature-admin-page__cell">Repositories</div>
                   <div className="review-feature-admin-page__cell">Updated</div>
-                  <div className="review-feature-admin-page__cell review-feature-admin-page__cell--actions">
-                    Actions
-                  </div>
                 </div>
                 {features.map((feature) => (
                   <FeatureRow
@@ -376,12 +373,27 @@ function FeatureRow({
 
   return (
     <div className="review-feature-admin-page__row">
-      <div className="review-feature-admin-page__cell review-feature-admin-page__cell--muted">
-        {feature.id}
-      </div>
       <div className="review-feature-admin-page__cell">
         <div className="review-feature-admin-page__name-cell">
-          <span className="review-feature-admin-page__name-text">{feature.name}</span>
+          <span className="review-feature-admin-page__name-group">
+            <span className="review-feature-admin-page__name-text">{feature.name}</span>
+            <span className="review-feature-admin-page__id-text">#{feature.id}</span>
+          </span>
+          <span className="review-feature-admin-page__actions">
+            <Link
+              className="review-feature-admin-page__row-action-link"
+              to={`/settings/system/review-features/${feature.id}`}
+            >
+              Edit
+            </Link>
+            <button
+              type="button"
+              className="review-feature-admin-page__row-action-link review-feature-admin-page__row-action-button"
+              onClick={onDelete}
+            >
+              Delete
+            </button>
+          </span>
         </div>
       </div>
       <div className="review-feature-admin-page__cell review-feature-admin-page__cell--muted">
@@ -393,37 +405,12 @@ function FeatureRow({
       >
         {repositorySummary}
       </div>
-      <div className="review-feature-admin-page__cell review-feature-admin-page__cell--muted">
+      <div
+        className="review-feature-admin-page__cell review-feature-admin-page__cell--muted"
+        title={formatDateTime(feature.lastModifiedDate)}
+      >
         {formatDateTime(feature.lastModifiedDate)}
-      </div>
-      <div className="review-feature-admin-page__cell review-feature-admin-page__cell--actions">
-        <div className="review-feature-admin-page__actions">
-          <Link
-            className="review-feature-admin-page__row-action-link"
-            to={`/settings/system/review-features/${feature.id}`}
-          >
-            Edit
-          </Link>
-          <button
-            type="button"
-            className="review-feature-admin-page__row-action-link review-feature-admin-page__row-action-button"
-            onClick={onDelete}
-          >
-            Delete
-          </button>
-        </div>
       </div>
     </div>
   );
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) {
-    return '—';
-  }
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) {
-    return value;
-  }
-  return new Date(parsed).toLocaleString();
 }

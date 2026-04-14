@@ -21,7 +21,7 @@ import { ReviewAutomationScheduleBuilderModal } from '../../components/ReviewAut
 import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSelect';
 import { SearchControl } from '../../components/SearchControl';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
-import { formatLocalDateTime } from '../../utils/dateTime';
+import { formatLocalDateTime as formatDateTime } from '../../utils/dateTime';
 import {
   DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
   formatReviewAutomationSchedule,
@@ -332,20 +332,15 @@ export function AdminReviewAutomationsPage() {
             ) : (
               <div className="review-automation-admin-page__table">
                 <div className="review-automation-admin-page__table-header">
-                  <div className="review-automation-admin-page__cell">ID</div>
                   <div className="review-automation-admin-page__cell">Automation</div>
-                  <div className="review-automation-admin-page__cell">Enabled</div>
-                  <div className="review-automation-admin-page__cell">Trigger</div>
-                  <div className="review-automation-admin-page__cell">Next run</div>
-                  <div className="review-automation-admin-page__cell">Schedule</div>
-                  <div className="review-automation-admin-page__cell">Team</div>
-                  <div className="review-automation-admin-page__cell">Due in</div>
-                  <div className="review-automation-admin-page__cell">Max size</div>
-                  <div className="review-automation-admin-page__cell">Features</div>
-                  <div className="review-automation-admin-page__cell">Updated</div>
-                  <div className="review-automation-admin-page__cell review-automation-admin-page__cell--actions">
-                    Actions
+                  <div className="review-automation-admin-page__cell review-automation-admin-page__cell--status">
+                    Status
                   </div>
+                  <div className="review-automation-admin-page__cell review-automation-admin-page__cell--schedule">
+                    Schedule
+                  </div>
+                  <div className="review-automation-admin-page__cell">Scope</div>
+                  <div className="review-automation-admin-page__cell">Rules</div>
                 </div>
                 {automations.map((automation) => (
                   <AutomationRow
@@ -620,6 +615,13 @@ function AutomationRow({
   automation: ApiReviewAutomationSummary;
   onDelete: () => void;
 }) {
+  const nextRunAt = automation.trigger?.nextRunAt ?? null;
+  const scheduleLabel = formatReviewAutomationSchedule(
+    automation.cronExpression,
+    automation.timeZone,
+  );
+  const nextRunLabel = nextRunAt ? `Next ${formatDateTime(nextRunAt)}` : 'No next run';
+  const featureTitle = automation.features.map((feature) => feature.name).join(', ');
   const featureSummary =
     automation.featureCount === 0
       ? 'No review features'
@@ -631,92 +633,79 @@ function AutomationRow({
 
   return (
     <div className="review-automation-admin-page__row">
-      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
-        {automation.id}
-      </div>
       <div className="review-automation-admin-page__cell review-automation-admin-page__cell--automation-name">
         <div className="review-automation-admin-page__name-cell">
-          <span className="review-automation-admin-page__name-text">{automation.name}</span>
+          <span className="review-automation-admin-page__name-group">
+            <span className="review-automation-admin-page__name-text">{automation.name}</span>
+            <span className="review-automation-admin-page__id-text">#{automation.id}</span>
+          </span>
+          <span className="review-automation-admin-page__actions">
+            <Link
+              className="review-automation-admin-page__row-action-link"
+              to={`/settings/system/review-automations/${automation.id}`}
+            >
+              Edit
+            </Link>
+            <button
+              type="button"
+              className="review-automation-admin-page__row-action-link review-automation-admin-page__row-action-button"
+              onClick={onDelete}
+            >
+              Delete
+            </button>
+          </span>
         </div>
       </div>
-      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
-        {automation.enabled ? 'Enabled' : 'Disabled'}
-      </div>
-      <div className="review-automation-admin-page__cell">
+      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--status">
         <span
           className={`review-automation-admin-page__trigger-badge ${getTriggerStatusClassName(automation.trigger?.status)}`}
           title={automation.trigger?.quartzState ?? 'No trigger'}
         >
           {formatTriggerStatus(automation.trigger?.status)}
         </span>
-      </div>
-      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
-        {formatDateTime(automation.trigger?.nextRunAt ?? null)}
-      </div>
-      <div
-        className="review-automation-admin-page__cell review-automation-admin-page__cell--muted review-automation-admin-page__cell--schedule"
-        title={`${automation.cronExpression} · ${automation.timeZone}`}
-      >
-        {formatReviewAutomationSchedule(automation.cronExpression, automation.timeZone)}
-      </div>
-      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
-        {automation.team?.name ?? '—'}
-      </div>
-      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
-        {formatDueDateOffsetDays(automation.dueDateOffsetDays)}
-      </div>
-      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
-        {automation.maxWordCountPerProject}
+        <span className="review-automation-admin-page__secondary-text">
+          {automation.enabled ? 'Enabled' : 'Disabled'}
+        </span>
       </div>
       <div
-        className="review-automation-admin-page__cell review-automation-admin-page__cell--muted"
-        title={automation.features.map((feature) => feature.name).join(', ')}
+        className="review-automation-admin-page__cell review-automation-admin-page__cell--schedule"
+        title={`${formatDateTime(nextRunAt)}\n${automation.cronExpression} · ${automation.timeZone}`}
       >
-        {featureSummary}
+        <span className="review-automation-admin-page__primary-text" title={scheduleLabel}>
+          {scheduleLabel}
+        </span>
+        <span className="review-automation-admin-page__secondary-text">{nextRunLabel}</span>
       </div>
-      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
-        {formatDateTime(automation.lastModifiedDate)}
+      <div
+        className="review-automation-admin-page__cell review-automation-admin-page__cell--scope"
+        title={featureTitle}
+      >
+        <span className="review-automation-admin-page__primary-text">
+          {automation.team?.name ?? 'No team'}
+        </span>
+        <span className="review-automation-admin-page__secondary-text">{featureSummary}</span>
       </div>
-      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--actions">
-        <div className="review-automation-admin-page__actions">
-          <Link
-            className="review-automation-admin-page__row-action-link"
-            to={`/settings/system/review-automations/${automation.id}`}
-          >
-            Edit
-          </Link>
-          <button
-            type="button"
-            className="review-automation-admin-page__row-action-link review-automation-admin-page__row-action-button"
-            onClick={onDelete}
-          >
-            Delete
-          </button>
-        </div>
+      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--rules">
+        <span className="review-automation-admin-page__primary-text">
+          {formatDueDateOffsetDays(automation.dueDateOffsetDays)}
+        </span>
+        <span className="review-automation-admin-page__secondary-text">
+          {formatMaxWordCount(automation.maxWordCountPerProject)}
+        </span>
       </div>
     </div>
   );
 }
 
-function formatDateTime(value?: string | number | null) {
-  if (!value) {
-    return '—';
-  }
-  const normalized = normalizeDateInput(value);
-  const formatted = formatLocalDateTime(normalized, '');
-  return formatted || value;
-}
-
-function normalizeDateInput(value: string | number) {
-  const trimmed = String(value).trim();
-  if (/^\d{10,13}$/.test(trimmed)) {
-    return new Date(Number(trimmed.length === 10 ? `${trimmed}000` : trimmed));
-  }
-  return trimmed;
-}
-
 function formatDueDateOffsetDays(value: number) {
-  return `${value}d`;
+  if (value === 0) {
+    return 'Due same day';
+  }
+  return value === 1 ? 'Due in 1 day' : `Due in ${value} days`;
+}
+
+function formatMaxWordCount(value: number) {
+  return `Max ${value.toLocaleString()} words`;
 }
 
 function formatTriggerStatus(value?: string | null) {

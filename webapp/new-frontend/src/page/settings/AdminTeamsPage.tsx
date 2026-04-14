@@ -195,12 +195,8 @@ export function AdminTeamsPage() {
             ) : (
               <div className="team-admin-page__table">
                 <div className="team-admin-page__table-header">
-                  <div className="team-admin-page__cell">ID</div>
                   <div className="team-admin-page__cell">Team</div>
                   <div className="team-admin-page__cell">Status</div>
-                  <div className="team-admin-page__cell team-admin-page__cell--actions">
-                    Actions
-                  </div>
                 </div>
                 {filteredTeamRows.map(({ team }) => {
                   const poolUrl = isAdmin
@@ -208,35 +204,33 @@ export function AdminTeamsPage() {
                     : `/settings/system/team-pools?teamId=${team.id}`;
                   return (
                     <div key={team.id} className="team-admin-page__row">
-                      <div className="team-admin-page__cell team-admin-page__cell--muted">
-                        {team.id}
-                      </div>
-                      <div className="team-admin-page__cell">
+                      <div className="team-admin-page__cell team-admin-page__cell--team">
                         <div className="team-admin-page__name-cell">
-                          <span className="team-admin-page__name-text">{team.name}</span>
+                          <span className="team-admin-page__name-group">
+                            <span className="team-admin-page__name-text">{team.name}</span>
+                            <span className="team-admin-page__id-text">#{team.id}</span>
+                          </span>
+                          <span className="team-admin-page__actions">
+                            {isAdmin && team.enabled ? (
+                              <Link
+                                className="team-admin-page__row-action-link"
+                                to={`/settings/system/teams/${team.id}`}
+                              >
+                                Edit team
+                              </Link>
+                            ) : null}
+                            {team.enabled ? (
+                              <Link className="team-admin-page__row-action-link" to={poolUrl}>
+                                Edit pools
+                              </Link>
+                            ) : (
+                              <span className="team-admin-page__row-action-muted">Disabled</span>
+                            )}
+                          </span>
                         </div>
                       </div>
                       <div className="team-admin-page__cell team-admin-page__cell--muted">
                         {team.enabled ? 'Enabled' : 'Disabled'}
-                      </div>
-                      <div className="team-admin-page__cell team-admin-page__cell--actions">
-                        <div className="team-admin-page__actions">
-                          {isAdmin && team.enabled ? (
-                            <Link
-                              className="team-admin-page__row-action-link"
-                              to={`/settings/system/teams/${team.id}`}
-                            >
-                              Edit team
-                            </Link>
-                          ) : null}
-                          {team.enabled ? (
-                            <Link className="team-admin-page__row-action-link" to={poolUrl}>
-                              Edit pools
-                            </Link>
-                          ) : (
-                            <span className="team-admin-page__row-action-muted">Disabled</span>
-                          )}
-                        </div>
                       </div>
                     </div>
                   );

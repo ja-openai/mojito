@@ -5,8 +5,8 @@ export type ApiReviewFeatureRepository = {
 
 export type ApiReviewFeatureSummary = {
   id: number;
-  createdDate?: string | null;
-  lastModifiedDate?: string | null;
+  createdDate?: string | number | null;
+  lastModifiedDate?: string | number | null;
   name: string;
   enabled: boolean;
   repositoryCount: number;
@@ -15,8 +15,8 @@ export type ApiReviewFeatureSummary = {
 
 export type ApiReviewFeature = {
   id: number;
-  createdDate?: string | null;
-  lastModifiedDate?: string | null;
+  createdDate?: string | number | null;
+  lastModifiedDate?: string | number | null;
   name: string;
   enabled: boolean;
   repositories: ApiReviewFeatureRepository[];

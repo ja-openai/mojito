@@ -350,9 +350,6 @@ export function AdminAiLocalePromptSuffixPage() {
                   <div className="ai-locale-prompt-page__cell">Locale</div>
                   <div className="ai-locale-prompt-page__cell">Suffix</div>
                   <div className="ai-locale-prompt-page__cell">Updated</div>
-                  <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--actions">
-                    Actions
-                  </div>
                 </div>
                 {filteredRows.map((row) => (
                   <div
@@ -370,10 +367,22 @@ export function AdminAiLocalePromptSuffixPage() {
                   >
                     <div className="ai-locale-prompt-page__cell">
                       <div className="ai-locale-prompt-page__locale-cell">
-                        <span className="ai-locale-prompt-page__locale-name">
-                          {row.localeLabel}
+                        <span className="ai-locale-prompt-page__locale-group">
+                          <span className="ai-locale-prompt-page__locale-name">
+                            {row.localeLabel}
+                          </span>
+                          <span className="ai-locale-prompt-page__locale-tag">{row.localeTag}</span>
                         </span>
-                        <span className="ai-locale-prompt-page__locale-tag">{row.localeTag}</span>
+                        <button
+                          type="button"
+                          className="ai-locale-prompt-page__row-action"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEditEditor(row);
+                          }}
+                        >
+                          Edit
+                        </button>
                       </div>
                     </div>
                     <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--suffix">
@@ -381,18 +390,6 @@ export function AdminAiLocalePromptSuffixPage() {
                     </div>
                     <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--muted">
                       {formatDateTime(row.updatedAt)}
-                    </div>
-                    <div className="ai-locale-prompt-page__cell ai-locale-prompt-page__cell--actions">
-                      <button
-                        type="button"
-                        className="ai-locale-prompt-page__row-action"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEditEditor(row);
-                        }}
-                      >
-                        Edit
-                      </button>
                     </div>
                   </div>
                 ))}

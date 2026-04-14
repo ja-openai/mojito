@@ -67,7 +67,7 @@
   min-height: 20rem;
   border: none;
   border-radius: 0;
-  overflow-x: auto;
+  overflow-x: visible;
   overflow-y: visible;
   background: transparent;
 }
@@ -75,12 +75,10 @@
 .review-automation-admin-page__table-header,
 .review-automation-admin-page__row {
   display: grid;
-  grid-template-columns:
-    4.5rem minmax(18rem, 1.7fr) 5.5rem 7rem 9rem minmax(10rem, 1fr)
-    minmax(6rem, 0.8fr) 5rem 6rem minmax(8rem, 1fr) 9.5rem 6rem;
+  grid-template-columns: minmax(0, 1.55fr) 6.5rem minmax(0, 1.25fr) minmax(0, 1.1fr) 6.5rem;
   gap: var(--space-2);
   align-items: center;
-  min-width: 92rem;
+  min-width: 0;
 }
 
 .review-automation-admin-page__table-header {
@@ -101,7 +99,7 @@
 }
 
 .review-automation-admin-page__row {
-  min-height: 3rem;
+  min-height: 3.5rem;
   padding: 0 var(--space-1);
   border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
   color: var(--color-text);
@@ -123,43 +121,48 @@
   color: var(--color-text-muted);
 }
 
-.review-automation-admin-page__cell--actions {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  padding-left: var(--space-2);
-  background: var(--color-surface);
-  text-align: right;
-}
-
-.review-automation-admin-page__table-header .review-automation-admin-page__cell--actions {
-  z-index: 2;
-  background: var(--color-surface);
-}
-
-.review-automation-admin-page__row:hover .review-automation-admin-page__cell--actions {
-  background: color-mix(in srgb, var(--color-surface-muted) 40%, var(--color-surface));
-}
-
 .review-automation-admin-page__cell--automation-name {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
 }
 
-.review-automation-admin-page__cell--schedule {
+.review-automation-admin-page__cell--schedule,
+.review-automation-admin-page__cell--scope,
+.review-automation-admin-page__cell--rules,
+.review-automation-admin-page__cell--status {
+  display: grid;
+  gap: 0.15rem;
   line-height: 1.25;
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
-  word-break: break-word;
+  min-width: 0;
+}
+
+.review-automation-admin-page__cell--status {
+  justify-items: center;
+  text-align: center;
+}
+
+.review-automation-admin-page__cell--schedule {
+  padding-left: var(--space-2);
 }
 
 .review-automation-admin-page__name-cell {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.review-automation-admin-page__name-group {
+  display: inline-flex;
+  align-items: baseline;
   gap: var(--space-2);
   min-width: 0;
+  overflow: hidden;
 }
 
 .review-automation-admin-page__name-text {
@@ -170,11 +173,36 @@
   word-break: break-word;
 }
 
+.review-automation-admin-page__id-text {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  flex: none;
+}
+
+.review-automation-admin-page__primary-text,
+.review-automation-admin-page__secondary-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.review-automation-admin-page__primary-text {
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.review-automation-admin-page__secondary-text {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
 .review-automation-admin-page__actions {
   display: inline-flex;
-  justify-content: flex-end;
   align-items: center;
   gap: var(--space-3);
+  flex: none;
 }
 
 .review-automation-admin-page__trigger-badge {
@@ -185,7 +213,6 @@
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
   border: var(--border-width) solid transparent;
 }
 
@@ -214,7 +241,7 @@
 }
 
 .review-automation-admin-page__row-action-link {
-  color: var(--color-text-muted);
+  color: var(--color-accent);
   text-decoration: none;
   font-size: var(--font-size-sm);
   opacity: 0;
@@ -224,8 +251,7 @@
 
 .review-automation-admin-page__row-action-link:hover,
 .review-automation-admin-page__row-action-link:focus-visible {
-  color: var(--color-text);
-  text-decoration: underline;
+  color: color-mix(in srgb, var(--color-accent) 84%, var(--color-text));
 }
 
 .review-automation-admin-page__row-action-button {
@@ -299,6 +325,10 @@
     display: none;
   }
 
+  .review-automation-admin-page__table {
+    overflow-x: hidden;
+  }
+
   .review-automation-admin-page__create-dialog .modal__card {
     width: min(94vw, 100%);
     padding: var(--space-4);
@@ -310,19 +340,8 @@
     padding: var(--space-3) var(--space-1);
   }
 
-  .review-automation-admin-page__cell--actions {
-    position: static;
-    padding-left: 0;
-    background: transparent;
-    text-align: left;
-  }
-
   .review-automation-admin-page__row-action-link {
     opacity: 1;
     pointer-events: auto;
-  }
-
-  .review-automation-admin-page__actions {
-    justify-content: flex-start;
   }
 }

@@ -19,6 +19,10 @@ const FALLBACK_TIME_ZONES = [
 
 const DAILY_CRON_PATTERN = /^0\s+([0-5]?\d)\s+([01]?\d|2[0-3])\s+\*\s+\*\s+\?$/i;
 const WEEKDAY_CRON_PATTERN = /^0\s+([0-5]?\d)\s+([01]?\d|2[0-3])\s+\?\s+\*\s+MON-FRI$/i;
+const CUSTOM_SCHEDULE_LABELS: Record<string, string> = {
+  '0 * * * * ?': 'Every minute',
+  '0/30 * * * * ?': 'Every 30 seconds',
+};
 
 const toTwoDigits = (value: number) => String(value).padStart(2, '0');
 
@@ -99,5 +103,12 @@ export function formatReviewAutomationSchedule(cronExpression: string, timeZone:
   if (helper.mode === 'daily') {
     return `Daily ${helper.timeOfDay} · ${zone}`;
   }
+
+  const trimmed = cronExpression.trim();
+  const customLabel = CUSTOM_SCHEDULE_LABELS[trimmed];
+  if (customLabel) {
+    return customLabel;
+  }
+
   return `${cronExpression} · ${zone}`;
 }

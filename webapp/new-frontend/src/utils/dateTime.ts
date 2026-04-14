@@ -1,4 +1,4 @@
-type DateInput = string | Date | null | undefined;
+type DateInput = string | number | Date | null | undefined;
 
 const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
 

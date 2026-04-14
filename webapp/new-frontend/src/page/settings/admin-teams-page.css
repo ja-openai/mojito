@@ -76,7 +76,7 @@
 .team-admin-page__table-header,
 .team-admin-page__row {
   display: grid;
-  grid-template-columns: 4.5rem 1.8fr 6rem 1fr;
+  grid-template-columns: minmax(0, 1fr) 6rem;
   align-items: center;
   gap: var(--space-2);
 }
@@ -121,15 +121,26 @@
   color: var(--color-text-muted);
 }
 
-.team-admin-page__cell--actions {
-  text-align: right;
+.team-admin-page__cell--team {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .team-admin-page__name-cell {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
   min-width: 0;
+}
+
+.team-admin-page__name-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .team-admin-page__name-text {
@@ -139,15 +150,21 @@
   white-space: nowrap;
 }
 
+.team-admin-page__id-text {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  flex: none;
+}
+
 .team-admin-page__actions {
   display: inline-flex;
-  justify-content: flex-end;
   align-items: center;
   gap: var(--space-3);
+  flex: none;
 }
 
 .team-admin-page__row-action-link {
-  color: var(--color-text-muted);
+  color: var(--color-accent);
   text-decoration: none;
   font-size: var(--font-size-sm);
   opacity: 0;
@@ -162,8 +179,7 @@
 
 .team-admin-page__row-action-link:hover,
 .team-admin-page__row-action-link:focus-visible {
-  color: var(--color-text);
-  text-decoration: underline;
+  color: color-mix(in srgb, var(--color-accent) 84%, var(--color-text));
 }
 
 .team-admin-page__row:hover .team-admin-page__row-action-link,
@@ -215,17 +231,9 @@
     padding: var(--space-3) var(--space-1);
   }
 
-  .team-admin-page__cell--actions {
-    text-align: left;
-  }
-
   .team-admin-page__row-action-link {
     opacity: 1;
     pointer-events: auto;
-  }
-
-  .team-admin-page__actions {
-    justify-content: flex-start;
   }
 }
 .team-admin-page__filter {
