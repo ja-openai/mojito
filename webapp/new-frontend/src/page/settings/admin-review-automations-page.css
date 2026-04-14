@@ -67,16 +67,20 @@
   min-height: 20rem;
   border: none;
   border-radius: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
   background: transparent;
 }
 
 .review-automation-admin-page__table-header,
 .review-automation-admin-page__row {
   display: grid;
-  grid-template-columns: 4.5rem 1.15fr 5.5rem 7rem 10rem 11rem 7rem 6rem 7rem 1.25fr 10rem 6rem;
+  grid-template-columns:
+    4.5rem minmax(18rem, 1.7fr) 5.5rem 7rem 9rem minmax(10rem, 1fr)
+    minmax(6rem, 0.8fr) 5rem 6rem minmax(8rem, 1fr) 9.5rem 6rem;
   gap: var(--space-2);
   align-items: center;
+  min-width: 92rem;
 }
 
 .review-automation-admin-page__table-header {
@@ -120,7 +124,35 @@
 }
 
 .review-automation-admin-page__cell--actions {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  padding-left: var(--space-2);
+  background: var(--color-surface);
   text-align: right;
+}
+
+.review-automation-admin-page__table-header .review-automation-admin-page__cell--actions {
+  z-index: 2;
+  background: var(--color-surface);
+}
+
+.review-automation-admin-page__row:hover .review-automation-admin-page__cell--actions {
+  background: color-mix(in srgb, var(--color-surface-muted) 40%, var(--color-surface));
+}
+
+.review-automation-admin-page__cell--automation-name {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.review-automation-admin-page__cell--schedule {
+  line-height: 1.25;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .review-automation-admin-page__name-cell {
@@ -132,9 +164,10 @@
 
 .review-automation-admin-page__name-text {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .review-automation-admin-page__actions {
@@ -278,6 +311,9 @@
   }
 
   .review-automation-admin-page__cell--actions {
+    position: static;
+    padding-left: 0;
+    background: transparent;
     text-align: left;
   }
 

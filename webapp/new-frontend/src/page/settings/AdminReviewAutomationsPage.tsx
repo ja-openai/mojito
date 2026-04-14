@@ -21,6 +21,7 @@ import { ReviewAutomationScheduleBuilderModal } from '../../components/ReviewAut
 import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSelect';
 import { SearchControl } from '../../components/SearchControl';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import { formatLocalDateTime } from '../../utils/dateTime';
 import {
   DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
   formatReviewAutomationSchedule,
@@ -616,7 +617,7 @@ function AutomationRow({
       <div className="review-automation-admin-page__cell review-automation-admin-page__cell--muted">
         {automation.id}
       </div>
-      <div className="review-automation-admin-page__cell">
+      <div className="review-automation-admin-page__cell review-automation-admin-page__cell--automation-name">
         <div className="review-automation-admin-page__name-cell">
           <span className="review-automation-admin-page__name-text">{automation.name}</span>
         </div>
@@ -636,7 +637,7 @@ function AutomationRow({
         {formatDateTime(automation.trigger?.nextRunAt ?? null)}
       </div>
       <div
-        className="review-automation-admin-page__cell review-automation-admin-page__cell--muted"
+        className="review-automation-admin-page__cell review-automation-admin-page__cell--muted review-automation-admin-page__cell--schedule"
         title={`${automation.cronExpression} · ${automation.timeZone}`}
       >
         {formatReviewAutomationSchedule(automation.cronExpression, automation.timeZone)}
@@ -680,15 +681,21 @@ function AutomationRow({
   );
 }
 
-function formatDateTime(value?: string | null) {
+function formatDateTime(value?: string | number | null) {
   if (!value) {
     return '—';
   }
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) {
-    return value;
+  const normalized = normalizeDateInput(value);
+  const formatted = formatLocalDateTime(normalized, '');
+  return formatted || value;
+}
+
+function normalizeDateInput(value: string | number) {
+  const trimmed = String(value).trim();
+  if (/^\d{10,13}$/.test(trimmed)) {
+    return new Date(Number(trimmed.length === 10 ? `${trimmed}000` : trimmed));
   }
-  return new Date(parsed).toLocaleString();
+  return trimmed;
 }
 
 function formatDueDateOffsetDays(value: number) {

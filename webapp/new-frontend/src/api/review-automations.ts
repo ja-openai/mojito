@@ -15,8 +15,8 @@ export type ApiReviewAutomationTrigger = {
 
 export type ApiReviewAutomationSummary = {
   id: number;
-  createdDate?: string | null;
-  lastModifiedDate?: string | null;
+  createdDate?: string | number | null;
+  lastModifiedDate?: string | number | null;
   name: string;
   enabled: boolean;
   cronExpression: string;
@@ -31,8 +31,8 @@ export type ApiReviewAutomationSummary = {
 
 export type ApiReviewAutomation = {
   id: number;
-  createdDate?: string | null;
-  lastModifiedDate?: string | null;
+  createdDate?: string | number | null;
+  lastModifiedDate?: string | number | null;
   name: string;
   enabled: boolean;
   cronExpression: string;
