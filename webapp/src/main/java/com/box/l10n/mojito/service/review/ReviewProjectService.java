@@ -32,6 +32,9 @@ import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
+import com.google.common.base.Stopwatch;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -50,6 +53,11 @@ import org.springframework.util.CollectionUtils;
 public class ReviewProjectService {
 
   private static final Logger logger = LoggerFactory.getLogger(ReviewProjectService.class);
+  private static final String METRIC_PREFIX = "ReviewProjectService";
+  private static final String SEARCH_MODE_PROJECTS = "projects";
+  private static final String SEARCH_MODE_REQUESTS = "requests";
+  private static final long SEARCH_PHASE_SLOW_LOG_THRESHOLD_MS = 250;
+  private static final long SEARCH_TOTAL_SLOW_LOG_THRESHOLD_MS = 1_000;
 
   private final ReviewProjectRepository reviewProjectRepository;
   private final ReviewProjectTextUnitRepository reviewProjectTextUnitRepository;
@@ -72,6 +80,7 @@ public class ReviewProjectService {
   private final TeamSlackNotificationService teamSlackNotificationService;
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
   private final ReviewFeatureRepository reviewFeatureRepository;
+  private final MeterRegistry meterRegistry;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -96,7 +105,8 @@ public class ReviewProjectService {
       ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
       TeamSlackNotificationService teamSlackNotificationService,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
-      ReviewFeatureRepository reviewFeatureRepository) {
+      ReviewFeatureRepository reviewFeatureRepository,
+      MeterRegistry meterRegistry) {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
@@ -118,6 +128,7 @@ public class ReviewProjectService {
     this.teamSlackNotificationService = teamSlackNotificationService;
     this.quartzPollableTaskScheduler = quartzPollableTaskScheduler;
     this.reviewFeatureRepository = reviewFeatureRepository;
+    this.meterRegistry = meterRegistry;
   }
 
   public PollableFuture<CreateReviewProjectRequestResult> createReviewProjectRequestAsync(
@@ -414,12 +425,27 @@ public class ReviewProjectService {
       throw new IllegalArgumentException("request must not be null");
     }
 
+    Stopwatch totalStopwatch = Stopwatch.createStarted();
+    Stopwatch phaseStopwatch = Stopwatch.createStarted();
     ProjectAccessContext accessContext = createProjectAccessContext();
+    recordSearchPhase(SEARCH_MODE_PROJECTS, "accessContext", phaseStopwatch, 1);
+
+    phaseStopwatch = Stopwatch.createStarted();
     List<SearchReviewProjectDetail> projectDetails =
         getProjectDetailsByCriteria(request, accessContext);
+    recordSearchPhase(
+        SEARCH_MODE_PROJECTS, "getProjectDetails", phaseStopwatch, projectDetails.size());
+
+    phaseStopwatch = Stopwatch.createStarted();
     Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
+    recordSearchPhase(
+        SEARCH_MODE_PROJECTS, "getAcceptedCounts", phaseStopwatch, acceptedCountByProjectId.size());
+
+    phaseStopwatch = Stopwatch.createStarted();
     List<SearchReviewProjectsView.ReviewProject> reviewProjects =
         toReviewProjectViews(projectDetails, acceptedCountByProjectId);
+    recordSearchPhase(SEARCH_MODE_PROJECTS, "buildResponse", phaseStopwatch, reviewProjects.size());
+    recordSearchPhase(SEARCH_MODE_PROJECTS, "total", totalStopwatch, reviewProjects.size());
 
     return new SearchReviewProjectsView(reviewProjects);
   }
@@ -430,24 +456,42 @@ public class ReviewProjectService {
     if (request == null) {
       throw new IllegalArgumentException("request must not be null");
     }
+    Stopwatch totalStopwatch = Stopwatch.createStarted();
+    Stopwatch phaseStopwatch = Stopwatch.createStarted();
     ProjectAccessContext accessContext = createProjectAccessContext();
+    recordSearchPhase(SEARCH_MODE_REQUESTS, "accessContext", phaseStopwatch, 1);
 
     List<ReviewProjectStatus> requestedStatuses = getRequestModeStatuses(request.statuses());
     List<ReviewProjectStatus> projectStatuses = getRequestModeStatuses(request.projectStatuses());
     boolean includeOpen = requestedStatuses.contains(ReviewProjectStatus.OPEN);
     boolean includeClosed = requestedStatuses.contains(ReviewProjectStatus.CLOSED);
 
+    phaseStopwatch = Stopwatch.createStarted();
     List<Long> requestIds = findRequestIdsByStatuses(request, requestedStatuses, accessContext);
+    recordSearchPhase(SEARCH_MODE_REQUESTS, "findRequestIds", phaseStopwatch, requestIds.size());
     if (requestIds.isEmpty()) {
+      recordSearchPhase(SEARCH_MODE_REQUESTS, "total", totalStopwatch, 0);
       return new SearchReviewProjectRequestsView(List.of());
     }
 
+    phaseStopwatch = Stopwatch.createStarted();
     List<SearchReviewProjectDetail> projectDetails =
         getProjectDetailsByRequestIds(requestIds, projectStatuses, request, accessContext);
+    recordSearchPhase(
+        SEARCH_MODE_REQUESTS, "getProjectDetails", phaseStopwatch, projectDetails.size());
+
+    phaseStopwatch = Stopwatch.createStarted();
     Map<Long, Long> acceptedCountByProjectId = getAcceptedCountByProjectId(projectDetails);
+    recordSearchPhase(
+        SEARCH_MODE_REQUESTS, "getAcceptedCounts", phaseStopwatch, acceptedCountByProjectId.size());
+
+    phaseStopwatch = Stopwatch.createStarted();
     List<SearchReviewProjectsView.ReviewProject> reviewProjects =
         toReviewProjectViews(projectDetails, acceptedCountByProjectId);
+    recordSearchPhase(
+        SEARCH_MODE_REQUESTS, "buildProjectViews", phaseStopwatch, reviewProjects.size());
 
+    phaseStopwatch = Stopwatch.createStarted();
     Map<Long, List<SearchReviewProjectsView.ReviewProject>> projectsByRequestId =
         reviewProjects.stream()
             .filter(
@@ -529,7 +573,40 @@ public class ReviewProjectService {
               sortedProjects));
     }
 
+    recordSearchPhase(SEARCH_MODE_REQUESTS, "groupResponse", phaseStopwatch, groups.size());
+    recordSearchPhase(SEARCH_MODE_REQUESTS, "total", totalStopwatch, groups.size());
     return new SearchReviewProjectRequestsView(groups);
+  }
+
+  private void recordSearchPhase(String mode, String phase, Stopwatch stopwatch, int resultCount) {
+    long elapsedMillis = stopwatch.elapsed().toMillis();
+    Tags tags = Tags.of("mode", mode, "phase", phase);
+    meterRegistry.timer(metricName("searchPhaseDuration"), tags).record(stopwatch.elapsed());
+    meterRegistry.summary(metricName("searchPhaseResultCount"), tags).record(resultCount);
+
+    long slowLogThresholdMillis =
+        "total".equals(phase)
+            ? SEARCH_TOTAL_SLOW_LOG_THRESHOLD_MS
+            : SEARCH_PHASE_SLOW_LOG_THRESHOLD_MS;
+    if (elapsedMillis >= slowLogThresholdMillis) {
+      logger.info(
+          "Review project search phase completed: mode={}, phase={}, elapsedMs={}, resultCount={}",
+          mode,
+          phase,
+          elapsedMillis,
+          resultCount);
+    } else {
+      logger.debug(
+          "Review project search phase completed: mode={}, phase={}, elapsedMs={}, resultCount={}",
+          mode,
+          phase,
+          elapsedMillis,
+          resultCount);
+    }
+  }
+
+  private String metricName(String suffix) {
+    return METRIC_PREFIX + "." + suffix;
   }
 
   private List<ReviewProjectStatus> getRequestModeStatuses(List<ReviewProjectStatus> statuses) {

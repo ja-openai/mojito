@@ -35,6 +35,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -80,6 +81,7 @@ public class ReviewProjectServiceTest {
       Mockito.mock(QuartzPollableTaskScheduler.class);
   private final ReviewFeatureRepository reviewFeatureRepository =
       Mockito.mock(ReviewFeatureRepository.class);
+  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 
   private ReviewProjectService reviewProjectService;
   private User currentUser;
@@ -109,7 +111,8 @@ public class ReviewProjectServiceTest {
                 reviewProjectAssignmentHistoryRepository,
                 teamSlackNotificationService,
                 quartzPollableTaskScheduler,
-                reviewFeatureRepository));
+                reviewFeatureRepository,
+                meterRegistry));
     doReturn(null).when(reviewProjectService).getProjectDetail(anyLong());
 
     currentUser = user(99L, "admin");
