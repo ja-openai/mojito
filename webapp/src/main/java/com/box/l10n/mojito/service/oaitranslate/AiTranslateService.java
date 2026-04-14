@@ -398,6 +398,7 @@ public class AiTranslateService {
 
         GlossaryTrie glossaryTrie =
             getGlossaryTrieForLocale(
+                repository,
                 bcp47Tag,
                 aiTranslateInput.glossaryName(),
                 aiTranslateInput.glossaryTermSource(),
@@ -925,6 +926,7 @@ public class AiTranslateService {
   }
 
   private GlossaryTrie getGlossaryTrieForLocale(
+      Repository repository,
       String bcp47Tag,
       String glossaryName,
       String termSource,
@@ -949,20 +951,45 @@ public class AiTranslateService {
       glossaryTrie.addTerm(
           new GlossaryService.GlossaryTerm(
               0L,
+              null,
+              null,
               termSource,
               termSource,
               termSourceDescription,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
               termTarget,
               termTargetDescription,
               termDoNotTranslate,
-              termCaseSensitive));
+              termCaseSensitive,
+              List.of()));
       logger.info(
           "Loaded the glossary from term: {} for locale: {} in {}.",
           termSource,
           bcp47Tag,
           stopwatchForGlossary.elapsed());
     } else {
-      logger.info("No glossary to load for locale: {}", bcp47Tag);
+      logger.debug(
+          "Loading repository-linked glossaries for repository: {} and locale: {}",
+          repository.getName(),
+          bcp47Tag);
+      glossaryTrie = glossaryService.loadLinkedGlossaryTrieForLocale(repository.getId(), bcp47Tag);
+      if (glossaryTrie == null) {
+        logger.info(
+            "No glossary to load for repository: {} and locale: {}",
+            repository.getName(),
+            bcp47Tag);
+      } else {
+        logger.info(
+            "Loaded repository-linked glossaries for repository: {} and locale: {} in {}.",
+            repository.getName(),
+            bcp47Tag,
+            stopwatchForGlossary.elapsed());
+      }
     }
     return glossaryTrie;
   }
@@ -1262,7 +1289,10 @@ public class AiTranslateService {
   record TextUnitDTOWithVariantComments(
       TextUnitDTO textUnitDTO, Set<TMTextUnitVariantComment> tmTextUnitVariantComments) {}
 
-  record FoundGlossaryTerms(Set<GlossaryService.GlossaryTerm> terms, boolean shouldSkip) {}
+  record FoundGlossaryTerms(
+      Set<GlossaryService.GlossaryTerm> terms,
+      List<GlossaryService.MatchedGlossaryTerm> matchedTerms,
+      boolean shouldSkip) {}
 
   FoundGlossaryTerms findGlossaryTermsOrSkip(
       GlossaryTrie glossaryTrie,
@@ -1272,25 +1302,31 @@ public class AiTranslateService {
     Stopwatch stopWatchFindTerm = Stopwatch.createStarted();
 
     Set<GlossaryService.GlossaryTerm> terms = Set.of();
+    List<GlossaryService.MatchedGlossaryTerm> matchedTerms = List.of();
     boolean shouldSkip = false;
 
     if (glossaryTrie != null) {
-      terms = glossaryTrie.findTerms(textUnitDTOWithVariantComments.textUnitDTO().getSource());
-      if (terms.isEmpty() && glossaryOnlyMatchedTextUnits) {
+      matchedTerms =
+          glossaryTrie.findMatches(textUnitDTOWithVariantComments.textUnitDTO().getSource());
+      terms =
+          matchedTerms.stream()
+              .map(GlossaryService.MatchedGlossaryTerm::glossaryTerm)
+              .collect(Collectors.toCollection(LinkedHashSet::new));
+      if (matchedTerms.isEmpty() && glossaryOnlyMatchedTextUnits) {
         logger.debug(
             "Skipping text unit because it contains no glossary term: {}",
             textUnitDTOWithVariantComments.textUnitDTO().getTmTextUnitId());
         shouldSkip = true;
       } else {
         logger.debug(
-            "Found glossary terms for text unit {}: {}",
+            "Found glossary term matches for text unit {}: {}",
             textUnitDTOWithVariantComments.textUnitDTO().getTmTextUnitId(),
-            terms);
+            matchedTerms);
       }
     }
     logger.debug("Time spent searching for terms: {}", stopWatchFindTerm);
 
-    return new FoundGlossaryTerms(terms, shouldSkip);
+    return new FoundGlossaryTerms(terms, matchedTerms, shouldSkip);
   }
 
   CompletionInput getCompletionInput(

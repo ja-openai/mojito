@@ -38,6 +38,7 @@ import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Stopwatch;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -178,6 +179,7 @@ class AiTranslateLegacyBatchService {
 
     GlossaryTrie glossaryTrie =
         getGlossaryTrieForLocale(
+            repository,
             repositoryLocale.getLocale().getBcp47Tag(),
             glossaryName,
             glossaryTermSource,
@@ -334,25 +336,31 @@ class AiTranslateLegacyBatchService {
     Stopwatch stopWatchFindTerm = Stopwatch.createStarted();
 
     Set<GlossaryService.GlossaryTerm> terms = Set.of();
+    List<GlossaryService.MatchedGlossaryTerm> matchedTerms = List.of();
     boolean shouldSkip = false;
 
     if (glossaryTrie != null) {
-      terms = glossaryTrie.findTerms(textUnitDTOWithVariantComments.textUnitDTO().getSource());
-      if (terms.isEmpty() && glossaryOnlyMatchedTextUnits) {
+      matchedTerms =
+          glossaryTrie.findMatches(textUnitDTOWithVariantComments.textUnitDTO().getSource());
+      terms =
+          matchedTerms.stream()
+              .map(GlossaryService.MatchedGlossaryTerm::glossaryTerm)
+              .collect(Collectors.toCollection(LinkedHashSet::new));
+      if (matchedTerms.isEmpty() && glossaryOnlyMatchedTextUnits) {
         logger.debug(
             "Skipping text unit because it contains no glossary term: {}",
             textUnitDTOWithVariantComments.textUnitDTO().getTmTextUnitId());
         shouldSkip = true;
       } else {
         logger.debug(
-            "Found glossary terms for text unit {}: {}",
+            "Found glossary term matches for text unit {}: {}",
             textUnitDTOWithVariantComments.textUnitDTO().getTmTextUnitId(),
-            terms);
+            matchedTerms);
       }
     }
     logger.debug("Time spent searching for terms: {}", stopWatchFindTerm);
 
-    return new AiTranslateService.FoundGlossaryTerms(terms, shouldSkip);
+    return new AiTranslateService.FoundGlossaryTerms(terms, matchedTerms, shouldSkip);
   }
 
   private CompletionInput getCompletionInput(
@@ -422,6 +430,7 @@ class AiTranslateLegacyBatchService {
   }
 
   private GlossaryTrie getGlossaryTrieForLocale(
+      Repository repository,
       String bcp47Tag,
       String glossaryName,
       String termSource,
@@ -446,20 +455,45 @@ class AiTranslateLegacyBatchService {
       glossaryTrie.addTerm(
           new GlossaryService.GlossaryTerm(
               0L,
+              null,
+              null,
               termSource,
               termSource,
               termSourceDescription,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
               termTarget,
               termTargetDescription,
               termDoNotTranslate,
-              termCaseSensitive));
+              termCaseSensitive,
+              List.of()));
       logger.info(
           "Loaded the glossary from term: {} for locale: {} in {}.",
           termSource,
           bcp47Tag,
           stopwatchForGlossary.elapsed());
     } else {
-      logger.info("No glossary to load for locale: {}", bcp47Tag);
+      logger.debug(
+          "Loading repository-linked glossaries for repository: {} and locale: {}",
+          repository.getName(),
+          bcp47Tag);
+      glossaryTrie = glossaryService.loadLinkedGlossaryTrieForLocale(repository.getId(), bcp47Tag);
+      if (glossaryTrie == null) {
+        logger.info(
+            "No glossary to load for repository: {} and locale: {}",
+            repository.getName(),
+            bcp47Tag);
+      } else {
+        logger.info(
+            "Loaded repository-linked glossaries for repository: {} and locale: {} in {}.",
+            repository.getName(),
+            bcp47Tag,
+            stopwatchForGlossary.elapsed());
+      }
     }
     return glossaryTrie;
   }

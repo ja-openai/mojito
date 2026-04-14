@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.repository;
 
 import static com.box.l10n.mojito.rest.repository.RepositorySpecification.deletedEquals;
+import static com.box.l10n.mojito.rest.repository.RepositorySpecification.hiddenEquals;
 import static com.box.l10n.mojito.rest.repository.RepositorySpecification.nameEquals;
 import static com.box.l10n.mojito.specification.Specifications.ifParamNotNull;
 import static org.springframework.data.jpa.domain.Specification.where;
@@ -93,7 +94,9 @@ public class RepositoryService {
    */
   public List<Repository> findRepositoriesIsNotDeletedOrderByName(String repositoryName) {
     return repositoryRepository.findAll(
-        where(deletedEquals(false)).and(ifParamNotNull(nameEquals(repositoryName))),
+        where(deletedEquals(false))
+            .and(hiddenEquals(false))
+            .and(ifParamNotNull(nameEquals(repositoryName))),
         Sort.by(Sort.Direction.ASC, "name"));
   }
 
@@ -111,6 +114,20 @@ public class RepositoryService {
   public Repository createRepository(
       String name, String description, Locale sourceLocale, Boolean checkSLA)
       throws RepositoryNameAlreadyUsedException {
+    return createRepository(name, description, sourceLocale, checkSLA, false);
+  }
+
+  @Transactional
+  public Repository createHiddenRepository(
+      String name, String description, Locale sourceLocale, Boolean checkSLA)
+      throws RepositoryNameAlreadyUsedException {
+    return createRepository(name, description, sourceLocale, checkSLA, true);
+  }
+
+  @Transactional
+  protected Repository createRepository(
+      String name, String description, Locale sourceLocale, Boolean checkSLA, boolean hidden)
+      throws RepositoryNameAlreadyUsedException {
 
     logger.debug("Check no repository with name: {} exists", name);
 
@@ -126,6 +143,7 @@ public class RepositoryService {
     repository.setName(name);
     repository.setDescription(description);
     repository.setCheckSLA(checkSLA != null ? checkSLA : false);
+    repository.setHidden(hidden);
     repository.setDropExporterType(dropExporterConfiguration.getType());
 
     if (sourceLocale == null) {

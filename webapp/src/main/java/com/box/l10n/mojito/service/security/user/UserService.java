@@ -129,6 +129,14 @@ public class UserService {
     return hasCurrentUserRole(Role.ROLE_TRANSLATOR);
   }
 
+  public boolean isCurrentUserAdminOrPm() {
+    return isCurrentUserAdmin() || isCurrentUserPm();
+  }
+
+  public boolean isCurrentUserTranslationRole() {
+    return isCurrentUserAdmin() || isCurrentUserPm() || isCurrentUserTranslator();
+  }
+
   private boolean hasCurrentUserRole(Role expectedRole) {
     Optional<User> currentUser = auditorAwareImpl.getCurrentAuditor();
     if (currentUser.isEmpty()) {

@@ -124,6 +124,11 @@ public class Repository extends AuditableEntity {
   @Column(name = "checkSLA", nullable = false)
   private Boolean checkSLA;
 
+  /** Internal repositories should be hidden from normal repository selectors and lists. */
+  @Column(name = "hidden", nullable = false)
+  @JsonView(View.Repository.class)
+  private Boolean hidden = false;
+
   public User getCreatedByUser() {
     return createdByUser;
   }
@@ -210,6 +215,14 @@ public class Repository extends AuditableEntity {
 
   public void setCheckSLA(Boolean checkSLA) {
     this.checkSLA = checkSLA;
+  }
+
+  public Boolean getHidden() {
+    return hidden;
+  }
+
+  public void setHidden(Boolean hidden) {
+    this.hidden = hidden;
   }
 
   public Set<Branch> getBranches() {

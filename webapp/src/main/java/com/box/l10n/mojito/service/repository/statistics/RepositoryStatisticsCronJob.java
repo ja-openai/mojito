@@ -52,7 +52,8 @@ public class RepositoryStatisticsCronJob implements Job {
   @Override
   public void execute(JobExecutionContext context) throws JobExecutionException {
     logger.debug("Sets repository stats as out of date");
-    List<Repository> repositories = repositoryRepository.findByDeletedFalseOrderByNameAsc();
+    List<Repository> repositories =
+        repositoryRepository.findByDeletedFalseAndHiddenFalseOrderByNameAsc();
     for (Repository repository : repositories) {
       repositoryStatisticsJobScheduler.schedule(repository.getId());
     }

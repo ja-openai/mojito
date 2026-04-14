@@ -46,4 +46,14 @@ public class RepositorySpecification {
       }
     };
   }
+
+  public static SingleParamSpecification<Repository> hiddenEquals(final Boolean hidden) {
+    return new SingleParamSpecification<Repository>(hidden) {
+      @Override
+      public Predicate toPredicate(
+          Root<Repository> root, CriteriaQuery<?> query, CriteriaBuilder builder) {
+        return builder.equal(root.get(Repository_.hidden), hidden);
+      }
+    };
+  }
 }

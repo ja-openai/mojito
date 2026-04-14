@@ -260,6 +260,8 @@ public class WebSecurityConfig {
                 .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/review-project-requests/search-hybrid")
                 .authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/glossaries/match")
+                .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/*/status")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/*/assignment")
@@ -268,6 +270,8 @@ public class WebSecurityConfig {
                 .requestMatchers("/api/textunits/**")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/review-project-text-units/**")
+                .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/glossaries/*/terms/*/proposals")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 // Read-only is OK for everyone
                 .requestMatchers(HttpMethod.GET, "/api/**")

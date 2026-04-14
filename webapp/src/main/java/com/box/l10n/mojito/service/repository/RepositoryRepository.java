@@ -22,6 +22,10 @@ public interface RepositoryRepository
   @EntityGraph(value = "Repository.legacy", type = EntityGraphType.FETCH)
   Repository findByName(@Param("name") String name);
 
+  List<Repository> findByDeletedFalseAndHiddenFalseOrderByNameAsc();
+
+  @Query(
+      "select r from Repository r where r.deleted = false and r.hidden = false order by r.name asc")
   List<Repository> findByDeletedFalseOrderByNameAsc();
 
   @EntityGraph(value = "Repository.legacy", type = EntityGraphType.FETCH)
@@ -38,7 +42,11 @@ public interface RepositoryRepository
       findByDeletedFalseAndCheckSLATrueAndRepositoryStatisticOoslaTextUnitCountGreaterThanOrderByNameAsc(
           long statisticsOoslaTextUnitCount);
 
-  List<Repository> findByIdInAndDeletedFalseOrderByNameAsc(List<Long> ids);
+  List<Repository> findByIdInAndDeletedFalseAndHiddenFalseOrderByNameAsc(List<Long> ids);
+
+  @Query(
+      "select r from Repository r where r.id in :ids and r.deleted = false and r.hidden = false order by r.name asc")
+  List<Repository> findByIdInAndDeletedFalseOrderByNameAsc(@Param("ids") List<Long> ids);
 
   @Query(
       """
@@ -62,6 +70,7 @@ public interface RepositoryRepository
       from Repository r
       join r.repositoryStatistic rs
       where r.deleted = false
+        and r.hidden = false
       order by r.name asc
       """)
   List<RepositorySummaryRow> findRepositorySummaryRows();

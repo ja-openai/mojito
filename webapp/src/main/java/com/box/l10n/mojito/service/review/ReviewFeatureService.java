@@ -270,7 +270,7 @@ public class ReviewFeatureService {
     }
 
     List<Repository> repositories =
-        repositoryRepository.findByIdInAndDeletedFalseOrderByNameAsc(normalizedIds);
+        repositoryRepository.findByIdInAndDeletedFalseAndHiddenFalseOrderByNameAsc(normalizedIds);
     if (repositories.size() != normalizedIds.size()) {
       Set<Long> foundIds =
           repositories.stream().map(Repository::getId).collect(java.util.stream.Collectors.toSet());
