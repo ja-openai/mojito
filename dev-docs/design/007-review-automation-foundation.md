@@ -4,12 +4,12 @@ Context
 
 - `ReviewFeature` now covers the grouping side of review automation, but we still need a separate admin object for schedule/runtime configuration.
 - PM discussions landed on multiple schedules rather than one global cron, with each schedule owning a list of review features.
-- Execution needs to create one review-project request per feature per run, using a single assigned team for the automation and a per-project word cap.
+- Execution needs to create one review-project request per feature per run, using a single assigned team for the automation, an optional locale-pool translator assignment, and a per-project word cap.
 
 Goals
 
 - Introduce `ReviewAutomation` as the admin-managed schedule/config entity for automated review-project creation.
-- Support multiple automations, each with enable/disable state, cron expression, time zone, assigned team, due-date offset, max word count per generated project, and review-feature membership.
+- Support multiple automations, each with enable/disable state, cron expression, time zone, assigned team, optional translator auto-assignment, due-date offset, max word count per generated project, and review-feature membership.
 - Make common schedules easier to author with a button-driven cron generator while still preserving raw cron editing for advanced cases.
 - Reuse the existing admin CRUD + batch patterns already used for users, team pools, and review features.
 - Execute cron/manual runs and persist lightweight run history for operational visibility.
@@ -42,6 +42,7 @@ Data Model
   - `team`
   - `dueDateOffsetDays`
   - `maxWordCountPerProject`
+  - `assignTranslator`
   - `features` (`many-to-many` to `ReviewFeature`)
 - `ReviewAutomationRun`
   - `reviewAutomation`
@@ -64,6 +65,7 @@ Backend Notes
 - Scheduler synchronization happens after automation CRUD commits, so Quartz stays aligned with saved config.
 - Cron execution runs as the system user and reuses the same feature-based review-project creation path as manual creation.
 - Automated creation always excludes text units already covered by any open review project for the same `tmTextUnit + locale`.
+- Manual and automated creation can skip default translator assignment while still keeping team and PM assignment.
 
 Frontend Notes
 

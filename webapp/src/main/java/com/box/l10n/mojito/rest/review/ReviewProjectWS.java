@@ -592,6 +592,7 @@ public class ReviewProjectWS {
         request.screenshotImageIds(),
         request.name(),
         request.teamId(),
+        request.assignTranslator(),
         null);
   }
 

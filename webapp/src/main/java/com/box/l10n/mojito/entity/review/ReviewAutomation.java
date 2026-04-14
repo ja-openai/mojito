@@ -43,6 +43,9 @@ public class ReviewAutomation extends AuditableEntity {
   @Column(name = "due_date_offset_days", nullable = false)
   private Integer dueDateOffsetDays = 1;
 
+  @Column(name = "assign_translator", nullable = false)
+  private Boolean assignTranslator = true;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(
       name = "team_id",
@@ -116,6 +119,14 @@ public class ReviewAutomation extends AuditableEntity {
 
   public void setDueDateOffsetDays(Integer dueDateOffsetDays) {
     this.dueDateOffsetDays = dueDateOffsetDays;
+  }
+
+  public Boolean getAssignTranslator() {
+    return assignTranslator;
+  }
+
+  public void setAssignTranslator(Boolean assignTranslator) {
+    this.assignTranslator = assignTranslator;
   }
 
   public Team getTeam() {

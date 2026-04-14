@@ -133,6 +133,8 @@ public class ReviewAutomationService {
                       automation != null ? automation.getDueDateOffsetDays() : null),
                   normalizeMaxWordCountPerProject(
                       automation != null ? automation.getMaxWordCountPerProject() : null),
+                  normalizeAssignTranslator(
+                      automation != null ? automation.getAssignTranslator() : null, true),
                   featureNamesByAutomationId.getOrDefault(row.id(), List.of()));
             })
         .toList();
@@ -167,6 +169,7 @@ public class ReviewAutomationService {
         toTeamRef(reviewAutomation.getTeam()),
         normalizeDueDateOffsetDays(reviewAutomation.getDueDateOffsetDays()),
         normalizeMaxWordCountPerProject(reviewAutomation.getMaxWordCountPerProject()),
+        normalizeAssignTranslator(reviewAutomation.getAssignTranslator(), true),
         loadTriggerStatusByAutomationId(List.of(reviewAutomation.getId()))
             .getOrDefault(reviewAutomation.getId(), defaultTriggerStatusView()),
         features);
@@ -192,6 +195,7 @@ public class ReviewAutomationService {
       Long teamId,
       Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
+      Boolean assignTranslator,
       List<Long> featureIds) {
     requireAdmin();
     String normalizedName = normalizeName(name);
@@ -209,6 +213,7 @@ public class ReviewAutomationService {
     reviewAutomation.setDueDateOffsetDays(normalizeDueDateOffsetDays(dueDateOffsetDays));
     reviewAutomation.setMaxWordCountPerProject(
         normalizeMaxWordCountPerProject(maxWordCountPerProject));
+    reviewAutomation.setAssignTranslator(normalizeAssignTranslator(assignTranslator, true));
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
     ReviewAutomation saved = reviewAutomationRepository.save(reviewAutomation);
     syncSchedulerAfterCommit();
@@ -225,6 +230,7 @@ public class ReviewAutomationService {
       Long teamId,
       Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
+      Boolean assignTranslator,
       List<Long> featureIds) {
     requireAdmin();
     ReviewAutomation reviewAutomation =
@@ -247,6 +253,8 @@ public class ReviewAutomationService {
     reviewAutomation.setDueDateOffsetDays(normalizeDueDateOffsetDays(dueDateOffsetDays));
     reviewAutomation.setMaxWordCountPerProject(
         normalizeMaxWordCountPerProject(maxWordCountPerProject));
+    reviewAutomation.setAssignTranslator(
+        normalizeAssignTranslator(assignTranslator, reviewAutomation.getAssignTranslator()));
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
     reviewAutomationRepository.save(reviewAutomation);
     syncSchedulerAfterCommit();
@@ -325,6 +333,9 @@ public class ReviewAutomationService {
       reviewAutomation.setDueDateOffsetDays(normalizeDueDateOffsetDays(row.dueDateOffsetDays()));
       reviewAutomation.setMaxWordCountPerProject(
           normalizeMaxWordCountPerProject(row.maxWordCountPerProject()));
+      reviewAutomation.setAssignTranslator(
+          normalizeAssignTranslator(
+              row.assignTranslator(), reviewAutomation.getAssignTranslator()));
       reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
       reviewAutomationRepository.save(reviewAutomation);
     }
@@ -425,6 +436,7 @@ public class ReviewAutomationService {
                     toTeamRef(row.teamId(), row.teamName()),
                     normalizeDueDateOffsetDays(row.dueDateOffsetDays()),
                     normalizeMaxWordCountPerProject(row.maxWordCountPerProject()),
+                    normalizeAssignTranslator(row.assignTranslator(), true),
                     triggerStatusByAutomationId.getOrDefault(row.id(), defaultTriggerStatusView()),
                     row.featureCount(),
                     featuresByAutomationId.getOrDefault(row.id(), List.of())))
@@ -646,6 +658,10 @@ public class ReviewAutomationService {
     return maxWordCountPerProject;
   }
 
+  private boolean normalizeAssignTranslator(Boolean assignTranslator, Boolean defaultValue) {
+    return assignTranslator == null ? Boolean.TRUE.equals(defaultValue) : assignTranslator;
+  }
+
   private void requireAdmin() {
     if (!userService.isCurrentUserAdmin()) {
       throw new AccessDeniedException("Admin role required");
@@ -663,6 +679,7 @@ public class ReviewAutomationService {
       TeamRef team,
       int dueDateOffsetDays,
       int maxWordCountPerProject,
+      boolean assignTranslator,
       ReviewAutomationTriggerStatusView trigger,
       List<FeatureRef> features) {
     public record TeamRef(Long id, String name) {}
@@ -681,6 +698,7 @@ public class ReviewAutomationService {
       String teamName,
       int dueDateOffsetDays,
       int maxWordCountPerProject,
+      boolean assignTranslator,
       List<String> featureNames) {}
 
   public record BatchUpsertRow(
@@ -692,6 +710,7 @@ public class ReviewAutomationService {
       Long teamId,
       Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
+      Boolean assignTranslator,
       List<Long> featureIds) {}
 
   public record BatchUpsertResult(int createdCount, int updatedCount) {}

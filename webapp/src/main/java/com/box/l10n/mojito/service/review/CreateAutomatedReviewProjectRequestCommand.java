@@ -9,4 +9,5 @@ public record CreateAutomatedReviewProjectRequestCommand(
     ZonedDateTime dueDate,
     Long teamId,
     Integer maxWordCountPerProject,
+    Boolean assignTranslator,
     Long requestedByUserId) {}

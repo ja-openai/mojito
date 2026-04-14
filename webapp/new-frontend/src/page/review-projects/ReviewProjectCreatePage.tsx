@@ -290,6 +290,7 @@ export function ReviewProjectCreatePage() {
               screenshotImageIds: values.screenshotImageIds,
               name: values.name,
               teamId: values.teamId ?? null,
+              assignTranslator: values.assignTranslator,
             });
             const report = buildCreateSubmissionReport([response]);
             if (report.skippedLocaleCount === 0 && report.erroredLocaleCount === 0) {
@@ -318,6 +319,7 @@ export function ReviewProjectCreatePage() {
               screenshotImageIds: values.screenshotImageIds,
               name: buildFeatureScopedRequestName(values.name, feature?.name ?? ''),
               teamId: values.teamId ?? null,
+              assignTranslator: values.assignTranslator,
             });
             responses.push(response);
           }

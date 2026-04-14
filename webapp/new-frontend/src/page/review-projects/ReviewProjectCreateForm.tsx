@@ -43,6 +43,7 @@ export type ReviewProjectCreateFormValues = {
   skipTextUnitsInOpenProjects: boolean;
   screenshotImageIds: string[];
   teamId: number | null;
+  assignTranslator: boolean;
 };
 
 export type ReviewProjectSourceMode = 'TEXT_UNITS' | 'REVIEW_FEATURE';
@@ -105,6 +106,7 @@ export function ReviewProjectCreateForm({
   const [skipTextUnitsInOpenProjects, setSkipTextUnitsInOpenProjects] = useState(true);
   const [notes, setNotes] = useState('');
   const [screenshotKeys, setScreenshotKeys] = useState<string[]>([]);
+  const [assignTranslator, setAssignTranslator] = useState(true);
   const [uploadQueue, setUploadQueue] = useState<RequestAttachmentUploadQueueItem[]>([]);
   const [optimizeImagesBeforeUpload, setOptimizeImagesBeforeUpload] = useState(true);
   const previewUrlsRef = useRef<Set<string>>(new Set());
@@ -361,23 +363,34 @@ export function ReviewProjectCreateForm({
         </div>
 
         {teamOptions && onChangeTeam ? (
-          <label className="review-create__field">
-            <span className="review-create__label">Team (optional)</span>
-            <SingleSelectDropdown
-              label="Team"
-              className="review-create__select-dropdown"
-              options={teamOptions.map((team) => ({
-                value: team.id,
-                label: `${team.name} (#${team.id})`,
-              }))}
-              value={selectedTeamId}
-              onChange={onChangeTeam}
-              noneLabel="No team"
-              placeholder="No team"
-              disabled={isSubmitting}
-              buttonAriaLabel="Select team for default assignment"
-            />
-          </label>
+          <>
+            <label className="review-create__field">
+              <span className="review-create__label">Team (optional)</span>
+              <SingleSelectDropdown
+                label="Team"
+                className="review-create__select-dropdown"
+                options={teamOptions.map((team) => ({
+                  value: team.id,
+                  label: `${team.name} (#${team.id})`,
+                }))}
+                value={selectedTeamId}
+                onChange={onChangeTeam}
+                noneLabel="No team"
+                placeholder="No team"
+                disabled={isSubmitting}
+                buttonAriaLabel="Select team for default assignment"
+              />
+            </label>
+            <label className="review-create__checkbox">
+              <input
+                type="checkbox"
+                checked={assignTranslator}
+                onChange={(event) => setAssignTranslator(event.target.checked)}
+                disabled={isSubmitting || selectedTeamId == null}
+              />
+              <span>Assign translator from locale pool</span>
+            </label>
+          </>
         ) : null}
 
         <div className="review-create__two-up">
@@ -480,6 +493,7 @@ export function ReviewProjectCreateForm({
               skipTextUnitsInOpenProjects,
               screenshotImageIds: screenshotKeys,
               teamId: selectedTeamId,
+              assignTranslator,
             });
           }}
           disabled={!canSubmit || isSubmitting}

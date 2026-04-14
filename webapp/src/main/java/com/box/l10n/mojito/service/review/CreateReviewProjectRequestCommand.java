@@ -17,4 +17,5 @@ public record CreateReviewProjectRequestCommand(
     List<String> screenshotImageIds,
     String name,
     Long teamId,
+    Boolean assignTranslator,
     Long requestedByUserId) {}

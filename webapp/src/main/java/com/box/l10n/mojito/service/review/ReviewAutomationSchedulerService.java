@@ -112,6 +112,7 @@ public class ReviewAutomationSchedulerService {
                     startedAt.plusDays(automation.getDueDateOffsetDays()),
                     automation.getTeam().getId(),
                     automation.getMaxWordCountPerProject(),
+                    automation.getAssignTranslator(),
                     requestedByUserId));
 
         if (result.requestId() != null) {

@@ -33,6 +33,7 @@ type ParsedRow = {
   teamName: string;
   dueDateOffsetDays: number;
   maxWordCountPerProject: number;
+  assignTranslator: boolean;
   featureIds: number[];
   featureNames: string[];
   errors: string[];
@@ -40,8 +41,8 @@ type ParsedRow = {
 
 const DEFAULT_MAX_WORD_COUNT = 2000;
 
-const EXAMPLE_INPUT = `Payments daily | enabled | 0 0 0 * * ? | America/Los_Angeles | Core Localization | 1 | 2000 | Payments
-Vendor catch-up | disabled | 0 30 6 * * ? | UTC | Vendor Team | 2 | 1500 | Billing, Checkout`;
+const EXAMPLE_INPUT = `Payments daily | enabled | 0 0 0 * * ? | America/Los_Angeles | Core Localization | assign-translator | 1 | 2000 | Payments
+Vendor catch-up | disabled | 0 30 6 * * ? | UTC | Vendor Team | no-translator | 2 | 1500 | Billing, Checkout`;
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
 
@@ -53,9 +54,10 @@ const formatBatchExportRow = (row: {
   teamName: string | null;
   dueDateOffsetDays: number;
   maxWordCountPerProject: number;
+  assignTranslator?: boolean | null;
   featureNames: string[];
 }) =>
-  `${row.name} | ${row.enabled ? 'enabled' : 'disabled'} | ${row.cronExpression} | ${row.timeZone} | ${row.teamName ?? ''} | ${row.dueDateOffsetDays} | ${row.maxWordCountPerProject} | ${row.featureNames.join(', ')}`;
+  `${row.name} | ${row.enabled ? 'enabled' : 'disabled'} | ${row.cronExpression} | ${row.timeZone} | ${row.teamName ?? ''} | ${row.assignTranslator === false ? 'no-translator' : 'assign-translator'} | ${row.dueDateOffsetDays} | ${row.maxWordCountPerProject} | ${row.featureNames.join(', ')}`;
 
 const normalizeEnabled = (value?: string | null) => {
   const trimmed = (value ?? '').trim().toLowerCase();
@@ -95,6 +97,20 @@ const normalizeDueDateOffsetDays = (value?: string | null) => {
   return parsed;
 };
 
+const normalizeAssignTranslator = (value?: string | null) => {
+  const trimmed = (value ?? '').trim().toLowerCase();
+  if (!trimmed) {
+    return true;
+  }
+  if (['assign-translator', 'assign', 'true', 'yes', 'on'].includes(trimmed)) {
+    return true;
+  }
+  if (['no-translator', 'skip-translator', 'none', 'false', 'no', 'off'].includes(trimmed)) {
+    return false;
+  }
+  return null;
+};
+
 const normalizeTimeZone = (value?: string | null) => {
   const trimmed = (value ?? '').trim();
   return trimmed || DEFAULT_REVIEW_AUTOMATION_TIME_ZONE;
@@ -119,10 +135,18 @@ function parseBatchInput(
       const cronExpression = (parts[2] ?? '').trim();
       const timeZone = normalizeTimeZone(parts[3] ?? '');
       const teamName = (parts[4] ?? '').trim();
-      const dueDateOffsetDays = normalizeDueDateOffsetDays(parts[5] ?? '');
-      const maxWordCountPerProject = normalizeMaxWordCount(parts[6] ?? '');
+      const hasAssignTranslatorColumn = parts.length >= 9;
+      const assignTranslator = hasAssignTranslatorColumn
+        ? normalizeAssignTranslator(parts[5] ?? '')
+        : true;
+      const dueDateOffsetDays = normalizeDueDateOffsetDays(
+        parts[hasAssignTranslatorColumn ? 6 : 5] ?? '',
+      );
+      const maxWordCountPerProject = normalizeMaxWordCount(
+        parts[hasAssignTranslatorColumn ? 7 : 6] ?? '',
+      );
       const featureNames =
-        parts[7]
+        parts[hasAssignTranslatorColumn ? 8 : 7]
           ?.split(/[;,]+/)
           .map((part) => part.trim())
           .filter(Boolean) ?? [];
@@ -147,6 +171,9 @@ function parseBatchInput(
       }
       if (maxWordCountPerProject == null) {
         errors.push('Invalid max word count');
+      }
+      if (assignTranslator == null) {
+        errors.push('Invalid translator assignment flag');
       }
 
       const resolvedFeatureIds: number[] = [];
@@ -185,6 +212,7 @@ function parseBatchInput(
         teamName: teamDisplayNamesByName.get(normalizedTeamKey) ?? teamName,
         dueDateOffsetDays: dueDateOffsetDays ?? 1,
         maxWordCountPerProject: maxWordCountPerProject ?? DEFAULT_MAX_WORD_COUNT,
+        assignTranslator: assignTranslator ?? true,
         featureIds: resolvedFeatureIds.sort((left, right) => left - right),
         featureNames: resolvedFeatureNames,
         errors,
@@ -362,6 +390,7 @@ export function AdminReviewAutomationBatchPage() {
         teamId: row.teamId,
         dueDateOffsetDays: row.dueDateOffsetDays,
         maxWordCountPerProject: row.maxWordCountPerProject,
+        assignTranslator: row.assignTranslator,
         featureIds: row.featureIds,
       })),
     });
@@ -432,6 +461,7 @@ export function AdminReviewAutomationBatchPage() {
         cronExpression: DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
         timeZone: DEFAULT_REVIEW_AUTOMATION_TIME_ZONE,
         teamName: '',
+        assignTranslator: true,
         dueDateOffsetDays: 1,
         maxWordCountPerProject: DEFAULT_MAX_WORD_COUNT,
         featureNames: [feature.name],
@@ -537,12 +567,15 @@ export function AdminReviewAutomationBatchPage() {
             <pre className="user-batch-page__example-code">{EXAMPLE_INPUT}</pre>
             <ul className="user-batch-page__intro-list review-automation-batch-page__docs-list">
               <li>
-                `name | enabled|disabled | cron | timezone | team | due-date-offset-days |
-                max-word-count | feature-a, feature-b`
+                `name | enabled|disabled | cron | timezone | team | assign-translator|no-translator
+                | due-date-offset-days | max-word-count | feature-a, feature-b`
               </li>
               <li>Blank status defaults to enabled.</li>
               <li>Blank timezone defaults to UTC.</li>
               <li>Team name must match an existing enabled team.</li>
+              <li>
+                Existing rows without the translator assignment column still default to assign.
+              </li>
               <li>Blank due date offset defaults to 1 day.</li>
               <li>Blank max word count defaults to 2000.</li>
               <li>Review feature names can be comma- or semicolon-separated.</li>
@@ -574,6 +607,7 @@ export function AdminReviewAutomationBatchPage() {
               <div>Cron</div>
               <div>TZ</div>
               <div>Team</div>
+              <div>Translator</div>
               <div>Due in</div>
               <div>Max size</div>
               <div>Features</div>
@@ -589,6 +623,9 @@ export function AdminReviewAutomationBatchPage() {
                   <div className="user-batch-page__cell--muted">{row.cronExpression || '—'}</div>
                   <div className="user-batch-page__cell--muted">{row.timeZone}</div>
                   <div className="user-batch-page__cell--muted">{row.teamName || '—'}</div>
+                  <div className="user-batch-page__cell--muted">
+                    {row.assignTranslator ? 'Assign' : 'Skip'}
+                  </div>
                   <div className="user-batch-page__cell--muted">{row.dueDateOffsetDays}d</div>
                   <div className="user-batch-page__cell--muted">{row.maxWordCountPerProject}</div>
                   <div className="user-batch-page__cell--muted">

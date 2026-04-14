@@ -231,6 +231,7 @@ public class ReviewProjectServiceTest {
             List.of(),
             "Manual selected ids",
             null,
+            true,
             99L));
 
     ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =
@@ -261,6 +262,7 @@ public class ReviewProjectServiceTest {
             List.of(),
             "Manual feature",
             null,
+            true,
             99L));
 
     ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =
@@ -291,6 +293,7 @@ public class ReviewProjectServiceTest {
             List.of(),
             "Manual feature default",
             null,
+            true,
             99L));
 
     ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =

@@ -85,6 +85,7 @@ export function AdminReviewAutomationsPage() {
     DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
   );
   const [newTeamIdDraft, setNewTeamIdDraft] = useState<number | null>(null);
+  const [newAssignTranslatorDraft, setNewAssignTranslatorDraft] = useState(true);
   const [newDueDateOffsetDaysDraft, setNewDueDateOffsetDaysDraft] = useState(
     String(DEFAULT_DUE_DATE_OFFSET_DAYS),
   );
@@ -187,6 +188,7 @@ export function AdminReviewAutomationsPage() {
     setNewTimeZoneDraft(getDefaultReviewAutomationTimeZone());
     setNewCronExpressionDraft(DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION);
     setNewTeamIdDraft(null);
+    setNewAssignTranslatorDraft(true);
     setNewDueDateOffsetDaysDraft(String(DEFAULT_DUE_DATE_OFFSET_DAYS));
     setNewMaxWordCountDraft(String(DEFAULT_MAX_WORD_COUNT));
     setNewFeatureIdsDraft([]);
@@ -227,6 +229,7 @@ export function AdminReviewAutomationsPage() {
       teamId: newTeamIdDraft,
       dueDateOffsetDays: dueDateOffsetDaysDraft.value as number,
       maxWordCountPerProject: maxWordCountDraft.value as number,
+      assignTranslator: newAssignTranslatorDraft,
       featureIds: [...newFeatureIdsDraft].sort((a, b) => a - b),
     });
   };
@@ -466,6 +469,20 @@ export function AdminReviewAutomationsPage() {
                 />
               </div>
               <div className="settings-field">
+                <span className="settings-field__label">Translator assignment</span>
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={newAssignTranslatorDraft}
+                    onChange={(event) => setNewAssignTranslatorDraft(event.target.checked)}
+                    disabled={newTeamIdDraft == null}
+                  />
+                  <span>Assign translator from locale pool</span>
+                </label>
+              </div>
+            </div>
+            <div className="settings-grid settings-grid--two-column">
+              <div className="settings-field">
                 <label
                   className="settings-field__label"
                   htmlFor="create-review-automation-due-offset"
@@ -485,27 +502,27 @@ export function AdminReviewAutomationsPage() {
                   }}
                 />
               </div>
-            </div>
-            <div className="settings-field">
-              <label
-                className="settings-field__label"
-                htmlFor="create-review-automation-max-word-count"
-              >
-                Max word count per project
-              </label>
-              <input
-                id="create-review-automation-max-word-count"
-                type="number"
-                min={1}
-                inputMode="numeric"
-                className="settings-input"
-                value={newMaxWordCountDraft}
-                onChange={(event) => {
-                  setNewMaxWordCountDraft(event.target.value);
-                  setCreateModalError(null);
-                }}
-                placeholder={String(DEFAULT_MAX_WORD_COUNT)}
-              />
+              <div className="settings-field">
+                <label
+                  className="settings-field__label"
+                  htmlFor="create-review-automation-max-word-count"
+                >
+                  Max word count per project
+                </label>
+                <input
+                  id="create-review-automation-max-word-count"
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  className="settings-input"
+                  value={newMaxWordCountDraft}
+                  onChange={(event) => {
+                    setNewMaxWordCountDraft(event.target.value);
+                    setCreateModalError(null);
+                  }}
+                  placeholder={String(DEFAULT_MAX_WORD_COUNT)}
+                />
+              </div>
             </div>
             <div className="settings-field">
               <div className="settings-field__header">

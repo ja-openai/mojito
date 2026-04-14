@@ -14,4 +14,5 @@ public record ReviewAutomationSummaryRow(
     String teamName,
     Integer dueDateOffsetDays,
     Integer maxWordCountPerProject,
+    Boolean assignTranslator,
     long featureCount) {}

@@ -74,6 +74,34 @@ public class ReviewAutomationSchedulerServiceTest {
     assertEquals(-1, command.name().indexOf(':'));
     assertEquals(-1, command.name().indexOf("PST"));
     assertEquals(-1, command.name().indexOf("PDT"));
+    assertEquals(Boolean.TRUE, command.assignTranslator());
+  }
+
+  @Test
+  public void runAutomationCanSkipTranslatorAssignment() {
+    ReviewAutomation automation = automation(18L, "Morning automation", "UTC");
+    automation.setAssignTranslator(false);
+    automation.setFeatures(new LinkedHashSet<>(List.of(feature(24L, "Billing"))));
+
+    ReviewAutomationRun run = new ReviewAutomationRun();
+    run.setId(32L);
+
+    when(reviewAutomationRepository.findByIdWithFeatures(18L)).thenReturn(Optional.of(automation));
+    when(reviewAutomationRunService.createRunningRun(any(), any(), anyLong(), anyInt(), any()))
+        .thenReturn(run);
+    when(reviewProjectService.createAutomatedReviewProjectRequest(any()))
+        .thenReturn(
+            new CreateReviewProjectRequestResult(
+                52L, "ignored", List.of(), null, List.of(), 0, 0, 0, 0, List.of()));
+
+    reviewAutomationSchedulerService.runAutomation(
+        18L, ReviewAutomationRun.TriggerSource.MANUAL, 99L, false);
+
+    ArgumentCaptor<CreateAutomatedReviewProjectRequestCommand> commandCaptor =
+        ArgumentCaptor.forClass(CreateAutomatedReviewProjectRequestCommand.class);
+    verify(reviewProjectService).createAutomatedReviewProjectRequest(commandCaptor.capture());
+
+    assertEquals(Boolean.FALSE, commandCaptor.getValue().assignTranslator());
   }
 
   private ReviewAutomation automation(Long id, String name, String timeZone) {

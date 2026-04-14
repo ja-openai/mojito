@@ -237,6 +237,7 @@ export type ReviewProjectCreateRequest = {
   screenshotImageIds?: string[] | null;
   name: string;
   teamId?: number | null;
+  assignTranslator?: boolean | null;
 };
 
 export type ReviewProjectCreateResponse = {

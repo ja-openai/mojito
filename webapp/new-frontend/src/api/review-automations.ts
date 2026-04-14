@@ -24,6 +24,7 @@ export type ApiReviewAutomationSummary = {
   team: { id: number; name: string } | null;
   dueDateOffsetDays: number;
   maxWordCountPerProject: number;
+  assignTranslator: boolean;
   trigger: ApiReviewAutomationTrigger | null;
   featureCount: number;
   features: ApiReviewAutomationFeature[];
@@ -40,6 +41,7 @@ export type ApiReviewAutomation = {
   team: { id: number; name: string } | null;
   dueDateOffsetDays: number;
   maxWordCountPerProject: number;
+  assignTranslator: boolean;
   trigger: ApiReviewAutomationTrigger | null;
   features: ApiReviewAutomationFeature[];
 };
@@ -59,6 +61,7 @@ export type ApiReviewAutomationBatchExportRow = {
   teamName: string | null;
   dueDateOffsetDays: number;
   maxWordCountPerProject: number;
+  assignTranslator: boolean;
   featureNames: string[];
 };
 
@@ -117,6 +120,7 @@ type UpsertReviewAutomationPayload = {
   teamId: number;
   dueDateOffsetDays: number;
   maxWordCountPerProject: number;
+  assignTranslator: boolean;
   featureIds: number[];
 };
 
@@ -130,6 +134,7 @@ type BatchUpsertPayload = {
     teamId: number;
     dueDateOffsetDays: number;
     maxWordCountPerProject: number;
+    assignTranslator?: boolean | null;
     featureIds: number[];
   }>;
 };

@@ -63,6 +63,7 @@ export function AdminReviewAutomationDetailPage() {
   const [timeZoneDraft, setTimeZoneDraft] = useState('UTC');
   const [cronExpressionDraft, setCronExpressionDraft] = useState('');
   const [teamIdDraft, setTeamIdDraft] = useState<number | null>(null);
+  const [assignTranslatorDraft, setAssignTranslatorDraft] = useState(true);
   const [dueDateOffsetDaysDraft, setDueDateOffsetDaysDraft] = useState('');
   const [maxWordCountDraft, setMaxWordCountDraft] = useState('');
   const [featureIdsDraft, setFeatureIdsDraft] = useState<number[]>([]);
@@ -120,6 +121,7 @@ export function AdminReviewAutomationDetailPage() {
       teamId: number;
       dueDateOffsetDays: number;
       maxWordCountPerProject: number;
+      assignTranslator: boolean;
       featureIds: number[];
     }) => updateReviewAutomation(parsedAutomationId as number, payload),
     onSuccess: async (updated) => {
@@ -192,6 +194,7 @@ export function AdminReviewAutomationDetailPage() {
     setTimeZoneDraft(automation.timeZone);
     setCronExpressionDraft(automation.cronExpression);
     setTeamIdDraft(automation.team?.id ?? null);
+    setAssignTranslatorDraft(automation.assignTranslator);
     setDueDateOffsetDaysDraft(String(automation.dueDateOffsetDays));
     setMaxWordCountDraft(String(automation.maxWordCountPerProject));
     setFeatureIdsDraft(automation.features.map((feature) => feature.id).sort((a, b) => a - b));
@@ -231,6 +234,9 @@ export function AdminReviewAutomationDetailPage() {
     if (teamIdDraft !== (automation.team?.id ?? null)) {
       return true;
     }
+    if (assignTranslatorDraft !== automation.assignTranslator) {
+      return true;
+    }
     if (dueDateOffsetDays.valid && dueDateOffsetDays.value !== automation.dueDateOffsetDays) {
       return true;
     }
@@ -247,6 +253,7 @@ export function AdminReviewAutomationDetailPage() {
     cronExpressionDraft,
     enabledDraft,
     featureIdsDraft,
+    assignTranslatorDraft,
     dueDateOffsetDays.valid,
     dueDateOffsetDays.value,
     maxWordCount.valid,
@@ -301,6 +308,7 @@ export function AdminReviewAutomationDetailPage() {
       teamId: teamIdDraft,
       dueDateOffsetDays: dueDateOffsetDays.value as number,
       maxWordCountPerProject: maxWordCount.value as number,
+      assignTranslator: assignTranslatorDraft,
       featureIds: [...featureIdsDraft].sort((a, b) => a - b),
     });
   };
@@ -499,6 +507,20 @@ export function AdminReviewAutomationDetailPage() {
                     setStatusNotice(null);
                   }}
                 />
+              </div>
+              <div className="settings-field">
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={assignTranslatorDraft}
+                    onChange={(event) => {
+                      setAssignTranslatorDraft(event.target.checked);
+                      setStatusNotice(null);
+                    }}
+                    disabled={teamIdDraft == null}
+                  />
+                  <span>Assign translator from locale pool</span>
+                </label>
               </div>
               <div className="settings-field">
                 <div className="settings-field__header">

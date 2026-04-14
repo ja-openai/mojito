@@ -151,6 +151,7 @@ public class ReviewProjectService {
             request.screenshotImageIds(),
             request.name(),
             request.teamId(),
+            request.assignTranslator(),
             requestedByUserId);
 
     QuartzJobInfo<CreateReviewProjectRequestCommand, CreateReviewProjectRequestResult>
@@ -277,6 +278,7 @@ public class ReviewProjectService {
             request.dueDate(),
             request.teamId(),
             request.requestedByUserId(),
+            request.assignTranslator(),
             localesToCreate);
 
     return buildCreateReviewProjectRequestResult(
@@ -375,6 +377,7 @@ public class ReviewProjectService {
             request.dueDate(),
             request.teamId(),
             request.requestedByUserId(),
+            request.assignTranslator(),
             localesToCreate);
 
     return buildCreateReviewProjectRequestResult(
@@ -2025,6 +2028,7 @@ public class ReviewProjectService {
       ZonedDateTime dueDate,
       Long teamId,
       Long requestedByUserId,
+      Boolean assignTranslator,
       List<LocaleCandidates> localesToCreate) {
     User requestedByUser = resolveUser(requestedByUserId, "requestedByUser");
 
@@ -2062,8 +2066,10 @@ public class ReviewProjectService {
       reviewProject.setCreatedByUser(requestedByUser);
       String localeTagKey =
           locale.getBcp47Tag() == null ? "" : locale.getBcp47Tag().trim().toLowerCase();
-      reviewProject.setAssignedTranslatorUser(
-          assignmentDefaults.defaultTranslatorByLocaleTagLowercase().get(localeTagKey));
+      if (assignTranslator == null || Boolean.TRUE.equals(assignTranslator)) {
+        reviewProject.setAssignedTranslatorUser(
+            assignmentDefaults.defaultTranslatorByLocaleTagLowercase().get(localeTagKey));
+      }
 
       ReviewProject saved = reviewProjectRepository.save(reviewProject);
 

@@ -74,6 +74,13 @@
   min-height: 16rem;
 }
 
+.review-automation-batch-page__grid ~ .user-batch-page__section .user-batch-page__preview-header,
+.review-automation-batch-page__grid ~ .user-batch-page__section .user-batch-page__preview-row {
+  grid-template-columns:
+    3rem 4.5rem minmax(8rem, 1.2fr) 5.5rem minmax(9rem, 1fr) 6rem minmax(8rem, 1fr)
+    6rem 4.5rem 5rem minmax(8rem, 1fr) minmax(8rem, 1fr);
+}
+
 @media (max-width: 72rem) {
   .review-automation-batch-page__grid {
     grid-template-columns: 1fr;

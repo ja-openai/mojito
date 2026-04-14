@@ -17,6 +17,7 @@ public record SearchReviewAutomationsView(
       TeamRef team,
       int dueDateOffsetDays,
       int maxWordCountPerProject,
+      boolean assignTranslator,
       ReviewAutomationTriggerStatusView trigger,
       long featureCount,
       List<FeatureSummary> features) {}

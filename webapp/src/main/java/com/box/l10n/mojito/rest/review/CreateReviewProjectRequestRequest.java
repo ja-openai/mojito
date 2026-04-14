@@ -16,4 +16,5 @@ public record CreateReviewProjectRequestRequest(
     ZonedDateTime dueDate,
     List<String> screenshotImageIds,
     String name,
-    Long teamId) {}
+    Long teamId,
+    Boolean assignTranslator) {}

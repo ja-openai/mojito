@@ -56,6 +56,7 @@ public class ReviewAutomationWS {
         TeamRef team,
         int dueDateOffsetDays,
         int maxWordCountPerProject,
+        boolean assignTranslator,
         TriggerStatusRef trigger,
         long featureCount,
         List<FeatureRef> features) {}
@@ -72,6 +73,7 @@ public class ReviewAutomationWS {
       TeamRef team,
       int dueDateOffsetDays,
       int maxWordCountPerProject,
+      boolean assignTranslator,
       TriggerStatusRef trigger,
       List<FeatureRef> features) {}
 
@@ -96,6 +98,7 @@ public class ReviewAutomationWS {
       Long teamId,
       Integer dueDateOffsetDays,
       Integer maxWordCountPerProject,
+      Boolean assignTranslator,
       List<Long> featureIds) {}
 
   public record BatchUpsertReviewAutomationsRequest(List<BatchRow> rows) {
@@ -108,6 +111,7 @@ public class ReviewAutomationWS {
         Long teamId,
         Integer dueDateOffsetDays,
         Integer maxWordCountPerProject,
+        Boolean assignTranslator,
         List<Long> featureIds) {}
   }
 
@@ -122,6 +126,7 @@ public class ReviewAutomationWS {
       String teamName,
       int dueDateOffsetDays,
       int maxWordCountPerProject,
+      boolean assignTranslator,
       List<String> featureNames) {}
 
   public record RunAutomationResponse(
@@ -209,6 +214,7 @@ public class ReviewAutomationWS {
                     row.teamName(),
                     row.dueDateOffsetDays(),
                     row.maxWordCountPerProject(),
+                    row.assignTranslator(),
                     row.featureNames()))
         .toList();
   }
@@ -326,6 +332,7 @@ public class ReviewAutomationWS {
               request != null ? request.teamId() : null,
               request != null ? request.dueDateOffsetDays() : null,
               request != null ? request.maxWordCountPerProject() : null,
+              request != null ? request.assignTranslator() : null,
               request != null ? request.featureIds() : List.of()));
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
@@ -346,6 +353,7 @@ public class ReviewAutomationWS {
               request != null ? request.teamId() : null,
               request != null ? request.dueDateOffsetDays() : null,
               request != null ? request.maxWordCountPerProject() : null,
+              request != null ? request.assignTranslator() : null,
               request != null ? request.featureIds() : List.of()));
     } catch (IllegalArgumentException ex) {
       HttpStatus status =
@@ -386,6 +394,7 @@ public class ReviewAutomationWS {
                                   row.teamId(),
                                   row.dueDateOffsetDays(),
                                   row.maxWordCountPerProject(),
+                                  row.assignTranslator(),
                                   row.featureIds()))
                       .toList());
       return new BatchUpsertReviewAutomationsResponse(result.createdCount(), result.updatedCount());
@@ -407,6 +416,7 @@ public class ReviewAutomationWS {
         view.team() == null ? null : new TeamRef(view.team().id(), view.team().name()),
         view.dueDateOffsetDays(),
         view.maxWordCountPerProject(),
+        view.assignTranslator(),
         toTriggerStatusRef(view.trigger()),
         view.featureCount(),
         view.features().stream()
@@ -427,6 +437,7 @@ public class ReviewAutomationWS {
         detail.team() == null ? null : new TeamRef(detail.team().id(), detail.team().name()),
         detail.dueDateOffsetDays(),
         detail.maxWordCountPerProject(),
+        detail.assignTranslator(),
         toTriggerStatusRef(detail.trigger()),
         detail.features().stream()
             .map(feature -> new FeatureRef(feature.id(), feature.name()))
