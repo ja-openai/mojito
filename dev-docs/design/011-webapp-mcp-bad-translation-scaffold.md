@@ -21,6 +21,10 @@ What this scaffold includes
 - The transport is Streamable-HTTP compatible in sync mode:
   - `POST /api/mcp` returns `application/json`
   - `GET /api/mcp` returns `405 Method Not Allowed` because streaming is not implemented yet
+- The first bad-translation read-only tool can build on top of it by:
+  - looking up translation candidates from `stringId`
+  - resolving locale mismatches from the observed file/log locale
+  - keeping repository optional so callers can start from the string alone
 
 Why this shape
 
