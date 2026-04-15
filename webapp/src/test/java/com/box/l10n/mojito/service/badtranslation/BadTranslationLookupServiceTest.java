@@ -1,4 +1,4 @@
-package com.box.l10n.mojito.service.mcp.badtranslation;
+package com.box.l10n.mojito.service.badtranslation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -124,7 +124,8 @@ public class BadTranslationLookupServiceTest {
     textUnitDTO.setTmTextUnitVariantId(63L);
     textUnitDTO.setAssetPath(assetPath);
     textUnitDTO.setAssetId(74L);
-    textUnitDTO.setSource("{month} {day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}");
+    textUnitDTO.setSource(
+        "{month} {day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}");
     textUnitDTO.setTarget(target);
     textUnitDTO.setTargetComment("ICU ordinal");
     textUnitDTO.setIncludedInLocalizedFile(true);

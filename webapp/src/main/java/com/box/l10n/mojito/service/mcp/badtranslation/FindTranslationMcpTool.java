@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.mcp.badtranslation;
 
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.service.badtranslation.BadTranslationLookupService;
 import com.box.l10n.mojito.service.mcp.McpToolDescriptor;
 import com.box.l10n.mojito.service.mcp.McpToolParameter;
 import com.box.l10n.mojito.service.mcp.TypedMcpToolHandler;

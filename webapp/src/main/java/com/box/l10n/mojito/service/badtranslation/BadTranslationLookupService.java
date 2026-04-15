@@ -1,4 +1,4 @@
-package com.box.l10n.mojito.service.mcp.badtranslation;
+package com.box.l10n.mojito.service.badtranslation;
 
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
