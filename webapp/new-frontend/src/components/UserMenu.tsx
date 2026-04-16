@@ -62,6 +62,8 @@ export function UserMenu() {
   const displayName = user.username || 'Account';
   const roleLabel = formatRole(user.role);
   const isAdmin = user.role === 'ROLE_ADMIN';
+  const isPm = user.role === 'ROLE_PM';
+  const canAccessIncidents = isAdmin || isPm;
   const canAccessStatistics = isAdmin;
 
   const handleNavigate = (path: string) => {
@@ -84,7 +86,9 @@ export function UserMenu() {
     : [];
 
   const accountLinks = [{ label: 'My Settings', path: '/settings/me' }];
-  const operationsLinks: Array<{ label: string; path: string }> = [];
+  const operationsLinks: Array<{ label: string; path: string }> = canAccessIncidents
+    ? [{ label: 'Translation incidents', path: '/translation-incidents' }]
+    : [];
 
   const adminLinks = isAdmin ? [{ label: 'System Settings', path: '/settings/system' }] : [];
 
@@ -108,7 +112,7 @@ export function UserMenu() {
             <div className="user-menu__line-name">{displayName}</div>
             <div className="user-menu__line-role">{roleLabel}</div>
           </div>
-          {canAccessStatistics || isAdmin ? (
+          {canAccessStatistics || isAdmin || operationsLinks.length > 0 ? (
             <>
               {insightsLinks.length > 0 ? (
                 <>

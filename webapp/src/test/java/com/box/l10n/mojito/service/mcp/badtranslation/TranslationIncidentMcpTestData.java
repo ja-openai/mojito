@@ -8,10 +8,11 @@ final class TranslationIncidentMcpTestData {
   private TranslationIncidentMcpTestData() {}
 
   static TranslationIncidentService.IncidentDetail incidentDetail(
-      Long id, String resolution, boolean canReject) {
+      Long id, String status, boolean canReject) {
     return new TranslationIncidentService.IncidentDetail(
         id,
-        resolution,
+        "OPEN",
+        status,
         "chatgpt-web",
         "string.id",
         "hr-HR",
@@ -22,7 +23,9 @@ final class TranslationIncidentMcpTestData {
         "Malformed ICU",
         "https://buildkite.example/4627",
         1,
+        "https://mojito.example/translation-incidents?incidentId=" + id,
         11L,
+        "https://mojito.example/text-units/11?locale=hr",
         12L,
         13L,
         "/src/a.ts",
@@ -52,6 +55,8 @@ final class TranslationIncidentMcpTestData {
         "slack draft",
         List.of(),
         List.of(),
+        null,
+        null,
         null,
         null,
         null,

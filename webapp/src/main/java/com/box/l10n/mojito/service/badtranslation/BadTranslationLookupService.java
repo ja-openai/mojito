@@ -8,6 +8,9 @@ import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
+import com.box.l10n.mojito.utils.ServerConfig;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -44,6 +47,7 @@ public class BadTranslationLookupService {
   public record TranslationCandidate(
       RepositoryRef repository,
       Long tmTextUnitId,
+      String textUnitLink,
       Long tmTextUnitCurrentVariantId,
       Long tmTextUnitVariantId,
       String stringId,
@@ -67,14 +71,17 @@ public class BadTranslationLookupService {
   private final RepositoryRepository repositoryRepository;
   private final LocaleService localeService;
   private final TextUnitSearcher textUnitSearcher;
+  private final ServerConfig serverConfig;
 
   public BadTranslationLookupService(
       RepositoryRepository repositoryRepository,
       LocaleService localeService,
-      TextUnitSearcher textUnitSearcher) {
+      TextUnitSearcher textUnitSearcher,
+      ServerConfig serverConfig) {
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.localeService = Objects.requireNonNull(localeService);
     this.textUnitSearcher = Objects.requireNonNull(textUnitSearcher);
+    this.serverConfig = Objects.requireNonNull(serverConfig);
   }
 
   public FindTranslationResult findTranslation(FindTranslationInput input) {
@@ -140,6 +147,7 @@ public class BadTranslationLookupService {
     return new TranslationCandidate(
         repositoryRef,
         textUnitDTO.getTmTextUnitId(),
+        buildTextUnitLink(textUnitDTO.getTmTextUnitId(), textUnitDTO.getTargetLocale()),
         textUnitDTO.getTmTextUnitCurrentVariantId(),
         textUnitDTO.getTmTextUnitVariantId(),
         textUnitDTO.getName(),
@@ -270,5 +278,31 @@ public class BadTranslationLookupService {
       return null;
     }
     return value.trim();
+  }
+
+  private String buildTextUnitLink(Long tmTextUnitId, String localeTag) {
+    String baseUrl = normalizeServerBaseUrl();
+    if (tmTextUnitId == null || baseUrl == null) {
+      return null;
+    }
+
+    String textUnitLink = baseUrl + "/text-units/" + tmTextUnitId;
+    if (localeTag == null || localeTag.isBlank()) {
+      return textUnitLink;
+    }
+    return textUnitLink + "?locale=" + URLEncoder.encode(localeTag.trim(), StandardCharsets.UTF_8);
+  }
+
+  private String normalizeServerBaseUrl() {
+    String configured = serverConfig.getUrl();
+    if (configured == null || configured.isBlank()) {
+      return null;
+    }
+
+    String trimmed = configured.trim();
+    while (trimmed.endsWith("/")) {
+      trimmed = trimmed.substring(0, trimmed.length() - 1);
+    }
+    return trimmed.isBlank() ? null : trimmed;
   }
 }

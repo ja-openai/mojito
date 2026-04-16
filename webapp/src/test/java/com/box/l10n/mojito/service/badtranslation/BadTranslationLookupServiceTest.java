@@ -8,6 +8,7 @@ import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
+import com.box.l10n.mojito.utils.ServerConfig;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.junit.Before;
@@ -20,13 +21,16 @@ public class BadTranslationLookupServiceTest {
       Mockito.mock(RepositoryRepository.class);
   private final LocaleService localeService = Mockito.mock(LocaleService.class);
   private final TextUnitSearcher textUnitSearcher = Mockito.mock(TextUnitSearcher.class);
+  private final ServerConfig serverConfig = Mockito.mock(ServerConfig.class);
 
   private BadTranslationLookupService service;
 
   @Before
   public void setUp() {
     service =
-        new BadTranslationLookupService(repositoryRepository, localeService, textUnitSearcher);
+        new BadTranslationLookupService(
+            repositoryRepository, localeService, textUnitSearcher, serverConfig);
+    Mockito.when(serverConfig.getUrl()).thenReturn("https://mojito.example/");
   }
 
   @Test
@@ -54,6 +58,8 @@ public class BadTranslationLookupServiceTest {
     assertThat(result.candidates())
         .extracting(candidate -> candidate.repository().name())
         .containsExactly("web-a", "web-b");
+    assertThat(result.candidates().getFirst().textUnitLink())
+        .isEqualTo("https://mojito.example/text-units/41?locale=hr-HR");
   }
 
   @Test

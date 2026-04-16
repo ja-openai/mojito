@@ -12,7 +12,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 
-import { RequireUser } from './components/RequireUser';
+import { RequireUser, useUser } from './components/RequireUser';
 import { UserMenu } from './components/UserMenu';
 import { AiTranslatePage } from './page/ai-translate/AiTranslatePage';
 import { MonitoringPage } from './page/monitoring/MonitoringPage';
@@ -62,8 +62,11 @@ const queryClient = new QueryClient();
 
 function AppLayout({ showHeader }: { showHeader: boolean }) {
   const location = useLocation();
+  const user = useUser();
+  const canAccessIncidents = user.role === 'ROLE_ADMIN' || user.role === 'ROLE_PM';
   const headerNavItems = [
     ...navItems.map(({ to, label }) => ({ to, label })),
+    ...(canAccessIncidents ? [{ to: '/translation-incidents', label: 'Incidents' }] : []),
     { to: '/settings/system', label: 'Settings' },
   ];
 
@@ -80,7 +83,10 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
                   className={({ isActive }) => {
                     const isSettingsSection =
                       to === '/settings/system' && location.pathname.startsWith('/settings/');
-                    return `app-shell__nav-link${isActive || isSettingsSection ? ' is-active' : ''}`;
+                    const isIncidentSection =
+                      to === '/translation-incidents' &&
+                      location.pathname.startsWith('/translation-incidents');
+                    return `app-shell__nav-link${isActive || isSettingsSection || isIncidentSection ? ' is-active' : ''}`;
                   }}
                 >
                   {label}
@@ -118,6 +124,7 @@ export function App() {
             <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/statistics" element={<StatisticsPage />} />
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
+            <Route path="/translation-incidents" element={<AdminTranslationIncidentsPage />} />
             <Route path="/screenshots" element={<ScreenshotsDropzonePage />} />
             <Route path="/settings" element={<Navigate to="/settings/me" replace />} />
             <Route path="/settings/me" element={<SettingsPage />} />

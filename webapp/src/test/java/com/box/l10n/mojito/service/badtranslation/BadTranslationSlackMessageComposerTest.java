@@ -19,6 +19,7 @@ public class BadTranslationSlackMessageComposerTest {
             new BadTranslationLookupService.TranslationCandidate(
                 new BadTranslationLookupService.RepositoryRef(11L, "chatgpt-web"),
                 41L,
+                null,
                 52L,
                 63L,
                 "Hermes.GptStudio.Analytics.AgentAnalyticsBarChart.tooltipDateLabel",

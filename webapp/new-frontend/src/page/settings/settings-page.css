@@ -302,6 +302,7 @@
   font: inherit;
   font-size: var(--font-size-sm);
   cursor: pointer;
+  text-decoration: none;
 }
 
 .settings-button:hover,

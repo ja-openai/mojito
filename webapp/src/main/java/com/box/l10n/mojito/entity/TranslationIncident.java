@@ -11,8 +11,12 @@ import jakarta.persistence.Table;
 public class TranslationIncident extends AuditableEntity {
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "status", nullable = false, length = 64)
+  @Column(name = "status", nullable = false, length = 32)
   private TranslationIncidentStatus status;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "resolution", nullable = false, length = 64)
+  private TranslationIncidentResolution resolution;
 
   @Column(name = "lookup_resolution_status", nullable = false, length = 64)
   private String lookupResolutionStatus;
@@ -152,12 +156,26 @@ public class TranslationIncident extends AuditableEntity {
   @Column(name = "rejected_at")
   private java.time.ZonedDateTime rejectedAt;
 
+  @Column(name = "closed_at")
+  private java.time.ZonedDateTime closedAt;
+
+  @Column(name = "closed_by_username")
+  private String closedByUsername;
+
   public TranslationIncidentStatus getStatus() {
     return status;
   }
 
   public void setStatus(TranslationIncidentStatus status) {
     this.status = status;
+  }
+
+  public TranslationIncidentResolution getResolution() {
+    return resolution;
+  }
+
+  public void setResolution(TranslationIncidentResolution resolution) {
+    this.resolution = resolution;
   }
 
   public String getLookupResolutionStatus() {
@@ -526,5 +544,21 @@ public class TranslationIncident extends AuditableEntity {
 
   public void setRejectedAt(java.time.ZonedDateTime rejectedAt) {
     this.rejectedAt = rejectedAt;
+  }
+
+  public java.time.ZonedDateTime getClosedAt() {
+    return closedAt;
+  }
+
+  public void setClosedAt(java.time.ZonedDateTime closedAt) {
+    this.closedAt = closedAt;
+  }
+
+  public String getClosedByUsername() {
+    return closedByUsername;
+  }
+
+  public void setClosedByUsername(String closedByUsername) {
+    this.closedByUsername = closedByUsername;
   }
 }

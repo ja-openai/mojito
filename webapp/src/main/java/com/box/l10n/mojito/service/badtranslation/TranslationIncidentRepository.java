@@ -5,10 +5,13 @@ import com.box.l10n.mojito.entity.TranslationIncidentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 @RepositoryRestResource(exported = false)
-public interface TranslationIncidentRepository extends JpaRepository<TranslationIncident, Long> {
+public interface TranslationIncidentRepository
+    extends JpaRepository<TranslationIncident, Long>,
+        JpaSpecificationExecutor<TranslationIncident> {
 
   Page<TranslationIncident> findAllByOrderByCreatedDateDesc(Pageable pageable);
 

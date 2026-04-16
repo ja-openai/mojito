@@ -1,76 +1,409 @@
-.translation-incidents-page__layout {
-  display: grid;
-  gap: var(--space-4);
+.settings-page--wide.translation-incidents-page {
+  max-width: none;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  gap: 0;
 }
 
-.translation-incidents-page__toolbar {
+.translation-incidents-page__bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-surface);
+  flex-wrap: wrap;
+}
+
+.translation-incidents-page__filters {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+  min-width: 0;
+  width: 100%;
+}
+
+.translation-incidents-page__search {
+  flex: 1 1 24rem;
+  min-width: min(100%, 18rem);
+}
+
+.translation-incidents-page__workflow-filter {
+  width: 10rem;
+  min-width: 10rem;
+}
+
+.translation-incidents-page__date-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2rem;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.translation-incidents-page__date-filter span {
+  white-space: nowrap;
+}
+
+.translation-incidents-page__date-filter input {
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  min-width: 8.5rem;
+  padding: 0;
+}
+
+.translation-incidents-page__date-filter input:focus {
+  outline: none;
+}
+
+.translation-incidents-page__notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-6);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: color-mix(in srgb, var(--color-success, #1a7f37) 8%, transparent);
+}
+
+.translation-incidents-page__summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-6) var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  min-height: 2rem;
+}
+
+.translation-incidents-page__summary-bar-center {
+  min-width: 0;
+}
+
+.translation-incidents-page__count {
+  min-width: min(100%, 20rem);
+}
+
+.translation-incidents-page__count-button {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: inherit;
+  height: 26px;
+  padding: 0 var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  cursor: pointer;
+  text-align: center;
+}
+
+.translation-incidents-page__count-button:not(:disabled):hover,
+.translation-incidents-page__count-button:not(:disabled):focus-visible {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.translation-incidents-page__count-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.translation-incidents-page__count-panel {
+  min-width: min(27.5rem, calc(100vw - 2rem));
+}
+
+.translation-incidents-page__count-pills {
+  flex-wrap: nowrap;
+}
+
+.translation-incidents-page__content {
+  --translation-incidents-resize-handle-size: 10px;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns:
+    var(--translation-incidents-list-width, 42%)
+    var(--translation-incidents-resize-handle-size)
+    calc(
+      100% - var(--translation-incidents-list-width, 42%) -
+        var(--translation-incidents-resize-handle-size)
+    );
+  padding: var(--space-3) var(--space-5) var(--space-5);
+  gap: 0;
+}
+
+.translation-incidents-page__content--collapsed {
+  grid-template-columns: 0 var(--translation-incidents-resize-handle-size) calc(
+      100% - var(--translation-incidents-resize-handle-size)
+    );
+}
+
+.translation-incidents-page__pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.translation-incidents-page__list-pane--collapsed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.translation-incidents-page__list-pane {
+  padding-right: var(--space-4);
+  --translation-incidents-row-height: 4.75rem;
+}
+
+.translation-incidents-page__detail-pane {
+  padding-left: var(--space-4);
+}
+
+.translation-incidents-page__list-scroll,
+.translation-incidents-page__detail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.translation-incidents-page__detail-scroll {
+  padding-top: var(--space-3);
+}
+
+.translation-incidents-page__list-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.translation-incidents-page__list-scroll .virtual-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.translation-incidents-page__queue-header,
+.translation-incidents-page__queue-row {
+  display: grid;
+  grid-template-columns:
+    minmax(14rem, 2.3fr) minmax(5rem, 0.8fr) minmax(7rem, 0.9fr) minmax(12rem, 1.8fr)
+    minmax(8rem, 1.1fr);
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.translation-incidents-page__queue-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  padding: 0 0 var(--space-1);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 75%, transparent);
+}
+
+.translation-incidents-page__queue-header .translation-incidents-page__queue-cell {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.translation-incidents-page__queue-row {
+  border-radius: var(--radius-2);
+  padding: var(--space-2);
+  cursor: pointer;
+  border: var(--border-width) solid transparent;
+}
+
+.translation-incidents-page__queue-row:hover,
+.translation-incidents-page__queue-row:focus-visible {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.translation-incidents-page__queue-row.is-selected {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.translation-incidents-page__queue-cell {
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.translation-incidents-page__queue-cell--string {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.translation-incidents-page__pane-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 10rem;
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.translation-incidents-page__resize-handle {
+  cursor: col-resize;
+  width: 100%;
+  background: transparent;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.translation-incidents-page__resize-handle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  height: 100%;
+  width: 1px;
+  background: color-mix(in srgb, var(--color-border) 55%, transparent);
+  z-index: 0;
+}
+
+.translation-incidents-page__resize-handle--collapsed::before {
+  display: none;
+}
+
+.translation-incidents-page__resize-handle:hover,
+.translation-incidents-page__resize-handle.is-resizing {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.translation-incidents-page__handle-button {
+  width: 0.625rem;
+  height: 3.125rem;
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+
+.translation-incidents-page__resize-handle:hover .translation-incidents-page__handle-button,
+.translation-incidents-page__resize-handle.is-resizing .translation-incidents-page__handle-button {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.translation-incidents-page__handle-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.translation-incidents-page__chevron {
+  width: 0.7rem;
+  height: 0.7rem;
+  display: block;
+}
+
+.translation-incidents-page__chevron--left {
+  transform: rotate(90deg);
+}
+
+.translation-incidents-page__chevron--right {
+  transform: rotate(-90deg);
 }
 
 .translation-incidents-page__status {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
   white-space: nowrap;
-}
-
-.translation-incidents-page__status-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 999px;
-  background: currentColor;
-  flex-shrink: 0;
-}
-
-.translation-incidents-page__status--READY_TO_REJECT {
-  color: var(--color-warning-text, #9a6700);
-}
-
-.translation-incidents-page__status--PENDING_REVIEW {
   color: var(--color-text-muted);
-}
-
-.translation-incidents-page__status--REJECTED {
-  color: var(--color-success, #1a7f37);
-}
-
-.translation-incidents-page__status--REJECT_FAILED {
-  color: var(--color-danger);
-}
-
-.translation-incidents-page__row-button {
-  border: none;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.translation-incidents-page__row-button:hover,
-.translation-incidents-page__row-button:focus-visible {
-  color: var(--color-accent);
-}
-
-.translation-incidents-page__row.is-selected td {
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .translation-incidents-page__detail-grid {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
+}
+
+.translation-incidents-page__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.translation-incidents-page__summary-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.translation-incidents-page__summary-eyebrow {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.translation-incidents-page__summary-title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.translation-incidents-page__summary-subtitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.translation-incidents-page__summary-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+}
+
+.translation-incidents-page__summary-facts--state {
+  padding: var(--space-3);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface) 98%, white 2%);
 }
 
 .translation-incidents-page__detail-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
 }
 
 .translation-incidents-page__detail-item {
@@ -96,36 +429,213 @@
 .translation-incidents-page__pre {
   margin: 0;
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
-  background: color-mix(in srgb, var(--color-surface) 85%, white 15%);
+  background: color-mix(in srgb, var(--color-surface) 96%, white 4%);
   border-radius: var(--radius-2);
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   font-size: var(--font-size-xs);
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-.translation-incidents-page__section-copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+.translation-incidents-page__code--translation {
+  min-height: 4.5rem;
+  font-size: var(--font-size-sm);
 }
 
-.translation-incidents-page__section-copy h3 {
+.translation-incidents-page__detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.translation-incidents-page__detail-section--context {
+  gap: var(--space-3);
+}
+
+.translation-incidents-page__detail-section h3 {
   margin: 0;
   font-size: var(--font-size-sm);
 }
 
+.translation-incidents-page__section-heading,
+.translation-incidents-page__message-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .translation-incidents-page__actions {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-@media (min-width: 72rem) {
-  .translation-incidents-page__layout {
-    grid-template-columns: minmax(0, 1.2fr) minmax(22rem, 0.8fr);
-    align-items: start;
+.translation-incidents-page__action-note {
+  margin-top: calc(var(--space-3) * -1);
+}
+
+.translation-incidents-page__detail-status-dropdown {
+  width: 9rem;
+  min-width: 9rem;
+}
+
+.translation-incidents-page__message-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding-top: var(--space-1);
+}
+
+.translation-incidents-page__message-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.translation-incidents-page__message-block h3 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.translation-incidents-page__message-block--snapshot {
+  grid-column: span 1;
+}
+
+.translation-incidents-page__message-block--wide {
+  grid-column: 1 / -1;
+}
+
+.translation-incidents-page__detail-list--people {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.translation-incidents-page__disclosure {
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 68%, transparent);
+  padding-top: var(--space-3);
+}
+
+.translation-incidents-page__disclosure-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.translation-incidents-page__disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.translation-incidents-page__disclosure[open] .translation-incidents-page__disclosure-summary {
+  margin-bottom: var(--space-2);
+}
+
+@media (max-width: 72rem) {
+  .translation-incidents-page__content,
+  .translation-incidents-page__content--collapsed {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4) var(--space-5);
+    overflow: auto;
+  }
+
+  .translation-incidents-page__resize-handle {
+    display: none;
+  }
+
+  .translation-incidents-page__detail-pane {
+    padding-left: 0;
+  }
+
+  .translation-incidents-page__list-pane {
+    padding-right: 0;
+  }
+
+  .translation-incidents-page__list-pane--collapsed {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .translation-incidents-page__list-scroll,
+  .translation-incidents-page__detail-scroll {
+    overflow: visible;
+  }
+
+  .translation-incidents-page__bar {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .translation-incidents-page__summary-bar {
+    padding: 0 var(--space-4) var(--space-2);
+  }
+
+  .translation-incidents-page__queue-header,
+  .translation-incidents-page__queue-row {
+    grid-template-columns: minmax(12rem, 2fr) minmax(4.5rem, 0.9fr) minmax(6rem, 1fr);
+  }
+
+  .translation-incidents-page__queue-header .translation-incidents-page__queue-cell:nth-child(4),
+  .translation-incidents-page__queue-header .translation-incidents-page__queue-cell:nth-child(5),
+  .translation-incidents-page__queue-row .translation-incidents-page__queue-cell:nth-child(4),
+  .translation-incidents-page__queue-row .translation-incidents-page__queue-cell:nth-child(5) {
+    display: none;
+  }
+
+  .translation-incidents-page__summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .translation-incidents-page__message-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .translation-incidents-page__detail-list--people {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 48rem) {
+  .translation-incidents-page__search,
+  .translation-incidents-page__workflow-filter,
+  .translation-incidents-page__date-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .translation-incidents-page__queue-header,
+  .translation-incidents-page__queue-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+
+  .translation-incidents-page__queue-header {
+    display: none;
+  }
+
+  .translation-incidents-page__summary-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .translation-incidents-page__date-filter {
+    justify-content: space-between;
+  }
+
+  .translation-incidents-page__summary-bar {
+    justify-content: flex-start;
+  }
+
+  .translation-incidents-page__date-filter input {
+    min-width: 0;
+    width: 100%;
+    text-align: right;
   }
 }
