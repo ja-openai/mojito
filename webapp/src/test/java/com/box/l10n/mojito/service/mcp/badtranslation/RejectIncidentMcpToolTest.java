@@ -10,27 +10,29 @@ import com.box.l10n.mojito.service.badtranslation.TranslationIncidentService;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-public class CreateIncidentMcpToolTest {
+public class RejectIncidentMcpToolTest {
 
   private final TranslationIncidentService translationIncidentService =
       Mockito.mock(TranslationIncidentService.class);
-  private final CreateIncidentMcpTool tool =
-      new CreateIncidentMcpTool(
+  private final RejectIncidentMcpTool tool =
+      new RejectIncidentMcpTool(
           ObjectMapper.withNoFailOnUnknownProperties(), translationIncidentService);
 
   @Test
-  public void executeCreatesIncidentThroughService() {
-    TranslationIncidentService.CreateIncidentRequest request =
-        new TranslationIncidentService.CreateIncidentRequest(
-            "string.id", "hr-HR", null, "Malformed ICU", "https://buildkite.example/4627");
+  public void executeRejectsStoredIncidentThroughService() {
+    RejectIncidentMcpTool.Input request = new RejectIncidentMcpTool.Input(91L, "duplicate other");
     TranslationIncidentService.IncidentDetail detail =
         TranslationIncidentMcpTestData.incidentDetail(
-            91L, TranslationIncidentResolution.READY_TO_REJECT.name(), true);
-    when(translationIncidentService.createIncident(request)).thenReturn(detail);
+            91L, TranslationIncidentResolution.REJECTED.name(), false);
+    when(translationIncidentService.rejectIncident(
+            91L, new TranslationIncidentService.RejectIncidentRequest("duplicate other")))
+        .thenReturn(detail);
 
     Object result = tool.execute(request);
 
     assertThat(result).isEqualTo(detail);
-    verify(translationIncidentService).createIncident(request);
+    verify(translationIncidentService)
+        .rejectIncident(
+            91L, new TranslationIncidentService.RejectIncidentRequest("duplicate other"));
   }
 }
