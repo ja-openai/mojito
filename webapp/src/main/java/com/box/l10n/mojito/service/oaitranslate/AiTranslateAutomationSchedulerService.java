@@ -19,10 +19,6 @@ public class AiTranslateAutomationSchedulerService {
 
   private static final String METRIC_PREFIX = "AiTranslateAutomation";
   private static final String UNIQUE_ID_PREFIX = "auto-ai-translate-repository-";
-  private static final String RELATED_STRINGS_TYPE = "USAGES";
-  private static final String TRANSLATE_TYPE = "TARGET_ONLY_NEW";
-  private static final String STATUS_FILTER = "FOR_TRANSLATION";
-  private static final String IMPORT_STATUS = "REVIEW_NEEDED";
 
   private final AiTranslateAutomationConfigService aiTranslateAutomationConfigService;
   private final AiTranslateConfigurationProperties aiTranslateConfigurationProperties;
@@ -102,10 +98,10 @@ public class AiTranslateAutomationSchedulerService {
                 false,
                 null,
                 null,
-                RELATED_STRINGS_TYPE,
-                TRANSLATE_TYPE,
-                STATUS_FILTER,
-                IMPORT_STATUS,
+                AiTranslateDefaults.RELATED_STRINGS_TYPE,
+                AiTranslateDefaults.TRANSLATE_TYPE,
+                AiTranslateDefaults.STATUS_FILTER,
+                AiTranslateDefaults.IMPORT_STATUS,
                 null,
                 null,
                 null,
@@ -127,8 +123,8 @@ public class AiTranslateAutomationSchedulerService {
             requestedByUserId,
             pollableFuture.getPollableTask(),
             aiTranslateConfigurationProperties.getModelName(),
-            TRANSLATE_TYPE,
-            RELATED_STRINGS_TYPE,
+            AiTranslateDefaults.TRANSLATE_TYPE,
+            AiTranslateDefaults.RELATED_STRINGS_TYPE,
             config.sourceTextMaxCountPerLocale());
         logger.info(
             "AI translate automation repository scheduled: source={}, repositoryId={}, repositoryName={}, uniqueId={}",

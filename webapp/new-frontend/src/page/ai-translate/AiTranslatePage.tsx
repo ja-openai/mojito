@@ -74,7 +74,7 @@ export function AiTranslatePage() {
   const [reasoningEffort, setReasoningEffort] = useState('');
   const [textVerbosity, setTextVerbosity] = useState('');
   const [promptSuffix, setPromptSuffix] = useState('');
-  const [relatedStrings, setRelatedStrings] = useState('NONE');
+  const [relatedStrings, setRelatedStrings] = useState('USAGES');
   const [translateType, setTranslateType] = useState('TARGET_ONLY_NEW');
   const [statusFilter, setStatusFilter] = useState('FOR_TRANSLATION');
   const [importStatus, setImportStatus] = useState('REVIEW_NEEDED');
@@ -107,9 +107,13 @@ export function AiTranslatePage() {
         if (!isMounted) {
           return;
         }
-        setUseModel((current) => current || config.modelName);
-        setReasoningEffort((current) => current || config.reasoningEffort);
-        setTextVerbosity((current) => current || config.textVerbosity);
+        setUseModel(config.modelName);
+        setReasoningEffort(config.reasoningEffort);
+        setTextVerbosity(config.textVerbosity);
+        setRelatedStrings(config.relatedStringsType);
+        setTranslateType(config.translateType);
+        setStatusFilter(config.statusFilter);
+        setImportStatus(config.importStatus);
         setConfigError(null);
       })
       .catch((error) => {

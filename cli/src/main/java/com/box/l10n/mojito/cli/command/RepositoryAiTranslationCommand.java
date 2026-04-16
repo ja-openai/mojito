@@ -9,6 +9,7 @@ import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.openai.OpenAIClient;
 import com.box.l10n.mojito.rest.client.PollableTaskClient;
 import com.box.l10n.mojito.rest.client.RepositoryAiTranslateClient;
+import com.box.l10n.mojito.rest.client.RepositoryAiTranslateClient.ProtoAiTranslateConfigResponse;
 import com.box.l10n.mojito.rest.client.RepositoryAiTranslateClient.ProtoAiTranslateGetReportResponse;
 import com.box.l10n.mojito.rest.client.RepositoryAiTranslateClient.ProtoAiTranslateRequest;
 import com.box.l10n.mojito.rest.client.RepositoryAiTranslateClient.ProtoAiTranslateResponse;
@@ -116,29 +117,32 @@ public class RepositoryAiTranslationCommand extends Command {
       names = "--related-strings",
       arity = 1,
       description =
-          "Related-string mode. NONE (default) = none, "
+          "Related-string mode. Defaults to the server config when omitted. NONE = none, "
               + "USAGES = same usage context, "
               + "ID_PREFIX = same key prefix")
-  String relatedStrings = "NONE";
+  String relatedStrings;
 
   @Parameter(
       names = "--translate-type",
       arity = 1,
-      description = "Type of translation to run: WITH_REVIEW, TARGET_ONLY")
-  String translateType = "WITH_REVIEW";
+      description =
+          "Type of translation to run. Defaults to the server config when omitted: "
+              + "WITH_REVIEW, TARGET_ONLY, TARGET_ONLY_NEW")
+  String translateType;
 
   @Parameter(
       names = "--status-filter",
       arity = 1,
-      description = "Text unit status filter eg. ALL or FOR_TRANSLATION")
-  String statusFilter = "FOR_TRANSLATION";
+      description = "Text unit status filter, eg. ALL or FOR_TRANSLATION")
+  String statusFilter;
 
   @Parameter(
       names = "--import-status",
       arity = 1,
       description =
-          "Status set on target during import: ACCEPTED, REVIEW_NEEDED, TRANSLATION_NEEDED")
-  String importStatus = "REVIEW_NEEDED";
+          "Status set on target during import. Defaults to the server config when omitted: "
+              + "ACCEPTED, REVIEW_NEEDED, TRANSLATION_NEEDED")
+  String importStatus;
 
   @Parameter(
       names = "--glossary-name",
@@ -271,6 +275,14 @@ public class RepositoryAiTranslationCommand extends Command {
       consoleWriter.a("Attaching, task id: ").fg(Color.MAGENTA).a(attachJobId).println();
       waitForPollable(attachJobId);
     } else {
+      ProtoAiTranslateConfigResponse config = repositoryAiTranslateClient.getConfig();
+      String effectiveRelatedStrings =
+          relatedStrings != null ? relatedStrings : config.relatedStringsType();
+      String effectiveTranslateType =
+          translateType != null ? translateType : config.translateType();
+      String effectiveStatusFilter = statusFilter != null ? statusFilter : config.statusFilter();
+      String effectiveImportStatus = importStatus != null ? importStatus : config.importStatus();
+
       consoleWriter
           .newLine()
           .a("Ai translate repository: ")
@@ -299,10 +311,10 @@ public class RepositoryAiTranslationCommand extends Command {
                   useBatch,
                   useModel,
                   promptSuffix,
-                  relatedStrings,
-                  translateType,
-                  statusFilter,
-                  importStatus,
+                  effectiveRelatedStrings,
+                  effectiveTranslateType,
+                  effectiveStatusFilter,
+                  effectiveImportStatus,
                   glossaryName,
                   glossaryTermSource,
                   glossaryTermSourceDescription,

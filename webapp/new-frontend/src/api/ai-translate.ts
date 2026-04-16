@@ -55,6 +55,10 @@ export type AiTranslateConfig = {
   modelName: string;
   reasoningEffort: string;
   textVerbosity: string;
+  relatedStringsType: string;
+  translateType: string;
+  statusFilter: string;
+  importStatus: string;
 };
 
 const DEFAULT_POLL_INTERVAL_MS = 500;

@@ -4,6 +4,7 @@ import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateConfigurationProperties;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateDefaults;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService.AiTranslateInput;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
@@ -42,7 +43,11 @@ public class AiTranslateWS {
     return new ProtoAiTranslateConfigResponse(
         aiTranslateConfigurationProperties.getModelName(),
         aiTranslateConfigurationProperties.getResponses().getReasoningEffort(),
-        aiTranslateConfigurationProperties.getResponses().getTextVerbosity());
+        aiTranslateConfigurationProperties.getResponses().getTextVerbosity(),
+        AiTranslateDefaults.RELATED_STRINGS_TYPE,
+        AiTranslateDefaults.TRANSLATE_TYPE,
+        AiTranslateDefaults.STATUS_FILTER,
+        AiTranslateDefaults.IMPORT_STATUS);
   }
 
   @RequestMapping(method = RequestMethod.POST, value = "/api/proto-ai-translate")
@@ -108,7 +113,13 @@ public class AiTranslateWS {
   public record ProtoAiTranslateResponse(PollableTask pollableTask) {}
 
   public record ProtoAiTranslateConfigResponse(
-      String modelName, String reasoningEffort, String textVerbosity) {}
+      String modelName,
+      String reasoningEffort,
+      String textVerbosity,
+      String relatedStringsType,
+      String translateType,
+      String statusFilter,
+      String importStatus) {}
 
   @RequestMapping(method = RequestMethod.POST, value = "/api/proto-ai-translate/retry-import")
   @ResponseStatus(HttpStatus.OK)

@@ -28,6 +28,11 @@ public class RepositoryAiTranslateClient extends BaseClient {
         getBasePathForEntity(), protoAiTranslateRequest, ProtoAiTranslateResponse.class);
   }
 
+  public ProtoAiTranslateConfigResponse getConfig() {
+    return authenticatedRestTemplate.getForObject(
+        getBasePathForEntity() + "/config", ProtoAiTranslateConfigResponse.class);
+  }
+
   public long retryImport(Long childPollableTaskId, boolean resume) {
     ProtoAiTranslateRetryImportResponse protoAiReviewRetryImportResponse =
         authenticatedRestTemplate.postForObject(
@@ -71,6 +76,15 @@ public class RepositoryAiTranslateClient extends BaseClient {
       boolean glossaryOnlyMatchedTextUnits,
       boolean dryRun,
       Integer timeoutSeconds) {}
+
+  public record ProtoAiTranslateConfigResponse(
+      String modelName,
+      String reasoningEffort,
+      String textVerbosity,
+      String relatedStringsType,
+      String translateType,
+      String statusFilter,
+      String importStatus) {}
 
   public record ProtoAiTranslateResponse(PollableTask pollableTask) {}
 
