@@ -22,6 +22,10 @@ What this scaffold includes
   - storing lookup/review context before mutation
   - giving admins a review queue in the existing settings UI
   - separating "record incident" from "reject translation"
+- The first incident MCP tool on top of that workflow:
+  - `bad_translation.create_incident`
+  - create a persisted incident from `stringId` + observed locale
+  - keep repository optional so callers can start from the string alone
 - A remote MCP transport at `/api/mcp` that supports:
   - `initialize`
   - `tools/list`
@@ -51,7 +55,6 @@ Current limitations
 
 Next build steps
 
-1. Add MCP tools that create translation incidents from string id + observed locale.
-2. Add MCP mutation tools that reject only when the stored incident resolved to one clear candidate.
-3. Keep tools read-only by default unless a clear mutating boundary is needed.
-4. Only add streaming/session support if a real client requirement justifies the extra state.
+1. Add MCP mutation tools that reject only when the stored incident resolved to one clear candidate.
+2. Keep tools read-only by default unless a clear mutating boundary is needed.
+3. Only add streaming/session support if a real client requirement justifies the extra state.
