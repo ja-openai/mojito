@@ -34,6 +34,7 @@ import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { AdminTeamPoolsPage } from './page/settings/AdminTeamPoolsPage';
 import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
 import { AdminTemporaryBulkTranslationAcceptPage } from './page/settings/AdminTemporaryBulkTranslationAcceptPage';
+import { AdminTranslationIncidentsPage } from './page/settings/AdminTranslationIncidentsPage';
 import { AdminUserBatchPage } from './page/settings/AdminUserBatchPage';
 import { AdminUserDetailPage } from './page/settings/AdminUserDetailPage';
 import { AdminUserSettingsPage } from './page/settings/AdminUserSettingsPage';
@@ -225,6 +226,14 @@ export function App() {
             <Route
               path="/settings/system/temporary-bulk-translation-accept"
               element={<AdminTemporaryBulkTranslationAcceptPage />}
+            />
+            <Route
+              path="/settings/admin/translation-incidents"
+              element={<AdminTranslationIncidentsPage />}
+            />
+            <Route
+              path="/settings/system/translation-incidents"
+              element={<AdminTranslationIncidentsPage />}
             />
           </Route>
         </Routes>

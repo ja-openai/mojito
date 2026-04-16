@@ -13,6 +13,15 @@ What this scaffold includes
   - typed tool handlers
   - a registry
   - a small server facade
+- A reusable bad-translation domain layer outside MCP for:
+  - translation lookup by string id and observed locale
+  - rejection mutation with Mojito audit comments
+  - best-effort review-project lineage scoring
+  - Slack draft context composition
+- A persisted `translation_incident` workflow in `webapp` for:
+  - storing lookup/review context before mutation
+  - giving admins a review queue in the existing settings UI
+  - separating "record incident" from "reject translation"
 - A remote MCP transport at `/api/mcp` that supports:
   - `initialize`
   - `tools/list`
@@ -38,9 +47,11 @@ Current limitations
 - No SSE streaming.
 - No MCP session lifecycle.
 - No resumable event or subscription state.
+- Slack stays in draft mode for the incident workflow; send remains a follow-up integration.
 
 Next build steps
 
-1. Add the first useful tool modules on top of the scaffold.
-2. Keep tools read-only by default unless a clear mutating boundary is needed.
-3. Only add streaming/session support if a real client requirement justifies the extra state.
+1. Add MCP tools that create translation incidents from string id + observed locale.
+2. Add MCP mutation tools that reject only when the stored incident resolved to one clear candidate.
+3. Keep tools read-only by default unless a clear mutating boundary is needed.
+4. Only add streaming/session support if a real client requirement justifies the extra state.

@@ -91,6 +91,18 @@ export function AdminSettingsPage() {
                   Review recent manual and scheduled automation runs.
                 </div>
               </button>
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/translation-incidents');
+                }}
+              >
+                <div className="settings-directory__title">Translation incidents</div>
+                <div className="settings-directory__description">
+                  Review invalid translation failures and reject the current Mojito target.
+                </div>
+              </button>
             </div>
           </section>
 

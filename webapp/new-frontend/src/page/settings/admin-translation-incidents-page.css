@@ -1,0 +1,131 @@
+.translation-incidents-page__layout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.translation-incidents-page__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.translation-incidents-page__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.translation-incidents-page__status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.translation-incidents-page__status--READY_TO_REJECT {
+  color: var(--color-warning-text, #9a6700);
+}
+
+.translation-incidents-page__status--PENDING_REVIEW {
+  color: var(--color-text-muted);
+}
+
+.translation-incidents-page__status--REJECTED {
+  color: var(--color-success, #1a7f37);
+}
+
+.translation-incidents-page__status--REJECT_FAILED {
+  color: var(--color-danger);
+}
+
+.translation-incidents-page__row-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.translation-incidents-page__row-button:hover,
+.translation-incidents-page__row-button:focus-visible {
+  color: var(--color-accent);
+}
+
+.translation-incidents-page__row.is-selected td {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.translation-incidents-page__detail-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.translation-incidents-page__detail-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.translation-incidents-page__detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.translation-incidents-page__detail-item dt {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.translation-incidents-page__detail-item dd {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.translation-incidents-page__code,
+.translation-incidents-page__pre {
+  margin: 0;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 85%, white 15%);
+  border-radius: var(--radius-2);
+  padding: var(--space-2);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.translation-incidents-page__section-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.translation-incidents-page__section-copy h3 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.translation-incidents-page__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+@media (min-width: 72rem) {
+  .translation-incidents-page__layout {
+    grid-template-columns: minmax(0, 1.2fr) minmax(22rem, 0.8fr);
+    align-items: start;
+  }
+}
