@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 type SettingsSubpageHeaderProps = {
   backTo: string;
   backLabel: string;
+  onBack?: () => void;
   context?: ReactNode;
   title: ReactNode;
   centerContent?: ReactNode;
@@ -13,6 +14,7 @@ type SettingsSubpageHeaderProps = {
 export function SettingsSubpageHeader({
   backTo,
   backLabel,
+  onBack,
   context,
   title,
   centerContent,
@@ -22,28 +24,54 @@ export function SettingsSubpageHeader({
     <header className="settings-subpage__topbar">
       <div className="settings-subpage__topbar-row">
         <div className="settings-subpage__topbar-group settings-subpage__topbar-group--left">
-          <Link
-            to={backTo}
-            className="settings-subpage__topbar-back"
-            aria-label={backLabel}
-            title={backLabel}
-          >
-            <svg
-              className="settings-subpage__topbar-back-icon"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
+          {onBack ? (
+            <button
+              type="button"
+              className="settings-subpage__topbar-back"
+              aria-label={backLabel}
+              title={backLabel}
+              onClick={onBack}
             >
-              <path
-                d="M20 12H6m0 0l5-5m-5 5l5 5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
+              <svg
+                className="settings-subpage__topbar-back-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M20 12H6m0 0l5-5m-5 5l5 5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          ) : (
+            <Link
+              to={backTo}
+              className="settings-subpage__topbar-back"
+              aria-label={backLabel}
+              title={backLabel}
+            >
+              <svg
+                className="settings-subpage__topbar-back-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M20 12H6m0 0l5-5m-5 5l5 5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+          )}
           <div className="settings-subpage__topbar-copy">
             {context ? <div className="settings-subpage__topbar-context">{context}</div> : null}
             <h1 className="settings-subpage__topbar-title">{title}</h1>

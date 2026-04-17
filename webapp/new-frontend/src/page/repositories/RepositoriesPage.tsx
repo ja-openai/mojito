@@ -546,9 +546,7 @@ export function RepositoriesPage() {
         : repoLocaleTags;
       const localeTags =
         localeTag != null ? [localeTag] : allowedLocaleTags.length ? allowedLocaleTags : [];
-      if (localeTags.length === 0) {
-        return;
-      }
+      const shouldPromptForLocale = localeTag == null && localeTags.length === 0;
       const searchRequest: TextUnitSearchRequest = {
         repositoryIds: [repositoryId],
         localeTags,
@@ -565,7 +563,12 @@ export function RepositoriesPage() {
         searchRequest.limit = clampWorksetSize(Math.max(count, preferred));
       }
 
-      void navigate('/workbench', { state: { workbenchSearch: searchRequest } });
+      void navigate('/workbench', {
+        state: {
+          workbenchSearch: searchRequest,
+          localePrompt: shouldPromptForLocale || undefined,
+        },
+      });
     },
     [allowedLocaleTagSet, navigate, repositories],
   );

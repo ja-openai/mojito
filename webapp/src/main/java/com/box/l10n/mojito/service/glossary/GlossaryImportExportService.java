@@ -15,11 +15,11 @@ import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -30,10 +30,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVPrinter;
-import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,7 +38,6 @@ public class GlossaryImportExportService {
 
   private static final int EXPORT_LIMIT = 10_000;
   private static final String FORMAT_JSON = "json";
-  private static final String FORMAT_CSV = "csv";
 
   private final GlossaryRepository glossaryRepository;
   private final GlossaryStorageService glossaryStorageService;
@@ -74,12 +69,8 @@ public class GlossaryImportExportService {
   public ExportPayload exportGlossary(Long glossaryId, String format) {
     Glossary glossary = getGlossary(glossaryId);
     Asset asset = glossaryStorageService.ensureCanonicalAsset(glossary);
-    List<GlossaryExportRow> rows = buildExportRows(glossary, asset);
     String normalizedFormat = normalizeFormat(format);
     String filename = slugify(glossary.getName()) + "." + normalizedFormat;
-    if (FORMAT_CSV.equals(normalizedFormat)) {
-      return new ExportPayload(normalizedFormat, filename, writeCsv(rows));
-    }
     return new ExportPayload(
         normalizedFormat,
         filename,
@@ -92,7 +83,7 @@ public class GlossaryImportExportService {
                     Boolean.TRUE.equals(glossary.getEnabled()),
                     glossary.getPriority(),
                     glossary.getScopeMode()),
-                rows)));
+                buildExportTerms(glossary, asset))));
   }
 
   @Transactional
@@ -146,7 +137,7 @@ public class GlossaryImportExportService {
         .orElseThrow(() -> new IllegalArgumentException("Glossary not found: " + glossaryId));
   }
 
-  private List<GlossaryExportRow> buildExportRows(Glossary glossary, Asset asset) {
+  private List<GlossaryExportTerm> buildExportTerms(Glossary glossary, Asset asset) {
     Map<String, ExistingTerm> sourceTermsByKey = loadExistingTermsByKey(asset);
     if (sourceTermsByKey.isEmpty()) {
       return List.of();
@@ -166,7 +157,7 @@ public class GlossaryImportExportService {
 
     Map<String, List<TextUnitDTO>> localizedByKey =
         loadLocalizedTextUnits(asset, glossary.getBackingRepository());
-    List<GlossaryExportRow> rows = new ArrayList<>();
+    List<GlossaryExportTerm> terms = new ArrayList<>();
 
     for (ExistingTerm existingTerm :
         sourceTermsByKey.values().stream()
@@ -179,22 +170,31 @@ public class GlossaryImportExportService {
       List<TextUnitDTO> localizedTextUnits =
           localizedByKey.getOrDefault(existingTerm.textUnit().getName(), List.of());
 
-      if (localizedTextUnits.isEmpty()) {
-        rows.add(toExportRow(existingTerm.textUnit(), metadata, null));
-        continue;
-      }
-
-      for (TextUnitDTO localizedTextUnit : localizedTextUnits) {
-        rows.add(toExportRow(existingTerm.textUnit(), metadata, localizedTextUnit));
-      }
+      terms.add(toExportTerm(existingTerm.textUnit(), metadata, localizedTextUnits));
     }
 
-    return rows;
+    return terms;
   }
 
-  private GlossaryExportRow toExportRow(
-      TextUnitDTO sourceTextUnit, GlossaryTermMetadata metadata, TextUnitDTO localizedTextUnit) {
-    return new GlossaryExportRow(
+  private GlossaryExportTerm toExportTerm(
+      TextUnitDTO sourceTextUnit,
+      GlossaryTermMetadata metadata,
+      List<TextUnitDTO> localizedTextUnits) {
+    List<GlossaryExportTranslation> translations =
+        localizedTextUnits.stream()
+            .sorted(
+                Comparator.comparing(
+                    TextUnitDTO::getTargetLocale,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+            .map(
+                localizedTextUnit ->
+                    new GlossaryExportTranslation(
+                        localizedTextUnit.getTargetLocale(),
+                        localizedTextUnit.getTarget(),
+                        localizedTextUnit.getTargetComment()))
+            .toList();
+
+    return new GlossaryExportTerm(
         sourceTextUnit.getName(),
         sourceTextUnit.getSource(),
         metadata != null ? metadata.getDefinition() : sourceTextUnit.getComment(),
@@ -207,9 +207,7 @@ public class GlossaryImportExportService {
         metadata != null
             ? Boolean.TRUE.equals(metadata.getDoNotTranslate())
             : sourceTextUnit.isDoNotTranslate(),
-        localizedTextUnit != null ? localizedTextUnit.getTargetLocale() : null,
-        localizedTextUnit != null ? localizedTextUnit.getTarget() : null,
-        localizedTextUnit != null ? localizedTextUnit.getTargetComment() : null);
+        translations);
   }
 
   private Map<String, ExistingTerm> loadExistingTermsByKey(Asset asset) {
@@ -400,17 +398,30 @@ public class GlossaryImportExportService {
     if (normalizedContent.isEmpty()) {
       throw new IllegalArgumentException("Glossary import content is required");
     }
-    return FORMAT_CSV.equals(normalizedFormat)
-        ? parseCsv(normalizedContent)
-        : parseJson(normalizedContent);
+    return parseJson(normalizedContent);
   }
 
   private List<GlossaryExportRow> parseJson(String content) {
     try {
       JsonNode root = objectMapper.readTree(content);
+
+      JsonNode termsNode = root.isArray() ? null : root.get("terms");
+      if (termsNode != null) {
+        if (!termsNode.isArray()) {
+          throw new IllegalArgumentException("Glossary JSON import terms must be an array");
+        }
+        List<GlossaryExportRow> rows = new ArrayList<>();
+        for (JsonNode termNode : termsNode) {
+          rows.addAll(
+              flattenImportTerm(objectMapper.treeToValue(termNode, GlossaryExportTerm.class)));
+        }
+        return rows;
+      }
+
       JsonNode entriesNode = root.isArray() ? root : root.get("entries");
       if (entriesNode == null || !entriesNode.isArray()) {
-        throw new IllegalArgumentException("Glossary JSON import must contain an entries array");
+        throw new IllegalArgumentException(
+            "Glossary JSON import must contain a terms or entries array");
       }
       List<GlossaryExportRow> rows = new ArrayList<>();
       for (JsonNode entryNode : entriesNode) {
@@ -422,31 +433,29 @@ public class GlossaryImportExportService {
     }
   }
 
-  private List<GlossaryExportRow> parseCsv(String content) {
-    try (CSVParser parser =
-        CSVParser.parse(content, CSVFormat.DEFAULT.withFirstRecordAsHeader().withTrim())) {
-      List<GlossaryExportRow> rows = new ArrayList<>();
-      for (CSVRecord record : parser) {
-        rows.add(
-            new GlossaryExportRow(
-                record.get("termKey"),
-                record.get("source"),
-                nullable(record, "definition"),
-                nullable(record, "partOfSpeech"),
-                nullable(record, "termType"),
-                nullable(record, "enforcement"),
-                nullable(record, "status"),
-                nullable(record, "provenance"),
-                parseBoolean(nullable(record, "caseSensitive")),
-                parseBoolean(nullable(record, "doNotTranslate")),
-                nullable(record, "locale"),
-                nullable(record, "target"),
-                nullable(record, "targetComment")));
-      }
-      return rows;
-    } catch (IOException ex) {
-      throw new IllegalArgumentException("Failed to parse glossary CSV import", ex);
+  private List<GlossaryExportRow> flattenImportTerm(GlossaryExportTerm term) {
+    if (term.translations() == null || term.translations().isEmpty()) {
+      return List.of(toImportRow(term, null));
     }
+    return term.translations().stream().map(translation -> toImportRow(term, translation)).toList();
+  }
+
+  private GlossaryExportRow toImportRow(
+      GlossaryExportTerm term, GlossaryExportTranslation translation) {
+    return new GlossaryExportRow(
+        term.termKey(),
+        term.source(),
+        term.definition(),
+        term.partOfSpeech(),
+        term.termType(),
+        term.enforcement(),
+        term.status(),
+        term.provenance(),
+        term.caseSensitive(),
+        term.doNotTranslate(),
+        translation != null ? translation.localeTag() : null,
+        translation != null ? translation.target() : null,
+        translation != null ? translation.targetComment() : null);
   }
 
   private String writeJson(GlossaryExportDocument document) {
@@ -457,52 +466,9 @@ public class GlossaryImportExportService {
     }
   }
 
-  private String writeCsv(List<GlossaryExportRow> rows) {
-    try {
-      StringWriter writer = new StringWriter();
-      CSVPrinter printer =
-          new CSVPrinter(
-              writer,
-              CSVFormat.DEFAULT.withHeader(
-                  "termKey",
-                  "source",
-                  "definition",
-                  "partOfSpeech",
-                  "termType",
-                  "enforcement",
-                  "status",
-                  "provenance",
-                  "caseSensitive",
-                  "doNotTranslate",
-                  "locale",
-                  "target",
-                  "targetComment"));
-      for (GlossaryExportRow row : rows) {
-        printer.printRecord(
-            row.termKey(),
-            row.source(),
-            row.definition(),
-            row.partOfSpeech(),
-            row.termType(),
-            row.enforcement(),
-            row.status(),
-            row.provenance(),
-            row.caseSensitive(),
-            row.doNotTranslate(),
-            row.locale(),
-            row.target(),
-            row.targetComment());
-      }
-      printer.flush();
-      return writer.toString();
-    } catch (IOException ex) {
-      throw new IllegalStateException("Failed to serialize glossary CSV export", ex);
-    }
-  }
-
   private String normalizeFormat(String format) {
     String normalized = format == null ? FORMAT_JSON : format.trim().toLowerCase(Locale.ROOT);
-    if (!FORMAT_JSON.equals(normalized) && !FORMAT_CSV.equals(normalized)) {
+    if (!FORMAT_JSON.equals(normalized)) {
       throw new IllegalArgumentException("Unsupported glossary format: " + format);
     }
     return normalized;
@@ -545,17 +511,6 @@ public class GlossaryImportExportService {
     return name.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-");
   }
 
-  private String nullable(CSVRecord record, String key) {
-    return record.isMapped(key) ? normalizeOptional(record.get(key)) : null;
-  }
-
-  private boolean parseBoolean(String value) {
-    if (value == null) {
-      return false;
-    }
-    return Boolean.parseBoolean(value);
-  }
-
   public record ExportPayload(String format, String filename, String content) {}
 
   public record ImportResult(
@@ -564,10 +519,26 @@ public class GlossaryImportExportService {
       int createdTranslationCount,
       int updatedTranslationCount) {}
 
-  record GlossaryExportDocument(GlossaryExportInfo glossary, List<GlossaryExportRow> entries) {}
+  record GlossaryExportDocument(GlossaryExportInfo glossary, List<GlossaryExportTerm> terms) {}
 
   record GlossaryExportInfo(
       Long id, String name, String description, boolean enabled, int priority, String scopeMode) {}
+
+  public record GlossaryExportTerm(
+      String termKey,
+      String source,
+      String definition,
+      String partOfSpeech,
+      String termType,
+      String enforcement,
+      String status,
+      String provenance,
+      boolean caseSensitive,
+      boolean doNotTranslate,
+      List<GlossaryExportTranslation> translations) {}
+
+  public record GlossaryExportTranslation(
+      @JsonAlias("locale") String localeTag, String target, String targetComment) {}
 
   public record GlossaryExportRow(
       String termKey,

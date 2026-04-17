@@ -10,11 +10,14 @@ import {
   Route,
   Routes,
   useLocation,
+  useParams,
 } from 'react-router-dom';
 
 import { RequireUser, useUser } from './components/RequireUser';
 import { UserMenu } from './components/UserMenu';
 import { AiTranslatePage } from './page/ai-translate/AiTranslatePage';
+import { GlossariesPage } from './page/glossaries/GlossariesPage';
+import { GlossaryWorkspacePage } from './page/glossaries/GlossaryWorkspacePage';
 import { MonitoringPage } from './page/monitoring/MonitoringPage';
 import { RepositoriesPage } from './page/repositories/RepositoriesPage';
 import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
@@ -23,6 +26,7 @@ import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
 import { AdminAiLocalePromptSuffixPage } from './page/settings/AdminAiLocalePromptSuffixPage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
+import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
 import { AdminReviewAutomationBatchPage } from './page/settings/AdminReviewAutomationBatchPage';
 import { AdminReviewAutomationDetailPage } from './page/settings/AdminReviewAutomationDetailPage';
 import { AdminReviewAutomationRunsPage } from './page/settings/AdminReviewAutomationRunsPage';
@@ -45,6 +49,7 @@ import { TextUnitDetailPage } from './page/text-unit-detail/TextUnitDetailPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { IcuMessagePreviewPage } from './page/tools/IcuMessagePreviewPage';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
+import { canAccessGlossaries } from './utils/permissions';
 
 type NavItem = {
   to: string;
@@ -60,13 +65,27 @@ const navItems: NavItem[] = [
 
 const queryClient = new QueryClient();
 
-function AppLayout({ showHeader }: { showHeader: boolean }) {
+function LegacyGlossariesRedirect() {
   const location = useLocation();
+  return <Navigate to={`/glossaries${location.search}`} replace />;
+}
+
+function LegacyGlossarySettingsRedirect() {
+  const params = useParams<{ glossaryId?: string }>();
+  if (!params.glossaryId) {
+    return <Navigate to="/glossaries" replace />;
+  }
+  return <Navigate to={`/glossaries/${params.glossaryId}/settings`} replace />;
+}
+
+function AppLayout({ showHeader }: { showHeader: boolean }) {
   const user = useUser();
+  const location = useLocation();
   const canAccessIncidents = user.role === 'ROLE_ADMIN' || user.role === 'ROLE_PM';
   const headerNavItems = [
     ...navItems.map(({ to, label }) => ({ to, label })),
     ...(canAccessIncidents ? [{ to: '/translation-incidents', label: 'Incidents' }] : []),
+    ...(canAccessGlossaries(user) ? [{ to: '/glossaries', label: 'Glossaries' }] : []),
     { to: '/settings/system', label: 'Settings' },
   ];
 
@@ -120,6 +139,8 @@ export function App() {
             {navItems.map(({ to, element }) => (
               <Route key={to} path={to} element={element} />
             ))}
+            <Route path="/glossaries" element={<GlossariesPage />} />
+            <Route path="/glossaries/:glossaryId/settings" element={<AdminGlossaryDetailPage />} />
             <Route path="/ai-translate" element={<AiTranslatePage />} />
             <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/statistics" element={<StatisticsPage />} />
@@ -146,6 +167,7 @@ export function App() {
               </RequireUser>
             }
           >
+            <Route path="/glossaries/:glossaryId" element={<GlossaryWorkspacePage />} />
             <Route path="/review-projects/:projectId" element={<ReviewProjectPage />} />
             <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
             <Route
@@ -158,6 +180,8 @@ export function App() {
             />
             <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
             <Route path="/settings/system/review-features" element={<AdminReviewFeaturesPage />} />
+            <Route path="/settings/admin/glossaries" element={<LegacyGlossariesRedirect />} />
+            <Route path="/settings/system/glossaries" element={<LegacyGlossariesRedirect />} />
             <Route
               path="/settings/admin/review-automations"
               element={<AdminReviewAutomationsPage />}
@@ -209,6 +233,14 @@ export function App() {
             <Route
               path="/settings/system/review-features/:featureId"
               element={<AdminReviewFeatureDetailPage />}
+            />
+            <Route
+              path="/settings/admin/glossaries/:glossaryId"
+              element={<LegacyGlossarySettingsRedirect />}
+            />
+            <Route
+              path="/settings/system/glossaries/:glossaryId"
+              element={<LegacyGlossarySettingsRedirect />}
             />
             <Route
               path="/settings/admin/review-automations/batch"

@@ -35,7 +35,7 @@ The glossary workspace is a two-pane surface:
 
 The term table supports:
 
-- text search across source, definition, target, and references/evidence captions
+- text search across source, definition, target, and reference captions
 - status filtering
 - multi-locale columns
 - an automatic visible-locale cap of five columns
@@ -139,12 +139,12 @@ Structured term metadata lives outside TM text-unit comments:
 This keeps glossary strings compatible with existing TM storage while avoiding a
 second translation store.
 
-### References / evidence
+### References
 
 The backend model is still named `GlossaryTermEvidence`, but the UI should prefer
 "References" where the user-facing label is not constrained by API names.
 
-Supported evidence/reference types:
+Supported reference types:
 
 - screenshot
 - string usage
@@ -153,6 +153,10 @@ Supported evidence/reference types:
 
 These records explain why a term exists or where it was observed. They are not
 part of the translation-storage model.
+
+The term editor presents these as a compact `References` section. Users can add
+notes, observed usage, code references, or attach screenshots without exposing
+raw backend enum names or a prominent screenshot dropzone.
 
 ## Term Lifecycle
 
@@ -222,8 +226,6 @@ TM rows.
 
 ## Follow-Ups
 
-- Rename user-facing "Evidence" labels to "References" where appropriate while
-  keeping backend/API names stable unless a wider migration is justified.
 - Add readiness/audit signals: missing locale coverage, pending candidates,
   recent changes, and review state.
 - Add configurable extraction noise controls and confidence thresholds.

@@ -1,0 +1,273 @@
+.glossary-admin-page {
+  width: 100%;
+}
+
+.settings-page--wide.glossary-admin-page {
+  max-width: none;
+}
+
+.glossary-admin-page .settings-card {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.glossary-admin-page__toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.glossary-admin-page__search {
+  width: 100%;
+}
+
+.glossary-admin-page__toolbar-actions {
+  display: inline-flex;
+  gap: var(--space-2);
+  justify-self: end;
+}
+
+.glossary-admin-page__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.glossary-admin-page__filter-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.glossary-admin-page__count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.glossary-admin-page__count-text {
+  min-height: 1rem;
+  white-space: nowrap;
+}
+
+.glossary-admin-page__status {
+  text-align: right;
+}
+
+.glossary-admin-page__status.is-error {
+  color: var(--color-danger);
+}
+
+.glossary-admin-page__table {
+  display: flex;
+  flex-direction: column;
+  min-height: 20rem;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.glossary-admin-page__table-header,
+.glossary-admin-page__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 5rem 9rem 9rem;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.glossary-admin-page__table-header {
+  padding: 0 0 var(--space-2);
+  background: transparent;
+  border-bottom: var(--border-width) solid var(--color-border);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.glossary-admin-page__table-header .glossary-admin-page__cell {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+}
+
+.glossary-admin-page__row {
+  min-height: 3rem;
+  padding: 0 var(--space-1);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  color: var(--color-text);
+}
+
+.glossary-admin-page__row:hover {
+  background: color-mix(in srgb, var(--color-surface-muted) 40%, transparent);
+}
+
+.glossary-admin-page__cell {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glossary-admin-page__cell--muted {
+  color: var(--color-text-muted);
+}
+
+.glossary-admin-page__name-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.glossary-admin-page__name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glossary-admin-page__name-link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glossary-admin-page__name-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.glossary-admin-page__id-text {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.glossary-admin-page__actions {
+  display: inline-flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex: none;
+}
+
+.glossary-admin-page__row-action-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.glossary-admin-page__row-action-link:hover,
+.glossary-admin-page__row-action-link:focus-visible {
+  color: color-mix(in srgb, var(--color-accent) 84%, var(--color-text));
+}
+
+.glossary-admin-page__row-action-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.glossary-admin-page__row:hover .glossary-admin-page__row-action-link,
+.glossary-admin-page__row:focus-within .glossary-admin-page__row-action-link {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.glossary-admin-page__row:hover .glossary-admin-page__id-text,
+.glossary-admin-page__row:focus-within .glossary-admin-page__id-text {
+  opacity: 1;
+}
+
+.glossary-admin-page__empty {
+  margin: var(--space-4) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.glossary-admin-page__create-modal {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.glossary-admin-page__create-dialog {
+  align-items: flex-start;
+  padding-top: max(var(--space-6), 8vh);
+  padding-bottom: max(var(--space-6), 6vh);
+}
+
+.glossary-admin-page__create-dialog .modal__card {
+  width: min(48rem, 94vw);
+  max-height: calc(100vh - 2 * max(var(--space-6), 6vh));
+  overflow: visible;
+  padding: var(--space-6);
+}
+
+.glossary-admin-page__create-modal .settings-field {
+  min-width: 0;
+}
+
+.glossary-admin-page__create-modal textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+@media (max-width: 78rem) {
+  .glossary-admin-page__toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .glossary-admin-page__toolbar-actions {
+    justify-self: start;
+  }
+
+  .glossary-admin-page__count {
+    grid-template-columns: 1fr;
+  }
+
+  .glossary-admin-page__status {
+    justify-self: start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 60rem) {
+  .glossary-admin-page__table-header {
+    display: none;
+  }
+
+  .glossary-admin-page__create-dialog .modal__card {
+    width: min(94vw, 100%);
+    padding: var(--space-4);
+  }
+
+  .glossary-admin-page__row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-1);
+  }
+}

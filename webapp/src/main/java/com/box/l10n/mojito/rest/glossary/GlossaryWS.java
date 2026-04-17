@@ -364,12 +364,8 @@ public class GlossaryWS {
     try {
       GlossaryImportExportService.ExportPayload payload =
           glossaryImportExportService.exportGlossary(glossaryId, format);
-      MediaType mediaType =
-          "csv".equalsIgnoreCase(payload.format())
-              ? MediaType.parseMediaType("text/csv")
-              : MediaType.APPLICATION_JSON;
       return ResponseEntity.ok()
-          .contentType(mediaType)
+          .contentType(MediaType.APPLICATION_JSON)
           .header(
               HttpHeaders.CONTENT_DISPOSITION,
               "attachment; filename=\"" + payload.filename() + "\"")

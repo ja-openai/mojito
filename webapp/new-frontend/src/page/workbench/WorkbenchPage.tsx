@@ -47,7 +47,11 @@ export function WorkbenchPage() {
   const shareId = searchParams.get('shareId');
   const wsId = searchParams.get(WORKBENCH_SESSION_QUERY_KEY);
   const deepLinkTmId = searchParams.get('tmTextUnitId');
-  const deepLinkLocale = searchParams.get('locale');
+  const deepLinkLocaleTags = useMemo(
+    () => searchParams.getAll('locale').filter(Boolean),
+    [searchParams],
+  );
+  const deepLinkLocaleKey = deepLinkLocaleTags.join('\u0000');
   const deepLinkRepo = searchParams.get('repo');
   const [shareIdToHydrate, setShareIdToHydrate] = useState<string | null>(shareId);
   const [hydratedSearchRequest, setHydratedSearchRequest] = useState<TextUnitSearchRequest | null>(
@@ -151,10 +155,10 @@ export function WorkbenchPage() {
       searchAttribute: 'tmTextUnitIds',
       searchType: 'exact',
       searchText: deepLinkTmId,
-      localeTags: deepLinkLocale ? [deepLinkLocale] : [],
+      localeTags: deepLinkLocaleTags,
       repositoryIds: deepLinkRepo ? [Number(deepLinkRepo)] : [],
     });
-  }, [deepLinkLocale, deepLinkRepo, deepLinkTmId]);
+  }, [deepLinkLocaleKey, deepLinkLocaleTags, deepLinkRepo, deepLinkTmId]);
 
   useEffect(() => {
     if (!stateSearchRequest) {
