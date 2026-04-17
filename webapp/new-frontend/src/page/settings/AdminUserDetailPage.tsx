@@ -16,6 +16,7 @@ import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { useLocales } from '../../hooks/useLocales';
 import { USERS_QUERY_KEY, useUsers } from '../../hooks/useUsers';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
+import { getUserDisplayName } from '../../utils/userDisplayName';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const normalizeLocaleList = (tags: string[]) =>
@@ -24,16 +25,6 @@ const normalizeLocaleList = (tags: string[]) =>
   );
 
 const getPrimaryRole = (user: ApiUser) => user.authorities?.[0]?.authority ?? 'ROLE_USER';
-
-const getDisplayName = (user: ApiUser) => {
-  if (user.commonName) {
-    return user.commonName;
-  }
-  if (user.givenName && user.surname) {
-    return `${user.givenName} ${user.surname}`;
-  }
-  return user.username;
-};
 
 const getLocaleTags = (user: ApiUser) =>
   (user.userLocales ?? [])
@@ -263,7 +254,7 @@ export function AdminUserDetailPage() {
     );
   }
 
-  const displayName = getDisplayName(userRecord);
+  const displayName = getUserDisplayName(userRecord);
   const displayNamePreview =
     normalizedCommonName ||
     [normalizedGivenName, normalizedSurname].filter(Boolean).join(' ') ||

@@ -25,6 +25,7 @@ import { useRepositories } from '../../hooks/useRepositories';
 import { useUsers } from '../../hooks/useUsers';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
+import { getUserLabel } from '../../utils/userDisplayName';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {
@@ -54,15 +55,6 @@ fr-FR,jane|max
 de-DE,alex|kim`;
 
 const getUserRole = (user: ApiUser) => user.authorities?.[0]?.authority ?? 'ROLE_USER';
-
-const getUserLabel = (user: ApiUser) => {
-  const fullName =
-    user.commonName || [user.givenName, user.surname].filter((part) => Boolean(part)).join(' ');
-  if (fullName) {
-    return `${fullName} (${user.username})`;
-  }
-  return user.username;
-};
 
 const normalizeLocaleTag = (value: string | null | undefined): string | null => {
   if (!value) {

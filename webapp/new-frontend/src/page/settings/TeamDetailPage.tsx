@@ -34,6 +34,7 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import { MultiSelectChip } from '../../components/MultiSelectChip';
 import { useUser } from '../../components/RequireUser';
+import { getUserDisplayName, getUserLabel } from '../../utils/userDisplayName';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {
@@ -57,17 +58,6 @@ type BatchInputParseResult = {
   nextIds: number[];
   unknownUsernames: string[];
   duplicateUsernames: string[];
-};
-
-const getUserDisplayName = (entry: ApiUser) =>
-  entry.commonName || [entry.givenName, entry.surname].filter((part) => Boolean(part)).join(' ');
-
-const getUserLabel = (entry: ApiUser) => {
-  const fullName = getUserDisplayName(entry);
-  if (fullName) {
-    return `${fullName} (${entry.username})`;
-  }
-  return entry.username;
 };
 
 const normalizeTeamName = (value: string) => value.trim().replace(/\s+/g, ' ');

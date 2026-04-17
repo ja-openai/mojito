@@ -22,6 +22,7 @@ import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import { USERS_QUERY_KEY, useUsers } from '../../hooks/useUsers';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
+import { getUserDisplayName } from '../../utils/userDisplayName';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const formatRole = (role?: string | null) => {
@@ -38,16 +39,6 @@ const formatRole = (role?: string | null) => {
 };
 
 const getPrimaryRole = (user: ApiUser) => user.authorities?.[0]?.authority ?? 'ROLE_USER';
-
-const getDisplayName = (user: ApiUser) => {
-  if (user.commonName) {
-    return user.commonName;
-  }
-  if (user.givenName && user.surname) {
-    return `${user.givenName} ${user.surname}`;
-  }
-  return user.username;
-};
 
 const getLocaleTags = (user: ApiUser) =>
   (user.userLocales ?? [])
@@ -125,7 +116,7 @@ export function AdminUserSettingsPage() {
     }
 
     return users.map((entry) => {
-      const displayName = getDisplayName(entry);
+      const displayName = getUserDisplayName(entry);
       const roleValue = getPrimaryRole(entry);
       const roleLabel = formatRole(roleValue);
       const teamNames =
