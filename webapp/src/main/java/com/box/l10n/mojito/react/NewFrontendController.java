@@ -18,6 +18,7 @@ public class NewFrontendController {
     "/review-projects",
     "/review-projects/{path:[^.]*}",
     "/review-projects/{path:[^.]*}/**",
+    "/translation-incidents",
     "/workbench",
     "/monitoring",
     "/statistics",

@@ -1,8 +1,12 @@
 package com.box.l10n.mojito.react;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
+import org.junit.Assert;
 import org.junit.Test;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 public class NewFrontendControllerTest {
 
@@ -11,6 +15,15 @@ public class NewFrontendControllerTest {
     NewFrontendController controller = new NewFrontendController();
 
     assertEquals("forward:/index.html", controller.forwardNewApp());
+  }
+
+  @Test
+  public void forwardNewAppIncludesTranslationIncidentsRoute() throws Exception {
+    RequestMapping requestMapping =
+        NewFrontendController.class.getMethod("forwardNewApp").getAnnotation(RequestMapping.class);
+
+    Assert.assertNotNull(requestMapping);
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/translation-incidents"));
   }
 
   @Test
