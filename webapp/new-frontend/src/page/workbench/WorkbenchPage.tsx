@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { TextUnitSearchRequest } from '../../api/text-units';
 import { useUser } from '../../components/RequireUser';
+import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
 import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
 import { useWorkbenchCollections } from './useWorkbenchCollections';
@@ -26,7 +27,12 @@ const localePromptTitle = 'Choose a locale';
 type WorkbenchLocationState = { workbenchSearch?: TextUnitSearchRequest | null } & Record<
   string,
   unknown
-> & { localePrompt?: boolean; workbenchScrollTop?: number | null; workbenchRowId?: string | null };
+> & {
+    localePrompt?: boolean;
+    workbenchScrollTop?: number | null;
+    workbenchRowId?: string | null;
+    glossaryContext?: GlossaryWorkbenchContext | null;
+  };
 
 function isWorkbenchLocationState(state: unknown): state is WorkbenchLocationState {
   return typeof state === 'object' && state !== null && 'workbenchSearch' in state;
@@ -75,6 +81,7 @@ export function WorkbenchPage() {
       : null;
   const stateRowId =
     typeof locationState?.workbenchRowId === 'string' ? locationState.workbenchRowId : null;
+  const glossaryContext = locationState?.glossaryContext ?? null;
   const [pendingRestoreScrollTop, setPendingRestoreScrollTop] = useState<number | null>(
     stateScrollTop,
   );
@@ -676,6 +683,7 @@ export function WorkbenchPage() {
         onAddToCollection={handleAddToCollection}
         onRemoveFromCollection={handleRemoveFromCollection}
         activeCollectionIds={activeCollectionIds}
+        glossaryContext={glossaryContext}
         onOpenCollectionSearch={handleOpenCollectionSearch}
         onShareCollection={handleShareCollection}
         onCreateReviewProject={handleCreateReviewProjectFromCollection}

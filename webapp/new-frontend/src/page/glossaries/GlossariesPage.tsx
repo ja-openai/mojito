@@ -593,7 +593,11 @@ function GlossaryRow({
             className="glossary-admin-page__row-action-link"
             to="/workbench"
             state={buildGlossaryWorkbenchState({
+              glossaryId: glossary.id,
+              glossaryName: glossary.name,
               backingRepositoryId: glossary.backingRepository.id,
+              backingRepositoryName: glossary.backingRepository.name,
+              assetPath: glossary.assetPath,
             })}
           >
             Workbench

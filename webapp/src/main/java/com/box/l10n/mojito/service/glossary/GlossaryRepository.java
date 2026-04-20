@@ -26,6 +26,9 @@ public interface GlossaryRepository extends JpaRepository<Glossary, Long> {
   @Query("select g from Glossary g where g.id = :id")
   Optional<Glossary> findByIdWithBindings(@Param("id") Long id);
 
+  @Query("select distinct g.backingRepository.id from Glossary g")
+  List<Long> findBackingRepositoryIds();
+
   @EntityGraph(attributePaths = "backingRepository")
   @Query(
       """

@@ -32,6 +32,7 @@ export type ApiRepository = {
   sourceLocale?: ApiLocale | null;
   repositoryLocales?: ApiRepositoryLocale[] | null;
   repositoryStatistic?: ApiRepositoryStatistic | null;
+  isGlossary?: boolean | null;
 };
 
 export const fetchRepositories = async (): Promise<ApiRepository[]> => {

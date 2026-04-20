@@ -198,6 +198,7 @@ public class GlossaryManagementService {
         Boolean.TRUE.equals(glossary.getEnabled()),
         glossary.getPriority(),
         normalizeScopeMode(glossary.getScopeMode()),
+        glossary.getAssetPath(),
         repositoryCount,
         new RepositoryRef(
             glossary.getBackingRepository().getId(), glossary.getBackingRepository().getName()));
@@ -379,6 +380,7 @@ public class GlossaryManagementService {
       boolean enabled,
       int priority,
       String scopeMode,
+      String assetPath,
       int repositoryCount,
       RepositoryRef backingRepository) {}
 

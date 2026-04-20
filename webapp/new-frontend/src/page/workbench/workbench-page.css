@@ -1152,6 +1152,52 @@
   overflow-wrap: anywhere;
 }
 
+.workbench-glossary-affordance {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  width: fit-content;
+  min-height: 1.35rem;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(
+    in srgb,
+    var(--color-surface-elevated, var(--color-surface)) 70%,
+    transparent
+  );
+  color: var(--color-text-subtle);
+  font: inherit;
+  font-size: var(--font-size-2xs);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.workbench-glossary-affordance:hover,
+.workbench-glossary-affordance:focus-visible {
+  border-color: color-mix(in srgb, var(--color-accent) 52%, var(--color-border));
+  color: var(--color-text);
+}
+
+.workbench-glossary-affordance:focus-visible {
+  outline: 2px solid var(--color-focus-outline);
+  outline-offset: 2px;
+}
+
+.workbench-glossary-affordance__label {
+  font-weight: var(--font-weight-semibold);
+}
+
+.workbench-glossary-affordance__name {
+  min-width: 0;
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
 .workbench-page__meta-link {
   display: inline-flex;
   align-items: center;

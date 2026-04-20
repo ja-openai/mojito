@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.rest.repository;
 
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerType;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -13,7 +14,8 @@ public record RepositorySummaryResponse(
     List<RepositoryLocaleSummary> repositoryLocales,
     RepositoryStatisticSummary repositoryStatistic,
     List<AssetIntegrityCheckerSummary> assetIntegrityCheckers,
-    Boolean checkSLA) {
+    Boolean checkSLA,
+    @JsonProperty("isGlossary") Boolean isGlossary) {
 
   public record LocaleSummary(Long id, String bcp47Tag) {}
 

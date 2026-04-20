@@ -1,13 +1,16 @@
+import { useQuery } from '@tanstack/react-query';
 import {
   type KeyboardEvent,
   type RefObject,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { fetchGlossaries } from '../../api/glossaries';
 import type { ApiRepository } from '../../api/repositories';
 import type { TextUnitSearchRequest } from '../../api/text-units';
 import { AutoTextarea } from '../../components/AutoTextarea';
@@ -18,6 +21,7 @@ import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import { isPrimaryActionShortcut } from '../../utils/keyboardShortcuts';
 import { isRtlLocale } from '../../utils/localeDirection';
 import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
@@ -55,10 +59,22 @@ type WorkbenchBodyProps = {
   onRemoveFromCollection: (tmTextUnitId: number) => void;
   activeCollectionIds: Set<number>;
   activeCollectionName: string | null;
+  glossaryContext: GlossaryWorkbenchContext | null;
   restoreScrollTop: number | null;
   restoreRowId: string | null;
   onRestoreScrollConsumed: () => void;
 };
+
+type GlossaryWorkbenchTarget = {
+  glossaryId: number;
+  glossaryName: string;
+};
+
+const getGlossaryWorkbenchKey = (repositoryName: string, assetPath: string | null | undefined) =>
+  `${repositoryName.trim().toLowerCase()}\u0000${(assetPath ?? '').trim().toLowerCase()}`;
+
+const normalizeWorkbenchToken = (value: string | null | undefined) =>
+  (value ?? '').trim().toLowerCase();
 
 export function WorkbenchBody({
   rows,
@@ -91,6 +107,7 @@ export function WorkbenchBody({
   onRemoveFromCollection,
   activeCollectionIds,
   activeCollectionName,
+  glossaryContext,
   restoreScrollTop,
   restoreRowId,
   onRestoreScrollConsumed,
@@ -102,6 +119,58 @@ export function WorkbenchBody({
   registerRowRefRef.current = registerRowRef;
 
   const hasRows = rows.length > 0;
+  const glossaryQuery = useQuery({
+    queryKey: ['workbench-glossary-affordances'],
+    queryFn: () => fetchGlossaries({ limit: 200 }),
+    enabled: hasRows,
+    staleTime: 60_000,
+  });
+  const glossaryTargetByWorkbenchKey = useMemo(() => {
+    const glossaries = glossaryQuery.data?.glossaries ?? [];
+    const targets = new Map<string, GlossaryWorkbenchTarget>();
+    if (glossaryContext) {
+      targets.set(
+        getGlossaryWorkbenchKey(glossaryContext.backingRepositoryName, glossaryContext.assetPath),
+        {
+          glossaryId: glossaryContext.glossaryId,
+          glossaryName: glossaryContext.glossaryName,
+        },
+      );
+    }
+    glossaries
+      .filter((glossary) => Boolean(glossary.backingRepository.name && glossary.assetPath))
+      .forEach((glossary) => {
+        const key = getGlossaryWorkbenchKey(glossary.backingRepository.name, glossary.assetPath);
+        if (!targets.has(key)) {
+          targets.set(key, {
+            glossaryId: glossary.id,
+            glossaryName: glossary.name,
+          });
+        }
+      });
+    return targets;
+  }, [glossaryContext, glossaryQuery.data?.glossaries]);
+  const getGlossaryTargetForRow = useCallback(
+    (row: WorkbenchRow) => {
+      if (
+        glossaryContext &&
+        normalizeWorkbenchToken(row.repositoryName) ===
+          normalizeWorkbenchToken(glossaryContext.backingRepositoryName) &&
+        (!row.assetPath ||
+          normalizeWorkbenchToken(row.assetPath) ===
+            normalizeWorkbenchToken(glossaryContext.assetPath))
+      ) {
+        return {
+          glossaryId: glossaryContext.glossaryId,
+          glossaryName: glossaryContext.glossaryName,
+        };
+      }
+      return glossaryTargetByWorkbenchKey.get(
+        getGlossaryWorkbenchKey(row.repositoryName, row.assetPath),
+      );
+    },
+    [glossaryContext, glossaryTargetByWorkbenchKey],
+  );
 
   const showNoResults =
     hasSearched &&
@@ -246,6 +315,15 @@ export function WorkbenchBody({
       });
     },
     [activeSearchRequest, navigate],
+  );
+
+  const openGlossaryTerm = useCallback(
+    (row: WorkbenchRow, glossaryTarget: GlossaryWorkbenchTarget) => {
+      const params = new URLSearchParams();
+      params.set('termId', String(row.tmTextUnitId));
+      void navigate(`/glossaries/${glossaryTarget.glossaryId}?${params.toString()}`);
+    },
+    [navigate],
   );
 
   const scrollElementRef = useRef<HTMLDivElement>(null);
@@ -424,6 +502,7 @@ export function WorkbenchBody({
               const isInCollection = hasActiveCollection
                 ? activeCollectionIds.has(row.tmTextUnitId)
                 : false;
+              const glossaryTarget = getGlossaryTargetForRow(row);
               const collectionButtonLabel =
                 hasActiveCollection && isInCollection ? 'In collection' : 'Add to collection';
               const handleTranslationKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -504,6 +583,24 @@ export function WorkbenchBody({
                           <span className="workbench-page__meta-location">
                             {row.locations.join(', ')}
                           </span>
+                        ) : null}
+                        {glossaryTarget ? (
+                          <button
+                            type="button"
+                            className="workbench-glossary-affordance"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openGlossaryTerm(row, glossaryTarget);
+                            }}
+                            title={`Open ${row.textUnitName} in glossary ${glossaryTarget.glossaryName}`}
+                          >
+                            <span className="workbench-glossary-affordance__label">
+                              Glossary term
+                            </span>
+                            <span className="workbench-glossary-affordance__name">
+                              {glossaryTarget.glossaryName}
+                            </span>
+                          </button>
                         ) : null}
                       </div>
                     </div>

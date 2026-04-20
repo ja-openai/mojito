@@ -8,12 +8,15 @@ import com.box.l10n.mojito.rest.repository.RepositorySummaryResponse.RepositoryL
 import com.box.l10n.mojito.rest.repository.RepositorySummaryResponse.RepositoryLocaleSummary;
 import com.box.l10n.mojito.rest.repository.RepositorySummaryResponse.RepositoryStatisticSummary;
 import com.box.l10n.mojito.service.assetintegritychecker.AssetIntegrityCheckerRepository;
+import com.box.l10n.mojito.service.glossary.GlossaryRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.repository.statistics.RepositoryLocaleStatisticRepository;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,8 @@ public class RepositorySummaryService {
 
   @Autowired AssetIntegrityCheckerRepository assetIntegrityCheckerRepository;
 
+  @Autowired GlossaryRepository glossaryRepository;
+
   @Autowired LocaleService localeService;
 
   /**
@@ -47,6 +52,8 @@ public class RepositorySummaryService {
 
     List<Long> repositoryIds =
         repositoryRows.stream().map(RepositorySummaryRow::repositoryId).toList();
+    Set<Long> glossaryBackingRepositoryIds =
+        new HashSet<>(glossaryRepository.findBackingRepositoryIds());
 
     List<RepositoryLocaleRow> repositoryLocaleRows =
         repositoryLocaleRepository.findRowsByRepositoryIdIn(repositoryIds);
@@ -126,7 +133,8 @@ public class RepositorySummaryService {
               repositoryLocales,
               repositoryStatistic,
               assetIntegrityCheckers,
-              repositoryRow.checkSLA());
+              repositoryRow.checkSLA(),
+              glossaryBackingRepositoryIds.contains(repositoryId));
 
       response.add(repositoryResponse);
     }

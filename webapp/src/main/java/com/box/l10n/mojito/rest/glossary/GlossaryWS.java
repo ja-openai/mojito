@@ -55,6 +55,7 @@ public class GlossaryWS {
         boolean enabled,
         int priority,
         String scopeMode,
+        String assetPath,
         int repositoryCount,
         RepositoryRef backingRepository) {}
   }
@@ -596,6 +597,7 @@ public class GlossaryWS {
         summary.enabled(),
         summary.priority(),
         summary.scopeMode(),
+        summary.assetPath(),
         summary.repositoryCount(),
         new RepositoryRef(summary.backingRepository().id(), summary.backingRepository().name()));
   }

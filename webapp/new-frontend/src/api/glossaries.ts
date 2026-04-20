@@ -15,6 +15,7 @@ export type ApiGlossarySummary = {
   enabled: boolean;
   priority: number;
   scopeMode: 'GLOBAL' | 'SELECTED_REPOSITORIES';
+  assetPath: string;
   repositoryCount: number;
   backingRepository: ApiGlossaryRepositoryRef;
 };

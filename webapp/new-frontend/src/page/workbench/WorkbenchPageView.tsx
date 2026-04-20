@@ -8,6 +8,7 @@ import type { TextUnitSearchRequest } from '../../api/text-units';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { Modal } from '../../components/Modal';
+import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import type { RepositorySelectionOption } from '../../utils/repositorySelection';
 import type {
@@ -153,6 +154,7 @@ type Props = {
   onAddToCollection: (tmTextUnitId: number, repositoryId: number | null) => void;
   onRemoveFromCollection: (tmTextUnitId: number) => void;
   activeCollectionIds: Set<number>;
+  glossaryContext: GlossaryWorkbenchContext | null;
   onOpenCollectionSearch: (id: string) => void;
   onShareCollection: (id: string) => boolean;
   onCreateReviewProject: (id: string) => void;
@@ -311,6 +313,7 @@ export function WorkbenchPageView({
   onAddToCollection,
   onRemoveFromCollection,
   activeCollectionIds,
+  glossaryContext,
   onOpenCollectionSearch,
   onShareCollection,
   onCreateReviewProject,
@@ -452,6 +455,7 @@ export function WorkbenchPageView({
         onRemoveFromCollection={onRemoveFromCollection}
         activeCollectionIds={activeCollectionIds}
         activeCollectionName={activeCollectionName}
+        glossaryContext={glossaryContext}
         restoreScrollTop={restoreScrollTop}
         restoreRowId={restoreRowId}
         onRestoreScrollConsumed={onRestoreScrollConsumed}

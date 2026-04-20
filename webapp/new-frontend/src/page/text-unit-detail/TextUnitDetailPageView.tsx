@@ -77,6 +77,8 @@ type TextUnitDetailPageViewProps = {
   glossaryMatches: ApiMatchedGlossaryTerm[];
   isGlossaryLoading: boolean;
   glossaryErrorMessage: string | null;
+  isGlossaryCollapsed: boolean;
+  onToggleGlossaryCollapsed: () => void;
   isMetaCollapsed: boolean;
   onToggleMetaCollapsed: () => void;
   isMetaLoading: boolean;
@@ -135,6 +137,8 @@ export function TextUnitDetailPageView({
   glossaryMatches,
   isGlossaryLoading,
   glossaryErrorMessage,
+  isGlossaryCollapsed,
+  onToggleGlossaryCollapsed,
   isMetaCollapsed,
   onToggleMetaCollapsed,
   isMetaLoading,
@@ -349,12 +353,21 @@ export function TextUnitDetailPageView({
             </section>
 
             <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
-              <GlossaryMatchesPanel
-                matches={glossaryMatches}
-                isLoading={isGlossaryLoading}
-                errorMessage={glossaryErrorMessage}
-                currentTarget={editorInfo.target}
+              <SectionHeader
+                title="Glossary"
+                expanded={!isGlossaryCollapsed}
+                onToggle={onToggleGlossaryCollapsed}
+                summary={isGlossaryLoading ? 'Loading…' : null}
               />
+              {!isGlossaryCollapsed ? (
+                <GlossaryMatchesPanel
+                  matches={glossaryMatches}
+                  isLoading={isGlossaryLoading}
+                  errorMessage={glossaryErrorMessage}
+                  currentTarget={editorInfo.target}
+                  showHeader={false}
+                />
+              ) : null}
             </section>
 
             <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">

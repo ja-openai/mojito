@@ -224,6 +224,10 @@ The glossary table links a clicked term into Workbench with:
 This keeps inspection precise without making users manage glossary content as raw
 TM rows.
 
+Workbench also detects rows from glossary backing repositories and shows a
+compact glossary-term affordance that opens the clicked row back in the glossary
+workspace.
+
 ## Follow-Ups
 
 - Add readiness/audit signals: missing locale coverage, pending candidates,

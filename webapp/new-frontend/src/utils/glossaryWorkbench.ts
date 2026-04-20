@@ -3,14 +3,31 @@ import type { TextUnitSearchRequest } from '../api/text-units';
 export type GlossaryWorkbenchNavigationState = {
   workbenchSearch: TextUnitSearchRequest;
   localePrompt?: boolean;
+  glossaryContext?: GlossaryWorkbenchContext;
+};
+
+export type GlossaryWorkbenchContext = {
+  glossaryId: number;
+  glossaryName: string;
+  backingRepositoryId: number;
+  backingRepositoryName: string;
+  assetPath: string;
 };
 
 export function buildGlossaryWorkbenchState({
+  glossaryId,
+  glossaryName,
   backingRepositoryId,
+  backingRepositoryName,
+  assetPath,
   localeTags,
   tmTextUnitId,
 }: {
+  glossaryId?: number | null;
+  glossaryName?: string | null;
   backingRepositoryId: number;
+  backingRepositoryName?: string | null;
+  assetPath?: string | null;
   localeTags?: string[] | null;
   tmTextUnitId?: number | null;
 }): GlossaryWorkbenchNavigationState {
@@ -33,5 +50,15 @@ export function buildGlossaryWorkbenchState({
       offset: 0,
     },
     localePrompt: normalizedLocaleTags.length === 0 ? true : undefined,
+    glossaryContext:
+      glossaryId != null && glossaryName && backingRepositoryName
+        ? {
+            glossaryId,
+            glossaryName,
+            backingRepositoryId,
+            backingRepositoryName,
+            assetPath: assetPath?.trim() || 'glossary',
+          }
+        : undefined,
   };
 }

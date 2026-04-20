@@ -27,6 +27,7 @@ export type RepositoryMetricValue = {
 export type RepositoryRow = {
   id: number;
   name: string;
+  isGlossary: boolean;
   rejected: RepositoryMetricValue;
   needsTranslation: RepositoryMetricValue;
   needsReview: RepositoryMetricValue;
@@ -394,6 +395,9 @@ function RepositoryTable({
                     <span className="repositories-page__repo-id" aria-hidden="true">
                       #{repo.id}
                     </span>
+                    {repo.isGlossary ? (
+                      <span className="repositories-page__repo-badge">Glossary</span>
+                    ) : null}
                   </div>
                   <button
                     type="button"

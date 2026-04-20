@@ -432,7 +432,11 @@ export function AdminGlossaryDetailPage() {
                 <Link
                   to="/workbench"
                   state={buildGlossaryWorkbenchState({
+                    glossaryId: glossaryQuery.data?.id,
+                    glossaryName: glossaryQuery.data?.name,
                     backingRepositoryId: glossaryQuery.data?.backingRepository.id ?? 0,
+                    backingRepositoryName: glossaryQuery.data?.backingRepository.name,
+                    assetPath: glossaryQuery.data?.assetPath,
                     localeTags: glossaryQuery.data?.localeTags,
                   })}
                   className="settings-table__link"

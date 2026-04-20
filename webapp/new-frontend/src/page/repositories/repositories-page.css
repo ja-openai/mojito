@@ -239,6 +239,16 @@
   opacity: 1;
 }
 
+.repositories-page__repo-badge {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xs);
+  line-height: 1;
+  padding: 0.2rem var(--space-2);
+  white-space: nowrap;
+}
+
 .repositories-page__row-action {
   border: 0;
   background: transparent;

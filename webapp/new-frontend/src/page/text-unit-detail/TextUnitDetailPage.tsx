@@ -70,6 +70,7 @@ export function TextUnitDetailPage() {
 
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
   const [isMetaCollapsed, setIsMetaCollapsed] = useState(true);
+  const [isGlossaryCollapsed, setIsGlossaryCollapsed] = useState(false);
   const [isIcuPreviewCollapsed, setIsIcuPreviewCollapsed] = useState(true);
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
@@ -926,6 +927,8 @@ export function TextUnitDetailPage() {
       glossaryMatches={glossaryMatchesQuery.data ?? []}
       isGlossaryLoading={glossaryMatchesQuery.isLoading}
       glossaryErrorMessage={getQueryErrorMessage(glossaryMatchesQuery.error)}
+      isGlossaryCollapsed={isGlossaryCollapsed}
+      onToggleGlossaryCollapsed={() => setIsGlossaryCollapsed((current) => !current)}
       isMetaCollapsed={isMetaCollapsed}
       onToggleMetaCollapsed={() => setIsMetaCollapsed((current) => !current)}
       isMetaLoading={textUnitQuery.isLoading}

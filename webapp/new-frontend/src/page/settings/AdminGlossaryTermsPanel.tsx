@@ -1405,7 +1405,11 @@ export function AdminGlossaryTermsPanel({
               }}
               getWorkbenchState={(tmTextUnitId) =>
                 buildGlossaryWorkbenchState({
+                  glossaryId: glossary.id,
+                  glossaryName: glossary.name,
                   backingRepositoryId: glossary.backingRepository.id,
+                  backingRepositoryName: glossary.backingRepository.name,
+                  assetPath: glossary.assetPath,
                   localeTags: workbenchLocaleTags,
                   tmTextUnitId,
                 })

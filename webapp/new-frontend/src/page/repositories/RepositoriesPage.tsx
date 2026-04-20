@@ -81,6 +81,7 @@ const buildRepositoryRow = (
   return {
     id: repository.id,
     name: repository.name,
+    isGlossary: Boolean(repository.isGlossary),
     rejected: getMetricValue(summary.rejected, summary.rejectedWords),
     needsTranslation: getMetricValue(summary.needsTranslation, summary.needsTranslationWords),
     needsReview: getMetricValue(summary.needsReview, summary.needsReviewWords),
