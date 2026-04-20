@@ -976,6 +976,7 @@ export function AdminTranslationIncidentsPage() {
                         <thead>
                           <tr>
                             <th>Repository</th>
+                            <th>Text unit</th>
                             <th>Asset</th>
                             <th>Status</th>
                             <th>Reject</th>
@@ -995,12 +996,13 @@ export function AdminTranslationIncidentsPage() {
                                     rel="noreferrer"
                                     className="settings-table__link"
                                   >
-                                    {candidate.assetPath ?? candidate.tmTextUnitId}
+                                    {candidate.tmTextUnitId ?? '—'}
                                   </a>
                                 ) : (
-                                  (candidate.assetPath ?? '—')
+                                  (candidate.tmTextUnitId ?? '—')
                                 )}
                               </td>
+                              <td>{candidate.assetPath ?? '—'}</td>
                               <td>{candidate.status ?? '—'}</td>
                               <td>{candidate.canReject ? 'Yes' : 'No'}</td>
                             </tr>
