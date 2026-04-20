@@ -684,7 +684,7 @@ const getProgressMetrics = (decidedValue: unknown, totalValue: unknown) => {
   const total = toFiniteNonNegative(totalValue);
   const rawPercent = total === 0 ? 0 : (decided / total) * 100;
   const percentValue = Math.max(0, Math.min(100, rawPercent));
-  const roundedPercent = Math.round(percentValue);
+  const roundedPercent = Math.floor(percentValue);
   const percentWidth =
     decided > 0 && percentValue > 0 && percentValue < 1 ? '2px' : `${percentValue}%`;
   return {
