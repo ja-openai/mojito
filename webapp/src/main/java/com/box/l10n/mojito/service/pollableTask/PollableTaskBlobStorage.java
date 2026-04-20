@@ -5,6 +5,7 @@ import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Pref
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -42,23 +43,14 @@ public class PollableTaskBlobStorage {
   }
 
   public String getOutputJson(Long pollableTaskId) {
-    String outputName = getOutputName(pollableTaskId);
-    String outputJson =
-        structuredBlobStorage
-            .getString(POLLABLE_TASK, outputName)
-            .orElseThrow(
-                () -> new RuntimeException("Can't get the output json for: " + pollableTaskId));
-    return outputJson;
+    return findOutputJson(pollableTaskId)
+        .orElseThrow(
+            () -> new RuntimeException("Can't get the output json for: " + pollableTaskId));
   }
 
   public String getInputJson(Long pollableTaskId) {
-    String inputName = getInputName(pollableTaskId);
-    String inputJson =
-        structuredBlobStorage
-            .getString(POLLABLE_TASK, inputName)
-            .orElseThrow(
-                () -> new RuntimeException("Can't get the input json for: " + pollableTaskId));
-    return inputJson;
+    return findInputJson(pollableTaskId)
+        .orElseThrow(() -> new RuntimeException("Can't get the input json for: " + pollableTaskId));
   }
 
   public <T> T getOutput(Long pollableTaskId, Class<T> clazz) {
@@ -73,5 +65,15 @@ public class PollableTaskBlobStorage {
 
   String getOutputName(long pollableTaskId) {
     return pollableTaskId + "/output";
+  }
+
+  public Optional<String> findInputJson(Long pollableTaskId) {
+    String inputName = getInputName(pollableTaskId);
+    return structuredBlobStorage.getString(POLLABLE_TASK, inputName);
+  }
+
+  public Optional<String> findOutputJson(Long pollableTaskId) {
+    String outputName = getOutputName(pollableTaskId);
+    return structuredBlobStorage.getString(POLLABLE_TASK, outputName);
   }
 }

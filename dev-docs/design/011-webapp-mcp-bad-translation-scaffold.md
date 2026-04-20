@@ -29,6 +29,12 @@ What this scaffold includes
   - `bad_translation.reject_incident`
   - `bad_translation.create_and_reject_if_clear`
   - auto-reject only when incident creation resolves to one clear rejectable candidate
+- A generic task-inspection workflow on top of existing pollable-task storage:
+  - reuse `/api/pollableTasks/{id}` plus the stored task input/output blobs
+  - add `GET /api/pollableTasks/{id}/inspection` for a compact debugging view
+  - add `task.inspect` so MCP clients can inspect arbitrary Mojito task ids
+  - include repository context when input/output payloads expose `repositoryId`, `repositoryName`, or `repository`
+  - surface the parsed Mojito error payload and the backend exception headline from the stored stack trace
 - A remote MCP transport at `/api/mcp` that supports:
   - `initialize`
   - `tools/list`
@@ -55,6 +61,18 @@ Current limitations
 - No MCP session lifecycle.
 - No resumable event or subscription state.
 - Slack stays in draft mode for the incident workflow; send remains a follow-up integration.
+- Task inspection is lookup-by-id only. It does not yet provide search/listing for recent failed tasks.
+
+Task inspection example
+
+- REST: `GET /api/pollableTasks/50255159/inspection`
+- MCP: `task.inspect` with arguments `{"taskId": 50255159}`
+- Response highlights:
+  - `status`
+  - `operation` and `taskType`
+  - `repository`
+  - `error.reportedMessage`, `error.exceptionType`, `error.exceptionMessage`
+  - `input`, `output`, `failures`, and related API `links`
 
 Next build steps
 

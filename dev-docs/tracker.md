@@ -26,3 +26,4 @@ Backlog
 - WORKBENCH-03 — Decide whether `/api/textunitsBatch` should be admin-only end-to-end. The new workbench import UI is admin-gated, but backend auth still follows the broader `/api/textunits/**` permissions.
 - WORKBENCH-04 — Revisit workbench import round-trip semantics for `status` and `includedInLocalizedFile`. The current batch import backend ignores those fields even though export/import can carry them.
 - PLATFORM-01 — Harden the `webapp` MCP bad-translation workflow after the initial scaffold: improve review-project lineage confidence, add better operator audit visibility, and decide whether sync-only `/api/mcp` is enough before adding SSE/session support.
+- PLATFORM-02 — Extend task inspection beyond single-id lookup if operators need broader triage: recent failed-task search, repository-scoped task history, and retention expectations for pollable-task input/output blobs.
