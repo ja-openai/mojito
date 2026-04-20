@@ -1214,15 +1214,38 @@ export function ReviewProjectPageView({
           onClose={() => setIsScreenshotModalOpen(false)}
         />
       ) : null}
-      <ConfirmModal
-        open={mutations.showValidationDialog}
-        title="Translation check failed"
-        body={mutations.validationDialogBody}
-        confirmLabel="Save anyway"
-        cancelLabel="Keep editing"
-        onConfirm={mutations.onConfirmValidationSave}
-        onCancel={mutations.onDismissValidationSave}
-      />
+      {mutations.validationDialogRequiresConfirmation ? (
+        <ConfirmModal
+          open={mutations.showValidationDialog}
+          title={mutations.validationDialogTitle}
+          body={mutations.validationDialogBody}
+          confirmLabel="Save anyway"
+          cancelLabel="Keep editing"
+          onConfirm={mutations.onConfirmValidationSave}
+          onCancel={mutations.onDismissValidationSave}
+        />
+      ) : (
+        <Modal
+          open={mutations.showValidationDialog}
+          size="sm"
+          role="alertdialog"
+          ariaLabel={mutations.validationDialogTitle}
+          onClose={mutations.onDismissValidationSave}
+          closeOnBackdrop
+        >
+          <div className="modal__title">{mutations.validationDialogTitle}</div>
+          <div className="modal__body">{mutations.validationDialogBody}</div>
+          <div className="modal__actions">
+            <button
+              type="button"
+              className="modal__button modal__button--primary"
+              onClick={mutations.onDismissValidationSave}
+            >
+              OK
+            </button>
+          </div>
+        </Modal>
+      )}
       <ConfirmModal
         open={pendingSelection != null}
         title="Discard changes?"

@@ -48,8 +48,9 @@ export type PendingAction =
   | { kind: 'decision-state'; request: DecisionStateRequest };
 
 export type PendingValidationSave = {
+  title: string;
   body: string;
-  action: PendingAction;
+  action?: PendingAction;
 };
 
 export type ReviewProjectMutationControls = {
@@ -62,7 +63,9 @@ export type ReviewProjectMutationControls = {
   activeTextUnitId: number | null;
   conflictTextUnit: ApiReviewProjectTextUnit | null;
   showValidationDialog: boolean;
+  validationDialogTitle: string;
   validationDialogBody: string;
+  validationDialogRequiresConfirmation: boolean;
   onConfirmValidationSave: () => void;
   onDismissValidationSave: () => void;
   onUseConflictCurrent: () => void;
@@ -353,10 +356,14 @@ export function useReviewProjectMutations(
             }
             if (result?.checkResult === false) {
               if (user.role === 'ROLE_TRANSLATOR') {
-                setErrorMessage(TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE);
+                setPendingValidationSave({
+                  title: 'Integrity check override not allowed',
+                  body: TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE,
+                });
                 return;
               }
               setPendingValidationSave({
+                title: 'Translation check failed',
                 body: formatCheckFailureBody(result),
                 action,
               });
@@ -370,6 +377,7 @@ export function useReviewProjectMutations(
             }
             const message = error instanceof Error ? error.message : 'Unknown error';
             setPendingValidationSave({
+              title: 'Unable to validate placeholders',
               body: `Unable to validate placeholders (${message}). Do you want to save it anyway?`,
               action,
             });
@@ -448,7 +456,7 @@ export function useReviewProjectMutations(
   );
 
   const onConfirmValidationSave = useCallback(() => {
-    if (!pendingValidationSave) {
+    if (!pendingValidationSave?.action) {
       return;
     }
     performAction(pendingValidationSave.action, true);
@@ -536,7 +544,9 @@ export function useReviewProjectMutations(
       activeTextUnitId,
       conflictTextUnit,
       showValidationDialog: pendingValidationSave != null,
+      validationDialogTitle: pendingValidationSave?.title ?? '',
       validationDialogBody: pendingValidationSave?.body ?? '',
+      validationDialogRequiresConfirmation: pendingValidationSave?.action != null,
       onConfirmValidationSave,
       onDismissValidationSave,
       onUseConflictCurrent,
