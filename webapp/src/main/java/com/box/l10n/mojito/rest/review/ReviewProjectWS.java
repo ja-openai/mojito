@@ -33,6 +33,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -333,6 +334,8 @@ public class ReviewProjectWS {
       return currentTextUnit == null
           ? ResponseEntity.status(HttpStatus.CONFLICT).build()
           : ResponseEntity.status(HttpStatus.CONFLICT).body(toTextUnitResponse(currentTextUnit));
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
     }
   }
 

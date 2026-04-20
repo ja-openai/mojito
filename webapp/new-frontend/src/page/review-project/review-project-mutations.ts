@@ -16,6 +16,7 @@ import {
   updateReviewProjectStatus,
 } from '../../api/review-projects';
 import { checkTextUnitIntegrity, type TextUnitIntegrityCheckResult } from '../../api/text-units';
+import { useUser } from '../../components/RequireUser';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import {
   REVIEW_PROJECT_REQUESTS_QUERY_KEY,
@@ -86,10 +87,13 @@ export type ReviewProjectMutationControls = {
 };
 
 type MutationError = Error & { status?: number; data?: ApiReviewProjectTextUnit | null };
+const TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE =
+  "You're not authorized to bypass integrity check, please reach out to your PM or admin";
 
 export function useReviewProjectMutations(
   projectId: number | undefined,
 ): ReviewProjectMutationControls {
+  const user = useUser();
   const queryClient = useQueryClient();
   const actionAttemptRef = useRef(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -348,6 +352,10 @@ export function useReviewProjectMutations(
               return;
             }
             if (result?.checkResult === false) {
+              if (user.role === 'ROLE_TRANSLATOR') {
+                setErrorMessage(TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE);
+                return;
+              }
               setPendingValidationSave({
                 body: formatCheckFailureBody(result),
                 action,
@@ -371,7 +379,7 @@ export function useReviewProjectMutations(
 
       void executeAction(action, attemptId);
     },
-    [executeAction, formatCheckFailureBody, projectId],
+    [executeAction, formatCheckFailureBody, projectId, user.role],
   );
 
   const onRequestSaveDecision = useCallback(

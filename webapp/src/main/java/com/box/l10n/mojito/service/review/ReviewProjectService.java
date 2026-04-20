@@ -16,6 +16,7 @@ import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.security.user.UserRepository;
@@ -27,6 +28,7 @@ import com.box.l10n.mojito.service.team.TeamUserRepository;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
@@ -58,6 +60,8 @@ public class ReviewProjectService {
   private static final String SEARCH_MODE_REQUESTS = "requests";
   private static final long SEARCH_PHASE_SLOW_LOG_THRESHOLD_MS = 250;
   private static final long SEARCH_TOTAL_SLOW_LOG_THRESHOLD_MS = 1_000;
+  private static final String TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE =
+      "You're not authorized to bypass integrity check, please reach out to your PM or admin";
 
   private final ReviewProjectRepository reviewProjectRepository;
   private final ReviewProjectTextUnitRepository reviewProjectTextUnitRepository;
@@ -70,6 +74,7 @@ public class ReviewProjectService {
   private final TMTextUnitRepository tmTextUnitRepository;
   private final TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
   private final TMService tmService;
+  private final TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService;
   private final WordCountService wordCountService;
   private final UserService userService;
   private final UserRepository userRepository;
@@ -96,6 +101,7 @@ public class ReviewProjectService {
       TMTextUnitRepository tmTextUnitRepository,
       TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository,
       TMService tmService,
+      TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService,
       WordCountService wordCountService,
       UserService userService,
       UserRepository userRepository,
@@ -118,6 +124,7 @@ public class ReviewProjectService {
     this.tmTextUnitRepository = tmTextUnitRepository;
     this.tmTextUnitCurrentVariantRepository = tmTextUnitCurrentVariantRepository;
     this.tmService = tmService;
+    this.tmTextUnitIntegrityCheckService = tmTextUnitIntegrityCheckService;
     this.wordCountService = wordCountService;
     this.userService = userService;
     this.userRepository = userRepository;
@@ -1569,6 +1576,7 @@ public class ReviewProjectService {
         userRepository
             .findById(teamService.getCurrentUserIdOrThrow())
             .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    boolean isTranslator = userService.isCurrentUserTranslator();
 
     TMTextUnitVariant baselineVariant = textUnit.getTmTextUnitVariant();
     TMTextUnit tmTextUnit = textUnit.getTmTextUnit();
@@ -1614,6 +1622,14 @@ public class ReviewProjectService {
 
     if (hasTarget) {
       String normalizedTarget = NormalizationUtils.normalize(target);
+      if (isTranslator) {
+        try {
+          tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
+              tmTextUnit.getId(), normalizedTarget);
+        } catch (IntegrityCheckException e) {
+          throw new AccessDeniedException(TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE);
+        }
+      }
       TMTextUnitVariant.Status statusEnum = TMTextUnitVariant.Status.valueOf(status);
 
       AddTMTextUnitCurrentVariantResult addResult =

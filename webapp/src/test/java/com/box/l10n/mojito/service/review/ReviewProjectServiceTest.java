@@ -1,8 +1,10 @@
 package com.box.l10n.mojito.service.review;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -11,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamUserRole;
 import com.box.l10n.mojito.entity.review.ReviewFeature;
@@ -18,10 +21,12 @@ import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
+import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.WordCountService;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
@@ -31,6 +36,7 @@ import com.box.l10n.mojito.service.team.TeamSlackNotificationService;
 import com.box.l10n.mojito.service.team.TeamUserRepository;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
@@ -44,6 +50,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.security.access.AccessDeniedException;
 
 public class ReviewProjectServiceTest {
 
@@ -67,6 +74,8 @@ public class ReviewProjectServiceTest {
   private final TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository =
       Mockito.mock(TMTextUnitCurrentVariantRepository.class);
   private final TMService tmService = Mockito.mock(TMService.class);
+  private final TMTextUnitIntegrityCheckService tmTextUnitIntegrityCheckService =
+      Mockito.mock(TMTextUnitIntegrityCheckService.class);
   private final WordCountService wordCountService = Mockito.mock(WordCountService.class);
   private final UserService userService = Mockito.mock(UserService.class);
   private final UserRepository userRepository = Mockito.mock(UserRepository.class);
@@ -102,6 +111,7 @@ public class ReviewProjectServiceTest {
                 tmTextUnitRepository,
                 tmTextUnitCurrentVariantRepository,
                 tmService,
+                tmTextUnitIntegrityCheckService,
                 wordCountService,
                 userService,
                 userRepository,
@@ -310,6 +320,57 @@ public class ReviewProjectServiceTest {
         ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
     verify(textUnitSearcher).search(parametersCaptor.capture());
     assertEquals(StatusFilter.REVIEW_NEEDED, parametersCaptor.getValue().getStatusFilter());
+  }
+
+  @Test
+  public void saveDecisionBlocksTranslatorIntegrityBypass() {
+    when(userService.isCurrentUserAdmin()).thenReturn(false);
+    when(userService.isCurrentUserTranslator()).thenReturn(true);
+
+    Team team = team(7L);
+    Locale locale = locale(14L, "ja-JP");
+    ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+
+    try {
+      Mockito.doThrow(new IntegrityCheckException("broken placeholder"))
+          .when(tmTextUnitIntegrityCheckService)
+          .checkTMTextUnitIntegrity(321L, "Bonjour %");
+    } catch (IntegrityCheckException e) {
+      throw new RuntimeException(e);
+    }
+
+    try {
+      reviewProjectService.saveDecision(
+          55L,
+          "Bonjour %",
+          null,
+          "ACCEPTED",
+          true,
+          com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED,
+          null,
+          false,
+          null);
+      fail("Expected AccessDeniedException");
+    } catch (AccessDeniedException e) {
+      assertEquals(
+          "You're not authorized to bypass integrity check, please reach out to your PM or admin",
+          e.getMessage());
+    }
+
+    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(eq(321L), eq("Bonjour %"));
+    verify(tmService, never())
+        .addTMTextUnitCurrentVariantWithResult(
+            any(), anyLong(), anyLong(), anyLong(), anyLong(), any(), any(), any(), any(), any(),
+            any());
   }
 
   private ReviewProject project(
