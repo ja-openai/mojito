@@ -239,36 +239,6 @@
   opacity: 1;
 }
 
-.repositories-page__header-cell--locale {
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.repositories-page__selected-repo {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  min-width: 0;
-  max-width: 100%;
-  color: var(--color-text);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: normal;
-  text-transform: none;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.repositories-page__selected-repo-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.repositories-page__selected-repo-id {
-  color: var(--color-text-subtle);
-  flex: none;
-}
-
 .repositories-page__row-action {
   border: 0;
   background: transparent;
