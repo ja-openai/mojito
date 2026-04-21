@@ -2978,21 +2978,28 @@ function ReviewProjectHeader({
     staleTime: 30_000,
   });
 
-  const { selectedCount, decidedCount, pendingCount, progressPercent, progressTitle } =
-    useMemo(() => {
-      const selected = textUnits?.length ?? 0;
-      const decided = textUnits?.filter((tu) => getDecisionState(tu) === 'DECIDED').length ?? 0;
-      const pending = Math.max(0, selected - decided);
-      const percent = selected > 0 ? Math.round((decided / selected) * 100) : 0;
-      const title = selected > 0 ? `${decided}/${selected}` : 'No text units';
-      return {
-        selectedCount: selected,
-        decidedCount: decided,
-        pendingCount: pending,
-        progressPercent: percent,
-        progressTitle: title,
-      };
-    }, [textUnits]);
+  const {
+    selectedCount,
+    decidedCount,
+    pendingCount,
+    progressPercent,
+    progressPercentLabel,
+    progressTitle,
+  } = useMemo(() => {
+    const selected = textUnits?.length ?? 0;
+    const decided = textUnits?.filter((tu) => getDecisionState(tu) === 'DECIDED').length ?? 0;
+    const pending = Math.max(0, selected - decided);
+    const percent = selected > 0 ? (decided / selected) * 100 : 0;
+    const title = selected > 0 ? `${decided}/${selected}` : 'No text units';
+    return {
+      selectedCount: selected,
+      decidedCount: decided,
+      pendingCount: pending,
+      progressPercent: percent,
+      progressPercentLabel: Math.floor(percent),
+      progressTitle: title,
+    };
+  }, [textUnits]);
 
   const handleProjectAction = useCallback(() => {
     if (mutations.isProjectStatusSaving) {
@@ -3529,7 +3536,7 @@ function ReviewProjectHeader({
             <span className="review-project-page__header-dot">•</span>
             <div className="review-project-page__header-progress">
               <span className="review-project-page__header-progress-label" title={progressTitle}>
-                {progressPercent}%
+                {progressPercentLabel}%
               </span>
               <ProgressBar percent={progressPercent} title={progressTitle} />
             </div>
