@@ -10,6 +10,7 @@ import com.box.l10n.mojito.entity.glossary.GlossaryTermEvidence;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermTranslationProposal;
 import com.box.l10n.mojito.service.asset.VirtualAssetRequiredException;
+import com.box.l10n.mojito.service.asset.VirtualAssetService;
 import com.box.l10n.mojito.service.asset.VirtualAssetTextUnit;
 import com.box.l10n.mojito.service.asset.VirtualTextUnitBatchUpdaterService;
 import com.box.l10n.mojito.service.locale.LocaleService;
@@ -105,6 +106,7 @@ public class GlossaryTermService {
   private final GlossaryAiExtractionService glossaryAiExtractionService;
   private final PollableTaskBlobStorage pollableTaskBlobStorage;
   private final TextUnitSearcher textUnitSearcher;
+  private final VirtualAssetService virtualAssetService;
   private final VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService;
   private final TextUnitBatchImporterService textUnitBatchImporterService;
   private final TMTextUnitRepository tmTextUnitRepository;
@@ -121,6 +123,7 @@ public class GlossaryTermService {
       GlossaryAiExtractionService glossaryAiExtractionService,
       PollableTaskBlobStorage pollableTaskBlobStorage,
       TextUnitSearcher textUnitSearcher,
+      VirtualAssetService virtualAssetService,
       VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService,
       TextUnitBatchImporterService textUnitBatchImporterService,
       TMTextUnitRepository tmTextUnitRepository,
@@ -135,6 +138,7 @@ public class GlossaryTermService {
     this.glossaryAiExtractionService = glossaryAiExtractionService;
     this.pollableTaskBlobStorage = pollableTaskBlobStorage;
     this.textUnitSearcher = textUnitSearcher;
+    this.virtualAssetService = virtualAssetService;
     this.virtualTextUnitBatchUpdaterService = virtualTextUnitBatchUpdaterService;
     this.textUnitBatchImporterService = textUnitBatchImporterService;
     this.tmTextUnitRepository = tmTextUnitRepository;
@@ -304,7 +308,8 @@ public class GlossaryTermService {
     } else {
       requireGlossaryReader();
       if (tmTextUnitId != null) {
-        throw new AccessDeniedException("Only PMs and admins can edit existing glossary terms");
+        return updateReaderTermTranslations(
+            glossaryId, tmTextUnitId, command != null ? command.translations() : List.of());
       }
     }
     Glossary glossary = getGlossary(glossaryId);
@@ -362,6 +367,49 @@ public class GlossaryTermService {
             .getOrDefault(termKey, List.of());
 
     return toTermView(refreshedSource, metadata, localizedTextUnits, evidenceByMetadataId);
+  }
+
+  @Transactional
+  public void deleteTerm(Long glossaryId, Long tmTextUnitId) {
+    requireTermManager();
+
+    Glossary glossary = getGlossary(glossaryId);
+    Asset asset = glossaryStorageService.ensureCanonicalAsset(glossary);
+    TextUnitDTO sourceTextUnit = getSourceTextUnit(asset, tmTextUnitId);
+
+    glossaryTermMetadataRepository
+        .findByGlossaryIdAndTmTextUnitId(glossaryId, tmTextUnitId)
+        .ifPresent(
+            metadata -> {
+              glossaryTermEvidenceRepository.deleteByGlossaryTermMetadataId(metadata.getId());
+              glossaryTermMetadataRepository.delete(metadata);
+            });
+    glossaryTermTranslationProposalRepository.deleteByGlossaryIdAndTmTextUnitId(
+        glossaryId, tmTextUnitId);
+    virtualAssetService.deleteTextUnit(asset.getId(), sourceTextUnit.getName());
+  }
+
+  private TermView updateReaderTermTranslations(
+      Long glossaryId, Long tmTextUnitId, List<TranslationInput> translations) {
+    Glossary glossary = getGlossary(glossaryId);
+    Asset asset = glossaryStorageService.ensureCanonicalAsset(glossary);
+    TextUnitDTO sourceTextUnit = getSourceTextUnit(asset, tmTextUnitId);
+    List<TranslationInput> allowedTranslations = validateReaderTranslations(translations);
+
+    importTranslations(glossary, sourceTextUnit.getName(), allowedTranslations);
+
+    GlossaryTermMetadata metadata =
+        glossaryTermMetadataRepository
+            .findByGlossaryIdAndTmTextUnitId(glossaryId, tmTextUnitId)
+            .orElse(null);
+    Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId =
+        metadata == null ? Map.of() : getEvidenceByMetadataId(List.of(metadata));
+    List<TextUnitDTO> localizedTextUnits =
+        loadLocalizedTextUnits(
+                asset, allowedTranslations.stream().map(TranslationInput::localeTag).toList())
+            .getOrDefault(sourceTextUnit.getName(), List.of());
+
+    return toTermView(sourceTextUnit, metadata, localizedTextUnits, evidenceByMetadataId);
   }
 
   private TermUpsertCommand sanitizeReaderProposalCommand(TermUpsertCommand command) {

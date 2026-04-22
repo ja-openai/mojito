@@ -1,0 +1,80 @@
+.glossary-term-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.glossary-term-metadata__label {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-subtle);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.glossary-term-metadata__value {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.glossary-term-metadata__term {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.glossary-term-metadata__source,
+.glossary-term-metadata__target {
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.glossary-term-metadata__source:hover,
+.glossary-term-metadata__source:focus-visible {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.glossary-term-metadata__target--muted {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-weight: var(--font-weight-regular);
+}
+
+.glossary-term-metadata__meta {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+
+.glossary-term-metadata__separator {
+  color: color-mix(in srgb, var(--color-text-muted) 60%, transparent);
+}
+
+.glossary-term-metadata__note {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.glossary-term-metadata__status {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.glossary-term-metadata__state {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.glossary-term-metadata__state--error {
+  color: var(--color-danger);
+}

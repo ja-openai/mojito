@@ -594,9 +594,8 @@ export function WorkbenchBody({
                             }}
                             title={`Open ${row.textUnitName} in glossary ${glossaryTarget.glossaryName}`}
                           >
-                            <span className="workbench-glossary-affordance__label">
-                              Glossary term
-                            </span>
+                            <span className="workbench-glossary-affordance__label">Glossary</span>
+                            <span className="workbench-glossary-affordance__separator">·</span>
                             <span className="workbench-glossary-affordance__name">
                               {glossaryTarget.glossaryName}
                             </span>

@@ -8,7 +8,13 @@ import {
   formatAiReviewError,
   requestAiReview,
 } from '../../api/ai-review';
-import { type ApiMatchedGlossaryTerm, matchGlossaryTerms } from '../../api/glossaries';
+import {
+  type ApiGlossaryTerm,
+  type ApiMatchedGlossaryTerm,
+  fetchGlossaries,
+  fetchGlossaryTerms,
+  matchGlossaryTerms,
+} from '../../api/glossaries';
 import {
   type ApiGitBlameWithUsage,
   type ApiTextUnitHistoryItem,
@@ -33,6 +39,10 @@ import {
   filterSelfGlossaryMatches,
   sortGlossaryMatches,
 } from '../../utils/glossary-matches';
+import {
+  findGlossaryTargetForTextUnit,
+  findGlossaryTermByTmTextUnitId,
+} from '../../utils/glossaryTermLookup';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
 import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
 import { formatStatus, mapUiStatusToApi } from '../workbench/workbench-helpers';
@@ -154,6 +164,56 @@ export function TextUnitDetailPage() {
 
   const activeTextUnit = textUnitQuery.data;
   const localeForEditing = localeTag ?? activeTextUnit?.targetLocale ?? null;
+
+  const glossaryTargetsQuery = useQuery({
+    queryKey: ['text-unit-detail-glossary-targets'],
+    enabled: Boolean(activeTextUnit?.repositoryName?.trim()) && Boolean(activeTextUnit?.assetPath),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: () => fetchGlossaries({ limit: 200 }),
+  });
+  const glossaryTermTarget = useMemo(
+    () =>
+      findGlossaryTargetForTextUnit(glossaryTargetsQuery.data?.glossaries ?? [], {
+        repositoryName: activeTextUnit?.repositoryName,
+        assetPath: activeTextUnit?.assetPath,
+      }),
+    [
+      activeTextUnit?.assetPath,
+      activeTextUnit?.repositoryName,
+      glossaryTargetsQuery.data?.glossaries,
+    ],
+  );
+  const glossaryTermQuery = useQuery({
+    queryKey: [
+      'text-unit-detail-glossary-term',
+      glossaryTermTarget?.glossaryId ?? null,
+      activeTextUnit?.tmTextUnitId ?? null,
+      activeTextUnit?.source ?? null,
+      localeForEditing,
+    ],
+    enabled:
+      glossaryTermTarget != null &&
+      activeTextUnit?.tmTextUnitId != null &&
+      Boolean(activeTextUnit?.source?.trim()),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (
+        glossaryTermTarget == null ||
+        activeTextUnit?.tmTextUnitId == null ||
+        !activeTextUnit.source?.trim()
+      ) {
+        return null as ApiGlossaryTerm | null;
+      }
+      const response = await fetchGlossaryTerms(glossaryTermTarget.glossaryId, {
+        search: activeTextUnit.source,
+        localeTags: localeForEditing ? [localeForEditing] : [],
+        limit: 25,
+      });
+      return findGlossaryTermByTmTextUnitId(response.terms, activeTextUnit.tmTextUnitId);
+    },
+  });
 
   const glossaryMatchesQuery = useQuery({
     queryKey: [
@@ -927,6 +987,19 @@ export function TextUnitDetailPage() {
       glossaryMatches={glossaryMatchesQuery.data ?? []}
       isGlossaryLoading={glossaryMatchesQuery.isLoading}
       glossaryErrorMessage={getQueryErrorMessage(glossaryMatchesQuery.error)}
+      glossaryTermMetadata={
+        glossaryTermTarget
+          ? {
+              glossaryId: glossaryTermTarget.glossaryId,
+              glossaryName: glossaryTermTarget.glossaryName,
+              term: glossaryTermQuery.data ?? null,
+              isLoading: glossaryTargetsQuery.isLoading || glossaryTermQuery.isLoading,
+              errorMessage: getQueryErrorMessage(
+                glossaryTargetsQuery.error ?? glossaryTermQuery.error,
+              ),
+            }
+          : null
+      }
       isGlossaryCollapsed={isGlossaryCollapsed}
       onToggleGlossaryCollapsed={() => setIsGlossaryCollapsed((current) => !current)}
       isMetaCollapsed={isMetaCollapsed}

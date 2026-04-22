@@ -575,6 +575,18 @@ export async function deleteGlossary(glossaryId: number): Promise<void> {
   }
 }
 
+export async function deleteGlossaryTerm(glossaryId: number, tmTextUnitId: number): Promise<void> {
+  const response = await fetch(`/api/glossaries/${glossaryId}/terms/${tmTextUnitId}`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to delete glossary term');
+  }
+}
+
 export async function submitGlossaryTranslationProposal(
   glossaryId: number,
   tmTextUnitId: number,

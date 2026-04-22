@@ -22,4 +22,14 @@ public interface GlossaryTermTranslationProposalRepository
       where gttp.glossary.id = :glossaryId
       """)
   int deleteByGlossaryId(@Param("glossaryId") Long glossaryId);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      """
+      delete from GlossaryTermTranslationProposal gttp
+      where gttp.glossary.id = :glossaryId
+        and gttp.tmTextUnit.id = :tmTextUnitId
+      """)
+  int deleteByGlossaryIdAndTmTextUnitId(
+      @Param("glossaryId") Long glossaryId, @Param("tmTextUnitId") Long tmTextUnitId);
 }

@@ -440,6 +440,20 @@ public class GlossaryWS {
     return upsertGlossaryTerm(glossaryId, tmTextUnitId, request);
   }
 
+  @DeleteMapping("/{glossaryId}/terms/{tmTextUnitId}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteGlossaryTerm(@PathVariable Long glossaryId, @PathVariable Long tmTextUnitId) {
+    try {
+      glossaryTermService.deleteTerm(glossaryId, tmTextUnitId);
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
   @PostMapping("/{glossaryId}/terms/batch")
   public BatchUpdateGlossaryTermsResponse batchUpdateGlossaryTerms(
       @PathVariable Long glossaryId, @RequestBody BatchUpdateGlossaryTermsRequest request) {

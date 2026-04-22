@@ -4,11 +4,12 @@ import './text-unit-detail-page.css';
 import { type ReactNode } from 'react';
 
 import type { AiReviewSuggestion } from '../../api/ai-review';
-import type { ApiMatchedGlossaryTerm } from '../../api/glossaries';
+import type { ApiGlossaryTerm, ApiMatchedGlossaryTerm } from '../../api/glossaries';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { GlossaryMatchesPanel } from '../../components/GlossaryMatchesPanel';
+import { GlossaryTermMetadataPanel } from '../../components/GlossaryTermMetadataPanel';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
@@ -76,6 +77,13 @@ type TextUnitDetailPageViewProps = {
   glossaryMatches: ApiMatchedGlossaryTerm[];
   isGlossaryLoading: boolean;
   glossaryErrorMessage: string | null;
+  glossaryTermMetadata: {
+    glossaryId: number;
+    glossaryName: string;
+    term: ApiGlossaryTerm | null;
+    isLoading: boolean;
+    errorMessage: string | null;
+  } | null;
   isGlossaryCollapsed: boolean;
   onToggleGlossaryCollapsed: () => void;
   isMetaCollapsed: boolean;
@@ -129,6 +137,7 @@ export function TextUnitDetailPageView({
   glossaryMatches,
   isGlossaryLoading,
   glossaryErrorMessage,
+  glossaryTermMetadata,
   isGlossaryCollapsed,
   onToggleGlossaryCollapsed,
   isMetaCollapsed,
@@ -334,6 +343,21 @@ export function TextUnitDetailPageView({
                     <pre className="text-unit-detail-page__key-info-text">{keyInfo.stringId}</pre>
                   </dd>
                 </div>
+                {glossaryTermMetadata ? (
+                  <div className="text-unit-detail-page__key-info-row">
+                    <dt>Glossary term</dt>
+                    <dd>
+                      <GlossaryTermMetadataPanel
+                        glossaryId={glossaryTermMetadata.glossaryId}
+                        glossaryName={glossaryTermMetadata.glossaryName}
+                        term={glossaryTermMetadata.term}
+                        isLoading={glossaryTermMetadata.isLoading}
+                        errorMessage={glossaryTermMetadata.errorMessage}
+                        showHeader={false}
+                      />
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
             </section>
 

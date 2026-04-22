@@ -21,6 +21,7 @@ import {
   type ApiUpsertGlossaryTermRequest,
   batchUpdateGlossaryTerms,
   createGlossaryTerm,
+  deleteGlossaryTerm,
   fetchGlossaryExtractionOutput,
   fetchGlossaryExtractionTask,
   fetchGlossaryTerms,
@@ -28,13 +29,14 @@ import {
   updateGlossaryTerm,
   waitForGlossaryExtractionTask,
 } from '../../api/glossaries';
+import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import { PillDropdown } from '../../components/PillDropdown';
 import { useUser } from '../../components/RequireUser';
 import { buildGlossaryWorkbenchState } from '../../utils/glossaryWorkbench';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
-import { canManageGlossaryTerms } from '../../utils/permissions';
+import { canEditLocale, canManageGlossaryTerms } from '../../utils/permissions';
 import {
   buildRequestAttachmentUploadQueueEntries,
   canUploadRequestAttachmentFile,
@@ -50,6 +52,19 @@ import { GlossaryTermsListView } from './GlossaryTermsListView';
 const TERM_TYPES = ['BRAND', 'PRODUCT', 'UI_LABEL', 'LEGAL', 'TECHNICAL', 'GENERAL'] as const;
 const ENFORCEMENTS = ['HARD', 'SOFT', 'REVIEW_ONLY'] as const;
 const STATUSES = ['CANDIDATE', 'APPROVED', 'DEPRECATED', 'REJECTED'] as const;
+const TERM_TYPE_LABELS: Record<(typeof TERM_TYPES)[number], string> = {
+  BRAND: 'Brand',
+  PRODUCT: 'Product',
+  UI_LABEL: 'UI label',
+  LEGAL: 'Legal',
+  TECHNICAL: 'Technical',
+  GENERAL: 'General',
+};
+const ENFORCEMENT_LABELS: Record<(typeof ENFORCEMENTS)[number], string> = {
+  HARD: 'Hard',
+  SOFT: 'Soft',
+  REVIEW_ONLY: 'Review only',
+};
 const STATUS_LABELS: Record<(typeof STATUSES)[number], string> = {
   CANDIDATE: 'Candidate',
   APPROVED: 'Approved',
@@ -57,6 +72,12 @@ const STATUS_LABELS: Record<(typeof STATUSES)[number], string> = {
   REJECTED: 'Rejected',
 };
 const PROVENANCES = ['MANUAL', 'IMPORTED', 'AUTOMATED', 'AI_EXTRACTED'] as const;
+const PROVENANCE_LABELS: Record<(typeof PROVENANCES)[number], string> = {
+  MANUAL: 'Manual',
+  IMPORTED: 'Imported',
+  AUTOMATED: 'Automated',
+  AI_EXTRACTED: 'AI extracted',
+};
 type ReferenceType = ApiGlossaryTermEvidence['evidenceType'];
 const REFERENCE_TYPES = [
   'SCREENSHOT',
@@ -552,6 +573,7 @@ export function AdminGlossaryTermsPanel({
   );
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorDraft, setEditorDraft] = useState<TermDraft>(() => createBlankDraft([]));
+  const [termPendingDelete, setTermPendingDelete] = useState<TermDraft | null>(null);
   const [batchOpen, setBatchOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [statusNotice, setStatusNotice] = useState<{
@@ -784,6 +806,37 @@ export function AdminGlossaryTermsPanel({
       setStatusNotice({
         kind: 'error',
         message: error.message || 'Failed to save glossary term.',
+      });
+    },
+  });
+
+  const deleteTermMutation = useMutation({
+    mutationFn: async (draft: TermDraft) => {
+      if (draft.tmTextUnitId == null) {
+        throw new Error('Cannot delete an unsaved glossary term.');
+      }
+      await deleteGlossaryTerm(glossary.id, draft.tmTextUnitId);
+      return draft;
+    },
+    onSuccess: async (deletedTerm) => {
+      await queryClient.invalidateQueries({ queryKey: ['glossary-terms', glossary.id] });
+      setTermPendingDelete(null);
+      setEditorOpen(false);
+      setUploadQueue([]);
+      setSelectedTermIds((current) =>
+        deletedTerm.tmTextUnitId == null
+          ? current
+          : current.filter((id) => id !== deletedTerm.tmTextUnitId),
+      );
+      setStatusNotice({
+        kind: 'success',
+        message: `Deleted glossary term ${deletedTerm.source}.`,
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to delete glossary term.',
       });
     },
   });
@@ -1445,27 +1498,51 @@ export function AdminGlossaryTermsPanel({
                     : current.filter((id) => id !== tmTextUnitId),
                 )
               }
-              getWorkbenchHref={(tmTextUnitId) => {
+              getWorkbenchHref={(tmTextUnitId, localeTags = workbenchLocaleTags) => {
                 const params = new URLSearchParams();
                 params.set('tmTextUnitId', String(tmTextUnitId));
                 params.set('repo', String(glossary.backingRepository.id));
-                workbenchLocaleTags.forEach((localeTag) => params.append('locale', localeTag));
+                localeTags.forEach((localeTag) => params.append('locale', localeTag));
                 return `/workbench?${params.toString()}`;
               }}
-              getWorkbenchState={(tmTextUnitId) =>
+              getWorkbenchState={(tmTextUnitId, localeTags = workbenchLocaleTags) =>
                 buildGlossaryWorkbenchState({
                   glossaryId: glossary.id,
                   glossaryName: glossary.name,
                   backingRepositoryId: glossary.backingRepository.id,
                   backingRepositoryName: glossary.backingRepository.name,
                   assetPath: glossary.assetPath,
-                  localeTags: workbenchLocaleTags,
+                  localeTags,
                   tmTextUnitId,
                 })
               }
+              getTextUnitDetailHref={(tmTextUnitId, localeTag) =>
+                `/text-units/${tmTextUnitId}?locale=${encodeURIComponent(localeTag)}`
+              }
+              getTextUnitDetailState={(tmTextUnitId, localeTag) => {
+                const state = buildGlossaryWorkbenchState({
+                  glossaryId: glossary.id,
+                  glossaryName: glossary.name,
+                  backingRepositoryId: glossary.backingRepository.id,
+                  backingRepositoryName: glossary.backingRepository.name,
+                  assetPath: glossary.assetPath,
+                  localeTags: [localeTag],
+                  tmTextUnitId,
+                });
+                return {
+                  from: '/workbench',
+                  workbenchSearch: state.workbenchSearch,
+                };
+              }}
               statusOptions={[...STATUSES]}
               getStatusLabel={(status) =>
                 STATUS_LABELS[status as (typeof STATUSES)[number]] ?? status
+              }
+              getTermTypeLabel={(termType) =>
+                TERM_TYPE_LABELS[termType as (typeof TERM_TYPES)[number]] ?? termType
+              }
+              getEnforcementLabel={(enforcement) =>
+                ENFORCEMENT_LABELS[enforcement as (typeof ENFORCEMENTS)[number]] ?? enforcement
               }
               isChangingStatus={statusMutation.isPending}
               openStatusTermId={openStatusTermId}
@@ -1478,6 +1555,9 @@ export function AdminGlossaryTermsPanel({
                 });
               }}
               onChangeTermStatus={(term, status) => statusMutation.mutate({ term, status })}
+              canEditTranslationLocale={(localeTag) =>
+                canManageTerms || canEditLocale(user, localeTag)
+              }
               savingTranslationKey={
                 inlineTranslationMutation.isPending && inlineTranslationMutation.variables
                   ? `${inlineTranslationMutation.variables.term.tmTextUnitId}:${inlineTranslationMutation.variables.localeTag.toLowerCase()}`
@@ -1674,7 +1754,7 @@ export function AdminGlossaryTermsPanel({
                     >
                       {TERM_TYPES.map((termType) => (
                         <option key={termType} value={termType}>
-                          {termType}
+                          {TERM_TYPE_LABELS[termType]}
                         </option>
                       ))}
                     </select>
@@ -1697,7 +1777,7 @@ export function AdminGlossaryTermsPanel({
                     >
                       {ENFORCEMENTS.map((enforcement) => (
                         <option key={enforcement} value={enforcement}>
-                          {enforcement}
+                          {ENFORCEMENT_LABELS[enforcement]}
                         </option>
                       ))}
                     </select>
@@ -1720,7 +1800,7 @@ export function AdminGlossaryTermsPanel({
                     >
                       {PROVENANCES.map((provenance) => (
                         <option key={provenance} value={provenance}>
-                          {provenance}
+                          {PROVENANCE_LABELS[provenance]}
                         </option>
                       ))}
                     </select>
@@ -1964,11 +2044,21 @@ export function AdminGlossaryTermsPanel({
                     type="button"
                     className="settings-button settings-button--ghost"
                     onClick={closeEditor}
-                    disabled={saveTermMutation.isPending}
+                    disabled={saveTermMutation.isPending || deleteTermMutation.isPending}
                   >
                     {returnToExtractAfterEditor ? 'Back to candidates' : 'Cancel'}
                   </button>
                   <div className="glossary-term-admin__editor-page-actions">
+                    {canManageTerms && editorDraft.tmTextUnitId != null ? (
+                      <button
+                        type="button"
+                        className="settings-button settings-button--ghost"
+                        onClick={() => setTermPendingDelete(editorDraft)}
+                        disabled={saveTermMutation.isPending || deleteTermMutation.isPending}
+                      >
+                        Delete
+                      </button>
+                    ) : null}
                     {editorWorkbenchState ? (
                       <Link
                         to="/workbench"
@@ -1983,7 +2073,11 @@ export function AdminGlossaryTermsPanel({
                         type="button"
                         className="settings-button settings-button--primary"
                         onClick={() => saveTermMutation.mutate(editorDraft)}
-                        disabled={saveTermMutation.isPending || !editorDraft.source.trim()}
+                        disabled={
+                          saveTermMutation.isPending ||
+                          deleteTermMutation.isPending ||
+                          !editorDraft.source.trim()
+                        }
                       >
                         {saveTermMutation.isPending
                           ? canManageTerms
@@ -2039,7 +2133,7 @@ export function AdminGlossaryTermsPanel({
               <option value="">No change</option>
               {TERM_TYPES.map((termType) => (
                 <option key={termType} value={termType}>
-                  {termType}
+                  {TERM_TYPE_LABELS[termType]}
                 </option>
               ))}
             </select>
@@ -2056,7 +2150,7 @@ export function AdminGlossaryTermsPanel({
               <option value="">No change</option>
               {ENFORCEMENTS.map((enforcement) => (
                 <option key={enforcement} value={enforcement}>
-                  {enforcement}
+                  {ENFORCEMENT_LABELS[enforcement]}
                 </option>
               ))}
             </select>
@@ -2090,7 +2184,7 @@ export function AdminGlossaryTermsPanel({
               <option value="">No change</option>
               {PROVENANCES.map((provenance) => (
                 <option key={provenance} value={provenance}>
-                  {provenance}
+                  {PROVENANCE_LABELS[provenance]}
                 </option>
               ))}
             </select>
@@ -2156,6 +2250,29 @@ export function AdminGlossaryTermsPanel({
           </button>
         </div>
       </Modal>
+
+      <ConfirmModal
+        open={termPendingDelete != null}
+        title="Delete glossary term"
+        body={
+          termPendingDelete
+            ? `Delete ${termPendingDelete.source}? This removes the term from the glossary. Use Rejected instead if you want to keep an audit trail.`
+            : ''
+        }
+        confirmLabel={deleteTermMutation.isPending ? 'Deleting…' : 'Delete'}
+        cancelLabel="Cancel"
+        onCancel={() => {
+          if (!deleteTermMutation.isPending) {
+            setTermPendingDelete(null);
+          }
+        }}
+        onConfirm={() => {
+          if (termPendingDelete) {
+            deleteTermMutation.mutate(termPendingDelete);
+          }
+        }}
+        requireText={termPendingDelete?.source}
+      />
     </section>
   );
 }

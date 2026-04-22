@@ -59,14 +59,19 @@ type Props = {
   onOpenEditTerm: (term: ApiGlossaryTerm) => void;
   selectedTermIds: number[];
   onToggleTermSelection: (tmTextUnitId: number, checked: boolean) => void;
-  getWorkbenchHref: (tmTextUnitId: number) => string;
-  getWorkbenchState: (tmTextUnitId: number) => unknown;
+  getWorkbenchHref: (tmTextUnitId: number, localeTags?: string[]) => string;
+  getWorkbenchState: (tmTextUnitId: number, localeTags?: string[]) => unknown;
+  getTextUnitDetailHref: (tmTextUnitId: number, localeTag: string) => string;
+  getTextUnitDetailState: (tmTextUnitId: number, localeTag: string) => unknown;
   statusOptions: string[];
   getStatusLabel: (status: string) => string;
+  getTermTypeLabel: (termType: string) => string;
+  getEnforcementLabel: (enforcement: string) => string;
   isChangingStatus: boolean;
   openStatusTermId: number | null;
   onOpenStatusTermIdChange: (tmTextUnitId: number, nextOpen: boolean) => void;
   onChangeTermStatus: (term: ApiGlossaryTerm, status: string) => void;
+  canEditTranslationLocale: (localeTag: string) => boolean;
   savingTranslationKey: string | null;
   onSaveTermTranslation: (
     term: ApiGlossaryTerm,
@@ -139,12 +144,17 @@ export function GlossaryTermsListView({
   onToggleTermSelection,
   getWorkbenchHref,
   getWorkbenchState,
+  getTextUnitDetailHref,
+  getTextUnitDetailState,
   statusOptions,
   getStatusLabel,
+  getTermTypeLabel,
+  getEnforcementLabel,
   isChangingStatus,
   openStatusTermId,
   onOpenStatusTermIdChange,
   onChangeTermStatus,
+  canEditTranslationLocale,
   savingTranslationKey,
   onSaveTermTranslation,
 }: Props) {
@@ -435,9 +445,9 @@ export function GlossaryTermsListView({
                       <div className="glossary-term-admin__source-stack">
                         <div className="glossary-term-admin__source">{term.source}</div>
                         <div className="glossary-term-admin__term-meta">
-                          <span>{getStatusLabel(term.termType ?? 'GENERAL')}</span>
+                          <span>{getTermTypeLabel(term.termType ?? 'GENERAL')}</span>
                           <span aria-hidden="true">·</span>
-                          <span>{getStatusLabel(term.enforcement ?? 'SOFT')}</span>
+                          <span>{getEnforcementLabel(term.enforcement ?? 'SOFT')}</span>
                         </div>
                       </div>
                       <div className="glossary-term-admin__row-actions">
@@ -459,8 +469,9 @@ export function GlossaryTermsListView({
                       editingTranslation?.tmTextUnitId === term.tmTextUnitId &&
                       editingTranslation.localeTag.toLowerCase() === localeTag.toLowerCase();
                     const isSavingTranslation = savingTranslationKey === translationKey;
+                    const canEditTranslation = canEditTranslationLocale(localeTag);
                     const openTranslationEditor = () => {
-                      if (!canManageTerms) {
+                      if (!canEditTranslation) {
                         return;
                       }
                       setEditingTranslation({
@@ -481,25 +492,6 @@ export function GlossaryTermsListView({
                     };
                     return (
                       <td key={localeTag} onClick={(event) => event.stopPropagation()}>
-                        <button
-                          type="button"
-                          className="glossary-term-admin__translation-button"
-                          disabled={!canManageTerms}
-                          onClick={openTranslationEditor}
-                        >
-                          <span
-                            className={`glossary-term-admin__translation${
-                              term.doNotTranslate ? ' glossary-term-admin__translation--muted' : ''
-                            }`}
-                          >
-                            {term.doNotTranslate ? 'Do not translate' : translation?.target || '—'}
-                          </span>
-                          {translation?.targetComment ? (
-                            <span className="glossary-term-admin__translation-note">
-                              {translation.targetComment}
-                            </span>
-                          ) : null}
-                        </button>
                         {isEditingTranslation ? (
                           <div className="glossary-term-admin__translation-editor">
                             <textarea
@@ -535,19 +527,43 @@ export function GlossaryTermsListView({
                               >
                                 Cancel
                               </button>
-                              <button
-                                type="button"
+                              <Link
+                                to={getTextUnitDetailHref(term.tmTextUnitId, localeTag)}
+                                state={getTextUnitDetailState(term.tmTextUnitId, localeTag)}
                                 className="glossary-term-admin__translation-editor-button"
                                 onClick={() => {
                                   setEditingTranslation(null);
-                                  onOpenEditTerm(term);
                                 }}
                               >
                                 Details
-                              </button>
+                              </Link>
                             </div>
                           </div>
-                        ) : null}
+                        ) : (
+                          <button
+                            type="button"
+                            className="glossary-term-admin__translation-button"
+                            disabled={!canEditTranslation}
+                            onClick={openTranslationEditor}
+                          >
+                            <span
+                              className={`glossary-term-admin__translation${
+                                term.doNotTranslate
+                                  ? ' glossary-term-admin__translation--muted'
+                                  : ''
+                              }`}
+                            >
+                              {term.doNotTranslate
+                                ? 'Do not translate'
+                                : translation?.target || '—'}
+                            </span>
+                            {translation?.targetComment ? (
+                              <span className="glossary-term-admin__translation-note">
+                                {translation.targetComment}
+                              </span>
+                            ) : null}
+                          </button>
+                        )}
                       </td>
                     );
                   })}

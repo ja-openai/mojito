@@ -126,15 +126,18 @@ export function GlossaryMatchesPanel({
               (evidence): evidence is typeof evidence & { imageKey: string } =>
                 Boolean(evidence.imageKey),
             );
+            const requiredTarget = match.doNotTranslate
+              ? 'Do not translate'
+              : match.target || 'No target translation yet';
+            const note = match.targetComment || match.comment || match.definition || null;
 
             return (
               <article
                 key={`${match.tmTextUnitId}:${match.startIndex}:${match.endIndex}:${match.target ?? ''}`}
                 className="glossary-match-panel__item"
               >
-                <div className="glossary-match-panel__field">
-                  <div className="glossary-match-panel__label">Source term</div>
-                  <div className="glossary-match-panel__item-header">
+                <div className="glossary-match-panel__pair">
+                  <div className="glossary-match-panel__pair-value">
                     {match.glossaryId ? (
                       <Link
                         className="glossary-match-panel__term-link"
@@ -143,40 +146,30 @@ export function GlossaryMatchesPanel({
                         {match.source}
                       </Link>
                     ) : (
-                      <div className="glossary-match-panel__term">{match.source}</div>
+                      <span>{match.source}</span>
                     )}
                   </div>
+                  <div className="glossary-match-panel__pair-value">{requiredTarget}</div>
                 </div>
 
                 {match.source.trim() !== match.matchedText.trim() ? (
-                  <div className="glossary-match-panel__field">
-                    <div className="glossary-match-panel__label">Matched text</div>
-                    <div className="glossary-match-panel__source">{match.matchedText}</div>
+                  <div className="glossary-match-panel__matched-text">
+                    matched as {match.matchedText}
                   </div>
                 ) : null}
-
-                <div className="glossary-match-panel__field">
-                  <div className="glossary-match-panel__label">
-                    {match.doNotTranslate ? 'Required action' : 'Required target'}
-                  </div>
-                  <div className="glossary-match-panel__target">
-                    {match.doNotTranslate ? (
-                      <span className="glossary-match-panel__target-badge">Do not translate</span>
-                    ) : (
-                      match.target || 'No target translation yet'
-                    )}
-                  </div>
-                </div>
 
                 {complianceMessage ? (
                   <div className="glossary-match-panel__compliance-note">{complianceMessage}</div>
                 ) : null}
 
-                {supportLine || (match.glossaryId && match.glossaryName) ? (
-                  <div className="glossary-match-panel__support">
+                {supportLine ||
+                (match.glossaryId && match.glossaryName) ||
+                note ||
+                evidenceSummary ? (
+                  <div className="glossary-match-panel__meta">
                     {supportLine ? <span>{supportLine}</span> : null}
                     {supportLine && match.glossaryId && match.glossaryName ? (
-                      <span className="glossary-match-panel__support-separator">·</span>
+                      <span className="glossary-match-panel__separator">·</span>
                     ) : null}
                     {match.glossaryId && match.glossaryName ? (
                       <Link
@@ -186,28 +179,15 @@ export function GlossaryMatchesPanel({
                         {match.glossaryName}
                       </Link>
                     ) : null}
-                  </div>
-                ) : null}
-
-                {match.definition ? (
-                  <div className="glossary-match-panel__note glossary-match-panel__note--definition">
-                    {match.definition}
-                  </div>
-                ) : null}
-
-                {match.targetComment || match.comment || evidenceSummary ? (
-                  <div className="glossary-match-panel__details">
-                    {match.targetComment ? (
-                      <div className="glossary-match-panel__note">{match.targetComment}</div>
+                    {(supportLine || (match.glossaryId && match.glossaryName)) && note ? (
+                      <span className="glossary-match-panel__separator">·</span>
                     ) : null}
-                    {!match.targetComment && match.comment ? (
-                      <div className="glossary-match-panel__note">{match.comment}</div>
+                    {note ? <span>{note}</span> : null}
+                    {(supportLine || (match.glossaryId && match.glossaryName) || note) &&
+                    evidenceSummary ? (
+                      <span className="glossary-match-panel__separator">·</span>
                     ) : null}
-                    {evidenceSummary ? (
-                      <div className="glossary-match-panel__evidence-summary">
-                        {evidenceSummary}
-                      </div>
-                    ) : null}
+                    {evidenceSummary ? <span>{evidenceSummary}</span> : null}
                   </div>
                 ) : null}
 
