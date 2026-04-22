@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ApiGlossaryTerm } from '../../api/glossaries';
@@ -66,10 +67,19 @@ type Props = {
   openStatusTermId: number | null;
   onOpenStatusTermIdChange: (tmTextUnitId: number, nextOpen: boolean) => void;
   onChangeTermStatus: (term: ApiGlossaryTerm, status: string) => void;
+  savingTranslationKey: string | null;
+  onSaveTermTranslation: (
+    term: ApiGlossaryTerm,
+    localeTag: string,
+    value: { target: string; targetComment: string },
+  ) => Promise<void>;
 };
 
 const getTranslation = (term: ApiGlossaryTerm, localeTag: string) =>
   term.translations.find((translation) => translation.localeTag === localeTag);
+
+const getTranslationKey = (tmTextUnitId: number, localeTag: string) =>
+  `${tmTextUnitId}:${localeTag.toLowerCase()}`;
 
 const AUTO_VISIBLE_LOCALE_COLUMNS_CAP = 5;
 
@@ -135,7 +145,15 @@ export function GlossaryTermsListView({
   openStatusTermId,
   onOpenStatusTermIdChange,
   onChangeTermStatus,
+  savingTranslationKey,
+  onSaveTermTranslation,
 }: Props) {
+  const [editingTranslation, setEditingTranslation] = useState<{
+    tmTextUnitId: number;
+    localeTag: string;
+    target: string;
+    targetComment: string;
+  } | null>(null);
   const emptyColSpan = displayedLocaleTags.length + (canManageTerms ? 3 : 2);
   const showLocaleColumnLimit = selectedLocaleTags.length > AUTO_VISIBLE_LOCALE_COLUMNS_CAP;
   const tableStyle = {
@@ -395,10 +413,8 @@ export function GlossaryTermsListView({
               terms.map((term) => (
                 <tr
                   key={term.tmTextUnitId}
-                  className={`glossary-term-admin__row${
-                    canManageTerms ? ' glossary-term-admin__row--interactive' : ''
-                  }`}
-                  onClick={canManageTerms ? () => onOpenEditTerm(term) : undefined}
+                  className="glossary-term-admin__row glossary-term-admin__row--interactive"
+                  onClick={() => onOpenEditTerm(term)}
                 >
                   {canManageTerms ? (
                     <td
@@ -439,18 +455,102 @@ export function GlossaryTermsListView({
                   </td>
                   {displayedLocaleTags.map((localeTag) => {
                     const translation = getTranslation(term, localeTag);
+                    const translationKey = getTranslationKey(term.tmTextUnitId, localeTag);
+                    const isEditingTranslation =
+                      editingTranslation?.tmTextUnitId === term.tmTextUnitId &&
+                      editingTranslation.localeTag.toLowerCase() === localeTag.toLowerCase();
+                    const isSavingTranslation = savingTranslationKey === translationKey;
+                    const openTranslationEditor = () => {
+                      if (!canManageTerms) {
+                        return;
+                      }
+                      setEditingTranslation({
+                        tmTextUnitId: term.tmTextUnitId,
+                        localeTag,
+                        target: translation?.target ?? '',
+                        targetComment: translation?.targetComment ?? '',
+                      });
+                    };
+                    const saveTranslation = async () => {
+                      if (!editingTranslation?.target.trim()) {
+                        return;
+                      }
+                      await onSaveTermTranslation(term, localeTag, {
+                        target: editingTranslation.target,
+                        targetComment: editingTranslation.targetComment,
+                      });
+                      setEditingTranslation(null);
+                    };
                     return (
-                      <td key={localeTag}>
-                        <div
-                          className={`glossary-term-admin__translation${
-                            term.doNotTranslate ? ' glossary-term-admin__translation--muted' : ''
-                          }`}
+                      <td key={localeTag} onClick={(event) => event.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="glossary-term-admin__translation-button"
+                          disabled={!canManageTerms}
+                          onClick={openTranslationEditor}
                         >
-                          {term.doNotTranslate ? 'Do not translate' : translation?.target || '—'}
-                        </div>
-                        {translation?.targetComment ? (
-                          <div className="glossary-term-admin__translation-note">
-                            {translation.targetComment}
+                          <span
+                            className={`glossary-term-admin__translation${
+                              term.doNotTranslate ? ' glossary-term-admin__translation--muted' : ''
+                            }`}
+                          >
+                            {term.doNotTranslate ? 'Do not translate' : translation?.target || '—'}
+                          </span>
+                          {translation?.targetComment ? (
+                            <span className="glossary-term-admin__translation-note">
+                              {translation.targetComment}
+                            </span>
+                          ) : null}
+                        </button>
+                        {isEditingTranslation ? (
+                          <div className="glossary-term-admin__translation-editor">
+                            <textarea
+                              className="settings-input glossary-term-admin__translation-editor-target"
+                              value={editingTranslation.target}
+                              placeholder="Target translation"
+                              autoFocus
+                              onChange={(event) =>
+                                setEditingTranslation((current) =>
+                                  current ? { ...current, target: event.target.value } : current,
+                                )
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === 'Escape') {
+                                  setEditingTranslation(null);
+                                }
+                              }}
+                            />
+                            <input
+                              type="text"
+                              className="settings-input"
+                              value={editingTranslation.targetComment}
+                              placeholder="Target note"
+                              onChange={(event) =>
+                                setEditingTranslation((current) =>
+                                  current
+                                    ? { ...current, targetComment: event.target.value }
+                                    : current,
+                                )
+                              }
+                            />
+                            <div className="glossary-term-admin__translation-editor-actions">
+                              <button
+                                type="button"
+                                className="settings-button settings-button--ghost"
+                                disabled={isSavingTranslation}
+                                onClick={() => setEditingTranslation(null)}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                className="settings-button settings-button--primary"
+                                disabled={isSavingTranslation || !editingTranslation.target.trim()}
+                                onClick={() => void saveTranslation()}
+                              >
+                                {isSavingTranslation ? 'Saving…' : 'Save'}
+                              </button>
+                            </div>
                           </div>
                         ) : null}
                       </td>
@@ -478,7 +578,7 @@ export function GlossaryTermsListView({
                         />
                       </div>
                     ) : (
-                      (term.status ?? '—')
+                      getStatusLabel(term.status ?? 'CANDIDATE')
                     )}
                   </td>
                 </tr>

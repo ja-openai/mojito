@@ -443,6 +443,31 @@
   color: var(--color-text-subtle);
 }
 
+.glossary-term-admin__translation-button {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+}
+
+.glossary-term-admin__translation-button:not(:disabled) {
+  cursor: text;
+}
+
+.glossary-term-admin__translation-button:focus-visible {
+  outline: 2px solid var(--color-focus-outline);
+  outline-offset: 2px;
+  border-radius: var(--radius-1);
+}
+
+.glossary-term-admin__translation-button .glossary-term-admin__translation-note {
+  display: block;
+}
+
 .glossary-term-admin__translation {
   color: var(--color-text);
   overflow-wrap: anywhere;
@@ -452,6 +477,26 @@
 .glossary-term-admin__translation--muted {
   color: var(--color-text-subtle);
   font-style: italic;
+}
+
+.glossary-term-admin__translation-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 58%, transparent);
+}
+
+.glossary-term-admin__translation-editor-target {
+  min-height: 4rem;
+  resize: vertical;
+}
+
+.glossary-term-admin__translation-editor-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 .glossary-term-admin__status-cell {
@@ -653,12 +698,47 @@
   align-items: flex-start;
 }
 
+.glossary-term-admin__translation-card,
 .glossary-term-admin__reference-card,
 .glossary-term-admin__candidate-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 58%, transparent);
+}
+
+.glossary-term-admin__translation-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.glossary-term-admin__translation-locale {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.glossary-term-admin__translation-locale span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+.glossary-term-admin__translation-target {
+  min-height: 4.25rem;
+  resize: vertical;
+}
+
+.glossary-term-admin__reference-card,
+.glossary-term-admin__candidate-card {
+  padding-right: var(--space-3);
+  padding-left: var(--space-3);
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
   border-radius: var(--radius-2);
   background: color-mix(

@@ -287,7 +287,13 @@ const termToDraft = (term: ApiGlossaryTerm, localeTags: string[]): TermDraft => 
   };
 };
 
-const draftToRequest = (draft: TermDraft, { includeTranslations = true } = {}) => {
+const draftToRequest = (
+  draft: TermDraft,
+  {
+    includeTranslations = true,
+    translationLocaleTags = null,
+  }: { includeTranslations?: boolean; translationLocaleTags?: string[] | null } = {},
+) => {
   const request = {
     termKey: draft.tmTextUnitId == null ? draft.termKey.trim() || null : draft.termKey || null,
     source: draft.source.trim(),
@@ -324,9 +330,19 @@ const draftToRequest = (draft: TermDraft, { includeTranslations = true } = {}) =
     return request;
   }
 
+  const translationLocaleKeys =
+    translationLocaleTags == null
+      ? null
+      : new Set(translationLocaleTags.map((localeTag) => localeTag.trim().toLowerCase()));
+  const translations = draft.translations.filter(
+    (translation) =>
+      translationLocaleKeys == null ||
+      translationLocaleKeys.has(translation.localeTag.trim().toLowerCase()),
+  );
+
   return {
     ...request,
-    translations: draft.translations
+    translations: translations
       .map((translation) => ({
         localeTag: translation.localeTag.trim(),
         target: translation.target.trim() || null,
@@ -594,11 +610,6 @@ export function AdminGlossaryTermsPanel({
         ),
     [glossary.localeTags, resolveLocaleDisplayName],
   );
-  const editableLocaleOptions = useMemo(
-    () => localeOptions.filter((option) => canEditLocale(user, option.tag)),
-    [localeOptions, user],
-  );
-
   useEffect(() => {
     const nextPrefs = loadGlossaryWorkspacePrefs(glossary.id);
     const nextSelectedLocaleTags = nextPrefs?.selectedLocaleTags ?? [];
@@ -740,7 +751,8 @@ export function AdminGlossaryTermsPanel({
   const saveTermMutation = useMutation({
     mutationFn: async (draft: TermDraft) => {
       const request = draftToRequest(draft, {
-        includeTranslations: !canManageTerms && draft.tmTextUnitId == null,
+        includeTranslations: canManageTerms || draft.tmTextUnitId == null,
+        translationLocaleTags: selectedLocaleTags,
       });
       return draft.tmTextUnitId == null
         ? createGlossaryTerm(glossary.id, request)
@@ -772,6 +784,56 @@ export function AdminGlossaryTermsPanel({
       setStatusNotice({
         kind: 'error',
         message: error.message || 'Failed to save glossary term.',
+      });
+    },
+  });
+
+  const inlineTranslationMutation = useMutation({
+    mutationFn: async ({
+      term,
+      localeTag,
+      target,
+      targetComment,
+    }: {
+      term: ApiGlossaryTerm;
+      localeTag: string;
+      target: string;
+      targetComment: string;
+    }) => {
+      const draft = termToDraft(term, glossary.localeTags);
+      const existingTranslation = draft.translations.find(
+        (translation) => translation.localeTag.toLowerCase() === localeTag.toLowerCase(),
+      );
+      if (existingTranslation) {
+        existingTranslation.target = target;
+        existingTranslation.targetComment = targetComment;
+      } else {
+        draft.translations.push({
+          ...createBlankTranslation(localeTag),
+          target,
+          targetComment,
+        });
+      }
+      return updateGlossaryTerm(
+        glossary.id,
+        term.tmTextUnitId,
+        draftToRequest(draft, {
+          includeTranslations: true,
+          translationLocaleTags: [localeTag],
+        }),
+      );
+    },
+    onSuccess: async (savedTerm) => {
+      await queryClient.invalidateQueries({ queryKey: ['glossary-terms', glossary.id] });
+      setStatusNotice({
+        kind: 'success',
+        message: `Saved ${savedTerm.source} translation.`,
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to save glossary translation.',
       });
     },
   });
@@ -968,6 +1030,12 @@ export function AdminGlossaryTermsPanel({
   );
 
   const workbenchLocaleTags = selectedLocaleTags;
+  const editorTranslationLocaleOptions = useMemo(() => {
+    const selectedLocaleKeys = new Set(
+      selectedLocaleTags.map((localeTag) => localeTag.toLowerCase()),
+    );
+    return localeOptions.filter((option) => selectedLocaleKeys.has(option.tag.toLowerCase()));
+  }, [localeOptions, selectedLocaleTags]);
   const editorWorkbenchState =
     editorDraft.tmTextUnitId == null
       ? null
@@ -1020,7 +1088,7 @@ export function AdminGlossaryTermsPanel({
     setReturnToExtractAfterEditor(false);
     setCandidateSourceInEditor(null);
     setUploadQueue([]);
-    setEditorDraft(createBlankDraft([]));
+    setEditorDraft(createBlankDraft(selectedLocaleTags));
     setCollapsedWorkspacePane(null);
     setEditorOpen(true);
   };
@@ -1035,7 +1103,7 @@ export function AdminGlossaryTermsPanel({
   };
 
   const openCandidateModal = (candidate: ApiExtractedGlossaryCandidate) => {
-    const nextDraft = createBlankDraft([]);
+    const nextDraft = createBlankDraft(selectedLocaleTags);
     nextDraft.source = candidate.term;
     nextDraft.termType = candidate.suggestedTermType || 'GENERAL';
     nextDraft.provenance = candidate.suggestedProvenance || 'AI_EXTRACTED';
@@ -1102,17 +1170,33 @@ export function AdminGlossaryTermsPanel({
     setEditorOpen(true);
   }, [glossary.localeTags, initialOpenTermId, terms]);
 
-  const addProposalTranslation = () => {
-    const usedLocaleTags = new Set(
-      editorDraft.translations.map((translation) => translation.localeTag.toLowerCase()),
-    );
-    const nextLocaleTag =
-      editableLocaleOptions.find((option) => !usedLocaleTags.has(option.tag.toLowerCase()))?.tag ??
-      '';
-    setEditorDraft((current) => ({
-      ...current,
-      translations: [...current.translations, createBlankTranslation(nextLocaleTag)],
-    }));
+  const updateEditorTranslation = (
+    localeTag: string,
+    patch: Partial<Pick<TranslationDraft, 'target' | 'targetComment'>>,
+  ) => {
+    setEditorDraft((current) => {
+      const existingTranslation = current.translations.find(
+        (translation) => translation.localeTag.toLowerCase() === localeTag.toLowerCase(),
+      );
+      if (!existingTranslation) {
+        return {
+          ...current,
+          translations: [
+            ...current.translations,
+            {
+              ...createBlankTranslation(localeTag),
+              ...patch,
+            },
+          ],
+        };
+      }
+      return {
+        ...current,
+        translations: current.translations.map((translation) =>
+          translation.id === existingTranslation.id ? { ...translation, ...patch } : translation,
+        ),
+      };
+    });
   };
 
   const handleReferenceScreenshotFiles = async (files: FileList | null): Promise<void> => {
@@ -1429,6 +1513,19 @@ export function AdminGlossaryTermsPanel({
                 });
               }}
               onChangeTermStatus={(term, status) => statusMutation.mutate({ term, status })}
+              savingTranslationKey={
+                inlineTranslationMutation.isPending && inlineTranslationMutation.variables
+                  ? `${inlineTranslationMutation.variables.term.tmTextUnitId}:${inlineTranslationMutation.variables.localeTag.toLowerCase()}`
+                  : null
+              }
+              onSaveTermTranslation={async (term, localeTag, value) => {
+                await inlineTranslationMutation.mutateAsync({
+                  term,
+                  localeTag,
+                  target: value.target,
+                  targetComment: value.targetComment,
+                });
+              }}
             />
           )}
         </div>
@@ -1696,135 +1793,80 @@ export function AdminGlossaryTermsPanel({
                   </label>
                 </div>
 
-                {!canManageTerms ? (
-                  <section className="glossary-term-admin__section">
-                    <div className="settings-card__header">
-                      <h4>Optional translations</h4>
-                    </div>
-                    <>
+                <section className="glossary-term-admin__section">
+                  <div className="settings-card__header">
+                    <div>
+                      <h4>Translations</h4>
                       <p className="settings-hint">
-                        Add target translations for locales you can edit. Leave this empty if you
-                        are only proposing the source term.
+                        Edit the locale columns selected in the table. Save runs Mojito integrity
+                        checks.
                       </p>
-                      {editableLocaleOptions.length === 0 ? (
-                        <p className="settings-hint">
-                          You can still submit the candidate term, but you do not have editable
-                          locales for target translations.
-                        </p>
-                      ) : null}
-                      <div className="glossary-term-admin__section-actions">
-                        <button
-                          type="button"
-                          className="settings-button settings-button--ghost"
-                          onClick={addProposalTranslation}
-                          disabled={
-                            !canEditProposalDraft ||
-                            editableLocaleOptions.length === 0 ||
-                            editorDraft.translations.length >= editableLocaleOptions.length
-                          }
-                        >
-                          Add translation
-                        </button>
-                      </div>
-                      {editorDraft.translations.length === 0 ? null : (
-                        <div className="glossary-term-admin__translation-list">
-                          {editorDraft.translations.map((translation) => {
-                            const usedLocaleTags = new Set(
-                              editorDraft.translations
-                                .filter((item) => item.id !== translation.id)
-                                .map((item) => item.localeTag.toLowerCase()),
-                            );
-
-                            return (
-                              <div
-                                key={translation.id}
-                                className="glossary-term-admin__translation-row"
-                              >
-                                <select
-                                  className="settings-input"
-                                  value={translation.localeTag}
-                                  disabled={!canEditProposalDraft}
-                                  onChange={(event) =>
-                                    setEditorDraft((current) => ({
-                                      ...current,
-                                      translations: current.translations.map((item) =>
-                                        item.id === translation.id
-                                          ? { ...item, localeTag: event.target.value }
-                                          : item,
-                                      ),
-                                    }))
-                                  }
-                                >
-                                  <option value="">Locale</option>
-                                  {editableLocaleOptions
-                                    .filter(
-                                      (option) =>
-                                        option.tag === translation.localeTag ||
-                                        !usedLocaleTags.has(option.tag.toLowerCase()),
-                                    )
-                                    .map((option) => (
-                                      <option key={option.tag} value={option.tag}>
-                                        {option.label}
-                                      </option>
-                                    ))}
-                                </select>
-                                <input
-                                  type="text"
-                                  className="settings-input"
-                                  placeholder="Target translation"
-                                  value={translation.target}
-                                  disabled={!canEditProposalDraft}
-                                  onChange={(event) =>
-                                    setEditorDraft((current) => ({
-                                      ...current,
-                                      translations: current.translations.map((item) =>
-                                        item.id === translation.id
-                                          ? { ...item, target: event.target.value }
-                                          : item,
-                                      ),
-                                    }))
-                                  }
-                                />
-                                <input
-                                  type="text"
-                                  className="settings-input"
-                                  placeholder="Target note"
-                                  value={translation.targetComment}
-                                  disabled={!canEditProposalDraft}
-                                  onChange={(event) =>
-                                    setEditorDraft((current) => ({
-                                      ...current,
-                                      translations: current.translations.map((item) =>
-                                        item.id === translation.id
-                                          ? { ...item, targetComment: event.target.value }
-                                          : item,
-                                      ),
-                                    }))
-                                  }
-                                />
-                                <button
-                                  type="button"
-                                  className="settings-button settings-button--ghost"
-                                  disabled={!canEditProposalDraft}
-                                  onClick={() =>
-                                    setEditorDraft((current) => ({
-                                      ...current,
-                                      translations: current.translations.filter(
-                                        (item) => item.id !== translation.id,
-                                      ),
-                                    }))
-                                  }
-                                >
-                                  Remove
-                                </button>
+                    </div>
+                  </div>
+                  {editorTranslationLocaleOptions.length === 0 ? (
+                    <p className="settings-hint">
+                      Select locale columns above to edit glossary translations here.
+                    </p>
+                  ) : (
+                    <div className="glossary-term-admin__translation-list">
+                      {editorTranslationLocaleOptions.map((localeOption) => {
+                        const translation = editorDraft.translations.find(
+                          (item) => item.localeTag.toLowerCase() === localeOption.tag.toLowerCase(),
+                        );
+                        const canEditTranslation =
+                          canEditProposalDraft &&
+                          (canManageTerms || canEditLocale(user, localeOption.tag));
+                        return (
+                          <div
+                            key={localeOption.tag}
+                            className="glossary-term-admin__translation-card"
+                          >
+                            <div className="glossary-term-admin__translation-card-header">
+                              <div>
+                                <div className="glossary-term-admin__translation-locale">
+                                  {localeOption.label}
+                                  <span>{localeOption.tag}</span>
+                                </div>
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </>
-                  </section>
-                ) : null}
+                              {!canEditTranslation ? (
+                                <span className="settings-hint">Read only</span>
+                              ) : null}
+                            </div>
+                            {editorDraft.doNotTranslate ? (
+                              <p className="settings-hint">
+                                This term is marked do not translate. Add a target only when a
+                                locale needs explicit wording.
+                              </p>
+                            ) : null}
+                            <textarea
+                              className="settings-input glossary-term-admin__translation-target"
+                              placeholder="Target translation"
+                              value={translation?.target ?? ''}
+                              disabled={!canEditTranslation}
+                              onChange={(event) =>
+                                updateEditorTranslation(localeOption.tag, {
+                                  target: event.target.value,
+                                })
+                              }
+                            />
+                            <input
+                              type="text"
+                              className="settings-input"
+                              placeholder="Target note"
+                              value={translation?.targetComment ?? ''}
+                              disabled={!canEditTranslation}
+                              onChange={(event) =>
+                                updateEditorTranslation(localeOption.tag, {
+                                  targetComment: event.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
 
                 <section className="glossary-term-admin__section">
                   <div className="settings-card__header">
@@ -2046,20 +2088,16 @@ export function AdminGlossaryTermsPanel({
                         Open in Workbench
                       </Link>
                     ) : null}
-                    <button
-                      type="button"
-                      className="settings-button settings-button--primary"
-                      onClick={() => saveTermMutation.mutate(editorDraft)}
-                      disabled={saveTermMutation.isPending || !editorDraft.source.trim()}
-                    >
-                      {saveTermMutation.isPending
-                        ? canManageTerms
-                          ? 'Saving…'
-                          : 'Submitting…'
-                        : canManageTerms
-                          ? 'Save term'
-                          : 'Submit candidate'}
-                    </button>
+                    {canManageTerms ? (
+                      <button
+                        type="button"
+                        className="settings-button settings-button--primary"
+                        onClick={() => saveTermMutation.mutate(editorDraft)}
+                        disabled={saveTermMutation.isPending || !editorDraft.source.trim()}
+                      >
+                        {saveTermMutation.isPending ? 'Saving…' : 'Save term'}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -2139,7 +2177,7 @@ export function AdminGlossaryTermsPanel({
               <option value="">No change</option>
               {STATUSES.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {STATUS_LABELS[status]}
                 </option>
               ))}
             </select>

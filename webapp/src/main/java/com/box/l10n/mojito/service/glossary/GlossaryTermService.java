@@ -876,7 +876,7 @@ public class GlossaryTermService {
     if (!imports.isEmpty()) {
       textUnitBatchImporterService.importTextUnitsWithVariantComment(
           imports,
-          TextUnitBatchImporterService.IntegrityChecksType.SKIP,
+          TextUnitBatchImporterService.IntegrityChecksType.ALWAYS_USE_INTEGRITY_CHECKER_STATUS,
           TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
     }
   }
