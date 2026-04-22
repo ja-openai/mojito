@@ -271,6 +271,8 @@ public class WebSecurityConfig {
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/review-project-text-units/**")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/glossaries/*/terms")
+                .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/glossaries/*/terms/*/proposals")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 // Read-only is OK for everyone

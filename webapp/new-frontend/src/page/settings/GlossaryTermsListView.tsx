@@ -152,7 +152,6 @@ export function GlossaryTermsListView({
     tmTextUnitId: number;
     localeTag: string;
     target: string;
-    targetComment: string;
   } | null>(null);
   const emptyColSpan = displayedLocaleTags.length + (canManageTerms ? 3 : 2);
   const showLocaleColumnLimit = selectedLocaleTags.length > AUTO_VISIBLE_LOCALE_COLUMNS_CAP;
@@ -468,7 +467,6 @@ export function GlossaryTermsListView({
                         tmTextUnitId: term.tmTextUnitId,
                         localeTag,
                         target: translation?.target ?? '',
-                        targetComment: translation?.targetComment ?? '',
                       });
                     };
                     const saveTranslation = async () => {
@@ -477,7 +475,7 @@ export function GlossaryTermsListView({
                       }
                       await onSaveTermTranslation(term, localeTag, {
                         target: editingTranslation.target,
-                        targetComment: editingTranslation.targetComment,
+                        targetComment: translation?.targetComment ?? '',
                       });
                       setEditingTranslation(null);
                     };
@@ -520,23 +518,18 @@ export function GlossaryTermsListView({
                                 }
                               }}
                             />
-                            <input
-                              type="text"
-                              className="settings-input"
-                              value={editingTranslation.targetComment}
-                              placeholder="Target note"
-                              onChange={(event) =>
-                                setEditingTranslation((current) =>
-                                  current
-                                    ? { ...current, targetComment: event.target.value }
-                                    : current,
-                                )
-                              }
-                            />
                             <div className="glossary-term-admin__translation-editor-actions">
                               <button
                                 type="button"
-                                className="settings-button settings-button--ghost"
+                                className="glossary-term-admin__translation-editor-button glossary-term-admin__translation-editor-button--primary"
+                                disabled={isSavingTranslation || !editingTranslation.target.trim()}
+                                onClick={() => void saveTranslation()}
+                              >
+                                {isSavingTranslation ? 'Saving…' : 'Accept'}
+                              </button>
+                              <button
+                                type="button"
+                                className="glossary-term-admin__translation-editor-button"
                                 disabled={isSavingTranslation}
                                 onClick={() => setEditingTranslation(null)}
                               >
@@ -544,11 +537,13 @@ export function GlossaryTermsListView({
                               </button>
                               <button
                                 type="button"
-                                className="settings-button settings-button--primary"
-                                disabled={isSavingTranslation || !editingTranslation.target.trim()}
-                                onClick={() => void saveTranslation()}
+                                className="glossary-term-admin__translation-editor-button"
+                                onClick={() => {
+                                  setEditingTranslation(null);
+                                  onOpenEditTerm(term);
+                                }}
                               >
-                                {isSavingTranslation ? 'Saving…' : 'Save'}
+                                Details
                               </button>
                             </div>
                           </div>

@@ -34,7 +34,7 @@ import { useUser } from '../../components/RequireUser';
 import { buildGlossaryWorkbenchState } from '../../utils/glossaryWorkbench';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
-import { canEditLocale, canManageGlossaryTerms } from '../../utils/permissions';
+import { canManageGlossaryTerms } from '../../utils/permissions';
 import {
   buildRequestAttachmentUploadQueueEntries,
   canUploadRequestAttachmentFile,
@@ -1030,12 +1030,6 @@ export function AdminGlossaryTermsPanel({
   );
 
   const workbenchLocaleTags = selectedLocaleTags;
-  const editorTranslationLocaleOptions = useMemo(() => {
-    const selectedLocaleKeys = new Set(
-      selectedLocaleTags.map((localeTag) => localeTag.toLowerCase()),
-    );
-    return localeOptions.filter((option) => selectedLocaleKeys.has(option.tag.toLowerCase()));
-  }, [localeOptions, selectedLocaleTags]);
   const editorWorkbenchState =
     editorDraft.tmTextUnitId == null
       ? null
@@ -1063,7 +1057,7 @@ export function AdminGlossaryTermsPanel({
         title: canManageTerms ? 'Select a glossary term' : 'Browse glossary terms',
         message: canManageTerms
           ? 'Select a term to edit it here, or create a new term without leaving the table.'
-          : 'Select a term to inspect its metadata, translations, and references.',
+          : 'Select a term to inspect its metadata and references.',
       };
 
   useEffect(() => {
@@ -1169,35 +1163,6 @@ export function AdminGlossaryTermsPanel({
     setCollapsedWorkspacePane(null);
     setEditorOpen(true);
   }, [glossary.localeTags, initialOpenTermId, terms]);
-
-  const updateEditorTranslation = (
-    localeTag: string,
-    patch: Partial<Pick<TranslationDraft, 'target' | 'targetComment'>>,
-  ) => {
-    setEditorDraft((current) => {
-      const existingTranslation = current.translations.find(
-        (translation) => translation.localeTag.toLowerCase() === localeTag.toLowerCase(),
-      );
-      if (!existingTranslation) {
-        return {
-          ...current,
-          translations: [
-            ...current.translations,
-            {
-              ...createBlankTranslation(localeTag),
-              ...patch,
-            },
-          ],
-        };
-      }
-      return {
-        ...current,
-        translations: current.translations.map((translation) =>
-          translation.id === existingTranslation.id ? { ...translation, ...patch } : translation,
-        ),
-      };
-    });
-  };
 
   const handleReferenceScreenshotFiles = async (files: FileList | null): Promise<void> => {
     if (!files || files.length === 0) {
@@ -1794,85 +1759,10 @@ export function AdminGlossaryTermsPanel({
                 </div>
 
                 <section className="glossary-term-admin__section">
-                  <div className="settings-card__header">
+                  <div className="glossary-term-admin__section-header">
                     <div>
-                      <h4>Translations</h4>
-                      <p className="settings-hint">
-                        Edit the locale columns selected in the table. Save runs Mojito integrity
-                        checks.
-                      </p>
-                    </div>
-                  </div>
-                  {editorTranslationLocaleOptions.length === 0 ? (
-                    <p className="settings-hint">
-                      Select locale columns above to edit glossary translations here.
-                    </p>
-                  ) : (
-                    <div className="glossary-term-admin__translation-list">
-                      {editorTranslationLocaleOptions.map((localeOption) => {
-                        const translation = editorDraft.translations.find(
-                          (item) => item.localeTag.toLowerCase() === localeOption.tag.toLowerCase(),
-                        );
-                        const canEditTranslation =
-                          canEditProposalDraft &&
-                          (canManageTerms || canEditLocale(user, localeOption.tag));
-                        return (
-                          <div
-                            key={localeOption.tag}
-                            className="glossary-term-admin__translation-card"
-                          >
-                            <div className="glossary-term-admin__translation-card-header">
-                              <div>
-                                <div className="glossary-term-admin__translation-locale">
-                                  {localeOption.label}
-                                  <span>{localeOption.tag}</span>
-                                </div>
-                              </div>
-                              {!canEditTranslation ? (
-                                <span className="settings-hint">Read only</span>
-                              ) : null}
-                            </div>
-                            {editorDraft.doNotTranslate ? (
-                              <p className="settings-hint">
-                                This term is marked do not translate. Add a target only when a
-                                locale needs explicit wording.
-                              </p>
-                            ) : null}
-                            <textarea
-                              className="settings-input glossary-term-admin__translation-target"
-                              placeholder="Target translation"
-                              value={translation?.target ?? ''}
-                              disabled={!canEditTranslation}
-                              onChange={(event) =>
-                                updateEditorTranslation(localeOption.tag, {
-                                  target: event.target.value,
-                                })
-                              }
-                            />
-                            <input
-                              type="text"
-                              className="settings-input"
-                              placeholder="Target note"
-                              value={translation?.targetComment ?? ''}
-                              disabled={!canEditTranslation}
-                              onChange={(event) =>
-                                updateEditorTranslation(localeOption.tag, {
-                                  targetComment: event.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
-
-                <section className="glossary-term-admin__section">
-                  <div className="settings-card__header">
-                    <div>
-                      <h4>References</h4>
-                      <p className="settings-hint">
+                      <h4 className="glossary-term-admin__section-title">References</h4>
+                      <p className="glossary-term-admin__section-description">
                         Capture why this term exists: reviewer notes, observed usage, code context,
                         or screenshots.
                       </p>
@@ -2088,14 +1978,20 @@ export function AdminGlossaryTermsPanel({
                         Open in Workbench
                       </Link>
                     ) : null}
-                    {canManageTerms ? (
+                    {canManageTerms || editorDraft.tmTextUnitId == null ? (
                       <button
                         type="button"
                         className="settings-button settings-button--primary"
                         onClick={() => saveTermMutation.mutate(editorDraft)}
                         disabled={saveTermMutation.isPending || !editorDraft.source.trim()}
                       >
-                        {saveTermMutation.isPending ? 'Saving…' : 'Save term'}
+                        {saveTermMutation.isPending
+                          ? canManageTerms
+                            ? 'Saving…'
+                            : 'Submitting…'
+                          : canManageTerms
+                            ? 'Save term'
+                            : 'Submit candidate'}
                       </button>
                     ) : null}
                   </div>
