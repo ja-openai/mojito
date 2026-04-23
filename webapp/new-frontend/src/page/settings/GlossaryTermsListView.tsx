@@ -1,8 +1,11 @@
 import type { CSSProperties } from 'react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 
 import type { ApiGlossaryTerm } from '../../api/glossaries';
+import { ConfirmModal } from '../../components/ConfirmModal';
+import { getAnchoredDropdownPanelStyle } from '../../components/dropdownPosition';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { PillDropdown } from '../../components/PillDropdown';
@@ -57,12 +60,11 @@ type Props = {
   allVisibleSelected: boolean;
   onToggleSelectAll: () => void;
   onOpenEditTerm: (term: ApiGlossaryTerm) => void;
+  onOpenInlineTranslationEdit: (term: ApiGlossaryTerm) => void;
   selectedTermIds: number[];
   onToggleTermSelection: (tmTextUnitId: number, checked: boolean) => void;
   getWorkbenchHref: (tmTextUnitId: number, localeTags?: string[]) => string;
   getWorkbenchState: (tmTextUnitId: number, localeTags?: string[]) => unknown;
-  getTextUnitDetailHref: (tmTextUnitId: number, localeTag: string) => string;
-  getTextUnitDetailState: (tmTextUnitId: number, localeTag: string) => unknown;
   statusOptions: string[];
   getStatusLabel: (status: string) => string;
   getTermTypeLabel: (termType: string) => string;
@@ -86,22 +88,135 @@ const getTranslation = (term: ApiGlossaryTerm, localeTag: string) =>
 const getTranslationKey = (tmTextUnitId: number, localeTag: string) =>
   `${tmTextUnitId}:${localeTag.toLowerCase()}`;
 
+type PendingEditExit =
+  | { type: 'term'; term: ApiGlossaryTerm }
+  | { type: 'translation'; term: ApiGlossaryTerm; localeTag: string; target: string };
+
 const AUTO_VISIBLE_LOCALE_COLUMNS_CAP = 5;
 
 function getSourceColumnWidth(localeColumnCount: number) {
   if (localeColumnCount <= 0) {
-    return 'auto';
+    return 'minmax(18rem, 1fr)';
   }
   if (localeColumnCount === 1) {
-    return '34%';
+    return 'minmax(16rem, 0.9fr)';
   }
   if (localeColumnCount === 2) {
-    return '28%';
+    return 'minmax(15rem, 0.8fr)';
   }
   if (localeColumnCount === 3) {
-    return '23%';
+    return 'minmax(14rem, 0.7fr)';
   }
-  return '18%';
+  return 'minmax(13rem, 0.6fr)';
+}
+
+function getTableGridTemplate(canManageTerms: boolean, localeColumnCount: number) {
+  const checkboxTrack = canManageTerms ? '2.75rem ' : '';
+  const sourceTrack = getSourceColumnWidth(localeColumnCount);
+  const statusTrack = '9.75rem';
+  const localeTracks =
+    localeColumnCount > 0 ? ` repeat(${localeColumnCount}, minmax(12rem, 1fr))` : '';
+  return `${checkboxTrack}${sourceTrack} ${statusTrack}${localeTracks}`;
+}
+
+function GlossaryPrimaryActionMenu({
+  onOpenCreate,
+  onOpenExtract,
+}: {
+  onOpenCreate: () => void;
+  onOpenExtract: () => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>();
+
+  const updatePanelPosition = useCallback(() => {
+    if (!buttonRef.current) {
+      return;
+    }
+    const rect = buttonRef.current.getBoundingClientRect();
+    setPanelStyle(
+      getAnchoredDropdownPanelStyle({
+        rect,
+        align: 'right',
+        maxWidth: Math.min(260, window.innerWidth - 32),
+      }),
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!buttonRef.current?.contains(target) && !panelRef.current?.contains(target)) {
+        setIsOpen(false);
+      }
+    };
+    const handleReposition = () => updatePanelPosition();
+
+    updatePanelPosition();
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [isOpen, updatePanelPosition]);
+
+  const runAction = (action: () => void) => {
+    setIsOpen(false);
+    action();
+  };
+
+  return (
+    <div className="glossary-term-admin__primary-action">
+      <button
+        type="button"
+        className="settings-button settings-button--primary glossary-term-admin__primary-action-button"
+        onClick={() => {
+          updatePanelPosition();
+          setIsOpen((previous) => !previous);
+        }}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        ref={buttonRef}
+      >
+        <span>Add term</span>
+        <span className="glossary-term-admin__primary-action-chevron" aria-hidden="true" />
+      </button>
+      {isOpen
+        ? createPortal(
+            <div
+              className="chip-dropdown__panel glossary-term-admin__primary-action-panel"
+              role="menu"
+              ref={panelRef}
+              style={panelStyle}
+            >
+              <button
+                type="button"
+                className="glossary-term-admin__primary-action-option is-primary"
+                onClick={() => runAction(onOpenCreate)}
+              >
+                Add term
+              </button>
+              <button
+                type="button"
+                className="glossary-term-admin__primary-action-option"
+                onClick={() => runAction(onOpenExtract)}
+              >
+                Extract candidates
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
 }
 
 export function GlossaryTermsListView({
@@ -140,12 +255,11 @@ export function GlossaryTermsListView({
   allVisibleSelected,
   onToggleSelectAll,
   onOpenEditTerm,
+  onOpenInlineTranslationEdit,
   selectedTermIds,
   onToggleTermSelection,
   getWorkbenchHref,
   getWorkbenchState,
-  getTextUnitDetailHref,
-  getTextUnitDetailState,
   statusOptions,
   getStatusLabel,
   getTermTypeLabel,
@@ -163,11 +277,71 @@ export function GlossaryTermsListView({
     localeTag: string;
     target: string;
   } | null>(null);
+  const [pendingEditExit, setPendingEditExit] = useState<PendingEditExit | null>(null);
   const emptyColSpan = displayedLocaleTags.length + (canManageTerms ? 3 : 2);
   const showLocaleColumnLimit = selectedLocaleTags.length > AUTO_VISIBLE_LOCALE_COLUMNS_CAP;
   const tableStyle = {
-    '--glossary-term-admin-source-width': getSourceColumnWidth(displayedLocaleTags.length),
+    '--glossary-term-admin-grid-template': getTableGridTemplate(
+      canManageTerms,
+      displayedLocaleTags.length,
+    ),
   } as CSSProperties;
+  const shouldGuardEditExit = (term: ApiGlossaryTerm, localeTag?: string) => {
+    if (!editingTranslation) {
+      return false;
+    }
+    if (editingTranslation.tmTextUnitId !== term.tmTextUnitId) {
+      return true;
+    }
+    return Boolean(
+      localeTag && editingTranslation.localeTag.toLowerCase() !== localeTag.toLowerCase(),
+    );
+  };
+  const openTermEditor = (term: ApiGlossaryTerm) => {
+    if (shouldGuardEditExit(term)) {
+      setPendingEditExit({ type: 'term', term });
+      return;
+    }
+    onOpenEditTerm(term);
+  };
+  const openTranslationEditor = (
+    term: ApiGlossaryTerm,
+    localeTag: string,
+    target: string,
+    canEditTranslation: boolean,
+  ) => {
+    if (!canEditTranslation) {
+      return;
+    }
+    if (shouldGuardEditExit(term, localeTag)) {
+      setPendingEditExit({ type: 'translation', term, localeTag, target });
+      return;
+    }
+    onOpenInlineTranslationEdit(term);
+    setEditingTranslation({
+      tmTextUnitId: term.tmTextUnitId,
+      localeTag,
+      target,
+    });
+  };
+  const discardCurrentEdit = () => {
+    const pending = pendingEditExit;
+    setEditingTranslation(null);
+    setPendingEditExit(null);
+    if (!pending) {
+      return;
+    }
+    if (pending.type === 'term') {
+      onOpenEditTerm(pending.term);
+      return;
+    }
+    onOpenInlineTranslationEdit(pending.term);
+    setEditingTranslation({
+      tmTextUnitId: pending.term.tmTextUnitId,
+      localeTag: pending.localeTag,
+      target: pending.target,
+    });
+  };
 
   return (
     <>
@@ -207,22 +381,10 @@ export function GlossaryTermsListView({
           </div>
           <div className="glossary-term-admin__actions">
             {canManageTerms ? (
-              <>
-                <button
-                  type="button"
-                  className="settings-button settings-button--ghost"
-                  onClick={onOpenExtract}
-                >
-                  Extract candidates
-                </button>
-                <button
-                  type="button"
-                  className="settings-button settings-button--primary"
-                  onClick={onOpenCreate}
-                >
-                  Add term
-                </button>
-              </>
+              <GlossaryPrimaryActionMenu
+                onOpenCreate={onOpenCreate}
+                onOpenExtract={onOpenExtract}
+              />
             ) : (
               <button
                 type="button"
@@ -375,10 +537,10 @@ export function GlossaryTermsListView({
           <colgroup>
             {canManageTerms ? <col className="glossary-term-admin__checkbox-column" /> : null}
             <col className="glossary-term-admin__source-column" />
+            <col className="glossary-term-admin__status-column" />
             {displayedLocaleTags.map((localeTag) => (
               <col key={localeTag} className="glossary-term-admin__translation-column" />
             ))}
-            <col className="glossary-term-admin__status-column" />
           </colgroup>
           <thead>
             <tr>
@@ -393,10 +555,17 @@ export function GlossaryTermsListView({
                 </th>
               ) : null}
               <th>Source</th>
-              {displayedLocaleTags.map((localeTag) => (
-                <th key={localeTag}>{localeTag}</th>
-              ))}
               <th className="glossary-term-admin__status-header">Status</th>
+              {displayedLocaleTags.map((localeTag, index) => (
+                <th
+                  key={localeTag}
+                  className={
+                    index === 0 ? 'glossary-term-admin__translation-cell--first' : undefined
+                  }
+                >
+                  {localeTag}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -423,7 +592,7 @@ export function GlossaryTermsListView({
                 <tr
                   key={term.tmTextUnitId}
                   className="glossary-term-admin__row glossary-term-admin__row--interactive"
-                  onClick={() => onOpenEditTerm(term)}
+                  onClick={() => openTermEditor(term)}
                 >
                   {canManageTerms ? (
                     <td
@@ -440,7 +609,7 @@ export function GlossaryTermsListView({
                       />
                     </td>
                   ) : null}
-                  <td>
+                  <td className="glossary-term-admin__source-cell">
                     <div className="glossary-term-admin__source-row">
                       <div className="glossary-term-admin__source-stack">
                         <div className="glossary-term-admin__source">{term.source}</div>
@@ -462,7 +631,33 @@ export function GlossaryTermsListView({
                       </div>
                     </div>
                   </td>
-                  {displayedLocaleTags.map((localeTag) => {
+                  <td
+                    className="glossary-term-admin__status-cell"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {canManageTerms ? (
+                      <div className="glossary-term-admin__status-stack">
+                        <PillDropdown
+                          value={term.status ?? 'CANDIDATE'}
+                          options={statusOptions.map((status) => ({
+                            value: status,
+                            label: getStatusLabel(status),
+                          }))}
+                          onChange={(next) => onChangeTermStatus(term, next)}
+                          disabled={isChangingStatus}
+                          ariaLabel="Glossary term status"
+                          isOpen={openStatusTermId === term.tmTextUnitId}
+                          onOpenChange={(nextOpen) =>
+                            onOpenStatusTermIdChange(term.tmTextUnitId, nextOpen)
+                          }
+                          className="glossary-term-admin__status-pill"
+                        />
+                      </div>
+                    ) : (
+                      getStatusLabel(term.status ?? 'CANDIDATE')
+                    )}
+                  </td>
+                  {displayedLocaleTags.map((localeTag, index) => {
                     const translation = getTranslation(term, localeTag);
                     const translationKey = getTranslationKey(term.tmTextUnitId, localeTag);
                     const isEditingTranslation =
@@ -470,16 +665,13 @@ export function GlossaryTermsListView({
                       editingTranslation.localeTag.toLowerCase() === localeTag.toLowerCase();
                     const isSavingTranslation = savingTranslationKey === translationKey;
                     const canEditTranslation = canEditTranslationLocale(localeTag);
-                    const openTranslationEditor = () => {
-                      if (!canEditTranslation) {
-                        return;
-                      }
-                      setEditingTranslation({
-                        tmTextUnitId: term.tmTextUnitId,
+                    const openCurrentTranslationEditor = () =>
+                      openTranslationEditor(
+                        term,
                         localeTag,
-                        target: translation?.target ?? '',
-                      });
-                    };
+                        translation?.target ?? '',
+                        canEditTranslation,
+                      );
                     const saveTranslation = async () => {
                       if (!editingTranslation?.target.trim()) {
                         return;
@@ -491,7 +683,22 @@ export function GlossaryTermsListView({
                       setEditingTranslation(null);
                     };
                     return (
-                      <td key={localeTag} onClick={(event) => event.stopPropagation()}>
+                      <td
+                        key={localeTag}
+                        className={`glossary-term-admin__translation-cell${
+                          index === 0 ? ' glossary-term-admin__translation-cell--first' : ''
+                        }${
+                          !isEditingTranslation && canEditTranslation
+                            ? ' glossary-term-admin__translation-cell--interactive'
+                            : ''
+                        }`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!isEditingTranslation) {
+                            openCurrentTranslationEditor();
+                          }
+                        }}
+                      >
                         {isEditingTranslation ? (
                           <div className="glossary-term-admin__translation-editor">
                             <textarea
@@ -528,14 +735,15 @@ export function GlossaryTermsListView({
                                 Cancel
                               </button>
                               <Link
-                                to={getTextUnitDetailHref(term.tmTextUnitId, localeTag)}
-                                state={getTextUnitDetailState(term.tmTextUnitId, localeTag)}
+                                to={getWorkbenchHref(term.tmTextUnitId, [localeTag])}
+                                state={getWorkbenchState(term.tmTextUnitId, [localeTag])}
                                 className="glossary-term-admin__translation-editor-button"
-                                onClick={() => {
+                                onClick={(event) => {
+                                  event.stopPropagation();
                                   setEditingTranslation(null);
                                 }}
                               >
-                                Details
+                                Workbench
                               </Link>
                             </div>
                           </div>
@@ -544,7 +752,10 @@ export function GlossaryTermsListView({
                             type="button"
                             className="glossary-term-admin__translation-button"
                             disabled={!canEditTranslation}
-                            onClick={openTranslationEditor}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openCurrentTranslationEditor();
+                            }}
                           >
                             <span
                               className={`glossary-term-admin__translation${
@@ -567,37 +778,23 @@ export function GlossaryTermsListView({
                       </td>
                     );
                   })}
-                  <td
-                    className="glossary-term-admin__status-cell"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {canManageTerms ? (
-                      <div className="glossary-term-admin__status-stack">
-                        <PillDropdown
-                          value={term.status ?? 'CANDIDATE'}
-                          options={statusOptions.map((status) => ({
-                            value: status,
-                            label: getStatusLabel(status),
-                          }))}
-                          onChange={(next) => onChangeTermStatus(term, next)}
-                          disabled={isChangingStatus}
-                          ariaLabel="Glossary term status"
-                          isOpen={openStatusTermId === term.tmTextUnitId}
-                          onOpenChange={(nextOpen) =>
-                            onOpenStatusTermIdChange(term.tmTextUnitId, nextOpen)
-                          }
-                        />
-                      </div>
-                    ) : (
-                      getStatusLabel(term.status ?? 'CANDIDATE')
-                    )}
-                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal
+        open={pendingEditExit != null}
+        title="Stop editing translation?"
+        body="You have an inline translation edit in progress. Stop editing to switch to another term."
+        confirmLabel="Stop editing"
+        cancelLabel="Keep editing"
+        confirmVariant="primary"
+        onCancel={() => setPendingEditExit(null)}
+        onConfirm={discardCurrentEdit}
+      />
     </>
   );
 }

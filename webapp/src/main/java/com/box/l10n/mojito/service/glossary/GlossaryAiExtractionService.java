@@ -39,7 +39,8 @@ public class GlossaryAiExtractionService {
 
       For each retained candidate:
       - preserve the original `term` exactly
-      - provide a short rationale tied to the provided samples
+      - provide a concise `definition` that explains what the term means in product context
+      - provide a short `rationale` tied to the provided samples explaining why it belongs in the glossary
       - set `confidence` from 0 to 100
       - suggest `termType`
       - suggest `partOfSpeech` only when it is reasonably clear
@@ -107,6 +108,7 @@ public class GlossaryAiExtractionService {
   public record AiCandidateView(
       String term,
       Integer confidence,
+      String definition,
       String rationale,
       String termType,
       String partOfSpeech,

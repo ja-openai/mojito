@@ -218,6 +218,52 @@
   flex-wrap: nowrap;
 }
 
+.glossary-term-admin__primary-action {
+  display: inline-flex;
+}
+
+.glossary-term-admin__primary-action-button {
+  gap: var(--space-2);
+}
+
+.glossary-term-admin__primary-action-chevron {
+  width: 0;
+  height: 0;
+  border-left: 0.3125rem solid transparent;
+  border-right: 0.3125rem solid transparent;
+  border-top: 0.3125rem solid currentColor;
+  opacity: 0.8;
+}
+
+.glossary-term-admin__primary-action-panel {
+  padding: var(--space-1);
+  gap: 0;
+}
+
+.glossary-term-admin__primary-action-option {
+  width: 100%;
+  min-height: 2rem;
+  border: 0;
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.glossary-term-admin__primary-action-option:hover,
+.glossary-term-admin__primary-action-option:focus-visible {
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  outline: none;
+}
+
+.glossary-term-admin__primary-action-option.is-primary {
+  font-weight: var(--font-weight-medium);
+}
+
 .glossary-term-admin__section-actions {
   align-items: center;
   flex-wrap: wrap;
@@ -341,32 +387,44 @@
 }
 
 .glossary-term-admin__table {
+  display: block;
+  width: 100%;
   min-width: 54rem;
-  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .glossary-term-admin__table--no-locales {
   min-width: 34rem;
 }
 
-.glossary-term-admin__checkbox-column {
-  width: 2.75rem;
+.glossary-term-admin__table colgroup {
+  display: none;
 }
 
-.glossary-term-admin__source-column {
-  width: var(--glossary-term-admin-source-width, 18%);
+.glossary-term-admin__table thead,
+.glossary-term-admin__table tbody {
+  display: block;
 }
 
-.glossary-term-admin__table--no-locales .glossary-term-admin__source-column {
-  width: auto;
+.glossary-term-admin__table tr {
+  display: grid;
+  grid-template-columns: var(--glossary-term-admin-grid-template);
+  column-gap: var(--space-4);
+  align-items: stretch;
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
 }
 
-.glossary-term-admin__translation-column {
-  width: auto;
+.glossary-term-admin__table th,
+.glossary-term-admin__table td {
+  display: block;
+  min-width: 0;
+  border-bottom: 0;
 }
 
-.glossary-term-admin__status-column {
-  width: 7.5rem;
+.glossary-term-admin__table--no-locales th,
+.glossary-term-admin__table--no-locales td {
+  min-width: 0;
 }
 
 .glossary-term-admin__workspace-pane--primary .settings-table-wrapper {
@@ -389,14 +447,13 @@
 }
 
 .glossary-term-admin__status-header {
-  width: 1%;
-  min-width: 7.5rem;
-  text-align: end;
+  text-align: center;
   white-space: nowrap;
 }
 
 .glossary-term-admin__checkbox-cell {
-  width: 2.75rem;
+  display: flex;
+  align-items: flex-start;
 }
 
 .glossary-term-admin__row--interactive {
@@ -412,6 +469,10 @@
   color: var(--color-text);
   overflow-wrap: anywhere;
   word-break: normal;
+}
+
+.glossary-term-admin__source-cell {
+  cursor: pointer;
 }
 
 .glossary-term-admin__source-row {
@@ -455,6 +516,10 @@
 }
 
 .glossary-term-admin__translation-button:not(:disabled) {
+  cursor: text;
+}
+
+.glossary-term-admin__translation-cell--interactive {
   cursor: text;
 }
 
@@ -530,16 +595,23 @@
 
 .glossary-term-admin__status-cell {
   color: var(--color-text-muted);
-  width: 1%;
-  min-width: 7.5rem;
-  text-align: end;
+  text-align: center;
   white-space: nowrap;
 }
 
 .glossary-term-admin__status-stack {
   display: inline-flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
+}
+
+.glossary-term-admin__status-pill .pill-dropdown__button {
+  min-width: 7rem;
+  padding-inline: var(--space-3) 1.625rem;
+}
+
+.glossary-term-admin__status-pill .pill-dropdown__label {
+  text-align: center;
 }
 
 .glossary-term-admin__row-actions {
@@ -570,6 +642,7 @@
 }
 
 .glossary-term-admin__empty {
+  grid-column: 1 / -1;
   color: var(--color-text-muted);
   text-align: center;
   padding: var(--space-5) var(--space-3);
@@ -814,6 +887,15 @@
   background: transparent;
   color: var(--color-text-subtle);
   font-size: var(--font-size-xs);
+}
+
+.glossary-term-admin__replace-option {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.glossary-term-admin__replace-actions {
+  margin-top: var(--space-4);
 }
 
 @media (max-width: 72rem) {

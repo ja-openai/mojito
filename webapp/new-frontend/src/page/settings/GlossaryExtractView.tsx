@@ -199,8 +199,11 @@ export function GlossaryExtractView({
                     </span>
                   ))}
                 </div>
-                {candidate.rationale ? (
-                  <p className="settings-hint">{candidate.rationale}</p>
+                {candidate.definition ? (
+                  <p className="settings-hint">{candidate.definition}</p>
+                ) : null}
+                {candidate.rationale && candidate.rationale !== candidate.definition ? (
+                  <p className="settings-hint">Reason: {candidate.rationale}</p>
                 ) : null}
                 <div className="glossary-term-admin__candidate-samples">
                   {candidate.sampleSources.map((sample) => (

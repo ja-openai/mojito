@@ -192,6 +192,15 @@ type TermDraft = {
   references: ReferenceDraft[];
 };
 
+type SaveTermVariables = {
+  draft: TermDraft;
+  replaceTerm?: boolean;
+  copyTranslationsOnReplace?: boolean | null;
+  copyTranslationStatus?: CopyTranslationStatus | null;
+};
+
+type CopyTranslationStatus = NonNullable<ApiUpsertGlossaryTermRequest['copyTranslationStatus']>;
+
 type BatchDraft = {
   termType: string;
   enforcement: string;
@@ -280,8 +289,8 @@ const termToDraft = (term: ApiGlossaryTerm, localeTags: string[]): TermDraft => 
     tmTextUnitId: term.tmTextUnitId,
     termKey: term.termKey,
     source: term.source,
-    sourceComment: term.sourceComment ?? '',
-    definition: term.definition ?? '',
+    sourceComment: term.sourceComment ?? term.definition ?? '',
+    definition: term.definition ?? term.sourceComment ?? '',
     partOfSpeech: term.partOfSpeech ?? '',
     termType: term.termType ?? 'GENERAL',
     enforcement: term.enforcement ?? 'SOFT',
@@ -308,18 +317,47 @@ const termToDraft = (term: ApiGlossaryTerm, localeTags: string[]): TermDraft => 
   };
 };
 
+const normalizeBackingField = (value: string) => value.trim();
+
+const getReplacementBackingFieldLabels = (original: TermDraft | null, draft: TermDraft) => {
+  if (!original || draft.tmTextUnitId == null) {
+    return [];
+  }
+
+  const labels: string[] = [];
+  if (normalizeBackingField(original.termKey) !== normalizeBackingField(draft.termKey)) {
+    labels.push('term key');
+  }
+  if (normalizeBackingField(original.source) !== normalizeBackingField(draft.source)) {
+    labels.push('source term');
+  }
+  if (normalizeBackingField(original.definition) !== normalizeBackingField(draft.definition)) {
+    labels.push('definition');
+  }
+  return labels;
+};
+
 const draftToRequest = (
   draft: TermDraft,
   {
     includeTranslations = true,
     translationLocaleTags = null,
-  }: { includeTranslations?: boolean; translationLocaleTags?: string[] | null } = {},
+    replaceTerm = false,
+    copyTranslationsOnReplace = null,
+    copyTranslationStatus = null,
+  }: {
+    includeTranslations?: boolean;
+    translationLocaleTags?: string[] | null;
+    replaceTerm?: boolean;
+    copyTranslationsOnReplace?: boolean | null;
+    copyTranslationStatus?: CopyTranslationStatus | null;
+  } = {},
 ) => {
   const request = {
     termKey: draft.tmTextUnitId == null ? draft.termKey.trim() || null : draft.termKey || null,
     source: draft.source.trim(),
-    sourceComment: draft.sourceComment.trim() || null,
-    definition: draft.definition.trim() || null,
+    sourceComment: draft.definition.trim() || null,
+    definition: null,
     partOfSpeech: draft.partOfSpeech.trim() || null,
     termType: draft.termType || null,
     enforcement: draft.enforcement || null,
@@ -327,6 +365,9 @@ const draftToRequest = (
     provenance: draft.provenance || null,
     caseSensitive: draft.caseSensitive,
     doNotTranslate: draft.doNotTranslate,
+    replaceTerm,
+    copyTranslationsOnReplace,
+    copyTranslationStatus,
     evidence: draft.references
       .map((reference) => ({
         evidenceType: reference.referenceType,
@@ -520,7 +561,8 @@ const extractedCandidateToRequest = (
   candidate: ApiExtractedGlossaryCandidate,
 ): ApiUpsertGlossaryTermRequest => ({
   source: candidate.term,
-  definition: candidate.rationale ?? null,
+  sourceComment: candidate.definition ?? null,
+  definition: null,
   partOfSpeech: candidate.suggestedPartOfSpeech || null,
   termType: candidate.suggestedTermType || 'GENERAL',
   enforcement: candidate.suggestedEnforcement || 'SOFT',
@@ -528,6 +570,14 @@ const extractedCandidateToRequest = (
   provenance: candidate.suggestedProvenance || 'AI_EXTRACTED',
   caseSensitive: false,
   doNotTranslate: candidate.suggestedDoNotTranslate,
+  evidence: candidate.rationale
+    ? [
+        {
+          evidenceType: 'NOTE',
+          caption: candidate.rationale,
+        },
+      ]
+    : undefined,
 });
 
 export function AdminGlossaryTermsPanel({
@@ -573,7 +623,12 @@ export function AdminGlossaryTermsPanel({
   );
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorDraft, setEditorDraft] = useState<TermDraft>(() => createBlankDraft([]));
+  const [originalEditorDraft, setOriginalEditorDraft] = useState<TermDraft | null>(null);
   const [termPendingDelete, setTermPendingDelete] = useState<TermDraft | null>(null);
+  const [termPendingReplace, setTermPendingReplace] = useState<TermDraft | null>(null);
+  const [replaceCopyTranslations, setReplaceCopyTranslations] = useState(true);
+  const [replaceCopyTranslationStatus, setReplaceCopyTranslationStatus] =
+    useState<CopyTranslationStatus>('KEEP_CURRENT');
   const [batchOpen, setBatchOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [statusNotice, setStatusNotice] = useState<{
@@ -771,10 +826,18 @@ export function AdminGlossaryTermsPanel({
   });
 
   const saveTermMutation = useMutation({
-    mutationFn: async (draft: TermDraft) => {
+    mutationFn: async ({
+      draft,
+      replaceTerm = false,
+      copyTranslationsOnReplace = null,
+      copyTranslationStatus = null,
+    }: SaveTermVariables) => {
       const request = draftToRequest(draft, {
-        includeTranslations: canManageTerms || draft.tmTextUnitId == null,
+        includeTranslations: draft.tmTextUnitId == null,
         translationLocaleTags: selectedLocaleTags,
+        replaceTerm,
+        copyTranslationsOnReplace,
+        copyTranslationStatus,
       });
       return draft.tmTextUnitId == null
         ? createGlossaryTerm(glossary.id, request)
@@ -784,6 +847,8 @@ export function AdminGlossaryTermsPanel({
       await queryClient.invalidateQueries({ queryKey: ['glossary-terms', glossary.id] });
       setEditorOpen(false);
       setUploadQueue([]);
+      setOriginalEditorDraft(null);
+      setTermPendingReplace(null);
       if (returnToExtractAfterEditor) {
         setExtractOpen(true);
       }
@@ -823,6 +888,8 @@ export function AdminGlossaryTermsPanel({
       setTermPendingDelete(null);
       setEditorOpen(false);
       setUploadQueue([]);
+      setOriginalEditorDraft(null);
+      setTermPendingReplace(null);
       setSelectedTermIds((current) =>
         deletedTerm.tmTextUnitId == null
           ? current
@@ -1092,6 +1159,20 @@ export function AdminGlossaryTermsPanel({
           tmTextUnitId: editorDraft.tmTextUnitId,
         });
   const canEditProposalDraft = canManageTerms || editorDraft.tmTextUnitId == null;
+  const replacementBackingFieldLabels = getReplacementBackingFieldLabels(
+    originalEditorDraft,
+    editorDraft,
+  );
+  const isReplacingBackingTextUnit = replacementBackingFieldLabels.length > 0;
+  const handleSaveTerm = () => {
+    if (canManageTerms && isReplacingBackingTextUnit) {
+      setReplaceCopyTranslations(true);
+      setReplaceCopyTranslationStatus('KEEP_CURRENT');
+      setTermPendingReplace(editorDraft);
+      return;
+    }
+    saveTermMutation.mutate({ draft: editorDraft });
+  };
   const editorTitle =
     editorDraft.tmTextUnitId == null
       ? canManageTerms
@@ -1135,7 +1216,9 @@ export function AdminGlossaryTermsPanel({
     setReturnToExtractAfterEditor(false);
     setCandidateSourceInEditor(null);
     setUploadQueue([]);
-    setEditorDraft(createBlankDraft(selectedLocaleTags));
+    const nextDraft = createBlankDraft(selectedLocaleTags);
+    setEditorDraft(nextDraft);
+    setOriginalEditorDraft(null);
     setCollapsedWorkspacePane(null);
     setEditorOpen(true);
   };
@@ -1144,7 +1227,9 @@ export function AdminGlossaryTermsPanel({
     setReturnToExtractAfterEditor(false);
     setCandidateSourceInEditor(null);
     setUploadQueue([]);
-    setEditorDraft(termToDraft(term, glossary.localeTags));
+    const nextDraft = termToDraft(term, glossary.localeTags);
+    setEditorDraft(nextDraft);
+    setOriginalEditorDraft(nextDraft);
     setCollapsedWorkspacePane(null);
     setEditorOpen(true);
   };
@@ -1154,13 +1239,23 @@ export function AdminGlossaryTermsPanel({
     nextDraft.source = candidate.term;
     nextDraft.termType = candidate.suggestedTermType || 'GENERAL';
     nextDraft.provenance = candidate.suggestedProvenance || 'AI_EXTRACTED';
+    nextDraft.definition = candidate.definition ?? candidate.rationale ?? '';
     nextDraft.partOfSpeech = candidate.suggestedPartOfSpeech || '';
     nextDraft.enforcement = candidate.suggestedEnforcement || 'SOFT';
     nextDraft.doNotTranslate = candidate.suggestedDoNotTranslate;
+    nextDraft.references = candidate.rationale
+      ? [
+          {
+            ...createBlankReference('NOTE'),
+            caption: candidate.rationale,
+          },
+        ]
+      : [];
     setReturnToExtractAfterEditor(true);
     setCandidateSourceInEditor(candidate.term);
     setUploadQueue([]);
     setEditorDraft(nextDraft);
+    setOriginalEditorDraft(null);
     setCollapsedWorkspacePane(null);
     setEditorOpen(true);
   };
@@ -1171,6 +1266,8 @@ export function AdminGlossaryTermsPanel({
     }
     setEditorOpen(false);
     setUploadQueue([]);
+    setOriginalEditorDraft(null);
+    setTermPendingReplace(null);
     if (returnToExtractAfterEditor) {
       setExtractOpen(true);
     }
@@ -1212,7 +1309,9 @@ export function AdminGlossaryTermsPanel({
     setReturnToExtractAfterEditor(false);
     setCandidateSourceInEditor(null);
     setUploadQueue([]);
-    setEditorDraft(termToDraft(requestedTerm, glossary.localeTags));
+    const nextDraft = termToDraft(requestedTerm, glossary.localeTags);
+    setEditorDraft(nextDraft);
+    setOriginalEditorDraft(nextDraft);
     setCollapsedWorkspacePane(null);
     setEditorOpen(true);
   }, [glossary.localeTags, initialOpenTermId, terms]);
@@ -1490,6 +1589,7 @@ export function AdminGlossaryTermsPanel({
                 setSelectedTermIds(allVisibleSelected ? [] : terms.map((term) => term.tmTextUnitId))
               }
               onOpenEditTerm={openEditModal}
+              onOpenInlineTranslationEdit={openEditModal}
               selectedTermIds={selectedTermIds}
               onToggleTermSelection={(tmTextUnitId, checked) =>
                 setSelectedTermIds((current) =>
@@ -1516,24 +1616,6 @@ export function AdminGlossaryTermsPanel({
                   tmTextUnitId,
                 })
               }
-              getTextUnitDetailHref={(tmTextUnitId, localeTag) =>
-                `/text-units/${tmTextUnitId}?locale=${encodeURIComponent(localeTag)}`
-              }
-              getTextUnitDetailState={(tmTextUnitId, localeTag) => {
-                const state = buildGlossaryWorkbenchState({
-                  glossaryId: glossary.id,
-                  glossaryName: glossary.name,
-                  backingRepositoryId: glossary.backingRepository.id,
-                  backingRepositoryName: glossary.backingRepository.name,
-                  assetPath: glossary.assetPath,
-                  localeTags: [localeTag],
-                  tmTextUnitId,
-                });
-                return {
-                  from: '/workbench',
-                  workbenchSearch: state.workbenchSearch,
-                };
-              }}
               statusOptions={[...STATUSES]}
               getStatusLabel={(status) =>
                 STATUS_LABELS[status as (typeof STATUSES)[number]] ?? status
@@ -1679,7 +1761,7 @@ export function AdminGlossaryTermsPanel({
                       type="text"
                       className="settings-input"
                       value={editorDraft.termKey}
-                      disabled={!canManageTerms || editorDraft.tmTextUnitId != null}
+                      disabled={!canManageTerms}
                       onChange={(event) =>
                         setEditorDraft((current) => ({ ...current, termKey: event.target.value }))
                       }
@@ -1697,23 +1779,9 @@ export function AdminGlossaryTermsPanel({
                     value={editorDraft.definition}
                     disabled={!canEditProposalDraft}
                     onChange={(event) =>
-                      setEditorDraft((current) => ({ ...current, definition: event.target.value }))
-                    }
-                  />
-                </div>
-
-                <div className="settings-field">
-                  <label className="settings-field__label" htmlFor="glossary-term-source-comment">
-                    Source note
-                  </label>
-                  <textarea
-                    id="glossary-term-source-comment"
-                    className="settings-input"
-                    value={editorDraft.sourceComment}
-                    disabled={!canEditProposalDraft}
-                    onChange={(event) =>
                       setEditorDraft((current) => ({
                         ...current,
+                        definition: event.target.value,
                         sourceComment: event.target.value,
                       }))
                     }
@@ -1859,34 +1927,7 @@ export function AdminGlossaryTermsPanel({
                             }))
                           }
                         >
-                          Add note
-                        </button>
-                        <button
-                          type="button"
-                          className="settings-button settings-button--ghost"
-                          onClick={() =>
-                            setEditorDraft((current) => ({
-                              ...current,
-                              references: [
-                                ...current.references,
-                                createBlankReference('STRING_USAGE'),
-                              ],
-                            }))
-                          }
-                        >
-                          Add usage
-                        </button>
-                        <button
-                          type="button"
-                          className="settings-button settings-button--ghost"
-                          onClick={() =>
-                            setEditorDraft((current) => ({
-                              ...current,
-                              references: [...current.references, createBlankReference('CODE_REF')],
-                            }))
-                          }
-                        >
-                          Add code reference
+                          Add reference
                         </button>
                         <button
                           type="button"
@@ -2072,20 +2113,25 @@ export function AdminGlossaryTermsPanel({
                       <button
                         type="button"
                         className="settings-button settings-button--primary"
-                        onClick={() => saveTermMutation.mutate(editorDraft)}
+                        onClick={handleSaveTerm}
                         disabled={
                           saveTermMutation.isPending ||
                           deleteTermMutation.isPending ||
-                          !editorDraft.source.trim()
+                          !editorDraft.source.trim() ||
+                          (canManageTerms &&
+                            editorDraft.tmTextUnitId != null &&
+                            !editorDraft.termKey.trim())
                         }
                       >
                         {saveTermMutation.isPending
                           ? canManageTerms
                             ? 'Saving…'
                             : 'Submitting…'
-                          : canManageTerms
-                            ? 'Save term'
-                            : 'Submit candidate'}
+                          : canManageTerms && isReplacingBackingTextUnit
+                            ? 'Replace term'
+                            : canManageTerms
+                              ? 'Save term'
+                              : 'Submit candidate'}
                       </button>
                     ) : null}
                   </div>
@@ -2247,6 +2293,80 @@ export function AdminGlossaryTermsPanel({
             disabled={batchMutation.isPending || selectedTermIds.length === 0}
           >
             {batchMutation.isPending ? 'Updating…' : 'Apply'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={termPendingReplace != null}
+        size="sm"
+        role="alertdialog"
+        ariaLabel="Replace glossary term"
+      >
+        <div className="modal__title">Replace glossary term</div>
+        <div className="modal__body">
+          {termPendingReplace
+            ? `Replacing ${termPendingReplace.source} will create a new backing text unit for the changed ${getReplacementBackingFieldLabels(
+                originalEditorDraft,
+                termPendingReplace,
+              ).join(
+                ', ',
+              )}. The old text unit will be left unused so existing history remains intact.`
+            : ''}
+        </div>
+        <div className="settings-grid">
+          <label className="settings-field__row glossary-term-admin__replace-option">
+            <span>Copy existing translations to the replacement term</span>
+            <input
+              type="checkbox"
+              checked={replaceCopyTranslations}
+              onChange={(event) => setReplaceCopyTranslations(event.target.checked)}
+            />
+          </label>
+          <label className="settings-field">
+            <span className="settings-field__label">Copied translation status</span>
+            <select
+              className="settings-input"
+              value={replaceCopyTranslationStatus}
+              onChange={(event) =>
+                setReplaceCopyTranslationStatus(event.target.value as CopyTranslationStatus)
+              }
+              disabled={!replaceCopyTranslations}
+            >
+              <option value="KEEP_CURRENT">Keep current status</option>
+              <option value="REVIEW_NEEDED">Send to review</option>
+              <option value="APPROVED">Mark approved</option>
+            </select>
+          </label>
+        </div>
+        <div className="modal__actions glossary-term-admin__replace-actions">
+          <button
+            type="button"
+            className="modal__button"
+            onClick={() => {
+              if (!saveTermMutation.isPending) {
+                setTermPendingReplace(null);
+              }
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="modal__button modal__button--primary"
+            onClick={() => {
+              if (termPendingReplace) {
+                saveTermMutation.mutate({
+                  draft: termPendingReplace,
+                  replaceTerm: true,
+                  copyTranslationsOnReplace: replaceCopyTranslations,
+                  copyTranslationStatus: replaceCopyTranslationStatus,
+                });
+              }
+            }}
+            disabled={saveTermMutation.isPending}
+          >
+            {saveTermMutation.isPending ? 'Replacing…' : 'Replace term'}
           </button>
         </div>
       </Modal>

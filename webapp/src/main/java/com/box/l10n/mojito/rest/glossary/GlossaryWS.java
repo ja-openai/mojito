@@ -164,6 +164,9 @@ public class GlossaryWS {
       String provenance,
       Boolean caseSensitive,
       Boolean doNotTranslate,
+      Boolean replaceTerm,
+      Boolean copyTranslationsOnReplace,
+      String copyTranslationStatus,
       List<UpsertGlossaryTermTranslationRequest> translations,
       List<UpsertGlossaryTermEvidenceRequest> evidence) {}
 
@@ -206,6 +209,7 @@ public class GlossaryWS {
         String suggestedProvenance,
         boolean existingInGlossary,
         int confidence,
+        String definition,
         String rationale,
         String suggestedPartOfSpeech,
         String suggestedEnforcement,
@@ -656,6 +660,9 @@ public class GlossaryWS {
                   request != null ? request.provenance() : null,
                   request != null ? request.caseSensitive() : null,
                   request != null ? request.doNotTranslate() : null,
+                  request != null ? request.replaceTerm() : null,
+                  request != null ? request.copyTranslationsOnReplace() : null,
+                  request != null ? request.copyTranslationStatus() : null,
                   request != null ? toTranslationInputs(request.translations()) : List.of(),
                   request != null ? toEvidenceInputs(request.evidence()) : List.of()));
       return toGlossaryTermResponse(term);

@@ -197,7 +197,7 @@ public class GlossaryImportExportService {
     return new GlossaryExportTerm(
         sourceTextUnit.getName(),
         sourceTextUnit.getSource(),
-        metadata != null ? metadata.getDefinition() : sourceTextUnit.getComment(),
+        sourceTextUnit.getComment(),
         metadata != null ? metadata.getPartOfSpeech() : null,
         metadata != null ? metadata.getTermType() : null,
         metadata != null ? metadata.getEnforcement() : null,
@@ -323,7 +323,6 @@ public class GlossaryImportExportService {
                                 + refreshedTerm.textUnit().getTmTextUnitId())));
       }
 
-      metadata.setDefinition(importedTerm.definition());
       metadata.setPartOfSpeech(importedTerm.partOfSpeech());
       metadata.setTermType(importedTerm.termType());
       metadata.setEnforcement(importedTerm.enforcement());

@@ -185,7 +185,7 @@ public class GlossaryService {
               textUnitDTO.getName(),
               textUnitDTO.getSource(),
               getGlossaryComment(textUnitDTO, metadata),
-              metadata == null ? null : metadata.getDefinition(),
+              textUnitDTO.getComment(),
               metadata == null ? null : metadata.getPartOfSpeech(),
               metadata == null ? null : metadata.getTermType(),
               metadata == null ? null : metadata.getEnforcement(),

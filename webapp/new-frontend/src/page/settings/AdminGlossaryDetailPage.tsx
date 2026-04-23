@@ -2,9 +2,10 @@ import './settings-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 
-import { fetchGlossary, updateGlossary } from '../../api/glossaries';
+import { deleteGlossary, fetchGlossary, updateGlossary } from '../../api/glossaries';
+import { ConfirmModal } from '../../components/ConfirmModal';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useUser } from '../../components/RequireUser';
@@ -23,6 +24,7 @@ export function AdminGlossaryDetailPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const params = useParams<{ glossaryId?: string }>();
   const { data: repositories } = useRepositories();
   const { data: locales, isLoading: localesLoading, isError: localesError } = useLocales();
@@ -42,6 +44,7 @@ export function AdminGlossaryDetailPage() {
     kind: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const parsedGlossaryId = useMemo(() => {
     const raw = params.glossaryId?.trim();
@@ -83,6 +86,22 @@ export function AdminGlossaryDetailPage() {
       setStatusNotice({
         kind: 'error',
         message: error.message || 'Failed to save glossary.',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteGlossary(parsedGlossaryId as number),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['glossaries'] });
+      setShowDeleteConfirm(false);
+      void navigate('/glossaries', { replace: true });
+    },
+    onError: (error: Error) => {
+      setShowDeleteConfirm(false);
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to delete glossary.',
       });
     },
   });
@@ -459,12 +478,38 @@ export function AdminGlossaryDetailPage() {
                   >
                     Save
                   </button>
+                  <button
+                    type="button"
+                    className="settings-button settings-button--ghost"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={updateMutation.isPending || deleteMutation.isPending}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             </>
           )}
         </section>
       </div>
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="Delete glossary"
+        body={
+          glossaryQuery.data
+            ? `Delete ${glossaryQuery.data.name}? This soft-deletes the glossary and its backing repository.`
+            : ''
+        }
+        confirmLabel={deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+        cancelLabel="Cancel"
+        onCancel={() => {
+          if (!deleteMutation.isPending) {
+            setShowDeleteConfirm(false);
+          }
+        }}
+        onConfirm={() => deleteMutation.mutate()}
+        requireText={glossaryQuery.data?.name}
+      />
     </div>
   );
 }

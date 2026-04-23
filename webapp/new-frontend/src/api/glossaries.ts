@@ -153,6 +153,9 @@ export type ApiUpsertGlossaryTermRequest = {
   provenance?: string | null;
   caseSensitive?: boolean | null;
   doNotTranslate?: boolean | null;
+  replaceTerm?: boolean | null;
+  copyTranslationsOnReplace?: boolean | null;
+  copyTranslationStatus?: 'KEEP_CURRENT' | 'REVIEW_NEEDED' | 'APPROVED' | null;
   translations?: Array<{
     localeTag: string;
     target?: string | null;
@@ -202,6 +205,7 @@ export type ApiExtractedGlossaryCandidate = {
   suggestedProvenance: string;
   existingInGlossary: boolean;
   confidence: number;
+  definition?: string | null;
   rationale?: string | null;
   suggestedPartOfSpeech?: string | null;
   suggestedEnforcement?: string | null;

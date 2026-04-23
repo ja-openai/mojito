@@ -1,10 +1,12 @@
 package com.box.l10n.mojito.service.glossary;
 
 import static com.box.l10n.mojito.entity.TMTextUnitVariant.Status.APPROVED;
+import static com.box.l10n.mojito.entity.TMTextUnitVariant.Status.REVIEW_NEEDED;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermEvidence;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
@@ -53,6 +55,9 @@ public class GlossaryTermService {
   private static final int DEFAULT_EXTRACTION_LIMIT = 50;
   private static final int MAX_EXTRACTION_LIMIT = 200;
   private static final int DEFAULT_EXTRACTION_SCAN_LIMIT = 5_000;
+  private static final String COPY_TRANSLATION_STATUS_KEEP_CURRENT = "KEEP_CURRENT";
+  private static final String COPY_TRANSLATION_STATUS_REVIEW_NEEDED = "REVIEW_NEEDED";
+  private static final String COPY_TRANSLATION_STATUS_APPROVED = "APPROVED";
   private static final Pattern TITLE_PHRASE_PATTERN =
       Pattern.compile("\\b[A-Z][a-z0-9]+(?:[ -][A-Z][a-z0-9]+){0,3}\\b");
   private static final Pattern UPPER_TOKEN_PATTERN =
@@ -320,37 +325,59 @@ public class GlossaryTermService {
 
     TextUnitDTO existingSource =
         tmTextUnitId == null ? null : getSourceTextUnit(asset, tmTextUnitId);
+    String normalizedSourceComment =
+        normalizeOptional(
+            effectiveCommand.sourceComment() != null
+                ? effectiveCommand.sourceComment()
+                : effectiveCommand.definition());
+    String requestedTermKey = normalizeOptional(effectiveCommand.termKey());
     String termKey =
         existingSource != null
-            ? existingSource.getName()
-            : normalizeOptional(effectiveCommand.termKey()) != null
-                ? normalizeOptional(effectiveCommand.termKey())
-                : generateTermKey(normalizedSource);
+            ? requestedTermKey != null ? requestedTermKey : existingSource.getName()
+            : requestedTermKey != null ? requestedTermKey : generateTermKey(normalizedSource);
+    validateReplacementTermKey(asset, existingSource, termKey);
+    boolean replacesBackingTextUnit =
+        existingSource != null
+            && isBackingTextUnitReplacement(
+                existingSource, termKey, normalizedSource, normalizedSourceComment);
+    if (replacesBackingTextUnit && !Boolean.TRUE.equals(effectiveCommand.replaceTerm())) {
+      throw new IllegalArgumentException(
+          "Changing source term, term key, or definition replaces the backing text unit. Confirm replacement to continue.");
+    }
+    List<TextUnitDTO> copiedLocalizedTextUnits =
+        replacesBackingTextUnit && Boolean.TRUE.equals(effectiveCommand.copyTranslationsOnReplace())
+            ? loadLocalizedTextUnits(asset, getAvailableLocaleTags(glossary))
+                .getOrDefault(existingSource.getName(), List.of())
+            : List.of();
 
     VirtualAssetTextUnit virtualAssetTextUnit = new VirtualAssetTextUnit();
     virtualAssetTextUnit.setName(termKey);
     virtualAssetTextUnit.setContent(normalizedSource);
-    virtualAssetTextUnit.setComment(normalizeOptional(effectiveCommand.sourceComment()));
+    virtualAssetTextUnit.setComment(normalizedSourceComment);
     virtualAssetTextUnit.setDoNotTranslate(
         resolveDoNotTranslate(effectiveCommand.doNotTranslate(), null));
     updateVirtualAssetTerms(asset, List.of(virtualAssetTextUnit));
 
     TextUnitDTO refreshedSource = getSourceTextUnitByKey(asset, termKey);
+    if (replacesBackingTextUnit && !Objects.equals(existingSource.getName(), termKey)) {
+      virtualAssetService.deleteTextUnit(asset.getId(), existingSource.getName());
+    }
     GlossaryTermMetadata metadata =
-        glossaryTermMetadataRepository
-            .findByGlossaryIdAndTmTextUnitId(glossaryId, refreshedSource.getTmTextUnitId())
-            .orElseGet(
-                () -> {
-                  GlossaryTermMetadata next = new GlossaryTermMetadata();
-                  next.setGlossary(glossary);
-                  next.setTmTextUnit(getTmTextUnit(refreshedSource.getTmTextUnitId()));
-                  return next;
-                });
+        getMetadataForUpsert(glossary, existingSource, refreshedSource, replacesBackingTextUnit);
+    if (replacesBackingTextUnit) {
+      glossaryTermTranslationProposalRepository.deleteByGlossaryIdAndTmTextUnitId(
+          glossaryId, existingSource.getTmTextUnitId());
+    }
 
     applyMetadata(metadata, effectiveCommand, refreshedSource);
     metadata = glossaryTermMetadataRepository.save(metadata);
 
     replaceEvidence(metadata, effectiveCommand.evidence());
+    importTranslations(
+        glossary,
+        termKey,
+        toCopiedTranslationInputs(
+            copiedLocalizedTextUnits, effectiveCommand.copyTranslationStatus()));
     importTranslations(glossary, termKey, effectiveCommand.translations());
 
     Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId =
@@ -358,7 +385,7 @@ public class GlossaryTermService {
     List<TextUnitDTO> localizedTextUnits =
         loadLocalizedTextUnits(
                 asset,
-                effectiveCommand.translations() == null
+                effectiveCommand.translations() == null || !copiedLocalizedTextUnits.isEmpty()
                     ? getAvailableLocaleTags(glossary)
                     : effectiveCommand.translations().stream()
                         .map(TranslationInput::localeTag)
@@ -425,6 +452,9 @@ public class GlossaryTermService {
         GlossaryTermMetadata.PROVENANCE_MANUAL,
         command.caseSensitive(),
         command.doNotTranslate(),
+        false,
+        false,
+        null,
         validateReaderTranslations(command.translations()),
         command.evidence() == null ? List.of() : command.evidence());
   }
@@ -774,6 +804,7 @@ public class GlossaryTermService {
                       40,
                       null,
                       null,
+                      null,
                       GlossaryTermMetadata.ENFORCEMENT_SOFT,
                       false,
                       "HEURISTIC_FALLBACK"))
@@ -809,6 +840,7 @@ public class GlossaryTermService {
                   candidate.confidence() == null
                       ? 75
                       : Math.max(0, Math.min(100, candidate.confidence())),
+                  normalizeOptional(candidate.definition()),
                   normalizeOptional(candidate.rationale()),
                   normalizeOptional(candidate.partOfSpeech()),
                   tryNormalizeEnforcement(
@@ -851,9 +883,62 @@ public class GlossaryTermService {
         .orElseThrow(() -> new IllegalArgumentException("Glossary not found: " + glossaryId));
   }
 
+  private GlossaryTermMetadata getMetadataForUpsert(
+      Glossary glossary,
+      TextUnitDTO existingSource,
+      TextUnitDTO refreshedSource,
+      boolean replacesBackingTextUnit) {
+    Long glossaryId = glossary.getId();
+    if (replacesBackingTextUnit && existingSource != null) {
+      GlossaryTermMetadata metadata =
+          glossaryTermMetadataRepository
+              .findByGlossaryIdAndTmTextUnitId(glossaryId, existingSource.getTmTextUnitId())
+              .orElseGet(
+                  () -> {
+                    GlossaryTermMetadata next = new GlossaryTermMetadata();
+                    next.setGlossary(glossary);
+                    return next;
+                  });
+      metadata.setTmTextUnit(getTmTextUnit(refreshedSource.getTmTextUnitId()));
+      return metadata;
+    }
+
+    return glossaryTermMetadataRepository
+        .findByGlossaryIdAndTmTextUnitId(glossaryId, refreshedSource.getTmTextUnitId())
+        .orElseGet(
+            () -> {
+              GlossaryTermMetadata next = new GlossaryTermMetadata();
+              next.setGlossary(glossary);
+              next.setTmTextUnit(getTmTextUnit(refreshedSource.getTmTextUnitId()));
+              return next;
+            });
+  }
+
+  private void validateReplacementTermKey(Asset asset, TextUnitDTO existingSource, String termKey) {
+    if (existingSource == null || Objects.equals(existingSource.getName(), termKey)) {
+      return;
+    }
+    searchAssetTextUnits(asset, null, true, SEARCH_SCAN_LIMIT).stream()
+        .filter(textUnitDTO -> Objects.equals(textUnitDTO.getName(), termKey))
+        .filter(
+            textUnitDTO ->
+                !Objects.equals(textUnitDTO.getTmTextUnitId(), existingSource.getTmTextUnitId()))
+        .findFirst()
+        .ifPresent(
+            ignored -> {
+              throw new IllegalArgumentException("Glossary term key already exists: " + termKey);
+            });
+  }
+
+  private boolean isBackingTextUnitReplacement(
+      TextUnitDTO existingSource, String termKey, String source, String sourceComment) {
+    return !Objects.equals(existingSource.getName(), termKey)
+        || !Objects.equals(normalizeOptional(existingSource.getSource()), source)
+        || !Objects.equals(normalizeOptional(existingSource.getComment()), sourceComment);
+  }
+
   private void applyMetadata(
       GlossaryTermMetadata metadata, TermUpsertCommand command, TextUnitDTO sourceTextUnit) {
-    metadata.setDefinition(normalizeOptional(command.definition()));
     metadata.setPartOfSpeech(normalizeOptional(command.partOfSpeech()));
     metadata.setTermType(normalizeTermType(command.termType()));
     metadata.setEnforcement(normalizeEnforcement(command.enforcement()));
@@ -894,6 +979,45 @@ public class GlossaryTermService {
     glossaryTermEvidenceRepository.saveAll(evidence);
   }
 
+  private List<TranslationInput> toCopiedTranslationInputs(
+      List<TextUnitDTO> localizedTextUnits, String copyTranslationStatus) {
+    if (localizedTextUnits == null || localizedTextUnits.isEmpty()) {
+      return List.of();
+    }
+
+    List<TranslationInput> translationInputs = new ArrayList<>();
+    for (TextUnitDTO localizedTextUnit : localizedTextUnits) {
+      String localeTag = normalizeOptional(localizedTextUnit.getTargetLocale());
+      String target = normalizeOptional(localizedTextUnit.getTarget());
+      if (localeTag == null || target == null) {
+        continue;
+      }
+      translationInputs.add(
+          new TranslationInput(
+              localeTag,
+              target,
+              normalizeOptional(localizedTextUnit.getTargetComment()),
+              resolveCopiedTranslationStatus(copyTranslationStatus, localizedTextUnit).name()));
+    }
+    return translationInputs;
+  }
+
+  private TMTextUnitVariant.Status resolveCopiedTranslationStatus(
+      String copyTranslationStatus, TextUnitDTO localizedTextUnit) {
+    String normalizedCopyTranslationStatus = normalizeOptional(copyTranslationStatus);
+    if (normalizedCopyTranslationStatus == null
+        || COPY_TRANSLATION_STATUS_KEEP_CURRENT.equals(normalizedCopyTranslationStatus)) {
+      return localizedTextUnit.getStatus() == null ? APPROVED : localizedTextUnit.getStatus();
+    }
+    if (COPY_TRANSLATION_STATUS_REVIEW_NEEDED.equals(normalizedCopyTranslationStatus)) {
+      return REVIEW_NEEDED;
+    }
+    if (COPY_TRANSLATION_STATUS_APPROVED.equals(normalizedCopyTranslationStatus)) {
+      return APPROVED;
+    }
+    throw new IllegalArgumentException("Unknown copy translation status: " + copyTranslationStatus);
+  }
+
   private void importTranslations(
       Glossary glossary, String termKey, List<TranslationInput> translationInputs) {
     if (translationInputs == null || translationInputs.isEmpty()) {
@@ -915,7 +1039,7 @@ public class GlossaryTermService {
       textUnitDTO.setName(termKey);
       textUnitDTO.setTarget(target);
       textUnitDTO.setTargetComment(normalizeOptional(translationInput.targetComment()));
-      textUnitDTO.setStatus(APPROVED);
+      textUnitDTO.setStatus(resolveTranslationInputStatus(translationInput.status()));
       textUnitDTO.setIncludedInLocalizedFile(true);
       imports.add(
           new TextUnitBatchImporterService.TextUnitDTOWithVariantComment(textUnitDTO, null));
@@ -926,6 +1050,18 @@ public class GlossaryTermService {
           imports,
           TextUnitBatchImporterService.IntegrityChecksType.ALWAYS_USE_INTEGRITY_CHECKER_STATUS,
           TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
+    }
+  }
+
+  private TMTextUnitVariant.Status resolveTranslationInputStatus(String status) {
+    String normalizedStatus = normalizeOptional(status);
+    if (normalizedStatus == null) {
+      return APPROVED;
+    }
+    try {
+      return TMTextUnitVariant.Status.valueOf(normalizedStatus);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Unknown translation status: " + status);
     }
   }
 
@@ -1006,7 +1142,7 @@ public class GlossaryTermService {
         sourceTextUnit.getName(),
         sourceTextUnit.getSource(),
         sourceTextUnit.getComment(),
-        metadata == null ? null : metadata.getDefinition(),
+        sourceTextUnit.getComment(),
         metadata == null ? null : metadata.getPartOfSpeech(),
         metadata == null ? null : metadata.getTermType(),
         metadata == null ? null : metadata.getEnforcement(),
@@ -1442,10 +1578,18 @@ public class GlossaryTermService {
       String provenance,
       Boolean caseSensitive,
       Boolean doNotTranslate,
+      Boolean replaceTerm,
+      Boolean copyTranslationsOnReplace,
+      String copyTranslationStatus,
       List<TranslationInput> translations,
       List<EvidenceInput> evidence) {}
 
-  public record TranslationInput(String localeTag, String target, String targetComment) {}
+  public record TranslationInput(
+      String localeTag, String target, String targetComment, String status) {
+    public TranslationInput(String localeTag, String target, String targetComment) {
+      this(localeTag, target, targetComment, null);
+    }
+  }
 
   public record EvidenceInput(
       String evidenceType,
@@ -1506,6 +1650,7 @@ public class GlossaryTermService {
       String suggestedProvenance,
       boolean existingInGlossary,
       int confidence,
+      String definition,
       String rationale,
       String suggestedPartOfSpeech,
       String suggestedEnforcement,
@@ -1545,6 +1690,7 @@ public class GlossaryTermService {
           GlossaryTermMetadata.PROVENANCE_AUTOMATED,
           existingInGlossary,
           40,
+          null,
           null,
           null,
           GlossaryTermMetadata.ENFORCEMENT_SOFT,

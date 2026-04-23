@@ -5,13 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
-import {
-  type ApiGlossarySummary,
-  createGlossary,
-  deleteGlossary,
-  fetchGlossaries,
-} from '../../api/glossaries';
-import { ConfirmModal } from '../../components/ConfirmModal';
+import { type ApiGlossarySummary, createGlossary, fetchGlossaries } from '../../api/glossaries';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import { Modal } from '../../components/Modal';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
@@ -22,7 +16,6 @@ import { useLocales } from '../../hooks/useLocales';
 import { useRepositories } from '../../hooks/useRepositories';
 import { formatLocalDateTime as formatDateTime } from '../../utils/dateTime';
 import { buildScopedGlossaryLocaleOptions } from '../../utils/glossaryLocaleScope';
-import { buildGlossaryWorkbenchState } from '../../utils/glossaryWorkbench';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { canAccessGlossaries } from '../../utils/permissions';
 import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
@@ -66,9 +59,6 @@ export function GlossariesPage() {
   const [showAllLocaleOptions, setShowAllLocaleOptions] = useState(false);
   const [createModalError, setCreateModalError] = useState<string | null>(null);
   const [statusNotice, setStatusNotice] = useState<StatusNotice | null>(null);
-  const [glossaryPendingDelete, setGlossaryPendingDelete] = useState<ApiGlossarySummary | null>(
-    null,
-  );
 
   const resetCreateDrafts = useCallback(() => {
     setNewNameDraft('');
@@ -128,25 +118,6 @@ export function GlossariesPage() {
     },
     onError: (error: Error) => {
       setCreateModalError(error.message || 'Failed to create glossary.');
-    },
-  });
-
-  const deleteGlossaryMutation = useMutation({
-    mutationFn: (glossaryId: number) => deleteGlossary(glossaryId),
-    onSuccess: async () => {
-      const deletedName = glossaryPendingDelete?.name;
-      await queryClient.invalidateQueries({ queryKey: ['glossaries'] });
-      setGlossaryPendingDelete(null);
-      setStatusNotice({
-        kind: 'success',
-        message: deletedName ? `Deleted glossary ${deletedName}.` : 'Deleted glossary.',
-      });
-    },
-    onError: (error: Error) => {
-      setStatusNotice({
-        kind: 'error',
-        message: error.message || 'Failed to delete glossary.',
-      });
     },
   });
 
@@ -338,15 +309,7 @@ export function GlossariesPage() {
                 <div className="glossary-admin-page__cell">Updated</div>
               </div>
               {glossaries.map((glossary) => (
-                <GlossaryRow
-                  key={glossary.id}
-                  glossary={glossary}
-                  isAdmin={isAdmin}
-                  onDelete={() => {
-                    setGlossaryPendingDelete(glossary);
-                    setStatusNotice(null);
-                  }}
-                />
+                <GlossaryRow key={glossary.id} glossary={glossary} isAdmin={isAdmin} />
               ))}
             </div>
           )}
@@ -538,44 +501,13 @@ export function GlossariesPage() {
               </div>
             </div>
           </Modal>
-
-          <ConfirmModal
-            open={glossaryPendingDelete != null}
-            title="Delete glossary"
-            body={
-              glossaryPendingDelete
-                ? `Delete ${glossaryPendingDelete.name}? This soft-deletes the glossary and its backing repository.`
-                : ''
-            }
-            confirmLabel="Delete"
-            cancelLabel="Cancel"
-            onCancel={() => {
-              if (!deleteGlossaryMutation.isPending) {
-                setGlossaryPendingDelete(null);
-              }
-            }}
-            onConfirm={() => {
-              if (glossaryPendingDelete?.id != null) {
-                deleteGlossaryMutation.mutate(glossaryPendingDelete.id);
-              }
-            }}
-            requireText={glossaryPendingDelete?.name}
-          />
         </>
       ) : null}
     </div>
   );
 }
 
-function GlossaryRow({
-  glossary,
-  isAdmin,
-  onDelete,
-}: {
-  glossary: ApiGlossarySummary;
-  isAdmin: boolean;
-  onDelete: () => void;
-}) {
+function GlossaryRow({ glossary, isAdmin }: { glossary: ApiGlossarySummary; isAdmin: boolean }) {
   return (
     <div className="glossary-admin-page__row">
       <div className="glossary-admin-page__cell glossary-admin-page__name-cell">
@@ -589,19 +521,6 @@ function GlossaryRow({
           <span className="glossary-admin-page__id-text">#{glossary.id}</span>
         </div>
         <div className="glossary-admin-page__actions">
-          <Link
-            className="glossary-admin-page__row-action-link"
-            to="/workbench"
-            state={buildGlossaryWorkbenchState({
-              glossaryId: glossary.id,
-              glossaryName: glossary.name,
-              backingRepositoryId: glossary.backingRepository.id,
-              backingRepositoryName: glossary.backingRepository.name,
-              assetPath: glossary.assetPath,
-            })}
-          >
-            Workbench
-          </Link>
           {isAdmin ? (
             <Link
               className="glossary-admin-page__row-action-link"
@@ -609,15 +528,6 @@ function GlossaryRow({
             >
               Settings
             </Link>
-          ) : null}
-          {isAdmin ? (
-            <button
-              type="button"
-              className="glossary-admin-page__row-action-link glossary-admin-page__row-action-button glossary-admin-page__row-action-button--danger"
-              onClick={onDelete}
-            >
-              Delete
-            </button>
           ) : null}
         </div>
       </div>

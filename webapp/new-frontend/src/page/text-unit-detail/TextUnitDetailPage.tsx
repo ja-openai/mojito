@@ -28,13 +28,6 @@ import {
 } from '../../api/text-units';
 import { useUser } from '../../components/RequireUser';
 import {
-  buildIntegrityCheckErrorReport,
-  checkTextUnitIntegrityWithRetry,
-  INTEGRITY_CHECK_FAILURE_MESSAGE,
-  INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
-  INTEGRITY_CHECK_UNAVAILABLE_TITLE,
-} from '../../utils/integrityCheck';
-import {
   buildGlossaryContextMessage,
   filterSelfGlossaryMatches,
   sortGlossaryMatches,
@@ -43,6 +36,13 @@ import {
   findGlossaryTargetForTextUnit,
   findGlossaryTermByTmTextUnitId,
 } from '../../utils/glossaryTermLookup';
+import {
+  buildIntegrityCheckErrorReport,
+  checkTextUnitIntegrityWithRetry,
+  INTEGRITY_CHECK_FAILURE_MESSAGE,
+  INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
+  INTEGRITY_CHECK_UNAVAILABLE_TITLE,
+} from '../../utils/integrityCheck';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
 import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
 import { formatStatus, mapUiStatusToApi } from '../workbench/workbench-helpers';
