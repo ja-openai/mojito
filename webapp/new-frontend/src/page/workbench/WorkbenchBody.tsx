@@ -576,6 +576,19 @@ export function WorkbenchBody({
                             ↗
                           </button>
                         ) : null}
+                        {glossaryTarget ? (
+                          <button
+                            type="button"
+                            className="workbench-glossary-pill"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openGlossaryTerm(row, glossaryTarget);
+                            }}
+                            title={`Open ${row.textUnitName} in glossary ${glossaryTarget.glossaryName}`}
+                          >
+                            Glossary term
+                          </button>
+                        ) : null}
                       </div>
                       <div className="workbench-page__meta-link workbench-page__meta-link--stack">
                         <span className="workbench-page__repo-name">{row.repositoryName}</span>
@@ -583,23 +596,6 @@ export function WorkbenchBody({
                           <span className="workbench-page__meta-location">
                             {row.locations.join(', ')}
                           </span>
-                        ) : null}
-                        {glossaryTarget ? (
-                          <button
-                            type="button"
-                            className="workbench-glossary-affordance"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openGlossaryTerm(row, glossaryTarget);
-                            }}
-                            title={`Open ${row.textUnitName} in glossary ${glossaryTarget.glossaryName}`}
-                          >
-                            <span className="workbench-glossary-affordance__label">Glossary</span>
-                            <span className="workbench-glossary-affordance__separator">·</span>
-                            <span className="workbench-glossary-affordance__name">
-                              {glossaryTarget.glossaryName}
-                            </span>
-                          </button>
                         ) : null}
                       </div>
                     </div>

@@ -1,6 +1,8 @@
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { fetchGlossaries } from '../../api/glossaries';
 import type {
   ApiLocale,
   ApiRepository,
@@ -75,6 +77,7 @@ const buildRepositoryRow = (
   repository: ApiRepository,
   selectedRepositoryId: number | null,
   allowedLocaleTags?: Set<string>,
+  glossaryIdByRepositoryId?: Map<number, number>,
 ): RepositoryRow => {
   const summary = getRepositorySummary(repository, allowedLocaleTags);
 
@@ -82,6 +85,7 @@ const buildRepositoryRow = (
     id: repository.id,
     name: repository.name,
     isGlossary: Boolean(repository.isGlossary),
+    glossaryId: glossaryIdByRepositoryId?.get(repository.id) ?? null,
     rejected: getMetricValue(summary.rejected, summary.rejectedWords),
     needsTranslation: getMetricValue(summary.needsTranslation, summary.needsTranslationWords),
     needsReview: getMetricValue(summary.needsReview, summary.needsReviewWords),
@@ -93,9 +97,15 @@ const buildRepositoriesWithSelection = (
   repositories: ApiRepository[],
   selectedRepositoryId: number | null,
   allowedLocaleTags?: Set<string>,
+  glossaryIdByRepositoryId?: Map<number, number>,
 ): RepositoryRow[] =>
   repositories.map((repository) =>
-    buildRepositoryRow(repository, selectedRepositoryId, allowedLocaleTags),
+    buildRepositoryRow(
+      repository,
+      selectedRepositoryId,
+      allowedLocaleTags,
+      glossaryIdByRepositoryId,
+    ),
   );
 
 const getRepositorySummary = (repository: ApiRepository, allowedLocaleTags?: Set<string>) => {
@@ -211,6 +221,11 @@ export function RepositoriesPage() {
   const lastPersistedStateSignatureRef = useRef<string | null>(null);
 
   const { data: repositoryData, isLoading, isError, error, refetch } = useRepositories();
+  const glossaryQuery = useQuery({
+    queryKey: ['repositories-glossary-links'],
+    queryFn: () => fetchGlossaries({ limit: 200 }),
+    staleTime: 60_000,
+  });
   const handleRetryFetch = useCallback(() => {
     void refetch();
   }, [refetch]);
@@ -223,6 +238,10 @@ export function RepositoriesPage() {
     : undefined;
 
   const repositories = useMemo(() => repositoryData ?? [], [repositoryData]);
+  const glossaryIdByRepositoryId = useMemo(() => {
+    const glossaryEntries = glossaryQuery.data?.glossaries ?? [];
+    return new Map(glossaryEntries.map((glossary) => [glossary.backingRepository.id, glossary.id]));
+  }, [glossaryQuery.data?.glossaries]);
   const repositoryOptions = useRepositorySelectionOptions(repositories);
 
   const {
@@ -425,8 +444,9 @@ export function RepositoriesPage() {
         filteredRepositories,
         selectedRepositoryId,
         allowedLocaleTagSet,
+        glossaryIdByRepositoryId,
       ),
-    [allowedLocaleTagSet, filteredRepositories, selectedRepositoryId],
+    [allowedLocaleTagSet, filteredRepositories, glossaryIdByRepositoryId, selectedRepositoryId],
   );
 
   const selectedRepository = useMemo(

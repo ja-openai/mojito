@@ -1141,6 +1141,27 @@
   overflow-wrap: anywhere;
 }
 
+.workbench-glossary-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.workbench-glossary-pill:hover,
+.workbench-glossary-pill:focus-visible {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  color: var(--color-accent);
+}
+
 .workbench-page__repo-name {
   font-size: var(--font-size-2xs);
   color: var(--color-text-muted);
@@ -1150,50 +1171,6 @@
   font-size: var(--font-size-2xs);
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
-}
-
-.workbench-glossary-affordance {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  max-width: 100%;
-  width: fit-content;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: var(--font-size-2xs);
-  line-height: 1.3;
-  cursor: pointer;
-}
-
-.workbench-glossary-affordance:hover,
-.workbench-glossary-affordance:focus-visible {
-  color: var(--color-accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.workbench-glossary-affordance:focus-visible {
-  outline: 2px solid var(--color-focus-outline);
-  outline-offset: 2px;
-}
-
-.workbench-glossary-affordance__label {
-  font-weight: var(--font-weight-medium);
-}
-
-.workbench-glossary-affordance__separator {
-  color: color-mix(in srgb, var(--color-text-muted) 60%, transparent);
-}
-
-.workbench-glossary-affordance__name {
-  min-width: 0;
-  max-width: 10rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .workbench-page__meta-link {

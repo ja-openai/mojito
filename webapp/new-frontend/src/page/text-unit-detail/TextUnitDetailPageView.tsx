@@ -2,6 +2,7 @@ import '../review-project/review-project-page.css';
 import './text-unit-detail-page.css';
 
 import { type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 import type { AiReviewSuggestion } from '../../api/ai-review';
 import type { ApiGlossaryTerm, ApiMatchedGlossaryTerm } from '../../api/glossaries';
@@ -9,7 +10,6 @@ import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatR
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { GlossaryMatchesPanel } from '../../components/GlossaryMatchesPanel';
-import { GlossaryTermMetadataPanel } from '../../components/GlossaryTermMetadataPanel';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
@@ -32,6 +32,9 @@ export type TextUnitDetailMetaSection = {
 export type { TextUnitDetailHistoryComment, TextUnitDetailHistoryRow };
 
 export type TextUnitDetailAiMessage = AiChatReviewMessage;
+
+const formatGlossaryMetadataValue = (value?: string | null) =>
+  value?.trim() ? value.trim().toLowerCase().replace(/_/g, ' ') : null;
 
 type TextUnitDetailPageViewProps = {
   tmTextUnitId: number;
@@ -163,6 +166,17 @@ export function TextUnitDetailPageView({
   onConfirmDeleteEditor,
   onDismissDeleteDialog,
 }: TextUnitDetailPageViewProps) {
+  const glossaryTerm = glossaryTermMetadata?.term ?? null;
+  const glossaryTermHref = glossaryTermMetadata
+    ? `/glossaries/${glossaryTermMetadata.glossaryId}${
+        glossaryTerm ? `?termId=${glossaryTerm.tmTextUnitId}` : ''
+      }`
+    : null;
+  const glossaryTermComment =
+    glossaryTerm?.definition?.trim() || glossaryTerm?.sourceComment?.trim() || keyInfo.comment;
+  const glossaryTermType = formatGlossaryMetadataValue(glossaryTerm?.termType);
+  const glossaryPartOfSpeech = formatGlossaryMetadataValue(glossaryTerm?.partOfSpeech);
+
   return (
     <div className="review-project-page text-unit-detail-page">
       <header className="review-project-page__header">
@@ -322,7 +336,17 @@ export function TextUnitDetailPageView({
             <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
               <dl className="text-unit-detail-page__key-info">
                 <div className="text-unit-detail-page__key-info-row">
-                  <dt>Source</dt>
+                  <dt className="text-unit-detail-page__key-info-label">
+                    <span>Source</span>
+                    {glossaryTermHref ? (
+                      <Link
+                        className="text-unit-detail-page__source-affordance"
+                        to={glossaryTermHref}
+                      >
+                        <Pill>Glossary term</Pill>
+                      </Link>
+                    ) : null}
+                  </dt>
                   <dd>
                     <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
                       {keyInfo.source}
@@ -333,28 +357,33 @@ export function TextUnitDetailPageView({
                   <dt>Comment</dt>
                   <dd>
                     <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
-                      {keyInfo.comment}
+                      {glossaryTermComment}
                     </pre>
                   </dd>
                 </div>
-                <div className="text-unit-detail-page__key-info-row">
-                  <dt>Id</dt>
-                  <dd>
-                    <pre className="text-unit-detail-page__key-info-text">{keyInfo.stringId}</pre>
-                  </dd>
-                </div>
-                {glossaryTermMetadata ? (
+                {glossaryPartOfSpeech ? (
                   <div className="text-unit-detail-page__key-info-row">
-                    <dt>Glossary term</dt>
+                    <dt>POS</dt>
                     <dd>
-                      <GlossaryTermMetadataPanel
-                        glossaryId={glossaryTermMetadata.glossaryId}
-                        glossaryName={glossaryTermMetadata.glossaryName}
-                        term={glossaryTermMetadata.term}
-                        isLoading={glossaryTermMetadata.isLoading}
-                        errorMessage={glossaryTermMetadata.errorMessage}
-                        showHeader={false}
-                      />
+                      <pre className="text-unit-detail-page__key-info-text">
+                        {glossaryPartOfSpeech}
+                      </pre>
+                    </dd>
+                  </div>
+                ) : null}
+                {glossaryTermType ? (
+                  <div className="text-unit-detail-page__key-info-row">
+                    <dt>Type</dt>
+                    <dd>
+                      <pre className="text-unit-detail-page__key-info-text">{glossaryTermType}</pre>
+                    </dd>
+                  </div>
+                ) : null}
+                {!glossaryTermMetadata ? (
+                  <div className="text-unit-detail-page__key-info-row">
+                    <dt>Id</dt>
+                    <dd>
+                      <pre className="text-unit-detail-page__key-info-text">{keyInfo.stringId}</pre>
                     </dd>
                   </div>
                 ) : null}

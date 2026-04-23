@@ -44,7 +44,6 @@ import {
   MultiSectionFilterChip,
 } from '../../components/filters/MultiSectionFilterChip';
 import { GlossaryMatchesPanel } from '../../components/GlossaryMatchesPanel';
-import { GlossaryTermMetadataPanel } from '../../components/GlossaryTermMetadataPanel';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
 import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { LocalePill } from '../../components/LocalePill';

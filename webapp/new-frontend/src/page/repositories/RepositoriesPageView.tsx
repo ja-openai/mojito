@@ -4,6 +4,7 @@ import '../workbench/workbench-page.css';
 import './repositories-page.css';
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom';
 
 import { MultiSectionFilterChip } from '../../components/filters/MultiSectionFilterChip';
 import type { LocaleOption } from '../../components/LocaleMultiSelect';
@@ -28,6 +29,7 @@ export type RepositoryRow = {
   id: number;
   name: string;
   isGlossary: boolean;
+  glossaryId?: number | null;
   rejected: RepositoryMetricValue;
   needsTranslation: RepositoryMetricValue;
   needsReview: RepositoryMetricValue;
@@ -395,7 +397,16 @@ function RepositoryTable({
                     <span className="repositories-page__repo-id" aria-hidden="true">
                       #{repo.id}
                     </span>
-                    {repo.isGlossary ? (
+                    {repo.isGlossary && repo.glossaryId ? (
+                      <Link
+                        className="repositories-page__repo-badge repositories-page__repo-badge--link"
+                        to={`/glossaries/${repo.glossaryId}`}
+                        onClick={(event) => event.stopPropagation()}
+                        title={`Open glossary ${repo.name}`}
+                      >
+                        Glossary
+                      </Link>
+                    ) : repo.isGlossary ? (
                       <span className="repositories-page__repo-badge">Glossary</span>
                     ) : null}
                   </div>
