@@ -71,6 +71,8 @@ const STATUS_LABELS: Record<(typeof STATUSES)[number], string> = {
   DEPRECATED: 'Deprecated',
   REJECTED: 'Rejected',
 };
+const ACTIVE_STATUS_FILTER = 'ACTIVE';
+const ALL_STATUS_FILTER = 'ALL';
 const PROVENANCES = ['MANUAL', 'IMPORTED', 'AUTOMATED', 'AI_EXTRACTED'] as const;
 const PROVENANCE_LABELS: Record<(typeof PROVENANCES)[number], string> = {
   MANUAL: 'Manual',
@@ -92,6 +94,8 @@ const REFERENCE_TYPE_LABELS: Record<ReferenceType, string> = {
   CODE_REF: 'Code reference',
 };
 const STATUS_FILTER_OPTIONS = [
+  { value: ACTIVE_STATUS_FILTER, label: 'Active' },
+  { value: ALL_STATUS_FILTER, label: 'All statuses' },
   { value: 'CANDIDATE', label: 'Candidates' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'DEPRECATED', label: 'Deprecated' },
@@ -460,9 +464,11 @@ function getGlossaryWorkspacePrefsStorage() {
 
 function normalizePersistedStatusFilter(value: unknown): string | null {
   if (typeof value !== 'string') {
-    return null;
+    return ACTIVE_STATUS_FILTER;
   }
-  return STATUS_FILTER_OPTIONS.some((option) => option.value === value) ? value : null;
+  return STATUS_FILTER_OPTIONS.some((option) => option.value === value)
+    ? value
+    : ACTIVE_STATUS_FILTER;
 }
 
 function normalizePersistedPositiveNumber(value: unknown, fallback: number) {
@@ -603,7 +609,7 @@ export function AdminGlossaryTermsPanel({
   const [searchDraft, setSearchDraft] = useState(persistedWorkspacePrefs?.searchDraft ?? '');
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>(initialSelectedLocaleTags);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string | null>(
-    persistedWorkspacePrefs?.selectedStatusFilter ?? null,
+    persistedWorkspacePrefs?.selectedStatusFilter ?? ACTIVE_STATUS_FILTER,
   );
   const [selectedTermIds, setSelectedTermIds] = useState<number[]>([]);
   const [openStatusTermId, setOpenStatusTermId] = useState<number | null>(null);
@@ -692,7 +698,7 @@ export function AdminGlossaryTermsPanel({
     const nextSelectedLocaleTags = nextPrefs?.selectedLocaleTags ?? [];
     setSearchDraft(nextPrefs?.searchDraft ?? '');
     setSelectedLocaleTags(nextSelectedLocaleTags);
-    setSelectedStatusFilter(nextPrefs?.selectedStatusFilter ?? null);
+    setSelectedStatusFilter(nextPrefs?.selectedStatusFilter ?? ACTIVE_STATUS_FILTER);
     setTermsLimit(String(nextPrefs?.termsLimit ?? 200));
     setVisibleLocaleColumnLimit(
       getVisibleLocaleColumnLimitForSelection(
@@ -1103,8 +1109,14 @@ export function AdminGlossaryTermsPanel({
 
   const terms = useMemo(() => {
     const nextTerms = termsQuery.data?.terms ?? [];
-    if (selectedStatusFilter == null) {
+    if (selectedStatusFilter == null || selectedStatusFilter === ALL_STATUS_FILTER) {
       return nextTerms;
+    }
+    if (selectedStatusFilter === ACTIVE_STATUS_FILTER) {
+      return nextTerms.filter((term) => {
+        const status = (term.status ?? 'CANDIDATE').toUpperCase();
+        return status === 'CANDIDATE' || status === 'APPROVED';
+      });
     }
     return nextTerms.filter(
       (term) => (term.status ?? 'CANDIDATE').toUpperCase() === selectedStatusFilter,

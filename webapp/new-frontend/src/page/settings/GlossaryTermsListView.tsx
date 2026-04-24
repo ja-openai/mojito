@@ -373,8 +373,7 @@ export function GlossaryTermsListView({
               onChange={onChangeSelectedStatusFilter}
               className="glossary-term-admin__filter-dropdown glossary-term-admin__filter-dropdown--status"
               buttonAriaLabel="Filter glossary terms by status"
-              noneLabel="All statuses"
-              placeholder="All statuses"
+              placeholder="Status"
               noResultsLabel="No statuses found"
               searchable={false}
             />
