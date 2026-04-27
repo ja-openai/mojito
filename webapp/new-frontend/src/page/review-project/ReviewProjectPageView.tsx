@@ -93,7 +93,10 @@ import {
   toDescriptionAttachmentMarkdown,
   uploadRequestAttachmentFile,
 } from '../../utils/request-attachments';
-import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
+import {
+  buildReviewProjectTextUnitUrl,
+  buildTextUnitDetailUrl,
+} from '../../utils/textUnitDetailUrl';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
 
@@ -1211,6 +1214,7 @@ export function ReviewProjectPageView({
         <section className="review-project-page__detail-pane" ref={detailPaneRef}>
           {selectedTextUnit ? (
             <DetailPane
+              projectId={projectId}
               textUnit={selectedTextUnit}
               localeTag={localeTag}
               mutations={mutations}
@@ -1374,6 +1378,7 @@ function TextUnitRow({
 }
 
 function DetailPane({
+  projectId,
   textUnit,
   localeTag,
   mutations,
@@ -1386,6 +1391,7 @@ function DetailPane({
   onQueueAdvance,
   focusTranslationKey,
 }: {
+  projectId: number;
   textUnit: ApiReviewProjectTextUnit;
   localeTag: string;
   mutations: ReviewProjectMutationControls;
@@ -1790,6 +1796,10 @@ function DetailPane({
           workbenchTextUnitId != null
             ? buildTextUnitDetailUrl(workbenchTextUnitId, localeTag)
             : window.location.href,
+        reviewProjectTextUnitUrl: buildReviewProjectTextUnitUrl(
+          projectId,
+          workbenchTextUnitId ?? textUnit.id,
+        ),
         target: nextTarget,
         comment: commentOverride ?? draftCommentNormalized,
         status: nextStatusApi.status,
@@ -1805,6 +1815,7 @@ function DetailPane({
       draftStatusChoice,
       draftTarget,
       mutations,
+      projectId,
       snapshot.expectedCurrentVariantId,
       textUnit.id,
       localeTag,

@@ -9,3 +9,15 @@ export const buildTextUnitDetailUrl = (tmTextUnitId: number, localeTag?: string 
   }
   return url.toString();
 };
+
+export const buildReviewProjectTextUnitUrl = (
+  reviewProjectId: number,
+  selectedTextUnitId: number,
+) => {
+  const url = new URL(
+    `/review-projects/${encodeURIComponent(String(reviewProjectId))}`,
+    window.location.origin,
+  );
+  url.searchParams.set('tu', String(selectedTextUnitId));
+  return url.toString();
+};

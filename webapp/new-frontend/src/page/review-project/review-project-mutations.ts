@@ -34,6 +34,7 @@ export type SaveDecisionRequest = {
   textUnitId: number;
   tmTextUnitId: number | null;
   reportUrl?: string | null;
+  reviewProjectTextUnitUrl?: string | null;
   target: string;
   comment: string | null;
   status: string;
@@ -155,6 +156,12 @@ export function useReviewProjectMutations(
       const errorMessage = detail || 'Unavailable';
       const report = buildIntegrityCheckErrorReport({
         url: reportUrl,
+        additionalLinks: [
+          {
+            label: 'Review project text unit URL',
+            url: action.request.reviewProjectTextUnitUrl,
+          },
+        ],
         suggestedTranslation: attemptedTranslation,
         errorMessage,
       });
@@ -402,8 +409,15 @@ export function useReviewProjectMutations(
                 return;
               }
               const detail = result.failureDetail?.trim();
+              const reportUrl = action.request.reportUrl?.trim() || window.location.href;
               const report = buildIntegrityCheckErrorReport({
-                url: action.request.reportUrl?.trim() || window.location.href,
+                url: reportUrl,
+                additionalLinks: [
+                  {
+                    label: 'Review project text unit URL',
+                    url: action.request.reviewProjectTextUnitUrl,
+                  },
+                ],
                 suggestedTranslation: action.request.target.trim() || '(empty translation)',
                 errorMessage: detail || 'Unavailable',
               });

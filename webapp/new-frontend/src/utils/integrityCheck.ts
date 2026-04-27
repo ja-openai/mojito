@@ -57,30 +57,45 @@ const escapeReportHtml = (value: string) =>
     .replace(/'/g, '&#39;')
     .replace(/\n/g, '<br>');
 
+type IntegrityCheckReportLink = {
+  label: string;
+  url?: string | null;
+};
+
 export const buildIntegrityCheckErrorReport = ({
   url,
+  additionalLinks = [],
   suggestedTranslation,
   errorMessage,
 }: {
   url: string;
+  additionalLinks?: IntegrityCheckReportLink[];
   suggestedTranslation: string;
   errorMessage: string;
 }) => {
+  const reportLinks = [{ label: 'URL', url }, ...additionalLinks]
+    .map((link) => ({ label: link.label.trim(), url: link.url?.trim() ?? '' }))
+    .filter((link) => link.label && link.url);
   const reportMessage = [
     'Hi, I need help with a translation that does not pass the integrity check.',
-    '*URL*',
-    url,
+    ...reportLinks.flatMap((link) => [`*${link.label}*`, link.url]),
     '*Suggested translation*',
     suggestedTranslation,
     '*Error message*:',
     errorMessage,
   ].join('\n\n');
+  const reportLinkHtml = reportLinks
+    .map(
+      (link) =>
+        `<p><strong>${escapeReportHtml(link.label)}</strong><br><a href="${escapeReportHtml(
+          link.url,
+        )}">${escapeReportHtml(link.url)}</a></p>`,
+    )
+    .join('');
   const reportHtml = [
     '<div>',
     '<p>Hi, I need help with a translation that does not pass the integrity check.</p>',
-    `<p><strong>URL</strong><br><a href="${escapeReportHtml(url)}">${escapeReportHtml(
-      url,
-    )}</a></p>`,
+    reportLinkHtml,
     `<p><strong>Suggested translation</strong><br>${escapeReportHtml(suggestedTranslation)}</p>`,
     `<p><strong>Error message:</strong><br>${escapeReportHtml(errorMessage)}</p>`,
     '</div>',
