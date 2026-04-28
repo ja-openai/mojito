@@ -6,6 +6,9 @@ import com.box.l10n.mojito.entity.glossary.termindex.TermIndexEntry;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
+import com.box.l10n.mojito.service.pollableTask.Pollable;
+import com.box.l10n.mojito.service.pollableTask.PollableFuture;
+import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
@@ -150,6 +153,12 @@ public class TermIndexRefreshService {
       failRefreshRun(refreshRun.getId(), processedTextUnitCount, occurrenceCount, e);
       throw e;
     }
+  }
+
+  @Pollable(async = true, message = "Refresh raw term index")
+  public PollableFuture<Void> refreshAsync(RefreshCommand command) {
+    refresh(command);
+    return new PollableFutureTaskResult<>();
   }
 
   private RepositoryRefreshResult refreshRepository(

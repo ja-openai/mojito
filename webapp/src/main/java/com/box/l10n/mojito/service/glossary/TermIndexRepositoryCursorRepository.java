@@ -3,6 +3,8 @@ package com.box.l10n.mojito.service.glossary;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
 import java.time.ZonedDateTime;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -15,6 +17,19 @@ public interface TermIndexRepositoryCursorRepository
     extends JpaRepository<TermIndexRepositoryCursor, Long> {
 
   Optional<TermIndexRepositoryCursor> findByRepositoryId(Long repositoryId);
+
+  @Query(
+      """
+      select cursor
+      from TermIndexRepositoryCursor cursor
+      join fetch cursor.repository repository
+      left join fetch cursor.currentRefreshRun
+      where (:repositoryIdsEmpty = true or repository.id in :repositoryIds)
+      order by repository.name asc
+      """)
+  List<TermIndexRepositoryCursor> findForExplorer(
+      @Param("repositoryIdsEmpty") boolean repositoryIdsEmpty,
+      @Param("repositoryIds") Collection<Long> repositoryIds);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(

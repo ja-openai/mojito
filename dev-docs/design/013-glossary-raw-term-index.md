@@ -125,6 +125,17 @@ after another run has taken over.
 - writes lexical occurrences for title-case, uppercase, and camel-case signals
 - recomputes entry occurrence and repository counts for affected entries
 
+`/settings/system/glossary-term-index` exposes the admin refresh/run view on top
+of that foundation, and `/settings/system/glossary-term-index/terms` exposes the
+raw term review view. Together they can start an asynchronous repository-scoped
+refresh from an explicit refresh modal, inspect repository cursors and a capped
+recent-run list, search a virtualized raw entry list with a Workbench-style
+result limit, and drill into a capped set of matched source occurrences. These
+surfaces are for extractor investigation only; they do not create or link
+glossary terms. Raw entry search uses the same hybrid async shape as Workbench:
+try the request synchronously first, return a polling token if it crosses the
+configured threshold, and store the eventual result briefly in blob storage.
+
 This intentionally stops before glossary-specific assignment. The next layer
 should derive glossary suggestions from the raw index and existing glossary
 terms, then persist accepted mappings in `glossary_term_index_link`.

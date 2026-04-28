@@ -94,6 +94,38 @@ export function AdminSettingsPage() {
             </div>
           </section>
 
+          <section className="settings-card" aria-labelledby="settings-glossaries">
+            <div className="settings-card__header">
+              <h2 id="settings-glossaries">Glossaries</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/glossary-term-index');
+                }}
+              >
+                <div className="settings-directory__title">Term index runs</div>
+                <div className="settings-directory__description">
+                  Refresh the raw term index and inspect repository cursor status.
+                </div>
+              </button>
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/glossary-term-index/terms');
+                }}
+              >
+                <div className="settings-directory__title">Raw term review</div>
+                <div className="settings-directory__description">
+                  Search indexed raw terms and inspect source text unit examples.
+                </div>
+              </button>
+            </div>
+          </section>
+
           <section className="settings-card" aria-labelledby="settings-user-management">
             <div className="settings-card__header">
               <h2 id="settings-user-management">User management</h2>

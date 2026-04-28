@@ -38,6 +38,10 @@ import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
 import { AdminTeamPoolsPage } from './page/settings/AdminTeamPoolsPage';
 import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
 import { AdminTemporaryBulkTranslationAcceptPage } from './page/settings/AdminTemporaryBulkTranslationAcceptPage';
+import {
+  AdminTermIndexRunsPage,
+  AdminTermIndexTermsPage,
+} from './page/settings/AdminTermIndexExplorerPage';
 import { AdminTranslationIncidentsPage } from './page/settings/AdminTranslationIncidentsPage';
 import { AdminUserBatchPage } from './page/settings/AdminUserBatchPage';
 import { AdminUserDetailPage } from './page/settings/AdminUserDetailPage';
@@ -182,6 +186,22 @@ export function App() {
             <Route path="/settings/system/review-features" element={<AdminReviewFeaturesPage />} />
             <Route path="/settings/admin/glossaries" element={<LegacyGlossariesRedirect />} />
             <Route path="/settings/system/glossaries" element={<LegacyGlossariesRedirect />} />
+            <Route
+              path="/settings/admin/glossary-term-index"
+              element={<AdminTermIndexRunsPage />}
+            />
+            <Route
+              path="/settings/system/glossary-term-index"
+              element={<AdminTermIndexRunsPage />}
+            />
+            <Route
+              path="/settings/admin/glossary-term-index/terms"
+              element={<AdminTermIndexTermsPage />}
+            />
+            <Route
+              path="/settings/system/glossary-term-index/terms"
+              element={<AdminTermIndexTermsPage />}
+            />
             <Route
               path="/settings/admin/review-automations"
               element={<AdminReviewAutomationsPage />}
