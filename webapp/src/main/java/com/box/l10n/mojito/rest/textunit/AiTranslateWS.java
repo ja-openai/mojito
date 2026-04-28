@@ -1,10 +1,14 @@
 package com.box.l10n.mojito.rest.textunit;
 
+import com.box.l10n.mojito.entity.AiTranslateRun;
 import com.box.l10n.mojito.entity.PollableTask;
+import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
+import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateConfigurationProperties;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateDefaults;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateRunService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService.AiTranslateInput;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
@@ -37,6 +41,10 @@ public class AiTranslateWS {
 
   @Autowired StructuredBlobStorage structuredBlobStorage;
 
+  @Autowired AiTranslateRunService aiTranslateRunService;
+
+  @Autowired AuditorAwareImpl auditorAwareImpl;
+
   @RequestMapping(method = RequestMethod.GET, value = "/api/proto-ai-translate/config")
   @ResponseStatus(HttpStatus.OK)
   public ProtoAiTranslateConfigResponse getConfig() {
@@ -55,34 +63,69 @@ public class AiTranslateWS {
   public ProtoAiTranslateResponse aiTranslate(
       @RequestBody ProtoAiTranslateRequest protoAiTranslateRequest) {
 
-    PollableFuture<Void> pollableFuture =
-        aiTranslateService.aiTranslateAsync(
-            new AiTranslateInput(
-                protoAiTranslateRequest.repositoryName(),
-                protoAiTranslateRequest.targetBcp47tags(),
-                protoAiTranslateRequest.sourceTextMaxCountPerLocale(),
-                protoAiTranslateRequest.tmTextUnitIds(),
-                protoAiTranslateRequest.useBatch(),
-                protoAiTranslateRequest.useModel(),
-                protoAiTranslateRequest.promptSuffix(),
-                protoAiTranslateRequest.relatedStringsType(),
-                protoAiTranslateRequest.translateType(),
-                protoAiTranslateRequest.statusFilter(),
-                protoAiTranslateRequest.importStatus(),
-                protoAiTranslateRequest.reasoningEffort(),
-                protoAiTranslateRequest.textVerbosity(),
-                protoAiTranslateRequest.glossaryName(),
-                protoAiTranslateRequest.glossaryTermSource(),
-                protoAiTranslateRequest.glossaryTermSourceDescription(),
-                protoAiTranslateRequest.glossaryTermTarget(),
-                protoAiTranslateRequest.glossaryTermTargetDescription(),
-                protoAiTranslateRequest.glossaryTermDoNotTranslate(),
-                protoAiTranslateRequest.glossaryTermCaseSensitive(),
-                protoAiTranslateRequest.glossaryOnlyMatchedTextUnits(),
-                protoAiTranslateRequest.dryRun(),
-                protoAiTranslateRequest.timeoutSeconds()));
+    AiTranslateInput aiTranslateInput = toAiTranslateInput(protoAiTranslateRequest);
+    PollableFuture<Void> pollableFuture = aiTranslateService.aiTranslateAsync(aiTranslateInput);
+    PollableTask pollableTask = pollableFuture.getPollableTask();
+    recordManualRun(protoAiTranslateRequest, pollableTask);
 
-    return new ProtoAiTranslateResponse(pollableFuture.getPollableTask());
+    return new ProtoAiTranslateResponse(pollableTask);
+  }
+
+  private AiTranslateInput toAiTranslateInput(ProtoAiTranslateRequest protoAiTranslateRequest) {
+    return new AiTranslateInput(
+        protoAiTranslateRequest.repositoryName(),
+        protoAiTranslateRequest.targetBcp47tags(),
+        protoAiTranslateRequest.sourceTextMaxCountPerLocale(),
+        protoAiTranslateRequest.tmTextUnitIds(),
+        protoAiTranslateRequest.useBatch(),
+        protoAiTranslateRequest.useModel(),
+        protoAiTranslateRequest.promptSuffix(),
+        protoAiTranslateRequest.relatedStringsType(),
+        protoAiTranslateRequest.translateType(),
+        protoAiTranslateRequest.statusFilter(),
+        protoAiTranslateRequest.importStatus(),
+        protoAiTranslateRequest.reasoningEffort(),
+        protoAiTranslateRequest.textVerbosity(),
+        protoAiTranslateRequest.glossaryName(),
+        protoAiTranslateRequest.glossaryTermSource(),
+        protoAiTranslateRequest.glossaryTermSourceDescription(),
+        protoAiTranslateRequest.glossaryTermTarget(),
+        protoAiTranslateRequest.glossaryTermTargetDescription(),
+        protoAiTranslateRequest.glossaryTermDoNotTranslate(),
+        protoAiTranslateRequest.glossaryTermCaseSensitive(),
+        protoAiTranslateRequest.glossaryOnlyMatchedTextUnits(),
+        protoAiTranslateRequest.dryRun(),
+        protoAiTranslateRequest.timeoutSeconds());
+  }
+
+  private void recordManualRun(
+      ProtoAiTranslateRequest protoAiTranslateRequest, PollableTask pollableTask) {
+    Repository repository =
+        repositoryRepository.findByName(protoAiTranslateRequest.repositoryName());
+    if (repository == null || Boolean.TRUE.equals(repository.getDeleted())) {
+      return;
+    }
+
+    aiTranslateRunService.createScheduledRun(
+        AiTranslateRun.TriggerSource.MANUAL,
+        repository,
+        auditorAwareImpl.getCurrentAuditor().map(user -> user.getId()).orElse(null),
+        pollableTask,
+        getModel(protoAiTranslateRequest),
+        getValueOrDefault(
+            protoAiTranslateRequest.translateType(), AiTranslateDefaults.TRANSLATE_TYPE),
+        getValueOrDefault(
+            protoAiTranslateRequest.relatedStringsType(), AiTranslateDefaults.RELATED_STRINGS_TYPE),
+        protoAiTranslateRequest.sourceTextMaxCountPerLocale());
+  }
+
+  private String getModel(ProtoAiTranslateRequest protoAiTranslateRequest) {
+    return getValueOrDefault(
+        protoAiTranslateRequest.useModel(), aiTranslateConfigurationProperties.getModelName());
+  }
+
+  private String getValueOrDefault(String value, String defaultValue) {
+    return value == null || value.isBlank() ? defaultValue : value;
   }
 
   public record ProtoAiTranslateRequest(

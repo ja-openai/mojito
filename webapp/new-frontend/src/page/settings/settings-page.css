@@ -459,6 +459,18 @@
   color: var(--color-text);
 }
 
+.settings-table__expanded-row > td {
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-border));
+}
+
+.settings-table-wrapper--nested {
+  margin: var(--space-1) 0;
+}
+
+.settings-table--nested {
+  font-size: var(--font-size-xs);
+}
+
 .settings-table__link {
   color: var(--color-accent);
   text-decoration: none;
@@ -467,6 +479,34 @@
 .settings-table__link:hover,
 .settings-table__link:focus-visible {
   text-decoration: underline;
+}
+
+.settings-inline-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.settings-inline-links a,
+.settings-table a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.settings-table-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.settings-table-button:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  text-decoration: none;
 }
 
 @media (min-width: 48rem) {

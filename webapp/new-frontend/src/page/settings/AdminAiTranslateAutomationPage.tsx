@@ -1,17 +1,24 @@
 import './settings-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
 
 import {
   type ApiAiTranslateAutomationConfig,
   type ApiAiTranslateAutomationRun,
+  type ApiAiTranslateLineageAttempt,
   fetchAiTranslateAutomationConfig,
   fetchAiTranslateAutomationRuns,
+  fetchAiTranslateLineageAttempts,
   runAiTranslateAutomationNow,
   updateAiTranslateAutomationConfig,
 } from '../../api/ai-translate-automation';
+import {
+  buildAiTranslateAttemptDetailsUrl,
+  buildAiTranslateAttemptPayloadUrl,
+} from '../../api/text-units';
+import { JsonPayloadModal, type JsonPayloadModalItem } from '../../components/JsonPayloadModal';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useUser } from '../../components/RequireUser';
@@ -29,6 +36,7 @@ const CRON_PRESETS = [
 const RECENT_RUN_LIMIT_PRESETS = [20, 50, 100];
 const DEFAULT_RECENT_RUN_LIMIT = 20;
 const CUSTOM_RECENT_RUN_LIMIT_INITIAL_VALUE = 50;
+const RUN_LINEAGE_LIMIT = 500;
 
 export function AdminAiTranslateAutomationPage() {
   const user = useUser();
@@ -42,6 +50,7 @@ export function AdminAiTranslateAutomationPage() {
   const [automationCronExpressionDraft, setAutomationCronExpressionDraft] = useState('');
   const [runHistoryRepositoryIds, setRunHistoryRepositoryIds] = useState<number[]>([]);
   const [runHistoryLimit, setRunHistoryLimit] = useState(DEFAULT_RECENT_RUN_LIMIT);
+  const [expandedRunId, setExpandedRunId] = useState<number | null>(null);
   const [hasInitializedRunHistoryRepositories, setHasInitializedRunHistoryRepositories] =
     useState(false);
 
@@ -61,6 +70,18 @@ export function AdminAiTranslateAutomationPage() {
     staleTime: 10_000,
     enabled: isAdmin && runHistoryRepositoryIds.length > 0,
   });
+  const expandedRun = automationRunsQuery.data?.find((run) => run.id === expandedRunId) ?? null;
+  const expandedRunPollableTaskId = expandedRun?.pollableTaskId ?? null;
+  const lineageAttemptsQuery = useQuery<ApiAiTranslateLineageAttempt[]>({
+    queryKey: ['ai-translate-lineage-attempts', expandedRunPollableTaskId],
+    queryFn: () =>
+      fetchAiTranslateLineageAttempts({
+        pollableTaskIds: expandedRunPollableTaskId == null ? [] : [expandedRunPollableTaskId],
+        limit: RUN_LINEAGE_LIMIT,
+      }),
+    staleTime: 10_000,
+    enabled: isAdmin && expandedRunPollableTaskId != null,
+  });
 
   const saveAutomationMutation = useMutation({
     mutationFn: updateAiTranslateAutomationConfig,
@@ -72,6 +93,7 @@ export function AdminAiTranslateAutomationPage() {
       setAutomationSourceTextMaxDraft(String(nextConfig.sourceTextMaxCountPerLocale));
       setAutomationCronExpressionDraft(nextConfig.cronExpression ?? '');
       await queryClient.invalidateQueries({ queryKey: ['ai-translate-automation-runs'] });
+      await queryClient.invalidateQueries({ queryKey: ['ai-translate-lineage-attempts'] });
     },
   });
 
@@ -79,6 +101,7 @@ export function AdminAiTranslateAutomationPage() {
     mutationFn: runAiTranslateAutomationNow,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['ai-translate-automation-runs'] });
+      await queryClient.invalidateQueries({ queryKey: ['ai-translate-lineage-attempts'] });
     },
   });
 
@@ -403,26 +426,60 @@ export function AdminAiTranslateAutomationPage() {
                   <th>Batch</th>
                   <th>Tokens</th>
                   <th>Est. cost</th>
+                  <th>Lineage</th>
                 </tr>
               </thead>
               <tbody>
                 {automationRunsQuery.data?.length ? (
-                  automationRunsQuery.data.map((run) => (
-                    <tr key={run.id}>
-                      <td>{formatDateTime(run.createdAt)}</td>
-                      <td>{run.triggerSource.toLowerCase()}</td>
-                      <td>{run.repositoryName}</td>
-                      <td>{formatStatus(run.status)}</td>
-                      <td>{run.pollableTaskId ?? '—'}</td>
-                      <td>{run.model}</td>
-                      <td>{run.sourceTextMaxCountPerLocale}</td>
-                      <td>{formatTotalTokens(run)}</td>
-                      <td>{formatEstimatedCostUsd(run.estimatedCostUsd)}</td>
-                    </tr>
-                  ))
+                  automationRunsQuery.data.map((run) => {
+                    const isExpanded = expandedRunId === run.id;
+                    return (
+                      <Fragment key={run.id}>
+                        <tr>
+                          <td>{formatDateTime(run.createdAt)}</td>
+                          <td>{run.triggerSource.toLowerCase()}</td>
+                          <td>{run.repositoryName}</td>
+                          <td>{formatStatus(run.status)}</td>
+                          <td>{run.pollableTaskId ?? '—'}</td>
+                          <td>{run.model}</td>
+                          <td>{run.sourceTextMaxCountPerLocale}</td>
+                          <td>{formatTotalTokens(run)}</td>
+                          <td>{formatEstimatedCostUsd(run.estimatedCostUsd)}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="settings-table-button"
+                              onClick={() => setExpandedRunId(isExpanded ? null : run.id)}
+                              disabled={run.pollableTaskId == null}
+                              aria-expanded={isExpanded}
+                            >
+                              {isExpanded ? 'Hide' : 'Show'}
+                            </button>
+                          </td>
+                        </tr>
+                        {isExpanded ? (
+                          <tr className="settings-table__expanded-row">
+                            <td colSpan={10}>
+                              <RunLineageDrilldown
+                                attempts={lineageAttemptsQuery.data ?? []}
+                                isLoading={lineageAttemptsQuery.isLoading}
+                                errorMessage={
+                                  lineageAttemptsQuery.error instanceof Error
+                                    ? lineageAttemptsQuery.error.message
+                                    : lineageAttemptsQuery.error
+                                      ? 'Failed to load AI translate lineage.'
+                                      : null
+                                }
+                              />
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={9}>
+                    <td colSpan={10}>
                       {runHistoryRepositoryIds.length === 0
                         ? 'No repositories selected.'
                         : automationRunsQuery.isLoading
@@ -440,6 +497,139 @@ export function AdminAiTranslateAutomationPage() {
   );
 }
 
+function RunLineageDrilldown({
+  attempts,
+  isLoading,
+  errorMessage,
+}: {
+  attempts: ApiAiTranslateLineageAttempt[];
+  isLoading: boolean;
+  errorMessage: string | null;
+}) {
+  const [jsonPayload, setJsonPayload] = useState<{
+    items: JsonPayloadModalItem[];
+    activeItemKey: string;
+  } | null>(null);
+
+  if (errorMessage) {
+    return <div className="settings-hint is-error">{errorMessage}</div>;
+  }
+
+  if (isLoading) {
+    return <div className="settings-hint">Loading lineage…</div>;
+  }
+
+  if (!attempts.length) {
+    return <div className="settings-hint">No lineage recorded for this run.</div>;
+  }
+
+  return (
+    <>
+      <div className="settings-table-wrapper settings-table-wrapper--nested">
+        <table className="settings-table settings-table--nested">
+          <thead>
+            <tr>
+              <th>Created</th>
+              <th>Locale</th>
+              <th>Text unit</th>
+              <th>Variant</th>
+              <th>Status</th>
+              <th>Model</th>
+              <th>Group</th>
+              <th>JSON</th>
+            </tr>
+          </thead>
+          <tbody>
+            {attempts.map((attempt) => {
+              const jsonItems = getRunLineageJsonItems(attempt);
+              return (
+                <tr key={attempt.id}>
+                  <td>{formatDateTime(attempt.createdDate)}</td>
+                  <td>{attempt.localeBcp47Tag}</td>
+                  <td>
+                    <Link to={getTextUnitLink(attempt)}>{formatTextUnitLabel(attempt)}</Link>
+                  </td>
+                  <td>{attempt.tmTextUnitVariantId ?? '—'}</td>
+                  <td>{formatStatus(attempt.status ?? 'UNKNOWN')}</td>
+                  <td>{attempt.model ?? '—'}</td>
+                  <td>{attempt.requestGroupId ?? '—'}</td>
+                  <td>
+                    <div className="settings-inline-links">
+                      {jsonItems.map((item) => (
+                        <button
+                          key={item.key}
+                          type="button"
+                          className="settings-table-button"
+                          onClick={() =>
+                            setJsonPayload({ items: jsonItems, activeItemKey: item.key })
+                          }
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <JsonPayloadModal
+        open={Boolean(jsonPayload)}
+        items={jsonPayload?.items ?? []}
+        activeItemKey={jsonPayload?.activeItemKey ?? null}
+        onActiveItemKeyChange={(activeItemKey) =>
+          setJsonPayload((current) => (current ? { ...current, activeItemKey } : current))
+        }
+        onClose={() => setJsonPayload(null)}
+      />
+    </>
+  );
+}
+
+function getRunLineageJsonItems(attempt: ApiAiTranslateLineageAttempt): JsonPayloadModalItem[] {
+  const items: JsonPayloadModalItem[] = [
+    {
+      key: 'details',
+      label: 'Details',
+      title: 'AI Translate details JSON',
+      url: buildAiTranslateAttemptDetailsUrl(
+        attempt.tmTextUnitId,
+        attempt.id,
+        attempt.localeBcp47Tag,
+      ),
+    },
+  ];
+  if (attempt.hasRequestPayload) {
+    items.push({
+      key: 'request',
+      label: 'Request',
+      title: 'AI Translate request JSON',
+      url: buildAiTranslateAttemptPayloadUrl(
+        attempt.tmTextUnitId,
+        attempt.id,
+        attempt.localeBcp47Tag,
+        'request',
+      ),
+    });
+  }
+  if (attempt.hasResponsePayload) {
+    items.push({
+      key: 'response',
+      label: 'Response',
+      title: 'AI Translate response JSON',
+      url: buildAiTranslateAttemptPayloadUrl(
+        attempt.tmTextUnitId,
+        attempt.id,
+        attempt.localeBcp47Tag,
+        'response',
+      ),
+    });
+  }
+  return items;
+}
+
 function formatDateTime(value: string | null) {
   if (!value) {
     return '—';
@@ -453,6 +643,15 @@ function formatDateTime(value: string | null) {
 
 function formatStatus(value: string) {
   return value.toLowerCase().split('_').join(' ');
+}
+
+function getTextUnitLink(attempt: ApiAiTranslateLineageAttempt) {
+  return `/text-units/${attempt.tmTextUnitId}?locale=${encodeURIComponent(attempt.localeBcp47Tag)}`;
+}
+
+function formatTextUnitLabel(attempt: ApiAiTranslateLineageAttempt) {
+  const name = attempt.tmTextUnitName?.trim();
+  return name ? name : `#${attempt.tmTextUnitId}`;
 }
 
 function formatTotalTokens(run: ApiAiTranslateAutomationRun) {

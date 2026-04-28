@@ -34,7 +34,12 @@ import {
   fetchTeams,
   fetchTeamTranslators,
 } from '../../api/teams';
-import { type ApiTextUnitHistoryItem, fetchTextUnitHistory } from '../../api/text-units';
+import {
+  type ApiAiTranslateTextUnitAttempt,
+  type ApiTextUnitHistoryItem,
+  fetchAiTranslateTextUnitAttempts,
+  fetchTextUnitHistory,
+} from '../../api/text-units';
 import { type ApiUser, fetchAllUsersAdmin } from '../../api/users';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
@@ -64,6 +69,7 @@ import {
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
 import {
   formatLocalDate as formatDate,
   formatLocalDateTime as formatDateTime,
@@ -1545,7 +1551,7 @@ function DetailPane({
 
   const historyQuery = useQuery({
     queryKey: ['review-project-text-unit-history', workbenchTextUnitId, localeTag],
-    enabled: workbenchTextUnitId != null && Boolean(localeTag),
+    enabled: workbenchTextUnitId != null && Boolean(localeTag) && !isHistoryCollapsed,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     queryFn: () => {
@@ -1556,48 +1562,66 @@ function DetailPane({
     },
   });
 
+  const aiTranslateAttemptsQuery = useQuery({
+    queryKey: ['review-project-text-unit-ai-translate-attempts', workbenchTextUnitId, localeTag],
+    enabled: workbenchTextUnitId != null && Boolean(localeTag) && !isHistoryCollapsed,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    queryFn: () => {
+      if (workbenchTextUnitId == null || !localeTag) {
+        return Promise.resolve([] as ApiAiTranslateTextUnitAttempt[]);
+      }
+      return fetchAiTranslateTextUnitAttempts(workbenchTextUnitId, localeTag);
+    },
+  });
+
+  const aiTranslateTimelineData = useMemo<
+    ReturnType<typeof buildAiTranslateAttemptTimelineData>
+  >(() => {
+    if (workbenchTextUnitId == null || !localeTag) {
+      return { byVariantId: new Map(), unlinked: [] };
+    }
+    return buildAiTranslateAttemptTimelineData(
+      aiTranslateAttemptsQuery.data ?? [],
+      workbenchTextUnitId,
+      localeTag,
+    );
+  }, [aiTranslateAttemptsQuery.data, localeTag, workbenchTextUnitId]);
+
   const historyErrorMessage =
     historyQuery.error instanceof Error ? historyQuery.error.message : 'Unable to load history.';
 
   const historyRows = useMemo<TextUnitHistoryTimelineEntry[]>(() => {
-    return [...(historyQuery.data ?? [])]
-      .sort((a, b) => {
-        const aTimestamp =
-          (a.id === decisionVariantId ? Date.parse(decision?.lastModifiedDate ?? '') || 0 : 0) ||
-          Date.parse(a.createdDate ?? '') ||
-          0;
-        const bTimestamp =
-          (b.id === decisionVariantId ? Date.parse(decision?.lastModifiedDate ?? '') || 0 : 0) ||
-          Date.parse(b.createdDate ?? '') ||
-          0;
-        if (bTimestamp !== aTimestamp) {
-          return bTimestamp - aTimestamp;
-        }
-        return (b.id ?? 0) - (a.id ?? 0);
-      })
-      .slice(0, 8)
-      .map((item) => {
-        const isAcceptedItem = item.id === decisionVariantId;
-        const statusKey =
-          item.includedInLocalizedFile === false ? 'REJECTED' : (item.status ?? null);
-        const statusLabel = statusKey != null ? statusKeyToLabel(statusKey) : '-';
-        const sourceTmTextUnitId = item.leveraging?.sourceTmTextUnitId;
-        const sourceTmTextUnitVariantId = item.leveraging?.sourceTmTextUnitVariantId;
-        const leveragingType = item.leveraging?.leveragingType?.trim() || null;
-        const isLeveraged =
-          typeof sourceTmTextUnitId === 'number' && typeof sourceTmTextUnitVariantId === 'number';
-        const userName =
-          (isAcceptedItem
-            ? decision?.lastModifiedByUsername
-            : item.createdByUser?.username
-          )?.trim() ||
-          item.createdByUser?.username?.trim() ||
-          'Unknown user';
-        const displayDate =
-          isAcceptedItem && decision?.lastModifiedDate
-            ? formatDateTime(decision.lastModifiedDate)
-            : formatDateTime(item.createdDate);
-        return {
+    const historyEntries = [...(historyQuery.data ?? [])].map((item) => {
+      const timestamp =
+        (item.id === decisionVariantId ? Date.parse(decision?.lastModifiedDate ?? '') || 0 : 0) ||
+        Date.parse(item.createdDate ?? '') ||
+        0;
+      const isAcceptedItem = item.id === decisionVariantId;
+      const statusKey = item.includedInLocalizedFile === false ? 'REJECTED' : (item.status ?? null);
+      const statusLabel = statusKey != null ? statusKeyToLabel(statusKey) : '-';
+      const sourceTmTextUnitId = item.leveraging?.sourceTmTextUnitId;
+      const sourceTmTextUnitVariantId = item.leveraging?.sourceTmTextUnitVariantId;
+      const leveragingType = item.leveraging?.leveragingType?.trim() || null;
+      const isLeveraged =
+        typeof sourceTmTextUnitId === 'number' && typeof sourceTmTextUnitVariantId === 'number';
+      const aiTranslateAttempts = aiTranslateTimelineData.byVariantId.get(item.id) ?? [];
+      const userName =
+        (isAcceptedItem
+          ? decision?.lastModifiedByUsername
+          : item.createdByUser?.username
+        )?.trim() ||
+        item.createdByUser?.username?.trim() ||
+        'Unknown user';
+      const displayDate =
+        isAcceptedItem && decision?.lastModifiedDate
+          ? formatDateTime(decision.lastModifiedDate)
+          : formatDateTime(item.createdDate);
+
+      return {
+        timestamp,
+        tieBreaker: item.id ?? 0,
+        row: {
           key: String(item.id),
           variantId: String(item.id),
           userName,
@@ -1608,7 +1632,9 @@ function DetailPane({
             ...(item.id === baselineVariant?.id ? ['Baseline'] : []),
             ...(item.id === decisionVariantId ? ['Accepted'] : []),
             ...(isLeveraged ? ['Leveraged'] : []),
+            ...(aiTranslateAttempts.length > 0 ? ['AI Translate'] : []),
           ],
+          aiTranslateAttempts,
           sourceLink: isLeveraged
             ? {
                 label: `Source variant #${sourceTmTextUnitVariantId}`,
@@ -1634,9 +1660,39 @@ function DetailPane({
             severity: comment.severity ?? '-',
             content: comment.content ?? '-',
           })),
-        };
-      });
+        },
+      };
+    });
+
+    const unlinkedAiTranslateEntries = aiTranslateTimelineData.unlinked.map((attempt) => ({
+      timestamp: Date.parse(attempt.createdDate ?? '') || 0,
+      tieBreaker: 0,
+      row: {
+        key: `ai-translate-${attempt.key}`,
+        title: 'AI Translate attempt',
+        userName: 'AI Translate',
+        translation: '<no imported translation>',
+        date: formatDateTime(attempt.createdDate),
+        status: attempt.status,
+        badges: ['AI Translate'],
+        aiTranslateAttempts: [attempt],
+        comments: [],
+      },
+    }));
+
+    return [...historyEntries, ...unlinkedAiTranslateEntries]
+      .sort((a, b) => {
+        const aTimestamp = a.timestamp;
+        const bTimestamp = b.timestamp;
+        if (bTimestamp !== aTimestamp) {
+          return bTimestamp - aTimestamp;
+        }
+        return b.tieBreaker - a.tieBreaker;
+      })
+      .slice(0, 8)
+      .map((entry) => entry.row);
   }, [
+    aiTranslateTimelineData,
     baselineVariant?.id,
     decision?.lastModifiedByUsername,
     decision?.lastModifiedDate,

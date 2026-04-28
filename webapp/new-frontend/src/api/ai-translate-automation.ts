@@ -31,8 +31,36 @@ export type ApiAiTranslateAutomationRun = {
   estimatedCostUsd: string | null;
 };
 
+export type ApiAiTranslateLineageAttempt = {
+  id: number;
+  createdDate: string | null;
+  lastModifiedDate: string | null;
+  tmTextUnitId: number;
+  tmTextUnitName: string | null;
+  tmTextUnitVariantId: number | null;
+  localeBcp47Tag: string;
+  repositoryId: number | null;
+  repositoryName: string | null;
+  pollableTaskId: number | null;
+  aiTranslateRunId: number | null;
+  requestGroupId: string | null;
+  translateType: string | null;
+  model: string | null;
+  status: string | null;
+  completionId: string | null;
+  hasRequestPayload: boolean;
+  hasResponsePayload: boolean;
+  errorMessage: string | null;
+};
+
 export type FetchAiTranslateAutomationRunsParams = {
   repositoryIds?: number[];
+  limit?: number;
+};
+
+export type FetchAiTranslateLineageAttemptsParams = {
+  repositoryIds?: number[];
+  pollableTaskIds?: number[];
   limit?: number;
 };
 
@@ -109,4 +137,34 @@ export const fetchAiTranslateAutomationRuns = async ({
   }
 
   return (await response.json()) as ApiAiTranslateAutomationRun[];
+};
+
+export const fetchAiTranslateLineageAttempts = async ({
+  repositoryIds = [],
+  pollableTaskIds = [],
+  limit,
+}: FetchAiTranslateLineageAttemptsParams = {}): Promise<ApiAiTranslateLineageAttempt[]> => {
+  const params = new URLSearchParams();
+  for (const repositoryId of repositoryIds) {
+    params.append('repositoryIds', String(repositoryId));
+  }
+  for (const pollableTaskId of pollableTaskIds) {
+    params.append('pollableTaskIds', String(pollableTaskId));
+  }
+  if (typeof limit === 'number') {
+    params.set('limit', String(limit));
+  }
+
+  const query = params.toString();
+  const response = await fetch(`/api/ai-translate/lineage${query ? `?${query}` : ''}`, {
+    method: 'GET',
+    credentials: 'same-origin',
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load AI translate lineage');
+  }
+
+  return (await response.json()) as ApiAiTranslateLineageAttempt[];
 };

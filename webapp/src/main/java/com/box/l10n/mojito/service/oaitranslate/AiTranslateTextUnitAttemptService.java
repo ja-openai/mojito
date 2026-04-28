@@ -24,12 +24,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.io.IOException;
+import java.time.ZonedDateTime;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +45,8 @@ public class AiTranslateTextUnitAttemptService {
   private final AiTranslateRunRepository aiTranslateRunRepository;
   private final StructuredBlobStorage structuredBlobStorage;
   private final ObjectMapper objectMapper;
+
+  public static final int DEFAULT_RECENT_LINEAGE_LIMIT = 50;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -67,6 +72,41 @@ public class AiTranslateTextUnitAttemptService {
   public record NoBatchImportedVariant(
       String requestGroupId, Long tmTextUnitId, Long tmTextUnitVariantId) {}
 
+  public record TextUnitAttemptSummary(
+      Long id,
+      ZonedDateTime createdDate,
+      ZonedDateTime lastModifiedDate,
+      Long tmTextUnitVariantId,
+      String requestGroupId,
+      String translateType,
+      String model,
+      String status,
+      String completionId,
+      boolean hasRequestPayload,
+      boolean hasResponsePayload,
+      String errorMessage) {}
+
+  public record TextUnitAttemptLineageSummary(
+      Long id,
+      ZonedDateTime createdDate,
+      ZonedDateTime lastModifiedDate,
+      Long tmTextUnitId,
+      String tmTextUnitName,
+      Long tmTextUnitVariantId,
+      String localeBcp47Tag,
+      Long repositoryId,
+      String repositoryName,
+      Long pollableTaskId,
+      Long aiTranslateRunId,
+      String requestGroupId,
+      String translateType,
+      String model,
+      String status,
+      String completionId,
+      boolean hasRequestPayload,
+      boolean hasResponsePayload,
+      String errorMessage) {}
+
   public String putPayloadBlob(
       Long pollableTaskId, String requestGroupId, String fileName, String content) {
     String blobName = "%d/%s/%s".formatted(pollableTaskId, requestGroupId, fileName);
@@ -76,6 +116,43 @@ public class AiTranslateTextUnitAttemptService {
         redactImageDataUrls(content, objectMapper),
         Retention.PERMANENT);
     return blobName;
+  }
+
+  @Transactional(readOnly = true)
+  public List<TextUnitAttemptSummary> getTextUnitAttempts(Long tmTextUnitId, Long localeId) {
+    return aiTranslateTextUnitAttemptRepository
+        .findByTmTextUnit_IdAndLocale_IdOrderByCreatedDateDesc(tmTextUnitId, localeId)
+        .stream()
+        .map(this::toTextUnitAttemptSummary)
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<TextUnitAttemptSummary> getTextUnitAttempt(
+      Long tmTextUnitId, Long localeId, Long attemptId) {
+    return aiTranslateTextUnitAttemptRepository
+        .findByIdAndTmTextUnit_IdAndLocale_Id(attemptId, tmTextUnitId, localeId)
+        .map(this::toTextUnitAttemptSummary);
+  }
+
+  @Transactional(readOnly = true)
+  public List<TextUnitAttemptLineageSummary> getRecentLineage(
+      List<Long> repositoryIds, List<Long> pollableTaskIds, int limit) {
+    return getRecentLineageRows(repositoryIds, pollableTaskIds, limit).stream()
+        .map(this::toTextUnitAttemptLineageSummary)
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<String> getRequestPayload(Long tmTextUnitId, Long localeId, Long attemptId) {
+    return getPayload(
+        tmTextUnitId, localeId, attemptId, AiTranslateTextUnitAttempt::getRequestPayloadBlobName);
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<String> getResponsePayload(Long tmTextUnitId, Long localeId, Long attemptId) {
+    return getPayload(
+        tmTextUnitId, localeId, attemptId, AiTranslateTextUnitAttempt::getResponsePayloadBlobName);
   }
 
   @Transactional
@@ -198,6 +275,77 @@ public class AiTranslateTextUnitAttemptService {
     attempt.setStatus(STATUS_REQUESTED);
     attempt.setRequestPayloadBlobName(request.requestPayloadBlobName());
     return attempt;
+  }
+
+  private TextUnitAttemptSummary toTextUnitAttemptSummary(AiTranslateTextUnitAttempt attempt) {
+    TMTextUnitVariant tmTextUnitVariant = attempt.getTmTextUnitVariant();
+    return new TextUnitAttemptSummary(
+        attempt.getId(),
+        attempt.getCreatedDate(),
+        attempt.getLastModifiedDate(),
+        tmTextUnitVariant == null ? null : tmTextUnitVariant.getId(),
+        attempt.getRequestGroupId(),
+        attempt.getTranslateType(),
+        attempt.getModel(),
+        attempt.getStatus(),
+        attempt.getCompletionId(),
+        hasPayload(attempt.getRequestPayloadBlobName()),
+        hasPayload(attempt.getResponsePayloadBlobName()),
+        attempt.getErrorMessage());
+  }
+
+  private TextUnitAttemptLineageSummary toTextUnitAttemptLineageSummary(
+      AiTranslateTextUnitAttemptLineageRow row) {
+    return new TextUnitAttemptLineageSummary(
+        row.id(),
+        row.createdDate(),
+        row.lastModifiedDate(),
+        row.tmTextUnitId(),
+        row.tmTextUnitName(),
+        row.tmTextUnitVariantId(),
+        row.localeBcp47Tag(),
+        row.repositoryId(),
+        row.repositoryName(),
+        row.pollableTaskId(),
+        row.aiTranslateRunId(),
+        row.requestGroupId(),
+        row.translateType(),
+        row.model(),
+        row.status(),
+        row.completionId(),
+        hasPayload(row.requestPayloadBlobName()),
+        hasPayload(row.responsePayloadBlobName()),
+        row.errorMessage());
+  }
+
+  private List<AiTranslateTextUnitAttemptLineageRow> getRecentLineageRows(
+      List<Long> repositoryIds, List<Long> pollableTaskIds, int limit) {
+    PageRequest pageRequest = PageRequest.of(0, limit);
+    if (pollableTaskIds != null && !pollableTaskIds.isEmpty()) {
+      return aiTranslateTextUnitAttemptRepository.findRecentLineageRowsByPollableTaskIds(
+          pollableTaskIds, pageRequest);
+    }
+    if (repositoryIds != null && !repositoryIds.isEmpty()) {
+      return aiTranslateTextUnitAttemptRepository.findRecentLineageRowsByRepositoryIds(
+          repositoryIds, pageRequest);
+    }
+    return aiTranslateTextUnitAttemptRepository.findRecentLineageRows(pageRequest);
+  }
+
+  private Optional<String> getPayload(
+      Long tmTextUnitId,
+      Long localeId,
+      Long attemptId,
+      Function<AiTranslateTextUnitAttempt, String> getBlobName) {
+    return aiTranslateTextUnitAttemptRepository
+        .findByIdAndTmTextUnit_IdAndLocale_Id(attemptId, tmTextUnitId, localeId)
+        .map(getBlobName)
+        .filter(blobName -> blobName != null && !blobName.isBlank())
+        .flatMap(blobName -> structuredBlobStorage.getString(AI_TRANSLATE_LINEAGE, blobName));
+  }
+
+  private boolean hasPayload(String blobName) {
+    return blobName != null && !blobName.isBlank();
   }
 
   private void updateRequestGroup(

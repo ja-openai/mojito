@@ -21,6 +21,11 @@ share those blob names through `request_group_id`, so the payload is not copied 
 Inline image data URLs are redacted before lineage payloads are written. Legacy batch mode continues
 to rely on its existing batch import blobs and does not write normalized lineage rows. The no-batch
 downloadable report keeps the lineage group id instead of embedding the raw provider request.
+The new frontend text-unit history timeline fetches these attempt rows separately and links to the
+scoped attempt summary plus redacted request/response payloads when a payload exists, including
+from review-project detail. The system AI Translate settings page also exposes lineage as a
+drill-down on recent runs so operators can check whether normalized rows were written even when a
+text-unit history row only has the legacy translation comment.
 
 P95 request latency by locale:
 

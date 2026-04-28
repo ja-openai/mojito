@@ -16,9 +16,11 @@ import {
   matchGlossaryTerms,
 } from '../../api/glossaries';
 import {
+  type ApiAiTranslateTextUnitAttempt,
   type ApiGitBlameWithUsage,
   type ApiTextUnitHistoryItem,
   deleteTextUnitCurrentVariant,
+  fetchAiTranslateTextUnitAttempts,
   fetchGitBlameWithUsages,
   fetchTextUnitHistory,
   saveTextUnit,
@@ -27,6 +29,7 @@ import {
   type TextUnitSearchRequest,
 } from '../../api/text-units';
 import { useUser } from '../../components/RequireUser';
+import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
 import {
   buildGlossaryContextMessage,
   filterSelfGlossaryMatches,
@@ -138,7 +141,7 @@ export function TextUnitDetailPage() {
 
   const historyQuery = useQuery({
     queryKey: ['text-unit-history', tmTextUnitId, localeTag],
-    enabled: tmTextUnitId !== null && Boolean(localeTag),
+    enabled: tmTextUnitId !== null && Boolean(localeTag) && !isHistoryCollapsed,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     queryFn: () => {
@@ -146,6 +149,19 @@ export function TextUnitDetailPage() {
         return Promise.resolve([] as ApiTextUnitHistoryItem[]);
       }
       return fetchTextUnitHistory(tmTextUnitId, localeTag);
+    },
+  });
+
+  const aiTranslateAttemptsQuery = useQuery({
+    queryKey: ['text-unit-ai-translate-attempts', tmTextUnitId, localeTag],
+    enabled: tmTextUnitId !== null && Boolean(localeTag) && !isHistoryCollapsed,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    queryFn: () => {
+      if (tmTextUnitId === null || !localeTag) {
+        return Promise.resolve([] as ApiAiTranslateTextUnitAttempt[]);
+      }
+      return fetchAiTranslateTextUnitAttempts(tmTextUnitId, localeTag);
     },
   });
 
@@ -451,6 +467,19 @@ export function TextUnitDetailPage() {
     });
   }, [historyQuery.data]);
 
+  const aiTranslateTimelineData = useMemo<
+    ReturnType<typeof buildAiTranslateAttemptTimelineData>
+  >(() => {
+    if (tmTextUnitId === null || !localeTag) {
+      return { byVariantId: new Map(), unlinked: [] };
+    }
+    return buildAiTranslateAttemptTimelineData(
+      aiTranslateAttemptsQuery.data ?? [],
+      tmTextUnitId,
+      localeTag,
+    );
+  }, [aiTranslateAttemptsQuery.data, localeTag, tmTextUnitId]);
+
   const gitBlame = useMemo(() => gitBlameQuery.data?.[0] ?? null, [gitBlameQuery.data]);
 
   const textUnitLocation = useMemo(() => {
@@ -529,7 +558,7 @@ export function TextUnitDetailPage() {
 
   const historyRows = useMemo<TextUnitDetailHistoryRow[]>(() => {
     const historyLocaleTag = localeTag ?? activeTextUnit?.targetLocale ?? null;
-    return sortedHistoryItems.map((item) => {
+    const historyEntries = sortedHistoryItems.map((item) => {
       const comments: TextUnitDetailHistoryComment[] = (item.tmTextUnitVariantComments ?? []).map(
         (comment, index) => ({
           key:
@@ -546,29 +575,57 @@ export function TextUnitDetailPage() {
       const leveragingType = item.leveraging?.leveragingType?.trim() || null;
       const isLeveraged =
         typeof sourceTmTextUnitId === 'number' && typeof sourceTmTextUnitVariantId === 'number';
+      const aiTranslateAttempts = aiTranslateTimelineData.byVariantId.get(item.id) ?? [];
+      const badges = [
+        ...(isLeveraged ? ['Leveraged'] : []),
+        ...(aiTranslateAttempts.length > 0 ? ['AI Translate'] : []),
+      ];
 
       return {
-        key: String(item.id),
-        variantId: String(item.id),
-        userName: formatValue(item.createdByUser?.username ?? 'Unknown user'),
-        translation: formatHistoryTranslation(item.content),
-        date: formatDateTime(item.createdDate),
-        status: formatValue(formatHistoryStatus(item.status, item.includedInLocalizedFile)),
-        comments,
-        badges: isLeveraged ? ['Leveraged'] : undefined,
-        sourceLink: isLeveraged
-          ? {
-              label: `Source variant #${sourceTmTextUnitVariantId}`,
-              to: {
-                pathname: `/text-units/${sourceTmTextUnitId}`,
-                search: historyLocaleTag ? `?locale=${encodeURIComponent(historyLocaleTag)}` : '',
-              },
-              title: leveragingType ?? 'Open leveraged source',
-            }
-          : null,
+        timestamp: safeDateValue(item.createdDate),
+        row: {
+          key: String(item.id),
+          variantId: String(item.id),
+          userName: formatValue(item.createdByUser?.username ?? 'Unknown user'),
+          translation: formatHistoryTranslation(item.content),
+          date: formatDateTime(item.createdDate),
+          status: formatValue(formatHistoryStatus(item.status, item.includedInLocalizedFile)),
+          comments,
+          aiTranslateAttempts,
+          badges: badges.length > 0 ? badges : undefined,
+          sourceLink: isLeveraged
+            ? {
+                label: `Source variant #${sourceTmTextUnitVariantId}`,
+                to: {
+                  pathname: `/text-units/${sourceTmTextUnitId}`,
+                  search: historyLocaleTag ? `?locale=${encodeURIComponent(historyLocaleTag)}` : '',
+                },
+                title: leveragingType ?? 'Open leveraged source',
+              }
+            : null,
+        },
       };
     });
-  }, [activeTextUnit?.targetLocale, localeTag, sortedHistoryItems]);
+
+    const unlinkedAiTranslateEntries = aiTranslateTimelineData.unlinked.map((attempt) => ({
+      timestamp: safeDateValue(attempt.createdDate),
+      row: {
+        key: `ai-translate-${attempt.key}`,
+        title: 'AI Translate attempt',
+        userName: 'AI Translate',
+        translation: '<no imported translation>',
+        date: formatDateTime(attempt.createdDate),
+        status: formatValue(attempt.status),
+        comments: [],
+        aiTranslateAttempts: [attempt],
+        badges: ['AI Translate'],
+      },
+    }));
+
+    return [...historyEntries, ...unlinkedAiTranslateEntries]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .map((entry) => entry.row);
+  }, [activeTextUnit?.targetLocale, aiTranslateTimelineData, localeTag, sortedHistoryItems]);
 
   const handleBack = () => {
     if (locationState?.from === '/workbench' && window.history.length > 1) {
@@ -591,7 +648,7 @@ export function TextUnitDetailPage() {
 
   const isEditorDirty = draftTarget !== baselineTarget || draftStatus !== baselineStatus;
   const hasCurrentTranslation = typeof activeTextUnit?.tmTextUnitVariantId === 'number';
-  const showDeletedHistoryEntry = !hasCurrentTranslation && historyRows.length > 1;
+  const showDeletedHistoryEntry = !hasCurrentTranslation && sortedHistoryItems.length > 1;
   const canDeleteCurrentTranslation =
     canEdit &&
     hasCurrentTranslation &&
@@ -1023,6 +1080,7 @@ export function TextUnitDetailPage() {
       historyMissingLocale={!localeTag}
       historyRows={historyRows}
       historyInitialDate={formatDateTime(textUnitQuery.data?.tmTextUnitCreatedDate)}
+      isHistoryCountReady={historyQuery.isSuccess}
       showDeletedHistoryEntry={showDeletedHistoryEntry}
       showValidationDialog={pendingValidationSave !== null}
       validationDialogTitle={pendingValidationSave?.title ?? ''}

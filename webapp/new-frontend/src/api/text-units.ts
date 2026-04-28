@@ -171,6 +171,21 @@ export type ApiTextUnitHistoryItem = {
   tmTextUnitVariantComments?: ApiTextUnitHistoryComment[] | null;
 };
 
+export type ApiAiTranslateTextUnitAttempt = {
+  id: number;
+  createdDate?: string | null;
+  lastModifiedDate?: string | null;
+  tmTextUnitVariantId?: number | null;
+  requestGroupId?: string | null;
+  translateType?: string | null;
+  model?: string | null;
+  status?: string | null;
+  completionId?: string | null;
+  hasRequestPayload?: boolean;
+  hasResponsePayload?: boolean;
+  errorMessage?: string | null;
+};
+
 export type ApiGitBlame = {
   authorName?: string | null;
   authorEmail?: string | null;
@@ -333,6 +348,38 @@ export async function fetchTextUnitHistory(
   return getJson<ApiTextUnitHistoryItem[]>(
     `/api/textunits/${tmTextUnitId}/history?${params.toString()}`,
   );
+}
+
+export async function fetchAiTranslateTextUnitAttempts(
+  tmTextUnitId: number,
+  bcp47Tag: string,
+): Promise<ApiAiTranslateTextUnitAttempt[]> {
+  const params = new URLSearchParams();
+  params.set('bcp47Tag', bcp47Tag);
+  return getJson<ApiAiTranslateTextUnitAttempt[]>(
+    `/api/textunits/${tmTextUnitId}/ai-translate-attempts?${params.toString()}`,
+  );
+}
+
+export function buildAiTranslateAttemptPayloadUrl(
+  tmTextUnitId: number,
+  attemptId: number,
+  bcp47Tag: string,
+  payloadKind: 'request' | 'response',
+): string {
+  const params = new URLSearchParams();
+  params.set('bcp47Tag', bcp47Tag);
+  return `/api/textunits/${tmTextUnitId}/ai-translate-attempts/${attemptId}/${payloadKind}?${params.toString()}`;
+}
+
+export function buildAiTranslateAttemptDetailsUrl(
+  tmTextUnitId: number,
+  attemptId: number,
+  bcp47Tag: string,
+): string {
+  const params = new URLSearchParams();
+  params.set('bcp47Tag', bcp47Tag);
+  return `/api/textunits/${tmTextUnitId}/ai-translate-attempts/${attemptId}?${params.toString()}`;
 }
 
 export async function fetchGitBlameWithUsages(

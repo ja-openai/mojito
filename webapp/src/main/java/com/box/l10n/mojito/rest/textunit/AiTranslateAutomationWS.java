@@ -4,6 +4,7 @@ import com.box.l10n.mojito.service.oaitranslate.AiTranslateAutomationConfigServi
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateAutomationCronSchedulerService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateAutomationSchedulerService;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateRunService;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateTextUnitAttemptService;
 import com.box.l10n.mojito.service.team.TeamService;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ public class AiTranslateAutomationWS {
   private final AiTranslateAutomationCronSchedulerService aiTranslateAutomationCronSchedulerService;
   private final AiTranslateAutomationSchedulerService aiTranslateAutomationSchedulerService;
   private final AiTranslateRunService aiTranslateRunService;
+  private final AiTranslateTextUnitAttemptService aiTranslateTextUnitAttemptService;
   private final TeamService teamService;
 
   public AiTranslateAutomationWS(
@@ -29,11 +31,13 @@ public class AiTranslateAutomationWS {
       AiTranslateAutomationCronSchedulerService aiTranslateAutomationCronSchedulerService,
       AiTranslateAutomationSchedulerService aiTranslateAutomationSchedulerService,
       AiTranslateRunService aiTranslateRunService,
+      AiTranslateTextUnitAttemptService aiTranslateTextUnitAttemptService,
       TeamService teamService) {
     this.aiTranslateAutomationConfigService = aiTranslateAutomationConfigService;
     this.aiTranslateAutomationCronSchedulerService = aiTranslateAutomationCronSchedulerService;
     this.aiTranslateAutomationSchedulerService = aiTranslateAutomationSchedulerService;
     this.aiTranslateRunService = aiTranslateRunService;
+    this.aiTranslateTextUnitAttemptService = aiTranslateTextUnitAttemptService;
     this.teamService = teamService;
   }
 
@@ -112,6 +116,48 @@ public class AiTranslateAutomationWS {
         .toList();
   }
 
+  @RequestMapping(method = RequestMethod.GET, value = "/api/ai-translate/lineage")
+  @ResponseStatus(HttpStatus.OK)
+  public List<LineageAttemptResponse> getLineageAttempts(
+      @RequestParam(value = "repositoryIds", required = false) List<Long> repositoryIds,
+      @RequestParam(value = "pollableTaskIds", required = false) List<Long> pollableTaskIds,
+      @RequestParam(value = "limit", required = false) Integer limit) {
+    int resolvedLimit =
+        limit == null ? AiTranslateTextUnitAttemptService.DEFAULT_RECENT_LINEAGE_LIMIT : limit;
+    if (resolvedLimit < 1) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be at least 1");
+    }
+
+    return aiTranslateTextUnitAttemptService
+        .getRecentLineage(repositoryIds, pollableTaskIds, resolvedLimit)
+        .stream()
+        .map(
+            attempt ->
+                new LineageAttemptResponse(
+                    attempt.id(),
+                    attempt.createdDate() == null ? null : attempt.createdDate().toString(),
+                    attempt.lastModifiedDate() == null
+                        ? null
+                        : attempt.lastModifiedDate().toString(),
+                    attempt.tmTextUnitId(),
+                    attempt.tmTextUnitName(),
+                    attempt.tmTextUnitVariantId(),
+                    attempt.localeBcp47Tag(),
+                    attempt.repositoryId(),
+                    attempt.repositoryName(),
+                    attempt.pollableTaskId(),
+                    attempt.aiTranslateRunId(),
+                    attempt.requestGroupId(),
+                    attempt.translateType(),
+                    attempt.model(),
+                    attempt.status(),
+                    attempt.completionId(),
+                    attempt.hasRequestPayload(),
+                    attempt.hasResponsePayload(),
+                    attempt.errorMessage()))
+        .toList();
+  }
+
   public record AutomationConfigRequest(
       boolean enabled,
       List<Long> repositoryIds,
@@ -146,4 +192,25 @@ public class AiTranslateAutomationWS {
       long outputTokens,
       long reasoningTokens,
       java.math.BigDecimal estimatedCostUsd) {}
+
+  public record LineageAttemptResponse(
+      Long id,
+      String createdDate,
+      String lastModifiedDate,
+      Long tmTextUnitId,
+      String tmTextUnitName,
+      Long tmTextUnitVariantId,
+      String localeBcp47Tag,
+      Long repositoryId,
+      String repositoryName,
+      Long pollableTaskId,
+      Long aiTranslateRunId,
+      String requestGroupId,
+      String translateType,
+      String model,
+      String status,
+      String completionId,
+      boolean hasRequestPayload,
+      boolean hasResponsePayload,
+      String errorMessage) {}
 }

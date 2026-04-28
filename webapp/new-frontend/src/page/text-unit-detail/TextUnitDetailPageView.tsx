@@ -103,6 +103,7 @@ type TextUnitDetailPageViewProps = {
   historyMissingLocale: boolean;
   historyRows: TextUnitDetailHistoryRow[];
   historyInitialDate: string;
+  isHistoryCountReady: boolean;
   showDeletedHistoryEntry: boolean;
   showValidationDialog: boolean;
   validationDialogTitle: string;
@@ -164,6 +165,7 @@ export function TextUnitDetailPageView({
   historyMissingLocale,
   historyRows,
   historyInitialDate,
+  isHistoryCountReady,
   showDeletedHistoryEntry,
   showValidationDialog,
   validationDialogTitle,
@@ -191,6 +193,9 @@ export function TextUnitDetailPageView({
     glossaryTerm?.definition?.trim() || glossaryTerm?.sourceComment?.trim() || keyInfo.comment;
   const glossaryTermType = formatGlossaryMetadataValue(glossaryTerm?.termType);
   const glossaryPartOfSpeech = formatGlossaryMetadataValue(glossaryTerm?.partOfSpeech);
+  const historyCount =
+    historyRows.length + (showDeletedHistoryEntry ? 1 : 0) + (historyInitialDate ? 1 : 0);
+  const historyTitle = isHistoryCountReady ? `History (${historyCount})` : 'History';
 
   return (
     <div className="review-project-page text-unit-detail-page">
@@ -425,7 +430,7 @@ export function TextUnitDetailPageView({
 
             <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
               <SectionHeader
-                title={`History (${historyRows.length + 1})`}
+                title={historyTitle}
                 expanded={!isHistoryCollapsed}
                 onToggle={onToggleHistoryCollapsed}
               />
