@@ -12,6 +12,7 @@ import com.box.l10n.mojito.service.mcp.McpToolRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,7 +35,20 @@ public class McpTransportServiceTest {
                 true,
                 List.of(
                     new McpToolParameter("stringId", "String id", true),
-                    new McpToolParameter("observedLocale", "Observed locale", true)));
+                    new McpToolParameter("observedLocale", "Observed locale", true),
+                    new McpToolParameter(
+                        "evidence",
+                        "Evidence references",
+                        false,
+                        Map.of(
+                            "type",
+                            "array",
+                            "items",
+                            Map.of(
+                                "type",
+                                "object",
+                                "properties",
+                                Map.of("tmTextUnitId", Map.of("type", "integer")))))));
           }
 
           @Override
@@ -80,6 +94,18 @@ public class McpTransportServiceTest {
     JsonNode tool = result.body().path("result").path("tools").get(0);
     assertThat(tool.path("name").asText()).isEqualTo("bad_translation.find_translation");
     assertThat(tool.path("inputSchema").path("properties").has("observedLocale")).isTrue();
+    assertThat(tool.path("inputSchema").path("properties").path("evidence").path("type").asText())
+        .isEqualTo("array");
+    assertThat(
+            tool.path("inputSchema")
+                .path("properties")
+                .path("evidence")
+                .path("items")
+                .path("properties")
+                .path("tmTextUnitId")
+                .path("type")
+                .asText())
+        .isEqualTo("integer");
     assertThat(tool.path("annotations").path("readOnlyHint").asBoolean()).isTrue();
   }
 

@@ -238,9 +238,7 @@ public class McpTransportService {
     Set<String> required = new LinkedHashSet<>();
 
     for (McpToolParameter parameter : parameters) {
-      ObjectNode property = objectMapper.createObjectNode();
-      property.put("type", parameter.jsonType());
-      property.put("description", parameter.description());
+      ObjectNode property = toParameterSchema(parameter);
       properties.set(parameter.name(), property);
 
       if (parameter.required()) {
@@ -257,6 +255,21 @@ public class McpTransportService {
     }
 
     return schema;
+  }
+
+  private ObjectNode toParameterSchema(McpToolParameter parameter) {
+    if (parameter.jsonSchema() != null) {
+      ObjectNode property = objectMapper.valueToTree(parameter.jsonSchema());
+      if (!property.has("description")) {
+        property.put("description", parameter.description());
+      }
+      return property;
+    }
+
+    ObjectNode property = objectMapper.createObjectNode();
+    property.put("type", parameter.jsonType());
+    property.put("description", parameter.description());
+    return property;
   }
 
   private String toolResultText(McpToolCallResult toolCallResult) {
