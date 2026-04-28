@@ -3,13 +3,16 @@ package com.box.l10n.mojito.service.tm;
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.EntityGraph.EntityGraphType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 /**
@@ -62,4 +65,30 @@ public interface TMTextUnitRepository extends JpaRepository<TMTextUnit, Long> {
       Long tmId, Collection<String> contentMd5s);
 
   TMTextUnit findByMd5AndTmIdAndAssetId(String contentMd5, Long tmId, Long assetId);
+
+  @Query(
+      """
+      select distinct tu
+      from TMTextUnit tu
+      join fetch tu.asset asset
+      join fetch asset.repository repository
+      join AssetTextUnitToTMTextUnit mapping on mapping.tmTextUnit = tu
+      where repository.id = :repositoryId
+        and asset.deleted = false
+        and mapping.assetExtraction = asset.lastSuccessfulAssetExtraction
+        and (
+          :afterCreatedDate is null
+          or tu.createdDate > :afterCreatedDate
+          or (
+            tu.createdDate = :afterCreatedDate
+            and tu.id > :afterTmTextUnitId
+          )
+        )
+      order by tu.createdDate asc, tu.id asc
+      """)
+  List<TMTextUnit> findUsedTextUnitsForTermIndexRefresh(
+      @Param("repositoryId") Long repositoryId,
+      @Param("afterCreatedDate") ZonedDateTime afterCreatedDate,
+      @Param("afterTmTextUnitId") Long afterTmTextUnitId,
+      Pageable pageable);
 }
