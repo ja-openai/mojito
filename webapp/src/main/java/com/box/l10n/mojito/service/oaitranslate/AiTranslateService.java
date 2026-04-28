@@ -28,6 +28,8 @@ import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateBatchesImportJob.AiTranslateBatchesImportInput;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateBatchesImportJob.AiTranslateBatchesImportOutput;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateTextUnitAttemptService.NoBatchAttemptRequest;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateTextUnitAttemptService.NoBatchImportedVariant;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateType.CompletionInput;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateType.CompletionInput.ExistingTarget;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateType.CompletionMultiTextUnitInput;
@@ -121,6 +123,7 @@ public class AiTranslateService {
   private final AiTranslateScreenshotService aiTranslateScreenshotService;
   private final AiTranslateLegacyBatchService aiTranslateLegacyBatchService;
   private final AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService;
+  private final AiTranslateTextUnitAttemptService aiTranslateTextUnitAttemptService;
   private final MeterRegistry meterRegistry;
   private final AtomicInteger noBatchRequestsInFlight;
 
@@ -180,7 +183,8 @@ public class AiTranslateService {
       ScreenshotService screenshotService,
       AiTranslateScreenshotService aiTranslateScreenshotService,
       AiTranslateLegacyBatchService aiTranslateLegacyBatchService,
-      AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService) {
+      AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService,
+      AiTranslateTextUnitAttemptService aiTranslateTextUnitAttemptService) {
     this.textUnitSearcher = textUnitSearcher;
     this.repositoryRepository = repositoryRepository;
     this.repositoryService = repositoryService;
@@ -202,6 +206,7 @@ public class AiTranslateService {
     this.aiTranslateScreenshotService = aiTranslateScreenshotService;
     this.aiTranslateLegacyBatchService = aiTranslateLegacyBatchService;
     this.aiTranslateLocalePromptSuffixService = aiTranslateLocalePromptSuffixService;
+    this.aiTranslateTextUnitAttemptService = aiTranslateTextUnitAttemptService;
     this.noBatchRequestsInFlight =
         meterRegistry.gauge(
             metricName("requestsInFlight"), Tags.of("mode", MODE_NO_BATCH), new AtomicInteger());
@@ -328,15 +333,12 @@ public class AiTranslateService {
     }
   }
 
-  record TextextUnitsByScreenshotWithResponsesResponse(
+  record TextUnitsByScreenshotWithResponsesResponse(
       ResponsesRequest responsesRequest,
+      String lineageRequestGroupId,
       TextUnitsByScreenshot textUnitsByScreenshot,
+      List<TextUnitDTOWithVariantComments> requestedTextUnitDTOWithVariantCommentsList,
       int timeoutSeconds,
-      CompletableFuture<ResponsesResponse> responsesResponseCompletableFuture) {}
-
-  record TextUnitDTOWithResponsesResponse(
-      ResponsesRequest responsesRequest,
-      TextUnitDTO textUnitDTO,
       CompletableFuture<ResponsesResponse> responsesResponseCompletableFuture) {}
 
   public AiTranslateRunTotals aiTranslateNoBatch(
@@ -427,7 +429,7 @@ public class AiTranslateService {
         int skippedTextUnitCount = 0;
         Set<Long> skippedTmTextUnitIds = new HashSet<>();
 
-        List<TextextUnitsByScreenshotWithResponsesResponse>
+        List<TextUnitsByScreenshotWithResponsesResponse>
             textUnitsByScreenshotWithResponsesResponseList = new ArrayList<>();
 
         for (TextUnitsByScreenshot textUnitsByScreenshot :
@@ -435,6 +437,8 @@ public class AiTranslateService {
 
           CompletionMultiTextUnitInput.Builder builder =
               CompletionMultiTextUnitInput.builder(bcp47Tag);
+          List<TextUnitDTOWithVariantComments> requestedTextUnitDTOWithVariantComments =
+              new ArrayList<>();
           int requestTextUnitCount = 0;
           int requestSourceCharCount = 0;
 
@@ -457,6 +461,7 @@ public class AiTranslateService {
 
             requestTextUnitCount++;
             requestSourceCharCount += safeLength(textUnitDTO.getSource());
+            requestedTextUnitDTOWithVariantComments.add(textUnitDTOWithVariantComments);
             builder.addTextUnit(
                 new TextUnit(
                     textUnitDTO.getTmTextUnitId(),
@@ -481,6 +486,10 @@ public class AiTranslateService {
                     relatedStringsProvider.getRelatedStrings(textUnitDTO)));
           }
 
+          if (requestedTextUnitDTOWithVariantComments.isEmpty()) {
+            continue;
+          }
+
           CompletionMultiTextUnitInput completionMultiTextUnitInput = builder.build();
 
           String inputAsJsonString =
@@ -502,6 +511,16 @@ public class AiTranslateService {
               .ifPresent(requestBuilder::addUserImageUrl);
 
           ResponsesRequest responsesRequest = requestBuilder.build();
+          String lineageRequestGroupId =
+              createNoBatchLineageAttempts(
+                  currentTask.getId(),
+                  repositoryLocale.getLocale().getId(),
+                  aiTranslateType.name(),
+                  model,
+                  responsesRequest,
+                  requestedTextUnitDTOWithVariantComments.stream()
+                      .map(TextUnitDTOWithVariantComments::textUnitDTO)
+                      .toList());
           Tags requestTags =
               metricTags(
                   MODE_NO_BATCH,
@@ -549,15 +568,16 @@ public class AiTranslateService {
           incrementCounter(metricName("groupedRequests"), requestTags);
           groupedRequestCount++;
 
-          TextextUnitsByScreenshotWithResponsesResponse
-              textextUnitsByScreenshotWithResponsesResponse =
-                  new TextextUnitsByScreenshotWithResponsesResponse(
-                      responsesRequest,
-                      textUnitsByScreenshot,
-                      timeout,
-                      responsesResponseCompletableFuture);
+          TextUnitsByScreenshotWithResponsesResponse textUnitsByScreenshotWithResponsesResponse =
+              new TextUnitsByScreenshotWithResponsesResponse(
+                  responsesRequest,
+                  lineageRequestGroupId,
+                  textUnitsByScreenshot,
+                  requestedTextUnitDTOWithVariantComments,
+                  timeout,
+                  responsesResponseCompletableFuture);
           textUnitsByScreenshotWithResponsesResponseList.add(
-              textextUnitsByScreenshotWithResponsesResponse);
+              textUnitsByScreenshotWithResponsesResponse);
         }
 
         List<TextUnitDTOWithVariantCommentOrError> textUnitDTOWithVariantCommentOrErrors =
@@ -565,6 +585,8 @@ public class AiTranslateService {
                 .flatMap(
                     textUnitsByScreenshotWithResponsesResponse -> {
                       ResponsesResponse responsesResponse;
+                      String lineageRequestGroupId =
+                          textUnitsByScreenshotWithResponsesResponse.lineageRequestGroupId();
                       Tags requestTags =
                           metricTags(
                               MODE_NO_BATCH,
@@ -584,8 +606,7 @@ public class AiTranslateService {
                       } catch (Throwable t) {
                         List<Long> failedTmTextUnitIds =
                             textUnitsByScreenshotWithResponsesResponse
-                                .textUnitsByScreenshot()
-                                .textUnitDTOWithVariantCommentsList
+                                .requestedTextUnitDTOWithVariantCommentsList()
                                 .stream()
                                 .map(TextUnitDTOWithVariantComments::textUnitDTO)
                                 .map(TextUnitDTO::getTmTextUnitId)
@@ -618,22 +639,26 @@ public class AiTranslateService {
                               t);
                         }
 
+                        markNoBatchLineageFailed(
+                            currentTask.getId(), lineageRequestGroupId, null, null, errorMessage);
+
                         return textUnitsByScreenshotWithResponsesResponse
-                            .textUnitsByScreenshot()
-                            .textUnitDTOWithVariantCommentsList
+                            .requestedTextUnitDTOWithVariantCommentsList()
                             .stream()
                             .map(
                                 textUnitDTOWithVariantComments ->
                                     new TextUnitDTOWithVariantCommentOrError(
-                                        textUnitsByScreenshotWithResponsesResponse
-                                            .responsesRequest(),
                                         null,
                                         new TextUnitDTOWithVariantComment(
                                             textUnitDTOWithVariantComments.textUnitDTO(), null),
                                         textUnitDTOWithVariantComments.textUnitDTO().getTarget(),
-                                        errorMessage));
+                                        errorMessage,
+                                        lineageRequestGroupId));
                       }
 
+                      String responsePayloadBlobName =
+                          putNoBatchResponseLineageBlob(
+                              currentTask.getId(), lineageRequestGroupId, responsesResponse);
                       Object completionOutput;
                       try {
                         String completionOutputAsJson = responsesResponse.outputText();
@@ -648,35 +673,45 @@ public class AiTranslateService {
                         incrementCounter(metricName("parseFailures"), requestTags);
                         logger.debug(errorMessage, t);
 
+                        markNoBatchLineageFailed(
+                            currentTask.getId(),
+                            lineageRequestGroupId,
+                            responsesResponse.id(),
+                            responsePayloadBlobName,
+                            errorMessage);
+
                         return textUnitsByScreenshotWithResponsesResponse
-                            .textUnitsByScreenshot()
-                            .textUnitDTOWithVariantCommentsList
+                            .requestedTextUnitDTOWithVariantCommentsList()
                             .stream()
                             .map(
                                 textUnitDTOWithVariantComments ->
                                     new TextUnitDTOWithVariantCommentOrError(
-                                        textUnitsByScreenshotWithResponsesResponse
-                                            .responsesRequest(),
                                         responsesResponse.id(),
                                         new TextUnitDTOWithVariantComment(
                                             textUnitDTOWithVariantComments.textUnitDTO(), null),
                                         textUnitDTOWithVariantComments.textUnitDTO().getTarget(),
-                                        errorMessage));
+                                        errorMessage,
+                                        lineageRequestGroupId));
                       }
 
+                      markNoBatchLineageResponded(
+                          currentTask.getId(),
+                          lineageRequestGroupId,
+                          responsesResponse.id(),
+                          responsePayloadBlobName);
+
                       return textUnitsByScreenshotWithResponsesResponse
-                          .textUnitsByScreenshot()
-                          .textUnitDTOWithVariantCommentsList()
+                          .requestedTextUnitDTOWithVariantCommentsList()
                           .stream()
                           .map(
                               textUnitDTOWithVariantComments ->
                                   prepareForTextUnitDTOForImport(
-                                      textUnitsByScreenshotWithResponsesResponse.responsesRequest(),
                                       responsesResponse.id(),
                                       aiTranslateType,
                                       importStatus,
                                       textUnitDTOWithVariantComments.textUnitDTO(),
-                                      completionOutput));
+                                      completionOutput,
+                                      lineageRequestGroupId));
                     })
                 .toList();
 
@@ -708,6 +743,9 @@ public class AiTranslateService {
                                     .getId(),
                             Function.identity()));
 
+        markNoBatchLineageImported(
+            currentTask.getId(), importResultByTmTextUnitId, textUnitDTOWithVariantCommentOrErrors);
+
         long successfulTextUnitCount =
             textUnitDTOWithVariantCommentOrErrors.stream()
                 .filter(t -> t.textUnitDTOWithVariantComment() != null)
@@ -731,7 +769,7 @@ public class AiTranslateService {
             sumResponsesUsage(
                 textUnitsByScreenshotWithResponsesResponseList.stream()
                     .map(
-                        TextextUnitsByScreenshotWithResponsesResponse
+                        TextUnitsByScreenshotWithResponsesResponse
                             ::responsesResponseCompletableFuture)
                     .toList());
         runInputTokens += responsesUsageTotals.inputTokens();
@@ -772,9 +810,6 @@ public class AiTranslateService {
         List<ImportReport.ImportReportLine> importReportLines =
             textUnitDTOWithVariantCommentOrErrors.stream()
                 .map(
-                    // in case of batch, it is possible that tu.textUnitDTOWithVariantComment() ==
-                    // null so if sharing we need
-                    // to make sure this works
                     tu -> {
                       TextUnitDTO textUnitDTO = tu.textUnitDTOWithVariantComment().textUnitDTO();
                       ImportResult importResult =
@@ -795,8 +830,8 @@ public class AiTranslateService {
                       }
 
                       return new ImportReport.ImportReportLine(
-                          tu.responsesRequest(),
                           tu.completionId(),
+                          tu.lineageRequestGroupId(),
                           textUnitDTO.getTmTextUnitId(),
                           repositoryLocale.getLocale().getBcp47Tag(),
                           textUnitDTO.getSource(),
@@ -907,10 +942,165 @@ public class AiTranslateService {
     return "%s/locale/%s".formatted(pollableTaskId, bcp47Tag);
   }
 
+  private String createNoBatchLineageAttempts(
+      Long pollableTaskId,
+      Long localeId,
+      String translateType,
+      String model,
+      ResponsesRequest responsesRequest,
+      List<TextUnitDTO> textUnitDTOs) {
+    if (pollableTaskId == null
+        || localeId == null
+        || responsesRequest == null
+        || textUnitDTOs == null
+        || textUnitDTOs.isEmpty()) {
+      return null;
+    }
+
+    String requestGroupId = UUID.randomUUID().toString();
+    try {
+      String requestPayloadBlobName =
+          aiTranslateTextUnitAttemptService.putPayloadBlob(
+              pollableTaskId,
+              requestGroupId,
+              "request.json",
+              objectMapper.writeValueAsStringUnchecked(responsesRequest));
+      aiTranslateTextUnitAttemptService.createNoBatchAttempts(
+          pollableTaskId,
+          textUnitDTOs.stream()
+              .map(
+                  textUnitDTO ->
+                      new NoBatchAttemptRequest(
+                          textUnitDTO.getTmTextUnitId(),
+                          localeId,
+                          requestGroupId,
+                          translateType,
+                          model,
+                          requestPayloadBlobName))
+              .toList());
+      return requestGroupId;
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to store AI translate request lineage for pollable task: {}", pollableTaskId, e);
+      return null;
+    }
+  }
+
+  private String putNoBatchResponseLineageBlob(
+      Long pollableTaskId, String requestGroupId, ResponsesResponse responsesResponse) {
+    if (pollableTaskId == null || requestGroupId == null || responsesResponse == null) {
+      return null;
+    }
+
+    try {
+      return aiTranslateTextUnitAttemptService.putPayloadBlob(
+          pollableTaskId,
+          requestGroupId,
+          "response.json",
+          objectMapper.writeValueAsStringUnchecked(responsesResponse));
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to store AI translate response lineage for pollable task: {}", pollableTaskId, e);
+      return null;
+    }
+  }
+
+  private void markNoBatchLineageResponded(
+      Long pollableTaskId,
+      String requestGroupId,
+      String completionId,
+      String responsePayloadBlobName) {
+    if (pollableTaskId == null || requestGroupId == null) {
+      return;
+    }
+
+    try {
+      aiTranslateTextUnitAttemptService.markNoBatchResponded(
+          pollableTaskId, requestGroupId, completionId, responsePayloadBlobName);
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to mark AI translate lineage as responded for pollable task: {}",
+          pollableTaskId,
+          e);
+    }
+  }
+
+  private void markNoBatchLineageFailed(
+      Long pollableTaskId,
+      String requestGroupId,
+      String completionId,
+      String responsePayloadBlobName,
+      String errorMessage) {
+    if (pollableTaskId == null || requestGroupId == null) {
+      return;
+    }
+
+    try {
+      aiTranslateTextUnitAttemptService.markNoBatchFailed(
+          pollableTaskId, requestGroupId, completionId, responsePayloadBlobName, errorMessage);
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to mark AI translate lineage as failed for pollable task: {}", pollableTaskId, e);
+    }
+  }
+
+  private void markNoBatchLineageImported(
+      Long pollableTaskId,
+      Map<Long, ImportResult> importResultByTmTextUnitId,
+      List<TextUnitDTOWithVariantCommentOrError> textUnitDTOWithVariantCommentOrErrors) {
+    if (pollableTaskId == null
+        || importResultByTmTextUnitId == null
+        || importResultByTmTextUnitId.isEmpty()
+        || textUnitDTOWithVariantCommentOrErrors == null
+        || textUnitDTOWithVariantCommentOrErrors.isEmpty()) {
+      return;
+    }
+
+    List<NoBatchImportedVariant> importedVariants =
+        textUnitDTOWithVariantCommentOrErrors.stream()
+            .filter(t -> t.lineageRequestGroupId() != null)
+            .filter(t -> t.error() == null)
+            .filter(t -> t.textUnitDTOWithVariantComment() != null)
+            .map(
+                t -> {
+                  TextUnitDTO textUnitDTO = t.textUnitDTOWithVariantComment().textUnitDTO();
+                  ImportResult importResult =
+                      importResultByTmTextUnitId.get(textUnitDTO.getTmTextUnitId());
+                  if (importResult == null) {
+                    return null;
+                  }
+
+                  Long tmTextUnitVariantId =
+                      importResult
+                          .addTMTextUnitCurrentVariantResult()
+                          .getTmTextUnitCurrentVariant()
+                          .getTmTextUnitVariant()
+                          .getId();
+                  return new NoBatchImportedVariant(
+                      t.lineageRequestGroupId(),
+                      textUnitDTO.getTmTextUnitId(),
+                      tmTextUnitVariantId);
+                })
+            .filter(Objects::nonNull)
+            .toList();
+    if (importedVariants.isEmpty()) {
+      return;
+    }
+
+    try {
+      aiTranslateTextUnitAttemptService.markNoBatchImported(pollableTaskId, importedVariants);
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to mark AI translate lineage as imported for pollable task: {}",
+          pollableTaskId,
+          e);
+    }
+  }
+
   record ImportReport(List<ImportReportLine> lines) {
     record ImportReportLine(
-        ResponsesRequest responsesRequest,
         String completionId,
+        String lineageRequestGroupId,
         long tmTexUnitId,
         String locale,
         String source,
@@ -1043,11 +1233,11 @@ public class AiTranslateService {
   }
 
   record TextUnitDTOWithVariantCommentOrError(
-      ResponsesRequest responsesRequest,
       String completionId,
       TextUnitDTOWithVariantComment textUnitDTOWithVariantComment,
       String oldTarget,
-      String error) {}
+      String error,
+      String lineageRequestGroupId) {}
 
   List<String> importBatch(
       RetrieveBatchResponse retrieveBatchResponse,
@@ -1096,7 +1286,7 @@ public class AiTranslateService {
                         "Response batch file line failed: " + chatCompletionResponseBatchFileLine;
                     logger.debug(errorMessage);
                     return new TextUnitDTOWithVariantCommentOrError(
-                        null, null, null, null, errorMessage);
+                        null, null, null, errorMessage, null);
                   }
 
                   String completionOutputAsJson =
@@ -1124,19 +1314,19 @@ public class AiTranslateService {
                     logger.debug(errorMessage, e);
                     return new TextUnitDTOWithVariantCommentOrError(
                         null,
-                        null,
                         new TextUnitDTOWithVariantComment(textUnitDTO, null),
                         textUnitDTO.getTarget(),
-                        errorMessage);
+                        errorMessage,
+                        null);
                   }
 
                   return prepareForTextUnitDTOForImport(
-                      null,
                       chatCompletionResponseBatchFileLine.id(),
                       aiTranslateType,
                       importStatus,
                       textUnitDTO,
-                      completionOutput);
+                      completionOutput,
+                      null);
                 })
             .toList();
 
@@ -1156,12 +1346,12 @@ public class AiTranslateService {
   }
 
   private static TextUnitDTOWithVariantCommentOrError prepareForTextUnitDTOForImport(
-      ResponsesRequest responsesRequest,
       String completionId,
       AiTranslateType aiTranslateType,
       Status importStatus,
       TextUnitDTO textUnitDTO,
-      Object completionOutput) {
+      Object completionOutput,
+      String lineageRequestGroupId) {
 
     String oldTarget = textUnitDTO.getTarget();
 
@@ -1174,11 +1364,11 @@ public class AiTranslateService {
           textUnitDTO.getTmTextUnitId(),
           completionOutput);
       return new TextUnitDTOWithVariantCommentOrError(
-          responsesRequest,
           completionId,
           new TextUnitDTOWithVariantComment(textUnitDTO, null),
           oldTarget,
-          "Cannot find the target for tmTextUnitId: %s".formatted(textUnitDTO.getTmTextUnitId()));
+          "Cannot find the target for tmTextUnitId: %s".formatted(textUnitDTO.getTmTextUnitId()),
+          lineageRequestGroupId);
     }
 
     textUnitDTO.setStatus(importStatus);
@@ -1195,11 +1385,11 @@ public class AiTranslateService {
     tmTextUnitVariantComment.setContent(targetWithMetadata.targetComment());
 
     return new TextUnitDTOWithVariantCommentOrError(
-        responsesRequest,
         completionId,
         new TextUnitDTOWithVariantComment(textUnitDTO, tmTextUnitVariantComment),
         oldTarget,
-        null);
+        null,
+        lineageRequestGroupId);
   }
 
   @Pollable(message = "AiTranslateService Retry import for job id: {id}")

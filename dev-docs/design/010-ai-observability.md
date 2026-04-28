@@ -11,6 +11,17 @@ Use `AiTranslateService_requestDuration_seconds_*` for provider-call latency and
 `AiTranslateService_localeDuration_seconds_*` for whole-locale runtime. `localeDuration` includes
 search/import work; `requestDuration` is the closer proxy for model latency.
 
+No-batch lineage is stored separately from translation comments. `ai_translate_text_unit_attempt`
+keeps the per-string audit row, anchored to the pollable task and linked to `ai_translate_run` when
+a run row exists. Attempt status is stored as an open `varchar` and handled in code with string
+constants, not a database or JPA enum, so adding an attempt status does not require a schema change.
+Heavy provider payloads live in `AI_TRANSLATE_LINEAGE` blobs: one request JSON blob per grouped
+Responses request and one response JSON blob when the provider response is received. Attempt rows
+share those blob names through `request_group_id`, so the payload is not copied once per text unit.
+Inline image data URLs are redacted before lineage payloads are written. Legacy batch mode continues
+to rely on its existing batch import blobs and does not write normalized lineage rows. The no-batch
+downloadable report keeps the lineage group id instead of embedding the raw provider request.
+
 P95 request latency by locale:
 
 ```promql
