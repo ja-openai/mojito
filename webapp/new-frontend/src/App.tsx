@@ -65,6 +65,7 @@ const navItems: NavItem[] = [
   { to: '/repositories', label: 'Repositories', element: <RepositoriesPage /> },
   { to: '/workbench', label: 'Workbench', element: <WorkbenchPage /> },
   { to: '/review-projects', label: 'Review Projects', element: <ReviewProjectsPage /> },
+  { to: '/screenshots', label: 'Screenshots', element: <ScreenshotsDropzonePage /> },
 ];
 
 const queryClient = new QueryClient();
