@@ -41,6 +41,10 @@ MCP tools
   - Mutating.
   - Appends supporting references to an existing term without replacing term metadata or existing references.
   - Use with `text_unit.search` to attach product TU usage evidence.
+- `image.upload`
+  - Mutating.
+  - Uploads a base64 image or image data URL to Mojito image storage.
+  - Returns an `imageKey` and `/api/images/...` URL that can be attached as screenshot evidence with `glossary.term.bulk_upsert` or `glossary.term.link_references`.
 - `glossary.term.suggest_translations_from_tm`
   - Read-only.
   - Searches product TM for exact source-term matches and returns observed target-term suggestions by locale.
@@ -62,6 +66,7 @@ Codebase mining workflow
 2. The client uses `text_unit.search` to find concrete Mojito text units for observed usage.
 3. The client calls `glossary.term.review_plan` and then `glossary.term.bulk_upsert`.
 4. The client calls `glossary.term.link_references` to append product-string references discovered after the term already exists.
+5. If the client captured screenshot context, it calls `image.upload` first, then links the returned `imageKey` as `SCREENSHOT` evidence, optionally with `tmTextUnitId` and crop coordinates.
 
 Why not parse Excel in Mojito MCP
 

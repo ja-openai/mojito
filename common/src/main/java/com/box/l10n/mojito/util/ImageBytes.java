@@ -1,11 +1,13 @@
 package com.box.l10n.mojito.util;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 
 public record ImageBytes(String filename, byte[] content, String contentType) {
 
@@ -42,6 +44,67 @@ public record ImageBytes(String filename, byte[] content, String contentType) {
     return "data:" + contentType + ";base64," + base64;
   }
 
+  public static Optional<String> imageContentTypeForExtension(String extension) {
+    if (extension == null) {
+      return Optional.empty();
+    }
+    return switch (extension.toLowerCase(Locale.ROOT)) {
+      case "png" -> Optional.of("image/png");
+      case "jpg", "jpeg" -> Optional.of("image/jpeg");
+      case "gif" -> Optional.of("image/gif");
+      case "webp" -> Optional.of("image/webp");
+      case "bmp" -> Optional.of("image/bmp");
+      case "svg" -> Optional.of("image/svg+xml");
+      default -> Optional.empty();
+    };
+  }
+
+  public static Optional<String> imageExtensionForContentType(String contentType) {
+    return switch (normalizeImageContentType(contentType)) {
+      case "image/png" -> Optional.of("png");
+      case "image/jpeg" -> Optional.of("jpg");
+      case "image/gif" -> Optional.of("gif");
+      case "image/webp" -> Optional.of("webp");
+      case "image/bmp" -> Optional.of("bmp");
+      case "image/svg+xml" -> Optional.of("svg");
+      default -> Optional.empty();
+    };
+  }
+
+  public static String normalizeImageContentType(String contentType) {
+    if (contentType == null) {
+      return "";
+    }
+    String normalized = contentType.trim().toLowerCase(Locale.ROOT);
+    if ("image/jpg".equals(normalized)) {
+      return "image/jpeg";
+    }
+    return normalized;
+  }
+
+  public static Optional<String> detectImageContentType(byte[] bytes) {
+    Objects.requireNonNull(bytes, "bytes must not be null");
+    if (isPng(bytes)) {
+      return Optional.of("image/png");
+    }
+    if (isJpeg(bytes)) {
+      return Optional.of("image/jpeg");
+    }
+    if (isGif(bytes)) {
+      return Optional.of("image/gif");
+    }
+    if (isWebp(bytes)) {
+      return Optional.of("image/webp");
+    }
+    if (isBmp(bytes)) {
+      return Optional.of("image/bmp");
+    }
+    if (isSvg(bytes)) {
+      return Optional.of("image/svg+xml");
+    }
+    return Optional.empty();
+  }
+
   private static String guessContentType(Path path, byte[] bytes) {
     String filename = path.getFileName().toString();
     String ext = "";
@@ -49,37 +112,15 @@ public record ImageBytes(String filename, byte[] content, String contentType) {
     if (dot >= 0 && dot < filename.length() - 1) {
       ext = filename.substring(dot + 1).toLowerCase(Locale.ROOT);
     }
-    switch (ext) {
-      case "png":
-        return "image/png";
-      case "jpg":
-      case "jpeg":
-        return "image/jpeg";
-      case "gif":
-        return "image/gif";
-      case "webp":
-        return "image/webp";
-      case "bmp":
-        return "image/bmp";
-      case "svg":
-        return "image/svg+xml";
-      case "pdf":
-        return "application/pdf";
-      default:
-        if (isPng(bytes)) {
-          return "image/png";
-        }
-        if (isJpeg(bytes)) {
-          return "image/jpeg";
-        }
-        if (isGif(bytes)) {
-          return "image/gif";
-        }
-        if (isWebp(bytes)) {
-          return "image/webp";
-        }
-        return "application/octet-stream";
+    Optional<String> contentTypeFromExtension = imageContentTypeForExtension(ext);
+    if (contentTypeFromExtension.isPresent()) {
+      return contentTypeFromExtension.get();
     }
+    if ("pdf".equals(ext)) {
+      return "application/pdf";
+    }
+
+    return detectImageContentType(bytes).orElse("application/octet-stream");
   }
 
   private static boolean isPng(byte[] b) {
@@ -118,5 +159,17 @@ public record ImageBytes(String filename, byte[] content, String contentType) {
         && b[9] == 'E'
         && b[10] == 'B'
         && b[11] == 'P';
+  }
+
+  private static boolean isBmp(byte[] b) {
+    return b.length >= 2 && b[0] == 'B' && b[1] == 'M';
+  }
+
+  private static boolean isSvg(byte[] b) {
+    String prefix =
+        new String(b, 0, Math.min(b.length, 4096), StandardCharsets.UTF_8)
+            .stripLeading()
+            .toLowerCase(Locale.ROOT);
+    return prefix.startsWith("<svg") || (prefix.startsWith("<?xml") && prefix.contains("<svg"));
   }
 }
