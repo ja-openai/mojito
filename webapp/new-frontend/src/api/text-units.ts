@@ -277,6 +277,10 @@ export async function searchTextUnits(request: TextUnitSearchRequest): Promise<A
   throw new Error('Unexpected search response');
 }
 
+export async function fetchSourceTextUnit(tmTextUnitId: number): Promise<ApiTextUnit> {
+  return getJson<ApiTextUnit>(`/api/textunits/${tmTextUnitId}/source`);
+}
+
 export async function saveTextUnit(request: SaveTextUnitRequest): Promise<ApiTextUnit> {
   return postJson<ApiTextUnit>('/api/textunits', request);
 }

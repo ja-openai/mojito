@@ -66,6 +66,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Webservices for the workbench. Allows to search for TextUnits and add/update/delete translations.
@@ -160,6 +161,24 @@ public class TextUnitWS {
 
     List<TextUnitDTO> search = textUnitSearcher.search(textUnitSearcherParameters);
     return search;
+  }
+
+  @RequestMapping(method = RequestMethod.GET, value = "/api/textunits/{tmTextUnitId}/source")
+  @ResponseStatus(HttpStatus.OK)
+  public TextUnitDTO getSourceTextUnit(@PathVariable Long tmTextUnitId) {
+    TextUnitSearcherParameters textUnitSearcherParameters = new TextUnitSearcherParameters();
+    textUnitSearcherParameters.setTmTextUnitIds(tmTextUnitId);
+    textUnitSearcherParameters.setForRootLocale(true);
+    textUnitSearcherParameters.setPluralFormsFiltered(false);
+    textUnitSearcherParameters.setLimit(1);
+    textUnitSearcherParameters.setOffset(0);
+
+    return textUnitSearcher.search(textUnitSearcherParameters).stream()
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Source text unit not found: " + tmTextUnitId));
   }
 
   record SearchTextUnitsHybridResponse(

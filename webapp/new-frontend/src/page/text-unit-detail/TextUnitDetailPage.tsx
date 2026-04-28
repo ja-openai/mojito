@@ -22,6 +22,7 @@ import {
   deleteTextUnitCurrentVariant,
   fetchAiTranslateTextUnitAttempts,
   fetchGitBlameWithUsages,
+  fetchSourceTextUnit,
   fetchTextUnitHistory,
   saveTextUnit,
   type SaveTextUnitRequest,
@@ -114,15 +115,19 @@ export function TextUnitDetailPage() {
   const [isAiResponding, setIsAiResponding] = useState(false);
 
   const localeTag = useMemo(() => searchParams.get('locale')?.trim() ?? null, [searchParams]);
+  const isSourceOnly = !localeTag;
 
   const textUnitQuery = useQuery({
-    queryKey: ['text-unit-detail', tmTextUnitId, localeTag],
-    enabled: tmTextUnitId !== null && Boolean(localeTag),
+    queryKey: ['text-unit-detail', tmTextUnitId, localeTag ?? 'source'],
+    enabled: tmTextUnitId !== null,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      if (tmTextUnitId === null || !localeTag) {
+      if (tmTextUnitId === null) {
         return null;
+      }
+      if (!localeTag) {
+        return fetchSourceTextUnit(tmTextUnitId);
       }
 
       const results = await searchTextUnits({
@@ -179,7 +184,8 @@ export function TextUnitDetailPage() {
   });
 
   const activeTextUnit = textUnitQuery.data;
-  const localeForEditing = localeTag ?? activeTextUnit?.targetLocale ?? null;
+  const localeForEditing = localeTag;
+  const displayLocale = localeTag ?? activeTextUnit?.targetLocale ?? null;
 
   const glossaryTargetsQuery = useQuery({
     queryKey: ['text-unit-detail-glossary-targets'],
@@ -346,19 +352,19 @@ export function TextUnitDetailPage() {
       activeTextUnit.tmTextUnitVariantId ?? activeTextUnit.tmTextUnitCurrentVariantId;
     return [
       activeTextUnit.tmTextUnitId,
-      localeForEditing ?? '',
+      displayLocale ?? '',
       variantId ?? 'none',
-      activeTextUnit.target ?? '',
+      isSourceOnly ? (activeTextUnit.source ?? '') : (activeTextUnit.target ?? ''),
       status,
     ].join(':');
-  }, [activeTextUnit, localeForEditing]);
+  }, [activeTextUnit, displayLocale, isSourceOnly]);
 
   useEffect(() => {
     if (!activeTextUnit || editorSeedKey === null) {
       return;
     }
 
-    const nextTarget = activeTextUnit.target ?? '';
+    const nextTarget = isSourceOnly ? (activeTextUnit.source ?? '') : (activeTextUnit.target ?? '');
     const nextStatus = normalizeEditorStatus(
       formatStatus(activeTextUnit.status, activeTextUnit.includedInLocalizedFile),
     );
@@ -372,9 +378,11 @@ export function TextUnitDetailPage() {
   }, [
     activeTextUnit,
     activeTextUnit?.includedInLocalizedFile,
+    activeTextUnit?.source,
     activeTextUnit?.status,
     activeTextUnit?.target,
     editorSeedKey,
+    isSourceOnly,
   ]);
 
   const aiContextKey = useMemo(() => {
@@ -499,7 +507,7 @@ export function TextUnitDetailPage() {
   const metaSections = useMemo<TextUnitDetailMetaSection[]>(() => {
     const textUnitRows: TextUnitDetailMetaRow[] = [
       { label: 'Repository', value: formatValue(activeTextUnit?.repositoryName) },
-      { label: 'Locale', value: formatValue(localeForEditing) },
+      { label: isSourceOnly ? 'Source locale' : 'Locale', value: formatValue(displayLocale) },
       { label: 'Created', value: formatDateTime(textUnitQuery.data?.tmTextUnitCreatedDate) },
       { label: 'Translated', value: formatDateTime(textUnitQuery.data?.createdDate) },
       { label: 'AssetPath', value: formatValue(textUnitQuery.data?.assetPath) },
@@ -550,8 +558,9 @@ export function TextUnitDetailPage() {
     ];
   }, [
     activeTextUnit?.repositoryName,
+    displayLocale,
     gitBlame,
-    localeForEditing,
+    isSourceOnly,
     textUnitLocation,
     textUnitQuery.data,
   ]);
@@ -981,8 +990,9 @@ export function TextUnitDetailPage() {
     setSaveErrorMessage(null);
   }, []);
 
-  const editorWarningMessage =
-    !localeForEditing || !activeTextUnit
+  const editorWarningMessage = isSourceOnly
+    ? 'Open this page with a target locale to edit a translation or view translation history.'
+    : !localeForEditing || !activeTextUnit
       ? 'Missing locale. Open this page from a workbench row to enable editing.'
       : !canEdit
         ? 'You do not have permission to edit this locale.'
@@ -1003,6 +1013,7 @@ export function TextUnitDetailPage() {
       editorInfo={{
         target: draftTarget,
         status: draftStatus,
+        isSourceOnly,
         statusOptions: editorStatusOptions,
         canEdit,
         canDelete: canDeleteCurrentTranslation,
@@ -1014,7 +1025,7 @@ export function TextUnitDetailPage() {
       }}
       keyInfo={{
         stringId: formatValue(activeTextUnit?.name),
-        locale: formatValue(localeForEditing),
+        locale: isSourceOnly ? `Source ${formatValue(displayLocale)}` : formatValue(displayLocale),
         source: formatValue(activeTextUnit?.source),
         comment: formatValue(activeTextUnit?.comment),
         repositoryName: formatValue(activeTextUnit?.repositoryName),
@@ -1024,7 +1035,7 @@ export function TextUnitDetailPage() {
       onSaveEditor={handleSaveEditor}
       onResetEditor={handleResetEditor}
       onRequestDeleteEditor={handleRequestDeleteEditor}
-      previewLocale={localeForEditing ?? 'en'}
+      previewLocale={displayLocale ?? 'en'}
       isIcuPreviewCollapsed={isIcuPreviewCollapsed}
       onToggleIcuPreviewCollapsed={() => setIsIcuPreviewCollapsed((current) => !current)}
       icuPreviewMode={icuPreviewMode}
@@ -1080,7 +1091,7 @@ export function TextUnitDetailPage() {
       historyMissingLocale={!localeTag}
       historyRows={historyRows}
       historyInitialDate={formatDateTime(textUnitQuery.data?.tmTextUnitCreatedDate)}
-      isHistoryCountReady={historyQuery.isSuccess}
+      isHistoryCountReady={!localeTag || historyQuery.isSuccess}
       showDeletedHistoryEntry={showDeletedHistoryEntry}
       showValidationDialog={pendingValidationSave !== null}
       validationDialogTitle={pendingValidationSave?.title ?? ''}

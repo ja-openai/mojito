@@ -43,6 +43,7 @@ type TextUnitDetailPageViewProps = {
   editorInfo: {
     target: string;
     status: string;
+    isSourceOnly: boolean;
     statusOptions: string[];
     canEdit: boolean;
     canDelete: boolean;
@@ -244,7 +245,9 @@ export function TextUnitDetailPageView({
       <div className="text-unit-detail-page__content">
         <div className="text-unit-detail-page__layout">
           <section className="text-unit-detail-page__panel text-unit-detail-page__panel--editor">
-            <h1 className="text-unit-detail-page__title">Translation</h1>
+            <h1 className="text-unit-detail-page__title">
+              {editorInfo.isSourceOnly ? 'Source' : 'Translation'}
+            </h1>
 
             <div className="text-unit-detail-page__editor-field">
               <AutoTextarea
@@ -258,87 +261,93 @@ export function TextUnitDetailPageView({
               />
             </div>
 
-            <div className="text-unit-detail-page__editor-controls">
-              <div className="text-unit-detail-page__editor-status">
-                <PillDropdown
-                  value={editorInfo.status}
-                  options={editorInfo.statusOptions.map((option) => ({
-                    value: option,
-                    label: option,
-                  }))}
-                  onChange={onChangeStatus}
-                  disabled={!editorInfo.canEdit || editorInfo.isSaving}
-                  ariaLabel="Translation status"
-                />
+            {!editorInfo.isSourceOnly ? (
+              <div className="text-unit-detail-page__editor-controls">
+                <div className="text-unit-detail-page__editor-status">
+                  <PillDropdown
+                    value={editorInfo.status}
+                    options={editorInfo.statusOptions.map((option) => ({
+                      value: option,
+                      label: option,
+                    }))}
+                    onChange={onChangeStatus}
+                    disabled={!editorInfo.canEdit || editorInfo.isSaving}
+                    ariaLabel="Translation status"
+                  />
+                </div>
+                <div className="text-unit-detail-page__editor-actions">
+                  <button
+                    type="button"
+                    className="text-unit-detail-page__button"
+                    onClick={onRequestDeleteEditor}
+                    disabled={
+                      !editorInfo.canDelete ||
+                      editorInfo.isSaving ||
+                      editorInfo.isDeleting ||
+                      !editorInfo.canEdit
+                    }
+                  >
+                    {editorInfo.isDeleting ? 'Deleting…' : 'Delete'}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-unit-detail-page__button"
+                    onClick={onResetEditor}
+                    disabled={!editorInfo.isDirty || editorInfo.isSaving || editorInfo.isDeleting}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    className="text-unit-detail-page__button text-unit-detail-page__button--primary"
+                    onClick={onSaveEditor}
+                    disabled={
+                      !editorInfo.canEdit ||
+                      !editorInfo.isDirty ||
+                      editorInfo.isSaving ||
+                      editorInfo.isDeleting
+                    }
+                  >
+                    {editorInfo.isSaving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
               </div>
-              <div className="text-unit-detail-page__editor-actions">
-                <button
-                  type="button"
-                  className="text-unit-detail-page__button"
-                  onClick={onRequestDeleteEditor}
-                  disabled={
-                    !editorInfo.canDelete ||
-                    editorInfo.isSaving ||
-                    editorInfo.isDeleting ||
-                    !editorInfo.canEdit
-                  }
-                >
-                  {editorInfo.isDeleting ? 'Deleting…' : 'Delete'}
-                </button>
-                <button
-                  type="button"
-                  className="text-unit-detail-page__button"
-                  onClick={onResetEditor}
-                  disabled={!editorInfo.isDirty || editorInfo.isSaving || editorInfo.isDeleting}
-                >
-                  Reset
-                </button>
-                <button
-                  type="button"
-                  className="text-unit-detail-page__button text-unit-detail-page__button--primary"
-                  onClick={onSaveEditor}
-                  disabled={
-                    !editorInfo.canEdit ||
-                    !editorInfo.isDirty ||
-                    editorInfo.isSaving ||
-                    editorInfo.isDeleting
-                  }
-                >
-                  {editorInfo.isSaving ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-            </div>
+            ) : null}
 
-            <IcuPreviewSection
-              sourceMessage={keyInfo.source}
-              targetMessage={editorInfo.target}
-              targetLocale={previewLocale}
-              mode={icuPreviewMode}
-              isCollapsed={isIcuPreviewCollapsed}
-              onToggleCollapsed={onToggleIcuPreviewCollapsed}
-              onChangeMode={onChangeIcuPreviewMode}
-              className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--icu-inline"
-              titleClassName="text-unit-detail-page__section-title"
-            />
-
-            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--ai-inline">
-              <SectionHeader
-                title="AI Chat Review"
-                expanded={!isAiCollapsed}
-                onToggle={onToggleAiCollapsed}
+            {!editorInfo.isSourceOnly ? (
+              <IcuPreviewSection
+                sourceMessage={keyInfo.source}
+                targetMessage={editorInfo.target}
+                targetLocale={previewLocale}
+                mode={icuPreviewMode}
+                isCollapsed={isIcuPreviewCollapsed}
+                onToggleCollapsed={onToggleIcuPreviewCollapsed}
+                onChangeMode={onChangeIcuPreviewMode}
+                className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--icu-inline"
+                titleClassName="text-unit-detail-page__section-title"
               />
-              {!isAiCollapsed ? (
-                <AiChatReview
-                  messages={aiMessages}
-                  input={aiInput}
-                  onChangeInput={onChangeAiInput}
-                  onSubmit={onSubmitAi}
-                  onRetryError={onRetryAi}
-                  onUseSuggestion={onUseAiSuggestion}
-                  isResponding={isAiResponding}
+            ) : null}
+
+            {!editorInfo.isSourceOnly ? (
+              <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--ai-inline">
+                <SectionHeader
+                  title="AI Chat Review"
+                  expanded={!isAiCollapsed}
+                  onToggle={onToggleAiCollapsed}
                 />
-              ) : null}
-            </section>
+                {!isAiCollapsed ? (
+                  <AiChatReview
+                    messages={aiMessages}
+                    input={aiInput}
+                    onChangeInput={onChangeAiInput}
+                    onSubmit={onSubmitAi}
+                    onRetryError={onRetryAi}
+                    onUseSuggestion={onUseAiSuggestion}
+                    isResponding={isAiResponding}
+                  />
+                ) : null}
+              </section>
+            ) : null}
 
             {editorInfo.warningMessage ? (
               <div className="text-unit-detail-page__state text-unit-detail-page__state--warning">

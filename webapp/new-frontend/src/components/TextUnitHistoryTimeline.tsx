@@ -64,7 +64,7 @@ export function TextUnitHistoryTimeline({
   initialDate,
   emptyMessage = 'No history yet.',
 }: TextUnitHistoryTimelineProps) {
-  if (missingLocale) {
+  if (missingLocale && !initialDate) {
     return (
       <div className="text-unit-history__state text-unit-history__state--warning">
         Missing locale. Open this page from the workbench row to load history.
