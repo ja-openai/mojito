@@ -7,6 +7,7 @@ import com.box.l10n.mojito.service.mcp.McpToolDescriptor;
 import com.box.l10n.mojito.service.mcp.McpToolParameter;
 import com.box.l10n.mojito.service.mcp.TypedMcpToolHandler;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -23,7 +24,8 @@ public class SearchGlossaryTermsMcpTool
           true,
           true,
           List.of(
-              new McpToolParameter("glossaryId", "Glossary id. Preferred when known.", false),
+              new McpToolParameter(
+                  "glossaryId", "Glossary id. Preferred when known.", false, Long.class),
               new McpToolParameter(
                   "glossaryName",
                   "Exact glossary name. Used only when glossaryId is omitted.",
@@ -35,9 +37,19 @@ public class SearchGlossaryTermsMcpTool
               new McpToolParameter(
                   "localeTags",
                   "Optional locale tags to include, for example [\"fr\", \"de-DE\"].",
-                  false),
+                  false,
+                  Map.of(
+                      "type",
+                      "array",
+                      "description",
+                      "Optional locale tags to include, for example [\"fr\", \"de-DE\"].",
+                      "items",
+                      Map.of("type", "string"))),
               new McpToolParameter(
-                  "limit", "Optional max terms to return. Defaults to 100, max 500.", false)));
+                  "limit",
+                  "Optional max terms to return. Defaults to 100, max 500.",
+                  false,
+                  Integer.class)));
 
   private final GlossaryMcpSupport glossaryMcpSupport;
   private final GlossaryTermService glossaryTermService;

@@ -28,6 +28,7 @@ import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -394,6 +395,47 @@ public class GlossaryTermService {
             .getOrDefault(termKey, List.of());
 
     return toTermView(refreshedSource, metadata, localizedTextUnits, evidenceByMetadataId);
+  }
+
+  @Transactional
+  public TermView appendTermEvidence(
+      Long glossaryId, Long tmTextUnitId, List<EvidenceInput> evidenceInputs) {
+    requireTermManager();
+    if (evidenceInputs == null || evidenceInputs.isEmpty()) {
+      throw new IllegalArgumentException("evidence is required");
+    }
+
+    Glossary glossary = getGlossary(glossaryId);
+    Asset asset = glossaryStorageService.ensureCanonicalAsset(glossary);
+    TextUnitDTO sourceTextUnit = getSourceTextUnit(asset, tmTextUnitId);
+    GlossaryTermMetadata metadata =
+        glossaryTermMetadataRepository
+            .findByGlossaryIdAndTmTextUnitId(glossaryId, tmTextUnitId)
+            .orElseThrow(
+                () -> new IllegalArgumentException("Glossary term not found: " + tmTextUnitId));
+    List<GlossaryTermEvidence> currentEvidence =
+        glossaryTermEvidenceRepository.findByGlossaryTermMetadataIdOrderBySortOrderAsc(
+            metadata.getId());
+
+    List<GlossaryTermEvidence> evidence = new ArrayList<>();
+    int sortOrder =
+        currentEvidence.stream()
+                .map(GlossaryTermEvidence::getSortOrder)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(-1)
+            + 1;
+    for (EvidenceInput evidenceInput : evidenceInputs) {
+      evidence.add(toEvidence(metadata, evidenceInput, sortOrder++));
+    }
+    glossaryTermEvidenceRepository.saveAll(evidence);
+
+    Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId =
+        Map.of(
+            metadata.getId(),
+            glossaryTermEvidenceRepository.findByGlossaryTermMetadataIdOrderBySortOrderAsc(
+                metadata.getId()));
+    return toTermView(sourceTextUnit, metadata, List.of(), evidenceByMetadataId);
   }
 
   @Transactional
@@ -957,26 +999,34 @@ public class GlossaryTermService {
     List<GlossaryTermEvidence> evidence = new ArrayList<>();
     int sortOrder = 0;
     for (EvidenceInput evidenceInput : evidenceInputs) {
-      String evidenceType = normalizeEvidenceType(evidenceInput.evidenceType());
-      GlossaryTermEvidence next = new GlossaryTermEvidence();
-      next.setGlossaryTermMetadata(metadata);
-      next.setEvidenceType(evidenceType);
-      next.setImageKey(normalizeOptional(evidenceInput.imageKey()));
-      next.setCaption(normalizeOptional(evidenceInput.caption()));
-      next.setCropX(evidenceInput.cropX());
-      next.setCropY(evidenceInput.cropY());
-      next.setCropWidth(evidenceInput.cropWidth());
-      next.setCropHeight(evidenceInput.cropHeight());
-      next.setSortOrder(sortOrder++);
-
-      Long referencedTmTextUnitId = evidenceInput.tmTextUnitId();
-      if (referencedTmTextUnitId != null) {
-        next.setTmTextUnit(getTmTextUnit(referencedTmTextUnitId));
-      }
-      evidence.add(next);
+      evidence.add(toEvidence(metadata, evidenceInput, sortOrder++));
     }
 
     glossaryTermEvidenceRepository.saveAll(evidence);
+  }
+
+  private GlossaryTermEvidence toEvidence(
+      GlossaryTermMetadata metadata, EvidenceInput evidenceInput, int sortOrder) {
+    if (evidenceInput == null) {
+      throw new IllegalArgumentException("evidence entry is required");
+    }
+    String evidenceType = normalizeEvidenceType(evidenceInput.evidenceType());
+    GlossaryTermEvidence next = new GlossaryTermEvidence();
+    next.setGlossaryTermMetadata(metadata);
+    next.setEvidenceType(evidenceType);
+    next.setImageKey(normalizeOptional(evidenceInput.imageKey()));
+    next.setCaption(normalizeOptional(evidenceInput.caption()));
+    next.setCropX(evidenceInput.cropX());
+    next.setCropY(evidenceInput.cropY());
+    next.setCropWidth(evidenceInput.cropWidth());
+    next.setCropHeight(evidenceInput.cropHeight());
+    next.setSortOrder(sortOrder);
+
+    Long referencedTmTextUnitId = evidenceInput.tmTextUnitId();
+    if (referencedTmTextUnitId != null) {
+      next.setTmTextUnit(getTmTextUnit(referencedTmTextUnitId));
+    }
+    return next;
   }
 
   private List<TranslationInput> toCopiedTranslationInputs(
@@ -1138,6 +1188,8 @@ public class GlossaryTermService {
 
     return new TermView(
         metadata == null ? null : metadata.getId(),
+        metadata == null ? null : metadata.getCreatedDate(),
+        metadata == null ? null : metadata.getLastModifiedDate(),
         sourceTextUnit.getTmTextUnitId(),
         sourceTextUnit.getName(),
         sourceTextUnit.getSource(),
@@ -1536,6 +1588,8 @@ public class GlossaryTermService {
 
   public record TermView(
       Long metadataId,
+      ZonedDateTime createdDate,
+      ZonedDateTime lastModifiedDate,
       Long tmTextUnitId,
       String termKey,
       String source,

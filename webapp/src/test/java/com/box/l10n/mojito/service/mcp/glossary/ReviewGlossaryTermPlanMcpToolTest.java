@@ -8,46 +8,48 @@ import com.box.l10n.mojito.service.glossary.GlossaryTermService;
 import java.util.List;
 import org.junit.Test;
 
-public class SearchGlossaryTermsMcpToolTest {
+public class ReviewGlossaryTermPlanMcpToolTest {
 
   private final FakeGlossaryManagementService glossaryManagementService =
       new FakeGlossaryManagementService();
   private final FakeGlossaryTermService glossaryTermService = new FakeGlossaryTermService();
   private final GlossaryMcpSupport glossaryMcpSupport =
       new GlossaryMcpSupport(glossaryManagementService);
-  private final SearchGlossaryTermsMcpTool tool =
-      new SearchGlossaryTermsMcpTool(
+  private final ReviewGlossaryTermPlanMcpTool tool =
+      new ReviewGlossaryTermPlanMcpTool(
           ObjectMapper.withNoFailOnUnknownProperties(), glossaryMcpSupport, glossaryTermService);
 
   @Test
-  public void executeSearchesResolvedGlossaryTerms() {
+  public void executeDetectsExistingSourceDuplicate() {
     Object result =
         tool.execute(
-            new SearchGlossaryTermsMcpTool.Input(null, "g4", "actions", List.of("fr"), 25));
+            new ReviewGlossaryTermPlanMcpTool.Input(
+                4L,
+                null,
+                List.of(new ReviewGlossaryTermPlanMcpTool.TermInput(null, null, "actions"))));
 
-    assertThat(glossaryTermService.lastGlossaryId).isEqualTo(4L);
-    assertThat(glossaryTermService.lastSearchQuery).isEqualTo("actions");
-    assertThat(glossaryTermService.lastLocaleTags).containsExactly("fr");
-    assertThat(glossaryTermService.lastLimit).isEqualTo(25);
     assertThat(result)
         .isEqualTo(
-            new SearchGlossaryTermsMcpTool.SearchResult(
-                new SearchGlossaryTermsMcpTool.GlossaryRef(4L, "g4"),
-                "actions",
-                List.of("fr"),
+            new ReviewGlossaryTermPlanMcpTool.ReviewPlanResult(
+                new ReviewGlossaryTermPlanMcpTool.GlossaryRef(4L, "g4"),
                 1,
-                List.of(glossaryTermService.term)));
+                false,
+                List.of(
+                    new ReviewGlossaryTermPlanMcpTool.TermPlan(
+                        0,
+                        "REVIEW_DUPLICATE",
+                        null,
+                        null,
+                        "actions",
+                        List.of("Existing glossary term match found. Review before writing."),
+                        List.of(
+                            new ReviewGlossaryTermPlanMcpTool.ExistingTermMatch(
+                                "SOURCE", 20L, "actions", "Actions", "CANDIDATE"))))));
   }
 
   private static final class FakeGlossaryManagementService extends GlossaryManagementService {
     private FakeGlossaryManagementService() {
       super(null, null, null, null, null, null, null);
-    }
-
-    @Override
-    public SearchGlossariesView searchGlossaries(
-        String searchQuery, Boolean enabled, Integer limit) {
-      return new SearchGlossariesView(List.of(glossarySummary()), 1);
     }
 
     @Override
@@ -57,11 +59,7 @@ public class SearchGlossaryTermsMcpToolTest {
   }
 
   private static final class FakeGlossaryTermService extends GlossaryTermService {
-    private Long lastGlossaryId;
-    private String lastSearchQuery;
-    private List<String> lastLocaleTags;
-    private Integer lastLimit;
-    private final TermView term =
+    private final TermView termView =
         new TermView(
             10L,
             null,
@@ -78,7 +76,7 @@ public class SearchGlossaryTermsMcpToolTest {
             "AUTOMATED",
             false,
             false,
-            List.of(new TermTranslationView("fr", "Actions", null, "APPROVED")),
+            List.of(),
             List.of());
 
     private FakeGlossaryTermService() {
@@ -89,27 +87,8 @@ public class SearchGlossaryTermsMcpToolTest {
     @Override
     public SearchTermsView searchTerms(
         Long glossaryId, String searchQuery, List<String> localeTags, Integer limit) {
-      lastGlossaryId = glossaryId;
-      lastSearchQuery = searchQuery;
-      lastLocaleTags = localeTags;
-      lastLimit = limit;
-      return new SearchTermsView(List.of(term), 1, List.of("fr"));
+      return new SearchTermsView(List.of(termView), 1, List.of());
     }
-  }
-
-  private static GlossaryManagementService.GlossarySummary glossarySummary() {
-    return new GlossaryManagementService.GlossarySummary(
-        4L,
-        null,
-        null,
-        "g4",
-        null,
-        true,
-        0,
-        "GLOBAL",
-        "glossary",
-        0,
-        new GlossaryManagementService.RepositoryRef(14L, "glossary-g4"));
   }
 
   private static GlossaryManagementService.GlossaryDetail glossaryDetail() {

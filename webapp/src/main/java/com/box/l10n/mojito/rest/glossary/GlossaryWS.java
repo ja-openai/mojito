@@ -122,6 +122,8 @@ public class GlossaryWS {
 
   public record GlossaryTermResponse(
       Long metadataId,
+      ZonedDateTime createdDate,
+      ZonedDateTime lastModifiedDate,
       Long tmTextUnitId,
       String termKey,
       String source,
@@ -711,6 +713,8 @@ public class GlossaryWS {
   private GlossaryTermResponse toGlossaryTermResponse(GlossaryTermService.TermView term) {
     return new GlossaryTermResponse(
         term.metadataId(),
+        term.createdDate(),
+        term.lastModifiedDate(),
         term.tmTextUnitId(),
         term.termKey(),
         term.source(),

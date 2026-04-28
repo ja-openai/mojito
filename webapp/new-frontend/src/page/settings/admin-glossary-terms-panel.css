@@ -658,7 +658,10 @@
 
 .glossary-term-admin__workflow-row {
   display: flex;
+  align-items: flex-start;
   justify-content: flex-start;
+  gap: var(--space-5);
+  flex-wrap: wrap;
 }
 
 .glossary-term-admin__workflow-field {
@@ -669,6 +672,20 @@
 
 .glossary-term-admin__status-dropdown {
   align-self: flex-start;
+}
+
+.glossary-term-admin__term-dates {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.glossary-term-admin__term-date {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .glossary-term-admin__editor-page {

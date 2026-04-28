@@ -9,8 +9,10 @@ import com.box.l10n.mojito.service.mcp.McpToolDescriptor;
 import com.box.l10n.mojito.service.mcp.McpToolParameter;
 import com.box.l10n.mojito.service.mcp.TypedMcpToolHandler;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -36,7 +38,8 @@ public class BulkUpsertGlossaryTermsMcpTool
           false,
           true,
           List.of(
-              new McpToolParameter("glossaryId", "Glossary id. Preferred when known.", false),
+              new McpToolParameter(
+                  "glossaryId", "Glossary id. Preferred when known.", false, Long.class),
               new McpToolParameter(
                   "glossaryName",
                   "Exact glossary name. Used only when glossaryId is omitted.",
@@ -44,11 +47,13 @@ public class BulkUpsertGlossaryTermsMcpTool
               new McpToolParameter(
                   "dryRun",
                   "Defaults to true. When true, validates and returns an operation plan without writing.",
-                  false),
+                  false,
+                  Boolean.class),
               new McpToolParameter(
                   "terms",
                   "Terms to upsert. Each term needs source, optional termKey/tmTextUnitId, metadata, translations, and evidence. Evidence can link existing Mojito TUs with tmTextUnitId.",
-                  true)));
+                  true,
+                  termsSchema())));
 
   private final GlossaryMcpSupport glossaryMcpSupport;
   private final GlossaryTermService glossaryTermService;
@@ -92,6 +97,118 @@ public class BulkUpsertGlossaryTermsMcpTool
       Integer cropY,
       Integer cropWidth,
       Integer cropHeight) {}
+
+  private static Map<String, Object> termsSchema() {
+    return Map.of(
+        "type",
+        "array",
+        "description",
+        "Terms to upsert. Each term needs source, optional termKey/tmTextUnitId, metadata, translations, and evidence. Evidence can link existing Mojito TUs with tmTextUnitId.",
+        "minItems",
+        1,
+        "maxItems",
+        MAX_TERMS,
+        "items",
+        termSchema());
+  }
+
+  private static Map<String, Object> termSchema() {
+    Map<String, Object> properties = new LinkedHashMap<>();
+    properties.put(
+        "tmTextUnitId", integerSchema("Existing glossary source tmTextUnitId to update."));
+    properties.put("termKey", stringSchema("Stable glossary term key. Optional for new terms."));
+    properties.put("source", stringSchema("Canonical source term text."));
+    properties.put(
+        "sourceComment",
+        stringSchema("Canonical source text-unit comment. Also used as the glossary definition."));
+    properties.put(
+        "definition",
+        stringSchema("Glossary definition. If sourceComment is omitted, this seeds the comment."));
+    properties.put("partOfSpeech", stringSchema("Part of speech, for example noun or verb."));
+    properties.put("termType", enumSchema("Term type.", GlossaryTermMetadata.TERM_TYPES));
+    properties.put(
+        "enforcement", enumSchema("Enforcement level.", GlossaryTermMetadata.ENFORCEMENTS));
+    properties.put("status", enumSchema("Term status.", GlossaryTermMetadata.STATUSES));
+    properties.put("provenance", enumSchema("Term provenance.", GlossaryTermMetadata.PROVENANCES));
+    properties.put("caseSensitive", booleanSchema("Whether matching should be case-sensitive."));
+    properties.put("doNotTranslate", booleanSchema("Whether the term must stay untranslated."));
+    properties.put("translations", translationsSchema());
+    properties.put("evidence", evidenceSchema());
+
+    return Map.of(
+        "type",
+        "object",
+        "additionalProperties",
+        false,
+        "required",
+        List.of("source"),
+        "properties",
+        properties);
+  }
+
+  private static Map<String, Object> translationsSchema() {
+    return Map.of(
+        "type",
+        "array",
+        "description",
+        "Target terms keyed by locale.",
+        "items",
+        Map.of(
+            "type",
+            "object",
+            "additionalProperties",
+            false,
+            "required",
+            List.of("localeTag", "target"),
+            "properties",
+            Map.of(
+                "localeTag", stringSchema("BCP-47 locale tag, for example fr or fr-CA."),
+                "target", stringSchema("Target glossary term."),
+                "targetComment", stringSchema("Optional target note."))));
+  }
+
+  private static Map<String, Object> evidenceSchema() {
+    return Map.of(
+        "type",
+        "array",
+        "description",
+        "Supporting references for why this term belongs in the glossary.",
+        "items",
+        Map.of(
+            "type",
+            "object",
+            "additionalProperties",
+            false,
+            "required",
+            List.of("evidenceType"),
+            "properties",
+            Map.of(
+                "evidenceType", enumSchema("Reference type.", EVIDENCE_TYPES),
+                "caption", stringSchema("Reference note or caption."),
+                "imageKey", stringSchema("Stored screenshot image key."),
+                "tmTextUnitId", integerSchema("Existing Mojito text unit id used as evidence."),
+                "cropX", integerSchema("Optional screenshot crop x coordinate."),
+                "cropY", integerSchema("Optional screenshot crop y coordinate."),
+                "cropWidth", integerSchema("Optional screenshot crop width."),
+                "cropHeight", integerSchema("Optional screenshot crop height."))));
+  }
+
+  private static Map<String, Object> stringSchema(String description) {
+    return Map.of("type", "string", "description", description);
+  }
+
+  private static Map<String, Object> integerSchema(String description) {
+    return Map.of("type", "integer", "description", description);
+  }
+
+  private static Map<String, Object> booleanSchema(String description) {
+    return Map.of("type", "boolean", "description", description);
+  }
+
+  private static Map<String, Object> enumSchema(String description, Set<String> values) {
+    return Map.of(
+        "type", "string", "description", description, "enum", values.stream().sorted().toList());
+  }
 
   public record BulkUpsertResult(
       GlossaryRef glossary,

@@ -118,6 +118,8 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
     private final TermView termView =
         new TermView(
             10L,
+            null,
+            null,
             20L,
             "actions",
             "Actions",

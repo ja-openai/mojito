@@ -58,6 +58,8 @@ export type ApiGlossaryTermEvidence = {
 
 export type ApiGlossaryTerm = {
   metadataId?: number | null;
+  createdDate?: string | null;
+  lastModifiedDate?: string | null;
   tmTextUnitId: number;
   termKey: string;
   source: string;

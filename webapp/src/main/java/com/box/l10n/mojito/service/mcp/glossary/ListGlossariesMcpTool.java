@@ -25,9 +25,13 @@ public class ListGlossariesMcpTool extends TypedMcpToolHandler<ListGlossariesMcp
               new McpToolParameter(
                   "enabled",
                   "Optional enabled filter. Non-admin users only see enabled glossaries.",
-                  false),
+                  false,
+                  Boolean.class),
               new McpToolParameter(
-                  "limit", "Optional max results to return. Defaults to 50, max 200.", false)));
+                  "limit",
+                  "Optional max results to return. Defaults to 50, max 200.",
+                  false,
+                  Integer.class)));
 
   private final GlossaryManagementService glossaryManagementService;
 

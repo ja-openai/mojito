@@ -33,6 +33,7 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import { PillDropdown } from '../../components/PillDropdown';
 import { useUser } from '../../components/RequireUser';
+import { formatLocalDateTime, getLocalAndUtcDateTimeTooltip } from '../../utils/dateTime';
 import { buildGlossaryWorkbenchState } from '../../utils/glossaryWorkbench';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
@@ -181,6 +182,8 @@ type ReferenceDraft = {
 
 type TermDraft = {
   tmTextUnitId?: number | null;
+  createdDate?: string | null;
+  lastModifiedDate?: string | null;
   termKey: string;
   source: string;
   sourceComment: string;
@@ -251,6 +254,8 @@ const getReferencePlaceholder = (referenceType: ReferenceType) => {
 
 const createBlankDraft = (localeTags: string[] = []): TermDraft => ({
   tmTextUnitId: null,
+  createdDate: null,
+  lastModifiedDate: null,
   termKey: '',
   source: '',
   sourceComment: '',
@@ -291,6 +296,8 @@ const termToDraft = (term: ApiGlossaryTerm, localeTags: string[]): TermDraft => 
   ]);
   return {
     tmTextUnitId: term.tmTextUnitId,
+    createdDate: term.createdDate ?? null,
+    lastModifiedDate: term.lastModifiedDate ?? null,
     termKey: term.termKey,
     source: term.source,
     sourceComment: term.sourceComment ?? term.definition ?? '',
@@ -1745,6 +1752,20 @@ export function AdminGlossaryTermsPanel({
                       className="glossary-term-admin__status-dropdown"
                       disabled={!canManageTerms}
                     />
+                  </div>
+                  <div className="glossary-term-admin__term-dates">
+                    <div className="glossary-term-admin__term-date">
+                      <span className="settings-field__label">Created</span>
+                      <span title={getLocalAndUtcDateTimeTooltip(editorDraft.createdDate)}>
+                        {formatLocalDateTime(editorDraft.createdDate)}
+                      </span>
+                    </div>
+                    <div className="glossary-term-admin__term-date">
+                      <span className="settings-field__label">Updated</span>
+                      <span title={getLocalAndUtcDateTimeTooltip(editorDraft.lastModifiedDate)}>
+                        {formatLocalDateTime(editorDraft.lastModifiedDate)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
