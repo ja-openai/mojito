@@ -73,6 +73,16 @@ const getFullyTranslatedLocaleTags = (repository: ApiRepository) => {
 
 const getMetricValue = (count: number, words: number) => ({ count, words });
 
+const hasSameIds = (left: number[], right: number[]) => {
+  if (left.length !== right.length) {
+    return false;
+  }
+  const rightSet = new Set(right);
+  return left.every((id) => rightSet.has(id));
+};
+
+type RepositorySelectionMode = 'repositories' | 'glossaries' | 'other';
+
 const buildRepositoryRow = (
   repository: ApiRepository,
   selectedRepositoryId: number | null,
@@ -243,6 +253,24 @@ export function RepositoriesPage() {
     return new Map(glossaryEntries.map((glossary) => [glossary.backingRepository.id, glossary.id]));
   }, [glossaryQuery.data?.glossaries]);
   const repositoryOptions = useRepositorySelectionOptions(repositories);
+  const allRepositoryIds = useMemo(
+    () => repositoryOptions.map((repository) => repository.id),
+    [repositoryOptions],
+  );
+  const productRepositoryIds = useMemo(
+    () =>
+      repositoryOptions
+        .filter((repository) => !repository.isGlossary)
+        .map((repository) => repository.id),
+    [repositoryOptions],
+  );
+  const glossaryRepositoryIds = useMemo(
+    () =>
+      repositoryOptions
+        .filter((repository) => repository.isGlossary)
+        .map((repository) => repository.id),
+    [repositoryOptions],
+  );
 
   const {
     selectedIds: selectedRepositoryIds,
@@ -543,6 +571,70 @@ export function RepositoriesPage() {
     [onChangeLocaleSelection],
   );
 
+  const repositorySelectionMode: RepositorySelectionMode = (() => {
+    if (
+      productRepositoryIds.length > 0 &&
+      hasSameIds(selectedRepositoryIds, productRepositoryIds)
+    ) {
+      return 'repositories';
+    }
+    if (
+      glossaryRepositoryIds.length > 0 &&
+      hasSameIds(selectedRepositoryIds, glossaryRepositoryIds)
+    ) {
+      return 'glossaries';
+    }
+    return 'other';
+  })();
+
+  const repositorySelectionActions = useMemo(
+    () =>
+      [
+        repositorySelectionMode === 'repositories'
+          ? null
+          : {
+              label: 'Repositories',
+              onClick: () => onChangeRepositorySelection(productRepositoryIds),
+              disabled: productRepositoryIds.length === 0,
+              ariaLabel: 'Show repositories excluding glossaries',
+            },
+        repositorySelectionMode === 'glossaries'
+          ? null
+          : {
+              label: 'Glossaries',
+              onClick: () => onChangeRepositorySelection(glossaryRepositoryIds),
+              disabled: glossaryRepositoryIds.length === 0,
+              ariaLabel: 'Show glossary backing repositories only',
+            },
+      ].filter((action): action is NonNullable<typeof action> => action != null),
+    [
+      glossaryRepositoryIds,
+      onChangeRepositorySelection,
+      productRepositoryIds,
+      repositorySelectionMode,
+    ],
+  );
+
+  const formatRepositorySelectionSummary = useCallback(
+    ({ selectedIds, defaultSummary }: { selectedIds: number[]; defaultSummary: string }) => {
+      if (hasSameIds(selectedIds, allRepositoryIds)) {
+        return 'All repositories';
+      }
+      if (
+        glossaryRepositoryIds.length > 0 &&
+        productRepositoryIds.length > 0 &&
+        hasSameIds(selectedIds, productRepositoryIds)
+      ) {
+        return 'Repositories';
+      }
+      if (glossaryRepositoryIds.length > 0 && hasSameIds(selectedIds, glossaryRepositoryIds)) {
+        return 'Glossaries';
+      }
+      return defaultSummary;
+    },
+    [allRepositoryIds, glossaryRepositoryIds, productRepositoryIds],
+  );
+
   const handleOpenWorkbench = useCallback(
     ({
       repositoryId,
@@ -613,6 +705,8 @@ export function RepositoriesPage() {
       repositoryOptions={repositoryOptions}
       selectedRepositoryIds={selectedRepositoryIds}
       onChangeRepositorySelection={onChangeRepositorySelection}
+      repositorySelectionActions={repositorySelectionActions}
+      formatRepositorySelectionSummary={formatRepositorySelectionSummary}
       onOpenAiTranslate={handleOpenAiTranslate}
       localeOptions={localeOptions}
       selectedLocaleTags={selectedLocaleTags}

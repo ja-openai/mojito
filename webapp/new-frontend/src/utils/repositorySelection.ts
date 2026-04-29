@@ -5,6 +5,7 @@ import type { ApiRepository } from '../api/repositories';
 export type RepositorySelectionOption = {
   id: number;
   name: string;
+  isGlossary?: boolean;
 };
 
 type UseRepositorySelectionOptions = {
@@ -30,7 +31,7 @@ export function useRepositorySelectionOptions(
     }
     return repositories
       .filter((repo): repo is ApiRepository => Boolean(repo && typeof repo.id === 'number'))
-      .map((repo) => ({ id: repo.id, name: repo.name }));
+      .map((repo) => ({ id: repo.id, name: repo.name, isGlossary: Boolean(repo.isGlossary) }));
   }, [repositories]);
 }
 

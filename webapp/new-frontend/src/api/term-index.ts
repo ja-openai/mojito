@@ -22,6 +22,7 @@ export type ApiTermIndexRefreshRequest = {
   repositoryIds: number[];
   fullRefresh?: boolean | null;
   batchSize?: number | null;
+  excludeGlossaryRepositories?: boolean | null;
 };
 
 export type ApiTermIndexEntry = {

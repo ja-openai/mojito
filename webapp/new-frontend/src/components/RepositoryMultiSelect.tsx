@@ -1,5 +1,5 @@
 import type { RepositorySelectionOption } from '../utils/repositorySelection';
-import type { MultiSelectOption } from './MultiSelectChip';
+import type { MultiSelectCustomAction, MultiSelectOption } from './MultiSelectChip';
 import { MultiSelectChip } from './MultiSelectChip';
 export type { RepositorySelectionOption as RepositoryMultiSelectOption } from '../utils/repositorySelection';
 
@@ -12,6 +12,12 @@ type Props = {
   disabled?: boolean;
   align?: 'left' | 'right';
   buttonAriaLabel?: string;
+  customActions?: MultiSelectCustomAction[];
+  summaryFormatter?: (args: {
+    options: RepositorySelectionOption[];
+    selectedIds: number[];
+    defaultSummary: string;
+  }) => string;
 };
 
 export function RepositoryMultiSelect({
@@ -23,6 +29,8 @@ export function RepositoryMultiSelect({
   disabled = false,
   align = 'left',
   buttonAriaLabel,
+  customActions,
+  summaryFormatter,
 }: Props) {
   const multiOptions: Array<MultiSelectOption<number>> = options.map((option) => ({
     value: option.id,
@@ -43,24 +51,35 @@ export function RepositoryMultiSelect({
       align={align}
       disabled={disabled}
       buttonAriaLabel={buttonAriaLabel ?? resolvedLabel}
+      customActions={customActions}
       summaryFormatter={({ options: opts, selectedValues }) => {
-        if (!opts.length) {
-          return resolvedLabel;
+        const defaultSummary = (() => {
+          if (!opts.length) {
+            return resolvedLabel;
+          }
+          if (!selectedValues.length) {
+            return resolvedLabel;
+          }
+          if (selectedValues.length === opts.length) {
+            return 'All repositories';
+          }
+          if (selectedValues.length === 1) {
+            const selectedSet = new Set(selectedValues);
+            return opts
+              .filter((option) => selectedSet.has(option.value))
+              .map((option) => option.label)
+              .join(', ');
+          }
+          return `${selectedValues.length} repositories`;
+        })();
+        if (summaryFormatter) {
+          return summaryFormatter({
+            options,
+            selectedIds: selectedValues,
+            defaultSummary,
+          });
         }
-        if (!selectedValues.length) {
-          return resolvedLabel;
-        }
-        if (selectedValues.length === opts.length) {
-          return 'All repositories';
-        }
-        if (selectedValues.length === 1) {
-          const selectedSet = new Set(selectedValues);
-          return opts
-            .filter((option) => selectedSet.has(option.value))
-            .map((option) => option.label)
-            .join(', ');
-        }
-        return `${selectedValues.length} repositories`;
+        return defaultSummary;
       }}
     />
   );

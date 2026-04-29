@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { MultiSectionFilterChip } from '../../components/filters/MultiSectionFilterChip';
 import type { LocaleOption } from '../../components/LocaleMultiSelect';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
+import type { MultiSelectCustomAction } from '../../components/MultiSelectChip';
 import {
   RepositoryMultiSelect,
   type RepositoryMultiSelectOption,
@@ -67,6 +68,11 @@ type Props = {
   repositoryOptions: RepositoryMultiSelectOption[];
   selectedRepositoryIds: number[];
   onChangeRepositorySelection: (next: number[]) => void;
+  repositorySelectionActions?: MultiSelectCustomAction[];
+  formatRepositorySelectionSummary?: (args: {
+    selectedIds: number[];
+    defaultSummary: string;
+  }) => string;
   onOpenAiTranslate: (id: number) => void;
   localeOptions: LocaleOption[];
   selectedLocaleTags: string[];
@@ -609,6 +615,8 @@ export function RepositoriesPageView({
   repositoryOptions,
   selectedRepositoryIds,
   onChangeRepositorySelection,
+  repositorySelectionActions,
+  formatRepositorySelectionSummary,
   onOpenAiTranslate,
   localeOptions,
   selectedLocaleTags,
@@ -643,6 +651,8 @@ export function RepositoriesPageView({
               onChange={onChangeRepositorySelection}
               className="repositories-page__repository-filter"
               buttonAriaLabel="Filter repositories by name"
+              customActions={repositorySelectionActions}
+              summaryFormatter={formatRepositorySelectionSummary}
             />
             <LocaleMultiSelect
               options={localeOptions}

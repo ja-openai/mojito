@@ -4,15 +4,18 @@ import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
+import com.box.l10n.mojito.service.glossary.GlossaryRepository;
 import com.box.l10n.mojito.service.glossary.TermIndexExplorerService;
 import com.box.l10n.mojito.service.glossary.TermIndexRefreshService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -38,6 +41,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class TermIndexExplorerWS {
 
   private final UserService userService;
+  private final GlossaryRepository glossaryRepository;
   private final TermIndexRefreshService termIndexRefreshService;
   private final TermIndexExplorerService termIndexExplorerService;
   private final StructuredBlobStorage structuredBlobStorage;
@@ -47,6 +51,7 @@ public class TermIndexExplorerWS {
 
   public TermIndexExplorerWS(
       UserService userService,
+      GlossaryRepository glossaryRepository,
       TermIndexRefreshService termIndexRefreshService,
       TermIndexExplorerService termIndexExplorerService,
       StructuredBlobStorage structuredBlobStorage,
@@ -55,6 +60,7 @@ public class TermIndexExplorerWS {
       @Qualifier("termIndexEntriesHybridExecutor")
           AsyncTaskExecutor termIndexEntriesHybridExecutor) {
     this.userService = Objects.requireNonNull(userService);
+    this.glossaryRepository = Objects.requireNonNull(glossaryRepository);
     this.termIndexRefreshService = Objects.requireNonNull(termIndexRefreshService);
     this.termIndexExplorerService = Objects.requireNonNull(termIndexExplorerService);
     this.structuredBlobStorage = Objects.requireNonNull(structuredBlobStorage);
@@ -67,8 +73,7 @@ public class TermIndexExplorerWS {
   @PostMapping("/refresh")
   public StartRefreshResponse refresh(@RequestBody RefreshRequest request) {
     requireAdmin();
-    List<Long> repositoryIds =
-        request == null || request.repositoryIds() == null ? List.of() : request.repositoryIds();
+    List<Long> repositoryIds = resolveRefreshRepositoryIds(request);
     if (repositoryIds.stream().filter(Objects::nonNull).toList().isEmpty()) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "At least one repository is required to refresh the term index");
@@ -219,7 +224,24 @@ public class TermIndexExplorerWS {
     }
   }
 
-  public record RefreshRequest(List<Long> repositoryIds, Boolean fullRefresh, Integer batchSize) {}
+  private List<Long> resolveRefreshRepositoryIds(RefreshRequest request) {
+    List<Long> repositoryIds =
+        request == null || request.repositoryIds() == null ? List.of() : request.repositoryIds();
+    if (!Boolean.TRUE.equals(request == null ? null : request.excludeGlossaryRepositories())) {
+      return repositoryIds;
+    }
+
+    Set<Long> glossaryRepositoryIds = new HashSet<>(glossaryRepository.findBackingRepositoryIds());
+    return repositoryIds.stream()
+        .filter(repositoryId -> !glossaryRepositoryIds.contains(repositoryId))
+        .toList();
+  }
+
+  public record RefreshRequest(
+      List<Long> repositoryIds,
+      Boolean fullRefresh,
+      Integer batchSize,
+      Boolean excludeGlossaryRepositories) {}
 
   public record StartRefreshResponse(PollableTask pollableTask) {}
 

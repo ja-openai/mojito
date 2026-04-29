@@ -68,6 +68,7 @@ const DEFAULT_BATCH_SIZE = 1000;
 type TermIndexRefreshForm = {
   repositoryIds: number[];
   fullRefresh: boolean;
+  excludeGlossaryRepositories: boolean;
 };
 
 const PaneGripIcon = () => (
@@ -84,6 +85,18 @@ const PaneGripIcon = () => (
   </svg>
 );
 
+const excludeGlossaryRepositoryIds = (
+  repositoryIds: number[],
+  repositoryOptions: ReturnType<typeof useRepositorySelectionOptions>,
+) => {
+  const glossaryRepositoryIds = new Set(
+    repositoryOptions
+      .filter((repository) => repository.isGlossary)
+      .map((repository) => repository.id),
+  );
+  return repositoryIds.filter((repositoryId) => !glossaryRepositoryIds.has(repositoryId));
+};
+
 export function AdminTermIndexExplorerPage() {
   return <AdminTermIndexRunsPage />;
 }
@@ -98,6 +111,8 @@ export function AdminTermIndexRunsPage() {
   const [refreshModalOpen, setRefreshModalOpen] = useState(false);
   const [refreshRepositoryIds, setRefreshRepositoryIds] = useState<number[]>([]);
   const [refreshFullRefresh, setRefreshFullRefresh] = useState(false);
+  const [refreshExcludeGlossaryRepositories, setRefreshExcludeGlossaryRepositories] =
+    useState(true);
   const [activeRefreshTaskId, setActiveRefreshTaskId] = useState<number | null>(null);
   const [runResultLimit, setRunResultLimit] = useState(RUN_RESULT_LIMIT_DEFAULT);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
@@ -127,6 +142,7 @@ export function AdminTermIndexRunsPage() {
         repositoryIds: request.repositoryIds,
         fullRefresh: request.fullRefresh,
         batchSize: DEFAULT_BATCH_SIZE,
+        excludeGlossaryRepositories: request.excludeGlossaryRepositories,
       });
       setActiveRefreshTaskId(startedTask.id);
       return waitForTermIndexRefreshTask(startedTask.id);
@@ -155,19 +171,24 @@ export function AdminTermIndexRunsPage() {
     setNotice(null);
     setRefreshRepositoryIds(selectedRepositoryIds);
     setRefreshFullRefresh(false);
+    setRefreshExcludeGlossaryRepositories(true);
     setRefreshModalOpen(true);
   };
 
   const startRefresh = () => {
-    if (refreshRepositoryIds.length === 0 || refreshMutation.isPending) {
+    const repositoryIds = refreshExcludeGlossaryRepositories
+      ? excludeGlossaryRepositoryIds(refreshRepositoryIds, repositoryOptions)
+      : refreshRepositoryIds;
+    if (repositoryIds.length === 0 || refreshMutation.isPending) {
       return;
     }
 
     setNotice(null);
     setRefreshModalOpen(false);
     refreshMutation.mutate({
-      repositoryIds: refreshRepositoryIds,
+      repositoryIds,
       fullRefresh: refreshFullRefresh,
+      excludeGlossaryRepositories: refreshExcludeGlossaryRepositories,
     });
   };
 
@@ -236,9 +257,11 @@ export function AdminTermIndexRunsPage() {
         repositoryOptions={repositoryOptions}
         selectedRepositoryIds={refreshRepositoryIds}
         fullRefresh={refreshFullRefresh}
+        excludeGlossaryRepositories={refreshExcludeGlossaryRepositories}
         isRefreshing={refreshMutation.isPending}
         onRepositoryChange={setRefreshRepositoryIds}
         onFullRefreshChange={setRefreshFullRefresh}
+        onExcludeGlossaryRepositoriesChange={setRefreshExcludeGlossaryRepositories}
         onClose={() => setRefreshModalOpen(false)}
         onStart={startRefresh}
       />
@@ -576,9 +599,11 @@ function TermIndexRefreshModal({
   repositoryOptions,
   selectedRepositoryIds,
   fullRefresh,
+  excludeGlossaryRepositories,
   isRefreshing,
   onRepositoryChange,
   onFullRefreshChange,
+  onExcludeGlossaryRepositoriesChange,
   onClose,
   onStart,
 }: {
@@ -586,17 +611,34 @@ function TermIndexRefreshModal({
   repositoryOptions: ReturnType<typeof useRepositorySelectionOptions>;
   selectedRepositoryIds: number[];
   fullRefresh: boolean;
+  excludeGlossaryRepositories: boolean;
   isRefreshing: boolean;
   onRepositoryChange: (repositoryIds: number[]) => void;
   onFullRefreshChange: (fullRefresh: boolean) => void;
+  onExcludeGlossaryRepositoriesChange: (excludeGlossaryRepositories: boolean) => void;
   onClose: () => void;
   onStart: () => void;
 }) {
-  const canStart = selectedRepositoryIds.length > 0 && !isRefreshing;
+  const nonGlossarySelectedRepositoryIds = excludeGlossaryRepositoryIds(
+    selectedRepositoryIds,
+    repositoryOptions,
+  );
+  const excludedGlossaryRepositoryCount =
+    selectedRepositoryIds.length - nonGlossarySelectedRepositoryIds.length;
+  const refreshRepositoryCount = excludeGlossaryRepositories
+    ? nonGlossarySelectedRepositoryIds.length
+    : selectedRepositoryIds.length;
+  const canStart = refreshRepositoryCount > 0 && !isRefreshing;
   const repositorySummary =
-    selectedRepositoryIds.length === 1
+    refreshRepositoryCount === 1
       ? '1 repository selected'
-      : `${selectedRepositoryIds.length.toLocaleString()} repositories selected`;
+      : `${refreshRepositoryCount.toLocaleString()} repositories selected`;
+  const exclusionSummary =
+    excludeGlossaryRepositories && excludedGlossaryRepositoryCount > 0
+      ? ` · ${excludedGlossaryRepositoryCount.toLocaleString()} ${
+          excludedGlossaryRepositoryCount === 1 ? 'glossary' : 'glossaries'
+        } excluded`
+      : '';
 
   return (
     <Modal
@@ -619,12 +661,23 @@ function TermIndexRefreshModal({
             className="settings-repository-select"
             buttonAriaLabel="Select repositories to refresh"
           />
-          <p className={`settings-hint${selectedRepositoryIds.length === 0 ? ' is-error' : ''}`}>
-            {selectedRepositoryIds.length === 0
-              ? 'Select at least one repository.'
-              : repositorySummary}
+          <p className={`settings-hint${refreshRepositoryCount === 0 ? ' is-error' : ''}`}>
+            {refreshRepositoryCount === 0 && selectedRepositoryIds.length > 0
+              ? 'All selected repositories are excluded.'
+              : refreshRepositoryCount === 0
+                ? 'Select at least one repository.'
+                : `${repositorySummary}${exclusionSummary}`}
           </p>
         </div>
+
+        <label className="settings-toggle">
+          <input
+            type="checkbox"
+            checked={excludeGlossaryRepositories}
+            onChange={(event) => onExcludeGlossaryRepositoriesChange(event.target.checked)}
+          />
+          <span>Exclude glossary repositories</span>
+        </label>
 
         <fieldset className="term-index-explorer__refresh-mode">
           <legend>Refresh mode</legend>
