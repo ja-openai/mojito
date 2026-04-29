@@ -29,6 +29,7 @@ import {
   updateGlossaryTerm,
   waitForGlossaryExtractionTask,
 } from '../../api/glossaries';
+import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import { PillDropdown } from '../../components/PillDropdown';
@@ -1807,11 +1808,13 @@ export function AdminGlossaryTermsPanel({
                   <label className="settings-field__label" htmlFor="glossary-term-definition">
                     Definition
                   </label>
-                  <textarea
+                  <AutoTextarea
                     id="glossary-term-definition"
                     className="settings-input"
                     value={editorDraft.definition}
                     disabled={!canEditProposalDraft}
+                    minRows={3}
+                    maxRows={12}
                     onChange={(event) =>
                       setEditorDraft((current) => ({
                         ...current,
