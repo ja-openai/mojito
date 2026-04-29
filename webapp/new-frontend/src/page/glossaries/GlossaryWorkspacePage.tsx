@@ -3,7 +3,7 @@ import './glossaries-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { exportGlossary, fetchGlossary, importGlossary } from '../../api/glossaries';
 import { useUser } from '../../components/RequireUser';
@@ -128,6 +128,16 @@ export function GlossaryWorkspacePage() {
                 ? 'Extract candidates'
                 : viewState.title || 'Edit term'
             : 'Glossaries'
+        }
+        rightContent={
+          canExportGlossary && viewState.mode === 'terms' ? (
+            <Link
+              className="glossary-workspace__settings-link"
+              to={`/glossaries/${glossaryId}/settings`}
+            >
+              Settings
+            </Link>
+          ) : null
         }
       />
       <div className="settings-page settings-page--wide glossaries-page">

@@ -48,10 +48,12 @@
 }
 
 .settings-subpage__topbar-group--left {
+  grid-column: 1;
   justify-self: start;
 }
 
 .settings-subpage__topbar-group--center {
+  grid-column: 2;
   justify-self: center;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
@@ -59,6 +61,7 @@
 }
 
 .settings-subpage__topbar-group--right {
+  grid-column: 3;
   justify-self: end;
 }
 

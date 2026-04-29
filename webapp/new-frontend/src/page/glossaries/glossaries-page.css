@@ -39,6 +39,17 @@
   font-weight: var(--font-weight-medium);
 }
 
+.glossary-workspace__settings-link {
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+}
+
+.glossary-workspace__settings-link:hover,
+.glossary-workspace__settings-link:focus-visible {
+  color: color-mix(in srgb, var(--color-accent) 84%, var(--color-text));
+}
+
 .glossaries-page__header {
   display: flex;
   align-items: flex-end;
