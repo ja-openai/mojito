@@ -12,7 +12,7 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
-import com.box.l10n.mojito.entity.glossary.termindex.TermIndexEntry;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
@@ -45,7 +45,7 @@ public class TermIndexRefreshServiceTest {
 
   @Mock com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository;
   @Mock TMTextUnitRepository tmTextUnitRepository;
-  @Mock TermIndexEntryRepository termIndexEntryRepository;
+  @Mock TermIndexExtractedTermRepository termIndexExtractedTermRepository;
   @Mock TermIndexOccurrenceRepository termIndexOccurrenceRepository;
   @Mock TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository;
   @Mock TermIndexRefreshRunRepository termIndexRefreshRunRepository;
@@ -54,7 +54,7 @@ public class TermIndexRefreshServiceTest {
   TermIndexRefreshService termIndexRefreshService;
   AtomicReference<TermIndexRefreshRun> refreshRun = new AtomicReference<>();
   AtomicReference<TermIndexRepositoryCursor> cursor = new AtomicReference<>();
-  Map<Long, TermIndexEntry> termIndexEntries = new LinkedHashMap<>();
+  Map<Long, TermIndexExtractedTerm> termIndexExtractedTerms = new LinkedHashMap<>();
   Set<Long> runEntryIds = new LinkedHashSet<>();
 
   @Before
@@ -63,7 +63,7 @@ public class TermIndexRefreshServiceTest {
         new TermIndexRefreshService(
             repositoryRepository,
             tmTextUnitRepository,
-            termIndexEntryRepository,
+            termIndexExtractedTermRepository,
             termIndexOccurrenceRepository,
             termIndexRepositoryCursorRepository,
             termIndexRefreshRunRepository,
@@ -151,36 +151,38 @@ public class TermIndexRefreshServiceTest {
               leasedCursor.setCurrentRefreshRun(null);
               return 1;
             });
-    when(termIndexEntryRepository.save(any(TermIndexEntry.class)))
+    when(termIndexExtractedTermRepository.save(any(TermIndexExtractedTerm.class)))
         .thenAnswer(
             invocation -> {
-              TermIndexEntry entry = invocation.getArgument(0);
+              TermIndexExtractedTerm entry = invocation.getArgument(0);
               if (entry.getId() == null) {
                 entry.setId(200L);
               }
-              termIndexEntries.put(entry.getId(), entry);
+              termIndexExtractedTerms.put(entry.getId(), entry);
               return entry;
             });
-    when(termIndexEntryRepository.findById(any(Long.class)))
+    when(termIndexExtractedTermRepository.findById(any(Long.class)))
         .thenAnswer(
-            invocation -> Optional.ofNullable(termIndexEntries.get(invocation.getArgument(0))));
-    when(termIndexEntryRepository.findBySourceLocaleTagAndNormalizedKey(anyString(), anyString()))
+            invocation ->
+                Optional.ofNullable(termIndexExtractedTerms.get(invocation.getArgument(0))));
+    when(termIndexExtractedTermRepository.findBySourceLocaleTagAndNormalizedKey(
+            anyString(), anyString()))
         .thenAnswer(
             invocation -> {
               String sourceLocaleTag = invocation.getArgument(0);
               String normalizedKey = invocation.getArgument(1);
-              return termIndexEntries.values().stream()
+              return termIndexExtractedTerms.values().stream()
                   .filter(entry -> sourceLocaleTag.equals(entry.getSourceLocaleTag()))
                   .filter(entry -> normalizedKey.equals(entry.getNormalizedKey()))
                   .findFirst();
             });
-    when(termIndexEntryRepository.insertIfAbsent(anyString(), anyString(), anyString()))
+    when(termIndexExtractedTermRepository.insertIfAbsent(anyString(), anyString(), anyString()))
         .thenAnswer(
             invocation -> {
               String sourceLocaleTag = invocation.getArgument(0);
               String normalizedKey = invocation.getArgument(1);
               boolean exists =
-                  termIndexEntries.values().stream()
+                  termIndexExtractedTerms.values().stream()
                       .anyMatch(
                           entry ->
                               sourceLocaleTag.equals(entry.getSourceLocaleTag())
@@ -189,14 +191,14 @@ public class TermIndexRefreshServiceTest {
                 return 0;
               }
 
-              TermIndexEntry entry = new TermIndexEntry();
-              entry.setId(200L + termIndexEntries.size());
+              TermIndexExtractedTerm entry = new TermIndexExtractedTerm();
+              entry.setId(200L + termIndexExtractedTerms.size());
               entry.setSourceLocaleTag(sourceLocaleTag);
               entry.setNormalizedKey(normalizedKey);
               entry.setDisplayTerm(invocation.getArgument(2));
               entry.setFirstSeenAt(ZonedDateTime.now());
               entry.setLastSeenAt(entry.getFirstSeenAt());
-              termIndexEntries.put(entry.getId(), entry);
+              termIndexExtractedTerms.put(entry.getId(), entry);
               return 1;
             });
     when(termIndexOccurrenceRepository.saveAll(any()))
@@ -211,14 +213,14 @@ public class TermIndexRefreshServiceTest {
               runEntryIds.addAll(ids);
               return runEntryIds.size() - beforeSize;
             });
-    when(termIndexRefreshRunEntryRepository.findTermIndexEntryIdsByRefreshRunIdAfter(
+    when(termIndexRefreshRunEntryRepository.findTermIndexExtractedTermIdsByRefreshRunIdAfter(
             eq(7L), any(Long.class), any(Pageable.class)))
         .thenAnswer(
             invocation -> {
-              Long afterTermIndexEntryId = invocation.getArgument(1);
+              Long afterTermIndexExtractedTermId = invocation.getArgument(1);
               Pageable pageable = invocation.getArgument(2);
               return runEntryIds.stream()
-                  .filter(id -> id > afterTermIndexEntryId)
+                  .filter(id -> id > afterTermIndexExtractedTermId)
                   .sorted()
                   .limit(pageable.getPageSize())
                   .toList();
@@ -236,12 +238,14 @@ public class TermIndexRefreshServiceTest {
     when(tmTextUnitRepository.findUsedTextUnitsForTermIndexRefresh(
             eq(5L), eq(null), eq(0L), any(Pageable.class)))
         .thenReturn(List.of(textUnit));
-    when(termIndexOccurrenceRepository.findDistinctTermIndexEntryIdsByTmTextUnitIdIn(List.of(100L)))
+    when(termIndexOccurrenceRepository.findDistinctTermIndexExtractedTermIdsByTmTextUnitIdIn(
+            List.of(100L)))
         .thenReturn(List.of());
-    when(termIndexOccurrenceRepository.countByTermIndexEntry(any(TermIndexEntry.class)))
+    when(termIndexOccurrenceRepository.countByTermIndexExtractedTerm(
+            any(TermIndexExtractedTerm.class)))
         .thenReturn(1L);
-    when(termIndexOccurrenceRepository.countDistinctRepositoriesByTermIndexEntry(
-            any(TermIndexEntry.class)))
+    when(termIndexOccurrenceRepository.countDistinctRepositoriesByTermIndexExtractedTerm(
+            any(TermIndexExtractedTerm.class)))
         .thenReturn(1L);
 
     TermIndexRefreshService.RefreshResult result =
@@ -261,8 +265,8 @@ public class TermIndexRefreshServiceTest {
     assertThat(occurrences).hasSize(1);
     TermIndexOccurrence occurrence = occurrences.getFirst();
     assertThat(occurrence.getMatchedText()).isEqualTo("Sora");
-    assertThat(occurrence.getTermIndexEntry().getNormalizedKey()).isEqualTo("sora");
-    assertThat(occurrence.getTermIndexEntry().getSourceLocaleTag()).isEqualTo("en");
+    assertThat(occurrence.getTermIndexExtractedTerm().getNormalizedKey()).isEqualTo("sora");
+    assertThat(occurrence.getTermIndexExtractedTerm().getSourceLocaleTag()).isEqualTo("en");
     assertThat(occurrence.getRepository()).isSameAs(repository);
     assertThat(occurrence.getTmTextUnit()).isSameAs(textUnit);
     assertThat(occurrence.getExtractionMethod())
@@ -278,12 +282,12 @@ public class TermIndexRefreshServiceTest {
   @Test
   public void fullRefreshDeletesRepositoryOccurrencesAndRecomputesStaleEntries() {
     Repository repository = repository(5L, "chatgpt-web", "en");
-    TermIndexEntry staleEntry = new TermIndexEntry();
+    TermIndexExtractedTerm staleEntry = new TermIndexExtractedTerm();
     staleEntry.setId(300L);
     staleEntry.setSourceLocaleTag("en");
     staleEntry.setNormalizedKey("old term");
     staleEntry.setDisplayTerm("Old Term");
-    termIndexEntries.put(staleEntry.getId(), staleEntry);
+    termIndexExtractedTerms.put(staleEntry.getId(), staleEntry);
 
     when(repositoryRepository.findByIdInAndDeletedFalseAndHiddenFalseOrderByNameAsc(List.of(5L)))
         .thenReturn(List.of(repository));
@@ -297,8 +301,9 @@ public class TermIndexRefreshServiceTest {
     when(tmTextUnitRepository.findUsedTextUnitsForTermIndexRefresh(
             eq(5L), eq(null), eq(0L), any(Pageable.class)))
         .thenReturn(List.of());
-    when(termIndexOccurrenceRepository.countByTermIndexEntry(staleEntry)).thenReturn(0L);
-    when(termIndexOccurrenceRepository.countDistinctRepositoriesByTermIndexEntry(staleEntry))
+    when(termIndexOccurrenceRepository.countByTermIndexExtractedTerm(staleEntry)).thenReturn(0L);
+    when(termIndexOccurrenceRepository.countDistinctRepositoriesByTermIndexExtractedTerm(
+            staleEntry))
         .thenReturn(0L);
 
     TermIndexRefreshService.RefreshResult result =
@@ -310,7 +315,7 @@ public class TermIndexRefreshServiceTest {
             new TermIndexRefreshService.RefreshResult(
                 7L, TermIndexRefreshRun.STATUS_SUCCEEDED, 1, 0, 1, 0));
     verify(termIndexOccurrenceRepository).deleteByRepositoryId(5L);
-    verify(termIndexEntryRepository).save(staleEntry);
+    verify(termIndexExtractedTermRepository).save(staleEntry);
     assertThat(staleEntry.getOccurrenceCount()).isZero();
     assertThat(staleEntry.getRepositoryCount()).isZero();
   }

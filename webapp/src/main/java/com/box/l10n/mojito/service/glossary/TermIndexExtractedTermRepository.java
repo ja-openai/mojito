@@ -1,6 +1,6 @@
 package com.box.l10n.mojito.service.glossary;
 
-import com.box.l10n.mojito.entity.glossary.termindex.TermIndexEntry;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -13,16 +13,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 @RepositoryRestResource(exported = false)
-public interface TermIndexEntryRepository extends JpaRepository<TermIndexEntry, Long> {
+public interface TermIndexExtractedTermRepository
+    extends JpaRepository<TermIndexExtractedTerm, Long> {
 
-  Optional<TermIndexEntry> findBySourceLocaleTagAndNormalizedKey(
+  Optional<TermIndexExtractedTerm> findBySourceLocaleTagAndNormalizedKey(
       String sourceLocaleTag, String normalizedKey);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       value =
           """
-          insert ignore into term_index_entry
+          insert ignore into term_index_extracted_term
             (created_date, last_modified_date, source_locale_tag, normalized_key, display_term,
              occurrence_count, repository_count, first_seen_at, last_seen_at)
           values
@@ -44,7 +45,7 @@ public interface TermIndexEntryRepository extends JpaRepository<TermIndexEntry, 
              count(distinct occurrence.repository.id) as repositoryCount,
              max(occurrence.createdDate) as lastOccurrenceAt
       from TermIndexOccurrence occurrence
-      join occurrence.termIndexEntry entry
+      join occurrence.termIndexExtractedTerm entry
       where (:repositoryIdsEmpty = true or occurrence.repository.id in :repositoryIds)
         and (
           :searchQuery is null

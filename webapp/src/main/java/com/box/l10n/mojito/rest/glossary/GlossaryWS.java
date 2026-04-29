@@ -1,18 +1,38 @@
 package com.box.l10n.mojito.rest.glossary;
 
 import com.box.l10n.mojito.entity.PollableTask;
+import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.service.blobstorage.Retention;
+import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.glossary.GlossaryImportExportService;
 import com.box.l10n.mojito.service.glossary.GlossaryManagementService;
+import com.box.l10n.mojito.service.glossary.GlossaryTermIndexCurationService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermService;
 import com.box.l10n.mojito.service.oaitranslate.GlossaryService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
+import com.box.l10n.mojito.service.security.user.UserService;
+import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,20 +49,42 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/glossaries")
 public class GlossaryWS {
 
+  private static final String GLOSSARY_WORKSPACE_CANDIDATE_SOURCE_NAME = "glossary-workspace";
+  private static final String GLOSSARY_WORKSPACE_CANDIDATE_SOURCE_TYPE = "HUMAN";
+
   private final GlossaryManagementService glossaryManagementService;
   private final GlossaryImportExportService glossaryImportExportService;
   private final GlossaryTermService glossaryTermService;
+  private final GlossaryTermIndexCurationService glossaryTermIndexCurationService;
   private final GlossaryService glossaryService;
+  private final StructuredBlobStorage structuredBlobStorage;
+  private final ObjectMapper objectMapper;
+  private final TermIndexEntriesHybridProperties termIndexEntriesHybridProperties;
+  private final AsyncTaskExecutor termIndexEntriesHybridExecutor;
+  private final UserService userService;
 
   public GlossaryWS(
       GlossaryManagementService glossaryManagementService,
       GlossaryImportExportService glossaryImportExportService,
       GlossaryTermService glossaryTermService,
-      GlossaryService glossaryService) {
+      GlossaryTermIndexCurationService glossaryTermIndexCurationService,
+      GlossaryService glossaryService,
+      StructuredBlobStorage structuredBlobStorage,
+      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
+      TermIndexEntriesHybridProperties termIndexEntriesHybridProperties,
+      @Qualifier("termIndexEntriesHybridExecutor") AsyncTaskExecutor termIndexEntriesHybridExecutor,
+      UserService userService) {
     this.glossaryManagementService = glossaryManagementService;
     this.glossaryImportExportService = glossaryImportExportService;
     this.glossaryTermService = glossaryTermService;
+    this.glossaryTermIndexCurationService = glossaryTermIndexCurationService;
     this.glossaryService = glossaryService;
+    this.structuredBlobStorage = Objects.requireNonNull(structuredBlobStorage);
+    this.objectMapper = Objects.requireNonNull(objectMapper);
+    this.termIndexEntriesHybridProperties =
+        Objects.requireNonNull(termIndexEntriesHybridProperties);
+    this.termIndexEntriesHybridExecutor = Objects.requireNonNull(termIndexEntriesHybridExecutor);
+    this.userService = Objects.requireNonNull(userService);
   }
 
   public record SearchGlossariesResponse(List<GlossarySummary> glossaries, long totalCount) {
@@ -106,6 +148,101 @@ public class GlossaryWS {
 
   public record SearchGlossaryTermsResponse(
       List<GlossaryTermResponse> terms, long totalCount, List<String> localeTags) {}
+
+  public record SearchTermIndexSuggestionsResponse(
+      List<TermIndexSuggestionResponse> suggestions, long totalCount) {}
+
+  public record SearchTermIndexSuggestionsRequest(
+      String search,
+      Integer limit,
+      Boolean useAi,
+      Boolean includeReviewed,
+      String reviewStateFilter) {}
+
+  public record SearchTermIndexSuggestionsHybridResponse(
+      SearchTermIndexSuggestionsResponse results,
+      PollingToken pollingToken,
+      HybridSearchError error) {
+    public record PollingToken(UUID requestId, long recommendedPollingDurationMillis) {}
+
+    public record HybridSearchError(
+        String type, String message, String stackTrace, boolean expected) {}
+  }
+
+  public record TermIndexSuggestionResponse(
+      Long termIndexCandidateId,
+      Long termIndexExtractedTermId,
+      String normalizedKey,
+      String term,
+      String label,
+      String sourceLocaleTag,
+      long occurrenceCount,
+      int repositoryCount,
+      int sourceCount,
+      int confidence,
+      String definition,
+      String rationale,
+      String suggestedTermType,
+      String suggestedProvenance,
+      String suggestedPartOfSpeech,
+      String suggestedEnforcement,
+      boolean suggestedDoNotTranslate,
+      List<TermIndexOccurrenceResponse> examples,
+      List<TermIndexCandidateSourceResponse> sources,
+      ZonedDateTime lastSignalAt,
+      String reviewState,
+      String selectionMethod) {}
+
+  public record TermIndexOccurrenceResponse(
+      Long id,
+      Long repositoryId,
+      String repositoryName,
+      Long assetId,
+      String assetPath,
+      Long tmTextUnitId,
+      String textUnitName,
+      String sourceText,
+      String matchedText,
+      Integer startIndex,
+      Integer endIndex,
+      String extractionMethod,
+      Integer confidence) {}
+
+  public record TermIndexCandidateSourceResponse(
+      Long id,
+      String sourceType,
+      String sourceName,
+      String sourceExternalId,
+      Integer confidence,
+      String metadataJson,
+      ZonedDateTime createdDate) {}
+
+  public record SeedTermIndexCandidatesRequest(List<SeedTermIndexCandidateRequest> candidates) {}
+
+  public record SeedTermIndexCandidateRequest(
+      String term,
+      String sourceLocaleTag,
+      String sourceType,
+      String sourceName,
+      String sourceExternalId,
+      Integer confidence,
+      String label,
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Map<String, Object> metadata) {}
+
+  public record SeedTermIndexCandidatesResponse(
+      int candidateCount, List<SeededTermIndexCandidateResponse> candidates) {}
+
+  public record SeededTermIndexCandidateResponse(
+      Long termIndexCandidateId,
+      Long termIndexExtractedTermId,
+      String term,
+      String normalizedKey) {}
 
   public record GlossaryWorkspaceSummaryResponse(
       long totalTerms,
@@ -185,6 +322,22 @@ public class GlossaryWS {
       Integer cropY,
       Integer cropWidth,
       Integer cropHeight) {}
+
+  public record AcceptTermIndexSuggestionRequest(
+      String termKey,
+      String source,
+      String definition,
+      String partOfSpeech,
+      String termType,
+      String enforcement,
+      String status,
+      Boolean caseSensitive,
+      Boolean doNotTranslate,
+      Integer confidence,
+      String rationale,
+      List<UpsertGlossaryTermEvidenceRequest> evidence) {}
+
+  public record IgnoreTermIndexSuggestionRequest(String reason) {}
 
   public record BatchUpdateGlossaryTermsRequest(
       List<Long> tmTextUnitIds,
@@ -402,6 +555,225 @@ public class GlossaryWS {
           result.updatedTermCount(),
           result.createdTranslationCount(),
           result.updatedTranslationCount());
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @GetMapping("/{glossaryId}/term-index-suggestions")
+  public SearchTermIndexSuggestionsResponse searchTermIndexSuggestions(
+      @PathVariable Long glossaryId,
+      @RequestParam(name = "search", required = false) String searchQuery,
+      @RequestParam(name = "limit", required = false) Integer limit,
+      @RequestParam(name = "useAi", required = false) Boolean useAi,
+      @RequestParam(name = "includeReviewed", required = false) Boolean includeReviewed,
+      @RequestParam(name = "reviewStateFilter", required = false) String reviewStateFilter) {
+    try {
+      GlossaryTermIndexCurationService.SuggestionSearchView view =
+          glossaryTermIndexCurationService.searchSuggestions(
+              glossaryId,
+              new GlossaryTermIndexCurationService.SuggestionSearchCommand(
+                  searchQuery, limit, useAi, includeReviewed, reviewStateFilter));
+      return new SearchTermIndexSuggestionsResponse(
+          view.suggestions().stream().map(this::toTermIndexSuggestionResponse).toList(),
+          view.totalCount());
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/term-index-suggestions/search-hybrid")
+  public ResponseEntity<SearchTermIndexSuggestionsHybridResponse> searchTermIndexSuggestionsHybrid(
+      @PathVariable Long glossaryId, @RequestBody SearchTermIndexSuggestionsRequest request) {
+    requireTermManager();
+    UUID requestId = UUID.randomUUID();
+    AtomicBoolean forceAsyncPersistence = new AtomicBoolean(false);
+    long searchStartedAtNanos = System.nanoTime();
+
+    Future<SearchTermIndexSuggestionsResponse> searchFuture =
+        termIndexEntriesHybridExecutor.submit(
+            () -> {
+              SearchTermIndexSuggestionsResponse results;
+              try {
+                results =
+                    searchTermIndexSuggestions(
+                        glossaryId,
+                        request != null ? request.search() : null,
+                        request != null ? request.limit() : null,
+                        request != null ? request.useAi() : null,
+                        request != null ? request.includeReviewed() : null,
+                        request != null ? request.reviewStateFilter() : null);
+              } catch (Exception e) {
+                if (forceAsyncPersistence.get()) {
+                  persistTermIndexSuggestionSearchHybridResponse(
+                      glossaryId,
+                      requestId,
+                      new SearchTermIndexSuggestionsHybridResponse(
+                          null,
+                          null,
+                          new SearchTermIndexSuggestionsHybridResponse.HybridSearchError(
+                              e.getClass().getName(),
+                              e.getMessage(),
+                              Throwables.getStackTraceAsString(e),
+                              isExpectedHybridSearchError(e))));
+                }
+                throw e;
+              }
+
+              long searchCompletedAtNanos = System.nanoTime();
+              if (forceAsyncPersistence.get()
+                  || searchCompletedAtNanos - searchStartedAtNanos
+                      >= termIndexEntriesHybridProperties.convertToAsyncAfter().toNanos()) {
+                persistTermIndexSuggestionSearchHybridResponse(
+                    glossaryId,
+                    requestId,
+                    new SearchTermIndexSuggestionsHybridResponse(results, null, null));
+              }
+              return results;
+            });
+
+    try {
+      SearchTermIndexSuggestionsResponse results =
+          searchFuture.get(
+              termIndexEntriesHybridProperties.convertToAsyncAfter().toNanos(),
+              TimeUnit.NANOSECONDS);
+      return ResponseEntity.ok(new SearchTermIndexSuggestionsHybridResponse(results, null, null));
+    } catch (TimeoutException e) {
+      forceAsyncPersistence.set(true);
+      return ResponseEntity.accepted()
+          .body(
+              new SearchTermIndexSuggestionsHybridResponse(
+                  null, buildTermIndexSuggestionSearchPollingToken(requestId), null));
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof AccessDeniedException accessDeniedException) {
+        throw accessDeniedException;
+      }
+      if (e.getCause() instanceof ResponseStatusException responseStatusException) {
+        throw responseStatusException;
+      }
+      throw new UncheckedExecutionException(e);
+    } catch (InterruptedException e) {
+      searchFuture.cancel(true);
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+  }
+
+  @GetMapping("/{glossaryId}/term-index-suggestions/search-hybrid/results/{requestId}")
+  public ResponseEntity<SearchTermIndexSuggestionsHybridResponse>
+      getSearchTermIndexSuggestionsHybridResults(
+          @PathVariable Long glossaryId, @PathVariable UUID requestId) {
+    requireTermManager();
+    Optional<String> storedResult =
+        structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.GLOSSARY_TERM_INDEX_SUGGESTION_SEARCH_ASYNC,
+            responseStorageNameForTermIndexSuggestionSearch(glossaryId, requestId));
+
+    if (storedResult.isEmpty()) {
+      return ResponseEntity.accepted()
+          .body(
+              new SearchTermIndexSuggestionsHybridResponse(
+                  null, buildTermIndexSuggestionSearchPollingToken(requestId), null));
+    }
+
+    SearchTermIndexSuggestionsHybridResponse response =
+        objectMapper.readValueUnchecked(
+            storedResult.get(), SearchTermIndexSuggestionsHybridResponse.class);
+    if (response.error() == null) {
+      return ResponseEntity.ok(response);
+    }
+    if (response.error().expected()) {
+      return ResponseEntity.badRequest().body(response);
+    }
+    return ResponseEntity.internalServerError().body(response);
+  }
+
+  @PostMapping("/{glossaryId}/term-index-suggestions/{termIndexCandidateId}/accept")
+  public GlossaryTermResponse acceptTermIndexSuggestion(
+      @PathVariable Long glossaryId,
+      @PathVariable Long termIndexCandidateId,
+      @RequestBody AcceptTermIndexSuggestionRequest request) {
+    try {
+      GlossaryTermService.TermView term =
+          glossaryTermIndexCurationService.acceptSuggestion(
+              glossaryId,
+              termIndexCandidateId,
+              new GlossaryTermIndexCurationService.AcceptSuggestionCommand(
+                  request != null ? request.termKey() : null,
+                  request != null ? request.source() : null,
+                  request != null ? request.definition() : null,
+                  request != null ? request.partOfSpeech() : null,
+                  request != null ? request.termType() : null,
+                  request != null ? request.enforcement() : null,
+                  request != null ? request.status() : null,
+                  request != null ? request.caseSensitive() : null,
+                  request != null ? request.doNotTranslate() : null,
+                  request != null ? request.confidence() : null,
+                  request != null ? request.rationale() : null,
+                  request != null ? toSuggestionEvidenceInputs(request.evidence()) : List.of()));
+      return toGlossaryTermResponse(term);
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/term-index-suggestions/{termIndexCandidateId}/ignore")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void ignoreTermIndexSuggestion(
+      @PathVariable Long glossaryId,
+      @PathVariable Long termIndexCandidateId,
+      @RequestBody IgnoreTermIndexSuggestionRequest request) {
+    try {
+      glossaryTermIndexCurationService.ignoreSuggestion(
+          glossaryId,
+          termIndexCandidateId,
+          new GlossaryTermIndexCurationService.IgnoreSuggestionCommand(
+              request != null ? request.reason() : null));
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/term-index-candidates")
+  public SeedTermIndexCandidatesResponse seedTermIndexCandidates(
+      @PathVariable Long glossaryId, @RequestBody SeedTermIndexCandidatesRequest request) {
+    try {
+      GlossaryTermIndexCurationService.SeedResult result =
+          glossaryTermIndexCurationService.seedTermsForGlossary(
+              glossaryId,
+              new GlossaryTermIndexCurationService.SeedCommand(
+                  request == null || request.candidates() == null
+                      ? null
+                      : request.candidates().stream()
+                          .map(candidate -> toSeedTermInput(glossaryId, candidate))
+                          .toList()));
+      return new SeedTermIndexCandidatesResponse(
+          result.termCount(),
+          result.terms().stream()
+              .map(
+                  term ->
+                      new SeededTermIndexCandidateResponse(
+                          term.termIndexCandidateId(),
+                          term.termIndexExtractedTermId(),
+                          term.term(),
+                          term.normalizedKey()))
+              .toList());
     } catch (IllegalArgumentException ex) {
       HttpStatus status =
           ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
@@ -712,6 +1084,113 @@ public class GlossaryWS {
         .toList();
   }
 
+  private List<GlossaryTermIndexCurationService.AcceptSuggestionEvidenceInput>
+      toSuggestionEvidenceInputs(List<UpsertGlossaryTermEvidenceRequest> evidence) {
+    if (evidence == null || evidence.isEmpty()) {
+      return List.of();
+    }
+    return evidence.stream()
+        .map(
+            item ->
+                new GlossaryTermIndexCurationService.AcceptSuggestionEvidenceInput(
+                    item.evidenceType(),
+                    item.caption(),
+                    item.imageKey(),
+                    item.tmTextUnitId(),
+                    item.cropX(),
+                    item.cropY(),
+                    item.cropWidth(),
+                    item.cropHeight()))
+        .toList();
+  }
+
+  private TermIndexSuggestionResponse toTermIndexSuggestionResponse(
+      GlossaryTermIndexCurationService.SuggestionView suggestion) {
+    return new TermIndexSuggestionResponse(
+        suggestion.termIndexCandidateId(),
+        suggestion.termIndexExtractedTermId(),
+        suggestion.normalizedKey(),
+        suggestion.term(),
+        suggestion.label(),
+        suggestion.sourceLocaleTag(),
+        suggestion.occurrenceCount(),
+        suggestion.repositoryCount(),
+        suggestion.sourceCount(),
+        suggestion.confidence(),
+        suggestion.definition(),
+        suggestion.rationale(),
+        suggestion.suggestedTermType(),
+        suggestion.suggestedProvenance(),
+        suggestion.suggestedPartOfSpeech(),
+        suggestion.suggestedEnforcement(),
+        suggestion.suggestedDoNotTranslate(),
+        suggestion.examples().stream().map(this::toTermIndexOccurrenceResponse).toList(),
+        suggestion.sources().stream().map(this::toTermIndexCandidateSourceResponse).toList(),
+        suggestion.lastSignalAt(),
+        suggestion.reviewState(),
+        suggestion.selectionMethod());
+  }
+
+  private TermIndexOccurrenceResponse toTermIndexOccurrenceResponse(
+      GlossaryTermIndexCurationService.OccurrenceView occurrence) {
+    return new TermIndexOccurrenceResponse(
+        occurrence.id(),
+        occurrence.repositoryId(),
+        occurrence.repositoryName(),
+        occurrence.assetId(),
+        occurrence.assetPath(),
+        occurrence.tmTextUnitId(),
+        occurrence.textUnitName(),
+        occurrence.sourceText(),
+        occurrence.matchedText(),
+        occurrence.startIndex(),
+        occurrence.endIndex(),
+        occurrence.extractionMethod(),
+        occurrence.confidence());
+  }
+
+  private TermIndexCandidateSourceResponse toTermIndexCandidateSourceResponse(
+      GlossaryTermIndexCurationService.CandidateSourceView source) {
+    return new TermIndexCandidateSourceResponse(
+        source.id(),
+        source.sourceType(),
+        source.sourceName(),
+        source.sourceExternalId(),
+        source.confidence(),
+        source.metadataJson(),
+        source.createdDate());
+  }
+
+  private GlossaryTermIndexCurationService.SeedTermInput toSeedTermInput(
+      Long glossaryId, SeedTermIndexCandidateRequest candidate) {
+    Map<String, Object> metadata = new LinkedHashMap<>();
+    if (candidate != null && candidate.metadata() != null) {
+      metadata.putAll(candidate.metadata());
+    }
+    metadata.putIfAbsent("glossaryId", glossaryId);
+    metadata.putIfAbsent("submittedFrom", GLOSSARY_WORKSPACE_CANDIDATE_SOURCE_NAME);
+
+    return new GlossaryTermIndexCurationService.SeedTermInput(
+        candidate == null ? null : candidate.term(),
+        candidate == null ? null : candidate.sourceLocaleTag(),
+        candidate == null || candidate.sourceType() == null
+            ? GLOSSARY_WORKSPACE_CANDIDATE_SOURCE_TYPE
+            : candidate.sourceType(),
+        candidate == null || candidate.sourceName() == null
+            ? GLOSSARY_WORKSPACE_CANDIDATE_SOURCE_NAME
+            : candidate.sourceName(),
+        candidate == null ? null : candidate.sourceExternalId(),
+        candidate == null ? null : candidate.confidence(),
+        candidate == null ? null : candidate.label(),
+        candidate == null ? null : candidate.definition(),
+        candidate == null ? null : candidate.rationale(),
+        candidate == null ? null : candidate.termType(),
+        candidate == null ? null : candidate.partOfSpeech(),
+        candidate == null ? null : candidate.enforcement(),
+        candidate == null ? null : candidate.doNotTranslate(),
+        metadata);
+  }
+
   private GlossaryTermResponse toGlossaryTermResponse(GlossaryTermService.TermView term) {
     return new GlossaryTermResponse(
         term.metadataId(),
@@ -811,5 +1290,38 @@ public class GlossaryWS {
                         evidence.cropHeight(),
                         evidence.sortOrder()))
             .toList());
+  }
+
+  private void persistTermIndexSuggestionSearchHybridResponse(
+      Long glossaryId, UUID requestId, SearchTermIndexSuggestionsHybridResponse response) {
+    String payloadJson = objectMapper.writeValueAsStringUnchecked(response);
+    structuredBlobStorage.put(
+        StructuredBlobStorage.Prefix.GLOSSARY_TERM_INDEX_SUGGESTION_SEARCH_ASYNC,
+        responseStorageNameForTermIndexSuggestionSearch(glossaryId, requestId),
+        payloadJson,
+        Retention.MIN_1_DAY);
+  }
+
+  private SearchTermIndexSuggestionsHybridResponse.PollingToken
+      buildTermIndexSuggestionSearchPollingToken(UUID requestId) {
+    return new SearchTermIndexSuggestionsHybridResponse.PollingToken(
+        requestId, termIndexEntriesHybridProperties.recommendedPollingDuration().toMillis());
+  }
+
+  private boolean isExpectedHybridSearchError(Exception e) {
+    return e instanceof AccessDeniedException
+        || e instanceof IllegalArgumentException
+        || e instanceof ResponseStatusException responseStatusException
+            && responseStatusException.getStatusCode().is4xxClientError();
+  }
+
+  private String responseStorageNameForTermIndexSuggestionSearch(Long glossaryId, UUID requestId) {
+    return glossaryId + "/" + requestId;
+  }
+
+  private void requireTermManager() {
+    if (!userService.isCurrentUserAdminOrPm()) {
+      throw new AccessDeniedException("PM or admin access is required to curate glossary terms");
+    }
   }
 }

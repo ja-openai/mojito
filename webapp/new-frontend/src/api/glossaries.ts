@@ -1,6 +1,10 @@
 import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
 import { isTransientHttpError, poll } from '../utils/poller';
 
+const GLOSSARY_SUGGESTION_SEARCH_POLL_TIMEOUT_MS = 120_000;
+const DEFAULT_POLL_INTERVAL_MS = 1000;
+const MAX_POLL_INTERVAL_MS = 8000;
+
 export type ApiGlossaryRepositoryRef = {
   id: number;
   name: string;
@@ -220,6 +224,132 @@ export type ApiExtractGlossaryTermsResponse = {
   candidates: ApiExtractedGlossaryCandidate[];
 };
 
+export type ApiGlossaryTermIndexOccurrence = {
+  id?: number | null;
+  repositoryId?: number | null;
+  repositoryName: string;
+  assetId?: number | null;
+  assetPath?: string | null;
+  tmTextUnitId: number;
+  textUnitName?: string | null;
+  sourceText?: string | null;
+  matchedText?: string | null;
+  startIndex?: number | null;
+  endIndex?: number | null;
+  extractionMethod?: string | null;
+  confidence?: number | null;
+};
+
+export type ApiGlossaryTermIndexCandidateSource = {
+  id: number;
+  sourceType: string;
+  sourceName?: string | null;
+  sourceExternalId?: string | null;
+  confidence?: number | null;
+  metadataJson?: string | null;
+  createdDate?: string | null;
+};
+
+export type ApiGlossaryTermIndexSuggestionReviewState =
+  | 'NEW'
+  | 'IGNORED'
+  | 'LINKED'
+  | 'EXISTING_TERM'
+  | (string & {});
+
+export type ApiGlossaryTermIndexSuggestionReviewStateFilter =
+  | 'NEW'
+  | 'IGNORED'
+  | 'LINKED'
+  | 'EXISTING_TERM'
+  | 'REVIEWED'
+  | 'ALL';
+
+export type ApiGlossaryTermIndexSuggestion = {
+  termIndexCandidateId: number;
+  termIndexExtractedTermId?: number | null;
+  normalizedKey: string;
+  term: string;
+  label?: string | null;
+  sourceLocaleTag: string;
+  occurrenceCount: number;
+  repositoryCount: number;
+  sourceCount: number;
+  confidence: number;
+  definition?: string | null;
+  rationale?: string | null;
+  suggestedTermType: string;
+  suggestedProvenance: string;
+  suggestedPartOfSpeech?: string | null;
+  suggestedEnforcement: string;
+  suggestedDoNotTranslate: boolean;
+  examples: ApiGlossaryTermIndexOccurrence[];
+  sources: ApiGlossaryTermIndexCandidateSource[];
+  lastSignalAt?: string | null;
+  reviewState: ApiGlossaryTermIndexSuggestionReviewState;
+  selectionMethod: string;
+};
+
+export type ApiSeedGlossaryTermIndexCandidatesRequest = {
+  candidates: Array<{
+    term: string;
+    sourceLocaleTag?: string | null;
+    sourceType?: string | null;
+    sourceName?: string | null;
+    sourceExternalId?: string | null;
+    confidence?: number | null;
+    label?: string | null;
+    definition?: string | null;
+    rationale?: string | null;
+    termType?: string | null;
+    partOfSpeech?: string | null;
+    enforcement?: string | null;
+    doNotTranslate?: boolean | null;
+    metadata?: Record<string, unknown> | null;
+  }>;
+};
+
+export type ApiSeedGlossaryTermIndexCandidatesResponse = {
+  candidateCount: number;
+  candidates: Array<{
+    termIndexCandidateId: number;
+    termIndexExtractedTermId?: number | null;
+    term: string;
+    normalizedKey: string;
+  }>;
+};
+
+export type ApiGlossaryTermIndexSuggestionsResponse = {
+  suggestions: ApiGlossaryTermIndexSuggestion[];
+  totalCount: number;
+};
+
+type ApiGlossaryTermIndexSuggestionsHybridResponse = {
+  results?: ApiGlossaryTermIndexSuggestionsResponse | null;
+  pollingToken?: {
+    requestId: string;
+    recommendedPollingDurationMillis?: number;
+  } | null;
+  error?: {
+    message?: string;
+  } | null;
+};
+
+export type ApiAcceptGlossaryTermIndexSuggestionRequest = {
+  termKey?: string | null;
+  source?: string | null;
+  definition?: string | null;
+  partOfSpeech?: string | null;
+  termType?: string | null;
+  enforcement?: string | null;
+  status?: string | null;
+  caseSensitive?: boolean | null;
+  doNotTranslate?: boolean | null;
+  confidence?: number | null;
+  rationale?: string | null;
+  evidence?: ApiUpsertGlossaryTermRequest['evidence'];
+};
+
 type PollableTaskResponse = {
   id: number;
   isAllFinished?: boolean;
@@ -364,6 +494,222 @@ export async function fetchGlossaryWorkspaceSummary(
   }
 
   return (await response.json()) as ApiGlossaryWorkspaceSummary;
+}
+
+export async function fetchGlossaryTermIndexSuggestions(
+  glossaryId: number,
+  options?: {
+    search?: string;
+    limit?: number;
+    useAi?: boolean;
+    includeReviewed?: boolean;
+    reviewStateFilter?: ApiGlossaryTermIndexSuggestionReviewStateFilter;
+  },
+): Promise<ApiGlossaryTermIndexSuggestionsResponse> {
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/term-index-suggestions/search-hybrid`,
+    {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        search: options?.search?.trim() || null,
+        limit: options?.limit ?? null,
+        useAi: options?.useAi ?? null,
+        includeReviewed: options?.includeReviewed ?? null,
+        reviewStateFilter: options?.reviewStateFilter ?? null,
+      }),
+    },
+  );
+
+  const payload = await parseGlossarySuggestionSearchHybridResponse(
+    response,
+    'Failed to load glossary term suggestions',
+  );
+
+  if (payload?.results) {
+    return payload.results;
+  }
+
+  if (payload?.error) {
+    throw createNonTransientError(
+      payload.error.message || 'Failed to load glossary term suggestions',
+    );
+  }
+
+  if (payload?.pollingToken) {
+    return pollForGlossaryTermIndexSuggestions(glossaryId, payload.pollingToken);
+  }
+
+  throw new Error('Unexpected glossary term suggestion search response');
+}
+
+export async function acceptGlossaryTermIndexSuggestion(
+  glossaryId: number,
+  termIndexCandidateId: number,
+  request: ApiAcceptGlossaryTermIndexSuggestionRequest,
+): Promise<ApiGlossaryTerm> {
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/term-index-suggestions/${termIndexCandidateId}/accept`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(request),
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to accept glossary term suggestion');
+  }
+
+  return (await response.json()) as ApiGlossaryTerm;
+}
+
+export async function ignoreGlossaryTermIndexSuggestion(
+  glossaryId: number,
+  termIndexCandidateId: number,
+  request?: { reason?: string | null },
+): Promise<void> {
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/term-index-suggestions/${termIndexCandidateId}/ignore`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(request ?? {}),
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to ignore glossary term suggestion');
+  }
+}
+
+export async function seedGlossaryTermIndexCandidates(
+  glossaryId: number,
+  request: ApiSeedGlossaryTermIndexCandidatesRequest,
+): Promise<ApiSeedGlossaryTermIndexCandidatesResponse> {
+  const response = await fetch(`/api/glossaries/${glossaryId}/term-index-candidates`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to add glossary term index candidate');
+  }
+
+  return (await response.json()) as ApiSeedGlossaryTermIndexCandidatesResponse;
+}
+
+async function pollForGlossaryTermIndexSuggestions(
+  glossaryId: number,
+  pollingToken: {
+    requestId: string;
+    recommendedPollingDurationMillis?: number;
+  },
+): Promise<ApiGlossaryTermIndexSuggestionsResponse> {
+  const timeoutMs = getGlossarySuggestionSearchPollingTimeoutMs(
+    pollingToken.recommendedPollingDurationMillis,
+  );
+
+  const results = await poll<ApiGlossaryTermIndexSuggestionsResponse | null>(
+    async () => {
+      const response = await fetch(
+        `/api/glossaries/${glossaryId}/term-index-suggestions/search-hybrid/results/${pollingToken.requestId}`,
+        {
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' },
+        },
+      );
+      const payload = await parseGlossarySuggestionSearchHybridResponse(
+        response,
+        'Failed to load glossary term suggestions',
+      );
+
+      if (payload?.results) {
+        return payload.results;
+      }
+      if (payload?.error) {
+        throw createNonTransientError(
+          payload.error.message || 'Failed to load glossary term suggestions',
+        );
+      }
+      return null;
+    },
+    {
+      intervalMs: DEFAULT_POLL_INTERVAL_MS,
+      maxIntervalMs: MAX_POLL_INTERVAL_MS,
+      timeoutMs,
+      timeoutMessage: 'Timed out while loading glossary term suggestions',
+      isTransientError: isTransientHttpError,
+      shouldStop: (response) => response !== null,
+    },
+  );
+
+  return results ?? { suggestions: [], totalCount: 0 };
+}
+
+async function parseGlossarySuggestionSearchHybridResponse(
+  response: Response,
+  fallbackMessage: string,
+): Promise<ApiGlossaryTermIndexSuggestionsHybridResponse | null> {
+  const text = await response.text();
+  const payload = parseGlossarySuggestionSearchHybridPayload(text);
+
+  if (!response.ok) {
+    if (payload?.error?.message) {
+      throw createNonTransientError(payload.error.message);
+    }
+    const error: Error & { status?: number } = new Error(
+      text || fallbackMessage || `Request failed with status ${response.status}`,
+    );
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload;
+}
+
+function parseGlossarySuggestionSearchHybridPayload(text: string) {
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text) as ApiGlossaryTermIndexSuggestionsHybridResponse;
+  } catch {
+    return null;
+  }
+}
+
+function getGlossarySuggestionSearchPollingTimeoutMs(recommended?: number) {
+  if (!Number.isFinite(recommended) || typeof recommended !== 'number' || recommended <= 0) {
+    return GLOSSARY_SUGGESTION_SEARCH_POLL_TIMEOUT_MS;
+  }
+  return recommended;
+}
+
+function createNonTransientError(message: string) {
+  const error: Error & { isTransient?: boolean } = new Error(message);
+  error.isTransient = false;
+  return error;
 }
 
 export async function createGlossary(

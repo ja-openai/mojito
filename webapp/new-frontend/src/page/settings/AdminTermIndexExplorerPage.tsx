@@ -24,6 +24,7 @@ import {
   waitForTermIndexRefreshTask,
 } from '../../api/term-index';
 import { Modal } from '../../components/Modal';
+import type { MultiSelectCustomAction } from '../../components/MultiSelectChip';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useUser } from '../../components/RequireUser';
@@ -34,7 +35,11 @@ import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import { useRepositories } from '../../hooks/useRepositories';
 import { formatLocalDateTime } from '../../utils/dateTime';
-import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
+import {
+  type RepositorySelectionOption,
+  useRepositorySelection,
+  useRepositorySelectionOptions,
+} from '../../utils/repositorySelection';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const TERM_RESULT_LIMIT_DEFAULT = 1000;
@@ -85,16 +90,152 @@ const PaneGripIcon = () => (
   </svg>
 );
 
-const excludeGlossaryRepositoryIds = (
-  repositoryIds: number[],
-  repositoryOptions: ReturnType<typeof useRepositorySelectionOptions>,
-) => {
-  const glossaryRepositoryIds = new Set(
-    repositoryOptions
-      .filter((repository) => repository.isGlossary)
-      .map((repository) => repository.id),
+const getRepositoryIds = (repositoryOptions: RepositorySelectionOption[]) =>
+  repositoryOptions.map((repository) => repository.id);
+
+const getProductRepositoryIds = (repositoryOptions: RepositorySelectionOption[]) =>
+  repositoryOptions
+    .filter((repository) => !repository.isGlossary)
+    .map((repository) => repository.id);
+
+const getGlossaryRepositoryIds = (repositoryOptions: RepositorySelectionOption[]) =>
+  repositoryOptions
+    .filter((repository) => repository.isGlossary)
+    .map((repository) => repository.id);
+
+const hasSameRepositoryIds = (left: number[], right: number[]) => {
+  if (left.length !== right.length) {
+    return false;
+  }
+  const rightSet = new Set(right);
+  return left.every((value) => rightSet.has(value));
+};
+
+const getRepositoryTypeSelectionActions = ({
+  selectedRepositoryIds,
+  productRepositoryIds,
+  glossaryRepositoryIds,
+  onChangeRepositorySelection,
+}: {
+  selectedRepositoryIds: number[];
+  productRepositoryIds: number[];
+  glossaryRepositoryIds: number[];
+  onChangeRepositorySelection: (repositoryIds: number[]) => void;
+}): MultiSelectCustomAction[] => {
+  const selectedProducts =
+    productRepositoryIds.length > 0 &&
+    hasSameRepositoryIds(selectedRepositoryIds, productRepositoryIds);
+  const selectedGlossaries =
+    glossaryRepositoryIds.length > 0 &&
+    hasSameRepositoryIds(selectedRepositoryIds, glossaryRepositoryIds);
+
+  const actions: Array<MultiSelectCustomAction | null> = [
+    selectedProducts
+      ? null
+      : {
+          label: 'Repositories',
+          onClick: () => onChangeRepositorySelection(productRepositoryIds),
+          disabled: productRepositoryIds.length === 0,
+          ariaLabel: 'Show repositories excluding glossaries',
+        },
+    selectedGlossaries
+      ? null
+      : {
+          label: 'Glossaries',
+          onClick: () => onChangeRepositorySelection(glossaryRepositoryIds),
+          disabled: glossaryRepositoryIds.length === 0,
+          ariaLabel: 'Show glossary repositories only',
+        },
+  ];
+
+  return actions.filter((action): action is MultiSelectCustomAction => action != null);
+};
+
+const getRepositorySelectionSummaryFormatter =
+  (allRepositoryIds: number[], productRepositoryIds: number[], glossaryRepositoryIds: number[]) =>
+  ({ selectedIds, defaultSummary }: { selectedIds: number[]; defaultSummary: string }) => {
+    if (selectedIds.length === 0 || hasSameRepositoryIds(selectedIds, allRepositoryIds)) {
+      return 'All repositories';
+    }
+    if (
+      productRepositoryIds.length > 0 &&
+      glossaryRepositoryIds.length > 0 &&
+      hasSameRepositoryIds(selectedIds, productRepositoryIds)
+    ) {
+      return 'Repositories';
+    }
+    if (
+      glossaryRepositoryIds.length > 0 &&
+      hasSameRepositoryIds(selectedIds, glossaryRepositoryIds)
+    ) {
+      return 'Glossaries';
+    }
+    return defaultSummary;
+  };
+
+const useTermIndexRepositorySelection = (repositoryOptions: RepositorySelectionOption[]) => {
+  const allRepositoryIds = useMemo(() => getRepositoryIds(repositoryOptions), [repositoryOptions]);
+  const productRepositoryIds = useMemo(
+    () => getProductRepositoryIds(repositoryOptions),
+    [repositoryOptions],
   );
-  return repositoryIds.filter((repositoryId) => !glossaryRepositoryIds.has(repositoryId));
+  const glossaryRepositoryIds = useMemo(
+    () => getGlossaryRepositoryIds(repositoryOptions),
+    [repositoryOptions],
+  );
+
+  const {
+    selectedIds: selectedRepositoryIds,
+    hasTouched,
+    onChangeSelection: updateSelectedRepositoryIds,
+    setSelection,
+  } = useRepositorySelection({ options: repositoryOptions });
+
+  useEffect(() => {
+    if (!hasTouched && productRepositoryIds.length > 0) {
+      setSelection(productRepositoryIds, { touched: false });
+    }
+  }, [hasTouched, productRepositoryIds, setSelection]);
+
+  const effectiveRepositoryIds =
+    selectedRepositoryIds.length > 0 ? selectedRepositoryIds : allRepositoryIds;
+
+  const repositorySelectionActions = useMemo(
+    () =>
+      getRepositoryTypeSelectionActions({
+        selectedRepositoryIds,
+        productRepositoryIds,
+        glossaryRepositoryIds,
+        onChangeRepositorySelection: updateSelectedRepositoryIds,
+      }),
+    [
+      glossaryRepositoryIds,
+      productRepositoryIds,
+      selectedRepositoryIds,
+      updateSelectedRepositoryIds,
+    ],
+  );
+
+  const formatRepositorySelectionSummary = useMemo(
+    () =>
+      getRepositorySelectionSummaryFormatter(
+        allRepositoryIds,
+        productRepositoryIds,
+        glossaryRepositoryIds,
+      ),
+    [allRepositoryIds, glossaryRepositoryIds, productRepositoryIds],
+  );
+
+  return {
+    allRepositoryIds,
+    productRepositoryIds,
+    glossaryRepositoryIds,
+    selectedRepositoryIds,
+    effectiveRepositoryIds,
+    repositorySelectionActions,
+    formatRepositorySelectionSummary,
+    updateSelectedRepositoryIds,
+  };
 };
 
 export function AdminTermIndexExplorerPage() {
@@ -107,24 +248,30 @@ export function AdminTermIndexRunsPage() {
   const queryClient = useQueryClient();
   const { data: repositories } = useRepositories();
   const repositoryOptions = useRepositorySelectionOptions(repositories ?? []);
-  const [selectedRepositoryIds, setSelectedRepositoryIds] = useState<number[]>([]);
+  const {
+    allRepositoryIds,
+    productRepositoryIds,
+    selectedRepositoryIds,
+    effectiveRepositoryIds,
+    repositorySelectionActions,
+    formatRepositorySelectionSummary,
+    updateSelectedRepositoryIds,
+  } = useTermIndexRepositorySelection(repositoryOptions);
   const [refreshModalOpen, setRefreshModalOpen] = useState(false);
   const [refreshRepositoryIds, setRefreshRepositoryIds] = useState<number[]>([]);
   const [refreshFullRefresh, setRefreshFullRefresh] = useState(false);
-  const [refreshExcludeGlossaryRepositories, setRefreshExcludeGlossaryRepositories] =
-    useState(true);
   const [activeRefreshTaskId, setActiveRefreshTaskId] = useState<number | null>(null);
   const [runResultLimit, setRunResultLimit] = useState(RUN_RESULT_LIMIT_DEFAULT);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
 
   const statusQuery = useQuery({
-    queryKey: ['term-index-status', selectedRepositoryIds, runResultLimit],
+    queryKey: ['term-index-status', effectiveRepositoryIds, runResultLimit],
     queryFn: () =>
       fetchTermIndexStatus({
-        repositoryIds: selectedRepositoryIds,
+        repositoryIds: effectiveRepositoryIds,
         recentRunLimit: runResultLimit,
       }),
-    enabled: isAdmin,
+    enabled: isAdmin && repositoryOptions.length > 0,
     staleTime: 5_000,
     refetchInterval: activeRefreshTaskId == null ? false : 3_000,
   });
@@ -171,14 +318,11 @@ export function AdminTermIndexRunsPage() {
     setNotice(null);
     setRefreshRepositoryIds(selectedRepositoryIds);
     setRefreshFullRefresh(false);
-    setRefreshExcludeGlossaryRepositories(true);
     setRefreshModalOpen(true);
   };
 
   const startRefresh = () => {
-    const repositoryIds = refreshExcludeGlossaryRepositories
-      ? excludeGlossaryRepositoryIds(refreshRepositoryIds, repositoryOptions)
-      : refreshRepositoryIds;
+    const repositoryIds = refreshRepositoryIds.length > 0 ? refreshRepositoryIds : allRepositoryIds;
     if (repositoryIds.length === 0 || refreshMutation.isPending) {
       return;
     }
@@ -188,7 +332,7 @@ export function AdminTermIndexRunsPage() {
     refreshMutation.mutate({
       repositoryIds,
       fullRefresh: refreshFullRefresh,
-      excludeGlossaryRepositories: refreshExcludeGlossaryRepositories,
+      excludeGlossaryRepositories: hasSameRepositoryIds(repositoryIds, productRepositoryIds),
     });
   };
 
@@ -213,12 +357,14 @@ export function AdminTermIndexRunsPage() {
           <div className="term-index-explorer__run-toolbar">
             <div className="term-index-explorer__repository-control">
               <RepositoryMultiSelect
-                label="Repository filter"
+                label="Repositories"
                 options={repositoryOptions}
                 selectedIds={selectedRepositoryIds}
-                onChange={setSelectedRepositoryIds}
+                onChange={updateSelectedRepositoryIds}
                 className="settings-repository-select"
-                buttonAriaLabel="Filter term index status by repository. No selection shows all repositories."
+                buttonAriaLabel="Filter term index status by repository. Use menu actions to switch between repositories and glossaries."
+                customActions={repositorySelectionActions}
+                summaryFormatter={formatRepositorySelectionSummary}
               />
             </div>
             <button
@@ -257,11 +403,9 @@ export function AdminTermIndexRunsPage() {
         repositoryOptions={repositoryOptions}
         selectedRepositoryIds={refreshRepositoryIds}
         fullRefresh={refreshFullRefresh}
-        excludeGlossaryRepositories={refreshExcludeGlossaryRepositories}
         isRefreshing={refreshMutation.isPending}
         onRepositoryChange={setRefreshRepositoryIds}
         onFullRefreshChange={setRefreshFullRefresh}
-        onExcludeGlossaryRepositoriesChange={setRefreshExcludeGlossaryRepositories}
         onClose={() => setRefreshModalOpen(false)}
         onStart={startRefresh}
       />
@@ -274,7 +418,13 @@ export function AdminTermIndexTermsPage() {
   const isAdmin = user.role === 'ROLE_ADMIN';
   const { data: repositories } = useRepositories();
   const repositoryOptions = useRepositorySelectionOptions(repositories ?? []);
-  const [selectedRepositoryIds, setSelectedRepositoryIds] = useState<number[]>([]);
+  const {
+    selectedRepositoryIds,
+    effectiveRepositoryIds,
+    repositorySelectionActions,
+    formatRepositorySelectionSummary,
+    updateSelectedRepositoryIds,
+  } = useTermIndexRepositorySelection(repositoryOptions);
   const [searchQuery, setSearchQuery] = useState('');
   const [minOccurrences, setMinOccurrences] = useState(MIN_OCCURRENCES_DEFAULT);
   const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
@@ -300,16 +450,16 @@ export function AdminTermIndexTermsPage() {
   };
 
   const statusQuery = useQuery({
-    queryKey: ['term-index-status', selectedRepositoryIds],
-    queryFn: () => fetchTermIndexStatus({ repositoryIds: selectedRepositoryIds }),
-    enabled: isAdmin,
+    queryKey: ['term-index-status', effectiveRepositoryIds],
+    queryFn: () => fetchTermIndexStatus({ repositoryIds: effectiveRepositoryIds }),
+    enabled: isAdmin && repositoryOptions.length > 0,
     staleTime: 30_000,
   });
 
   const entriesQuery = useQuery({
     queryKey: [
       'term-index-entries',
-      selectedRepositoryIds,
+      effectiveRepositoryIds,
       searchQuery,
       extractionMethod,
       minOccurrences,
@@ -317,13 +467,13 @@ export function AdminTermIndexTermsPage() {
     ],
     queryFn: () =>
       fetchTermIndexEntries({
-        repositoryIds: selectedRepositoryIds,
+        repositoryIds: effectiveRepositoryIds,
         search: searchQuery,
         extractionMethod,
         minOccurrences,
         limit: termResultLimit,
       }),
-    enabled: isAdmin,
+    enabled: isAdmin && repositoryOptions.length > 0,
     staleTime: 5_000,
   });
 
@@ -345,14 +495,14 @@ export function AdminTermIndexTermsPage() {
   }, [entries, selectedEntryId]);
 
   const occurrencesQuery = useQuery({
-    queryKey: ['term-index-occurrences', selectedEntryId, selectedRepositoryIds, extractionMethod],
+    queryKey: ['term-index-occurrences', selectedEntryId, effectiveRepositoryIds, extractionMethod],
     queryFn: () =>
       fetchTermIndexOccurrences(selectedEntryId ?? 0, {
-        repositoryIds: selectedRepositoryIds,
+        repositoryIds: effectiveRepositoryIds,
         extractionMethod,
         limit: EXAMPLE_RESULT_LIMIT,
       }),
-    enabled: isAdmin && selectedEntryId != null,
+    enabled: isAdmin && selectedEntryId != null && repositoryOptions.length > 0,
     staleTime: 5_000,
   });
 
@@ -451,11 +601,13 @@ export function AdminTermIndexTermsPage() {
                 options={repositoryOptions}
                 selectedIds={selectedRepositoryIds}
                 onChange={(next) => {
-                  setSelectedRepositoryIds(next);
+                  updateSelectedRepositoryIds(next);
                   resetTermSelection();
                 }}
                 className="settings-repository-select"
-                buttonAriaLabel="Select repositories for term review. No selection searches all indexed repositories."
+                buttonAriaLabel="Select repositories for term review. Use menu actions to switch between repositories and glossaries."
+                customActions={repositorySelectionActions}
+                summaryFormatter={formatRepositorySelectionSummary}
               />
             </div>
             <SearchControl
@@ -599,11 +751,9 @@ function TermIndexRefreshModal({
   repositoryOptions,
   selectedRepositoryIds,
   fullRefresh,
-  excludeGlossaryRepositories,
   isRefreshing,
   onRepositoryChange,
   onFullRefreshChange,
-  onExcludeGlossaryRepositoriesChange,
   onClose,
   onStart,
 }: {
@@ -611,34 +761,50 @@ function TermIndexRefreshModal({
   repositoryOptions: ReturnType<typeof useRepositorySelectionOptions>;
   selectedRepositoryIds: number[];
   fullRefresh: boolean;
-  excludeGlossaryRepositories: boolean;
   isRefreshing: boolean;
   onRepositoryChange: (repositoryIds: number[]) => void;
   onFullRefreshChange: (fullRefresh: boolean) => void;
-  onExcludeGlossaryRepositoriesChange: (excludeGlossaryRepositories: boolean) => void;
   onClose: () => void;
   onStart: () => void;
 }) {
-  const nonGlossarySelectedRepositoryIds = excludeGlossaryRepositoryIds(
-    selectedRepositoryIds,
-    repositoryOptions,
+  const allRepositoryIds = useMemo(() => getRepositoryIds(repositoryOptions), [repositoryOptions]);
+  const productRepositoryIds = useMemo(
+    () => getProductRepositoryIds(repositoryOptions),
+    [repositoryOptions],
   );
-  const excludedGlossaryRepositoryCount =
-    selectedRepositoryIds.length - nonGlossarySelectedRepositoryIds.length;
-  const refreshRepositoryCount = excludeGlossaryRepositories
-    ? nonGlossarySelectedRepositoryIds.length
-    : selectedRepositoryIds.length;
+  const glossaryRepositoryIds = useMemo(
+    () => getGlossaryRepositoryIds(repositoryOptions),
+    [repositoryOptions],
+  );
+  const repositorySelectionActions = useMemo(
+    () =>
+      getRepositoryTypeSelectionActions({
+        selectedRepositoryIds,
+        productRepositoryIds,
+        glossaryRepositoryIds,
+        onChangeRepositorySelection: onRepositoryChange,
+      }),
+    [glossaryRepositoryIds, onRepositoryChange, productRepositoryIds, selectedRepositoryIds],
+  );
+  const formatRepositorySelectionSummary = useMemo(
+    () =>
+      getRepositorySelectionSummaryFormatter(
+        allRepositoryIds,
+        productRepositoryIds,
+        glossaryRepositoryIds,
+      ),
+    [allRepositoryIds, glossaryRepositoryIds, productRepositoryIds],
+  );
+  const effectiveRefreshRepositoryIds =
+    selectedRepositoryIds.length > 0 ? selectedRepositoryIds : allRepositoryIds;
+  const refreshRepositoryCount = effectiveRefreshRepositoryIds.length;
   const canStart = refreshRepositoryCount > 0 && !isRefreshing;
   const repositorySummary =
-    refreshRepositoryCount === 1
-      ? '1 repository selected'
-      : `${refreshRepositoryCount.toLocaleString()} repositories selected`;
-  const exclusionSummary =
-    excludeGlossaryRepositories && excludedGlossaryRepositoryCount > 0
-      ? ` · ${excludedGlossaryRepositoryCount.toLocaleString()} ${
-          excludedGlossaryRepositoryCount === 1 ? 'glossary' : 'glossaries'
-        } excluded`
-      : '';
+    selectedRepositoryIds.length === 0
+      ? 'All repositories selected'
+      : refreshRepositoryCount === 1
+        ? '1 repository selected'
+        : `${refreshRepositoryCount.toLocaleString()} repositories selected`;
 
   return (
     <Modal
@@ -653,31 +819,22 @@ function TermIndexRefreshModal({
       </div>
       <div className="modal__body term-index-explorer__refresh-modal-body">
         <div className="settings-field">
-          <RepositoryMultiSelect
-            label="Repositories to refresh"
-            options={repositoryOptions}
-            selectedIds={selectedRepositoryIds}
-            onChange={onRepositoryChange}
-            className="settings-repository-select"
-            buttonAriaLabel="Select repositories to refresh"
-          />
+          <div className="term-index-explorer__repository-control">
+            <RepositoryMultiSelect
+              label="Repositories to refresh"
+              options={repositoryOptions}
+              selectedIds={selectedRepositoryIds}
+              onChange={onRepositoryChange}
+              className="settings-repository-select"
+              buttonAriaLabel="Select repositories to refresh. Use menu actions to switch between repositories and glossaries."
+              customActions={repositorySelectionActions}
+              summaryFormatter={formatRepositorySelectionSummary}
+            />
+          </div>
           <p className={`settings-hint${refreshRepositoryCount === 0 ? ' is-error' : ''}`}>
-            {refreshRepositoryCount === 0 && selectedRepositoryIds.length > 0
-              ? 'All selected repositories are excluded.'
-              : refreshRepositoryCount === 0
-                ? 'Select at least one repository.'
-                : `${repositorySummary}${exclusionSummary}`}
+            {refreshRepositoryCount === 0 ? 'Select at least one repository.' : repositorySummary}
           </p>
         </div>
-
-        <label className="settings-toggle">
-          <input
-            type="checkbox"
-            checked={excludeGlossaryRepositories}
-            onChange={(event) => onExcludeGlossaryRepositoriesChange(event.target.checked)}
-          />
-          <span>Exclude glossary repositories</span>
-        </label>
 
         <fieldset className="term-index-explorer__refresh-mode">
           <legend>Refresh mode</legend>
@@ -820,7 +977,7 @@ function IndexStatusTables({
                   <th>Run</th>
                   <th>Status</th>
                   <th>Text units</th>
-                  <th>Entries</th>
+                  <th>Extracted terms</th>
                   <th>Started</th>
                   <th>Completed</th>
                 </tr>
@@ -831,7 +988,7 @@ function IndexStatusTables({
                     <td>#{run.id}</td>
                     <td>{run.status}</td>
                     <td>{run.processedTextUnitCount}</td>
-                    <td>{run.entryCount}</td>
+                    <td>{run.extractedTermCount}</td>
                     <td>{formatLocalDateTime(run.startedAt)}</td>
                     <td>
                       {run.completedAt ? formatLocalDateTime(run.completedAt) : 'In progress'}

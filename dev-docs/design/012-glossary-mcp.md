@@ -51,6 +51,11 @@ MCP tools
   - Read-only.
   - Searches product TM for exact source-term matches and returns observed target-term suggestions by locale.
   - Clients should review the suggestions and then write selected targets through `glossary.term.bulk_upsert`.
+- `glossary.term_index.seed_terms`
+  - Mutating.
+  - Merges externally suggested terms into the raw term index without creating glossary terms directly.
+  - Supports source type/name/external id, confidence, definition, rationale, and arbitrary metadata such as screenshot image keys or code paths.
+  - Use when Codex or another terminology source has good context but the final glossary assignment should still be reviewed in Mojito.
 
 Bootstrap workflow
 
@@ -64,11 +69,11 @@ Bootstrap workflow
 
 Codebase mining workflow
 
-1. The client uses the raw term index refresh/review flow once available, or uses local code/search tooling to prepare terms.
-2. The client uses `text_unit.search` to find concrete Mojito text units for observed usage.
-3. The client calls `glossary.term.review_plan` and then `glossary.term.bulk_upsert`.
-4. The client calls `glossary.term.link_references` to append product-string references discovered after the term already exists.
-5. If the client captured screenshot context, it calls `image.upload` first, then links the returned `imageKey` as `SCREENSHOT` evidence, optionally with `tmTextUnitId` and crop coordinates.
+1. The client uses the raw term index refresh/review flow for observed Mojito strings.
+2. If the client has additional product/code/screenshot context, it calls `image.upload` as needed and then `glossary.term_index.seed_terms`.
+3. A curator reviews the merged suggestions in `/glossaries/:glossaryId`, where accepting a suggestion creates the glossary term and links it back to the raw entry.
+4. The client can still use `glossary.term.bulk_upsert` for already-reviewed bootstrap files where bypassing the raw suggestion queue is intentional.
+5. The client calls `glossary.term.link_references` to append product-string references discovered after the term already exists.
 
 Why not parse Excel in Mojito MCP
 
@@ -80,4 +85,4 @@ Current limitations
 
 - `glossary.translation.propose`: submit locale-specific translation proposals when the client should not directly write approved translations.
 - The remote endpoint is authenticated with the existing Mojito web security stack. Codex clients need a configured auth header or an authenticated local bridge; no MCP-specific token model exists yet.
-- Candidate discovery should move to the glossary-neutral raw term index in `dev-docs/design/013-glossary-raw-term-index.md`; refresh runs are audit/progress, not candidate ownership.
+- The seed-term tool stores context in the raw index only; richer curator UI for inspecting structured metadata is still limited.

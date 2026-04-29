@@ -1,7 +1,7 @@
 package com.box.l10n.mojito.entity.glossary;
 
 import com.box.l10n.mojito.entity.AuditableEntity;
-import com.box.l10n.mojito.entity.glossary.termindex.TermIndexEntry;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -16,12 +16,12 @@ import jakarta.persistence.Table;
     name = "glossary_term_index_link",
     indexes = {
       @Index(
-          name = "UK__GLOSSARY_TERM_INDEX_LINK__TERM_ENTRY_RELATION",
-          columnList = "glossary_term_metadata_id, term_index_entry_id, relation_type",
+          name = "UK__GLOSSARY_TERM_INDEX_LINK__TERM_CANDIDATE_RELATION",
+          columnList = "glossary_term_metadata_id, term_index_candidate_id, relation_type",
           unique = true),
       @Index(
-          name = "I__GLOSSARY_TERM_INDEX_LINK__TERM_INDEX_ENTRY",
-          columnList = "term_index_entry_id")
+          name = "I__GLOSSARY_TERM_INDEX_LINK__CANDIDATE",
+          columnList = "term_index_candidate_id")
     })
 public class GlossaryTermIndexLink extends AuditableEntity {
 
@@ -38,10 +38,10 @@ public class GlossaryTermIndexLink extends AuditableEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(
-      name = "term_index_entry_id",
+      name = "term_index_candidate_id",
       nullable = false,
-      foreignKey = @ForeignKey(name = "FK__GLOSSARY_TERM_INDEX_LINK__TERM_INDEX_ENTRY"))
-  private TermIndexEntry termIndexEntry;
+      foreignKey = @ForeignKey(name = "FK__GLOSSARY_TERM_INDEX_LINK__CANDIDATE"))
+  private TermIndexCandidate termIndexCandidate;
 
   @Column(name = "relation_type", nullable = false, length = 32)
   private String relationType = RELATION_TYPE_PRIMARY;
@@ -60,12 +60,12 @@ public class GlossaryTermIndexLink extends AuditableEntity {
     this.glossaryTermMetadata = glossaryTermMetadata;
   }
 
-  public TermIndexEntry getTermIndexEntry() {
-    return termIndexEntry;
+  public TermIndexCandidate getTermIndexCandidate() {
+    return termIndexCandidate;
   }
 
-  public void setTermIndexEntry(TermIndexEntry termIndexEntry) {
-    this.termIndexEntry = termIndexEntry;
+  public void setTermIndexCandidate(TermIndexCandidate termIndexCandidate) {
+    this.termIndexCandidate = termIndexCandidate;
   }
 
   public String getRelationType() {

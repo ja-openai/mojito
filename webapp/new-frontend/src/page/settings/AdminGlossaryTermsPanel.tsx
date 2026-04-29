@@ -13,21 +13,22 @@ import {
 import { Link } from 'react-router-dom';
 
 import {
-  type ApiExtractedGlossaryCandidate,
+  acceptGlossaryTermIndexSuggestion,
+  type ApiAcceptGlossaryTermIndexSuggestionRequest,
   type ApiGlossaryDetail,
   type ApiGlossaryTerm,
   type ApiGlossaryTermEvidence,
-  type ApiPollableTask,
+  type ApiGlossaryTermIndexSuggestion,
+  type ApiGlossaryTermIndexSuggestionReviewStateFilter,
   type ApiUpsertGlossaryTermRequest,
   batchUpdateGlossaryTerms,
   createGlossaryTerm,
   deleteGlossaryTerm,
-  fetchGlossaryExtractionOutput,
-  fetchGlossaryExtractionTask,
+  fetchGlossaryTermIndexSuggestions,
   fetchGlossaryTerms,
-  startGlossaryTermExtraction,
+  ignoreGlossaryTermIndexSuggestion,
+  seedGlossaryTermIndexCandidates,
   updateGlossaryTerm,
-  waitForGlossaryExtractionTask,
 } from '../../api/glossaries';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -48,7 +49,7 @@ import {
   revokeRequestAttachmentUploadQueuePreviews,
   uploadRequestAttachmentFile,
 } from '../../utils/request-attachments';
-import { GlossaryExtractView } from './GlossaryExtractView';
+import { GlossaryCurationView } from './GlossaryCurationView';
 import { GlossaryTermsListView } from './GlossaryTermsListView';
 
 const TERM_TYPES = ['BRAND', 'PRODUCT', 'UI_LABEL', 'LEGAL', 'TECHNICAL', 'GENERAL'] as const;
@@ -83,6 +84,7 @@ const PROVENANCE_LABELS: Record<(typeof PROVENANCES)[number], string> = {
   AI_EXTRACTED: 'AI extracted',
 };
 type ReferenceType = ApiGlossaryTermEvidence['evidenceType'];
+type SuggestionPendingAction = 'ACCEPT' | 'IGNORE';
 const REFERENCE_TYPES = [
   'SCREENSHOT',
   'NOTE',
@@ -103,7 +105,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'DEPRECATED', label: 'Deprecated' },
   { value: 'REJECTED', label: 'Rejected' },
 ] as const;
-const EXTRACT_LIMIT_PRESETS = [25, 50, 100, 200];
+const SUGGESTION_LIMIT_PRESETS = [25, 50, 100, 200];
 const DEFAULT_VISIBLE_LOCALE_COLUMNS = 3;
 const AUTO_VISIBLE_LOCALE_COLUMNS_CAP = 5;
 const DEFAULT_TERMS_LIMIT = 200;
@@ -221,6 +223,17 @@ type BatchDraft = {
   doNotTranslate: '' | 'true' | 'false';
 };
 
+type TermIndexCandidateDraft = {
+  term: string;
+  label: string;
+  definition: string;
+  rationale: string;
+  partOfSpeech: string;
+  termType: string;
+  enforcement: string;
+  doNotTranslate: boolean;
+};
+
 const createClientId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto && crypto.randomUUID
     ? crypto.randomUUID()
@@ -272,6 +285,17 @@ const createBlankDraft = (localeTags: string[] = []): TermDraft => ({
   doNotTranslate: false,
   translations: localeTags.map((localeTag) => createBlankTranslation(localeTag)),
   references: [],
+});
+
+const createBlankTermIndexCandidateDraft = (): TermIndexCandidateDraft => ({
+  term: '',
+  label: '',
+  definition: '',
+  rationale: '',
+  partOfSpeech: '',
+  termType: 'GENERAL',
+  enforcement: 'SOFT',
+  doNotTranslate: false,
 });
 
 const dedupeLocaleTags = (localeTags: string[]) => {
@@ -438,9 +462,6 @@ const toBooleanPatchValue = (value: '' | 'true' | 'false') => {
   return null;
 };
 
-const areNumberArraysEqual = (left: number[], right: number[]) =>
-  left.length === right.length && left.every((value, index) => value === right[index]);
-
 const areStringArraysEqual = (left: string[], right: string[]) =>
   left.length === right.length && left.every((value, index) => value === right[index]);
 
@@ -577,32 +598,107 @@ function saveGlossaryWorkspacePrefs(glossaryId: number, prefs: GlossaryWorkspace
   }
 }
 
-const extractedCandidateToRequest = (
-  candidate: ApiExtractedGlossaryCandidate,
-): ApiUpsertGlossaryTermRequest => ({
-  source: candidate.term,
-  sourceComment: candidate.definition ?? null,
-  definition: null,
-  partOfSpeech: candidate.suggestedPartOfSpeech || null,
-  termType: candidate.suggestedTermType || 'GENERAL',
-  enforcement: candidate.suggestedEnforcement || 'SOFT',
-  status: 'APPROVED',
-  provenance: candidate.suggestedProvenance || 'AI_EXTRACTED',
+const suggestionToAcceptRequest = (
+  suggestion: ApiGlossaryTermIndexSuggestion,
+): ApiAcceptGlossaryTermIndexSuggestionRequest => ({
+  source: suggestion.term,
+  definition: suggestion.definition ?? null,
+  partOfSpeech: suggestion.suggestedPartOfSpeech || null,
+  termType: suggestion.suggestedTermType || 'GENERAL',
+  enforcement: suggestion.suggestedEnforcement || 'SOFT',
+  status: 'CANDIDATE',
   caseSensitive: false,
-  doNotTranslate: candidate.suggestedDoNotTranslate,
-  evidence: candidate.rationale
-    ? [
-        {
-          evidenceType: 'NOTE',
-          caption: candidate.rationale,
-        },
-      ]
-    : undefined,
+  doNotTranslate: suggestion.suggestedDoNotTranslate,
+  confidence: suggestion.confidence,
+  rationale: suggestion.rationale ?? null,
+  evidence: [
+    ...(suggestion.rationale
+      ? [
+          {
+            evidenceType: 'NOTE' as const,
+            caption: suggestion.rationale,
+          },
+        ]
+      : []),
+    ...suggestion.examples.slice(0, 3).map((example) => ({
+      evidenceType: 'STRING_USAGE' as const,
+      caption: `Observed in ${example.repositoryName}: ${example.sourceText ?? ''}`.slice(0, 1024),
+      tmTextUnitId: example.tmTextUnitId,
+    })),
+  ],
+});
+
+const canAcceptSuggestion = (suggestion: ApiGlossaryTermIndexSuggestion) =>
+  suggestion.reviewState !== 'LINKED' && suggestion.reviewState !== 'EXISTING_TERM';
+
+const suggestionToDraft = (
+  suggestion: ApiGlossaryTermIndexSuggestion,
+  localeTags: string[],
+): TermDraft => {
+  const draft = createBlankDraft(localeTags);
+  draft.source = suggestion.term;
+  draft.definition = suggestion.definition ?? suggestion.rationale ?? '';
+  draft.sourceComment = draft.definition;
+  draft.partOfSpeech = suggestion.suggestedPartOfSpeech ?? '';
+  draft.termType = suggestion.suggestedTermType || 'GENERAL';
+  draft.enforcement = suggestion.suggestedEnforcement || 'SOFT';
+  draft.status = 'CANDIDATE';
+  draft.provenance = suggestion.suggestedProvenance || 'AI_EXTRACTED';
+  draft.caseSensitive = false;
+  draft.doNotTranslate = suggestion.suggestedDoNotTranslate;
+  draft.references = [
+    ...(suggestion.rationale
+      ? [
+          {
+            ...createBlankReference('NOTE'),
+            caption: suggestion.rationale,
+          },
+        ]
+      : []),
+    ...suggestion.examples.slice(0, 3).map((example) => ({
+      ...createBlankReference('STRING_USAGE'),
+      caption: `Observed in ${example.repositoryName}: ${example.sourceText ?? ''}`.slice(0, 1024),
+      tmTextUnitId: String(example.tmTextUnitId),
+    })),
+  ];
+  return draft;
+};
+
+const draftToAcceptSuggestionRequest = (
+  draft: TermDraft,
+  suggestion: ApiGlossaryTermIndexSuggestion,
+): ApiAcceptGlossaryTermIndexSuggestionRequest => ({
+  termKey: draft.termKey.trim() || null,
+  source: draft.source.trim() || suggestion.term,
+  definition: draft.definition.trim() || null,
+  partOfSpeech: draft.partOfSpeech.trim() || null,
+  termType: draft.termType || suggestion.suggestedTermType || 'GENERAL',
+  enforcement: draft.enforcement || suggestion.suggestedEnforcement || 'SOFT',
+  status: draft.status || 'CANDIDATE',
+  caseSensitive: draft.caseSensitive,
+  doNotTranslate: draft.doNotTranslate,
+  confidence: suggestion.confidence,
+  rationale: suggestion.rationale ?? null,
+  evidence: draft.references
+    .map((reference) => ({
+      evidenceType: reference.referenceType,
+      caption: reference.caption.trim() || null,
+      imageKey: reference.imageKey.trim() || null,
+      tmTextUnitId:
+        reference.referenceType === 'STRING_USAGE' &&
+        reference.tmTextUnitId.trim() &&
+        Number.isFinite(Number(reference.tmTextUnitId))
+          ? Number(reference.tmTextUnitId)
+          : null,
+    }))
+    .filter(
+      (reference) =>
+        Boolean(reference.imageKey) || Boolean(reference.caption) || reference.tmTextUnitId != null,
+    ),
 });
 
 export function AdminGlossaryTermsPanel({
   glossary,
-  repositoryOptions,
   initialOpenTermId = null,
   backRequestNonce = 0,
   canImport = false,
@@ -653,6 +749,10 @@ export function AdminGlossaryTermsPanel({
     useState<CopyTranslationStatus>('KEEP_CURRENT');
   const [batchOpen, setBatchOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
+  const [candidateModalOpen, setCandidateModalOpen] = useState(false);
+  const [candidateDraft, setCandidateDraft] = useState<TermIndexCandidateDraft>(() =>
+    createBlankTermIndexCandidateDraft(),
+  );
   const [statusNotice, setStatusNotice] = useState<{
     kind: 'success' | 'error';
     message: string;
@@ -666,18 +766,19 @@ export function AdminGlossaryTermsPanel({
     caseSensitive: '',
     doNotTranslate: '',
   });
-  const [extractRepositoryIds, setExtractRepositoryIds] = useState<number[]>([]);
-  const [extractLimit, setExtractLimit] = useState('50');
-  const [extractMinOccurrences, setExtractMinOccurrences] = useState('2');
-  const [extractTask, setExtractTask] = useState<ApiPollableTask | null>(null);
-  const [extractedCandidates, setExtractedCandidates] = useState<ApiExtractedGlossaryCandidate[]>(
-    [],
-  );
-  const [selectedExtractedCandidateTerms, setSelectedExtractedCandidateTerms] = useState<string[]>(
-    [],
-  );
+  const [suggestionSearchDraft, setSuggestionSearchDraft] = useState('');
+  const [suggestionSearchQuery, setSuggestionSearchQuery] = useState('');
+  const [suggestionLimit, setSuggestionLimit] = useState('50');
+  const [suggestionReviewStateFilter, setSuggestionReviewStateFilter] =
+    useState<ApiGlossaryTermIndexSuggestionReviewStateFilter>('NEW');
+  const [suggestionSearchNonce, setSuggestionSearchNonce] = useState(0);
+  const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<number[]>([]);
+  const [pendingSuggestionActions, setPendingSuggestionActions] = useState<
+    Record<number, SuggestionPendingAction>
+  >({});
   const [returnToExtractAfterEditor, setReturnToExtractAfterEditor] = useState(false);
-  const [candidateSourceInEditor, setCandidateSourceInEditor] = useState<string | null>(null);
+  const [suggestionInEditor, setSuggestionInEditor] =
+    useState<ApiGlossaryTermIndexSuggestion | null>(null);
   const [uploadQueue, setUploadQueue] = useState<RequestAttachmentUploadQueueItem[]>([]);
   const optimizeImagesBeforeUpload = true;
   const openedInitialTermIdRef = useRef<number | null>(null);
@@ -686,16 +787,6 @@ export function AdminGlossaryTermsPanel({
     persistedWorkspacePrefs?.primaryPaneWidthPct ?? DEFAULT_PRIMARY_PANE_WIDTH_PCT,
   );
   const hydratedWorkspacePrefsGlossaryIdRef = useRef<number | null>(null);
-
-  const extractRepositoryOptions = useMemo(
-    () =>
-      repositoryOptions
-        .filter((repository) => repository.id !== glossary.backingRepository.id)
-        .sort((first, second) =>
-          first.name.localeCompare(second.name, undefined, { sensitivity: 'base' }),
-        ),
-    [glossary.backingRepository.id, repositoryOptions],
-  );
 
   const localeOptions = useMemo(
     () =>
@@ -799,38 +890,11 @@ export function AdminGlossaryTermsPanel({
     };
   }, []);
 
-  useEffect(() => {
-    if (extractRepositoryIds.length > 0) {
-      return;
-    }
-    if (glossary.scopeMode === 'SELECTED_REPOSITORIES') {
-      const availableRepositoryIds = new Set(
-        extractRepositoryOptions.map((repository) => repository.id),
-      );
-      setExtractRepositoryIds(
-        glossary.repositories
-          .map((repository) => repository.id)
-          .filter((repositoryId) => availableRepositoryIds.has(repositoryId)),
-      );
-    }
-  }, [
-    extractRepositoryIds.length,
-    extractRepositoryOptions,
-    glossary.repositories,
-    glossary.scopeMode,
-  ]);
-
-  useEffect(() => {
-    const availableRepositoryIds = new Set(
-      extractRepositoryOptions.map((repository) => repository.id),
-    );
-    setExtractRepositoryIds((current) => {
-      const next = current.filter((repositoryId) => availableRepositoryIds.has(repositoryId));
-      return areNumberArraysEqual(current, next) ? current : next;
-    });
-  }, [extractRepositoryOptions]);
-
   const termsLimitNumber = normalizeTermsLimit(termsLimit);
+  const suggestionLimitNumber = Math.min(
+    Math.max(1, Number.parseInt(suggestionLimit.trim() || '50', 10)),
+    200,
+  );
 
   const termsQuery = useQuery({
     queryKey: [
@@ -849,6 +913,81 @@ export function AdminGlossaryTermsPanel({
     staleTime: 15_000,
   });
 
+  const suggestionsQuery = useQuery({
+    queryKey: [
+      'glossary-term-index-suggestions',
+      glossary.id,
+      suggestionSearchQuery,
+      suggestionLimitNumber,
+      suggestionReviewStateFilter,
+      suggestionSearchNonce,
+    ],
+    queryFn: () =>
+      fetchGlossaryTermIndexSuggestions(glossary.id, {
+        search: suggestionSearchQuery,
+        limit: suggestionLimitNumber,
+        useAi: true,
+        reviewStateFilter: suggestionReviewStateFilter,
+      }),
+    enabled: extractOpen && suggestionSearchNonce > 0,
+    staleTime: 0,
+  });
+
+  const seedCandidateMutation = useMutation({
+    mutationFn: async (draft: TermIndexCandidateDraft) =>
+      seedGlossaryTermIndexCandidates(glossary.id, {
+        candidates: [
+          {
+            term: draft.term.trim(),
+            label: draft.label.trim() || null,
+            definition: draft.definition.trim() || null,
+            rationale: draft.rationale.trim() || null,
+            partOfSpeech: draft.partOfSpeech.trim() || null,
+            termType: draft.termType || null,
+            enforcement: draft.enforcement || null,
+            doNotTranslate: draft.doNotTranslate,
+            confidence: 70,
+            metadata: {
+              glossaryId: glossary.id,
+              glossaryName: glossary.name,
+            },
+          },
+        ],
+      }),
+    onSuccess: async (result, draft) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['glossary-term-index-suggestions', glossary.id],
+      });
+      const seededTerm = result.candidates[0]?.term ?? draft.term.trim();
+      setCandidateModalOpen(false);
+      setCandidateDraft(createBlankTermIndexCandidateDraft());
+      setExtractOpen(true);
+      setSuggestionReviewStateFilter('NEW');
+      setSuggestionSearchDraft(seededTerm);
+      setSuggestionSearchQuery(seededTerm);
+      setSuggestionSearchNonce((current) => current + 1);
+      setStatusNotice({
+        kind: 'success',
+        message: `Added ${seededTerm} to the suggestion queue.`,
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to add glossary suggestion.',
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (!extractOpen || suggestionSearchNonce > 0) {
+      return;
+    }
+    setSelectedSuggestionIds([]);
+    setSuggestionSearchQuery(suggestionSearchDraft);
+    setSuggestionSearchNonce(1);
+  }, [extractOpen, suggestionSearchDraft, suggestionSearchNonce]);
+
   const saveTermMutation = useMutation({
     mutationFn: async ({
       draft,
@@ -863,12 +1002,22 @@ export function AdminGlossaryTermsPanel({
         copyTranslationsOnReplace,
         copyTranslationStatus,
       });
+      if (draft.tmTextUnitId == null && suggestionInEditor) {
+        return acceptGlossaryTermIndexSuggestion(
+          glossary.id,
+          suggestionInEditor.termIndexCandidateId,
+          draftToAcceptSuggestionRequest(draft, suggestionInEditor),
+        );
+      }
       return draft.tmTextUnitId == null
         ? createGlossaryTerm(glossary.id, request)
         : updateGlossaryTerm(glossary.id, draft.tmTextUnitId, request);
     },
     onSuccess: async (savedTerm) => {
       await queryClient.invalidateQueries({ queryKey: ['glossary-terms', glossary.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ['glossary-term-index-suggestions', glossary.id],
+      });
       setEditorOpen(false);
       setUploadQueue([]);
       setOriginalEditorDraft(null);
@@ -876,13 +1025,8 @@ export function AdminGlossaryTermsPanel({
       if (returnToExtractAfterEditor) {
         setExtractOpen(true);
       }
-      if (candidateSourceInEditor) {
-        setExtractedCandidates((current) =>
-          current.filter((candidate) => candidate.term !== candidateSourceInEditor),
-        );
-      }
       setReturnToExtractAfterEditor(false);
-      setCandidateSourceInEditor(null);
+      setSuggestionInEditor(null);
       setSelectedTermIds([]);
       setStatusNotice({
         kind: 'success',
@@ -1037,51 +1181,97 @@ export function AdminGlossaryTermsPanel({
     },
   });
 
-  const extractMutation = useMutation({
-    mutationFn: async () => {
-      const pollableTask = await startGlossaryTermExtraction(glossary.id, {
-        repositoryIds: extractRepositoryIds,
-        limit: Number.parseInt(extractLimit.trim() || '50', 10),
-        minOccurrences: Number.parseInt(extractMinOccurrences.trim() || '2', 10),
-      });
-      setExtractTask(pollableTask);
-      const latestTask = await fetchGlossaryExtractionTask(pollableTask.id);
-      setExtractTask(latestTask);
-      const completedTask = await waitForGlossaryExtractionTask(pollableTask.id);
-      setExtractTask(completedTask);
-      return fetchGlossaryExtractionOutput(pollableTask.id);
+  const acceptSuggestionMutation = useMutation({
+    mutationFn: async (suggestion: ApiGlossaryTermIndexSuggestion) =>
+      acceptGlossaryTermIndexSuggestion(
+        glossary.id,
+        suggestion.termIndexCandidateId,
+        suggestionToAcceptRequest(suggestion),
+      ),
+    onMutate: (suggestion) => {
+      setPendingSuggestionActions((current) => ({
+        ...current,
+        [suggestion.termIndexCandidateId]: 'ACCEPT',
+      }));
     },
-    onMutate: () => {
-      setExtractTask(null);
-      setExtractedCandidates([]);
+    onSuccess: async (savedTerm, suggestion) => {
+      await queryClient.invalidateQueries({ queryKey: ['glossary-terms', glossary.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ['glossary-term-index-suggestions', glossary.id],
+      });
+      setSelectedSuggestionIds((current) =>
+        current.filter((id) => id !== suggestion.termIndexCandidateId),
+      );
       setStatusNotice({
         kind: 'success',
-        message: 'Started glossary extraction…',
-      });
-    },
-    onSuccess: (result) => {
-      setExtractedCandidates(result.candidates);
-      setSelectedExtractedCandidateTerms([]);
-      setStatusNotice({
-        kind: 'success',
-        message: `Loaded ${result.candidates.length} glossary candidates.`,
+        message: `Accepted ${savedTerm.source} as a glossary candidate.`,
       });
     },
     onError: (error: Error) => {
-      setExtractTask(null);
       setStatusNotice({
         kind: 'error',
-        message: error.message || 'Failed to extract glossary candidates.',
+        message: error.message || 'Failed to accept glossary suggestion.',
+      });
+    },
+    onSettled: (_savedTerm, _error, suggestion) => {
+      setPendingSuggestionActions((current) => {
+        const next = { ...current };
+        delete next[suggestion.termIndexCandidateId];
+        return next;
       });
     },
   });
 
-  const batchAddExtractedCandidatesMutation = useMutation({
-    mutationFn: async (candidates: ApiExtractedGlossaryCandidate[]) => {
+  const ignoreSuggestionMutation = useMutation({
+    mutationFn: async (suggestion: ApiGlossaryTermIndexSuggestion) => {
+      await ignoreGlossaryTermIndexSuggestion(glossary.id, suggestion.termIndexCandidateId, {
+        reason: 'Ignored from glossary workspace.',
+      });
+      return suggestion;
+    },
+    onMutate: (suggestion) => {
+      setPendingSuggestionActions((current) => ({
+        ...current,
+        [suggestion.termIndexCandidateId]: 'IGNORE',
+      }));
+    },
+    onSuccess: async (suggestion) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['glossary-term-index-suggestions', glossary.id],
+      });
+      setSelectedSuggestionIds((current) =>
+        current.filter((id) => id !== suggestion.termIndexCandidateId),
+      );
+      setStatusNotice({
+        kind: 'success',
+        message: `Ignored ${suggestion.term}.`,
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to ignore glossary suggestion.',
+      });
+    },
+    onSettled: (_savedSuggestion, _error, suggestion) => {
+      setPendingSuggestionActions((current) => {
+        const next = { ...current };
+        delete next[suggestion.termIndexCandidateId];
+        return next;
+      });
+    },
+  });
+
+  const batchAcceptSuggestionsMutation = useMutation({
+    mutationFn: async (suggestions: ApiGlossaryTermIndexSuggestion[]) => {
       const results = await Promise.allSettled(
-        candidates.map(async (candidate) => ({
-          candidate,
-          saved: await createGlossaryTerm(glossary.id, extractedCandidateToRequest(candidate)),
+        suggestions.map(async (suggestion) => ({
+          suggestion,
+          saved: await acceptGlossaryTermIndexSuggestion(
+            glossary.id,
+            suggestion.termIndexCandidateId,
+            suggestionToAcceptRequest(suggestion),
+          ),
         })),
       );
 
@@ -1090,11 +1280,11 @@ export function AdminGlossaryTermsPanel({
           (
             result,
           ): result is PromiseFulfilledResult<{
-            candidate: ApiExtractedGlossaryCandidate;
+            suggestion: ApiGlossaryTermIndexSuggestion;
             saved: ApiGlossaryTerm;
           }> => result.status === 'fulfilled',
         )
-        .map((result) => result.value.candidate.term);
+        .map((result) => result.value.suggestion.termIndexCandidateId);
 
       return {
         succeeded,
@@ -1103,24 +1293,22 @@ export function AdminGlossaryTermsPanel({
     },
     onSuccess: async ({ succeeded, failed }) => {
       await queryClient.invalidateQueries({ queryKey: ['glossary-terms', glossary.id] });
-      setExtractedCandidates((current) =>
-        current.filter((candidate) => !succeeded.includes(candidate.term)),
-      );
-      setSelectedExtractedCandidateTerms((current) =>
-        current.filter((term) => !succeeded.includes(term)),
-      );
+      await queryClient.invalidateQueries({
+        queryKey: ['glossary-term-index-suggestions', glossary.id],
+      });
+      setSelectedSuggestionIds((current) => current.filter((id) => !succeeded.includes(id)));
       setStatusNotice({
         kind: failed > 0 ? 'error' : 'success',
         message:
           failed > 0
-            ? `Added ${succeeded.length} extracted terms. ${failed} failed and need review.`
-            : `Added ${succeeded.length} extracted terms.`,
+            ? `Accepted ${succeeded.length} suggestions. ${failed} failed and need review.`
+            : `Accepted ${succeeded.length} suggestions.`,
       });
     },
     onError: (error: Error) => {
       setStatusNotice({
         kind: 'error',
-        message: error.message || 'Failed to add extracted glossary terms.',
+        message: error.message || 'Failed to accept glossary suggestions.',
       });
     },
   });
@@ -1161,17 +1349,25 @@ export function AdminGlossaryTermsPanel({
         : `${selectedLocaleTags.length} locale column${selectedLocaleTags.length === 1 ? '' : 's'}`;
   const allVisibleSelected =
     terms.length > 0 && terms.every((term) => selectedTermIds.includes(term.tmTextUnitId));
-  const selectedExtractedCandidates = useMemo(
-    () =>
-      extractedCandidates.filter((candidate) =>
-        selectedExtractedCandidateTerms.includes(candidate.term),
-      ),
-    [extractedCandidates, selectedExtractedCandidateTerms],
+  const suggestions = useMemo(
+    () => suggestionsQuery.data?.suggestions ?? [],
+    [suggestionsQuery.data?.suggestions],
   );
-  const allExtractedCandidatesSelected =
-    extractedCandidates.length > 0 &&
-    extractedCandidates.every((candidate) =>
-      selectedExtractedCandidateTerms.includes(candidate.term),
+  const acceptableSuggestions = useMemo(
+    () => suggestions.filter(canAcceptSuggestion),
+    [suggestions],
+  );
+  const selectedSuggestions = useMemo(
+    () =>
+      acceptableSuggestions.filter((suggestion) =>
+        selectedSuggestionIds.includes(suggestion.termIndexCandidateId),
+      ),
+    [acceptableSuggestions, selectedSuggestionIds],
+  );
+  const allSuggestionsSelected =
+    acceptableSuggestions.length > 0 &&
+    acceptableSuggestions.every((suggestion) =>
+      selectedSuggestionIds.includes(suggestion.termIndexCandidateId),
     );
 
   const selectedTerms = useMemo(
@@ -1203,8 +1399,9 @@ export function AdminGlossaryTermsPanel({
     }
     saveTermMutation.mutate({ draft: editorDraft });
   };
-  const editorTitle =
-    editorDraft.tmTextUnitId == null
+  const editorTitle = suggestionInEditor
+    ? `Review suggestion: ${suggestionInEditor.term}`
+    : editorDraft.tmTextUnitId == null
       ? canManageTerms
         ? 'Create glossary term'
         : 'Propose glossary term'
@@ -1213,9 +1410,9 @@ export function AdminGlossaryTermsPanel({
         : editorDraft.source;
   const detailPlaceholder = extractOpen
     ? {
-        title: 'Review candidates in context',
+        title: 'Review raw term suggestions',
         message:
-          'Select a candidate to review it here, or add candidates directly from the queue on the left.',
+          'Select a suggestion to review its definition, sources, and glossary metadata before accepting it.',
       }
     : {
         title: canManageTerms ? 'Select a glossary term' : 'Browse glossary terms',
@@ -1235,7 +1432,7 @@ export function AdminGlossaryTermsPanel({
     }
 
     if (extractOpen) {
-      onViewStateChange({ mode: 'extract', title: 'Extract candidates' });
+      onViewStateChange({ mode: 'extract', title: 'Review suggestions' });
       return;
     }
 
@@ -1244,7 +1441,7 @@ export function AdminGlossaryTermsPanel({
 
   const openCreateModal = () => {
     setReturnToExtractAfterEditor(false);
-    setCandidateSourceInEditor(null);
+    setSuggestionInEditor(null);
     setUploadQueue([]);
     const nextDraft = createBlankDraft(selectedLocaleTags);
     setEditorDraft(nextDraft);
@@ -1253,9 +1450,14 @@ export function AdminGlossaryTermsPanel({
     setEditorOpen(true);
   };
 
+  const openCandidateModal = () => {
+    setCandidateDraft(createBlankTermIndexCandidateDraft());
+    setCandidateModalOpen(true);
+  };
+
   const openEditModal = (term: ApiGlossaryTerm) => {
     setReturnToExtractAfterEditor(false);
-    setCandidateSourceInEditor(null);
+    setSuggestionInEditor(null);
     setUploadQueue([]);
     const nextDraft = termToDraft(term, glossary.localeTags);
     setEditorDraft(nextDraft);
@@ -1264,25 +1466,13 @@ export function AdminGlossaryTermsPanel({
     setEditorOpen(true);
   };
 
-  const openCandidateModal = (candidate: ApiExtractedGlossaryCandidate) => {
-    const nextDraft = createBlankDraft(selectedLocaleTags);
-    nextDraft.source = candidate.term;
-    nextDraft.termType = candidate.suggestedTermType || 'GENERAL';
-    nextDraft.provenance = candidate.suggestedProvenance || 'AI_EXTRACTED';
-    nextDraft.definition = candidate.definition ?? candidate.rationale ?? '';
-    nextDraft.partOfSpeech = candidate.suggestedPartOfSpeech || '';
-    nextDraft.enforcement = candidate.suggestedEnforcement || 'SOFT';
-    nextDraft.doNotTranslate = candidate.suggestedDoNotTranslate;
-    nextDraft.references = candidate.rationale
-      ? [
-          {
-            ...createBlankReference('NOTE'),
-            caption: candidate.rationale,
-          },
-        ]
-      : [];
+  const openSuggestionModal = (suggestion: ApiGlossaryTermIndexSuggestion) => {
+    if (!canAcceptSuggestion(suggestion)) {
+      return;
+    }
+    const nextDraft = suggestionToDraft(suggestion, selectedLocaleTags);
     setReturnToExtractAfterEditor(true);
-    setCandidateSourceInEditor(candidate.term);
+    setSuggestionInEditor(suggestion);
     setUploadQueue([]);
     setEditorDraft(nextDraft);
     setOriginalEditorDraft(null);
@@ -1302,7 +1492,7 @@ export function AdminGlossaryTermsPanel({
       setExtractOpen(true);
     }
     setReturnToExtractAfterEditor(false);
-    setCandidateSourceInEditor(null);
+    setSuggestionInEditor(null);
   }, [returnToExtractAfterEditor, saveTermMutation.isPending]);
 
   useEffect(() => {
@@ -1337,7 +1527,7 @@ export function AdminGlossaryTermsPanel({
 
     openedInitialTermIdRef.current = initialOpenTermId;
     setReturnToExtractAfterEditor(false);
-    setCandidateSourceInEditor(null);
+    setSuggestionInEditor(null);
     setUploadQueue([]);
     const nextDraft = termToDraft(requestedTerm, glossary.localeTags);
     setEditorDraft(nextDraft);
@@ -1517,49 +1707,67 @@ export function AdminGlossaryTermsPanel({
       >
         <div className="glossary-term-admin__workspace-pane glossary-term-admin__workspace-pane--primary">
           {extractOpen ? (
-            <GlossaryExtractView
-              extractRepositoryOptions={extractRepositoryOptions}
-              extractRepositoryIds={extractRepositoryIds}
-              onChangeExtractRepositoryIds={(next) =>
-                setExtractRepositoryIds([...next].sort((a, b) => a - b))
+            <GlossaryCurationView
+              searchDraft={suggestionSearchDraft}
+              onChangeSearch={(value) => {
+                setSuggestionSearchDraft(value);
+                setStatusNotice(null);
+              }}
+              reviewStateFilter={suggestionReviewStateFilter}
+              onChangeReviewStateFilter={(value) => {
+                setSuggestionReviewStateFilter(value);
+                setSelectedSuggestionIds([]);
+                setStatusNotice(null);
+              }}
+              hasPendingSearchChanges={
+                suggestionSearchDraft.trim() !== suggestionSearchQuery.trim()
               }
-              extractMinOccurrences={extractMinOccurrences}
-              onChangeExtractMinOccurrences={setExtractMinOccurrences}
-              onRunExtraction={() => extractMutation.mutate()}
-              isExtracting={extractMutation.isPending}
-              canRunExtraction={!extractMutation.isPending && extractRepositoryIds.length > 0}
-              extractTask={extractTask}
-              extractedCandidates={extractedCandidates}
-              extractLimit={Number.parseInt(extractLimit.trim() || '50', 10)}
-              onChangeExtractLimit={(value) => setExtractLimit(String(value))}
-              limitPresetOptions={EXTRACT_LIMIT_PRESETS}
-              allExtractedCandidatesSelected={allExtractedCandidatesSelected}
-              onToggleSelectAllExtracted={() =>
-                setSelectedExtractedCandidateTerms(
-                  allExtractedCandidatesSelected
-                    ? []
-                    : extractedCandidates
-                        .filter((candidate) => !candidate.existingInGlossary)
-                        .map((candidate) => candidate.term),
-                )
+              onRefreshSuggestions={() => {
+                setSelectedSuggestionIds([]);
+                setSuggestionSearchQuery(suggestionSearchDraft);
+                setSuggestionSearchNonce((current) => current + 1);
+              }}
+              onOpenCreateCandidate={openCandidateModal}
+              isLoading={suggestionsQuery.isFetching}
+              suggestions={suggestions}
+              totalCount={suggestionsQuery.data?.totalCount ?? suggestions.length}
+              hasSearched={suggestionSearchNonce > 0}
+              errorMessage={
+                suggestionsQuery.isError
+                  ? suggestionsQuery.error instanceof Error
+                    ? suggestionsQuery.error.message
+                    : 'Could not load glossary suggestions.'
+                  : null
               }
-              selectedExtractedCandidatesCount={selectedExtractedCandidates.length}
-              onAddSelectedExtracted={() =>
-                batchAddExtractedCandidatesMutation.mutate(selectedExtractedCandidates)
-              }
-              isAddingSelected={batchAddExtractedCandidatesMutation.isPending}
-              selectedExtractedCandidateTerms={selectedExtractedCandidateTerms}
-              onToggleExtractedCandidate={(term, checked) =>
-                setSelectedExtractedCandidateTerms((current) =>
+              suggestionLimit={suggestionLimitNumber}
+              onChangeSuggestionLimit={(value) => setSuggestionLimit(String(value))}
+              limitPresetOptions={SUGGESTION_LIMIT_PRESETS}
+              selectedSuggestionIds={selectedSuggestionIds}
+              onToggleSuggestion={(termIndexCandidateId, checked) =>
+                setSelectedSuggestionIds((current) =>
                   checked
-                    ? Array.from(new Set([...current, term]))
-                    : current.filter((currentTerm) => currentTerm !== term),
+                    ? Array.from(new Set([...current, termIndexCandidateId]))
+                    : current.filter((id) => id !== termIndexCandidateId),
                 )
               }
-              onOpenCandidateModal={openCandidateModal}
-              onAddCandidate={(candidate) =>
-                batchAddExtractedCandidatesMutation.mutate([candidate])
+              allSuggestionsSelected={allSuggestionsSelected}
+              onToggleSelectAll={() =>
+                setSelectedSuggestionIds(
+                  allSuggestionsSelected
+                    ? []
+                    : acceptableSuggestions.map((suggestion) => suggestion.termIndexCandidateId),
+                )
               }
+              onAcceptSelected={() => batchAcceptSuggestionsMutation.mutate(selectedSuggestions)}
+              isAcceptingSelected={batchAcceptSuggestionsMutation.isPending}
+              onOpenSuggestion={openSuggestionModal}
+              onAcceptSuggestion={(suggestion) => {
+                if (canAcceptSuggestion(suggestion)) {
+                  acceptSuggestionMutation.mutate(suggestion);
+                }
+              }}
+              onIgnoreSuggestion={(suggestion) => ignoreSuggestionMutation.mutate(suggestion)}
+              pendingSuggestionActions={pendingSuggestionActions}
             />
           ) : (
             <GlossaryTermsListView
@@ -2134,7 +2342,7 @@ export function AdminGlossaryTermsPanel({
                     onClick={closeEditor}
                     disabled={saveTermMutation.isPending || deleteTermMutation.isPending}
                   >
-                    {returnToExtractAfterEditor ? 'Back to candidates' : 'Cancel'}
+                    {returnToExtractAfterEditor ? 'Back to suggestions' : 'Cancel'}
                   </button>
                   <div className="glossary-term-admin__editor-page-actions">
                     {canManageTerms && editorDraft.tmTextUnitId != null ? (
@@ -2197,6 +2405,185 @@ export function AdminGlossaryTermsPanel({
           )}
         </div>
       </div>
+
+      <Modal
+        open={candidateModalOpen}
+        size="lg"
+        ariaLabel="Add term index candidate"
+        onClose={() => {
+          if (!seedCandidateMutation.isPending) {
+            setCandidateModalOpen(false);
+          }
+        }}
+        closeOnBackdrop
+      >
+        <div className="modal__header">
+          <div>
+            <h3 className="modal__title">Add candidate</h3>
+            <p className="settings-hint">
+              Add a review candidate when extraction missed a term or needs a manual split.
+            </p>
+          </div>
+        </div>
+        <div className="settings-grid settings-grid--two-column">
+          <div className="settings-field">
+            <label className="settings-field__label" htmlFor="term-index-candidate-term">
+              Term
+            </label>
+            <input
+              id="term-index-candidate-term"
+              type="text"
+              className="settings-input"
+              value={candidateDraft.term}
+              onChange={(event) =>
+                setCandidateDraft((current) => ({ ...current, term: event.target.value }))
+              }
+              autoFocus
+            />
+          </div>
+          <div className="settings-field">
+            <label className="settings-field__label" htmlFor="term-index-candidate-label">
+              Label
+            </label>
+            <input
+              id="term-index-candidate-label"
+              type="text"
+              className="settings-input"
+              placeholder="Optional display label"
+              value={candidateDraft.label}
+              onChange={(event) =>
+                setCandidateDraft((current) => ({ ...current, label: event.target.value }))
+              }
+            />
+          </div>
+          <div className="settings-field settings-field--full">
+            <label className="settings-field__label" htmlFor="term-index-candidate-definition">
+              Definition
+            </label>
+            <AutoTextarea
+              id="term-index-candidate-definition"
+              className="settings-input"
+              minRows={3}
+              value={candidateDraft.definition}
+              onChange={(event) =>
+                setCandidateDraft((current) => ({
+                  ...current,
+                  definition: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="settings-field settings-field--full">
+            <label className="settings-field__label" htmlFor="term-index-candidate-rationale">
+              Rationale
+            </label>
+            <AutoTextarea
+              id="term-index-candidate-rationale"
+              className="settings-input"
+              minRows={2}
+              value={candidateDraft.rationale}
+              onChange={(event) =>
+                setCandidateDraft((current) => ({
+                  ...current,
+                  rationale: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="settings-field">
+            <label className="settings-field__label" htmlFor="term-index-candidate-pos">
+              Part of speech
+            </label>
+            <input
+              id="term-index-candidate-pos"
+              type="text"
+              className="settings-input"
+              value={candidateDraft.partOfSpeech}
+              onChange={(event) =>
+                setCandidateDraft((current) => ({
+                  ...current,
+                  partOfSpeech: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="settings-field">
+            <label className="settings-field__label" htmlFor="term-index-candidate-type">
+              Term type
+            </label>
+            <select
+              id="term-index-candidate-type"
+              className="settings-input"
+              value={candidateDraft.termType}
+              onChange={(event) =>
+                setCandidateDraft((current) => ({ ...current, termType: event.target.value }))
+              }
+            >
+              {TERM_TYPES.map((termType) => (
+                <option key={termType} value={termType}>
+                  {TERM_TYPE_LABELS[termType]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="settings-field">
+            <label className="settings-field__label" htmlFor="term-index-candidate-enforcement">
+              Enforcement
+            </label>
+            <select
+              id="term-index-candidate-enforcement"
+              className="settings-input"
+              value={candidateDraft.enforcement}
+              onChange={(event) =>
+                setCandidateDraft((current) => ({
+                  ...current,
+                  enforcement: event.target.value,
+                }))
+              }
+            >
+              {ENFORCEMENTS.map((enforcement) => (
+                <option key={enforcement} value={enforcement}>
+                  {ENFORCEMENT_LABELS[enforcement]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="settings-field">
+            <label className="settings-field__label">Flags</label>
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={candidateDraft.doNotTranslate}
+                onChange={(event) =>
+                  setCandidateDraft((current) => ({
+                    ...current,
+                    doNotTranslate: event.target.checked,
+                  }))
+                }
+              />
+              <span>Do not translate</span>
+            </label>
+          </div>
+        </div>
+        <div className="modal__footer">
+          <button
+            type="button"
+            className="settings-button settings-button--ghost"
+            onClick={() => setCandidateModalOpen(false)}
+            disabled={seedCandidateMutation.isPending}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="settings-button settings-button--primary"
+            onClick={() => seedCandidateMutation.mutate(candidateDraft)}
+            disabled={seedCandidateMutation.isPending || !candidateDraft.term.trim()}
+          >
+            {seedCandidateMutation.isPending ? 'Adding…' : 'Add candidate'}
+          </button>
+        </div>
+      </Modal>
 
       <Modal
         open={batchOpen}

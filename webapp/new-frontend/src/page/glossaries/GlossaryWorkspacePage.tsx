@@ -125,7 +125,7 @@ export function GlossaryWorkspacePage() {
             ? viewState.mode === 'terms'
               ? glossaryQuery.data.name
               : viewState.mode === 'extract'
-                ? 'Extract candidates'
+                ? 'Review suggestions'
                 : viewState.title || 'Edit term'
             : 'Glossaries'
         }

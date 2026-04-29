@@ -9,14 +9,14 @@ import java.time.ZonedDateTime;
 
 @Entity
 @Table(
-    name = "term_index_entry",
+    name = "term_index_extracted_term",
     indexes = {
       @Index(
-          name = "UK__TERM_INDEX_ENTRY__LOCALE_KEY",
+          name = "UK__TERM_INDEX_EXTRACTED_TERM__LOCALE_KEY",
           columnList = "source_locale_tag, normalized_key",
           unique = true)
     })
-public class TermIndexEntry extends AuditableEntity {
+public class TermIndexExtractedTerm extends AuditableEntity {
 
   public static final String SOURCE_LOCALE_ROOT = "root";
 
@@ -34,9 +34,6 @@ public class TermIndexEntry extends AuditableEntity {
 
   @Column(name = "repository_count", nullable = false)
   private Integer repositoryCount = 0;
-
-  @Column(name = "signal_summary", length = 1024)
-  private String signalSummary;
 
   @Column(name = "first_seen_at")
   private ZonedDateTime firstSeenAt;
@@ -82,14 +79,6 @@ public class TermIndexEntry extends AuditableEntity {
 
   public void setRepositoryCount(Integer repositoryCount) {
     this.repositoryCount = repositoryCount;
-  }
-
-  public String getSignalSummary() {
-    return signalSummary;
-  }
-
-  public void setSignalSummary(String signalSummary) {
-    this.signalSummary = signalSummary;
   }
 
   public ZonedDateTime getFirstSeenAt() {
