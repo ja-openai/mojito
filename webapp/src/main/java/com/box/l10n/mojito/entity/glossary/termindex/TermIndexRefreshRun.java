@@ -23,8 +23,8 @@ public class TermIndexRefreshRun extends AuditableEntity {
   @Column(name = "processed_text_unit_count", nullable = false)
   private Long processedTextUnitCount = 0L;
 
-  @Column(name = "entry_count", nullable = false)
-  private Long entryCount = 0L;
+  @Column(name = "extracted_term_count", nullable = false)
+  private Long extractedTermCount = 0L;
 
   @Column(name = "occurrence_count", nullable = false)
   private Long occurrenceCount = 0L;
@@ -62,12 +62,12 @@ public class TermIndexRefreshRun extends AuditableEntity {
     this.processedTextUnitCount = processedTextUnitCount;
   }
 
-  public Long getEntryCount() {
-    return entryCount;
+  public Long getExtractedTermCount() {
+    return extractedTermCount;
   }
 
-  public void setEntryCount(Long entryCount) {
-    this.entryCount = entryCount;
+  public void setExtractedTermCount(Long extractedTermCount) {
+    this.extractedTermCount = extractedTermCount;
   }
 
   public Long getOccurrenceCount() {

@@ -21,19 +21,20 @@ public class TermIndexExplorerService {
   private static final List<Long> EMPTY_FILTER_SENTINEL = List.of(-1L);
 
   private final UserService userService;
-  private final TermIndexEntryRepository termIndexEntryRepository;
+  private final TermIndexExtractedTermRepository termIndexExtractedTermRepository;
   private final TermIndexOccurrenceRepository termIndexOccurrenceRepository;
   private final TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository;
   private final TermIndexRefreshRunRepository termIndexRefreshRunRepository;
 
   public TermIndexExplorerService(
       UserService userService,
-      TermIndexEntryRepository termIndexEntryRepository,
+      TermIndexExtractedTermRepository termIndexExtractedTermRepository,
       TermIndexOccurrenceRepository termIndexOccurrenceRepository,
       TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository,
       TermIndexRefreshRunRepository termIndexRefreshRunRepository) {
     this.userService = Objects.requireNonNull(userService);
-    this.termIndexEntryRepository = Objects.requireNonNull(termIndexEntryRepository);
+    this.termIndexExtractedTermRepository =
+        Objects.requireNonNull(termIndexExtractedTermRepository);
     this.termIndexOccurrenceRepository = Objects.requireNonNull(termIndexOccurrenceRepository);
     this.termIndexRepositoryCursorRepository =
         Objects.requireNonNull(termIndexRepositoryCursorRepository);
@@ -48,7 +49,7 @@ public class TermIndexExplorerService {
     boolean repositoryIdsEmpty = normalized.repositoryIds().isEmpty();
 
     List<EntrySummaryView> entries =
-        termIndexEntryRepository
+        termIndexExtractedTermRepository
             .searchEntries(
                 repositoryIdsEmpty,
                 repositoryIds,
@@ -64,7 +65,7 @@ public class TermIndexExplorerService {
 
   @Transactional(readOnly = true)
   public OccurrenceSearchView searchOccurrences(
-      Long termIndexEntryId, OccurrenceSearchCommand command) {
+      Long termIndexExtractedTermId, OccurrenceSearchCommand command) {
     requireAdmin();
     OccurrenceSearchCommand normalized = normalize(command);
     List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
@@ -72,8 +73,8 @@ public class TermIndexExplorerService {
 
     List<OccurrenceView> occurrences =
         termIndexOccurrenceRepository
-            .findDetailsByTermIndexEntryId(
-                termIndexEntryId,
+            .findDetailsByTermIndexExtractedTermId(
+                termIndexExtractedTermId,
                 repositoryIdsEmpty,
                 repositoryIds,
                 normalizeOptional(normalized.extractionMethod()),
@@ -108,7 +109,7 @@ public class TermIndexExplorerService {
     return new StatusView(cursors, recentRuns, extractionMethods);
   }
 
-  private EntrySummaryView toEntrySummaryView(TermIndexEntryRepository.SearchRow row) {
+  private EntrySummaryView toEntrySummaryView(TermIndexExtractedTermRepository.SearchRow row) {
     return new EntrySummaryView(
         row.getId(),
         row.getNormalizedKey(),
@@ -158,7 +159,7 @@ public class TermIndexExplorerService {
         run.getStatus(),
         run.getRequestedRepositoryIds(),
         run.getProcessedTextUnitCount(),
-        run.getEntryCount(),
+        run.getExtractedTermCount(),
         run.getOccurrenceCount(),
         run.getStartedAt(),
         run.getCompletedAt(),
@@ -289,7 +290,7 @@ public class TermIndexExplorerService {
       String status,
       String requestedRepositoryIds,
       Long processedTextUnitCount,
-      Long entryCount,
+      Long extractedTermCount,
       Long occurrenceCount,
       ZonedDateTime startedAt,
       ZonedDateTime completedAt,

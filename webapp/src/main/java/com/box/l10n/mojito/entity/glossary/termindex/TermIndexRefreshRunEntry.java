@@ -15,11 +15,11 @@ import jakarta.persistence.Table;
     indexes = {
       @Index(
           name = "UK__TERM_INDEX_REFRESH_RUN_ENTRY__RUN_ENTRY",
-          columnList = "refresh_run_id, term_index_entry_id",
+          columnList = "refresh_run_id, term_index_extracted_term_id",
           unique = true),
       @Index(
-          name = "I__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_ENTRY",
-          columnList = "term_index_entry_id")
+          name = "I__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_EXTRACTED_TERM",
+          columnList = "term_index_extracted_term_id")
     })
 public class TermIndexRefreshRunEntry extends AuditableEntity {
 
@@ -32,10 +32,11 @@ public class TermIndexRefreshRunEntry extends AuditableEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(
-      name = "term_index_entry_id",
+      name = "term_index_extracted_term_id",
       nullable = false,
-      foreignKey = @ForeignKey(name = "FK__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_ENTRY"))
-  private TermIndexEntry termIndexEntry;
+      foreignKey =
+          @ForeignKey(name = "FK__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_EXTRACTED_TERM"))
+  private TermIndexExtractedTerm termIndexExtractedTerm;
 
   public TermIndexRefreshRun getRefreshRun() {
     return refreshRun;
@@ -45,11 +46,11 @@ public class TermIndexRefreshRunEntry extends AuditableEntity {
     this.refreshRun = refreshRun;
   }
 
-  public TermIndexEntry getTermIndexEntry() {
-    return termIndexEntry;
+  public TermIndexExtractedTerm getTermIndexExtractedTerm() {
+    return termIndexExtractedTerm;
   }
 
-  public void setTermIndexEntry(TermIndexEntry termIndexEntry) {
-    this.termIndexEntry = termIndexEntry;
+  public void setTermIndexExtractedTerm(TermIndexExtractedTerm termIndexExtractedTerm) {
+    this.termIndexExtractedTerm = termIndexExtractedTerm;
   }
 }

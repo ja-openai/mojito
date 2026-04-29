@@ -90,7 +90,7 @@ export type ApiTermIndexRefreshRun = {
   status: string;
   requestedRepositoryIds?: string | null;
   processedTextUnitCount: number;
-  entryCount: number;
+  extractedTermCount: number;
   occurrenceCount: number;
   startedAt?: string | null;
   completedAt?: string | null;

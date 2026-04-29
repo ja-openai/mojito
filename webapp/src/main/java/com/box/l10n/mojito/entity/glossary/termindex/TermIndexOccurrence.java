@@ -18,13 +18,14 @@ import jakarta.persistence.Table;
     name = "term_index_occurrence",
     indexes = {
       @Index(
-          name = "UK__TERM_INDEX_OCCURRENCE__ENTRY_TU_SPAN_EXTRACTOR",
-          columnList = "term_index_entry_id, tm_text_unit_id, start_index, end_index, extractor_id",
+          name = "UK__TERM_INDEX_OCCURRENCE__EXTRACTED_TERM_TU_SPAN",
+          columnList =
+              "term_index_extracted_term_id, tm_text_unit_id, start_index, end_index, extractor_id",
           unique = true),
       @Index(name = "I__TERM_INDEX_OCCURRENCE__TM_TEXT_UNIT", columnList = "tm_text_unit_id"),
       @Index(
-          name = "I__TERM_INDEX_OCCURRENCE__REPOSITORY_ENTRY",
-          columnList = "repository_id, term_index_entry_id")
+          name = "I__TERM_INDEX_OCCURRENCE__REPOSITORY_EXTRACTED_TERM",
+          columnList = "repository_id, term_index_extracted_term_id")
     })
 public class TermIndexOccurrence extends AuditableEntity {
 
@@ -39,10 +40,10 @@ public class TermIndexOccurrence extends AuditableEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(
-      name = "term_index_entry_id",
+      name = "term_index_extracted_term_id",
       nullable = false,
-      foreignKey = @ForeignKey(name = "FK__TERM_INDEX_OCCURRENCE__ENTRY"))
-  private TermIndexEntry termIndexEntry;
+      foreignKey = @ForeignKey(name = "FK__TERM_INDEX_OCCURRENCE__EXTRACTED_TERM"))
+  private TermIndexExtractedTerm termIndexExtractedTerm;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(
@@ -88,12 +89,12 @@ public class TermIndexOccurrence extends AuditableEntity {
   @Column(name = "metadata_json", length = Integer.MAX_VALUE)
   private String metadataJson;
 
-  public TermIndexEntry getTermIndexEntry() {
-    return termIndexEntry;
+  public TermIndexExtractedTerm getTermIndexExtractedTerm() {
+    return termIndexExtractedTerm;
   }
 
-  public void setTermIndexEntry(TermIndexEntry termIndexEntry) {
-    this.termIndexEntry = termIndexEntry;
+  public void setTermIndexExtractedTerm(TermIndexExtractedTerm termIndexExtractedTerm) {
+    this.termIndexExtractedTerm = termIndexExtractedTerm;
   }
 
   public TMTextUnit getTmTextUnit() {

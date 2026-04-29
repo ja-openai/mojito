@@ -1,6 +1,6 @@
 package com.box.l10n.mojito.service.glossary;
 
-import com.box.l10n.mojito.entity.glossary.termindex.TermIndexEntry;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import java.time.ZonedDateTime;
 import java.util.Collection;
@@ -15,7 +15,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 @RepositoryRestResource(exported = false)
 public interface TermIndexOccurrenceRepository extends JpaRepository<TermIndexOccurrence, Long> {
 
-  List<TermIndexOccurrence> findByTermIndexEntryId(Long termIndexEntryId);
+  List<TermIndexOccurrence> findByTermIndexExtractedTermId(Long termIndexExtractedTermId);
 
   @Query(
       """
@@ -46,13 +46,13 @@ public interface TermIndexOccurrenceRepository extends JpaRepository<TermIndexOc
       join occurrence.repository repository
       join occurrence.tmTextUnit textUnit
       left join occurrence.asset asset
-      where occurrence.termIndexEntry.id = :termIndexEntryId
+      where occurrence.termIndexExtractedTerm.id = :termIndexExtractedTermId
         and (:repositoryIdsEmpty = true or repository.id in :repositoryIds)
         and (:extractionMethod is null or occurrence.extractionMethod = :extractionMethod)
       order by repository.name asc, occurrence.id desc
       """)
-  List<DetailRow> findDetailsByTermIndexEntryId(
-      @Param("termIndexEntryId") Long termIndexEntryId,
+  List<DetailRow> findDetailsByTermIndexExtractedTermId(
+      @Param("termIndexExtractedTermId") Long termIndexExtractedTermId,
       @Param("repositoryIdsEmpty") boolean repositoryIdsEmpty,
       @Param("repositoryIds") Collection<Long> repositoryIds,
       @Param("extractionMethod") String extractionMethod,
@@ -60,31 +60,32 @@ public interface TermIndexOccurrenceRepository extends JpaRepository<TermIndexOc
 
   @Query(
       """
-      select distinct occurrence.termIndexEntry.id
+      select distinct occurrence.termIndexExtractedTerm.id
       from TermIndexOccurrence occurrence
       where occurrence.tmTextUnit.id in :tmTextUnitIds
       """)
-  List<Long> findDistinctTermIndexEntryIdsByTmTextUnitIdIn(
+  List<Long> findDistinctTermIndexExtractedTermIdsByTmTextUnitIdIn(
       @Param("tmTextUnitIds") Collection<Long> tmTextUnitIds);
 
   @Query(
       """
-      select distinct occurrence.termIndexEntry.id
+      select distinct occurrence.termIndexExtractedTerm.id
       from TermIndexOccurrence occurrence
       where occurrence.repository.id = :repositoryId
       """)
-  List<Long> findDistinctTermIndexEntryIdsByRepositoryId(@Param("repositoryId") Long repositoryId);
+  List<Long> findDistinctTermIndexExtractedTermIdsByRepositoryId(
+      @Param("repositoryId") Long repositoryId);
 
-  long countByTermIndexEntry(TermIndexEntry termIndexEntry);
+  long countByTermIndexExtractedTerm(TermIndexExtractedTerm termIndexExtractedTerm);
 
   @Query(
       """
       select count(distinct occurrence.repository.id)
       from TermIndexOccurrence occurrence
-      where occurrence.termIndexEntry = :termIndexEntry
+      where occurrence.termIndexExtractedTerm = :termIndexExtractedTerm
       """)
-  long countDistinctRepositoriesByTermIndexEntry(
-      @Param("termIndexEntry") TermIndexEntry termIndexEntry);
+  long countDistinctRepositoriesByTermIndexExtractedTerm(
+      @Param("termIndexExtractedTerm") TermIndexExtractedTerm termIndexExtractedTerm);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(

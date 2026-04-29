@@ -2,7 +2,7 @@ package com.box.l10n.mojito.service.glossary;
 
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
-import com.box.l10n.mojito.entity.glossary.termindex.TermIndexEntry;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
@@ -90,7 +90,7 @@ public class TermIndexRefreshService {
 
   private final com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository;
   private final TMTextUnitRepository tmTextUnitRepository;
-  private final TermIndexEntryRepository termIndexEntryRepository;
+  private final TermIndexExtractedTermRepository termIndexExtractedTermRepository;
   private final TermIndexOccurrenceRepository termIndexOccurrenceRepository;
   private final TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository;
   private final TermIndexRefreshRunRepository termIndexRefreshRunRepository;
@@ -100,7 +100,7 @@ public class TermIndexRefreshService {
   public TermIndexRefreshService(
       com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository,
       TMTextUnitRepository tmTextUnitRepository,
-      TermIndexEntryRepository termIndexEntryRepository,
+      TermIndexExtractedTermRepository termIndexExtractedTermRepository,
       TermIndexOccurrenceRepository termIndexOccurrenceRepository,
       TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository,
       TermIndexRefreshRunRepository termIndexRefreshRunRepository,
@@ -108,7 +108,8 @@ public class TermIndexRefreshService {
       TransactionTemplate transactionTemplate) {
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.tmTextUnitRepository = Objects.requireNonNull(tmTextUnitRepository);
-    this.termIndexEntryRepository = Objects.requireNonNull(termIndexEntryRepository);
+    this.termIndexExtractedTermRepository =
+        Objects.requireNonNull(termIndexExtractedTermRepository);
     this.termIndexOccurrenceRepository = Objects.requireNonNull(termIndexOccurrenceRepository);
     this.termIndexRepositoryCursorRepository =
         Objects.requireNonNull(termIndexRepositoryCursorRepository);
@@ -138,16 +139,16 @@ public class TermIndexRefreshService {
         updateRefreshRunProgress(refreshRun.getId(), processedTextUnitCount, occurrenceCount);
       }
 
-      long entryCount = recomputeAggregatesForRefreshRun(refreshRun.getId(), batchSize);
+      long extractedTermCount = recomputeAggregatesForRefreshRun(refreshRun.getId(), batchSize);
       refreshRun =
           completeRefreshRun(
-              refreshRun.getId(), processedTextUnitCount, occurrenceCount, entryCount);
+              refreshRun.getId(), processedTextUnitCount, occurrenceCount, extractedTermCount);
       return new RefreshResult(
           refreshRun.getId(),
           refreshRun.getStatus(),
           repositories.size(),
           processedTextUnitCount,
-          refreshRun.getEntryCount(),
+          refreshRun.getExtractedTermCount(),
           occurrenceCount);
     } catch (RuntimeException e) {
       failRefreshRun(refreshRun.getId(), processedTextUnitCount, occurrenceCount, e);
@@ -230,8 +231,8 @@ public class TermIndexRefreshService {
               if (!fullRefresh) {
                 List<Long> textUnitIds = textUnits.stream().map(TMTextUnit::getId).toList();
                 affectedEntryIds.addAll(
-                    termIndexOccurrenceRepository.findDistinctTermIndexEntryIdsByTmTextUnitIdIn(
-                        textUnitIds));
+                    termIndexOccurrenceRepository
+                        .findDistinctTermIndexExtractedTermIdsByTmTextUnitIdIn(textUnitIds));
                 termIndexOccurrenceRepository.deleteByTmTextUnitIdIn(textUnitIds);
               }
 
@@ -346,12 +347,12 @@ public class TermIndexRefreshService {
         if (normalizedKey == null) {
           continue;
         }
-        TermIndexEntry entry =
+        TermIndexExtractedTerm entry =
             findOrCreateEntry(sourceLocaleTag, normalizedKey, match.displayTerm());
         affectedEntryIds.add(entry.getId());
 
         TermIndexOccurrence occurrence = new TermIndexOccurrence();
-        occurrence.setTermIndexEntry(entry);
+        occurrence.setTermIndexExtractedTerm(entry);
         occurrence.setTmTextUnit(textUnit);
         occurrence.setRepository(repository);
         occurrence.setAsset(textUnit.getAsset());
@@ -373,17 +374,17 @@ public class TermIndexRefreshService {
     return occurrences.size();
   }
 
-  private TermIndexEntry findOrCreateEntry(
+  private TermIndexExtractedTerm findOrCreateEntry(
       String sourceLocaleTag, String normalizedKey, String displayTerm) {
-    Optional<TermIndexEntry> existingEntry =
-        termIndexEntryRepository.findBySourceLocaleTagAndNormalizedKey(
+    Optional<TermIndexExtractedTerm> existingEntry =
+        termIndexExtractedTermRepository.findBySourceLocaleTagAndNormalizedKey(
             sourceLocaleTag, normalizedKey);
     if (existingEntry.isPresent()) {
       return existingEntry.get();
     }
 
-    termIndexEntryRepository.insertIfAbsent(sourceLocaleTag, normalizedKey, displayTerm);
-    return termIndexEntryRepository
+    termIndexExtractedTermRepository.insertIfAbsent(sourceLocaleTag, normalizedKey, displayTerm);
+    return termIndexExtractedTermRepository
         .findBySourceLocaleTagAndNormalizedKey(sourceLocaleTag, normalizedKey)
         .orElseThrow(
             () ->
@@ -391,44 +392,47 @@ public class TermIndexRefreshService {
                     "Unable to create term index entry: " + sourceLocaleTag + "/" + normalizedKey));
   }
 
-  private void updateAggregates(Collection<Long> termIndexEntryIds) {
-    for (Long termIndexEntryId : termIndexEntryIds) {
-      termIndexEntryRepository.findById(termIndexEntryId).ifPresent(this::updateAggregate);
+  private void updateAggregates(Collection<Long> termIndexExtractedTermIds) {
+    for (Long termIndexExtractedTermId : termIndexExtractedTermIds) {
+      termIndexExtractedTermRepository
+          .findById(termIndexExtractedTermId)
+          .ifPresent(this::updateAggregate);
     }
   }
 
-  private void stageAffectedEntries(Long refreshRunId, Collection<Long> termIndexEntryIds) {
-    if (termIndexEntryIds.isEmpty()) {
+  private void stageAffectedEntries(Long refreshRunId, Collection<Long> termIndexExtractedTermIds) {
+    if (termIndexExtractedTermIds.isEmpty()) {
       return;
     }
-    termIndexRefreshRunEntryRepository.insertEntries(refreshRunId, termIndexEntryIds);
+    termIndexRefreshRunEntryRepository.insertEntries(refreshRunId, termIndexExtractedTermIds);
   }
 
   private long recomputeAggregatesForRefreshRun(Long refreshRunId, int batchSize) {
-    long entryCount = countAffectedEntries(refreshRunId);
-    Long afterTermIndexEntryId = 0L;
+    long extractedTermCount = countAffectedEntries(refreshRunId);
+    Long afterTermIndexExtractedTermId = 0L;
 
     while (true) {
-      List<Long> termIndexEntryIds =
-          loadAffectedEntryIdPage(refreshRunId, afterTermIndexEntryId, batchSize);
-      if (termIndexEntryIds.isEmpty()) {
+      List<Long> termIndexExtractedTermIds =
+          loadAffectedEntryIdPage(refreshRunId, afterTermIndexExtractedTermId, batchSize);
+      if (termIndexExtractedTermIds.isEmpty()) {
         break;
       }
 
-      transactionTemplate.executeWithoutResult(status -> updateAggregates(termIndexEntryIds));
-      afterTermIndexEntryId = termIndexEntryIds.getLast();
+      transactionTemplate.executeWithoutResult(
+          status -> updateAggregates(termIndexExtractedTermIds));
+      afterTermIndexExtractedTermId = termIndexExtractedTermIds.getLast();
     }
 
-    return entryCount;
+    return extractedTermCount;
   }
 
   private List<Long> loadAffectedEntryIdPage(
-      Long refreshRunId, Long afterTermIndexEntryId, int batchSize) {
+      Long refreshRunId, Long afterTermIndexExtractedTermId, int batchSize) {
     return Objects.requireNonNull(
         transactionTemplate.execute(
             status ->
-                termIndexRefreshRunEntryRepository.findTermIndexEntryIdsByRefreshRunIdAfter(
-                    refreshRunId, afterTermIndexEntryId, PageRequest.of(0, batchSize))));
+                termIndexRefreshRunEntryRepository.findTermIndexExtractedTermIdsByRefreshRunIdAfter(
+                    refreshRunId, afterTermIndexExtractedTermId, PageRequest.of(0, batchSize))));
   }
 
   private long countAffectedEntries(Long refreshRunId) {
@@ -437,10 +441,10 @@ public class TermIndexRefreshService {
             status -> termIndexRefreshRunEntryRepository.countByRefreshRunId(refreshRunId)));
   }
 
-  private void updateAggregate(TermIndexEntry entry) {
-    long occurrenceCount = termIndexOccurrenceRepository.countByTermIndexEntry(entry);
+  private void updateAggregate(TermIndexExtractedTerm entry) {
+    long occurrenceCount = termIndexOccurrenceRepository.countByTermIndexExtractedTerm(entry);
     long repositoryCount =
-        termIndexOccurrenceRepository.countDistinctRepositoriesByTermIndexEntry(entry);
+        termIndexOccurrenceRepository.countDistinctRepositoriesByTermIndexExtractedTerm(entry);
     entry.setOccurrenceCount(occurrenceCount);
     entry.setRepositoryCount(Math.toIntExact(repositoryCount));
     if (occurrenceCount > 0) {
@@ -449,7 +453,7 @@ public class TermIndexRefreshService {
       }
       entry.setLastSeenAt(ZonedDateTime.now());
     }
-    termIndexEntryRepository.save(entry);
+    termIndexExtractedTermRepository.save(entry);
   }
 
   private List<TMTextUnit> loadNextBatch(
@@ -482,7 +486,7 @@ public class TermIndexRefreshService {
           TermIndexRefreshRun refreshRun = findRefreshRun(refreshRunId);
           refreshRun.setProcessedTextUnitCount(processedTextUnitCount);
           refreshRun.setOccurrenceCount(occurrenceCount);
-          refreshRun.setEntryCount(
+          refreshRun.setExtractedTermCount(
               termIndexRefreshRunEntryRepository.countByRefreshRunId(refreshRunId));
           termIndexRefreshRunRepository.save(refreshRun);
         });
@@ -492,7 +496,7 @@ public class TermIndexRefreshService {
       Long refreshRunId,
       long processedTextUnitCount,
       long occurrenceCount,
-      long affectedEntryCount) {
+      long affectedExtractedTermCount) {
     return Objects.requireNonNull(
         transactionTemplate.execute(
             status -> {
@@ -500,7 +504,7 @@ public class TermIndexRefreshService {
               refreshRun.setStatus(TermIndexRefreshRun.STATUS_SUCCEEDED);
               refreshRun.setProcessedTextUnitCount(processedTextUnitCount);
               refreshRun.setOccurrenceCount(occurrenceCount);
-              refreshRun.setEntryCount(affectedEntryCount);
+              refreshRun.setExtractedTermCount(affectedExtractedTermCount);
               refreshRun.setCompletedAt(ZonedDateTime.now());
               return termIndexRefreshRunRepository.save(refreshRun);
             }));
@@ -518,7 +522,7 @@ public class TermIndexRefreshService {
             refreshRun.setStatus(TermIndexRefreshRun.STATUS_FAILED);
             refreshRun.setProcessedTextUnitCount(processedTextUnitCount);
             refreshRun.setOccurrenceCount(occurrenceCount);
-            refreshRun.setEntryCount(
+            refreshRun.setExtractedTermCount(
                 termIndexRefreshRunEntryRepository.countByRefreshRunId(refreshRunId));
             refreshRun.setCompletedAt(ZonedDateTime.now());
             refreshRun.setErrorMessage(errorMessage(cause));
@@ -649,7 +653,7 @@ public class TermIndexRefreshService {
     if (repository.getSourceLocale() == null
         || repository.getSourceLocale().getBcp47Tag() == null
         || repository.getSourceLocale().getBcp47Tag().isBlank()) {
-      return TermIndexEntry.SOURCE_LOCALE_ROOT;
+      return TermIndexExtractedTerm.SOURCE_LOCALE_ROOT;
     }
     return repository.getSourceLocale().getBcp47Tag();
   }
@@ -716,7 +720,7 @@ public class TermIndexRefreshService {
       String status,
       int repositoryCount,
       long processedTextUnitCount,
-      long entryCount,
+      long extractedTermCount,
       long occurrenceCount) {}
 
   private record RepositoryLease(Long repositoryId, Long refreshRunId, String leaseToken) {}
