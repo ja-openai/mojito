@@ -127,6 +127,7 @@ export type ApiMatchedGlossaryTerm = {
 
 export type ApiUpsertGlossaryRequest = {
   name: string;
+  backingRepositoryName?: string | null;
   description?: string | null;
   enabled?: boolean | null;
   priority?: number | null;

@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.glossary;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -89,6 +90,7 @@ public class GlossaryStorageServiceTest {
     com.box.l10n.mojito.entity.Locale rootLocaleValue = new com.box.l10n.mojito.entity.Locale();
     rootLocaleValue.setBcp47Tag("en-US");
     RepositoryLocale rootLocale = new RepositoryLocale(repository, rootLocaleValue, false, null);
+    repository.getRepositoryLocales().add(rootLocale);
 
     com.box.l10n.mojito.entity.Locale frLocale = new com.box.l10n.mojito.entity.Locale();
     frLocale.setBcp47Tag("fr-FR");
@@ -133,6 +135,10 @@ public class GlossaryStorageServiceTest {
     com.box.l10n.mojito.entity.Locale rootLocaleValue = new com.box.l10n.mojito.entity.Locale();
     rootLocaleValue.setBcp47Tag("en-US");
     RepositoryLocale rootLocale = new RepositoryLocale(repository, rootLocaleValue, false, null);
+    RepositoryLocale oldTargetLocale =
+        new RepositoryLocale(repository, new com.box.l10n.mojito.entity.Locale(), true, rootLocale);
+    repository.getRepositoryLocales().add(rootLocale);
+    repository.getRepositoryLocales().add(oldTargetLocale);
 
     Glossary glossary = new Glossary();
     glossary.setName("Core Glossary");
@@ -145,5 +151,21 @@ public class GlossaryStorageServiceTest {
 
     verify(repositoryLocaleRepository).deleteByRepositoryAndParentLocaleIsNotNull(repository);
     verify(repositoryService, never()).updateRepositoryLocales(eq(repository), any());
+    assertEquals(1, repository.getRepositoryLocales().size());
+    assertTrue(repository.getRepositoryLocales().contains(rootLocale));
+  }
+
+  @Test
+  public void renameManagedBackingRepositoryOnlyRenamesRepository() throws Exception {
+    Repository repository = new Repository();
+    repository.setName("glossary-old");
+
+    Glossary glossary = new Glossary();
+    glossary.setName("Core Glossary");
+    glossary.setBackingRepository(repository);
+
+    glossaryStorageService.renameManagedBackingRepository(glossary, " glossary-new ");
+
+    verify(repositoryService).renameRepository(repository, "glossary-new");
   }
 }

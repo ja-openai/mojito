@@ -750,6 +750,20 @@ public class RepositoryService {
     logger.debug("Deleted repository with name: {}", repository.getName());
   }
 
+  @Transactional
+  public void renameRepository(Repository repository, String newName)
+      throws RepositoryNameAlreadyUsedException {
+    logger.debug("Rename repository [{}] to [{}]", repository.getName(), newName);
+
+    Repository existingRepository = repositoryRepository.findByName(newName);
+    if (existingRepository != null && !repository.getId().equals(existingRepository.getId())) {
+      throw new RepositoryNameAlreadyUsedException(newName + " is used by other repository");
+    }
+
+    repository.setName(newName);
+    repositoryRepository.save(repository);
+  }
+
   /**
    * Updates a {@link Repository}.
    *

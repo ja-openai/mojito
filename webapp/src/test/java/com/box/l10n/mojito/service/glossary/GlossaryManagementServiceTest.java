@@ -1,11 +1,13 @@
 package com.box.l10n.mojito.service.glossary;
 
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.service.security.user.UserService;
+import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,5 +60,36 @@ public class GlossaryManagementServiceTest {
     verify(glossaryTermMetadataRepository).deleteByGlossaryId(1L);
     verify(glossaryStorageService).deleteManagedBackingRepository(glossary);
     verify(glossaryRepository).delete(glossary);
+  }
+
+  @Test
+  public void updateGlossaryRenamesBackingRepositoryWhenRequested() {
+    Repository backingRepository = new Repository();
+    backingRepository.setName("glossary-old");
+
+    Glossary glossary = new Glossary();
+    glossary.setId(1L);
+    glossary.setName("Old glossary");
+    glossary.setBackingRepository(backingRepository);
+
+    when(userService.isCurrentUserAdmin()).thenReturn(true);
+    when(userService.isCurrentUserTranslationRole()).thenReturn(true);
+    when(glossaryRepository.findByIdWithBindings(1L)).thenReturn(Optional.of(glossary));
+    when(glossaryRepository.findByNameIgnoreCase("New glossary")).thenReturn(Optional.empty());
+
+    glossaryManagementService.updateGlossary(
+        1L,
+        "New glossary",
+        null,
+        true,
+        0,
+        Glossary.SCOPE_MODE_GLOBAL,
+        List.of(),
+        List.of(),
+        List.of(),
+        "glossary-new");
+
+    verify(glossaryStorageService).renameManagedBackingRepository(glossary, "glossary-new");
+    verify(glossaryStorageService, never()).replaceLocales(glossary, List.of());
   }
 }

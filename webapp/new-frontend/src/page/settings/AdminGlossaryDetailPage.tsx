@@ -10,7 +10,7 @@ import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useUser } from '../../components/RequireUser';
 import { useLocales } from '../../hooks/useLocales';
-import { useRepositories } from '../../hooks/useRepositories';
+import { REPOSITORIES_QUERY_KEY, useRepositories } from '../../hooks/useRepositories';
 import { buildScopedGlossaryLocaleOptions } from '../../utils/glossaryLocaleScope';
 import { buildGlossaryWorkbenchState } from '../../utils/glossaryWorkbench';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
@@ -18,6 +18,7 @@ import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const normalizeGlossaryName = (value: string) => value.trim().replace(/\s+/g, ' ');
+const normalizeRepositoryName = (value: string) => value.trim().replace(/\s+/g, ' ');
 type GlossaryScopeMode = 'GLOBAL' | 'SELECTED_REPOSITORIES';
 
 export function AdminGlossaryDetailPage() {
@@ -32,6 +33,7 @@ export function AdminGlossaryDetailPage() {
   const repositoryOptions = useRepositorySelectionOptions(repositories ?? []);
 
   const [nameDraft, setNameDraft] = useState('');
+  const [backingRepositoryNameDraft, setBackingRepositoryNameDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [enabledDraft, setEnabledDraft] = useState(true);
   const [priorityDraft, setPriorityDraft] = useState('0');
@@ -65,6 +67,7 @@ export function AdminGlossaryDetailPage() {
   const updateMutation = useMutation({
     mutationFn: (payload: {
       name: string;
+      backingRepositoryName?: string | null;
       description?: string | null;
       enabled: boolean;
       priority: number;
@@ -77,6 +80,7 @@ export function AdminGlossaryDetailPage() {
       queryClient.setQueryData(['glossary', parsedGlossaryId], updated);
       await queryClient.invalidateQueries({ queryKey: ['glossaries'] });
       await queryClient.invalidateQueries({ queryKey: ['glossary', parsedGlossaryId] });
+      await queryClient.invalidateQueries({ queryKey: REPOSITORIES_QUERY_KEY });
       setStatusNotice({
         kind: 'success',
         message: `Saved glossary ${updated.name}.`,
@@ -112,6 +116,7 @@ export function AdminGlossaryDetailPage() {
       return;
     }
     setNameDraft(glossary.name);
+    setBackingRepositoryNameDraft(glossary.backingRepository.name);
     setDescriptionDraft(glossary.description ?? '');
     setEnabledDraft(glossary.enabled);
     setPriorityDraft(String(glossary.priority));
@@ -132,6 +137,9 @@ export function AdminGlossaryDetailPage() {
       return false;
     }
     if (normalizeGlossaryName(nameDraft) !== glossary.name) {
+      return true;
+    }
+    if (normalizeRepositoryName(backingRepositoryNameDraft) !== glossary.backingRepository.name) {
       return true;
     }
     if ((descriptionDraft.trim() || null) !== (glossary.description ?? null)) {
@@ -183,6 +191,7 @@ export function AdminGlossaryDetailPage() {
     enabledDraft,
     excludedRepositoryIdsDraft,
     glossaryQuery.data,
+    backingRepositoryNameDraft,
     localeTagsDraft,
     nameDraft,
     priorityDraft,
@@ -267,6 +276,11 @@ export function AdminGlossaryDetailPage() {
       setStatusNotice({ kind: 'error', message: 'Glossary name is required.' });
       return;
     }
+    const normalizedBackingRepositoryName = normalizeRepositoryName(backingRepositoryNameDraft);
+    if (!normalizedBackingRepositoryName) {
+      setStatusNotice({ kind: 'error', message: 'Backing repository name is required.' });
+      return;
+    }
     const priority = Number.parseInt(priorityDraft.trim() || '0', 10);
     if (!Number.isFinite(priority)) {
       setStatusNotice({ kind: 'error', message: 'Priority must be a whole number.' });
@@ -274,6 +288,7 @@ export function AdminGlossaryDetailPage() {
     }
     updateMutation.mutate({
       name: normalizedName,
+      backingRepositoryName: normalizedBackingRepositoryName,
       description: descriptionDraft.trim() || null,
       enabled: enabledDraft,
       priority,
@@ -446,8 +461,23 @@ export function AdminGlossaryDetailPage() {
               </div>
               <div className="settings-field">
                 <div className="settings-field__header">
-                  <div className="settings-field__label">Backing repository</div>
+                  <label
+                    className="settings-field__label"
+                    htmlFor="glossary-backing-repository-name"
+                  >
+                    Backing repository
+                  </label>
                 </div>
+                <input
+                  id="glossary-backing-repository-name"
+                  type="text"
+                  className="settings-input"
+                  value={backingRepositoryNameDraft}
+                  onChange={(event) => {
+                    setBackingRepositoryNameDraft(event.target.value);
+                    setStatusNotice(null);
+                  }}
+                />
                 <Link
                   to="/workbench"
                   state={buildGlossaryWorkbenchState({

@@ -85,7 +85,8 @@ public class GlossaryWS {
       String scopeMode,
       List<String> localeTags,
       List<Long> repositoryIds,
-      List<Long> excludedRepositoryIds) {}
+      List<Long> excludedRepositoryIds,
+      String backingRepositoryName) {}
 
   public record MatchGlossaryTermsRequest(
       Long repositoryId,
@@ -323,7 +324,8 @@ public class GlossaryWS {
               request != null ? request.scopeMode() : null,
               request != null ? request.localeTags() : List.of(),
               request != null ? request.repositoryIds() : List.of(),
-              request != null ? request.excludedRepositoryIds() : List.of()));
+              request != null ? request.excludedRepositoryIds() : List.of(),
+              request != null ? request.backingRepositoryName() : null));
     } catch (IllegalArgumentException ex) {
       HttpStatus status =
           ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")

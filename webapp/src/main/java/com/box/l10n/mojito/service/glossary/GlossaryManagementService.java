@@ -7,8 +7,10 @@ import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -140,6 +142,31 @@ public class GlossaryManagementService {
       List<String> localeTags,
       List<Long> repositoryIds,
       List<Long> excludedRepositoryIds) {
+    return updateGlossary(
+        glossaryId,
+        name,
+        description,
+        enabled,
+        priority,
+        scopeMode,
+        localeTags,
+        repositoryIds,
+        excludedRepositoryIds,
+        null);
+  }
+
+  @Transactional
+  public GlossaryDetail updateGlossary(
+      Long glossaryId,
+      String name,
+      String description,
+      Boolean enabled,
+      Integer priority,
+      String scopeMode,
+      List<String> localeTags,
+      List<Long> repositoryIds,
+      List<Long> excludedRepositoryIds,
+      String backingRepositoryName) {
     requireAdmin();
 
     Glossary glossary =
@@ -167,7 +194,12 @@ public class GlossaryManagementService {
 
     glossaryRepository.save(glossary);
     glossaryStorageService.ensureCanonicalAsset(glossary);
-    glossaryStorageService.replaceLocales(glossary, localeTags);
+    if (hasLocaleChanges(glossary, localeTags)) {
+      glossaryStorageService.replaceLocales(glossary, localeTags);
+    }
+    if (backingRepositoryName != null) {
+      glossaryStorageService.renameManagedBackingRepository(glossary, backingRepositoryName);
+    }
     return getGlossary(glossary.getId());
   }
 
@@ -244,6 +276,33 @@ public class GlossaryManagementService {
                 .thenComparing(Repository::getId))
         .map(repository -> new RepositoryRef(repository.getId(), repository.getName()))
         .toList();
+  }
+
+  private boolean hasLocaleChanges(Glossary glossary, List<String> localeTags) {
+    String rootLocaleTag =
+        glossary.getBackingRepository().getRepositoryLocales().stream()
+            .filter(repositoryLocale -> repositoryLocale.getParentLocale() == null)
+            .map(repositoryLocale -> repositoryLocale.getLocale().getBcp47Tag())
+            .findFirst()
+            .orElse(null);
+
+    Set<String> currentLocaleTags =
+        glossary.getBackingRepository().getRepositoryLocales().stream()
+            .filter(repositoryLocale -> repositoryLocale.getParentLocale() != null)
+            .map(repositoryLocale -> repositoryLocale.getLocale().getBcp47Tag())
+            .map(tag -> tag.toLowerCase(Locale.ROOT))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+    Set<String> nextLocaleTags =
+        (localeTags == null ? List.<String>of() : localeTags)
+            .stream()
+                .filter(tag -> tag != null && !tag.isBlank())
+                .map(String::trim)
+                .filter(tag -> rootLocaleTag == null || !tag.equalsIgnoreCase(rootLocaleTag))
+                .map(tag -> tag.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+    return !currentLocaleTags.equals(nextLocaleTags);
   }
 
   private boolean matches(Glossary glossary, String normalizedSearchQuery) {

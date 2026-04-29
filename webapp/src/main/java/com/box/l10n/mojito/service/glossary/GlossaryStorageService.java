@@ -149,6 +149,8 @@ public class GlossaryStorageService {
       repositoryLocales.add(new RepositoryLocale(backingRepository, locale, true, null));
     }
 
+    retainOnlyRootLocaleInMemory(backingRepository, rootLocale);
+
     if (repositoryLocales.isEmpty()) {
       repositoryLocaleRepository.deleteByRepositoryAndParentLocaleIsNotNull(backingRepository);
       return;
@@ -171,6 +173,32 @@ public class GlossaryStorageService {
     repositoryService.deleteRepository(backingRepository);
   }
 
+  @Transactional
+  public void renameManagedBackingRepository(Glossary glossary, String repositoryName) {
+    Repository backingRepository = glossary.getBackingRepository();
+    if (backingRepository == null || Boolean.TRUE.equals(backingRepository.getDeleted())) {
+      throw new IllegalStateException(
+          "Backing repository is missing for glossary " + glossary.getName());
+    }
+
+    String normalizedName = normalizeBackingRepositoryName(repositoryName);
+    if (normalizedName.equals(backingRepository.getName())) {
+      return;
+    }
+
+    try {
+      repositoryService.renameRepository(backingRepository, normalizedName);
+    } catch (RepositoryNameAlreadyUsedException ex) {
+      throw new IllegalArgumentException("Repository already exists: " + normalizedName, ex);
+    }
+  }
+
+  private void retainOnlyRootLocaleInMemory(
+      Repository backingRepository, RepositoryLocale rootLocale) {
+    backingRepository.getRepositoryLocales().clear();
+    backingRepository.getRepositoryLocales().add(rootLocale);
+  }
+
   private String buildBackingRepositoryName(String glossaryName) {
     String slug =
         glossaryName == null
@@ -191,6 +219,18 @@ public class GlossaryStorageService {
     String truncatedBase = StringUtils.left(baseName, Math.max(1, maxBaseLength));
     truncatedBase = truncatedBase.replaceAll("-+$", "");
     return truncatedBase + "-" + suffix;
+  }
+
+  private String normalizeBackingRepositoryName(String repositoryName) {
+    String normalized = repositoryName == null ? "" : repositoryName.trim().replaceAll("\\s+", " ");
+    if (normalized.isEmpty()) {
+      throw new IllegalArgumentException("Backing repository name is required");
+    }
+    if (normalized.length() > Repository.NAME_MAX_LENGTH) {
+      throw new IllegalArgumentException(
+          "Backing repository name must be at most " + Repository.NAME_MAX_LENGTH + " characters");
+    }
+    return normalized;
   }
 
   private String randomSuffix() {
