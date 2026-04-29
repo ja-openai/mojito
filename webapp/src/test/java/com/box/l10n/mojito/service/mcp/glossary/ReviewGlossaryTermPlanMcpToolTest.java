@@ -1,11 +1,13 @@
 package com.box.l10n.mojito.service.mcp.glossary;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.glossary.GlossaryManagementService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermService;
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.Test;
 
 public class ReviewGlossaryTermPlanMcpToolTest {
@@ -45,6 +47,33 @@ public class ReviewGlossaryTermPlanMcpToolTest {
                         List.of(
                             new ReviewGlossaryTermPlanMcpTool.ExistingTermMatch(
                                 "SOURCE", 20L, "actions", "Actions", "CANDIDATE"))))));
+  }
+
+  @Test
+  public void executeAllowsLargeSingleRequest() {
+    List<ReviewGlossaryTermPlanMcpTool.TermInput> terms =
+        IntStream.range(0, 201).mapToObj(i -> termInput("term " + i)).toList();
+
+    ReviewGlossaryTermPlanMcpTool.ReviewPlanResult result =
+        (ReviewGlossaryTermPlanMcpTool.ReviewPlanResult)
+            tool.execute(new ReviewGlossaryTermPlanMcpTool.Input(4L, null, terms));
+
+    assertThat(result.proposedTermCount()).isEqualTo(201);
+    assertThat(result.plan()).hasSize(201);
+  }
+
+  @Test
+  public void executeRejectsOverLargeRequestLimit() {
+    List<ReviewGlossaryTermPlanMcpTool.TermInput> terms =
+        IntStream.range(0, 1001).mapToObj(i -> termInput("term " + i)).toList();
+
+    assertThatThrownBy(() -> tool.execute(new ReviewGlossaryTermPlanMcpTool.Input(4L, null, terms)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("terms must contain at most 1000 entries");
+  }
+
+  private ReviewGlossaryTermPlanMcpTool.TermInput termInput(String source) {
+    return new ReviewGlossaryTermPlanMcpTool.TermInput(null, null, source);
   }
 
   private static final class FakeGlossaryManagementService extends GlossaryManagementService {

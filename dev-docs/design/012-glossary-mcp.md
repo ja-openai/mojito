@@ -31,11 +31,13 @@ MCP tools
 - `glossary.term.bulk_upsert`
   - Mutating, dry-run by default.
   - Accepts normalized JSON terms, not arbitrary files.
+  - Accepts up to 1,000 terms per call; split larger imports to keep MCP request/response payloads bounded.
   - Supports source metadata, translations, and supporting references.
   - Supporting references can link existing product TUs by evidence `tmTextUnitId`.
 - `glossary.term.review_plan`
   - Read-only.
   - Compares proposed terms against existing terms and returns create/update/duplicate guidance.
+  - Accepts up to 1,000 proposed terms per call.
   - Use before `bulk_upsert` when bootstrapping from files or mined codebase terms.
 - `glossary.term.link_references`
   - Mutating.

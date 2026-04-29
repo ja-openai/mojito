@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class BulkUpsertGlossaryTermsMcpTool
     extends TypedMcpToolHandler<BulkUpsertGlossaryTermsMcpTool.Input> {
 
-  private static final int MAX_TERMS = 200;
+  private static final int MAX_TERMS = 1_000;
   private static final Set<String> EVIDENCE_TYPES =
       Set.of(
           GlossaryTermEvidence.EVIDENCE_TYPE_SCREENSHOT,

@@ -7,6 +7,7 @@ import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.glossary.GlossaryManagementService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermService;
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.Test;
 
 public class BulkUpsertGlossaryTermsMcpToolTest {
@@ -69,6 +70,31 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
                     new BulkUpsertGlossaryTermsMcpTool.OperationPreview(
                         0, 20L, "actions", "Actions", "CANDIDATE", "AUTOMATED", 1, 1, 1)),
                 List.of(glossaryTermService.termView)));
+  }
+
+  @Test
+  public void executeAllowsLargeSingleRequest() {
+    List<BulkUpsertGlossaryTermsMcpTool.TermInput> terms =
+        IntStream.range(0, 201).mapToObj(i -> termInput(null, "Action " + i)).toList();
+
+    BulkUpsertGlossaryTermsMcpTool.BulkUpsertResult result =
+        (BulkUpsertGlossaryTermsMcpTool.BulkUpsertResult)
+            tool.execute(new BulkUpsertGlossaryTermsMcpTool.Input(4L, null, true, terms));
+
+    assertThat(result.termCount()).isEqualTo(201);
+    assertThat(result.operations()).hasSize(201);
+    assertThat(glossaryTermService.upsertCallCount).isZero();
+  }
+
+  @Test
+  public void executeRejectsOverLargeRequestLimit() {
+    List<BulkUpsertGlossaryTermsMcpTool.TermInput> terms =
+        IntStream.range(0, 1001).mapToObj(i -> termInput(null, "Action " + i)).toList();
+
+    assertThatThrownBy(
+            () -> tool.execute(new BulkUpsertGlossaryTermsMcpTool.Input(4L, null, true, terms)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("terms must contain at most 1000 entries");
   }
 
   @Test

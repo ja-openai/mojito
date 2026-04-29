@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 public class ReviewGlossaryTermPlanMcpTool
     extends TypedMcpToolHandler<ReviewGlossaryTermPlanMcpTool.Input> {
 
-  private static final int MAX_TERMS = 200;
+  private static final int MAX_TERMS = 1_000;
   private static final int EXISTING_SCAN_LIMIT = 500;
 
   private static final McpToolDescriptor DESCRIPTOR =
