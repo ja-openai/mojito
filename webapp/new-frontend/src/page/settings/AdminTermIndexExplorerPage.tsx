@@ -70,6 +70,20 @@ type TermIndexRefreshForm = {
   fullRefresh: boolean;
 };
 
+const PaneGripIcon = () => (
+  <svg
+    className="term-index-explorer__pane-grip"
+    viewBox="0 0 6 22"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <circle cx="3" cy="4" r="1" />
+    <circle cx="3" cy="8.5" r="1" />
+    <circle cx="3" cy="13" r="1" />
+    <circle cx="3" cy="17.5" r="1" />
+  </svg>
+);
+
 export function AdminTermIndexExplorerPage() {
   return <AdminTermIndexRunsPage />;
 }
@@ -394,7 +408,7 @@ export function AdminTermIndexTermsPage() {
   }
 
   return (
-    <div className="settings-subpage">
+    <div className="settings-subpage term-index-explorer__page">
       <SettingsSubpageHeader
         backTo="/settings/system"
         backLabel="Back to settings"
@@ -491,7 +505,7 @@ export function AdminTermIndexTermsPage() {
           <div className="term-index-explorer__workspace" ref={workspaceRef} style={workspaceStyle}>
             <div className="term-index-explorer__terms">
               {entriesQuery.isLoading ? (
-                <p className="settings-hint">Loading terms...</p>
+                <div className="term-index-explorer__loading-spacer" aria-hidden="true" />
               ) : entriesQuery.isError ? (
                 <p className="settings-hint is-error">{getErrorMessage(entriesQuery.error)}</p>
               ) : entries.length === 0 ? (
@@ -516,7 +530,9 @@ export function AdminTermIndexTermsPage() {
               aria-valuemin={25}
               aria-valuemax={75}
               aria-valuenow={Math.round(termPaneWidthPct)}
-            />
+            >
+              <PaneGripIcon />
+            </div>
             <div className="term-index-explorer__occurrences">
               {selectedEntry ? (
                 <OccurrencePanel
@@ -1002,7 +1018,7 @@ function OccurrencePanel({
         </span>
       </div>
       {isLoading ? (
-        <p className="settings-hint">Loading examples...</p>
+        <div className="term-index-explorer__loading-spacer" aria-hidden="true" />
       ) : error ? (
         <p className="settings-hint is-error">{getErrorMessage(error)}</p>
       ) : occurrences.length === 0 ? (
