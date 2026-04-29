@@ -18,11 +18,14 @@ public class NewFrontendControllerTest {
   }
 
   @Test
-  public void forwardNewAppIncludesTranslationIncidentsRoute() throws Exception {
+  public void forwardNewAppIncludesTopLevelRoutes() throws Exception {
     RequestMapping requestMapping =
         NewFrontendController.class.getMethod("forwardNewApp").getAnnotation(RequestMapping.class);
 
     Assert.assertNotNull(requestMapping);
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/glossaries"));
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/glossaries/{path:[^.]*}"));
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/glossaries/{path:[^.]*}/**"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/translation-incidents"));
   }
 
