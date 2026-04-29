@@ -96,6 +96,31 @@
   background: color-mix(in srgb, var(--color-surface-muted) 70%, transparent);
 }
 
+.statistics-page__period-cell {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.statistics-page__row-action {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+  opacity: 0;
+  text-decoration: none;
+  transition: opacity 120ms ease;
+}
+
+.statistics-page__table tr:hover .statistics-page__row-action,
+.statistics-page__table tr:focus-within .statistics-page__row-action {
+  opacity: 1;
+}
+
+.statistics-page__row-action:hover,
+.statistics-page__row-action:focus-visible {
+  text-decoration: underline;
+}
+
 @media (max-width: 64rem) {
   .statistics-page__controls {
     grid-template-columns: 1fr;

@@ -2,16 +2,19 @@ import '../settings/settings-page.css';
 import './statistics-page.css';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 
 import {
   fetchTextUnitIngestionSnapshot,
   type IngestionGroupBy,
   recomputeTextUnitIngestion,
+  type TextUnitIngestionPoint,
   type TextUnitIngestionRecomputeResult,
   type TextUnitIngestionSnapshot,
 } from '../../api/monitoring';
+import type { TextUnitSearchRequest } from '../../api/text-units';
 import { useUser } from '../../components/RequireUser';
+import { useRepositories } from '../../hooks/useRepositories';
 
 type StatisticsViewMode = 'all' | 'repository';
 type StatisticsMetric = 'textUnits' | 'words';
@@ -80,8 +83,56 @@ function sanitizeTsvCell(value: string | number | null | undefined) {
     .trim();
 }
 
+function formatUtcIso(date: Date) {
+  return date.toISOString();
+}
+
+function getPeriodDateRange(period: string, groupBy: IngestionGroupBy) {
+  let start: Date;
+  let endExclusive: Date;
+
+  if (groupBy === 'day') {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(period);
+    if (!match) {
+      return null;
+    }
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    start = new Date(Date.UTC(year, month, day));
+    endExclusive = new Date(Date.UTC(year, month, day + 1));
+  } else if (groupBy === 'month') {
+    const match = /^(\d{4})-(\d{2})$/.exec(period);
+    if (!match) {
+      return null;
+    }
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    start = new Date(Date.UTC(year, month, 1));
+    endExclusive = new Date(Date.UTC(year, month + 1, 1));
+  } else {
+    const match = /^(\d{4})$/.exec(period);
+    if (!match) {
+      return null;
+    }
+    const year = Number(match[1]);
+    start = new Date(Date.UTC(year, 0, 1));
+    endExclusive = new Date(Date.UTC(year + 1, 0, 1));
+  }
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(endExclusive.getTime())) {
+    return null;
+  }
+
+  return {
+    after: formatUtcIso(start),
+    before: formatUtcIso(new Date(endExclusive.getTime() - 1)),
+  };
+}
+
 export function StatisticsPage() {
   const user = useUser();
+  const { data: repositories = [] } = useRepositories();
   const isAdmin = user.role === 'ROLE_ADMIN';
   const canViewStatistics = isAdmin;
 
@@ -101,8 +152,52 @@ export function StatisticsPage() {
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat(), []);
   const isGroupedByRepository = viewMode === 'repository';
-  const rows = useMemo(() => snapshot?.rows ?? [], [snapshot?.rows]);
+  const rows = useMemo(() => {
+    const nextRows = [...(snapshot?.rows ?? [])];
+    nextRows.sort((left, right) => {
+      const periodCompare = right.period.localeCompare(left.period);
+      if (periodCompare !== 0) {
+        return periodCompare;
+      }
+      const leftRepository = left.repositoryName ?? '';
+      const rightRepository = right.repositoryName ?? '';
+      return leftRepository.localeCompare(rightRepository);
+    });
+    return nextRows;
+  }, [snapshot?.rows]);
   const metricLabel = metric === 'words' ? 'Words added' : 'Text units added';
+
+  const buildWorkbenchState = useCallback(
+    (row: TextUnitIngestionPoint) => {
+      const dateRange = getPeriodDateRange(row.period, groupBy);
+      if (!dateRange) {
+        return null;
+      }
+
+      const repositoryIds =
+        row.repositoryId != null
+          ? [row.repositoryId]
+          : repositories.map((repository) => repository.id);
+      if (!repositoryIds.length) {
+        return null;
+      }
+
+      const workbenchSearch: TextUnitSearchRequest = {
+        repositoryIds,
+        localeTags: [],
+        tmTextUnitCreatedAfter: dateRange.after,
+        tmTextUnitCreatedBefore: dateRange.before,
+        limit: Math.max(1, row.stringCount),
+        offset: 0,
+      };
+
+      return {
+        workbenchSearch,
+        localePrompt: true,
+      };
+    },
+    [groupBy, repositories],
+  );
 
   const loadSnapshot = useCallback(async () => {
     if (!canViewStatistics) {
@@ -375,11 +470,23 @@ export function StatisticsPage() {
                     (row.repositoryId != null
                       ? `Repository #${row.repositoryId}`
                       : 'All repositories');
+                  const workbenchState = buildWorkbenchState(row);
 
                   return (
                     <tr key={rowKey}>
                       {isGroupedByRepository ? <td>{repositoryLabel}</td> : null}
-                      <td>{row.period}</td>
+                      <td className="statistics-page__period-cell">
+                        <span>{row.period}</span>
+                        {workbenchState ? (
+                          <Link
+                            className="statistics-page__row-action"
+                            to="/workbench"
+                            state={workbenchState}
+                          >
+                            Open in Workbench
+                          </Link>
+                        ) : null}
+                      </td>
                       <td>
                         {numberFormatter.format(
                           metric === 'words' ? row.wordCount : row.stringCount,
