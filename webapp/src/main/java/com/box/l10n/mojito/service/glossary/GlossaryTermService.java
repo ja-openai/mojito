@@ -50,7 +50,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class GlossaryTermService {
 
   private static final int DEFAULT_TERM_LIMIT = 200;
-  private static final int MAX_TERM_LIMIT = 500;
+  private static final int MAX_TERM_LIMIT = 1_000;
   private static final int SEARCH_SCAN_LIMIT = 2_000;
   private static final int WORKSPACE_SUMMARY_SCAN_LIMIT = 10_000;
   private static final int DEFAULT_EXTRACTION_LIMIT = 50;

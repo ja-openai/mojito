@@ -106,7 +106,9 @@ const STATUS_FILTER_OPTIONS = [
 const EXTRACT_LIMIT_PRESETS = [25, 50, 100, 200];
 const DEFAULT_VISIBLE_LOCALE_COLUMNS = 3;
 const AUTO_VISIBLE_LOCALE_COLUMNS_CAP = 5;
-const TERMS_LIMIT_PRESETS = [50, 100, 200, 500];
+const DEFAULT_TERMS_LIMIT = 200;
+const MAX_TERMS_LIMIT = 1000;
+const TERMS_LIMIT_PRESETS = [50, 100, 200, 500, 1000];
 const VISIBLE_LOCALE_COLUMN_PRESETS = [1, 3, 5, 10];
 const DEFAULT_PRIMARY_PANE_WIDTH_PCT = 58;
 const MIN_PRIMARY_PANE_WIDTH_PCT = 36;
@@ -484,6 +486,10 @@ function normalizePersistedPositiveNumber(value: unknown, fallback: number) {
   return Number.isFinite(next) && next >= 1 ? Math.round(next) : fallback;
 }
 
+function normalizeTermsLimit(value: unknown) {
+  return Math.min(MAX_TERMS_LIMIT, normalizePersistedPositiveNumber(value, DEFAULT_TERMS_LIMIT));
+}
+
 function normalizePersistedPaneWidth(value: unknown) {
   const next = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(next)) {
@@ -540,7 +546,7 @@ function loadGlossaryWorkspacePrefs(glossaryId: number): GlossaryWorkspacePrefs 
           : [],
       ),
       selectedStatusFilter: normalizePersistedStatusFilter(parsed.selectedStatusFilter),
-      termsLimit: normalizePersistedPositiveNumber(parsed.termsLimit, 200),
+      termsLimit: normalizeTermsLimit(parsed.termsLimit),
       visibleLocaleColumnLimit: normalizePersistedPositiveNumber(
         parsed.visibleLocaleColumnLimit,
         DEFAULT_VISIBLE_LOCALE_COLUMNS,
@@ -621,7 +627,9 @@ export function AdminGlossaryTermsPanel({
   );
   const [selectedTermIds, setSelectedTermIds] = useState<number[]>([]);
   const [openStatusTermId, setOpenStatusTermId] = useState<number | null>(null);
-  const [termsLimit, setTermsLimit] = useState(String(persistedWorkspacePrefs?.termsLimit ?? 200));
+  const [termsLimit, setTermsLimit] = useState(
+    String(normalizeTermsLimit(persistedWorkspacePrefs?.termsLimit)),
+  );
   const [visibleLocaleColumnLimit, setVisibleLocaleColumnLimit] = useState(
     getVisibleLocaleColumnLimitForSelection(
       persistedWorkspacePrefs?.visibleLocaleColumnLimit ?? DEFAULT_VISIBLE_LOCALE_COLUMNS,
@@ -707,7 +715,7 @@ export function AdminGlossaryTermsPanel({
     setSearchDraft(nextPrefs?.searchDraft ?? '');
     setSelectedLocaleTags(nextSelectedLocaleTags);
     setSelectedStatusFilter(nextPrefs?.selectedStatusFilter ?? ACTIVE_STATUS_FILTER);
-    setTermsLimit(String(nextPrefs?.termsLimit ?? 200));
+    setTermsLimit(String(normalizeTermsLimit(nextPrefs?.termsLimit)));
     setVisibleLocaleColumnLimit(
       getVisibleLocaleColumnLimitForSelection(
         nextPrefs?.visibleLocaleColumnLimit ?? DEFAULT_VISIBLE_LOCALE_COLUMNS,
@@ -749,7 +757,7 @@ export function AdminGlossaryTermsPanel({
       searchDraft,
       selectedLocaleTags,
       selectedStatusFilter,
-      termsLimit: normalizePersistedPositiveNumber(termsLimit, 200),
+      termsLimit: normalizeTermsLimit(termsLimit),
       visibleLocaleColumnLimit,
       primaryPaneWidthPct:
         collapsedWorkspacePane == null
@@ -822,19 +830,21 @@ export function AdminGlossaryTermsPanel({
     });
   }, [extractRepositoryOptions]);
 
+  const termsLimitNumber = normalizeTermsLimit(termsLimit);
+
   const termsQuery = useQuery({
     queryKey: [
       'glossary-terms',
       glossary.id,
       searchDraft,
       selectedLocaleTags.join('|'),
-      termsLimit,
+      termsLimitNumber,
     ],
     queryFn: () =>
       fetchGlossaryTerms(glossary.id, {
         search: searchDraft,
         localeTags: selectedLocaleTags,
-        limit: Number.parseInt(termsLimit.trim() || '200', 10),
+        limit: termsLimitNumber,
       }),
     staleTime: 15_000,
   });
@@ -1579,8 +1589,8 @@ export function AdminGlossaryTermsPanel({
               onOpenExport={() => onOpenExport?.()}
               termsTotalCount={termsQuery.data?.totalCount ?? 0}
               visibleTermsCount={terms.length}
-              termsLimit={Number.parseInt(termsLimit.trim() || '200', 10)}
-              onChangeTermsLimit={(value) => setTermsLimit(String(value))}
+              termsLimit={termsLimitNumber}
+              onChangeTermsLimit={(value) => setTermsLimit(String(normalizeTermsLimit(value)))}
               termsLimitOptions={TERMS_LIMIT_PRESETS}
               visibleLocaleColumnLimit={visibleLocaleColumnLimit}
               onChangeVisibleLocaleColumnLimit={(value) =>
