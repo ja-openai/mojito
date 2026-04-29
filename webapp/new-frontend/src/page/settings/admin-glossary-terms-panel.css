@@ -464,6 +464,16 @@
   background: color-mix(in srgb, var(--color-accent) 4%, transparent);
 }
 
+.glossary-term-admin__row--interactive:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: -2px;
+}
+
+.glossary-term-admin__row.is-selected {
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  box-shadow: inset 0.2rem 0 0 var(--color-accent);
+}
+
 .glossary-term-admin__source {
   font-weight: var(--font-weight-medium);
   color: var(--color-text);

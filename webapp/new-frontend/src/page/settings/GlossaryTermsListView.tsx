@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, KeyboardEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
@@ -61,6 +61,7 @@ type Props = {
   onToggleSelectAll: () => void;
   onOpenEditTerm: (term: ApiGlossaryTerm) => void;
   onOpenInlineTranslationEdit: (term: ApiGlossaryTerm) => void;
+  activeTermId: number | null;
   selectedTermIds: number[];
   onToggleTermSelection: (tmTextUnitId: number, checked: boolean) => void;
   getWorkbenchHref: (tmTextUnitId: number, localeTags?: string[]) => string;
@@ -256,6 +257,7 @@ export function GlossaryTermsListView({
   onToggleSelectAll,
   onOpenEditTerm,
   onOpenInlineTranslationEdit,
+  activeTermId,
   selectedTermIds,
   onToggleTermSelection,
   getWorkbenchHref,
@@ -278,6 +280,7 @@ export function GlossaryTermsListView({
     target: string;
   } | null>(null);
   const [pendingEditExit, setPendingEditExit] = useState<PendingEditExit | null>(null);
+  const termRowRefs = useRef(new Map<number, HTMLTableRowElement>());
   const emptyColSpan = displayedLocaleTags.length + (canManageTerms ? 3 : 2);
   const showLocaleColumnLimit = selectedLocaleTags.length > AUTO_VISIBLE_LOCALE_COLUMNS_CAP;
   const tableStyle = {
@@ -303,6 +306,50 @@ export function GlossaryTermsListView({
       return;
     }
     onOpenEditTerm(term);
+  };
+  const activeTermIndex = terms.findIndex((term) => term.tmTextUnitId === activeTermId);
+  const focusTermRow = (tmTextUnitId: number) => {
+    requestAnimationFrame(() => {
+      termRowRefs.current.get(tmTextUnitId)?.focus();
+    });
+  };
+  const openTermFromKeyboard = (term: ApiGlossaryTerm) => {
+    openTermEditor(term);
+    focusTermRow(term.tmTextUnitId);
+  };
+  const handleTermRowKeyDown = (
+    term: ApiGlossaryTerm,
+    index: number,
+    event: KeyboardEvent<HTMLTableRowElement>,
+  ) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowDown') {
+      nextIndex = Math.min(index + 1, terms.length - 1);
+    } else if (event.key === 'ArrowUp') {
+      nextIndex = Math.max(index - 1, 0);
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = terms.length - 1;
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openTermFromKeyboard(term);
+      return;
+    }
+
+    if (nextIndex == null) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextTerm = terms[nextIndex];
+    if (nextTerm) {
+      openTermFromKeyboard(nextTerm);
+    }
   };
   const openTranslationEditor = (
     term: ApiGlossaryTerm,
@@ -587,11 +634,27 @@ export function GlossaryTermsListView({
                 </td>
               </tr>
             ) : (
-              terms.map((term) => (
+              terms.map((term, index) => (
                 <tr
                   key={term.tmTextUnitId}
-                  className="glossary-term-admin__row glossary-term-admin__row--interactive"
+                  ref={(node) => {
+                    if (node) {
+                      termRowRefs.current.set(term.tmTextUnitId, node);
+                    } else {
+                      termRowRefs.current.delete(term.tmTextUnitId);
+                    }
+                  }}
+                  className={`glossary-term-admin__row glossary-term-admin__row--interactive${
+                    term.tmTextUnitId === activeTermId ? ' is-selected' : ''
+                  }`}
+                  tabIndex={
+                    (activeTermIndex >= 0 ? term.tmTextUnitId === activeTermId : index === 0)
+                      ? 0
+                      : -1
+                  }
+                  aria-selected={term.tmTextUnitId === activeTermId}
                   onClick={() => openTermEditor(term)}
+                  onKeyDown={(event) => handleTermRowKeyDown(term, index, event)}
                 >
                   {canManageTerms ? (
                     <td

@@ -1609,6 +1609,7 @@ export function AdminGlossaryTermsPanel({
               }
               onOpenEditTerm={openEditModal}
               onOpenInlineTranslationEdit={openEditModal}
+              activeTermId={editorOpen ? (editorDraft.tmTextUnitId ?? null) : null}
               selectedTermIds={selectedTermIds}
               onToggleTermSelection={(tmTextUnitId, checked) =>
                 setSelectedTermIds((current) =>
