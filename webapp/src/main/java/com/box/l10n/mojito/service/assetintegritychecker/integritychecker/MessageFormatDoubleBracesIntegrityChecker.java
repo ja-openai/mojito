@@ -11,9 +11,6 @@ import java.util.ArrayDeque;
  */
 public class MessageFormatDoubleBracesIntegrityChecker extends MessageFormatIntegrityChecker {
 
-  private static final String LEFT_DOUBLE_BRACES_REGEX = "\\{\\{.*?";
-  private static final String RIGHT_DOUBLE_BRACES_REGEX = "\\}\\}.*?";
-
   @Override
   public void check(String source, String content) throws MessageFormatIntegrityCheckerException {
     verifyEqualNumberOfBraces(source);
@@ -42,6 +39,26 @@ public class MessageFormatDoubleBracesIntegrityChecker extends MessageFormatInte
   }
 
   private String replaceDoubleBracesWithSingle(String str) {
-    return str.replaceAll(LEFT_DOUBLE_BRACES_REGEX, "{").replaceAll(RIGHT_DOUBLE_BRACES_REGEX, "}");
+    StringBuilder result = new StringBuilder(str.length());
+    int doubleBracesDepth = 0;
+
+    for (int i = 0; i < str.length(); i++) {
+      if (i + 1 < str.length() && str.charAt(i) == '{' && str.charAt(i + 1) == '{') {
+        result.append('{');
+        doubleBracesDepth++;
+        i++;
+      } else if (i + 1 < str.length()
+          && str.charAt(i) == '}'
+          && str.charAt(i + 1) == '}'
+          && doubleBracesDepth > 0) {
+        result.append('}');
+        doubleBracesDepth--;
+        i++;
+      } else {
+        result.append(str.charAt(i));
+      }
+    }
+
+    return result.toString();
   }
 }
