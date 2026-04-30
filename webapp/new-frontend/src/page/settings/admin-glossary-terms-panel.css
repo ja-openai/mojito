@@ -386,7 +386,8 @@
 }
 
 .glossary-term-admin__candidate-card:hover .glossary-term-admin__candidate-action,
-.glossary-term-admin__candidate-card:focus-within .glossary-term-admin__candidate-action {
+.glossary-term-admin__candidate-card:focus-within .glossary-term-admin__candidate-action,
+.glossary-term-admin__candidate-card.is-active .glossary-term-admin__candidate-action {
   opacity: 1;
   pointer-events: auto;
 }
@@ -870,6 +871,26 @@
     var(--color-surface-elevated, var(--color-surface)) 72%,
     transparent
   );
+}
+
+.glossary-term-admin__candidate-card--clickable {
+  cursor: pointer;
+}
+
+.glossary-term-admin__candidate-card--clickable:hover,
+.glossary-term-admin__candidate-card.is-active {
+  border-color: var(--color-focus-border);
+  background: color-mix(
+    in srgb,
+    var(--color-surface-selected) 55%,
+    var(--color-surface-elevated, var(--color-surface))
+  );
+}
+
+.glossary-term-admin__candidate-card--clickable:focus {
+  outline: none;
+  border-color: var(--color-focus-border);
+  box-shadow: 0 0 0 0.125rem var(--color-focus-outline);
 }
 
 .glossary-term-admin__reference-header,

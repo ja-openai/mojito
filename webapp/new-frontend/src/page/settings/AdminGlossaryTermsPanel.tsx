@@ -24,9 +24,12 @@ import {
   batchUpdateGlossaryTerms,
   createGlossaryTerm,
   deleteGlossaryTerm,
+  exportGlossaryTermIndexCandidates,
   fetchGlossaryTermIndexSuggestions,
   fetchGlossaryTerms,
+  generateGlossaryTermIndexCandidates,
   ignoreGlossaryTermIndexSuggestion,
+  importGlossaryTermIndexCandidates,
   seedGlossaryTermIndexCandidates,
   updateGlossaryTerm,
 } from '../../api/glossaries';
@@ -750,6 +753,8 @@ export function AdminGlossaryTermsPanel({
   const [batchOpen, setBatchOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [candidateModalOpen, setCandidateModalOpen] = useState(false);
+  const [candidateImportModalOpen, setCandidateImportModalOpen] = useState(false);
+  const [candidateImportContent, setCandidateImportContent] = useState('');
   const [candidateDraft, setCandidateDraft] = useState<TermIndexCandidateDraft>(() =>
     createBlankTermIndexCandidateDraft(),
   );
@@ -926,7 +931,7 @@ export function AdminGlossaryTermsPanel({
       fetchGlossaryTermIndexSuggestions(glossary.id, {
         search: suggestionSearchQuery,
         limit: suggestionLimitNumber,
-        useAi: true,
+        useAi: false,
         reviewStateFilter: suggestionReviewStateFilter,
       }),
     enabled: extractOpen && suggestionSearchNonce > 0,
@@ -975,6 +980,89 @@ export function AdminGlossaryTermsPanel({
       setStatusNotice({
         kind: 'error',
         message: error.message || 'Failed to add glossary suggestion.',
+      });
+    },
+  });
+
+  const generateCandidatesMutation = useMutation({
+    mutationFn: async () =>
+      generateGlossaryTermIndexCandidates(glossary.id, {
+        search: suggestionSearchDraft.trim() || null,
+        minOccurrences: 1,
+        limit: suggestionLimitNumber,
+      }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['glossary-term-index-suggestions', glossary.id],
+      });
+      setExtractOpen(true);
+      setSelectedSuggestionIds([]);
+      setSuggestionSearchQuery(suggestionSearchDraft);
+      setSuggestionSearchNonce((current) => current + 1);
+      setStatusNotice({
+        kind: 'success',
+        message: `Generated ${result.candidateCount} suggestions from extraction (${result.createdCandidateCount} new, ${result.updatedCandidateCount} refreshed).`,
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to generate term suggestions from extraction.',
+      });
+    },
+  });
+
+  const importCandidatesMutation = useMutation({
+    mutationFn: async (content: string) =>
+      importGlossaryTermIndexCandidates(glossary.id, {
+        format: 'json',
+        content,
+      }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['glossary-term-index-suggestions', glossary.id],
+      });
+      setCandidateImportModalOpen(false);
+      setCandidateImportContent('');
+      setExtractOpen(true);
+      setSelectedSuggestionIds([]);
+      setSuggestionSearchQuery(suggestionSearchDraft);
+      setSuggestionSearchNonce((current) => current + 1);
+      setStatusNotice({
+        kind: 'success',
+        message: `Imported ${result.candidateCount} suggestions (${result.createdCandidateCount} new, ${result.updatedCandidateCount} refreshed).`,
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to import term suggestions.',
+      });
+    },
+  });
+
+  const exportCandidatesMutation = useMutation({
+    mutationFn: async () =>
+      exportGlossaryTermIndexCandidates(glossary.id, {
+        search: suggestionSearchDraft.trim() || null,
+        limit: Math.max(suggestionLimitNumber, 1000),
+      }),
+    onSuccess: (blob) => {
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = `${glossary.name.trim().replace(/\s+/g, '-').toLowerCase()}-suggestions.json`;
+      anchor.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      setStatusNotice({
+        kind: 'success',
+        message: 'Exported term suggestions as JSON.',
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to export term suggestions.',
       });
     },
   });
@@ -1204,7 +1292,7 @@ export function AdminGlossaryTermsPanel({
       );
       setStatusNotice({
         kind: 'success',
-        message: `Accepted ${savedTerm.source} as a glossary candidate.`,
+        message: `Accepted ${savedTerm.source} into glossary review.`,
       });
     },
     onError: (error: Error) => {
@@ -1727,7 +1815,15 @@ export function AdminGlossaryTermsPanel({
                 setSuggestionSearchQuery(suggestionSearchDraft);
                 setSuggestionSearchNonce((current) => current + 1);
               }}
+              onGenerateCandidates={() => generateCandidatesMutation.mutate()}
+              isGeneratingCandidates={generateCandidatesMutation.isPending}
               onOpenCreateCandidate={openCandidateModal}
+              onOpenImportCandidates={() => {
+                setCandidateImportContent('');
+                setCandidateImportModalOpen(true);
+              }}
+              onExportCandidates={() => exportCandidatesMutation.mutate()}
+              isExportingCandidates={exportCandidatesMutation.isPending}
               isLoading={suggestionsQuery.isFetching}
               suggestions={suggestions}
               totalCount={suggestionsQuery.data?.totalCount ?? suggestions.length}
@@ -1760,6 +1856,7 @@ export function AdminGlossaryTermsPanel({
               }
               onAcceptSelected={() => batchAcceptSuggestionsMutation.mutate(selectedSuggestions)}
               isAcceptingSelected={batchAcceptSuggestionsMutation.isPending}
+              activeSuggestionId={suggestionInEditor?.termIndexCandidateId ?? null}
               onOpenSuggestion={openSuggestionModal}
               onAcceptSuggestion={(suggestion) => {
                 if (canAcceptSuggestion(suggestion)) {
@@ -2409,7 +2506,7 @@ export function AdminGlossaryTermsPanel({
       <Modal
         open={candidateModalOpen}
         size="lg"
-        ariaLabel="Add term index candidate"
+        ariaLabel="Add term index suggestion"
         onClose={() => {
           if (!seedCandidateMutation.isPending) {
             setCandidateModalOpen(false);
@@ -2419,9 +2516,9 @@ export function AdminGlossaryTermsPanel({
       >
         <div className="modal__header">
           <div>
-            <h3 className="modal__title">Add candidate</h3>
+            <h3 className="modal__title">Add suggestion</h3>
             <p className="settings-hint">
-              Add a review candidate when extraction missed a term or needs a manual split.
+              Add a source-side suggestion when extraction missed a term or needs a manual split.
             </p>
           </div>
         </div>
@@ -2580,7 +2677,60 @@ export function AdminGlossaryTermsPanel({
             onClick={() => seedCandidateMutation.mutate(candidateDraft)}
             disabled={seedCandidateMutation.isPending || !candidateDraft.term.trim()}
           >
-            {seedCandidateMutation.isPending ? 'Adding…' : 'Add candidate'}
+            {seedCandidateMutation.isPending ? 'Adding…' : 'Add suggestion'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={candidateImportModalOpen}
+        size="lg"
+        ariaLabel="Import term index suggestions"
+        onClose={() => {
+          if (!importCandidatesMutation.isPending) {
+            setCandidateImportModalOpen(false);
+          }
+        }}
+        closeOnBackdrop
+      >
+        <div className="modal__header">
+          <div>
+            <h3 className="modal__title">Import suggestions</h3>
+            <p className="settings-hint">
+              Paste JSON with a candidates array, a terms array, or a raw array of source-side
+              suggestions.
+            </p>
+          </div>
+        </div>
+        <div className="settings-field">
+          <label className="settings-field__label" htmlFor="term-index-candidate-import">
+            Suggestion JSON
+          </label>
+          <AutoTextarea
+            id="term-index-candidate-import"
+            className="settings-input"
+            minRows={12}
+            value={candidateImportContent}
+            onChange={(event) => setCandidateImportContent(event.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="modal__footer">
+          <button
+            type="button"
+            className="settings-button settings-button--ghost"
+            onClick={() => setCandidateImportModalOpen(false)}
+            disabled={importCandidatesMutation.isPending}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="settings-button settings-button--primary"
+            onClick={() => importCandidatesMutation.mutate(candidateImportContent)}
+            disabled={importCandidatesMutation.isPending || !candidateImportContent.trim()}
+          >
+            {importCandidatesMutation.isPending ? 'Importing…' : 'Import suggestions'}
           </button>
         </div>
       </Modal>

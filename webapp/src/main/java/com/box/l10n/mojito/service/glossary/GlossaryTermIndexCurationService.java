@@ -17,6 +17,8 @@ import com.box.l10n.mojito.service.tm.search.TextUnitTextSearch;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearchField;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearchPredicate;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -44,9 +46,17 @@ public class GlossaryTermIndexCurationService {
   private static final int MAX_PREFETCH_LIMIT = 800;
   private static final int EXAMPLE_LIMIT = 4;
   private static final int LIVE_SEARCH_EXAMPLE_LIMIT = 3;
-  private static final int MAX_LIVE_SEARCH_SUGGESTIONS = 50;
+  private static final int DEFAULT_GENERATION_LIMIT = 500;
+  private static final int MAX_GENERATION_LIMIT = 5_000;
+  private static final int DEFAULT_CANDIDATE_EXPORT_LIMIT = 1_000;
+  private static final int MAX_CANDIDATE_EXPORT_LIMIT = 10_000;
   private static final List<Long> EMPTY_FILTER_SENTINEL = List.of(-1L);
   private static final String EXTRACTION_SOURCE_NAME = "term-index";
+  private static final String GLOSSARY_SUBMISSION_SOURCE_TYPE = "HUMAN";
+  private static final String GLOSSARY_SUBMISSION_SOURCE_NAME = "glossary-workspace";
+  private static final String GLOSSARY_SUBMISSION_METADATA_GLOSSARY_ID = "glossaryId";
+  private static final String GLOSSARY_SUBMISSION_METADATA_SUBMITTED_FROM = "submittedFrom";
+  private static final String CANDIDATE_EXPORT_FORMAT_JSON = "json";
   private static final String SOURCE_SEARCH_METHOD = "SOURCE_SEARCH";
   private static final String REVIEW_STATE_NEW = "NEW";
   private static final String REVIEW_STATE_IGNORED = "IGNORED";
@@ -100,7 +110,7 @@ public class GlossaryTermIndexCurationService {
     this.objectMapper = Objects.requireNonNull(objectMapper);
   }
 
-  @Transactional
+  @Transactional(readOnly = true)
   public SuggestionSearchView searchSuggestions(Long glossaryId, SuggestionSearchCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
@@ -110,21 +120,15 @@ public class GlossaryTermIndexCurationService {
     String searchQuery = normalizeOptional(normalized.searchQuery());
 
     LinkedHashMap<Long, SuggestionAccumulator> candidates = new LinkedHashMap<>();
-    if (!scopeRepositoryIds.isEmpty()) {
-      List<Long> repositoryFilter = repositoryIdsOrSentinel(scopeRepositoryIds);
-      termIndexExtractedTermRepository
-          .searchEntries(
-              false, repositoryFilter, searchQuery, null, 1L, PageRequest.of(0, prefetchLimit))
-          .forEach(
-              row -> {
-                TermIndexCandidate candidate = ensureExtractionCandidate(row);
-                candidates.putIfAbsent(candidate.getId(), fromOccurrenceRow(row, candidate));
-              });
-    }
-
     termIndexCandidateRepository
-        .searchUnattachedCandidates(searchQuery, PageRequest.of(0, prefetchLimit))
-        .forEach(row -> candidates.putIfAbsent(row.getId(), fromUnattachedCandidateRow(row)));
+        .searchForGlossarySuggestions(
+            false,
+            repositoryIdsOrSentinel(scopeRepositoryIds),
+            searchQuery,
+            PageRequest.of(0, prefetchLimit))
+        .stream()
+        .filter(row -> candidateVisibleForGlossary(row.getMetadataJson(), glossary.getId()))
+        .forEach(row -> candidates.putIfAbsent(row.getId(), fromCandidateSearchRow(row)));
 
     if (candidates.isEmpty()) {
       return new SuggestionSearchView(List.of(), 0);
@@ -163,7 +167,6 @@ public class GlossaryTermIndexCurationService {
     if (suggestions.isEmpty() && !heuristicSuggestions.isEmpty()) {
       suggestions = heuristicSuggestions.stream().limit(normalized.limit()).toList();
     }
-    suggestions = addLiveSearchExamplesIfSmall(suggestions, scopeRepositoryIds);
     return new SuggestionSearchView(suggestions, heuristicSuggestions.size());
   }
 
@@ -260,13 +263,100 @@ public class GlossaryTermIndexCurationService {
   @Transactional
   public SeedResult seedTermsForGlossary(Long glossaryId, SeedCommand command) {
     requireTermManager();
-    getGlossary(glossaryId);
+    Glossary glossary = getGlossary(glossaryId);
     SeedCommand normalized = normalize(command);
-    return seedTermsInternal(normalized);
+    return seedTermsInternal(
+        new SeedCommand(scopeCandidatesToGlossary(glossary.getId(), normalized.terms())));
+  }
+
+  @Transactional
+  public GenerateCandidatesResult generateCandidatesForGlossary(
+      Long glossaryId, GenerateCandidatesCommand command) {
+    requireTermManager();
+    Glossary glossary = getGlossary(glossaryId);
+    GenerateCandidatesCommand normalized = normalize(command);
+    List<Long> scopeRepositoryIds = resolveScopeRepositoryIds(glossary);
+    if (scopeRepositoryIds.isEmpty()) {
+      return new GenerateCandidatesResult(0, 0, 0, List.of());
+    }
+
+    List<TermIndexExtractedTermRepository.SearchRow> rows =
+        termIndexExtractedTermRepository.searchEntries(
+            false,
+            repositoryIdsOrSentinel(scopeRepositoryIds),
+            normalizeOptional(normalized.searchQuery()),
+            normalizeOptional(normalized.extractionMethod()),
+            Math.max(1L, normalized.minOccurrences() == null ? 1L : normalized.minOccurrences()),
+            PageRequest.of(0, normalizeGenerationLimit(normalized.limit())));
+
+    List<SeededTermView> generatedCandidates = new ArrayList<>(rows.size());
+    int createdCandidateCount = 0;
+    int updatedCandidateCount = 0;
+    for (TermIndexExtractedTermRepository.SearchRow row : rows) {
+      CandidateWriteResult writeResult = upsertExtractionCandidate(row);
+      if (writeResult.created()) {
+        createdCandidateCount++;
+      } else {
+        updatedCandidateCount++;
+      }
+      generatedCandidates.add(toSeededTermView(writeResult.candidate()));
+    }
+
+    return new GenerateCandidatesResult(
+        generatedCandidates.size(),
+        createdCandidateCount,
+        updatedCandidateCount,
+        generatedCandidates);
+  }
+
+  @Transactional
+  public SeedResult importCandidatesForGlossary(Long glossaryId, CandidateImportCommand command) {
+    requireTermManager();
+    Glossary glossary = getGlossary(glossaryId);
+    CandidateImportCommand normalized = normalize(command);
+    List<SeedTermInput> candidates = parseCandidateImportRows(normalized);
+    return seedTermsInternal(
+        normalize(new SeedCommand(scopeCandidatesToGlossary(glossary.getId(), candidates))));
+  }
+
+  @Transactional(readOnly = true)
+  public CandidateExportResult exportCandidatesForGlossary(
+      Long glossaryId, CandidateExportCommand command) {
+    requireTermManager();
+    Glossary glossary = getGlossary(glossaryId);
+    CandidateExportCommand normalized = normalize(command);
+    List<Long> scopeRepositoryIds = resolveScopeRepositoryIds(glossary);
+    List<TermIndexCandidate> candidates =
+        termIndexCandidateRepository.findForGlossaryCandidateExport(
+            false,
+            repositoryIdsOrSentinel(scopeRepositoryIds),
+            normalizeOptional(normalized.searchQuery()),
+            PageRequest.of(0, normalizeCandidateExportLimit(normalized.limit())));
+    candidates =
+        candidates.stream()
+            .filter(candidate -> candidateVisibleForGlossary(candidate, glossary.getId()))
+            .toList();
+    CandidateExportDocument document =
+        new CandidateExportDocument(
+            new CandidateExportInfo(
+                glossary.getId(),
+                glossary.getName(),
+                normalizeOptional(normalized.searchQuery()),
+                candidates.size()),
+            candidates.stream().map(this::toSeedTermInput).toList());
+    String filename =
+        slugify(glossary.getName()) + "-term-index-candidates." + CANDIDATE_EXPORT_FORMAT_JSON;
+    return new CandidateExportResult(
+        CANDIDATE_EXPORT_FORMAT_JSON,
+        filename,
+        objectMapper.writeValueAsStringUnchecked(document),
+        candidates.size());
   }
 
   private SeedResult seedTermsInternal(SeedCommand normalized) {
     List<SeededTermView> seededTerms = new ArrayList<>(normalized.terms().size());
+    int createdCandidateCount = 0;
+    int updatedCandidateCount = 0;
 
     for (SeedTermInput term : normalized.terms()) {
       String normalizedKey = normalizeCandidateKey(term.term());
@@ -306,16 +396,22 @@ public class GlossaryTermIndexCurationService {
               term.definition(),
               term.rationale(),
               metadataJson);
+      Optional<TermIndexCandidate> existingCandidate =
+          findCandidate(sourceType, sourceName, candidateHash);
       TermIndexCandidate candidate =
-          findCandidate(sourceType, sourceName, candidateHash)
-              .orElseGet(
-                  () -> {
-                    TermIndexCandidate next = new TermIndexCandidate();
-                    next.setSourceType(sourceType);
-                    next.setSourceName(sourceName);
-                    next.setCandidateHash(candidateHash);
-                    return next;
-                  });
+          existingCandidate.orElseGet(
+              () -> {
+                TermIndexCandidate next = new TermIndexCandidate();
+                next.setSourceType(sourceType);
+                next.setSourceName(sourceName);
+                next.setCandidateHash(candidateHash);
+                return next;
+              });
+      if (existingCandidate.isPresent()) {
+        updatedCandidateCount++;
+      } else {
+        createdCandidateCount++;
+      }
       candidate.setTermIndexExtractedTerm(extractedTerm);
       candidate.setSourceLocaleTag(sourceLocaleTag);
       candidate.setNormalizedKey(normalizedKey);
@@ -334,15 +430,11 @@ public class GlossaryTermIndexCurationService {
       candidate.setMetadataJson(metadataJson);
       termIndexCandidateRepository.save(candidate);
 
-      seededTerms.add(
-          new SeededTermView(
-              candidate.getId(),
-              extractedTerm == null ? null : extractedTerm.getId(),
-              candidate.getTerm(),
-              normalizedKey));
+      seededTerms.add(toSeededTermView(candidate));
     }
 
-    return new SeedResult(seededTerms.size(), seededTerms);
+    return new SeedResult(
+        seededTerms.size(), createdCandidateCount, updatedCandidateCount, seededTerms);
   }
 
   private SuggestionView toSuggestion(
@@ -570,73 +662,6 @@ public class GlossaryTermIndexCurationService {
     return evidence;
   }
 
-  private List<SuggestionView> addLiveSearchExamplesIfSmall(
-      List<SuggestionView> suggestions, List<Long> scopeRepositoryIds) {
-    if (suggestions.isEmpty() || suggestions.size() > MAX_LIVE_SEARCH_SUGGESTIONS) {
-      return suggestions;
-    }
-
-    List<SuggestionView> enriched = new ArrayList<>(suggestions.size());
-    for (SuggestionView suggestion : suggestions) {
-      if (suggestion.examples().size() >= EXAMPLE_LIMIT) {
-        enriched.add(suggestion);
-        continue;
-      }
-      List<OccurrenceView> searchedExamples =
-          searchSourceExamples(
-              suggestion.term(), scopeRepositoryIds, EXAMPLE_LIMIT - suggestion.examples().size());
-      if (searchedExamples.isEmpty()) {
-        enriched.add(suggestion);
-        continue;
-      }
-      List<OccurrenceView> examples = new ArrayList<>(suggestion.examples());
-      Set<Long> exampleTextUnitIds =
-          examples.stream()
-              .map(OccurrenceView::tmTextUnitId)
-              .filter(Objects::nonNull)
-              .collect(Collectors.toCollection(LinkedHashSet::new));
-      for (OccurrenceView searchedExample : searchedExamples) {
-        if (searchedExample.tmTextUnitId() != null
-            && !exampleTextUnitIds.add(searchedExample.tmTextUnitId())) {
-          continue;
-        }
-        examples.add(searchedExample);
-        if (examples.size() >= EXAMPLE_LIMIT) {
-          break;
-        }
-      }
-      enriched.add(copyWithExamples(suggestion, examples));
-    }
-    return enriched;
-  }
-
-  private SuggestionView copyWithExamples(
-      SuggestionView suggestion, List<OccurrenceView> examples) {
-    return new SuggestionView(
-        suggestion.termIndexCandidateId(),
-        suggestion.termIndexExtractedTermId(),
-        suggestion.normalizedKey(),
-        suggestion.term(),
-        suggestion.label(),
-        suggestion.sourceLocaleTag(),
-        suggestion.occurrenceCount(),
-        suggestion.repositoryCount(),
-        suggestion.sourceCount(),
-        suggestion.confidence(),
-        suggestion.definition(),
-        suggestion.rationale(),
-        suggestion.suggestedTermType(),
-        suggestion.suggestedProvenance(),
-        suggestion.suggestedPartOfSpeech(),
-        suggestion.suggestedEnforcement(),
-        suggestion.suggestedDoNotTranslate(),
-        examples,
-        suggestion.sources(),
-        suggestion.lastSignalAt(),
-        suggestion.reviewState(),
-        suggestion.selectionMethod());
-  }
-
   private List<OccurrenceView> searchSourceExamples(
       String term, List<Long> scopeRepositoryIds, int limit) {
     String normalizedTerm = normalizeOptional(term);
@@ -804,7 +829,7 @@ public class GlossaryTermIndexCurationService {
         .toList();
   }
 
-  private TermIndexCandidate ensureExtractionCandidate(
+  private CandidateWriteResult upsertExtractionCandidate(
       TermIndexExtractedTermRepository.SearchRow row) {
     String sourceLocaleTag =
         coalesce(
@@ -821,18 +846,18 @@ public class GlossaryTermIndexCurationService {
             null,
             null,
             null);
+    Optional<TermIndexCandidate> existingCandidate =
+        termIndexCandidateRepository.findBySourceTypeAndSourceNameAndCandidateHash(
+            TermIndexCandidate.SOURCE_TYPE_EXTRACTION, EXTRACTION_SOURCE_NAME, candidateHash);
     TermIndexCandidate candidate =
-        termIndexCandidateRepository
-            .findBySourceTypeAndSourceNameAndCandidateHash(
-                TermIndexCandidate.SOURCE_TYPE_EXTRACTION, EXTRACTION_SOURCE_NAME, candidateHash)
-            .orElseGet(
-                () -> {
-                  TermIndexCandidate next = new TermIndexCandidate();
-                  next.setSourceType(TermIndexCandidate.SOURCE_TYPE_EXTRACTION);
-                  next.setSourceName(EXTRACTION_SOURCE_NAME);
-                  next.setCandidateHash(candidateHash);
-                  return next;
-                });
+        existingCandidate.orElseGet(
+            () -> {
+              TermIndexCandidate next = new TermIndexCandidate();
+              next.setSourceType(TermIndexCandidate.SOURCE_TYPE_EXTRACTION);
+              next.setSourceName(EXTRACTION_SOURCE_NAME);
+              next.setCandidateHash(candidateHash);
+              return next;
+            });
     candidate.setTermIndexExtractedTerm(
         termIndexExtractedTermRepository.getReferenceById(row.getId()));
     candidate.setSourceLocaleTag(sourceLocaleTag);
@@ -845,37 +870,25 @@ public class GlossaryTermIndexCurationService {
     candidate.setTermType(suggestTermType(row.getDisplayTerm()));
     candidate.setEnforcement(GlossaryTermMetadata.ENFORCEMENT_SOFT);
     candidate.setDoNotTranslate(shouldPreserveSource(row.getDisplayTerm()));
-    return termIndexCandidateRepository.save(candidate);
+    return new CandidateWriteResult(
+        termIndexCandidateRepository.save(candidate), existingCandidate.isEmpty());
   }
 
-  private SuggestionAccumulator fromOccurrenceRow(
-      TermIndexExtractedTermRepository.SearchRow row, TermIndexCandidate candidate) {
-    return new SuggestionAccumulator(
-        candidate.getId(),
-        row.getId(),
-        row.getNormalizedKey(),
-        row.getDisplayTerm(),
-        candidate.getLabel(),
-        row.getSourceLocaleTag(),
-        nullToZero(row.getOccurrenceCount()),
-        Math.toIntExact(nullToZero(row.getRepositoryCount())),
-        1,
-        row.getLastOccurrenceAt());
-  }
-
-  private SuggestionAccumulator fromUnattachedCandidateRow(
-      TermIndexCandidateRepository.UnattachedCandidateRow row) {
+  private SuggestionAccumulator fromCandidateSearchRow(
+      TermIndexCandidateRepository.CandidateSearchRow row) {
     return new SuggestionAccumulator(
         row.getId(),
-        null,
+        row.getTermIndexExtractedTermId(),
         row.getNormalizedKey(),
         row.getTerm(),
         row.getLabel(),
         row.getSourceLocaleTag(),
-        0,
-        0,
+        nullToZero(row.getOccurrenceCount()),
+        Math.toIntExact(nullToZero(row.getRepositoryCount())),
         1,
-        row.getLastSignalAt());
+        row.getLastOccurrenceAt() == null
+            ? row.getCandidateCreatedDate()
+            : row.getLastOccurrenceAt());
   }
 
   private OccurrenceView toOccurrenceView(TermIndexOccurrenceRepository.DetailRow row) {
@@ -969,6 +982,36 @@ public class GlossaryTermIndexCurationService {
     return command;
   }
 
+  private GenerateCandidatesCommand normalize(GenerateCandidatesCommand command) {
+    if (command == null) {
+      return new GenerateCandidatesCommand(null, null, 1L, DEFAULT_GENERATION_LIMIT);
+    }
+    return new GenerateCandidatesCommand(
+        command.searchQuery(),
+        command.extractionMethod(),
+        Math.max(1L, command.minOccurrences() == null ? 1L : command.minOccurrences()),
+        normalizeGenerationLimit(command.limit()));
+  }
+
+  private CandidateImportCommand normalize(CandidateImportCommand command) {
+    if (command == null || normalizeOptional(command.content()) == null) {
+      throw new IllegalArgumentException("content is required");
+    }
+    return new CandidateImportCommand(
+        normalizeCandidateFormat(command.format()), command.content());
+  }
+
+  private CandidateExportCommand normalize(CandidateExportCommand command) {
+    if (command == null) {
+      return new CandidateExportCommand(
+          null, DEFAULT_CANDIDATE_EXPORT_LIMIT, CANDIDATE_EXPORT_FORMAT_JSON);
+    }
+    return new CandidateExportCommand(
+        command.searchQuery(),
+        normalizeCandidateExportLimit(command.limit()),
+        normalizeCandidateFormat(command.format()));
+  }
+
   private AcceptSuggestionCommand normalize(
       AcceptSuggestionCommand command, TermIndexCandidate candidate) {
     String defaultTerm = candidate.getTerm();
@@ -1034,6 +1077,24 @@ public class GlossaryTermIndexCurationService {
   private int normalizeLimit(Integer limit) {
     int normalized = limit == null ? DEFAULT_SUGGESTION_LIMIT : limit;
     return Math.min(Math.max(1, normalized), MAX_SUGGESTION_LIMIT);
+  }
+
+  private int normalizeGenerationLimit(Integer limit) {
+    int normalized = limit == null ? DEFAULT_GENERATION_LIMIT : limit;
+    return Math.min(Math.max(1, normalized), MAX_GENERATION_LIMIT);
+  }
+
+  private int normalizeCandidateExportLimit(Integer limit) {
+    int normalized = limit == null ? DEFAULT_CANDIDATE_EXPORT_LIMIT : limit;
+    return Math.min(Math.max(1, normalized), MAX_CANDIDATE_EXPORT_LIMIT);
+  }
+
+  private String normalizeCandidateFormat(String format) {
+    String normalized = normalizeOptional(format);
+    if (normalized == null || CANDIDATE_EXPORT_FORMAT_JSON.equalsIgnoreCase(normalized)) {
+      return CANDIDATE_EXPORT_FORMAT_JSON;
+    }
+    throw new IllegalArgumentException("Unsupported candidate format: " + format);
   }
 
   private String normalizeRequired(String value, String fieldName) {
@@ -1129,6 +1190,123 @@ public class GlossaryTermIndexCurationService {
             normalizeOptional(rationale) == null ? "" : normalizeOptional(rationale),
             metadataJson == null ? "" : metadataJson);
     return DigestUtils.sha256Hex(payload);
+  }
+
+  private List<SeedTermInput> scopeCandidatesToGlossary(
+      Long glossaryId, List<SeedTermInput> candidates) {
+    return candidates.stream()
+        .map(candidate -> scopeCandidateToGlossary(glossaryId, candidate))
+        .toList();
+  }
+
+  private SeedTermInput scopeCandidateToGlossary(Long glossaryId, SeedTermInput candidate) {
+    Map<String, Object> metadata = new LinkedHashMap<>();
+    if (candidate.metadata() != null) {
+      metadata.putAll(candidate.metadata());
+    }
+    metadata.putIfAbsent(GLOSSARY_SUBMISSION_METADATA_GLOSSARY_ID, glossaryId);
+    metadata.putIfAbsent(
+        GLOSSARY_SUBMISSION_METADATA_SUBMITTED_FROM, GLOSSARY_SUBMISSION_SOURCE_NAME);
+
+    return new SeedTermInput(
+        candidate.term(),
+        candidate.sourceLocaleTag(),
+        coalesce(normalizeOptional(candidate.sourceType()), GLOSSARY_SUBMISSION_SOURCE_TYPE),
+        coalesce(normalizeOptional(candidate.sourceName()), GLOSSARY_SUBMISSION_SOURCE_NAME),
+        candidate.sourceExternalId(),
+        candidate.confidence(),
+        candidate.label(),
+        candidate.definition(),
+        candidate.rationale(),
+        candidate.termType(),
+        candidate.partOfSpeech(),
+        candidate.enforcement(),
+        candidate.doNotTranslate(),
+        metadata);
+  }
+
+  private boolean candidateVisibleForGlossary(TermIndexCandidate candidate, Long glossaryId) {
+    return candidateVisibleForGlossary(candidate.getMetadataJson(), glossaryId);
+  }
+
+  private boolean candidateVisibleForGlossary(String metadataJson, Long glossaryId) {
+    Map<String, Object> metadata = parseMetadata(metadataJson);
+    if (metadata == null || !metadata.containsKey(GLOSSARY_SUBMISSION_METADATA_GLOSSARY_ID)) {
+      return true;
+    }
+    Object candidateGlossaryId = metadata.get(GLOSSARY_SUBMISSION_METADATA_GLOSSARY_ID);
+    return candidateGlossaryId != null
+        && String.valueOf(glossaryId).equals(String.valueOf(candidateGlossaryId));
+  }
+
+  private List<SeedTermInput> parseCandidateImportRows(CandidateImportCommand command) {
+    JsonNode root = objectMapper.readValueUnchecked(command.content(), JsonNode.class);
+    JsonNode candidatesNode;
+    if (root.isArray()) {
+      candidatesNode = root;
+    } else if (root.has("candidates")) {
+      candidatesNode = root.get("candidates");
+    } else if (root.has("terms")) {
+      candidatesNode = root.get("terms");
+    } else {
+      throw new IllegalArgumentException("Candidate import must contain candidates or terms");
+    }
+    if (candidatesNode == null || !candidatesNode.isArray()) {
+      throw new IllegalArgumentException("Candidate import rows must be an array");
+    }
+    return objectMapper.convertValue(candidatesNode, new TypeReference<List<SeedTermInput>>() {});
+  }
+
+  private SeedTermInput toSeedTermInput(TermIndexCandidate candidate) {
+    return new SeedTermInput(
+        candidate.getTerm(),
+        candidate.getSourceLocaleTag(),
+        candidate.getSourceType(),
+        candidate.getSourceName(),
+        candidate.getSourceExternalId(),
+        candidate.getConfidence(),
+        candidate.getLabel(),
+        candidate.getDefinition(),
+        candidate.getRationale(),
+        candidate.getTermType(),
+        candidate.getPartOfSpeech(),
+        candidate.getEnforcement(),
+        candidate.getDoNotTranslate(),
+        parseMetadata(candidate.getMetadataJson()));
+  }
+
+  private Map<String, Object> parseMetadata(String metadataJson) {
+    if (normalizeOptional(metadataJson) == null) {
+      return null;
+    }
+    try {
+      return objectMapper.readValueUnchecked(
+          metadataJson, new TypeReference<Map<String, Object>>() {});
+    } catch (RuntimeException ignored) {
+      return Map.of("raw", metadataJson);
+    }
+  }
+
+  private SeededTermView toSeededTermView(TermIndexCandidate candidate) {
+    TermIndexExtractedTerm extractedTerm = candidate.getTermIndexExtractedTerm();
+    return new SeededTermView(
+        candidate.getId(),
+        extractedTerm == null ? null : extractedTerm.getId(),
+        candidate.getTerm(),
+        candidate.getNormalizedKey());
+  }
+
+  private String slugify(String value) {
+    String normalized = normalizeOptional(value);
+    if (normalized == null) {
+      return "glossary";
+    }
+    normalized =
+        normalized
+            .toLowerCase(Locale.ROOT)
+            .replaceAll("[^\\p{L}\\p{N}]+", "-")
+            .replaceAll("^-+|-+$", "");
+    return normalized.isBlank() ? "glossary" : normalized;
   }
 
   private String heuristicDefinition(SuggestionAccumulator candidate) {
@@ -1292,6 +1470,13 @@ public class GlossaryTermIndexCurationService {
 
   public record SeedCommand(List<SeedTermInput> terms) {}
 
+  public record GenerateCandidatesCommand(
+      String searchQuery, String extractionMethod, Long minOccurrences, Integer limit) {}
+
+  public record CandidateImportCommand(String format, String content) {}
+
+  public record CandidateExportCommand(String searchQuery, Integer limit, String format) {}
+
   public record SeedTermInput(
       String term,
       String sourceLocaleTag,
@@ -1308,13 +1493,34 @@ public class GlossaryTermIndexCurationService {
       Boolean doNotTranslate,
       Map<String, Object> metadata) {}
 
-  public record SeedResult(int termCount, List<SeededTermView> terms) {}
+  public record SeedResult(
+      int termCount,
+      int createdCandidateCount,
+      int updatedCandidateCount,
+      List<SeededTermView> terms) {}
+
+  public record GenerateCandidatesResult(
+      int candidateCount,
+      int createdCandidateCount,
+      int updatedCandidateCount,
+      List<SeededTermView> candidates) {}
+
+  public record CandidateExportResult(
+      String format, String filename, String content, int candidateCount) {}
+
+  public record CandidateExportInfo(
+      Long glossaryId, String glossaryName, String searchQuery, int candidateCount) {}
+
+  public record CandidateExportDocument(
+      CandidateExportInfo glossary, List<SeedTermInput> candidates) {}
 
   public record SeededTermView(
       Long termIndexCandidateId,
       Long termIndexExtractedTermId,
       String term,
       String normalizedKey) {}
+
+  private record CandidateWriteResult(TermIndexCandidate candidate, boolean created) {}
 
   private record Span(int start, int end) {}
 }

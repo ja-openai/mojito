@@ -219,6 +219,11 @@ public class GlossaryWS {
 
   public record SeedTermIndexCandidatesRequest(List<SeedTermIndexCandidateRequest> candidates) {}
 
+  public record GenerateTermIndexCandidatesRequest(
+      String search, String extractionMethod, Long minOccurrences, Integer limit) {}
+
+  public record ImportTermIndexCandidatesRequest(String format, String content) {}
+
   public record SeedTermIndexCandidateRequest(
       String term,
       String sourceLocaleTag,
@@ -236,7 +241,10 @@ public class GlossaryWS {
       Map<String, Object> metadata) {}
 
   public record SeedTermIndexCandidatesResponse(
-      int candidateCount, List<SeededTermIndexCandidateResponse> candidates) {}
+      int candidateCount,
+      int createdCandidateCount,
+      int updatedCandidateCount,
+      List<SeededTermIndexCandidateResponse> candidates) {}
 
   public record SeededTermIndexCandidateResponse(
       Long termIndexCandidateId,
@@ -763,17 +771,78 @@ public class GlossaryWS {
                       : request.candidates().stream()
                           .map(candidate -> toSeedTermInput(glossaryId, candidate))
                           .toList()));
+      return toSeedTermIndexCandidatesResponse(result);
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/term-index-candidates/generate")
+  public SeedTermIndexCandidatesResponse generateTermIndexCandidates(
+      @PathVariable Long glossaryId, @RequestBody GenerateTermIndexCandidatesRequest request) {
+    try {
+      GlossaryTermIndexCurationService.GenerateCandidatesResult result =
+          glossaryTermIndexCurationService.generateCandidatesForGlossary(
+              glossaryId,
+              new GlossaryTermIndexCurationService.GenerateCandidatesCommand(
+                  request == null ? null : request.search(),
+                  request == null ? null : request.extractionMethod(),
+                  request == null ? null : request.minOccurrences(),
+                  request == null ? null : request.limit()));
       return new SeedTermIndexCandidatesResponse(
-          result.termCount(),
-          result.terms().stream()
-              .map(
-                  term ->
-                      new SeededTermIndexCandidateResponse(
-                          term.termIndexCandidateId(),
-                          term.termIndexExtractedTermId(),
-                          term.term(),
-                          term.normalizedKey()))
-              .toList());
+          result.candidateCount(),
+          result.createdCandidateCount(),
+          result.updatedCandidateCount(),
+          result.candidates().stream().map(this::toSeededTermIndexCandidateResponse).toList());
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/term-index-candidates/import")
+  public SeedTermIndexCandidatesResponse importTermIndexCandidates(
+      @PathVariable Long glossaryId, @RequestBody ImportTermIndexCandidatesRequest request) {
+    try {
+      GlossaryTermIndexCurationService.SeedResult result =
+          glossaryTermIndexCurationService.importCandidatesForGlossary(
+              glossaryId,
+              new GlossaryTermIndexCurationService.CandidateImportCommand(
+                  request == null ? null : request.format(),
+                  request == null ? null : request.content()));
+      return toSeedTermIndexCandidatesResponse(result);
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @GetMapping("/{glossaryId}/term-index-candidates/export")
+  public ResponseEntity<byte[]> exportTermIndexCandidates(
+      @PathVariable Long glossaryId,
+      @RequestParam(name = "format", required = false) String format,
+      @RequestParam(name = "search", required = false) String search,
+      @RequestParam(name = "limit", required = false) Integer limit) {
+    try {
+      GlossaryTermIndexCurationService.CandidateExportResult export =
+          glossaryTermIndexCurationService.exportCandidatesForGlossary(
+              glossaryId,
+              new GlossaryTermIndexCurationService.CandidateExportCommand(search, limit, format));
+      return ResponseEntity.ok()
+          .contentType(MediaType.APPLICATION_JSON)
+          .header(
+              HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + export.filename() + "\"")
+          .body(export.content().getBytes(StandardCharsets.UTF_8));
     } catch (IllegalArgumentException ex) {
       HttpStatus status =
           ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
@@ -1159,6 +1228,24 @@ public class GlossaryWS {
         source.confidence(),
         source.metadataJson(),
         source.createdDate());
+  }
+
+  private SeedTermIndexCandidatesResponse toSeedTermIndexCandidatesResponse(
+      GlossaryTermIndexCurationService.SeedResult result) {
+    return new SeedTermIndexCandidatesResponse(
+        result.termCount(),
+        result.createdCandidateCount(),
+        result.updatedCandidateCount(),
+        result.terms().stream().map(this::toSeededTermIndexCandidateResponse).toList());
+  }
+
+  private SeededTermIndexCandidateResponse toSeededTermIndexCandidateResponse(
+      GlossaryTermIndexCurationService.SeededTermView term) {
+    return new SeededTermIndexCandidateResponse(
+        term.termIndexCandidateId(),
+        term.termIndexExtractedTermId(),
+        term.term(),
+        term.normalizedKey());
   }
 
   private GlossaryTermIndexCurationService.SeedTermInput toSeedTermInput(
