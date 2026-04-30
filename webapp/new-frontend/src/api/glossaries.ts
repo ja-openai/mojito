@@ -311,12 +311,26 @@ export type ApiSeedGlossaryTermIndexCandidatesRequest = {
 
 export type ApiSeedGlossaryTermIndexCandidatesResponse = {
   candidateCount: number;
+  createdCandidateCount: number;
+  updatedCandidateCount: number;
   candidates: Array<{
     termIndexCandidateId: number;
     termIndexExtractedTermId?: number | null;
     term: string;
     normalizedKey: string;
   }>;
+};
+
+export type ApiGenerateGlossaryTermIndexCandidatesRequest = {
+  search?: string | null;
+  extractionMethod?: string | null;
+  minOccurrences?: number | null;
+  limit?: number | null;
+};
+
+export type ApiImportGlossaryTermIndexCandidatesRequest = {
+  format?: string | null;
+  content: string;
 };
 
 export type ApiGlossaryTermIndexSuggestionsResponse = {
@@ -613,10 +627,88 @@ export async function seedGlossaryTermIndexCandidates(
 
   if (!response.ok) {
     const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to add glossary term index candidate');
+    throw new Error(message || 'Failed to add glossary term index suggestion');
   }
 
   return (await response.json()) as ApiSeedGlossaryTermIndexCandidatesResponse;
+}
+
+export async function generateGlossaryTermIndexCandidates(
+  glossaryId: number,
+  request: ApiGenerateGlossaryTermIndexCandidatesRequest,
+): Promise<ApiSeedGlossaryTermIndexCandidatesResponse> {
+  const response = await fetch(`/api/glossaries/${glossaryId}/term-index-candidates/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to generate glossary term index suggestions');
+  }
+
+  return (await response.json()) as ApiSeedGlossaryTermIndexCandidatesResponse;
+}
+
+export async function importGlossaryTermIndexCandidates(
+  glossaryId: number,
+  request: ApiImportGlossaryTermIndexCandidatesRequest,
+): Promise<ApiSeedGlossaryTermIndexCandidatesResponse> {
+  const response = await fetch(`/api/glossaries/${glossaryId}/term-index-candidates/import`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({
+      format: request.format ?? 'json',
+      content: request.content,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to import glossary term index suggestions');
+  }
+
+  return (await response.json()) as ApiSeedGlossaryTermIndexCandidatesResponse;
+}
+
+export async function exportGlossaryTermIndexCandidates(
+  glossaryId: number,
+  options?: {
+    search?: string | null;
+    limit?: number | null;
+  },
+): Promise<Blob> {
+  const params = new URLSearchParams();
+  params.set('format', 'json');
+  if (options?.search?.trim()) {
+    params.set('search', options.search.trim());
+  }
+  if (typeof options?.limit === 'number') {
+    params.set('limit', String(options.limit));
+  }
+
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/term-index-candidates/export?${params.toString()}`,
+    {
+      credentials: 'same-origin',
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to export glossary term index suggestions');
+  }
+
+  return await response.blob();
 }
 
 async function pollForGlossaryTermIndexSuggestions(

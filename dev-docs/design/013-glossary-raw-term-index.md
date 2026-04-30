@@ -63,6 +63,15 @@ distinct proposals with the same source string, they stay as separate candidates
 when their source id/hash or meaning metadata differs; they do not merge into a
 single extracted term.
 
+Candidates intentionally stay source-side for now. They can recommend
+do-not-translate, enforcement, type, and meaning, but they do not own reusable
+target translations. Accepted glossary terms and their backing glossary
+repository text units remain the place where locale-specific target terms live.
+Projects that need shared translations should compose the relevant glossaries;
+if the same source term needs different legal/product/register translations,
+that should be expressed as separate glossary-owned terminology rather than as a
+candidate-level translation table.
+
 ### Glossary Curation
 
 Glossary terms remain backed by glossary repository text units. A candidate
@@ -164,9 +173,11 @@ configured threshold, and store the eventual result briefly in blob storage.
 
 The glossary workspace now uses this foundation for per-glossary curation:
 
-- `/api/glossaries/{id}/term-index-suggestions/search-hybrid` derives
-  suggestions from scoped extracted terms plus candidate submissions. By default it
-  excludes existing glossary terms, accepted links, ignored candidates, and glossary
+- `/api/glossaries/{id}/term-index-suggestions/search-hybrid` reads stored review
+  suggestions from `term_index_candidate`. Extraction-derived suggestions must be
+  materialized first by the generate endpoint, while manual, import, MCP, and
+  external-system submissions can write directly into the same table. By default it
+  excludes existing glossary terms, accepted links, ignored suggestions, and glossary
   backing repositories so the review queue shrinks as curators act on it. The
   request can filter by review state (`NEW`, `IGNORED`, `LINKED`,
   `EXISTING_TERM`, `REVIEWED`, or `ALL`) when a curator wants to inspect past
@@ -175,18 +186,26 @@ The glossary workspace now uses this foundation for per-glossary curation:
   shape as extracted-term search: fast responses return inline, slower searches
   return a polling token.
 - `/api/glossaries/{id}/term-index-candidates` lets term managers add manual
-  candidates into the same review queue when extraction missed a term or a
+  source-side suggestions into the same review queue when extraction missed a term or a
   source needs a manual split.
-- Suggestions are AI-refined through `GlossaryAiExtractionService` by default;
-  if AI is unavailable or filters everything out, the UI falls back to
-  heuristic suggestions. The review UI does not expose this as a normal curator
-  choice; raw extractor investigation stays in the system term-index pages.
+- `/api/glossaries/{id}/term-index-candidates/generate` materializes review
+  suggestions from the current extracted-term index for the glossary repository
+  scope. This is the automation bridge between extraction and curator review;
+  it does not create glossary terms.
+- `/api/glossaries/{id}/term-index-candidates/import` and
+  `/api/glossaries/{id}/term-index-candidates/export` provide JSON round-trip
+  for stored suggestion queues. Imports accept a `candidates` array, a `terms`
+  array, or a raw array and are tagged to the destination glossary by the
+  curation service.
+- Suggestions can still be AI-refined through `GlossaryAiExtractionService` when
+  requested by API callers, but the review UI loads stored suggestions without
+  AI by default. Raw extractor investigation stays in the system term-index pages.
 - The suggestion review UI keeps draft search text separate from the applied
   query so expensive ranking only runs on initial load, refresh, or when the
   curator explicitly applies edited search text.
-- For small suggestion result sets, seeded terms with few or no stored
-  occurrences are enriched with bounded live source-text search examples. These
-  examples are review evidence only; they do not mutate occurrence history.
+- Suggestion search returns stored candidate and occurrence data only; generation,
+  import, manual add, MCP, or external submissions are the write paths that put
+  more suggestions into the table.
 - Accepting a suggestion creates a normal glossary term, attaches note/string
   usage evidence, and writes a `PRIMARY` `glossary_term_index_link`.
 - Ignoring a suggestion writes `glossary_term_index_decision`.

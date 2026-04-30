@@ -51,10 +51,12 @@ MCP tools
   - Read-only.
   - Searches product TM for exact source-term matches and returns observed target-term suggestions by locale.
   - Clients should review the suggestions and then write selected targets through `glossary.term.bulk_upsert`.
-- `glossary.term_index.seed_terms`
+- `glossary.term_index.seed_candidates`
   - Mutating.
-  - Merges externally suggested terms into the raw term index without creating glossary terms directly.
-  - Supports source type/name/external id, confidence, definition, rationale, and arbitrary metadata such as screenshot image keys or code paths.
+  - Merges externally suggested terms into the term-index candidate review layer without creating glossary terms directly.
+  - Can target a glossary by id or exact name; glossary-scoped submissions are tagged so they appear in that glossary's review queue.
+  - Supports source type/name/external id, confidence, definition, rationale, source-side term metadata, and arbitrary metadata such as screenshot image keys or code paths.
+  - Does not accept target translations; reviewed locale terms still go through glossary term write flows such as `glossary.term.bulk_upsert`.
   - Use when Codex or another terminology source has good context but the final glossary assignment should still be reviewed in Mojito.
 
 Bootstrap workflow
@@ -70,7 +72,7 @@ Bootstrap workflow
 Codebase mining workflow
 
 1. The client uses the raw term index refresh/review flow for observed Mojito strings.
-2. If the client has additional product/code/screenshot context, it calls `image.upload` as needed and then `glossary.term_index.seed_terms`.
+2. If the client has additional product/code/screenshot context, it calls `image.upload` as needed and then `glossary.term_index.seed_candidates`.
 3. A curator reviews the merged suggestions in `/glossaries/:glossaryId`, where accepting a suggestion creates the glossary term and links it back to the raw entry.
 4. The client can still use `glossary.term.bulk_upsert` for already-reviewed bootstrap files where bypassing the raw suggestion queue is intentional.
 5. The client calls `glossary.term.link_references` to append product-string references discovered after the term already exists.

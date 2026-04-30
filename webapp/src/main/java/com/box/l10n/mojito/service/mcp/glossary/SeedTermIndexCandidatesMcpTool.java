@@ -13,41 +13,63 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Component
-public class SeedTermIndexTermsMcpTool
-    extends TypedMcpToolHandler<SeedTermIndexTermsMcpTool.Input> {
+public class SeedTermIndexCandidatesMcpTool
+    extends TypedMcpToolHandler<SeedTermIndexCandidatesMcpTool.Input> {
 
   private static final int MAX_TERMS = 1_000;
 
   private static final McpToolDescriptor DESCRIPTOR =
       new McpToolDescriptor(
-          "glossary.term_index.seed_terms",
-          "Seed raw glossary term index terms",
-          "Merge externally suggested terms into Mojito's raw term index without creating glossary terms directly. Use this for Codex/product terminology, screenshot-derived term lists, or human seed lists; curators can then review the terms in the glossary workspace.",
+          "glossary.term_index.seed_candidates",
+          "Seed term index candidates",
+          "Merge externally suggested terms into Mojito's term index candidate review layer without creating glossary terms directly. Use this for Codex/product terminology, screenshot-derived term lists, or human seed lists; curators can then review the candidates in the glossary workspace.",
           false,
           true,
           List.of(
               new McpToolParameter(
-                  "terms",
-                  "Terms to seed into the raw term index with optional definition, rationale, confidence, and metadata.",
+                  "glossaryId",
+                  "Optional glossary id. When provided, the candidates are tagged as submitted for that glossary.",
+                  false,
+                  Long.class),
+              new McpToolParameter(
+                  "glossaryName",
+                  "Optional exact glossary name, used only when glossaryId is omitted.",
+                  false),
+              new McpToolParameter(
+                  "candidates",
+                  "Candidates to seed into the term index with optional definition, rationale, confidence, and metadata.",
                   true,
                   termsSchema())));
 
+  private final GlossaryMcpSupport glossaryMcpSupport;
   private final GlossaryTermIndexCurationService glossaryTermIndexCurationService;
 
-  public SeedTermIndexTermsMcpTool(
+  public SeedTermIndexCandidatesMcpTool(
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
+      GlossaryMcpSupport glossaryMcpSupport,
       GlossaryTermIndexCurationService glossaryTermIndexCurationService) {
     super(objectMapper, Input.class, DESCRIPTOR);
+    this.glossaryMcpSupport = Objects.requireNonNull(glossaryMcpSupport);
     this.glossaryTermIndexCurationService =
         Objects.requireNonNull(glossaryTermIndexCurationService);
   }
 
-  public record Input(List<GlossaryTermIndexCurationService.SeedTermInput> terms) {}
+  public record Input(
+      Long glossaryId,
+      String glossaryName,
+      List<GlossaryTermIndexCurationService.SeedTermInput> candidates) {}
 
   @Override
   protected Object execute(Input input) {
+    if (input != null && (input.glossaryId() != null || hasText(input.glossaryName()))) {
+      Long glossaryId =
+          glossaryMcpSupport.resolveGlossary(input.glossaryId(), input.glossaryName()).id();
+      return glossaryTermIndexCurationService.seedTermsForGlossary(
+          glossaryId, new GlossaryTermIndexCurationService.SeedCommand(input.candidates()));
+    }
     return glossaryTermIndexCurationService.seedTerms(
-        new GlossaryTermIndexCurationService.SeedCommand(input == null ? null : input.terms()));
+        new GlossaryTermIndexCurationService.SeedCommand(
+            input == null ? null : input.candidates()));
   }
 
   private static Map<String, Object> termsSchema() {
@@ -64,8 +86,15 @@ public class SeedTermIndexTermsMcpTool
     properties.put(
         "sourceExternalId", stringSchema("Optional stable external id for idempotent updates."));
     properties.put("confidence", integerSchema("Optional confidence from 0 to 100."));
+    properties.put("label", stringSchema("Optional display label."));
     properties.put("definition", stringSchema("Suggested glossary definition."));
     properties.put("rationale", stringSchema("Why this term should be reviewed for the glossary."));
+    properties.put("termType", stringSchema("Optional term type, for example BRAND or PRODUCT."));
+    properties.put("partOfSpeech", stringSchema("Optional part of speech."));
+    properties.put("enforcement", stringSchema("Optional enforcement, for example SOFT or HARD."));
+    properties.put(
+        "doNotTranslate",
+        Map.of("type", "boolean", "description", "Optional do-not-translate recommendation."));
     properties.put(
         "metadata",
         Map.of(
@@ -92,5 +121,9 @@ public class SeedTermIndexTermsMcpTool
 
   private static Map<String, Object> integerSchema(String description) {
     return Map.of("type", "integer", "description", description);
+  }
+
+  private boolean hasText(String value) {
+    return value != null && !value.trim().isEmpty();
   }
 }
