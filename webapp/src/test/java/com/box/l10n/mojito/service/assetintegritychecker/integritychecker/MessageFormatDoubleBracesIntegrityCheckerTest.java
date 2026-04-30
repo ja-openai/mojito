@@ -124,6 +124,24 @@ public class MessageFormatDoubleBracesIntegrityCheckerTest {
   }
 
   @Test
+  public void testSingleBraceMessageFormatPluralWithAdjacentClosingBraces()
+      throws MessageFormatIntegrityCheckerException {
+
+    MessageFormatDoubleBracesIntegrityChecker checker =
+        new MessageFormatDoubleBracesIntegrityChecker();
+    String source =
+        "You have {count, plural, one {one active item} other {active items}} "
+            + "in {count, plural, one {one category} other {multiple categories}}: "
+            + "{itemNames}.";
+    String target =
+        "There {count, plural, one {is one active item} other {are active items}} "
+            + "in {count, plural, one {one category} other {multiple categories}}: "
+            + "{itemNames}.";
+
+    checker.check(source, target);
+  }
+
+  @Test
   public void testNamedParametersChanged() throws MessageFormatIntegrityCheckerException {
 
     MessageFormatDoubleBracesIntegrityChecker checker =
