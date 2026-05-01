@@ -27,16 +27,67 @@ export type ApiTermIndexRefreshRequest = {
 
 export type ApiTermIndexEntry = {
   id: number;
+  termIndexCandidateId?: number | null;
   normalizedKey: string;
   displayTerm: string;
   sourceLocaleTag: string;
+  createdDate?: string | null;
+  lastModifiedDate?: string | null;
+  reviewStatus: ApiTermIndexReviewStatus;
+  reviewAuthority: ApiTermIndexReviewAuthority;
+  reviewReason?: string | null;
+  reviewRationale?: string | null;
+  reviewConfidence?: number | null;
   occurrenceCount: number;
   repositoryCount: number;
   lastOccurrenceAt?: string | null;
 };
 
+export type ApiTermIndexReviewStatus = 'TO_REVIEW' | 'ACCEPTED' | 'REJECTED' | (string & {});
+
+export type ApiTermIndexReviewStatusFilter =
+  | 'NON_REJECTED'
+  | 'TO_REVIEW'
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'ALL';
+
+export type ApiTermIndexReviewAuthority = 'DEFAULT' | 'AI' | 'HUMAN' | (string & {});
+
 export type ApiTermIndexEntriesResponse = {
   entries: ApiTermIndexEntry[];
+};
+
+export type ApiTermIndexBatchReviewResponse = {
+  updatedEntryCount: number;
+};
+
+export type ApiGenerateTermIndexCandidatesRequest = {
+  termIndexEntryIds: number[];
+  repositoryIds?: number[];
+  definition?: string | null;
+  rationale?: string | null;
+  termType?: string | null;
+  partOfSpeech?: string | null;
+  enforcement?: string | null;
+  doNotTranslate?: boolean | null;
+  confidence?: number | null;
+  reviewStatus?: ApiTermIndexReviewStatus | null;
+  reviewReason?: string | null;
+  reviewRationale?: string | null;
+  reviewConfidence?: number | null;
+};
+
+export type ApiGenerateTermIndexCandidatesResponse = {
+  candidateCount: number;
+  createdCandidateCount: number;
+  updatedCandidateCount: number;
+  candidates: Array<{
+    termIndexCandidateId: number;
+    termIndexExtractedTermId?: number | null;
+    term: string;
+    normalizedKey: string;
+  }>;
 };
 
 type ApiTermIndexEntriesHybridResponse = {
@@ -207,6 +258,7 @@ export async function fetchTermIndexEntries(options?: {
   repositoryIds?: number[];
   search?: string;
   extractionMethod?: string | null;
+  reviewStatus?: ApiTermIndexReviewStatusFilter | null;
   minOccurrences?: number;
   limit?: number;
 }): Promise<ApiTermIndexEntriesResponse> {
@@ -221,6 +273,7 @@ export async function fetchTermIndexEntries(options?: {
       repositoryIds: options?.repositoryIds ?? [],
       search: options?.search?.trim() || null,
       extractionMethod: options?.extractionMethod?.trim() || null,
+      reviewStatus: options?.reviewStatus ?? null,
       minOccurrences: options?.minOccurrences ?? null,
       limit: options?.limit ?? null,
     }),
@@ -244,6 +297,81 @@ export async function fetchTermIndexEntries(options?: {
   }
 
   throw new Error('Unexpected term index entry search response');
+}
+
+export async function updateTermIndexEntryReview(
+  termIndexEntryId: number,
+  request: {
+    reviewStatus: ApiTermIndexReviewStatus;
+    reviewReason?: string | null;
+    reviewRationale?: string | null;
+    reviewConfidence?: number | null;
+  },
+): Promise<ApiTermIndexEntry> {
+  const response = await fetch(`/api/glossary-term-index/entries/${termIndexEntryId}/review`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to update term review'));
+  }
+
+  return (await response.json()) as ApiTermIndexEntry;
+}
+
+export async function updateTermIndexEntryReviews(
+  termIndexEntryIds: number[],
+  request: {
+    reviewStatus: ApiTermIndexReviewStatus;
+    reviewReason?: string | null;
+    reviewRationale?: string | null;
+    reviewConfidence?: number | null;
+  },
+): Promise<ApiTermIndexBatchReviewResponse> {
+  const response = await fetch('/api/glossary-term-index/entries/review', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      termIndexEntryIds,
+      ...request,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to update term reviews'));
+  }
+
+  return (await response.json()) as ApiTermIndexBatchReviewResponse;
+}
+
+export async function generateTermIndexCandidatesFromEntries(
+  request: ApiGenerateTermIndexCandidatesRequest,
+): Promise<ApiGenerateTermIndexCandidatesResponse> {
+  const response = await fetch('/api/glossary-term-index/candidates/generate', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to generate term candidates'));
+  }
+
+  return (await response.json()) as ApiGenerateTermIndexCandidatesResponse;
 }
 
 export async function fetchTermIndexOccurrences(

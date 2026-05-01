@@ -5,6 +5,7 @@ import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.glossary.GlossaryRepository;
+import com.box.l10n.mojito.service.glossary.GlossaryTermIndexCurationService;
 import com.box.l10n.mojito.service.glossary.TermIndexExplorerService;
 import com.box.l10n.mojito.service.glossary.TermIndexRefreshService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
@@ -44,6 +45,7 @@ public class TermIndexExplorerWS {
   private final GlossaryRepository glossaryRepository;
   private final TermIndexRefreshService termIndexRefreshService;
   private final TermIndexExplorerService termIndexExplorerService;
+  private final GlossaryTermIndexCurationService glossaryTermIndexCurationService;
   private final StructuredBlobStorage structuredBlobStorage;
   private final ObjectMapper objectMapper;
   private final TermIndexEntriesHybridProperties termIndexEntriesHybridProperties;
@@ -54,6 +56,7 @@ public class TermIndexExplorerWS {
       GlossaryRepository glossaryRepository,
       TermIndexRefreshService termIndexRefreshService,
       TermIndexExplorerService termIndexExplorerService,
+      GlossaryTermIndexCurationService glossaryTermIndexCurationService,
       StructuredBlobStorage structuredBlobStorage,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
       TermIndexEntriesHybridProperties termIndexEntriesHybridProperties,
@@ -63,6 +66,8 @@ public class TermIndexExplorerWS {
     this.glossaryRepository = Objects.requireNonNull(glossaryRepository);
     this.termIndexRefreshService = Objects.requireNonNull(termIndexRefreshService);
     this.termIndexExplorerService = Objects.requireNonNull(termIndexExplorerService);
+    this.glossaryTermIndexCurationService =
+        Objects.requireNonNull(glossaryTermIndexCurationService);
     this.structuredBlobStorage = Objects.requireNonNull(structuredBlobStorage);
     this.objectMapper = Objects.requireNonNull(objectMapper);
     this.termIndexEntriesHybridProperties =
@@ -95,12 +100,18 @@ public class TermIndexExplorerWS {
       @RequestParam(value = "repositoryId", required = false) List<Long> repositoryIds,
       @RequestParam(value = "search", required = false) String searchQuery,
       @RequestParam(value = "extractionMethod", required = false) String extractionMethod,
+      @RequestParam(value = "reviewStatus", required = false) String reviewStatusFilter,
       @RequestParam(value = "minOccurrences", required = false) Long minOccurrences,
       @RequestParam(value = "limit", required = false) Integer limit) {
     requireAdmin();
     return termIndexExplorerService.searchEntries(
         new TermIndexExplorerService.EntrySearchCommand(
-            repositoryIds, searchQuery, extractionMethod, minOccurrences, limit));
+            repositoryIds,
+            searchQuery,
+            extractionMethod,
+            reviewStatusFilter,
+            minOccurrences,
+            limit));
   }
 
   @PostMapping("/entries/search-hybrid")
@@ -210,6 +221,72 @@ public class TermIndexExplorerWS {
             repositoryIds, extractionMethod, limit));
   }
 
+  @PostMapping("/entries/{termIndexEntryId}/review")
+  public TermIndexExplorerService.EntrySummaryView updateEntryReview(
+      @PathVariable Long termIndexEntryId, @RequestBody TermIndexEntryReviewRequest request) {
+    try {
+      return termIndexExplorerService.updateEntryReview(
+          termIndexEntryId,
+          new TermIndexExplorerService.ReviewUpdateCommand(
+              request != null ? request.reviewStatus() : null,
+              request != null ? request.reviewReason() : null,
+              request != null ? request.reviewRationale() : null,
+              request != null ? request.reviewConfidence() : null));
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+    }
+  }
+
+  @PostMapping("/entries/review")
+  public TermIndexExplorerService.BatchReviewUpdateView updateEntryReviews(
+      @RequestBody TermIndexEntryBatchReviewRequest request) {
+    try {
+      return termIndexExplorerService.updateEntryReviews(
+          new TermIndexExplorerService.BatchReviewUpdateCommand(
+              request != null ? request.termIndexEntryIds() : null,
+              request != null ? request.reviewStatus() : null,
+              request != null ? request.reviewReason() : null,
+              request != null ? request.reviewRationale() : null,
+              request != null ? request.reviewConfidence() : null));
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+    }
+  }
+
+  @PostMapping("/candidates/generate")
+  public GenerateCandidatesFromEntriesResponse generateCandidatesFromEntries(
+      @RequestBody GenerateCandidatesFromEntriesRequest request) {
+    requireAdmin();
+    try {
+      GlossaryTermIndexCurationService.GenerateCandidatesResult result =
+          glossaryTermIndexCurationService.generateCandidatesFromExtractedTerms(
+              new GlossaryTermIndexCurationService.GenerateCandidatesFromExtractedTermsCommand(
+                  request != null ? request.termIndexEntryIds() : null,
+                  request != null ? request.repositoryIds() : null,
+                  request == null
+                      ? null
+                      : new GlossaryTermIndexCurationService.CandidateFieldOverrides(
+                          request.definition(),
+                          request.rationale(),
+                          request.termType(),
+                          request.partOfSpeech(),
+                          request.enforcement(),
+                          request.doNotTranslate(),
+                          request.confidence(),
+                          request.reviewStatus(),
+                          request.reviewReason(),
+                          request.reviewRationale(),
+                          request.reviewConfidence())));
+      return new GenerateCandidatesFromEntriesResponse(
+          result.candidateCount(),
+          result.createdCandidateCount(),
+          result.updatedCandidateCount(),
+          result.candidates().stream().map(this::toGeneratedCandidateResponse).toList());
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+    }
+  }
+
   @GetMapping("/status")
   public TermIndexExplorerService.StatusView status(
       @RequestParam(value = "repositoryId", required = false) List<Long> repositoryIds,
@@ -249,8 +326,46 @@ public class TermIndexExplorerWS {
       List<Long> repositoryIds,
       String search,
       String extractionMethod,
+      String reviewStatus,
       Long minOccurrences,
       Integer limit) {}
+
+  public record TermIndexEntryReviewRequest(
+      String reviewStatus, String reviewReason, String reviewRationale, Integer reviewConfidence) {}
+
+  public record TermIndexEntryBatchReviewRequest(
+      List<Long> termIndexEntryIds,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
+
+  public record GenerateCandidatesFromEntriesRequest(
+      List<Long> termIndexEntryIds,
+      List<Long> repositoryIds,
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Integer confidence,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
+
+  public record GenerateCandidatesFromEntriesResponse(
+      int candidateCount,
+      int createdCandidateCount,
+      int updatedCandidateCount,
+      List<GeneratedCandidateResponse> candidates) {}
+
+  public record GeneratedCandidateResponse(
+      Long termIndexCandidateId,
+      Long termIndexExtractedTermId,
+      String term,
+      String normalizedKey) {}
 
   public record TermIndexEntrySearchHybridResponse(
       TermIndexExplorerService.EntrySearchView results,
@@ -265,14 +380,25 @@ public class TermIndexExplorerWS {
   private TermIndexExplorerService.EntrySearchCommand toEntrySearchCommand(
       TermIndexEntrySearchRequest request) {
     if (request == null) {
-      return new TermIndexExplorerService.EntrySearchCommand(List.of(), null, null, null, null);
+      return new TermIndexExplorerService.EntrySearchCommand(
+          List.of(), null, null, null, null, null);
     }
     return new TermIndexExplorerService.EntrySearchCommand(
         request.repositoryIds(),
         request.search(),
         request.extractionMethod(),
+        request.reviewStatus(),
         request.minOccurrences(),
         request.limit());
+  }
+
+  private GeneratedCandidateResponse toGeneratedCandidateResponse(
+      GlossaryTermIndexCurationService.SeededTermView candidate) {
+    return new GeneratedCandidateResponse(
+        candidate.termIndexCandidateId(),
+        candidate.termIndexExtractedTermId(),
+        candidate.term(),
+        candidate.normalizedKey());
   }
 
   private void persistTermIndexEntrySearchHybridResponse(

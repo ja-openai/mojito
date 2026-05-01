@@ -927,6 +927,62 @@
   color: var(--color-text);
 }
 
+.glossary-term-admin__candidate-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.glossary-term-admin__candidate-origin {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.25rem;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+}
+
+.glossary-term-admin__candidate-origin.is-extracted {
+  border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+  color: color-mix(in srgb, var(--color-accent) 68%, var(--color-text));
+}
+
+.glossary-term-admin__candidate-origin.is-manual {
+  border-color: color-mix(in srgb, var(--color-warning, #b54708) 30%, var(--color-border));
+  color: color-mix(in srgb, var(--color-warning, #b54708) 72%, var(--color-text));
+}
+
+.glossary-term-admin__index-section {
+  padding: var(--space-3);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+}
+
+.glossary-term-admin__index-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.glossary-term-admin__index-link {
+  min-height: 2rem;
+}
+
+.glossary-term-admin__pill-link {
+  text-decoration: none;
+}
+
+.glossary-term-admin__pill-link:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  color: color-mix(in srgb, var(--color-accent) 70%, var(--color-text));
+}
+
 .glossary-term-admin__candidate-sample {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
@@ -946,6 +1002,21 @@
   font-size: var(--font-size-xs);
 }
 
+.glossary-term-admin__glossary-presence.is-in-glossary {
+  border-color: color-mix(in srgb, var(--color-success, #16803c) 36%, var(--color-border));
+  color: color-mix(in srgb, var(--color-success, #16803c) 76%, var(--color-text));
+}
+
+.glossary-term-admin__glossary-presence.is-not-in-glossary {
+  border-color: color-mix(in srgb, var(--color-border) 85%, transparent);
+  color: var(--color-text-muted);
+}
+
+.glossary-term-admin__extracted-match.is-ambiguous {
+  border-color: color-mix(in srgb, var(--color-warning, #b54708) 34%, var(--color-border));
+  color: color-mix(in srgb, var(--color-warning, #b54708) 72%, var(--color-text));
+}
+
 .glossary-term-admin__replace-option {
   color: var(--color-text);
   font-size: var(--font-size-sm);
@@ -953,6 +1024,73 @@
 
 .glossary-term-admin__replace-actions {
   margin-top: var(--space-4);
+}
+
+.glossary-term-admin .modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.glossary-term-admin__generation-modal-body,
+.glossary-term-admin__generation-summary,
+.glossary-term-admin__generation-samples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.glossary-term-admin__generation-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.glossary-term-admin__generation-facts div {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(
+    in srgb,
+    var(--color-surface-elevated, var(--color-surface)) 72%,
+    transparent
+  );
+}
+
+.glossary-term-admin__generation-facts dt {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+}
+
+.glossary-term-admin__generation-facts dd {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.glossary-term-admin__generation-facts--report dd {
+  font-size: var(--font-size-lg);
+}
+
+.glossary-term-admin__generation-summary ul,
+.glossary-term-admin__generation-samples ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.glossary-term-admin__generation-samples li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 @media (max-width: 72rem) {

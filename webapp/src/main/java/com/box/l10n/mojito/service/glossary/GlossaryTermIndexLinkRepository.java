@@ -17,9 +17,25 @@ public interface GlossaryTermIndexLinkRepository
 
   List<GlossaryTermIndexLink> findByTermIndexCandidateId(Long termIndexCandidateId);
 
+  void deleteByGlossaryTermMetadataId(Long glossaryTermMetadataId);
+
   Optional<GlossaryTermIndexLink>
       findByGlossaryTermMetadataIdAndTermIndexCandidateIdAndRelationType(
           Long glossaryTermMetadataId, Long termIndexCandidateId, String relationType);
+
+  @Query(
+      """
+      select link
+      from GlossaryTermIndexLink link
+      join fetch link.termIndexCandidate candidate
+      left join fetch candidate.termIndexExtractedTerm
+      where link.glossaryTermMetadata.id in :glossaryTermMetadataIds
+        and link.relationType = :relationType
+      order by link.id asc
+      """)
+  List<GlossaryTermIndexLink> findByGlossaryTermMetadataIdInAndRelationType(
+      @Param("glossaryTermMetadataIds") Collection<Long> glossaryTermMetadataIds,
+      @Param("relationType") String relationType);
 
   @Query(
       """

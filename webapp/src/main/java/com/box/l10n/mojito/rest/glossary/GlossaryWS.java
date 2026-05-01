@@ -157,7 +157,8 @@ public class GlossaryWS {
       Integer limit,
       Boolean useAi,
       Boolean includeReviewed,
-      String reviewStateFilter) {}
+      String reviewStatusFilter,
+      String glossaryPresenceFilter) {}
 
   public record SearchTermIndexSuggestionsHybridResponse(
       SearchTermIndexSuggestionsResponse results,
@@ -179,6 +180,7 @@ public class GlossaryWS {
       long occurrenceCount,
       int repositoryCount,
       int sourceCount,
+      int extractedTermMatchCount,
       int confidence,
       String definition,
       String rationale,
@@ -190,7 +192,13 @@ public class GlossaryWS {
       List<TermIndexOccurrenceResponse> examples,
       List<TermIndexCandidateSourceResponse> sources,
       ZonedDateTime lastSignalAt,
-      String reviewState,
+      String candidateReviewStatus,
+      String candidateReviewAuthority,
+      String candidateReviewReason,
+      String candidateReviewRationale,
+      Integer candidateReviewConfidence,
+      String reviewStatus,
+      String glossaryPresence,
       String selectionMethod) {}
 
   public record TermIndexOccurrenceResponse(
@@ -224,6 +232,17 @@ public class GlossaryWS {
 
   public record ImportTermIndexCandidatesRequest(String format, String content) {}
 
+  public record CandidateReviewRequest(
+      String reviewStatus, String reviewReason, String reviewRationale, Integer reviewConfidence) {}
+
+  public record CandidateReviewResponse(
+      Long termIndexCandidateId,
+      String reviewStatus,
+      String reviewAuthority,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
+
   public record SeedTermIndexCandidateRequest(
       String term,
       String sourceLocaleTag,
@@ -238,6 +257,11 @@ public class GlossaryWS {
       String partOfSpeech,
       String enforcement,
       Boolean doNotTranslate,
+      String reviewStatus,
+      String reviewAuthority,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence,
       Map<String, Object> metadata) {}
 
   public record SeedTermIndexCandidatesResponse(
@@ -282,6 +306,8 @@ public class GlossaryWS {
       String provenance,
       boolean caseSensitive,
       boolean doNotTranslate,
+      Long termIndexCandidateId,
+      Long termIndexExtractedTermId,
       List<GlossaryTermTranslationResponse> translations,
       List<GlossaryTermEvidenceResponse> evidence) {}
 
@@ -579,13 +605,20 @@ public class GlossaryWS {
       @RequestParam(name = "limit", required = false) Integer limit,
       @RequestParam(name = "useAi", required = false) Boolean useAi,
       @RequestParam(name = "includeReviewed", required = false) Boolean includeReviewed,
-      @RequestParam(name = "reviewStateFilter", required = false) String reviewStateFilter) {
+      @RequestParam(name = "reviewStatusFilter", required = false) String reviewStatusFilter,
+      @RequestParam(name = "glossaryPresenceFilter", required = false)
+          String glossaryPresenceFilter) {
     try {
       GlossaryTermIndexCurationService.SuggestionSearchView view =
           glossaryTermIndexCurationService.searchSuggestions(
               glossaryId,
               new GlossaryTermIndexCurationService.SuggestionSearchCommand(
-                  searchQuery, limit, useAi, includeReviewed, reviewStateFilter));
+                  searchQuery,
+                  limit,
+                  useAi,
+                  includeReviewed,
+                  reviewStatusFilter,
+                  glossaryPresenceFilter));
       return new SearchTermIndexSuggestionsResponse(
           view.suggestions().stream().map(this::toTermIndexSuggestionResponse).toList(),
           view.totalCount());
@@ -618,7 +651,8 @@ public class GlossaryWS {
                         request != null ? request.limit() : null,
                         request != null ? request.useAi() : null,
                         request != null ? request.includeReviewed() : null,
-                        request != null ? request.reviewStateFilter() : null);
+                        request != null ? request.reviewStatusFilter() : null,
+                        request != null ? request.glossaryPresenceFilter() : null);
               } catch (Exception e) {
                 if (forceAsyncPersistence.get()) {
                   persistTermIndexSuggestionSearchHybridResponse(
@@ -755,6 +789,32 @@ public class GlossaryWS {
               ? HttpStatus.NOT_FOUND
               : HttpStatus.BAD_REQUEST;
       throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/term-index-suggestions/{termIndexCandidateId}/review")
+  public CandidateReviewResponse updateTermIndexSuggestionReview(
+      @PathVariable Long glossaryId,
+      @PathVariable Long termIndexCandidateId,
+      @RequestBody CandidateReviewRequest request) {
+    try {
+      GlossaryTermIndexCurationService.CandidateReviewView review =
+          glossaryTermIndexCurationService.updateCandidateReview(
+              termIndexCandidateId,
+              new GlossaryTermIndexCurationService.CandidateReviewCommand(
+                  request != null ? request.reviewStatus() : null,
+                  request != null ? request.reviewReason() : null,
+                  request != null ? request.reviewRationale() : null,
+                  request != null ? request.reviewConfidence() : null));
+      return new CandidateReviewResponse(
+          review.termIndexCandidateId(),
+          review.reviewStatus(),
+          review.reviewAuthority(),
+          review.reviewReason(),
+          review.reviewRationale(),
+          review.reviewConfidence());
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
     }
   }
 
@@ -1185,6 +1245,7 @@ public class GlossaryWS {
         suggestion.occurrenceCount(),
         suggestion.repositoryCount(),
         suggestion.sourceCount(),
+        suggestion.extractedTermMatchCount(),
         suggestion.confidence(),
         suggestion.definition(),
         suggestion.rationale(),
@@ -1196,7 +1257,13 @@ public class GlossaryWS {
         suggestion.examples().stream().map(this::toTermIndexOccurrenceResponse).toList(),
         suggestion.sources().stream().map(this::toTermIndexCandidateSourceResponse).toList(),
         suggestion.lastSignalAt(),
-        suggestion.reviewState(),
+        suggestion.candidateReviewStatus(),
+        suggestion.candidateReviewAuthority(),
+        suggestion.candidateReviewReason(),
+        suggestion.candidateReviewRationale(),
+        suggestion.candidateReviewConfidence(),
+        suggestion.reviewStatus(),
+        suggestion.glossaryPresence(),
         suggestion.selectionMethod());
   }
 
@@ -1275,6 +1342,11 @@ public class GlossaryWS {
         candidate == null ? null : candidate.partOfSpeech(),
         candidate == null ? null : candidate.enforcement(),
         candidate == null ? null : candidate.doNotTranslate(),
+        candidate == null ? null : candidate.reviewStatus(),
+        candidate == null ? null : candidate.reviewAuthority(),
+        candidate == null ? null : candidate.reviewReason(),
+        candidate == null ? null : candidate.reviewRationale(),
+        candidate == null ? null : candidate.reviewConfidence(),
         metadata);
   }
 
@@ -1295,6 +1367,8 @@ public class GlossaryWS {
         term.provenance(),
         term.caseSensitive(),
         term.doNotTranslate(),
+        term.termIndexCandidateId(),
+        term.termIndexExtractedTermId(),
         term.translations().stream().map(this::toGlossaryTermTranslationResponse).toList(),
         term.evidence().stream().map(this::toGlossaryTermEvidenceResponse).toList());
   }

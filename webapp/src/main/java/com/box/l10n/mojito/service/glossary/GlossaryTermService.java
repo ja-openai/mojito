@@ -9,8 +9,11 @@ import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermEvidence;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermTranslationProposal;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.service.asset.VirtualAssetRequiredException;
 import com.box.l10n.mojito.service.asset.VirtualAssetService;
 import com.box.l10n.mojito.service.asset.VirtualAssetTextUnit;
@@ -56,6 +59,8 @@ public class GlossaryTermService {
   private static final int DEFAULT_EXTRACTION_LIMIT = 50;
   private static final int MAX_EXTRACTION_LIMIT = 200;
   private static final int DEFAULT_EXTRACTION_SCAN_LIMIT = 5_000;
+  private static final String TERM_INDEX_EXTRACTION_SOURCE_NAME = "term-index";
+  private static final String TERM_INDEX_GLOSSARY_SOURCE_NAME = "glossary-workspace";
   private static final String COPY_TRANSLATION_STATUS_KEEP_CURRENT = "KEEP_CURRENT";
   private static final String COPY_TRANSLATION_STATUS_REVIEW_NEEDED = "REVIEW_NEEDED";
   private static final String COPY_TRANSLATION_STATUS_APPROVED = "APPROVED";
@@ -108,7 +113,10 @@ public class GlossaryTermService {
   private final GlossaryStorageService glossaryStorageService;
   private final GlossaryTermMetadataRepository glossaryTermMetadataRepository;
   private final GlossaryTermEvidenceRepository glossaryTermEvidenceRepository;
+  private final GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository;
   private final GlossaryTermTranslationProposalRepository glossaryTermTranslationProposalRepository;
+  private final TermIndexExtractedTermRepository termIndexExtractedTermRepository;
+  private final TermIndexCandidateRepository termIndexCandidateRepository;
   private final GlossaryAiExtractionService glossaryAiExtractionService;
   private final PollableTaskBlobStorage pollableTaskBlobStorage;
   private final TextUnitSearcher textUnitSearcher;
@@ -125,7 +133,10 @@ public class GlossaryTermService {
       GlossaryStorageService glossaryStorageService,
       GlossaryTermMetadataRepository glossaryTermMetadataRepository,
       GlossaryTermEvidenceRepository glossaryTermEvidenceRepository,
+      GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository,
       GlossaryTermTranslationProposalRepository glossaryTermTranslationProposalRepository,
+      TermIndexExtractedTermRepository termIndexExtractedTermRepository,
+      TermIndexCandidateRepository termIndexCandidateRepository,
       GlossaryAiExtractionService glossaryAiExtractionService,
       PollableTaskBlobStorage pollableTaskBlobStorage,
       TextUnitSearcher textUnitSearcher,
@@ -140,7 +151,10 @@ public class GlossaryTermService {
     this.glossaryStorageService = glossaryStorageService;
     this.glossaryTermMetadataRepository = glossaryTermMetadataRepository;
     this.glossaryTermEvidenceRepository = glossaryTermEvidenceRepository;
+    this.glossaryTermIndexLinkRepository = glossaryTermIndexLinkRepository;
     this.glossaryTermTranslationProposalRepository = glossaryTermTranslationProposalRepository;
+    this.termIndexExtractedTermRepository = termIndexExtractedTermRepository;
+    this.termIndexCandidateRepository = termIndexCandidateRepository;
     this.glossaryAiExtractionService = glossaryAiExtractionService;
     this.pollableTaskBlobStorage = pollableTaskBlobStorage;
     this.textUnitSearcher = textUnitSearcher;
@@ -172,6 +186,8 @@ public class GlossaryTermService {
             glossary.getId(), sourceTextUnits.stream().map(TextUnitDTO::getTmTextUnitId).toList());
     Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId =
         getEvidenceByMetadataId(metadataByTmTextUnitId.values());
+    Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
+        getPrimaryLinksByMetadataId(metadataByTmTextUnitId.values());
     List<String> resolvedLocaleTags = resolveRequestedLocaleTags(glossary, localeTags);
     Map<String, List<TextUnitDTO>> localizedByTermKey =
         loadLocalizedTextUnits(asset, resolvedLocaleTags);
@@ -185,7 +201,8 @@ public class GlossaryTermService {
                         textUnit,
                         metadataByTmTextUnitId.get(textUnit.getTmTextUnitId()),
                         localizedByTermKey.getOrDefault(textUnit.getName(), List.of()),
-                        evidenceByMetadataId))
+                        evidenceByMetadataId,
+                        primaryLinksByMetadataId))
             .filter(term -> matchesSearch(term, normalizedSearchQuery))
             .sorted(
                 Comparator.comparing(TermView::source, String.CASE_INSENSITIVE_ORDER)
@@ -372,6 +389,7 @@ public class GlossaryTermService {
 
     applyMetadata(metadata, effectiveCommand, refreshedSource);
     metadata = glossaryTermMetadataRepository.save(metadata);
+    backfillTermIndexLink(metadata, normalizedSource);
 
     replaceEvidence(metadata, effectiveCommand.evidence());
     importTranslations(
@@ -383,6 +401,8 @@ public class GlossaryTermService {
 
     Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId =
         getEvidenceByMetadataId(List.of(metadata));
+    Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
+        getPrimaryLinksByMetadataId(List.of(metadata));
     List<TextUnitDTO> localizedTextUnits =
         loadLocalizedTextUnits(
                 asset,
@@ -394,7 +414,12 @@ public class GlossaryTermService {
                         .toList())
             .getOrDefault(termKey, List.of());
 
-    return toTermView(refreshedSource, metadata, localizedTextUnits, evidenceByMetadataId);
+    return toTermView(
+        refreshedSource,
+        metadata,
+        localizedTextUnits,
+        evidenceByMetadataId,
+        primaryLinksByMetadataId);
   }
 
   @Transactional
@@ -435,7 +460,10 @@ public class GlossaryTermService {
             metadata.getId(),
             glossaryTermEvidenceRepository.findByGlossaryTermMetadataIdOrderBySortOrderAsc(
                 metadata.getId()));
-    return toTermView(sourceTextUnit, metadata, List.of(), evidenceByMetadataId);
+    Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
+        getPrimaryLinksByMetadataId(List.of(metadata));
+    return toTermView(
+        sourceTextUnit, metadata, List.of(), evidenceByMetadataId, primaryLinksByMetadataId);
   }
 
   @Transactional
@@ -451,6 +479,7 @@ public class GlossaryTermService {
         .ifPresent(
             metadata -> {
               glossaryTermEvidenceRepository.deleteByGlossaryTermMetadataId(metadata.getId());
+              glossaryTermIndexLinkRepository.deleteByGlossaryTermMetadataId(metadata.getId());
               glossaryTermMetadataRepository.delete(metadata);
             });
     glossaryTermTranslationProposalRepository.deleteByGlossaryIdAndTmTextUnitId(
@@ -473,12 +502,19 @@ public class GlossaryTermService {
             .orElse(null);
     Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId =
         metadata == null ? Map.of() : getEvidenceByMetadataId(List.of(metadata));
+    Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
+        metadata == null ? Map.of() : getPrimaryLinksByMetadataId(List.of(metadata));
     List<TextUnitDTO> localizedTextUnits =
         loadLocalizedTextUnits(
                 asset, allowedTranslations.stream().map(TranslationInput::localeTag).toList())
             .getOrDefault(sourceTextUnit.getName(), List.of());
 
-    return toTermView(sourceTextUnit, metadata, localizedTextUnits, evidenceByMetadataId);
+    return toTermView(
+        sourceTextUnit,
+        metadata,
+        localizedTextUnits,
+        evidenceByMetadataId,
+        primaryLinksByMetadataId);
   }
 
   private TermUpsertCommand sanitizeReaderProposalCommand(TermUpsertCommand command) {
@@ -1146,11 +1182,36 @@ public class GlossaryTermService {
     return evidenceByMetadataId;
   }
 
+  private Map<Long, GlossaryTermIndexLink> getPrimaryLinksByMetadataId(
+      Collection<GlossaryTermMetadata> metadata) {
+    if (metadata == null || metadata.isEmpty()) {
+      return Map.of();
+    }
+    List<Long> metadataIds =
+        metadata.stream()
+            .filter(Objects::nonNull)
+            .map(GlossaryTermMetadata::getId)
+            .filter(Objects::nonNull)
+            .toList();
+    if (metadataIds.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId = new LinkedHashMap<>();
+    for (GlossaryTermIndexLink link :
+        glossaryTermIndexLinkRepository.findByGlossaryTermMetadataIdInAndRelationType(
+            metadataIds, GlossaryTermIndexLink.RELATION_TYPE_PRIMARY)) {
+      primaryLinksByMetadataId.putIfAbsent(link.getGlossaryTermMetadata().getId(), link);
+    }
+    return primaryLinksByMetadataId;
+  }
+
   private TermView toTermView(
       TextUnitDTO sourceTextUnit,
       GlossaryTermMetadata metadata,
       List<TextUnitDTO> localizedTextUnits,
-      Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId) {
+      Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId,
+      Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId) {
     List<TermTranslationView> translations =
         localizedTextUnits.stream()
             .sorted(
@@ -1186,6 +1247,13 @@ public class GlossaryTermService {
                             item.getSortOrder()))
                 .toList();
 
+    GlossaryTermIndexLink primaryLink =
+        metadata == null ? null : primaryLinksByMetadataId.get(metadata.getId());
+    TermIndexCandidate linkedCandidate =
+        primaryLink == null ? null : primaryLink.getTermIndexCandidate();
+    TermIndexExtractedTerm linkedExtractedTerm =
+        linkedCandidate == null ? null : linkedCandidate.getTermIndexExtractedTerm();
+
     return new TermView(
         metadata == null ? null : metadata.getId(),
         metadata == null ? null : metadata.getCreatedDate(),
@@ -1204,6 +1272,8 @@ public class GlossaryTermService {
         metadata != null
             ? Boolean.TRUE.equals(metadata.getDoNotTranslate())
             : sourceTextUnit.isDoNotTranslate(),
+        linkedCandidate == null ? null : linkedCandidate.getId(),
+        linkedExtractedTerm == null ? null : linkedExtractedTerm.getId(),
         translations,
         evidence);
   }
@@ -1493,6 +1563,213 @@ public class GlossaryTermService {
     return abbreviated + "_" + DigestUtils.md5Hex(source).substring(0, 8);
   }
 
+  private void backfillTermIndexLink(GlossaryTermMetadata metadata, String source) {
+    String normalizedKey = normalizeCandidateKey(source);
+    if (metadata == null
+        || metadata.getId() == null
+        || normalizedKey == null
+        || GlossaryTermMetadata.PROVENANCE_AI_EXTRACTED.equals(metadata.getProvenance())) {
+      return;
+    }
+
+    TermIndexCandidate candidate =
+        termIndexExtractedTermRepository
+            .findBySourceLocaleTagAndNormalizedKey(
+                TermIndexExtractedTerm.SOURCE_LOCALE_ROOT, normalizedKey)
+            .map(this::findOrCreateExtractionCandidate)
+            .orElseGet(() -> findOrCreateGlossaryCandidate(metadata, source, normalizedKey));
+    ensureTermIndexLink(metadata, candidate);
+  }
+
+  private TermIndexCandidate findOrCreateExtractionCandidate(TermIndexExtractedTerm extractedTerm) {
+    String sourceLocaleTag =
+        normalizeOptional(extractedTerm.getSourceLocaleTag()) == null
+            ? TermIndexExtractedTerm.SOURCE_LOCALE_ROOT
+            : normalizeOptional(extractedTerm.getSourceLocaleTag());
+    String candidateHash =
+        extractionCandidateHash(
+            sourceLocaleTag, extractedTerm.getNormalizedKey(), extractedTerm.getDisplayTerm());
+    TermIndexCandidate candidate =
+        termIndexCandidateRepository
+            .findBySourceTypeAndSourceNameAndCandidateHash(
+                TermIndexCandidate.SOURCE_TYPE_EXTRACTION,
+                TERM_INDEX_EXTRACTION_SOURCE_NAME,
+                candidateHash)
+            .orElseGet(
+                () -> {
+                  TermIndexCandidate next = new TermIndexCandidate();
+                  next.setSourceType(TermIndexCandidate.SOURCE_TYPE_EXTRACTION);
+                  next.setSourceName(TERM_INDEX_EXTRACTION_SOURCE_NAME);
+                  next.setCandidateHash(candidateHash);
+                  return next;
+                });
+
+    candidate.setTermIndexExtractedTerm(extractedTerm);
+    candidate.setSourceLocaleTag(sourceLocaleTag);
+    candidate.setNormalizedKey(extractedTerm.getNormalizedKey());
+    candidate.setTerm(extractedTerm.getDisplayTerm());
+    candidate.setConfidence(
+        heuristicTermIndexConfidence(
+            extractedTerm.getOccurrenceCount(), extractedTerm.getRepositoryCount()));
+    candidate.setDefinition(null);
+    candidate.setRationale(null);
+    candidate.setTermType(suggestTermType(extractedTerm.getDisplayTerm()));
+    candidate.setEnforcement(GlossaryTermMetadata.ENFORCEMENT_SOFT);
+    candidate.setDoNotTranslate(shouldPreserveSource(extractedTerm.getDisplayTerm()));
+    return termIndexCandidateRepository.save(candidate);
+  }
+
+  private TermIndexCandidate findOrCreateGlossaryCandidate(
+      GlossaryTermMetadata metadata, String source, String normalizedKey) {
+    String sourceExternalId = "glossary-term-metadata:" + metadata.getId();
+    String candidateHash =
+        candidateHash(
+            TermIndexCandidate.SOURCE_TYPE_HUMAN,
+            TERM_INDEX_GLOSSARY_SOURCE_NAME,
+            sourceExternalId,
+            TermIndexExtractedTerm.SOURCE_LOCALE_ROOT,
+            null,
+            null,
+            null,
+            null,
+            null,
+            glossaryCandidateMetadataJson(metadata));
+    TermIndexCandidate candidate =
+        termIndexCandidateRepository
+            .findBySourceTypeAndSourceNameAndCandidateHash(
+                TermIndexCandidate.SOURCE_TYPE_HUMAN,
+                TERM_INDEX_GLOSSARY_SOURCE_NAME,
+                candidateHash)
+            .orElseGet(
+                () -> {
+                  TermIndexCandidate next = new TermIndexCandidate();
+                  next.setSourceType(TermIndexCandidate.SOURCE_TYPE_HUMAN);
+                  next.setSourceName(TERM_INDEX_GLOSSARY_SOURCE_NAME);
+                  next.setSourceExternalId(sourceExternalId);
+                  next.setCandidateHash(candidateHash);
+                  return next;
+                });
+
+    candidate.setTermIndexExtractedTerm(null);
+    candidate.setSourceLocaleTag(TermIndexExtractedTerm.SOURCE_LOCALE_ROOT);
+    candidate.setNormalizedKey(normalizedKey);
+    candidate.setTerm(source);
+    candidate.setLabel(null);
+    candidate.setDefinition(null);
+    candidate.setRationale(null);
+    candidate.setConfidence(100);
+    candidate.setTermType(metadata.getTermType());
+    candidate.setPartOfSpeech(metadata.getPartOfSpeech());
+    candidate.setEnforcement(metadata.getEnforcement());
+    candidate.setDoNotTranslate(metadata.getDoNotTranslate());
+    candidate.setMetadataJson(glossaryCandidateMetadataJson(metadata));
+    return termIndexCandidateRepository.save(candidate);
+  }
+
+  private void ensureTermIndexLink(
+      GlossaryTermMetadata metadata, TermIndexCandidate termIndexCandidate) {
+    List<GlossaryTermIndexLink> existingLinks =
+        glossaryTermIndexLinkRepository.findByGlossaryTermMetadataId(metadata.getId());
+    GlossaryTermIndexLink link =
+        existingLinks.stream()
+            .filter(
+                existing ->
+                    Objects.equals(
+                            existing.getTermIndexCandidate().getId(), termIndexCandidate.getId())
+                        && GlossaryTermIndexLink.RELATION_TYPE_PRIMARY.equals(
+                            existing.getRelationType()))
+            .findFirst()
+            .orElseGet(
+                () ->
+                    existingLinks.stream()
+                        .filter(
+                            existing ->
+                                GlossaryTermIndexLink.RELATION_TYPE_PRIMARY.equals(
+                                    existing.getRelationType()))
+                        .findFirst()
+                        .orElseGet(GlossaryTermIndexLink::new));
+    link.setGlossaryTermMetadata(metadata);
+    link.setTermIndexCandidate(termIndexCandidate);
+    link.setRelationType(GlossaryTermIndexLink.RELATION_TYPE_PRIMARY);
+    link.setConfidence(termIndexCandidate.getConfidence());
+    link.setRationale("Linked from glossary source save.");
+    glossaryTermIndexLinkRepository.save(link);
+  }
+
+  private String extractionCandidateHash(
+      String sourceLocaleTag, String normalizedKey, String displayTerm) {
+    return candidateHash(
+        TermIndexCandidate.SOURCE_TYPE_EXTRACTION,
+        TERM_INDEX_EXTRACTION_SOURCE_NAME,
+        null,
+        sourceLocaleTag,
+        normalizedKey,
+        displayTerm,
+        null,
+        null,
+        null,
+        null);
+  }
+
+  private String candidateHash(
+      String sourceType,
+      String sourceName,
+      String sourceExternalId,
+      String sourceLocaleTag,
+      String normalizedKey,
+      String term,
+      String label,
+      String definition,
+      String rationale,
+      String metadataJson) {
+    String payload =
+        String.join(
+            "\n",
+            sourceType,
+            normalizeSourceName(sourceName),
+            normalizeOptional(sourceExternalId) == null ? "" : normalizeOptional(sourceExternalId),
+            normalizeOptional(sourceLocaleTag) == null ? "" : normalizeOptional(sourceLocaleTag),
+            normalizeOptional(normalizedKey) == null ? "" : normalizeOptional(normalizedKey),
+            normalizeOptional(term) == null ? "" : normalizeOptional(term),
+            normalizeOptional(label) == null ? "" : normalizeOptional(label),
+            normalizeOptional(definition) == null ? "" : normalizeOptional(definition),
+            normalizeOptional(rationale) == null ? "" : normalizeOptional(rationale),
+            metadataJson == null ? "" : metadataJson);
+    return DigestUtils.sha256Hex(payload);
+  }
+
+  private String normalizeSourceName(String sourceName) {
+    String normalized = normalizeOptional(sourceName);
+    if (normalized == null) {
+      return "";
+    }
+    return normalized.length() > 255 ? normalized.substring(0, 255) : normalized;
+  }
+
+  private String glossaryCandidateMetadataJson(GlossaryTermMetadata metadata) {
+    return "{\"glossaryId\":"
+        + metadata.getGlossary().getId()
+        + ",\"glossaryTermMetadataId\":"
+        + metadata.getId()
+        + ",\"submittedFrom\":\"glossary-page\"}";
+  }
+
+  private int heuristicTermIndexConfidence(Long occurrenceCount, Integer repositoryCount) {
+    long normalizedOccurrenceCount = occurrenceCount == null ? 0 : occurrenceCount;
+    long normalizedRepositoryCount = repositoryCount == null ? 0 : repositoryCount;
+    return Math.max(
+        35,
+        Math.min(
+            70,
+            35
+                + (int) Math.min(normalizedOccurrenceCount * 3, 25)
+                + (int) Math.min(normalizedRepositoryCount * 5, 10)));
+  }
+
+  private boolean shouldPreserveSource(String term) {
+    return term != null && term.length() >= 3 && term.equals(term.toUpperCase(Locale.ROOT));
+  }
+
   private List<String> extractCandidatePhrases(String source) {
     if (source == null || source.isBlank()) {
       return List.of();
@@ -1602,6 +1879,8 @@ public class GlossaryTermService {
       String provenance,
       boolean caseSensitive,
       boolean doNotTranslate,
+      Long termIndexCandidateId,
+      Long termIndexExtractedTermId,
       List<TermTranslationView> translations,
       List<TermEvidenceView> evidence) {}
 

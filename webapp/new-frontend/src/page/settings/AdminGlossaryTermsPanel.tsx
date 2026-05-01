@@ -19,18 +19,15 @@ import {
   type ApiGlossaryTerm,
   type ApiGlossaryTermEvidence,
   type ApiGlossaryTermIndexSuggestion,
-  type ApiGlossaryTermIndexSuggestionReviewStateFilter,
+  type ApiGlossaryTermIndexSuggestionGlossaryPresenceFilter,
+  type ApiGlossaryTermIndexSuggestionReviewStatusFilter,
   type ApiUpsertGlossaryTermRequest,
   batchUpdateGlossaryTerms,
   createGlossaryTerm,
   deleteGlossaryTerm,
-  exportGlossaryTermIndexCandidates,
   fetchGlossaryTermIndexSuggestions,
   fetchGlossaryTerms,
-  generateGlossaryTermIndexCandidates,
   ignoreGlossaryTermIndexSuggestion,
-  importGlossaryTermIndexCandidates,
-  seedGlossaryTermIndexCandidates,
   updateGlossaryTerm,
 } from '../../api/glossaries';
 import { AutoTextarea } from '../../components/AutoTextarea';
@@ -108,7 +105,16 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'DEPRECATED', label: 'Deprecated' },
   { value: 'REJECTED', label: 'Rejected' },
 ] as const;
-const SUGGESTION_LIMIT_PRESETS = [25, 50, 100, 200];
+const DEFAULT_SUGGESTION_LIMIT = 50;
+const SUGGESTION_LIMIT_OPTIONS = [
+  { value: 25, label: '25' },
+  { value: 50, label: '50' },
+  { value: 100, label: '100' },
+  { value: 200, label: '200' },
+  { value: 500, label: '500' },
+  { value: 1000, label: '1k' },
+  { value: 10000, label: '10k' },
+];
 const DEFAULT_VISIBLE_LOCALE_COLUMNS = 3;
 const AUTO_VISIBLE_LOCALE_COLUMNS_CAP = 5;
 const DEFAULT_TERMS_LIMIT = 200;
@@ -192,6 +198,8 @@ type TermDraft = {
   tmTextUnitId?: number | null;
   createdDate?: string | null;
   lastModifiedDate?: string | null;
+  termIndexCandidateId?: number | null;
+  termIndexExtractedTermId?: number | null;
   termKey: string;
   source: string;
   sourceComment: string;
@@ -226,21 +234,19 @@ type BatchDraft = {
   doNotTranslate: '' | 'true' | 'false';
 };
 
-type TermIndexCandidateDraft = {
-  term: string;
-  label: string;
-  definition: string;
-  rationale: string;
-  partOfSpeech: string;
-  termType: string;
-  enforcement: string;
-  doNotTranslate: boolean;
-};
-
 const createClientId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto && crypto.randomUUID
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
+
+const getRawTermExplorerPath = (entryId: number, search: string) => {
+  const params = new URLSearchParams({ entryId: String(entryId) });
+  const trimmedSearch = search.trim();
+  if (trimmedSearch) {
+    params.set('search', trimmedSearch);
+  }
+  return `/settings/system/glossary-term-index/terms?${params.toString()}`;
+};
 
 const createBlankTranslation = (localeTag = ''): TranslationDraft => ({
   id: createClientId(),
@@ -275,6 +281,8 @@ const createBlankDraft = (localeTags: string[] = []): TermDraft => ({
   tmTextUnitId: null,
   createdDate: null,
   lastModifiedDate: null,
+  termIndexCandidateId: null,
+  termIndexExtractedTermId: null,
   termKey: '',
   source: '',
   sourceComment: '',
@@ -288,17 +296,6 @@ const createBlankDraft = (localeTags: string[] = []): TermDraft => ({
   doNotTranslate: false,
   translations: localeTags.map((localeTag) => createBlankTranslation(localeTag)),
   references: [],
-});
-
-const createBlankTermIndexCandidateDraft = (): TermIndexCandidateDraft => ({
-  term: '',
-  label: '',
-  definition: '',
-  rationale: '',
-  partOfSpeech: '',
-  termType: 'GENERAL',
-  enforcement: 'SOFT',
-  doNotTranslate: false,
 });
 
 const dedupeLocaleTags = (localeTags: string[]) => {
@@ -328,6 +325,8 @@ const termToDraft = (term: ApiGlossaryTerm, localeTags: string[]): TermDraft => 
     tmTextUnitId: term.tmTextUnitId,
     createdDate: term.createdDate ?? null,
     lastModifiedDate: term.lastModifiedDate ?? null,
+    termIndexCandidateId: term.termIndexCandidateId ?? null,
+    termIndexExtractedTermId: term.termIndexExtractedTermId ?? null,
     termKey: term.termKey,
     source: term.source,
     sourceComment: term.sourceComment ?? term.definition ?? '',
@@ -514,6 +513,14 @@ function normalizeTermsLimit(value: unknown) {
   return Math.min(MAX_TERMS_LIMIT, normalizePersistedPositiveNumber(value, DEFAULT_TERMS_LIMIT));
 }
 
+function normalizeSuggestionLimit(value: unknown) {
+  return normalizePersistedPositiveNumber(value, DEFAULT_SUGGESTION_LIMIT);
+}
+
+function formatShortCount(value: number) {
+  return value >= 1000 && value % 1000 === 0 ? `${value / 1000}k` : value.toLocaleString();
+}
+
 function normalizePersistedPaneWidth(value: unknown) {
   const next = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(next)) {
@@ -632,13 +639,15 @@ const suggestionToAcceptRequest = (
 });
 
 const canAcceptSuggestion = (suggestion: ApiGlossaryTermIndexSuggestion) =>
-  suggestion.reviewState !== 'LINKED' && suggestion.reviewState !== 'EXISTING_TERM';
+  suggestion.glossaryPresence === 'NOT_IN_GLOSSARY';
 
 const suggestionToDraft = (
   suggestion: ApiGlossaryTermIndexSuggestion,
   localeTags: string[],
 ): TermDraft => {
   const draft = createBlankDraft(localeTags);
+  draft.termIndexCandidateId = suggestion.termIndexCandidateId;
+  draft.termIndexExtractedTermId = suggestion.termIndexExtractedTermId ?? null;
   draft.source = suggestion.term;
   draft.definition = suggestion.definition ?? suggestion.rationale ?? '';
   draft.sourceComment = draft.definition;
@@ -752,12 +761,6 @@ export function AdminGlossaryTermsPanel({
     useState<CopyTranslationStatus>('KEEP_CURRENT');
   const [batchOpen, setBatchOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
-  const [candidateModalOpen, setCandidateModalOpen] = useState(false);
-  const [candidateImportModalOpen, setCandidateImportModalOpen] = useState(false);
-  const [candidateImportContent, setCandidateImportContent] = useState('');
-  const [candidateDraft, setCandidateDraft] = useState<TermIndexCandidateDraft>(() =>
-    createBlankTermIndexCandidateDraft(),
-  );
   const [statusNotice, setStatusNotice] = useState<{
     kind: 'success' | 'error';
     message: string;
@@ -773,11 +776,14 @@ export function AdminGlossaryTermsPanel({
   });
   const [suggestionSearchDraft, setSuggestionSearchDraft] = useState('');
   const [suggestionSearchQuery, setSuggestionSearchQuery] = useState('');
-  const [suggestionLimit, setSuggestionLimit] = useState('50');
-  const [suggestionReviewStateFilter, setSuggestionReviewStateFilter] =
-    useState<ApiGlossaryTermIndexSuggestionReviewStateFilter>('NEW');
+  const [suggestionLimit, setSuggestionLimit] = useState(String(DEFAULT_SUGGESTION_LIMIT));
+  const [suggestionReviewStatusFilter, setSuggestionReviewStatusFilter] =
+    useState<ApiGlossaryTermIndexSuggestionReviewStatusFilter>('NEW');
+  const [suggestionGlossaryPresenceFilter, setSuggestionGlossaryPresenceFilter] =
+    useState<ApiGlossaryTermIndexSuggestionGlossaryPresenceFilter>('NOT_IN_GLOSSARY');
   const [suggestionSearchNonce, setSuggestionSearchNonce] = useState(0);
   const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<number[]>([]);
+  const [activeSuggestionId, setActiveSuggestionId] = useState<number | null>(null);
   const [pendingSuggestionActions, setPendingSuggestionActions] = useState<
     Record<number, SuggestionPendingAction>
   >({});
@@ -896,10 +902,7 @@ export function AdminGlossaryTermsPanel({
   }, []);
 
   const termsLimitNumber = normalizeTermsLimit(termsLimit);
-  const suggestionLimitNumber = Math.min(
-    Math.max(1, Number.parseInt(suggestionLimit.trim() || '50', 10)),
-    200,
-  );
+  const suggestionLimitNumber = normalizeSuggestionLimit(suggestionLimit);
 
   const termsQuery = useQuery({
     queryKey: [
@@ -924,7 +927,8 @@ export function AdminGlossaryTermsPanel({
       glossary.id,
       suggestionSearchQuery,
       suggestionLimitNumber,
-      suggestionReviewStateFilter,
+      suggestionReviewStatusFilter,
+      suggestionGlossaryPresenceFilter,
       suggestionSearchNonce,
     ],
     queryFn: () =>
@@ -932,149 +936,31 @@ export function AdminGlossaryTermsPanel({
         search: suggestionSearchQuery,
         limit: suggestionLimitNumber,
         useAi: false,
-        reviewStateFilter: suggestionReviewStateFilter,
+        reviewStatusFilter: suggestionReviewStatusFilter,
+        glossaryPresenceFilter: suggestionGlossaryPresenceFilter,
       }),
     enabled: extractOpen && suggestionSearchNonce > 0,
     staleTime: 0,
   });
 
-  const seedCandidateMutation = useMutation({
-    mutationFn: async (draft: TermIndexCandidateDraft) =>
-      seedGlossaryTermIndexCandidates(glossary.id, {
-        candidates: [
-          {
-            term: draft.term.trim(),
-            label: draft.label.trim() || null,
-            definition: draft.definition.trim() || null,
-            rationale: draft.rationale.trim() || null,
-            partOfSpeech: draft.partOfSpeech.trim() || null,
-            termType: draft.termType || null,
-            enforcement: draft.enforcement || null,
-            doNotTranslate: draft.doNotTranslate,
-            confidence: 70,
-            metadata: {
-              glossaryId: glossary.id,
-              glossaryName: glossary.name,
-            },
-          },
-        ],
-      }),
-    onSuccess: async (result, draft) => {
-      await queryClient.invalidateQueries({
-        queryKey: ['glossary-term-index-suggestions', glossary.id],
-      });
-      const seededTerm = result.candidates[0]?.term ?? draft.term.trim();
-      setCandidateModalOpen(false);
-      setCandidateDraft(createBlankTermIndexCandidateDraft());
-      setExtractOpen(true);
-      setSuggestionReviewStateFilter('NEW');
-      setSuggestionSearchDraft(seededTerm);
-      setSuggestionSearchQuery(seededTerm);
-      setSuggestionSearchNonce((current) => current + 1);
-      setStatusNotice({
-        kind: 'success',
-        message: `Added ${seededTerm} to the suggestion queue.`,
-      });
-    },
-    onError: (error: Error) => {
-      setStatusNotice({
-        kind: 'error',
-        message: error.message || 'Failed to add glossary suggestion.',
-      });
-    },
-  });
-
-  const generateCandidatesMutation = useMutation({
-    mutationFn: async () =>
-      generateGlossaryTermIndexCandidates(glossary.id, {
-        search: suggestionSearchDraft.trim() || null,
-        minOccurrences: 1,
-        limit: suggestionLimitNumber,
-      }),
-    onSuccess: async (result) => {
-      await queryClient.invalidateQueries({
-        queryKey: ['glossary-term-index-suggestions', glossary.id],
-      });
-      setExtractOpen(true);
-      setSelectedSuggestionIds([]);
-      setSuggestionSearchQuery(suggestionSearchDraft);
-      setSuggestionSearchNonce((current) => current + 1);
-      setStatusNotice({
-        kind: 'success',
-        message: `Generated ${result.candidateCount} suggestions from extraction (${result.createdCandidateCount} new, ${result.updatedCandidateCount} refreshed).`,
-      });
-    },
-    onError: (error: Error) => {
-      setStatusNotice({
-        kind: 'error',
-        message: error.message || 'Failed to generate term suggestions from extraction.',
-      });
-    },
-  });
-
-  const importCandidatesMutation = useMutation({
-    mutationFn: async (content: string) =>
-      importGlossaryTermIndexCandidates(glossary.id, {
-        format: 'json',
-        content,
-      }),
-    onSuccess: async (result) => {
-      await queryClient.invalidateQueries({
-        queryKey: ['glossary-term-index-suggestions', glossary.id],
-      });
-      setCandidateImportModalOpen(false);
-      setCandidateImportContent('');
-      setExtractOpen(true);
-      setSelectedSuggestionIds([]);
-      setSuggestionSearchQuery(suggestionSearchDraft);
-      setSuggestionSearchNonce((current) => current + 1);
-      setStatusNotice({
-        kind: 'success',
-        message: `Imported ${result.candidateCount} suggestions (${result.createdCandidateCount} new, ${result.updatedCandidateCount} refreshed).`,
-      });
-    },
-    onError: (error: Error) => {
-      setStatusNotice({
-        kind: 'error',
-        message: error.message || 'Failed to import term suggestions.',
-      });
-    },
-  });
-
-  const exportCandidatesMutation = useMutation({
-    mutationFn: async () =>
-      exportGlossaryTermIndexCandidates(glossary.id, {
-        search: suggestionSearchDraft.trim() || null,
-        limit: Math.max(suggestionLimitNumber, 1000),
-      }),
-    onSuccess: (blob) => {
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = downloadUrl;
-      anchor.download = `${glossary.name.trim().replace(/\s+/g, '-').toLowerCase()}-suggestions.json`;
-      anchor.click();
-      window.URL.revokeObjectURL(downloadUrl);
-      setStatusNotice({
-        kind: 'success',
-        message: 'Exported term suggestions as JSON.',
-      });
-    },
-    onError: (error: Error) => {
-      setStatusNotice({
-        kind: 'error',
-        message: error.message || 'Failed to export term suggestions.',
-      });
-    },
-  });
-
   useEffect(() => {
-    if (!extractOpen || suggestionSearchNonce > 0) {
+    if (!extractOpen) {
       return;
     }
-    setSelectedSuggestionIds([]);
-    setSuggestionSearchQuery(suggestionSearchDraft);
-    setSuggestionSearchNonce(1);
-  }, [extractOpen, suggestionSearchDraft, suggestionSearchNonce]);
+
+    const nextSearchQuery = suggestionSearchDraft.trim();
+    if (suggestionSearchNonce > 0 && nextSearchQuery === suggestionSearchQuery) {
+      return;
+    }
+
+    const searchTimer = window.setTimeout(() => {
+      setSelectedSuggestionIds([]);
+      setSuggestionSearchQuery(nextSearchQuery);
+      setSuggestionSearchNonce((current) => (current === 0 ? 1 : current));
+    }, 250);
+
+    return () => window.clearTimeout(searchTimer);
+  }, [extractOpen, suggestionSearchDraft, suggestionSearchNonce, suggestionSearchQuery]);
 
   const saveTermMutation = useMutation({
     mutationFn: async ({
@@ -1298,7 +1184,7 @@ export function AdminGlossaryTermsPanel({
     onError: (error: Error) => {
       setStatusNotice({
         kind: 'error',
-        message: error.message || 'Failed to accept glossary suggestion.',
+        message: error.message || 'Failed to accept glossary candidate.',
       });
     },
     onSettled: (_savedTerm, _error, suggestion) => {
@@ -1338,7 +1224,7 @@ export function AdminGlossaryTermsPanel({
     onError: (error: Error) => {
       setStatusNotice({
         kind: 'error',
-        message: error.message || 'Failed to ignore glossary suggestion.',
+        message: error.message || 'Failed to ignore glossary candidate.',
       });
     },
     onSettled: (_savedSuggestion, _error, suggestion) => {
@@ -1389,14 +1275,14 @@ export function AdminGlossaryTermsPanel({
         kind: failed > 0 ? 'error' : 'success',
         message:
           failed > 0
-            ? `Accepted ${succeeded.length} suggestions. ${failed} failed and need review.`
-            : `Accepted ${succeeded.length} suggestions.`,
+            ? `Accepted ${succeeded.length} candidates. ${failed} failed and need review.`
+            : `Accepted ${succeeded.length} candidates.`,
       });
     },
     onError: (error: Error) => {
       setStatusNotice({
         kind: 'error',
-        message: error.message || 'Failed to accept glossary suggestions.',
+        message: error.message || 'Failed to accept glossary candidates.',
       });
     },
   });
@@ -1488,7 +1374,7 @@ export function AdminGlossaryTermsPanel({
     saveTermMutation.mutate({ draft: editorDraft });
   };
   const editorTitle = suggestionInEditor
-    ? `Review suggestion: ${suggestionInEditor.term}`
+    ? `Candidate: ${suggestionInEditor.term}`
     : editorDraft.tmTextUnitId == null
       ? canManageTerms
         ? 'Create glossary term'
@@ -1498,9 +1384,9 @@ export function AdminGlossaryTermsPanel({
         : editorDraft.source;
   const detailPlaceholder = extractOpen
     ? {
-        title: 'Review raw term suggestions',
+        title: 'Term candidates',
         message:
-          'Select a suggestion to review its definition, sources, and glossary metadata before accepting it.',
+          'Select a candidate to review its definition, sources, and glossary metadata before accepting it into this glossary.',
       }
     : {
         title: canManageTerms ? 'Select a glossary term' : 'Browse glossary terms',
@@ -1520,7 +1406,7 @@ export function AdminGlossaryTermsPanel({
     }
 
     if (extractOpen) {
-      onViewStateChange({ mode: 'extract', title: 'Review suggestions' });
+      onViewStateChange({ mode: 'extract', title: 'Term candidates' });
       return;
     }
 
@@ -1536,11 +1422,6 @@ export function AdminGlossaryTermsPanel({
     setOriginalEditorDraft(null);
     setCollapsedWorkspacePane(null);
     setEditorOpen(true);
-  };
-
-  const openCandidateModal = () => {
-    setCandidateDraft(createBlankTermIndexCandidateDraft());
-    setCandidateModalOpen(true);
   };
 
   const openEditModal = (term: ApiGlossaryTerm) => {
@@ -1559,6 +1440,7 @@ export function AdminGlossaryTermsPanel({
       return;
     }
     const nextDraft = suggestionToDraft(suggestion, selectedLocaleTags);
+    setActiveSuggestionId(suggestion.termIndexCandidateId);
     setReturnToExtractAfterEditor(true);
     setSuggestionInEditor(suggestion);
     setUploadQueue([]);
@@ -1566,6 +1448,31 @@ export function AdminGlossaryTermsPanel({
     setOriginalEditorDraft(null);
     setCollapsedWorkspacePane(null);
     setEditorOpen(true);
+  };
+
+  const openLinkedCandidate = () => {
+    if (editorDraft.termIndexCandidateId == null) {
+      return;
+    }
+
+    const nextSearchQuery = editorDraft.source.trim();
+    setEditorOpen(false);
+    setReturnToExtractAfterEditor(false);
+    setSuggestionInEditor(null);
+    setUploadQueue([]);
+    setOriginalEditorDraft(null);
+    setSelectedSuggestionIds([]);
+    setActiveSuggestionId(editorDraft.termIndexCandidateId);
+    setSuggestionReviewStatusFilter('ALL');
+    setSuggestionGlossaryPresenceFilter('ALL');
+    setSuggestionSearchDraft(nextSearchQuery);
+    setSuggestionSearchQuery(nextSearchQuery);
+    setSuggestionSearchNonce((current) => current + 1);
+    setExtractOpen(true);
+    setStatusNotice({
+      kind: 'success',
+      message: `Showing candidate #${editorDraft.termIndexCandidateId}.`,
+    });
   };
 
   const closeEditor = useCallback(() => {
@@ -1799,12 +1706,21 @@ export function AdminGlossaryTermsPanel({
               searchDraft={suggestionSearchDraft}
               onChangeSearch={(value) => {
                 setSuggestionSearchDraft(value);
+                setActiveSuggestionId(null);
                 setStatusNotice(null);
               }}
-              reviewStateFilter={suggestionReviewStateFilter}
-              onChangeReviewStateFilter={(value) => {
-                setSuggestionReviewStateFilter(value);
+              reviewStatusFilter={suggestionReviewStatusFilter}
+              onChangeReviewStatusFilter={(value) => {
+                setSuggestionReviewStatusFilter(value);
                 setSelectedSuggestionIds([]);
+                setActiveSuggestionId(null);
+                setStatusNotice(null);
+              }}
+              glossaryPresenceFilter={suggestionGlossaryPresenceFilter}
+              onChangeGlossaryPresenceFilter={(value) => {
+                setSuggestionGlossaryPresenceFilter(value);
+                setSelectedSuggestionIds([]);
+                setActiveSuggestionId(null);
                 setStatusNotice(null);
               }}
               hasPendingSearchChanges={
@@ -1812,18 +1728,10 @@ export function AdminGlossaryTermsPanel({
               }
               onRefreshSuggestions={() => {
                 setSelectedSuggestionIds([]);
-                setSuggestionSearchQuery(suggestionSearchDraft);
+                setActiveSuggestionId(null);
+                setSuggestionSearchQuery(suggestionSearchDraft.trim());
                 setSuggestionSearchNonce((current) => current + 1);
               }}
-              onGenerateCandidates={() => generateCandidatesMutation.mutate()}
-              isGeneratingCandidates={generateCandidatesMutation.isPending}
-              onOpenCreateCandidate={openCandidateModal}
-              onOpenImportCandidates={() => {
-                setCandidateImportContent('');
-                setCandidateImportModalOpen(true);
-              }}
-              onExportCandidates={() => exportCandidatesMutation.mutate()}
-              isExportingCandidates={exportCandidatesMutation.isPending}
               isLoading={suggestionsQuery.isFetching}
               suggestions={suggestions}
               totalCount={suggestionsQuery.data?.totalCount ?? suggestions.length}
@@ -1832,12 +1740,15 @@ export function AdminGlossaryTermsPanel({
                 suggestionsQuery.isError
                   ? suggestionsQuery.error instanceof Error
                     ? suggestionsQuery.error.message
-                    : 'Could not load glossary suggestions.'
+                    : 'Could not load glossary candidates.'
                   : null
               }
               suggestionLimit={suggestionLimitNumber}
-              onChangeSuggestionLimit={(value) => setSuggestionLimit(String(value))}
-              limitPresetOptions={SUGGESTION_LIMIT_PRESETS}
+              suggestionLimitLabel={formatShortCount(suggestionLimitNumber)}
+              onChangeSuggestionLimit={(value) =>
+                setSuggestionLimit(String(normalizeSuggestionLimit(value)))
+              }
+              limitPresetOptions={SUGGESTION_LIMIT_OPTIONS}
               selectedSuggestionIds={selectedSuggestionIds}
               onToggleSuggestion={(termIndexCandidateId, checked) =>
                 setSelectedSuggestionIds((current) =>
@@ -1856,7 +1767,11 @@ export function AdminGlossaryTermsPanel({
               }
               onAcceptSelected={() => batchAcceptSuggestionsMutation.mutate(selectedSuggestions)}
               isAcceptingSelected={batchAcceptSuggestionsMutation.isPending}
-              activeSuggestionId={suggestionInEditor?.termIndexCandidateId ?? null}
+              activeSuggestionId={suggestionInEditor?.termIndexCandidateId ?? activeSuggestionId}
+              onActivateSuggestion={(suggestion) => {
+                setActiveSuggestionId(suggestion.termIndexCandidateId);
+                setStatusNotice(null);
+              }}
               onOpenSuggestion={openSuggestionModal}
               onAcceptSuggestion={(suggestion) => {
                 if (canAcceptSuggestion(suggestion)) {
@@ -1886,7 +1801,10 @@ export function AdminGlossaryTermsPanel({
               }))}
               selectedStatusFilter={selectedStatusFilter}
               onChangeSelectedStatusFilter={setSelectedStatusFilter}
-              onOpenExtract={() => setExtractOpen(true)}
+              onOpenExtract={() => {
+                setActiveSuggestionId(null);
+                setExtractOpen(true);
+              }}
               onOpenCreate={openCreateModal}
               canImport={canImport && typeof onOpenImport === 'function'}
               onOpenImport={() => onOpenImport?.()}
@@ -2227,6 +2145,37 @@ export function AdminGlossaryTermsPanel({
                   </div>
                 </div>
 
+                {editorDraft.termIndexCandidateId != null ||
+                editorDraft.termIndexExtractedTermId != null ? (
+                  <section className="glossary-term-admin__section glossary-term-admin__index-section">
+                    <div className="glossary-term-admin__section-header">
+                      <h4 className="glossary-term-admin__section-title">Term index</h4>
+                      <div className="glossary-term-admin__index-links">
+                        {editorDraft.termIndexCandidateId != null ? (
+                          <button
+                            type="button"
+                            className="settings-button settings-button--ghost glossary-term-admin__index-link"
+                            onClick={openLinkedCandidate}
+                          >
+                            Candidate #{editorDraft.termIndexCandidateId}
+                          </button>
+                        ) : null}
+                        {editorDraft.termIndexExtractedTermId != null ? (
+                          <Link
+                            className="settings-button settings-button--ghost glossary-term-admin__index-link"
+                            to={getRawTermExplorerPath(
+                              editorDraft.termIndexExtractedTermId,
+                              editorDraft.source,
+                            )}
+                          >
+                            Extracted term #{editorDraft.termIndexExtractedTermId}
+                          </Link>
+                        ) : null}
+                      </div>
+                    </div>
+                  </section>
+                ) : null}
+
                 <div className="glossary-term-admin__toggle-row">
                   <label className="settings-toggle">
                     <input
@@ -2439,7 +2388,7 @@ export function AdminGlossaryTermsPanel({
                     onClick={closeEditor}
                     disabled={saveTermMutation.isPending || deleteTermMutation.isPending}
                   >
-                    {returnToExtractAfterEditor ? 'Back to suggestions' : 'Cancel'}
+                    {returnToExtractAfterEditor ? 'Back to candidates' : 'Cancel'}
                   </button>
                   <div className="glossary-term-admin__editor-page-actions">
                     {canManageTerms && editorDraft.tmTextUnitId != null ? (
@@ -2502,238 +2451,6 @@ export function AdminGlossaryTermsPanel({
           )}
         </div>
       </div>
-
-      <Modal
-        open={candidateModalOpen}
-        size="lg"
-        ariaLabel="Add term index suggestion"
-        onClose={() => {
-          if (!seedCandidateMutation.isPending) {
-            setCandidateModalOpen(false);
-          }
-        }}
-        closeOnBackdrop
-      >
-        <div className="modal__header">
-          <div>
-            <h3 className="modal__title">Add suggestion</h3>
-            <p className="settings-hint">
-              Add a source-side suggestion when extraction missed a term or needs a manual split.
-            </p>
-          </div>
-        </div>
-        <div className="settings-grid settings-grid--two-column">
-          <div className="settings-field">
-            <label className="settings-field__label" htmlFor="term-index-candidate-term">
-              Term
-            </label>
-            <input
-              id="term-index-candidate-term"
-              type="text"
-              className="settings-input"
-              value={candidateDraft.term}
-              onChange={(event) =>
-                setCandidateDraft((current) => ({ ...current, term: event.target.value }))
-              }
-              autoFocus
-            />
-          </div>
-          <div className="settings-field">
-            <label className="settings-field__label" htmlFor="term-index-candidate-label">
-              Label
-            </label>
-            <input
-              id="term-index-candidate-label"
-              type="text"
-              className="settings-input"
-              placeholder="Optional display label"
-              value={candidateDraft.label}
-              onChange={(event) =>
-                setCandidateDraft((current) => ({ ...current, label: event.target.value }))
-              }
-            />
-          </div>
-          <div className="settings-field settings-field--full">
-            <label className="settings-field__label" htmlFor="term-index-candidate-definition">
-              Definition
-            </label>
-            <AutoTextarea
-              id="term-index-candidate-definition"
-              className="settings-input"
-              minRows={3}
-              value={candidateDraft.definition}
-              onChange={(event) =>
-                setCandidateDraft((current) => ({
-                  ...current,
-                  definition: event.target.value,
-                }))
-              }
-            />
-          </div>
-          <div className="settings-field settings-field--full">
-            <label className="settings-field__label" htmlFor="term-index-candidate-rationale">
-              Rationale
-            </label>
-            <AutoTextarea
-              id="term-index-candidate-rationale"
-              className="settings-input"
-              minRows={2}
-              value={candidateDraft.rationale}
-              onChange={(event) =>
-                setCandidateDraft((current) => ({
-                  ...current,
-                  rationale: event.target.value,
-                }))
-              }
-            />
-          </div>
-          <div className="settings-field">
-            <label className="settings-field__label" htmlFor="term-index-candidate-pos">
-              Part of speech
-            </label>
-            <input
-              id="term-index-candidate-pos"
-              type="text"
-              className="settings-input"
-              value={candidateDraft.partOfSpeech}
-              onChange={(event) =>
-                setCandidateDraft((current) => ({
-                  ...current,
-                  partOfSpeech: event.target.value,
-                }))
-              }
-            />
-          </div>
-          <div className="settings-field">
-            <label className="settings-field__label" htmlFor="term-index-candidate-type">
-              Term type
-            </label>
-            <select
-              id="term-index-candidate-type"
-              className="settings-input"
-              value={candidateDraft.termType}
-              onChange={(event) =>
-                setCandidateDraft((current) => ({ ...current, termType: event.target.value }))
-              }
-            >
-              {TERM_TYPES.map((termType) => (
-                <option key={termType} value={termType}>
-                  {TERM_TYPE_LABELS[termType]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="settings-field">
-            <label className="settings-field__label" htmlFor="term-index-candidate-enforcement">
-              Enforcement
-            </label>
-            <select
-              id="term-index-candidate-enforcement"
-              className="settings-input"
-              value={candidateDraft.enforcement}
-              onChange={(event) =>
-                setCandidateDraft((current) => ({
-                  ...current,
-                  enforcement: event.target.value,
-                }))
-              }
-            >
-              {ENFORCEMENTS.map((enforcement) => (
-                <option key={enforcement} value={enforcement}>
-                  {ENFORCEMENT_LABELS[enforcement]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="settings-field">
-            <label className="settings-field__label">Flags</label>
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={candidateDraft.doNotTranslate}
-                onChange={(event) =>
-                  setCandidateDraft((current) => ({
-                    ...current,
-                    doNotTranslate: event.target.checked,
-                  }))
-                }
-              />
-              <span>Do not translate</span>
-            </label>
-          </div>
-        </div>
-        <div className="modal__footer">
-          <button
-            type="button"
-            className="settings-button settings-button--ghost"
-            onClick={() => setCandidateModalOpen(false)}
-            disabled={seedCandidateMutation.isPending}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="settings-button settings-button--primary"
-            onClick={() => seedCandidateMutation.mutate(candidateDraft)}
-            disabled={seedCandidateMutation.isPending || !candidateDraft.term.trim()}
-          >
-            {seedCandidateMutation.isPending ? 'Adding…' : 'Add suggestion'}
-          </button>
-        </div>
-      </Modal>
-
-      <Modal
-        open={candidateImportModalOpen}
-        size="lg"
-        ariaLabel="Import term index suggestions"
-        onClose={() => {
-          if (!importCandidatesMutation.isPending) {
-            setCandidateImportModalOpen(false);
-          }
-        }}
-        closeOnBackdrop
-      >
-        <div className="modal__header">
-          <div>
-            <h3 className="modal__title">Import suggestions</h3>
-            <p className="settings-hint">
-              Paste JSON with a candidates array, a terms array, or a raw array of source-side
-              suggestions.
-            </p>
-          </div>
-        </div>
-        <div className="settings-field">
-          <label className="settings-field__label" htmlFor="term-index-candidate-import">
-            Suggestion JSON
-          </label>
-          <AutoTextarea
-            id="term-index-candidate-import"
-            className="settings-input"
-            minRows={12}
-            value={candidateImportContent}
-            onChange={(event) => setCandidateImportContent(event.target.value)}
-            autoFocus
-          />
-        </div>
-        <div className="modal__footer">
-          <button
-            type="button"
-            className="settings-button settings-button--ghost"
-            onClick={() => setCandidateImportModalOpen(false)}
-            disabled={importCandidatesMutation.isPending}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="settings-button settings-button--primary"
-            onClick={() => importCandidatesMutation.mutate(candidateImportContent)}
-            disabled={importCandidatesMutation.isPending || !candidateImportContent.trim()}
-          >
-            {importCandidatesMutation.isPending ? 'Importing…' : 'Import suggestions'}
-          </button>
-        </div>
-      </Modal>
 
       <Modal
         open={batchOpen}

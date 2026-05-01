@@ -21,6 +21,17 @@ public interface TermIndexCandidateRepository extends JpaRepository<TermIndexCan
 
   @Query(
       """
+      select candidate.termIndexExtractedTerm.id as termIndexExtractedTermId,
+             max(candidate.id) as termIndexCandidateId
+      from TermIndexCandidate candidate
+      where candidate.termIndexExtractedTerm.id in :termIndexExtractedTermIds
+      group by candidate.termIndexExtractedTerm.id
+      """)
+  List<ExtractedTermCandidateIdRow> findCandidateIdsByExtractedTermIdIn(
+      @Param("termIndexExtractedTermIds") Collection<Long> termIndexExtractedTermIds);
+
+  @Query(
+      """
       select distinct candidate
       from TermIndexCandidate candidate
       left join fetch candidate.termIndexExtractedTerm extractedTerm
@@ -38,12 +49,18 @@ public interface TermIndexCandidateRepository extends JpaRepository<TermIndexCan
           or lower(candidate.definition) like lower(concat('%', :searchQuery, '%'))
           or lower(candidate.rationale) like lower(concat('%', :searchQuery, '%'))
         )
+        and (
+          :reviewStatusFilter = 'ALL'
+          or (:reviewStatusFilter = 'NON_REJECTED' and candidate.reviewStatus <> 'REJECTED')
+          or candidate.reviewStatus = :reviewStatusFilter
+        )
       order by candidate.createdDate desc, lower(candidate.term) asc
       """)
   List<TermIndexCandidate> findForGlossaryCandidateExport(
       @Param("repositoryScopeEmpty") boolean repositoryScopeEmpty,
       @Param("repositoryIds") Collection<Long> repositoryIds,
       @Param("searchQuery") String searchQuery,
+      @Param("reviewStatusFilter") String reviewStatusFilter,
       Pageable pageable);
 
   @Query(
@@ -55,6 +72,11 @@ public interface TermIndexCandidateRepository extends JpaRepository<TermIndexCan
              candidate.label as label,
              candidate.sourceLocaleTag as sourceLocaleTag,
              candidate.metadataJson as metadataJson,
+             candidate.reviewStatus as reviewStatus,
+             candidate.reviewAuthority as reviewAuthority,
+             candidate.reviewReason as reviewReason,
+             candidate.reviewRationale as reviewRationale,
+             candidate.reviewConfidence as reviewConfidence,
              count(occurrence.id) as occurrenceCount,
              count(distinct occurrence.repository.id) as repositoryCount,
              max(occurrence.createdDate) as lastOccurrenceAt,
@@ -76,6 +98,11 @@ public interface TermIndexCandidateRepository extends JpaRepository<TermIndexCan
           or lower(candidate.definition) like lower(concat('%', :searchQuery, '%'))
           or lower(candidate.rationale) like lower(concat('%', :searchQuery, '%'))
         )
+        and (
+          :reviewStatusFilter = 'ALL'
+          or (:reviewStatusFilter = 'NON_REJECTED' and candidate.reviewStatus <> 'REJECTED')
+          or candidate.reviewStatus = :reviewStatusFilter
+        )
       group by candidate.id,
                extractedTerm.id,
                candidate.normalizedKey,
@@ -83,6 +110,11 @@ public interface TermIndexCandidateRepository extends JpaRepository<TermIndexCan
                candidate.label,
                candidate.sourceLocaleTag,
                candidate.metadataJson,
+               candidate.reviewStatus,
+               candidate.reviewAuthority,
+               candidate.reviewReason,
+               candidate.reviewRationale,
+               candidate.reviewConfidence,
                candidate.createdDate
       order by count(occurrence.id) desc, candidate.createdDate desc, lower(candidate.term) asc
       """)
@@ -90,6 +122,7 @@ public interface TermIndexCandidateRepository extends JpaRepository<TermIndexCan
       @Param("repositoryScopeEmpty") boolean repositoryScopeEmpty,
       @Param("repositoryIds") Collection<Long> repositoryIds,
       @Param("searchQuery") String searchQuery,
+      @Param("reviewStatusFilter") String reviewStatusFilter,
       Pageable pageable);
 
   interface CandidateSearchRow {
@@ -107,6 +140,16 @@ public interface TermIndexCandidateRepository extends JpaRepository<TermIndexCan
 
     String getMetadataJson();
 
+    String getReviewStatus();
+
+    String getReviewAuthority();
+
+    String getReviewReason();
+
+    String getReviewRationale();
+
+    Integer getReviewConfidence();
+
     Long getOccurrenceCount();
 
     Long getRepositoryCount();
@@ -114,5 +157,11 @@ public interface TermIndexCandidateRepository extends JpaRepository<TermIndexCan
     java.time.ZonedDateTime getLastOccurrenceAt();
 
     java.time.ZonedDateTime getCandidateCreatedDate();
+  }
+
+  interface ExtractedTermCandidateIdRow {
+    Long getTermIndexExtractedTermId();
+
+    Long getTermIndexCandidateId();
   }
 }

@@ -158,12 +158,15 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
             "AUTOMATED",
             false,
             false,
+            null,
+            null,
             List.of(),
             List.of());
 
     private FakeGlossaryTermService() {
       super(
-          null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+          null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+          null, null, null);
     }
 
     @Override

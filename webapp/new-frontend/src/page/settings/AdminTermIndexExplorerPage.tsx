@@ -12,20 +12,27 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 
 import {
+  type ApiGenerateTermIndexCandidatesResponse,
   type ApiTermIndexEntry,
   type ApiTermIndexOccurrence,
+  type ApiTermIndexReviewStatus,
+  type ApiTermIndexReviewStatusFilter,
   fetchTermIndexEntries,
   fetchTermIndexOccurrences,
   fetchTermIndexStatus,
+  generateTermIndexCandidatesFromEntries,
   startTermIndexRefresh,
+  updateTermIndexEntryReview,
+  updateTermIndexEntryReviews,
   waitForTermIndexRefreshTask,
 } from '../../api/term-index';
 import { Modal } from '../../components/Modal';
 import type { MultiSelectCustomAction } from '../../components/MultiSelectChip';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
+import { PillDropdown } from '../../components/PillDropdown';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
@@ -67,8 +74,102 @@ const MIN_OCCURRENCES_OPTIONS = [
   { value: 25, label: '25+' },
   { value: 50, label: '50+' },
 ];
+const REVIEW_STATUS_FILTER_OPTIONS: Array<{
+  value: ApiTermIndexReviewStatusFilter;
+  label: string;
+}> = [
+  { value: 'NON_REJECTED', label: 'Non-rejected' },
+  { value: 'TO_REVIEW', label: 'To review' },
+  { value: 'ACCEPTED', label: 'Accepted' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'ALL', label: 'All statuses' },
+];
+const REVIEW_STATUS_OPTIONS: Array<{
+  value: ApiTermIndexReviewStatus;
+  label: string;
+}> = [
+  { value: 'TO_REVIEW', label: 'To review' },
+  { value: 'ACCEPTED', label: 'Accepted' },
+  { value: 'REJECTED', label: 'Rejected' },
+];
+const TERM_TYPE_OPTIONS = [
+  { value: 'BRAND', label: 'Brand' },
+  { value: 'PRODUCT', label: 'Product' },
+  { value: 'UI_LABEL', label: 'UI label' },
+  { value: 'LEGAL', label: 'Legal' },
+  { value: 'TECHNICAL', label: 'Technical' },
+  { value: 'GENERAL', label: 'General' },
+];
+const ENFORCEMENT_OPTIONS = [
+  { value: 'HARD', label: 'Hard' },
+  { value: 'SOFT', label: 'Soft' },
+  { value: 'REVIEW_ONLY', label: 'Review only' },
+];
 const EXAMPLE_RESULT_LIMIT = 500;
+const DEFAULT_TERM_PANE_WIDTH_PCT = 42;
 const DEFAULT_BATCH_SIZE = 1000;
+
+type CandidateDraft = {
+  definition: string;
+  rationale: string;
+  termType: string;
+  partOfSpeech: string;
+  enforcement: string;
+  doNotTranslate: boolean;
+  confidence: string;
+  reviewStatus: ApiTermIndexReviewStatus;
+};
+
+type CandidateGenerationRequest = {
+  mode: 'single' | 'bulk';
+  entryIds: number[];
+  entries: ApiTermIndexEntry[];
+  draft: CandidateDraft | null;
+};
+
+const parsePositiveIntegerParam = (value: string | null) => {
+  if (value == null) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const isInteractiveTarget = (target: EventTarget | null) =>
+  target instanceof HTMLElement &&
+  target.closest('button, input, select, textarea, a, [contenteditable="true"]') != null;
+
+const isTextEntryTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const element = target.closest('input, select, textarea, [contenteditable="true"]');
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (element instanceof HTMLInputElement) {
+    const type = element.type.toLowerCase();
+    return !['button', 'checkbox', 'radio', 'reset', 'submit'].includes(type);
+  }
+
+  return true;
+};
+
+const getTermIndexFromTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) {
+    return -1;
+  }
+
+  const row = target.closest<HTMLElement>('[data-term-index]');
+  if (row?.dataset.termIndex == null) {
+    return -1;
+  }
+
+  const index = Number(row.dataset.termIndex);
+  return Number.isInteger(index) ? index : -1;
+};
 
 type TermIndexRefreshForm = {
   repositoryIds: number[];
@@ -102,6 +203,61 @@ const getGlossaryRepositoryIds = (repositoryOptions: RepositorySelectionOption[]
   repositoryOptions
     .filter((repository) => repository.isGlossary)
     .map((repository) => repository.id);
+
+const getRawTermExplorerPath = (entryId: number, search?: string) => {
+  const params = new URLSearchParams({ entryId: String(entryId) });
+  const trimmedSearch = search?.trim();
+  if (trimmedSearch) {
+    params.set('search', trimmedSearch);
+  }
+  return `/settings/system/glossary-term-index/terms?${params.toString()}`;
+};
+
+const createCandidateDraft = (entry: ApiTermIndexEntry | null): CandidateDraft => ({
+  definition: '',
+  rationale: '',
+  termType: suggestCandidateTermType(entry?.displayTerm ?? ''),
+  partOfSpeech: '',
+  enforcement: 'SOFT',
+  doNotTranslate: shouldCandidatePreserveSource(entry?.displayTerm ?? ''),
+  confidence: '',
+  reviewStatus: 'TO_REVIEW',
+});
+
+const suggestCandidateTermType = (term: string) => {
+  const normalized = term.trim();
+  if (!normalized) {
+    return 'GENERAL';
+  }
+  if (/^[A-Z0-9][A-Z0-9._-]*$/.test(normalized) && /[A-Z]/.test(normalized)) {
+    return 'BRAND';
+  }
+  if (/[._/-]/.test(normalized)) {
+    return 'TECHNICAL';
+  }
+  return 'GENERAL';
+};
+
+const shouldCandidatePreserveSource = (term: string) => {
+  const normalized = term.trim();
+  return /^[A-Z0-9][A-Z0-9._/-]*$/.test(normalized) && /[A-Z]/.test(normalized);
+};
+
+const nullableTrimmed = (value: string) => {
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+};
+
+const parseOptionalConfidence = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? Math.min(100, Math.max(0, Math.round(parsed))) : null;
+};
+
+const cloneCandidateDraft = (draft: CandidateDraft): CandidateDraft => ({ ...draft });
 
 const hasSameRepositoryIds = (left: number[], right: number[]) => {
   if (left.length !== right.length) {
@@ -416,6 +572,12 @@ export function AdminTermIndexRunsPage() {
 export function AdminTermIndexTermsPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const requestedSearchParam = searchParams.get('search');
+  const requestedEntryIdParam = searchParams.get('entryId');
+  const initialSearchQuery = requestedSearchParam?.trim() ?? '';
+  const initialSelectedEntryId = parsePositiveIntegerParam(requestedEntryIdParam);
   const { data: repositories } = useRepositories();
   const repositoryOptions = useRepositorySelectionOptions(repositories ?? []);
   const {
@@ -425,17 +587,21 @@ export function AdminTermIndexTermsPage() {
     formatRepositorySelectionSummary,
     updateSelectedRepositoryIds,
   } = useTermIndexRepositorySelection(repositoryOptions);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [minOccurrences, setMinOccurrences] = useState(MIN_OCCURRENCES_DEFAULT);
   const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
+  const [reviewStatusFilter, setReviewStatusFilter] =
+    useState<ApiTermIndexReviewStatusFilter>('NON_REJECTED');
   const [termResultLimit, setTermResultLimit] = useState(TERM_RESULT_LIMIT_DEFAULT);
-  const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
-  const [termPaneWidthPct, setTermPaneWidthPct] = useState(50);
+  const [selectedEntryId, setSelectedEntryId] = useState<number | null>(initialSelectedEntryId);
+  const [selectedEntryIds, setSelectedEntryIds] = useState<number[]>([]);
+  const [termPaneWidthPct, setTermPaneWidthPct] = useState(DEFAULT_TERM_PANE_WIDTH_PCT);
   const [isPaneResizing, setIsPaneResizing] = useState(false);
   const workspaceRef = useRef<HTMLDivElement>(null);
 
   const resetTermSelection = () => {
     setSelectedEntryId(null);
+    setSelectedEntryIds([]);
   };
   const updateTermPaneWidthPct = useCallback((next: number) => {
     setTermPaneWidthPct(Math.min(75, Math.max(25, next)));
@@ -448,6 +614,12 @@ export function AdminTermIndexTermsPage() {
     setMinOccurrences(Math.max(1, next));
     resetTermSelection();
   };
+
+  useEffect(() => {
+    setSearchQuery(requestedSearchParam?.trim() ?? '');
+    setSelectedEntryId(parsePositiveIntegerParam(requestedEntryIdParam));
+    setSelectedEntryIds([]);
+  }, [requestedEntryIdParam, requestedSearchParam]);
 
   const statusQuery = useQuery({
     queryKey: ['term-index-status', effectiveRepositoryIds],
@@ -462,6 +634,7 @@ export function AdminTermIndexTermsPage() {
       effectiveRepositoryIds,
       searchQuery,
       extractionMethod,
+      reviewStatusFilter,
       minOccurrences,
       termResultLimit,
     ],
@@ -470,6 +643,7 @@ export function AdminTermIndexTermsPage() {
         repositoryIds: effectiveRepositoryIds,
         search: searchQuery,
         extractionMethod,
+        reviewStatus: reviewStatusFilter,
         minOccurrences,
         limit: termResultLimit,
       }),
@@ -483,16 +657,29 @@ export function AdminTermIndexTermsPage() {
     () => entries.find((entry) => entry.id === selectedEntryId) ?? null,
     [entries, selectedEntryId],
   );
+  const selectedEntries = useMemo(
+    () => entries.filter((entry) => selectedEntryIds.includes(entry.id)),
+    [entries, selectedEntryIds],
+  );
+  const allEntriesSelected =
+    entries.length > 0 && entries.every((entry) => selectedEntryIds.includes(entry.id));
 
   useEffect(() => {
     if (entries.length === 0) {
-      setSelectedEntryId(null);
+      if (!entriesQuery.isFetching) {
+        setSelectedEntryId(null);
+      }
       return;
     }
     if (selectedEntryId == null || !entries.some((entry) => entry.id === selectedEntryId)) {
       setSelectedEntryId(entries[0].id);
     }
-  }, [entries, selectedEntryId]);
+  }, [entries, entriesQuery.isFetching, selectedEntryId]);
+
+  useEffect(() => {
+    const visibleEntryIds = new Set(entries.map((entry) => entry.id));
+    setSelectedEntryIds((current) => current.filter((entryId) => visibleEntryIds.has(entryId)));
+  }, [entries]);
 
   const occurrencesQuery = useQuery({
     queryKey: ['term-index-occurrences', selectedEntryId, effectiveRepositoryIds, extractionMethod],
@@ -508,6 +695,71 @@ export function AdminTermIndexTermsPage() {
 
   const occurrenceData = occurrencesQuery.data;
   const occurrences = occurrenceData?.occurrences ?? [];
+
+  const updateReviewMutation = useMutation({
+    mutationFn: ({
+      entryId,
+      reviewStatus,
+      reviewReason,
+    }: {
+      entryId: number;
+      reviewStatus: ApiTermIndexReviewStatus;
+      reviewReason?: string | null;
+    }) =>
+      updateTermIndexEntryReview(entryId, {
+        reviewStatus,
+        reviewReason: reviewReason ?? null,
+      }),
+    onSuccess: async (entry) => {
+      setSelectedEntryId(entry.id);
+      await queryClient.invalidateQueries({ queryKey: ['term-index-entries'] });
+    },
+  });
+
+  const batchUpdateReviewMutation = useMutation({
+    mutationFn: ({
+      entryIds,
+      reviewStatus,
+      reviewReason,
+    }: {
+      entryIds: number[];
+      reviewStatus: ApiTermIndexReviewStatus;
+      reviewReason?: string | null;
+    }) =>
+      updateTermIndexEntryReviews(entryIds, {
+        reviewStatus,
+        reviewReason: reviewReason ?? null,
+      }),
+    onSuccess: async () => {
+      setSelectedEntryIds([]);
+      await queryClient.invalidateQueries({ queryKey: ['term-index-entries'] });
+    },
+  });
+
+  const updateEntryReview = (entryId: number, reviewStatus: ApiTermIndexReviewStatus) => {
+    if (updateReviewMutation.isPending) {
+      return;
+    }
+    updateReviewMutation.mutate({
+      entryId,
+      reviewStatus,
+      reviewReason: reviewStatus === 'REJECTED' ? 'OTHER' : null,
+    });
+  };
+
+  const updateSelectedEntriesReview = (reviewStatus: ApiTermIndexReviewStatus | null) => {
+    if (selectedEntryIds.length === 0 || batchUpdateReviewMutation.isPending) {
+      return;
+    }
+    if (reviewStatus == null) {
+      return;
+    }
+    batchUpdateReviewMutation.mutate({
+      entryIds: selectedEntryIds,
+      reviewStatus,
+      reviewReason: reviewStatus === 'REJECTED' ? 'OTHER' : null,
+    });
+  };
 
   const extractionMethodOptions = useMemo(
     () =>
@@ -638,6 +890,19 @@ export function AdminTermIndexTermsPage() {
               }
             />
             <div className="term-index-explorer__filter-controls">
+              <SingleSelectDropdown
+                label="Review status"
+                options={REVIEW_STATUS_FILTER_OPTIONS}
+                value={reviewStatusFilter}
+                onChange={(next) => {
+                  setReviewStatusFilter(next ?? 'NON_REJECTED');
+                  resetTermSelection();
+                }}
+                placeholder="Non-rejected"
+                className="term-index-explorer__search-type"
+                buttonAriaLabel="Filter by review status"
+                searchable={false}
+              />
               <NumericPresetDropdown
                 value={minOccurrences}
                 buttonLabel={minOccurrencesLabel}
@@ -675,8 +940,56 @@ export function AdminTermIndexTermsPage() {
 
         <section className="settings-card term-index-explorer__results-card" aria-label="Raw terms">
           <div className="term-index-explorer__subbar">
-            <span className="settings-hint">{termCountLabel}</span>
+            <span className="settings-hint term-index-explorer__subbar-count">
+              {termCountLabel}
+            </span>
+            <div className="term-index-explorer__subbar-actions">
+              <button
+                type="button"
+                className="term-index-explorer__subbar-button"
+                onClick={() =>
+                  setSelectedEntryIds(allEntriesSelected ? [] : entries.map((entry) => entry.id))
+                }
+                disabled={entries.length === 0 || batchUpdateReviewMutation.isPending}
+              >
+                {allEntriesSelected ? 'Deselect visible' : 'Select all'}
+              </button>
+              {selectedEntries.length > 0 ? (
+                <>
+                  <span className="settings-hint term-index-explorer__selection-summary">
+                    {selectedEntries.length.toLocaleString()} selected
+                  </span>
+                  <SingleSelectDropdown
+                    label="Bulk actions"
+                    value={null}
+                    placeholder={`Bulk: ${selectedEntries.length.toLocaleString()}`}
+                    options={REVIEW_STATUS_OPTIONS}
+                    onChange={updateSelectedEntriesReview}
+                    disabled={batchUpdateReviewMutation.isPending}
+                    className="term-index-explorer__bulk-dropdown"
+                    buttonAriaLabel="Apply bulk review status"
+                    searchable={false}
+                  />
+                  <button
+                    type="button"
+                    className="term-index-explorer__subbar-button"
+                    onClick={() => setSelectedEntryIds([])}
+                    disabled={batchUpdateReviewMutation.isPending}
+                  >
+                    Clear selection
+                  </button>
+                </>
+              ) : null}
+            </div>
           </div>
+          {batchUpdateReviewMutation.error ? (
+            <p className="settings-hint is-error">
+              {getErrorMessage(batchUpdateReviewMutation.error)}
+            </p>
+          ) : null}
+          {updateReviewMutation.error ? (
+            <p className="settings-hint is-error">{getErrorMessage(updateReviewMutation.error)}</p>
+          ) : null}
           <div className="term-index-explorer__workspace" ref={workspaceRef} style={workspaceStyle}>
             <div className="term-index-explorer__terms">
               {entriesQuery.isLoading ? (
@@ -689,14 +1002,25 @@ export function AdminTermIndexTermsPage() {
                 <TermList
                   entries={entries}
                   selectedEntryId={selectedEntryId}
+                  selectedEntryIds={selectedEntryIds}
+                  rowMetadata="term"
                   onSelectEntry={setSelectedEntryId}
+                  onUpdateEntryReview={updateEntryReview}
+                  isUpdatingReview={updateReviewMutation.isPending}
+                  onToggleEntrySelection={(entryId, checked) =>
+                    setSelectedEntryIds((current) =>
+                      checked
+                        ? Array.from(new Set([...current, entryId]))
+                        : current.filter((id) => id !== entryId),
+                    )
+                  }
                 />
               )}
             </div>
             <div
               className={`term-index-explorer__pane-divider${isPaneResizing ? ' is-resizing' : ''}`}
               onMouseDown={startPaneResize}
-              onDoubleClick={() => updateTermPaneWidthPct(50)}
+              onDoubleClick={() => updateTermPaneWidthPct(DEFAULT_TERM_PANE_WIDTH_PCT)}
               onKeyDown={handlePaneDividerKeyDown}
               role="separator"
               tabIndex={0}
@@ -710,7 +1034,7 @@ export function AdminTermIndexTermsPage() {
             </div>
             <div className="term-index-explorer__occurrences">
               {selectedEntry ? (
-                <OccurrencePanel
+                <ExtractedTermDetailPanel
                   entry={selectedEntry}
                   occurrences={occurrences}
                   isLoading={occurrencesQuery.isLoading}
@@ -727,7 +1051,568 @@ export function AdminTermIndexTermsPage() {
   );
 }
 
-function TermIndexSubnav({ active }: { active: 'runs' | 'terms' }) {
+export function AdminTermIndexCandidateGenerationPage() {
+  const user = useUser();
+  const isAdmin = user.role === 'ROLE_ADMIN';
+  const queryClient = useQueryClient();
+  const { data: repositories } = useRepositories();
+  const repositoryOptions = useRepositorySelectionOptions(repositories ?? []);
+  const {
+    selectedRepositoryIds,
+    effectiveRepositoryIds,
+    repositorySelectionActions,
+    formatRepositorySelectionSummary,
+    updateSelectedRepositoryIds,
+  } = useTermIndexRepositorySelection(repositoryOptions);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minOccurrences, setMinOccurrences] = useState(MIN_OCCURRENCES_DEFAULT);
+  const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
+  const [reviewStatusFilter, setReviewStatusFilter] =
+    useState<ApiTermIndexReviewStatusFilter>('NON_REJECTED');
+  const [termResultLimit, setTermResultLimit] = useState(TERM_RESULT_LIMIT_DEFAULT);
+  const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
+  const [selectedEntryIds, setSelectedEntryIds] = useState<number[]>([]);
+  const [candidateDraft, setCandidateDraft] = useState<CandidateDraft>(() =>
+    createCandidateDraft(null),
+  );
+  const [candidateGenerationRequest, setCandidateGenerationRequest] =
+    useState<CandidateGenerationRequest | null>(null);
+  const [candidateGenerationReport, setCandidateGenerationReport] =
+    useState<ApiGenerateTermIndexCandidatesResponse | null>(null);
+  const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
+  const [termPaneWidthPct, setTermPaneWidthPct] = useState(DEFAULT_TERM_PANE_WIDTH_PCT);
+  const [isPaneResizing, setIsPaneResizing] = useState(false);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+
+  const resetTermSelection = () => {
+    setSelectedEntryId(null);
+    setSelectedEntryIds([]);
+    setNotice(null);
+  };
+  const updateTermPaneWidthPct = useCallback((next: number) => {
+    setTermPaneWidthPct(Math.min(75, Math.max(25, next)));
+  }, []);
+  const updateTermResultLimit = (next: number) => {
+    setTermResultLimit(Math.min(Math.max(1, next), TERM_RESULT_LIMIT_MAX));
+    resetTermSelection();
+  };
+  const updateMinOccurrences = (next: number) => {
+    setMinOccurrences(Math.max(1, next));
+    resetTermSelection();
+  };
+
+  const statusQuery = useQuery({
+    queryKey: ['term-index-status', effectiveRepositoryIds],
+    queryFn: () => fetchTermIndexStatus({ repositoryIds: effectiveRepositoryIds }),
+    enabled: isAdmin && repositoryOptions.length > 0,
+    staleTime: 30_000,
+  });
+
+  const entriesQuery = useQuery({
+    queryKey: [
+      'term-index-entries',
+      'candidate-generation',
+      effectiveRepositoryIds,
+      searchQuery,
+      extractionMethod,
+      reviewStatusFilter,
+      minOccurrences,
+      termResultLimit,
+    ],
+    queryFn: () =>
+      fetchTermIndexEntries({
+        repositoryIds: effectiveRepositoryIds,
+        search: searchQuery,
+        extractionMethod,
+        reviewStatus: reviewStatusFilter,
+        minOccurrences,
+        limit: termResultLimit,
+      }),
+    enabled: isAdmin && repositoryOptions.length > 0,
+    staleTime: 5_000,
+  });
+
+  const entryData = entriesQuery.data;
+  const entries = useMemo(() => entryData?.entries ?? [], [entryData]);
+  const selectedEntry = useMemo(
+    () => entries.find((entry) => entry.id === selectedEntryId) ?? null,
+    [entries, selectedEntryId],
+  );
+  const selectedEntries = useMemo(
+    () => entries.filter((entry) => selectedEntryIds.includes(entry.id)),
+    [entries, selectedEntryIds],
+  );
+  const allEntriesSelected =
+    entries.length > 0 && entries.every((entry) => selectedEntryIds.includes(entry.id));
+  const repositoryScopeLabel = formatRepositorySelectionSummary({
+    selectedIds: effectiveRepositoryIds,
+    defaultSummary:
+      effectiveRepositoryIds.length === 1
+        ? '1 repository'
+        : `${effectiveRepositoryIds.length.toLocaleString()} repositories`,
+  });
+
+  useEffect(() => {
+    if (entries.length === 0) {
+      if (!entriesQuery.isFetching) {
+        setSelectedEntryId(null);
+      }
+      return;
+    }
+    if (selectedEntryId == null || !entries.some((entry) => entry.id === selectedEntryId)) {
+      setSelectedEntryId(entries[0].id);
+    }
+  }, [entries, entriesQuery.isFetching, selectedEntryId]);
+
+  useEffect(() => {
+    setCandidateDraft(createCandidateDraft(selectedEntry));
+  }, [selectedEntry]);
+
+  useEffect(() => {
+    const visibleEntryIds = new Set(entries.map((entry) => entry.id));
+    setSelectedEntryIds((current) => current.filter((entryId) => visibleEntryIds.has(entryId)));
+  }, [entries]);
+
+  const occurrencesQuery = useQuery({
+    queryKey: [
+      'term-index-occurrences',
+      'candidate-generation',
+      selectedEntryId,
+      effectiveRepositoryIds,
+      extractionMethod,
+    ],
+    queryFn: () =>
+      fetchTermIndexOccurrences(selectedEntryId ?? 0, {
+        repositoryIds: effectiveRepositoryIds,
+        extractionMethod,
+        limit: EXAMPLE_RESULT_LIMIT,
+      }),
+    enabled: isAdmin && selectedEntryId != null && repositoryOptions.length > 0,
+    staleTime: 5_000,
+  });
+
+  const occurrenceData = occurrencesQuery.data;
+  const occurrences = occurrenceData?.occurrences ?? [];
+
+  const updateReviewMutation = useMutation({
+    mutationFn: ({
+      entryId,
+      reviewStatus,
+      reviewReason,
+    }: {
+      entryId: number;
+      reviewStatus: ApiTermIndexReviewStatus;
+      reviewReason?: string | null;
+    }) =>
+      updateTermIndexEntryReview(entryId, {
+        reviewStatus,
+        reviewReason: reviewReason ?? null,
+      }),
+    onSuccess: async (entry) => {
+      setSelectedEntryId(entry.id);
+      await queryClient.invalidateQueries({ queryKey: ['term-index-entries'] });
+    },
+  });
+
+  const generateCandidatesMutation = useMutation({
+    mutationFn: ({ entryIds, draft }: { entryIds: number[]; draft?: CandidateDraft | null }) =>
+      generateTermIndexCandidatesFromEntries({
+        termIndexEntryIds: entryIds,
+        repositoryIds: effectiveRepositoryIds,
+        definition: draft ? nullableTrimmed(draft.definition) : null,
+        rationale: draft ? nullableTrimmed(draft.rationale) : null,
+        termType: draft?.termType || null,
+        partOfSpeech: draft ? nullableTrimmed(draft.partOfSpeech) : null,
+        enforcement: draft?.enforcement || null,
+        doNotTranslate: draft?.doNotTranslate ?? null,
+        confidence: draft ? parseOptionalConfidence(draft.confidence) : null,
+        reviewStatus: draft?.reviewStatus ?? 'TO_REVIEW',
+      }),
+    onSuccess: async (result) => {
+      setCandidateGenerationReport(result);
+      setNotice({
+        kind: 'success',
+        message: `Generated ${result.candidateCount.toLocaleString()} candidates (${result.createdCandidateCount.toLocaleString()} new, ${result.updatedCandidateCount.toLocaleString()} refreshed).`,
+      });
+      setSelectedEntryIds([]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['glossary-term-index-suggestions'] }),
+        queryClient.invalidateQueries({ queryKey: ['term-index-entries'] }),
+      ]);
+    },
+    onError: (error: Error) => {
+      setNotice({ kind: 'error', message: error.message || 'Candidate generation failed.' });
+    },
+  });
+
+  const closeCandidateGenerationModal = () => {
+    if (generateCandidatesMutation.isPending) {
+      return;
+    }
+    setCandidateGenerationRequest(null);
+    setCandidateGenerationReport(null);
+  };
+
+  const confirmCandidateGeneration = () => {
+    if (!candidateGenerationRequest || generateCandidatesMutation.isPending) {
+      return;
+    }
+    setNotice(null);
+    setCandidateGenerationReport(null);
+    generateCandidatesMutation.mutate({
+      entryIds: candidateGenerationRequest.entryIds,
+      draft: candidateGenerationRequest.draft,
+    });
+  };
+
+  const updateEntryReview = (entryId: number, reviewStatus: ApiTermIndexReviewStatus) => {
+    if (updateReviewMutation.isPending) {
+      return;
+    }
+    setNotice(null);
+    updateReviewMutation.mutate({
+      entryId,
+      reviewStatus,
+      reviewReason: reviewStatus === 'REJECTED' ? 'OTHER' : null,
+    });
+  };
+
+  const generateSelectedCandidates = () => {
+    if (selectedEntries.length === 0 || generateCandidatesMutation.isPending) {
+      return;
+    }
+    setNotice(null);
+    setCandidateGenerationReport(null);
+    setCandidateGenerationRequest({
+      mode: 'bulk',
+      entryIds: selectedEntries.map((entry) => entry.id),
+      entries: selectedEntries,
+      draft: null,
+    });
+  };
+
+  const generateSelectedEntryCandidate = () => {
+    if (!selectedEntry || generateCandidatesMutation.isPending) {
+      return;
+    }
+    setNotice(null);
+    setCandidateGenerationReport(null);
+    setCandidateGenerationRequest({
+      mode: 'single',
+      entryIds: [selectedEntry.id],
+      entries: [selectedEntry],
+      draft: cloneCandidateDraft(candidateDraft),
+    });
+  };
+
+  const extractionMethodOptions = useMemo(
+    () =>
+      (statusQuery.data?.extractionMethods ?? []).map((method) => ({
+        value: method,
+        label: formatMethod(method),
+      })),
+    [statusQuery.data?.extractionMethods],
+  );
+  const termCountLabel = entriesQuery.isLoading
+    ? 'Loading terms...'
+    : formatCappedListLabel('terms', entries.length, termResultLimit);
+  const minOccurrencesLabel =
+    minOccurrences === 1 ? 'Any hits' : `${minOccurrences.toLocaleString()}+ hits`;
+  const resultLimitLabel = `${formatShortCount(termResultLimit)} terms`;
+  const workspaceStyle = useMemo(
+    () =>
+      ({
+        '--term-index-left-pane-width': `${termPaneWidthPct}%`,
+      }) as CSSProperties,
+    [termPaneWidthPct],
+  );
+  const startPaneResize = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setIsPaneResizing(true);
+
+      const handleMove = (moveEvent: MouseEvent) => {
+        if (!workspaceRef.current) {
+          return;
+        }
+        const rect = workspaceRef.current.getBoundingClientRect();
+        updateTermPaneWidthPct(((moveEvent.clientX - rect.left) / rect.width) * 100);
+      };
+      const handleUp = () => {
+        setIsPaneResizing(false);
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleUp);
+      };
+
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleUp);
+    },
+    [updateTermPaneWidthPct],
+  );
+  const handlePaneDividerKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      let nextWidth: number | null = null;
+      if (event.key === 'ArrowLeft') {
+        nextWidth = termPaneWidthPct - 5;
+      } else if (event.key === 'ArrowRight') {
+        nextWidth = termPaneWidthPct + 5;
+      } else if (event.key === 'Home') {
+        nextWidth = 25;
+      } else if (event.key === 'End') {
+        nextWidth = 75;
+      }
+
+      if (nextWidth == null) {
+        return;
+      }
+
+      event.preventDefault();
+      updateTermPaneWidthPct(nextWidth);
+    },
+    [termPaneWidthPct, updateTermPaneWidthPct],
+  );
+
+  if (!isAdmin) {
+    return <Navigate to="/repositories" replace />;
+  }
+
+  return (
+    <div className="settings-subpage term-index-explorer__page">
+      <SettingsSubpageHeader
+        backTo="/settings/system"
+        backLabel="Back to settings"
+        context="Settings > Glossaries"
+        title="Candidate generation"
+        centerContent={<TermIndexSubnav active="candidates" />}
+      />
+      <div className="settings-page settings-page--wide term-index-explorer">
+        <section
+          className="settings-card term-index-explorer__filter-card"
+          aria-label="Candidate source filters"
+        >
+          <div className="term-index-explorer__filterbar">
+            <div className="term-index-explorer__repository-control">
+              <RepositoryMultiSelect
+                label="Repositories"
+                options={repositoryOptions}
+                selectedIds={selectedRepositoryIds}
+                onChange={(next) => {
+                  updateSelectedRepositoryIds(next);
+                  resetTermSelection();
+                }}
+                className="settings-repository-select"
+                buttonAriaLabel="Select repositories for candidate generation. Use menu actions to switch between repositories and glossaries."
+                customActions={repositorySelectionActions}
+                summaryFormatter={formatRepositorySelectionSummary}
+              />
+            </div>
+            <SearchControl
+              inputId="term-index-candidate-source-search"
+              value={searchQuery}
+              onChange={(next) => {
+                setSearchQuery(next);
+                resetTermSelection();
+              }}
+              placeholder="Search non-rejected extracted terms"
+              inputAriaLabel="Search extracted terms for candidate generation"
+              className="term-index-explorer__search-control"
+              leading={
+                <SingleSelectDropdown
+                  label="Extraction method"
+                  options={extractionMethodOptions}
+                  value={extractionMethod}
+                  onChange={(next) => {
+                    setExtractionMethod(next);
+                    resetTermSelection();
+                  }}
+                  placeholder="All methods"
+                  noneLabel="All methods"
+                  className="term-index-explorer__search-type"
+                  buttonAriaLabel="Filter by extraction method"
+                  searchable={false}
+                />
+              }
+            />
+            <div className="term-index-explorer__filter-controls">
+              <SingleSelectDropdown
+                label="Review status"
+                options={REVIEW_STATUS_FILTER_OPTIONS}
+                value={reviewStatusFilter}
+                onChange={(next) => {
+                  setReviewStatusFilter(next ?? 'NON_REJECTED');
+                  resetTermSelection();
+                }}
+                placeholder="Non-rejected"
+                className="term-index-explorer__search-type"
+                buttonAriaLabel="Filter by raw term review status"
+                searchable={false}
+              />
+              <NumericPresetDropdown
+                value={minOccurrences}
+                buttonLabel={minOccurrencesLabel}
+                menuLabel="Minimum hits"
+                presetOptions={MIN_OCCURRENCES_OPTIONS}
+                onChange={updateMinOccurrences}
+                ariaLabel="Minimum hits"
+                className="term-index-explorer__filter-number"
+                pillsClassName="settings-pills"
+                optionClassName="settings-pill"
+                optionActiveClassName="is-active"
+                customButtonClassName="settings-pill"
+                customActiveClassName="is-active"
+                customInitialValue={MIN_OCCURRENCES_DEFAULT}
+              />
+              <NumericPresetDropdown
+                value={termResultLimit}
+                buttonLabel={resultLimitLabel}
+                menuLabel="Result size limit"
+                presetOptions={TERM_RESULT_LIMIT_OPTIONS}
+                onChange={updateTermResultLimit}
+                ariaLabel="Candidate source result size limit"
+                disabled={entriesQuery.isLoading}
+                className="term-index-explorer__filter-number"
+                pillsClassName="settings-pills"
+                optionClassName="settings-pill"
+                optionActiveClassName="is-active"
+                customButtonClassName="settings-pill"
+                customActiveClassName="is-active"
+                customInitialValue={TERM_RESULT_LIMIT_DEFAULT}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="settings-card term-index-explorer__results-card"
+          aria-label="Candidate sources"
+        >
+          <div className="term-index-explorer__subbar">
+            <span className="settings-hint term-index-explorer__subbar-count">
+              {termCountLabel}
+            </span>
+            <div className="term-index-explorer__subbar-actions">
+              <button
+                type="button"
+                className="term-index-explorer__subbar-button"
+                onClick={() =>
+                  setSelectedEntryIds(allEntriesSelected ? [] : entries.map((entry) => entry.id))
+                }
+                disabled={entries.length === 0 || generateCandidatesMutation.isPending}
+              >
+                {allEntriesSelected ? 'Deselect visible' : 'Select all'}
+              </button>
+              {selectedEntries.length > 0 ? (
+                <>
+                  <span className="settings-hint term-index-explorer__selection-summary">
+                    {selectedEntries.length.toLocaleString()} selected
+                  </span>
+                  <button
+                    type="button"
+                    className="term-index-explorer__subbar-button"
+                    onClick={generateSelectedCandidates}
+                    disabled={generateCandidatesMutation.isPending}
+                  >
+                    Generate selected candidates
+                  </button>
+                  <button
+                    type="button"
+                    className="term-index-explorer__subbar-button"
+                    onClick={() => setSelectedEntryIds([])}
+                    disabled={generateCandidatesMutation.isPending}
+                  >
+                    Clear selection
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </div>
+          {notice ? (
+            <p className={`settings-hint${notice.kind === 'error' ? ' is-error' : ''}`}>
+              {notice.message}
+            </p>
+          ) : null}
+          {updateReviewMutation.error ? (
+            <p className="settings-hint is-error">{getErrorMessage(updateReviewMutation.error)}</p>
+          ) : null}
+          <div className="term-index-explorer__workspace" ref={workspaceRef} style={workspaceStyle}>
+            <div className="term-index-explorer__terms">
+              {entriesQuery.isLoading ? (
+                <div className="term-index-explorer__loading-spacer" aria-hidden="true" />
+              ) : entriesQuery.isError ? (
+                <p className="settings-hint is-error">{getErrorMessage(entriesQuery.error)}</p>
+              ) : entries.length === 0 ? (
+                <p className="settings-hint">No non-rejected extracted terms match the filters.</p>
+              ) : (
+                <TermList
+                  entries={entries}
+                  selectedEntryId={selectedEntryId}
+                  selectedEntryIds={selectedEntryIds}
+                  rowMetadata="candidate"
+                  onSelectEntry={setSelectedEntryId}
+                  onUpdateEntryReview={updateEntryReview}
+                  isUpdatingReview={updateReviewMutation.isPending}
+                  onToggleEntrySelection={(entryId, checked) =>
+                    setSelectedEntryIds((current) =>
+                      checked
+                        ? Array.from(new Set([...current, entryId]))
+                        : current.filter((id) => id !== entryId),
+                    )
+                  }
+                />
+              )}
+            </div>
+            <div
+              className={`term-index-explorer__pane-divider${isPaneResizing ? ' is-resizing' : ''}`}
+              onMouseDown={startPaneResize}
+              onDoubleClick={() => updateTermPaneWidthPct(DEFAULT_TERM_PANE_WIDTH_PCT)}
+              onKeyDown={handlePaneDividerKeyDown}
+              role="separator"
+              tabIndex={0}
+              aria-label="Resize term and candidate panes"
+              aria-orientation="vertical"
+              aria-valuemin={25}
+              aria-valuemax={75}
+              aria-valuenow={Math.round(termPaneWidthPct)}
+            >
+              <PaneGripIcon />
+            </div>
+            <div className="term-index-explorer__occurrences">
+              {selectedEntry ? (
+                <CandidateDraftPanel
+                  entry={selectedEntry}
+                  draft={candidateDraft}
+                  occurrences={occurrences}
+                  isLoadingOccurrences={occurrencesQuery.isLoading}
+                  occurrenceError={occurrencesQuery.error}
+                  isGenerating={generateCandidatesMutation.isPending}
+                  onDraftChange={setCandidateDraft}
+                  onGenerate={generateSelectedEntryCandidate}
+                />
+              ) : (
+                <p className="settings-hint">Select a term to draft a candidate.</p>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+      <CandidateGenerationModal
+        open={candidateGenerationRequest != null}
+        request={candidateGenerationRequest}
+        report={candidateGenerationReport}
+        repositoryScopeLabel={repositoryScopeLabel}
+        searchQuery={searchQuery}
+        extractionMethod={extractionMethod}
+        reviewStatusFilter={reviewStatusFilter}
+        isGenerating={generateCandidatesMutation.isPending}
+        error={generateCandidatesMutation.error}
+        onClose={closeCandidateGenerationModal}
+        onGenerate={confirmCandidateGeneration}
+      />
+    </div>
+  );
+}
+
+function TermIndexSubnav({ active }: { active: 'runs' | 'terms' | 'candidates' }) {
   return (
     <nav className="term-index-explorer__subnav" aria-label="Term index sections">
       <Link
@@ -741,6 +1626,12 @@ function TermIndexSubnav({ active }: { active: 'runs' | 'terms' }) {
         to="/settings/system/glossary-term-index/terms"
       >
         Terms
+      </Link>
+      <Link
+        className={`term-index-explorer__subnav-link${active === 'candidates' ? ' is-active' : ''}`}
+        to="/settings/system/glossary-term-index/candidates"
+      >
+        Candidates
       </Link>
     </nav>
   );
@@ -889,6 +1780,466 @@ function TermIndexRefreshModal({
   );
 }
 
+function CandidateGenerationModal({
+  open,
+  request,
+  report,
+  repositoryScopeLabel,
+  searchQuery,
+  extractionMethod,
+  reviewStatusFilter,
+  isGenerating,
+  error,
+  onClose,
+  onGenerate,
+}: {
+  open: boolean;
+  request: CandidateGenerationRequest | null;
+  report: ApiGenerateTermIndexCandidatesResponse | null;
+  repositoryScopeLabel: string;
+  searchQuery: string;
+  extractionMethod: string | null;
+  reviewStatusFilter: ApiTermIndexReviewStatusFilter;
+  isGenerating: boolean;
+  error: unknown;
+  onClose: () => void;
+  onGenerate: () => void;
+}) {
+  const selectedEntryCount = request?.entries.length ?? 0;
+  const draft = request?.draft ?? null;
+  const sourceLabel =
+    request?.mode === 'single'
+      ? (request.entries[0]?.displayTerm ?? 'Selected extracted term')
+      : selectedEntryCount === 1
+        ? '1 selected extracted term'
+        : `${selectedEntryCount.toLocaleString()} selected extracted terms`;
+  const sampleEntries = request?.entries.slice(0, 6) ?? [];
+  const remainingEntryCount = Math.max(0, selectedEntryCount - sampleEntries.length);
+  const reviewStatusLabel =
+    REVIEW_STATUS_OPTIONS.find((option) => option.value === draft?.reviewStatus)?.label ??
+    'To review';
+  const reviewStatusFilterLabel =
+    REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === reviewStatusFilter)?.label ??
+    reviewStatusFilter;
+  const hasDraftOverrides =
+    draft != null &&
+    (Boolean(draft.definition.trim()) ||
+      Boolean(draft.rationale.trim()) ||
+      Boolean(draft.partOfSpeech.trim()) ||
+      Boolean(draft.confidence.trim()) ||
+      draft.termType !== 'GENERAL' ||
+      draft.enforcement !== 'SOFT' ||
+      draft.doNotTranslate ||
+      draft.reviewStatus !== 'TO_REVIEW');
+  const generatedCandidates = report?.candidates.slice(0, 10) ?? [];
+
+  return (
+    <Modal
+      open={open}
+      size="lg"
+      ariaLabel="Generate term index candidates"
+      onClose={onClose}
+      closeOnBackdrop={!isGenerating}
+    >
+      <div className="modal__header">
+        <div>
+          <h3 className="modal__title">
+            {report
+              ? 'Candidate generation report'
+              : request?.mode === 'single'
+                ? 'Generate this candidate'
+                : 'Generate selected candidates'}
+          </h3>
+          <p className="settings-hint">
+            {report
+              ? 'The candidate table has been refreshed from the selected extracted terms.'
+              : 'Create or refresh stored candidates from reviewed extracted terms. Definition and rationale are only saved when provided here.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="modal__body term-index-explorer__generation-modal-body">
+        <dl className="term-index-explorer__generation-facts">
+          <div>
+            <dt>Source</dt>
+            <dd>{sourceLabel}</dd>
+          </div>
+          <div>
+            <dt>Repository scope</dt>
+            <dd>{repositoryScopeLabel}</dd>
+          </div>
+          <div>
+            <dt>Search filter</dt>
+            <dd>{searchQuery.trim() || 'None'}</dd>
+          </div>
+          <div>
+            <dt>Extraction method</dt>
+            <dd>{formatMethod(extractionMethod)}</dd>
+          </div>
+          <div>
+            <dt>Raw term status filter</dt>
+            <dd>{reviewStatusFilterLabel}</dd>
+          </div>
+        </dl>
+
+        {report ? (
+          <>
+            <dl className="term-index-explorer__generation-facts term-index-explorer__generation-facts--report">
+              <div>
+                <dt>Total</dt>
+                <dd>{report.candidateCount.toLocaleString()}</dd>
+              </div>
+              <div>
+                <dt>New</dt>
+                <dd>{report.createdCandidateCount.toLocaleString()}</dd>
+              </div>
+              <div>
+                <dt>Refreshed</dt>
+                <dd>{report.updatedCandidateCount.toLocaleString()}</dd>
+              </div>
+            </dl>
+            {generatedCandidates.length > 0 ? (
+              <div className="term-index-explorer__generation-samples">
+                <div className="settings-field__label">Generated candidates</div>
+                <p className="settings-hint">
+                  The candidate source list has been refreshed. Rows that were generated now show
+                  their candidate IDs in this page.
+                </p>
+                <ul>
+                  {generatedCandidates.map((candidate) => (
+                    <li key={candidate.termIndexCandidateId}>
+                      <span>{candidate.term}</span>
+                      <span className="settings-hint">#{candidate.termIndexCandidateId}</span>
+                      {candidate.termIndexExtractedTermId != null ? (
+                        <span className="settings-hint">
+                          extracted #{candidate.termIndexExtractedTermId}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="settings-hint">
+                No candidates were generated. Rejected or missing extracted terms are skipped.
+              </p>
+            )}
+          </>
+        ) : (
+          <div className="term-index-explorer__generation-summary">
+            <div className="settings-field__label">This will</div>
+            <ul>
+              <li>Create missing candidates for the selected extracted terms.</li>
+              <li>Refresh existing extraction-backed candidates for the same extracted terms.</li>
+              <li>Keep definition and rationale empty unless manual values are provided.</li>
+              <li>Leave glossary terms unchanged until a candidate is accepted in a glossary.</li>
+              <li>Skip rejected extracted terms if any are selected.</li>
+            </ul>
+            {draft ? (
+              <div className="term-index-explorer__generation-overrides">
+                <div className="settings-field__label">Candidate fields</div>
+                {hasDraftOverrides ? (
+                  <dl>
+                    <div>
+                      <dt>Term type</dt>
+                      <dd>
+                        {TERM_TYPE_OPTIONS.find((option) => option.value === draft.termType)
+                          ?.label ?? draft.termType}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Enforcement</dt>
+                      <dd>
+                        {ENFORCEMENT_OPTIONS.find((option) => option.value === draft.enforcement)
+                          ?.label ?? draft.enforcement}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Review status</dt>
+                      <dd>{reviewStatusLabel}</dd>
+                    </div>
+                    {draft.partOfSpeech.trim() ? (
+                      <div>
+                        <dt>Part of speech</dt>
+                        <dd>{draft.partOfSpeech.trim()}</dd>
+                      </div>
+                    ) : null}
+                    {draft.confidence.trim() ? (
+                      <div>
+                        <dt>Confidence</dt>
+                        <dd>{draft.confidence.trim()}%</dd>
+                      </div>
+                    ) : null}
+                    {draft.doNotTranslate ? (
+                      <div>
+                        <dt>Flags</dt>
+                        <dd>Do not translate</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                ) : (
+                  <p className="settings-hint">
+                    No custom fields set. Defaults will be used for this candidate.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="settings-hint">
+                Bulk generation uses default candidate fields, leaves definition and rationale
+                empty, and sets generated candidates to To review.
+              </p>
+            )}
+            {sampleEntries.length > 0 ? (
+              <div className="term-index-explorer__generation-samples">
+                <div className="settings-field__label">Selected extracted terms</div>
+                <ul>
+                  {sampleEntries.map((entry) => (
+                    <li key={entry.id}>
+                      <span>{entry.displayTerm}</span>
+                      <span className="settings-hint">
+                        extracted #{entry.id} · {entry.occurrenceCount.toLocaleString()} hits
+                      </span>
+                    </li>
+                  ))}
+                  {remainingEntryCount > 0 ? (
+                    <li className="settings-hint">
+                      +{remainingEntryCount.toLocaleString()} more selected
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+            ) : null}
+            {error ? <p className="settings-hint is-error">{getErrorMessage(error)}</p> : null}
+          </div>
+        )}
+      </div>
+
+      <div className="modal__footer">
+        <button
+          type="button"
+          className="settings-button settings-button--ghost"
+          onClick={onClose}
+          disabled={isGenerating}
+        >
+          {report ? 'Close' : 'Cancel'}
+        </button>
+        {report ? null : (
+          <button
+            type="button"
+            className="settings-button settings-button--primary"
+            onClick={onGenerate}
+            disabled={isGenerating || !request || request.entryIds.length === 0}
+          >
+            {isGenerating
+              ? 'Generating...'
+              : request?.mode === 'single'
+                ? 'Generate this candidate'
+                : 'Generate selected candidates'}
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function CandidateDraftPanel({
+  entry,
+  draft,
+  occurrences,
+  isLoadingOccurrences,
+  occurrenceError,
+  isGenerating,
+  onDraftChange,
+  onGenerate,
+}: {
+  entry: ApiTermIndexEntry;
+  draft: CandidateDraft;
+  occurrences: ApiTermIndexOccurrence[];
+  isLoadingOccurrences: boolean;
+  occurrenceError: unknown;
+  isGenerating: boolean;
+  onDraftChange: (draft: CandidateDraft) => void;
+  onGenerate: () => void;
+}) {
+  const updateDraft = <K extends keyof CandidateDraft>(key: K, value: CandidateDraft[K]) => {
+    onDraftChange({ ...draft, [key]: value });
+  };
+  const createdLabel = entry.createdDate ? formatLocalDateTime(entry.createdDate) : null;
+
+  return (
+    <div className="term-index-explorer__candidate-panel">
+      <section className="term-index-explorer__candidate-card" aria-label="Candidate draft">
+        <div className="term-index-explorer__candidate-header">
+          <div className="term-index-explorer__candidate-heading">
+            <div className="term-index-explorer__candidate-title-line">
+              <div className="term-index-explorer__candidate-title">{entry.displayTerm}</div>
+              <span className="term-index-explorer__candidate-primary-id">
+                {entry.termIndexCandidateId != null
+                  ? `#${entry.termIndexCandidateId}`
+                  : 'Not generated'}
+              </span>
+            </div>
+            <div className="term-index-explorer__candidate-meta-line">
+              <Link to={getRawTermExplorerPath(entry.id, entry.displayTerm)}>
+                Extracted term #{entry.id}
+              </Link>
+              <span>{entry.occurrenceCount.toLocaleString()} hits</span>
+              <span>{entry.repositoryCount.toLocaleString()} repositories</span>
+              {createdLabel ? (
+                <time dateTime={entry.createdDate ?? undefined} title={createdLabel}>
+                  Source created {createdLabel}
+                </time>
+              ) : null}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="settings-button settings-button--primary"
+            onClick={onGenerate}
+            disabled={isGenerating || entry.reviewStatus === 'REJECTED'}
+          >
+            {isGenerating ? 'Generating' : 'Generate this candidate'}
+          </button>
+        </div>
+        <div className="settings-grid settings-grid--two-column">
+          <label className="settings-field">
+            <span className="settings-field__label">Term type</span>
+            <select
+              className="settings-input"
+              value={draft.termType}
+              onChange={(event) => updateDraft('termType', event.target.value)}
+            >
+              {TERM_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="settings-field">
+            <span className="settings-field__label">Enforcement</span>
+            <select
+              className="settings-input"
+              value={draft.enforcement}
+              onChange={(event) => updateDraft('enforcement', event.target.value)}
+            >
+              {ENFORCEMENT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="settings-field">
+            <span className="settings-field__label">Part of speech</span>
+            <input
+              className="settings-input"
+              value={draft.partOfSpeech}
+              onChange={(event) => updateDraft('partOfSpeech', event.target.value)}
+              placeholder="Optional"
+            />
+          </label>
+          <label className="settings-field">
+            <span className="settings-field__label">Confidence</span>
+            <input
+              className="settings-input"
+              type="number"
+              min="0"
+              max="100"
+              value={draft.confidence}
+              onChange={(event) => updateDraft('confidence', event.target.value)}
+              placeholder="Automatic"
+            />
+          </label>
+        </div>
+        <label className="settings-field">
+          <span className="settings-field__label">Definition</span>
+          <textarea
+            className="settings-input term-index-explorer__candidate-textarea"
+            value={draft.definition}
+            onChange={(event) => updateDraft('definition', event.target.value)}
+            placeholder="Manual definition override"
+          />
+        </label>
+        <label className="settings-field">
+          <span className="settings-field__label">Rationale</span>
+          <textarea
+            className="settings-input term-index-explorer__candidate-textarea"
+            value={draft.rationale}
+            onChange={(event) => updateDraft('rationale', event.target.value)}
+            placeholder="Manual review rationale"
+          />
+        </label>
+        <div className="term-index-explorer__candidate-options">
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={draft.doNotTranslate}
+              onChange={(event) => updateDraft('doNotTranslate', event.target.checked)}
+            />
+            <span>Do not translate</span>
+          </label>
+          <SingleSelectDropdown
+            label="Candidate review"
+            value={draft.reviewStatus}
+            options={REVIEW_STATUS_OPTIONS}
+            onChange={(next) => updateDraft('reviewStatus', next ?? 'TO_REVIEW')}
+            className="term-index-explorer__candidate-review"
+            buttonAriaLabel="Set generated candidate review status"
+            searchable={false}
+          />
+        </div>
+      </section>
+      <section className="term-index-explorer__candidate-card" aria-label="Usage examples">
+        <div className="term-index-explorer__candidate-section-title">Usage examples</div>
+        <OccurrencePanel
+          entryId={entry.id}
+          occurrences={occurrences}
+          isLoading={isLoadingOccurrences}
+          error={occurrenceError}
+        />
+      </section>
+    </div>
+  );
+}
+
+function ExtractedTermDetailPanel({
+  entry,
+  occurrences,
+  isLoading,
+  error,
+}: {
+  entry: ApiTermIndexEntry;
+  occurrences: ApiTermIndexOccurrence[];
+  isLoading: boolean;
+  error: unknown;
+}) {
+  return (
+    <div className="term-index-explorer__entry-detail-panel">
+      <TermIndexEntryMetadata entry={entry} />
+      <OccurrencePanel
+        entryId={entry.id}
+        occurrences={occurrences}
+        isLoading={isLoading}
+        error={error}
+      />
+    </div>
+  );
+}
+
+function TermIndexEntryMetadata({ entry }: { entry: ApiTermIndexEntry }) {
+  return (
+    <div className="term-index-explorer__entry-metadata" aria-label="Term index metadata">
+      <span>Extracted term #{entry.id}</span>
+      <span>Created {formatLocalDateTime(entry.createdDate)}</span>
+      <span>Updated {formatLocalDateTime(entry.lastModifiedDate)}</span>
+      {entry.lastOccurrenceAt ? (
+        <span>Last hit {formatLocalDateTime(entry.lastOccurrenceAt)}</span>
+      ) : null}
+    </div>
+  );
+}
+
 function IndexStatusTables({
   statusQuery,
   runResultLimit,
@@ -1007,15 +2358,25 @@ function IndexStatusTables({
 function TermList({
   entries,
   selectedEntryId,
+  selectedEntryIds,
+  rowMetadata,
   onSelectEntry,
+  onUpdateEntryReview,
+  isUpdatingReview,
+  onToggleEntrySelection,
 }: {
   entries: ApiTermIndexEntry[];
   selectedEntryId: number | null;
+  selectedEntryIds: number[];
+  rowMetadata: 'term' | 'candidate';
   onSelectEntry: (entryId: number) => void;
+  onUpdateEntryReview: (entryId: number, reviewStatus: ApiTermIndexReviewStatus) => void;
+  isUpdatingReview: boolean;
+  onToggleEntrySelection: (entryId: number, checked: boolean) => void;
 }) {
-  const termRowRefs = useRef(new Map<number, HTMLButtonElement>());
+  const termRowRefs = useRef(new Map<number, HTMLDivElement>());
   const selectedIndex = entries.findIndex((entry) => entry.id === selectedEntryId);
-  const estimateSize = useCallback(() => 64, []);
+  const estimateSize = useCallback(() => 40, []);
   const getItemKey = useCallback((index: number) => entries[index]?.id ?? index, [entries]);
   const {
     scrollRef,
@@ -1031,7 +2392,12 @@ function TermList({
   });
   const { getRowRef } = useMeasuredRowRefs<number, HTMLDivElement>({ measureElement });
 
-  const selectEntryAtIndex = (index: number) => {
+  const findNextEntryIndex = (startIndex: number, direction: 1 | -1) => {
+    const nextIndex = startIndex + direction;
+    return nextIndex >= 0 && nextIndex < entries.length ? nextIndex : -1;
+  };
+
+  const activateEntryAtIndex = (index: number) => {
     const nextEntry = entries[index];
     if (!nextEntry) {
       return;
@@ -1046,24 +2412,38 @@ function TermList({
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    let nextIndex: number | null = null;
+    if (
+      event.key !== 'ArrowDown' &&
+      event.key !== 'ArrowUp' &&
+      event.key !== 'Home' &&
+      event.key !== 'End'
+    ) {
+      return;
+    }
+    if (isTextEntryTarget(event.target)) {
+      return;
+    }
 
-    if (event.key === 'ArrowDown') {
-      nextIndex = Math.min(selectedIndex < 0 ? 0 : selectedIndex + 1, entries.length - 1);
-    } else if (event.key === 'ArrowUp') {
-      nextIndex = Math.max(selectedIndex < 0 ? 0 : selectedIndex - 1, 0);
-    } else if (event.key === 'Home') {
+    const focusedIndex = getTermIndexFromTarget(event.target);
+    const currentIndex = focusedIndex >= 0 ? focusedIndex : selectedIndex;
+    let nextIndex: number;
+
+    if (event.key === 'Home') {
       nextIndex = 0;
     } else if (event.key === 'End') {
       nextIndex = entries.length - 1;
+    } else {
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      const startIndex = currentIndex >= 0 ? currentIndex : direction === 1 ? -1 : entries.length;
+      nextIndex = findNextEntryIndex(startIndex, direction);
     }
 
-    if (nextIndex == null) {
+    if (nextIndex < 0 || entries.length === 0) {
       return;
     }
 
     event.preventDefault();
-    selectEntryAtIndex(nextIndex);
+    activateEntryAtIndex(nextIndex);
   };
 
   useEffect(() => {
@@ -1077,6 +2457,7 @@ function TermList({
       className="term-index-explorer__term-list"
       role="listbox"
       aria-label="Indexed terms"
+      aria-multiselectable="true"
       onKeyDown={handleKeyDown}
     >
       <VirtualList
@@ -1097,7 +2478,10 @@ function TermList({
             content: (
               <TermRow
                 entry={entry}
+                index={virtualRow.index}
+                rowMetadata={rowMetadata}
                 selected={entry.id === selectedEntryId}
+                selectedForBatch={selectedEntryIds.includes(entry.id)}
                 focusable={
                   selectedIndex < 0 ? virtualRow.index === 0 : entry.id === selectedEntryId
                 }
@@ -1109,6 +2493,9 @@ function TermList({
                   }
                 }}
                 onSelect={() => onSelectEntry(entry.id)}
+                onUpdateReview={(reviewStatus) => onUpdateEntryReview(entry.id, reviewStatus)}
+                isUpdatingReview={isUpdatingReview}
+                onToggleSelection={(checked) => onToggleEntrySelection(entry.id, checked)}
               />
             ),
           };
@@ -1120,45 +2507,111 @@ function TermList({
 
 function TermRow({
   entry,
+  index,
+  rowMetadata,
   selected,
+  selectedForBatch,
   focusable,
   rowRef,
   onSelect,
+  onUpdateReview,
+  isUpdatingReview,
+  onToggleSelection,
 }: {
   entry: ApiTermIndexEntry;
+  index: number;
+  rowMetadata: 'term' | 'candidate';
   selected: boolean;
+  selectedForBatch: boolean;
   focusable: boolean;
-  rowRef: (node: HTMLButtonElement | null) => void;
+  rowRef: (node: HTMLDivElement | null) => void;
   onSelect: () => void;
+  onUpdateReview: (reviewStatus: ApiTermIndexReviewStatus) => void;
+  isUpdatingReview: boolean;
+  onToggleSelection: (checked: boolean) => void;
 }) {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isInteractiveTarget(event.target)) {
+      return;
+    }
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onSelect();
+      return;
+    }
+    if (event.key === ' ') {
+      event.preventDefault();
+      onToggleSelection(!selectedForBatch);
+    }
+  };
+
   return (
-    <button
+    <div
       ref={rowRef}
-      type="button"
       role="option"
       aria-selected={selected}
+      data-term-index={index}
       tabIndex={focusable ? 0 : -1}
       className={`term-index-explorer__term-row${selected ? ' is-selected' : ''}`}
       onClick={onSelect}
+      onFocus={onSelect}
+      onKeyDown={handleKeyDown}
     >
-      <span className="term-index-explorer__term-main">
-        <span className="term-index-explorer__term-name">{entry.displayTerm}</span>
-        <span className="term-index-explorer__term-key">{entry.normalizedKey}</span>
+      <input
+        type="checkbox"
+        className="term-index-explorer__term-checkbox"
+        checked={selectedForBatch}
+        onClick={(event) => event.stopPropagation()}
+        onChange={(event) => onToggleSelection(event.target.checked)}
+        aria-label={`Select ${entry.displayTerm}`}
+      />
+      <span className="term-index-explorer__term-body">
+        <span className="term-index-explorer__term-main">
+          <span className="term-index-explorer__term-name-cell">
+            <span className="term-index-explorer__term-name">{entry.displayTerm}</span>
+            {rowMetadata === 'term' ? (
+              <span className="term-index-explorer__term-inline-meta">
+                <span>#{entry.id}</span>
+              </span>
+            ) : null}
+            {rowMetadata === 'candidate' && entry.termIndexCandidateId != null ? (
+              <span className="term-index-explorer__term-inline-meta">
+                <span>#{entry.termIndexCandidateId}</span>
+              </span>
+            ) : null}
+          </span>
+          <span className="term-index-explorer__term-hit-count">
+            {entry.occurrenceCount.toLocaleString()} hits
+          </span>
+          <span className="term-index-explorer__term-repository-count">
+            {entry.repositoryCount.toLocaleString()} repos
+          </span>
+        </span>
+        <span className="term-index-explorer__term-meta">
+          <PillDropdown
+            value={entry.reviewStatus}
+            options={REVIEW_STATUS_OPTIONS}
+            onChange={onUpdateReview}
+            disabled={isUpdatingReview}
+            ariaLabel={`Review status for ${entry.displayTerm}`}
+            className="term-index-explorer__term-review-dropdown"
+          />
+        </span>
       </span>
-      <span className="term-index-explorer__term-meta">
-        {entry.occurrenceCount} hits · {entry.repositoryCount} repos · {entry.sourceLocaleTag}
-      </span>
-    </button>
+    </div>
   );
 }
 
 function OccurrencePanel({
-  entry,
+  entryId,
   occurrences,
   isLoading,
   error,
 }: {
-  entry: ApiTermIndexEntry;
+  entryId: number;
   occurrences: ApiTermIndexOccurrence[];
   isLoading: boolean;
   error: unknown;
@@ -1173,7 +2626,7 @@ function OccurrencePanel({
 
   useEffect(() => {
     setFocusedOccurrenceId(null);
-  }, [entry.id]);
+  }, [entryId]);
 
   const focusOccurrenceAtIndex = (index: number) => {
     const nextOccurrence = occurrences[index];
@@ -1212,21 +2665,6 @@ function OccurrencePanel({
 
   return (
     <div className="term-index-explorer__occurrence-panel">
-      <div className="term-index-explorer__occurrence-header">
-        <div>
-          <div className="term-index-explorer__occurrence-title">{entry.displayTerm}</div>
-          <div className="settings-hint">
-            {entry.occurrenceCount} hits across {entry.repositoryCount} repositories
-          </div>
-        </div>
-      </div>
-      <div className="term-index-explorer__subbar term-index-explorer__subbar--compact">
-        <span className="settings-hint">
-          {isLoading
-            ? 'Loading examples...'
-            : formatCappedListLabel('examples', occurrences.length, EXAMPLE_RESULT_LIMIT)}
-        </span>
-      </div>
       {isLoading ? (
         <div className="term-index-explorer__loading-spacer" aria-hidden="true" />
       ) : error ? (

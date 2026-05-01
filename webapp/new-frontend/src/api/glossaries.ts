@@ -76,6 +76,8 @@ export type ApiGlossaryTerm = {
   provenance?: string | null;
   caseSensitive: boolean;
   doNotTranslate: boolean;
+  termIndexCandidateId?: number | null;
+  termIndexExtractedTermId?: number | null;
   translations: ApiGlossaryTermTranslation[];
   evidence: ApiGlossaryTermEvidence[];
 };
@@ -250,20 +252,29 @@ export type ApiGlossaryTermIndexCandidateSource = {
   createdDate?: string | null;
 };
 
-export type ApiGlossaryTermIndexSuggestionReviewState =
+export type ApiGlossaryTermIndexSuggestionReviewStatus =
   | 'NEW'
   | 'IGNORED'
-  | 'LINKED'
-  | 'EXISTING_TERM'
+  | 'ACCEPTED'
   | (string & {});
 
-export type ApiGlossaryTermIndexSuggestionReviewStateFilter =
+export type ApiGlossaryTermIndexSuggestionReviewStatusFilter =
   | 'NEW'
   | 'IGNORED'
-  | 'LINKED'
-  | 'EXISTING_TERM'
+  | 'ACCEPTED'
   | 'REVIEWED'
   | 'ALL';
+
+export type ApiGlossaryTermIndexSuggestionGlossaryPresence =
+  | 'LINKED'
+  | 'EXISTING_TERM'
+  | 'NOT_IN_GLOSSARY'
+  | (string & {});
+
+export type ApiGlossaryTermIndexSuggestionGlossaryPresenceFilter =
+  | 'ALL'
+  | 'IN_GLOSSARY'
+  | 'NOT_IN_GLOSSARY';
 
 export type ApiGlossaryTermIndexSuggestion = {
   termIndexCandidateId: number;
@@ -275,6 +286,7 @@ export type ApiGlossaryTermIndexSuggestion = {
   occurrenceCount: number;
   repositoryCount: number;
   sourceCount: number;
+  extractedTermMatchCount: number;
   confidence: number;
   definition?: string | null;
   rationale?: string | null;
@@ -286,9 +298,19 @@ export type ApiGlossaryTermIndexSuggestion = {
   examples: ApiGlossaryTermIndexOccurrence[];
   sources: ApiGlossaryTermIndexCandidateSource[];
   lastSignalAt?: string | null;
-  reviewState: ApiGlossaryTermIndexSuggestionReviewState;
+  candidateReviewStatus: ApiTermIndexLayerReviewStatus;
+  candidateReviewAuthority: ApiTermIndexLayerReviewAuthority;
+  candidateReviewReason?: string | null;
+  candidateReviewRationale?: string | null;
+  candidateReviewConfidence?: number | null;
+  reviewStatus: ApiGlossaryTermIndexSuggestionReviewStatus;
+  glossaryPresence: ApiGlossaryTermIndexSuggestionGlossaryPresence;
   selectionMethod: string;
 };
+
+export type ApiTermIndexLayerReviewStatus = 'TO_REVIEW' | 'ACCEPTED' | 'REJECTED' | (string & {});
+
+export type ApiTermIndexLayerReviewAuthority = 'DEFAULT' | 'AI' | 'HUMAN' | (string & {});
 
 export type ApiSeedGlossaryTermIndexCandidatesRequest = {
   candidates: Array<{
@@ -305,6 +327,11 @@ export type ApiSeedGlossaryTermIndexCandidatesRequest = {
     partOfSpeech?: string | null;
     enforcement?: string | null;
     doNotTranslate?: boolean | null;
+    reviewStatus?: ApiTermIndexLayerReviewStatus | null;
+    reviewAuthority?: ApiTermIndexLayerReviewAuthority | null;
+    reviewReason?: string | null;
+    reviewRationale?: string | null;
+    reviewConfidence?: number | null;
     metadata?: Record<string, unknown> | null;
   }>;
 };
@@ -517,7 +544,8 @@ export async function fetchGlossaryTermIndexSuggestions(
     limit?: number;
     useAi?: boolean;
     includeReviewed?: boolean;
-    reviewStateFilter?: ApiGlossaryTermIndexSuggestionReviewStateFilter;
+    reviewStatusFilter?: ApiGlossaryTermIndexSuggestionReviewStatusFilter;
+    glossaryPresenceFilter?: ApiGlossaryTermIndexSuggestionGlossaryPresenceFilter;
   },
 ): Promise<ApiGlossaryTermIndexSuggestionsResponse> {
   const response = await fetch(
@@ -534,7 +562,8 @@ export async function fetchGlossaryTermIndexSuggestions(
         limit: options?.limit ?? null,
         useAi: options?.useAi ?? null,
         includeReviewed: options?.includeReviewed ?? null,
-        reviewStateFilter: options?.reviewStateFilter ?? null,
+        reviewStatusFilter: options?.reviewStatusFilter ?? null,
+        glossaryPresenceFilter: options?.glossaryPresenceFilter ?? null,
       }),
     },
   );
@@ -609,6 +638,51 @@ export async function ignoreGlossaryTermIndexSuggestion(
     const message = await response.text().catch(() => '');
     throw new Error(message || 'Failed to ignore glossary term suggestion');
   }
+}
+
+export async function updateGlossaryTermIndexSuggestionReview(
+  glossaryId: number,
+  termIndexCandidateId: number,
+  request: {
+    reviewStatus: ApiTermIndexLayerReviewStatus;
+    reviewReason?: string | null;
+    reviewRationale?: string | null;
+    reviewConfidence?: number | null;
+  },
+): Promise<{
+  termIndexCandidateId: number;
+  reviewStatus: ApiTermIndexLayerReviewStatus;
+  reviewAuthority: ApiTermIndexLayerReviewAuthority;
+  reviewReason?: string | null;
+  reviewRationale?: string | null;
+  reviewConfidence?: number | null;
+}> {
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/term-index-suggestions/${termIndexCandidateId}/review`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(request),
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to update glossary term suggestion review');
+  }
+
+  return (await response.json()) as {
+    termIndexCandidateId: number;
+    reviewStatus: ApiTermIndexLayerReviewStatus;
+    reviewAuthority: ApiTermIndexLayerReviewAuthority;
+    reviewReason?: string | null;
+    reviewRationale?: string | null;
+    reviewConfidence?: number | null;
+  };
 }
 
 export async function seedGlossaryTermIndexCandidates(
