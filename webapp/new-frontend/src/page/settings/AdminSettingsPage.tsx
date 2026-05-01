@@ -123,6 +123,18 @@ export function AdminSettingsPage() {
                   Search indexed raw terms and inspect source text unit examples.
                 </div>
               </button>
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/glossary-term-index/candidates');
+                }}
+              >
+                <div className="settings-directory__title">Candidate generation</div>
+                <div className="settings-directory__description">
+                  Turn reviewed extracted terms into glossary candidate suggestions.
+                </div>
+              </button>
             </div>
           </section>
 

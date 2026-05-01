@@ -76,7 +76,8 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
   private static final class FakeGlossaryTermService extends GlossaryTermService {
     private FakeGlossaryTermService() {
       super(
-          null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+          null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+          null, null, null);
     }
 
     @Override
@@ -100,6 +101,8 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
                   "AI_EXTRACTED",
                   true,
                   true,
+                  null,
+                  null,
                   List.of(),
                   List.of())),
           1,

@@ -78,12 +78,15 @@ public class SearchGlossaryTermsMcpToolTest {
             "AUTOMATED",
             false,
             false,
+            null,
+            null,
             List.of(new TermTranslationView("fr", "Actions", null, "APPROVED")),
             List.of());
 
     private FakeGlossaryTermService() {
       super(
-          null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+          null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+          null, null, null);
     }
 
     @Override

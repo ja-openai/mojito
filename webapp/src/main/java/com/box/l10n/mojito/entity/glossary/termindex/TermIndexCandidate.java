@@ -90,6 +90,21 @@ public class TermIndexCandidate extends AuditableEntity {
   @Column(name = "metadata_json", length = Integer.MAX_VALUE)
   private String metadataJson;
 
+  @Column(name = "review_status", nullable = false, length = 32)
+  private String reviewStatus = TermIndexReview.STATUS_TO_REVIEW;
+
+  @Column(name = "review_authority", nullable = false, length = 32)
+  private String reviewAuthority = TermIndexReview.AUTHORITY_DEFAULT;
+
+  @Column(name = "review_reason", length = 64)
+  private String reviewReason;
+
+  @Column(name = "review_rationale", length = 2048)
+  private String reviewRationale;
+
+  @Column(name = "review_confidence")
+  private Integer reviewConfidence;
+
   public TermIndexExtractedTerm getTermIndexExtractedTerm() {
     return termIndexExtractedTerm;
   }
@@ -224,5 +239,45 @@ public class TermIndexCandidate extends AuditableEntity {
 
   public void setMetadataJson(String metadataJson) {
     this.metadataJson = metadataJson;
+  }
+
+  public String getReviewStatus() {
+    return reviewStatus;
+  }
+
+  public void setReviewStatus(String reviewStatus) {
+    this.reviewStatus = reviewStatus;
+  }
+
+  public String getReviewAuthority() {
+    return reviewAuthority;
+  }
+
+  public void setReviewAuthority(String reviewAuthority) {
+    this.reviewAuthority = reviewAuthority;
+  }
+
+  public String getReviewReason() {
+    return reviewReason;
+  }
+
+  public void setReviewReason(String reviewReason) {
+    this.reviewReason = reviewReason;
+  }
+
+  public String getReviewRationale() {
+    return reviewRationale;
+  }
+
+  public void setReviewRationale(String reviewRationale) {
+    this.reviewRationale = reviewRationale;
+  }
+
+  public Integer getReviewConfidence() {
+    return reviewConfidence;
+  }
+
+  public void setReviewConfidence(Integer reviewConfidence) {
+    this.reviewConfidence = reviewConfidence;
   }
 }

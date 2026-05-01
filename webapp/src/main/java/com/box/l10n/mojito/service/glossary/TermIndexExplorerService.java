@@ -1,10 +1,15 @@
 package com.box.l10n.mojito.service.glossary;
 
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
 import com.box.l10n.mojito.service.security.user.UserService;
 import java.time.ZonedDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,6 +27,7 @@ public class TermIndexExplorerService {
 
   private final UserService userService;
   private final TermIndexExtractedTermRepository termIndexExtractedTermRepository;
+  private final TermIndexCandidateRepository termIndexCandidateRepository;
   private final TermIndexOccurrenceRepository termIndexOccurrenceRepository;
   private final TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository;
   private final TermIndexRefreshRunRepository termIndexRefreshRunRepository;
@@ -29,12 +35,14 @@ public class TermIndexExplorerService {
   public TermIndexExplorerService(
       UserService userService,
       TermIndexExtractedTermRepository termIndexExtractedTermRepository,
+      TermIndexCandidateRepository termIndexCandidateRepository,
       TermIndexOccurrenceRepository termIndexOccurrenceRepository,
       TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository,
       TermIndexRefreshRunRepository termIndexRefreshRunRepository) {
     this.userService = Objects.requireNonNull(userService);
     this.termIndexExtractedTermRepository =
         Objects.requireNonNull(termIndexExtractedTermRepository);
+    this.termIndexCandidateRepository = Objects.requireNonNull(termIndexCandidateRepository);
     this.termIndexOccurrenceRepository = Objects.requireNonNull(termIndexOccurrenceRepository);
     this.termIndexRepositoryCursorRepository =
         Objects.requireNonNull(termIndexRepositoryCursorRepository);
@@ -48,19 +56,70 @@ public class TermIndexExplorerService {
     List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
     boolean repositoryIdsEmpty = normalized.repositoryIds().isEmpty();
 
+    List<TermIndexExtractedTermRepository.SearchRow> rows =
+        termIndexExtractedTermRepository.searchEntries(
+            repositoryIdsEmpty,
+            repositoryIds,
+            normalizeOptional(normalized.searchQuery()),
+            normalizeOptional(normalized.extractionMethod()),
+            normalized.reviewStatusFilter(),
+            normalized.minOccurrences(),
+            pageRequest(normalized.limit()));
+    Map<Long, Long> candidateIdsByExtractedTermId =
+        findCandidateIdsByExtractedTermId(
+            rows.stream().map(TermIndexExtractedTermRepository.SearchRow::getId).toList());
     List<EntrySummaryView> entries =
-        termIndexExtractedTermRepository
-            .searchEntries(
-                repositoryIdsEmpty,
-                repositoryIds,
-                normalizeOptional(normalized.searchQuery()),
-                normalizeOptional(normalized.extractionMethod()),
-                normalized.minOccurrences(),
-                pageRequest(normalized.limit()))
-            .stream()
-            .map(this::toEntrySummaryView)
+        rows.stream()
+            .map(row -> toEntrySummaryView(row, candidateIdsByExtractedTermId.get(row.getId())))
             .toList();
     return new EntrySearchView(entries);
+  }
+
+  @Transactional
+  public EntrySummaryView updateEntryReview(
+      Long termIndexExtractedTermId, ReviewUpdateCommand command) {
+    requireAdmin();
+    TermIndexExtractedTerm entry =
+        termIndexExtractedTermRepository
+            .findById(termIndexExtractedTermId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Term index extracted term not found: " + termIndexExtractedTermId));
+    ReviewUpdateCommand normalized = normalize(command);
+    entry.setReviewStatus(normalized.reviewStatus());
+    entry.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+    entry.setReviewReason(normalized.reviewReason());
+    entry.setReviewRationale(normalized.reviewRationale());
+    entry.setReviewConfidence(normalized.reviewConfidence());
+    TermIndexExtractedTerm saved = termIndexExtractedTermRepository.save(entry);
+    return toEntrySummaryView(saved, findCandidateIdByExtractedTermId(saved.getId()));
+  }
+
+  @Transactional
+  public BatchReviewUpdateView updateEntryReviews(BatchReviewUpdateCommand command) {
+    requireAdmin();
+    BatchReviewUpdateCommand normalized = normalize(command);
+    List<Long> termIndexExtractedTermIds =
+        normalized.termIndexExtractedTermIds().stream()
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+    if (termIndexExtractedTermIds.isEmpty()) {
+      throw new IllegalArgumentException("termIndexEntryIds are required");
+    }
+
+    List<TermIndexExtractedTerm> entries =
+        termIndexExtractedTermRepository.findAllById(termIndexExtractedTermIds);
+    for (TermIndexExtractedTerm entry : entries) {
+      entry.setReviewStatus(normalized.reviewStatus());
+      entry.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+      entry.setReviewReason(normalized.reviewReason());
+      entry.setReviewRationale(normalized.reviewRationale());
+      entry.setReviewConfidence(normalized.reviewConfidence());
+    }
+    termIndexExtractedTermRepository.saveAll(entries);
+    return new BatchReviewUpdateView(entries.size());
   }
 
   @Transactional(readOnly = true)
@@ -109,15 +168,66 @@ public class TermIndexExplorerService {
     return new StatusView(cursors, recentRuns, extractionMethods);
   }
 
-  private EntrySummaryView toEntrySummaryView(TermIndexExtractedTermRepository.SearchRow row) {
+  private EntrySummaryView toEntrySummaryView(
+      TermIndexExtractedTermRepository.SearchRow row, Long termIndexCandidateId) {
     return new EntrySummaryView(
         row.getId(),
+        termIndexCandidateId,
         row.getNormalizedKey(),
         row.getDisplayTerm(),
         row.getSourceLocaleTag(),
+        row.getCreatedDate(),
+        row.getLastModifiedDate(),
+        row.getReviewStatus(),
+        row.getReviewAuthority(),
+        row.getReviewReason(),
+        row.getReviewRationale(),
+        row.getReviewConfidence(),
         nullToZero(row.getOccurrenceCount()),
         Math.toIntExact(nullToZero(row.getRepositoryCount())),
         row.getLastOccurrenceAt());
+  }
+
+  private EntrySummaryView toEntrySummaryView(
+      TermIndexExtractedTerm entry, Long termIndexCandidateId) {
+    return new EntrySummaryView(
+        entry.getId(),
+        termIndexCandidateId,
+        entry.getNormalizedKey(),
+        entry.getDisplayTerm(),
+        entry.getSourceLocaleTag(),
+        entry.getCreatedDate(),
+        entry.getLastModifiedDate(),
+        entry.getReviewStatus(),
+        entry.getReviewAuthority(),
+        entry.getReviewReason(),
+        entry.getReviewRationale(),
+        entry.getReviewConfidence(),
+        nullToZero(entry.getOccurrenceCount()),
+        entry.getRepositoryCount() == null ? 0 : entry.getRepositoryCount(),
+        entry.getLastSeenAt());
+  }
+
+  private Map<Long, Long> findCandidateIdsByExtractedTermId(List<Long> termIndexExtractedTermIds) {
+    Map<Long, Long> candidateIdsByExtractedTermId = new HashMap<>();
+    if (termIndexExtractedTermIds.isEmpty()) {
+      return candidateIdsByExtractedTermId;
+    }
+    termIndexCandidateRepository
+        .findCandidateIdsByExtractedTermIdIn(termIndexExtractedTermIds)
+        .forEach(
+            row ->
+                candidateIdsByExtractedTermId.put(
+                    row.getTermIndexExtractedTermId(), row.getTermIndexCandidateId()));
+    return candidateIdsByExtractedTermId;
+  }
+
+  private Long findCandidateIdByExtractedTermId(Long termIndexExtractedTermId) {
+    if (termIndexExtractedTermId == null) {
+      return null;
+    }
+    return findCandidateIdsByExtractedTermId(List.of(termIndexExtractedTermId))
+        .get(termIndexExtractedTermId);
   }
 
   private OccurrenceView toOccurrenceView(TermIndexOccurrenceRepository.DetailRow row) {
@@ -168,12 +278,14 @@ public class TermIndexExplorerService {
 
   private EntrySearchCommand normalize(EntrySearchCommand command) {
     if (command == null) {
-      return new EntrySearchCommand(List.of(), null, null, 1L, DEFAULT_LIMIT);
+      return new EntrySearchCommand(
+          List.of(), null, null, TermIndexReview.STATUS_FILTER_NON_REJECTED, 1L, DEFAULT_LIMIT);
     }
     return new EntrySearchCommand(
         normalizeRepositoryIds(command.repositoryIds()),
         command.searchQuery(),
         command.extractionMethod(),
+        normalizeReviewStatusFilter(command.reviewStatusFilter()),
         Math.max(1L, command.minOccurrences() == null ? 1L : command.minOccurrences()),
         normalizeLimit(command.limit()));
   }
@@ -197,6 +309,63 @@ public class TermIndexExplorerService {
 
   private List<Long> repositoryIdsOrSentinel(List<Long> repositoryIds) {
     return repositoryIds.isEmpty() ? EMPTY_FILTER_SENTINEL : repositoryIds;
+  }
+
+  private ReviewUpdateCommand normalize(ReviewUpdateCommand command) {
+    if (command == null) {
+      throw new IllegalArgumentException("reviewStatus is required");
+    }
+    return new ReviewUpdateCommand(
+        normalizeReviewStatus(command.reviewStatus()),
+        truncate(normalizeOptional(command.reviewReason()), 64),
+        truncate(normalizeOptional(command.reviewRationale()), 2048),
+        clampConfidence(command.reviewConfidence()));
+  }
+
+  private BatchReviewUpdateCommand normalize(BatchReviewUpdateCommand command) {
+    if (command == null) {
+      throw new IllegalArgumentException("reviewStatus is required");
+    }
+    return new BatchReviewUpdateCommand(
+        command.termIndexExtractedTermIds() == null
+            ? List.of()
+            : command.termIndexExtractedTermIds(),
+        normalizeReviewStatus(command.reviewStatus()),
+        truncate(normalizeOptional(command.reviewReason()), 64),
+        truncate(normalizeOptional(command.reviewRationale()), 2048),
+        clampConfidence(command.reviewConfidence()));
+  }
+
+  private String normalizeReviewStatus(String reviewStatus) {
+    String normalized = normalizeOptional(reviewStatus);
+    if (normalized == null) {
+      throw new IllegalArgumentException("reviewStatus is required");
+    }
+    normalized = normalized.toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case TermIndexReview.STATUS_TO_REVIEW,
+              TermIndexReview.STATUS_ACCEPTED,
+              TermIndexReview.STATUS_REJECTED ->
+          normalized;
+      default -> throw new IllegalArgumentException("Unsupported reviewStatus: " + reviewStatus);
+    };
+  }
+
+  private String normalizeReviewStatusFilter(String reviewStatusFilter) {
+    String normalized = normalizeOptional(reviewStatusFilter);
+    if (normalized == null) {
+      return TermIndexReview.STATUS_FILTER_NON_REJECTED;
+    }
+    normalized = normalized.toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case TermIndexReview.STATUS_FILTER_ALL,
+              TermIndexReview.STATUS_FILTER_NON_REJECTED,
+              TermIndexReview.STATUS_TO_REVIEW,
+              TermIndexReview.STATUS_ACCEPTED,
+              TermIndexReview.STATUS_REJECTED ->
+          normalized;
+      default -> TermIndexReview.STATUS_FILTER_NON_REJECTED;
+    };
   }
 
   private int normalizeLimit(Integer limit) {
@@ -224,6 +393,20 @@ public class TermIndexExplorerService {
     return value.trim();
   }
 
+  private String truncate(String value, int maxLength) {
+    if (value == null || value.length() <= maxLength) {
+      return value;
+    }
+    return value.substring(0, maxLength);
+  }
+
+  private Integer clampConfidence(Integer value) {
+    if (value == null) {
+      return null;
+    }
+    return Math.min(100, Math.max(0, value));
+  }
+
   private void requireAdmin() {
     if (!userService.isCurrentUserAdmin()) {
       throw new AccessDeniedException("Admin role required");
@@ -234,8 +417,21 @@ public class TermIndexExplorerService {
       List<Long> repositoryIds,
       String searchQuery,
       String extractionMethod,
+      String reviewStatusFilter,
       Long minOccurrences,
       Integer limit) {}
+
+  public record ReviewUpdateCommand(
+      String reviewStatus, String reviewReason, String reviewRationale, Integer reviewConfidence) {}
+
+  public record BatchReviewUpdateCommand(
+      List<Long> termIndexExtractedTermIds,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
+
+  public record BatchReviewUpdateView(int updatedEntryCount) {}
 
   public record OccurrenceSearchCommand(
       List<Long> repositoryIds, String extractionMethod, Integer limit) {}
@@ -244,9 +440,17 @@ public class TermIndexExplorerService {
 
   public record EntrySummaryView(
       Long id,
+      Long termIndexCandidateId,
       String normalizedKey,
       String displayTerm,
       String sourceLocaleTag,
+      ZonedDateTime createdDate,
+      ZonedDateTime lastModifiedDate,
+      String reviewStatus,
+      String reviewAuthority,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence,
       long occurrenceCount,
       int repositoryCount,
       ZonedDateTime lastOccurrenceAt) {}

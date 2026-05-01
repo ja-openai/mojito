@@ -39,6 +39,7 @@ import { AdminTeamPoolsPage } from './page/settings/AdminTeamPoolsPage';
 import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
 import { AdminTemporaryBulkTranslationAcceptPage } from './page/settings/AdminTemporaryBulkTranslationAcceptPage';
 import {
+  AdminTermIndexCandidateGenerationPage,
   AdminTermIndexRunsPage,
   AdminTermIndexTermsPage,
 } from './page/settings/AdminTermIndexExplorerPage';
@@ -202,6 +203,14 @@ export function App() {
             <Route
               path="/settings/system/glossary-term-index/terms"
               element={<AdminTermIndexTermsPage />}
+            />
+            <Route
+              path="/settings/admin/glossary-term-index/candidates"
+              element={<AdminTermIndexCandidateGenerationPage />}
+            />
+            <Route
+              path="/settings/system/glossary-term-index/candidates"
+              element={<AdminTermIndexCandidateGenerationPage />}
             />
             <Route
               path="/settings/admin/review-automations"

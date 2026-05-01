@@ -7,6 +7,7 @@ import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.search.SearchType;
@@ -42,14 +43,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class GlossaryTermIndexCurationService {
 
   private static final int DEFAULT_SUGGESTION_LIMIT = 50;
-  private static final int MAX_SUGGESTION_LIMIT = 200;
-  private static final int MAX_PREFETCH_LIMIT = 800;
   private static final int EXAMPLE_LIMIT = 4;
   private static final int LIVE_SEARCH_EXAMPLE_LIMIT = 3;
   private static final int DEFAULT_GENERATION_LIMIT = 500;
-  private static final int MAX_GENERATION_LIMIT = 5_000;
   private static final int DEFAULT_CANDIDATE_EXPORT_LIMIT = 1_000;
-  private static final int MAX_CANDIDATE_EXPORT_LIMIT = 10_000;
   private static final List<Long> EMPTY_FILTER_SENTINEL = List.of(-1L);
   private static final String EXTRACTION_SOURCE_NAME = "term-index";
   private static final String GLOSSARY_SUBMISSION_SOURCE_TYPE = "HUMAN";
@@ -58,12 +55,16 @@ public class GlossaryTermIndexCurationService {
   private static final String GLOSSARY_SUBMISSION_METADATA_SUBMITTED_FROM = "submittedFrom";
   private static final String CANDIDATE_EXPORT_FORMAT_JSON = "json";
   private static final String SOURCE_SEARCH_METHOD = "SOURCE_SEARCH";
-  private static final String REVIEW_STATE_NEW = "NEW";
-  private static final String REVIEW_STATE_IGNORED = "IGNORED";
-  private static final String REVIEW_STATE_LINKED = "LINKED";
-  private static final String REVIEW_STATE_EXISTING_TERM = "EXISTING_TERM";
-  private static final String REVIEW_STATE_FILTER_ALL = "ALL";
-  private static final String REVIEW_STATE_FILTER_REVIEWED = "REVIEWED";
+  private static final String REVIEW_STATUS_NEW = "NEW";
+  private static final String REVIEW_STATUS_IGNORED = "IGNORED";
+  private static final String REVIEW_STATUS_ACCEPTED = "ACCEPTED";
+  private static final String REVIEW_STATUS_FILTER_ALL = "ALL";
+  private static final String REVIEW_STATUS_FILTER_REVIEWED = "REVIEWED";
+  private static final String GLOSSARY_PRESENCE_LINKED = "LINKED";
+  private static final String GLOSSARY_PRESENCE_EXISTING_TERM = "EXISTING_TERM";
+  private static final String GLOSSARY_PRESENCE_NOT_IN_GLOSSARY = "NOT_IN_GLOSSARY";
+  private static final String GLOSSARY_PRESENCE_FILTER_ALL = "ALL";
+  private static final String GLOSSARY_PRESENCE_FILTER_IN_GLOSSARY = "IN_GLOSSARY";
 
   private final GlossaryRepository glossaryRepository;
   private final com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository;
@@ -116,19 +117,32 @@ public class GlossaryTermIndexCurationService {
     Glossary glossary = getGlossary(glossaryId);
     SuggestionSearchCommand normalized = normalize(command);
     List<Long> scopeRepositoryIds = resolveScopeRepositoryIds(glossary);
-    int prefetchLimit = Math.min(MAX_PREFETCH_LIMIT, Math.max(normalized.limit() * 4, 100));
+    int prefetchLimit = prefetchLimit(normalized.limit());
     String searchQuery = normalizeOptional(normalized.searchQuery());
 
+    List<TermIndexCandidateRepository.CandidateSearchRow> candidateRows =
+        termIndexCandidateRepository
+            .searchForGlossarySuggestions(
+                false,
+                repositoryIdsOrSentinel(scopeRepositoryIds),
+                searchQuery,
+                TermIndexReview.STATUS_FILTER_NON_REJECTED,
+                PageRequest.of(0, prefetchLimit))
+            .stream()
+            .filter(row -> candidateVisibleForGlossary(row.getMetadataJson(), glossary.getId()))
+            .toList();
+    Map<String, Long> extractedTermMatchCountsByNormalizedKey =
+        findExtractedTermMatchCountsByNormalizedKey(candidateRows, scopeRepositoryIds);
+
     LinkedHashMap<Long, SuggestionAccumulator> candidates = new LinkedHashMap<>();
-    termIndexCandidateRepository
-        .searchForGlossarySuggestions(
-            false,
-            repositoryIdsOrSentinel(scopeRepositoryIds),
-            searchQuery,
-            PageRequest.of(0, prefetchLimit))
-        .stream()
-        .filter(row -> candidateVisibleForGlossary(row.getMetadataJson(), glossary.getId()))
-        .forEach(row -> candidates.putIfAbsent(row.getId(), fromCandidateSearchRow(row)));
+    candidateRows.forEach(
+        row ->
+            candidates.putIfAbsent(
+                row.getId(),
+                fromCandidateSearchRow(
+                    row,
+                    extractedTermMatchCountsByNormalizedKey.getOrDefault(
+                        row.getNormalizedKey(), 0L))));
 
     if (candidates.isEmpty()) {
       return new SuggestionSearchView(List.of(), 0);
@@ -142,23 +156,38 @@ public class GlossaryTermIndexCurationService {
         termIndexCandidateRepository.findAllById(candidateIds).stream()
             .collect(Collectors.toMap(TermIndexCandidate::getId, candidate -> candidate));
 
-    List<SuggestionView> heuristicSuggestions = new ArrayList<>();
+    List<SuggestionCandidate> heuristicCandidates = new ArrayList<>();
     for (SuggestionAccumulator accumulator : candidates.values()) {
       TermIndexCandidate candidate = candidatesById.get(accumulator.id());
       if (candidate == null) {
         continue;
       }
-      String reviewState =
-          reviewState(accumulator, linkedCandidateIds, ignoredCandidateIds, existingTermKeys);
-      if (!matchesReviewStateFilter(reviewState, normalized.reviewStateFilter())) {
+      SuggestionState state =
+          suggestionState(accumulator, linkedCandidateIds, ignoredCandidateIds, existingTermKeys);
+      if (!matchesReviewStatusFilter(state.reviewStatus(), normalized.reviewStatusFilter())) {
         continue;
       }
-      heuristicSuggestions.add(
-          toSuggestion(accumulator, candidate, scopeRepositoryIds, reviewState));
-      if (heuristicSuggestions.size() >= prefetchLimit) {
+      if (!matchesGlossaryPresenceFilter(
+          state.glossaryPresence(), normalized.glossaryPresenceFilter())) {
+        continue;
+      }
+      heuristicCandidates.add(new SuggestionCandidate(accumulator, candidate, state));
+      if (heuristicCandidates.size() >= prefetchLimit) {
         break;
       }
     }
+
+    List<SuggestionView> heuristicSuggestions =
+        heuristicCandidates.stream()
+            .limit(normalized.limit())
+            .map(
+                suggestion ->
+                    toSuggestion(
+                        suggestion.accumulator(),
+                        suggestion.candidate(),
+                        scopeRepositoryIds,
+                        suggestion.state()))
+            .toList();
 
     List<SuggestionView> suggestions =
         Boolean.TRUE.equals(normalized.useAi())
@@ -167,7 +196,7 @@ public class GlossaryTermIndexCurationService {
     if (suggestions.isEmpty() && !heuristicSuggestions.isEmpty()) {
       suggestions = heuristicSuggestions.stream().limit(normalized.limit()).toList();
     }
-    return new SuggestionSearchView(suggestions, heuristicSuggestions.size());
+    return new SuggestionSearchView(suggestions, heuristicCandidates.size());
   }
 
   @Transactional
@@ -254,6 +283,27 @@ public class GlossaryTermIndexCurationService {
   }
 
   @Transactional
+  public CandidateReviewView updateCandidateReview(
+      Long termIndexCandidateId, CandidateReviewCommand command) {
+    requireTermManager();
+    TermIndexCandidate candidate = getCandidate(termIndexCandidateId);
+    CandidateReviewCommand normalized = normalize(command);
+    candidate.setReviewStatus(normalized.reviewStatus());
+    candidate.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+    candidate.setReviewReason(normalized.reviewReason());
+    candidate.setReviewRationale(normalized.reviewRationale());
+    candidate.setReviewConfidence(normalized.reviewConfidence());
+    TermIndexCandidate saved = termIndexCandidateRepository.save(candidate);
+    return new CandidateReviewView(
+        saved.getId(),
+        saved.getReviewStatus(),
+        saved.getReviewAuthority(),
+        saved.getReviewReason(),
+        saved.getReviewRationale(),
+        saved.getReviewConfidence());
+  }
+
+  @Transactional
   public SeedResult seedTerms(SeedCommand command) {
     requireTermManager();
     SeedCommand normalized = normalize(command);
@@ -286,6 +336,7 @@ public class GlossaryTermIndexCurationService {
             repositoryIdsOrSentinel(scopeRepositoryIds),
             normalizeOptional(normalized.searchQuery()),
             normalizeOptional(normalized.extractionMethod()),
+            TermIndexReview.STATUS_FILTER_NON_REJECTED,
             Math.max(1L, normalized.minOccurrences() == null ? 1L : normalized.minOccurrences()),
             PageRequest.of(0, normalizeGenerationLimit(normalized.limit())));
 
@@ -294,6 +345,39 @@ public class GlossaryTermIndexCurationService {
     int updatedCandidateCount = 0;
     for (TermIndexExtractedTermRepository.SearchRow row : rows) {
       CandidateWriteResult writeResult = upsertExtractionCandidate(row);
+      if (writeResult.created()) {
+        createdCandidateCount++;
+      } else {
+        updatedCandidateCount++;
+      }
+      generatedCandidates.add(toSeededTermView(writeResult.candidate()));
+    }
+
+    return new GenerateCandidatesResult(
+        generatedCandidates.size(),
+        createdCandidateCount,
+        updatedCandidateCount,
+        generatedCandidates);
+  }
+
+  @Transactional
+  public GenerateCandidatesResult generateCandidatesFromExtractedTerms(
+      GenerateCandidatesFromExtractedTermsCommand command) {
+    requireTermManager();
+    GenerateCandidatesFromExtractedTermsCommand normalized = normalize(command);
+    List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
+    boolean repositoryIdsEmpty = normalized.repositoryIds().isEmpty();
+    CandidateFieldOverrides overrides = normalized.overrides();
+
+    List<TermIndexExtractedTermRepository.SearchRow> rows =
+        termIndexExtractedTermRepository.findCandidateGenerationRowsByIdIn(
+            normalized.termIndexExtractedTermIds(), repositoryIdsEmpty, repositoryIds);
+
+    List<SeededTermView> generatedCandidates = new ArrayList<>(rows.size());
+    int createdCandidateCount = 0;
+    int updatedCandidateCount = 0;
+    for (TermIndexExtractedTermRepository.SearchRow row : rows) {
+      CandidateWriteResult writeResult = upsertExtractionCandidate(row, overrides);
       if (writeResult.created()) {
         createdCandidateCount++;
       } else {
@@ -331,6 +415,7 @@ public class GlossaryTermIndexCurationService {
             false,
             repositoryIdsOrSentinel(scopeRepositoryIds),
             normalizeOptional(normalized.searchQuery()),
+            TermIndexReview.STATUS_FILTER_NON_REJECTED,
             PageRequest.of(0, normalizeCandidateExportLimit(normalized.limit())));
     candidates =
         candidates.stream()
@@ -428,6 +513,7 @@ public class GlossaryTermIndexCurationService {
           normalizeKnownValue(term.enforcement(), GlossaryTermMetadata.ENFORCEMENTS, null));
       candidate.setDoNotTranslate(term.doNotTranslate());
       candidate.setMetadataJson(metadataJson);
+      applySeedReview(candidate, sourceType, term);
       termIndexCandidateRepository.save(candidate);
 
       seededTerms.add(toSeededTermView(candidate));
@@ -441,7 +527,7 @@ public class GlossaryTermIndexCurationService {
       SuggestionAccumulator accumulator,
       TermIndexCandidate candidate,
       List<Long> scopeRepositoryIds,
-      String reviewState) {
+      SuggestionState state) {
     List<TermIndexOccurrenceRepository.DetailRow> examples =
         accumulator.termIndexExtractedTermId() == null
             ? List.of()
@@ -470,6 +556,7 @@ public class GlossaryTermIndexCurationService {
         accumulator.occurrenceCount(),
         accumulator.repositoryCount(),
         accumulator.sourceCount(),
+        accumulator.extractedTermMatchCount(),
         confidence,
         definition,
         rationale,
@@ -489,7 +576,13 @@ public class GlossaryTermIndexCurationService {
         occurrenceViews,
         List.of(toCandidateSourceView(candidate)),
         accumulator.lastSignalAt(),
-        reviewState,
+        candidate.getReviewStatus(),
+        candidate.getReviewAuthority(),
+        candidate.getReviewReason(),
+        candidate.getReviewRationale(),
+        candidate.getReviewConfidence(),
+        state.reviewStatus(),
+        state.glossaryPresence(),
         "HEURISTIC");
   }
 
@@ -551,6 +644,7 @@ public class GlossaryTermIndexCurationService {
                   heuristic.occurrenceCount(),
                   heuristic.repositoryCount(),
                   heuristic.sourceCount(),
+                  heuristic.extractedTermMatchCount(),
                   clampConfidence(aiCandidate.confidence()) == null
                       ? 75
                       : clampConfidence(aiCandidate.confidence()),
@@ -572,7 +666,13 @@ public class GlossaryTermIndexCurationService {
                   heuristic.examples(),
                   heuristic.sources(),
                   heuristic.lastSignalAt(),
-                  heuristic.reviewState(),
+                  heuristic.candidateReviewStatus(),
+                  heuristic.candidateReviewAuthority(),
+                  heuristic.candidateReviewReason(),
+                  heuristic.candidateReviewRationale(),
+                  heuristic.candidateReviewConfidence(),
+                  heuristic.reviewStatus(),
+                  heuristic.glossaryPresence(),
                   "AI_REVIEW");
             })
         .filter(Objects::nonNull)
@@ -831,6 +931,11 @@ public class GlossaryTermIndexCurationService {
 
   private CandidateWriteResult upsertExtractionCandidate(
       TermIndexExtractedTermRepository.SearchRow row) {
+    return upsertExtractionCandidate(row, null);
+  }
+
+  private CandidateWriteResult upsertExtractionCandidate(
+      TermIndexExtractedTermRepository.SearchRow row, CandidateFieldOverrides overrides) {
     String sourceLocaleTag =
         coalesce(
             normalizeOptional(row.getSourceLocaleTag()), TermIndexExtractedTerm.SOURCE_LOCALE_ROOT);
@@ -864,18 +969,79 @@ public class GlossaryTermIndexCurationService {
     candidate.setNormalizedKey(row.getNormalizedKey());
     candidate.setTerm(row.getDisplayTerm());
     candidate.setConfidence(
-        heuristicConfidence(row.getOccurrenceCount(), row.getRepositoryCount()));
-    candidate.setDefinition(null);
-    candidate.setRationale(null);
-    candidate.setTermType(suggestTermType(row.getDisplayTerm()));
-    candidate.setEnforcement(GlossaryTermMetadata.ENFORCEMENT_SOFT);
-    candidate.setDoNotTranslate(shouldPreserveSource(row.getDisplayTerm()));
+        coalesce(
+            overrides == null ? null : overrides.confidence(),
+            heuristicConfidence(row.getOccurrenceCount(), row.getRepositoryCount())));
+    candidate.setDefinition(overrides == null ? null : overrides.definition());
+    candidate.setRationale(overrides == null ? null : overrides.rationale());
+    candidate.setTermType(
+        coalesce(
+            overrides == null ? null : overrides.termType(),
+            suggestTermType(row.getDisplayTerm())));
+    candidate.setPartOfSpeech(overrides == null ? null : overrides.partOfSpeech());
+    candidate.setEnforcement(
+        coalesce(
+            overrides == null ? null : overrides.enforcement(),
+            GlossaryTermMetadata.ENFORCEMENT_SOFT));
+    candidate.setDoNotTranslate(
+        coalesce(
+            overrides == null ? null : overrides.doNotTranslate(),
+            shouldPreserveSource(row.getDisplayTerm())));
+    applyExtractionCandidateReview(candidate, overrides);
     return new CandidateWriteResult(
         termIndexCandidateRepository.save(candidate), existingCandidate.isEmpty());
   }
 
+  private void applyExtractionCandidateReview(
+      TermIndexCandidate candidate, CandidateFieldOverrides overrides) {
+    if (overrides != null && overrides.reviewStatus() != null) {
+      candidate.setReviewStatus(overrides.reviewStatus());
+      candidate.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+      candidate.setReviewReason(overrides.reviewReason());
+      candidate.setReviewRationale(overrides.reviewRationale());
+      candidate.setReviewConfidence(overrides.reviewConfidence());
+      return;
+    }
+    applyDefaultReview(candidate);
+  }
+
+  private void applyDefaultReview(TermIndexCandidate candidate) {
+    if (candidate.getReviewStatus() == null) {
+      candidate.setReviewStatus(TermIndexReview.STATUS_TO_REVIEW);
+    }
+    if (candidate.getReviewAuthority() == null) {
+      candidate.setReviewAuthority(TermIndexReview.AUTHORITY_DEFAULT);
+    }
+  }
+
+  private void applySeedReview(
+      TermIndexCandidate candidate, String sourceType, SeedTermInput term) {
+    if (TermIndexCandidate.SOURCE_TYPE_HUMAN.equals(sourceType)) {
+      candidate.setReviewStatus(TermIndexReview.STATUS_ACCEPTED);
+      candidate.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+      candidate.setReviewReason(null);
+      candidate.setReviewRationale(null);
+      candidate.setReviewConfidence(null);
+      return;
+    }
+    if (!TermIndexReview.AUTHORITY_HUMAN.equals(candidate.getReviewAuthority())) {
+      String reviewStatus = normalizeCandidateReviewStatus(term.reviewStatus(), null);
+      if (reviewStatus != null) {
+        candidate.setReviewStatus(reviewStatus);
+      }
+      String reviewAuthority = normalizeCandidateReviewAuthority(term.reviewAuthority(), null);
+      if (reviewAuthority != null) {
+        candidate.setReviewAuthority(reviewAuthority);
+      }
+      candidate.setReviewReason(truncate(normalizeOptional(term.reviewReason()), 64));
+      candidate.setReviewRationale(truncate(normalizeOptional(term.reviewRationale()), 2048));
+      candidate.setReviewConfidence(clampConfidence(term.reviewConfidence()));
+    }
+    applyDefaultReview(candidate);
+  }
+
   private SuggestionAccumulator fromCandidateSearchRow(
-      TermIndexCandidateRepository.CandidateSearchRow row) {
+      TermIndexCandidateRepository.CandidateSearchRow row, long extractedTermMatchCount) {
     return new SuggestionAccumulator(
         row.getId(),
         row.getTermIndexExtractedTermId(),
@@ -886,9 +1052,35 @@ public class GlossaryTermIndexCurationService {
         nullToZero(row.getOccurrenceCount()),
         Math.toIntExact(nullToZero(row.getRepositoryCount())),
         1,
+        Math.toIntExact(extractedTermMatchCount),
         row.getLastOccurrenceAt() == null
             ? row.getCandidateCreatedDate()
             : row.getLastOccurrenceAt());
+  }
+
+  private Map<String, Long> findExtractedTermMatchCountsByNormalizedKey(
+      List<TermIndexCandidateRepository.CandidateSearchRow> rows, List<Long> scopeRepositoryIds) {
+    List<String> normalizedKeys =
+        rows.stream()
+            .map(TermIndexCandidateRepository.CandidateSearchRow::getNormalizedKey)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+    if (normalizedKeys.isEmpty()) {
+      return Map.of();
+    }
+    return termIndexExtractedTermRepository
+        .countScopedMatchesByNormalizedKeyIn(
+            normalizedKeys,
+            scopeRepositoryIds.isEmpty(),
+            repositoryIdsOrSentinel(scopeRepositoryIds))
+        .stream()
+        .collect(
+            Collectors.toMap(
+                TermIndexExtractedTermRepository.ExtractedTermMatchCountRow::getNormalizedKey,
+                row -> nullToZero(row.getExtractedTermMatchCount()),
+                Long::sum,
+                LinkedHashMap::new));
   }
 
   private OccurrenceView toOccurrenceView(TermIndexOccurrenceRepository.DetailRow row) {
@@ -922,57 +1114,135 @@ public class GlossaryTermIndexCurationService {
   private SuggestionSearchCommand normalize(SuggestionSearchCommand command) {
     if (command == null) {
       return new SuggestionSearchCommand(
-          null, DEFAULT_SUGGESTION_LIMIT, true, false, REVIEW_STATE_NEW);
+          null,
+          DEFAULT_SUGGESTION_LIMIT,
+          true,
+          false,
+          REVIEW_STATUS_NEW,
+          GLOSSARY_PRESENCE_FILTER_ALL);
     }
     return new SuggestionSearchCommand(
         command.searchQuery(),
         normalizeLimit(command.limit()),
         command.useAi(),
         Boolean.TRUE.equals(command.includeReviewed()),
-        normalizeReviewStateFilter(command.reviewStateFilter(), command.includeReviewed()));
+        normalizeReviewStatusFilter(command.reviewStatusFilter(), command.includeReviewed()),
+        normalizeGlossaryPresenceFilter(command.glossaryPresenceFilter()));
   }
 
-  private String normalizeReviewStateFilter(String reviewStateFilter, Boolean includeReviewed) {
-    String normalized = normalizeOptional(reviewStateFilter);
+  private String normalizeReviewStatusFilter(String reviewStatusFilter, Boolean includeReviewed) {
+    String normalized = normalizeOptional(reviewStatusFilter);
     if (normalized == null) {
-      return Boolean.TRUE.equals(includeReviewed) ? REVIEW_STATE_FILTER_ALL : REVIEW_STATE_NEW;
+      return Boolean.TRUE.equals(includeReviewed) ? REVIEW_STATUS_FILTER_ALL : REVIEW_STATUS_NEW;
     }
     normalized = normalized.toUpperCase(Locale.ROOT);
     return switch (normalized) {
-      case REVIEW_STATE_NEW,
-              REVIEW_STATE_IGNORED,
-              REVIEW_STATE_LINKED,
-              REVIEW_STATE_EXISTING_TERM,
-              REVIEW_STATE_FILTER_REVIEWED,
-              REVIEW_STATE_FILTER_ALL ->
+      case REVIEW_STATUS_NEW,
+              REVIEW_STATUS_IGNORED,
+              REVIEW_STATUS_ACCEPTED,
+              REVIEW_STATUS_FILTER_REVIEWED,
+              REVIEW_STATUS_FILTER_ALL ->
           normalized;
-      default -> REVIEW_STATE_NEW;
+      default -> REVIEW_STATUS_NEW;
     };
   }
 
-  private boolean matchesReviewStateFilter(String reviewState, String reviewStateFilter) {
-    return switch (reviewStateFilter) {
-      case REVIEW_STATE_FILTER_ALL -> true;
-      case REVIEW_STATE_FILTER_REVIEWED -> !REVIEW_STATE_NEW.equals(reviewState);
-      default -> Objects.equals(reviewState, reviewStateFilter);
+  private String normalizeGlossaryPresenceFilter(String glossaryPresenceFilter) {
+    String normalized = normalizeOptional(glossaryPresenceFilter);
+    if (normalized == null) {
+      return GLOSSARY_PRESENCE_FILTER_ALL;
+    }
+    normalized = normalized.toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case GLOSSARY_PRESENCE_FILTER_ALL,
+              GLOSSARY_PRESENCE_FILTER_IN_GLOSSARY,
+              GLOSSARY_PRESENCE_NOT_IN_GLOSSARY,
+              GLOSSARY_PRESENCE_LINKED,
+              GLOSSARY_PRESENCE_EXISTING_TERM ->
+          normalized;
+      default -> GLOSSARY_PRESENCE_FILTER_ALL;
     };
   }
 
-  private String reviewState(
+  private String normalizeCandidateReviewStatus(String reviewStatus, String fallback) {
+    String normalized = normalizeOptional(reviewStatus);
+    if (normalized == null) {
+      return fallback;
+    }
+    normalized = normalized.toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case TermIndexReview.STATUS_TO_REVIEW,
+              TermIndexReview.STATUS_ACCEPTED,
+              TermIndexReview.STATUS_REJECTED ->
+          normalized;
+      default -> fallback;
+    };
+  }
+
+  private String normalizeCandidateReviewAuthority(String reviewAuthority, String fallback) {
+    String normalized = normalizeOptional(reviewAuthority);
+    if (normalized == null) {
+      return fallback;
+    }
+    normalized = normalized.toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case TermIndexReview.AUTHORITY_DEFAULT,
+              TermIndexReview.AUTHORITY_AI,
+              TermIndexReview.AUTHORITY_HUMAN ->
+          normalized;
+      default -> fallback;
+    };
+  }
+
+  private boolean matchesReviewStatusFilter(String reviewStatus, String reviewStatusFilter) {
+    return switch (reviewStatusFilter) {
+      case REVIEW_STATUS_FILTER_ALL -> true;
+      case REVIEW_STATUS_FILTER_REVIEWED -> !REVIEW_STATUS_NEW.equals(reviewStatus);
+      default -> Objects.equals(reviewStatus, reviewStatusFilter);
+    };
+  }
+
+  private boolean matchesGlossaryPresenceFilter(
+      String glossaryPresence, String glossaryPresenceFilter) {
+    return switch (glossaryPresenceFilter) {
+      case GLOSSARY_PRESENCE_FILTER_ALL -> true;
+      case GLOSSARY_PRESENCE_FILTER_IN_GLOSSARY ->
+          GLOSSARY_PRESENCE_LINKED.equals(glossaryPresence)
+              || GLOSSARY_PRESENCE_EXISTING_TERM.equals(glossaryPresence);
+      default -> Objects.equals(glossaryPresence, glossaryPresenceFilter);
+    };
+  }
+
+  private SuggestionState suggestionState(
       SuggestionAccumulator candidate,
       Set<Long> linkedEntryIds,
       Set<Long> ignoredEntryIds,
       Set<String> existingTermKeys) {
+    String glossaryPresence = glossaryPresence(candidate, linkedEntryIds, existingTermKeys);
+    String reviewStatus = reviewStatus(candidate, linkedEntryIds, ignoredEntryIds);
+    return new SuggestionState(reviewStatus, glossaryPresence);
+  }
+
+  private String reviewStatus(
+      SuggestionAccumulator candidate, Set<Long> linkedEntryIds, Set<Long> ignoredEntryIds) {
+    if (ignoredEntryIds.contains(candidate.id())) {
+      return REVIEW_STATUS_IGNORED;
+    }
     if (linkedEntryIds.contains(candidate.id())) {
-      return REVIEW_STATE_LINKED;
+      return REVIEW_STATUS_ACCEPTED;
+    }
+    return REVIEW_STATUS_NEW;
+  }
+
+  private String glossaryPresence(
+      SuggestionAccumulator candidate, Set<Long> linkedEntryIds, Set<String> existingTermKeys) {
+    if (linkedEntryIds.contains(candidate.id())) {
+      return GLOSSARY_PRESENCE_LINKED;
     }
     if (existingTermKeys.contains(candidate.normalizedKey())) {
-      return REVIEW_STATE_EXISTING_TERM;
+      return GLOSSARY_PRESENCE_EXISTING_TERM;
     }
-    if (ignoredEntryIds.contains(candidate.id())) {
-      return REVIEW_STATE_IGNORED;
-    }
-    return REVIEW_STATE_NEW;
+    return GLOSSARY_PRESENCE_NOT_IN_GLOSSARY;
   }
 
   private SeedCommand normalize(SeedCommand command) {
@@ -991,6 +1261,57 @@ public class GlossaryTermIndexCurationService {
         command.extractionMethod(),
         Math.max(1L, command.minOccurrences() == null ? 1L : command.minOccurrences()),
         normalizeGenerationLimit(command.limit()));
+  }
+
+  private GenerateCandidatesFromExtractedTermsCommand normalize(
+      GenerateCandidatesFromExtractedTermsCommand command) {
+    if (command == null
+        || command.termIndexExtractedTermIds() == null
+        || command.termIndexExtractedTermIds().isEmpty()) {
+      throw new IllegalArgumentException("termIndexEntryIds are required");
+    }
+    List<Long> termIndexExtractedTermIds =
+        command.termIndexExtractedTermIds().stream().filter(Objects::nonNull).distinct().toList();
+    if (termIndexExtractedTermIds.isEmpty()) {
+      throw new IllegalArgumentException("termIndexEntryIds are required");
+    }
+    return new GenerateCandidatesFromExtractedTermsCommand(
+        termIndexExtractedTermIds,
+        normalizeRepositoryIds(command.repositoryIds()),
+        normalize(command.overrides()));
+  }
+
+  private CandidateFieldOverrides normalize(CandidateFieldOverrides overrides) {
+    if (overrides == null) {
+      return null;
+    }
+    return new CandidateFieldOverrides(
+        truncate(normalizeOptional(overrides.definition()), 2048),
+        truncate(normalizeOptional(overrides.rationale()), 2048),
+        normalizeKnownValue(overrides.termType(), GlossaryTermMetadata.TERM_TYPES, null),
+        truncate(normalizeOptional(overrides.partOfSpeech()), 64),
+        normalizeKnownValue(overrides.enforcement(), GlossaryTermMetadata.ENFORCEMENTS, null),
+        overrides.doNotTranslate(),
+        clampConfidence(overrides.confidence()),
+        normalizeCandidateReviewStatus(overrides.reviewStatus(), null),
+        truncate(normalizeOptional(overrides.reviewReason()), 64),
+        truncate(normalizeOptional(overrides.reviewRationale()), 2048),
+        clampConfidence(overrides.reviewConfidence()));
+  }
+
+  private CandidateReviewCommand normalize(CandidateReviewCommand command) {
+    if (command == null) {
+      throw new IllegalArgumentException("reviewStatus is required");
+    }
+    String reviewStatus = normalizeCandidateReviewStatus(command.reviewStatus(), null);
+    if (reviewStatus == null) {
+      throw new IllegalArgumentException("Unsupported reviewStatus: " + command.reviewStatus());
+    }
+    return new CandidateReviewCommand(
+        reviewStatus,
+        truncate(normalizeOptional(command.reviewReason()), 64),
+        truncate(normalizeOptional(command.reviewRationale()), 2048),
+        clampConfidence(command.reviewConfidence()));
   }
 
   private CandidateImportCommand normalize(CandidateImportCommand command) {
@@ -1074,19 +1395,31 @@ public class GlossaryTermIndexCurationService {
     return repositoryIds.isEmpty() ? EMPTY_FILTER_SENTINEL : repositoryIds;
   }
 
+  private List<Long> normalizeRepositoryIds(List<Long> repositoryIds) {
+    if (repositoryIds == null) {
+      return List.of();
+    }
+    return repositoryIds.stream().filter(Objects::nonNull).distinct().toList();
+  }
+
   private int normalizeLimit(Integer limit) {
     int normalized = limit == null ? DEFAULT_SUGGESTION_LIMIT : limit;
-    return Math.min(Math.max(1, normalized), MAX_SUGGESTION_LIMIT);
+    return Math.max(1, normalized);
   }
 
   private int normalizeGenerationLimit(Integer limit) {
     int normalized = limit == null ? DEFAULT_GENERATION_LIMIT : limit;
-    return Math.min(Math.max(1, normalized), MAX_GENERATION_LIMIT);
+    return Math.max(1, normalized);
   }
 
   private int normalizeCandidateExportLimit(Integer limit) {
     int normalized = limit == null ? DEFAULT_CANDIDATE_EXPORT_LIMIT : limit;
-    return Math.min(Math.max(1, normalized), MAX_CANDIDATE_EXPORT_LIMIT);
+    return Math.max(1, normalized);
+  }
+
+  private int prefetchLimit(int requestedLimit) {
+    long desiredLimit = Math.max(requestedLimit * 4L, 100L);
+    return desiredLimit > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) desiredLimit;
   }
 
   private String normalizeCandidateFormat(String format) {
@@ -1144,7 +1477,7 @@ public class GlossaryTermIndexCurationService {
     return value == null ? 0 : value;
   }
 
-  private String coalesce(String left, String right) {
+  private <T> T coalesce(T left, T right) {
     return left != null ? left : right;
   }
 
@@ -1222,6 +1555,11 @@ public class GlossaryTermIndexCurationService {
         candidate.partOfSpeech(),
         candidate.enforcement(),
         candidate.doNotTranslate(),
+        candidate.reviewStatus(),
+        candidate.reviewAuthority(),
+        candidate.reviewReason(),
+        candidate.reviewRationale(),
+        candidate.reviewConfidence(),
         metadata);
   }
 
@@ -1272,6 +1610,11 @@ public class GlossaryTermIndexCurationService {
         candidate.getPartOfSpeech(),
         candidate.getEnforcement(),
         candidate.getDoNotTranslate(),
+        candidate.getReviewStatus(),
+        candidate.getReviewAuthority(),
+        candidate.getReviewReason(),
+        candidate.getReviewRationale(),
+        candidate.getReviewConfidence(),
         parseMetadata(candidate.getMetadataJson()));
   }
 
@@ -1383,14 +1726,21 @@ public class GlossaryTermIndexCurationService {
       long occurrenceCount,
       int repositoryCount,
       int sourceCount,
+      int extractedTermMatchCount,
       ZonedDateTime lastSignalAt) {}
+
+  private record SuggestionCandidate(
+      SuggestionAccumulator accumulator, TermIndexCandidate candidate, SuggestionState state) {}
+
+  private record SuggestionState(String reviewStatus, String glossaryPresence) {}
 
   public record SuggestionSearchCommand(
       String searchQuery,
       Integer limit,
       Boolean useAi,
       Boolean includeReviewed,
-      String reviewStateFilter) {}
+      String reviewStatusFilter,
+      String glossaryPresenceFilter) {}
 
   public record SuggestionSearchView(List<SuggestionView> suggestions, long totalCount) {}
 
@@ -1404,6 +1754,7 @@ public class GlossaryTermIndexCurationService {
       long occurrenceCount,
       int repositoryCount,
       int sourceCount,
+      int extractedTermMatchCount,
       int confidence,
       String definition,
       String rationale,
@@ -1415,7 +1766,13 @@ public class GlossaryTermIndexCurationService {
       List<OccurrenceView> examples,
       List<CandidateSourceView> sources,
       ZonedDateTime lastSignalAt,
-      String reviewState,
+      String candidateReviewStatus,
+      String candidateReviewAuthority,
+      String candidateReviewReason,
+      String candidateReviewRationale,
+      Integer candidateReviewConfidence,
+      String reviewStatus,
+      String glossaryPresence,
       String selectionMethod) {}
 
   public record OccurrenceView(
@@ -1468,10 +1825,39 @@ public class GlossaryTermIndexCurationService {
 
   public record IgnoreSuggestionCommand(String reason) {}
 
+  public record CandidateReviewCommand(
+      String reviewStatus, String reviewReason, String reviewRationale, Integer reviewConfidence) {}
+
+  public record CandidateReviewView(
+      Long termIndexCandidateId,
+      String reviewStatus,
+      String reviewAuthority,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
+
   public record SeedCommand(List<SeedTermInput> terms) {}
 
   public record GenerateCandidatesCommand(
       String searchQuery, String extractionMethod, Long minOccurrences, Integer limit) {}
+
+  public record GenerateCandidatesFromExtractedTermsCommand(
+      List<Long> termIndexExtractedTermIds,
+      List<Long> repositoryIds,
+      CandidateFieldOverrides overrides) {}
+
+  public record CandidateFieldOverrides(
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Integer confidence,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
 
   public record CandidateImportCommand(String format, String content) {}
 
@@ -1491,6 +1877,11 @@ public class GlossaryTermIndexCurationService {
       String partOfSpeech,
       String enforcement,
       Boolean doNotTranslate,
+      String reviewStatus,
+      String reviewAuthority,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence,
       Map<String, Object> metadata) {}
 
   public record SeedResult(

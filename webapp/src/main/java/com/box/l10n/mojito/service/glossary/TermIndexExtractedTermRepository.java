@@ -41,6 +41,13 @@ public interface TermIndexExtractedTermRepository
              entry.normalizedKey as normalizedKey,
              entry.displayTerm as displayTerm,
              entry.sourceLocaleTag as sourceLocaleTag,
+             entry.createdDate as createdDate,
+             entry.lastModifiedDate as lastModifiedDate,
+             entry.reviewStatus as reviewStatus,
+             entry.reviewAuthority as reviewAuthority,
+             entry.reviewReason as reviewReason,
+             entry.reviewRationale as reviewRationale,
+             entry.reviewConfidence as reviewConfidence,
              count(occurrence.id) as occurrenceCount,
              count(distinct occurrence.repository.id) as repositoryCount,
              max(occurrence.createdDate) as lastOccurrenceAt
@@ -53,7 +60,22 @@ public interface TermIndexExtractedTermRepository
           or lower(entry.normalizedKey) like lower(concat('%', :searchQuery, '%'))
         )
         and (:extractionMethod is null or occurrence.extractionMethod = :extractionMethod)
-      group by entry.id, entry.normalizedKey, entry.displayTerm, entry.sourceLocaleTag
+        and (
+          :reviewStatusFilter = 'ALL'
+          or (:reviewStatusFilter = 'NON_REJECTED' and entry.reviewStatus <> 'REJECTED')
+          or entry.reviewStatus = :reviewStatusFilter
+        )
+      group by entry.id,
+               entry.normalizedKey,
+               entry.displayTerm,
+               entry.sourceLocaleTag,
+               entry.createdDate,
+               entry.lastModifiedDate,
+               entry.reviewStatus,
+               entry.reviewAuthority,
+               entry.reviewReason,
+               entry.reviewRationale,
+               entry.reviewConfidence
       having count(occurrence.id) >= :minOccurrences
       order by count(occurrence.id) desc, lower(entry.displayTerm) asc
       """)
@@ -62,8 +84,63 @@ public interface TermIndexExtractedTermRepository
       @Param("repositoryIds") Collection<Long> repositoryIds,
       @Param("searchQuery") String searchQuery,
       @Param("extractionMethod") String extractionMethod,
+      @Param("reviewStatusFilter") String reviewStatusFilter,
       @Param("minOccurrences") long minOccurrences,
       Pageable pageable);
+
+  @Query(
+      """
+      select entry.id as id,
+             entry.normalizedKey as normalizedKey,
+             entry.displayTerm as displayTerm,
+             entry.sourceLocaleTag as sourceLocaleTag,
+             entry.createdDate as createdDate,
+             entry.lastModifiedDate as lastModifiedDate,
+             entry.reviewStatus as reviewStatus,
+             entry.reviewAuthority as reviewAuthority,
+             entry.reviewReason as reviewReason,
+             entry.reviewRationale as reviewRationale,
+             entry.reviewConfidence as reviewConfidence,
+             count(occurrence.id) as occurrenceCount,
+             count(distinct occurrence.repository.id) as repositoryCount,
+             max(occurrence.createdDate) as lastOccurrenceAt
+      from TermIndexOccurrence occurrence
+      join occurrence.termIndexExtractedTerm entry
+      where entry.id in :termIndexExtractedTermIds
+        and (:repositoryIdsEmpty = true or occurrence.repository.id in :repositoryIds)
+        and entry.reviewStatus <> 'REJECTED'
+      group by entry.id,
+               entry.normalizedKey,
+               entry.displayTerm,
+               entry.sourceLocaleTag,
+               entry.createdDate,
+               entry.lastModifiedDate,
+               entry.reviewStatus,
+               entry.reviewAuthority,
+               entry.reviewReason,
+               entry.reviewRationale,
+               entry.reviewConfidence
+      order by count(occurrence.id) desc, lower(entry.displayTerm) asc
+      """)
+  List<SearchRow> findCandidateGenerationRowsByIdIn(
+      @Param("termIndexExtractedTermIds") Collection<Long> termIndexExtractedTermIds,
+      @Param("repositoryIdsEmpty") boolean repositoryIdsEmpty,
+      @Param("repositoryIds") Collection<Long> repositoryIds);
+
+  @Query(
+      """
+      select entry.normalizedKey as normalizedKey,
+             count(distinct entry.id) as extractedTermMatchCount
+      from TermIndexOccurrence occurrence
+      join occurrence.termIndexExtractedTerm entry
+      where entry.normalizedKey in :normalizedKeys
+        and (:repositoryIdsEmpty = true or occurrence.repository.id in :repositoryIds)
+      group by entry.normalizedKey
+      """)
+  List<ExtractedTermMatchCountRow> countScopedMatchesByNormalizedKeyIn(
+      @Param("normalizedKeys") Collection<String> normalizedKeys,
+      @Param("repositoryIdsEmpty") boolean repositoryIdsEmpty,
+      @Param("repositoryIds") Collection<Long> repositoryIds);
 
   interface SearchRow {
     Long getId();
@@ -74,10 +151,30 @@ public interface TermIndexExtractedTermRepository
 
     String getSourceLocaleTag();
 
+    ZonedDateTime getCreatedDate();
+
+    ZonedDateTime getLastModifiedDate();
+
+    String getReviewStatus();
+
+    String getReviewAuthority();
+
+    String getReviewReason();
+
+    String getReviewRationale();
+
+    Integer getReviewConfidence();
+
     Long getOccurrenceCount();
 
     Long getRepositoryCount();
 
     ZonedDateTime getLastOccurrenceAt();
+  }
+
+  interface ExtractedTermMatchCountRow {
+    String getNormalizedKey();
+
+    Long getExtractedTermMatchCount();
   }
 }
