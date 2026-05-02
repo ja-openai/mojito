@@ -8,6 +8,7 @@ import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
@@ -300,11 +301,7 @@ public class GlossaryTermIndexCurationService {
     requireTermManager();
     TermIndexCandidate candidate = getCandidate(termIndexCandidateId);
     CandidateReviewCommand normalized = normalize(command);
-    candidate.setReviewStatus(normalized.reviewStatus());
-    candidate.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
-    candidate.setReviewReason(normalized.reviewReason());
-    candidate.setReviewRationale(normalized.reviewRationale());
-    candidate.setReviewConfidence(normalized.reviewConfidence());
+    applyHumanCandidateReview(candidate, normalized, currentUserOrNull());
     TermIndexCandidate saved = termIndexCandidateRepository.save(candidate);
     return new CandidateReviewView(
         saved.getId(),
@@ -312,7 +309,15 @@ public class GlossaryTermIndexCurationService {
         saved.getReviewAuthority(),
         saved.getReviewReason(),
         saved.getReviewRationale(),
-        saved.getReviewConfidence());
+        saved.getReviewConfidence(),
+        saved.getReviewChangedAt(),
+        saved.getReviewChangedByUser() == null ? null : saved.getReviewChangedByUser().getId(),
+        saved.getReviewChangedByUser() == null
+            ? null
+            : saved.getReviewChangedByUser().getUsername(),
+        saved.getReviewChangedByUser() == null
+            ? null
+            : saved.getReviewChangedByUser().getCommonName());
   }
 
   @Transactional
@@ -344,7 +349,7 @@ public class GlossaryTermIndexCurationService {
     GenerateCandidatesCommand normalized = normalize(command);
     getGlossary(glossaryId);
     return scheduleGenerateCandidates(
-        new GenerateCandidatesJobCommand(glossaryId, normalized, null),
+        new GenerateCandidatesJobCommand(glossaryId, normalized, null, currentUserIdOrNull()),
         "Generate glossary term index candidates");
   }
 
@@ -406,7 +411,8 @@ public class GlossaryTermIndexCurationService {
     requireTermManager();
     GenerateCandidatesFromExtractedTermsCommand normalized = normalize(command);
     return scheduleGenerateCandidates(
-        new GenerateCandidatesJobCommand(null, null, normalized), "Generate term index candidates");
+        new GenerateCandidatesJobCommand(null, null, normalized, currentUserIdOrNull()),
+        "Generate term index candidates");
   }
 
   public PollableFuture<TriageExtractedTermsResult> scheduleTriageExtractedTerms(
@@ -432,7 +438,8 @@ public class GlossaryTermIndexCurationService {
           command.glossaryId(), command.generateCandidatesCommand());
     }
     return generateCandidatesFromExtractedTermsInternal(
-        command.generateCandidatesFromExtractedTermsCommand());
+        command.generateCandidatesFromExtractedTermsCommand(),
+        userByIdOrNull(command.requestedByUserId()));
   }
 
   private PollableFuture<GenerateCandidatesResult> scheduleGenerateCandidates(
@@ -449,6 +456,12 @@ public class GlossaryTermIndexCurationService {
   @Transactional
   GenerateCandidatesResult generateCandidatesFromExtractedTermsInternal(
       GenerateCandidatesFromExtractedTermsCommand command) {
+    return generateCandidatesFromExtractedTermsInternal(command, currentUserOrNull());
+  }
+
+  @Transactional
+  GenerateCandidatesResult generateCandidatesFromExtractedTermsInternal(
+      GenerateCandidatesFromExtractedTermsCommand command, User reviewChangedByUser) {
     GenerateCandidatesFromExtractedTermsCommand normalized = normalize(command);
     List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
     boolean repositoryIdsEmpty = normalized.repositoryIds().isEmpty();
@@ -466,7 +479,8 @@ public class GlossaryTermIndexCurationService {
     for (TermIndexExtractedTermRepository.SearchRow row : rows) {
       for (GeneratedCandidateFields fields :
           candidateFieldsForRow(candidateFieldsByExtractedTermId, row)) {
-        CandidateWriteResult writeResult = upsertExtractionCandidate(row, fields);
+        CandidateWriteResult writeResult =
+            upsertExtractionCandidate(row, fields, reviewChangedByUser);
         if (writeResult.created()) {
           createdCandidateCount++;
         } else {
@@ -769,6 +783,16 @@ public class GlossaryTermIndexCurationService {
         candidate.getReviewReason(),
         candidate.getReviewRationale(),
         candidate.getReviewConfidence(),
+        candidate.getReviewChangedAt(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getId(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getUsername(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getCommonName(),
         state.reviewStatus(),
         state.glossaryPresence(),
         "HEURISTIC");
@@ -860,6 +884,10 @@ public class GlossaryTermIndexCurationService {
                   heuristic.candidateReviewReason(),
                   heuristic.candidateReviewRationale(),
                   heuristic.candidateReviewConfidence(),
+                  heuristic.candidateReviewChangedAt(),
+                  heuristic.candidateReviewChangedByUserId(),
+                  heuristic.candidateReviewChangedByUsername(),
+                  heuristic.candidateReviewChangedByCommonName(),
                   heuristic.reviewStatus(),
                   heuristic.glossaryPresence(),
                   "AI_REVIEW");
@@ -1170,6 +1198,8 @@ public class GlossaryTermIndexCurationService {
       extractedTerm.setReviewReason(normalizeReviewReason(review.reviewReason()));
       extractedTerm.setReviewRationale(truncate(normalizeOptional(review.reviewRationale()), 2048));
       extractedTerm.setReviewConfidence(clampConfidence(review.reviewConfidence()));
+      extractedTerm.setReviewChangedAt(ZonedDateTime.now());
+      extractedTerm.setReviewChangedByUser(null);
       updatedTerms.add(extractedTerm);
       triagedTerms.add(
           new TriagedExtractedTermView(
@@ -1189,11 +1219,18 @@ public class GlossaryTermIndexCurationService {
 
   private CandidateWriteResult upsertExtractionCandidate(
       TermIndexExtractedTermRepository.SearchRow row) {
-    return upsertExtractionCandidate(row, GeneratedCandidateFields.defaultFields());
+    return upsertExtractionCandidate(row, GeneratedCandidateFields.defaultFields(), null);
   }
 
   private CandidateWriteResult upsertExtractionCandidate(
       TermIndexExtractedTermRepository.SearchRow row, GeneratedCandidateFields fields) {
+    return upsertExtractionCandidate(row, fields, null);
+  }
+
+  private CandidateWriteResult upsertExtractionCandidate(
+      TermIndexExtractedTermRepository.SearchRow row,
+      GeneratedCandidateFields fields,
+      User reviewChangedByUser) {
     CandidateFieldOverrides overrides = fields == null ? null : fields.overrides();
     String sourceLocaleTag =
         coalesce(
@@ -1259,19 +1296,21 @@ public class GlossaryTermIndexCurationService {
         coalesce(
             overrides == null ? null : overrides.doNotTranslate(),
             coalesce(candidate.getDoNotTranslate(), shouldPreserveSource(row.getDisplayTerm()))));
-    applyExtractionCandidateReview(candidate, overrides);
+    applyExtractionCandidateReview(candidate, overrides, reviewChangedByUser);
     return new CandidateWriteResult(
         termIndexCandidateRepository.save(candidate), existingCandidate.isEmpty());
   }
 
   private void applyExtractionCandidateReview(
-      TermIndexCandidate candidate, CandidateFieldOverrides overrides) {
+      TermIndexCandidate candidate, CandidateFieldOverrides overrides, User reviewChangedByUser) {
     if (overrides != null && overrides.reviewStatus() != null) {
       candidate.setReviewStatus(overrides.reviewStatus());
       candidate.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
       candidate.setReviewReason(overrides.reviewReason());
       candidate.setReviewRationale(overrides.reviewRationale());
       candidate.setReviewConfidence(overrides.reviewConfidence());
+      candidate.setReviewChangedAt(ZonedDateTime.now());
+      candidate.setReviewChangedByUser(reviewChangedByUser);
       return;
     }
     applyDefaultReview(candidate);
@@ -1491,6 +1530,8 @@ public class GlossaryTermIndexCurationService {
       candidate.setReviewReason(null);
       candidate.setReviewRationale(null);
       candidate.setReviewConfidence(null);
+      candidate.setReviewChangedAt(ZonedDateTime.now());
+      candidate.setReviewChangedByUser(currentUserOrNull());
       return;
     }
     if (!TermIndexReview.AUTHORITY_HUMAN.equals(candidate.getReviewAuthority())) {
@@ -1505,6 +1546,11 @@ public class GlossaryTermIndexCurationService {
       candidate.setReviewReason(truncate(normalizeOptional(term.reviewReason()), 64));
       candidate.setReviewRationale(truncate(normalizeOptional(term.reviewRationale()), 2048));
       candidate.setReviewConfidence(clampConfidence(term.reviewConfidence()));
+      candidate.setReviewChangedAt(ZonedDateTime.now());
+      candidate.setReviewChangedByUser(
+          TermIndexReview.AUTHORITY_HUMAN.equals(candidate.getReviewAuthority())
+              ? currentUserOrNull()
+              : null);
     }
     applyDefaultReview(candidate);
   }
@@ -2007,6 +2053,29 @@ public class GlossaryTermIndexCurationService {
     return value == null ? null : Math.max(0, Math.min(100, value));
   }
 
+  private void applyHumanCandidateReview(
+      TermIndexCandidate candidate, CandidateReviewCommand command, User currentUser) {
+    candidate.setReviewStatus(command.reviewStatus());
+    candidate.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+    candidate.setReviewReason(command.reviewReason());
+    candidate.setReviewRationale(command.reviewRationale());
+    candidate.setReviewConfidence(command.reviewConfidence());
+    candidate.setReviewChangedAt(ZonedDateTime.now());
+    candidate.setReviewChangedByUser(currentUser);
+  }
+
+  private User currentUserOrNull() {
+    return userService.getCurrentUser().orElse(null);
+  }
+
+  private Long currentUserIdOrNull() {
+    return userService.getCurrentUser().map(User::getId).orElse(null);
+  }
+
+  private User userByIdOrNull(Long userId) {
+    return userService.getUserById(userId).orElse(null);
+  }
+
   private int ceilDiv(int dividend, int divisor) {
     if (dividend <= 0 || divisor <= 0) {
       return 0;
@@ -2340,6 +2409,10 @@ public class GlossaryTermIndexCurationService {
       String candidateReviewReason,
       String candidateReviewRationale,
       Integer candidateReviewConfidence,
+      ZonedDateTime candidateReviewChangedAt,
+      Long candidateReviewChangedByUserId,
+      String candidateReviewChangedByUsername,
+      String candidateReviewChangedByCommonName,
       String reviewStatus,
       String glossaryPresence,
       String selectionMethod) {}
@@ -2403,7 +2476,11 @@ public class GlossaryTermIndexCurationService {
       String reviewAuthority,
       String reviewReason,
       String reviewRationale,
-      Integer reviewConfidence) {}
+      Integer reviewConfidence,
+      ZonedDateTime reviewChangedAt,
+      Long reviewChangedByUserId,
+      String reviewChangedByUsername,
+      String reviewChangedByCommonName) {}
 
   public record SeedCommand(List<SeedTermInput> terms) {}
 
@@ -2418,7 +2495,8 @@ public class GlossaryTermIndexCurationService {
   public record GenerateCandidatesJobCommand(
       Long glossaryId,
       GenerateCandidatesCommand generateCandidatesCommand,
-      GenerateCandidatesFromExtractedTermsCommand generateCandidatesFromExtractedTermsCommand) {}
+      GenerateCandidatesFromExtractedTermsCommand generateCandidatesFromExtractedTermsCommand,
+      Long requestedByUserId) {}
 
   public record TriageExtractedTermsCommand(
       List<Long> termIndexExtractedTermIds,

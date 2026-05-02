@@ -48,11 +48,16 @@ public interface TermIndexExtractedTermRepository
              entry.reviewReason as reviewReason,
              entry.reviewRationale as reviewRationale,
              entry.reviewConfidence as reviewConfidence,
+             entry.reviewChangedAt as reviewChangedAt,
+             reviewChangedByUser.id as reviewChangedByUserId,
+             reviewChangedByUser.username as reviewChangedByUsername,
+             reviewChangedByUser.commonName as reviewChangedByCommonName,
              count(occurrence.id) as occurrenceCount,
              count(distinct occurrence.repository.id) as repositoryCount,
              max(occurrence.createdDate) as lastOccurrenceAt
       from TermIndexOccurrence occurrence
       join occurrence.termIndexExtractedTerm entry
+      left join entry.reviewChangedByUser reviewChangedByUser
       where (:repositoryIdsEmpty = true or occurrence.repository.id in :repositoryIds)
         and (
           :searchQuery is null
@@ -75,7 +80,11 @@ public interface TermIndexExtractedTermRepository
                entry.reviewAuthority,
                entry.reviewReason,
                entry.reviewRationale,
-               entry.reviewConfidence
+               entry.reviewConfidence,
+               entry.reviewChangedAt,
+               reviewChangedByUser.id,
+               reviewChangedByUser.username,
+               reviewChangedByUser.commonName
       having count(occurrence.id) >= :minOccurrences
       order by count(occurrence.id) desc, lower(entry.displayTerm) asc
       """)
@@ -101,11 +110,16 @@ public interface TermIndexExtractedTermRepository
              entry.reviewReason as reviewReason,
              entry.reviewRationale as reviewRationale,
              entry.reviewConfidence as reviewConfidence,
+             entry.reviewChangedAt as reviewChangedAt,
+             reviewChangedByUser.id as reviewChangedByUserId,
+             reviewChangedByUser.username as reviewChangedByUsername,
+             reviewChangedByUser.commonName as reviewChangedByCommonName,
              count(occurrence.id) as occurrenceCount,
              count(distinct occurrence.repository.id) as repositoryCount,
              max(occurrence.createdDate) as lastOccurrenceAt
       from TermIndexOccurrence occurrence
       join occurrence.termIndexExtractedTerm entry
+      left join entry.reviewChangedByUser reviewChangedByUser
       where entry.id in :termIndexExtractedTermIds
         and (:repositoryIdsEmpty = true or occurrence.repository.id in :repositoryIds)
         and entry.reviewStatus <> 'REJECTED'
@@ -119,7 +133,11 @@ public interface TermIndexExtractedTermRepository
                entry.reviewAuthority,
                entry.reviewReason,
                entry.reviewRationale,
-               entry.reviewConfidence
+               entry.reviewConfidence,
+               entry.reviewChangedAt,
+               reviewChangedByUser.id,
+               reviewChangedByUser.username,
+               reviewChangedByUser.commonName
       order by count(occurrence.id) desc, lower(entry.displayTerm) asc
       """)
   List<SearchRow> findCandidateGenerationRowsByIdIn(
@@ -140,11 +158,16 @@ public interface TermIndexExtractedTermRepository
              entry.reviewReason as reviewReason,
              entry.reviewRationale as reviewRationale,
              entry.reviewConfidence as reviewConfidence,
+             entry.reviewChangedAt as reviewChangedAt,
+             reviewChangedByUser.id as reviewChangedByUserId,
+             reviewChangedByUser.username as reviewChangedByUsername,
+             reviewChangedByUser.commonName as reviewChangedByCommonName,
              count(occurrence.id) as occurrenceCount,
              count(distinct occurrence.repository.id) as repositoryCount,
              max(occurrence.createdDate) as lastOccurrenceAt
       from TermIndexOccurrence occurrence
       join occurrence.termIndexExtractedTerm entry
+      left join entry.reviewChangedByUser reviewChangedByUser
       where entry.id in :termIndexExtractedTermIds
         and (:repositoryIdsEmpty = true or occurrence.repository.id in :repositoryIds)
       group by entry.id,
@@ -157,7 +180,11 @@ public interface TermIndexExtractedTermRepository
                entry.reviewAuthority,
                entry.reviewReason,
                entry.reviewRationale,
-               entry.reviewConfidence
+               entry.reviewConfidence,
+               entry.reviewChangedAt,
+               reviewChangedByUser.id,
+               reviewChangedByUser.username,
+               reviewChangedByUser.commonName
       order by count(occurrence.id) desc, lower(entry.displayTerm) asc
       """)
   List<SearchRow> findSearchRowsByIdIn(
@@ -202,6 +229,14 @@ public interface TermIndexExtractedTermRepository
     String getReviewRationale();
 
     Integer getReviewConfidence();
+
+    ZonedDateTime getReviewChangedAt();
+
+    Long getReviewChangedByUserId();
+
+    String getReviewChangedByUsername();
+
+    String getReviewChangedByCommonName();
 
     Long getOccurrenceCount();
 

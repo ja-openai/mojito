@@ -197,6 +197,10 @@ public class GlossaryWS {
       String candidateReviewReason,
       String candidateReviewRationale,
       Integer candidateReviewConfidence,
+      ZonedDateTime candidateReviewChangedAt,
+      Long candidateReviewChangedByUserId,
+      String candidateReviewChangedByUsername,
+      String candidateReviewChangedByCommonName,
       String reviewStatus,
       String glossaryPresence,
       String selectionMethod) {}
@@ -241,7 +245,11 @@ public class GlossaryWS {
       String reviewAuthority,
       String reviewReason,
       String reviewRationale,
-      Integer reviewConfidence) {}
+      Integer reviewConfidence,
+      ZonedDateTime reviewChangedAt,
+      Long reviewChangedByUserId,
+      String reviewChangedByUsername,
+      String reviewChangedByCommonName) {}
 
   public record SeedTermIndexCandidateRequest(
       String term,
@@ -822,7 +830,11 @@ public class GlossaryWS {
           review.reviewAuthority(),
           review.reviewReason(),
           review.reviewRationale(),
-          review.reviewConfidence());
+          review.reviewConfidence(),
+          review.reviewChangedAt(),
+          review.reviewChangedByUserId(),
+          review.reviewChangedByUsername(),
+          review.reviewChangedByCommonName());
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
     }
@@ -1268,6 +1280,10 @@ public class GlossaryWS {
         suggestion.candidateReviewReason(),
         suggestion.candidateReviewRationale(),
         suggestion.candidateReviewConfidence(),
+        suggestion.candidateReviewChangedAt(),
+        suggestion.candidateReviewChangedByUserId(),
+        suggestion.candidateReviewChangedByUsername(),
+        suggestion.candidateReviewChangedByCommonName(),
         suggestion.reviewStatus(),
         suggestion.glossaryPresence(),
         suggestion.selectionMethod());

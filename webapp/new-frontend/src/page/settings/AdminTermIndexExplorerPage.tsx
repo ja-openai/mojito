@@ -2529,6 +2529,23 @@ function CandidateDraftPanel({
     });
   };
   const createdLabel = entry.createdDate ? formatLocalDateTime(entry.createdDate) : null;
+  const extractedReviewLabel = formatReviewChange(
+    entry.reviewStatus,
+    entry.reviewAuthority,
+    entry.reviewChangedAt,
+    entry.reviewChangedByCommonName,
+    entry.reviewChangedByUsername,
+  );
+  const candidateReviewLabel =
+    entry.termIndexCandidateId == null
+      ? null
+      : formatReviewChange(
+          entry.candidateReviewStatus,
+          entry.candidateReviewAuthority,
+          entry.candidateReviewChangedAt,
+          entry.candidateReviewChangedByCommonName,
+          entry.candidateReviewChangedByUsername,
+        );
 
   return (
     <div className="term-index-explorer__candidate-panel">
@@ -2554,6 +2571,8 @@ function CandidateDraftPanel({
                   Source created {createdLabel}
                 </time>
               ) : null}
+              <span>{extractedReviewLabel}</span>
+              {candidateReviewLabel ? <span>Candidate {candidateReviewLabel}</span> : null}
             </div>
           </div>
           <button
@@ -2692,11 +2711,19 @@ function ExtractedTermDetailPanel({
 }
 
 function TermIndexEntryMetadata({ entry }: { entry: ApiTermIndexEntry }) {
+  const reviewLabel = formatReviewChange(
+    entry.reviewStatus,
+    entry.reviewAuthority,
+    entry.reviewChangedAt,
+    entry.reviewChangedByCommonName,
+    entry.reviewChangedByUsername,
+  );
   return (
     <div className="term-index-explorer__entry-metadata" aria-label="Term index metadata">
       <span>Extracted term #{entry.id}</span>
       <span>Created {formatLocalDateTime(entry.createdDate)}</span>
       <span>Updated {formatLocalDateTime(entry.lastModifiedDate)}</span>
+      <span>{reviewLabel}</span>
       {entry.lastOccurrenceAt ? (
         <span>Last hit {formatLocalDateTime(entry.lastOccurrenceAt)}</span>
       ) : null}
@@ -3257,6 +3284,38 @@ function formatReviewStatus(status: string | null | undefined) {
   return (
     REVIEW_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? formatMethod(status)
   );
+}
+
+function formatReviewChange(
+  status: string | null | undefined,
+  authority: string | null | undefined,
+  changedAt: string | null | undefined,
+  changedByCommonName: string | null | undefined,
+  changedByUsername: string | null | undefined,
+) {
+  const statusLabel = formatReviewStatus(status);
+  const actor =
+    authority === 'AI'
+      ? 'AI'
+      : changedByCommonName?.trim() || changedByUsername?.trim() || reviewAuthorityLabel(authority);
+  const changedAtLabel = changedAt ? ` on ${formatLocalDateTime(changedAt)}` : '';
+
+  return `${statusLabel} by ${actor}${changedAtLabel}`;
+}
+
+function reviewAuthorityLabel(authority: string | null | undefined) {
+  switch (authority) {
+    case 'HUMAN':
+      return 'unknown user';
+    case 'AI':
+      return 'AI';
+    case 'DEFAULT':
+    case null:
+    case undefined:
+      return 'default';
+    default:
+      return formatMethod(authority);
+  }
 }
 
 function getErrorMessage(error: unknown) {

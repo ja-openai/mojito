@@ -165,6 +165,35 @@ const formatCandidateReviewStatus = (suggestion: ApiGlossaryTermIndexSuggestion)
   }
 };
 
+const formatCandidateReviewChange = (suggestion: ApiGlossaryTermIndexSuggestion) => {
+  const actor =
+    suggestion.candidateReviewAuthority === 'AI'
+      ? 'AI'
+      : suggestion.candidateReviewChangedByCommonName?.trim() ||
+        suggestion.candidateReviewChangedByUsername?.trim() ||
+        formatCandidateReviewAuthority(suggestion.candidateReviewAuthority);
+  const changedAt = suggestion.candidateReviewChangedAt
+    ? ` on ${formatLocalDateTime(suggestion.candidateReviewChangedAt)}`
+    : '';
+
+  return `Review by ${actor}${changedAt}`;
+};
+
+const formatCandidateReviewAuthority = (authority: string | null | undefined) => {
+  switch (authority) {
+    case 'HUMAN':
+      return 'unknown user';
+    case 'AI':
+      return 'AI';
+    case 'DEFAULT':
+    case null:
+    case undefined:
+      return 'default';
+    default:
+      return formatMethod(authority);
+  }
+};
+
 const getGlossaryPresence = (suggestion: ApiGlossaryTermIndexSuggestion) => {
   switch (getSuggestionGlossaryPresenceValue(suggestion)) {
     case 'LINKED':
@@ -552,7 +581,8 @@ export function GlossaryCurationView({
                           {candidateCreatedDate
                             ? `Created ${formatLocalDateTime(candidateCreatedDate)} · `
                             : ''}
-                          {formatMethod(suggestion.selectionMethod)}
+                          {formatMethod(suggestion.selectionMethod)} ·{' '}
+                          {formatCandidateReviewChange(suggestion)}
                         </div>
                       </div>
                     </div>
