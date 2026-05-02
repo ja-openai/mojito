@@ -18,6 +18,7 @@ public class GlossaryAiExtractionService {
       You are designing a localization glossary for a software product.
 
       You will receive JSON with candidate terms gathered from repository strings. Each candidate has:
+      - `inputId`
       - `term`
       - `occurrenceCount`
       - `repositoryCount`
@@ -38,6 +39,7 @@ public class GlossaryAiExtractionService {
       show that the string is a canonical label.
 
       For each retained candidate:
+      - preserve the original `inputId` exactly when present
       - preserve the original `term` exactly
       - provide a concise `definition` that explains what the term means in product context
       - provide a short `rationale` tied to the provided samples explaining why it belongs in the glossary
@@ -55,6 +57,7 @@ public class GlossaryAiExtractionService {
       You are enriching selected localization glossary candidate terms for a software product.
 
       You will receive JSON with candidate terms gathered from repository strings. Each candidate has:
+      - `inputId`
       - `term`
       - `occurrenceCount`
       - `repositoryCount`
@@ -62,11 +65,18 @@ public class GlossaryAiExtractionService {
       - `sampleSources`
       - `heuristicTermType`
 
-      Return exactly one candidate object for each input candidate.
-      Do not filter, reject, drop, merge, rename, or replace candidates.
+      Return one or more candidate objects for each input candidate.
+      Do not filter, reject, drop, merge, rename, or replace input terms.
+      If the samples show distinct meanings, product concepts, parts of speech, or translation
+      treatments for the same term, split the input into separate candidate objects.
 
       For each candidate:
+      - preserve the original `inputId` exactly
       - preserve the original `term` exactly
+      - provide a concise `label` when the term is split, such as `search action`,
+        `search feature`, or `browser search`
+      - provide a stable `sourceExternalId` when the term is split; make it lowercase,
+        short, and tied to the sense, not to wording that may change
       - provide a concise `definition` that explains what the term means in product context
       - provide a short `rationale` tied to the provided samples explaining why it was generated
       - set `confidence` from 0 to 100
@@ -75,6 +85,38 @@ public class GlossaryAiExtractionService {
       - suggest `enforcement`
       - set `doNotTranslate` for brands / product names / tokens that should usually remain as-is
       - if the term appears generic or weak, still return it with lower confidence and explain why
+
+      Output valid JSON only.
+      """;
+
+  private static final String EXTRACTED_TERM_REVIEW_PROMPT =
+      """
+      You are reviewing raw term extractions before they become glossary candidates.
+
+      You will receive JSON with raw terms gathered from repository strings. Each candidate has:
+      - `inputId`
+      - `term`
+      - `occurrenceCount`
+      - `repositoryCount`
+      - `repositories`
+      - `sampleSources`
+      - `heuristicTermType`
+
+      Classify every input term with exactly one `reviewStatus`:
+      - `ACCEPTED`: clearly useful source terminology for glossary candidate generation.
+      - `TO_REVIEW`: plausible but ambiguous; a human should decide.
+      - `REJECTED`: should not become a glossary candidate.
+
+      Use `REJECTED` for stop words, generic UI filler, extraction artifacts, false positives,
+      or out-of-scope fragments. Prefer `TO_REVIEW` when the samples are ambiguous.
+
+      For each review:
+      - preserve the original `inputId` exactly
+      - preserve the original `term` exactly
+      - set `reviewReason` to one of `STOP_WORD`, `TOO_GENERIC`, `FALSE_POSITIVE`,
+        `OUT_OF_SCOPE`, or `OTHER`
+      - provide a concise `reviewRationale` tied to the samples
+      - set `reviewConfidence` from 0 to 100
 
       Output valid JSON only.
       """;
@@ -98,6 +140,36 @@ public class GlossaryAiExtractionService {
 
   public List<AiCandidateView> enrichCandidates(List<CandidateSignal> candidates) {
     return requestCandidates(ENRICHMENT_PROMPT, candidates);
+  }
+
+  public List<AiExtractedTermReviewView> reviewExtractedTerms(List<CandidateSignal> candidates) {
+    if (openAIClient == null || candidates == null || candidates.isEmpty()) {
+      return List.of();
+    }
+
+    String inputJson =
+        objectMapper.writeValueAsStringUnchecked(new CandidateSignalInput(candidates));
+    ResponsesRequest request =
+        ResponsesRequest.builder()
+            .model(aiReviewConfigurationProperties.getModelName())
+            .instructions(EXTRACTED_TERM_REVIEW_PROMPT)
+            .reasoningEffort(aiReviewConfigurationProperties.getResponses().getReasoningEffort())
+            .textVerbosity(aiReviewConfigurationProperties.getResponses().getTextVerbosity())
+            .addUserText(inputJson)
+            .addJsonSchema(ExtractedTermReviewOutput.class)
+            .build();
+
+    int charCount = inputJson.length();
+    Duration timeout =
+        aiReviewConfigurationProperties
+            .getTimeout()
+            .resolveRequestTimeout(
+                1, charCount, aiReviewConfigurationProperties.getResponses().getReasoningEffort());
+
+    String jsonResponse = openAIClient.getResponses(request, timeout).join().outputText();
+    ExtractedTermReviewOutput output =
+        objectMapper.readValueUnchecked(jsonResponse, ExtractedTermReviewOutput.class);
+    return output == null || output.reviews() == null ? List.of() : output.reviews();
   }
 
   private List<AiCandidateView> requestCandidates(
@@ -134,6 +206,7 @@ public class GlossaryAiExtractionService {
   public record CandidateSignalInput(List<CandidateSignal> candidates) {}
 
   public record CandidateSignal(
+      String inputId,
       String term,
       int occurrenceCount,
       int repositoryCount,
@@ -144,7 +217,10 @@ public class GlossaryAiExtractionService {
   public record CandidateSignalOutput(List<AiCandidateView> candidates) {}
 
   public record AiCandidateView(
+      String inputId,
       String term,
+      String label,
+      String sourceExternalId,
       Integer confidence,
       String definition,
       String rationale,
@@ -152,4 +228,14 @@ public class GlossaryAiExtractionService {
       String partOfSpeech,
       String enforcement,
       Boolean doNotTranslate) {}
+
+  public record ExtractedTermReviewOutput(List<AiExtractedTermReviewView> reviews) {}
+
+  public record AiExtractedTermReviewView(
+      String inputId,
+      String term,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
 }

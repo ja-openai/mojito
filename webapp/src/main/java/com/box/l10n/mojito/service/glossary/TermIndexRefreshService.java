@@ -6,9 +6,9 @@ import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
+import com.box.l10n.mojito.quartz.QuartzJobInfo;
+import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
-import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
@@ -96,6 +96,7 @@ public class TermIndexRefreshService {
   private final TermIndexRefreshRunRepository termIndexRefreshRunRepository;
   private final TermIndexRefreshRunEntryRepository termIndexRefreshRunEntryRepository;
   private final TransactionTemplate transactionTemplate;
+  private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
 
   public TermIndexRefreshService(
       com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository,
@@ -105,7 +106,8 @@ public class TermIndexRefreshService {
       TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository,
       TermIndexRefreshRunRepository termIndexRefreshRunRepository,
       TermIndexRefreshRunEntryRepository termIndexRefreshRunEntryRepository,
-      TransactionTemplate transactionTemplate) {
+      TransactionTemplate transactionTemplate,
+      QuartzPollableTaskScheduler quartzPollableTaskScheduler) {
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.tmTextUnitRepository = Objects.requireNonNull(tmTextUnitRepository);
     this.termIndexExtractedTermRepository =
@@ -117,6 +119,18 @@ public class TermIndexRefreshService {
     this.termIndexRefreshRunEntryRepository =
         Objects.requireNonNull(termIndexRefreshRunEntryRepository);
     this.transactionTemplate = Objects.requireNonNull(transactionTemplate);
+    this.quartzPollableTaskScheduler = Objects.requireNonNull(quartzPollableTaskScheduler);
+  }
+
+  public PollableFuture<RefreshResult> scheduleRefresh(RefreshCommand command) {
+    RefreshCommand validatedCommand = validate(command);
+    QuartzJobInfo<RefreshCommand, RefreshResult> quartzJobInfo =
+        QuartzJobInfo.newBuilder(TermIndexRefreshJob.class)
+            .withInput(validatedCommand)
+            .withMessage("Refresh raw term index")
+            .withRequestRecovery(true)
+            .build();
+    return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
   }
 
   public RefreshResult refresh(RefreshCommand command) {
@@ -154,12 +168,6 @@ public class TermIndexRefreshService {
       failRefreshRun(refreshRun.getId(), processedTextUnitCount, occurrenceCount, e);
       throw e;
     }
-  }
-
-  @Pollable(async = true, message = "Refresh raw term index")
-  public PollableFuture<Void> refreshAsync(RefreshCommand command) {
-    refresh(command);
-    return new PollableFutureTaskResult<>();
   }
 
   private RepositoryRefreshResult refreshRepository(

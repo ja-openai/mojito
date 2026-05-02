@@ -270,11 +270,14 @@ public class GlossaryWS {
       int updatedCandidateCount,
       List<SeededTermIndexCandidateResponse> candidates) {}
 
+  public record StartTermIndexCandidatesGenerationResponse(PollableTask pollableTask) {}
+
   public record SeededTermIndexCandidateResponse(
       Long termIndexCandidateId,
       Long termIndexExtractedTermId,
       String term,
       String normalizedKey,
+      String label,
       String definition,
       String rationale,
       String termType,
@@ -849,22 +852,18 @@ public class GlossaryWS {
   }
 
   @PostMapping("/{glossaryId}/term-index-candidates/generate")
-  public SeedTermIndexCandidatesResponse generateTermIndexCandidates(
+  public StartTermIndexCandidatesGenerationResponse generateTermIndexCandidates(
       @PathVariable Long glossaryId, @RequestBody GenerateTermIndexCandidatesRequest request) {
     try {
-      GlossaryTermIndexCurationService.GenerateCandidatesResult result =
-          glossaryTermIndexCurationService.generateCandidatesForGlossary(
+      PollableFuture<GlossaryTermIndexCurationService.GenerateCandidatesResult> pollableFuture =
+          glossaryTermIndexCurationService.scheduleGenerateCandidatesForGlossary(
               glossaryId,
               new GlossaryTermIndexCurationService.GenerateCandidatesCommand(
                   request == null ? null : request.search(),
                   request == null ? null : request.extractionMethod(),
                   request == null ? null : request.minOccurrences(),
                   request == null ? null : request.limit()));
-      return new SeedTermIndexCandidatesResponse(
-          result.candidateCount(),
-          result.createdCandidateCount(),
-          result.updatedCandidateCount(),
-          result.candidates().stream().map(this::toSeededTermIndexCandidateResponse).toList());
+      return new StartTermIndexCandidatesGenerationResponse(pollableFuture.getPollableTask());
     } catch (IllegalArgumentException ex) {
       HttpStatus status =
           ex.getMessage() != null && ex.getMessage().startsWith("Glossary not found:")
@@ -1320,6 +1319,7 @@ public class GlossaryWS {
         term.termIndexExtractedTermId(),
         term.term(),
         term.normalizedKey(),
+        term.label(),
         term.definition(),
         term.rationale(),
         term.termType(),

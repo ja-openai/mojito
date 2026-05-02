@@ -129,6 +129,44 @@ public interface TermIndexExtractedTermRepository
 
   @Query(
       """
+      select entry.id as id,
+             entry.normalizedKey as normalizedKey,
+             entry.displayTerm as displayTerm,
+             entry.sourceLocaleTag as sourceLocaleTag,
+             entry.createdDate as createdDate,
+             entry.lastModifiedDate as lastModifiedDate,
+             entry.reviewStatus as reviewStatus,
+             entry.reviewAuthority as reviewAuthority,
+             entry.reviewReason as reviewReason,
+             entry.reviewRationale as reviewRationale,
+             entry.reviewConfidence as reviewConfidence,
+             count(occurrence.id) as occurrenceCount,
+             count(distinct occurrence.repository.id) as repositoryCount,
+             max(occurrence.createdDate) as lastOccurrenceAt
+      from TermIndexOccurrence occurrence
+      join occurrence.termIndexExtractedTerm entry
+      where entry.id in :termIndexExtractedTermIds
+        and (:repositoryIdsEmpty = true or occurrence.repository.id in :repositoryIds)
+      group by entry.id,
+               entry.normalizedKey,
+               entry.displayTerm,
+               entry.sourceLocaleTag,
+               entry.createdDate,
+               entry.lastModifiedDate,
+               entry.reviewStatus,
+               entry.reviewAuthority,
+               entry.reviewReason,
+               entry.reviewRationale,
+               entry.reviewConfidence
+      order by count(occurrence.id) desc, lower(entry.displayTerm) asc
+      """)
+  List<SearchRow> findSearchRowsByIdIn(
+      @Param("termIndexExtractedTermIds") Collection<Long> termIndexExtractedTermIds,
+      @Param("repositoryIdsEmpty") boolean repositoryIdsEmpty,
+      @Param("repositoryIds") Collection<Long> repositoryIds);
+
+  @Query(
+      """
       select entry.normalizedKey as normalizedKey,
              count(distinct entry.id) as extractedTermMatchCount
       from TermIndexOccurrence occurrence
