@@ -28,6 +28,18 @@ export type ApiTermIndexRefreshRequest = {
 export type ApiTermIndexEntry = {
   id: number;
   termIndexCandidateId?: number | null;
+  candidateDefinition?: string | null;
+  candidateRationale?: string | null;
+  candidateTermType?: string | null;
+  candidatePartOfSpeech?: string | null;
+  candidateEnforcement?: string | null;
+  candidateDoNotTranslate?: boolean | null;
+  candidateConfidence?: number | null;
+  candidateReviewStatus?: ApiTermIndexReviewStatus | null;
+  candidateReviewAuthority?: ApiTermIndexReviewAuthority | null;
+  candidateReviewReason?: string | null;
+  candidateReviewRationale?: string | null;
+  candidateReviewConfidence?: number | null;
   normalizedKey: string;
   displayTerm: string;
   sourceLocaleTag: string;
@@ -87,6 +99,13 @@ export type ApiGenerateTermIndexCandidatesResponse = {
     termIndexExtractedTermId?: number | null;
     term: string;
     normalizedKey: string;
+    definition?: string | null;
+    rationale?: string | null;
+    termType?: string | null;
+    partOfSpeech?: string | null;
+    enforcement?: string | null;
+    doNotTranslate?: boolean | null;
+    confidence?: number | null;
   }>;
 };
 

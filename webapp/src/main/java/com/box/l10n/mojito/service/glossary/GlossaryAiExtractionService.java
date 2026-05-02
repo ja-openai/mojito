@@ -50,6 +50,35 @@ public class GlossaryAiExtractionService {
       Output valid JSON only.
       """;
 
+  private static final String ENRICHMENT_PROMPT =
+      """
+      You are enriching selected localization glossary candidate terms for a software product.
+
+      You will receive JSON with candidate terms gathered from repository strings. Each candidate has:
+      - `term`
+      - `occurrenceCount`
+      - `repositoryCount`
+      - `repositories`
+      - `sampleSources`
+      - `heuristicTermType`
+
+      Return exactly one candidate object for each input candidate.
+      Do not filter, reject, drop, merge, rename, or replace candidates.
+
+      For each candidate:
+      - preserve the original `term` exactly
+      - provide a concise `definition` that explains what the term means in product context
+      - provide a short `rationale` tied to the provided samples explaining why it was generated
+      - set `confidence` from 0 to 100
+      - suggest `termType`
+      - suggest `partOfSpeech` only when it is reasonably clear
+      - suggest `enforcement`
+      - set `doNotTranslate` for brands / product names / tokens that should usually remain as-is
+      - if the term appears generic or weak, still return it with lower confidence and explain why
+
+      Output valid JSON only.
+      """;
+
   private final OpenAIClient openAIClient;
   private final AiReviewConfigurationProperties aiReviewConfigurationProperties;
   private final ObjectMapper objectMapper;
@@ -64,23 +93,32 @@ public class GlossaryAiExtractionService {
   }
 
   public List<AiCandidateView> refineCandidates(List<CandidateSignal> candidates) {
+    return requestCandidates(EXTRACTION_PROMPT, candidates);
+  }
+
+  public List<AiCandidateView> enrichCandidates(List<CandidateSignal> candidates) {
+    return requestCandidates(ENRICHMENT_PROMPT, candidates);
+  }
+
+  private List<AiCandidateView> requestCandidates(
+      String instructions, List<CandidateSignal> candidates) {
     if (openAIClient == null || candidates == null || candidates.isEmpty()) {
       return List.of();
     }
 
+    String inputJson =
+        objectMapper.writeValueAsStringUnchecked(new CandidateSignalInput(candidates));
     ResponsesRequest request =
         ResponsesRequest.builder()
             .model(aiReviewConfigurationProperties.getModelName())
-            .instructions(EXTRACTION_PROMPT)
+            .instructions(instructions)
             .reasoningEffort(aiReviewConfigurationProperties.getResponses().getReasoningEffort())
             .textVerbosity(aiReviewConfigurationProperties.getResponses().getTextVerbosity())
-            .addUserText(
-                objectMapper.writeValueAsStringUnchecked(new CandidateSignalInput(candidates)))
+            .addUserText(inputJson)
             .addJsonSchema(CandidateSignalOutput.class)
             .build();
 
-    int charCount =
-        objectMapper.writeValueAsStringUnchecked(new CandidateSignalInput(candidates)).length();
+    int charCount = inputJson.length();
     Duration timeout =
         aiReviewConfigurationProperties
             .getTimeout()
