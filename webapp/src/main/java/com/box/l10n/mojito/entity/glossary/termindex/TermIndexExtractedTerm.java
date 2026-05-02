@@ -1,9 +1,14 @@
 package com.box.l10n.mojito.entity.glossary.termindex;
 
 import com.box.l10n.mojito.entity.AuditableEntity;
+import com.box.l10n.mojito.entity.security.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.ZonedDateTime;
 
@@ -55,6 +60,15 @@ public class TermIndexExtractedTerm extends AuditableEntity {
 
   @Column(name = "review_confidence")
   private Integer reviewConfidence;
+
+  @Column(name = "review_changed_at")
+  private ZonedDateTime reviewChangedAt;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(
+      name = "review_changed_by_user_id",
+      foreignKey = @ForeignKey(name = "FK__TERM_INDEX_EXTRACTED_TERM__REVIEW_CHANGED_BY_USER"))
+  private User reviewChangedByUser;
 
   public String getNormalizedKey() {
     return normalizedKey;
@@ -150,5 +164,21 @@ public class TermIndexExtractedTerm extends AuditableEntity {
 
   public void setReviewConfidence(Integer reviewConfidence) {
     this.reviewConfidence = reviewConfidence;
+  }
+
+  public ZonedDateTime getReviewChangedAt() {
+    return reviewChangedAt;
+  }
+
+  public void setReviewChangedAt(ZonedDateTime reviewChangedAt) {
+    this.reviewChangedAt = reviewChangedAt;
+  }
+
+  public User getReviewChangedByUser() {
+    return reviewChangedByUser;
+  }
+
+  public void setReviewChangedByUser(User reviewChangedByUser) {
+    this.reviewChangedByUser = reviewChangedByUser;
   }
 }

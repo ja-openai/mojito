@@ -58,6 +58,10 @@ export type ApiTermIndexEntry = {
   candidateReviewReason?: string | null;
   candidateReviewRationale?: string | null;
   candidateReviewConfidence?: number | null;
+  candidateReviewChangedAt?: string | null;
+  candidateReviewChangedByUserId?: number | null;
+  candidateReviewChangedByUsername?: string | null;
+  candidateReviewChangedByCommonName?: string | null;
   normalizedKey: string;
   displayTerm: string;
   sourceLocaleTag: string;
@@ -68,6 +72,10 @@ export type ApiTermIndexEntry = {
   reviewReason?: string | null;
   reviewRationale?: string | null;
   reviewConfidence?: number | null;
+  reviewChangedAt?: string | null;
+  reviewChangedByUserId?: number | null;
+  reviewChangedByUsername?: string | null;
+  reviewChangedByCommonName?: string | null;
   occurrenceCount: number;
   repositoryCount: number;
   lastOccurrenceAt?: string | null;

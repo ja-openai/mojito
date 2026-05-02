@@ -5,6 +5,7 @@ import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.security.user.UserService;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
@@ -88,11 +89,13 @@ public class TermIndexExplorerService {
                     new IllegalArgumentException(
                         "Term index extracted term not found: " + termIndexExtractedTermId));
     ReviewUpdateCommand normalized = normalize(command);
-    entry.setReviewStatus(normalized.reviewStatus());
-    entry.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
-    entry.setReviewReason(normalized.reviewReason());
-    entry.setReviewRationale(normalized.reviewRationale());
-    entry.setReviewConfidence(normalized.reviewConfidence());
+    applyHumanReview(
+        entry,
+        normalized.reviewStatus(),
+        normalized.reviewReason(),
+        normalized.reviewRationale(),
+        normalized.reviewConfidence(),
+        currentUserOrNull());
     TermIndexExtractedTerm saved = termIndexExtractedTermRepository.save(entry);
     return toEntrySummaryView(saved, findCandidateByExtractedTermId(saved.getId()));
   }
@@ -112,12 +115,15 @@ public class TermIndexExplorerService {
 
     List<TermIndexExtractedTerm> entries =
         termIndexExtractedTermRepository.findAllById(termIndexExtractedTermIds);
+    User currentUser = currentUserOrNull();
     for (TermIndexExtractedTerm entry : entries) {
-      entry.setReviewStatus(normalized.reviewStatus());
-      entry.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
-      entry.setReviewReason(normalized.reviewReason());
-      entry.setReviewRationale(normalized.reviewRationale());
-      entry.setReviewConfidence(normalized.reviewConfidence());
+      applyHumanReview(
+          entry,
+          normalized.reviewStatus(),
+          normalized.reviewReason(),
+          normalized.reviewRationale(),
+          normalized.reviewConfidence(),
+          currentUser);
     }
     termIndexExtractedTermRepository.saveAll(entries);
     return new BatchReviewUpdateView(entries.size());
@@ -186,6 +192,10 @@ public class TermIndexExplorerService {
         candidate == null ? null : candidate.reviewReason(),
         candidate == null ? null : candidate.reviewRationale(),
         candidate == null ? null : candidate.reviewConfidence(),
+        candidate == null ? null : candidate.reviewChangedAt(),
+        candidate == null ? null : candidate.reviewChangedByUserId(),
+        candidate == null ? null : candidate.reviewChangedByUsername(),
+        candidate == null ? null : candidate.reviewChangedByCommonName(),
         row.getNormalizedKey(),
         row.getDisplayTerm(),
         row.getSourceLocaleTag(),
@@ -196,6 +206,10 @@ public class TermIndexExplorerService {
         row.getReviewReason(),
         row.getReviewRationale(),
         row.getReviewConfidence(),
+        row.getReviewChangedAt(),
+        row.getReviewChangedByUserId(),
+        row.getReviewChangedByUsername(),
+        row.getReviewChangedByCommonName(),
         nullToZero(row.getOccurrenceCount()),
         Math.toIntExact(nullToZero(row.getRepositoryCount())),
         row.getLastOccurrenceAt());
@@ -218,6 +232,10 @@ public class TermIndexExplorerService {
         candidate == null ? null : candidate.reviewReason(),
         candidate == null ? null : candidate.reviewRationale(),
         candidate == null ? null : candidate.reviewConfidence(),
+        candidate == null ? null : candidate.reviewChangedAt(),
+        candidate == null ? null : candidate.reviewChangedByUserId(),
+        candidate == null ? null : candidate.reviewChangedByUsername(),
+        candidate == null ? null : candidate.reviewChangedByCommonName(),
         entry.getNormalizedKey(),
         entry.getDisplayTerm(),
         entry.getSourceLocaleTag(),
@@ -228,6 +246,14 @@ public class TermIndexExplorerService {
         entry.getReviewReason(),
         entry.getReviewRationale(),
         entry.getReviewConfidence(),
+        entry.getReviewChangedAt(),
+        entry.getReviewChangedByUser() == null ? null : entry.getReviewChangedByUser().getId(),
+        entry.getReviewChangedByUser() == null
+            ? null
+            : entry.getReviewChangedByUser().getUsername(),
+        entry.getReviewChangedByUser() == null
+            ? null
+            : entry.getReviewChangedByUser().getCommonName(),
         nullToZero(entry.getOccurrenceCount()),
         entry.getRepositoryCount() == null ? 0 : entry.getRepositoryCount(),
         entry.getLastSeenAt());
@@ -274,7 +300,17 @@ public class TermIndexExplorerService {
         candidate.getReviewAuthority(),
         candidate.getReviewReason(),
         candidate.getReviewRationale(),
-        candidate.getReviewConfidence());
+        candidate.getReviewConfidence(),
+        candidate.getReviewChangedAt(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getId(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getUsername(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getCommonName());
   }
 
   private OccurrenceView toOccurrenceView(TermIndexOccurrenceRepository.DetailRow row) {
@@ -454,6 +490,26 @@ public class TermIndexExplorerService {
     return Math.min(100, Math.max(0, value));
   }
 
+  private void applyHumanReview(
+      TermIndexExtractedTerm entry,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence,
+      User currentUser) {
+    entry.setReviewStatus(reviewStatus);
+    entry.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+    entry.setReviewReason(reviewReason);
+    entry.setReviewRationale(reviewRationale);
+    entry.setReviewConfidence(reviewConfidence);
+    entry.setReviewChangedAt(ZonedDateTime.now());
+    entry.setReviewChangedByUser(currentUser);
+  }
+
+  private User currentUserOrNull() {
+    return userService.getCurrentUser().orElse(null);
+  }
+
   private void requireAdmin() {
     if (!userService.isCurrentUserAdmin()) {
       throw new AccessDeniedException("Admin role required");
@@ -500,6 +556,10 @@ public class TermIndexExplorerService {
       String candidateReviewReason,
       String candidateReviewRationale,
       Integer candidateReviewConfidence,
+      ZonedDateTime candidateReviewChangedAt,
+      Long candidateReviewChangedByUserId,
+      String candidateReviewChangedByUsername,
+      String candidateReviewChangedByCommonName,
       String normalizedKey,
       String displayTerm,
       String sourceLocaleTag,
@@ -510,6 +570,10 @@ public class TermIndexExplorerService {
       String reviewReason,
       String reviewRationale,
       Integer reviewConfidence,
+      ZonedDateTime reviewChangedAt,
+      Long reviewChangedByUserId,
+      String reviewChangedByUsername,
+      String reviewChangedByCommonName,
       long occurrenceCount,
       int repositoryCount,
       ZonedDateTime lastOccurrenceAt) {}
@@ -527,7 +591,11 @@ public class TermIndexExplorerService {
       String reviewAuthority,
       String reviewReason,
       String reviewRationale,
-      Integer reviewConfidence) {}
+      Integer reviewConfidence,
+      ZonedDateTime reviewChangedAt,
+      Long reviewChangedByUserId,
+      String reviewChangedByUsername,
+      String reviewChangedByCommonName) {}
 
   public record OccurrenceSearchView(List<OccurrenceView> occurrences) {}
 

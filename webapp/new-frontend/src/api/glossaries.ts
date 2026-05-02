@@ -303,6 +303,10 @@ export type ApiGlossaryTermIndexSuggestion = {
   candidateReviewReason?: string | null;
   candidateReviewRationale?: string | null;
   candidateReviewConfidence?: number | null;
+  candidateReviewChangedAt?: string | null;
+  candidateReviewChangedByUserId?: number | null;
+  candidateReviewChangedByUsername?: string | null;
+  candidateReviewChangedByCommonName?: string | null;
   reviewStatus: ApiGlossaryTermIndexSuggestionReviewStatus;
   glossaryPresence: ApiGlossaryTermIndexSuggestionGlossaryPresence;
   selectionMethod: string;
@@ -664,6 +668,10 @@ export async function updateGlossaryTermIndexSuggestionReview(
   reviewReason?: string | null;
   reviewRationale?: string | null;
   reviewConfidence?: number | null;
+  reviewChangedAt?: string | null;
+  reviewChangedByUserId?: number | null;
+  reviewChangedByUsername?: string | null;
+  reviewChangedByCommonName?: string | null;
 }> {
   const response = await fetch(
     `/api/glossaries/${glossaryId}/term-index-suggestions/${termIndexCandidateId}/review`,
@@ -690,6 +698,10 @@ export async function updateGlossaryTermIndexSuggestionReview(
     reviewReason?: string | null;
     reviewRationale?: string | null;
     reviewConfidence?: number | null;
+    reviewChangedAt?: string | null;
+    reviewChangedByUserId?: number | null;
+    reviewChangedByUsername?: string | null;
+    reviewChangedByCommonName?: string | null;
   };
 }
 

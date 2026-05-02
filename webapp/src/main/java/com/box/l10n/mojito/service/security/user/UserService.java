@@ -137,6 +137,20 @@ public class UserService {
     return isCurrentUserAdmin() || isCurrentUserPm() || isCurrentUserTranslator();
   }
 
+  public Optional<User> getCurrentUser() {
+    return auditorAwareImpl
+        .getCurrentAuditor()
+        .map(User::getUsername)
+        .map(userRepository::findByUsername);
+  }
+
+  public Optional<User> getUserById(Long userId) {
+    if (userId == null) {
+      return Optional.empty();
+    }
+    return userRepository.findById(userId);
+  }
+
   private boolean hasCurrentUserRole(Role expectedRole) {
     Optional<User> currentUser = auditorAwareImpl.getCurrentAuditor();
     if (currentUser.isEmpty()) {
