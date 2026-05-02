@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.glossary;
 
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
@@ -65,12 +66,12 @@ public class TermIndexExplorerService {
             normalized.reviewStatusFilter(),
             normalized.minOccurrences(),
             pageRequest(normalized.limit()));
-    Map<Long, Long> candidateIdsByExtractedTermId =
-        findCandidateIdsByExtractedTermId(
+    Map<Long, CandidateSummary> candidatesByExtractedTermId =
+        findCandidatesByExtractedTermId(
             rows.stream().map(TermIndexExtractedTermRepository.SearchRow::getId).toList());
     List<EntrySummaryView> entries =
         rows.stream()
-            .map(row -> toEntrySummaryView(row, candidateIdsByExtractedTermId.get(row.getId())))
+            .map(row -> toEntrySummaryView(row, candidatesByExtractedTermId.get(row.getId())))
             .toList();
     return new EntrySearchView(entries);
   }
@@ -93,7 +94,7 @@ public class TermIndexExplorerService {
     entry.setReviewRationale(normalized.reviewRationale());
     entry.setReviewConfidence(normalized.reviewConfidence());
     TermIndexExtractedTerm saved = termIndexExtractedTermRepository.save(entry);
-    return toEntrySummaryView(saved, findCandidateIdByExtractedTermId(saved.getId()));
+    return toEntrySummaryView(saved, findCandidateByExtractedTermId(saved.getId()));
   }
 
   @Transactional
@@ -169,10 +170,22 @@ public class TermIndexExplorerService {
   }
 
   private EntrySummaryView toEntrySummaryView(
-      TermIndexExtractedTermRepository.SearchRow row, Long termIndexCandidateId) {
+      TermIndexExtractedTermRepository.SearchRow row, CandidateSummary candidate) {
     return new EntrySummaryView(
         row.getId(),
-        termIndexCandidateId,
+        candidate == null ? null : candidate.id(),
+        candidate == null ? null : candidate.definition(),
+        candidate == null ? null : candidate.rationale(),
+        candidate == null ? null : candidate.termType(),
+        candidate == null ? null : candidate.partOfSpeech(),
+        candidate == null ? null : candidate.enforcement(),
+        candidate == null ? null : candidate.doNotTranslate(),
+        candidate == null ? null : candidate.confidence(),
+        candidate == null ? null : candidate.reviewStatus(),
+        candidate == null ? null : candidate.reviewAuthority(),
+        candidate == null ? null : candidate.reviewReason(),
+        candidate == null ? null : candidate.reviewRationale(),
+        candidate == null ? null : candidate.reviewConfidence(),
         row.getNormalizedKey(),
         row.getDisplayTerm(),
         row.getSourceLocaleTag(),
@@ -189,10 +202,22 @@ public class TermIndexExplorerService {
   }
 
   private EntrySummaryView toEntrySummaryView(
-      TermIndexExtractedTerm entry, Long termIndexCandidateId) {
+      TermIndexExtractedTerm entry, CandidateSummary candidate) {
     return new EntrySummaryView(
         entry.getId(),
-        termIndexCandidateId,
+        candidate == null ? null : candidate.id(),
+        candidate == null ? null : candidate.definition(),
+        candidate == null ? null : candidate.rationale(),
+        candidate == null ? null : candidate.termType(),
+        candidate == null ? null : candidate.partOfSpeech(),
+        candidate == null ? null : candidate.enforcement(),
+        candidate == null ? null : candidate.doNotTranslate(),
+        candidate == null ? null : candidate.confidence(),
+        candidate == null ? null : candidate.reviewStatus(),
+        candidate == null ? null : candidate.reviewAuthority(),
+        candidate == null ? null : candidate.reviewReason(),
+        candidate == null ? null : candidate.reviewRationale(),
+        candidate == null ? null : candidate.reviewConfidence(),
         entry.getNormalizedKey(),
         entry.getDisplayTerm(),
         entry.getSourceLocaleTag(),
@@ -208,26 +233,48 @@ public class TermIndexExplorerService {
         entry.getLastSeenAt());
   }
 
-  private Map<Long, Long> findCandidateIdsByExtractedTermId(List<Long> termIndexExtractedTermIds) {
-    Map<Long, Long> candidateIdsByExtractedTermId = new HashMap<>();
+  private Map<Long, CandidateSummary> findCandidatesByExtractedTermId(
+      List<Long> termIndexExtractedTermIds) {
+    Map<Long, CandidateSummary> candidatesByExtractedTermId = new HashMap<>();
     if (termIndexExtractedTermIds.isEmpty()) {
-      return candidateIdsByExtractedTermId;
+      return candidatesByExtractedTermId;
     }
     termIndexCandidateRepository
-        .findCandidateIdsByExtractedTermIdIn(termIndexExtractedTermIds)
+        .findByTermIndexExtractedTermIdInOrderByCreatedDateDesc(termIndexExtractedTermIds)
         .forEach(
-            row ->
-                candidateIdsByExtractedTermId.put(
-                    row.getTermIndexExtractedTermId(), row.getTermIndexCandidateId()));
-    return candidateIdsByExtractedTermId;
+            candidate -> {
+              if (candidate.getTermIndexExtractedTerm() == null) {
+                return;
+              }
+              candidatesByExtractedTermId.putIfAbsent(
+                  candidate.getTermIndexExtractedTerm().getId(), toCandidateSummary(candidate));
+            });
+    return candidatesByExtractedTermId;
   }
 
-  private Long findCandidateIdByExtractedTermId(Long termIndexExtractedTermId) {
+  private CandidateSummary findCandidateByExtractedTermId(Long termIndexExtractedTermId) {
     if (termIndexExtractedTermId == null) {
       return null;
     }
-    return findCandidateIdsByExtractedTermId(List.of(termIndexExtractedTermId))
+    return findCandidatesByExtractedTermId(List.of(termIndexExtractedTermId))
         .get(termIndexExtractedTermId);
+  }
+
+  private CandidateSummary toCandidateSummary(TermIndexCandidate candidate) {
+    return new CandidateSummary(
+        candidate.getId(),
+        candidate.getDefinition(),
+        candidate.getRationale(),
+        candidate.getTermType(),
+        candidate.getPartOfSpeech(),
+        candidate.getEnforcement(),
+        candidate.getDoNotTranslate(),
+        candidate.getConfidence(),
+        candidate.getReviewStatus(),
+        candidate.getReviewAuthority(),
+        candidate.getReviewReason(),
+        candidate.getReviewRationale(),
+        candidate.getReviewConfidence());
   }
 
   private OccurrenceView toOccurrenceView(TermIndexOccurrenceRepository.DetailRow row) {
@@ -441,6 +488,18 @@ public class TermIndexExplorerService {
   public record EntrySummaryView(
       Long id,
       Long termIndexCandidateId,
+      String candidateDefinition,
+      String candidateRationale,
+      String candidateTermType,
+      String candidatePartOfSpeech,
+      String candidateEnforcement,
+      Boolean candidateDoNotTranslate,
+      Integer candidateConfidence,
+      String candidateReviewStatus,
+      String candidateReviewAuthority,
+      String candidateReviewReason,
+      String candidateReviewRationale,
+      Integer candidateReviewConfidence,
       String normalizedKey,
       String displayTerm,
       String sourceLocaleTag,
@@ -454,6 +513,21 @@ public class TermIndexExplorerService {
       long occurrenceCount,
       int repositoryCount,
       ZonedDateTime lastOccurrenceAt) {}
+
+  private record CandidateSummary(
+      Long id,
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Integer confidence,
+      String reviewStatus,
+      String reviewAuthority,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
 
   public record OccurrenceSearchView(List<OccurrenceView> occurrences) {}
 

@@ -45,6 +45,7 @@ public class GlossaryTermIndexCurationService {
   private static final int DEFAULT_SUGGESTION_LIMIT = 50;
   private static final int EXAMPLE_LIMIT = 4;
   private static final int LIVE_SEARCH_EXAMPLE_LIMIT = 3;
+  private static final int AI_CANDIDATE_BATCH_SIZE = 50;
   private static final int DEFAULT_GENERATION_LIMIT = 500;
   private static final int DEFAULT_CANDIDATE_EXPORT_LIMIT = 1_000;
   private static final List<Long> EMPTY_FILTER_SENTINEL = List.of(-1L);
@@ -340,11 +341,15 @@ public class GlossaryTermIndexCurationService {
             Math.max(1L, normalized.minOccurrences() == null ? 1L : normalized.minOccurrences()),
             PageRequest.of(0, normalizeGenerationLimit(normalized.limit())));
 
+    Map<Long, CandidateFieldOverrides> overridesByExtractedTermId =
+        candidateFieldOverridesByExtractedTermId(
+            rows, false, repositoryIdsOrSentinel(scopeRepositoryIds), null);
     List<SeededTermView> generatedCandidates = new ArrayList<>(rows.size());
     int createdCandidateCount = 0;
     int updatedCandidateCount = 0;
     for (TermIndexExtractedTermRepository.SearchRow row : rows) {
-      CandidateWriteResult writeResult = upsertExtractionCandidate(row);
+      CandidateWriteResult writeResult =
+          upsertExtractionCandidate(row, overridesByExtractedTermId.get(row.getId()));
       if (writeResult.created()) {
         createdCandidateCount++;
       } else {
@@ -373,11 +378,15 @@ public class GlossaryTermIndexCurationService {
         termIndexExtractedTermRepository.findCandidateGenerationRowsByIdIn(
             normalized.termIndexExtractedTermIds(), repositoryIdsEmpty, repositoryIds);
 
+    Map<Long, CandidateFieldOverrides> overridesByExtractedTermId =
+        candidateFieldOverridesByExtractedTermId(
+            rows, repositoryIdsEmpty, repositoryIds, overrides);
     List<SeededTermView> generatedCandidates = new ArrayList<>(rows.size());
     int createdCandidateCount = 0;
     int updatedCandidateCount = 0;
     for (TermIndexExtractedTermRepository.SearchRow row : rows) {
-      CandidateWriteResult writeResult = upsertExtractionCandidate(row, overrides);
+      CandidateWriteResult writeResult =
+          upsertExtractionCandidate(row, overridesByExtractedTermId.get(row.getId()));
       if (writeResult.created()) {
         createdCandidateCount++;
       } else {
@@ -971,22 +980,27 @@ public class GlossaryTermIndexCurationService {
     candidate.setConfidence(
         coalesce(
             overrides == null ? null : overrides.confidence(),
-            heuristicConfidence(row.getOccurrenceCount(), row.getRepositoryCount())));
-    candidate.setDefinition(overrides == null ? null : overrides.definition());
-    candidate.setRationale(overrides == null ? null : overrides.rationale());
+            coalesce(
+                candidate.getConfidence(),
+                heuristicConfidence(row.getOccurrenceCount(), row.getRepositoryCount()))));
+    candidate.setDefinition(
+        coalesce(overrides == null ? null : overrides.definition(), candidate.getDefinition()));
+    candidate.setRationale(
+        coalesce(overrides == null ? null : overrides.rationale(), candidate.getRationale()));
     candidate.setTermType(
         coalesce(
             overrides == null ? null : overrides.termType(),
-            suggestTermType(row.getDisplayTerm())));
-    candidate.setPartOfSpeech(overrides == null ? null : overrides.partOfSpeech());
+            coalesce(candidate.getTermType(), suggestTermType(row.getDisplayTerm()))));
+    candidate.setPartOfSpeech(
+        coalesce(overrides == null ? null : overrides.partOfSpeech(), candidate.getPartOfSpeech()));
     candidate.setEnforcement(
         coalesce(
             overrides == null ? null : overrides.enforcement(),
-            GlossaryTermMetadata.ENFORCEMENT_SOFT));
+            coalesce(candidate.getEnforcement(), GlossaryTermMetadata.ENFORCEMENT_SOFT)));
     candidate.setDoNotTranslate(
         coalesce(
             overrides == null ? null : overrides.doNotTranslate(),
-            shouldPreserveSource(row.getDisplayTerm())));
+            coalesce(candidate.getDoNotTranslate(), shouldPreserveSource(row.getDisplayTerm()))));
     applyExtractionCandidateReview(candidate, overrides);
     return new CandidateWriteResult(
         termIndexCandidateRepository.save(candidate), existingCandidate.isEmpty());
@@ -1012,6 +1026,129 @@ public class GlossaryTermIndexCurationService {
     if (candidate.getReviewAuthority() == null) {
       candidate.setReviewAuthority(TermIndexReview.AUTHORITY_DEFAULT);
     }
+  }
+
+  private Map<Long, CandidateFieldOverrides> candidateFieldOverridesByExtractedTermId(
+      List<TermIndexExtractedTermRepository.SearchRow> rows,
+      boolean repositoryIdsEmpty,
+      List<Long> repositoryIds,
+      CandidateFieldOverrides requestedOverrides) {
+    if (rows.isEmpty()) {
+      return Map.of();
+    }
+    Map<String, GlossaryAiExtractionService.AiCandidateView> aiCandidatesByKey =
+        aiCandidatesByNormalizedKey(rows, repositoryIdsEmpty, repositoryIds);
+    Map<Long, CandidateFieldOverrides> overridesByExtractedTermId = new LinkedHashMap<>();
+    for (TermIndexExtractedTermRepository.SearchRow row : rows) {
+      CandidateFieldOverrides mergedOverrides =
+          mergeCandidateFieldOverrides(
+              requestedOverrides, aiCandidatesByKey.get(row.getNormalizedKey()));
+      if (mergedOverrides != null) {
+        overridesByExtractedTermId.put(row.getId(), mergedOverrides);
+      }
+    }
+    return overridesByExtractedTermId;
+  }
+
+  private Map<String, GlossaryAiExtractionService.AiCandidateView> aiCandidatesByNormalizedKey(
+      List<TermIndexExtractedTermRepository.SearchRow> rows,
+      boolean repositoryIdsEmpty,
+      List<Long> repositoryIds) {
+    Map<String, GlossaryAiExtractionService.AiCandidateView> aiCandidatesByKey =
+        new LinkedHashMap<>();
+    for (int start = 0; start < rows.size(); start += AI_CANDIDATE_BATCH_SIZE) {
+      List<TermIndexExtractedTermRepository.SearchRow> batch =
+          rows.subList(start, Math.min(rows.size(), start + AI_CANDIDATE_BATCH_SIZE));
+      List<GlossaryAiExtractionService.CandidateSignal> signals =
+          batch.stream()
+              .map(row -> toCandidateSignal(row, repositoryIdsEmpty, repositoryIds))
+              .toList();
+      List<GlossaryAiExtractionService.AiCandidateView> aiCandidates;
+      try {
+        aiCandidates = glossaryAiExtractionService.enrichCandidates(signals);
+      } catch (RuntimeException ignored) {
+        continue;
+      }
+      for (GlossaryAiExtractionService.AiCandidateView aiCandidate : aiCandidates) {
+        String key = normalizeCandidateKey(aiCandidate.term());
+        if (key != null) {
+          aiCandidatesByKey.putIfAbsent(key, aiCandidate);
+        }
+      }
+    }
+    return aiCandidatesByKey;
+  }
+
+  private GlossaryAiExtractionService.CandidateSignal toCandidateSignal(
+      TermIndexExtractedTermRepository.SearchRow row,
+      boolean repositoryIdsEmpty,
+      List<Long> repositoryIds) {
+    List<TermIndexOccurrenceRepository.DetailRow> examples =
+        termIndexOccurrenceRepository.findDetailsByTermIndexExtractedTermId(
+            row.getId(), repositoryIdsEmpty, repositoryIds, null, PageRequest.of(0, EXAMPLE_LIMIT));
+    List<String> repositories =
+        examples.stream()
+            .map(TermIndexOccurrenceRepository.DetailRow::getRepositoryName)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+    List<String> sampleSources =
+        examples.stream()
+            .map(TermIndexOccurrenceRepository.DetailRow::getSourceText)
+            .filter(Objects::nonNull)
+            .map(source -> truncate(source, 320))
+            .distinct()
+            .toList();
+    return new GlossaryAiExtractionService.CandidateSignal(
+        row.getDisplayTerm(),
+        Math.toIntExact(Math.min(Integer.MAX_VALUE, nullToZero(row.getOccurrenceCount()))),
+        Math.toIntExact(Math.min(Integer.MAX_VALUE, nullToZero(row.getRepositoryCount()))),
+        repositories,
+        sampleSources,
+        suggestTermType(row.getDisplayTerm()));
+  }
+
+  private CandidateFieldOverrides mergeCandidateFieldOverrides(
+      CandidateFieldOverrides requestedOverrides,
+      GlossaryAiExtractionService.AiCandidateView aiCandidate) {
+    if (requestedOverrides == null && aiCandidate == null) {
+      return null;
+    }
+    return new CandidateFieldOverrides(
+        coalesce(
+            requestedOverrides == null ? null : requestedOverrides.definition(),
+            truncate(
+                normalizeOptional(aiCandidate == null ? null : aiCandidate.definition()), 2048)),
+        coalesce(
+            requestedOverrides == null ? null : requestedOverrides.rationale(),
+            truncate(
+                normalizeOptional(aiCandidate == null ? null : aiCandidate.rationale()), 2048)),
+        coalesce(
+            requestedOverrides == null ? null : requestedOverrides.termType(),
+            normalizeKnownValue(
+                aiCandidate == null ? null : aiCandidate.termType(),
+                GlossaryTermMetadata.TERM_TYPES,
+                null)),
+        coalesce(
+            requestedOverrides == null ? null : requestedOverrides.partOfSpeech(),
+            truncate(
+                normalizeOptional(aiCandidate == null ? null : aiCandidate.partOfSpeech()), 64)),
+        coalesce(
+            requestedOverrides == null ? null : requestedOverrides.enforcement(),
+            normalizeKnownValue(
+                aiCandidate == null ? null : aiCandidate.enforcement(),
+                GlossaryTermMetadata.ENFORCEMENTS,
+                null)),
+        coalesce(
+            requestedOverrides == null ? null : requestedOverrides.doNotTranslate(),
+            aiCandidate == null ? null : aiCandidate.doNotTranslate()),
+        coalesce(
+            requestedOverrides == null ? null : requestedOverrides.confidence(),
+            clampConfidence(aiCandidate == null ? null : aiCandidate.confidence())),
+        requestedOverrides == null ? null : requestedOverrides.reviewStatus(),
+        requestedOverrides == null ? null : requestedOverrides.reviewReason(),
+        requestedOverrides == null ? null : requestedOverrides.reviewRationale(),
+        requestedOverrides == null ? null : requestedOverrides.reviewConfidence());
   }
 
   private void applySeedReview(
@@ -1636,7 +1773,14 @@ public class GlossaryTermIndexCurationService {
         candidate.getId(),
         extractedTerm == null ? null : extractedTerm.getId(),
         candidate.getTerm(),
-        candidate.getNormalizedKey());
+        candidate.getNormalizedKey(),
+        candidate.getDefinition(),
+        candidate.getRationale(),
+        candidate.getTermType(),
+        candidate.getPartOfSpeech(),
+        candidate.getEnforcement(),
+        candidate.getDoNotTranslate(),
+        candidate.getConfidence());
   }
 
   private String slugify(String value) {
@@ -1909,7 +2053,14 @@ public class GlossaryTermIndexCurationService {
       Long termIndexCandidateId,
       Long termIndexExtractedTermId,
       String term,
-      String normalizedKey) {}
+      String normalizedKey,
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Integer confidence) {}
 
   private record CandidateWriteResult(TermIndexCandidate candidate, boolean created) {}
 

@@ -118,7 +118,18 @@ type CandidateDraft = {
   doNotTranslate: boolean;
   confidence: string;
   reviewStatus: ApiTermIndexReviewStatus;
+  editedFields: Partial<Record<CandidateDraftField, boolean>>;
 };
+
+type CandidateDraftField =
+  | 'definition'
+  | 'rationale'
+  | 'termType'
+  | 'partOfSpeech'
+  | 'enforcement'
+  | 'doNotTranslate'
+  | 'confidence'
+  | 'reviewStatus';
 
 type CandidateGenerationRequest = {
   mode: 'single' | 'bulk';
@@ -214,14 +225,16 @@ const getRawTermExplorerPath = (entryId: number, search?: string) => {
 };
 
 const createCandidateDraft = (entry: ApiTermIndexEntry | null): CandidateDraft => ({
-  definition: '',
-  rationale: '',
-  termType: suggestCandidateTermType(entry?.displayTerm ?? ''),
-  partOfSpeech: '',
-  enforcement: 'SOFT',
-  doNotTranslate: shouldCandidatePreserveSource(entry?.displayTerm ?? ''),
-  confidence: '',
-  reviewStatus: 'TO_REVIEW',
+  definition: entry?.candidateDefinition ?? '',
+  rationale: entry?.candidateRationale ?? '',
+  termType: entry?.candidateTermType ?? suggestCandidateTermType(entry?.displayTerm ?? ''),
+  partOfSpeech: entry?.candidatePartOfSpeech ?? '',
+  enforcement: entry?.candidateEnforcement ?? 'SOFT',
+  doNotTranslate:
+    entry?.candidateDoNotTranslate ?? shouldCandidatePreserveSource(entry?.displayTerm ?? ''),
+  confidence: entry?.candidateConfidence == null ? '' : String(entry.candidateConfidence),
+  reviewStatus: entry?.candidateReviewStatus ?? 'TO_REVIEW',
+  editedFields: {},
 });
 
 const suggestCandidateTermType = (term: string) => {
@@ -257,7 +270,27 @@ const parseOptionalConfidence = (value: string) => {
   return Number.isFinite(parsed) ? Math.min(100, Math.max(0, Math.round(parsed))) : null;
 };
 
-const cloneCandidateDraft = (draft: CandidateDraft): CandidateDraft => ({ ...draft });
+const cloneCandidateDraft = (draft: CandidateDraft): CandidateDraft => ({
+  ...draft,
+  editedFields: { ...draft.editedFields },
+});
+
+const candidateDraftTextValue = (draft: CandidateDraft, field: 'definition' | 'rationale') =>
+  draft.editedFields[field] ? nullableTrimmed(draft[field]) : null;
+
+const candidateDraftStringValue = (
+  draft: CandidateDraft,
+  field: 'partOfSpeech' | 'termType' | 'enforcement',
+) => (draft.editedFields[field] ? nullableTrimmed(draft[field]) : null);
+
+const candidateDraftBooleanValue = (draft: CandidateDraft, field: 'doNotTranslate') =>
+  draft.editedFields[field] ? draft[field] : null;
+
+const candidateDraftConfidenceValue = (draft: CandidateDraft) =>
+  draft.editedFields.confidence ? parseOptionalConfidence(draft.confidence) : null;
+
+const candidateDraftReviewStatusValue = (draft: CandidateDraft) =>
+  draft.editedFields.reviewStatus ? draft.reviewStatus : null;
 
 const hasSameRepositoryIds = (left: number[], right: number[]) => {
   if (left.length !== right.length) {
@@ -1219,14 +1252,14 @@ export function AdminTermIndexCandidateGenerationPage() {
       generateTermIndexCandidatesFromEntries({
         termIndexEntryIds: entryIds,
         repositoryIds: effectiveRepositoryIds,
-        definition: draft ? nullableTrimmed(draft.definition) : null,
-        rationale: draft ? nullableTrimmed(draft.rationale) : null,
-        termType: draft?.termType || null,
-        partOfSpeech: draft ? nullableTrimmed(draft.partOfSpeech) : null,
-        enforcement: draft?.enforcement || null,
-        doNotTranslate: draft?.doNotTranslate ?? null,
-        confidence: draft ? parseOptionalConfidence(draft.confidence) : null,
-        reviewStatus: draft?.reviewStatus ?? 'TO_REVIEW',
+        definition: draft ? candidateDraftTextValue(draft, 'definition') : null,
+        rationale: draft ? candidateDraftTextValue(draft, 'rationale') : null,
+        termType: draft ? candidateDraftStringValue(draft, 'termType') : null,
+        partOfSpeech: draft ? candidateDraftStringValue(draft, 'partOfSpeech') : null,
+        enforcement: draft ? candidateDraftStringValue(draft, 'enforcement') : null,
+        doNotTranslate: draft ? candidateDraftBooleanValue(draft, 'doNotTranslate') : null,
+        confidence: draft ? candidateDraftConfidenceValue(draft) : null,
+        reviewStatus: draft ? candidateDraftReviewStatusValue(draft) : null,
       }),
     onSuccess: async (result) => {
       setCandidateGenerationReport(result);
@@ -1822,15 +1855,7 @@ function CandidateGenerationModal({
     REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === reviewStatusFilter)?.label ??
     reviewStatusFilter;
   const hasDraftOverrides =
-    draft != null &&
-    (Boolean(draft.definition.trim()) ||
-      Boolean(draft.rationale.trim()) ||
-      Boolean(draft.partOfSpeech.trim()) ||
-      Boolean(draft.confidence.trim()) ||
-      draft.termType !== 'GENERAL' ||
-      draft.enforcement !== 'SOFT' ||
-      draft.doNotTranslate ||
-      draft.reviewStatus !== 'TO_REVIEW');
+    draft != null && Object.values(draft.editedFields).some((isEdited) => Boolean(isEdited));
   const generatedCandidates = report?.candidates.slice(0, 10) ?? [];
 
   return (
@@ -1853,7 +1878,7 @@ function CandidateGenerationModal({
           <p className="settings-hint">
             {report
               ? 'The candidate table has been refreshed from the selected extracted terms.'
-              : 'Create or refresh stored candidates from reviewed extracted terms. Definition and rationale are only saved when provided here.'}
+              : 'Create or refresh stored candidates from reviewed extracted terms. AI fills candidate fields when they are not edited here.'}
           </p>
         </div>
       </div>
@@ -1915,6 +1940,9 @@ function CandidateGenerationModal({
                           extracted #{candidate.termIndexExtractedTermId}
                         </span>
                       ) : null}
+                      {candidate.definition ? (
+                        <span className="settings-hint">{candidate.definition}</span>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -1931,7 +1959,8 @@ function CandidateGenerationModal({
             <ul>
               <li>Create missing candidates for the selected extracted terms.</li>
               <li>Refresh existing extraction-backed candidates for the same extracted terms.</li>
-              <li>Keep definition and rationale empty unless manual values are provided.</li>
+              <li>Ask AI to fill definition, rationale, and candidate metadata where possible.</li>
+              <li>Use edited fields from this form as overrides.</li>
               <li>Leave glossary terms unchanged until a candidate is accepted in a glossary.</li>
               <li>Skip rejected extracted terms if any are selected.</li>
             </ul>
@@ -1940,40 +1969,58 @@ function CandidateGenerationModal({
                 <div className="settings-field__label">Candidate fields</div>
                 {hasDraftOverrides ? (
                   <dl>
-                    <div>
-                      <dt>Term type</dt>
-                      <dd>
-                        {TERM_TYPE_OPTIONS.find((option) => option.value === draft.termType)
-                          ?.label ?? draft.termType}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Enforcement</dt>
-                      <dd>
-                        {ENFORCEMENT_OPTIONS.find((option) => option.value === draft.enforcement)
-                          ?.label ?? draft.enforcement}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Review status</dt>
-                      <dd>{reviewStatusLabel}</dd>
-                    </div>
-                    {draft.partOfSpeech.trim() ? (
+                    {draft.editedFields.termType ? (
+                      <div>
+                        <dt>Term type</dt>
+                        <dd>
+                          {TERM_TYPE_OPTIONS.find((option) => option.value === draft.termType)
+                            ?.label ?? draft.termType}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {draft.editedFields.enforcement ? (
+                      <div>
+                        <dt>Enforcement</dt>
+                        <dd>
+                          {ENFORCEMENT_OPTIONS.find((option) => option.value === draft.enforcement)
+                            ?.label ?? draft.enforcement}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {draft.editedFields.reviewStatus ? (
+                      <div>
+                        <dt>Review status</dt>
+                        <dd>{reviewStatusLabel}</dd>
+                      </div>
+                    ) : null}
+                    {draft.editedFields.definition && draft.definition.trim() ? (
+                      <div>
+                        <dt>Definition</dt>
+                        <dd>{draft.definition.trim()}</dd>
+                      </div>
+                    ) : null}
+                    {draft.editedFields.rationale && draft.rationale.trim() ? (
+                      <div>
+                        <dt>Rationale</dt>
+                        <dd>{draft.rationale.trim()}</dd>
+                      </div>
+                    ) : null}
+                    {draft.editedFields.partOfSpeech && draft.partOfSpeech.trim() ? (
                       <div>
                         <dt>Part of speech</dt>
                         <dd>{draft.partOfSpeech.trim()}</dd>
                       </div>
                     ) : null}
-                    {draft.confidence.trim() ? (
+                    {draft.editedFields.confidence && draft.confidence.trim() ? (
                       <div>
                         <dt>Confidence</dt>
                         <dd>{draft.confidence.trim()}%</dd>
                       </div>
                     ) : null}
-                    {draft.doNotTranslate ? (
+                    {draft.editedFields.doNotTranslate ? (
                       <div>
                         <dt>Flags</dt>
-                        <dd>Do not translate</dd>
+                        <dd>{draft.doNotTranslate ? 'Do not translate' : 'Translate normally'}</dd>
                       </div>
                     ) : null}
                   </dl>
@@ -1985,8 +2032,8 @@ function CandidateGenerationModal({
               </div>
             ) : (
               <p className="settings-hint">
-                Bulk generation uses default candidate fields, leaves definition and rationale
-                empty, and sets generated candidates to To review.
+                Bulk generation asks AI to fill candidate fields and keeps generated candidates in
+                To review.
               </p>
             )}
             {sampleEntries.length > 0 ? (
@@ -2061,8 +2108,12 @@ function CandidateDraftPanel({
   onDraftChange: (draft: CandidateDraft) => void;
   onGenerate: () => void;
 }) {
-  const updateDraft = <K extends keyof CandidateDraft>(key: K, value: CandidateDraft[K]) => {
-    onDraftChange({ ...draft, [key]: value });
+  const updateDraft = <K extends CandidateDraftField>(key: K, value: CandidateDraft[K]) => {
+    onDraftChange({
+      ...draft,
+      [key]: value,
+      editedFields: { ...draft.editedFields, [key]: true },
+    });
   };
   const createdLabel = entry.createdDate ? formatLocalDateTime(entry.createdDate) : null;
 
@@ -2158,7 +2209,7 @@ function CandidateDraftPanel({
             className="settings-input term-index-explorer__candidate-textarea"
             value={draft.definition}
             onChange={(event) => updateDraft('definition', event.target.value)}
-            placeholder="Manual definition override"
+            placeholder="AI will fill this when generated"
           />
         </label>
         <label className="settings-field">
@@ -2167,7 +2218,7 @@ function CandidateDraftPanel({
             className="settings-input term-index-explorer__candidate-textarea"
             value={draft.rationale}
             onChange={(event) => updateDraft('rationale', event.target.value)}
-            placeholder="Manual review rationale"
+            placeholder="AI will explain why this should be a glossary candidate"
           />
         </label>
         <div className="term-index-explorer__candidate-options">

@@ -365,7 +365,14 @@ public class TermIndexExplorerWS {
       Long termIndexCandidateId,
       Long termIndexExtractedTermId,
       String term,
-      String normalizedKey) {}
+      String normalizedKey,
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Integer confidence) {}
 
   public record TermIndexEntrySearchHybridResponse(
       TermIndexExplorerService.EntrySearchView results,
@@ -398,7 +405,14 @@ public class TermIndexExplorerWS {
         candidate.termIndexCandidateId(),
         candidate.termIndexExtractedTermId(),
         candidate.term(),
-        candidate.normalizedKey());
+        candidate.normalizedKey(),
+        candidate.definition(),
+        candidate.rationale(),
+        candidate.termType(),
+        candidate.partOfSpeech(),
+        candidate.enforcement(),
+        candidate.doNotTranslate(),
+        candidate.confidence());
   }
 
   private void persistTermIndexEntrySearchHybridResponse(

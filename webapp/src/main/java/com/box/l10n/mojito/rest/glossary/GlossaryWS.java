@@ -274,7 +274,14 @@ public class GlossaryWS {
       Long termIndexCandidateId,
       Long termIndexExtractedTermId,
       String term,
-      String normalizedKey) {}
+      String normalizedKey,
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Integer confidence) {}
 
   public record GlossaryWorkspaceSummaryResponse(
       long totalTerms,
@@ -1312,7 +1319,14 @@ public class GlossaryWS {
         term.termIndexCandidateId(),
         term.termIndexExtractedTermId(),
         term.term(),
-        term.normalizedKey());
+        term.normalizedKey(),
+        term.definition(),
+        term.rationale(),
+        term.termType(),
+        term.partOfSpeech(),
+        term.enforcement(),
+        term.doNotTranslate(),
+        term.confidence());
   }
 
   private GlossaryTermIndexCurationService.SeedTermInput toSeedTermInput(

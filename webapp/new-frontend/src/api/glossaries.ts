@@ -345,6 +345,13 @@ export type ApiSeedGlossaryTermIndexCandidatesResponse = {
     termIndexExtractedTermId?: number | null;
     term: string;
     normalizedKey: string;
+    definition?: string | null;
+    rationale?: string | null;
+    termType?: string | null;
+    partOfSpeech?: string | null;
+    enforcement?: string | null;
+    doNotTranslate?: boolean | null;
+    confidence?: number | null;
   }>;
 };
 
