@@ -92,6 +92,8 @@ export type ApiTermIndexReviewStatusFilter =
 
 export type ApiTermIndexReviewAuthority = 'DEFAULT' | 'AI' | 'HUMAN' | (string & {});
 
+export type ApiTermIndexEntrySort = 'HITS' | 'REVIEW_CONFIDENCE_DESC' | 'REVIEW_CONFIDENCE_ASC';
+
 export type ApiTermIndexEntriesResponse = {
   entries: ApiTermIndexEntry[];
 };
@@ -108,6 +110,10 @@ export type ApiTriageTermIndexEntriesRequest = {
   reviewStatus?: ApiTermIndexReviewStatusFilter | null;
   minOccurrences?: number | null;
   limit?: number | null;
+  lastOccurrenceAfter?: string | null;
+  lastOccurrenceBefore?: string | null;
+  reviewChangedAfter?: string | null;
+  reviewChangedBefore?: string | null;
   overwriteHumanReview?: boolean | null;
 };
 
@@ -406,6 +412,11 @@ export async function fetchTermIndexEntries(options?: {
   reviewStatus?: ApiTermIndexReviewStatusFilter | null;
   minOccurrences?: number;
   limit?: number;
+  lastOccurrenceAfter?: string | null;
+  lastOccurrenceBefore?: string | null;
+  reviewChangedAfter?: string | null;
+  reviewChangedBefore?: string | null;
+  sortBy?: ApiTermIndexEntrySort | null;
 }): Promise<ApiTermIndexEntriesResponse> {
   const response = await fetch('/api/glossary-term-index/entries/search-hybrid', {
     method: 'POST',
@@ -421,6 +432,11 @@ export async function fetchTermIndexEntries(options?: {
       reviewStatus: options?.reviewStatus ?? null,
       minOccurrences: options?.minOccurrences ?? null,
       limit: options?.limit ?? null,
+      lastOccurrenceAfter: options?.lastOccurrenceAfter ?? null,
+      lastOccurrenceBefore: options?.lastOccurrenceBefore ?? null,
+      reviewChangedAfter: options?.reviewChangedAfter ?? null,
+      reviewChangedBefore: options?.reviewChangedBefore ?? null,
+      sortBy: options?.sortBy ?? null,
     }),
   });
 
@@ -474,8 +490,11 @@ export async function updateTermIndexEntryReviews(
   termIndexEntryIds: number[],
   request: {
     reviewStatus: ApiTermIndexReviewStatus;
+    updateReviewReason?: boolean;
     reviewReason?: string | null;
+    updateReviewRationale?: boolean;
     reviewRationale?: string | null;
+    updateReviewConfidence?: boolean;
     reviewConfidence?: number | null;
   },
 ): Promise<ApiTermIndexBatchReviewResponse> {

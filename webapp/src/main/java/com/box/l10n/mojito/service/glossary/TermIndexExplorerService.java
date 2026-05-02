@@ -26,6 +26,9 @@ public class TermIndexExplorerService {
   private static final int DEFAULT_RECENT_RUN_LIMIT = 20;
   private static final int MAX_RECENT_RUN_LIMIT = 500;
   private static final List<Long> EMPTY_FILTER_SENTINEL = List.of(-1L);
+  private static final String ENTRY_SORT_HITS = "HITS";
+  private static final String ENTRY_SORT_REVIEW_CONFIDENCE_DESC = "REVIEW_CONFIDENCE_DESC";
+  private static final String ENTRY_SORT_REVIEW_CONFIDENCE_ASC = "REVIEW_CONFIDENCE_ASC";
 
   private final UserService userService;
   private final TermIndexExtractedTermRepository termIndexExtractedTermRepository;
@@ -66,6 +69,11 @@ public class TermIndexExplorerService {
             normalizeOptional(normalized.extractionMethod()),
             normalized.reviewStatusFilter(),
             normalized.minOccurrences(),
+            normalized.lastOccurrenceAfter(),
+            normalized.lastOccurrenceBefore(),
+            normalized.reviewChangedAfter(),
+            normalized.reviewChangedBefore(),
+            normalized.sortBy(),
             pageRequest(normalized.limit()));
     Map<Long, CandidateSummary> candidatesByExtractedTermId =
         findCandidatesByExtractedTermId(
@@ -120,9 +128,15 @@ public class TermIndexExplorerService {
       applyHumanReview(
           entry,
           normalized.reviewStatus(),
-          normalized.reviewReason(),
-          normalized.reviewRationale(),
-          normalized.reviewConfidence(),
+          Boolean.TRUE.equals(normalized.updateReviewReason())
+              ? normalized.reviewReason()
+              : entry.getReviewReason(),
+          Boolean.TRUE.equals(normalized.updateReviewRationale())
+              ? normalized.reviewRationale()
+              : entry.getReviewRationale(),
+          Boolean.TRUE.equals(normalized.updateReviewConfidence())
+              ? normalized.reviewConfidence()
+              : entry.getReviewConfidence(),
           currentUser);
     }
     termIndexExtractedTermRepository.saveAll(entries);
@@ -362,7 +376,17 @@ public class TermIndexExplorerService {
   private EntrySearchCommand normalize(EntrySearchCommand command) {
     if (command == null) {
       return new EntrySearchCommand(
-          List.of(), null, null, TermIndexReview.STATUS_FILTER_NON_REJECTED, 1L, DEFAULT_LIMIT);
+          List.of(),
+          null,
+          null,
+          TermIndexReview.STATUS_FILTER_NON_REJECTED,
+          1L,
+          DEFAULT_LIMIT,
+          null,
+          null,
+          null,
+          null,
+          ENTRY_SORT_REVIEW_CONFIDENCE_DESC);
     }
     return new EntrySearchCommand(
         normalizeRepositoryIds(command.repositoryIds()),
@@ -370,7 +394,12 @@ public class TermIndexExplorerService {
         command.extractionMethod(),
         normalizeReviewStatusFilter(command.reviewStatusFilter()),
         Math.max(1L, command.minOccurrences() == null ? 1L : command.minOccurrences()),
-        normalizeLimit(command.limit()));
+        normalizeLimit(command.limit()),
+        command.lastOccurrenceAfter(),
+        command.lastOccurrenceBefore(),
+        command.reviewChangedAfter(),
+        command.reviewChangedBefore(),
+        normalizeEntrySort(command.sortBy()));
   }
 
   private OccurrenceSearchCommand normalize(OccurrenceSearchCommand command) {
@@ -414,8 +443,11 @@ public class TermIndexExplorerService {
             ? List.of()
             : command.termIndexExtractedTermIds(),
         normalizeReviewStatus(command.reviewStatus()),
+        Boolean.TRUE.equals(command.updateReviewReason()),
         truncate(normalizeOptional(command.reviewReason()), 64),
+        Boolean.TRUE.equals(command.updateReviewRationale()),
         truncate(normalizeOptional(command.reviewRationale()), 2048),
+        Boolean.TRUE.equals(command.updateReviewConfidence()),
         clampConfidence(command.reviewConfidence()));
   }
 
@@ -448,6 +480,19 @@ public class TermIndexExplorerService {
               TermIndexReview.STATUS_REJECTED ->
           normalized;
       default -> TermIndexReview.STATUS_FILTER_NON_REJECTED;
+    };
+  }
+
+  private String normalizeEntrySort(String sortBy) {
+    String normalized = normalizeOptional(sortBy);
+    if (normalized == null) {
+      return ENTRY_SORT_REVIEW_CONFIDENCE_DESC;
+    }
+    normalized = normalized.toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case ENTRY_SORT_HITS, ENTRY_SORT_REVIEW_CONFIDENCE_DESC, ENTRY_SORT_REVIEW_CONFIDENCE_ASC ->
+          normalized;
+      default -> ENTRY_SORT_REVIEW_CONFIDENCE_DESC;
     };
   }
 
@@ -522,7 +567,12 @@ public class TermIndexExplorerService {
       String extractionMethod,
       String reviewStatusFilter,
       Long minOccurrences,
-      Integer limit) {}
+      Integer limit,
+      ZonedDateTime lastOccurrenceAfter,
+      ZonedDateTime lastOccurrenceBefore,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore,
+      String sortBy) {}
 
   public record ReviewUpdateCommand(
       String reviewStatus, String reviewReason, String reviewRationale, Integer reviewConfidence) {}
@@ -530,8 +580,11 @@ public class TermIndexExplorerService {
   public record BatchReviewUpdateCommand(
       List<Long> termIndexExtractedTermIds,
       String reviewStatus,
+      Boolean updateReviewReason,
       String reviewReason,
+      Boolean updateReviewRationale,
       String reviewRationale,
+      Boolean updateReviewConfidence,
       Integer reviewConfidence) {}
 
   public record BatchReviewUpdateView(int updatedEntryCount) {}
