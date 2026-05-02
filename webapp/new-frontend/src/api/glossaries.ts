@@ -345,6 +345,7 @@ export type ApiSeedGlossaryTermIndexCandidatesResponse = {
     termIndexExtractedTermId?: number | null;
     term: string;
     normalizedKey: string;
+    label?: string | null;
     definition?: string | null;
     rationale?: string | null;
     termType?: string | null;
@@ -731,6 +732,28 @@ export async function generateGlossaryTermIndexCandidates(
   if (!response.ok) {
     const message = await response.text().catch(() => '');
     throw new Error(message || 'Failed to generate glossary term index suggestions');
+  }
+
+  const payload = (await response.json()) as ApiStartGlossaryExtractionResponse;
+  const task = normalizePollableTask(payload.pollableTask);
+  const completedTask = await waitForGlossaryExtractionTask(task.id, 600_000);
+  if (completedTask.errorMessage) {
+    throw new Error(normalizePollableTaskErrorMessage(completedTask.errorMessage));
+  }
+  return fetchGlossaryTermIndexCandidateGenerationOutput(task.id);
+}
+
+async function fetchGlossaryTermIndexCandidateGenerationOutput(
+  pollableTaskId: number,
+): Promise<ApiSeedGlossaryTermIndexCandidatesResponse> {
+  const response = await fetch(`/api/pollableTasks/${pollableTaskId}/output`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load generated glossary term index suggestions');
   }
 
   return (await response.json()) as ApiSeedGlossaryTermIndexCandidatesResponse;

@@ -16,6 +16,7 @@ import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
+import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import java.time.ZonedDateTime;
 import java.util.Collection;
@@ -50,6 +51,7 @@ public class TermIndexRefreshServiceTest {
   @Mock TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository;
   @Mock TermIndexRefreshRunRepository termIndexRefreshRunRepository;
   @Mock TermIndexRefreshRunEntryRepository termIndexRefreshRunEntryRepository;
+  @Mock QuartzPollableTaskScheduler quartzPollableTaskScheduler;
 
   TermIndexRefreshService termIndexRefreshService;
   AtomicReference<TermIndexRefreshRun> refreshRun = new AtomicReference<>();
@@ -68,7 +70,8 @@ public class TermIndexRefreshServiceTest {
             termIndexRepositoryCursorRepository,
             termIndexRefreshRunRepository,
             termIndexRefreshRunEntryRepository,
-            transactionTemplate());
+            transactionTemplate(),
+            quartzPollableTaskScheduler);
 
     when(termIndexRefreshRunRepository.save(any(TermIndexRefreshRun.class)))
         .thenAnswer(

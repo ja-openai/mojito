@@ -5,17 +5,35 @@ type PollableTaskResponse = {
   id: number;
   isAllFinished?: boolean;
   allFinished?: boolean;
+  message?: unknown;
   errorMessage?: string | null;
 };
 
 const TERM_ENTRY_SEARCH_POLL_TIMEOUT_MS = 120_000;
+const LONG_TERM_INDEX_JOB_TIMEOUT_MS = 3_600_000;
 const DEFAULT_POLL_INTERVAL_MS = 1000;
 const MAX_POLL_INTERVAL_MS = 8000;
 
 export type ApiTermIndexPollableTask = {
   id: number;
   isAllFinished: boolean;
+  progress?: ApiTermIndexTaskProgress | null;
   errorMessage?: string | null;
+};
+
+export type ApiTermIndexTaskProgress = {
+  type?: string;
+  status?: string;
+  entryCount?: number;
+  reviewableEntryCount?: number;
+  reviewedEntryCount?: number;
+  updatedEntryCount?: number;
+  acceptedCount?: number;
+  toReviewCount?: number;
+  rejectedCount?: number;
+  skippedHumanReviewedCount?: number;
+  batchCount?: number;
+  completedBatchCount?: number;
 };
 
 export type ApiTermIndexRefreshRequest = {
@@ -74,6 +92,36 @@ export type ApiTermIndexBatchReviewResponse = {
   updatedEntryCount: number;
 };
 
+export type ApiTriageTermIndexEntriesRequest = {
+  termIndexEntryIds?: number[];
+  repositoryIds?: number[];
+  search?: string | null;
+  extractionMethod?: string | null;
+  reviewStatus?: ApiTermIndexReviewStatusFilter | null;
+  minOccurrences?: number | null;
+  limit?: number | null;
+  overwriteHumanReview?: boolean | null;
+};
+
+export type ApiTriageTermIndexEntriesResponse = {
+  entryCount: number;
+  reviewedEntryCount: number;
+  updatedEntryCount: number;
+  acceptedCount: number;
+  toReviewCount: number;
+  rejectedCount: number;
+  skippedHumanReviewedCount: number;
+  entries: Array<{
+    termIndexExtractedTermId: number;
+    term: string;
+    normalizedKey: string;
+    reviewStatus: ApiTermIndexReviewStatus;
+    reviewReason?: string | null;
+    reviewRationale?: string | null;
+    reviewConfidence?: number | null;
+  }>;
+};
+
 export type ApiGenerateTermIndexCandidatesRequest = {
   termIndexEntryIds: number[];
   repositoryIds?: number[];
@@ -99,6 +147,7 @@ export type ApiGenerateTermIndexCandidatesResponse = {
     termIndexExtractedTermId?: number | null;
     term: string;
     normalizedKey: string;
+    label?: string | null;
     definition?: string | null;
     rationale?: string | null;
     termType?: string | null;
@@ -177,6 +226,14 @@ type StartRefreshResponse = {
   pollableTask: PollableTaskResponse;
 };
 
+type StartGenerateCandidatesResponse = {
+  pollableTask: PollableTaskResponse;
+};
+
+type StartTriageEntriesResponse = {
+  pollableTask: PollableTaskResponse;
+};
+
 async function getErrorMessage(response: Response, fallbackMessage: string) {
   const text = await response.text().catch(() => '');
   if (!text) {
@@ -199,15 +256,62 @@ async function getErrorMessage(response: Response, fallbackMessage: string) {
 }
 
 function normalizePollableTask(task: PollableTaskResponse): ApiTermIndexPollableTask {
-  const rawMessage = task.errorMessage;
-  const normalizedMessage =
-    typeof rawMessage === 'string' ? rawMessage : rawMessage ? JSON.stringify(rawMessage) : null;
+  const rawErrorMessage = task.errorMessage;
+  const normalizedErrorMessage =
+    typeof rawErrorMessage === 'string'
+      ? rawErrorMessage
+      : rawErrorMessage
+        ? JSON.stringify(rawErrorMessage)
+        : null;
 
   return {
     id: task.id,
     isAllFinished: task.isAllFinished ?? task.allFinished ?? false,
-    errorMessage: normalizedMessage,
+    progress: normalizeTermIndexTaskProgress(task.message),
+    errorMessage: normalizedErrorMessage,
   };
+}
+
+function normalizeTermIndexTaskProgress(message: unknown): ApiTermIndexTaskProgress | null {
+  let value = message;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      return null;
+    }
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    type: getOptionalString(value.type),
+    status: getOptionalString(value.status),
+    entryCount: getOptionalNumber(value.entryCount),
+    reviewableEntryCount: getOptionalNumber(value.reviewableEntryCount),
+    reviewedEntryCount: getOptionalNumber(value.reviewedEntryCount),
+    updatedEntryCount: getOptionalNumber(value.updatedEntryCount),
+    acceptedCount: getOptionalNumber(value.acceptedCount),
+    toReviewCount: getOptionalNumber(value.toReviewCount),
+    rejectedCount: getOptionalNumber(value.rejectedCount),
+    skippedHumanReviewedCount: getOptionalNumber(value.skippedHumanReviewedCount),
+    batchCount: getOptionalNumber(value.batchCount),
+    completedBatchCount: getOptionalNumber(value.completedBatchCount),
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value != null && !Array.isArray(value);
+}
+
+function getOptionalString(value: unknown) {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function getOptionalNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 function appendRepositoryParams(params: URLSearchParams, repositoryIds?: number[]) {
@@ -258,12 +362,26 @@ export async function waitForTermIndexRefreshTask(
   pollableTaskId: number,
   timeoutMs = 300_000,
 ): Promise<ApiTermIndexPollableTask> {
+  return waitForTermIndexPollableTask(
+    pollableTaskId,
+    timeoutMs,
+    'Timed out while waiting for term index refresh',
+  );
+}
+
+async function waitForTermIndexPollableTask(
+  pollableTaskId: number,
+  timeoutMs: number,
+  timeoutMessage: string,
+  onProgress?: (task: ApiTermIndexPollableTask) => void,
+): Promise<ApiTermIndexPollableTask> {
   return poll(() => fetchTermIndexRefreshTask(pollableTaskId), {
     intervalMs: DEFAULT_POLL_INTERVAL_MS,
     maxIntervalMs: MAX_POLL_INTERVAL_MS,
     timeoutMs,
-    timeoutMessage: 'Timed out while waiting for term index refresh',
+    timeoutMessage,
     isTransientError: isTransientHttpError,
+    onResult: onProgress,
     shouldStop: (task) => task.isAllFinished,
   }).then((task) => {
     if (task.errorMessage) {
@@ -373,6 +491,51 @@ export async function updateTermIndexEntryReviews(
   return (await response.json()) as ApiTermIndexBatchReviewResponse;
 }
 
+export async function triageTermIndexEntries(
+  request: ApiTriageTermIndexEntriesRequest,
+  options?: { onProgress?: (progress: ApiTermIndexTaskProgress | null) => void },
+): Promise<ApiTriageTermIndexEntriesResponse> {
+  const response = await fetch('/api/glossary-term-index/entries/triage', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to start extracted term triage'));
+  }
+
+  const payload = (await response.json()) as StartTriageEntriesResponse;
+  const task = normalizePollableTask(payload.pollableTask);
+  options?.onProgress?.(task.progress ?? null);
+  await waitForTermIndexPollableTask(
+    task.id,
+    LONG_TERM_INDEX_JOB_TIMEOUT_MS,
+    'Timed out while waiting for extracted term triage',
+    (pollableTask) => options?.onProgress?.(pollableTask.progress ?? null),
+  );
+  return fetchTermIndexTriageOutput(task.id);
+}
+
+async function fetchTermIndexTriageOutput(
+  pollableTaskId: number,
+): Promise<ApiTriageTermIndexEntriesResponse> {
+  const response = await fetch(`/api/pollableTasks/${pollableTaskId}/output`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to load extracted term triage report'));
+  }
+
+  return (await response.json()) as ApiTriageTermIndexEntriesResponse;
+}
+
 export async function generateTermIndexCandidatesFromEntries(
   request: ApiGenerateTermIndexCandidatesRequest,
 ): Promise<ApiGenerateTermIndexCandidatesResponse> {
@@ -388,6 +551,28 @@ export async function generateTermIndexCandidatesFromEntries(
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, 'Failed to generate term candidates'));
+  }
+
+  const payload = (await response.json()) as StartGenerateCandidatesResponse;
+  const task = normalizePollableTask(payload.pollableTask);
+  await waitForTermIndexPollableTask(
+    task.id,
+    LONG_TERM_INDEX_JOB_TIMEOUT_MS,
+    'Timed out while waiting for term candidate generation',
+  );
+  return fetchTermIndexCandidateGenerationOutput(task.id);
+}
+
+async function fetchTermIndexCandidateGenerationOutput(
+  pollableTaskId: number,
+): Promise<ApiGenerateTermIndexCandidatesResponse> {
+  const response = await fetch(`/api/pollableTasks/${pollableTaskId}/output`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to load generated term candidates'));
   }
 
   return (await response.json()) as ApiGenerateTermIndexCandidatesResponse;

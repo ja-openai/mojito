@@ -4,6 +4,7 @@ type PollOptions<T> = {
   timeoutMessage?: string;
   maxIntervalMs?: number;
   isTransientError?: (error: unknown) => boolean;
+  onResult?: (result: T) => void;
   shouldStop: (result: T) => boolean;
 };
 
@@ -19,6 +20,7 @@ export async function poll<T>(task: () => Promise<T>, options: PollOptions<T>): 
     timeoutMessage,
     maxIntervalMs = DEFAULT_MAX_POLL_INTERVAL_MS,
     isTransientError,
+    onResult,
     shouldStop,
   } = options;
   const startedAt = Date.now();
@@ -31,6 +33,7 @@ export async function poll<T>(task: () => Promise<T>, options: PollOptions<T>): 
 
     try {
       const result = await task();
+      onResult?.(result);
       if (shouldStop(result)) {
         return result;
       }

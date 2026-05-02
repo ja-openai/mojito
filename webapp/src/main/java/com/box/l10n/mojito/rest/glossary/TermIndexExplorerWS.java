@@ -85,8 +85,8 @@ public class TermIndexExplorerWS {
     }
 
     try {
-      PollableFuture<Void> pollableFuture =
-          termIndexRefreshService.refreshAsync(
+      PollableFuture<TermIndexRefreshService.RefreshResult> pollableFuture =
+          termIndexRefreshService.scheduleRefresh(
               new TermIndexRefreshService.RefreshCommand(
                   repositoryIds, request.fullRefresh(), request.batchSize()));
       return new StartRefreshResponse(pollableFuture.getPollableTask());
@@ -253,13 +253,35 @@ public class TermIndexExplorerWS {
     }
   }
 
+  @PostMapping("/entries/triage")
+  public StartTriageExtractedTermsResponse triageEntries(
+      @RequestBody TriageExtractedTermsRequest request) {
+    requireAdmin();
+    try {
+      PollableFuture<GlossaryTermIndexCurationService.TriageExtractedTermsResult> pollableFuture =
+          glossaryTermIndexCurationService.scheduleTriageExtractedTerms(
+              new GlossaryTermIndexCurationService.TriageExtractedTermsCommand(
+                  request != null ? request.termIndexEntryIds() : null,
+                  request != null ? request.repositoryIds() : null,
+                  request != null ? request.search() : null,
+                  request != null ? request.extractionMethod() : null,
+                  request != null ? request.reviewStatus() : null,
+                  request != null ? request.minOccurrences() : null,
+                  request != null ? request.limit() : null,
+                  request != null ? request.overwriteHumanReview() : null));
+      return new StartTriageExtractedTermsResponse(pollableFuture.getPollableTask());
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+    }
+  }
+
   @PostMapping("/candidates/generate")
-  public GenerateCandidatesFromEntriesResponse generateCandidatesFromEntries(
+  public StartGenerateCandidatesFromEntriesResponse generateCandidatesFromEntries(
       @RequestBody GenerateCandidatesFromEntriesRequest request) {
     requireAdmin();
     try {
-      GlossaryTermIndexCurationService.GenerateCandidatesResult result =
-          glossaryTermIndexCurationService.generateCandidatesFromExtractedTerms(
+      PollableFuture<GlossaryTermIndexCurationService.GenerateCandidatesResult> pollableFuture =
+          glossaryTermIndexCurationService.scheduleGenerateCandidatesFromExtractedTerms(
               new GlossaryTermIndexCurationService.GenerateCandidatesFromExtractedTermsCommand(
                   request != null ? request.termIndexEntryIds() : null,
                   request != null ? request.repositoryIds() : null,
@@ -277,11 +299,7 @@ public class TermIndexExplorerWS {
                           request.reviewReason(),
                           request.reviewRationale(),
                           request.reviewConfidence())));
-      return new GenerateCandidatesFromEntriesResponse(
-          result.candidateCount(),
-          result.createdCandidateCount(),
-          result.updatedCandidateCount(),
-          result.candidates().stream().map(this::toGeneratedCandidateResponse).toList());
+      return new StartGenerateCandidatesFromEntriesResponse(pollableFuture.getPollableTask());
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
     }
@@ -340,6 +358,18 @@ public class TermIndexExplorerWS {
       String reviewRationale,
       Integer reviewConfidence) {}
 
+  public record TriageExtractedTermsRequest(
+      List<Long> termIndexEntryIds,
+      List<Long> repositoryIds,
+      String search,
+      String extractionMethod,
+      String reviewStatus,
+      Long minOccurrences,
+      Integer limit,
+      Boolean overwriteHumanReview) {}
+
+  public record StartTriageExtractedTermsResponse(PollableTask pollableTask) {}
+
   public record GenerateCandidatesFromEntriesRequest(
       List<Long> termIndexEntryIds,
       List<Long> repositoryIds,
@@ -361,11 +391,14 @@ public class TermIndexExplorerWS {
       int updatedCandidateCount,
       List<GeneratedCandidateResponse> candidates) {}
 
+  public record StartGenerateCandidatesFromEntriesResponse(PollableTask pollableTask) {}
+
   public record GeneratedCandidateResponse(
       Long termIndexCandidateId,
       Long termIndexExtractedTermId,
       String term,
       String normalizedKey,
+      String label,
       String definition,
       String rationale,
       String termType,
@@ -406,6 +439,7 @@ public class TermIndexExplorerWS {
         candidate.termIndexExtractedTermId(),
         candidate.term(),
         candidate.normalizedKey(),
+        candidate.label(),
         candidate.definition(),
         candidate.rationale(),
         candidate.termType(),

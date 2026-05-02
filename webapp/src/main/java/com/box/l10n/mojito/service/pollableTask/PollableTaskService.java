@@ -122,6 +122,15 @@ public class PollableTaskService {
     return pollableTaskRepository.save(pollableTask);
   }
 
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public PollableTask updateMessage(long id, String message) {
+
+    PollableTask pollableTask = getPollableTask(id);
+    pollableTask.setMessage(message);
+
+    return pollableTaskRepository.save(pollableTask);
+  }
+
   /**
    * Waits for {@link PollableTask} to be all finished (see {@link PollableTask#isAllFinished() }).
    * Infinite timeout.

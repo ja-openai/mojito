@@ -777,6 +777,84 @@
   margin-right: var(--space-2);
 }
 
+.term-index-explorer__triage-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.term-index-explorer__triage-summary p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.term-index-explorer__triage-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.term-index-explorer__triage-progress-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.term-index-explorer__triage-progress progress {
+  width: 100%;
+}
+
+.term-index-explorer__triage-progress p {
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+}
+
+.term-index-explorer__triage-config {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.term-index-explorer__triage-config div {
+  display: contents;
+}
+
+.term-index-explorer__triage-config dt {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+}
+
+.term-index-explorer__triage-config dd {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.term-index-explorer__triage-report {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+}
+
+.term-index-explorer__triage-report strong {
+  color: var(--color-text);
+}
+
+.term-index-explorer__modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
 @media (max-width: 72rem) {
   .term-index-explorer__filterbar,
   .term-index-explorer__status-grid,

@@ -9,6 +9,10 @@ import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.quartz.QuartzJobInfo;
+import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
+import com.box.l10n.mojito.service.pollableTask.PollableFuture;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.search.SearchType;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
@@ -44,6 +48,7 @@ public class GlossaryTermIndexCurationService {
 
   private static final int DEFAULT_SUGGESTION_LIMIT = 50;
   private static final int EXAMPLE_LIMIT = 4;
+  private static final int AI_SIGNAL_EXAMPLE_LIMIT = 8;
   private static final int LIVE_SEARCH_EXAMPLE_LIMIT = 3;
   private static final int AI_CANDIDATE_BATCH_SIZE = 50;
   private static final int DEFAULT_GENERATION_LIMIT = 500;
@@ -80,6 +85,8 @@ public class GlossaryTermIndexCurationService {
   private final TextUnitSearcher textUnitSearcher;
   private final UserService userService;
   private final ObjectMapper objectMapper;
+  private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
+  private final PollableTaskService pollableTaskService;
 
   public GlossaryTermIndexCurationService(
       GlossaryRepository glossaryRepository,
@@ -94,7 +101,9 @@ public class GlossaryTermIndexCurationService {
       GlossaryAiExtractionService glossaryAiExtractionService,
       TextUnitSearcher textUnitSearcher,
       UserService userService,
-      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper) {
+      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
+      QuartzPollableTaskScheduler quartzPollableTaskScheduler,
+      PollableTaskService pollableTaskService) {
     this.glossaryRepository = Objects.requireNonNull(glossaryRepository);
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.glossaryTermMetadataRepository = Objects.requireNonNull(glossaryTermMetadataRepository);
@@ -110,6 +119,8 @@ public class GlossaryTermIndexCurationService {
     this.textUnitSearcher = Objects.requireNonNull(textUnitSearcher);
     this.userService = Objects.requireNonNull(userService);
     this.objectMapper = Objects.requireNonNull(objectMapper);
+    this.quartzPollableTaskScheduler = Objects.requireNonNull(quartzPollableTaskScheduler);
+    this.pollableTaskService = Objects.requireNonNull(pollableTaskService);
   }
 
   @Transactional(readOnly = true)
@@ -324,6 +335,22 @@ public class GlossaryTermIndexCurationService {
   public GenerateCandidatesResult generateCandidatesForGlossary(
       Long glossaryId, GenerateCandidatesCommand command) {
     requireTermManager();
+    return generateCandidatesForGlossaryInternal(glossaryId, command);
+  }
+
+  public PollableFuture<GenerateCandidatesResult> scheduleGenerateCandidatesForGlossary(
+      Long glossaryId, GenerateCandidatesCommand command) {
+    requireTermManager();
+    GenerateCandidatesCommand normalized = normalize(command);
+    getGlossary(glossaryId);
+    return scheduleGenerateCandidates(
+        new GenerateCandidatesJobCommand(glossaryId, normalized, null),
+        "Generate glossary term index candidates");
+  }
+
+  @Transactional
+  GenerateCandidatesResult generateCandidatesForGlossaryInternal(
+      Long glossaryId, GenerateCandidatesCommand command) {
     Glossary glossary = getGlossary(glossaryId);
     GenerateCandidatesCommand normalized = normalize(command);
     List<Long> scopeRepositoryIds = resolveScopeRepositoryIds(glossary);
@@ -341,21 +368,23 @@ public class GlossaryTermIndexCurationService {
             Math.max(1L, normalized.minOccurrences() == null ? 1L : normalized.minOccurrences()),
             PageRequest.of(0, normalizeGenerationLimit(normalized.limit())));
 
-    Map<Long, CandidateFieldOverrides> overridesByExtractedTermId =
-        candidateFieldOverridesByExtractedTermId(
+    Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId =
+        candidateFieldsByExtractedTermId(
             rows, false, repositoryIdsOrSentinel(scopeRepositoryIds), null);
     List<SeededTermView> generatedCandidates = new ArrayList<>(rows.size());
     int createdCandidateCount = 0;
     int updatedCandidateCount = 0;
     for (TermIndexExtractedTermRepository.SearchRow row : rows) {
-      CandidateWriteResult writeResult =
-          upsertExtractionCandidate(row, overridesByExtractedTermId.get(row.getId()));
-      if (writeResult.created()) {
-        createdCandidateCount++;
-      } else {
-        updatedCandidateCount++;
+      for (GeneratedCandidateFields fields :
+          candidateFieldsForRow(candidateFieldsByExtractedTermId, row)) {
+        CandidateWriteResult writeResult = upsertExtractionCandidate(row, fields);
+        if (writeResult.created()) {
+          createdCandidateCount++;
+        } else {
+          updatedCandidateCount++;
+        }
+        generatedCandidates.add(toSeededTermView(writeResult.candidate()));
       }
-      generatedCandidates.add(toSeededTermView(writeResult.candidate()));
     }
 
     return new GenerateCandidatesResult(
@@ -369,6 +398,57 @@ public class GlossaryTermIndexCurationService {
   public GenerateCandidatesResult generateCandidatesFromExtractedTerms(
       GenerateCandidatesFromExtractedTermsCommand command) {
     requireTermManager();
+    return generateCandidatesFromExtractedTermsInternal(command);
+  }
+
+  public PollableFuture<GenerateCandidatesResult> scheduleGenerateCandidatesFromExtractedTerms(
+      GenerateCandidatesFromExtractedTermsCommand command) {
+    requireTermManager();
+    GenerateCandidatesFromExtractedTermsCommand normalized = normalize(command);
+    return scheduleGenerateCandidates(
+        new GenerateCandidatesJobCommand(null, null, normalized), "Generate term index candidates");
+  }
+
+  public PollableFuture<TriageExtractedTermsResult> scheduleTriageExtractedTerms(
+      TriageExtractedTermsCommand command) {
+    requireTermManager();
+    TriageExtractedTermsCommand normalized = normalize(command);
+    QuartzJobInfo<TriageExtractedTermsCommand, TriageExtractedTermsResult> quartzJobInfo =
+        QuartzJobInfo.newBuilder(TermIndexExtractedTermTriageJob.class)
+            .withInput(normalized)
+            .withMessage("Triage extracted term index terms")
+            .withRequestRecovery(true)
+            .build();
+    return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+  }
+
+  @Transactional
+  public GenerateCandidatesResult generateCandidates(GenerateCandidatesJobCommand command) {
+    if (command == null) {
+      throw new IllegalArgumentException("candidate generation command is required");
+    }
+    if (command.generateCandidatesCommand() != null) {
+      return generateCandidatesForGlossaryInternal(
+          command.glossaryId(), command.generateCandidatesCommand());
+    }
+    return generateCandidatesFromExtractedTermsInternal(
+        command.generateCandidatesFromExtractedTermsCommand());
+  }
+
+  private PollableFuture<GenerateCandidatesResult> scheduleGenerateCandidates(
+      GenerateCandidatesJobCommand command, String message) {
+    QuartzJobInfo<GenerateCandidatesJobCommand, GenerateCandidatesResult> quartzJobInfo =
+        QuartzJobInfo.newBuilder(TermIndexCandidateGenerationJob.class)
+            .withInput(command)
+            .withMessage(message)
+            .withRequestRecovery(true)
+            .build();
+    return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+  }
+
+  @Transactional
+  GenerateCandidatesResult generateCandidatesFromExtractedTermsInternal(
+      GenerateCandidatesFromExtractedTermsCommand command) {
     GenerateCandidatesFromExtractedTermsCommand normalized = normalize(command);
     List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
     boolean repositoryIdsEmpty = normalized.repositoryIds().isEmpty();
@@ -378,21 +458,22 @@ public class GlossaryTermIndexCurationService {
         termIndexExtractedTermRepository.findCandidateGenerationRowsByIdIn(
             normalized.termIndexExtractedTermIds(), repositoryIdsEmpty, repositoryIds);
 
-    Map<Long, CandidateFieldOverrides> overridesByExtractedTermId =
-        candidateFieldOverridesByExtractedTermId(
-            rows, repositoryIdsEmpty, repositoryIds, overrides);
+    Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId =
+        candidateFieldsByExtractedTermId(rows, repositoryIdsEmpty, repositoryIds, overrides);
     List<SeededTermView> generatedCandidates = new ArrayList<>(rows.size());
     int createdCandidateCount = 0;
     int updatedCandidateCount = 0;
     for (TermIndexExtractedTermRepository.SearchRow row : rows) {
-      CandidateWriteResult writeResult =
-          upsertExtractionCandidate(row, overridesByExtractedTermId.get(row.getId()));
-      if (writeResult.created()) {
-        createdCandidateCount++;
-      } else {
-        updatedCandidateCount++;
+      for (GeneratedCandidateFields fields :
+          candidateFieldsForRow(candidateFieldsByExtractedTermId, row)) {
+        CandidateWriteResult writeResult = upsertExtractionCandidate(row, fields);
+        if (writeResult.created()) {
+          createdCandidateCount++;
+        } else {
+          updatedCandidateCount++;
+        }
+        generatedCandidates.add(toSeededTermView(writeResult.candidate()));
       }
-      generatedCandidates.add(toSeededTermView(writeResult.candidate()));
     }
 
     return new GenerateCandidatesResult(
@@ -400,6 +481,104 @@ public class GlossaryTermIndexCurationService {
         createdCandidateCount,
         updatedCandidateCount,
         generatedCandidates);
+  }
+
+  @Transactional
+  public TriageExtractedTermsResult triageExtractedTerms(TriageExtractedTermsCommand command) {
+    return triageExtractedTerms(command, null);
+  }
+
+  @Transactional
+  public TriageExtractedTermsResult triageExtractedTerms(
+      TriageExtractedTermsCommand command, Long pollableTaskId) {
+    TriageExtractedTermsCommand normalized = normalize(command);
+    List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
+    boolean repositoryIdsEmpty = normalized.repositoryIds().isEmpty();
+    List<TermIndexExtractedTermRepository.SearchRow> rows =
+        findRowsForTriage(normalized, repositoryIdsEmpty, repositoryIds);
+    boolean overwriteHumanReview = Boolean.TRUE.equals(normalized.overwriteHumanReview());
+    List<TermIndexExtractedTermRepository.SearchRow> reviewableRows =
+        rows.stream()
+            .filter(
+                row ->
+                    overwriteHumanReview
+                        || !TermIndexReview.AUTHORITY_HUMAN.equals(row.getReviewAuthority()))
+            .toList();
+    int skippedHumanReviewedCount = rows.size() - reviewableRows.size();
+
+    List<TriagedExtractedTermView> triagedTerms = new ArrayList<>();
+    int acceptedCount = 0;
+    int toReviewCount = 0;
+    int rejectedCount = 0;
+    int processedEntryCount = 0;
+    int batchCount = ceilDiv(reviewableRows.size(), AI_CANDIDATE_BATCH_SIZE);
+    int completedBatchCount = 0;
+
+    updateTriageProgress(
+        pollableTaskId,
+        new TriageProgressView(
+            "TRIAGE_EXTRACTED_TERMS",
+            batchCount == 0 ? "COMPLETED" : "RUNNING",
+            rows.size(),
+            reviewableRows.size(),
+            processedEntryCount,
+            triagedTerms.size(),
+            acceptedCount,
+            toReviewCount,
+            rejectedCount,
+            skippedHumanReviewedCount,
+            batchCount,
+            completedBatchCount));
+
+    for (int start = 0; start < reviewableRows.size(); start += AI_CANDIDATE_BATCH_SIZE) {
+      List<TermIndexExtractedTermRepository.SearchRow> batch =
+          reviewableRows.subList(
+              start, Math.min(reviewableRows.size(), start + AI_CANDIDATE_BATCH_SIZE));
+      List<GlossaryAiExtractionService.CandidateSignal> signals =
+          batch.stream()
+              .map(row -> toCandidateSignal(row, repositoryIdsEmpty, repositoryIds))
+              .toList();
+      List<GlossaryAiExtractionService.AiExtractedTermReviewView> reviews =
+          glossaryAiExtractionService.reviewExtractedTerms(signals);
+      List<TriagedExtractedTermView> triagedBatch =
+          applyAiExtractedTermReviews(batch, reviews, overwriteHumanReview);
+      triagedTerms.addAll(triagedBatch);
+      processedEntryCount += batch.size();
+
+      for (TriagedExtractedTermView triagedTerm : triagedBatch) {
+        switch (triagedTerm.reviewStatus()) {
+          case TermIndexReview.STATUS_ACCEPTED -> acceptedCount++;
+          case TermIndexReview.STATUS_REJECTED -> rejectedCount++;
+          default -> toReviewCount++;
+        }
+      }
+      completedBatchCount++;
+      updateTriageProgress(
+          pollableTaskId,
+          new TriageProgressView(
+              "TRIAGE_EXTRACTED_TERMS",
+              completedBatchCount >= batchCount ? "COMPLETED" : "RUNNING",
+              rows.size(),
+              reviewableRows.size(),
+              processedEntryCount,
+              triagedTerms.size(),
+              acceptedCount,
+              toReviewCount,
+              rejectedCount,
+              skippedHumanReviewedCount,
+              batchCount,
+              completedBatchCount));
+    }
+
+    return new TriageExtractedTermsResult(
+        rows.size(),
+        triagedTerms.size(),
+        triagedTerms.size(),
+        acceptedCount,
+        toReviewCount,
+        rejectedCount,
+        skippedHumanReviewedCount,
+        triagedTerms);
   }
 
   @Transactional
@@ -605,6 +784,7 @@ public class GlossaryTermIndexCurationService {
             .map(
                 suggestion ->
                     new GlossaryAiExtractionService.CandidateSignal(
+                        String.valueOf(suggestion.termIndexCandidateId()),
                         suggestion.term(),
                         Math.toIntExact(Math.min(Integer.MAX_VALUE, suggestion.occurrenceCount())),
                         suggestion.repositoryCount(),
@@ -938,25 +1118,101 @@ public class GlossaryTermIndexCurationService {
         .toList();
   }
 
-  private CandidateWriteResult upsertExtractionCandidate(
-      TermIndexExtractedTermRepository.SearchRow row) {
-    return upsertExtractionCandidate(row, null);
+  private List<TermIndexExtractedTermRepository.SearchRow> findRowsForTriage(
+      TriageExtractedTermsCommand command, boolean repositoryIdsEmpty, List<Long> repositoryIds) {
+    if (!command.termIndexExtractedTermIds().isEmpty()) {
+      return termIndexExtractedTermRepository.findSearchRowsByIdIn(
+          command.termIndexExtractedTermIds(), repositoryIdsEmpty, repositoryIds);
+    }
+
+    return termIndexExtractedTermRepository.searchEntries(
+        repositoryIdsEmpty,
+        repositoryIds,
+        normalizeOptional(command.searchQuery()),
+        normalizeOptional(command.extractionMethod()),
+        command.reviewStatusFilter(),
+        command.minOccurrences(),
+        PageRequest.of(0, normalizeGenerationLimit(command.limit())));
+  }
+
+  private List<TriagedExtractedTermView> applyAiExtractedTermReviews(
+      List<TermIndexExtractedTermRepository.SearchRow> rows,
+      List<GlossaryAiExtractionService.AiExtractedTermReviewView> reviews,
+      boolean overwriteHumanReview) {
+    if (reviews.isEmpty()) {
+      return List.of();
+    }
+    Map<Long, TermIndexExtractedTerm> termsById =
+        termIndexExtractedTermRepository
+            .findAllById(
+                rows.stream().map(TermIndexExtractedTermRepository.SearchRow::getId).toList())
+            .stream()
+            .collect(Collectors.toMap(TermIndexExtractedTerm::getId, term -> term));
+    List<TermIndexExtractedTerm> updatedTerms = new ArrayList<>();
+    List<TriagedExtractedTermView> triagedTerms = new ArrayList<>();
+    for (GlossaryAiExtractionService.AiExtractedTermReviewView review : reviews) {
+      Long extractedTermId = parseLong(review.inputId());
+      if (extractedTermId == null) {
+        continue;
+      }
+      TermIndexExtractedTerm extractedTerm = termsById.get(extractedTermId);
+      if (extractedTerm == null
+          || (!overwriteHumanReview
+              && TermIndexReview.AUTHORITY_HUMAN.equals(extractedTerm.getReviewAuthority()))) {
+        continue;
+      }
+      String reviewStatus = normalizeCandidateReviewStatus(review.reviewStatus(), null);
+      if (reviewStatus == null) {
+        continue;
+      }
+      extractedTerm.setReviewStatus(reviewStatus);
+      extractedTerm.setReviewAuthority(TermIndexReview.AUTHORITY_AI);
+      extractedTerm.setReviewReason(normalizeReviewReason(review.reviewReason()));
+      extractedTerm.setReviewRationale(truncate(normalizeOptional(review.reviewRationale()), 2048));
+      extractedTerm.setReviewConfidence(clampConfidence(review.reviewConfidence()));
+      updatedTerms.add(extractedTerm);
+      triagedTerms.add(
+          new TriagedExtractedTermView(
+              extractedTerm.getId(),
+              extractedTerm.getDisplayTerm(),
+              extractedTerm.getNormalizedKey(),
+              extractedTerm.getReviewStatus(),
+              extractedTerm.getReviewReason(),
+              extractedTerm.getReviewRationale(),
+              extractedTerm.getReviewConfidence()));
+    }
+    if (!updatedTerms.isEmpty()) {
+      termIndexExtractedTermRepository.saveAll(updatedTerms);
+    }
+    return triagedTerms;
   }
 
   private CandidateWriteResult upsertExtractionCandidate(
-      TermIndexExtractedTermRepository.SearchRow row, CandidateFieldOverrides overrides) {
+      TermIndexExtractedTermRepository.SearchRow row) {
+    return upsertExtractionCandidate(row, GeneratedCandidateFields.defaultFields());
+  }
+
+  private CandidateWriteResult upsertExtractionCandidate(
+      TermIndexExtractedTermRepository.SearchRow row, GeneratedCandidateFields fields) {
+    CandidateFieldOverrides overrides = fields == null ? null : fields.overrides();
     String sourceLocaleTag =
         coalesce(
             normalizeOptional(row.getSourceLocaleTag()), TermIndexExtractedTerm.SOURCE_LOCALE_ROOT);
+    String label = fields == null ? null : truncate(normalizeOptional(fields.label()), 512);
+    String sourceExternalId =
+        fields == null ? null : truncate(normalizeOptional(fields.sourceExternalId()), 255);
+    String hashLabel = fields != null && fields.distinctIdentity() ? label : null;
+    String hashSourceExternalId =
+        fields != null && fields.distinctIdentity() ? sourceExternalId : null;
     String candidateHash =
         candidateHash(
             TermIndexCandidate.SOURCE_TYPE_EXTRACTION,
             EXTRACTION_SOURCE_NAME,
-            null,
+            hashSourceExternalId,
             sourceLocaleTag,
             row.getNormalizedKey(),
             row.getDisplayTerm(),
-            null,
+            hashLabel,
             null,
             null,
             null);
@@ -977,6 +1233,8 @@ public class GlossaryTermIndexCurationService {
     candidate.setSourceLocaleTag(sourceLocaleTag);
     candidate.setNormalizedKey(row.getNormalizedKey());
     candidate.setTerm(row.getDisplayTerm());
+    candidate.setLabel(coalesce(label, candidate.getLabel()));
+    candidate.setSourceExternalId(coalesce(sourceExternalId, candidate.getSourceExternalId()));
     candidate.setConfidence(
         coalesce(
             overrides == null ? null : overrides.confidence(),
@@ -1028,7 +1286,16 @@ public class GlossaryTermIndexCurationService {
     }
   }
 
-  private Map<Long, CandidateFieldOverrides> candidateFieldOverridesByExtractedTermId(
+  private List<GeneratedCandidateFields> candidateFieldsForRow(
+      Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId,
+      TermIndexExtractedTermRepository.SearchRow row) {
+    List<GeneratedCandidateFields> fields = candidateFieldsByExtractedTermId.get(row.getId());
+    return fields == null || fields.isEmpty()
+        ? List.of(GeneratedCandidateFields.defaultFields())
+        : fields;
+  }
+
+  private Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId(
       List<TermIndexExtractedTermRepository.SearchRow> rows,
       boolean repositoryIdsEmpty,
       List<Long> repositoryIds,
@@ -1036,26 +1303,52 @@ public class GlossaryTermIndexCurationService {
     if (rows.isEmpty()) {
       return Map.of();
     }
-    Map<String, GlossaryAiExtractionService.AiCandidateView> aiCandidatesByKey =
-        aiCandidatesByNormalizedKey(rows, repositoryIdsEmpty, repositoryIds);
-    Map<Long, CandidateFieldOverrides> overridesByExtractedTermId = new LinkedHashMap<>();
+    Map<Long, List<GlossaryAiExtractionService.AiCandidateView>> aiCandidatesByExtractedTermId =
+        aiCandidatesByExtractedTermId(rows, repositoryIdsEmpty, repositoryIds);
+    Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId =
+        new LinkedHashMap<>();
     for (TermIndexExtractedTermRepository.SearchRow row : rows) {
-      CandidateFieldOverrides mergedOverrides =
-          mergeCandidateFieldOverrides(
-              requestedOverrides, aiCandidatesByKey.get(row.getNormalizedKey()));
-      if (mergedOverrides != null) {
-        overridesByExtractedTermId.put(row.getId(), mergedOverrides);
+      List<GlossaryAiExtractionService.AiCandidateView> aiCandidates =
+          aiCandidatesByExtractedTermId.getOrDefault(row.getId(), List.of());
+      if (aiCandidates.isEmpty()) {
+        if (requestedOverrides != null) {
+          candidateFieldsByExtractedTermId.put(
+              row.getId(),
+              List.of(new GeneratedCandidateFields(null, null, false, requestedOverrides)));
+        }
+        continue;
       }
+      boolean splitCandidate = aiCandidates.size() > 1;
+      List<GeneratedCandidateFields> fields = new ArrayList<>(aiCandidates.size());
+      for (int index = 0; index < aiCandidates.size(); index++) {
+        GlossaryAiExtractionService.AiCandidateView aiCandidate = aiCandidates.get(index);
+        fields.add(
+            new GeneratedCandidateFields(
+                generatedCandidateLabel(aiCandidate, splitCandidate, index),
+                generatedCandidateSourceExternalId(aiCandidate, splitCandidate, index),
+                splitCandidate,
+                mergeCandidateFieldOverrides(requestedOverrides, aiCandidate)));
+      }
+      candidateFieldsByExtractedTermId.put(row.getId(), fields);
     }
-    return overridesByExtractedTermId;
+    return candidateFieldsByExtractedTermId;
   }
 
-  private Map<String, GlossaryAiExtractionService.AiCandidateView> aiCandidatesByNormalizedKey(
-      List<TermIndexExtractedTermRepository.SearchRow> rows,
-      boolean repositoryIdsEmpty,
-      List<Long> repositoryIds) {
-    Map<String, GlossaryAiExtractionService.AiCandidateView> aiCandidatesByKey =
+  private Map<Long, List<GlossaryAiExtractionService.AiCandidateView>>
+      aiCandidatesByExtractedTermId(
+          List<TermIndexExtractedTermRepository.SearchRow> rows,
+          boolean repositoryIdsEmpty,
+          List<Long> repositoryIds) {
+    Map<Long, List<GlossaryAiExtractionService.AiCandidateView>> aiCandidatesByExtractedTermId =
         new LinkedHashMap<>();
+    Map<String, Long> extractedTermIdByNormalizedKey =
+        rows.stream()
+            .collect(
+                Collectors.toMap(
+                    TermIndexExtractedTermRepository.SearchRow::getNormalizedKey,
+                    TermIndexExtractedTermRepository.SearchRow::getId,
+                    (left, ignored) -> left,
+                    LinkedHashMap::new));
     for (int start = 0; start < rows.size(); start += AI_CANDIDATE_BATCH_SIZE) {
       List<TermIndexExtractedTermRepository.SearchRow> batch =
           rows.subList(start, Math.min(rows.size(), start + AI_CANDIDATE_BATCH_SIZE));
@@ -1070,13 +1363,47 @@ public class GlossaryTermIndexCurationService {
         continue;
       }
       for (GlossaryAiExtractionService.AiCandidateView aiCandidate : aiCandidates) {
-        String key = normalizeCandidateKey(aiCandidate.term());
-        if (key != null) {
-          aiCandidatesByKey.putIfAbsent(key, aiCandidate);
+        Long extractedTermId = parseLong(aiCandidate.inputId());
+        if (extractedTermId == null) {
+          String key = normalizeCandidateKey(aiCandidate.term());
+          extractedTermId = key == null ? null : extractedTermIdByNormalizedKey.get(key);
+        }
+        if (extractedTermId != null) {
+          aiCandidatesByExtractedTermId
+              .computeIfAbsent(extractedTermId, ignored -> new ArrayList<>())
+              .add(aiCandidate);
         }
       }
     }
-    return aiCandidatesByKey;
+    return aiCandidatesByExtractedTermId;
+  }
+
+  private String generatedCandidateLabel(
+      GlossaryAiExtractionService.AiCandidateView aiCandidate, boolean splitCandidate, int index) {
+    String label = normalizeOptional(aiCandidate.label());
+    if (label != null || !splitCandidate) {
+      return label;
+    }
+    String termType =
+        normalizeKnownValue(aiCandidate.termType(), GlossaryTermMetadata.TERM_TYPES, null);
+    if (termType != null) {
+      return termType.toLowerCase(Locale.ROOT).replace('_', ' ');
+    }
+    String partOfSpeech = normalizeOptional(aiCandidate.partOfSpeech());
+    if (partOfSpeech != null) {
+      return partOfSpeech.toLowerCase(Locale.ROOT);
+    }
+    return "Sense " + (index + 1);
+  }
+
+  private String generatedCandidateSourceExternalId(
+      GlossaryAiExtractionService.AiCandidateView aiCandidate, boolean splitCandidate, int index) {
+    String sourceExternalId = normalizeOptional(aiCandidate.sourceExternalId());
+    if (sourceExternalId != null || !splitCandidate) {
+      return sourceExternalId;
+    }
+    return slugify(
+        coalesce(generatedCandidateLabel(aiCandidate, true, index), "sense-" + (index + 1)));
   }
 
   private GlossaryAiExtractionService.CandidateSignal toCandidateSignal(
@@ -1085,7 +1412,11 @@ public class GlossaryTermIndexCurationService {
       List<Long> repositoryIds) {
     List<TermIndexOccurrenceRepository.DetailRow> examples =
         termIndexOccurrenceRepository.findDetailsByTermIndexExtractedTermId(
-            row.getId(), repositoryIdsEmpty, repositoryIds, null, PageRequest.of(0, EXAMPLE_LIMIT));
+            row.getId(),
+            repositoryIdsEmpty,
+            repositoryIds,
+            null,
+            PageRequest.of(0, AI_SIGNAL_EXAMPLE_LIMIT));
     List<String> repositories =
         examples.stream()
             .map(TermIndexOccurrenceRepository.DetailRow::getRepositoryName)
@@ -1100,6 +1431,7 @@ public class GlossaryTermIndexCurationService {
             .distinct()
             .toList();
     return new GlossaryAiExtractionService.CandidateSignal(
+        String.valueOf(row.getId()),
         row.getDisplayTerm(),
         Math.toIntExact(Math.min(Integer.MAX_VALUE, nullToZero(row.getOccurrenceCount()))),
         Math.toIntExact(Math.min(Integer.MAX_VALUE, nullToZero(row.getRepositoryCount()))),
@@ -1316,6 +1648,23 @@ public class GlossaryTermIndexCurationService {
     };
   }
 
+  private String normalizeTermIndexReviewStatusFilter(String reviewStatusFilter) {
+    String normalized = normalizeOptional(reviewStatusFilter);
+    if (normalized == null) {
+      return TermIndexReview.STATUS_TO_REVIEW;
+    }
+    normalized = normalized.toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case TermIndexReview.STATUS_FILTER_ALL,
+              TermIndexReview.STATUS_FILTER_NON_REJECTED,
+              TermIndexReview.STATUS_TO_REVIEW,
+              TermIndexReview.STATUS_ACCEPTED,
+              TermIndexReview.STATUS_REJECTED ->
+          normalized;
+      default -> TermIndexReview.STATUS_TO_REVIEW;
+    };
+  }
+
   private String normalizeCandidateReviewAuthority(String reviewAuthority, String fallback) {
     String normalized = normalizeOptional(reviewAuthority);
     if (normalized == null) {
@@ -1328,6 +1677,24 @@ public class GlossaryTermIndexCurationService {
               TermIndexReview.AUTHORITY_HUMAN ->
           normalized;
       default -> fallback;
+    };
+  }
+
+  private String normalizeReviewReason(String reviewReason) {
+    String normalized = normalizeOptional(reviewReason);
+    if (normalized == null) {
+      return null;
+    }
+    normalized = normalized.toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case TermIndexReview.REASON_STOP_WORD,
+              TermIndexReview.REASON_TOO_GENERIC,
+              TermIndexReview.REASON_FALSE_POSITIVE,
+              TermIndexReview.REASON_OUT_OF_SCOPE,
+              TermIndexReview.REASON_DUPLICATE,
+              TermIndexReview.REASON_OTHER ->
+          normalized;
+      default -> TermIndexReview.REASON_OTHER;
     };
   }
 
@@ -1416,6 +1783,36 @@ public class GlossaryTermIndexCurationService {
         termIndexExtractedTermIds,
         normalizeRepositoryIds(command.repositoryIds()),
         normalize(command.overrides()));
+  }
+
+  private TriageExtractedTermsCommand normalize(TriageExtractedTermsCommand command) {
+    if (command == null) {
+      return new TriageExtractedTermsCommand(
+          List.of(),
+          List.of(),
+          null,
+          null,
+          TermIndexReview.STATUS_TO_REVIEW,
+          1L,
+          DEFAULT_GENERATION_LIMIT,
+          false);
+    }
+    List<Long> termIndexExtractedTermIds =
+        command.termIndexExtractedTermIds() == null
+            ? List.of()
+            : command.termIndexExtractedTermIds().stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    return new TriageExtractedTermsCommand(
+        termIndexExtractedTermIds,
+        normalizeRepositoryIds(command.repositoryIds()),
+        command.searchQuery(),
+        command.extractionMethod(),
+        normalizeTermIndexReviewStatusFilter(command.reviewStatusFilter()),
+        Math.max(1L, command.minOccurrences() == null ? 1L : command.minOccurrences()),
+        normalizeGenerationLimit(command.limit()),
+        Boolean.TRUE.equals(command.overwriteHumanReview()));
   }
 
   private CandidateFieldOverrides normalize(CandidateFieldOverrides overrides) {
@@ -1610,6 +2007,13 @@ public class GlossaryTermIndexCurationService {
     return value == null ? null : Math.max(0, Math.min(100, value));
   }
 
+  private int ceilDiv(int dividend, int divisor) {
+    if (dividend <= 0 || divisor <= 0) {
+      return 0;
+    }
+    return (dividend + divisor - 1) / divisor;
+  }
+
   private long nullToZero(Long value) {
     return value == null ? 0 : value;
   }
@@ -1623,6 +2027,26 @@ public class GlossaryTermIndexCurationService {
       return value;
     }
     return value.substring(0, maxLength);
+  }
+
+  private Long parseLong(String value) {
+    String normalized = normalizeOptional(value);
+    if (normalized == null) {
+      return null;
+    }
+    try {
+      return Long.valueOf(normalized);
+    } catch (NumberFormatException ignored) {
+      return null;
+    }
+  }
+
+  private void updateTriageProgress(Long pollableTaskId, TriageProgressView progress) {
+    if (pollableTaskId == null || progress == null) {
+      return;
+    }
+    pollableTaskService.updateMessage(
+        pollableTaskId, objectMapper.writeValueAsStringUnchecked(progress));
   }
 
   private Optional<TermIndexCandidate> findCandidate(
@@ -1774,6 +2198,7 @@ public class GlossaryTermIndexCurationService {
         extractedTerm == null ? null : extractedTerm.getId(),
         candidate.getTerm(),
         candidate.getNormalizedKey(),
+        candidate.getLabel(),
         candidate.getDefinition(),
         candidate.getRationale(),
         candidate.getTermType(),
@@ -1990,6 +2415,21 @@ public class GlossaryTermIndexCurationService {
       List<Long> repositoryIds,
       CandidateFieldOverrides overrides) {}
 
+  public record GenerateCandidatesJobCommand(
+      Long glossaryId,
+      GenerateCandidatesCommand generateCandidatesCommand,
+      GenerateCandidatesFromExtractedTermsCommand generateCandidatesFromExtractedTermsCommand) {}
+
+  public record TriageExtractedTermsCommand(
+      List<Long> termIndexExtractedTermIds,
+      List<Long> repositoryIds,
+      String searchQuery,
+      String extractionMethod,
+      String reviewStatusFilter,
+      Long minOccurrences,
+      Integer limit,
+      Boolean overwriteHumanReview) {}
+
   public record CandidateFieldOverrides(
       String definition,
       String rationale,
@@ -2040,6 +2480,30 @@ public class GlossaryTermIndexCurationService {
       int updatedCandidateCount,
       List<SeededTermView> candidates) {}
 
+  public record TriageExtractedTermsResult(
+      int entryCount,
+      int reviewedEntryCount,
+      int updatedEntryCount,
+      int acceptedCount,
+      int toReviewCount,
+      int rejectedCount,
+      int skippedHumanReviewedCount,
+      List<TriagedExtractedTermView> entries) {}
+
+  public record TriageProgressView(
+      String type,
+      String status,
+      int entryCount,
+      int reviewableEntryCount,
+      int reviewedEntryCount,
+      int updatedEntryCount,
+      int acceptedCount,
+      int toReviewCount,
+      int rejectedCount,
+      int skippedHumanReviewedCount,
+      int batchCount,
+      int completedBatchCount) {}
+
   public record CandidateExportResult(
       String format, String filename, String content, int candidateCount) {}
 
@@ -2054,6 +2518,7 @@ public class GlossaryTermIndexCurationService {
       Long termIndexExtractedTermId,
       String term,
       String normalizedKey,
+      String label,
       String definition,
       String rationale,
       String termType,
@@ -2062,7 +2527,27 @@ public class GlossaryTermIndexCurationService {
       Boolean doNotTranslate,
       Integer confidence) {}
 
+  public record TriagedExtractedTermView(
+      Long termIndexExtractedTermId,
+      String term,
+      String normalizedKey,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
+
   private record CandidateWriteResult(TermIndexCandidate candidate, boolean created) {}
+
+  private record GeneratedCandidateFields(
+      String label,
+      String sourceExternalId,
+      boolean distinctIdentity,
+      CandidateFieldOverrides overrides) {
+
+    private static GeneratedCandidateFields defaultFields() {
+      return new GeneratedCandidateFields(null, null, false, null);
+    }
+  }
 
   private record Span(int start, int end) {}
 }

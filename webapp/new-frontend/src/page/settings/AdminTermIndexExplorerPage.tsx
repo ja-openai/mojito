@@ -20,11 +20,14 @@ import {
   type ApiTermIndexOccurrence,
   type ApiTermIndexReviewStatus,
   type ApiTermIndexReviewStatusFilter,
+  type ApiTermIndexTaskProgress,
+  type ApiTriageTermIndexEntriesResponse,
   fetchTermIndexEntries,
   fetchTermIndexOccurrences,
   fetchTermIndexStatus,
   generateTermIndexCandidatesFromEntries,
   startTermIndexRefresh,
+  triageTermIndexEntries,
   updateTermIndexEntryReview,
   updateTermIndexEntryReviews,
   waitForTermIndexRefreshTask,
@@ -108,6 +111,7 @@ const ENFORCEMENT_OPTIONS = [
 const EXAMPLE_RESULT_LIMIT = 500;
 const DEFAULT_TERM_PANE_WIDTH_PCT = 42;
 const DEFAULT_BATCH_SIZE = 1000;
+const TERM_INDEX_AI_REVIEW_BATCH_SIZE = 50;
 
 type CandidateDraft = {
   definition: string;
@@ -136,6 +140,12 @@ type CandidateGenerationRequest = {
   entryIds: number[];
   entries: ApiTermIndexEntry[];
   draft: CandidateDraft | null;
+};
+
+type ExtractedTermTriageRequest = {
+  mode: 'selected' | 'filter';
+  entryIds: number[];
+  entries: ApiTermIndexEntry[];
 };
 
 const parsePositiveIntegerParam = (value: string | null) => {
@@ -628,6 +638,11 @@ export function AdminTermIndexTermsPage() {
   const [termResultLimit, setTermResultLimit] = useState(TERM_RESULT_LIMIT_DEFAULT);
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(initialSelectedEntryId);
   const [selectedEntryIds, setSelectedEntryIds] = useState<number[]>([]);
+  const [triageRequest, setTriageRequest] = useState<ExtractedTermTriageRequest | null>(null);
+  const [triageReport, setTriageReport] = useState<ApiTriageTermIndexEntriesResponse | null>(null);
+  const [triageProgress, setTriageProgress] = useState<ApiTermIndexTaskProgress | null>(null);
+  const [triageOverwriteHumanReview, setTriageOverwriteHumanReview] = useState(false);
+  const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
   const [termPaneWidthPct, setTermPaneWidthPct] = useState(DEFAULT_TERM_PANE_WIDTH_PCT);
   const [isPaneResizing, setIsPaneResizing] = useState(false);
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -635,6 +650,7 @@ export function AdminTermIndexTermsPage() {
   const resetTermSelection = () => {
     setSelectedEntryId(null);
     setSelectedEntryIds([]);
+    setNotice(null);
   };
   const updateTermPaneWidthPct = useCallback((next: number) => {
     setTermPaneWidthPct(Math.min(75, Math.max(25, next)));
@@ -769,6 +785,48 @@ export function AdminTermIndexTermsPage() {
     },
   });
 
+  const triageMutation = useMutation({
+    mutationFn: ({
+      request,
+      overwriteHumanReview,
+    }: {
+      request: ExtractedTermTriageRequest;
+      overwriteHumanReview: boolean;
+    }) =>
+      triageTermIndexEntries(
+        {
+          termIndexEntryIds: request.mode === 'selected' ? request.entryIds : [],
+          repositoryIds: effectiveRepositoryIds,
+          search: request.mode === 'filter' ? searchQuery : null,
+          extractionMethod: request.mode === 'filter' ? extractionMethod : null,
+          reviewStatus: request.mode === 'filter' ? reviewStatusFilter : null,
+          minOccurrences: request.mode === 'filter' ? minOccurrences : null,
+          limit: request.mode === 'filter' ? termResultLimit : null,
+          overwriteHumanReview,
+        },
+        {
+          onProgress: setTriageProgress,
+        },
+      ),
+    onSuccess: async (report) => {
+      setTriageReport(report);
+      setTriageProgress(null);
+      setNotice({
+        kind: 'success',
+        message: `Reviewed ${report.reviewedEntryCount.toLocaleString()} extracted terms (${report.rejectedCount.toLocaleString()} rejected).`,
+      });
+      setSelectedEntryIds([]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['term-index-entries'] }),
+        queryClient.invalidateQueries({ queryKey: ['term-index-occurrences'] }),
+      ]);
+    },
+    onError: (error: Error) => {
+      setTriageProgress(null);
+      setNotice({ kind: 'error', message: error.message || 'Extracted term triage failed.' });
+    },
+  });
+
   const updateEntryReview = (entryId: number, reviewStatus: ApiTermIndexReviewStatus) => {
     if (updateReviewMutation.isPending) {
       return;
@@ -791,6 +849,44 @@ export function AdminTermIndexTermsPage() {
       entryIds: selectedEntryIds,
       reviewStatus,
       reviewReason: reviewStatus === 'REJECTED' ? 'OTHER' : null,
+    });
+  };
+
+  const openTriageModal = () => {
+    if (entries.length === 0 || triageMutation.isPending) {
+      return;
+    }
+    const hasSelectedEntries = selectedEntries.length > 0;
+    setNotice(null);
+    setTriageReport(null);
+    setTriageProgress(null);
+    setTriageOverwriteHumanReview(false);
+    setTriageRequest({
+      mode: hasSelectedEntries ? 'selected' : 'filter',
+      entryIds: hasSelectedEntries ? selectedEntries.map((entry) => entry.id) : [],
+      entries: hasSelectedEntries ? selectedEntries : entries,
+    });
+  };
+
+  const closeTriageModal = () => {
+    if (triageMutation.isPending) {
+      return;
+    }
+    setTriageRequest(null);
+    setTriageReport(null);
+    setTriageProgress(null);
+  };
+
+  const confirmTriage = () => {
+    if (!triageRequest || triageMutation.isPending) {
+      return;
+    }
+    setNotice(null);
+    setTriageReport(null);
+    setTriageProgress(null);
+    triageMutation.mutate({
+      request: triageRequest,
+      overwriteHumanReview: triageOverwriteHumanReview,
     });
   };
 
@@ -980,6 +1076,18 @@ export function AdminTermIndexTermsPage() {
               <button
                 type="button"
                 className="term-index-explorer__subbar-button"
+                onClick={openTriageModal}
+                disabled={entries.length === 0 || triageMutation.isPending}
+              >
+                {triageMutation.isPending
+                  ? 'Auto-review running'
+                  : selectedEntries.length > 0
+                    ? 'Auto-review selected'
+                    : 'Auto-review visible'}
+              </button>
+              <button
+                type="button"
+                className="term-index-explorer__subbar-button"
                 onClick={() =>
                   setSelectedEntryIds(allEntriesSelected ? [] : entries.map((entry) => entry.id))
                 }
@@ -1015,6 +1123,11 @@ export function AdminTermIndexTermsPage() {
               ) : null}
             </div>
           </div>
+          {notice ? (
+            <p className={`settings-hint${notice.kind === 'error' ? ' is-error' : ''}`}>
+              {notice.message}
+            </p>
+          ) : null}
           {batchUpdateReviewMutation.error ? (
             <p className="settings-hint is-error">
               {getErrorMessage(batchUpdateReviewMutation.error)}
@@ -1080,6 +1193,30 @@ export function AdminTermIndexTermsPage() {
           </div>
         </section>
       </div>
+      <ExtractedTermTriageModal
+        open={triageRequest != null}
+        request={triageRequest}
+        report={triageReport}
+        progress={triageProgress}
+        repositoryScopeLabel={formatRepositorySelectionSummary({
+          selectedIds: effectiveRepositoryIds,
+          defaultSummary:
+            effectiveRepositoryIds.length === 1
+              ? '1 repository'
+              : `${effectiveRepositoryIds.length.toLocaleString()} repositories`,
+        })}
+        searchQuery={searchQuery}
+        extractionMethod={extractionMethod}
+        reviewStatusFilter={reviewStatusFilter}
+        minOccurrences={minOccurrences}
+        limit={termResultLimit}
+        overwriteHumanReview={triageOverwriteHumanReview}
+        isReviewing={triageMutation.isPending}
+        error={triageMutation.error}
+        onOverwriteHumanReviewChange={setTriageOverwriteHumanReview}
+        onClose={closeTriageModal}
+        onTriage={confirmTriage}
+      />
     </div>
   );
 }
@@ -1813,6 +1950,279 @@ function TermIndexRefreshModal({
   );
 }
 
+function ExtractedTermTriageModal({
+  open,
+  request,
+  report,
+  progress,
+  repositoryScopeLabel,
+  searchQuery,
+  extractionMethod,
+  reviewStatusFilter,
+  minOccurrences,
+  limit,
+  overwriteHumanReview,
+  isReviewing,
+  error,
+  onOverwriteHumanReviewChange,
+  onClose,
+  onTriage,
+}: {
+  open: boolean;
+  request: ExtractedTermTriageRequest | null;
+  report: ApiTriageTermIndexEntriesResponse | null;
+  progress: ApiTermIndexTaskProgress | null;
+  repositoryScopeLabel: string;
+  searchQuery: string;
+  extractionMethod: string | null;
+  reviewStatusFilter: ApiTermIndexReviewStatusFilter;
+  minOccurrences: number;
+  limit: number;
+  overwriteHumanReview: boolean;
+  isReviewing: boolean;
+  error: unknown;
+  onOverwriteHumanReviewChange: (overwrite: boolean) => void;
+  onClose: () => void;
+  onTriage: () => void;
+}) {
+  const sourceLabel =
+    request?.mode === 'selected'
+      ? request.entries.length === 1
+        ? '1 selected extracted term'
+        : `${request?.entries.length.toLocaleString() ?? 0} selected extracted terms`
+      : 'Current filtered result set';
+  const reviewStatusFilterLabel =
+    REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === reviewStatusFilter)?.label ??
+    reviewStatusFilter;
+  const sampleEntries = request?.entries.slice(0, 6) ?? [];
+  const remainingEntryCount = Math.max(0, (request?.entries.length ?? 0) - sampleEntries.length);
+  const triagedEntries = report?.entries.slice(0, 10) ?? [];
+  const requestedTermCount = request?.mode === 'filter' ? limit : (request?.entries.length ?? 0);
+  const batchCount =
+    requestedTermCount > 0 ? Math.ceil(requestedTermCount / TERM_INDEX_AI_REVIEW_BATCH_SIZE) : 0;
+  const batchLabel = batchCount === 1 ? '1 AI batch' : `${batchCount.toLocaleString()} AI batches`;
+  const reviewScopeLabel =
+    request?.mode === 'filter'
+      ? `Current filters, up to ${limit.toLocaleString()} extracted terms`
+      : sourceLabel;
+  const progressReviewableCount = progress?.reviewableEntryCount ?? requestedTermCount;
+  const progressReviewedCount = Math.min(
+    progress?.reviewedEntryCount ?? 0,
+    progressReviewableCount,
+  );
+  const progressBatchCount = progress?.batchCount ?? batchCount;
+  const progressCompletedBatchCount = Math.min(
+    progress?.completedBatchCount ?? 0,
+    progressBatchCount,
+  );
+  const progressLabel =
+    progressReviewableCount > 0
+      ? `${progressReviewedCount.toLocaleString()} of ${progressReviewableCount.toLocaleString()} processed`
+      : 'Preparing review scope';
+
+  return (
+    <Modal
+      open={open}
+      size="lg"
+      ariaLabel="Auto-review extracted terms"
+      onClose={onClose}
+      closeOnBackdrop={!isReviewing}
+    >
+      <div className="modal__header">
+        <div>
+          <h3 className="modal__title">
+            {report ? 'Extracted term review report' : 'Auto-review extracted terms'}
+          </h3>
+          <p className="settings-hint">
+            {report
+              ? 'The extracted term review statuses were updated from AI triage.'
+              : 'Ask AI to classify extracted terms before candidate generation.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="modal__body term-index-explorer__generation-modal-body">
+        {report ? (
+          <>
+            <div className="term-index-explorer__triage-report">
+              <span>
+                <strong>{report.entryCount.toLocaleString()}</strong> matched
+              </span>
+              <span>
+                <strong>{report.reviewedEntryCount.toLocaleString()}</strong> reviewed
+              </span>
+              <span>
+                <strong>{report.updatedEntryCount.toLocaleString()}</strong> updated
+              </span>
+              <span>
+                <strong>{report.acceptedCount.toLocaleString()}</strong> accepted
+              </span>
+              <span>
+                <strong>{report.toReviewCount.toLocaleString()}</strong> to review
+              </span>
+              <span>
+                <strong>{report.rejectedCount.toLocaleString()}</strong> rejected
+              </span>
+              <span>
+                <strong>{report.skippedHumanReviewedCount.toLocaleString()}</strong> skipped human
+              </span>
+            </div>
+            {triagedEntries.length > 0 ? (
+              <div className="term-index-explorer__generation-samples">
+                <div className="settings-field__label">Reviewed extracted terms</div>
+                <ul>
+                  {triagedEntries.map((entry) => (
+                    <li key={entry.termIndexExtractedTermId}>
+                      <span>{entry.term}</span>
+                      <span className="settings-hint">#{entry.termIndexExtractedTermId}</span>
+                      <span className="settings-hint">
+                        {formatReviewStatus(entry.reviewStatus)}
+                      </span>
+                      {entry.reviewReason ? (
+                        <span className="settings-hint">{formatMethod(entry.reviewReason)}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="settings-hint">No extracted terms were updated.</p>
+            )}
+          </>
+        ) : (
+          <div className="term-index-explorer__generation-summary">
+            <div className="term-index-explorer__triage-summary">
+              <div>
+                <div className="settings-field__label">Scope</div>
+                <p>{reviewScopeLabel}</p>
+              </div>
+              <div>
+                <div className="settings-field__label">Runtime</div>
+                <p>
+                  {batchLabel} of up to {TERM_INDEX_AI_REVIEW_BATCH_SIZE} terms. For 1,000 terms,
+                  expect about 20 serial AI calls and a few minutes of runtime; it can take longer
+                  if the AI API is slow.
+                </p>
+              </div>
+            </div>
+            {isReviewing ? (
+              <div className="term-index-explorer__triage-progress">
+                <div className="term-index-explorer__triage-progress-header">
+                  <span>{progress ? 'Reviewing extracted terms' : 'Waiting for worker'}</span>
+                  <span>{progressLabel}</span>
+                </div>
+                <progress
+                  max={Math.max(1, progressReviewableCount)}
+                  value={progressReviewedCount}
+                />
+                <p>
+                  {progressBatchCount > 0
+                    ? `Batch ${progressCompletedBatchCount.toLocaleString()} of ${progressBatchCount.toLocaleString()}`
+                    : 'The job is queued or calculating the review scope.'}
+                  {progress
+                    ? ` · ${(progress.acceptedCount ?? 0).toLocaleString()} accepted · ${(
+                        progress.toReviewCount ?? 0
+                      ).toLocaleString()} to review · ${(
+                        progress.rejectedCount ?? 0
+                      ).toLocaleString()} rejected`
+                    : null}
+                </p>
+              </div>
+            ) : null}
+            <dl className="term-index-explorer__triage-config">
+              <div>
+                <dt>Action</dt>
+                <dd>
+                  Update extracted-term review status only. Candidates and glossary terms stay
+                  unchanged.
+                </dd>
+              </div>
+              <div>
+                <dt>Repository scope</dt>
+                <dd>{repositoryScopeLabel}</dd>
+              </div>
+              {request?.mode === 'filter' ? (
+                <>
+                  <div>
+                    <dt>Search</dt>
+                    <dd>{searchQuery.trim() || 'None'}</dd>
+                  </div>
+                  <div>
+                    <dt>Extraction method</dt>
+                    <dd>{formatMethod(extractionMethod)}</dd>
+                  </div>
+                  <div>
+                    <dt>Status</dt>
+                    <dd>{reviewStatusFilterLabel}</dd>
+                  </div>
+                  <div>
+                    <dt>Minimum hits</dt>
+                    <dd>{minOccurrences === 1 ? 'Any' : `${minOccurrences.toLocaleString()}+`}</dd>
+                  </div>
+                  <div>
+                    <dt>Limit</dt>
+                    <dd>{limit.toLocaleString()}</dd>
+                  </div>
+                </>
+              ) : null}
+            </dl>
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={overwriteHumanReview}
+                onChange={(event) => onOverwriteHumanReviewChange(event.target.checked)}
+              />
+              <span>Overwrite human review decisions</span>
+            </label>
+            {sampleEntries.length > 0 ? (
+              <div className="term-index-explorer__generation-samples">
+                <div className="settings-field__label">Sample extracted terms</div>
+                <ul>
+                  {sampleEntries.map((entry) => (
+                    <li key={entry.id}>
+                      <span>{entry.displayTerm}</span>
+                      <span className="settings-hint">
+                        extracted #{entry.id} · {entry.occurrenceCount.toLocaleString()} hits
+                      </span>
+                    </li>
+                  ))}
+                  {remainingEntryCount > 0 ? (
+                    <li className="settings-hint">
+                      +{remainingEntryCount.toLocaleString()} more in scope
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+            ) : null}
+            {error ? <p className="settings-hint is-error">{getErrorMessage(error)}</p> : null}
+          </div>
+        )}
+      </div>
+
+      <div className="modal__footer term-index-explorer__modal-footer">
+        <button
+          type="button"
+          className="settings-button settings-button--ghost"
+          onClick={onClose}
+          disabled={isReviewing}
+        >
+          {report ? 'Close' : 'Cancel'}
+        </button>
+        {report ? null : (
+          <button
+            type="button"
+            className="settings-button settings-button--primary"
+            onClick={onTriage}
+            disabled={isReviewing || !request}
+          >
+            {isReviewing ? 'Reviewing...' : 'Start auto-review'}
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function CandidateGenerationModal({
   open,
   request,
@@ -1935,6 +2345,9 @@ function CandidateGenerationModal({
                     <li key={candidate.termIndexCandidateId}>
                       <span>{candidate.term}</span>
                       <span className="settings-hint">#{candidate.termIndexCandidateId}</span>
+                      {candidate.label ? (
+                        <span className="settings-hint">{candidate.label}</span>
+                      ) : null}
                       {candidate.termIndexExtractedTermId != null ? (
                         <span className="settings-hint">
                           extracted #{candidate.termIndexExtractedTermId}
@@ -2061,7 +2474,7 @@ function CandidateGenerationModal({
         )}
       </div>
 
-      <div className="modal__footer">
+      <div className="modal__footer term-index-explorer__modal-footer">
         <button
           type="button"
           className="settings-button settings-button--ghost"
@@ -2835,6 +3248,15 @@ function formatMethod(method: string | null | undefined) {
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function formatReviewStatus(status: string | null | undefined) {
+  if (!status) {
+    return 'To review';
+  }
+  return (
+    REVIEW_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? formatMethod(status)
+  );
 }
 
 function getErrorMessage(error: unknown) {

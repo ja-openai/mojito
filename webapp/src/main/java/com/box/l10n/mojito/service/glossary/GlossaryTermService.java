@@ -856,6 +856,7 @@ public class GlossaryTermService {
                 candidate ->
                     new GlossaryAiExtractionService.CandidateSignal(
                         candidate.term(),
+                        candidate.term(),
                         candidate.occurrenceCount(),
                         candidate.repositoryCount(),
                         candidate.repositories(),
