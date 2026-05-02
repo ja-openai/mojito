@@ -64,6 +64,44 @@
   gap: var(--space-1);
 }
 
+.filter-chip__date-input,
+.workbench-datefilter__input {
+  width: 100%;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-2);
+  padding: 0 var(--space-2);
+  height: 2rem;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.filter-chip__date-input:focus,
+.workbench-datefilter__input:focus {
+  outline: none;
+  border-color: var(--color-focus-border);
+  box-shadow: 0 0 0 0.125rem var(--color-focus-outline);
+}
+
+.filter-chip__clear-link,
+.workbench-filterchip__clear-link {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-subtle);
+  font: inherit;
+  font-size: var(--font-size-2xs);
+  padding: 0 var(--space-1);
+  height: 1.5rem;
+  cursor: pointer;
+}
+
+.filter-chip__clear-link:hover,
+.workbench-filterchip__clear-link:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
 .filter-chip__custom,
 .workbench-worksetcustom {
   display: inline-flex;

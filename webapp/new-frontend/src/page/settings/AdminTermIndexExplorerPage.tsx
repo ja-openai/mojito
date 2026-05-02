@@ -1,4 +1,5 @@
 import './settings-page.css';
+import '../../components/filters/filter-chip.css';
 import './term-index-explorer-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +18,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import {
   type ApiGenerateTermIndexCandidatesResponse,
   type ApiTermIndexEntry,
+  type ApiTermIndexEntrySort,
   type ApiTermIndexOccurrence,
   type ApiTermIndexReviewStatus,
   type ApiTermIndexReviewStatusFilter,
@@ -32,6 +34,10 @@ import {
   updateTermIndexEntryReviews,
   waitForTermIndexRefreshTask,
 } from '../../api/term-index';
+import {
+  type DateQuickRange,
+  MultiSectionFilterChip,
+} from '../../components/filters/MultiSectionFilterChip';
 import { Modal } from '../../components/Modal';
 import type { MultiSelectCustomAction } from '../../components/MultiSelectChip';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
@@ -44,6 +50,7 @@ import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs'
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import { useRepositories } from '../../hooks/useRepositories';
+import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import { formatLocalDateTime } from '../../utils/dateTime';
 import {
   type RepositorySelectionOption,
@@ -95,6 +102,22 @@ const REVIEW_STATUS_OPTIONS: Array<{
   { value: 'ACCEPTED', label: 'Accepted' },
   { value: 'REJECTED', label: 'Rejected' },
 ];
+const REVIEW_REASON_OPTIONS = [
+  { value: 'STOP_WORD', label: 'Stop word' },
+  { value: 'TOO_GENERIC', label: 'Too generic' },
+  { value: 'FALSE_POSITIVE', label: 'False positive' },
+  { value: 'OUT_OF_SCOPE', label: 'Out of scope' },
+  { value: 'OTHER', label: 'Other' },
+];
+const TERM_SORT_OPTIONS: Array<{
+  value: ApiTermIndexEntrySort;
+  label: string;
+}> = [
+  { value: 'REVIEW_CONFIDENCE_DESC', label: 'Review confidence' },
+  { value: 'HITS', label: 'Most hits' },
+  { value: 'REVIEW_CONFIDENCE_ASC', label: 'Low confidence' },
+];
+const ALL_EXTRACTORS_FILTER_VALUE = '__ALL_EXTRACTORS__';
 const TERM_TYPE_OPTIONS = [
   { value: 'BRAND', label: 'Brand' },
   { value: 'PRODUCT', label: 'Product' },
@@ -147,6 +170,46 @@ type ExtractedTermTriageRequest = {
   entryIds: number[];
   entries: ApiTermIndexEntry[];
 };
+
+type TermIndexReviewUpdate = {
+  reviewStatus: ApiTermIndexReviewStatus;
+  reviewReason?: string | null;
+  reviewRationale?: string | null;
+  reviewConfidence?: number | null;
+};
+
+type TermIndexReviewDraft = {
+  reviewStatus: ApiTermIndexReviewStatus;
+  reviewReason: string;
+  reviewRationale: string;
+  reviewConfidence: string;
+};
+
+type TermIndexBatchReviewUpdate = TermIndexReviewUpdate & {
+  updateReviewReason: boolean;
+  updateReviewRationale: boolean;
+  updateReviewConfidence: boolean;
+};
+
+type TermIndexBatchReviewDraft = {
+  reviewStatus: ApiTermIndexReviewStatus;
+  updateReviewReason: boolean;
+  reviewReason: string;
+  updateReviewRationale: boolean;
+  reviewRationale: string;
+  updateReviewConfidence: boolean;
+  reviewConfidence: string;
+};
+
+type TermIndexBulkReviewAction = 'MANUAL_REVIEW' | 'AI_REVIEW';
+
+const TERM_INDEX_BULK_REVIEW_OPTIONS: Array<{
+  value: TermIndexBulkReviewAction;
+  label: string;
+}> = [
+  { value: 'MANUAL_REVIEW', label: 'Manual review' },
+  { value: 'AI_REVIEW', label: 'AI review' },
+];
 
 const parsePositiveIntegerParam = (value: string | null) => {
   if (value == null) {
@@ -271,6 +334,49 @@ const nullableTrimmed = (value: string) => {
   return normalized ? normalized : null;
 };
 
+const getManualReviewUpdate = (
+  entry: ApiTermIndexEntry,
+  reviewStatus: ApiTermIndexReviewStatus = entry.reviewStatus,
+  overrides: Partial<TermIndexReviewUpdate> = {},
+): TermIndexReviewUpdate => ({
+  reviewStatus,
+  reviewReason:
+    overrides.reviewReason !== undefined
+      ? overrides.reviewReason
+      : reviewStatus === 'REJECTED'
+        ? (entry.reviewReason ?? 'OTHER')
+        : null,
+  reviewRationale:
+    overrides.reviewRationale !== undefined
+      ? overrides.reviewRationale
+      : (entry.reviewRationale ?? null),
+  reviewConfidence: overrides.reviewConfidence !== undefined ? overrides.reviewConfidence : null,
+});
+
+const createReviewDraft = (entry: ApiTermIndexEntry | null): TermIndexReviewDraft => ({
+  reviewStatus: entry?.reviewStatus ?? 'TO_REVIEW',
+  reviewReason: entry?.reviewReason ?? (entry?.reviewStatus === 'REJECTED' ? 'OTHER' : ''),
+  reviewRationale: entry?.reviewRationale ?? '',
+  reviewConfidence: entry?.reviewConfidence == null ? '' : String(entry.reviewConfidence),
+});
+
+const getReviewDraftUpdate = (draft: TermIndexReviewDraft): TermIndexReviewUpdate => {
+  const reviewReason = nullableTrimmed(draft.reviewReason);
+  return {
+    reviewStatus: draft.reviewStatus,
+    reviewReason: draft.reviewStatus === 'REJECTED' ? (reviewReason ?? 'OTHER') : reviewReason,
+    reviewRationale: nullableTrimmed(draft.reviewRationale),
+    reviewConfidence: parseOptionalConfidence(draft.reviewConfidence),
+  };
+};
+
+const hasReviewDraftChanged = (draft: TermIndexReviewDraft, entry: ApiTermIndexEntry) =>
+  draft.reviewStatus !== entry.reviewStatus ||
+  draft.reviewReason !==
+    (entry.reviewReason ?? (entry.reviewStatus === 'REJECTED' ? 'OTHER' : '')) ||
+  draft.reviewRationale !== (entry.reviewRationale ?? '') ||
+  draft.reviewConfidence !== (entry.reviewConfidence == null ? '' : String(entry.reviewConfidence));
+
 const parseOptionalConfidence = (value: string) => {
   const normalized = value.trim();
   if (!normalized) {
@@ -278,6 +384,34 @@ const parseOptionalConfidence = (value: string) => {
   }
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? Math.min(100, Math.max(0, Math.round(parsed))) : null;
+};
+
+const createBatchReviewDraft = (): TermIndexBatchReviewDraft => ({
+  reviewStatus: 'TO_REVIEW',
+  updateReviewReason: false,
+  reviewReason: '',
+  updateReviewRationale: false,
+  reviewRationale: '',
+  updateReviewConfidence: false,
+  reviewConfidence: '',
+});
+
+const getBatchReviewDraftUpdate = (
+  draft: TermIndexBatchReviewDraft,
+): TermIndexBatchReviewUpdate => {
+  const reviewReason = nullableTrimmed(draft.reviewReason);
+  return {
+    reviewStatus: draft.reviewStatus,
+    updateReviewReason: draft.updateReviewReason,
+    reviewReason:
+      draft.updateReviewReason && draft.reviewStatus === 'REJECTED'
+        ? (reviewReason ?? 'OTHER')
+        : reviewReason,
+    updateReviewRationale: draft.updateReviewRationale,
+    reviewRationale: nullableTrimmed(draft.reviewRationale),
+    updateReviewConfidence: draft.updateReviewConfidence,
+    reviewConfidence: parseOptionalConfidence(draft.reviewConfidence),
+  };
 };
 
 const cloneCandidateDraft = (draft: CandidateDraft): CandidateDraft => ({
@@ -438,10 +572,10 @@ const useTermIndexRepositorySelection = (repositoryOptions: RepositorySelectionO
 };
 
 export function AdminTermIndexExplorerPage() {
-  return <AdminTermIndexRunsPage />;
+  return <AdminTermIndexExtractionPage />;
 }
 
-export function AdminTermIndexRunsPage() {
+export function AdminTermIndexExtractionPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
   const queryClient = useQueryClient();
@@ -479,8 +613,8 @@ export function AdminTermIndexRunsPage() {
   };
   const recentRunCount = statusQuery.data?.recentRuns.length ?? 0;
   const recentRunCountLabel = statusQuery.isLoading
-    ? 'Loading runs...'
-    : formatCappedListLabel('runs', recentRunCount, runResultLimit);
+    ? 'Loading extraction runs...'
+    : formatCappedListLabel('extraction runs', recentRunCount, runResultLimit);
 
   const refreshMutation = useMutation({
     mutationFn: async (request: TermIndexRefreshForm) => {
@@ -498,8 +632,8 @@ export function AdminTermIndexRunsPage() {
       setNotice({
         kind: 'success',
         message: request.fullRefresh
-          ? 'Full term index refresh completed.'
-          : 'Term index refresh completed.',
+          ? 'Full term extraction completed.'
+          : 'Term extraction completed.',
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['term-index-status'] }),
@@ -509,7 +643,7 @@ export function AdminTermIndexRunsPage() {
     },
     onError: (error: Error) => {
       setActiveRefreshTaskId(null);
-      setNotice({ kind: 'error', message: error.message || 'Term index refresh failed.' });
+      setNotice({ kind: 'error', message: error.message || 'Term extraction failed.' });
     },
   });
 
@@ -545,13 +679,13 @@ export function AdminTermIndexRunsPage() {
         backTo="/settings/system"
         backLabel="Back to settings"
         context="Settings > Glossaries"
-        title="Term index runs"
-        centerContent={<TermIndexSubnav active="runs" />}
+        title="Term Extraction"
+        centerContent={<TermIndexSubnav active="extraction" />}
       />
       <div className="settings-page settings-page--wide term-index-explorer">
         <section
           className="settings-card term-index-explorer__filter-card"
-          aria-label="Run filters"
+          aria-label="Term extraction filters"
         >
           <div className="term-index-explorer__run-toolbar">
             <div className="term-index-explorer__repository-control">
@@ -560,7 +694,7 @@ export function AdminTermIndexRunsPage() {
                 options={repositoryOptions}
                 selectedIds={selectedRepositoryIds}
                 onChange={updateSelectedRepositoryIds}
-                className="settings-repository-select"
+                className="term-index-explorer__repository-select"
                 buttonAriaLabel="Filter term index status by repository. Use menu actions to switch between repositories and glossaries."
                 customActions={repositorySelectionActions}
                 summaryFormatter={formatRepositorySelectionSummary}
@@ -572,11 +706,11 @@ export function AdminTermIndexRunsPage() {
               disabled={refreshMutation.isPending}
               onClick={openRefreshModal}
             >
-              {refreshMutation.isPending ? 'Refresh running' : 'Refresh index'}
+              {refreshMutation.isPending ? 'Extracting' : 'Extract'}
             </button>
           </div>
           {activeRefreshTaskId != null ? (
-            <p className="settings-hint">Refresh task {activeRefreshTaskId} is running.</p>
+            <p className="settings-hint">Extraction task {activeRefreshTaskId} is running.</p>
           ) : null}
           {notice ? (
             <p className={`settings-hint${notice.kind === 'error' ? ' is-error' : ''}`}>
@@ -587,7 +721,7 @@ export function AdminTermIndexRunsPage() {
 
         <section className="settings-card">
           <div className="settings-card__header">
-            <h2>Index status</h2>
+            <h2>Extraction status</h2>
           </div>
           <IndexStatusTables
             statusQuery={statusQuery}
@@ -635,13 +769,20 @@ export function AdminTermIndexTermsPage() {
   const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
   const [reviewStatusFilter, setReviewStatusFilter] =
     useState<ApiTermIndexReviewStatusFilter>('NON_REJECTED');
+  const [termSort, setTermSort] = useState<ApiTermIndexEntrySort>('REVIEW_CONFIDENCE_DESC');
   const [termResultLimit, setTermResultLimit] = useState(TERM_RESULT_LIMIT_DEFAULT);
+  const [lastOccurrenceAfter, setLastOccurrenceAfter] = useState<string | null>(null);
+  const [lastOccurrenceBefore, setLastOccurrenceBefore] = useState<string | null>(null);
+  const [reviewChangedAfter, setReviewChangedAfter] = useState<string | null>(null);
+  const [reviewChangedBefore, setReviewChangedBefore] = useState<string | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(initialSelectedEntryId);
   const [selectedEntryIds, setSelectedEntryIds] = useState<number[]>([]);
   const [triageRequest, setTriageRequest] = useState<ExtractedTermTriageRequest | null>(null);
   const [triageReport, setTriageReport] = useState<ApiTriageTermIndexEntriesResponse | null>(null);
   const [triageProgress, setTriageProgress] = useState<ApiTermIndexTaskProgress | null>(null);
   const [triageOverwriteHumanReview, setTriageOverwriteHumanReview] = useState(false);
+  const [reviewOverrideEntry, setReviewOverrideEntry] = useState<ApiTermIndexEntry | null>(null);
+  const [bulkReviewModalOpen, setBulkReviewModalOpen] = useState(false);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
   const [termPaneWidthPct, setTermPaneWidthPct] = useState(DEFAULT_TERM_PANE_WIDTH_PCT);
   const [isPaneResizing, setIsPaneResizing] = useState(false);
@@ -661,6 +802,22 @@ export function AdminTermIndexTermsPage() {
   };
   const updateMinOccurrences = (next: number) => {
     setMinOccurrences(Math.max(1, next));
+    resetTermSelection();
+  };
+  const updateLastOccurrenceAfter = (next: string | null) => {
+    setLastOccurrenceAfter(next);
+    resetTermSelection();
+  };
+  const updateLastOccurrenceBefore = (next: string | null) => {
+    setLastOccurrenceBefore(next);
+    resetTermSelection();
+  };
+  const updateReviewChangedAfter = (next: string | null) => {
+    setReviewChangedAfter(next);
+    resetTermSelection();
+  };
+  const updateReviewChangedBefore = (next: string | null) => {
+    setReviewChangedBefore(next);
     resetTermSelection();
   };
 
@@ -684,8 +841,13 @@ export function AdminTermIndexTermsPage() {
       searchQuery,
       extractionMethod,
       reviewStatusFilter,
+      termSort,
       minOccurrences,
       termResultLimit,
+      lastOccurrenceAfter,
+      lastOccurrenceBefore,
+      reviewChangedAfter,
+      reviewChangedBefore,
     ],
     queryFn: () =>
       fetchTermIndexEntries({
@@ -695,6 +857,11 @@ export function AdminTermIndexTermsPage() {
         reviewStatus: reviewStatusFilter,
         minOccurrences,
         limit: termResultLimit,
+        lastOccurrenceAfter,
+        lastOccurrenceBefore,
+        reviewChangedAfter,
+        reviewChangedBefore,
+        sortBy: termSort,
       }),
     enabled: isAdmin && repositoryOptions.length > 0,
     staleTime: 5_000,
@@ -750,17 +917,24 @@ export function AdminTermIndexTermsPage() {
       entryId,
       reviewStatus,
       reviewReason,
+      reviewRationale,
+      reviewConfidence,
     }: {
       entryId: number;
       reviewStatus: ApiTermIndexReviewStatus;
       reviewReason?: string | null;
+      reviewRationale?: string | null;
+      reviewConfidence?: number | null;
     }) =>
       updateTermIndexEntryReview(entryId, {
         reviewStatus,
         reviewReason: reviewReason ?? null,
+        reviewRationale: reviewRationale ?? null,
+        reviewConfidence: reviewConfidence ?? null,
       }),
     onSuccess: async (entry) => {
       setSelectedEntryId(entry.id);
+      setReviewOverrideEntry(null);
       await queryClient.invalidateQueries({ queryKey: ['term-index-entries'] });
     },
   });
@@ -769,18 +943,34 @@ export function AdminTermIndexTermsPage() {
     mutationFn: ({
       entryIds,
       reviewStatus,
+      updateReviewReason,
       reviewReason,
+      updateReviewRationale,
+      reviewRationale,
+      updateReviewConfidence,
+      reviewConfidence,
     }: {
       entryIds: number[];
       reviewStatus: ApiTermIndexReviewStatus;
+      updateReviewReason?: boolean;
       reviewReason?: string | null;
+      updateReviewRationale?: boolean;
+      reviewRationale?: string | null;
+      updateReviewConfidence?: boolean;
+      reviewConfidence?: number | null;
     }) =>
       updateTermIndexEntryReviews(entryIds, {
         reviewStatus,
+        updateReviewReason: updateReviewReason ?? false,
         reviewReason: reviewReason ?? null,
+        updateReviewRationale: updateReviewRationale ?? false,
+        reviewRationale: reviewRationale ?? null,
+        updateReviewConfidence: updateReviewConfidence ?? false,
+        reviewConfidence: reviewConfidence ?? null,
       }),
     onSuccess: async () => {
       setSelectedEntryIds([]);
+      setBulkReviewModalOpen(false);
       await queryClient.invalidateQueries({ queryKey: ['term-index-entries'] });
     },
   });
@@ -802,6 +992,10 @@ export function AdminTermIndexTermsPage() {
           reviewStatus: request.mode === 'filter' ? reviewStatusFilter : null,
           minOccurrences: request.mode === 'filter' ? minOccurrences : null,
           limit: request.mode === 'filter' ? termResultLimit : null,
+          lastOccurrenceAfter: request.mode === 'filter' ? lastOccurrenceAfter : null,
+          lastOccurrenceBefore: request.mode === 'filter' ? lastOccurrenceBefore : null,
+          reviewChangedAfter: request.mode === 'filter' ? reviewChangedAfter : null,
+          reviewChangedBefore: request.mode === 'filter' ? reviewChangedBefore : null,
           overwriteHumanReview,
         },
         {
@@ -827,45 +1021,70 @@ export function AdminTermIndexTermsPage() {
     },
   });
 
-  const updateEntryReview = (entryId: number, reviewStatus: ApiTermIndexReviewStatus) => {
+  const updateEntryReview = (entry: ApiTermIndexEntry, reviewStatus: ApiTermIndexReviewStatus) => {
     if (updateReviewMutation.isPending) {
       return;
     }
     updateReviewMutation.mutate({
-      entryId,
-      reviewStatus,
-      reviewReason: reviewStatus === 'REJECTED' ? 'OTHER' : null,
+      entryId: entry.id,
+      ...getManualReviewUpdate(entry, reviewStatus),
     });
   };
 
-  const updateSelectedEntriesReview = (reviewStatus: ApiTermIndexReviewStatus | null) => {
-    if (selectedEntryIds.length === 0 || batchUpdateReviewMutation.isPending) {
+  const saveEntryReviewOverride = (entry: ApiTermIndexEntry, update: TermIndexReviewUpdate) => {
+    if (updateReviewMutation.isPending) {
       return;
     }
-    if (reviewStatus == null) {
+    updateReviewMutation.mutate({
+      entryId: entry.id,
+      ...update,
+    });
+  };
+
+  const openReviewOverride = (entry: ApiTermIndexEntry) => {
+    updateReviewMutation.reset();
+    setReviewOverrideEntry(entry);
+  };
+
+  const closeReviewOverride = () => {
+    updateReviewMutation.reset();
+    setReviewOverrideEntry(null);
+  };
+
+  const saveSelectedEntriesReview = (update: TermIndexBatchReviewUpdate) => {
+    if (selectedEntryIds.length === 0 || batchUpdateReviewMutation.isPending) {
       return;
     }
     batchUpdateReviewMutation.mutate({
       entryIds: selectedEntryIds,
-      reviewStatus,
-      reviewReason: reviewStatus === 'REJECTED' ? 'OTHER' : null,
+      ...update,
     });
   };
 
   const openTriageModal = () => {
-    if (entries.length === 0 || triageMutation.isPending) {
+    if (selectedEntries.length === 0 || triageMutation.isPending) {
       return;
     }
-    const hasSelectedEntries = selectedEntries.length > 0;
     setNotice(null);
     setTriageReport(null);
     setTriageProgress(null);
     setTriageOverwriteHumanReview(false);
     setTriageRequest({
-      mode: hasSelectedEntries ? 'selected' : 'filter',
-      entryIds: hasSelectedEntries ? selectedEntries.map((entry) => entry.id) : [],
-      entries: hasSelectedEntries ? selectedEntries : entries,
+      mode: 'selected',
+      entryIds: selectedEntries.map((entry) => entry.id),
+      entries: selectedEntries,
     });
+  };
+
+  const runBulkReviewAction = (action: TermIndexBulkReviewAction | null) => {
+    if (!action || selectedEntries.length === 0) {
+      return;
+    }
+    if (action === 'MANUAL_REVIEW') {
+      setBulkReviewModalOpen(true);
+      return;
+    }
+    openTriageModal();
   };
 
   const closeTriageModal = () => {
@@ -901,9 +1120,7 @@ export function AdminTermIndexTermsPage() {
   const termCountLabel = entriesQuery.isLoading
     ? 'Loading terms...'
     : formatCappedListLabel('terms', entries.length, termResultLimit);
-  const minOccurrencesLabel =
-    minOccurrences === 1 ? 'Any hits' : `${minOccurrences.toLocaleString()}+ hits`;
-  const resultLimitLabel = `${formatShortCount(termResultLimit)} terms`;
+  const termDateQuickRanges = useMemo(() => getStandardDateQuickRanges(), []);
   const workspaceStyle = useMemo(
     () =>
       ({
@@ -967,7 +1184,7 @@ export function AdminTermIndexTermsPage() {
         backTo="/settings/system"
         backLabel="Back to settings"
         context="Settings > Glossaries"
-        title="Raw term review"
+        title="Term Review"
         centerContent={<TermIndexSubnav active="terms" />}
       />
       <div className="settings-page settings-page--wide term-index-explorer">
@@ -985,7 +1202,7 @@ export function AdminTermIndexTermsPage() {
                   updateSelectedRepositoryIds(next);
                   resetTermSelection();
                 }}
-                className="settings-repository-select"
+                className="term-index-explorer__repository-select"
                 buttonAriaLabel="Select repositories for term review. Use menu actions to switch between repositories and glossaries."
                 customActions={repositorySelectionActions}
                 summaryFormatter={formatRepositorySelectionSummary}
@@ -1001,22 +1218,6 @@ export function AdminTermIndexTermsPage() {
               placeholder="Search terms or normalized keys"
               inputAriaLabel="Search raw terms"
               className="term-index-explorer__search-control"
-              leading={
-                <SingleSelectDropdown
-                  label="Extraction method"
-                  options={extractionMethodOptions}
-                  value={extractionMethod}
-                  onChange={(next) => {
-                    setExtractionMethod(next);
-                    resetTermSelection();
-                  }}
-                  placeholder="All methods"
-                  noneLabel="All methods"
-                  className="term-index-explorer__search-type"
-                  buttonAriaLabel="Filter by extraction method"
-                  searchable={false}
-                />
-              }
             />
             <div className="term-index-explorer__filter-controls">
               <SingleSelectDropdown
@@ -1032,36 +1233,26 @@ export function AdminTermIndexTermsPage() {
                 buttonAriaLabel="Filter by review status"
                 searchable={false}
               />
-              <NumericPresetDropdown
-                value={minOccurrences}
-                buttonLabel={minOccurrencesLabel}
-                menuLabel="Minimum hits"
-                presetOptions={MIN_OCCURRENCES_OPTIONS}
-                onChange={updateMinOccurrences}
-                ariaLabel="Minimum hits"
-                className="term-index-explorer__filter-number"
-                pillsClassName="settings-pills"
-                optionClassName="settings-pill"
-                optionActiveClassName="is-active"
-                customButtonClassName="settings-pill"
-                customActiveClassName="is-active"
-                customInitialValue={MIN_OCCURRENCES_DEFAULT}
-              />
-              <NumericPresetDropdown
-                value={termResultLimit}
-                buttonLabel={resultLimitLabel}
-                menuLabel="Result size limit"
-                presetOptions={TERM_RESULT_LIMIT_OPTIONS}
-                onChange={updateTermResultLimit}
-                ariaLabel="Term result size limit"
+              <TermIndexQueryFilterChip
+                extractionMethod={extractionMethod}
+                extractionMethodOptions={extractionMethodOptions}
+                onExtractionMethodChange={(next) => {
+                  setExtractionMethod(next);
+                  resetTermSelection();
+                }}
+                minOccurrences={minOccurrences}
+                onMinOccurrencesChange={updateMinOccurrences}
+                lastOccurrenceAfter={lastOccurrenceAfter}
+                lastOccurrenceBefore={lastOccurrenceBefore}
+                onLastOccurrenceAfterChange={updateLastOccurrenceAfter}
+                onLastOccurrenceBeforeChange={updateLastOccurrenceBefore}
+                reviewChangedAfter={reviewChangedAfter}
+                reviewChangedBefore={reviewChangedBefore}
+                onReviewChangedAfterChange={updateReviewChangedAfter}
+                onReviewChangedBeforeChange={updateReviewChangedBefore}
+                dateQuickRanges={termDateQuickRanges}
                 disabled={entriesQuery.isLoading}
-                className="term-index-explorer__filter-number"
-                pillsClassName="settings-pills"
-                optionClassName="settings-pill"
-                optionActiveClassName="is-active"
-                customButtonClassName="settings-pill"
-                customActiveClassName="is-active"
-                customInitialValue={TERM_RESULT_LIMIT_DEFAULT}
+                ariaLabel="Filter raw term extractor, hits, last extracted date, and review updated date"
               />
             </div>
           </div>
@@ -1069,53 +1260,59 @@ export function AdminTermIndexTermsPage() {
 
         <section className="settings-card term-index-explorer__results-card" aria-label="Raw terms">
           <div className="term-index-explorer__subbar">
-            <span className="settings-hint term-index-explorer__subbar-count">
-              {termCountLabel}
-            </span>
+            <TermIndexResultSizeDropdown
+              countLabel={termCountLabel}
+              resultLimit={termResultLimit}
+              onChangeResultLimit={updateTermResultLimit}
+              disabled={entriesQuery.isLoading}
+            />
+            <TermIndexSubbarSeparator />
+            <TermIndexSortDropdown
+              sortBy={termSort}
+              onChangeSort={(next) => {
+                setTermSort(next);
+                resetTermSelection();
+              }}
+              disabled={entriesQuery.isLoading}
+            />
             <div className="term-index-explorer__subbar-actions">
-              <button
-                type="button"
-                className="term-index-explorer__subbar-button"
-                onClick={openTriageModal}
-                disabled={entries.length === 0 || triageMutation.isPending}
-              >
-                {triageMutation.isPending
-                  ? 'Auto-review running'
-                  : selectedEntries.length > 0
-                    ? 'Auto-review selected'
-                    : 'Auto-review visible'}
-              </button>
-              <button
-                type="button"
-                className="term-index-explorer__subbar-button"
-                onClick={() =>
-                  setSelectedEntryIds(allEntriesSelected ? [] : entries.map((entry) => entry.id))
-                }
-                disabled={entries.length === 0 || batchUpdateReviewMutation.isPending}
-              >
-                {allEntriesSelected ? 'Deselect visible' : 'Select all'}
-              </button>
+              {entries.length > 0 && !allEntriesSelected ? (
+                <>
+                  <TermIndexSubbarSeparator />
+                  <button
+                    type="button"
+                    className="term-index-explorer__subbar-button"
+                    onClick={() => setSelectedEntryIds(entries.map((entry) => entry.id))}
+                    disabled={batchUpdateReviewMutation.isPending || triageMutation.isPending}
+                  >
+                    Select all
+                  </button>
+                </>
+              ) : null}
               {selectedEntries.length > 0 ? (
                 <>
+                  <TermIndexSubbarSeparator />
                   <span className="settings-hint term-index-explorer__selection-summary">
                     {selectedEntries.length.toLocaleString()} selected
                   </span>
+                  <TermIndexSubbarSeparator />
                   <SingleSelectDropdown
-                    label="Bulk actions"
+                    label="Bulk update"
+                    options={TERM_INDEX_BULK_REVIEW_OPTIONS}
                     value={null}
-                    placeholder={`Bulk: ${selectedEntries.length.toLocaleString()}`}
-                    options={REVIEW_STATUS_OPTIONS}
-                    onChange={updateSelectedEntriesReview}
-                    disabled={batchUpdateReviewMutation.isPending}
+                    onChange={runBulkReviewAction}
+                    placeholder={triageMutation.isPending ? 'AI review running' : 'Bulk update'}
                     className="term-index-explorer__bulk-dropdown"
-                    buttonAriaLabel="Apply bulk review status"
+                    buttonAriaLabel="Bulk update selected extracted terms"
                     searchable={false}
+                    disabled={batchUpdateReviewMutation.isPending || triageMutation.isPending}
                   />
+                  <TermIndexSubbarSeparator />
                   <button
                     type="button"
                     className="term-index-explorer__subbar-button"
                     onClick={() => setSelectedEntryIds([])}
-                    disabled={batchUpdateReviewMutation.isPending}
+                    disabled={batchUpdateReviewMutation.isPending || triageMutation.isPending}
                   >
                     Clear selection
                   </button>
@@ -1150,6 +1347,7 @@ export function AdminTermIndexTermsPage() {
                   selectedEntryId={selectedEntryId}
                   selectedEntryIds={selectedEntryIds}
                   rowMetadata="term"
+                  showReviewConfidence
                   onSelectEntry={setSelectedEntryId}
                   onUpdateEntryReview={updateEntryReview}
                   isUpdatingReview={updateReviewMutation.isPending}
@@ -1185,6 +1383,9 @@ export function AdminTermIndexTermsPage() {
                   occurrences={occurrences}
                   isLoading={occurrencesQuery.isLoading}
                   error={occurrencesQuery.error}
+                  isSavingReview={updateReviewMutation.isPending}
+                  reviewError={updateReviewMutation.error}
+                  onOpenReviewOverride={openReviewOverride}
                 />
               ) : (
                 <p className="settings-hint">Select a term to inspect examples.</p>
@@ -1210,12 +1411,34 @@ export function AdminTermIndexTermsPage() {
         reviewStatusFilter={reviewStatusFilter}
         minOccurrences={minOccurrences}
         limit={termResultLimit}
+        lastOccurrenceAfter={lastOccurrenceAfter}
+        lastOccurrenceBefore={lastOccurrenceBefore}
+        reviewChangedAfter={reviewChangedAfter}
+        reviewChangedBefore={reviewChangedBefore}
         overwriteHumanReview={triageOverwriteHumanReview}
         isReviewing={triageMutation.isPending}
         error={triageMutation.error}
         onOverwriteHumanReviewChange={setTriageOverwriteHumanReview}
         onClose={closeTriageModal}
         onTriage={confirmTriage}
+      />
+      <TermIndexReviewOverrideModal
+        entry={reviewOverrideEntry}
+        isSaving={updateReviewMutation.isPending}
+        error={updateReviewMutation.error}
+        onClose={closeReviewOverride}
+        onSave={saveEntryReviewOverride}
+      />
+      <TermIndexBatchReviewModal
+        open={bulkReviewModalOpen}
+        selectedCount={selectedEntryIds.length}
+        isSaving={batchUpdateReviewMutation.isPending}
+        error={batchUpdateReviewMutation.error}
+        onClose={() => {
+          batchUpdateReviewMutation.reset();
+          setBulkReviewModalOpen(false);
+        }}
+        onSave={saveSelectedEntriesReview}
       />
     </div>
   );
@@ -1239,7 +1462,12 @@ export function AdminTermIndexCandidateGenerationPage() {
   const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
   const [reviewStatusFilter, setReviewStatusFilter] =
     useState<ApiTermIndexReviewStatusFilter>('NON_REJECTED');
+  const [termSort, setTermSort] = useState<ApiTermIndexEntrySort>('REVIEW_CONFIDENCE_DESC');
   const [termResultLimit, setTermResultLimit] = useState(TERM_RESULT_LIMIT_DEFAULT);
+  const [lastOccurrenceAfter, setLastOccurrenceAfter] = useState<string | null>(null);
+  const [lastOccurrenceBefore, setLastOccurrenceBefore] = useState<string | null>(null);
+  const [reviewChangedAfter, setReviewChangedAfter] = useState<string | null>(null);
+  const [reviewChangedBefore, setReviewChangedBefore] = useState<string | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [selectedEntryIds, setSelectedEntryIds] = useState<number[]>([]);
   const [candidateDraft, setCandidateDraft] = useState<CandidateDraft>(() =>
@@ -1270,6 +1498,22 @@ export function AdminTermIndexCandidateGenerationPage() {
     setMinOccurrences(Math.max(1, next));
     resetTermSelection();
   };
+  const updateLastOccurrenceAfter = (next: string | null) => {
+    setLastOccurrenceAfter(next);
+    resetTermSelection();
+  };
+  const updateLastOccurrenceBefore = (next: string | null) => {
+    setLastOccurrenceBefore(next);
+    resetTermSelection();
+  };
+  const updateReviewChangedAfter = (next: string | null) => {
+    setReviewChangedAfter(next);
+    resetTermSelection();
+  };
+  const updateReviewChangedBefore = (next: string | null) => {
+    setReviewChangedBefore(next);
+    resetTermSelection();
+  };
 
   const statusQuery = useQuery({
     queryKey: ['term-index-status', effectiveRepositoryIds],
@@ -1286,8 +1530,13 @@ export function AdminTermIndexCandidateGenerationPage() {
       searchQuery,
       extractionMethod,
       reviewStatusFilter,
+      termSort,
       minOccurrences,
       termResultLimit,
+      lastOccurrenceAfter,
+      lastOccurrenceBefore,
+      reviewChangedAfter,
+      reviewChangedBefore,
     ],
     queryFn: () =>
       fetchTermIndexEntries({
@@ -1297,6 +1546,11 @@ export function AdminTermIndexCandidateGenerationPage() {
         reviewStatus: reviewStatusFilter,
         minOccurrences,
         limit: termResultLimit,
+        lastOccurrenceAfter,
+        lastOccurrenceBefore,
+        reviewChangedAfter,
+        reviewChangedBefore,
+        sortBy: termSort,
       }),
     enabled: isAdmin && repositoryOptions.length > 0,
     staleTime: 5_000,
@@ -1369,14 +1623,20 @@ export function AdminTermIndexCandidateGenerationPage() {
       entryId,
       reviewStatus,
       reviewReason,
+      reviewRationale,
+      reviewConfidence,
     }: {
       entryId: number;
       reviewStatus: ApiTermIndexReviewStatus;
       reviewReason?: string | null;
+      reviewRationale?: string | null;
+      reviewConfidence?: number | null;
     }) =>
       updateTermIndexEntryReview(entryId, {
         reviewStatus,
         reviewReason: reviewReason ?? null,
+        reviewRationale: reviewRationale ?? null,
+        reviewConfidence: reviewConfidence ?? null,
       }),
     onSuccess: async (entry) => {
       setSelectedEntryId(entry.id);
@@ -1435,15 +1695,14 @@ export function AdminTermIndexCandidateGenerationPage() {
     });
   };
 
-  const updateEntryReview = (entryId: number, reviewStatus: ApiTermIndexReviewStatus) => {
+  const updateEntryReview = (entry: ApiTermIndexEntry, reviewStatus: ApiTermIndexReviewStatus) => {
     if (updateReviewMutation.isPending) {
       return;
     }
     setNotice(null);
     updateReviewMutation.mutate({
-      entryId,
-      reviewStatus,
-      reviewReason: reviewStatus === 'REJECTED' ? 'OTHER' : null,
+      entryId: entry.id,
+      ...getManualReviewUpdate(entry, reviewStatus),
     });
   };
 
@@ -1486,9 +1745,7 @@ export function AdminTermIndexCandidateGenerationPage() {
   const termCountLabel = entriesQuery.isLoading
     ? 'Loading terms...'
     : formatCappedListLabel('terms', entries.length, termResultLimit);
-  const minOccurrencesLabel =
-    minOccurrences === 1 ? 'Any hits' : `${minOccurrences.toLocaleString()}+ hits`;
-  const resultLimitLabel = `${formatShortCount(termResultLimit)} terms`;
+  const termDateQuickRanges = useMemo(() => getStandardDateQuickRanges(), []);
   const workspaceStyle = useMemo(
     () =>
       ({
@@ -1552,7 +1809,7 @@ export function AdminTermIndexCandidateGenerationPage() {
         backTo="/settings/system"
         backLabel="Back to settings"
         context="Settings > Glossaries"
-        title="Candidate generation"
+        title="Candidate Generation"
         centerContent={<TermIndexSubnav active="candidates" />}
       />
       <div className="settings-page settings-page--wide term-index-explorer">
@@ -1570,7 +1827,7 @@ export function AdminTermIndexCandidateGenerationPage() {
                   updateSelectedRepositoryIds(next);
                   resetTermSelection();
                 }}
-                className="settings-repository-select"
+                className="term-index-explorer__repository-select"
                 buttonAriaLabel="Select repositories for candidate generation. Use menu actions to switch between repositories and glossaries."
                 customActions={repositorySelectionActions}
                 summaryFormatter={formatRepositorySelectionSummary}
@@ -1586,22 +1843,6 @@ export function AdminTermIndexCandidateGenerationPage() {
               placeholder="Search non-rejected extracted terms"
               inputAriaLabel="Search extracted terms for candidate generation"
               className="term-index-explorer__search-control"
-              leading={
-                <SingleSelectDropdown
-                  label="Extraction method"
-                  options={extractionMethodOptions}
-                  value={extractionMethod}
-                  onChange={(next) => {
-                    setExtractionMethod(next);
-                    resetTermSelection();
-                  }}
-                  placeholder="All methods"
-                  noneLabel="All methods"
-                  className="term-index-explorer__search-type"
-                  buttonAriaLabel="Filter by extraction method"
-                  searchable={false}
-                />
-              }
             />
             <div className="term-index-explorer__filter-controls">
               <SingleSelectDropdown
@@ -1617,36 +1858,26 @@ export function AdminTermIndexCandidateGenerationPage() {
                 buttonAriaLabel="Filter by raw term review status"
                 searchable={false}
               />
-              <NumericPresetDropdown
-                value={minOccurrences}
-                buttonLabel={minOccurrencesLabel}
-                menuLabel="Minimum hits"
-                presetOptions={MIN_OCCURRENCES_OPTIONS}
-                onChange={updateMinOccurrences}
-                ariaLabel="Minimum hits"
-                className="term-index-explorer__filter-number"
-                pillsClassName="settings-pills"
-                optionClassName="settings-pill"
-                optionActiveClassName="is-active"
-                customButtonClassName="settings-pill"
-                customActiveClassName="is-active"
-                customInitialValue={MIN_OCCURRENCES_DEFAULT}
-              />
-              <NumericPresetDropdown
-                value={termResultLimit}
-                buttonLabel={resultLimitLabel}
-                menuLabel="Result size limit"
-                presetOptions={TERM_RESULT_LIMIT_OPTIONS}
-                onChange={updateTermResultLimit}
-                ariaLabel="Candidate source result size limit"
+              <TermIndexQueryFilterChip
+                extractionMethod={extractionMethod}
+                extractionMethodOptions={extractionMethodOptions}
+                onExtractionMethodChange={(next) => {
+                  setExtractionMethod(next);
+                  resetTermSelection();
+                }}
+                minOccurrences={minOccurrences}
+                onMinOccurrencesChange={updateMinOccurrences}
+                lastOccurrenceAfter={lastOccurrenceAfter}
+                lastOccurrenceBefore={lastOccurrenceBefore}
+                onLastOccurrenceAfterChange={updateLastOccurrenceAfter}
+                onLastOccurrenceBeforeChange={updateLastOccurrenceBefore}
+                reviewChangedAfter={reviewChangedAfter}
+                reviewChangedBefore={reviewChangedBefore}
+                onReviewChangedAfterChange={updateReviewChangedAfter}
+                onReviewChangedBeforeChange={updateReviewChangedBefore}
+                dateQuickRanges={termDateQuickRanges}
                 disabled={entriesQuery.isLoading}
-                className="term-index-explorer__filter-number"
-                pillsClassName="settings-pills"
-                optionClassName="settings-pill"
-                optionActiveClassName="is-active"
-                customButtonClassName="settings-pill"
-                customActiveClassName="is-active"
-                customInitialValue={TERM_RESULT_LIMIT_DEFAULT}
+                ariaLabel="Filter candidate source extractor, hits, last extracted date, and review updated date"
               />
             </div>
           </div>
@@ -1657,25 +1888,42 @@ export function AdminTermIndexCandidateGenerationPage() {
           aria-label="Candidate sources"
         >
           <div className="term-index-explorer__subbar">
-            <span className="settings-hint term-index-explorer__subbar-count">
-              {termCountLabel}
-            </span>
+            <TermIndexResultSizeDropdown
+              countLabel={termCountLabel}
+              resultLimit={termResultLimit}
+              onChangeResultLimit={updateTermResultLimit}
+              disabled={entriesQuery.isLoading}
+            />
+            <TermIndexSubbarSeparator />
+            <TermIndexSortDropdown
+              sortBy={termSort}
+              onChangeSort={(next) => {
+                setTermSort(next);
+                resetTermSelection();
+              }}
+              disabled={entriesQuery.isLoading}
+            />
             <div className="term-index-explorer__subbar-actions">
-              <button
-                type="button"
-                className="term-index-explorer__subbar-button"
-                onClick={() =>
-                  setSelectedEntryIds(allEntriesSelected ? [] : entries.map((entry) => entry.id))
-                }
-                disabled={entries.length === 0 || generateCandidatesMutation.isPending}
-              >
-                {allEntriesSelected ? 'Deselect visible' : 'Select all'}
-              </button>
+              {entries.length > 0 && !allEntriesSelected ? (
+                <>
+                  <TermIndexSubbarSeparator />
+                  <button
+                    type="button"
+                    className="term-index-explorer__subbar-button"
+                    onClick={() => setSelectedEntryIds(entries.map((entry) => entry.id))}
+                    disabled={generateCandidatesMutation.isPending}
+                  >
+                    Select all
+                  </button>
+                </>
+              ) : null}
               {selectedEntries.length > 0 ? (
                 <>
+                  <TermIndexSubbarSeparator />
                   <span className="settings-hint term-index-explorer__selection-summary">
                     {selectedEntries.length.toLocaleString()} selected
                   </span>
+                  <TermIndexSubbarSeparator />
                   <button
                     type="button"
                     className="term-index-explorer__subbar-button"
@@ -1684,6 +1932,7 @@ export function AdminTermIndexCandidateGenerationPage() {
                   >
                     Generate selected candidates
                   </button>
+                  <TermIndexSubbarSeparator />
                   <button
                     type="button"
                     className="term-index-explorer__subbar-button"
@@ -1718,6 +1967,7 @@ export function AdminTermIndexCandidateGenerationPage() {
                   selectedEntryId={selectedEntryId}
                   selectedEntryIds={selectedEntryIds}
                   rowMetadata="candidate"
+                  showReviewConfidence
                   onSelectEntry={setSelectedEntryId}
                   onUpdateEntryReview={updateEntryReview}
                   isUpdatingReview={updateReviewMutation.isPending}
@@ -1782,28 +2032,217 @@ export function AdminTermIndexCandidateGenerationPage() {
   );
 }
 
-function TermIndexSubnav({ active }: { active: 'runs' | 'terms' | 'candidates' }) {
+function TermIndexSubnav({ active }: { active: 'extraction' | 'terms' | 'candidates' }) {
   return (
     <nav className="term-index-explorer__subnav" aria-label="Term index sections">
       <Link
-        className={`term-index-explorer__subnav-link${active === 'runs' ? ' is-active' : ''}`}
+        className={`term-index-explorer__subnav-link${active === 'extraction' ? ' is-active' : ''}`}
         to="/settings/system/glossary-term-index"
       >
-        Runs
+        Term Extraction
       </Link>
       <Link
         className={`term-index-explorer__subnav-link${active === 'terms' ? ' is-active' : ''}`}
         to="/settings/system/glossary-term-index/terms"
       >
-        Terms
+        Term Review
       </Link>
       <Link
         className={`term-index-explorer__subnav-link${active === 'candidates' ? ' is-active' : ''}`}
         to="/settings/system/glossary-term-index/candidates"
       >
-        Candidates
+        Candidate Generation
       </Link>
     </nav>
+  );
+}
+
+function TermIndexQueryFilterChip({
+  extractionMethod,
+  extractionMethodOptions,
+  onExtractionMethodChange,
+  minOccurrences,
+  onMinOccurrencesChange,
+  lastOccurrenceAfter,
+  lastOccurrenceBefore,
+  onLastOccurrenceAfterChange,
+  onLastOccurrenceBeforeChange,
+  reviewChangedAfter,
+  reviewChangedBefore,
+  onReviewChangedAfterChange,
+  onReviewChangedBeforeChange,
+  dateQuickRanges,
+  disabled,
+  ariaLabel,
+}: {
+  extractionMethod: string | null;
+  extractionMethodOptions: Array<{ value: string; label: string }>;
+  onExtractionMethodChange: (value: string | null) => void;
+  minOccurrences: number;
+  onMinOccurrencesChange: (value: number) => void;
+  lastOccurrenceAfter: string | null;
+  lastOccurrenceBefore: string | null;
+  onLastOccurrenceAfterChange: (value: string | null) => void;
+  onLastOccurrenceBeforeChange: (value: string | null) => void;
+  reviewChangedAfter: string | null;
+  reviewChangedBefore: string | null;
+  onReviewChangedAfterChange: (value: string | null) => void;
+  onReviewChangedBeforeChange: (value: string | null) => void;
+  dateQuickRanges: DateQuickRange[];
+  disabled?: boolean;
+  ariaLabel: string;
+}) {
+  const extractorOptions = useMemo(
+    () => [
+      { value: ALL_EXTRACTORS_FILTER_VALUE, label: 'All extractors' },
+      ...extractionMethodOptions,
+    ],
+    [extractionMethodOptions],
+  );
+  const extractorValue = extractionMethod ?? ALL_EXTRACTORS_FILTER_VALUE;
+  return (
+    <MultiSectionFilterChip
+      ariaLabel={ariaLabel}
+      align="right"
+      className="filter-chip term-index-explorer__query-filter"
+      classNames={{
+        button: 'filter-chip__button',
+        panel: 'filter-chip__panel',
+        section: 'filter-chip__section',
+        label: 'filter-chip__label',
+        list: 'filter-chip__list',
+        option: 'filter-chip__option',
+        helper: 'filter-chip__helper',
+        pills: 'filter-chip__pills',
+        quick: 'filter-chip__quick',
+        quickChip: 'filter-chip__quick-chip',
+        custom: 'filter-chip__custom',
+        customLabel: 'filter-chip__custom-label',
+        customInput: 'filter-chip__custom-input',
+        dateInput: 'filter-chip__date-input',
+        clear: 'filter-chip__clear-link',
+      }}
+      disabled={disabled}
+      summary={formatTermIndexQueryFilterSummary(
+        minOccurrences,
+        extractionMethod,
+        lastOccurrenceAfter,
+        lastOccurrenceBefore,
+        reviewChangedAfter,
+        reviewChangedBefore,
+      )}
+      sections={[
+        {
+          kind: 'radio',
+          label: 'Extractor',
+          options: extractorOptions,
+          value: extractorValue,
+          onChange: (value) =>
+            onExtractionMethodChange(value === ALL_EXTRACTORS_FILTER_VALUE ? null : String(value)),
+        },
+        {
+          kind: 'size',
+          label: 'Minimum hits',
+          options: MIN_OCCURRENCES_OPTIONS,
+          value: minOccurrences,
+          onChange: onMinOccurrencesChange,
+          min: 1,
+        },
+        {
+          kind: 'date',
+          label: 'Last extracted',
+          after: lastOccurrenceAfter,
+          before: lastOccurrenceBefore,
+          onChangeAfter: onLastOccurrenceAfterChange,
+          onChangeBefore: onLastOccurrenceBeforeChange,
+          afterLabel: 'Last extracted after',
+          beforeLabel: 'Last extracted before',
+          quickRanges: dateQuickRanges,
+          clearLabel: 'Clear date filter',
+          onClear: () => {
+            onLastOccurrenceAfterChange(null);
+            onLastOccurrenceBeforeChange(null);
+          },
+        },
+        {
+          kind: 'date',
+          label: 'Review updated',
+          after: reviewChangedAfter,
+          before: reviewChangedBefore,
+          onChangeAfter: onReviewChangedAfterChange,
+          onChangeBefore: onReviewChangedBeforeChange,
+          afterLabel: 'Review updated after',
+          beforeLabel: 'Review updated before',
+          quickRanges: dateQuickRanges,
+          clearLabel: 'Clear review date filter',
+          onClear: () => {
+            onReviewChangedAfterChange(null);
+            onReviewChangedBeforeChange(null);
+          },
+        },
+      ]}
+    />
+  );
+}
+
+function TermIndexResultSizeDropdown({
+  countLabel,
+  resultLimit,
+  onChangeResultLimit,
+  disabled,
+}: {
+  countLabel: string;
+  resultLimit: number;
+  onChangeResultLimit: (value: number) => void;
+  disabled: boolean;
+}) {
+  return (
+    <NumericPresetDropdown
+      value={resultLimit}
+      buttonLabel={countLabel}
+      menuLabel="Result size limit"
+      presetOptions={TERM_RESULT_LIMIT_OPTIONS}
+      onChange={onChangeResultLimit}
+      disabled={disabled}
+      ariaLabel="Term index result size"
+      className="term-index-explorer__subbar-count term-index-explorer__subbar-dropdown"
+      buttonClassName="term-index-explorer__subbar-button term-index-explorer__subbar-button--dropdown"
+    />
+  );
+}
+
+function TermIndexSortDropdown({
+  sortBy,
+  onChangeSort,
+  disabled,
+}: {
+  sortBy: ApiTermIndexEntrySort;
+  onChangeSort: (value: ApiTermIndexEntrySort) => void;
+  disabled: boolean;
+}) {
+  return (
+    <SingleSelectDropdown
+      label="Sort"
+      options={TERM_SORT_OPTIONS}
+      value={sortBy}
+      onChange={(next) => {
+        if (next != null) {
+          onChangeSort(next);
+        }
+      }}
+      className="term-index-explorer__sort-dropdown"
+      buttonAriaLabel="Sort term index results"
+      searchable={false}
+      disabled={disabled}
+    />
+  );
+}
+
+function TermIndexSubbarSeparator() {
+  return (
+    <span className="term-index-explorer__subbar-separator" aria-hidden="true">
+      ·
+    </span>
   );
 }
 
@@ -1872,22 +2311,22 @@ function TermIndexRefreshModal({
       open={open}
       onClose={onClose}
       closeOnBackdrop={!isRefreshing}
-      ariaLabel="Refresh term index"
+      ariaLabel="Run term extraction"
       className="term-index-explorer__refresh-modal"
     >
       <div className="modal__header">
-        <div className="modal__title">Refresh term index</div>
+        <div className="modal__title">Run term extraction</div>
       </div>
       <div className="modal__body term-index-explorer__refresh-modal-body">
         <div className="settings-field">
           <div className="term-index-explorer__repository-control">
             <RepositoryMultiSelect
-              label="Repositories to refresh"
+              label="Repositories to extract"
               options={repositoryOptions}
               selectedIds={selectedRepositoryIds}
               onChange={onRepositoryChange}
               className="settings-repository-select"
-              buttonAriaLabel="Select repositories to refresh. Use menu actions to switch between repositories and glossaries."
+              buttonAriaLabel="Select repositories for term extraction. Use menu actions to switch between repositories and glossaries."
               customActions={repositorySelectionActions}
               summaryFormatter={formatRepositorySelectionSummary}
             />
@@ -1898,7 +2337,7 @@ function TermIndexRefreshModal({
         </div>
 
         <fieldset className="term-index-explorer__refresh-mode">
-          <legend>Refresh mode</legend>
+          <legend>Extraction mode</legend>
           <label
             className={`term-index-explorer__refresh-mode-option${
               !fullRefresh ? ' is-selected' : ''
@@ -1943,7 +2382,7 @@ function TermIndexRefreshModal({
           onClick={onStart}
           disabled={!canStart}
         >
-          {isRefreshing ? 'Starting...' : 'Start refresh'}
+          {isRefreshing ? 'Starting...' : 'Extract'}
         </button>
       </div>
     </Modal>
@@ -1961,6 +2400,10 @@ function ExtractedTermTriageModal({
   reviewStatusFilter,
   minOccurrences,
   limit,
+  lastOccurrenceAfter,
+  lastOccurrenceBefore,
+  reviewChangedAfter,
+  reviewChangedBefore,
   overwriteHumanReview,
   isReviewing,
   error,
@@ -1978,6 +2421,10 @@ function ExtractedTermTriageModal({
   reviewStatusFilter: ApiTermIndexReviewStatusFilter;
   minOccurrences: number;
   limit: number;
+  lastOccurrenceAfter: string | null;
+  lastOccurrenceBefore: string | null;
+  reviewChangedAfter: string | null;
+  reviewChangedBefore: string | null;
   overwriteHumanReview: boolean;
   isReviewing: boolean;
   error: unknown;
@@ -2024,18 +2471,18 @@ function ExtractedTermTriageModal({
     <Modal
       open={open}
       size="lg"
-      ariaLabel="Auto-review extracted terms"
+      ariaLabel="AI review extracted terms"
       onClose={onClose}
       closeOnBackdrop={!isReviewing}
     >
       <div className="modal__header">
         <div>
           <h3 className="modal__title">
-            {report ? 'Extracted term review report' : 'Auto-review extracted terms'}
+            {report ? 'Extracted term review report' : 'AI review extracted terms'}
           </h3>
           <p className="settings-hint">
             {report
-              ? 'The extracted term review statuses were updated from AI triage.'
+              ? 'The extracted term review statuses were updated by AI review.'
               : 'Ask AI to classify extracted terms before candidate generation.'}
           </p>
         </div>
@@ -2163,6 +2610,14 @@ function ExtractedTermTriageModal({
                     <dt>Limit</dt>
                     <dd>{limit.toLocaleString()}</dd>
                   </div>
+                  <div>
+                    <dt>Last extracted</dt>
+                    <dd>{formatDateRangeFilter(lastOccurrenceAfter, lastOccurrenceBefore)}</dd>
+                  </div>
+                  <div>
+                    <dt>Review updated</dt>
+                    <dd>{formatDateRangeFilter(reviewChangedAfter, reviewChangedBefore)}</dd>
+                  </div>
                 </>
               ) : null}
             </dl>
@@ -2215,7 +2670,7 @@ function ExtractedTermTriageModal({
             onClick={onTriage}
             disabled={isReviewing || !request}
           >
-            {isReviewing ? 'Reviewing...' : 'Start auto-review'}
+            {isReviewing ? 'Reviewing...' : 'Start AI review'}
           </button>
         )}
       </div>
@@ -2691,15 +3146,26 @@ function ExtractedTermDetailPanel({
   occurrences,
   isLoading,
   error,
+  isSavingReview,
+  reviewError,
+  onOpenReviewOverride,
 }: {
   entry: ApiTermIndexEntry;
   occurrences: ApiTermIndexOccurrence[];
   isLoading: boolean;
   error: unknown;
+  isSavingReview: boolean;
+  reviewError: unknown;
+  onOpenReviewOverride: (entry: ApiTermIndexEntry) => void;
 }) {
   return (
     <div className="term-index-explorer__entry-detail-panel">
-      <TermIndexEntryMetadata entry={entry} />
+      <TermIndexReviewSummary
+        entry={entry}
+        isSavingReview={isSavingReview}
+        reviewError={reviewError}
+        onOpenReviewOverride={onOpenReviewOverride}
+      />
       <OccurrencePanel
         entryId={entry.id}
         occurrences={occurrences}
@@ -2710,24 +3176,386 @@ function ExtractedTermDetailPanel({
   );
 }
 
-function TermIndexEntryMetadata({ entry }: { entry: ApiTermIndexEntry }) {
-  const reviewLabel = formatReviewChange(
-    entry.reviewStatus,
-    entry.reviewAuthority,
-    entry.reviewChangedAt,
-    entry.reviewChangedByCommonName,
-    entry.reviewChangedByUsername,
-  );
+function TermIndexReviewSummary({
+  entry,
+  isSavingReview,
+  reviewError,
+  onOpenReviewOverride,
+}: {
+  entry: ApiTermIndexEntry;
+  isSavingReview: boolean;
+  reviewError: unknown;
+  onOpenReviewOverride: (entry: ApiTermIndexEntry) => void;
+}) {
+  const reviewActor =
+    entry.reviewChangedByCommonName?.trim() ||
+    entry.reviewChangedByUsername?.trim() ||
+    reviewAuthorityLabel(entry.reviewAuthority);
+  const reviewStatus = formatReviewStatus(entry.reviewStatus);
+  const reviewReason = entry.reviewReason ? formatMethod(entry.reviewReason) : 'No reason set';
+  const reviewRationale = entry.reviewRationale?.trim() || 'No rationale captured.';
+  const reviewConfidence =
+    entry.reviewConfidence == null ? 'No confidence' : `${entry.reviewConfidence}% confidence`;
+
   return (
-    <div className="term-index-explorer__entry-metadata" aria-label="Term index metadata">
-      <span>Extracted term #{entry.id}</span>
-      <span>Created {formatLocalDateTime(entry.createdDate)}</span>
-      <span>Updated {formatLocalDateTime(entry.lastModifiedDate)}</span>
-      <span>{reviewLabel}</span>
-      {entry.lastOccurrenceAt ? (
-        <span>Last hit {formatLocalDateTime(entry.lastOccurrenceAt)}</span>
+    <section className="term-index-explorer__review-summary" aria-label="Extracted term review">
+      <div className="term-index-explorer__review-summary-header">
+        <div className="term-index-explorer__review-title-group">
+          <div className="term-index-explorer__review-eyebrow">Extracted term #{entry.id}</div>
+          <h2 className="term-index-explorer__review-title">{entry.displayTerm}</h2>
+        </div>
+        <button
+          type="button"
+          className="settings-button settings-button--ghost term-index-explorer__review-override-button"
+          onClick={() => onOpenReviewOverride(entry)}
+          disabled={isSavingReview}
+        >
+          Override review
+        </button>
+      </div>
+
+      <dl className="term-index-explorer__review-facts">
+        <div>
+          <dt>Status</dt>
+          <dd>{reviewStatus}</dd>
+        </div>
+        <div>
+          <dt>Reason</dt>
+          <dd>{reviewReason}</dd>
+        </div>
+        <div>
+          <dt>Confidence</dt>
+          <dd>{reviewConfidence}</dd>
+        </div>
+      </dl>
+
+      <div className="term-index-explorer__review-rationale">
+        <div className="term-index-explorer__review-rationale-label">Rationale</div>
+        <p>{reviewRationale}</p>
+      </div>
+      {reviewError ? (
+        <p className="settings-hint is-error">{getErrorMessage(reviewError)}</p>
       ) : null}
-    </div>
+
+      <div className="term-index-explorer__entry-metadata" aria-label="Term index metadata">
+        <span>Created {formatLocalDateTime(entry.createdDate)}</span>
+        <span>Updated {formatLocalDateTime(entry.lastModifiedDate)}</span>
+        {entry.reviewChangedAt ? (
+          <span>
+            Reviewed by {reviewActor} on {formatLocalDateTime(entry.reviewChangedAt)}
+          </span>
+        ) : null}
+        {entry.lastOccurrenceAt ? (
+          <span>Last hit {formatLocalDateTime(entry.lastOccurrenceAt)}</span>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function TermIndexReviewOverrideModal({
+  entry,
+  isSaving,
+  error,
+  onClose,
+  onSave,
+}: {
+  entry: ApiTermIndexEntry | null;
+  isSaving: boolean;
+  error: unknown;
+  onClose: () => void;
+  onSave: (entry: ApiTermIndexEntry, update: TermIndexReviewUpdate) => void;
+}) {
+  const [draft, setDraft] = useState<TermIndexReviewDraft>(() => createReviewDraft(entry));
+  const hasChanges = entry != null && hasReviewDraftChanged(draft, entry);
+
+  useEffect(() => {
+    setDraft(createReviewDraft(entry));
+  }, [entry]);
+
+  const updateDraft = <K extends keyof TermIndexReviewDraft>(
+    field: K,
+    value: TermIndexReviewDraft[K],
+  ) => {
+    setDraft((current) => ({ ...current, [field]: value }));
+  };
+
+  const saveReview = () => {
+    if (entry == null || !hasChanges || isSaving) {
+      return;
+    }
+    onSave(entry, getReviewDraftUpdate(draft));
+  };
+
+  return (
+    <Modal
+      open={entry != null}
+      size="md"
+      ariaLabel="Override extracted term review"
+      onClose={onClose}
+      closeOnBackdrop={!isSaving}
+    >
+      <div className="modal__header">
+        <div>
+          <h3 className="modal__title">Override review</h3>
+          <p className="settings-hint">
+            {entry ? `${entry.displayTerm} · extracted term #${entry.id}` : ''}
+          </p>
+        </div>
+      </div>
+
+      <div className="modal__body term-index-explorer__review-modal-body">
+        <div className="settings-grid settings-grid--two-column">
+          <label className="settings-field">
+            <span className="settings-field__label">Status</span>
+            <select
+              className="settings-input"
+              value={draft.reviewStatus}
+              onChange={(event) =>
+                updateDraft('reviewStatus', event.target.value as ApiTermIndexReviewStatus)
+              }
+              disabled={isSaving}
+            >
+              {REVIEW_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="settings-field">
+            <span className="settings-field__label">Reason</span>
+            <select
+              className="settings-input"
+              value={draft.reviewReason}
+              onChange={(event) => updateDraft('reviewReason', event.target.value)}
+              disabled={isSaving}
+            >
+              <option value="">No reason</option>
+              {REVIEW_REASON_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="settings-field">
+          <span className="settings-field__label">Confidence</span>
+          <input
+            className="settings-input"
+            type="number"
+            min="0"
+            max="100"
+            value={draft.reviewConfidence}
+            onChange={(event) => updateDraft('reviewConfidence', event.target.value)}
+            placeholder="Optional"
+            disabled={isSaving}
+          />
+        </label>
+
+        <label className="settings-field">
+          <span className="settings-field__label">Rationale</span>
+          <textarea
+            className="settings-input term-index-explorer__review-modal-textarea"
+            value={draft.reviewRationale}
+            onChange={(event) => updateDraft('reviewRationale', event.target.value)}
+            placeholder="Optional review rationale"
+            rows={4}
+            disabled={isSaving}
+          />
+        </label>
+
+        {error ? <p className="settings-hint is-error">{getErrorMessage(error)}</p> : null}
+      </div>
+
+      <div className="modal__footer term-index-explorer__modal-footer">
+        <button
+          type="button"
+          className="settings-button settings-button--ghost"
+          onClick={onClose}
+          disabled={isSaving}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="settings-button settings-button--primary"
+          onClick={saveReview}
+          disabled={!hasChanges || isSaving}
+        >
+          {isSaving ? 'Saving...' : 'Save review'}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function TermIndexBatchReviewModal({
+  open,
+  selectedCount,
+  isSaving,
+  error,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  selectedCount: number;
+  isSaving: boolean;
+  error: unknown;
+  onClose: () => void;
+  onSave: (update: TermIndexBatchReviewUpdate) => void;
+}) {
+  const [draft, setDraft] = useState<TermIndexBatchReviewDraft>(() => createBatchReviewDraft());
+
+  useEffect(() => {
+    if (open) {
+      setDraft(createBatchReviewDraft());
+    }
+  }, [open]);
+
+  const updateDraft = <K extends keyof TermIndexBatchReviewDraft>(
+    field: K,
+    value: TermIndexBatchReviewDraft[K],
+  ) => {
+    setDraft((current) => ({ ...current, [field]: value }));
+  };
+
+  const saveReview = () => {
+    if (selectedCount === 0 || isSaving) {
+      return;
+    }
+    onSave(getBatchReviewDraftUpdate(draft));
+  };
+
+  const selectedLabel =
+    selectedCount === 1 ? '1 selected term' : `${selectedCount.toLocaleString()} selected terms`;
+
+  return (
+    <Modal
+      open={open}
+      size="md"
+      ariaLabel="Bulk update extracted term reviews"
+      onClose={onClose}
+      closeOnBackdrop={!isSaving}
+    >
+      <div className="modal__header">
+        <div>
+          <h3 className="modal__title">Bulk update review</h3>
+          <p className="settings-hint">{selectedLabel}</p>
+        </div>
+      </div>
+
+      <div className="modal__body term-index-explorer__review-modal-body">
+        <label className="settings-field">
+          <span className="settings-field__label">Status</span>
+          <select
+            className="settings-input"
+            value={draft.reviewStatus}
+            onChange={(event) =>
+              updateDraft('reviewStatus', event.target.value as ApiTermIndexReviewStatus)
+            }
+            disabled={isSaving}
+          >
+            {REVIEW_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="term-index-explorer__bulk-review-field">
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={draft.updateReviewReason}
+              onChange={(event) => updateDraft('updateReviewReason', event.target.checked)}
+              disabled={isSaving}
+            />
+            <span>Set reason</span>
+          </label>
+          <select
+            className="settings-input"
+            value={draft.reviewReason}
+            onChange={(event) => updateDraft('reviewReason', event.target.value)}
+            disabled={isSaving || !draft.updateReviewReason}
+          >
+            <option value="">No reason</option>
+            {REVIEW_REASON_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="term-index-explorer__bulk-review-field">
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={draft.updateReviewConfidence}
+              onChange={(event) => updateDraft('updateReviewConfidence', event.target.checked)}
+              disabled={isSaving}
+            />
+            <span>Set confidence</span>
+          </label>
+          <input
+            className="settings-input"
+            type="number"
+            min="0"
+            max="100"
+            value={draft.reviewConfidence}
+            onChange={(event) => updateDraft('reviewConfidence', event.target.value)}
+            placeholder="Optional"
+            disabled={isSaving || !draft.updateReviewConfidence}
+          />
+        </div>
+
+        <div className="term-index-explorer__bulk-review-field">
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={draft.updateReviewRationale}
+              onChange={(event) => updateDraft('updateReviewRationale', event.target.checked)}
+              disabled={isSaving}
+            />
+            <span>Set rationale</span>
+          </label>
+          <textarea
+            className="settings-input term-index-explorer__review-modal-textarea"
+            value={draft.reviewRationale}
+            onChange={(event) => updateDraft('reviewRationale', event.target.value)}
+            placeholder="Optional review rationale"
+            rows={4}
+            disabled={isSaving || !draft.updateReviewRationale}
+          />
+        </div>
+
+        <p className="settings-hint">Unchecked fields are left unchanged on each selected term.</p>
+        {error ? <p className="settings-hint is-error">{getErrorMessage(error)}</p> : null}
+      </div>
+
+      <div className="modal__footer term-index-explorer__modal-footer">
+        <button
+          type="button"
+          className="settings-button settings-button--ghost"
+          onClick={onClose}
+          disabled={isSaving}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="settings-button settings-button--primary"
+          onClick={saveReview}
+          disabled={selectedCount === 0 || isSaving}
+        >
+          {isSaving ? 'Saving...' : 'Save review'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -2788,14 +3616,14 @@ function IndexStatusTables({
       </div>
       <div>
         <div className="term-index-explorer__subheading-row">
-          <div className="term-index-explorer__subheading">Recent refresh runs</div>
+          <div className="term-index-explorer__subheading">Recent extraction runs</div>
           <NumericPresetDropdown
             value={runResultLimit}
             buttonLabel={runCountLabel}
             menuLabel="Recent run limit"
             presetOptions={RUN_RESULT_LIMIT_OPTIONS}
             onChange={onChangeRunResultLimit}
-            ariaLabel="Recent refresh run result size limit"
+            ariaLabel="Recent extraction run result size limit"
             disabled={statusQuery.isLoading}
             className="term-index-explorer__run-result-size"
             buttonClassName="term-index-explorer__run-result-size-button"
@@ -2808,9 +3636,9 @@ function IndexStatusTables({
           />
         </div>
         {statusQuery.isLoading ? (
-          <p className="settings-hint">Loading runs...</p>
+          <p className="settings-hint">Loading extraction runs...</p>
         ) : (statusQuery.data?.recentRuns ?? []).length === 0 ? (
-          <p className="settings-hint">No refresh runs yet.</p>
+          <p className="settings-hint">No extraction runs yet.</p>
         ) : (
           <div className="settings-table-wrapper">
             <table className="settings-table term-index-explorer__status-table">
@@ -2851,6 +3679,7 @@ function TermList({
   selectedEntryId,
   selectedEntryIds,
   rowMetadata,
+  showReviewConfidence,
   onSelectEntry,
   onUpdateEntryReview,
   isUpdatingReview,
@@ -2860,8 +3689,9 @@ function TermList({
   selectedEntryId: number | null;
   selectedEntryIds: number[];
   rowMetadata: 'term' | 'candidate';
+  showReviewConfidence?: boolean;
   onSelectEntry: (entryId: number) => void;
-  onUpdateEntryReview: (entryId: number, reviewStatus: ApiTermIndexReviewStatus) => void;
+  onUpdateEntryReview: (entry: ApiTermIndexEntry, reviewStatus: ApiTermIndexReviewStatus) => void;
   isUpdatingReview: boolean;
   onToggleEntrySelection: (entryId: number, checked: boolean) => void;
 }) {
@@ -2943,14 +3773,36 @@ function TermList({
     }
   }, [scrollToIndex, selectedIndex]);
 
+  const hasConfidenceColumn = showReviewConfidence === true;
+
   return (
     <div
-      className="term-index-explorer__term-list"
+      className={`term-index-explorer__term-list${
+        hasConfidenceColumn ? ' term-index-explorer__term-list--with-confidence' : ''
+      }`}
       role="listbox"
       aria-label="Indexed terms"
       aria-multiselectable="true"
       onKeyDown={handleKeyDown}
     >
+      <div className="term-index-explorer__term-list-header" aria-hidden="true">
+        <span className="term-index-explorer__term-list-header-selection" />
+        <span className="term-index-explorer__term-list-header-cell">Term</span>
+        <span className="term-index-explorer__term-list-header-cell term-index-explorer__term-list-header-cell--numeric">
+          Hits
+        </span>
+        <span className="term-index-explorer__term-list-header-cell term-index-explorer__term-list-header-cell--numeric">
+          Repos
+        </span>
+        {hasConfidenceColumn ? (
+          <span className="term-index-explorer__term-list-header-cell term-index-explorer__term-list-header-cell--numeric">
+            Confidence
+          </span>
+        ) : null}
+        <span className="term-index-explorer__term-list-header-cell term-index-explorer__term-list-header-cell--status">
+          Status
+        </span>
+      </div>
       <VirtualList
         scrollRef={scrollRef}
         items={virtualItems}
@@ -2971,6 +3823,7 @@ function TermList({
                 entry={entry}
                 index={virtualRow.index}
                 rowMetadata={rowMetadata}
+                showReviewConfidence={showReviewConfidence === true}
                 selected={entry.id === selectedEntryId}
                 selectedForBatch={selectedEntryIds.includes(entry.id)}
                 focusable={
@@ -2984,7 +3837,7 @@ function TermList({
                   }
                 }}
                 onSelect={() => onSelectEntry(entry.id)}
-                onUpdateReview={(reviewStatus) => onUpdateEntryReview(entry.id, reviewStatus)}
+                onUpdateReview={(reviewStatus) => onUpdateEntryReview(entry, reviewStatus)}
                 isUpdatingReview={isUpdatingReview}
                 onToggleSelection={(checked) => onToggleEntrySelection(entry.id, checked)}
               />
@@ -3000,6 +3853,7 @@ function TermRow({
   entry,
   index,
   rowMetadata,
+  showReviewConfidence,
   selected,
   selectedForBatch,
   focusable,
@@ -3012,6 +3866,7 @@ function TermRow({
   entry: ApiTermIndexEntry;
   index: number;
   rowMetadata: 'term' | 'candidate';
+  showReviewConfidence: boolean;
   selected: boolean;
   selectedForBatch: boolean;
   focusable: boolean;
@@ -3059,38 +3914,55 @@ function TermRow({
         onChange={(event) => onToggleSelection(event.target.checked)}
         aria-label={`Select ${entry.displayTerm}`}
       />
-      <span className="term-index-explorer__term-body">
-        <span className="term-index-explorer__term-main">
-          <span className="term-index-explorer__term-name-cell">
-            <span className="term-index-explorer__term-name">{entry.displayTerm}</span>
-            {rowMetadata === 'term' ? (
-              <span className="term-index-explorer__term-inline-meta">
-                <span>#{entry.id}</span>
-              </span>
-            ) : null}
-            {rowMetadata === 'candidate' && entry.termIndexCandidateId != null ? (
-              <span className="term-index-explorer__term-inline-meta">
-                <span>#{entry.termIndexCandidateId}</span>
-              </span>
-            ) : null}
+      <span className="term-index-explorer__term-name-cell">
+        <span className="term-index-explorer__term-name">{entry.displayTerm}</span>
+        {rowMetadata === 'term' ? (
+          <span className="term-index-explorer__term-inline-meta">
+            <span>#{entry.id}</span>
           </span>
-          <span className="term-index-explorer__term-hit-count">
-            {entry.occurrenceCount.toLocaleString()} hits
+        ) : null}
+        {rowMetadata === 'candidate' && entry.termIndexCandidateId != null ? (
+          <span className="term-index-explorer__term-inline-meta">
+            <span>#{entry.termIndexCandidateId}</span>
           </span>
-          <span className="term-index-explorer__term-repository-count">
-            {entry.repositoryCount.toLocaleString()} repos
-          </span>
+        ) : null}
+      </span>
+      <span
+        className="term-index-explorer__term-hit-count"
+        aria-label={`${entry.occurrenceCount.toLocaleString()} hits`}
+      >
+        <span>{entry.occurrenceCount.toLocaleString()}</span>
+        <span className="term-index-explorer__term-cell-label">hits</span>
+      </span>
+      <span
+        className="term-index-explorer__term-repository-count"
+        aria-label={`${entry.repositoryCount.toLocaleString()} repositories`}
+      >
+        <span>{entry.repositoryCount.toLocaleString()}</span>
+        <span className="term-index-explorer__term-cell-label">repos</span>
+      </span>
+      {showReviewConfidence ? (
+        <span
+          className="term-index-explorer__term-confidence"
+          aria-label={
+            entry.reviewConfidence == null
+              ? 'No confidence'
+              : `${entry.reviewConfidence}% confidence`
+          }
+        >
+          <span>{entry.reviewConfidence == null ? 'No' : `${entry.reviewConfidence}%`}</span>
+          <span className="term-index-explorer__term-cell-label">conf</span>
         </span>
-        <span className="term-index-explorer__term-meta">
-          <PillDropdown
-            value={entry.reviewStatus}
-            options={REVIEW_STATUS_OPTIONS}
-            onChange={onUpdateReview}
-            disabled={isUpdatingReview}
-            ariaLabel={`Review status for ${entry.displayTerm}`}
-            className="term-index-explorer__term-review-dropdown"
-          />
-        </span>
+      ) : null}
+      <span className="term-index-explorer__term-meta">
+        <PillDropdown
+          value={entry.reviewStatus}
+          options={REVIEW_STATUS_OPTIONS}
+          onChange={onUpdateReview}
+          disabled={isUpdatingReview}
+          ariaLabel={`Review status for ${entry.displayTerm}`}
+          className="term-index-explorer__term-review-dropdown"
+        />
       </span>
     </div>
   );
@@ -3253,7 +4125,7 @@ function formatCappedListLabel(label: string, visibleCount: number, limit: numbe
   }
   const countLabel = visibleCount.toLocaleString();
   if (visibleCount >= limit) {
-    return `Showing first ${countLabel} ${label}`;
+    return `Showing first ${countLabel} ${label} (more available)`;
   }
   return `Showing ${countLabel} ${label}`;
 }
@@ -3262,8 +4134,38 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function formatShortCount(value: number) {
-  return value >= 1000 && value % 1000 === 0 ? `${value / 1000}k` : value.toLocaleString();
+function formatTermIndexQueryFilterSummary(
+  minOccurrences: number,
+  extractionMethod: string | null,
+  lastOccurrenceAfter: string | null,
+  lastOccurrenceBefore: string | null,
+  reviewChangedAfter: string | null,
+  reviewChangedBefore: string | null,
+) {
+  const parts = [minOccurrences === 1 ? 'Any hits' : `${minOccurrences.toLocaleString()}+ hits`];
+  if (extractionMethod) {
+    parts.push(formatMethod(extractionMethod));
+  }
+  if (lastOccurrenceAfter || lastOccurrenceBefore) {
+    parts.push('Last extracted');
+  }
+  if (reviewChangedAfter || reviewChangedBefore) {
+    parts.push('Review updated');
+  }
+  return parts.join(' · ');
+}
+
+function formatDateRangeFilter(after: string | null, before: string | null) {
+  if (after && before) {
+    return `${formatLocalDateTime(after)} to ${formatLocalDateTime(before)}`;
+  }
+  if (after) {
+    return `After ${formatLocalDateTime(after)}`;
+  }
+  if (before) {
+    return `Before ${formatLocalDateTime(before)}`;
+  }
+  return 'Any date';
 }
 
 function formatMethod(method: string | null | undefined) {

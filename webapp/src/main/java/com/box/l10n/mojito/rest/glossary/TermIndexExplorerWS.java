@@ -12,6 +12,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -25,6 +26,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -102,7 +104,20 @@ public class TermIndexExplorerWS {
       @RequestParam(value = "extractionMethod", required = false) String extractionMethod,
       @RequestParam(value = "reviewStatus", required = false) String reviewStatusFilter,
       @RequestParam(value = "minOccurrences", required = false) Long minOccurrences,
-      @RequestParam(value = "limit", required = false) Integer limit) {
+      @RequestParam(value = "limit", required = false) Integer limit,
+      @RequestParam(value = "lastOccurrenceAfter", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          ZonedDateTime lastOccurrenceAfter,
+      @RequestParam(value = "lastOccurrenceBefore", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          ZonedDateTime lastOccurrenceBefore,
+      @RequestParam(value = "reviewChangedAfter", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          ZonedDateTime reviewChangedAfter,
+      @RequestParam(value = "reviewChangedBefore", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          ZonedDateTime reviewChangedBefore,
+      @RequestParam(value = "sortBy", required = false) String sortBy) {
     requireAdmin();
     return termIndexExplorerService.searchEntries(
         new TermIndexExplorerService.EntrySearchCommand(
@@ -111,7 +126,12 @@ public class TermIndexExplorerWS {
             extractionMethod,
             reviewStatusFilter,
             minOccurrences,
-            limit));
+            limit,
+            lastOccurrenceAfter,
+            lastOccurrenceBefore,
+            reviewChangedAfter,
+            reviewChangedBefore,
+            sortBy));
   }
 
   @PostMapping("/entries/search-hybrid")
@@ -245,8 +265,11 @@ public class TermIndexExplorerWS {
           new TermIndexExplorerService.BatchReviewUpdateCommand(
               request != null ? request.termIndexEntryIds() : null,
               request != null ? request.reviewStatus() : null,
+              request != null ? request.updateReviewReason() : null,
               request != null ? request.reviewReason() : null,
+              request != null ? request.updateReviewRationale() : null,
               request != null ? request.reviewRationale() : null,
+              request != null ? request.updateReviewConfidence() : null,
               request != null ? request.reviewConfidence() : null));
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
@@ -268,6 +291,10 @@ public class TermIndexExplorerWS {
                   request != null ? request.reviewStatus() : null,
                   request != null ? request.minOccurrences() : null,
                   request != null ? request.limit() : null,
+                  request != null ? request.lastOccurrenceAfter() : null,
+                  request != null ? request.lastOccurrenceBefore() : null,
+                  request != null ? request.reviewChangedAfter() : null,
+                  request != null ? request.reviewChangedBefore() : null,
                   request != null ? request.overwriteHumanReview() : null));
       return new StartTriageExtractedTermsResponse(pollableFuture.getPollableTask());
     } catch (IllegalArgumentException ex) {
@@ -346,7 +373,12 @@ public class TermIndexExplorerWS {
       String extractionMethod,
       String reviewStatus,
       Long minOccurrences,
-      Integer limit) {}
+      Integer limit,
+      ZonedDateTime lastOccurrenceAfter,
+      ZonedDateTime lastOccurrenceBefore,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore,
+      String sortBy) {}
 
   public record TermIndexEntryReviewRequest(
       String reviewStatus, String reviewReason, String reviewRationale, Integer reviewConfidence) {}
@@ -354,8 +386,11 @@ public class TermIndexExplorerWS {
   public record TermIndexEntryBatchReviewRequest(
       List<Long> termIndexEntryIds,
       String reviewStatus,
+      Boolean updateReviewReason,
       String reviewReason,
+      Boolean updateReviewRationale,
       String reviewRationale,
+      Boolean updateReviewConfidence,
       Integer reviewConfidence) {}
 
   public record TriageExtractedTermsRequest(
@@ -366,6 +401,10 @@ public class TermIndexExplorerWS {
       String reviewStatus,
       Long minOccurrences,
       Integer limit,
+      ZonedDateTime lastOccurrenceAfter,
+      ZonedDateTime lastOccurrenceBefore,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore,
       Boolean overwriteHumanReview) {}
 
   public record StartTriageExtractedTermsResponse(PollableTask pollableTask) {}
@@ -421,7 +460,7 @@ public class TermIndexExplorerWS {
       TermIndexEntrySearchRequest request) {
     if (request == null) {
       return new TermIndexExplorerService.EntrySearchCommand(
-          List.of(), null, null, null, null, null);
+          List.of(), null, null, null, null, null, null, null, null, null, null);
     }
     return new TermIndexExplorerService.EntrySearchCommand(
         request.repositoryIds(),
@@ -429,7 +468,12 @@ public class TermIndexExplorerWS {
         request.extractionMethod(),
         request.reviewStatus(),
         request.minOccurrences(),
-        request.limit());
+        request.limit(),
+        request.lastOccurrenceAfter(),
+        request.lastOccurrenceBefore(),
+        request.reviewChangedAfter(),
+        request.reviewChangedBefore(),
+        request.sortBy());
   }
 
   private GeneratedCandidateResponse toGeneratedCandidateResponse(

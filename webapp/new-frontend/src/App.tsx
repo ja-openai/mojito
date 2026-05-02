@@ -40,7 +40,7 @@ import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
 import { AdminTemporaryBulkTranslationAcceptPage } from './page/settings/AdminTemporaryBulkTranslationAcceptPage';
 import {
   AdminTermIndexCandidateGenerationPage,
-  AdminTermIndexRunsPage,
+  AdminTermIndexExtractionPage,
   AdminTermIndexTermsPage,
 } from './page/settings/AdminTermIndexExplorerPage';
 import { AdminTranslationIncidentsPage } from './page/settings/AdminTranslationIncidentsPage';
@@ -190,11 +190,11 @@ export function App() {
             <Route path="/settings/system/glossaries" element={<LegacyGlossariesRedirect />} />
             <Route
               path="/settings/admin/glossary-term-index"
-              element={<AdminTermIndexRunsPage />}
+              element={<AdminTermIndexExtractionPage />}
             />
             <Route
               path="/settings/system/glossary-term-index"
-              element={<AdminTermIndexRunsPage />}
+              element={<AdminTermIndexExtractionPage />}
             />
             <Route
               path="/settings/admin/glossary-term-index/terms"

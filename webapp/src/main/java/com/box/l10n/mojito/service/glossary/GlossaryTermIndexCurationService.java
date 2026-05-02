@@ -371,6 +371,11 @@ public class GlossaryTermIndexCurationService {
             normalizeOptional(normalized.extractionMethod()),
             TermIndexReview.STATUS_FILTER_NON_REJECTED,
             Math.max(1L, normalized.minOccurrences() == null ? 1L : normalized.minOccurrences()),
+            null,
+            null,
+            null,
+            null,
+            "HITS",
             PageRequest.of(0, normalizeGenerationLimit(normalized.limit())));
 
     Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId =
@@ -1160,6 +1165,11 @@ public class GlossaryTermIndexCurationService {
         normalizeOptional(command.extractionMethod()),
         command.reviewStatusFilter(),
         command.minOccurrences(),
+        command.lastOccurrenceAfter(),
+        command.lastOccurrenceBefore(),
+        command.reviewChangedAfter(),
+        command.reviewChangedBefore(),
+        "HITS",
         PageRequest.of(0, normalizeGenerationLimit(command.limit())));
   }
 
@@ -1841,6 +1851,10 @@ public class GlossaryTermIndexCurationService {
           TermIndexReview.STATUS_TO_REVIEW,
           1L,
           DEFAULT_GENERATION_LIMIT,
+          null,
+          null,
+          null,
+          null,
           false);
     }
     List<Long> termIndexExtractedTermIds =
@@ -1858,6 +1872,10 @@ public class GlossaryTermIndexCurationService {
         normalizeTermIndexReviewStatusFilter(command.reviewStatusFilter()),
         Math.max(1L, command.minOccurrences() == null ? 1L : command.minOccurrences()),
         normalizeGenerationLimit(command.limit()),
+        command.lastOccurrenceAfter(),
+        command.lastOccurrenceBefore(),
+        command.reviewChangedAfter(),
+        command.reviewChangedBefore(),
         Boolean.TRUE.equals(command.overwriteHumanReview()));
   }
 
@@ -2506,6 +2524,10 @@ public class GlossaryTermIndexCurationService {
       String reviewStatusFilter,
       Long minOccurrences,
       Integer limit,
+      ZonedDateTime lastOccurrenceAfter,
+      ZonedDateTime lastOccurrenceBefore,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore,
       Boolean overwriteHumanReview) {}
 
   public record CandidateFieldOverrides(

@@ -112,34 +112,18 @@ export function MultiSectionFilterChip({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const sizeInputRef = useRef<HTMLInputElement | null>(null);
+  const sizeCommitHandlersRef = useRef<Set<() => void>>(new Set());
   const [panelStyle, setPanelStyle] = useState<CSSProperties>();
 
-  const sizeSection = sections.find((section): section is SizeSection => section.kind === 'size');
-  const sizeOptions =
-    sizeSection?.options && sizeSection.options.length > 0
-      ? sizeSection.options
-      : resultSizePresets;
-  const sizeMin = sizeSection?.min ?? WORKSET_SIZE_MIN;
-  const hasSizeSection = sizeSection != null;
-  const sizeValue = sizeSection?.value;
-
-  const sizeIsPreset =
-    sizeSection != null && sizeOptions.some((option) => option.value === sizeSection.value);
-  const [sizeDraft, setSizeDraft] = useState(() => String(sizeValue ?? ''));
-  const [showCustomSize, setShowCustomSize] = useState(() => !sizeIsPreset);
-
-  const commitSizeDraft = useCallback(() => {
-    if (!sizeSection) return;
-    const parsed = parseInt(sizeDraft, 10);
-    if (Number.isNaN(parsed) || parsed < sizeMin) {
-      setSizeDraft(String(sizeSection.value ?? ''));
-      return;
-    }
-    if (parsed !== sizeSection.value) {
-      sizeSection.onChange(parsed);
-    }
-  }, [sizeDraft, sizeMin, sizeSection]);
+  const commitSizeSections = useCallback(() => {
+    sizeCommitHandlersRef.current.forEach((commit) => commit());
+  }, []);
+  const registerSizeCommitHandler = useCallback((commit: () => void) => {
+    sizeCommitHandlersRef.current.add(commit);
+    return () => {
+      sizeCommitHandlersRef.current.delete(commit);
+    };
+  }, []);
 
   const updatePanelPosition = useCallback(() => {
     if (!buttonRef.current) {
@@ -163,17 +147,17 @@ export function MultiSectionFilterChip({
 
   useEffect(() => {
     if (disabled && isOpen) {
-      commitSizeDraft();
+      commitSizeSections();
       setIsOpen(false);
     }
-  }, [commitSizeDraft, disabled, isOpen]);
+  }, [commitSizeSections, disabled, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (!containerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
-        commitSizeDraft();
+        commitSizeSections();
         setIsOpen(false);
       }
     };
@@ -188,26 +172,7 @@ export function MultiSectionFilterChip({
       window.removeEventListener('resize', handleReposition);
       window.removeEventListener('scroll', handleReposition, true);
     };
-  }, [commitSizeDraft, isOpen, updatePanelPosition]);
-
-  useEffect(() => {
-    if (!hasSizeSection) {
-      return;
-    }
-    const nextDraft = String(sizeValue ?? '');
-    const nextShowCustomSize = !sizeIsPreset;
-    setSizeDraft((prev) => (prev === nextDraft ? prev : nextDraft));
-    setShowCustomSize((prev) => (prev === nextShowCustomSize ? prev : nextShowCustomSize));
-  }, [hasSizeSection, sizeIsPreset, sizeValue]);
-
-  useEffect(() => {
-    if (showCustomSize) {
-      queueMicrotask(() => {
-        sizeInputRef.current?.focus();
-        sizeInputRef.current?.select();
-      });
-    }
-  }, [showCustomSize]);
+  }, [commitSizeSections, isOpen, updatePanelPosition]);
 
   const computedSummary = useMemo(() => {
     if (summary) return summary;
@@ -217,6 +182,8 @@ export function MultiSectionFilterChip({
         const selected = section.options.find((opt) => opt.value === section.value);
         if (selected) parts.push(selected.label);
       } else if (section.kind === 'size') {
+        const sizeOptions =
+          section.options && section.options.length > 0 ? section.options : resultSizePresets;
         const presetLabel = sizeOptions.find((opt) => opt.value === section.value)?.label;
         const label =
           presetLabel ??
@@ -231,7 +198,7 @@ export function MultiSectionFilterChip({
       }
     });
     return parts.join(' · ') || 'Filters';
-  }, [sections, sizeOptions, summary]);
+  }, [sections, summary]);
 
   const containerClassName = ['chip-dropdown', className].filter(Boolean).join(' ');
   const buttonClassName = ['chip-dropdown__button', mergedClassNames.button]
@@ -246,6 +213,9 @@ export function MultiSectionFilterChip({
         className={buttonClassName}
         onClick={() => {
           if (disabled) return;
+          if (isOpen) {
+            commitSizeSections();
+          }
           setIsOpen((prev) => !prev);
         }}
         aria-expanded={isOpen}
@@ -291,72 +261,14 @@ export function MultiSectionFilterChip({
                 }
                 if (section.kind === 'size') {
                   return (
-                    <div className={mergedClassNames.section} key={`size-${index}`}>
-                      <div className={mergedClassNames.label}>{section.label}</div>
-                      <div className={mergedClassNames.pills}>
-                        {sizeOptions.map((option) => (
-                          <button
-                            type="button"
-                            key={option.value}
-                            className={`${mergedClassNames.quickChip}${
-                              option.value === section.value ? ' is-active' : ''
-                            }`}
-                            onClick={() => {
-                              section.onChange(option.value);
-                              setShowCustomSize(false);
-                              if (closeOnSelection) {
-                                setIsOpen(false);
-                              }
-                            }}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                        {showCustomSize ? (
-                          <div className={`${mergedClassNames.custom} is-active`}>
-                            <span className={mergedClassNames.customLabel}>Custom</span>
-                            <input
-                              ref={sizeInputRef}
-                              className={mergedClassNames.customInput}
-                              type="number"
-                              inputMode="numeric"
-                              min={sizeMin}
-                              value={sizeDraft}
-                              onChange={(event) => setSizeDraft(event.target.value)}
-                              onBlur={() => {
-                                commitSizeDraft();
-                                if (closeOnSelection) {
-                                  setIsOpen(false);
-                                }
-                              }}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                  commitSizeDraft();
-                                  if (closeOnSelection) {
-                                    setIsOpen(false);
-                                  }
-                                }
-                                if (event.key === 'Escape') {
-                                  setSizeDraft(String(section.value ?? ''));
-                                  setShowCustomSize(false);
-                                }
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            className={mergedClassNames.quickChip}
-                            onClick={() => {
-                              setShowCustomSize(true);
-                              setSizeDraft(String(section.value ?? ''));
-                            }}
-                          >
-                            Custom…
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                    <SizeFilterSection
+                      key={`size-${index}`}
+                      section={section}
+                      classNames={mergedClassNames}
+                      closeOnSelection={closeOnSelection}
+                      onClose={() => setIsOpen(false)}
+                      registerCommitHandler={registerSizeCommitHandler}
+                    />
                   );
                 }
                 if (section.kind === 'date') {
@@ -441,6 +353,126 @@ export function MultiSectionFilterChip({
             document.body,
           )
         : null}
+    </div>
+  );
+}
+
+function SizeFilterSection({
+  section,
+  classNames,
+  closeOnSelection,
+  onClose,
+  registerCommitHandler,
+}: {
+  section: SizeSection;
+  classNames: ResolvedClassNames;
+  closeOnSelection: boolean;
+  onClose: () => void;
+  registerCommitHandler: (commit: () => void) => () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const sizeOptions =
+    section.options && section.options.length > 0 ? section.options : resultSizePresets;
+  const sizeMin = section.min ?? WORKSET_SIZE_MIN;
+  const sizeIsPreset = sizeOptions.some((option) => option.value === section.value);
+  const [sizeDraft, setSizeDraft] = useState(() => String(section.value ?? ''));
+  const [showCustomSize, setShowCustomSize] = useState(() => !sizeIsPreset);
+
+  const commitSizeDraft = useCallback(() => {
+    const parsed = parseInt(sizeDraft, 10);
+    if (Number.isNaN(parsed) || parsed < sizeMin) {
+      setSizeDraft(String(section.value ?? ''));
+      return;
+    }
+    if (parsed !== section.value) {
+      section.onChange(parsed);
+    }
+  }, [section, sizeDraft, sizeMin]);
+
+  useEffect(() => registerCommitHandler(commitSizeDraft), [commitSizeDraft, registerCommitHandler]);
+
+  useEffect(() => {
+    const nextDraft = String(section.value ?? '');
+    const nextShowCustomSize = !sizeIsPreset;
+    setSizeDraft((prev) => (prev === nextDraft ? prev : nextDraft));
+    setShowCustomSize((prev) => (prev === nextShowCustomSize ? prev : nextShowCustomSize));
+  }, [section.value, sizeIsPreset]);
+
+  useEffect(() => {
+    if (showCustomSize) {
+      queueMicrotask(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      });
+    }
+  }, [showCustomSize]);
+
+  return (
+    <div className={classNames.section}>
+      <div className={classNames.label}>{section.label}</div>
+      <div className={classNames.pills}>
+        {sizeOptions.map((option) => (
+          <button
+            type="button"
+            key={option.value}
+            className={`${classNames.quickChip}${
+              option.value === section.value ? ' is-active' : ''
+            }`}
+            onClick={() => {
+              section.onChange(option.value);
+              setShowCustomSize(false);
+              if (closeOnSelection) {
+                onClose();
+              }
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+        {showCustomSize ? (
+          <div className={`${classNames.custom} is-active`}>
+            <span className={classNames.customLabel}>Custom</span>
+            <input
+              ref={inputRef}
+              className={classNames.customInput}
+              type="number"
+              inputMode="numeric"
+              min={sizeMin}
+              value={sizeDraft}
+              onChange={(event) => setSizeDraft(event.target.value)}
+              onBlur={() => {
+                commitSizeDraft();
+                if (closeOnSelection) {
+                  onClose();
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  commitSizeDraft();
+                  if (closeOnSelection) {
+                    onClose();
+                  }
+                }
+                if (event.key === 'Escape') {
+                  setSizeDraft(String(section.value ?? ''));
+                  setShowCustomSize(false);
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={classNames.quickChip}
+            onClick={() => {
+              setShowCustomSize(true);
+              setSizeDraft(String(section.value ?? ''));
+            }}
+          >
+            Custom…
+          </button>
+        )}
+      </div>
     </div>
   );
 }
