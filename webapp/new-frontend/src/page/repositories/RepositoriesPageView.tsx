@@ -26,11 +26,18 @@ export type RepositoryMetricValue = {
   words: number;
 };
 
+export type RepositoryReviewFeatureCoverage = {
+  reviewFeatureCount: number;
+  enabledReviewFeatureCount: number;
+  reviewFeatureNames: string[];
+};
+
 export type RepositoryRow = {
   id: number;
   name: string;
   isGlossary: boolean;
   glossaryId?: number | null;
+  reviewFeatureCoverage?: RepositoryReviewFeatureCoverage;
   rejected: RepositoryMetricValue;
   needsTranslation: RepositoryMetricValue;
   needsReview: RepositoryMetricValue;
@@ -46,6 +53,7 @@ export type LocaleRow = {
 };
 
 export type RepositoryStatusFilter = 'all' | 'rejected' | 'needs-translation' | 'needs-review';
+export type RepositoryReviewCoverageFilter = 'all' | 'missing-enabled-review-feature';
 
 const statusFilterOptions: Array<{ value: RepositoryStatusFilter; label: string }> = [
   { value: 'all', label: 'All statuses' },
@@ -53,6 +61,11 @@ const statusFilterOptions: Array<{ value: RepositoryStatusFilter; label: string 
   { value: 'needs-translation', label: 'To translate' },
   { value: 'needs-review', label: 'To review' },
 ];
+const reviewCoverageFilterOptions: Array<{ value: RepositoryReviewCoverageFilter; label: string }> =
+  [
+    { value: 'all', label: 'All review coverage' },
+    { value: 'missing-enabled-review-feature', label: 'No enabled review feature' },
+  ];
 const metricOptions: Array<{ value: RepositoryMetric; label: string }> = [
   { value: 'textUnits', label: 'Text unit count' },
   { value: 'words', label: 'Word count' },
@@ -82,6 +95,10 @@ type Props = {
   onMetricChange: (value: RepositoryMetric) => void;
   statusFilter: RepositoryStatusFilter;
   onStatusFilterChange: (value: RepositoryStatusFilter) => void;
+  reviewCoverageFilter?: RepositoryReviewCoverageFilter;
+  onReviewCoverageFilterChange?: (value: RepositoryReviewCoverageFilter) => void;
+  showReviewCoverageFilter?: boolean;
+  isReviewCoverageFilterDisabled?: boolean;
   onSelectRepository: (id: number) => void;
   onOpenWorkbench: (params: {
     repositoryId: number;
@@ -157,6 +174,12 @@ type StatusFilterDropdownProps = {
   onChange: (value: RepositoryStatusFilter) => void;
 };
 
+type ReviewCoverageFilterDropdownProps = {
+  value: RepositoryReviewCoverageFilter;
+  onChange: (value: RepositoryReviewCoverageFilter) => void;
+  disabled?: boolean;
+};
+
 type MetricDropdownProps = {
   value: RepositoryMetric;
   onChange: (value: RepositoryMetric) => void;
@@ -188,6 +211,44 @@ function StatusFilterDropdown({ value, onChange }: StatusFilterDropdownProps) {
           options: statusFilterOptions,
           value,
           onChange: (next) => onChange(next as RepositoryStatusFilter),
+        },
+      ]}
+    />
+  );
+}
+
+function ReviewCoverageFilterDropdown({
+  value,
+  onChange,
+  disabled = false,
+}: ReviewCoverageFilterDropdownProps) {
+  const selectedLabel =
+    reviewCoverageFilterOptions.find((option) => option.value === value)?.label ??
+    'All review coverage';
+
+  return (
+    <MultiSectionFilterChip
+      align="left"
+      ariaLabel="Filter repositories by review feature coverage"
+      className="filter-chip repositories-page__review-coverage-filter"
+      classNames={{
+        button: 'filter-chip__button',
+        panel: 'filter-chip__panel',
+        section: 'filter-chip__section',
+        label: 'filter-chip__label',
+        list: 'filter-chip__list',
+        option: 'filter-chip__option',
+      }}
+      closeOnSelection
+      disabled={disabled}
+      summary={selectedLabel}
+      sections={[
+        {
+          kind: 'radio',
+          label: 'Review coverage',
+          options: reviewCoverageFilterOptions,
+          value,
+          onChange: (next) => onChange(next as RepositoryReviewCoverageFilter),
         },
       ]}
     />
@@ -252,6 +313,27 @@ function CellLink({
     >
       {children}
     </button>
+  );
+}
+
+function ReviewCoverageBadge({ coverage }: { coverage?: RepositoryReviewFeatureCoverage }) {
+  if (!coverage || coverage.enabledReviewFeatureCount > 0) {
+    return null;
+  }
+
+  const hasAnyReviewFeature = coverage.reviewFeatureCount > 0;
+  const label = hasAnyReviewFeature ? 'No enabled review feature' : 'No review feature';
+  const title = hasAnyReviewFeature
+    ? `Only disabled review features: ${coverage.reviewFeatureNames.join(', ')}`
+    : 'This repository is not assigned to any review feature.';
+
+  return (
+    <span
+      className="repositories-page__repo-badge repositories-page__repo-badge--warning"
+      title={title}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -415,6 +497,7 @@ function RepositoryTable({
                     ) : repo.isGlossary ? (
                       <span className="repositories-page__repo-badge">Glossary</span>
                     ) : null}
+                    <ReviewCoverageBadge coverage={repo.reviewFeatureCoverage} />
                   </div>
                   <button
                     type="button"
@@ -626,6 +709,10 @@ export function RepositoriesPageView({
   onMetricChange,
   statusFilter,
   onStatusFilterChange,
+  reviewCoverageFilter = 'all',
+  onReviewCoverageFilterChange,
+  showReviewCoverageFilter = false,
+  isReviewCoverageFilterDisabled = false,
   onSelectRepository,
   onOpenWorkbench,
   isRepositorySelectionEmpty,
@@ -662,6 +749,13 @@ export function RepositoriesPageView({
               myLocaleTags={myLocaleSelections}
             />
             <StatusFilterDropdown value={statusFilter} onChange={onStatusFilterChange} />
+            {showReviewCoverageFilter && onReviewCoverageFilterChange ? (
+              <ReviewCoverageFilterDropdown
+                value={reviewCoverageFilter}
+                onChange={onReviewCoverageFilterChange}
+                disabled={isReviewCoverageFilterDisabled}
+              />
+            ) : null}
             <MetricDropdown value={metric} onChange={onMetricChange} />
           </div>
         </div>

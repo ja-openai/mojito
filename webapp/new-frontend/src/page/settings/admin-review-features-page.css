@@ -61,6 +61,106 @@
   color: var(--color-danger);
 }
 
+.review-feature-admin-page__coverage {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  padding: var(--space-3) 0 var(--space-4);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.review-feature-admin-page__coverage-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.review-feature-admin-page__coverage-metric {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.review-feature-admin-page__coverage-value {
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.1;
+}
+
+.review-feature-admin-page__coverage-label,
+.review-feature-admin-page__coverage-note {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.review-feature-admin-page__coverage-note.is-error {
+  color: var(--color-danger);
+}
+
+.review-feature-admin-page__coverage-table {
+  display: flex;
+  flex-direction: column;
+  max-height: 18rem;
+  overflow: auto;
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.review-feature-admin-page__coverage-header,
+.review-feature-admin-page__coverage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.review-feature-admin-page__coverage-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-2) var(--space-1);
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.review-feature-admin-page__coverage-row {
+  min-height: 2.5rem;
+  padding: 0 var(--space-1);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 45%, transparent);
+  font-size: var(--font-size-sm);
+}
+
+.review-feature-admin-page__coverage-repository,
+.review-feature-admin-page__coverage-status {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-feature-admin-page__coverage-repository {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.review-feature-admin-page__coverage-status {
+  color: var(--color-text-muted);
+}
+
+.review-feature-admin-page__coverage-status a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.review-feature-admin-page__coverage-status a:hover,
+.review-feature-admin-page__coverage-status a:focus-visible {
+  color: color-mix(in srgb, var(--color-accent) 84%, var(--color-text));
+}
+
 .review-feature-admin-page__table {
   display: flex;
   flex-direction: column;
@@ -233,6 +333,10 @@
     justify-self: start;
     text-align: left;
   }
+
+  .review-feature-admin-page__coverage-summary {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 60rem) {
@@ -254,5 +358,15 @@
   .review-feature-admin-page__row-action-link {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .review-feature-admin-page__coverage-header {
+    display: none;
+  }
+
+  .review-feature-admin-page__coverage-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-1);
   }
 }

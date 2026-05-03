@@ -8,6 +8,10 @@ import type {
   ApiRepository,
   ApiRepositoryLocaleStatistic,
 } from '../../api/repositories';
+import {
+  type ApiReviewFeatureRepositoryCoverage,
+  fetchReviewFeatureRepositoryCoverage,
+} from '../../api/review-features';
 import type { TextUnitSearchRequest } from '../../api/text-units';
 import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
@@ -40,6 +44,8 @@ import {
 import type {
   LocaleRow,
   RepositoryMetric,
+  RepositoryReviewCoverageFilter,
+  RepositoryReviewFeatureCoverage,
   RepositoryRow,
   RepositoryStatusFilter,
 } from './RepositoriesPageView';
@@ -88,6 +94,7 @@ const buildRepositoryRow = (
   selectedRepositoryId: number | null,
   allowedLocaleTags?: Set<string>,
   glossaryIdByRepositoryId?: Map<number, number>,
+  reviewFeatureCoverageByRepositoryId?: Map<number, RepositoryReviewFeatureCoverage>,
 ): RepositoryRow => {
   const summary = getRepositorySummary(repository, allowedLocaleTags);
 
@@ -96,6 +103,7 @@ const buildRepositoryRow = (
     name: repository.name,
     isGlossary: Boolean(repository.isGlossary),
     glossaryId: glossaryIdByRepositoryId?.get(repository.id) ?? null,
+    reviewFeatureCoverage: reviewFeatureCoverageByRepositoryId?.get(repository.id),
     rejected: getMetricValue(summary.rejected, summary.rejectedWords),
     needsTranslation: getMetricValue(summary.needsTranslation, summary.needsTranslationWords),
     needsReview: getMetricValue(summary.needsReview, summary.needsReviewWords),
@@ -108,6 +116,7 @@ const buildRepositoriesWithSelection = (
   selectedRepositoryId: number | null,
   allowedLocaleTags?: Set<string>,
   glossaryIdByRepositoryId?: Map<number, number>,
+  reviewFeatureCoverageByRepositoryId?: Map<number, RepositoryReviewFeatureCoverage>,
 ): RepositoryRow[] =>
   repositories.map((repository) =>
     buildRepositoryRow(
@@ -115,8 +124,23 @@ const buildRepositoriesWithSelection = (
       selectedRepositoryId,
       allowedLocaleTags,
       glossaryIdByRepositoryId,
+      reviewFeatureCoverageByRepositoryId,
     ),
   );
+
+const buildReviewFeatureCoverageByRepositoryId = (
+  coverageRows?: ApiReviewFeatureRepositoryCoverage[],
+) => {
+  const next = new Map<number, RepositoryReviewFeatureCoverage>();
+  for (const row of coverageRows ?? []) {
+    next.set(row.repositoryId, {
+      reviewFeatureCount: row.reviewFeatureCount,
+      enabledReviewFeatureCount: row.enabledReviewFeatureCount,
+      reviewFeatureNames: row.reviewFeatures.map((feature) => feature.name),
+    });
+  }
+  return next;
+};
 
 const getRepositorySummary = (repository: ApiRepository, allowedLocaleTags?: Set<string>) => {
   const fullyTranslatedTags = getFullyTranslatedLocaleTags(repository);
@@ -211,6 +235,8 @@ export function RepositoriesPage() {
   const rsId = searchParams.get(REPOSITORIES_SESSION_QUERY_KEY);
   const [selectedRepositoryId, setSelectedRepositoryId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<RepositoryStatusFilter>('all');
+  const [reviewCoverageFilter, setReviewCoverageFilter] =
+    useState<RepositoryReviewCoverageFilter>('all');
   const [metric, setMetric] = useState<RepositoryMetric>('textUnits');
   const [preferredLocales, setPreferredLocales] = useState<string[]>(() => loadPreferredLocales());
   const [hydratedSession, setHydratedSession] = useState<{
@@ -230,11 +256,18 @@ export function RepositoriesPage() {
   const persistedRsIdRef = useRef<string | null>(rsId);
   const lastPersistedStateSignatureRef = useRef<string | null>(null);
 
+  const isAdmin = user.role === 'ROLE_ADMIN';
   const { data: repositoryData, isLoading, isError, error, refetch } = useRepositories();
   const glossaryQuery = useQuery({
     queryKey: ['repositories-glossary-links'],
     queryFn: () => fetchGlossaries({ limit: 200 }),
     staleTime: 60_000,
+  });
+  const reviewFeatureCoverageQuery = useQuery({
+    queryKey: ['review-features', 'repository-coverage'],
+    queryFn: fetchReviewFeatureRepositoryCoverage,
+    enabled: isAdmin,
+    staleTime: 30_000,
   });
   const handleRetryFetch = useCallback(() => {
     void refetch();
@@ -248,6 +281,10 @@ export function RepositoriesPage() {
     : undefined;
 
   const repositories = useMemo(() => repositoryData ?? [], [repositoryData]);
+  const reviewFeatureCoverageByRepositoryId = useMemo(
+    () => buildReviewFeatureCoverageByRepositoryId(reviewFeatureCoverageQuery.data),
+    [reviewFeatureCoverageQuery.data],
+  );
   const glossaryIdByRepositoryId = useMemo(() => {
     const glossaryEntries = glossaryQuery.data?.glossaries ?? [];
     return new Map(glossaryEntries.map((glossary) => [glossary.backingRepository.id, glossary.id]));
@@ -352,6 +389,7 @@ export function RepositoriesPage() {
     }
     setSelectedRepositoryId(hydratedSession.state.selectedRepositoryId);
     setStatusFilter(hydratedSession.state.statusFilter);
+    setReviewCoverageFilter(hydratedSession.state.reviewCoverageFilter);
     setMetric(hydratedSession.state.metric);
     setRepositorySelection(hydratedSession.state.selectedRepositoryIds, {
       touched: hydratedSession.state.repositorySelectionTouched,
@@ -377,11 +415,13 @@ export function RepositoriesPage() {
       selectedLocaleTags,
       localeSelectionTouched: hasTouchedLocaleSelection,
       statusFilter,
+      reviewCoverageFilter,
       metric,
     }),
     [
       hasTouchedLocaleSelection,
       hasTouchedRepositorySelection,
+      reviewCoverageFilter,
       selectedLocaleTags,
       selectedRepositoryId,
       selectedRepositoryIds,
@@ -452,19 +492,35 @@ export function RepositoriesPage() {
         return false;
       }
 
-      if (statusFilter === 'rejected') {
-        return summary.rejected > 0;
+      if (statusFilter === 'rejected' && summary.rejected === 0) {
+        return false;
       }
-      if (statusFilter === 'needs-translation') {
-        return summary.needsTranslation > 0;
+      if (statusFilter === 'needs-translation' && summary.needsTranslation === 0) {
+        return false;
       }
-      if (statusFilter === 'needs-review') {
-        return summary.needsReview > 0;
+      if (statusFilter === 'needs-review' && summary.needsReview === 0) {
+        return false;
+      }
+
+      if (
+        reviewCoverageFilter === 'missing-enabled-review-feature' &&
+        reviewFeatureCoverageQuery.data
+      ) {
+        const coverage = reviewFeatureCoverageByRepositoryId.get(repository.id);
+        return coverage != null && coverage.enabledReviewFeatureCount === 0;
       }
 
       return true;
     });
-  }, [allowedLocaleTagSet, allowedRepositoryIdSet, repositories, statusFilter]);
+  }, [
+    allowedLocaleTagSet,
+    allowedRepositoryIdSet,
+    repositories,
+    reviewCoverageFilter,
+    reviewFeatureCoverageByRepositoryId,
+    reviewFeatureCoverageQuery.data,
+    statusFilter,
+  ]);
 
   const repositoriesWithSelection = useMemo(
     () =>
@@ -473,8 +529,15 @@ export function RepositoriesPage() {
         selectedRepositoryId,
         allowedLocaleTagSet,
         glossaryIdByRepositoryId,
+        reviewFeatureCoverageByRepositoryId,
       ),
-    [allowedLocaleTagSet, filteredRepositories, glossaryIdByRepositoryId, selectedRepositoryId],
+    [
+      allowedLocaleTagSet,
+      filteredRepositories,
+      glossaryIdByRepositoryId,
+      reviewFeatureCoverageByRepositoryId,
+      selectedRepositoryId,
+    ],
   );
 
   const selectedRepository = useMemo(
@@ -716,6 +779,12 @@ export function RepositoriesPage() {
       onMetricChange={setMetric}
       statusFilter={statusFilter}
       onStatusFilterChange={setStatusFilter}
+      reviewCoverageFilter={reviewCoverageFilter}
+      onReviewCoverageFilterChange={setReviewCoverageFilter}
+      showReviewCoverageFilter={isAdmin}
+      isReviewCoverageFilterDisabled={
+        reviewFeatureCoverageQuery.isLoading || reviewFeatureCoverageQuery.isError
+      }
       onSelectRepository={handleSelectRepository}
       onOpenWorkbench={handleOpenWorkbench}
       isRepositorySelectionEmpty={selectedRepositoryIds.length === 0}

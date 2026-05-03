@@ -1,5 +1,9 @@
 import { loadSessionTokenPayload, saveSessionTokenPayload } from '../../utils/sessionTokenStore';
-import type { RepositoryMetric, RepositoryStatusFilter } from './RepositoriesPageView';
+import type {
+  RepositoryMetric,
+  RepositoryReviewCoverageFilter,
+  RepositoryStatusFilter,
+} from './RepositoriesPageView';
 
 const STORAGE_PREFIX = 'repositories.searchState.v1:';
 const STORAGE_MAX_ENTRIES = 24;
@@ -9,6 +13,10 @@ const STATUS_FILTER_VALUES: ReadonlySet<RepositoryStatusFilter> = new Set([
   'rejected',
   'needs-translation',
   'needs-review',
+]);
+const REVIEW_COVERAGE_FILTER_VALUES: ReadonlySet<RepositoryReviewCoverageFilter> = new Set([
+  'all',
+  'missing-enabled-review-feature',
 ]);
 const METRIC_VALUES: ReadonlySet<RepositoryMetric> = new Set(['textUnits', 'words']);
 
@@ -21,6 +29,7 @@ export type RepositoriesSessionState = {
   selectedLocaleTags: string[];
   localeSelectionTouched: boolean;
   statusFilter: RepositoryStatusFilter;
+  reviewCoverageFilter: RepositoryReviewCoverageFilter;
   metric: RepositoryMetric;
 };
 
@@ -72,6 +81,16 @@ function normalizeStatusFilter(value: unknown): RepositoryStatusFilter {
   return 'all';
 }
 
+function normalizeReviewCoverageFilter(value: unknown): RepositoryReviewCoverageFilter {
+  if (
+    typeof value === 'string' &&
+    REVIEW_COVERAGE_FILTER_VALUES.has(value as RepositoryReviewCoverageFilter)
+  ) {
+    return value as RepositoryReviewCoverageFilter;
+  }
+  return 'all';
+}
+
 function normalizeMetric(value: unknown): RepositoryMetric {
   if (typeof value === 'string' && METRIC_VALUES.has(value as RepositoryMetric)) {
     return value as RepositoryMetric;
@@ -100,6 +119,7 @@ function normalizeState(value: unknown): RepositoriesSessionState | null {
     selectedLocaleTags: normalizeLocaleTags(candidate.selectedLocaleTags),
     localeSelectionTouched: Boolean(candidate.localeSelectionTouched),
     statusFilter: normalizeStatusFilter(candidate.statusFilter),
+    reviewCoverageFilter: normalizeReviewCoverageFilter(candidate.reviewCoverageFilter),
     metric: normalizeMetric(candidate.metric),
   };
 }
@@ -112,6 +132,7 @@ function normalizeStateForStorage(state: RepositoriesSessionState): Repositories
     selectedLocaleTags: normalizeLocaleTags(state.selectedLocaleTags),
     localeSelectionTouched: Boolean(state.localeSelectionTouched),
     statusFilter: normalizeStatusFilter(state.statusFilter),
+    reviewCoverageFilter: normalizeReviewCoverageFilter(state.reviewCoverageFilter),
     metric: normalizeMetric(state.metric),
   };
 }

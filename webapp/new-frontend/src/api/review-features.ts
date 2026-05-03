@@ -35,6 +35,20 @@ export type ApiReviewFeatureBatchExportRow = {
   repositoryNames: string[];
 };
 
+export type ApiReviewFeatureRepositoryCoverageFeature = {
+  id: number;
+  name: string;
+  enabled: boolean;
+};
+
+export type ApiReviewFeatureRepositoryCoverage = {
+  repositoryId: number;
+  repositoryName: string;
+  reviewFeatureCount: number;
+  enabledReviewFeatureCount: number;
+  reviewFeatures: ApiReviewFeatureRepositoryCoverageFeature[];
+};
+
 export type ApiReviewFeaturesResponse = {
   reviewFeatures: ApiReviewFeatureSummary[];
   totalCount: number;
@@ -136,6 +150,22 @@ export async function fetchReviewFeatureBatchExport(): Promise<ApiReviewFeatureB
   }
 
   return (await response.json()) as ApiReviewFeatureBatchExportRow[];
+}
+
+export async function fetchReviewFeatureRepositoryCoverage(): Promise<
+  ApiReviewFeatureRepositoryCoverage[]
+> {
+  const response = await fetch('/api/review-features/repository-coverage', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load review feature repository coverage');
+  }
+
+  return (await response.json()) as ApiReviewFeatureRepositoryCoverage[];
 }
 
 export async function createReviewFeature(
