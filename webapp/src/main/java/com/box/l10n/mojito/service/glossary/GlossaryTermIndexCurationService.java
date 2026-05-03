@@ -42,7 +42,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class GlossaryTermIndexCurationService {
@@ -52,6 +55,9 @@ public class GlossaryTermIndexCurationService {
   private static final int AI_SIGNAL_EXAMPLE_LIMIT = 8;
   private static final int LIVE_SEARCH_EXAMPLE_LIMIT = 3;
   private static final int AI_CANDIDATE_BATCH_SIZE = 50;
+  private static final int AI_REVIEW_MAX_ATTEMPTS = 3;
+  private static final long AI_REVIEW_RETRY_BACKOFF_MILLIS = 1_000L;
+  private static final int TRIAGE_RESULT_ENTRY_LIMIT = 100;
   private static final int DEFAULT_GENERATION_LIMIT = 500;
   private static final int DEFAULT_CANDIDATE_EXPORT_LIMIT = 1_000;
   private static final List<Long> EMPTY_FILTER_SENTINEL = List.of(-1L);
@@ -88,6 +94,7 @@ public class GlossaryTermIndexCurationService {
   private final ObjectMapper objectMapper;
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
   private final PollableTaskService pollableTaskService;
+  private final TransactionTemplate requiresNewTransactionTemplate;
 
   public GlossaryTermIndexCurationService(
       GlossaryRepository glossaryRepository,
@@ -104,7 +111,8 @@ public class GlossaryTermIndexCurationService {
       UserService userService,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
-      PollableTaskService pollableTaskService) {
+      PollableTaskService pollableTaskService,
+      PlatformTransactionManager transactionManager) {
     this.glossaryRepository = Objects.requireNonNull(glossaryRepository);
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.glossaryTermMetadataRepository = Objects.requireNonNull(glossaryTermMetadataRepository);
@@ -122,6 +130,10 @@ public class GlossaryTermIndexCurationService {
     this.objectMapper = Objects.requireNonNull(objectMapper);
     this.quartzPollableTaskScheduler = Objects.requireNonNull(quartzPollableTaskScheduler);
     this.pollableTaskService = Objects.requireNonNull(pollableTaskService);
+    this.requiresNewTransactionTemplate =
+        new TransactionTemplate(Objects.requireNonNull(transactionManager));
+    this.requiresNewTransactionTemplate.setPropagationBehavior(
+        TransactionDefinition.PROPAGATION_REQUIRES_NEW);
   }
 
   @Transactional(readOnly = true)
@@ -502,12 +514,10 @@ public class GlossaryTermIndexCurationService {
         generatedCandidates);
   }
 
-  @Transactional
   public TriageExtractedTermsResult triageExtractedTerms(TriageExtractedTermsCommand command) {
     return triageExtractedTerms(command, null);
   }
 
-  @Transactional
   public TriageExtractedTermsResult triageExtractedTerms(
       TriageExtractedTermsCommand command, Long pollableTaskId) {
     TriageExtractedTermsCommand normalized = normalize(command);
@@ -525,10 +535,11 @@ public class GlossaryTermIndexCurationService {
             .toList();
     int skippedHumanReviewedCount = rows.size() - reviewableRows.size();
 
-    List<TriagedExtractedTermView> triagedTerms = new ArrayList<>();
+    List<TriagedExtractedTermView> resultEntries = new ArrayList<>();
     int acceptedCount = 0;
     int toReviewCount = 0;
     int rejectedCount = 0;
+    int updatedEntryCount = 0;
     int processedEntryCount = 0;
     int batchCount = ceilDiv(reviewableRows.size(), AI_CANDIDATE_BATCH_SIZE);
     int completedBatchCount = 0;
@@ -541,7 +552,7 @@ public class GlossaryTermIndexCurationService {
             rows.size(),
             reviewableRows.size(),
             processedEntryCount,
-            triagedTerms.size(),
+            updatedEntryCount,
             acceptedCount,
             toReviewCount,
             rejectedCount,
@@ -557,11 +568,41 @@ public class GlossaryTermIndexCurationService {
           batch.stream()
               .map(row -> toCandidateSignal(row, repositoryIdsEmpty, repositoryIds))
               .toList();
-      List<GlossaryAiExtractionService.AiExtractedTermReviewView> reviews =
-          glossaryAiExtractionService.reviewExtractedTerms(signals);
-      List<TriagedExtractedTermView> triagedBatch =
-          applyAiExtractedTermReviews(batch, reviews, overwriteHumanReview);
-      triagedTerms.addAll(triagedBatch);
+      List<TriagedExtractedTermView> triagedBatch;
+      try {
+        List<GlossaryAiExtractionService.AiExtractedTermReviewView> reviews =
+            reviewExtractedTermsWithRetry(signals);
+        triagedBatch =
+            applyAiExtractedTermReviewsInNewTransaction(batch, reviews, overwriteHumanReview);
+      } catch (RuntimeException e) {
+        updateTriageProgress(
+            pollableTaskId,
+            new TriageProgressView(
+                "TRIAGE_EXTRACTED_TERMS",
+                "FAILED",
+                rows.size(),
+                reviewableRows.size(),
+                processedEntryCount,
+                updatedEntryCount,
+                acceptedCount,
+                toReviewCount,
+                rejectedCount,
+                skippedHumanReviewedCount,
+                batchCount,
+                completedBatchCount));
+        throw new IllegalStateException(
+            "AI review failed for extracted term batch "
+                + (completedBatchCount + 1)
+                + " of "
+                + batchCount
+                + " after "
+                + completedBatchCount
+                + " completed batches",
+            e);
+      }
+
+      addResultEntries(resultEntries, triagedBatch);
+      updatedEntryCount += triagedBatch.size();
       processedEntryCount += batch.size();
 
       for (TriagedExtractedTermView triagedTerm : triagedBatch) {
@@ -580,7 +621,7 @@ public class GlossaryTermIndexCurationService {
               rows.size(),
               reviewableRows.size(),
               processedEntryCount,
-              triagedTerms.size(),
+              updatedEntryCount,
               acceptedCount,
               toReviewCount,
               rejectedCount,
@@ -591,13 +632,13 @@ public class GlossaryTermIndexCurationService {
 
     return new TriageExtractedTermsResult(
         rows.size(),
-        triagedTerms.size(),
-        triagedTerms.size(),
+        processedEntryCount,
+        updatedEntryCount,
         acceptedCount,
         toReviewCount,
         rejectedCount,
         skippedHumanReviewedCount,
-        triagedTerms);
+        resultEntries);
   }
 
   @Transactional
@@ -1171,6 +1212,50 @@ public class GlossaryTermIndexCurationService {
         command.reviewChangedBefore(),
         "HITS",
         PageRequest.of(0, normalizeGenerationLimit(command.limit())));
+  }
+
+  private List<GlossaryAiExtractionService.AiExtractedTermReviewView> reviewExtractedTermsWithRetry(
+      List<GlossaryAiExtractionService.CandidateSignal> signals) {
+    RuntimeException lastException = null;
+    for (int attempt = 1; attempt <= AI_REVIEW_MAX_ATTEMPTS; attempt++) {
+      try {
+        return glossaryAiExtractionService.reviewExtractedTerms(signals);
+      } catch (RuntimeException e) {
+        lastException = e;
+        if (attempt >= AI_REVIEW_MAX_ATTEMPTS) {
+          break;
+        }
+        sleepBeforeAiReviewRetry(attempt);
+      }
+    }
+    throw lastException == null ? new IllegalStateException("AI review failed") : lastException;
+  }
+
+  private void sleepBeforeAiReviewRetry(int attempt) {
+    try {
+      Thread.sleep(AI_REVIEW_RETRY_BACKOFF_MILLIS * attempt);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Interrupted while waiting to retry AI review", e);
+    }
+  }
+
+  private List<TriagedExtractedTermView> applyAiExtractedTermReviewsInNewTransaction(
+      List<TermIndexExtractedTermRepository.SearchRow> rows,
+      List<GlossaryAiExtractionService.AiExtractedTermReviewView> reviews,
+      boolean overwriteHumanReview) {
+    return Objects.requireNonNull(
+        requiresNewTransactionTemplate.execute(
+            status -> applyAiExtractedTermReviews(rows, reviews, overwriteHumanReview)));
+  }
+
+  private void addResultEntries(
+      List<TriagedExtractedTermView> resultEntries, List<TriagedExtractedTermView> triagedBatch) {
+    if (resultEntries.size() >= TRIAGE_RESULT_ENTRY_LIMIT || triagedBatch.isEmpty()) {
+      return;
+    }
+    int remaining = TRIAGE_RESULT_ENTRY_LIMIT - resultEntries.size();
+    resultEntries.addAll(triagedBatch.subList(0, Math.min(remaining, triagedBatch.size())));
   }
 
   private List<TriagedExtractedTermView> applyAiExtractedTermReviews(
