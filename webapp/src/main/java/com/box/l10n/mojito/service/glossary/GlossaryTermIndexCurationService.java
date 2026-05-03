@@ -52,7 +52,8 @@ public class GlossaryTermIndexCurationService {
 
   private static final int DEFAULT_SUGGESTION_LIMIT = 50;
   private static final int EXAMPLE_LIMIT = 4;
-  private static final int AI_SIGNAL_EXAMPLE_LIMIT = 8;
+  private static final int AI_SIGNAL_EXAMPLE_LIMIT = 12;
+  private static final int AI_SIGNAL_EXAMPLE_FETCH_LIMIT = 24;
   private static final int LIVE_SEARCH_EXAMPLE_LIMIT = 3;
   private static final int AI_CANDIDATE_BATCH_SIZE = 50;
   private static final int AI_REVIEW_MAX_ATTEMPTS = 3;
@@ -865,6 +866,7 @@ public class GlossaryTermIndexCurationService {
                             .distinct()
                             .toList(),
                         sampleSources(suggestion),
+                        sampleContexts(suggestion),
                         suggestion.suggestedTermType()))
             .toList();
 
@@ -964,6 +966,21 @@ public class GlossaryTermIndexCurationService {
         .map(value -> truncate(value, 320))
         .forEach(samples::add);
     return samples.stream().filter(Objects::nonNull).limit(6).toList();
+  }
+
+  private List<GlossaryAiExtractionService.SampleContext> sampleContexts(
+      SuggestionView suggestion) {
+    return suggestion.examples().stream()
+        .map(
+            example ->
+                new GlossaryAiExtractionService.SampleContext(
+                    normalizeOptional(example.repositoryName()),
+                    normalizeOptional(example.assetPath()),
+                    normalizeOptional(example.textUnitName()),
+                    normalizeOptional(example.matchedText()),
+                    truncate(normalizeOptional(example.sourceText()), 320)))
+        .limit(EXAMPLE_LIMIT)
+        .toList();
   }
 
   private List<GlossaryTermService.EvidenceInput> defaultEvidence(
@@ -1552,7 +1569,7 @@ public class GlossaryTermIndexCurationService {
             repositoryIdsEmpty,
             repositoryIds,
             null,
-            PageRequest.of(0, AI_SIGNAL_EXAMPLE_LIMIT));
+            PageRequest.of(0, AI_SIGNAL_EXAMPLE_FETCH_LIMIT));
     List<String> repositories =
         examples.stream()
             .map(TermIndexOccurrenceRepository.DetailRow::getRepositoryName)
@@ -1565,6 +1582,7 @@ public class GlossaryTermIndexCurationService {
             .filter(Objects::nonNull)
             .map(source -> truncate(source, 320))
             .distinct()
+            .limit(AI_SIGNAL_EXAMPLE_LIMIT)
             .toList();
     return new GlossaryAiExtractionService.CandidateSignal(
         String.valueOf(row.getId()),
@@ -1573,7 +1591,23 @@ public class GlossaryTermIndexCurationService {
         Math.toIntExact(Math.min(Integer.MAX_VALUE, nullToZero(row.getRepositoryCount()))),
         repositories,
         sampleSources,
+        sampleContexts(examples),
         suggestTermType(row.getDisplayTerm()));
+  }
+
+  private List<GlossaryAiExtractionService.SampleContext> sampleContexts(
+      List<TermIndexOccurrenceRepository.DetailRow> examples) {
+    return examples.stream()
+        .map(
+            example ->
+                new GlossaryAiExtractionService.SampleContext(
+                    normalizeOptional(example.getRepositoryName()),
+                    normalizeOptional(example.getAssetPath()),
+                    normalizeOptional(example.getTextUnitName()),
+                    normalizeOptional(example.getMatchedText()),
+                    truncate(normalizeOptional(example.getSourceText()), 320)))
+        .limit(AI_SIGNAL_EXAMPLE_LIMIT)
+        .toList();
   }
 
   private CandidateFieldOverrides mergeCandidateFieldOverrides(

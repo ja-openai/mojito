@@ -24,6 +24,7 @@ public class GlossaryAiExtractionService {
       - `repositoryCount`
       - `repositories`
       - `sampleSources`
+      - `sampleContexts` when available, with repository/path/key/source context
       - `heuristicTermType`
 
       Return only the candidates that should remain glossary candidates.
@@ -63,12 +64,18 @@ public class GlossaryAiExtractionService {
       - `repositoryCount`
       - `repositories`
       - `sampleSources`
+      - `sampleContexts` when available, with repository/path/key/source context
       - `heuristicTermType`
 
       Return one or more candidate objects for each input candidate.
       Do not filter, reject, drop, merge, rename, or replace input terms.
-      If the samples show distinct meanings, product concepts, parts of speech, or translation
-      treatments for the same term, split the input into separate candidate objects.
+      If the samples show distinct meanings, product concepts, parts of speech, UI roles, or
+      translation treatments for the same term, split the input into separate candidate objects.
+      Split by localization meaning, not just dictionary meaning. For example, a term like
+      `Thinking` should split if some samples use it as a model capability/style/mode and other
+      samples use it as an in-progress action or status label, because those commonly need
+      different translations. When the samples provide clearly different UI contexts, prefer
+      separate lower-confidence candidates over collapsing them into one generic candidate.
 
       For each candidate:
       - preserve the original `inputId` exactly
@@ -100,6 +107,7 @@ public class GlossaryAiExtractionService {
       - `repositoryCount`
       - `repositories`
       - `sampleSources`
+      - `sampleContexts` when available, with repository/path/key/source context
       - `heuristicTermType`
 
       Classify every input term with exactly one `reviewStatus`:
@@ -108,7 +116,10 @@ public class GlossaryAiExtractionService {
       - `REJECTED`: should not become a glossary candidate.
 
       Use `REJECTED` for stop words, generic UI filler, extraction artifacts, false positives,
-      or out-of-scope fragments. Prefer `TO_REVIEW` when the samples are ambiguous.
+      or out-of-scope fragments. Reject standalone pronouns, determiners, auxiliaries,
+      sentence scaffolding, and common function words such as `You`, `Your`, `We`, or
+      `This` unless the samples clearly show a branded or canonical product term.
+      Prefer `TO_REVIEW` when the samples are ambiguous.
 
       For each review:
       - preserve the original `inputId` exactly
@@ -212,7 +223,15 @@ public class GlossaryAiExtractionService {
       int repositoryCount,
       List<String> repositories,
       List<String> sampleSources,
+      List<SampleContext> sampleContexts,
       String heuristicTermType) {}
+
+  public record SampleContext(
+      String repositoryName,
+      String assetPath,
+      String textUnitName,
+      String matchedText,
+      String sourceText) {}
 
   public record CandidateSignalOutput(List<AiCandidateView> candidates) {}
 

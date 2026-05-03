@@ -861,6 +861,7 @@ public class GlossaryTermService {
                         candidate.repositoryCount(),
                         candidate.repositories(),
                         candidate.sampleSources(),
+                        List.of(),
                         candidate.suggestedTermType()))
             .toList();
 
