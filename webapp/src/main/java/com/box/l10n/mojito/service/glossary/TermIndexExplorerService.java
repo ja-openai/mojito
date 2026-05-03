@@ -68,6 +68,7 @@ public class TermIndexExplorerService {
             normalizeOptional(normalized.searchQuery()),
             normalizeOptional(normalized.extractionMethod()),
             normalized.reviewStatusFilter(),
+            normalized.reviewAuthorityFilter(),
             normalized.minOccurrences(),
             normalized.lastOccurrenceAfter(),
             normalized.lastOccurrenceBefore(),
@@ -381,6 +382,7 @@ public class TermIndexExplorerService {
           null,
           null,
           TermIndexReview.STATUS_FILTER_NON_REJECTED,
+          null,
           1L,
           DEFAULT_LIMIT,
           null,
@@ -394,6 +396,7 @@ public class TermIndexExplorerService {
         command.searchQuery(),
         command.extractionMethod(),
         normalizeReviewStatusFilter(command.reviewStatusFilter()),
+        normalizeReviewAuthorityFilter(command.reviewAuthorityFilter()),
         Math.max(1L, command.minOccurrences() == null ? 1L : command.minOccurrences()),
         normalizeLimit(command.limit()),
         command.lastOccurrenceAfter(),
@@ -484,6 +487,22 @@ public class TermIndexExplorerService {
     };
   }
 
+  private String normalizeReviewAuthorityFilter(String reviewAuthorityFilter) {
+    String normalized = normalizeOptional(reviewAuthorityFilter);
+    if (normalized == null) {
+      return null;
+    }
+    normalized = normalized.toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case TermIndexReview.AUTHORITY_FILTER_ALL,
+              TermIndexReview.AUTHORITY_NONE,
+              TermIndexReview.AUTHORITY_AI,
+              TermIndexReview.AUTHORITY_HUMAN ->
+          normalized;
+      default -> null;
+    };
+  }
+
   private String normalizeEntrySort(String sortBy) {
     String normalized = normalizeOptional(sortBy);
     if (normalized == null) {
@@ -567,6 +586,7 @@ public class TermIndexExplorerService {
       String searchQuery,
       String extractionMethod,
       String reviewStatusFilter,
+      String reviewAuthorityFilter,
       Long minOccurrences,
       Integer limit,
       ZonedDateTime lastOccurrenceAfter,

@@ -314,7 +314,7 @@ export type ApiGlossaryTermIndexSuggestion = {
 
 export type ApiTermIndexLayerReviewStatus = 'TO_REVIEW' | 'ACCEPTED' | 'REJECTED' | (string & {});
 
-export type ApiTermIndexLayerReviewAuthority = 'DEFAULT' | 'AI' | 'HUMAN' | (string & {});
+export type ApiTermIndexLayerReviewAuthority = 'NONE' | 'AI' | 'HUMAN' | (string & {});
 
 export type ApiSeedGlossaryTermIndexCandidatesRequest = {
   candidates: Array<{

@@ -382,6 +382,7 @@ public class GlossaryTermIndexCurationService {
             normalizeOptional(normalized.searchQuery()),
             normalizeOptional(normalized.extractionMethod()),
             TermIndexReview.STATUS_FILTER_NON_REJECTED,
+            null,
             Math.max(1L, normalized.minOccurrences() == null ? 1L : normalized.minOccurrences()),
             null,
             null,
@@ -1205,6 +1206,7 @@ public class GlossaryTermIndexCurationService {
         normalizeOptional(command.searchQuery()),
         normalizeOptional(command.extractionMethod()),
         command.reviewStatusFilter(),
+        command.reviewAuthorityFilter(),
         command.minOccurrences(),
         command.lastOccurrenceAfter(),
         command.lastOccurrenceBefore(),
@@ -1416,7 +1418,7 @@ public class GlossaryTermIndexCurationService {
       candidate.setReviewStatus(TermIndexReview.STATUS_TO_REVIEW);
     }
     if (candidate.getReviewAuthority() == null) {
-      candidate.setReviewAuthority(TermIndexReview.AUTHORITY_DEFAULT);
+      candidate.setReviewAuthority(TermIndexReview.AUTHORITY_NONE);
     }
   }
 
@@ -1813,7 +1815,7 @@ public class GlossaryTermIndexCurationService {
     }
     normalized = normalized.toUpperCase(Locale.ROOT);
     return switch (normalized) {
-      case TermIndexReview.AUTHORITY_DEFAULT,
+      case TermIndexReview.AUTHORITY_NONE,
               TermIndexReview.AUTHORITY_AI,
               TermIndexReview.AUTHORITY_HUMAN ->
           normalized;
@@ -1934,6 +1936,7 @@ public class GlossaryTermIndexCurationService {
           null,
           null,
           TermIndexReview.STATUS_TO_REVIEW,
+          TermIndexReview.AUTHORITY_NONE,
           1L,
           DEFAULT_GENERATION_LIMIT,
           null,
@@ -1955,6 +1958,8 @@ public class GlossaryTermIndexCurationService {
         command.searchQuery(),
         command.extractionMethod(),
         normalizeTermIndexReviewStatusFilter(command.reviewStatusFilter()),
+        normalizeCandidateReviewAuthority(
+            command.reviewAuthorityFilter(), TermIndexReview.AUTHORITY_NONE),
         Math.max(1L, command.minOccurrences() == null ? 1L : command.minOccurrences()),
         normalizeGenerationLimit(command.limit()),
         command.lastOccurrenceAfter(),
@@ -2607,6 +2612,7 @@ public class GlossaryTermIndexCurationService {
       String searchQuery,
       String extractionMethod,
       String reviewStatusFilter,
+      String reviewAuthorityFilter,
       Long minOccurrences,
       Integer limit,
       ZonedDateTime lastOccurrenceAfter,
