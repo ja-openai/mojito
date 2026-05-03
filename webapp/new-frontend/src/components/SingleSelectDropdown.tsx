@@ -26,6 +26,7 @@ type Props<T extends string | number> = {
   value: T | null;
   onChange: (next: T | null) => void;
   placeholder?: string;
+  buttonSummary?: string;
   className?: string;
   disabled?: boolean;
   align?: 'left' | 'right';
@@ -44,6 +45,7 @@ export function SingleSelectDropdown<T extends string | number>({
   value,
   onChange,
   placeholder,
+  buttonSummary,
   className,
   disabled = false,
   align = 'left',
@@ -117,7 +119,7 @@ export function SingleSelectDropdown<T extends string | number>({
   );
   const selectedOption = normalizedOptions.find((option) => option.value === value) ?? null;
   const resolvedPlaceholder = placeholder ?? label;
-  const summary = selectedOption ? selectedOption.label : resolvedPlaceholder;
+  const summary = buttonSummary ?? (selectedOption ? selectedOption.label : resolvedPlaceholder);
   const isPlaceholder = !selectedOption;
   const isDisabled = disabled || (options.length === 0 && value === null);
 

@@ -86,6 +86,8 @@ public class LinkGlossaryTermReferencesMcpToolTest {
             false,
             null,
             null,
+            null,
+            null,
             List.of(),
             List.of());
 

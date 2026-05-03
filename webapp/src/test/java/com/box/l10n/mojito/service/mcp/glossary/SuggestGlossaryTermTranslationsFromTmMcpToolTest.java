@@ -103,6 +103,8 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
                   true,
                   null,
                   null,
+                  null,
+                  null,
                   List.of(),
                   List.of())),
           1,

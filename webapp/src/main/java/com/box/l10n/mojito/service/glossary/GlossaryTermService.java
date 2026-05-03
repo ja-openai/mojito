@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -188,6 +189,8 @@ public class GlossaryTermService {
         getEvidenceByMetadataId(metadataByTmTextUnitId.values());
     Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
         getPrimaryLinksByMetadataId(metadataByTmTextUnitId.values());
+    Map<String, TermIndexExtractedTerm> extractedTermsByNormalizedKey =
+        getExtractedTermsByNormalizedKey(glossary, sourceTextUnits);
     List<String> resolvedLocaleTags = resolveRequestedLocaleTags(glossary, localeTags);
     Map<String, List<TextUnitDTO>> localizedByTermKey =
         loadLocalizedTextUnits(asset, resolvedLocaleTags);
@@ -202,7 +205,8 @@ public class GlossaryTermService {
                         metadataByTmTextUnitId.get(textUnit.getTmTextUnitId()),
                         localizedByTermKey.getOrDefault(textUnit.getName(), List.of()),
                         evidenceByMetadataId,
-                        primaryLinksByMetadataId))
+                        primaryLinksByMetadataId,
+                        extractedTermsByNormalizedKey))
             .filter(term -> matchesSearch(term, normalizedSearchQuery))
             .sorted(
                 Comparator.comparing(TermView::source, String.CASE_INSENSITIVE_ORDER)
@@ -211,6 +215,37 @@ public class GlossaryTermService {
 
     return new SearchTermsView(
         termViews.stream().limit(resolvedLimit).toList(), termViews.size(), resolvedLocaleTags);
+  }
+
+  @Transactional(readOnly = true)
+  public TermView getTerm(Long glossaryId, Long tmTextUnitId, List<String> localeTags) {
+    requireGlossaryReader();
+
+    Glossary glossary = getGlossary(glossaryId);
+    Asset asset = glossaryStorageService.ensureCanonicalAsset(glossary);
+    TextUnitDTO sourceTextUnit = getSourceTextUnit(asset, tmTextUnitId);
+    GlossaryTermMetadata metadata =
+        glossaryTermMetadataRepository
+            .findByGlossaryIdAndTmTextUnitId(glossaryId, tmTextUnitId)
+            .orElse(null);
+    Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId =
+        metadata == null ? Map.of() : getEvidenceByMetadataId(List.of(metadata));
+    Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
+        metadata == null ? Map.of() : getPrimaryLinksByMetadataId(List.of(metadata));
+    Map<String, TermIndexExtractedTerm> extractedTermsByNormalizedKey =
+        getExtractedTermsByNormalizedKey(glossary, List.of(sourceTextUnit));
+    List<String> resolvedLocaleTags = resolveRequestedLocaleTags(glossary, localeTags);
+    List<TextUnitDTO> localizedTextUnits =
+        loadLocalizedTextUnits(asset, resolvedLocaleTags)
+            .getOrDefault(sourceTextUnit.getName(), List.of());
+
+    return toTermView(
+        sourceTextUnit,
+        metadata,
+        localizedTextUnits,
+        evidenceByMetadataId,
+        primaryLinksByMetadataId,
+        extractedTermsByNormalizedKey);
   }
 
   @Transactional(readOnly = true)
@@ -419,7 +454,8 @@ public class GlossaryTermService {
         metadata,
         localizedTextUnits,
         evidenceByMetadataId,
-        primaryLinksByMetadataId);
+        primaryLinksByMetadataId,
+        Map.of());
   }
 
   @Transactional
@@ -463,7 +499,12 @@ public class GlossaryTermService {
     Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
         getPrimaryLinksByMetadataId(List.of(metadata));
     return toTermView(
-        sourceTextUnit, metadata, List.of(), evidenceByMetadataId, primaryLinksByMetadataId);
+        sourceTextUnit,
+        metadata,
+        List.of(),
+        evidenceByMetadataId,
+        primaryLinksByMetadataId,
+        Map.of());
   }
 
   @Transactional
@@ -514,7 +555,8 @@ public class GlossaryTermService {
         metadata,
         localizedTextUnits,
         evidenceByMetadataId,
-        primaryLinksByMetadataId);
+        primaryLinksByMetadataId,
+        Map.of());
   }
 
   private TermUpsertCommand sanitizeReaderProposalCommand(TermUpsertCommand command) {
@@ -1208,12 +1250,49 @@ public class GlossaryTermService {
     return primaryLinksByMetadataId;
   }
 
+  private Map<String, TermIndexExtractedTerm> getExtractedTermsByNormalizedKey(
+      Glossary glossary, Collection<TextUnitDTO> sourceTextUnits) {
+    if (sourceTextUnits == null || sourceTextUnits.isEmpty()) {
+      return Map.of();
+    }
+
+    Set<String> normalizedKeys = new LinkedHashSet<>();
+    for (TextUnitDTO sourceTextUnit : sourceTextUnits) {
+      String normalizedKey = normalizeCandidateKey(sourceTextUnit.getSource());
+      if (normalizedKey != null) {
+        normalizedKeys.add(normalizedKey);
+      }
+    }
+    if (normalizedKeys.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<String, TermIndexExtractedTerm> extractedTermsByNormalizedKey = new LinkedHashMap<>();
+    for (String sourceLocaleTag : termIndexSourceLocaleTags(glossary)) {
+      List<String> unresolvedKeys =
+          normalizedKeys.stream()
+              .filter(normalizedKey -> !extractedTermsByNormalizedKey.containsKey(normalizedKey))
+              .toList();
+      if (unresolvedKeys.isEmpty()) {
+        break;
+      }
+      for (TermIndexExtractedTerm extractedTerm :
+          termIndexExtractedTermRepository.findBySourceLocaleTagAndNormalizedKeyIn(
+              sourceLocaleTag, unresolvedKeys)) {
+        extractedTermsByNormalizedKey.putIfAbsent(extractedTerm.getNormalizedKey(), extractedTerm);
+      }
+    }
+
+    return extractedTermsByNormalizedKey;
+  }
+
   private TermView toTermView(
       TextUnitDTO sourceTextUnit,
       GlossaryTermMetadata metadata,
       List<TextUnitDTO> localizedTextUnits,
       Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId,
-      Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId) {
+      Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId,
+      Map<String, TermIndexExtractedTerm> extractedTermsByNormalizedKey) {
     List<TermTranslationView> translations =
         localizedTextUnits.stream()
             .sorted(
@@ -1255,6 +1334,14 @@ public class GlossaryTermService {
         primaryLink == null ? null : primaryLink.getTermIndexCandidate();
     TermIndexExtractedTerm linkedExtractedTerm =
         linkedCandidate == null ? null : linkedCandidate.getTermIndexExtractedTerm();
+    TermIndexExtractedTerm matchedExtractedTerm = linkedExtractedTerm;
+    if (matchedExtractedTerm == null) {
+      String normalizedKey = normalizeCandidateKey(sourceTextUnit.getSource());
+      matchedExtractedTerm =
+          normalizedKey == null || extractedTermsByNormalizedKey == null
+              ? null
+              : extractedTermsByNormalizedKey.get(normalizedKey);
+    }
 
     return new TermView(
         metadata == null ? null : metadata.getId(),
@@ -1275,7 +1362,9 @@ public class GlossaryTermService {
             ? Boolean.TRUE.equals(metadata.getDoNotTranslate())
             : sourceTextUnit.isDoNotTranslate(),
         linkedCandidate == null ? null : linkedCandidate.getId(),
-        linkedExtractedTerm == null ? null : linkedExtractedTerm.getId(),
+        matchedExtractedTerm == null ? null : matchedExtractedTerm.getId(),
+        matchedExtractedTerm == null ? null : matchedExtractedTerm.getOccurrenceCount(),
+        matchedExtractedTerm == null ? null : matchedExtractedTerm.getRepositoryCount(),
         translations,
         evidence);
   }
@@ -1575,18 +1664,52 @@ public class GlossaryTermService {
     }
 
     TermIndexCandidate candidate =
-        termIndexExtractedTermRepository
-            .findBySourceLocaleTagAndNormalizedKey(
-                TermIndexExtractedTerm.SOURCE_LOCALE_ROOT, normalizedKey)
+        findExtractedTermForGlossary(metadata, normalizedKey)
             .map(this::findOrCreateExtractionCandidate)
             .orElseGet(() -> findOrCreateGlossaryCandidate(metadata, source, normalizedKey));
     ensureTermIndexLink(metadata, candidate);
   }
 
+  private Optional<TermIndexExtractedTerm> findExtractedTermForGlossary(
+      GlossaryTermMetadata metadata, String normalizedKey) {
+    for (String sourceLocaleTag : termIndexSourceLocaleTags(metadata)) {
+      Optional<TermIndexExtractedTerm> extractedTerm =
+          termIndexExtractedTermRepository.findBySourceLocaleTagAndNormalizedKey(
+              sourceLocaleTag, normalizedKey);
+      if (extractedTerm.isPresent()) {
+        return extractedTerm;
+      }
+    }
+    return Optional.empty();
+  }
+
+  private List<String> termIndexSourceLocaleTags(GlossaryTermMetadata metadata) {
+    return termIndexSourceLocaleTags(metadata == null ? null : metadata.getGlossary());
+  }
+
+  private List<String> termIndexSourceLocaleTags(Glossary glossary) {
+    Set<String> sourceLocaleTags = new LinkedHashSet<>();
+    if (glossary != null
+        && glossary.getBackingRepository() != null
+        && glossary.getBackingRepository().getSourceLocale() != null) {
+      String bcp47Tag =
+          normalizeOptional(glossary.getBackingRepository().getSourceLocale().getBcp47Tag());
+      if (bcp47Tag != null) {
+        sourceLocaleTags.add(bcp47Tag);
+        int regionSeparator = bcp47Tag.indexOf('-');
+        if (regionSeparator > 0) {
+          sourceLocaleTags.add(bcp47Tag.substring(0, regionSeparator));
+        }
+      }
+    }
+    sourceLocaleTags.add(TermIndexExtractedTerm.DEFAULT_SOURCE_LOCALE_TAG);
+    return sourceLocaleTags.stream().toList();
+  }
+
   private TermIndexCandidate findOrCreateExtractionCandidate(TermIndexExtractedTerm extractedTerm) {
     String sourceLocaleTag =
         normalizeOptional(extractedTerm.getSourceLocaleTag()) == null
-            ? TermIndexExtractedTerm.SOURCE_LOCALE_ROOT
+            ? TermIndexExtractedTerm.DEFAULT_SOURCE_LOCALE_TAG
             : normalizeOptional(extractedTerm.getSourceLocaleTag());
     String candidateHash =
         extractionCandidateHash(
@@ -1629,7 +1752,7 @@ public class GlossaryTermService {
             TermIndexCandidate.SOURCE_TYPE_HUMAN,
             TERM_INDEX_GLOSSARY_SOURCE_NAME,
             sourceExternalId,
-            TermIndexExtractedTerm.SOURCE_LOCALE_ROOT,
+            glossarySourceLocaleTag(metadata),
             null,
             null,
             null,
@@ -1653,7 +1776,7 @@ public class GlossaryTermService {
                 });
 
     candidate.setTermIndexExtractedTerm(null);
-    candidate.setSourceLocaleTag(TermIndexExtractedTerm.SOURCE_LOCALE_ROOT);
+    candidate.setSourceLocaleTag(glossarySourceLocaleTag(metadata));
     candidate.setNormalizedKey(normalizedKey);
     candidate.setTerm(source);
     candidate.setLabel(null);
@@ -1666,6 +1789,10 @@ public class GlossaryTermService {
     candidate.setDoNotTranslate(metadata.getDoNotTranslate());
     candidate.setMetadataJson(glossaryCandidateMetadataJson(metadata));
     return termIndexCandidateRepository.save(candidate);
+  }
+
+  private String glossarySourceLocaleTag(GlossaryTermMetadata metadata) {
+    return termIndexSourceLocaleTags(metadata).getFirst();
   }
 
   private void ensureTermIndexLink(
@@ -1883,6 +2010,8 @@ public class GlossaryTermService {
       boolean doNotTranslate,
       Long termIndexCandidateId,
       Long termIndexExtractedTermId,
+      Long termIndexOccurrenceCount,
+      Integer termIndexRepositoryCount,
       List<TermTranslationView> translations,
       List<TermEvidenceView> evidence) {}
 

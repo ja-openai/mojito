@@ -79,8 +79,7 @@ public class SeedTermIndexCandidatesMcpTool
   private static Map<String, Object> termSchema() {
     Map<String, Object> properties = new LinkedHashMap<>();
     properties.put("term", stringSchema("Source term text. Required."));
-    properties.put(
-        "sourceLocaleTag", stringSchema("Optional source locale tag. Defaults to root."));
+    properties.put("sourceLocaleTag", stringSchema("Optional source locale tag. Defaults to en."));
     properties.put("sourceType", stringSchema("Optional source type, for example CODEX or HUMAN."));
     properties.put("sourceName", stringSchema("Optional source name, file, tool, or contributor."));
     properties.put(

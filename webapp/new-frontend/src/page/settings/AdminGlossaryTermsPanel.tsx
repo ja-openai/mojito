@@ -25,6 +25,7 @@ import {
   batchUpdateGlossaryTerms,
   createGlossaryTerm,
   deleteGlossaryTerm,
+  fetchGlossaryTerm,
   fetchGlossaryTermIndexSuggestions,
   fetchGlossaryTerms,
   ignoreGlossaryTermIndexSuggestion,
@@ -49,7 +50,7 @@ import {
   revokeRequestAttachmentUploadQueuePreviews,
   uploadRequestAttachmentFile,
 } from '../../utils/request-attachments';
-import { GlossaryCurationView } from './GlossaryCurationView';
+import { GlossaryCurationView, GlossarySuggestionDetailView } from './GlossaryCurationView';
 import { GlossaryTermsListView } from './GlossaryTermsListView';
 
 const TERM_TYPES = ['BRAND', 'PRODUCT', 'UI_LABEL', 'LEGAL', 'TECHNICAL', 'GENERAL'] as const;
@@ -168,6 +169,7 @@ type Props = {
   glossary: ApiGlossaryDetail;
   repositoryOptions: RepositoryOption[];
   initialOpenTermId?: number | null;
+  onClearInitialOpenTerm?: () => void;
   backRequestNonce?: number;
   canImport?: boolean;
   onOpenImport?: () => void;
@@ -200,6 +202,8 @@ type TermDraft = {
   lastModifiedDate?: string | null;
   termIndexCandidateId?: number | null;
   termIndexExtractedTermId?: number | null;
+  termIndexOccurrenceCount?: number | null;
+  termIndexRepositoryCount?: number | null;
   termKey: string;
   source: string;
   sourceComment: string;
@@ -248,6 +252,12 @@ const getRawTermExplorerPath = (entryId: number, search: string) => {
   return `/settings/system/glossary-term-index/terms?${params.toString()}`;
 };
 
+const getGlossaryTermWorkspacePath = (glossaryId: number, tmTextUnitId: number) =>
+  `/glossaries/${glossaryId}/terms/${tmTextUnitId}`;
+
+const formatCountLabel = (count: number, singularLabel: string, pluralLabel: string) =>
+  `${count.toLocaleString()} ${count === 1 ? singularLabel : pluralLabel}`;
+
 const createBlankTranslation = (localeTag = ''): TranslationDraft => ({
   id: createClientId(),
   localeTag,
@@ -283,6 +293,8 @@ const createBlankDraft = (localeTags: string[] = []): TermDraft => ({
   lastModifiedDate: null,
   termIndexCandidateId: null,
   termIndexExtractedTermId: null,
+  termIndexOccurrenceCount: null,
+  termIndexRepositoryCount: null,
   termKey: '',
   source: '',
   sourceComment: '',
@@ -327,6 +339,8 @@ const termToDraft = (term: ApiGlossaryTerm, localeTags: string[]): TermDraft => 
     lastModifiedDate: term.lastModifiedDate ?? null,
     termIndexCandidateId: term.termIndexCandidateId ?? null,
     termIndexExtractedTermId: term.termIndexExtractedTermId ?? null,
+    termIndexOccurrenceCount: term.termIndexOccurrenceCount ?? null,
+    termIndexRepositoryCount: term.termIndexRepositoryCount ?? null,
     termKey: term.termKey,
     source: term.source,
     sourceComment: term.sourceComment ?? term.definition ?? '',
@@ -648,6 +662,8 @@ const suggestionToDraft = (
   const draft = createBlankDraft(localeTags);
   draft.termIndexCandidateId = suggestion.termIndexCandidateId;
   draft.termIndexExtractedTermId = suggestion.termIndexExtractedTermId ?? null;
+  draft.termIndexOccurrenceCount = suggestion.occurrenceCount ?? null;
+  draft.termIndexRepositoryCount = suggestion.repositoryCount ?? null;
   draft.source = suggestion.term;
   draft.definition = suggestion.definition ?? suggestion.rationale ?? '';
   draft.sourceComment = draft.definition;
@@ -712,6 +728,7 @@ const draftToAcceptSuggestionRequest = (
 export function AdminGlossaryTermsPanel({
   glossary,
   initialOpenTermId = null,
+  onClearInitialOpenTerm,
   backRequestNonce = 0,
   canImport = false,
   onOpenImport,
@@ -1302,6 +1319,22 @@ export function AdminGlossaryTermsPanel({
       (term) => (term.status ?? 'CANDIDATE').toUpperCase() === selectedStatusFilter,
     );
   }, [selectedStatusFilter, termsQuery.data?.terms]);
+  const initialOpenTermFromList = useMemo(
+    () =>
+      initialOpenTermId == null
+        ? null
+        : (terms.find((term) => term.tmTextUnitId === initialOpenTermId) ?? null),
+    [initialOpenTermId, terms],
+  );
+  const initialOpenTermQuery = useQuery({
+    queryKey: ['glossary-term', glossary.id, initialOpenTermId, selectedLocaleTags.join('|')],
+    queryFn: () =>
+      fetchGlossaryTerm(glossary.id, initialOpenTermId ?? 0, {
+        localeTags: selectedLocaleTags,
+      }),
+    enabled: initialOpenTermId != null && initialOpenTermFromList == null,
+    staleTime: 15_000,
+  });
   const displayedLocaleTags = selectedLocaleTags.slice(0, visibleLocaleColumnLimit);
   const hiddenLocaleColumnCount = Math.max(
     selectedLocaleTags.length - displayedLocaleTags.length,
@@ -1337,6 +1370,15 @@ export function AdminGlossaryTermsPanel({
         selectedSuggestionIds.includes(suggestion.termIndexCandidateId),
       ),
     [acceptableSuggestions, selectedSuggestionIds],
+  );
+  const activeSuggestion = useMemo(
+    () =>
+      activeSuggestionId == null
+        ? null
+        : (suggestions.find(
+            (suggestion) => suggestion.termIndexCandidateId === activeSuggestionId,
+          ) ?? null),
+    [activeSuggestionId, suggestions],
   );
   const allSuggestionsSelected =
     acceptableSuggestions.length > 0 &&
@@ -1384,7 +1426,7 @@ export function AdminGlossaryTermsPanel({
         : editorDraft.source;
   const detailPlaceholder = extractOpen
     ? {
-        title: 'Term candidates',
+        title: 'Glossary builder',
         message:
           'Select a candidate to review its definition, sources, and glossary metadata before accepting it into this glossary.',
       }
@@ -1406,12 +1448,28 @@ export function AdminGlossaryTermsPanel({
     }
 
     if (extractOpen) {
-      onViewStateChange({ mode: 'extract', title: 'Term candidates' });
+      onViewStateChange({ mode: 'extract', title: 'Glossary builder' });
       return;
     }
 
     onViewStateChange({ mode: 'terms', title: glossary.name });
   }, [editorOpen, editorTitle, extractOpen, glossary.name, onViewStateChange]);
+
+  useEffect(() => {
+    if (!extractOpen || editorOpen) {
+      return;
+    }
+
+    setActiveSuggestionId((current) => {
+      if (
+        current != null &&
+        suggestions.some((suggestion) => suggestion.termIndexCandidateId === current)
+      ) {
+        return current;
+      }
+      return suggestions[0]?.termIndexCandidateId ?? null;
+    });
+  }, [editorOpen, extractOpen, suggestions]);
 
   const openCreateModal = () => {
     setReturnToExtractAfterEditor(false);
@@ -1488,7 +1546,15 @@ export function AdminGlossaryTermsPanel({
     }
     setReturnToExtractAfterEditor(false);
     setSuggestionInEditor(null);
-  }, [returnToExtractAfterEditor, saveTermMutation.isPending]);
+    if (initialOpenTermId != null) {
+      onClearInitialOpenTerm?.();
+    }
+  }, [
+    initialOpenTermId,
+    onClearInitialOpenTerm,
+    returnToExtractAfterEditor,
+    saveTermMutation.isPending,
+  ]);
 
   useEffect(() => {
     if (handledBackRequestRef.current === backRequestNonce) {
@@ -1515,7 +1581,7 @@ export function AdminGlossaryTermsPanel({
       return;
     }
 
-    const requestedTerm = terms.find((term) => term.tmTextUnitId === initialOpenTermId);
+    const requestedTerm = initialOpenTermFromList ?? initialOpenTermQuery.data ?? null;
     if (!requestedTerm) {
       return;
     }
@@ -1529,7 +1595,7 @@ export function AdminGlossaryTermsPanel({
     setOriginalEditorDraft(nextDraft);
     setCollapsedWorkspacePane(null);
     setEditorOpen(true);
-  }, [glossary.localeTags, initialOpenTermId, terms]);
+  }, [glossary.localeTags, initialOpenTermFromList, initialOpenTermId, initialOpenTermQuery.data]);
 
   const handleReferenceScreenshotFiles = async (files: FileList | null): Promise<void> => {
     if (!files || files.length === 0) {
@@ -1772,7 +1838,6 @@ export function AdminGlossaryTermsPanel({
                 setActiveSuggestionId(suggestion.termIndexCandidateId);
                 setStatusNotice(null);
               }}
-              onOpenSuggestion={openSuggestionModal}
               onAcceptSuggestion={(suggestion) => {
                 if (canAcceptSuggestion(suggestion)) {
                   acceptSuggestionMutation.mutate(suggestion);
@@ -2002,6 +2067,14 @@ export function AdminGlossaryTermsPanel({
                       </span>
                     </div>
                   </div>
+                  {editorDraft.tmTextUnitId != null ? (
+                    <Link
+                      className="settings-button settings-button--ghost glossary-term-admin__term-share-link"
+                      to={getGlossaryTermWorkspacePath(glossary.id, editorDraft.tmTextUnitId)}
+                    >
+                      Share URL
+                    </Link>
+                  ) : null}
                 </div>
 
                 <div className="settings-grid settings-grid--two-column">
@@ -2173,6 +2246,32 @@ export function AdminGlossaryTermsPanel({
                         ) : null}
                       </div>
                     </div>
+                    {editorDraft.termIndexOccurrenceCount != null ||
+                    editorDraft.termIndexRepositoryCount != null ? (
+                      <p className="glossary-term-admin__index-summary">
+                        {[
+                          editorDraft.termIndexOccurrenceCount == null
+                            ? null
+                            : formatCountLabel(
+                                editorDraft.termIndexOccurrenceCount,
+                                'occurrence',
+                                'occurrences',
+                              ),
+                          editorDraft.termIndexRepositoryCount == null
+                            ? null
+                            : formatCountLabel(
+                                editorDraft.termIndexRepositoryCount,
+                                'repository',
+                                'repositories',
+                              ),
+                        ]
+                          .filter(Boolean)
+                          .join(' across ')}
+                        {editorDraft.termIndexCandidateId == null
+                          ? '. This approved glossary term is matched directly from extracted usage, so no candidate row is required.'
+                          : null}
+                      </p>
+                    ) : null}
                   </section>
                 ) : null}
 
@@ -2439,6 +2538,19 @@ export function AdminGlossaryTermsPanel({
                 </div>
               </div>
             </div>
+          ) : extractOpen && activeSuggestion ? (
+            <GlossarySuggestionDetailView
+              suggestion={activeSuggestion}
+              onOpenSuggestion={openSuggestionModal}
+              onAcceptSuggestion={(suggestion) => {
+                if (canAcceptSuggestion(suggestion)) {
+                  acceptSuggestionMutation.mutate(suggestion);
+                }
+              }}
+              onIgnoreSuggestion={(suggestion) => ignoreSuggestionMutation.mutate(suggestion)}
+              pendingAction={pendingSuggestionActions[activeSuggestion.termIndexCandidateId]}
+              isAcceptingSelected={batchAcceptSuggestionsMutation.isPending}
+            />
           ) : (
             <div className="glossary-term-admin__detail-placeholder">
               <h3 className="glossary-term-admin__detail-placeholder-title">

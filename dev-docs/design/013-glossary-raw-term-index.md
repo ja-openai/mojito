@@ -25,7 +25,7 @@ definition or meaning review state.
 - `term_index_extracted_term`
   - normalized candidate key
   - display term
-  - source locale tag, using `root` when the source locale is not known
+  - source locale tag, defaulting to `en` when the source locale is not known
   - aggregate occurrence/repository counts
   - first/last seen timestamps
 - `term_index_occurrence`
@@ -56,7 +56,7 @@ the term entirely.
     code paths, product area, or extraction notes
   - stable candidate hash for idempotent updates
 
-This lets Codex, product teams, or imported seed lists provide high-context terms
+This lets external tools, product teams, or imported seed lists provide high-context terms
 while still forcing the final glossary decision through the same candidate
 curation path as occurrence-based extraction. If an external system submits two
 distinct proposals with the same source string, they stay as separate candidates
@@ -146,9 +146,9 @@ after another run has taken over.
 
 ## Current Refresh Foundation
 
-`TermIndexRefreshService` provides the first server-side refresh path:
+`TermIndexRefreshService` provides the server-side refresh path:
 
-- scans used root text units for selected repositories
+- scans used source text units for selected repositories
 - keeps a per-repository `(created_date, tm_text_unit_id)` cursor
 - uses a per-repository cursor lease so overlapping refreshes for the same
   repository do not run concurrently
@@ -158,6 +158,8 @@ after another run has taken over.
   from that staged list in pages
 - supports full refresh by deleting repository occurrences before re-indexing
 - writes lexical occurrences for title-case, uppercase, and camel-case signals
+- writes `EXTERNAL_GLOSSARY_IMPORT` occurrences by matching approved enabled
+  glossary terms against product source text during the same refresh
 - recomputes entry occurrence and repository counts for affected entries
 
 `/settings/system/glossary-term-index` exposes the admin refresh/run view on top

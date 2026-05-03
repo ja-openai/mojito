@@ -326,6 +326,8 @@ public class GlossaryWS {
       boolean doNotTranslate,
       Long termIndexCandidateId,
       Long termIndexExtractedTermId,
+      Long termIndexOccurrenceCount,
+      Integer termIndexRepositoryCount,
       List<GlossaryTermTranslationResponse> translations,
       List<GlossaryTermEvidenceResponse> evidence) {}
 
@@ -952,6 +954,25 @@ public class GlossaryWS {
     }
   }
 
+  @GetMapping("/{glossaryId}/terms/{tmTextUnitId}")
+  public GlossaryTermResponse getGlossaryTerm(
+      @PathVariable Long glossaryId,
+      @PathVariable Long tmTextUnitId,
+      @RequestParam(name = "locale", required = false) List<String> localeTags) {
+    try {
+      return toGlossaryTermResponse(
+          glossaryTermService.getTerm(glossaryId, tmTextUnitId, localeTags));
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null
+                  && (ex.getMessage().startsWith("Glossary not found:")
+                      || ex.getMessage().startsWith("Glossary term not found:"))
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
   @PostMapping("/{glossaryId}/terms")
   @ResponseStatus(HttpStatus.CREATED)
   public GlossaryTermResponse createGlossaryTerm(
@@ -1399,6 +1420,8 @@ public class GlossaryWS {
         term.doNotTranslate(),
         term.termIndexCandidateId(),
         term.termIndexExtractedTermId(),
+        term.termIndexOccurrenceCount(),
+        term.termIndexRepositoryCount(),
         term.translations().stream().map(this::toGlossaryTermTranslationResponse).toList(),
         term.evidence().stream().map(this::toGlossaryTermEvidenceResponse).toList());
   }

@@ -45,7 +45,7 @@ public class TermIndexCandidate extends AuditableEntity {
   private TermIndexExtractedTerm termIndexExtractedTerm;
 
   @Column(name = "source_locale_tag", nullable = false, length = 64)
-  private String sourceLocaleTag = TermIndexExtractedTerm.SOURCE_LOCALE_ROOT;
+  private String sourceLocaleTag = TermIndexExtractedTerm.DEFAULT_SOURCE_LOCALE_TAG;
 
   @Column(name = "normalized_key", nullable = false, length = 255)
   private String normalizedKey;

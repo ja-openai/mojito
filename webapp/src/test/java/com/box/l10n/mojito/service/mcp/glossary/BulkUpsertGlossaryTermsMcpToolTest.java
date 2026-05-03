@@ -160,6 +160,8 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
             false,
             null,
             null,
+            null,
+            null,
             List.of(),
             List.of());
 

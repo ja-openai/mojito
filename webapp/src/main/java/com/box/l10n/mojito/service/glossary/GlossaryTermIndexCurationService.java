@@ -79,6 +79,12 @@ public class GlossaryTermIndexCurationService {
   private static final String GLOSSARY_PRESENCE_NOT_IN_GLOSSARY = "NOT_IN_GLOSSARY";
   private static final String GLOSSARY_PRESENCE_FILTER_ALL = "ALL";
   private static final String GLOSSARY_PRESENCE_FILTER_IN_GLOSSARY = "IN_GLOSSARY";
+  private static final String LINK_ACTION_WOULD_LINK = "WOULD_LINK";
+  private static final String LINK_ACTION_LINKED = "LINKED";
+  private static final String LINK_ACTION_ALREADY_LINKED = "ALREADY_LINKED";
+  private static final String LINK_ACTION_NO_CANDIDATE = "NO_CANDIDATE";
+  private static final String LINK_ACTION_AMBIGUOUS = "AMBIGUOUS";
+  private static final String LINK_ACTION_SKIPPED = "SKIPPED";
 
   private final GlossaryRepository glossaryRepository;
   private final com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository;
@@ -264,21 +270,7 @@ public class GlossaryTermIndexCurationService {
         glossaryTermMetadataRepository
             .findById(term.metadataId())
             .orElseThrow(() -> new IllegalStateException("Saved glossary term metadata not found"));
-    GlossaryTermIndexLink link =
-        glossaryTermIndexLinkRepository
-            .findByGlossaryTermMetadataIdAndTermIndexCandidateIdAndRelationType(
-                metadata.getId(), candidate.getId(), GlossaryTermIndexLink.RELATION_TYPE_PRIMARY)
-            .orElseGet(
-                () -> {
-                  GlossaryTermIndexLink next = new GlossaryTermIndexLink();
-                  next.setGlossaryTermMetadata(metadata);
-                  next.setTermIndexCandidate(candidate);
-                  next.setRelationType(GlossaryTermIndexLink.RELATION_TYPE_PRIMARY);
-                  return next;
-                });
-    link.setConfidence(normalized.confidence());
-    link.setRationale(normalized.rationale());
-    glossaryTermIndexLinkRepository.save(link);
+    savePrimaryCandidateLink(metadata, candidate, normalized.confidence(), normalized.rationale());
 
     glossaryTermIndexDecisionRepository
         .findByGlossaryIdAndTermIndexCandidateId(glossary.getId(), candidate.getId())
@@ -688,6 +680,146 @@ public class GlossaryTermIndexCurationService {
         candidates.size());
   }
 
+  @Transactional
+  public LinkGlossaryTermsToCandidatesResult linkGlossaryTermsToCandidates(
+      Long glossaryId, LinkGlossaryTermsToCandidatesCommand command) {
+    requireTermManager();
+    Glossary glossary = getGlossary(glossaryId);
+    LinkGlossaryTermsToCandidatesCommand normalized = normalize(command);
+
+    List<GlossaryTermLinkCandidateRow> rows =
+        glossaryTermMetadataRepository.findByGlossaryId(glossary.getId()).stream()
+            .map(this::toGlossaryTermLinkCandidateRow)
+            .filter(row -> matchesLinkSearch(row, normalized.searchQuery()))
+            .limit(normalized.limit())
+            .toList();
+    List<Long> metadataIds =
+        rows.stream()
+            .map(row -> row.metadata().getId())
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+    Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
+        primaryLinksByMetadataId(metadataIds);
+    Set<String> normalizedKeys =
+        rows.stream()
+            .map(GlossaryTermLinkCandidateRow::normalizedKey)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    Map<String, List<TermIndexCandidate>> candidatesByNormalizedKey =
+        candidatesByNormalizedKey(normalizedKeys, glossary);
+
+    int matchedTermCount = 0;
+    int updatedLinkCount = 0;
+    int alreadyLinkedTermCount = 0;
+    int noCandidateTermCount = 0;
+    int ambiguousTermCount = 0;
+    int skippedTermCount = 0;
+    List<LinkGlossaryTermToCandidateView> terms = new ArrayList<>(rows.size());
+
+    for (GlossaryTermLinkCandidateRow row : rows) {
+      GlossaryTermMetadata metadata = row.metadata();
+      GlossaryTermIndexLink existingLink = primaryLinksByMetadataId.get(metadata.getId());
+      Long existingCandidateId =
+          existingLink == null ? null : existingLink.getTermIndexCandidate().getId();
+
+      if (row.normalizedKey() == null) {
+        skippedTermCount++;
+        terms.add(
+            toLinkGlossaryTermToCandidateView(
+                row, LINK_ACTION_SKIPPED, null, existingCandidateId, 0, "No source term."));
+        continue;
+      }
+
+      List<TermIndexCandidate> candidates =
+          candidatesByNormalizedKey.getOrDefault(row.normalizedKey(), List.of());
+      if (candidates.isEmpty()) {
+        noCandidateTermCount++;
+        terms.add(
+            toLinkGlossaryTermToCandidateView(
+                row,
+                LINK_ACTION_NO_CANDIDATE,
+                null,
+                existingCandidateId,
+                0,
+                "No existing candidate matched the normalized source term."));
+        continue;
+      }
+
+      if (existingLink != null
+          && (!normalized.overwriteExistingLinks()
+              || candidates.stream()
+                  .anyMatch(candidate -> Objects.equals(candidate.getId(), existingCandidateId)))) {
+        alreadyLinkedTermCount++;
+        terms.add(
+            toLinkGlossaryTermToCandidateView(
+                row,
+                LINK_ACTION_ALREADY_LINKED,
+                existingLink.getTermIndexCandidate(),
+                existingCandidateId,
+                candidates.size(),
+                "Glossary term already has a primary candidate link."));
+        continue;
+      }
+
+      if (candidates.size() > 1 && !normalized.allowAmbiguousMatches()) {
+        ambiguousTermCount++;
+        terms.add(
+            toLinkGlossaryTermToCandidateView(
+                row,
+                LINK_ACTION_AMBIGUOUS,
+                null,
+                existingCandidateId,
+                candidates.size(),
+                "Multiple existing candidates matched the normalized source term."));
+        continue;
+      }
+
+      TermIndexCandidate candidate = selectBestLinkCandidate(candidates);
+      matchedTermCount++;
+      if (normalized.dryRun()) {
+        terms.add(
+            toLinkGlossaryTermToCandidateView(
+                row,
+                LINK_ACTION_WOULD_LINK,
+                candidate,
+                existingCandidateId,
+                candidates.size(),
+                "Dry run: matched by normalized source term."));
+      } else {
+        savePrimaryCandidateLink(
+            metadata,
+            candidate,
+            candidate.getConfidence(),
+            "Linked to existing term-index candidate by normalized source term.",
+            existingLink);
+        updatedLinkCount++;
+        terms.add(
+            toLinkGlossaryTermToCandidateView(
+                row,
+                LINK_ACTION_LINKED,
+                candidate,
+                existingCandidateId,
+                candidates.size(),
+                "Linked by normalized source term."));
+      }
+    }
+
+    return new LinkGlossaryTermsToCandidatesResult(
+        glossary.getId(),
+        glossary.getName(),
+        normalized.dryRun(),
+        normalized.searchQuery(),
+        rows.size(),
+        matchedTermCount,
+        updatedLinkCount,
+        alreadyLinkedTermCount,
+        noCandidateTermCount,
+        ambiguousTermCount,
+        skippedTermCount,
+        terms);
+  }
+
   private SeedResult seedTermsInternal(SeedCommand normalized) {
     List<SeededTermView> seededTerms = new ArrayList<>(normalized.terms().size());
     int createdCandidateCount = 0;
@@ -700,7 +832,7 @@ public class GlossaryTermIndexCurationService {
       }
       String sourceLocaleTag =
           normalizeOptional(term.sourceLocaleTag()) == null
-              ? TermIndexExtractedTerm.SOURCE_LOCALE_ROOT
+              ? TermIndexExtractedTerm.DEFAULT_SOURCE_LOCALE_TAG
               : normalizeOptional(term.sourceLocaleTag());
       String displayTerm = normalizeRequired(term.term(), "term");
       TermIndexExtractedTerm extractedTerm =
@@ -732,7 +864,7 @@ public class GlossaryTermIndexCurationService {
               term.rationale(),
               metadataJson);
       Optional<TermIndexCandidate> existingCandidate =
-          findCandidate(sourceType, sourceName, candidateHash);
+          findCandidate(sourceType, sourceName, term.sourceExternalId(), candidateHash);
       TermIndexCandidate candidate =
           existingCandidate.orElseGet(
               () -> {
@@ -747,6 +879,7 @@ public class GlossaryTermIndexCurationService {
       } else {
         createdCandidateCount++;
       }
+      candidate.setCandidateHash(candidateHash);
       candidate.setTermIndexExtractedTerm(extractedTerm);
       candidate.setSourceLocaleTag(sourceLocaleTag);
       candidate.setNormalizedKey(normalizedKey);
@@ -1348,7 +1481,8 @@ public class GlossaryTermIndexCurationService {
     CandidateFieldOverrides overrides = fields == null ? null : fields.overrides();
     String sourceLocaleTag =
         coalesce(
-            normalizeOptional(row.getSourceLocaleTag()), TermIndexExtractedTerm.SOURCE_LOCALE_ROOT);
+            normalizeOptional(row.getSourceLocaleTag()),
+            TermIndexExtractedTerm.DEFAULT_SOURCE_LOCALE_TAG);
     String label = fields == null ? null : truncate(normalizeOptional(fields.label()), 512);
     String sourceExternalId =
         fields == null ? null : truncate(normalizeOptional(fields.sourceExternalId()), 255);
@@ -2055,6 +2189,20 @@ public class GlossaryTermIndexCurationService {
         normalizeCandidateFormat(command.format()));
   }
 
+  private LinkGlossaryTermsToCandidatesCommand normalize(
+      LinkGlossaryTermsToCandidatesCommand command) {
+    if (command == null) {
+      return new LinkGlossaryTermsToCandidatesCommand(true, null, 1_000, false, false);
+    }
+    int limit = command.limit() == null ? 1_000 : command.limit();
+    return new LinkGlossaryTermsToCandidatesCommand(
+        !Boolean.FALSE.equals(command.dryRun()),
+        normalizeOptional(command.searchQuery()),
+        Math.max(1, limit),
+        Boolean.TRUE.equals(command.overwriteExistingLinks()),
+        Boolean.TRUE.equals(command.allowAmbiguousMatches()));
+  }
+
   private AcceptSuggestionCommand normalize(
       AcceptSuggestionCommand command, TermIndexCandidate candidate) {
     String defaultTerm = candidate.getTerm();
@@ -2261,6 +2409,21 @@ public class GlossaryTermIndexCurationService {
   }
 
   private Optional<TermIndexCandidate> findCandidate(
+      String sourceType, String sourceName, String sourceExternalId, String candidateHash) {
+    String normalizedSourceExternalId = normalizeOptional(sourceExternalId);
+    if (normalizedSourceExternalId != null) {
+      Optional<TermIndexCandidate> existingByExternalId =
+          termIndexCandidateRepository
+              .findFirstBySourceTypeAndSourceNameAndSourceExternalIdOrderByCreatedDateDesc(
+                  sourceType, sourceName, normalizedSourceExternalId);
+      if (existingByExternalId.isPresent()) {
+        return existingByExternalId;
+      }
+    }
+    return findCandidate(sourceType, sourceName, candidateHash);
+  }
+
+  private Optional<TermIndexCandidate> findCandidate(
       String sourceType, String sourceName, String candidateHash) {
     return termIndexCandidateRepository.findBySourceTypeAndSourceNameAndCandidateHash(
         sourceType, sourceName, candidateHash);
@@ -2402,6 +2565,169 @@ public class GlossaryTermIndexCurationService {
     }
   }
 
+  private GlossaryTermLinkCandidateRow toGlossaryTermLinkCandidateRow(
+      GlossaryTermMetadata metadata) {
+    String source =
+        metadata.getTmTextUnit() == null
+            ? null
+            : normalizeOptional(metadata.getTmTextUnit().getContent());
+    return new GlossaryTermLinkCandidateRow(metadata, source, normalizeCandidateKey(source));
+  }
+
+  private boolean matchesLinkSearch(GlossaryTermLinkCandidateRow row, String searchQuery) {
+    if (searchQuery == null) {
+      return true;
+    }
+    String query = searchQuery.toLowerCase(Locale.ROOT);
+    return contains(row.source(), query)
+        || contains(row.normalizedKey(), query)
+        || contains(
+            row.metadata().getTmTextUnit() == null
+                ? null
+                : row.metadata().getTmTextUnit().getName(),
+            query);
+  }
+
+  private Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId(List<Long> metadataIds) {
+    if (metadataIds.isEmpty()) {
+      return Map.of();
+    }
+    LinkedHashMap<Long, GlossaryTermIndexLink> linksByMetadataId = new LinkedHashMap<>();
+    for (GlossaryTermIndexLink link :
+        glossaryTermIndexLinkRepository.findByGlossaryTermMetadataIdInAndRelationType(
+            metadataIds, GlossaryTermIndexLink.RELATION_TYPE_PRIMARY)) {
+      if (link.getGlossaryTermMetadata() != null
+          && link.getGlossaryTermMetadata().getId() != null) {
+        linksByMetadataId.putIfAbsent(link.getGlossaryTermMetadata().getId(), link);
+      }
+    }
+    return linksByMetadataId;
+  }
+
+  private Map<String, List<TermIndexCandidate>> candidatesByNormalizedKey(
+      Set<String> normalizedKeys, Glossary glossary) {
+    if (normalizedKeys.isEmpty()) {
+      return Map.of();
+    }
+
+    Long glossaryId = glossary.getId();
+    Set<String> remainingKeys = new LinkedHashSet<>(normalizedKeys);
+    Map<String, List<TermIndexCandidate>> candidatesByNormalizedKey = new LinkedHashMap<>();
+    for (String sourceLocaleTag : termIndexSourceLocaleTags(glossary)) {
+      if (remainingKeys.isEmpty()) {
+        break;
+      }
+      Map<String, List<TermIndexCandidate>> candidatesForLocale =
+          termIndexCandidateRepository
+              .findBySourceLocaleTagAndNormalizedKeyIn(
+                  sourceLocaleTag, new LinkedHashSet<>(remainingKeys))
+              .stream()
+              .filter(candidate -> candidateVisibleForGlossary(candidate, glossaryId))
+              .collect(
+                  Collectors.groupingBy(
+                      TermIndexCandidate::getNormalizedKey,
+                      LinkedHashMap::new,
+                      Collectors.toList()));
+      for (Map.Entry<String, List<TermIndexCandidate>> entry : candidatesForLocale.entrySet()) {
+        candidatesByNormalizedKey.put(entry.getKey(), entry.getValue());
+        remainingKeys.remove(entry.getKey());
+      }
+    }
+    return candidatesByNormalizedKey;
+  }
+
+  private List<String> termIndexSourceLocaleTags(Glossary glossary) {
+    Set<String> sourceLocaleTags = new LinkedHashSet<>();
+    if (glossary != null
+        && glossary.getBackingRepository() != null
+        && glossary.getBackingRepository().getSourceLocale() != null) {
+      String bcp47Tag =
+          normalizeOptional(glossary.getBackingRepository().getSourceLocale().getBcp47Tag());
+      if (bcp47Tag != null) {
+        sourceLocaleTags.add(bcp47Tag);
+        int regionSeparator = bcp47Tag.indexOf('-');
+        if (regionSeparator > 0) {
+          sourceLocaleTags.add(bcp47Tag.substring(0, regionSeparator));
+        }
+      }
+    }
+    sourceLocaleTags.add(TermIndexExtractedTerm.DEFAULT_SOURCE_LOCALE_TAG);
+    return sourceLocaleTags.stream().toList();
+  }
+
+  private TermIndexCandidate selectBestLinkCandidate(List<TermIndexCandidate> candidates) {
+    return candidates.stream()
+        .min(
+            Comparator.comparing(
+                    (TermIndexCandidate candidate) -> candidate.getTermIndexExtractedTerm() == null)
+                .thenComparing(
+                    candidate -> candidate.getConfidence() == null ? -1 : candidate.getConfidence(),
+                    Comparator.reverseOrder())
+                .thenComparing(
+                    candidate -> candidate.getId() == null ? -1L : candidate.getId(),
+                    Comparator.reverseOrder()))
+        .orElseThrow(() -> new IllegalArgumentException("candidate is required"));
+  }
+
+  private GlossaryTermIndexLink savePrimaryCandidateLink(
+      GlossaryTermMetadata metadata,
+      TermIndexCandidate candidate,
+      Integer confidence,
+      String rationale) {
+    return savePrimaryCandidateLink(metadata, candidate, confidence, rationale, null);
+  }
+
+  private GlossaryTermIndexLink savePrimaryCandidateLink(
+      GlossaryTermMetadata metadata,
+      TermIndexCandidate candidate,
+      Integer confidence,
+      String rationale,
+      GlossaryTermIndexLink existingPrimaryLink) {
+    GlossaryTermIndexLink link =
+        glossaryTermIndexLinkRepository
+            .findByGlossaryTermMetadataIdAndTermIndexCandidateIdAndRelationType(
+                metadata.getId(), candidate.getId(), GlossaryTermIndexLink.RELATION_TYPE_PRIMARY)
+            .orElseGet(
+                () ->
+                    existingPrimaryLink == null
+                        ? new GlossaryTermIndexLink()
+                        : existingPrimaryLink);
+    link.setGlossaryTermMetadata(metadata);
+    link.setTermIndexCandidate(candidate);
+    link.setRelationType(GlossaryTermIndexLink.RELATION_TYPE_PRIMARY);
+    link.setConfidence(confidence);
+    link.setRationale(rationale);
+    return glossaryTermIndexLinkRepository.save(link);
+  }
+
+  private LinkGlossaryTermToCandidateView toLinkGlossaryTermToCandidateView(
+      GlossaryTermLinkCandidateRow row,
+      String action,
+      TermIndexCandidate candidate,
+      Long existingCandidateId,
+      int candidateMatchCount,
+      String rationale) {
+    TermIndexExtractedTerm extractedTerm =
+        candidate == null ? null : candidate.getTermIndexExtractedTerm();
+    return new LinkGlossaryTermToCandidateView(
+        row.metadata().getId(),
+        row.metadata().getTmTextUnit() == null ? null : row.metadata().getTmTextUnit().getId(),
+        row.metadata().getTmTextUnit() == null ? null : row.metadata().getTmTextUnit().getName(),
+        row.source(),
+        row.normalizedKey(),
+        action,
+        candidate == null ? null : candidate.getId(),
+        extractedTerm == null ? null : extractedTerm.getId(),
+        candidate == null ? null : candidate.getSourceType(),
+        existingCandidateId,
+        candidateMatchCount,
+        rationale);
+  }
+
+  private boolean contains(String value, String lowercaseQuery) {
+    return value != null && value.toLowerCase(Locale.ROOT).contains(lowercaseQuery);
+  }
+
   private SeededTermView toSeededTermView(TermIndexCandidate candidate) {
     TermIndexExtractedTerm extractedTerm = candidate.getTermIndexExtractedTerm();
     return new SeededTermView(
@@ -2513,6 +2839,9 @@ public class GlossaryTermIndexCurationService {
       SuggestionAccumulator accumulator, TermIndexCandidate candidate, SuggestionState state) {}
 
   private record SuggestionState(String reviewStatus, String glossaryPresence) {}
+
+  private record GlossaryTermLinkCandidateRow(
+      GlossaryTermMetadata metadata, String source, String normalizedKey) {}
 
   public record SuggestionSearchCommand(
       String searchQuery,
@@ -2672,6 +3001,13 @@ public class GlossaryTermIndexCurationService {
 
   public record CandidateExportCommand(String searchQuery, Integer limit, String format) {}
 
+  public record LinkGlossaryTermsToCandidatesCommand(
+      Boolean dryRun,
+      String searchQuery,
+      Integer limit,
+      Boolean overwriteExistingLinks,
+      Boolean allowAmbiguousMatches) {}
+
   public record SeedTermInput(
       String term,
       String sourceLocaleTag,
@@ -2737,6 +3073,34 @@ public class GlossaryTermIndexCurationService {
 
   public record CandidateExportDocument(
       CandidateExportInfo glossary, List<SeedTermInput> candidates) {}
+
+  public record LinkGlossaryTermsToCandidatesResult(
+      Long glossaryId,
+      String glossaryName,
+      boolean dryRun,
+      String searchQuery,
+      int scannedTermCount,
+      int matchedTermCount,
+      int updatedLinkCount,
+      int alreadyLinkedTermCount,
+      int noCandidateTermCount,
+      int ambiguousTermCount,
+      int skippedTermCount,
+      List<LinkGlossaryTermToCandidateView> terms) {}
+
+  public record LinkGlossaryTermToCandidateView(
+      Long glossaryTermMetadataId,
+      Long tmTextUnitId,
+      String termKey,
+      String source,
+      String normalizedKey,
+      String action,
+      Long termIndexCandidateId,
+      Long termIndexExtractedTermId,
+      String candidateSourceType,
+      Long existingTermIndexCandidateId,
+      int candidateMatchCount,
+      String rationale) {}
 
   public record SeededTermView(
       Long termIndexCandidateId,

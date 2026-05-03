@@ -23,7 +23,7 @@ import java.time.ZonedDateTime;
     })
 public class TermIndexExtractedTerm extends AuditableEntity {
 
-  public static final String SOURCE_LOCALE_ROOT = "root";
+  public static final String DEFAULT_SOURCE_LOCALE_TAG = "en";
 
   @Column(name = "normalized_key", nullable = false, length = 255)
   private String normalizedKey;
@@ -32,7 +32,7 @@ public class TermIndexExtractedTerm extends AuditableEntity {
   private String displayTerm;
 
   @Column(name = "source_locale_tag", nullable = false, length = 64)
-  private String sourceLocaleTag = SOURCE_LOCALE_ROOT;
+  private String sourceLocaleTag = DEFAULT_SOURCE_LOCALE_TAG;
 
   @Column(name = "occurrence_count", nullable = false)
   private Long occurrenceCount = 0L;

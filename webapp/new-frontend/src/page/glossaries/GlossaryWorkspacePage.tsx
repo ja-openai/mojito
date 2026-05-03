@@ -19,15 +19,20 @@ export function GlossaryWorkspacePage() {
   const user = useUser();
   const canExportGlossary = user.role === 'ROLE_ADMIN';
   const queryClient = useQueryClient();
-  const params = useParams<{ glossaryId?: string }>();
+  const params = useParams<{ glossaryId?: string; tmTextUnitId?: string }>();
   const navigate = useNavigate();
   const { data: repositories } = useRepositories();
   const repositoryOptions = useRepositorySelectionOptions(repositories ?? []);
   const glossaryId = Number(params.glossaryId);
   const [searchParams] = useSearchParams();
-  const requestedTermId = Number(searchParams.get('termId'));
+  const requestedPathTermId = Number(params.tmTextUnitId);
+  const requestedQueryTermId = Number(searchParams.get('termId'));
   const initialOpenTermId =
-    Number.isInteger(requestedTermId) && requestedTermId > 0 ? requestedTermId : null;
+    Number.isInteger(requestedPathTermId) && requestedPathTermId > 0
+      ? requestedPathTermId
+      : Number.isInteger(requestedQueryTermId) && requestedQueryTermId > 0
+        ? requestedQueryTermId
+        : null;
   const [viewState, setViewState] = useState<{
     mode: 'terms' | 'extract' | 'editor';
     title?: string | null;
@@ -125,7 +130,7 @@ export function GlossaryWorkspacePage() {
             ? viewState.mode === 'terms'
               ? glossaryQuery.data.name
               : viewState.mode === 'extract'
-                ? 'Review suggestions'
+                ? viewState.title || 'Glossary builder'
                 : viewState.title || 'Edit term'
             : 'Glossaries'
         }
@@ -165,6 +170,11 @@ export function GlossaryWorkspacePage() {
                 glossary={glossaryQuery.data}
                 repositoryOptions={repositoryOptions}
                 initialOpenTermId={initialOpenTermId}
+                onClearInitialOpenTerm={() => {
+                  if (params.tmTextUnitId) {
+                    void navigate(`/glossaries/${glossaryId}`, { replace: true });
+                  }
+                }}
                 backRequestNonce={backRequestNonce}
                 canImport={canExportGlossary && !importMutation.isPending}
                 onOpenImport={() => {

@@ -80,6 +80,8 @@ public class SearchGlossaryTermsMcpToolTest {
             false,
             null,
             null,
+            null,
+            null,
             List.of(new TermTranslationView("fr", "Actions", null, "APPROVED")),
             List.of());
 

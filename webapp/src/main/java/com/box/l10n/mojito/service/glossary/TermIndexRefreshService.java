@@ -2,6 +2,8 @@ package com.box.l10n.mojito.service.glossary;
 
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.entity.glossary.Glossary;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
@@ -39,16 +41,22 @@ public class TermIndexRefreshService {
   static final int DEFAULT_BATCH_SIZE = 1_000;
   static final int MAX_BATCH_SIZE = 10_000;
   static final String EXTRACTOR_ID_PREFIX = "LEXICAL:";
+  static final String GLOSSARY_DICTIONARY_EXTRACTOR_ID = "GLOSSARY_DICTIONARY";
 
   private static final Duration LEASE_DURATION = Duration.ofMinutes(15);
   private static final int ACQUIRE_LEASE_ATTEMPT_COUNT = 2;
   private static final int ERROR_MESSAGE_MAX_LENGTH = 2048;
+  private static final int DICTIONARY_OCCURRENCE_CONFIDENCE = 100;
+  private static final int MAX_EXTRACTED_TERM_NORMALIZED_KEY_LENGTH = 255;
+  private static final int MAX_EXTRACTED_TERM_DISPLAY_TERM_LENGTH = 512;
+  private static final int MAX_DICTIONARY_TERM_TOKEN_COUNT = 12;
   private static final Pattern TITLE_PHRASE_PATTERN =
       Pattern.compile("\\b[A-Z][a-z0-9]+(?:[ -][A-Z][a-z0-9]+){0,3}\\b");
   private static final Pattern UPPER_TOKEN_PATTERN =
       Pattern.compile("\\b[A-Z]{2,}(?:[A-Z0-9_-]{0,30})\\b");
   private static final Pattern CAMEL_TOKEN_PATTERN =
       Pattern.compile("\\b[A-Za-z]+(?:[A-Z][a-z0-9]+)+\\b");
+  private static final Pattern DICTIONARY_TOKEN_PATTERN = Pattern.compile("[\\p{L}\\p{N}]+");
   private static final Set<String> EXTRACTION_STOP_WORDS =
       Set.of(
           "a",
@@ -90,6 +98,8 @@ public class TermIndexRefreshService {
 
   private final com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository;
   private final TMTextUnitRepository tmTextUnitRepository;
+  private final GlossaryRepository glossaryRepository;
+  private final GlossaryTermMetadataRepository glossaryTermMetadataRepository;
   private final TermIndexExtractedTermRepository termIndexExtractedTermRepository;
   private final TermIndexOccurrenceRepository termIndexOccurrenceRepository;
   private final TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository;
@@ -101,6 +111,8 @@ public class TermIndexRefreshService {
   public TermIndexRefreshService(
       com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository,
       TMTextUnitRepository tmTextUnitRepository,
+      GlossaryRepository glossaryRepository,
+      GlossaryTermMetadataRepository glossaryTermMetadataRepository,
       TermIndexExtractedTermRepository termIndexExtractedTermRepository,
       TermIndexOccurrenceRepository termIndexOccurrenceRepository,
       TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository,
@@ -110,6 +122,8 @@ public class TermIndexRefreshService {
       QuartzPollableTaskScheduler quartzPollableTaskScheduler) {
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.tmTextUnitRepository = Objects.requireNonNull(tmTextUnitRepository);
+    this.glossaryRepository = Objects.requireNonNull(glossaryRepository);
+    this.glossaryTermMetadataRepository = Objects.requireNonNull(glossaryTermMetadataRepository);
     this.termIndexExtractedTermRepository =
         Objects.requireNonNull(termIndexExtractedTermRepository);
     this.termIndexOccurrenceRepository = Objects.requireNonNull(termIndexOccurrenceRepository);
@@ -127,7 +141,7 @@ public class TermIndexRefreshService {
     QuartzJobInfo<RefreshCommand, RefreshResult> quartzJobInfo =
         QuartzJobInfo.newBuilder(TermIndexRefreshJob.class)
             .withInput(validatedCommand)
-            .withMessage("Refresh raw term index")
+            .withMessage("Refresh term index")
             .withRequestRecovery(true)
             .build();
     return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
@@ -184,9 +198,11 @@ public class TermIndexRefreshService {
       if (fullRefresh) {
         prepareFullRefresh(lease);
       }
+      GlossaryDictionary glossaryDictionary = loadGlossaryDictionary(repositoryId);
 
       while (true) {
-        BatchRefreshResult batchRefreshResult = refreshNextBatch(lease, fullRefresh, batchSize);
+        BatchRefreshResult batchRefreshResult =
+            refreshNextBatch(lease, fullRefresh, batchSize, glossaryDictionary);
         if (batchRefreshResult.processedTextUnitCount() == 0) {
           break;
         }
@@ -222,7 +238,10 @@ public class TermIndexRefreshService {
   }
 
   private BatchRefreshResult refreshNextBatch(
-      RepositoryLease lease, boolean fullRefresh, int batchSize) {
+      RepositoryLease lease,
+      boolean fullRefresh,
+      int batchSize,
+      GlossaryDictionary glossaryDictionary) {
     return Objects.requireNonNull(
         transactionTemplate.execute(
             status -> {
@@ -248,7 +267,8 @@ public class TermIndexRefreshService {
                 termIndexOccurrenceRepository.deleteByTmTextUnitIdIn(textUnitIds);
               }
 
-              long occurrenceCount = indexTextUnits(repository, textUnits, affectedEntryIds);
+              long occurrenceCount =
+                  indexTextUnits(repository, textUnits, affectedEntryIds, glossaryDictionary);
               stageAffectedEntries(lease.refreshRunId(), affectedEntryIds);
               TMTextUnit lastTextUnit = textUnits.getLast();
               assertLeaseUpdated(
@@ -349,13 +369,16 @@ public class TermIndexRefreshService {
   }
 
   private long indexTextUnits(
-      Repository repository, List<TMTextUnit> textUnits, Set<Long> affectedEntryIds) {
+      Repository repository,
+      List<TMTextUnit> textUnits,
+      Set<Long> affectedEntryIds,
+      GlossaryDictionary glossaryDictionary) {
     List<TermIndexOccurrence> occurrences = new ArrayList<>();
     String sourceLocaleTag = sourceLocaleTag(repository);
 
     for (TMTextUnit textUnit : textUnits) {
-      for (TermMatch match : extractTermMatches(textUnit.getContent())) {
-        String normalizedKey = normalizeCandidateKey(match.displayTerm());
+      for (TermMatch match : extractTermMatches(textUnit.getContent(), glossaryDictionary)) {
+        String normalizedKey = match.normalizedKey();
         if (normalizedKey == null) {
           continue;
         }
@@ -368,11 +391,11 @@ public class TermIndexRefreshService {
         occurrence.setTmTextUnit(textUnit);
         occurrence.setRepository(repository);
         occurrence.setAsset(textUnit.getAsset());
-        occurrence.setMatchedText(match.displayTerm());
+        occurrence.setMatchedText(match.matchedText());
         occurrence.setStartIndex(match.startIndex());
         occurrence.setEndIndex(match.endIndex());
         occurrence.setSourceHash(sourceHash(textUnit.getContent()));
-        occurrence.setExtractorId(EXTRACTOR_ID_PREFIX + match.extractionMethod());
+        occurrence.setExtractorId(match.extractorId());
         occurrence.setExtractionMethod(match.extractionMethod());
         occurrence.setConfidence(match.confidence());
         occurrences.add(occurrence);
@@ -384,6 +407,85 @@ public class TermIndexRefreshService {
     }
     termIndexOccurrenceRepository.saveAll(occurrences);
     return occurrences.size();
+  }
+
+  private GlossaryDictionary loadGlossaryDictionary(Long repositoryId) {
+    if (repositoryId == null) {
+      return GlossaryDictionary.empty();
+    }
+    List<Glossary> glossaries = glossaryRepository.findEnabledByRepositoryId(repositoryId);
+    if (glossaries == null || glossaries.isEmpty()) {
+      return GlossaryDictionary.empty();
+    }
+
+    Map<String, DictionaryTerm> caseInsensitiveTermsByNormalizedKey = new LinkedHashMap<>();
+    Map<String, DictionaryTerm> caseSensitiveTermsByCaseKey = new LinkedHashMap<>();
+    int maxTokenCount = 0;
+
+    for (Glossary glossary : glossaries) {
+      if (glossary == null || glossary.getId() == null) {
+        continue;
+      }
+      List<GlossaryTermMetadata> metadataRows =
+          glossaryTermMetadataRepository.findByGlossaryId(glossary.getId());
+      if (metadataRows == null) {
+        continue;
+      }
+      for (GlossaryTermMetadata metadata : metadataRows) {
+        DictionaryTerm dictionaryTerm = toDictionaryTerm(metadata);
+        if (dictionaryTerm == null) {
+          continue;
+        }
+
+        Map<String, DictionaryTerm> termsByKey =
+            dictionaryTerm.caseSensitive()
+                ? caseSensitiveTermsByCaseKey
+                : caseInsensitiveTermsByNormalizedKey;
+        String key =
+            dictionaryTerm.caseSensitive()
+                ? dictionaryTerm.caseSensitiveKey()
+                : dictionaryTerm.normalizedKey();
+        if (!termsByKey.containsKey(key)) {
+          termsByKey.put(key, dictionaryTerm);
+          maxTokenCount = Math.max(maxTokenCount, dictionaryTerm.tokenCount());
+        }
+      }
+    }
+
+    if (maxTokenCount == 0) {
+      return GlossaryDictionary.empty();
+    }
+    return new GlossaryDictionary(
+        caseInsensitiveTermsByNormalizedKey, caseSensitiveTermsByCaseKey, maxTokenCount);
+  }
+
+  private DictionaryTerm toDictionaryTerm(GlossaryTermMetadata metadata) {
+    if (metadata == null
+        || !GlossaryTermMetadata.STATUS_APPROVED.equals(metadata.getStatus())
+        || metadata.getTmTextUnit() == null) {
+      return null;
+    }
+    String displayTerm = normalizeOptional(metadata.getTmTextUnit().getContent());
+    if (displayTerm == null || displayTerm.length() > MAX_EXTRACTED_TERM_DISPLAY_TERM_LENGTH) {
+      return null;
+    }
+    String normalizedKey = normalizeCandidateKey(displayTerm);
+    String caseSensitiveKey = normalizeDictionaryCaseKey(displayTerm);
+    if (normalizedKey == null
+        || caseSensitiveKey == null
+        || normalizedKey.length() > MAX_EXTRACTED_TERM_NORMALIZED_KEY_LENGTH) {
+      return null;
+    }
+    int tokenCount = tokenCount(normalizedKey);
+    if (tokenCount == 0 || tokenCount > MAX_DICTIONARY_TERM_TOKEN_COUNT) {
+      return null;
+    }
+    return new DictionaryTerm(
+        displayTerm,
+        normalizedKey,
+        caseSensitiveKey,
+        Boolean.TRUE.equals(metadata.getCaseSensitive()),
+        tokenCount);
   }
 
   private TermIndexExtractedTerm findOrCreateEntry(
@@ -585,7 +687,7 @@ public class TermIndexRefreshService {
         : message.substring(0, ERROR_MESSAGE_MAX_LENGTH);
   }
 
-  private List<TermMatch> extractTermMatches(String source) {
+  private List<TermMatch> extractTermMatches(String source, GlossaryDictionary glossaryDictionary) {
     if (source == null || source.isBlank()) {
       return List.of();
     }
@@ -608,8 +710,8 @@ public class TermIndexRefreshService {
         source,
         TermIndexOccurrence.METHOD_LEXICAL_CAMEL_CASE,
         40);
+    collectGlossaryDictionaryMatches(matchesBySpanAndMethod, source, glossaryDictionary);
     return matchesBySpanAndMethod.values().stream()
-        .filter(match -> isUsableCandidate(match.displayTerm()))
         .sorted(Comparator.comparingInt(TermMatch::startIndex).thenComparing(TermMatch::endIndex))
         .toList();
   }
@@ -626,10 +728,108 @@ public class TermIndexRefreshService {
       if (term == null) {
         continue;
       }
-      String key = matcher.start() + ":" + matcher.end() + ":" + extractionMethod;
+      String normalizedKey = normalizeCandidateKey(term);
+      if (normalizedKey == null || !isUsableCandidate(term)) {
+        continue;
+      }
+      String key = termMatchKey(matcher.start(), matcher.end(), extractionMethod, normalizedKey);
       matchesBySpanAndMethod.putIfAbsent(
-          key, new TermMatch(term, matcher.start(), matcher.end(), extractionMethod, confidence));
+          key,
+          new TermMatch(
+              term,
+              term,
+              normalizedKey,
+              matcher.start(),
+              matcher.end(),
+              extractionMethod,
+              EXTRACTOR_ID_PREFIX + extractionMethod,
+              confidence));
     }
+  }
+
+  private void collectGlossaryDictionaryMatches(
+      Map<String, TermMatch> matchesBySpanAndMethod,
+      String source,
+      GlossaryDictionary glossaryDictionary) {
+    if (glossaryDictionary == null || glossaryDictionary.isEmpty()) {
+      return;
+    }
+    List<SourceToken> tokens = tokenizeForDictionary(source);
+    for (int startTokenIndex = 0; startTokenIndex < tokens.size(); startTokenIndex++) {
+      StringBuilder normalizedKey = new StringBuilder();
+      StringBuilder caseSensitiveKey = new StringBuilder();
+      int maxEndTokenIndex =
+          Math.min(tokens.size(), startTokenIndex + glossaryDictionary.maxTokenCount());
+      for (int endTokenIndex = startTokenIndex; endTokenIndex < maxEndTokenIndex; endTokenIndex++) {
+        SourceToken token = tokens.get(endTokenIndex);
+        if (endTokenIndex > startTokenIndex) {
+          normalizedKey.append(' ');
+          caseSensitiveKey.append(' ');
+        }
+        normalizedKey.append(token.text().toLowerCase(Locale.ROOT));
+        caseSensitiveKey.append(token.text());
+
+        int startIndex = tokens.get(startTokenIndex).startIndex();
+        int endIndex = token.endIndex();
+        String matchedText = source.substring(startIndex, endIndex);
+        addGlossaryDictionaryMatch(
+            matchesBySpanAndMethod,
+            glossaryDictionary.caseSensitiveTermsByCaseKey().get(caseSensitiveKey.toString()),
+            matchedText,
+            startIndex,
+            endIndex);
+        addGlossaryDictionaryMatch(
+            matchesBySpanAndMethod,
+            glossaryDictionary.caseInsensitiveTermsByNormalizedKey().get(normalizedKey.toString()),
+            matchedText,
+            startIndex,
+            endIndex);
+      }
+    }
+  }
+
+  private List<SourceToken> tokenizeForDictionary(String source) {
+    List<SourceToken> tokens = new ArrayList<>();
+    Matcher matcher = DICTIONARY_TOKEN_PATTERN.matcher(source);
+    while (matcher.find()) {
+      tokens.add(new SourceToken(matcher.group(), matcher.start(), matcher.end()));
+    }
+    return tokens;
+  }
+
+  private void addGlossaryDictionaryMatch(
+      Map<String, TermMatch> matchesBySpanAndMethod,
+      DictionaryTerm dictionaryTerm,
+      String matchedText,
+      int startIndex,
+      int endIndex) {
+    if (dictionaryTerm == null
+        || matchedText == null
+        || matchedText.length() > MAX_EXTRACTED_TERM_DISPLAY_TERM_LENGTH) {
+      return;
+    }
+    String key =
+        termMatchKey(
+            startIndex,
+            endIndex,
+            TermIndexOccurrence.METHOD_EXTERNAL_GLOSSARY_IMPORT,
+            dictionaryTerm.normalizedKey());
+    matchesBySpanAndMethod.putIfAbsent(
+        key,
+        new TermMatch(
+            dictionaryTerm.displayTerm(),
+            matchedText,
+            dictionaryTerm.normalizedKey(),
+            startIndex,
+            endIndex,
+            TermIndexOccurrence.METHOD_EXTERNAL_GLOSSARY_IMPORT,
+            GLOSSARY_DICTIONARY_EXTRACTOR_ID,
+            DICTIONARY_OCCURRENCE_CONFIDENCE));
+  }
+
+  private String termMatchKey(
+      int startIndex, int endIndex, String extractionMethod, String normalizedKey) {
+    return startIndex + ":" + endIndex + ":" + extractionMethod + ":" + normalizedKey;
   }
 
   private boolean isUsableCandidate(String candidate) {
@@ -662,11 +862,25 @@ public class TermIndexRefreshService {
     return normalized.isBlank() ? null : normalized;
   }
 
+  private String normalizeDictionaryCaseKey(String candidate) {
+    String normalized = normalizeOptional(candidate);
+    if (normalized == null) {
+      return null;
+    }
+    normalized = normalized.replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
+    return normalized.isBlank() ? null : normalized;
+  }
+
+  private int tokenCount(String normalizedKey) {
+    String normalized = normalizeOptional(normalizedKey);
+    return normalized == null ? 0 : normalized.split(" ").length;
+  }
+
   private String sourceLocaleTag(Repository repository) {
     if (repository.getSourceLocale() == null
         || repository.getSourceLocale().getBcp47Tag() == null
         || repository.getSourceLocale().getBcp47Tag().isBlank()) {
-      return TermIndexExtractedTerm.SOURCE_LOCALE_ROOT;
+      return TermIndexExtractedTerm.DEFAULT_SOURCE_LOCALE_TAG;
     }
     return repository.getSourceLocale().getBcp47Tag();
   }
@@ -748,5 +962,35 @@ public class TermIndexRefreshService {
   }
 
   private record TermMatch(
-      String displayTerm, int startIndex, int endIndex, String extractionMethod, int confidence) {}
+      String displayTerm,
+      String matchedText,
+      String normalizedKey,
+      int startIndex,
+      int endIndex,
+      String extractionMethod,
+      String extractorId,
+      int confidence) {}
+
+  private record GlossaryDictionary(
+      Map<String, DictionaryTerm> caseInsensitiveTermsByNormalizedKey,
+      Map<String, DictionaryTerm> caseSensitiveTermsByCaseKey,
+      int maxTokenCount) {
+
+    private static GlossaryDictionary empty() {
+      return new GlossaryDictionary(Map.of(), Map.of(), 0);
+    }
+
+    private boolean isEmpty() {
+      return maxTokenCount == 0;
+    }
+  }
+
+  private record DictionaryTerm(
+      String displayTerm,
+      String normalizedKey,
+      String caseSensitiveKey,
+      boolean caseSensitive,
+      int tokenCount) {}
+
+  private record SourceToken(String text, int startIndex, int endIndex) {}
 }

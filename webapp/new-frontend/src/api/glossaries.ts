@@ -78,6 +78,8 @@ export type ApiGlossaryTerm = {
   doNotTranslate: boolean;
   termIndexCandidateId?: number | null;
   termIndexExtractedTermId?: number | null;
+  termIndexOccurrenceCount?: number | null;
+  termIndexRepositoryCount?: number | null;
   translations: ApiGlossaryTermTranslation[];
   evidence: ApiGlossaryTermEvidence[];
 };
@@ -531,6 +533,37 @@ export async function fetchGlossaryTerms(
   }
 
   return (await response.json()) as ApiGlossaryTermsResponse;
+}
+
+export async function fetchGlossaryTerm(
+  glossaryId: number,
+  tmTextUnitId: number,
+  options?: {
+    localeTags?: string[];
+  },
+): Promise<ApiGlossaryTerm> {
+  const params = new URLSearchParams();
+  options?.localeTags?.forEach((localeTag) => {
+    const normalized = localeTag.trim();
+    if (normalized) {
+      params.append('locale', normalized);
+    }
+  });
+
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/terms/${tmTextUnitId}${params.size ? `?${params.toString()}` : ''}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load glossary term');
+  }
+
+  return (await response.json()) as ApiGlossaryTerm;
 }
 
 export async function fetchGlossaryWorkspaceSummary(

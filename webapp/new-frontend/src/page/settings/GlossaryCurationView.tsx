@@ -44,14 +44,22 @@ type Props = {
   isAcceptingSelected: boolean;
   activeSuggestionId: number | null;
   onActivateSuggestion: (suggestion: ApiGlossaryTermIndexSuggestion) => void;
-  onOpenSuggestion: (suggestion: ApiGlossaryTermIndexSuggestion) => void;
   onAcceptSuggestion: (suggestion: ApiGlossaryTermIndexSuggestion) => void;
   onIgnoreSuggestion: (suggestion: ApiGlossaryTermIndexSuggestion) => void;
   pendingSuggestionActions: Record<number, SuggestionPendingAction>;
 };
 
-const formatMethod = (method: string) =>
-  method
+type SuggestionDetailProps = {
+  suggestion: ApiGlossaryTermIndexSuggestion;
+  onOpenSuggestion: (suggestion: ApiGlossaryTermIndexSuggestion) => void;
+  onAcceptSuggestion: (suggestion: ApiGlossaryTermIndexSuggestion) => void;
+  onIgnoreSuggestion: (suggestion: ApiGlossaryTermIndexSuggestion) => void;
+  pendingAction?: SuggestionPendingAction;
+  isAcceptingSelected: boolean;
+};
+
+const formatMethod = (method: string | null | undefined) =>
+  (method || 'UNKNOWN')
     .toLowerCase()
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -150,22 +158,24 @@ const formatReviewStatus = (suggestion: ApiGlossaryTermIndexSuggestion) => {
   }
 };
 
-const formatCandidateReviewStatus = (suggestion: ApiGlossaryTermIndexSuggestion) => {
+const formatCandidateReviewStatusValue = (suggestion: ApiGlossaryTermIndexSuggestion) => {
   switch (suggestion.candidateReviewStatus) {
     case 'TO_REVIEW':
-      return 'Candidate: To review';
+      return 'To review';
     case 'ACCEPTED':
-      return 'Candidate: Accepted';
+      return 'Accepted';
     case 'REJECTED':
-      return 'Candidate: Rejected';
+      return 'Rejected';
     default:
-      return suggestion.candidateReviewStatus
-        ? `Candidate: ${suggestion.candidateReviewStatus}`
-        : null;
+      return suggestion.candidateReviewStatus ?? null;
   }
 };
 
 const formatCandidateReviewChange = (suggestion: ApiGlossaryTermIndexSuggestion) => {
+  if (suggestion.candidateReviewAuthority === 'NONE') {
+    return 'Not reviewed';
+  }
+
   const actor =
     suggestion.candidateReviewAuthority === 'AI'
       ? 'AI'
@@ -204,6 +214,28 @@ const getGlossaryPresence = (suggestion: ApiGlossaryTermIndexSuggestion) => {
     default:
       return { label: 'Not in glossary', className: 'is-not-in-glossary' };
   }
+};
+
+const renderSourceWithHighlight = (example: ApiGlossaryTermIndexSuggestion['examples'][number]) => {
+  const sourceText = example.sourceText ?? '';
+  if (
+    sourceText.length === 0 ||
+    example.startIndex == null ||
+    example.endIndex == null ||
+    example.startIndex < 0 ||
+    example.endIndex <= example.startIndex ||
+    example.endIndex > sourceText.length
+  ) {
+    return sourceText;
+  }
+
+  return (
+    <>
+      {sourceText.slice(0, example.startIndex)}
+      <mark>{sourceText.slice(example.startIndex, example.endIndex)}</mark>
+      {sourceText.slice(example.endIndex)}
+    </>
+  );
 };
 
 const REVIEW_STATUS_FILTER_OPTIONS: Array<{
@@ -286,7 +318,6 @@ export function GlossaryCurationView({
   isAcceptingSelected,
   activeSuggestionId,
   onActivateSuggestion,
-  onOpenSuggestion,
   onAcceptSuggestion,
   onIgnoreSuggestion,
   pendingSuggestionActions,
@@ -323,8 +354,8 @@ export function GlossaryCurationView({
 
   const openSuggestionAtIndex = (index: number) => {
     const suggestion = suggestions[index];
-    if (suggestion && canAcceptSuggestion(suggestion)) {
-      onOpenSuggestion(suggestion);
+    if (suggestion) {
+      onActivateSuggestion(suggestion);
     }
   };
 
@@ -379,9 +410,6 @@ export function GlossaryCurationView({
 
     event.currentTarget.focus();
     onActivateSuggestion(suggestion);
-    if (canAcceptSuggestion(suggestion)) {
-      onOpenSuggestion(suggestion);
-    }
   };
 
   const handleSuggestionRowKeyDown = (
@@ -524,157 +552,288 @@ export function GlossaryCurationView({
           </p>
         ) : (
           <div
-            className="glossary-term-admin__extract-results"
+            className="glossary-term-admin__suggestion-list"
+            role="listbox"
+            aria-label="Glossary candidate suggestions"
+            aria-multiselectable="true"
             onKeyDown={handleSuggestionResultsKeyDown}
           >
+            <div className="glossary-term-admin__suggestion-list-header" aria-hidden="true">
+              <span className="glossary-term-admin__suggestion-header-selection" />
+              <span className="glossary-term-admin__suggestion-header-cell">Term</span>
+              <span className="glossary-term-admin__suggestion-header-cell glossary-term-admin__suggestion-header-cell--numeric">
+                Hits
+              </span>
+              <span className="glossary-term-admin__suggestion-header-cell glossary-term-admin__suggestion-header-cell--numeric">
+                Repos
+              </span>
+              <span className="glossary-term-admin__suggestion-header-cell glossary-term-admin__suggestion-header-cell--numeric">
+                Confidence
+              </span>
+              <span className="glossary-term-admin__suggestion-header-cell glossary-term-admin__suggestion-header-cell--status">
+                Glossary
+              </span>
+              <span className="glossary-term-admin__suggestion-header-cell glossary-term-admin__suggestion-header-cell--status">
+                Review
+              </span>
+            </div>
             {suggestions.map((suggestion, index) => {
               const canAccept = canAcceptSuggestion(suggestion);
               const reviewStatus = formatReviewStatus(suggestion);
-              const candidateReviewStatus = formatCandidateReviewStatus(suggestion);
               const pendingAction = pendingSuggestionActions[suggestion.termIndexCandidateId];
               const isRowBusy = isAcceptingSelected || pendingAction != null;
               const isActive = suggestion.termIndexCandidateId === activeSuggestionId;
               const origin = getSuggestionOrigin(suggestion);
               const glossaryPresence = getGlossaryPresence(suggestion);
-              const candidateCreatedDate = getCandidateCreatedDate(suggestion);
 
               return (
-                <article
+                <div
                   key={suggestion.termIndexCandidateId}
-                  className={`glossary-term-admin__candidate-card${
-                    canAccept ? ' glossary-term-admin__candidate-card--clickable' : ''
-                  }${isActive ? ' is-active' : ''}`}
+                  className={`glossary-term-admin__suggestion-row${isActive ? ' is-selected' : ''}`}
+                  role="option"
+                  aria-selected={isActive}
                   data-suggestion-index={index}
-                  tabIndex={0}
+                  tabIndex={isActive || (activeSuggestionIndex < 0 && index === 0) ? 0 : -1}
                   aria-label={`Term candidate ${suggestion.term}`}
-                  aria-current={isActive ? 'true' : undefined}
                   onClick={(event) => handleSuggestionRowClick(event, suggestion)}
                   onFocus={() => onActivateSuggestion(suggestion)}
                   onKeyDown={(event) => handleSuggestionRowKeyDown(event, suggestion, isRowBusy)}
                 >
-                  <div className="glossary-term-admin__candidate-top">
-                    <div className="glossary-term-admin__candidate-select">
-                      <input
-                        type="checkbox"
-                        checked={selectedSuggestionIds.includes(suggestion.termIndexCandidateId)}
-                        onChange={(event) =>
-                          onToggleSuggestion(suggestion.termIndexCandidateId, event.target.checked)
-                        }
-                        disabled={!canAccept}
-                        aria-label={`Select term candidate ${suggestion.term}`}
-                      />
-                      <div>
-                        <div className="glossary-term-admin__candidate-title">
-                          <div className="glossary-term-admin__candidate-term">
-                            {suggestion.term}
-                          </div>
-                          <span
-                            className={`glossary-term-admin__candidate-origin ${origin.className}`}
-                          >
-                            {origin.label}
-                          </span>
-                        </div>
-                        <div className="glossary-term-admin__candidate-meta">
-                          {suggestion.occurrenceCount.toLocaleString()} hits ·{' '}
-                          {suggestion.repositoryCount.toLocaleString()} repositories ·{' '}
-                          {suggestion.sourceCount.toLocaleString()} sources ·{' '}
-                          {suggestion.confidence}% confidence ·{' '}
-                          {candidateCreatedDate
-                            ? `Created ${formatLocalDateTime(candidateCreatedDate)} · `
-                            : ''}
-                          {formatMethod(suggestion.selectionMethod)} ·{' '}
-                          {formatCandidateReviewChange(suggestion)}
-                        </div>
-                      </div>
-                    </div>
-                    {canAccept ? (
-                      <div className="glossary-term-admin__candidate-actions">
-                        <button
-                          type="button"
-                          className="settings-button settings-button--ghost glossary-term-admin__candidate-action"
-                          onClick={() => onIgnoreSuggestion(suggestion)}
-                          disabled={
-                            isRowBusy || getSuggestionReviewStatusValue(suggestion) !== 'NEW'
-                          }
-                        >
-                          {pendingAction === 'IGNORE' ? 'Ignoring...' : 'Ignore'}
-                        </button>
-                        <button
-                          type="button"
-                          className="settings-button settings-button--primary glossary-term-admin__candidate-action"
-                          onClick={() => onAcceptSuggestion(suggestion)}
-                          disabled={isRowBusy}
-                        >
-                          {pendingAction === 'ACCEPT' ? 'Accepting...' : 'Accept'}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="glossary-term-admin__candidate-repos">
-                    <span className="glossary-term-admin__pill">
-                      Candidate #{suggestion.termIndexCandidateId}
-                    </span>
-                    <span className="glossary-term-admin__pill">
-                      {suggestion.suggestedTermType}
-                    </span>
-                    <span className="glossary-term-admin__pill">
-                      {suggestion.suggestedEnforcement}
-                    </span>
-                    {suggestion.suggestedDoNotTranslate ? (
-                      <span className="glossary-term-admin__pill">Do not translate</span>
-                    ) : null}
-                    {reviewStatus ? (
-                      <span className="glossary-term-admin__pill">{reviewStatus}</span>
-                    ) : null}
-                    {candidateReviewStatus ? (
-                      <span className="glossary-term-admin__pill">{candidateReviewStatus}</span>
-                    ) : null}
-                    <span
-                      className={`glossary-term-admin__pill glossary-term-admin__glossary-presence ${glossaryPresence.className}`}
-                    >
-                      {glossaryPresence.label}
-                    </span>
-                    {suggestion.termIndexExtractedTermId != null ? (
-                      <Link
-                        className="glossary-term-admin__pill glossary-term-admin__pill-link"
-                        to={getRawTermExplorerPath(
-                          suggestion.termIndexExtractedTermId,
-                          suggestion.term,
-                        )}
-                      >
-                        Extracted term #{suggestion.termIndexExtractedTermId}
-                      </Link>
-                    ) : null}
-                    {suggestion.extractedTermMatchCount > 1 ? (
+                  <input
+                    type="checkbox"
+                    className="glossary-term-admin__suggestion-checkbox"
+                    checked={selectedSuggestionIds.includes(suggestion.termIndexCandidateId)}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) =>
+                      onToggleSuggestion(suggestion.termIndexCandidateId, event.target.checked)
+                    }
+                    disabled={!canAccept}
+                    aria-label={`Select term candidate ${suggestion.term}`}
+                  />
+                  <span className="glossary-term-admin__suggestion-name-cell">
+                    <span className="glossary-term-admin__suggestion-term">{suggestion.term}</span>
+                    <span className="glossary-term-admin__suggestion-inline-meta">
+                      <span>#{suggestion.termIndexCandidateId}</span>
                       <span
-                        className="glossary-term-admin__pill glossary-term-admin__extracted-match is-ambiguous"
-                        title="This candidate source matches more than one extracted term in the current glossary repository scope."
+                        className={`glossary-term-admin__suggestion-origin ${origin.className}`}
                       >
-                        {suggestion.extractedTermMatchCount.toLocaleString()} extracted matches
+                        {origin.label}
                       </span>
-                    ) : null}
-                  </div>
-                  {suggestion.definition ? (
-                    <p className="settings-hint">{suggestion.definition}</p>
-                  ) : null}
-                  {suggestion.rationale && suggestion.rationale !== suggestion.definition ? (
-                    <p className="settings-hint">Reason: {suggestion.rationale}</p>
-                  ) : null}
-                  {suggestion.examples.length > 0 ? (
-                    <div className="glossary-term-admin__candidate-samples">
-                      {suggestion.examples.slice(0, 3).map((example, index) => (
-                        <div
-                          key={`${example.id ?? 'searched'}-${example.tmTextUnitId}-${index}`}
-                          className="glossary-term-admin__candidate-sample"
-                        >
-                          <strong>{example.repositoryName}</strong>: {example.sourceText}
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </article>
+                      {suggestion.extractedTermMatchCount > 1 ? (
+                        <span title="This candidate source matches more than one extracted term in the current glossary repository scope.">
+                          {suggestion.extractedTermMatchCount.toLocaleString()} matches
+                        </span>
+                      ) : null}
+                    </span>
+                  </span>
+                  <span
+                    className="glossary-term-admin__suggestion-number"
+                    aria-label={`${suggestion.occurrenceCount.toLocaleString()} hits`}
+                  >
+                    <span>{suggestion.occurrenceCount.toLocaleString()}</span>
+                    <span className="glossary-term-admin__suggestion-cell-label">hits</span>
+                  </span>
+                  <span
+                    className="glossary-term-admin__suggestion-number"
+                    aria-label={`${suggestion.repositoryCount.toLocaleString()} repositories`}
+                  >
+                    <span>{suggestion.repositoryCount.toLocaleString()}</span>
+                    <span className="glossary-term-admin__suggestion-cell-label">repos</span>
+                  </span>
+                  <span
+                    className="glossary-term-admin__suggestion-number"
+                    aria-label={`${suggestion.confidence}% confidence`}
+                  >
+                    <span>{suggestion.confidence}%</span>
+                    <span className="glossary-term-admin__suggestion-cell-label">conf</span>
+                  </span>
+                  <span className="glossary-term-admin__suggestion-status">
+                    {glossaryPresence.label}
+                  </span>
+                  <span className="glossary-term-admin__suggestion-status">
+                    {reviewStatus ?? 'Unknown'}
+                  </span>
+                </div>
               );
             })}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+export function GlossarySuggestionDetailView({
+  suggestion,
+  onOpenSuggestion,
+  onAcceptSuggestion,
+  onIgnoreSuggestion,
+  pendingAction,
+  isAcceptingSelected,
+}: SuggestionDetailProps) {
+  const canAccept = canAcceptSuggestion(suggestion);
+  const origin = getSuggestionOrigin(suggestion);
+  const glossaryPresence = getGlossaryPresence(suggestion);
+  const candidateCreatedDate = getCandidateCreatedDate(suggestion);
+  const reviewStatus = formatReviewStatus(suggestion);
+  const candidateReviewStatus = formatCandidateReviewStatusValue(suggestion);
+  const candidateReviewChange = formatCandidateReviewChange(suggestion);
+  const isBusy = isAcceptingSelected || pendingAction != null;
+
+  return (
+    <div className="glossary-term-admin__suggestion-detail">
+      <section className="glossary-term-admin__suggestion-summary">
+        <div className="glossary-term-admin__suggestion-summary-header">
+          <div className="glossary-term-admin__suggestion-title-group">
+            <div className="glossary-term-admin__suggestion-eyebrow">
+              Candidate #{suggestion.termIndexCandidateId}
+              {suggestion.termIndexExtractedTermId != null ? (
+                <>
+                  {' · '}
+                  <Link
+                    to={getRawTermExplorerPath(
+                      suggestion.termIndexExtractedTermId,
+                      suggestion.term,
+                    )}
+                  >
+                    Extracted term #{suggestion.termIndexExtractedTermId}
+                  </Link>
+                </>
+              ) : null}
+            </div>
+            <h3 className="glossary-term-admin__suggestion-title">{suggestion.term}</h3>
+            <div className="glossary-term-admin__suggestion-meta-line">
+              <span className={`glossary-term-admin__suggestion-origin ${origin.className}`}>
+                {origin.label}
+              </span>
+              <span>{glossaryPresence.label}</span>
+              <span>{suggestion.occurrenceCount.toLocaleString()} hits</span>
+              <span>{suggestion.repositoryCount.toLocaleString()} repositories</span>
+              <span>{suggestion.confidence}% confidence</span>
+              {candidateCreatedDate ? (
+                <span>Created {formatLocalDateTime(candidateCreatedDate)}</span>
+              ) : null}
+            </div>
+          </div>
+          {canAccept ? (
+            <div className="glossary-term-admin__suggestion-detail-actions">
+              <button
+                type="button"
+                className="settings-button settings-button--ghost"
+                onClick={() => onOpenSuggestion(suggestion)}
+                disabled={isBusy}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className="settings-button settings-button--ghost"
+                onClick={() => onIgnoreSuggestion(suggestion)}
+                disabled={isBusy || getSuggestionReviewStatusValue(suggestion) !== 'NEW'}
+              >
+                {pendingAction === 'IGNORE' ? 'Ignoring...' : 'Ignore'}
+              </button>
+              <button
+                type="button"
+                className="settings-button settings-button--primary"
+                onClick={() => onAcceptSuggestion(suggestion)}
+                disabled={isBusy}
+              >
+                {pendingAction === 'ACCEPT' ? 'Accepting...' : 'Accept'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <dl className="glossary-term-admin__suggestion-facts">
+          <div>
+            <dt>Glossary review</dt>
+            <dd>{reviewStatus ?? 'Unknown'}</dd>
+          </div>
+          <div>
+            <dt>Candidate review</dt>
+            <dd>{candidateReviewStatus ?? 'Unknown'}</dd>
+          </div>
+          <div>
+            <dt>Review source</dt>
+            <dd>{candidateReviewChange}</dd>
+          </div>
+          <div>
+            <dt>Type</dt>
+            <dd>{suggestion.suggestedTermType}</dd>
+          </div>
+          <div>
+            <dt>Enforcement</dt>
+            <dd>{suggestion.suggestedEnforcement}</dd>
+          </div>
+          <div>
+            <dt>Translation</dt>
+            <dd>{suggestion.suggestedDoNotTranslate ? 'Do not translate' : 'Translate'}</dd>
+          </div>
+          {suggestion.suggestedPartOfSpeech ? (
+            <div>
+              <dt>Part of speech</dt>
+              <dd>{suggestion.suggestedPartOfSpeech}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Selection</dt>
+            <dd>{formatMethod(suggestion.selectionMethod)}</dd>
+          </div>
+        </dl>
+
+        {suggestion.definition ? (
+          <div className="glossary-term-admin__suggestion-rationale">
+            <span className="glossary-term-admin__suggestion-rationale-label">Definition</span>
+            <p>{suggestion.definition}</p>
+          </div>
+        ) : null}
+        {suggestion.rationale && suggestion.rationale !== suggestion.definition ? (
+          <div className="glossary-term-admin__suggestion-rationale">
+            <span className="glossary-term-admin__suggestion-rationale-label">Rationale</span>
+            <p>{suggestion.rationale}</p>
+          </div>
+        ) : null}
+        {suggestion.candidateReviewRationale ? (
+          <div className="glossary-term-admin__suggestion-rationale">
+            <span className="glossary-term-admin__suggestion-rationale-label">
+              Review rationale
+            </span>
+            <p>{suggestion.candidateReviewRationale}</p>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="glossary-term-admin__suggestion-examples">
+        <div className="glossary-term-admin__suggestion-section-title">
+          String usage
+          {suggestion.examples.length > 0 ? (
+            <span>{suggestion.examples.length.toLocaleString()} examples shown</span>
+          ) : null}
+        </div>
+        {suggestion.examples.length === 0 ? (
+          <p className="settings-hint">No string examples are linked to this candidate.</p>
+        ) : (
+          <div className="glossary-term-admin__suggestion-example-list">
+            {suggestion.examples.map((example, index) => (
+              <article
+                key={`${example.id ?? 'searched'}-${example.tmTextUnitId}-${index}`}
+                className="glossary-term-admin__suggestion-example"
+              >
+                <div className="glossary-term-admin__suggestion-example-meta">
+                  <strong>{example.repositoryName}</strong>
+                  {example.assetPath ? <span>{example.assetPath}</span> : null}
+                  <span>Text unit #{example.tmTextUnitId}</span>
+                  <span>{formatMethod(example.extractionMethod)}</span>
+                  {example.confidence != null ? (
+                    <span>{example.confidence}% confidence</span>
+                  ) : null}
+                </div>
+                <div className="glossary-term-admin__suggestion-source">
+                  {renderSourceWithHighlight(example)}
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </section>

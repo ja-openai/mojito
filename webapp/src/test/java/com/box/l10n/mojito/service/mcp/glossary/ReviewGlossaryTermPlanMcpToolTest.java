@@ -107,6 +107,8 @@ public class ReviewGlossaryTermPlanMcpToolTest {
             false,
             null,
             null,
+            null,
+            null,
             List.of(),
             List.of());
 

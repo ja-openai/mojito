@@ -12,6 +12,8 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.entity.glossary.Glossary;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
@@ -46,6 +48,8 @@ public class TermIndexRefreshServiceTest {
 
   @Mock com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository;
   @Mock TMTextUnitRepository tmTextUnitRepository;
+  @Mock GlossaryRepository glossaryRepository;
+  @Mock GlossaryTermMetadataRepository glossaryTermMetadataRepository;
   @Mock TermIndexExtractedTermRepository termIndexExtractedTermRepository;
   @Mock TermIndexOccurrenceRepository termIndexOccurrenceRepository;
   @Mock TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository;
@@ -65,6 +69,8 @@ public class TermIndexRefreshServiceTest {
         new TermIndexRefreshService(
             repositoryRepository,
             tmTextUnitRepository,
+            glossaryRepository,
+            glossaryTermMetadataRepository,
             termIndexExtractedTermRepository,
             termIndexOccurrenceRepository,
             termIndexRepositoryCursorRepository,
@@ -232,8 +238,8 @@ public class TermIndexRefreshServiceTest {
 
   @Test
   public void refreshIndexesLexicalOccurrencesAndUpdatesCursor() {
-    Repository repository = repository(5L, "chatgpt-web", "en");
-    TMTextUnit textUnit = textUnit(100L, "Sora", repository);
+    Repository repository = repository(5L, "product-web", "en");
+    TMTextUnit textUnit = textUnit(100L, "Acme", repository);
 
     when(repositoryRepository.findByIdInAndDeletedFalseAndHiddenFalseOrderByNameAsc(List.of(5L)))
         .thenReturn(List.of(repository));
@@ -267,8 +273,8 @@ public class TermIndexRefreshServiceTest {
         StreamSupport.stream(occurrencesCaptor.getValue().spliterator(), false).toList();
     assertThat(occurrences).hasSize(1);
     TermIndexOccurrence occurrence = occurrences.getFirst();
-    assertThat(occurrence.getMatchedText()).isEqualTo("Sora");
-    assertThat(occurrence.getTermIndexExtractedTerm().getNormalizedKey()).isEqualTo("sora");
+    assertThat(occurrence.getMatchedText()).isEqualTo("Acme");
+    assertThat(occurrence.getTermIndexExtractedTerm().getNormalizedKey()).isEqualTo("acme");
     assertThat(occurrence.getTermIndexExtractedTerm().getSourceLocaleTag()).isEqualTo("en");
     assertThat(occurrence.getRepository()).isSameAs(repository);
     assertThat(occurrence.getTmTextUnit()).isSameAs(textUnit);
@@ -283,8 +289,100 @@ public class TermIndexRefreshServiceTest {
   }
 
   @Test
+  public void refreshDefaultsMissingRepositorySourceLocaleToEnglish() {
+    Repository repository = repositoryWithoutSourceLocale(5L, "product-web");
+    TMTextUnit textUnit = textUnit(100L, "Acme", repository);
+
+    when(repositoryRepository.findByIdInAndDeletedFalseAndHiddenFalseOrderByNameAsc(List.of(5L)))
+        .thenReturn(List.of(repository));
+    when(repositoryRepository.findById(5L)).thenReturn(Optional.of(repository));
+    when(tmTextUnitRepository.findUsedTextUnitsForTermIndexRefresh(
+            eq(5L), eq(null), eq(0L), any(Pageable.class)))
+        .thenReturn(List.of(textUnit));
+    when(termIndexOccurrenceRepository.findDistinctTermIndexExtractedTermIdsByTmTextUnitIdIn(
+            List.of(100L)))
+        .thenReturn(List.of());
+    when(termIndexOccurrenceRepository.countByTermIndexExtractedTerm(
+            any(TermIndexExtractedTerm.class)))
+        .thenReturn(1L);
+    when(termIndexOccurrenceRepository.countDistinctRepositoriesByTermIndexExtractedTerm(
+            any(TermIndexExtractedTerm.class)))
+        .thenReturn(1L);
+
+    termIndexRefreshService.refresh(
+        new TermIndexRefreshService.RefreshCommand(List.of(5L), false, 100));
+
+    ArgumentCaptor<Iterable<TermIndexOccurrence>> occurrencesCaptor =
+        ArgumentCaptor.forClass(Iterable.class);
+    verify(termIndexOccurrenceRepository).saveAll(occurrencesCaptor.capture());
+    List<TermIndexOccurrence> occurrences =
+        StreamSupport.stream(occurrencesCaptor.getValue().spliterator(), false).toList();
+    assertThat(occurrences.getFirst().getTermIndexExtractedTerm().getSourceLocaleTag())
+        .isEqualTo(TermIndexExtractedTerm.DEFAULT_SOURCE_LOCALE_TAG);
+  }
+
+  @Test
+  public void refreshIndexesApprovedGlossaryDictionaryOccurrences() {
+    Repository repository = repository(5L, "product-web", "en");
+    TMTextUnit textUnit = textUnit(100L, "billing portal dashboard", repository);
+    Glossary glossary = glossary(30L, repository);
+    GlossaryTermMetadata approvedTerm =
+        glossaryTermMetadata(
+            40L, glossary, "Billing portal", GlossaryTermMetadata.STATUS_APPROVED, false);
+    GlossaryTermMetadata candidateTerm =
+        glossaryTermMetadata(
+            41L, glossary, "Dashboard", GlossaryTermMetadata.STATUS_CANDIDATE, false);
+
+    when(repositoryRepository.findByIdInAndDeletedFalseAndHiddenFalseOrderByNameAsc(List.of(5L)))
+        .thenReturn(List.of(repository));
+    when(repositoryRepository.findById(5L)).thenReturn(Optional.of(repository));
+    when(glossaryRepository.findEnabledByRepositoryId(5L)).thenReturn(List.of(glossary));
+    when(glossaryTermMetadataRepository.findByGlossaryId(30L))
+        .thenReturn(List.of(approvedTerm, candidateTerm));
+    when(tmTextUnitRepository.findUsedTextUnitsForTermIndexRefresh(
+            eq(5L), eq(null), eq(0L), any(Pageable.class)))
+        .thenReturn(List.of(textUnit));
+    when(termIndexOccurrenceRepository.findDistinctTermIndexExtractedTermIdsByTmTextUnitIdIn(
+            List.of(100L)))
+        .thenReturn(List.of());
+    when(termIndexOccurrenceRepository.countByTermIndexExtractedTerm(
+            any(TermIndexExtractedTerm.class)))
+        .thenReturn(1L);
+    when(termIndexOccurrenceRepository.countDistinctRepositoriesByTermIndexExtractedTerm(
+            any(TermIndexExtractedTerm.class)))
+        .thenReturn(1L);
+
+    TermIndexRefreshService.RefreshResult result =
+        termIndexRefreshService.refresh(
+            new TermIndexRefreshService.RefreshCommand(List.of(5L), false, 100));
+
+    assertThat(result)
+        .isEqualTo(
+            new TermIndexRefreshService.RefreshResult(
+                7L, TermIndexRefreshRun.STATUS_SUCCEEDED, 1, 1, 1, 1));
+
+    ArgumentCaptor<Iterable<TermIndexOccurrence>> occurrencesCaptor =
+        ArgumentCaptor.forClass(Iterable.class);
+    verify(termIndexOccurrenceRepository).saveAll(occurrencesCaptor.capture());
+    List<TermIndexOccurrence> occurrences =
+        StreamSupport.stream(occurrencesCaptor.getValue().spliterator(), false).toList();
+    assertThat(occurrences).hasSize(1);
+    TermIndexOccurrence occurrence = occurrences.getFirst();
+    assertThat(occurrence.getMatchedText()).isEqualTo("billing portal");
+    assertThat(occurrence.getTermIndexExtractedTerm().getDisplayTerm()).isEqualTo("Billing portal");
+    assertThat(occurrence.getTermIndexExtractedTerm().getNormalizedKey())
+        .isEqualTo("billing portal");
+    assertThat(occurrence.getTermIndexExtractedTerm().getSourceLocaleTag()).isEqualTo("en");
+    assertThat(occurrence.getExtractionMethod())
+        .isEqualTo(TermIndexOccurrence.METHOD_EXTERNAL_GLOSSARY_IMPORT);
+    assertThat(occurrence.getExtractorId())
+        .isEqualTo(TermIndexRefreshService.GLOSSARY_DICTIONARY_EXTRACTOR_ID);
+    assertThat(occurrence.getConfidence()).isEqualTo(100);
+  }
+
+  @Test
   public void fullRefreshDeletesRepositoryOccurrencesAndRecomputesStaleEntries() {
-    Repository repository = repository(5L, "chatgpt-web", "en");
+    Repository repository = repository(5L, "product-web", "en");
     TermIndexExtractedTerm staleEntry = new TermIndexExtractedTerm();
     staleEntry.setId(300L);
     staleEntry.setSourceLocaleTag("en");
@@ -325,7 +423,7 @@ public class TermIndexRefreshServiceTest {
 
   @Test
   public void refreshFailsWhenRepositoryLeaseIsAlreadyHeld() {
-    Repository repository = repository(5L, "chatgpt-web", "en");
+    Repository repository = repository(5L, "product-web", "en");
 
     when(repositoryRepository.findByIdInAndDeletedFalseAndHiddenFalseOrderByNameAsc(List.of(5L)))
         .thenReturn(List.of(repository));
@@ -370,6 +468,36 @@ public class TermIndexRefreshServiceTest {
     repository.setName(name);
     repository.setSourceLocale(locale);
     return repository;
+  }
+
+  private Repository repositoryWithoutSourceLocale(Long id, String name) {
+    Repository repository = new Repository();
+    repository.setId(id);
+    repository.setName(name);
+    return repository;
+  }
+
+  private Glossary glossary(Long id, Repository backingRepository) {
+    Glossary glossary = new Glossary();
+    glossary.setId(id);
+    glossary.setName("Product glossary");
+    glossary.setBackingRepository(backingRepository);
+    return glossary;
+  }
+
+  private GlossaryTermMetadata glossaryTermMetadata(
+      Long id, Glossary glossary, String source, String status, boolean caseSensitive) {
+    TMTextUnit glossaryTextUnit = new TMTextUnit();
+    glossaryTextUnit.setId(1_000L + id);
+    glossaryTextUnit.setContent(source);
+
+    GlossaryTermMetadata metadata = new GlossaryTermMetadata();
+    metadata.setId(id);
+    metadata.setGlossary(glossary);
+    metadata.setTmTextUnit(glossaryTextUnit);
+    metadata.setStatus(status);
+    metadata.setCaseSensitive(caseSensitive);
+    return metadata;
   }
 
   private TMTextUnit textUnit(Long id, String content, Repository repository) {

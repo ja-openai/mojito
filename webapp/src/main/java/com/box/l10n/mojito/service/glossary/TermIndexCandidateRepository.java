@@ -16,8 +16,25 @@ public interface TermIndexCandidateRepository extends JpaRepository<TermIndexCan
   Optional<TermIndexCandidate> findBySourceTypeAndSourceNameAndCandidateHash(
       String sourceType, String sourceName, String candidateHash);
 
+  Optional<TermIndexCandidate>
+      findFirstBySourceTypeAndSourceNameAndSourceExternalIdOrderByCreatedDateDesc(
+          String sourceType, String sourceName, String sourceExternalId);
+
   List<TermIndexCandidate> findByTermIndexExtractedTermIdInOrderByCreatedDateDesc(
       Collection<Long> termIndexExtractedTermIds);
+
+  @Query(
+      """
+      select distinct candidate
+      from TermIndexCandidate candidate
+      left join fetch candidate.termIndexExtractedTerm
+      where candidate.sourceLocaleTag = :sourceLocaleTag
+        and candidate.normalizedKey in :normalizedKeys
+      order by candidate.normalizedKey asc, candidate.createdDate desc
+      """)
+  List<TermIndexCandidate> findBySourceLocaleTagAndNormalizedKeyIn(
+      @Param("sourceLocaleTag") String sourceLocaleTag,
+      @Param("normalizedKeys") Collection<String> normalizedKeys);
 
   @Query(
       """

@@ -18,6 +18,9 @@ public interface TermIndexExtractedTermRepository
   Optional<TermIndexExtractedTerm> findBySourceLocaleTagAndNormalizedKey(
       String sourceLocaleTag, String normalizedKey);
 
+  List<TermIndexExtractedTerm> findBySourceLocaleTagAndNormalizedKeyIn(
+      String sourceLocaleTag, Collection<String> normalizedKeys);
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       value =

@@ -174,6 +174,10 @@ export function App() {
             }
           >
             <Route path="/glossaries/:glossaryId" element={<GlossaryWorkspacePage />} />
+            <Route
+              path="/glossaries/:glossaryId/terms/:tmTextUnitId"
+              element={<GlossaryWorkspacePage />}
+            />
             <Route path="/review-projects/:projectId" element={<ReviewProjectPage />} />
             <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
             <Route

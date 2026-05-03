@@ -123,9 +123,9 @@ const TERM_SORT_OPTIONS: Array<{
   value: ApiTermIndexEntrySort;
   label: string;
 }> = [
-  { value: 'REVIEW_CONFIDENCE_DESC', label: 'Review confidence' },
+  { value: 'REVIEW_CONFIDENCE_DESC', label: 'Highest confidence' },
   { value: 'HITS', label: 'Most hits' },
-  { value: 'REVIEW_CONFIDENCE_ASC', label: 'Low confidence' },
+  { value: 'REVIEW_CONFIDENCE_ASC', label: 'Lowest confidence' },
 ];
 const ALL_EXTRACTORS_FILTER_VALUE = '__ALL_EXTRACTORS__';
 const TERM_TYPE_OPTIONS = [
@@ -145,6 +145,23 @@ const EXAMPLE_RESULT_LIMIT = 500;
 const DEFAULT_TERM_PANE_WIDTH_PCT = 42;
 const DEFAULT_BATCH_SIZE = 1000;
 const TERM_INDEX_AI_REVIEW_BATCH_SIZE = 50;
+const TERM_INDEX_FILTER_CHIP_CLASS_NAMES = {
+  button: 'filter-chip__button',
+  panel: 'filter-chip__panel',
+  section: 'filter-chip__section',
+  label: 'filter-chip__label',
+  list: 'filter-chip__list',
+  option: 'filter-chip__option',
+  helper: 'filter-chip__helper',
+  pills: 'filter-chip__pills',
+  quick: 'filter-chip__quick',
+  quickChip: 'filter-chip__quick-chip',
+  custom: 'filter-chip__custom',
+  customLabel: 'filter-chip__custom-label',
+  customInput: 'filter-chip__custom-input',
+  dateInput: 'filter-chip__date-input',
+  clear: 'filter-chip__clear-link',
+};
 
 type CandidateDraft = {
   definition: string;
@@ -1226,29 +1243,24 @@ export function AdminTermIndexTermsPage() {
               className="term-index-explorer__search-control"
             />
             <div className="term-index-explorer__filter-controls">
-              <SingleSelectDropdown
-                label="Review status"
-                options={REVIEW_STATUS_FILTER_OPTIONS}
-                value={reviewStatusFilter}
-                onChange={(next) => {
-                  setReviewStatusFilter(next ?? 'NON_REJECTED');
+              <TermIndexReviewFilterChip
+                reviewStatus={reviewStatusFilter}
+                reviewAuthority={reviewAuthorityFilter}
+                onReviewStatusChange={(next) => {
+                  setReviewStatusFilter(next);
                   resetTermSelection();
                 }}
-                placeholder="Non-rejected"
-                className="term-index-explorer__search-type"
-                buttonAriaLabel="Filter by review status"
-                searchable={false}
+                onReviewAuthorityChange={(next) => {
+                  setReviewAuthorityFilter(next);
+                  resetTermSelection();
+                }}
+                disabled={entriesQuery.isLoading}
               />
               <TermIndexQueryFilterChip
                 extractionMethod={extractionMethod}
                 extractionMethodOptions={extractionMethodOptions}
                 onExtractionMethodChange={(next) => {
                   setExtractionMethod(next);
-                  resetTermSelection();
-                }}
-                reviewAuthority={reviewAuthorityFilter}
-                onReviewAuthorityChange={(next) => {
-                  setReviewAuthorityFilter(next);
                   resetTermSelection();
                 }}
                 minOccurrences={minOccurrences}
@@ -1425,6 +1437,7 @@ export function AdminTermIndexTermsPage() {
         searchQuery={searchQuery}
         extractionMethod={extractionMethod}
         reviewStatusFilter={reviewStatusFilter}
+        reviewAuthorityFilter={reviewAuthorityFilter}
         minOccurrences={minOccurrences}
         limit={termResultLimit}
         lastOccurrenceAfter={lastOccurrenceAfter}
@@ -1866,29 +1879,24 @@ export function AdminTermIndexCandidateGenerationPage() {
               className="term-index-explorer__search-control"
             />
             <div className="term-index-explorer__filter-controls">
-              <SingleSelectDropdown
-                label="Review status"
-                options={REVIEW_STATUS_FILTER_OPTIONS}
-                value={reviewStatusFilter}
-                onChange={(next) => {
-                  setReviewStatusFilter(next ?? 'NON_REJECTED');
+              <TermIndexReviewFilterChip
+                reviewStatus={reviewStatusFilter}
+                reviewAuthority={reviewAuthorityFilter}
+                onReviewStatusChange={(next) => {
+                  setReviewStatusFilter(next);
                   resetTermSelection();
                 }}
-                placeholder="Non-rejected"
-                className="term-index-explorer__search-type"
-                buttonAriaLabel="Filter by raw term review status"
-                searchable={false}
+                onReviewAuthorityChange={(next) => {
+                  setReviewAuthorityFilter(next);
+                  resetTermSelection();
+                }}
+                disabled={entriesQuery.isLoading}
               />
               <TermIndexQueryFilterChip
                 extractionMethod={extractionMethod}
                 extractionMethodOptions={extractionMethodOptions}
                 onExtractionMethodChange={(next) => {
                   setExtractionMethod(next);
-                  resetTermSelection();
-                }}
-                reviewAuthority={reviewAuthorityFilter}
-                onReviewAuthorityChange={(next) => {
-                  setReviewAuthorityFilter(next);
                   resetTermSelection();
                 }}
                 minOccurrences={minOccurrences}
@@ -2054,6 +2062,7 @@ export function AdminTermIndexCandidateGenerationPage() {
         searchQuery={searchQuery}
         extractionMethod={extractionMethod}
         reviewStatusFilter={reviewStatusFilter}
+        reviewAuthorityFilter={reviewAuthorityFilter}
         isGenerating={generateCandidatesMutation.isPending}
         error={generateCandidatesMutation.error}
         onClose={closeCandidateGenerationModal}
@@ -2100,8 +2109,6 @@ function TermIndexQueryFilterChip({
   extractionMethod,
   extractionMethodOptions,
   onExtractionMethodChange,
-  reviewAuthority,
-  onReviewAuthorityChange,
   minOccurrences,
   onMinOccurrencesChange,
   lastOccurrenceAfter,
@@ -2119,8 +2126,6 @@ function TermIndexQueryFilterChip({
   extractionMethod: string | null;
   extractionMethodOptions: Array<{ value: string; label: string }>;
   onExtractionMethodChange: (value: string | null) => void;
-  reviewAuthority: ApiTermIndexReviewAuthorityFilter;
-  onReviewAuthorityChange: (value: ApiTermIndexReviewAuthorityFilter) => void;
   minOccurrences: number;
   onMinOccurrencesChange: (value: number) => void;
   lastOccurrenceAfter: string | null;
@@ -2148,28 +2153,11 @@ function TermIndexQueryFilterChip({
       ariaLabel={ariaLabel}
       align="right"
       className="filter-chip term-index-explorer__query-filter"
-      classNames={{
-        button: 'filter-chip__button',
-        panel: 'filter-chip__panel',
-        section: 'filter-chip__section',
-        label: 'filter-chip__label',
-        list: 'filter-chip__list',
-        option: 'filter-chip__option',
-        helper: 'filter-chip__helper',
-        pills: 'filter-chip__pills',
-        quick: 'filter-chip__quick',
-        quickChip: 'filter-chip__quick-chip',
-        custom: 'filter-chip__custom',
-        customLabel: 'filter-chip__custom-label',
-        customInput: 'filter-chip__custom-input',
-        dateInput: 'filter-chip__date-input',
-        clear: 'filter-chip__clear-link',
-      }}
+      classNames={TERM_INDEX_FILTER_CHIP_CLASS_NAMES}
       disabled={disabled}
       summary={formatTermIndexQueryFilterSummary(
         minOccurrences,
         extractionMethod,
-        reviewAuthority,
         lastOccurrenceAfter,
         lastOccurrenceBefore,
         reviewChangedAfter,
@@ -2183,13 +2171,6 @@ function TermIndexQueryFilterChip({
           value: extractorValue,
           onChange: (value) =>
             onExtractionMethodChange(value === ALL_EXTRACTORS_FILTER_VALUE ? null : String(value)),
-        },
-        {
-          kind: 'radio',
-          label: 'Review source',
-          options: REVIEW_AUTHORITY_FILTER_OPTIONS,
-          value: reviewAuthority,
-          onChange: (value) => onReviewAuthorityChange(value as ApiTermIndexReviewAuthorityFilter),
         },
         {
           kind: 'size',
@@ -2236,6 +2217,47 @@ function TermIndexQueryFilterChip({
   );
 }
 
+function TermIndexReviewFilterChip({
+  reviewStatus,
+  reviewAuthority,
+  onReviewStatusChange,
+  onReviewAuthorityChange,
+  disabled,
+}: {
+  reviewStatus: ApiTermIndexReviewStatusFilter;
+  reviewAuthority: ApiTermIndexReviewAuthorityFilter;
+  onReviewStatusChange: (value: ApiTermIndexReviewStatusFilter) => void;
+  onReviewAuthorityChange: (value: ApiTermIndexReviewAuthorityFilter) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <MultiSectionFilterChip
+      ariaLabel="Filter by review status and source"
+      align="right"
+      className="filter-chip term-index-explorer__review-filter"
+      classNames={TERM_INDEX_FILTER_CHIP_CLASS_NAMES}
+      disabled={disabled}
+      summary={formatTermIndexReviewFilterSummary(reviewStatus, reviewAuthority)}
+      sections={[
+        {
+          kind: 'radio',
+          label: 'Status',
+          options: REVIEW_STATUS_FILTER_OPTIONS,
+          value: reviewStatus,
+          onChange: (value) => onReviewStatusChange(value as ApiTermIndexReviewStatusFilter),
+        },
+        {
+          kind: 'radio',
+          label: 'Source',
+          options: REVIEW_AUTHORITY_FILTER_OPTIONS,
+          value: reviewAuthority,
+          onChange: (value) => onReviewAuthorityChange(value as ApiTermIndexReviewAuthorityFilter),
+        },
+      ]}
+    />
+  );
+}
+
 function TermIndexResultSizeDropdown({
   countLabel,
   resultLimit,
@@ -2271,11 +2293,14 @@ function TermIndexSortDropdown({
   onChangeSort: (value: ApiTermIndexEntrySort) => void;
   disabled: boolean;
 }) {
+  const selectedSortLabel =
+    TERM_SORT_OPTIONS.find((option) => option.value === sortBy)?.label ?? 'Highest confidence';
   return (
     <SingleSelectDropdown
       label="Sort"
       options={TERM_SORT_OPTIONS}
       value={sortBy}
+      buttonSummary={`Sort by ${selectedSortLabel.toLowerCase()}`}
       onChange={(next) => {
         if (next != null) {
           onChangeSort(next);
@@ -2449,6 +2474,7 @@ function ExtractedTermTriageModal({
   searchQuery,
   extractionMethod,
   reviewStatusFilter,
+  reviewAuthorityFilter,
   minOccurrences,
   limit,
   lastOccurrenceAfter,
@@ -2470,6 +2496,7 @@ function ExtractedTermTriageModal({
   searchQuery: string;
   extractionMethod: string | null;
   reviewStatusFilter: ApiTermIndexReviewStatusFilter;
+  reviewAuthorityFilter: ApiTermIndexReviewAuthorityFilter;
   minOccurrences: number;
   limit: number;
   lastOccurrenceAfter: string | null;
@@ -2492,6 +2519,7 @@ function ExtractedTermTriageModal({
   const reviewStatusFilterLabel =
     REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === reviewStatusFilter)?.label ??
     reviewStatusFilter;
+  const reviewAuthorityFilterLabel = formatReviewAuthorityFilter(reviewAuthorityFilter);
   const sampleEntries = request?.entries.slice(0, 6) ?? [];
   const remainingEntryCount = Math.max(0, (request?.entries.length ?? 0) - sampleEntries.length);
   const triagedEntries = report?.entries.slice(0, 10) ?? [];
@@ -2654,6 +2682,10 @@ function ExtractedTermTriageModal({
                     <dd>{reviewStatusFilterLabel}</dd>
                   </div>
                   <div>
+                    <dt>Source</dt>
+                    <dd>{reviewAuthorityFilterLabel}</dd>
+                  </div>
+                  <div>
                     <dt>Minimum hits</dt>
                     <dd>{minOccurrences === 1 ? 'Any' : `${minOccurrences.toLocaleString()}+`}</dd>
                   </div>
@@ -2737,6 +2769,7 @@ function CandidateGenerationModal({
   searchQuery,
   extractionMethod,
   reviewStatusFilter,
+  reviewAuthorityFilter,
   isGenerating,
   error,
   onClose,
@@ -2749,6 +2782,7 @@ function CandidateGenerationModal({
   searchQuery: string;
   extractionMethod: string | null;
   reviewStatusFilter: ApiTermIndexReviewStatusFilter;
+  reviewAuthorityFilter: ApiTermIndexReviewAuthorityFilter;
   isGenerating: boolean;
   error: unknown;
   onClose: () => void;
@@ -2770,6 +2804,7 @@ function CandidateGenerationModal({
   const reviewStatusFilterLabel =
     REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === reviewStatusFilter)?.label ??
     reviewStatusFilter;
+  const reviewAuthorityFilterLabel = formatReviewAuthorityFilter(reviewAuthorityFilter);
   const hasDraftOverrides =
     draft != null && Object.values(draft.editedFields).some((isEdited) => Boolean(isEdited));
   const generatedCandidates = report?.candidates.slice(0, 10) ?? [];
@@ -2818,8 +2853,10 @@ function CandidateGenerationModal({
             <dd>{formatMethod(extractionMethod)}</dd>
           </div>
           <div>
-            <dt>Raw term status filter</dt>
-            <dd>{reviewStatusFilterLabel}</dd>
+            <dt>Raw term review filter</dt>
+            <dd>
+              {reviewStatusFilterLabel} · {reviewAuthorityFilterLabel}
+            </dd>
           </div>
         </dl>
 
@@ -2999,8 +3036,8 @@ function CandidateGenerationModal({
             {isGenerating
               ? 'Generating...'
               : request?.mode === 'single'
-                ? 'Generate this candidate'
-                : 'Generate selected candidates'}
+                ? 'Generate'
+                : 'Generate selected'}
           </button>
         )}
       </div>
@@ -3087,7 +3124,7 @@ function CandidateDraftPanel({
             onClick={onGenerate}
             disabled={isGenerating || entry.reviewStatus === 'REJECTED'}
           >
-            {isGenerating ? 'Generating' : 'Generate this candidate'}
+            {isGenerating ? 'Generating' : 'Generate'}
           </button>
         </div>
         <div className="settings-grid settings-grid--two-column">
@@ -4202,7 +4239,6 @@ function clamp(value: number, min: number, max: number) {
 function formatTermIndexQueryFilterSummary(
   minOccurrences: number,
   extractionMethod: string | null,
-  reviewAuthority: ApiTermIndexReviewAuthorityFilter,
   lastOccurrenceAfter: string | null,
   lastOccurrenceBefore: string | null,
   reviewChangedAfter: string | null,
@@ -4212,9 +4248,6 @@ function formatTermIndexQueryFilterSummary(
   if (extractionMethod) {
     parts.push(formatMethod(extractionMethod));
   }
-  if (reviewAuthority !== 'ALL') {
-    parts.push(formatReviewAuthorityFilter(reviewAuthority));
-  }
   if (lastOccurrenceAfter || lastOccurrenceBefore) {
     parts.push('Last extracted');
   }
@@ -4222,6 +4255,18 @@ function formatTermIndexQueryFilterSummary(
     parts.push('Review updated');
   }
   return parts.join(' · ');
+}
+
+function formatTermIndexReviewFilterSummary(
+  status: ApiTermIndexReviewStatusFilter,
+  authority: ApiTermIndexReviewAuthorityFilter,
+) {
+  const statusLabel =
+    REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === status)?.label ?? status;
+  if (authority === 'ALL') {
+    return `Review: ${statusLabel}`;
+  }
+  return `Review: ${statusLabel} · ${formatReviewAuthorityFilter(authority)}`;
 }
 
 function formatReviewAuthorityFilter(authority: ApiTermIndexReviewAuthorityFilter) {
