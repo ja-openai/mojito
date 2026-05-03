@@ -43,6 +43,7 @@ public class TermIndexExtractedTermRepositoryImpl
       String searchQuery,
       String extractionMethod,
       String reviewStatusFilter,
+      String reviewAuthorityFilter,
       long minOccurrences,
       ZonedDateTime lastOccurrenceAfter,
       ZonedDateTime lastOccurrenceBefore,
@@ -113,6 +114,7 @@ public class TermIndexExtractedTermRepositoryImpl
       predicates.add(cb.equal(occurrence.get("extractionMethod"), extractionMethod));
     }
     addReviewStatusFilter(cb, predicates, reviewStatus, reviewStatusFilter);
+    addReviewAuthorityFilter(cb, predicates, reviewAuthority, reviewAuthorityFilter);
     if (reviewChangedAfter != null) {
       predicates.add(cb.greaterThanOrEqualTo(reviewChangedAt, reviewChangedAfter));
     }
@@ -176,6 +178,18 @@ public class TermIndexExtractedTermRepositoryImpl
       return;
     }
     predicates.add(cb.equal(reviewStatus, reviewStatusFilter));
+  }
+
+  private void addReviewAuthorityFilter(
+      CriteriaBuilder cb,
+      List<Predicate> predicates,
+      Path<String> reviewAuthority,
+      String reviewAuthorityFilter) {
+    if (reviewAuthorityFilter == null
+        || TermIndexReview.AUTHORITY_FILTER_ALL.equals(reviewAuthorityFilter)) {
+      return;
+    }
+    predicates.add(cb.equal(reviewAuthority, reviewAuthorityFilter));
   }
 
   private List<Order> buildSearchOrder(

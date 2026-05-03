@@ -9,7 +9,8 @@ public final class TermIndexReview {
   public static final String STATUS_FILTER_ALL = "ALL";
   public static final String STATUS_FILTER_NON_REJECTED = "NON_REJECTED";
 
-  public static final String AUTHORITY_DEFAULT = "DEFAULT";
+  public static final String AUTHORITY_FILTER_ALL = "ALL";
+  public static final String AUTHORITY_NONE = "NONE";
   public static final String AUTHORITY_AI = "AI";
   public static final String AUTHORITY_HUMAN = "HUMAN";
 

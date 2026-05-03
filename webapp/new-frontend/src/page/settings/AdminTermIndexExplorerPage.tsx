@@ -20,6 +20,7 @@ import {
   type ApiTermIndexEntry,
   type ApiTermIndexEntrySort,
   type ApiTermIndexOccurrence,
+  type ApiTermIndexReviewAuthorityFilter,
   type ApiTermIndexReviewStatus,
   type ApiTermIndexReviewStatusFilter,
   type ApiTermIndexTaskProgress,
@@ -101,6 +102,15 @@ const REVIEW_STATUS_OPTIONS: Array<{
   { value: 'TO_REVIEW', label: 'To review' },
   { value: 'ACCEPTED', label: 'Accepted' },
   { value: 'REJECTED', label: 'Rejected' },
+];
+const REVIEW_AUTHORITY_FILTER_OPTIONS: Array<{
+  value: ApiTermIndexReviewAuthorityFilter;
+  label: string;
+}> = [
+  { value: 'ALL', label: 'All review sources' },
+  { value: 'NONE', label: 'Unreviewed' },
+  { value: 'AI', label: 'AI reviewed' },
+  { value: 'HUMAN', label: 'Human reviewed' },
 ];
 const REVIEW_REASON_OPTIONS = [
   { value: 'STOP_WORD', label: 'Stop word' },
@@ -759,6 +769,8 @@ export function AdminTermIndexTermsPage() {
   const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
   const [reviewStatusFilter, setReviewStatusFilter] =
     useState<ApiTermIndexReviewStatusFilter>('NON_REJECTED');
+  const [reviewAuthorityFilter, setReviewAuthorityFilter] =
+    useState<ApiTermIndexReviewAuthorityFilter>('ALL');
   const [termSort, setTermSort] = useState<ApiTermIndexEntrySort>('REVIEW_CONFIDENCE_DESC');
   const [termResultLimit, setTermResultLimit] = useState(TERM_RESULT_LIMIT_DEFAULT);
   const [lastOccurrenceAfter, setLastOccurrenceAfter] = useState<string | null>(null);
@@ -831,6 +843,7 @@ export function AdminTermIndexTermsPage() {
       searchQuery,
       extractionMethod,
       reviewStatusFilter,
+      reviewAuthorityFilter,
       termSort,
       minOccurrences,
       termResultLimit,
@@ -845,6 +858,7 @@ export function AdminTermIndexTermsPage() {
         search: searchQuery,
         extractionMethod,
         reviewStatus: reviewStatusFilter,
+        reviewAuthority: reviewAuthorityFilter,
         minOccurrences,
         limit: termResultLimit,
         lastOccurrenceAfter,
@@ -980,6 +994,7 @@ export function AdminTermIndexTermsPage() {
           search: request.mode === 'filter' ? searchQuery : null,
           extractionMethod: request.mode === 'filter' ? extractionMethod : null,
           reviewStatus: request.mode === 'filter' ? reviewStatusFilter : null,
+          reviewAuthority: request.mode === 'filter' ? reviewAuthorityFilter : null,
           minOccurrences: request.mode === 'filter' ? minOccurrences : null,
           limit: request.mode === 'filter' ? termResultLimit : null,
           lastOccurrenceAfter: request.mode === 'filter' ? lastOccurrenceAfter : null,
@@ -1231,6 +1246,11 @@ export function AdminTermIndexTermsPage() {
                   setExtractionMethod(next);
                   resetTermSelection();
                 }}
+                reviewAuthority={reviewAuthorityFilter}
+                onReviewAuthorityChange={(next) => {
+                  setReviewAuthorityFilter(next);
+                  resetTermSelection();
+                }}
                 minOccurrences={minOccurrences}
                 onMinOccurrencesChange={updateMinOccurrences}
                 lastOccurrenceAfter={lastOccurrenceAfter}
@@ -1458,6 +1478,8 @@ export function AdminTermIndexCandidateGenerationPage() {
   const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
   const [reviewStatusFilter, setReviewStatusFilter] =
     useState<ApiTermIndexReviewStatusFilter>('NON_REJECTED');
+  const [reviewAuthorityFilter, setReviewAuthorityFilter] =
+    useState<ApiTermIndexReviewAuthorityFilter>('ALL');
   const [termSort, setTermSort] = useState<ApiTermIndexEntrySort>('REVIEW_CONFIDENCE_DESC');
   const [termResultLimit, setTermResultLimit] = useState(TERM_RESULT_LIMIT_DEFAULT);
   const [lastOccurrenceAfter, setLastOccurrenceAfter] = useState<string | null>(null);
@@ -1526,6 +1548,7 @@ export function AdminTermIndexCandidateGenerationPage() {
       searchQuery,
       extractionMethod,
       reviewStatusFilter,
+      reviewAuthorityFilter,
       termSort,
       minOccurrences,
       termResultLimit,
@@ -1540,6 +1563,7 @@ export function AdminTermIndexCandidateGenerationPage() {
         search: searchQuery,
         extractionMethod,
         reviewStatus: reviewStatusFilter,
+        reviewAuthority: reviewAuthorityFilter,
         minOccurrences,
         limit: termResultLimit,
         lastOccurrenceAfter,
@@ -1862,6 +1886,11 @@ export function AdminTermIndexCandidateGenerationPage() {
                   setExtractionMethod(next);
                   resetTermSelection();
                 }}
+                reviewAuthority={reviewAuthorityFilter}
+                onReviewAuthorityChange={(next) => {
+                  setReviewAuthorityFilter(next);
+                  resetTermSelection();
+                }}
                 minOccurrences={minOccurrences}
                 onMinOccurrencesChange={updateMinOccurrences}
                 lastOccurrenceAfter={lastOccurrenceAfter}
@@ -2071,6 +2100,8 @@ function TermIndexQueryFilterChip({
   extractionMethod,
   extractionMethodOptions,
   onExtractionMethodChange,
+  reviewAuthority,
+  onReviewAuthorityChange,
   minOccurrences,
   onMinOccurrencesChange,
   lastOccurrenceAfter,
@@ -2088,6 +2119,8 @@ function TermIndexQueryFilterChip({
   extractionMethod: string | null;
   extractionMethodOptions: Array<{ value: string; label: string }>;
   onExtractionMethodChange: (value: string | null) => void;
+  reviewAuthority: ApiTermIndexReviewAuthorityFilter;
+  onReviewAuthorityChange: (value: ApiTermIndexReviewAuthorityFilter) => void;
   minOccurrences: number;
   onMinOccurrencesChange: (value: number) => void;
   lastOccurrenceAfter: string | null;
@@ -2136,6 +2169,7 @@ function TermIndexQueryFilterChip({
       summary={formatTermIndexQueryFilterSummary(
         minOccurrences,
         extractionMethod,
+        reviewAuthority,
         lastOccurrenceAfter,
         lastOccurrenceBefore,
         reviewChangedAfter,
@@ -2149,6 +2183,13 @@ function TermIndexQueryFilterChip({
           value: extractorValue,
           onChange: (value) =>
             onExtractionMethodChange(value === ALL_EXTRACTORS_FILTER_VALUE ? null : String(value)),
+        },
+        {
+          kind: 'radio',
+          label: 'Review source',
+          options: REVIEW_AUTHORITY_FILTER_OPTIONS,
+          value: reviewAuthority,
+          onChange: (value) => onReviewAuthorityChange(value as ApiTermIndexReviewAuthorityFilter),
         },
         {
           kind: 'size',
@@ -4161,6 +4202,7 @@ function clamp(value: number, min: number, max: number) {
 function formatTermIndexQueryFilterSummary(
   minOccurrences: number,
   extractionMethod: string | null,
+  reviewAuthority: ApiTermIndexReviewAuthorityFilter,
   lastOccurrenceAfter: string | null,
   lastOccurrenceBefore: string | null,
   reviewChangedAfter: string | null,
@@ -4170,6 +4212,9 @@ function formatTermIndexQueryFilterSummary(
   if (extractionMethod) {
     parts.push(formatMethod(extractionMethod));
   }
+  if (reviewAuthority !== 'ALL') {
+    parts.push(formatReviewAuthorityFilter(reviewAuthority));
+  }
   if (lastOccurrenceAfter || lastOccurrenceBefore) {
     parts.push('Last extracted');
   }
@@ -4177,6 +4222,13 @@ function formatTermIndexQueryFilterSummary(
     parts.push('Review updated');
   }
   return parts.join(' · ');
+}
+
+function formatReviewAuthorityFilter(authority: ApiTermIndexReviewAuthorityFilter) {
+  return (
+    REVIEW_AUTHORITY_FILTER_OPTIONS.find((option) => option.value === authority)?.label ??
+    reviewAuthorityLabel(authority)
+  );
 }
 
 function formatDateRangeFilter(after: string | null, before: string | null) {
@@ -4235,10 +4287,11 @@ function reviewAuthorityLabel(authority: string | null | undefined) {
       return 'unknown user';
     case 'AI':
       return 'AI';
-    case 'DEFAULT':
+    case 'NONE':
+      return 'not reviewed';
     case null:
     case undefined:
-      return 'default';
+      return 'unknown source';
     default:
       return formatMethod(authority);
   }

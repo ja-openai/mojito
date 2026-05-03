@@ -50,7 +50,7 @@ public class TermIndexExtractedTerm extends AuditableEntity {
   private String reviewStatus = TermIndexReview.STATUS_TO_REVIEW;
 
   @Column(name = "review_authority", nullable = false, length = 32)
-  private String reviewAuthority = TermIndexReview.AUTHORITY_DEFAULT;
+  private String reviewAuthority = TermIndexReview.AUTHORITY_NONE;
 
   @Column(name = "review_reason", length = 64)
   private String reviewReason;

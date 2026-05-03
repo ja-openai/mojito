@@ -13,6 +13,7 @@ public interface TermIndexExtractedTermRepositoryCustom {
       String searchQuery,
       String extractionMethod,
       String reviewStatusFilter,
+      String reviewAuthorityFilter,
       long minOccurrences,
       ZonedDateTime lastOccurrenceAfter,
       ZonedDateTime lastOccurrenceBefore,

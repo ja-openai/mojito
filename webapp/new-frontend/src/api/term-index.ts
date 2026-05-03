@@ -90,7 +90,8 @@ export type ApiTermIndexReviewStatusFilter =
   | 'REJECTED'
   | 'ALL';
 
-export type ApiTermIndexReviewAuthority = 'DEFAULT' | 'AI' | 'HUMAN' | (string & {});
+export type ApiTermIndexReviewAuthority = 'NONE' | 'AI' | 'HUMAN' | (string & {});
+export type ApiTermIndexReviewAuthorityFilter = 'ALL' | ApiTermIndexReviewAuthority | (string & {});
 
 export type ApiTermIndexEntrySort = 'HITS' | 'REVIEW_CONFIDENCE_DESC' | 'REVIEW_CONFIDENCE_ASC';
 
@@ -108,6 +109,7 @@ export type ApiTriageTermIndexEntriesRequest = {
   search?: string | null;
   extractionMethod?: string | null;
   reviewStatus?: ApiTermIndexReviewStatusFilter | null;
+  reviewAuthority?: ApiTermIndexReviewAuthorityFilter | null;
   minOccurrences?: number | null;
   limit?: number | null;
   lastOccurrenceAfter?: string | null;
@@ -411,6 +413,7 @@ export async function fetchTermIndexEntries(options?: {
   search?: string;
   extractionMethod?: string | null;
   reviewStatus?: ApiTermIndexReviewStatusFilter | null;
+  reviewAuthority?: ApiTermIndexReviewAuthorityFilter | null;
   minOccurrences?: number;
   limit?: number;
   lastOccurrenceAfter?: string | null;
@@ -431,6 +434,7 @@ export async function fetchTermIndexEntries(options?: {
       search: options?.search?.trim() || null,
       extractionMethod: options?.extractionMethod?.trim() || null,
       reviewStatus: options?.reviewStatus ?? null,
+      reviewAuthority: options?.reviewAuthority ?? null,
       minOccurrences: options?.minOccurrences ?? null,
       limit: options?.limit ?? null,
       lastOccurrenceAfter: options?.lastOccurrenceAfter ?? null,

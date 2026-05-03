@@ -103,6 +103,7 @@ public class TermIndexExplorerWS {
       @RequestParam(value = "search", required = false) String searchQuery,
       @RequestParam(value = "extractionMethod", required = false) String extractionMethod,
       @RequestParam(value = "reviewStatus", required = false) String reviewStatusFilter,
+      @RequestParam(value = "reviewAuthority", required = false) String reviewAuthorityFilter,
       @RequestParam(value = "minOccurrences", required = false) Long minOccurrences,
       @RequestParam(value = "limit", required = false) Integer limit,
       @RequestParam(value = "lastOccurrenceAfter", required = false)
@@ -125,6 +126,7 @@ public class TermIndexExplorerWS {
             searchQuery,
             extractionMethod,
             reviewStatusFilter,
+            reviewAuthorityFilter,
             minOccurrences,
             limit,
             lastOccurrenceAfter,
@@ -289,6 +291,7 @@ public class TermIndexExplorerWS {
                   request != null ? request.search() : null,
                   request != null ? request.extractionMethod() : null,
                   request != null ? request.reviewStatus() : null,
+                  request != null ? request.reviewAuthority() : null,
                   request != null ? request.minOccurrences() : null,
                   request != null ? request.limit() : null,
                   request != null ? request.lastOccurrenceAfter() : null,
@@ -372,6 +375,7 @@ public class TermIndexExplorerWS {
       String search,
       String extractionMethod,
       String reviewStatus,
+      String reviewAuthority,
       Long minOccurrences,
       Integer limit,
       ZonedDateTime lastOccurrenceAfter,
@@ -399,6 +403,7 @@ public class TermIndexExplorerWS {
       String search,
       String extractionMethod,
       String reviewStatus,
+      String reviewAuthority,
       Long minOccurrences,
       Integer limit,
       ZonedDateTime lastOccurrenceAfter,
@@ -460,13 +465,14 @@ public class TermIndexExplorerWS {
       TermIndexEntrySearchRequest request) {
     if (request == null) {
       return new TermIndexExplorerService.EntrySearchCommand(
-          List.of(), null, null, null, null, null, null, null, null, null, null);
+          List.of(), null, null, null, null, null, null, null, null, null, null, null);
     }
     return new TermIndexExplorerService.EntrySearchCommand(
         request.repositoryIds(),
         request.search(),
         request.extractionMethod(),
         request.reviewStatus(),
+        request.reviewAuthority(),
         request.minOccurrences(),
         request.limit(),
         request.lastOccurrenceAfter(),

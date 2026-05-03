@@ -185,10 +185,11 @@ const formatCandidateReviewAuthority = (authority: string | null | undefined) =>
       return 'unknown user';
     case 'AI':
       return 'AI';
-    case 'DEFAULT':
+    case 'NONE':
+      return 'not reviewed';
     case null:
     case undefined:
-      return 'default';
+      return 'unknown source';
     default:
       return formatMethod(authority);
   }
