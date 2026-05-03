@@ -6,9 +6,11 @@ import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import {
+  type ApiReviewFeatureRepositoryCoverage,
   type ApiReviewFeatureSummary,
   createReviewFeature,
   deleteReviewFeature,
+  fetchReviewFeatureRepositoryCoverage,
   fetchReviewFeatures,
 } from '../../api/review-features';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -62,6 +64,12 @@ export function AdminReviewFeaturesPage() {
         enabled: enabledFilter === 'all' ? null : enabledFilter === 'enabled' ? true : false,
         limit,
       }),
+    enabled: isAdmin,
+    staleTime: 30_000,
+  });
+  const repositoryCoverageQuery = useQuery({
+    queryKey: ['review-features', 'repository-coverage'],
+    queryFn: fetchReviewFeatureRepositoryCoverage,
     enabled: isAdmin,
     staleTime: 30_000,
   });
@@ -213,6 +221,16 @@ export function AdminReviewFeaturesPage() {
               ) : null}
             </div>
 
+            <RepositoryCoveragePanel
+              coverage={repositoryCoverageQuery.data ?? []}
+              isLoading={repositoryCoverageQuery.isLoading}
+              error={
+                repositoryCoverageQuery.error instanceof Error
+                  ? repositoryCoverageQuery.error.message
+                  : null
+              }
+            />
+
             {reviewFeaturesQuery.isError ? (
               <p className="review-feature-admin-page__empty">
                 {reviewFeaturesQuery.error instanceof Error
@@ -351,6 +369,107 @@ export function AdminReviewFeaturesPage() {
           requireTextLabel="Type the feature name to confirm deletion."
         />
       </div>
+    </div>
+  );
+}
+
+function RepositoryCoveragePanel({
+  coverage,
+  isLoading,
+  error,
+}: {
+  coverage: ApiReviewFeatureRepositoryCoverage[];
+  isLoading: boolean;
+  error: string | null;
+}) {
+  const repositoriesWithoutEnabledFeature = coverage.filter(
+    (repository) => repository.enabledReviewFeatureCount === 0,
+  );
+  const repositoriesWithoutAnyFeature = repositoriesWithoutEnabledFeature.filter(
+    (repository) => repository.reviewFeatureCount === 0,
+  );
+  const repositoriesOnlyInDisabledFeatures =
+    repositoriesWithoutEnabledFeature.length - repositoriesWithoutAnyFeature.length;
+  const repositoriesWithEnabledFeature = coverage.length - repositoriesWithoutEnabledFeature.length;
+
+  return (
+    <div className="review-feature-admin-page__coverage">
+      <div className="review-feature-admin-page__coverage-summary">
+        <div className="review-feature-admin-page__coverage-metric">
+          <span className="review-feature-admin-page__coverage-value">{coverage.length}</span>
+          <span className="review-feature-admin-page__coverage-label">Repositories</span>
+        </div>
+        <div className="review-feature-admin-page__coverage-metric">
+          <span className="review-feature-admin-page__coverage-value">
+            {repositoriesWithEnabledFeature}
+          </span>
+          <span className="review-feature-admin-page__coverage-label">In enabled features</span>
+        </div>
+        <div className="review-feature-admin-page__coverage-metric">
+          <span className="review-feature-admin-page__coverage-value">
+            {repositoriesWithoutEnabledFeature.length}
+          </span>
+          <span className="review-feature-admin-page__coverage-label">No enabled feature</span>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="review-feature-admin-page__coverage-note is-error">{error}</div>
+      ) : isLoading ? (
+        <div className="review-feature-admin-page__coverage-note">Loading repository coverage…</div>
+      ) : repositoriesWithoutEnabledFeature.length === 0 ? (
+        <div className="review-feature-admin-page__coverage-note">
+          All repositories are covered by at least one enabled review feature.
+        </div>
+      ) : (
+        <>
+          <div className="review-feature-admin-page__coverage-note">
+            {repositoriesWithoutAnyFeature.length} with no review feature,{' '}
+            {repositoriesOnlyInDisabledFeatures} only in disabled features.
+          </div>
+          <div className="review-feature-admin-page__coverage-table">
+            <div className="review-feature-admin-page__coverage-header">
+              <div>Repository</div>
+              <div>Coverage</div>
+            </div>
+            {repositoriesWithoutEnabledFeature.map((repository) => {
+              const disabledFeatures = repository.reviewFeatures.filter(
+                (feature) => !feature.enabled,
+              );
+              return (
+                <div
+                  key={repository.repositoryId}
+                  className="review-feature-admin-page__coverage-row"
+                >
+                  <div className="review-feature-admin-page__coverage-repository">
+                    {repository.repositoryName}
+                    <span className="review-feature-admin-page__id-text">
+                      #{repository.repositoryId}
+                    </span>
+                  </div>
+                  <div className="review-feature-admin-page__coverage-status">
+                    {disabledFeatures.length === 0 ? (
+                      'No review feature'
+                    ) : (
+                      <>
+                        Only disabled:{' '}
+                        {disabledFeatures.map((feature, index) => (
+                          <span key={feature.id}>
+                            {index > 0 ? ', ' : ''}
+                            <Link to={`/settings/system/review-features/${feature.id}`}>
+                              {feature.name}
+                            </Link>
+                          </span>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -86,6 +86,11 @@
   min-width: 0;
 }
 
+.repositories-page__review-coverage-filter {
+  width: clamp(var(--chip-width-sm-min), var(--chip-width-sm-fluid), var(--chip-width-sm-max));
+  min-width: 0;
+}
+
 .repositories-page__filter-button {
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 75%, transparent);
   border-radius: var(--radius-pill);
@@ -260,6 +265,12 @@
 .repositories-page__repo-badge--link:focus-visible {
   border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
   color: var(--color-accent);
+}
+
+.repositories-page__repo-badge--warning {
+  border-color: color-mix(in srgb, var(--color-warning, #b7791f) 45%, var(--color-border));
+  color: color-mix(in srgb, var(--color-warning, #b7791f) 78%, var(--color-text));
+  background: color-mix(in srgb, var(--color-warning, #b7791f) 10%, transparent);
 }
 
 .repositories-page__row-action {

@@ -61,6 +61,15 @@ public class ReviewFeatureWS {
   public record ReviewFeatureBatchExportResponse(
       Long id, String name, boolean enabled, List<String> repositoryNames) {}
 
+  public record RepositoryCoverageResponse(
+      Long repositoryId,
+      String repositoryName,
+      long reviewFeatureCount,
+      long enabledReviewFeatureCount,
+      List<RepositoryCoverageFeatureRef> reviewFeatures) {}
+
+  public record RepositoryCoverageFeatureRef(Long id, String name, boolean enabled) {}
+
   public record BatchUpsertReviewFeaturesResponse(int createdCount, int updatedCount) {}
 
   @GetMapping
@@ -76,6 +85,13 @@ public class ReviewFeatureWS {
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
+  }
+
+  @GetMapping("/repository-coverage")
+  public List<RepositoryCoverageResponse> getRepositoryCoverage() {
+    return reviewFeatureService.getRepositoryCoverage().stream()
+        .map(this::toRepositoryCoverageResponse)
+        .toList();
   }
 
   @GetMapping("/{featureId}")
@@ -193,5 +209,24 @@ public class ReviewFeatureWS {
         detail.repositories().stream()
             .map(repository -> new RepositoryRef(repository.id(), repository.name()))
             .toList());
+  }
+
+  private RepositoryCoverageResponse toRepositoryCoverageResponse(
+      ReviewFeatureService.RepositoryCoverage coverage) {
+    List<RepositoryCoverageFeatureRef> features =
+        coverage.reviewFeatures().stream()
+            .map(
+                feature ->
+                    new RepositoryCoverageFeatureRef(
+                        feature.id(), feature.name(), feature.enabled()))
+            .toList();
+    long enabledFeatureCount =
+        features.stream().filter(RepositoryCoverageFeatureRef::enabled).count();
+    return new RepositoryCoverageResponse(
+        coverage.repositoryId(),
+        coverage.repositoryName(),
+        features.size(),
+        enabledFeatureCount,
+        features);
   }
 }

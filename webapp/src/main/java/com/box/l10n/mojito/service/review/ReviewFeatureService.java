@@ -6,6 +6,7 @@ import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -88,6 +89,60 @@ public class ReviewFeatureService {
                     row.name(),
                     Boolean.TRUE.equals(row.enabled()),
                     repositoryNamesByFeatureId.getOrDefault(row.id(), List.of())))
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<RepositoryCoverage> getRepositoryCoverage() {
+    requireAdmin();
+    List<Repository> repositories =
+        repositoryRepository.findByDeletedFalseAndHiddenFalseOrderByNameAsc();
+    if (repositories.isEmpty()) {
+      return List.of();
+    }
+
+    Map<Long, RepositoryCoverageBuilder> coverageByRepositoryId = new LinkedHashMap<>();
+    for (Repository repository : repositories) {
+      coverageByRepositoryId.put(
+          repository.getId(),
+          new RepositoryCoverageBuilder(repository.getId(), repository.getName()));
+    }
+
+    List<ReviewFeatureOptionRow> featureRows = reviewFeatureRepository.findAllOptionRows();
+    if (!featureRows.isEmpty()) {
+      Map<Long, ReviewFeatureOptionRow> featureById = new LinkedHashMap<>();
+      for (ReviewFeatureOptionRow featureRow : featureRows) {
+        featureById.put(featureRow.id(), featureRow);
+      }
+
+      List<Long> featureIds = featureRows.stream().map(ReviewFeatureOptionRow::id).toList();
+      for (ReviewFeatureRepositoryRow repositoryRow :
+          reviewFeatureRepository.findRepositoryRowsByFeatureIds(featureIds)) {
+        RepositoryCoverageBuilder coverage =
+            coverageByRepositoryId.get(repositoryRow.repositoryId());
+        ReviewFeatureOptionRow feature = featureById.get(repositoryRow.reviewFeatureId());
+        if (coverage == null || feature == null) {
+          continue;
+        }
+        coverage
+            .reviewFeatures()
+            .add(
+                new RepositoryCoverage.ReviewFeatureRef(
+                    feature.id(), feature.name(), Boolean.TRUE.equals(feature.enabled())));
+      }
+    }
+
+    Comparator<RepositoryCoverage.ReviewFeatureRef> featureComparator =
+        Comparator.comparing(
+                RepositoryCoverage.ReviewFeatureRef::name, String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(RepositoryCoverage.ReviewFeatureRef::id);
+    return coverageByRepositoryId.values().stream()
+        .map(
+            coverage ->
+                new RepositoryCoverage(
+                    coverage.repositoryId(),
+                    coverage.repositoryName(),
+                    coverage.reviewFeatures().stream().sorted(featureComparator).toList()))
         .toList();
   }
 
@@ -352,6 +407,20 @@ public class ReviewFeatureService {
 
   public record ReviewFeatureBatchExportRow(
       Long id, String name, boolean enabled, List<String> repositoryNames) {}
+
+  public record RepositoryCoverage(
+      Long repositoryId, String repositoryName, List<ReviewFeatureRef> reviewFeatures) {
+    public record ReviewFeatureRef(Long id, String name, boolean enabled) {}
+  }
+
+  private record RepositoryCoverageBuilder(
+      Long repositoryId,
+      String repositoryName,
+      List<RepositoryCoverage.ReviewFeatureRef> reviewFeatures) {
+    private RepositoryCoverageBuilder(Long repositoryId, String repositoryName) {
+      this(repositoryId, repositoryName, new ArrayList<>());
+    }
+  }
 
   public record BatchUpsertRow(Long id, String name, Boolean enabled, List<Long> repositoryIds) {}
 
