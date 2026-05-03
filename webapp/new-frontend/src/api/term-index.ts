@@ -222,6 +222,7 @@ export type ApiTermIndexRefreshRun = {
   id: number;
   status: string;
   requestedRepositoryIds?: string | null;
+  pollableTaskId?: number | null;
   processedTextUnitCount: number;
   extractedTermCount: number;
   occurrenceCount: number;
