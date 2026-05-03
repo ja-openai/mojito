@@ -20,6 +20,9 @@ public class TermIndexRefreshRun extends AuditableEntity {
   @Column(name = "requested_repository_ids", length = 2048)
   private String requestedRepositoryIds;
 
+  @Column(name = "pollable_task_id")
+  private Long pollableTaskId;
+
   @Column(name = "processed_text_unit_count", nullable = false)
   private Long processedTextUnitCount = 0L;
 
@@ -52,6 +55,14 @@ public class TermIndexRefreshRun extends AuditableEntity {
 
   public void setRequestedRepositoryIds(String requestedRepositoryIds) {
     this.requestedRepositoryIds = requestedRepositoryIds;
+  }
+
+  public Long getPollableTaskId() {
+    return pollableTaskId;
+  }
+
+  public void setPollableTaskId(Long pollableTaskId) {
+    this.pollableTaskId = pollableTaskId;
   }
 
   public Long getProcessedTextUnitCount() {

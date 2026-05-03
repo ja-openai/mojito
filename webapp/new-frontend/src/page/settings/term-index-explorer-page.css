@@ -132,6 +132,10 @@
   gap: var(--space-4);
 }
 
+.term-index-explorer__status-section {
+  margin-top: var(--space-3);
+}
+
 .term-index-explorer__subheading {
   margin-bottom: var(--space-2);
   font-size: var(--font-size-sm);
@@ -364,6 +368,7 @@
 
 .term-index-explorer__workspace {
   --term-index-resize-handle-size: 10px;
+  position: relative;
   display: grid;
   grid-template-columns:
     var(--term-index-left-pane-width, 50%) var(--term-index-resize-handle-size)
@@ -373,6 +378,35 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+.term-index-explorer__workspace.is-loading .term-index-explorer__terms,
+.term-index-explorer__workspace.is-loading .term-index-explorer__pane-divider,
+.term-index-explorer__workspace.is-loading .term-index-explorer__occurrences {
+  filter: blur(1px);
+  opacity: 0.45;
+  pointer-events: none;
+  transition:
+    filter 120ms ease,
+    opacity 120ms ease;
+}
+
+.term-index-explorer__workspace-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.term-index-explorer__workspace-loading span {
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.12);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-3);
 }
 
 .term-index-explorer__terms,

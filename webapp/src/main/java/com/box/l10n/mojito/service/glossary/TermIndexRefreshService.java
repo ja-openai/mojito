@@ -134,13 +134,17 @@ public class TermIndexRefreshService {
   }
 
   public RefreshResult refresh(RefreshCommand command) {
+    return refresh(command, null);
+  }
+
+  public RefreshResult refresh(RefreshCommand command, Long pollableTaskId) {
     RefreshCommand validatedCommand = validate(command);
     List<Repository> repositories = resolveRepositories(validatedCommand.repositoryIds());
     List<Long> repositoryIds = repositories.stream().map(Repository::getId).toList();
     int batchSize = normalizeBatchSize(validatedCommand.batchSize());
     boolean fullRefresh = Boolean.TRUE.equals(validatedCommand.fullRefresh());
 
-    TermIndexRefreshRun refreshRun = createRefreshRun(repositories);
+    TermIndexRefreshRun refreshRun = createRefreshRun(repositories, pollableTaskId);
     long processedTextUnitCount = 0;
     long occurrenceCount = 0;
 
@@ -475,13 +479,14 @@ public class TermIndexRefreshService {
         PageRequest.of(0, batchSize));
   }
 
-  private TermIndexRefreshRun createRefreshRun(List<Repository> repositories) {
+  private TermIndexRefreshRun createRefreshRun(List<Repository> repositories, Long pollableTaskId) {
     return Objects.requireNonNull(
         transactionTemplate.execute(
             status -> {
               TermIndexRefreshRun refreshRun = new TermIndexRefreshRun();
               refreshRun.setStatus(TermIndexRefreshRun.STATUS_RUNNING);
               refreshRun.setRequestedRepositoryIds(joinRepositoryIds(repositories));
+              refreshRun.setPollableTaskId(pollableTaskId);
               refreshRun.setStartedAt(ZonedDateTime.now());
               return termIndexRefreshRunRepository.save(refreshRun);
             }));

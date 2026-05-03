@@ -11,6 +11,6 @@ public class TermIndexRefreshJob
 
   @Override
   public TermIndexRefreshService.RefreshResult call(TermIndexRefreshService.RefreshCommand input) {
-    return termIndexRefreshService.refresh(input);
+    return termIndexRefreshService.refresh(input, getCurrentPollableTask().getId());
   }
 }

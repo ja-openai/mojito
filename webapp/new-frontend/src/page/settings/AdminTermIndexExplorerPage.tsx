@@ -627,14 +627,9 @@ export function AdminTermIndexExtractionPage() {
       setActiveRefreshTaskId(startedTask.id);
       return waitForTermIndexRefreshTask(startedTask.id);
     },
-    onSuccess: async (_task, request) => {
+    onSuccess: async () => {
       setActiveRefreshTaskId(null);
-      setNotice({
-        kind: 'success',
-        message: request.fullRefresh
-          ? 'Full term extraction completed.'
-          : 'Term extraction completed.',
-      });
+      setNotice(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['term-index-status'] }),
         queryClient.invalidateQueries({ queryKey: ['term-index-entries'] }),
@@ -709,9 +704,6 @@ export function AdminTermIndexExtractionPage() {
               {refreshMutation.isPending ? 'Extracting' : 'Extract'}
             </button>
           </div>
-          {activeRefreshTaskId != null ? (
-            <p className="settings-hint">Extraction task {activeRefreshTaskId} is running.</p>
-          ) : null}
           {notice ? (
             <p className={`settings-hint${notice.kind === 'error' ? ' is-error' : ''}`}>
               {notice.message}
@@ -719,12 +711,10 @@ export function AdminTermIndexExtractionPage() {
           ) : null}
         </section>
 
-        <section className="settings-card">
-          <div className="settings-card__header">
-            <h2>Extraction status</h2>
-          </div>
+        <section className="term-index-explorer__status-section" aria-label="Extraction status">
           <IndexStatusTables
             statusQuery={statusQuery}
+            activeRefreshTaskId={activeRefreshTaskId}
             runResultLimit={runResultLimit}
             runCountLabel={recentRunCountLabel}
             onChangeRunResultLimit={updateRunResultLimit}
@@ -1118,8 +1108,9 @@ export function AdminTermIndexTermsPage() {
     [statusQuery.data?.extractionMethods],
   );
   const termCountLabel = entriesQuery.isLoading
-    ? 'Loading terms...'
+    ? 'Terms'
     : formatCappedListLabel('terms', entries.length, termResultLimit);
+  const showWorkspaceLoading = entriesQuery.isFetching && !entriesQuery.isError;
   const termDateQuickRanges = useMemo(() => getStandardDateQuickRanges(), []);
   const workspaceStyle = useMemo(
     () =>
@@ -1333,11 +1324,13 @@ export function AdminTermIndexTermsPage() {
           {updateReviewMutation.error ? (
             <p className="settings-hint is-error">{getErrorMessage(updateReviewMutation.error)}</p>
           ) : null}
-          <div className="term-index-explorer__workspace" ref={workspaceRef} style={workspaceStyle}>
+          <div
+            className={`term-index-explorer__workspace${showWorkspaceLoading ? ' is-loading' : ''}`}
+            ref={workspaceRef}
+            style={workspaceStyle}
+          >
             <div className="term-index-explorer__terms">
-              {entriesQuery.isLoading ? (
-                <div className="term-index-explorer__loading-spacer" aria-hidden="true" />
-              ) : entriesQuery.isError ? (
+              {entriesQuery.isLoading ? null : entriesQuery.isError ? (
                 <p className="settings-hint is-error">{getErrorMessage(entriesQuery.error)}</p>
               ) : entries.length === 0 ? (
                 <p className="settings-hint">No indexed terms match the current filters.</p>
@@ -1391,6 +1384,9 @@ export function AdminTermIndexTermsPage() {
                 <p className="settings-hint">Select a term to inspect examples.</p>
               )}
             </div>
+            {showWorkspaceLoading ? (
+              <TermIndexWorkspaceLoadingOverlay label="Loading terms" />
+            ) : null}
           </div>
         </section>
       </div>
@@ -1743,8 +1739,9 @@ export function AdminTermIndexCandidateGenerationPage() {
     [statusQuery.data?.extractionMethods],
   );
   const termCountLabel = entriesQuery.isLoading
-    ? 'Loading terms...'
+    ? 'Terms'
     : formatCappedListLabel('terms', entries.length, termResultLimit);
+  const showWorkspaceLoading = entriesQuery.isFetching && !entriesQuery.isError;
   const termDateQuickRanges = useMemo(() => getStandardDateQuickRanges(), []);
   const workspaceStyle = useMemo(
     () =>
@@ -1953,11 +1950,13 @@ export function AdminTermIndexCandidateGenerationPage() {
           {updateReviewMutation.error ? (
             <p className="settings-hint is-error">{getErrorMessage(updateReviewMutation.error)}</p>
           ) : null}
-          <div className="term-index-explorer__workspace" ref={workspaceRef} style={workspaceStyle}>
+          <div
+            className={`term-index-explorer__workspace${showWorkspaceLoading ? ' is-loading' : ''}`}
+            ref={workspaceRef}
+            style={workspaceStyle}
+          >
             <div className="term-index-explorer__terms">
-              {entriesQuery.isLoading ? (
-                <div className="term-index-explorer__loading-spacer" aria-hidden="true" />
-              ) : entriesQuery.isError ? (
+              {entriesQuery.isLoading ? null : entriesQuery.isError ? (
                 <p className="settings-hint is-error">{getErrorMessage(entriesQuery.error)}</p>
               ) : entries.length === 0 ? (
                 <p className="settings-hint">No non-rejected extracted terms match the filters.</p>
@@ -2012,6 +2011,9 @@ export function AdminTermIndexCandidateGenerationPage() {
                 <p className="settings-hint">Select a term to draft a candidate.</p>
               )}
             </div>
+            {showWorkspaceLoading ? (
+              <TermIndexWorkspaceLoadingOverlay label="Loading terms" />
+            ) : null}
           </div>
         </section>
       </div>
@@ -2054,6 +2056,14 @@ function TermIndexSubnav({ active }: { active: 'extraction' | 'terms' | 'candida
         Candidate Generation
       </Link>
     </nav>
+  );
+}
+
+function TermIndexWorkspaceLoadingOverlay({ label }: { label: string }) {
+  return (
+    <div className="term-index-explorer__workspace-loading" role="status" aria-live="polite">
+      <span>{label}</span>
+    </div>
   );
 }
 
@@ -3561,15 +3571,21 @@ function TermIndexBatchReviewModal({
 
 function IndexStatusTables({
   statusQuery,
+  activeRefreshTaskId,
   runResultLimit,
   runCountLabel,
   onChangeRunResultLimit,
 }: {
   statusQuery: ReturnType<typeof useQuery<Awaited<ReturnType<typeof fetchTermIndexStatus>>, Error>>;
+  activeRefreshTaskId: number | null;
   runResultLimit: number;
   runCountLabel: string;
   onChangeRunResultLimit: (value: number) => void;
 }) {
+  const activeRefreshRunId = statusQuery.data?.recentRuns.find(
+    (run) => run.status === 'RUNNING',
+  )?.id;
+
   return (
     <div className="term-index-explorer__status-grid">
       <div>
@@ -3645,6 +3661,7 @@ function IndexStatusTables({
               <thead>
                 <tr>
                   <th>Run</th>
+                  <th>Task</th>
                   <th>Status</th>
                   <th>Text units</th>
                   <th>Extracted terms</th>
@@ -3656,6 +3673,13 @@ function IndexStatusTables({
                 {(statusQuery.data?.recentRuns ?? []).map((run) => (
                   <tr key={run.id}>
                     <td>#{run.id}</td>
+                    <td>
+                      {run.pollableTaskId != null
+                        ? `#${run.pollableTaskId}`
+                        : activeRefreshTaskId != null && run.id === activeRefreshRunId
+                          ? `#${activeRefreshTaskId}`
+                          : '-'}
+                    </td>
                     <td>{run.status}</td>
                     <td>{run.processedTextUnitCount}</td>
                     <td>{run.extractedTermCount}</td>
