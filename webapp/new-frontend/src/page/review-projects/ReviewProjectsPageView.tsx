@@ -9,8 +9,10 @@ import { Link } from 'react-router-dom';
 import {
   type ApiReviewProjectAssignedScope,
   type ApiReviewProjectStatus,
+  type ApiReviewProjectTerminologyPhase,
   type ApiReviewProjectType,
   REVIEW_PROJECT_STATUS_LABELS,
+  REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
   updateReviewProjectAssignment,
   updateReviewProjectRequestPmAssignment,
@@ -105,6 +107,7 @@ export type ReviewProjectRow = {
   assignedTranslatorUserId: number | null;
   assignedTranslatorUsername: string | null;
   type: ApiReviewProjectType;
+  terminologyPhase: ApiReviewProjectTerminologyPhase | null;
   status: ApiReviewProjectStatus;
   localeTag: string | null;
   decidedCount: number;
@@ -375,7 +378,7 @@ function ContentSection({
   const [reassignDraftTranslatorUserId, setReassignDraftTranslatorUserId] = useState<number | null>(
     null,
   );
-  const [reassignShowAllTeam, setReassignShowAllTeam] = useState(false);
+  const [reassignShowAllAssignees, setReassignShowAllAssignees] = useState(false);
   const [reassignError, setReassignError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -383,11 +386,12 @@ function ContentSection({
       return;
     }
     setReassignDraftTranslatorUserId(reassignProject.assignedTranslatorUserId ?? null);
-    setReassignShowAllTeam(false);
+    setReassignShowAllAssignees(false);
     setReassignError(null);
   }, [reassignProject]);
 
   const activeTeamId = reassignProject?.teamId ?? null;
+  const isTerminologyReassignProject = reassignProject?.type === 'TERMINOLOGY';
   const teamTranslatorUsersQuery = useQuery({
     queryKey: ['team-users', activeTeamId, 'TRANSLATOR', 'review-projects-list-reassign'],
     queryFn: () => fetchTeamUsersByRole(activeTeamId as number, 'TRANSLATOR'),
@@ -428,7 +432,7 @@ function ContentSection({
     const localePoolIds =
       localePoolRow?.translatorUserIds?.filter((id): id is number => id > 0) ?? [];
     const source =
-      reassignShowAllTeam || localePoolIds.length === 0 ? translatorIds : localePoolIds;
+      reassignShowAllAssignees || localePoolIds.length === 0 ? translatorIds : localePoolIds;
     const ids = Array.from(new Set(source));
     if (reassignDraftTranslatorUserId != null && !ids.includes(reassignDraftTranslatorUserId)) {
       ids.unshift(reassignDraftTranslatorUserId);
@@ -438,7 +442,7 @@ function ContentSection({
     activeTeamId,
     reassignDraftTranslatorUserId,
     reassignProject,
-    reassignShowAllTeam,
+    reassignShowAllAssignees,
     teamLocalePoolsQuery.data?.entries,
     teamTranslatorsQuery.data?.userIds,
   ]);
@@ -465,9 +469,17 @@ function ContentSection({
     activeTeamId == null
       ? null
       : teamTranslatorUsersQuery.error != null
-        ? getErrorMessage(teamTranslatorUsersQuery.error, 'Failed to load translators')
+        ? getErrorMessage(
+            teamTranslatorUsersQuery.error,
+            isTerminologyReassignProject ? 'Failed to load advisors' : 'Failed to load translators',
+          )
         : teamTranslatorsQuery.error != null
-          ? getErrorMessage(teamTranslatorsQuery.error, 'Failed to load team translators')
+          ? getErrorMessage(
+              teamTranslatorsQuery.error,
+              isTerminologyReassignProject
+                ? 'Failed to load advisors'
+                : 'Failed to load translators',
+            )
           : teamLocalePoolsQuery.error != null
             ? getErrorMessage(teamLocalePoolsQuery.error, 'Failed to load locale pools')
             : null;
@@ -494,6 +506,12 @@ function ContentSection({
       setReassignError(error instanceof Error ? error.message : 'Failed to update assignment');
     },
   });
+  const canSaveTranslatorReassign =
+    reassignProject != null &&
+    canReassignTranslator &&
+    !translatorReassignMutation.isPending &&
+    reassignLoadError == null &&
+    activeTeamId != null;
 
   if (projects.length === 0) {
     return (
@@ -547,7 +565,7 @@ function ContentSection({
         open={reassignProject != null}
         size="md"
         className="review-projects-page__reassign-dialog"
-        ariaLabel="Reassign translator"
+        ariaLabel={isTerminologyReassignProject ? 'Reassign advisor' : 'Reassign translator'}
         onClose={() => {
           if (translatorReassignMutation.isPending) {
             return;
@@ -559,7 +577,9 @@ function ContentSection({
       >
         {reassignProject ? (
           <>
-            <div className="modal__title">Reassign translator</div>
+            <div className="modal__title">
+              Reassign {isTerminologyReassignProject ? 'advisor' : 'translator'}
+            </div>
             <div className="modal__body review-projects-page__reassign-modal">
               <div className="review-projects-page__reassign-modal-line">
                 <span className="review-projects-page__reassign-modal-label">Project</span>
@@ -568,15 +588,11 @@ function ContentSection({
                   {reassignProject.localeTag ? ` · ${reassignProject.localeTag}` : ''}
                 </span>
               </div>
-              <div className="review-projects-page__reassign-modal-line">
-                <span className="review-projects-page__reassign-modal-label">Team</span>
-                <span className="review-projects-page__reassign-modal-value">
-                  {reassignProject.teamName?.trim() ? reassignProject.teamName : '—'}
-                </span>
-              </div>
               {activeTeamId == null ? (
                 <div className="review-projects-page__reassign-modal-error">
-                  No team is assigned.
+                  {isTerminologyReassignProject
+                    ? 'No review team is assigned.'
+                    : 'No assignment pool is available.'}
                 </div>
               ) : reassignLoadError ? (
                 <div className="review-projects-page__reassign-modal-error">
@@ -585,19 +601,29 @@ function ContentSection({
               ) : (
                 <div className="review-projects-page__reassign-modal-field">
                   <SingleSelectDropdown<number>
-                    label="Translator"
+                    label={isTerminologyReassignProject ? 'Advisor' : 'Translator'}
                     options={translatorOptions}
                     value={reassignDraftTranslatorUserId}
                     onChange={(next) => {
                       setReassignDraftTranslatorUserId(next);
                       setReassignError(null);
                     }}
-                    placeholder="Select translator"
-                    noneLabel="No translator"
-                    buttonAriaLabel="Select translator"
+                    placeholder={
+                      isTerminologyReassignProject ? 'Select advisor' : 'Select translator'
+                    }
+                    noneLabel={isTerminologyReassignProject ? 'No advisor' : 'No translator'}
+                    buttonAriaLabel={
+                      isTerminologyReassignProject ? 'Select advisor' : 'Select translator'
+                    }
                     footerAction={{
-                      label: reassignShowAllTeam ? 'Locale pool only' : 'Show all team',
-                      onClick: () => setReassignShowAllTeam((value) => !value),
+                      label: isTerminologyReassignProject
+                        ? reassignShowAllAssignees
+                          ? 'Assigned advisors only'
+                          : 'Show all advisors'
+                        : reassignShowAllAssignees
+                          ? 'Locale pool only'
+                          : 'Show all translators',
+                      onClick: () => setReassignShowAllAssignees((value) => !value),
                       disabled: translatorReassignMutation.isPending,
                     }}
                   />
@@ -626,11 +652,7 @@ function ContentSection({
                 type="button"
                 className="modal__button modal__button--primary"
                 onClick={() => void translatorReassignMutation.mutateAsync()}
-                disabled={
-                  translatorReassignMutation.isPending ||
-                  activeTeamId == null ||
-                  reassignLoadError != null
-                }
+                disabled={!canSaveTranslatorReassign}
               >
                 {translatorReassignMutation.isPending ? 'Saving…' : 'Save'}
               </button>
@@ -700,6 +722,8 @@ const getProjectCompletionState = (project: ReviewProjectRow) => {
   return getCompletionState(project.decidedCount, project.textUnitCount ?? 0);
 };
 
+const getProjectProgressDoneLabel = () => 'reviewed';
+
 const getLanguageCompletionMetrics = (projects: ReviewProjectRow[]) => {
   const totalLanguages = projects.length;
   const completedLanguages = projects.reduce((sum, project) => {
@@ -715,6 +739,43 @@ const getLanguageCompletionMetrics = (projects: ReviewProjectRow[]) => {
     totalLanguages,
     percentWidth,
     completionLabel: `${completedLanguages}/${totalLanguages}`,
+  };
+};
+
+const getTerminologyGroupProgressMetrics = (projects: ReviewProjectRow[]) => {
+  const specialistProjects = projects.filter(
+    (project) => project.terminologyPhase === 'SPECIALIST_INPUT',
+  );
+  const pmProjects = projects.filter((project) => project.terminologyPhase === 'PM_RESOLUTION');
+  const completedSpecialists = specialistProjects.reduce((sum, project) => {
+    const { isComplete } = getProjectCompletionState(project);
+    return sum + (isComplete ? 1 : 0);
+  }, 0);
+  const totalSpecialists = specialistProjects.length;
+  const pmDecided = pmProjects.reduce(
+    (sum, project) => sum + toFiniteNonNegative(project.decidedCount),
+    0,
+  );
+  const pmTotal = pmProjects.reduce(
+    (sum, project) => sum + toFiniteNonNegative(project.textUnitCount ?? 0),
+    0,
+  );
+  const pmProgress = getProgressMetrics(pmDecided, pmTotal);
+  return {
+    completedSpecialists,
+    totalSpecialists,
+    specialistCompletionLabel: `${completedSpecialists}/${totalSpecialists}`,
+    specialistProgressTitle:
+      totalSpecialists === 0
+        ? 'No advisor review projects'
+        : `${completedSpecialists} of ${totalSpecialists} advisor review projects complete`,
+    pmPercentWidth: pmProjects.length === 0 ? '0%' : pmProgress.percentWidth,
+    pmProgressLabel:
+      pmProjects.length === 0 ? 'Decider none' : `Decider ${pmProgress.percentLabel}`,
+    pmProgressTitle:
+      pmProjects.length === 0
+        ? 'No decider project'
+        : `Decider reviewed: ${formatNumber(pmProgress.decided)} of ${formatNumber(pmProgress.total)}`,
   };
 };
 
@@ -756,6 +817,86 @@ function getRequestGroupTypeBadge(group: ReviewProjectRequestGroupRow): {
     label: 'Mixed',
     className: 'review-projects-page__type-pill--default',
   };
+}
+
+function isTerminologyProject(project: ReviewProjectRow) {
+  return project.type === 'TERMINOLOGY';
+}
+
+function isTerminologyRequestGroup(group: ReviewProjectRequestGroupRow) {
+  return group.projects.length > 0 && group.projects.every(isTerminologyProject);
+}
+
+function getTerminologyGroupSummary(group: ReviewProjectRequestGroupRow) {
+  const specialistCount = group.projects.filter(
+    (project) => project.terminologyPhase === 'SPECIALIST_INPUT',
+  ).length;
+  const pmCount = group.projects.filter(
+    (project) => project.terminologyPhase === 'PM_RESOLUTION',
+  ).length;
+  if (specialistCount === 0 && pmCount === 0) {
+    return `${group.projects.length} terminology project${group.projects.length === 1 ? '' : 's'}`;
+  }
+  const specialistLabel = `${specialistCount} advisor${specialistCount === 1 ? '' : 's'}`;
+  if (pmCount === 0) {
+    return specialistLabel;
+  }
+  return `${specialistLabel} · ${pmCount} decider${pmCount === 1 ? '' : 's'}`;
+}
+
+function getTerminologyProjectPhaseLabel(project: ReviewProjectRow) {
+  return project.terminologyPhase == null
+    ? 'Terminology'
+    : REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS[project.terminologyPhase];
+}
+
+function getTerminologyProjectReviewerLabel(project: ReviewProjectRow) {
+  if (project.terminologyPhase === 'PM_RESOLUTION') {
+    return `Decider ${getCompactUserDisplayName(project.assignedPmUsername)}`;
+  }
+  return `Advisor ${getCompactUserDisplayName(project.assignedTranslatorUsername)}`;
+}
+
+function getTerminologyProjectAssigneeLabel(project: ReviewProjectRow) {
+  if (project.terminologyPhase === 'PM_RESOLUTION') {
+    return getCompactUserDisplayName(project.assignedPmUsername);
+  }
+  return getCompactUserDisplayName(project.assignedTranslatorUsername);
+}
+
+function getTerminologyProjectSortRank(project: ReviewProjectRow) {
+  if (project.terminologyPhase === 'SPECIALIST_INPUT') {
+    return 0;
+  }
+  if (project.terminologyPhase === 'PM_RESOLUTION') {
+    return 1;
+  }
+  return 2;
+}
+
+function sortProjectsForRequestRows(projects: ReviewProjectRow[]) {
+  return [...projects].sort((a, b) => {
+    const aIsTerminology = isTerminologyProject(a);
+    const bIsTerminology = isTerminologyProject(b);
+    if (aIsTerminology !== bIsTerminology) {
+      return aIsTerminology ? -1 : 1;
+    }
+    if (aIsTerminology && bIsTerminology) {
+      const phaseDiff = getTerminologyProjectSortRank(a) - getTerminologyProjectSortRank(b);
+      if (phaseDiff !== 0) {
+        return phaseDiff;
+      }
+      const reviewerDiff = getTerminologyProjectReviewerLabel(a).localeCompare(
+        getTerminologyProjectReviewerLabel(b),
+      );
+      if (reviewerDiff !== 0) {
+        return reviewerDiff;
+      }
+      return a.id - b.id;
+    }
+    const localeDiff = (a.localeTag ?? '').localeCompare(b.localeTag ?? '');
+    return localeDiff !== 0 ? localeDiff : a.id - b.id;
+  });
 }
 
 function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestGroupRow[] {
@@ -824,9 +965,7 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
     .map((group) => ({
       ...group,
       localeTags: [...group.localeTags].sort((a, b) => a.localeCompare(b)),
-      projects: [...group.projects].sort((a, b) =>
-        (a.localeTag ?? '').localeCompare(b.localeTag ?? ''),
-      ),
+      projects: sortProjectsForRequestRows(group.projects),
     }))
     .sort((a, b) => {
       if (a.requestId != null && b.requestId != null) {
@@ -1143,11 +1282,14 @@ function ReviewProjectRowView({
     project.decidedCount,
     project.textUnitCount ?? 0,
   );
+  const progressDoneLabel = getProjectProgressDoneLabel();
   const localeTag = project.localeTag;
   const typeClass =
     project.type === 'EMERGENCY'
       ? 'review-projects-page__type-pill--emergency'
       : 'review-projects-page__type-pill--default';
+  const pmRoleLabel = project.type === 'TERMINOLOGY' ? 'Decider' : 'PM';
+  const translatorRoleLabel = project.type === 'TERMINOLOGY' ? 'Advisor' : 'Translator';
 
   return (
     <div className="review-projects-page__row-card">
@@ -1181,6 +1323,11 @@ function ReviewProjectRowView({
           <Pill className={`review-projects-page__type-pill ${typeClass}`}>
             {REVIEW_PROJECT_TYPE_LABELS[project.type] ?? REVIEW_PROJECT_TYPE_LABELS.NORMAL}
           </Pill>
+          {project.type === 'TERMINOLOGY' && project.terminologyPhase != null ? (
+            <Pill className="review-projects-page__type-pill">
+              {REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS[project.terminologyPhase]}
+            </Pill>
+          ) : null}
         </div>
         <div className="review-projects-page__meta">
           {project.status === 'CLOSED' ? (
@@ -1206,7 +1353,7 @@ function ReviewProjectRowView({
               className="review-projects-page__request-assignee"
               title={getUserTitle(project.assignedPmUsername)}
             >
-              PM {getCompactUserDisplayName(project.assignedPmUsername)}
+              {pmRoleLabel} {getCompactUserDisplayName(project.assignedPmUsername)}
             </span>
             <span className="review-projects-page__request-dot" aria-hidden="true">
               ·
@@ -1221,9 +1368,12 @@ function ReviewProjectRowView({
                   }
                 }}
                 disabled={isReassignSaving}
-                aria-label="Reassign translator"
+                aria-label={
+                  project.type === 'TERMINOLOGY' ? 'Reassign advisor' : 'Reassign translator'
+                }
                 title={getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'}
               >
+                {project.type === 'TERMINOLOGY' ? `${translatorRoleLabel} ` : ''}
                 {getCompactUserDisplayName(project.assignedTranslatorUsername)}
               </button>
             ) : (
@@ -1231,13 +1381,20 @@ function ReviewProjectRowView({
                 className="review-projects-page__request-assignee"
                 title={getUserTitle(project.assignedTranslatorUsername)}
               >
+                {project.type === 'TERMINOLOGY' ? `${translatorRoleLabel} ` : ''}
                 {getCompactUserDisplayName(project.assignedTranslatorUsername)}
               </span>
             )}
           </span>
         </div>
         <div className="review-projects-page__locales">
-          {localeTag ? (
+          {project.type === 'TERMINOLOGY' ? (
+            <div className="review-projects-page__pill-list">
+              <Pill className="review-projects-page__type-pill">
+                {getTerminologyProjectPhaseLabel(project)}
+              </Pill>
+            </div>
+          ) : localeTag ? (
             <div className="review-projects-page__pill-list">
               <LocalePill
                 className="review-projects-page__pill review-projects-page__pill--locale"
@@ -1252,7 +1409,7 @@ function ReviewProjectRowView({
         <div className="review-projects-page__progress">
           <div
             className="review-projects-page__progress-bar"
-            title={`${formatNumber(decided)} of ${formatNumber(total)} processed`}
+            title={`${formatNumber(decided)} of ${formatNumber(total)} ${progressDoneLabel}`}
           >
             <div
               className="review-projects-page__progress-fill"
@@ -1261,7 +1418,9 @@ function ReviewProjectRowView({
             />
           </div>
           <div className="review-projects-page__progress-meta">
-            <div className="review-projects-page__progress-percent">{percentLabel} reviewed</div>
+            <div className="review-projects-page__progress-percent">
+              {percentLabel} {progressDoneLabel}
+            </div>
           </div>
         </div>
       </div>
@@ -1338,7 +1497,7 @@ function RequestGroupsSection({
   );
   const [reassignTarget, setReassignTarget] = useState<AssignmentReassignTarget | null>(null);
   const [reassignDraftUserId, setReassignDraftUserId] = useState<number | null>(null);
-  const [reassignShowAllTeam, setReassignShowAllTeam] = useState(false);
+  const [reassignShowAllAssignees, setReassignShowAllAssignees] = useState(false);
   const [reassignError, setReassignError] = useState<string | null>(null);
 
   const activeTeamId = useMemo(() => {
@@ -1362,6 +1521,8 @@ function RequestGroupsSection({
           ),
         ).length > 1
       : false;
+  const isTerminologyPmReassignTarget =
+    reassignTarget?.kind === 'pm' && reassignTarget.projects.every(isTerminologyProject);
 
   useEffect(() => {
     if (!reassignTarget) {
@@ -1379,7 +1540,7 @@ function RequestGroupsSection({
       );
       setReassignDraftUserId(uniquePmIds.length === 1 ? (uniquePmIds[0] ?? null) : null);
     }
-    setReassignShowAllTeam(false);
+    setReassignShowAllAssignees(false);
     setReassignError(null);
   }, [reassignTarget]);
 
@@ -1390,17 +1551,17 @@ function RequestGroupsSection({
       canReassignPm &&
       reassignTarget != null &&
       activeTeamId != null &&
-      (reassignTarget.kind === 'pm' || reassignShowAllTeam),
+      (reassignTarget.kind === 'pm' || reassignShowAllAssignees),
     staleTime: 30_000,
   });
   const reassignTranslatorUsersQuery = useQuery({
     queryKey: ['team-users', activeTeamId, 'TRANSLATOR', 'review-projects-reassign'],
     queryFn: () => fetchTeamUsersByRole(activeTeamId as number, 'TRANSLATOR'),
     enabled:
-      canReassignTranslator &&
       reassignTarget != null &&
       activeTeamId != null &&
-      reassignTarget.kind === 'translator',
+      ((canReassignTranslator && reassignTarget.kind === 'translator') ||
+        (canReassignPm && isTerminologyPmReassignTarget)),
     staleTime: 30_000,
   });
   const reassignPmPoolQuery = useQuery({
@@ -1410,7 +1571,8 @@ function RequestGroupsSection({
       canReassignPm &&
       reassignTarget != null &&
       reassignTarget.kind === 'pm' &&
-      activeTeamId != null,
+      activeTeamId != null &&
+      !isTerminologyPmReassignTarget,
     staleTime: 30_000,
   });
   const reassignTranslatorsQuery = useQuery({
@@ -1435,12 +1597,29 @@ function RequestGroupsSection({
   });
 
   const reassignPmUsersById = useMemo(() => {
-    return buildTeamUserSummaryMap(reassignPmUsersQuery.data?.users);
-  }, [reassignPmUsersQuery.data?.users]);
+    return buildTeamUserSummaryMap(
+      reassignPmUsersQuery.data?.users,
+      isTerminologyPmReassignTarget ? reassignTranslatorUsersQuery.data?.users : undefined,
+    );
+  }, [
+    isTerminologyPmReassignTarget,
+    reassignPmUsersQuery.data?.users,
+    reassignTranslatorUsersQuery.data?.users,
+  ]);
 
   const reassignTranslatorUsersById = useMemo(() => {
     return buildTeamUserSummaryMap(reassignTranslatorUsersQuery.data?.users);
   }, [reassignTranslatorUsersQuery.data?.users]);
+
+  const reassignPmUserIdSet = useMemo(
+    () => new Set((reassignPmUsersQuery.data?.users ?? []).map((user) => user.id)),
+    [reassignPmUsersQuery.data?.users],
+  );
+
+  const reassignTranslatorUserIdSet = useMemo(
+    () => new Set((reassignTranslatorUsersQuery.data?.users ?? []).map((user) => user.id)),
+    [reassignTranslatorUsersQuery.data?.users],
+  );
 
   const reassignOptionIds = useMemo(() => {
     if (!reassignTarget || activeTeamId == null) {
@@ -1455,10 +1634,20 @@ function RequestGroupsSection({
     let baseIds: number[] = [];
     let allRoleIds: number[] = [];
     if (reassignTarget.kind === 'pm') {
-      baseIds = pmPoolIds;
-      allRoleIds = (reassignPmUsersQuery.data?.users ?? [])
-        .map((user) => user.id)
-        .filter((id): id is number => id > 0);
+      if (isTerminologyPmReassignTarget) {
+        allRoleIds = [
+          ...(reassignPmUsersQuery.data?.users ?? []).map((user) => user.id),
+          ...(reassignTranslatorUsersQuery.data?.users ?? []).map((user) => user.id),
+        ].filter((id): id is number => id > 0);
+        baseIds = (reassignTranslatorUsersQuery.data?.users ?? [])
+          .map((user) => user.id)
+          .filter((id): id is number => id > 0);
+      } else {
+        baseIds = pmPoolIds;
+        allRoleIds = (reassignPmUsersQuery.data?.users ?? [])
+          .map((user) => user.id)
+          .filter((id): id is number => id > 0);
+      }
     } else {
       const localeTagKey = (reassignTarget.project.localeTag ?? '').trim().toLowerCase();
       const localePoolRow =
@@ -1472,7 +1661,7 @@ function RequestGroupsSection({
       allRoleIds = translatorIds;
     }
 
-    const source = reassignShowAllTeam ? allRoleIds : baseIds;
+    const source = reassignShowAllAssignees ? allRoleIds : baseIds;
     const ids = Array.from(new Set(source));
     if (reassignDraftUserId != null && !ids.includes(reassignDraftUserId)) {
       ids.unshift(reassignDraftUserId);
@@ -1484,9 +1673,11 @@ function RequestGroupsSection({
     reassignLocalePoolsQuery.data?.entries,
     reassignPmUsersQuery.data?.users,
     reassignPmPoolQuery.data?.userIds,
-    reassignShowAllTeam,
+    reassignShowAllAssignees,
     reassignTarget,
+    reassignTranslatorUsersQuery.data?.users,
     reassignTranslatorsQuery.data?.userIds,
+    isTerminologyPmReassignTarget,
   ]);
 
   const reassignOptions = useMemo(
@@ -1506,14 +1697,31 @@ function RequestGroupsSection({
             : reassignTarget?.project.assignedTranslatorUserId === id
               ? reassignTarget.project.assignedTranslatorUsername
               : null;
+        const roleHelperParts =
+          reassignTarget?.kind === 'pm' && isTerminologyPmReassignTarget
+            ? [
+                reassignPmUserIdSet.has(id) ? 'PM' : null,
+                reassignTranslatorUserIdSet.has(id) ? 'Linguist' : null,
+              ].filter((role): role is string => role != null)
+            : [];
+        const roleHelper = roleHelperParts.length > 0 ? roleHelperParts.join(' + ') : undefined;
         return {
           value: id,
           label: user?.commonName
             ? `${user.commonName} (${user.username})`
             : (user?.username ?? fallbackUsername ?? `User #${id}`),
+          helper: roleHelper,
         };
       }),
-    [reassignOptionIds, reassignPmUsersById, reassignTarget, reassignTranslatorUsersById],
+    [
+      isTerminologyPmReassignTarget,
+      reassignOptionIds,
+      reassignPmUserIdSet,
+      reassignPmUsersById,
+      reassignTarget,
+      reassignTranslatorUserIdSet,
+      reassignTranslatorUsersById,
+    ],
   );
 
   const reassignLoadError =
@@ -1522,13 +1730,15 @@ function RequestGroupsSection({
       : reassignTarget.kind === 'pm'
         ? reassignPmUsersQuery.error != null
           ? getErrorMessage(reassignPmUsersQuery.error, 'Failed to load project managers')
-          : reassignPmPoolQuery.error != null
-            ? getErrorMessage(reassignPmPoolQuery.error, 'Failed to load PM pool')
-            : null
+          : isTerminologyPmReassignTarget && reassignTranslatorUsersQuery.error != null
+            ? getErrorMessage(reassignTranslatorUsersQuery.error, 'Failed to load linguists')
+            : reassignPmPoolQuery.error != null
+              ? getErrorMessage(reassignPmPoolQuery.error, 'Failed to load PM pool')
+              : null
         : reassignTranslatorUsersQuery.error != null
           ? getErrorMessage(reassignTranslatorUsersQuery.error, 'Failed to load translators')
           : reassignTranslatorsQuery.error != null
-            ? getErrorMessage(reassignTranslatorsQuery.error, 'Failed to load team translators')
+            ? getErrorMessage(reassignTranslatorsQuery.error, 'Failed to load translators')
             : reassignLocalePoolsQuery.error != null
               ? getErrorMessage(reassignLocalePoolsQuery.error, 'Failed to load locale pools')
               : null;
@@ -1550,7 +1760,11 @@ function RequestGroupsSection({
       }
 
       if (reassignTarget.requestId == null) {
-        throw new Error('Request ID is required for PM reassignment');
+        throw new Error(
+          isTerminologyPmReassignTarget
+            ? 'Request ID is required for decider reassignment'
+            : 'Request ID is required for PM reassignment',
+        );
       }
       await updateReviewProjectRequestPmAssignment(reassignTarget.requestId, {
         assignedPmUserId: reassignDraftUserId,
@@ -1590,8 +1804,28 @@ function RequestGroupsSection({
     setReassignError(null);
   }, [reassignMutation.isPending]);
 
-  const defaultScopeLabel =
-    reassignTarget?.kind === 'translator' ? 'Locale pool only' : 'PM pool only';
+  const isSpecialistReassignTarget =
+    reassignTarget?.kind === 'translator' && reassignTarget.project.type === 'TERMINOLOGY';
+  const isTerminologyReassignTarget =
+    reassignTarget?.kind === 'translator'
+      ? reassignTarget.project.type === 'TERMINOLOGY'
+      : (reassignTarget?.projects.length ?? 0) > 0 &&
+        reassignTarget?.projects.every(isTerminologyProject);
+  const translatorRoleLabel = isSpecialistReassignTarget ? 'Advisor' : 'Translator';
+  const defaultScopeLabel = isTerminologyPmReassignTarget
+    ? 'Linguists only'
+    : isTerminologyReassignTarget && reassignTarget?.kind === 'translator'
+      ? 'Assigned advisors only'
+      : reassignTarget?.kind === 'translator'
+        ? 'Locale pool only'
+        : 'PM pool only';
+  const showAllAssigneesLabel = isTerminologyPmReassignTarget
+    ? 'All team users'
+    : reassignTarget?.kind === 'pm'
+      ? 'Show all PMs'
+      : isTerminologyReassignTarget
+        ? 'Show all advisors'
+        : 'Show all translators';
   const canSaveReassign =
     reassignTarget != null &&
     (reassignTarget.kind === 'pm' ? canReassignPm : canReassignTranslator) &&
@@ -1615,11 +1849,14 @@ function RequestGroupsSection({
         <div className="review-projects-page__rows">
           {groups.map((group) => {
             const isExpanded = expandedKey === group.key;
-            const visibleProjects = getVisibleProjectsForRequest(
-              group.projects,
-              projectStatusFilter,
-              projectCompletionFilter,
+            const visibleProjects = sortProjectsForRequestRows(
+              getVisibleProjectsForRequest(
+                group.projects,
+                projectStatusFilter,
+                projectCompletionFilter,
+              ),
             );
+            const isTerminologyGroup = isTerminologyRequestGroup(group);
             const visibleGroupProjectIds = visibleProjects.map((project) => project.id);
             const requestEditProjectId = group.projects[0]?.id ?? null;
             const selectedInGroup = visibleGroupProjectIds.filter((projectId) =>
@@ -1631,6 +1868,9 @@ function RequestGroupsSection({
             const partiallySelectedInGroup = selectedInGroup > 0 && !allSelectedInGroup;
             const { completedLanguages, totalLanguages, percentWidth, completionLabel } =
               getLanguageCompletionMetrics(group.projects);
+            const terminologyProgress = isTerminologyGroup
+              ? getTerminologyGroupProgressMetrics(group.projects)
+              : null;
             const averageWordCount = getAverageCount(
               group.projects.map((project) => project.wordCount),
             );
@@ -1774,43 +2014,71 @@ function RequestGroupsSection({
                               }
                             }}
                             disabled={reassignMutation.isPending || group.requestId == null}
-                            aria-label="Reassign PM for this request"
+                            aria-label={
+                              isTerminologyGroup
+                                ? 'Reassign decider for this request'
+                                : 'Reassign PM for this request'
+                            }
                             title={getUserTitle(group.assignedPmUsername) ?? 'Unassigned'}
                           >
-                            PM {getCompactUserDisplayName(group.assignedPmUsername)}
+                            {isTerminologyGroup ? 'Decider' : 'PM'}{' '}
+                            {getCompactUserDisplayName(group.assignedPmUsername)}
                           </button>
                         ) : (
                           <span
                             className="review-projects-page__request-assignee"
                             title={getUserTitle(group.assignedPmUsername)}
                           >
-                            PM {getCompactUserDisplayName(group.assignedPmUsername)}
+                            {isTerminologyGroup ? 'Decider' : 'PM'}{' '}
+                            {getCompactUserDisplayName(group.assignedPmUsername)}
                           </span>
                         )}
                       </span>
                     ) : null}
                   </div>
                   <div className="review-projects-page__locales">
-                    <span className="review-projects-page__request-locale-count">
-                      {group.localeTags.length.toLocaleString()} locale
-                      {group.localeTags.length === 1 ? '' : 's'}
-                    </span>
+                    {isTerminologyGroup ? (
+                      <span className="review-projects-page__request-locale-count">
+                        {getTerminologyGroupSummary(group)}
+                      </span>
+                    ) : (
+                      <span className="review-projects-page__request-locale-count">
+                        {group.localeTags.length.toLocaleString()} locale
+                        {group.localeTags.length === 1 ? '' : 's'}
+                      </span>
+                    )}
                   </div>
                   <div className="review-projects-page__progress">
                     <div
                       className="review-projects-page__progress-bar"
-                      title={`${completedLanguages} of ${totalLanguages} locales complete`}
+                      title={
+                        terminologyProgress != null
+                          ? terminologyProgress.pmProgressTitle
+                          : `${completedLanguages} of ${totalLanguages} locales complete`
+                      }
                     >
                       <div
                         className="review-projects-page__progress-fill"
-                        style={{ width: percentWidth }}
+                        style={{
+                          width: terminologyProgress?.pmPercentWidth ?? percentWidth,
+                        }}
                         aria-hidden
                       />
                     </div>
                     <div className="review-projects-page__progress-meta">
                       <div className="review-projects-page__progress-percent">
-                        {completionLabel}
+                        {terminologyProgress != null
+                          ? terminologyProgress.pmProgressLabel
+                          : completionLabel}
                       </div>
+                      {terminologyProgress != null ? (
+                        <div
+                          className="review-projects-page__progress-detail"
+                          title={terminologyProgress.specialistProgressTitle}
+                        >
+                          Advisors {terminologyProgress.specialistCompletionLabel}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -1823,6 +2091,7 @@ function RequestGroupsSection({
                     ) : null}
                     {visibleProjects.map((project) => {
                       const isSelected = selectedProjectIdSet.has(project.id);
+                      const projectProgressDoneLabel = getProjectProgressDoneLabel();
                       const {
                         decided: projectDecided,
                         total: projectTotal,
@@ -1845,7 +2114,11 @@ function RequestGroupsSection({
                             className="review-projects-page__request-project-link review-projects-page__link"
                           >
                             <div className="review-projects-page__request-project-locale">
-                              {project.localeTag ? (
+                              {project.type === 'TERMINOLOGY' ? (
+                                <Pill className="review-projects-page__type-pill">
+                                  {getTerminologyProjectPhaseLabel(project)}
+                                </Pill>
+                              ) : project.localeTag ? (
                                 <>
                                   <LocalePill
                                     className="review-projects-page__pill review-projects-page__pill--locale"
@@ -1866,7 +2139,15 @@ function RequestGroupsSection({
                                 #{project.id}
                               </span>
                             </div>
-                            {canReassignTranslator ? (
+                            {project.type === 'TERMINOLOGY' &&
+                            project.terminologyPhase === 'PM_RESOLUTION' ? (
+                              <div
+                                className="review-projects-page__request-project-translator"
+                                title={getUserTitle(project.assignedPmUsername)}
+                              >
+                                {getTerminologyProjectAssigneeLabel(project)}
+                              </div>
+                            ) : canReassignTranslator ? (
                               <span
                                 role="button"
                                 tabIndex={0}
@@ -1890,19 +2171,27 @@ function RequestGroupsSection({
                                   }
                                 }}
                                 aria-disabled={reassignMutation.isPending}
-                                aria-label="Reassign translator"
+                                aria-label={
+                                  project.type === 'TERMINOLOGY'
+                                    ? 'Reassign advisor'
+                                    : 'Reassign translator'
+                                }
                                 title={
                                   getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'
                                 }
                               >
-                                {getCompactUserDisplayName(project.assignedTranslatorUsername)}
+                                {project.type === 'TERMINOLOGY'
+                                  ? getTerminologyProjectAssigneeLabel(project)
+                                  : getCompactUserDisplayName(project.assignedTranslatorUsername)}
                               </span>
                             ) : (
                               <div
                                 className="review-projects-page__request-project-translator"
                                 title={getUserTitle(project.assignedTranslatorUsername)}
                               >
-                                {getCompactUserDisplayName(project.assignedTranslatorUsername)}
+                                {project.type === 'TERMINOLOGY'
+                                  ? getTerminologyProjectAssigneeLabel(project)
+                                  : getCompactUserDisplayName(project.assignedTranslatorUsername)}
                               </div>
                             )}
                             <div className="review-projects-page__request-project-counts">
@@ -1921,7 +2210,7 @@ function RequestGroupsSection({
                               </div>
                               <div
                                 className="review-projects-page__progress-bar"
-                                title={`${formatNumber(projectDecided)} of ${formatNumber(projectTotal)} processed`}
+                                title={`${formatNumber(projectDecided)} of ${formatNumber(projectTotal)} ${projectProgressDoneLabel}`}
                               >
                                 <div
                                   className="review-projects-page__progress-fill"
@@ -1930,7 +2219,7 @@ function RequestGroupsSection({
                                 />
                               </div>
                               <span className="review-projects-page__progress-percent">
-                                {projectPercentLabel}
+                                {projectPercentLabel} {projectProgressDoneLabel}
                               </span>
                             </div>
                           </Link>
@@ -1949,7 +2238,11 @@ function RequestGroupsSection({
         size="md"
         className="review-projects-page__reassign-dialog"
         ariaLabel={
-          reassignTarget?.kind === 'pm' ? 'Reassign request PM' : 'Reassign project translator'
+          reassignTarget?.kind === 'pm'
+            ? isTerminologyPmReassignTarget
+              ? 'Reassign request decider'
+              : 'Reassign request PM'
+            : `Reassign project ${translatorRoleLabel.toLowerCase()}`
         }
         onClose={closeReassignModal}
         closeOnBackdrop={!reassignMutation.isPending}
@@ -1957,7 +2250,11 @@ function RequestGroupsSection({
         {reassignTarget ? (
           <>
             <div className="modal__title">
-              {reassignTarget.kind === 'pm' ? 'Reassign PM' : 'Reassign translator'}
+              {reassignTarget.kind === 'pm'
+                ? isTerminologyPmReassignTarget
+                  ? 'Reassign decider'
+                  : 'Reassign PM'
+                : `Reassign ${translatorRoleLabel}`}
             </div>
             <div className="modal__body review-projects-page__reassign-modal">
               <div className="review-projects-page__reassign-modal-line">
@@ -1981,26 +2278,17 @@ function RequestGroupsSection({
                   </>
                 )}
               </div>
-              <div className="review-projects-page__reassign-modal-line">
-                <span className="review-projects-page__reassign-modal-label">Team</span>
-                <span className="review-projects-page__reassign-modal-value">
-                  {activeTeamId != null
-                    ? reassignTarget.kind === 'pm'
-                      ? (reassignTarget.projects[0]?.teamName ?? `#${activeTeamId}`)
-                      : (reassignTarget.project.teamName ?? `#${activeTeamId}`)
-                    : hasMixedTeamsForPmTarget
-                      ? 'Mixed teams'
-                      : '—'}
-                </span>
-              </div>
-
               {hasMixedTeamsForPmTarget ? (
                 <div className="review-projects-page__reassign-modal-error">
-                  PM reassignment is disabled for mixed-team requests. Reassign per project for now.
+                  {isTerminologyReassignTarget
+                    ? 'Decider reassignment is disabled for mixed review teams. Reassign per project for now.'
+                    : 'PM reassignment is disabled for mixed assignment pools. Reassign per project for now.'}
                 </div>
               ) : activeTeamId == null ? (
                 <div className="review-projects-page__reassign-modal-error">
-                  No team is assigned.
+                  {isTerminologyReassignTarget
+                    ? 'No review team is assigned.'
+                    : 'No assignment pool is available.'}
                 </div>
               ) : reassignLoadError ? (
                 <div className="review-projects-page__reassign-modal-error">
@@ -2010,30 +2298,52 @@ function RequestGroupsSection({
                 <>
                   <div className="review-projects-page__reassign-modal-field">
                     <SingleSelectDropdown<number>
-                      label={reassignTarget.kind === 'pm' ? 'Project manager' : 'Translator'}
+                      label={
+                        reassignTarget.kind === 'pm'
+                          ? isTerminologyPmReassignTarget
+                            ? 'Decider'
+                            : 'Project manager'
+                          : translatorRoleLabel
+                      }
                       options={reassignOptions}
                       value={reassignDraftUserId}
                       onChange={(next) => {
                         setReassignDraftUserId(next);
                         setReassignError(null);
                       }}
-                      placeholder={reassignTarget.kind === 'pm' ? 'Select PM' : 'Select translator'}
-                      noneLabel={reassignTarget.kind === 'pm' ? 'No PM' : 'No translator'}
+                      placeholder={
+                        reassignTarget.kind === 'pm'
+                          ? isTerminologyPmReassignTarget
+                            ? 'Select decider'
+                            : 'Select PM'
+                          : `Select ${translatorRoleLabel.toLowerCase()}`
+                      }
+                      noneLabel={
+                        reassignTarget.kind === 'pm'
+                          ? isTerminologyPmReassignTarget
+                            ? 'No decider'
+                            : 'No PM'
+                          : `No ${translatorRoleLabel.toLowerCase()}`
+                      }
                       buttonAriaLabel={
                         reassignTarget.kind === 'pm'
-                          ? 'Select project manager'
-                          : 'Select translator'
+                          ? isTerminologyPmReassignTarget
+                            ? 'Select decider'
+                            : 'Select project manager'
+                          : `Select ${translatorRoleLabel.toLowerCase()}`
                       }
                       footerAction={{
-                        label: reassignShowAllTeam ? defaultScopeLabel : 'Show all team',
-                        onClick: () => setReassignShowAllTeam((value) => !value),
+                        label: reassignShowAllAssignees ? defaultScopeLabel : showAllAssigneesLabel,
+                        onClick: () => setReassignShowAllAssignees((value) => !value),
                         disabled: reassignMutation.isPending,
                       }}
                     />
                   </div>
                   {reassignTarget.kind === 'pm' ? (
                     <div className="review-projects-page__reassign-modal-help">
-                      Applies to all locale projects in this request.
+                      {isTerminologyPmReassignTarget
+                        ? 'Applies to all advisor and decider rows in this terminology request.'
+                        : 'Applies to all locale projects in this request.'}
                     </div>
                   ) : null}
                 </>

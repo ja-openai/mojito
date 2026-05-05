@@ -31,6 +31,10 @@ public class ReviewProject extends AuditableEntity {
   private ReviewProjectType type = ReviewProjectType.NORMAL;
 
   @Enumerated(EnumType.STRING)
+  @Column(name = "terminology_phase")
+  private ReviewProjectTerminologyPhase terminologyPhase;
+
+  @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false)
   private ReviewProjectStatus status = ReviewProjectStatus.OPEN;
 
@@ -89,6 +93,14 @@ public class ReviewProject extends AuditableEntity {
 
   public void setType(ReviewProjectType type) {
     this.type = type;
+  }
+
+  public ReviewProjectTerminologyPhase getTerminologyPhase() {
+    return terminologyPhase;
+  }
+
+  public void setTerminologyPhase(ReviewProjectTerminologyPhase terminologyPhase) {
+    this.terminologyPhase = terminologyPhase;
   }
 
   public ReviewProjectStatus getStatus() {

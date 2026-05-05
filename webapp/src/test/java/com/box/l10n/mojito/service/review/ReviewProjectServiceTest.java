@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.review;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -17,17 +18,23 @@ import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamUserRole;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.review.ReviewFeature;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
+import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
+import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision;
+import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitFeedback;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
+import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
@@ -43,6 +50,7 @@ import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import jakarta.persistence.EntityManager;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +60,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 public class ReviewProjectServiceTest {
 
@@ -61,6 +70,8 @@ public class ReviewProjectServiceTest {
       Mockito.mock(ReviewProjectTextUnitRepository.class);
   private final ReviewProjectTextUnitDecisionRepository reviewProjectTextUnitDecisionRepository =
       Mockito.mock(ReviewProjectTextUnitDecisionRepository.class);
+  private final ReviewProjectTextUnitFeedbackRepository reviewProjectTextUnitFeedbackRepository =
+      Mockito.mock(ReviewProjectTextUnitFeedbackRepository.class);
   private final ReviewProjectRequestRepository reviewProjectRequestRepository =
       Mockito.mock(ReviewProjectRequestRepository.class);
   private final ReviewProjectRequestScreenshotRepository reviewProjectRequestScreenshotRepository =
@@ -68,6 +79,8 @@ public class ReviewProjectServiceTest {
   private final ReviewProjectRequestSlackThreadRepository
       reviewProjectRequestSlackThreadRepository =
           Mockito.mock(ReviewProjectRequestSlackThreadRepository.class);
+  private final GlossaryTermMetadataRepository glossaryTermMetadataRepository =
+      Mockito.mock(GlossaryTermMetadataRepository.class);
   private final LocaleService localeService = Mockito.mock(LocaleService.class);
   private final TextUnitSearcher textUnitSearcher = Mockito.mock(TextUnitSearcher.class);
   private final TMTextUnitRepository tmTextUnitRepository =
@@ -92,6 +105,7 @@ public class ReviewProjectServiceTest {
   private final ReviewFeatureRepository reviewFeatureRepository =
       Mockito.mock(ReviewFeatureRepository.class);
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+  private final EntityManager entityManager = Mockito.mock(EntityManager.class);
 
   private ReviewProjectService reviewProjectService;
   private User currentUser;
@@ -104,9 +118,11 @@ public class ReviewProjectServiceTest {
                 reviewProjectRepository,
                 reviewProjectTextUnitRepository,
                 reviewProjectTextUnitDecisionRepository,
+                reviewProjectTextUnitFeedbackRepository,
                 reviewProjectRequestRepository,
                 reviewProjectRequestScreenshotRepository,
                 reviewProjectRequestSlackThreadRepository,
+                glossaryTermMetadataRepository,
                 localeService,
                 textUnitSearcher,
                 tmTextUnitRepository,
@@ -124,6 +140,7 @@ public class ReviewProjectServiceTest {
                 quartzPollableTaskScheduler,
                 reviewFeatureRepository,
                 meterRegistry));
+    ReflectionTestUtils.setField(reviewProjectService, "entityManager", entityManager);
     doReturn(null).when(reviewProjectService).getProjectDetail(anyLong());
 
     currentUser = user(99L, "admin");
@@ -131,6 +148,7 @@ public class ReviewProjectServiceTest {
 
     when(teamService.getCurrentUserIdOrThrow()).thenReturn(99L);
     when(userService.isCurrentUserAdmin()).thenReturn(true);
+    when(userService.isCurrentUserAdminOrPm()).thenReturn(true);
     when(userService.isCurrentUserPm()).thenReturn(false);
     when(userService.isCurrentUserTranslator()).thenReturn(false);
     when(userRepository.findById(99L)).thenReturn(Optional.of(currentUser));
@@ -205,6 +223,32 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void updateRequestAssignedPmAllowsTranslatorDeciderForTerminologyRequests() {
+    Team team = team(7L);
+    ReviewProjectRequest request = reviewProjectRequest(44L, "Terminology source review");
+    User decider = user(202L, "translator-decider");
+    ReviewProject projectA = project(21L, team, locale(31L, "en"), null, user(103L, "advisor-a"));
+    ReviewProject projectB = project(22L, team, locale(31L, "en"), null, user(104L, "advisor-b"));
+    projectA.setType(ReviewProjectType.TERMINOLOGY);
+    projectB.setType(ReviewProjectType.TERMINOLOGY);
+    projectA.setReviewProjectRequest(request);
+    projectB.setReviewProjectRequest(request);
+
+    when(reviewProjectRepository.findByRequestIdWithAssignment(44L))
+        .thenReturn(List.of(projectA, projectB));
+    when(userRepository.findById(202L)).thenReturn(Optional.of(decider));
+    when(teamService.isUserInTeamRole(7L, 202L, TeamUserRole.PM)).thenReturn(false);
+    when(teamService.isUserInTeamRole(7L, 202L, TeamUserRole.TRANSLATOR)).thenReturn(true);
+
+    reviewProjectService.updateRequestAssignedPm(44L, 202L, "decider change");
+
+    assertEquals(decider, projectA.getAssignedPmUser());
+    assertEquals(decider, projectB.getAssignedPmUser());
+    verify(teamSlackNotificationService)
+        .sendReviewProjectRequestAssignmentNotification(request, List.of(projectA, projectB));
+  }
+
+  @Test
   public void adminBatchDeleteProjectsDeletesOrphanRequestSlackThreads() {
     when(reviewProjectRepository.findRequestIdsByProjectIds(List.of(11L, 12L)))
         .thenReturn(List.of(44L));
@@ -216,6 +260,7 @@ public class ReviewProjectServiceTest {
 
     verify(reviewProjectAssignmentHistoryRepository).deleteByReviewProjectIds(List.of(11L, 12L));
     verify(reviewProjectTextUnitDecisionRepository).deleteByReviewProjectIds(List.of(11L, 12L));
+    verify(reviewProjectTextUnitFeedbackRepository).deleteByReviewProjectIds(List.of(11L, 12L));
     verify(reviewProjectTextUnitRepository).deleteByReviewProjectIds(List.of(11L, 12L));
     verify(reviewProjectRequestScreenshotRepository).deleteByReviewProjectRequestIdIn(List.of(44L));
     verify(reviewProjectRequestSlackThreadRepository)
@@ -253,13 +298,145 @@ public class ReviewProjectServiceTest {
             "Manual selected ids",
             null,
             true,
-            99L));
+            99L,
+            null));
 
     ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =
         ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
     verify(textUnitSearcher).search(parametersCaptor.capture());
     assertEquals(StatusFilter.NOT_ACCEPTED, parametersCaptor.getValue().getStatusFilter());
     assertEquals(List.of(1001L, 1002L), parametersCaptor.getValue().getTmTextUnitIds());
+  }
+
+  @Test
+  public void createReviewProjectRequestUsesSourceTextUnitsForTerminologyProjects() {
+    Locale locale = locale(41L, "en");
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(1001L);
+    tmTextUnit.setName("term.acme");
+    tmTextUnit.setContent("Acme");
+    tmTextUnit.setComment("Brand term");
+
+    when(localeService.findByBcp47Tag("en")).thenReturn(locale);
+    when(tmTextUnitRepository.findByIdIn(List.of(1001L))).thenReturn(List.of(tmTextUnit));
+    when(entityManager.getReference(TMTextUnit.class, 1001L)).thenReturn(tmTextUnit);
+    when(reviewProjectRequestRepository.save(any(ReviewProjectRequest.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewProjectRequest request = invocation.getArgument(0);
+              request.setId(44L);
+              return request;
+            });
+    when(reviewProjectRepository.save(any(ReviewProject.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewProject project = invocation.getArgument(0);
+              project.setId(12L);
+              return project;
+            });
+    when(wordCountService.getEnglishWordCount("Acme")).thenReturn(1);
+
+    CreateReviewProjectRequestResult result =
+        reviewProjectService.createReviewProjectRequest(
+            new CreateReviewProjectRequestCommand(
+                List.of("en"),
+                null,
+                List.of(1001L),
+                null,
+                StatusFilter.ALL,
+                false,
+                ReviewProjectType.TERMINOLOGY,
+                ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+                List.of(),
+                "Terminology source review",
+                null,
+                false,
+                99L,
+                null));
+
+    assertEquals(List.of(12L), result.projectIds());
+    assertEquals(1, result.createdLocaleCount());
+    verify(textUnitSearcher, never()).search(any(TextUnitSearcherParameters.class));
+    verify(reviewProjectTextUnitRepository).save(any(ReviewProjectTextUnit.class));
+  }
+
+  @Test
+  public void createReviewProjectRequestCreatesTerminologyPhaseProjects() {
+    Team team = team(7L);
+    Locale locale = locale(41L, "en");
+    User defaultPm = user(101L, "default-pm");
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(1001L);
+    tmTextUnit.setName("term.acme");
+    tmTextUnit.setContent("Acme");
+    tmTextUnit.setComment("Brand term");
+    ZonedDateTime specialistDueDate = ZonedDateTime.parse("2026-03-30T12:00:00Z");
+    ZonedDateTime pmDueDate = ZonedDateTime.parse("2026-03-31T12:00:00Z");
+
+    when(localeService.findByBcp47Tag("en")).thenReturn(locale);
+    when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team));
+    when(teamService.getPmPool(7L)).thenReturn(List.of(101L));
+    when(userRepository.findById(101L)).thenReturn(Optional.of(defaultPm));
+    when(tmTextUnitRepository.findByIdIn(List.of(1001L))).thenReturn(List.of(tmTextUnit));
+    when(entityManager.getReference(TMTextUnit.class, 1001L)).thenReturn(tmTextUnit);
+    when(reviewProjectRequestRepository.save(any(ReviewProjectRequest.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewProjectRequest request = invocation.getArgument(0);
+              request.setId(44L);
+              return request;
+            });
+    long[] nextProjectId = {12L};
+    when(reviewProjectRepository.save(any(ReviewProject.class)))
+        .thenAnswer(
+            invocation -> {
+              ReviewProject project = invocation.getArgument(0);
+              project.setId(nextProjectId[0]++);
+              return project;
+            });
+    when(wordCountService.getEnglishWordCount("Acme")).thenReturn(1);
+
+    CreateReviewProjectRequestResult result =
+        reviewProjectService.createReviewProjectRequest(
+            new CreateReviewProjectRequestCommand(
+                List.of("en"),
+                null,
+                List.of(1001L),
+                null,
+                StatusFilter.ALL,
+                false,
+                ReviewProjectType.TERMINOLOGY,
+                specialistDueDate,
+                List.of(),
+                "Terminology source review",
+                7L,
+                false,
+                99L,
+                List.of(
+                    new CreateReviewProjectRequestCommand.ProjectSpec(
+                        ReviewProjectTerminologyPhase.SPECIALIST_INPUT,
+                        specialistDueDate,
+                        null,
+                        null),
+                    new CreateReviewProjectRequestCommand.ProjectSpec(
+                        ReviewProjectTerminologyPhase.PM_RESOLUTION, pmDueDate, null, null))));
+
+    assertEquals(List.of(12L, 13L), result.projectIds());
+    assertEquals(1, result.createdLocaleCount());
+    assertEquals(2, result.localeResults().get(0).projectCount());
+    ArgumentCaptor<ReviewProject> projectCaptor = ArgumentCaptor.forClass(ReviewProject.class);
+    verify(reviewProjectRepository, times(2)).save(projectCaptor.capture());
+    assertEquals(
+        ReviewProjectTerminologyPhase.SPECIALIST_INPUT,
+        projectCaptor.getAllValues().get(0).getTerminologyPhase());
+    assertEquals(specialistDueDate, projectCaptor.getAllValues().get(0).getDueDate());
+    assertNull(projectCaptor.getAllValues().get(0).getAssignedPmUser());
+    assertEquals(
+        ReviewProjectTerminologyPhase.PM_RESOLUTION,
+        projectCaptor.getAllValues().get(1).getTerminologyPhase());
+    assertEquals(pmDueDate, projectCaptor.getAllValues().get(1).getDueDate());
+    assertNull(projectCaptor.getAllValues().get(1).getAssignedPmUser());
+    verify(reviewProjectTextUnitRepository, times(2)).save(any(ReviewProjectTextUnit.class));
   }
 
   @Test
@@ -284,7 +461,8 @@ public class ReviewProjectServiceTest {
             "Manual feature",
             null,
             true,
-            99L));
+            99L,
+            null));
 
     ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =
         ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
@@ -315,7 +493,8 @@ public class ReviewProjectServiceTest {
             "Manual feature default",
             null,
             true,
-            99L));
+            99L,
+            null));
 
     ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =
         ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
@@ -384,6 +563,135 @@ public class ReviewProjectServiceTest {
             any());
   }
 
+  @Test
+  public void saveTerminologyFeedbackStoresCurrentUserInput() {
+    ReviewProject reviewProject =
+        project(12L, team(7L), locale(14L, "en"), user(101L, "pm-a"), currentUser);
+    reviewProject.setType(ReviewProjectType.TERMINOLOGY);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(reviewProjectTextUnitFeedbackRepository.findByReviewProjectTextUnitIdAndReviewerUserId(
+            55L, 99L))
+        .thenReturn(Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+    when(reviewProjectTextUnitFeedbackRepository
+            .findByReviewProjectTextUnitIdOrderByLastModifiedDateDesc(55L))
+        .thenReturn(List.of());
+
+    reviewProjectService.saveTerminologyFeedback(
+        55L, ReviewProjectTextUnitFeedback.Recommendation.APPROVE, 5, " ship it ");
+
+    ArgumentCaptor<ReviewProjectTextUnitFeedback> feedbackCaptor =
+        ArgumentCaptor.forClass(ReviewProjectTextUnitFeedback.class);
+    verify(reviewProjectTextUnitFeedbackRepository).saveAndFlush(feedbackCaptor.capture());
+    ReviewProjectTextUnitFeedback feedback = feedbackCaptor.getValue();
+    assertEquals(reviewProjectTextUnit, feedback.getReviewProjectTextUnit());
+    assertEquals(currentUser, feedback.getReviewerUser());
+    assertEquals(
+        ReviewProjectTextUnitFeedback.Recommendation.APPROVE, feedback.getRecommendation());
+    assertEquals(Integer.valueOf(5), feedback.getConfidence());
+    assertEquals("ship it", feedback.getNotes());
+  }
+
+  @Test
+  public void saveTerminologyResolutionUpdatesGlossaryStatusAndMarksDecided() {
+    ReviewProject reviewProject =
+        project(12L, team(7L), locale(14L, "en"), user(101L, "pm-a"), currentUser);
+    reviewProject.setType(ReviewProjectType.TERMINOLOGY);
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+    GlossaryTermMetadata metadata = new GlossaryTermMetadata();
+    metadata.setStatus(GlossaryTermMetadata.STATUS_CANDIDATE);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitId(17L, 321L))
+        .thenReturn(Optional.of(metadata));
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+    when(reviewProjectTextUnitFeedbackRepository
+            .findByReviewProjectTextUnitIdOrderByLastModifiedDateDesc(55L))
+        .thenReturn(List.of());
+
+    reviewProjectService.saveTerminologyResolution(
+        55L, 17L, GlossaryTermMetadata.STATUS_APPROVED, " final ");
+
+    assertEquals(GlossaryTermMetadata.STATUS_APPROVED, metadata.getStatus());
+    verify(glossaryTermMetadataRepository).saveAndFlush(metadata);
+    ArgumentCaptor<ReviewProjectTextUnitDecision> decisionCaptor =
+        ArgumentCaptor.forClass(ReviewProjectTextUnitDecision.class);
+    verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(decisionCaptor.capture());
+    ReviewProjectTextUnitDecision decision = decisionCaptor.getValue();
+    assertEquals(reviewProjectTextUnit, decision.getReviewProjectTextUnit());
+    assertEquals(ReviewProjectTextUnitDecision.DecisionState.DECIDED, decision.getDecisionState());
+    assertEquals("final", decision.getNotes());
+    verify(reviewProjectRepository).incrementDecidedCount(12L);
+  }
+
+  @Test
+  public void createGlossaryTerminologyReviewProjectBuildsEnProjectFromReviewableTerms() {
+    ZonedDateTime dueDate = ZonedDateTime.parse("2026-05-12T09:00:00Z");
+    GlossaryTermMetadata candidate =
+        glossaryTermMetadata(3L, GlossaryTermMetadata.STATUS_CANDIDATE);
+    GlossaryTermMetadata approved = glossaryTermMetadata(2L, GlossaryTermMetadata.STATUS_APPROVED);
+    GlossaryTermMetadata rejected = glossaryTermMetadata(4L, GlossaryTermMetadata.STATUS_REJECTED);
+
+    when(glossaryTermMetadataRepository.findByGlossaryId(17L))
+        .thenReturn(List.of(rejected, candidate, approved));
+
+    reviewProjectService.createGlossaryTerminologyReviewProjectAsync(
+        17L,
+        new CreateGlossaryTerminologyReviewProjectCommand(
+            "Glossary source review",
+            "Review source terms",
+            dueDate,
+            7L,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null));
+
+    verify(teamService).assertUserCanAccessTeam(7L, 99L);
+    ArgumentCaptor<QuartzJobInfo> jobCaptor = ArgumentCaptor.forClass(QuartzJobInfo.class);
+    verify(quartzPollableTaskScheduler).scheduleJob(jobCaptor.capture());
+    CreateReviewProjectRequestCommand command =
+        (CreateReviewProjectRequestCommand) jobCaptor.getValue().getInput();
+
+    assertEquals(List.of("en"), command.localeTags());
+    assertEquals("Review source terms", command.notes());
+    assertEquals(List.of(2L, 3L), command.tmTextUnitIds());
+    assertEquals(StatusFilter.ALL, command.statusFilter());
+    assertEquals(Boolean.FALSE, command.skipTextUnitsInOpenProjects());
+    assertEquals(ReviewProjectType.TERMINOLOGY, command.type());
+    assertEquals(dueDate, command.dueDate());
+    assertEquals("Glossary source review", command.name());
+    assertEquals(Long.valueOf(7L), command.teamId());
+    assertEquals(Boolean.FALSE, command.assignTranslator());
+    assertEquals(Long.valueOf(99L), command.requestedByUserId());
+    assertEquals(2, command.projectSpecs().size());
+    assertEquals(
+        ReviewProjectTerminologyPhase.SPECIALIST_INPUT,
+        command.projectSpecs().get(0).terminologyPhase());
+    assertEquals(dueDate, command.projectSpecs().get(0).dueDate());
+    assertEquals(
+        ReviewProjectTerminologyPhase.PM_RESOLUTION,
+        command.projectSpecs().get(1).terminologyPhase());
+    assertEquals(dueDate.plusDays(1), command.projectSpecs().get(1).dueDate());
+  }
+
   private ReviewProject project(
       Long id, Team team, Locale locale, User assignedPmUser, User assignedTranslatorUser) {
     ReviewProject project = new ReviewProject();
@@ -435,5 +743,48 @@ public class ReviewProjectServiceTest {
     user.setId(id);
     user.setUsername(username);
     return user;
+  }
+
+  private GlossaryTermMetadata glossaryTermMetadata(Long tmTextUnitId, String status) {
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(tmTextUnitId);
+    GlossaryTermMetadata metadata = new GlossaryTermMetadata();
+    metadata.setTmTextUnit(tmTextUnit);
+    metadata.setStatus(status);
+    return metadata;
+  }
+
+  private ReviewProjectTextUnitDetail reviewProjectTextUnitDetail(Long reviewProjectTextUnitId) {
+    return new ReviewProjectTextUnitDetail(
+        reviewProjectTextUnitId,
+        321L,
+        "term.name",
+        "Term",
+        null,
+        ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+        1,
+        "glossary",
+        7L,
+        "repo",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 }

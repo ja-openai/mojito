@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import {
   acceptGlossaryTermIndexSuggestion,
@@ -31,12 +31,21 @@ import {
   ignoreGlossaryTermIndexSuggestion,
   updateGlossaryTerm,
 } from '../../api/glossaries';
+import { createGlossaryTerminologyReviewProjectRequest } from '../../api/review-projects';
+import { type ApiTeamUserSummary, fetchTeams, fetchTeamUsersByRole } from '../../api/teams';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
+import { MultiSelectChip } from '../../components/MultiSelectChip';
 import { PillDropdown } from '../../components/PillDropdown';
 import { useUser } from '../../components/RequireUser';
-import { formatLocalDateTime, getLocalAndUtcDateTimeTooltip } from '../../utils/dateTime';
+import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import {
+  formatLocalDateTime,
+  getLocalAndUtcDateTimeTooltip,
+  localDateTimeInputToIso,
+  toDateTimeLocalInputValue,
+} from '../../utils/dateTime';
 import { buildGlossaryWorkbenchState } from '../../utils/glossaryWorkbench';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
@@ -50,6 +59,7 @@ import {
   revokeRequestAttachmentUploadQueuePreviews,
   uploadRequestAttachmentFile,
 } from '../../utils/request-attachments';
+import { getUserLabel } from '../../utils/userDisplayName';
 import { GlossaryCurationView, GlossarySuggestionDetailView } from './GlossaryCurationView';
 import { GlossaryTermsListView } from './GlossaryTermsListView';
 
@@ -86,6 +96,7 @@ const PROVENANCE_LABELS: Record<(typeof PROVENANCES)[number], string> = {
 };
 type ReferenceType = ApiGlossaryTermEvidence['evidenceType'];
 type SuggestionPendingAction = 'ACCEPT' | 'IGNORE';
+type TerminologyReviewScope = 'glossary' | 'selected';
 const REFERENCE_TYPES = [
   'SCREENSHOT',
   'NOTE',
@@ -118,6 +129,7 @@ const SUGGESTION_LIMIT_OPTIONS = [
 ];
 const DEFAULT_VISIBLE_LOCALE_COLUMNS = 3;
 const AUTO_VISIBLE_LOCALE_COLUMNS_CAP = 5;
+const TERMINOLOGY_REVIEW_DUE_DATE_OFFSET_DAYS = 2;
 const DEFAULT_TERMS_LIMIT = 200;
 const MAX_TERMS_LIMIT = 1000;
 const TERMS_LIMIT_PRESETS = [50, 100, 200, 500, 1000];
@@ -236,6 +248,16 @@ type BatchDraft = {
   partOfSpeech: string;
   caseSensitive: '' | 'true' | 'false';
   doNotTranslate: '' | 'true' | 'false';
+};
+
+type TerminologyReviewDraft = {
+  scope: TerminologyReviewScope;
+  teamId: number | null;
+  tmTextUnitIds: number[];
+  specialistUserIds: number[];
+  pmUserId: number | null;
+  specialistDueDate: string;
+  pmDueDate: string;
 };
 
 const createClientId = () =>
@@ -531,6 +553,19 @@ function normalizeSuggestionLimit(value: unknown) {
   return normalizePersistedPositiveNumber(value, DEFAULT_SUGGESTION_LIMIT);
 }
 
+function getDefaultTerminologyReviewDueDateInput(
+  offsetDays = TERMINOLOGY_REVIEW_DUE_DATE_OFFSET_DAYS,
+) {
+  return toDateTimeLocalInputValue(new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000));
+}
+
+function toTeamUserSelectOption(user: ApiTeamUserSummary) {
+  return {
+    value: user.id,
+    label: getUserLabel(user) || `User #${user.id}`,
+  };
+}
+
 function formatShortCount(value: number) {
   return value >= 1000 && value % 1000 === 0 ? `${value / 1000}k` : value.toLocaleString();
 }
@@ -740,6 +775,7 @@ export function AdminGlossaryTermsPanel({
   const user = useUser();
   const canManageTerms = canManageGlossaryTerms(user);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const resolveLocaleDisplayName = useLocaleDisplayNameResolver();
   const previewUrlsRef = useRef<Set<string>>(new Set());
   const workspaceLayoutRef = useRef<HTMLDivElement | null>(null);
@@ -778,6 +814,10 @@ export function AdminGlossaryTermsPanel({
     useState<CopyTranslationStatus>('KEEP_CURRENT');
   const [batchOpen, setBatchOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
+  const [terminologyReviewDraft, setTerminologyReviewDraft] =
+    useState<TerminologyReviewDraft | null>(null);
+  const [terminologyReviewDeciderShowAllUsers, setTerminologyReviewDeciderShowAllUsers] =
+    useState(false);
   const [statusNotice, setStatusNotice] = useState<{
     kind: 'success' | 'error';
     message: string;
@@ -814,6 +854,26 @@ export function AdminGlossaryTermsPanel({
   const expandedPrimaryPaneWidthPctRef = useRef(
     persistedWorkspacePrefs?.primaryPaneWidthPct ?? DEFAULT_PRIMARY_PANE_WIDTH_PCT,
   );
+
+  const terminologyReviewTeamId = terminologyReviewDraft?.teamId ?? null;
+  const terminologyReviewTeamsQuery = useQuery({
+    queryKey: ['teams', 'terminology-review'],
+    queryFn: fetchTeams,
+    enabled: canManageTerms && terminologyReviewDraft != null,
+    staleTime: 30_000,
+  });
+  const terminologyReviewSpecialistsQuery = useQuery({
+    queryKey: ['team-users', terminologyReviewTeamId, 'TRANSLATOR', 'terminology-review'],
+    queryFn: () => fetchTeamUsersByRole(terminologyReviewTeamId as number, 'TRANSLATOR'),
+    enabled: canManageTerms && terminologyReviewDraft != null && terminologyReviewTeamId != null,
+    staleTime: 30_000,
+  });
+  const terminologyReviewPmUsersQuery = useQuery({
+    queryKey: ['team-users', terminologyReviewTeamId, 'PM', 'terminology-review'],
+    queryFn: () => fetchTeamUsersByRole(terminologyReviewTeamId as number, 'PM'),
+    enabled: canManageTerms && terminologyReviewDraft != null && terminologyReviewTeamId != null,
+    staleTime: 30_000,
+  });
   const hydratedWorkspacePrefsGlossaryIdRef = useRef<number | null>(null);
 
   const localeOptions = useMemo(
@@ -1146,6 +1206,91 @@ export function AdminGlossaryTermsPanel({
     },
   });
 
+  const terminologyReviewMutation = useMutation({
+    mutationFn: (request: TerminologyReviewDraft) => {
+      const specialistDueDate = localDateTimeInputToIso(request.specialistDueDate);
+      const pmDueDate = localDateTimeInputToIso(request.pmDueDate);
+      if (!specialistDueDate || !pmDueDate) {
+        throw new Error('Advisor and decider due dates are required.');
+      }
+      return createGlossaryTerminologyReviewProjectRequest(glossary.id, {
+        name:
+          request.scope === 'selected'
+            ? `Terminology review · ${glossary.name} · selected terms`
+            : `Terminology review · ${glossary.name}`,
+        notes:
+          request.scope === 'selected'
+            ? `Source terminology review for selected terms in glossary ${glossary.name} (#${glossary.id}).`
+            : `Source terminology review for glossary ${glossary.name} (#${glossary.id}).`,
+        dueDate: specialistDueDate,
+        teamId: request.teamId,
+        specialistDueDate,
+        pmDueDate,
+        specialistUserIds: request.specialistUserIds.length > 0 ? request.specialistUserIds : null,
+        pmUserId: request.pmUserId,
+        assignTranslator: false,
+        tmTextUnitIds: request.scope === 'selected' ? request.tmTextUnitIds : null,
+      });
+    },
+    onSuccess: (response) => {
+      setTerminologyReviewDraft(null);
+      const projectId = response.projectIds[0];
+      if (projectId != null) {
+        void navigate(`/review-projects/${projectId}`);
+        return;
+      }
+      setStatusNotice({
+        kind: 'error',
+        message: 'No terminology review project was created for this glossary.',
+      });
+    },
+    onError: (error: Error) => {
+      setStatusNotice({
+        kind: 'error',
+        message: error.message || 'Failed to create terminology review project.',
+      });
+    },
+  });
+
+  const openTerminologyReviewModal = useCallback(
+    (scope: TerminologyReviewScope, tmTextUnitIds: number[]) => {
+      terminologyReviewMutation.reset();
+      setTerminologyReviewDeciderShowAllUsers(false);
+      setTerminologyReviewDraft({
+        scope,
+        teamId: null,
+        tmTextUnitIds,
+        specialistUserIds: [],
+        pmUserId: null,
+        specialistDueDate: getDefaultTerminologyReviewDueDateInput(),
+        pmDueDate: getDefaultTerminologyReviewDueDateInput(
+          TERMINOLOGY_REVIEW_DUE_DATE_OFFSET_DAYS + 1,
+        ),
+      });
+      setStatusNotice(null);
+    },
+    [terminologyReviewMutation],
+  );
+
+  const terminologyReviewTermCount =
+    terminologyReviewDraft?.scope === 'selected'
+      ? terminologyReviewDraft.tmTextUnitIds.length
+      : (termsQuery.data?.totalCount ?? 0);
+  const canSubmitTerminologyReview =
+    terminologyReviewDraft != null &&
+    terminologyReviewDraft.teamId != null &&
+    terminologyReviewTermCount > 0 &&
+    Boolean(localDateTimeInputToIso(terminologyReviewDraft.specialistDueDate)) &&
+    Boolean(localDateTimeInputToIso(terminologyReviewDraft.pmDueDate)) &&
+    !terminologyReviewMutation.isPending;
+  const closeTerminologyReviewModal = useCallback(() => {
+    if (terminologyReviewMutation.isPending) {
+      return;
+    }
+    setTerminologyReviewDeciderShowAllUsers(false);
+    setTerminologyReviewDraft(null);
+  }, [terminologyReviewMutation.isPending]);
+
   const statusMutation = useMutation({
     mutationFn: async ({ term, status }: { term: ApiGlossaryTerm; status: string }) => {
       const draft = termToDraft(term, glossary.localeTags);
@@ -1356,6 +1501,94 @@ export function AdminGlossaryTermsPanel({
         : `${selectedLocaleTags.length} locale column${selectedLocaleTags.length === 1 ? '' : 's'}`;
   const allVisibleSelected =
     terms.length > 0 && terms.every((term) => selectedTermIds.includes(term.tmTextUnitId));
+  const terminologyReviewTeamOptions = useMemo(
+    () =>
+      (terminologyReviewTeamsQuery.data ?? [])
+        .filter((team) => team.enabled !== false)
+        .map((team) => ({
+          value: team.id,
+          label: `${team.name} (#${team.id})`,
+        }))
+        .sort((first, second) =>
+          first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }),
+        ),
+    [terminologyReviewTeamsQuery.data],
+  );
+  const terminologyReviewSpecialistOptions = useMemo(
+    () =>
+      (terminologyReviewSpecialistsQuery.data?.users ?? [])
+        .map(toTeamUserSelectOption)
+        .sort((first, second) =>
+          first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }),
+        ),
+    [terminologyReviewSpecialistsQuery.data?.users],
+  );
+  const terminologyReviewAllDeciderOptions = useMemo(() => {
+    const optionsByUserId = new Map<
+      number,
+      { value: number; label: string; helper: string; roles: Set<string> }
+    >();
+    const addUsers = (users: ApiTeamUserSummary[] | undefined, role: string) => {
+      (users ?? []).forEach((user) => {
+        const existing = optionsByUserId.get(user.id);
+        if (existing) {
+          existing.roles.add(role);
+          existing.helper = Array.from(existing.roles).join(' + ');
+          return;
+        }
+        optionsByUserId.set(user.id, {
+          value: user.id,
+          label: getUserLabel(user) || `User #${user.id}`,
+          helper: role,
+          roles: new Set([role]),
+        });
+      });
+    };
+    addUsers(terminologyReviewPmUsersQuery.data?.users, 'PM');
+    addUsers(terminologyReviewSpecialistsQuery.data?.users, 'Linguist');
+    return Array.from(optionsByUserId.values())
+      .map((option) => ({
+        value: option.value,
+        label: option.label,
+        helper: option.helper,
+      }))
+      .sort((first, second) =>
+        first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }),
+      );
+  }, [terminologyReviewPmUsersQuery.data?.users, terminologyReviewSpecialistsQuery.data?.users]);
+  const terminologyReviewLinguistUserIdSet = useMemo(
+    () => new Set((terminologyReviewSpecialistsQuery.data?.users ?? []).map((user) => user.id)),
+    [terminologyReviewSpecialistsQuery.data?.users],
+  );
+  const terminologyReviewDeciderOptions = useMemo(() => {
+    if (terminologyReviewDeciderShowAllUsers) {
+      return terminologyReviewAllDeciderOptions;
+    }
+
+    const linguistOptions = terminologyReviewAllDeciderOptions.filter((option) =>
+      terminologyReviewLinguistUserIdSet.has(option.value),
+    );
+    const selectedDeciderOption =
+      terminologyReviewDraft?.pmUserId == null
+        ? null
+        : (terminologyReviewAllDeciderOptions.find(
+            (option) => option.value === terminologyReviewDraft.pmUserId,
+          ) ?? null);
+
+    if (
+      selectedDeciderOption != null &&
+      !linguistOptions.some((option) => option.value === selectedDeciderOption.value)
+    ) {
+      return [selectedDeciderOption, ...linguistOptions];
+    }
+
+    return linguistOptions;
+  }, [
+    terminologyReviewAllDeciderOptions,
+    terminologyReviewDeciderShowAllUsers,
+    terminologyReviewDraft?.pmUserId,
+    terminologyReviewLinguistUserIdSet,
+  ]);
   const suggestions = useMemo(
     () => suggestionsQuery.data?.suggestions ?? [],
     [suggestionsQuery.data?.suggestions],
@@ -1889,6 +2122,16 @@ export function AdminGlossaryTermsPanel({
               visibleLocaleColumnLimitOptions={visibleLocaleColumnLimitOptions}
               localeColumnSummary={localeColumnSummary}
               selectedTermIdsCount={selectedTermIds.length}
+              isCreatingTerminologyReview={terminologyReviewMutation.isPending}
+              onCreateTerminologyReview={() =>
+                openTerminologyReviewModal(
+                  selectedTermIds.length > 0 ? 'selected' : 'glossary',
+                  selectedTermIds.length > 0 ? selectedTermIds : [],
+                )
+              }
+              onCreateSelectedTerminologyReview={() =>
+                openTerminologyReviewModal('selected', selectedTermIds)
+              }
               onOpenBatch={() => setBatchOpen(true)}
               onClearSelection={() => setSelectedTermIds([])}
               statusNotice={!editorOpen ? statusNotice : null}
@@ -2563,6 +2806,256 @@ export function AdminGlossaryTermsPanel({
           )}
         </div>
       </div>
+
+      <Modal
+        open={terminologyReviewDraft != null}
+        size="lg"
+        className="glossary-term-admin__terminology-review-modal"
+        ariaLabel="Create terminology review"
+        onClose={closeTerminologyReviewModal}
+        closeOnBackdrop={!terminologyReviewMutation.isPending}
+      >
+        {terminologyReviewDraft ? (
+          <>
+            <div className="modal__header">
+              <div>
+                <h3 className="modal__title">Create terminology review</h3>
+                <p className="settings-hint">
+                  Creates one advisor row per selected advisor, plus one decider row.
+                </p>
+              </div>
+            </div>
+            <div className="glossary-term-admin__terminology-review-modal-body">
+              <div className="settings-grid settings-grid--two-column">
+                <label className="settings-field">
+                  <span className="settings-field__label">Scope</span>
+                  <select
+                    className="settings-input"
+                    value={terminologyReviewDraft.scope}
+                    disabled={terminologyReviewMutation.isPending}
+                    onChange={(event) => {
+                      const scope = event.target.value as TerminologyReviewScope;
+                      setTerminologyReviewDraft((current) =>
+                        current == null
+                          ? current
+                          : {
+                              ...current,
+                              scope,
+                              tmTextUnitIds: scope === 'selected' ? selectedTermIds : [],
+                            },
+                      );
+                    }}
+                  >
+                    <option value="glossary">All reviewable terms</option>
+                    <option value="selected" disabled={selectedTermIds.length === 0}>
+                      {`Selected text unit${selectedTermIds.length === 1 ? '' : 's'} (${selectedTermIds.length})`}
+                    </option>
+                  </select>
+                </label>
+                <div className="settings-field">
+                  <span className="settings-field__label">Terms</span>
+                  <div className="glossary-term-admin__terminology-review-summary">
+                    {terminologyReviewTermCount.toLocaleString()} term
+                    {terminologyReviewTermCount === 1 ? '' : 's'}
+                  </div>
+                </div>
+                <div className="settings-field settings-field--full">
+                  <span className="settings-field__label">Review team</span>
+                  <SingleSelectDropdown<number>
+                    label="Review team"
+                    options={terminologyReviewTeamOptions}
+                    value={terminologyReviewDraft.teamId}
+                    onChange={(next) => {
+                      setTerminologyReviewDeciderShowAllUsers(false);
+                      setTerminologyReviewDraft((current) => {
+                        return current == null
+                          ? current
+                          : {
+                              ...current,
+                              teamId: next,
+                              specialistUserIds: [],
+                              pmUserId: null,
+                            };
+                      });
+                    }}
+                    className="glossary-term-admin__terminology-review-picker"
+                    placeholder={
+                      terminologyReviewTeamsQuery.isFetching
+                        ? 'Loading teams...'
+                        : 'Select review team'
+                    }
+                    disabled={
+                      terminologyReviewMutation.isPending || terminologyReviewTeamsQuery.isFetching
+                    }
+                    buttonAriaLabel="Choose terminology review team"
+                    searchPlaceholder="Filter teams"
+                    noResultsLabel="No teams found"
+                  />
+                  <span className="settings-hint">
+                    Create a dedicated glossary review team when advisors span vendors.
+                  </span>
+                </div>
+                <div className="settings-field settings-field--full">
+                  <span className="settings-field__label">Advisors</span>
+                  <MultiSelectChip<number>
+                    label="Advisors"
+                    options={terminologyReviewSpecialistOptions}
+                    selectedValues={terminologyReviewDraft.specialistUserIds}
+                    className="glossary-term-admin__terminology-review-picker"
+                    onChange={(next) =>
+                      setTerminologyReviewDraft((current) =>
+                        current == null ? current : { ...current, specialistUserIds: next },
+                      )
+                    }
+                    placeholder="Choose advisors"
+                    emptyOptionsLabel={
+                      terminologyReviewTeamId == null
+                        ? 'Select a team first'
+                        : terminologyReviewSpecialistsQuery.isFetching
+                          ? 'Loading advisors…'
+                          : 'No linguist users in this team'
+                    }
+                    disabled={
+                      terminologyReviewMutation.isPending ||
+                      terminologyReviewTeamId == null ||
+                      terminologyReviewSpecialistsQuery.isFetching
+                    }
+                    buttonAriaLabel="Choose terminology review advisors"
+                    searchPlaceholder="Filter advisors"
+                    noResultsLabel="No advisors found"
+                  />
+                  <span className="settings-hint">
+                    Leave empty to create one unassigned advisor row for this team.
+                  </span>
+                </div>
+                <div className="settings-field settings-field--full">
+                  <span className="settings-field__label">Decider</span>
+                  <SingleSelectDropdown<number>
+                    label="Decider"
+                    options={terminologyReviewDeciderOptions}
+                    value={terminologyReviewDraft.pmUserId}
+                    className="glossary-term-admin__terminology-review-picker"
+                    onChange={(next) =>
+                      setTerminologyReviewDraft((current) =>
+                        current == null ? current : { ...current, pmUserId: next },
+                      )
+                    }
+                    placeholder={
+                      terminologyReviewTeamId == null
+                        ? 'Select team first'
+                        : terminologyReviewPmUsersQuery.isFetching ||
+                            terminologyReviewSpecialistsQuery.isFetching
+                          ? 'Loading deciders…'
+                          : terminologyReviewDeciderOptions.length === 0
+                            ? terminologyReviewDeciderShowAllUsers
+                              ? 'No team users found'
+                              : 'No linguists in this team'
+                            : 'Leave unassigned'
+                    }
+                    noneLabel="Leave unassigned"
+                    disabled={
+                      terminologyReviewMutation.isPending ||
+                      terminologyReviewTeamId == null ||
+                      terminologyReviewPmUsersQuery.isFetching ||
+                      terminologyReviewSpecialistsQuery.isFetching
+                    }
+                    buttonAriaLabel="Choose terminology review decider"
+                    searchPlaceholder="Filter deciders"
+                    noResultsLabel={
+                      terminologyReviewDeciderShowAllUsers
+                        ? 'No team users found'
+                        : 'No linguists found'
+                    }
+                    footerAction={
+                      terminologyReviewTeamId == null
+                        ? null
+                        : {
+                            label: terminologyReviewDeciderShowAllUsers
+                              ? 'Linguists only'
+                              : 'All team users',
+                            onClick: () =>
+                              setTerminologyReviewDeciderShowAllUsers((value) => !value),
+                            disabled:
+                              terminologyReviewMutation.isPending ||
+                              terminologyReviewPmUsersQuery.isFetching ||
+                              terminologyReviewSpecialistsQuery.isFetching,
+                          }
+                    }
+                  />
+                </div>
+                <label className="settings-field">
+                  <span className="settings-field__label">Advisor due</span>
+                  <input
+                    type="datetime-local"
+                    className="settings-input"
+                    value={terminologyReviewDraft.specialistDueDate}
+                    disabled={terminologyReviewMutation.isPending}
+                    onChange={(event) =>
+                      setTerminologyReviewDraft((current) =>
+                        current == null
+                          ? current
+                          : { ...current, specialistDueDate: event.target.value },
+                      )
+                    }
+                  />
+                </label>
+                <label className="settings-field">
+                  <span className="settings-field__label">Decider due</span>
+                  <input
+                    type="datetime-local"
+                    className="settings-input"
+                    value={terminologyReviewDraft.pmDueDate}
+                    disabled={terminologyReviewMutation.isPending}
+                    onChange={(event) =>
+                      setTerminologyReviewDraft((current) =>
+                        current == null ? current : { ...current, pmDueDate: event.target.value },
+                      )
+                    }
+                  />
+                </label>
+              </div>
+              {terminologyReviewTeamsQuery.isError ||
+              terminologyReviewSpecialistsQuery.isError ||
+              terminologyReviewPmUsersQuery.isError ? (
+                <div className="glossary-term-admin__modal-error">
+                  {terminologyReviewTeamsQuery.error instanceof Error
+                    ? terminologyReviewTeamsQuery.error.message
+                    : terminologyReviewSpecialistsQuery.error instanceof Error
+                      ? terminologyReviewSpecialistsQuery.error.message
+                      : terminologyReviewPmUsersQuery.error instanceof Error
+                        ? terminologyReviewPmUsersQuery.error.message
+                        : 'Could not load team users.'}
+                </div>
+              ) : null}
+              {terminologyReviewMutation.isError ? (
+                <div className="glossary-term-admin__modal-error">
+                  {terminologyReviewMutation.error instanceof Error
+                    ? terminologyReviewMutation.error.message
+                    : 'Failed to create terminology review.'}
+                </div>
+              ) : null}
+            </div>
+            <div className="modal__actions">
+              <button
+                type="button"
+                className="modal__button"
+                onClick={closeTerminologyReviewModal}
+                disabled={terminologyReviewMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="modal__button modal__button--primary"
+                onClick={() => terminologyReviewMutation.mutate(terminologyReviewDraft)}
+                disabled={!canSubmitTerminologyReview}
+              >
+                {terminologyReviewMutation.isPending ? 'Creating…' : 'Create review'}
+              </button>
+            </div>
+          </>
+        ) : null}
+      </Modal>
 
       <Modal
         open={batchOpen}

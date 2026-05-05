@@ -226,6 +226,10 @@
   display: inline-flex;
 }
 
+.glossary-term-admin__review-action {
+  white-space: nowrap;
+}
+
 .glossary-term-admin__primary-action-button {
   gap: var(--space-2);
 }
@@ -1215,6 +1219,55 @@
   justify-content: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-4);
+}
+
+.glossary-term-admin__terminology-review-modal .modal__card {
+  max-height: min(92vh, 48rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.glossary-term-admin__terminology-review-modal .modal__header {
+  flex: 0 0 auto;
+}
+
+.glossary-term-admin__terminology-review-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.glossary-term-admin__terminology-review-picker.chip-dropdown {
+  width: 100%;
+}
+
+.glossary-term-admin__terminology-review-modal .modal__actions {
+  flex: 0 0 auto;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.glossary-term-admin__terminology-review-summary {
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.glossary-term-admin__modal-error {
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-danger) 35%, transparent);
+  border-radius: var(--radius-2);
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  font-size: var(--font-size-sm);
 }
 
 .glossary-term-admin__generation-modal-body,

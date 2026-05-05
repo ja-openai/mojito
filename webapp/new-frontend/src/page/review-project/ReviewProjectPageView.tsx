@@ -23,10 +23,19 @@ import {
 } from '../../api/glossaries';
 import type {
   ApiReviewProjectDetail,
+  ApiReviewProjectTerminologyPhase,
   ApiReviewProjectTextUnit,
   ApiReviewProjectType,
+  ApiTerminologyFeedbackRecommendation,
+  ApiTerminologyResolutionStatus,
 } from '../../api/review-projects';
-import { REVIEW_PROJECT_TYPE_LABELS, REVIEW_PROJECT_TYPES } from '../../api/review-projects';
+import {
+  REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
+  REVIEW_PROJECT_TYPE_LABELS,
+  REVIEW_PROJECT_TYPES,
+  TERMINOLOGY_FEEDBACK_RECOMMENDATION_LABELS,
+  TERMINOLOGY_RESOLUTION_STATUS_LABELS,
+} from '../../api/review-projects';
 import {
   type ApiTeam,
   fetchTeamLocalePools,
@@ -88,6 +97,7 @@ import {
 } from '../../utils/glossaryTermLookup';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import { toHtmlLangTag } from '../../utils/localeTag';
+import { canManageGlossaryTerms } from '../../utils/permissions';
 import {
   buildRequestAttachmentUploadQueueEntries,
   canUploadRequestAttachmentFile,
@@ -140,12 +150,39 @@ type EditedFilter = 'all' | 'edited' | 'notEdited';
 type SortByFilter = 'none' | 'id' | 'source' | 'translation' | 'location' | 'assetPath';
 type SortOrderFilter = 'asc' | 'desc';
 type EditKind = 'translation' | 'status' | 'comment';
+type TerminologyConfidenceChoice = 'unspecified' | '1' | '2' | '3' | '4' | '5';
+type TerminologyResolutionStatusChoice = ApiTerminologyResolutionStatus;
 
 const SAVING_INDICATOR_MIN_MS = 600;
 const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
-
+const DEFAULT_TERMINOLOGY_CONFIDENCE: TerminologyConfidenceChoice = '5';
+const TERMINOLOGY_FEEDBACK_RECOMMENDATION_OPTIONS: ApiTerminologyFeedbackRecommendation[] = [
+  'APPROVE',
+  'KEEP_CANDIDATE',
+  'REJECT',
+];
+const TERMINOLOGY_CONFIDENCE_OPTIONS: Array<{
+  value: Exclude<TerminologyConfidenceChoice, 'unspecified'>;
+  label: string;
+}> = [
+  { value: '5', label: 'High' },
+  { value: '3', label: 'Medium' },
+  { value: '1', label: 'Low' },
+];
+const TERMINOLOGY_RESOLUTION_STATUS_OPTIONS: TerminologyResolutionStatusChoice[] = [
+  'APPROVED',
+  'CANDIDATE',
+  'REJECTED',
+];
 const formatGlossaryMetadataValue = (value?: string | null) =>
   value?.trim() ? value.trim().toLowerCase().replace(/_/g, ' ') : null;
+
+const normalizeTerminologyResolutionStatus = (
+  value?: string | null,
+): TerminologyResolutionStatusChoice =>
+  TERMINOLOGY_RESOLUTION_STATUS_OPTIONS.includes(value as TerminologyResolutionStatusChoice)
+    ? (value as TerminologyResolutionStatusChoice)
+    : 'CANDIDATE';
 
 function mapChoiceToApi(choice: StatusChoice): {
   status: string;
@@ -358,6 +395,33 @@ type DecisionSnapshot = {
   statusChoice: StatusChoice;
   decisionState: DecisionStateChoice;
 };
+
+type TerminologyFeedbackSnapshot = {
+  recommendation: ApiTerminologyFeedbackRecommendation | null;
+  confidence: TerminologyConfidenceChoice;
+  notes: string;
+};
+
+function buildTerminologyFeedbackSnapshot(
+  textUnit: ApiReviewProjectTextUnit,
+  username: string,
+): TerminologyFeedbackSnapshot {
+  const currentUserFeedback =
+    textUnit.terminologyFeedbacks?.find((feedback) => feedback.reviewerUsername === username) ??
+    null;
+  const confidence =
+    currentUserFeedback?.confidence != null &&
+    currentUserFeedback.confidence >= 1 &&
+    currentUserFeedback.confidence <= 5
+      ? (String(currentUserFeedback.confidence) as TerminologyConfidenceChoice)
+      : 'unspecified';
+
+  return {
+    recommendation: currentUserFeedback?.recommendation ?? null,
+    confidence,
+    notes: currentUserFeedback?.notes ?? '',
+  };
+}
 
 type TranslationWarning = {
   code: string;
@@ -1076,6 +1140,18 @@ export function ReviewProjectPageView({
   if (!project) {
     return <div>No project data for id {projectId}</div>;
   }
+  const isTerminologyProject = isTerminologyReviewProjectType(project.type);
+  const isTerminologyDeciderProject = project.terminologyPhase === 'PM_RESOLUTION';
+  const primaryShortcutLabel = isTerminologyProject
+    ? isTerminologyDeciderProject
+      ? 'Apply final decision and blur'
+      : 'Save advisor input and blur'
+    : 'Accept and blur';
+  const primaryAdvanceShortcutLabel = isTerminologyProject
+    ? isTerminologyDeciderProject
+      ? 'Apply final decision and go to next term.'
+      : 'Save advisor input and go to next term.'
+    : 'Accept and go to next text unit. If unchanged, mark decided and go to next.';
 
   return (
     <div className="review-project-page">
@@ -1221,6 +1297,8 @@ export function ReviewProjectPageView({
           {selectedTextUnit ? (
             <DetailPane
               projectId={projectId}
+              projectType={project?.type ?? 'NORMAL'}
+              terminologyPhase={project?.terminologyPhase ?? null}
               textUnit={selectedTextUnit}
               localeTag={localeTag}
               mutations={mutations}
@@ -1305,34 +1383,67 @@ export function ReviewProjectPageView({
             </li>
             <li className="review-project-shortcuts__item">
               <span className="review-project-shortcuts__key">Cmd/Ctrl + Enter</span>
-              <span>Accept and blur</span>
+              <span>{primaryShortcutLabel}</span>
             </li>
             <li className="review-project-shortcuts__item">
               <span className="review-project-shortcuts__key">Cmd/Ctrl + Shift + Enter</span>
-              <span>
-                Accept and go to next text unit. If unchanged, mark decided and go to next.
-              </span>
+              <span>{primaryAdvanceShortcutLabel}</span>
             </li>
-            <li className="review-project-shortcuts__item">
-              <span className="review-project-shortcuts__key">Tab</span>
-              <span>Next editor (translation → comment → notes)</span>
-            </li>
-            <li className="review-project-shortcuts__item">
-              <span className="review-project-shortcuts__key">Shift + Tab</span>
-              <span>Previous editor</span>
-            </li>
-            <li className="review-project-shortcuts__item">
-              <span className="review-project-shortcuts__key">a</span>
-              <span>Accept selected text unit (outside edit fields)</span>
-            </li>
-            <li className="review-project-shortcuts__item">
-              <span className="review-project-shortcuts__key">e</span>
-              <span>Focus translation editor (outside edit fields)</span>
-            </li>
-            <li className="review-project-shortcuts__item">
-              <span className="review-project-shortcuts__key">p</span>
-              <span>Mark selected text unit as pending (outside edit fields)</span>
-            </li>
+            {!isTerminologyProject ? (
+              <>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">Tab</span>
+                  <span>Next editor (translation → comment → notes)</span>
+                </li>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">Shift + Tab</span>
+                  <span>Previous editor</span>
+                </li>
+              </>
+            ) : null}
+            {isTerminologyProject ? (
+              <>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">a</span>
+                  <span>
+                    {isTerminologyDeciderProject
+                      ? 'Apply final status: Approved (outside edit fields)'
+                      : 'Recommend Approved (outside edit fields)'}
+                  </span>
+                </li>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">c</span>
+                  <span>
+                    {isTerminologyDeciderProject
+                      ? 'Apply final status: Candidate (outside edit fields)'
+                      : 'Recommend Candidate (outside edit fields)'}
+                  </span>
+                </li>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">r</span>
+                  <span>
+                    {isTerminologyDeciderProject
+                      ? 'Apply final status: Rejected (outside edit fields)'
+                      : 'Recommend Rejected (outside edit fields)'}
+                  </span>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">a</span>
+                  <span>Accept selected text unit (outside edit fields)</span>
+                </li>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">e</span>
+                  <span>Focus translation editor (outside edit fields)</span>
+                </li>
+                <li className="review-project-shortcuts__item">
+                  <span className="review-project-shortcuts__key">p</span>
+                  <span>Mark selected text unit as pending (outside edit fields)</span>
+                </li>
+              </>
+            )}
           </ul>
         </div>
         <div className="modal__actions">
@@ -1385,6 +1496,8 @@ function TextUnitRow({
 
 function DetailPane({
   projectId,
+  projectType,
+  terminologyPhase,
   textUnit,
   localeTag,
   mutations,
@@ -1398,6 +1511,8 @@ function DetailPane({
   focusTranslationKey,
 }: {
   projectId: number;
+  projectType: ApiReviewProjectType;
+  terminologyPhase: ApiReviewProjectTerminologyPhase | null;
   textUnit: ApiReviewProjectTextUnit;
   localeTag: string;
   mutations: ReviewProjectMutationControls;
@@ -1410,6 +1525,10 @@ function DetailPane({
   onQueueAdvance: (focusTranslation: boolean) => void;
   focusTranslationKey: number;
 }) {
+  const user = useUser();
+  const isTerminologyProject = projectType === 'TERMINOLOGY';
+  const isSpecialistTerminologyProject = terminologyPhase === 'SPECIALIST_INPUT';
+  const isPmTerminologyProject = terminologyPhase === 'PM_RESOLUTION';
   const [isScreenshotsCollapsed, setIsScreenshotsCollapsed] = useState(false);
   const [heroHeight, setHeroHeight] = useState<number | null>(null);
   const [isHeroResizing, setIsHeroResizing] = useState(false);
@@ -1447,6 +1566,10 @@ function DetailPane({
   const baselineStatusKey = getStatusKey(baselineVariant);
   const snapshot = useMemo(() => buildSnapshot(textUnit), [textUnit]);
   const snapshotKey = useMemo(() => buildSnapshotKey(textUnit, snapshot), [textUnit, snapshot]);
+  const terminologySnapshot = useMemo(
+    () => buildTerminologyFeedbackSnapshot(textUnit, user.username),
+    [textUnit, user.username],
+  );
   const aiContextKey = useMemo(() => {
     const variantId =
       textUnit.currentTmTextUnitVariant?.id ?? textUnit.baselineTmTextUnitVariant?.id ?? 'none';
@@ -1462,6 +1585,11 @@ function DetailPane({
   const [draftStatusChoice, setDraftStatusChoice] = useState<StatusChoice>(snapshot.statusChoice);
   const [draftComment, setDraftComment] = useState(snapshot.comment ?? '');
   const [draftDecisionNotes, setDraftDecisionNotes] = useState(snapshot.decisionNotes ?? '');
+  const [draftTerminologyRecommendation, setDraftTerminologyRecommendation] =
+    useState<ApiTerminologyFeedbackRecommendation | null>(terminologySnapshot.recommendation);
+  const [draftTerminologyConfidence, setDraftTerminologyConfidence] =
+    useState<TerminologyConfidenceChoice>(terminologySnapshot.confidence);
+  const [draftTerminologyNotes, setDraftTerminologyNotes] = useState(terminologySnapshot.notes);
   const isMutationActive = mutations.activeTextUnitId === textUnit.id;
   const isSavingGlobal = mutations.isSaving;
   const isSaving = isMutationActive && isSavingGlobal;
@@ -1520,6 +1648,20 @@ function DetailPane({
     glossaryTerm?.definition?.trim() || glossaryTerm?.sourceComment?.trim() || sourceComment;
   const glossaryPartOfSpeech = formatGlossaryMetadataValue(glossaryTerm?.partOfSpeech);
   const glossaryTermType = formatGlossaryMetadataValue(glossaryTerm?.termType);
+  const terminologyResolutionSnapshot = useMemo(
+    () => ({
+      status: normalizeTerminologyResolutionStatus(glossaryTerm?.status),
+      notes: decision?.notes ?? '',
+    }),
+    [decision?.notes, glossaryTerm?.status],
+  );
+  const canResolveTerminology =
+    canManageGlossaryTerms(user) && glossaryTermTarget?.glossaryId != null && glossaryTerm != null;
+  const [draftTerminologyResolutionStatus, setDraftTerminologyResolutionStatus] =
+    useState<TerminologyResolutionStatusChoice>(terminologyResolutionSnapshot.status);
+  const [draftTerminologyResolutionNotes, setDraftTerminologyResolutionNotes] = useState(
+    terminologyResolutionSnapshot.notes,
+  );
   const glossaryMatchesQuery = useQuery({
     queryKey: [
       'review-project-glossary-matches',
@@ -1709,7 +1851,18 @@ function DetailPane({
   }, [snapshot, snapshotKey]);
 
   useEffect(() => {
-    if (!localeTag) {
+    setDraftTerminologyRecommendation(terminologySnapshot.recommendation);
+    setDraftTerminologyConfidence(terminologySnapshot.confidence);
+    setDraftTerminologyNotes(terminologySnapshot.notes);
+  }, [terminologySnapshot, textUnit.id]);
+
+  useEffect(() => {
+    setDraftTerminologyResolutionStatus(terminologyResolutionSnapshot.status);
+    setDraftTerminologyResolutionNotes(terminologyResolutionSnapshot.notes);
+  }, [terminologyResolutionSnapshot, textUnit.id]);
+
+  useEffect(() => {
+    if (isTerminologyProject || !localeTag) {
       setAiMessages([]);
       setAiInput('');
       setIsAiResponding(false);
@@ -1784,6 +1937,7 @@ function DetailPane({
   }, [
     aiContextKey,
     glossaryMatchesQuery.data,
+    isTerminologyProject,
     localeTag,
     snapshot.target,
     source,
@@ -1795,18 +1949,41 @@ function DetailPane({
   const snapshotStatusApi = mapChoiceToApi(snapshot.statusChoice);
   const draftCommentNormalized = normalizeOptional(draftComment);
   const draftDecisionNotesNormalized = normalizeOptional(draftDecisionNotes);
+  const draftTerminologyNotesNormalized = normalizeOptional(draftTerminologyNotes) ?? '';
+  const draftTerminologyResolutionNotesNormalized =
+    normalizeOptional(draftTerminologyResolutionNotes) ?? '';
+  const isTerminologyDirty =
+    draftTerminologyRecommendation !== terminologySnapshot.recommendation ||
+    draftTerminologyConfidence !== terminologySnapshot.confidence ||
+    draftTerminologyNotesNormalized !== terminologySnapshot.notes;
+  const isTerminologyResolutionDirty =
+    draftTerminologyResolutionStatus !== terminologyResolutionSnapshot.status ||
+    draftTerminologyResolutionNotesNormalized !== terminologyResolutionSnapshot.notes;
   const isTranslationDirty = draftTarget !== snapshot.target;
-  const isDirty =
+  const isTranslationReviewDirty =
     isTranslationDirty ||
     draftStatusApi.status !== snapshotStatusApi.status ||
     draftStatusApi.includedInLocalizedFile !== snapshotStatusApi.includedInLocalizedFile ||
     draftCommentNormalized !== snapshot.comment ||
     draftDecisionNotesNormalized !== snapshot.decisionNotes;
+  const isDirty = isTerminologyProject
+    ? isTerminologyDirty || isTerminologyResolutionDirty
+    : isTranslationReviewDirty;
   const isRejected = draftStatusApi.includedInLocalizedFile === false;
-  const canReset = isDirty && !isSavingGlobal;
+  const canReset = !isTerminologyProject && isDirty && !isSavingGlobal;
   const isAcceptedAndDecided =
     snapshot.statusChoice === 'ACCEPTED' && snapshot.decisionState === 'DECIDED';
-  const canAccept = !isSavingGlobal && (!isAcceptedAndDecided || isDirty);
+  const isTerminologyNotesDirty = draftTerminologyNotesNormalized !== terminologySnapshot.notes;
+  const canAccept = isTerminologyProject
+    ? !isSavingGlobal && draftTerminologyRecommendation != null && isTerminologyNotesDirty
+    : !isSavingGlobal && (!isAcceptedAndDecided || isDirty);
+  const canApplyTerminologyResolution =
+    isTerminologyProject &&
+    !isSpecialistTerminologyProject &&
+    canResolveTerminology &&
+    !isSavingGlobal &&
+    (isTerminologyResolutionDirty || decision?.decisionState !== 'DECIDED');
+  const canRunPrimaryShortcut = isPmTerminologyProject ? canApplyTerminologyResolution : canAccept;
   const isCommentDirty = draftCommentNormalized !== snapshot.comment;
   const isDecisionNotesDirty = draftDecisionNotesNormalized !== snapshot.decisionNotes;
   const isStatusDropdownDisabled =
@@ -1890,6 +2067,118 @@ function DetailPane({
     [mutations, snapshot.expectedCurrentVariantId, textUnit.id],
   );
 
+  const requestSaveTerminologyFeedback = useCallback(
+    (overrides?: {
+      recommendation?: ApiTerminologyFeedbackRecommendation;
+      confidence?: TerminologyConfidenceChoice;
+    }) => {
+      const recommendation = overrides?.recommendation ?? draftTerminologyRecommendation;
+      const confidence = overrides?.confidence ?? draftTerminologyConfidence;
+      if (recommendation == null) {
+        return;
+      }
+      mutations.onRequestTerminologyFeedback({
+        textUnitId: textUnit.id,
+        recommendation,
+        confidence: confidence === 'unspecified' ? null : Number.parseInt(confidence, 10),
+        notes: draftTerminologyNotesNormalized || null,
+      });
+    },
+    [
+      draftTerminologyConfidence,
+      draftTerminologyNotesNormalized,
+      draftTerminologyRecommendation,
+      mutations,
+      textUnit.id,
+    ],
+  );
+
+  const handleTerminologyRecommendationClick = useCallback(
+    (recommendation: ApiTerminologyFeedbackRecommendation) => {
+      const confidence =
+        draftTerminologyConfidence === 'unspecified'
+          ? DEFAULT_TERMINOLOGY_CONFIDENCE
+          : draftTerminologyConfidence;
+      setDraftTerminologyRecommendation(recommendation);
+      setDraftTerminologyConfidence(confidence);
+      requestSaveTerminologyFeedback({ recommendation, confidence });
+    },
+    [draftTerminologyConfidence, requestSaveTerminologyFeedback],
+  );
+
+  const handleTerminologyConfidenceClick = useCallback(
+    (confidence: TerminologyConfidenceChoice) => {
+      setDraftTerminologyConfidence(confidence);
+      if (draftTerminologyRecommendation == null) {
+        return;
+      }
+      requestSaveTerminologyFeedback({ confidence });
+    },
+    [draftTerminologyRecommendation, requestSaveTerminologyFeedback],
+  );
+
+  const requestSaveTerminologyResolution = useCallback(
+    (overrides?: { status?: TerminologyResolutionStatusChoice }) => {
+      if (glossaryTermTarget?.glossaryId == null) {
+        return;
+      }
+      mutations.onRequestTerminologyResolution({
+        textUnitId: textUnit.id,
+        glossaryId: glossaryTermTarget.glossaryId,
+        status: overrides?.status ?? draftTerminologyResolutionStatus,
+        notes: draftTerminologyResolutionNotesNormalized || null,
+      });
+    },
+    [
+      draftTerminologyResolutionNotesNormalized,
+      draftTerminologyResolutionStatus,
+      glossaryTermTarget?.glossaryId,
+      mutations,
+      textUnit.id,
+    ],
+  );
+
+  const handleTerminologyStatusShortcut = useCallback(
+    (lowerKey: string) => {
+      const recommendationByKey: Record<string, ApiTerminologyFeedbackRecommendation> = {
+        a: 'APPROVE',
+        c: 'KEEP_CANDIDATE',
+        r: 'REJECT',
+      };
+      const resolutionByKey: Record<string, TerminologyResolutionStatusChoice> = {
+        a: 'APPROVED',
+        c: 'CANDIDATE',
+        r: 'REJECTED',
+      };
+      const recommendation = recommendationByKey[lowerKey];
+      if (recommendation == null) {
+        return false;
+      }
+      if (mutations.showValidationDialog || mutations.isSaving) {
+        return true;
+      }
+      if (isPmTerminologyProject) {
+        const status = resolutionByKey[lowerKey];
+        if (!canResolveTerminology || status == null) {
+          return true;
+        }
+        setDraftTerminologyResolutionStatus(status);
+        requestSaveTerminologyResolution({ status });
+        return true;
+      }
+      handleTerminologyRecommendationClick(recommendation);
+      return true;
+    },
+    [
+      canResolveTerminology,
+      handleTerminologyRecommendationClick,
+      isPmTerminologyProject,
+      mutations.isSaving,
+      mutations.showValidationDialog,
+      requestSaveTerminologyResolution,
+    ],
+  );
+
   const handleReset = useCallback(() => {
     setDraftTarget(snapshot.target);
     setDraftStatusChoice(snapshot.statusChoice);
@@ -1897,29 +2186,48 @@ function DetailPane({
     setDraftDecisionNotes(snapshot.decisionNotes ?? '');
   }, [snapshot]);
 
-  const handleEditorKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Escape') {
-      event.currentTarget.blur();
-      event.stopPropagation();
-      return;
-    }
-    if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
-      const editors = [translationRef, commentRef, decisionNotesRef];
-      const currentIndex = editors.findIndex((ref) => ref.current === event.currentTarget);
-      if (currentIndex === -1) {
+  const handleEditorKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === 'Escape') {
+        event.currentTarget.blur();
+        event.stopPropagation();
         return;
       }
-      event.preventDefault();
-      const nextIndex = event.shiftKey
-        ? (currentIndex - 1 + editors.length) % editors.length
-        : (currentIndex + 1) % editors.length;
-      editors[nextIndex]?.current?.focus();
-    }
-  }, []);
+      if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        const editors = isTerminologyProject
+          ? [decisionNotesRef]
+          : [translationRef, commentRef, decisionNotesRef];
+        const currentIndex = editors.findIndex((ref) => ref.current === event.currentTarget);
+        if (currentIndex === -1) {
+          return;
+        }
+        event.preventDefault();
+        const nextIndex = event.shiftKey
+          ? (currentIndex - 1 + editors.length) % editors.length
+          : (currentIndex + 1) % editors.length;
+        editors[nextIndex]?.current?.focus();
+      }
+    },
+    [isTerminologyProject],
+  );
 
   const handleAccept = useCallback(() => {
+    if (isTerminologyProject) {
+      if (isPmTerminologyProject) {
+        requestSaveTerminologyResolution();
+        return;
+      }
+      requestSaveTerminologyFeedback();
+      return;
+    }
     requestSaveDecision({ statusChoiceOverride: 'ACCEPTED' });
-  }, [requestSaveDecision]);
+  }, [
+    isPmTerminologyProject,
+    isTerminologyProject,
+    requestSaveDecision,
+    requestSaveTerminologyFeedback,
+    requestSaveTerminologyResolution,
+  ]);
 
   const handleStatusChange = useCallback(
     (next: StatusChoice) => {
@@ -2136,6 +2444,9 @@ function DetailPane({
       const isOutsideEditable = !isEditableTarget(event.target) && !event.repeat;
 
       if (lowerKey === 'e' && isPlainKey) {
+        if (isTerminologyProject) {
+          return;
+        }
         if (!isOutsideEditable) {
           return;
         }
@@ -2145,6 +2456,9 @@ function DetailPane({
       }
 
       if (lowerKey === 'p' && isPlainKey) {
+        if (isTerminologyProject) {
+          return;
+        }
         if (!isOutsideEditable) {
           return;
         }
@@ -2158,6 +2472,14 @@ function DetailPane({
         return;
       }
 
+      if (isTerminologyProject && isPlainKey && isOutsideEditable) {
+        const handledTerminologyStatusShortcut = handleTerminologyStatusShortcut(lowerKey);
+        if (handledTerminologyStatusShortcut) {
+          event.preventDefault();
+          return;
+        }
+      }
+
       const isAcceptHotkey =
         lowerKey === 'a' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
       if (isAcceptHotkey) {
@@ -2167,7 +2489,7 @@ function DetailPane({
         if (mutations.showValidationDialog || mutations.isSaving) {
           return;
         }
-        if (canAccept) {
+        if (canRunPrimaryShortcut) {
           event.preventDefault();
           handleAccept();
         }
@@ -2185,12 +2507,20 @@ function DetailPane({
         if (mutations.showValidationDialog || mutations.isSaving) {
           return;
         }
-        if (canAccept) {
+        if (isTerminologyProject) {
+          if (canRunPrimaryShortcut) {
+            handleAccept();
+          }
+          onQueueAdvance(false);
+          focusedTextarea?.blur();
+          return;
+        }
+        if (canRunPrimaryShortcut) {
           handleAccept();
         } else if (snapshot.decisionState !== 'DECIDED') {
           requestDecisionState('DECIDED');
         }
-        onQueueAdvance(true);
+        onQueueAdvance(!isTerminologyProject);
         focusedTextarea?.blur();
         return;
       }
@@ -2198,7 +2528,7 @@ function DetailPane({
         focusedTextarea?.blur();
         return;
       }
-      if (canAccept) {
+      if (canRunPrimaryShortcut) {
         handleAccept();
       }
       focusedTextarea?.blur();
@@ -2206,11 +2536,13 @@ function DetailPane({
     window.addEventListener('keydown', handleSaveShortcut);
     return () => window.removeEventListener('keydown', handleSaveShortcut);
   }, [
-    canAccept,
+    canRunPrimaryShortcut,
     getFocusedTextarea,
-    isEditableTarget,
     handleAccept,
+    handleTerminologyStatusShortcut,
     isDirty,
+    isEditableTarget,
+    isTerminologyProject,
     mutations.isSaving,
     mutations.showValidationDialog,
     onQueueAdvance,
@@ -2599,173 +2931,340 @@ function DetailPane({
             </div>
           ) : null}
 
-          <div className="review-project-detail__field review-project-detail__field--translation">
-            <div className="review-project-detail__label-row">
-              <div className="review-project-detail__label">Translation</div>
-            </div>
-            <AutoTextarea
-              className={`review-project-detail__input review-project-detail__input--autosize review-project-detail__input--translation${
-                isRejected ? ' review-project-detail__input--rejected' : ''
-              }`}
-              ref={translationRef}
-              value={draftTarget}
-              onChange={(event) => {
-                setDraftTarget(event.target.value);
-              }}
-              spellCheck={true}
-              lang={translationLang}
-              onKeyDown={handleEditorKeyDown}
-              rows={1}
-              style={{ resize: 'none' }}
-            />
-          </div>
+          {isTerminologyProject ? (
+            <>
+              {!isPmTerminologyProject ? (
+                <>
+                  <div className="review-project-detail__section-label">Advisor input</div>
 
-          <div className="review-project-detail__editor-controls">
-            <div className="review-project-detail__decision-cluster">
-              <div className="review-project-detail__decision-segmented" role="group">
-                <button
-                  type="button"
-                  className={`review-project-detail__decision-option${
-                    snapshot.decisionState === 'PENDING' ? ' is-active' : ''
-                  }`}
-                  onClick={() => handleDecisionStateChange('PENDING')}
-                  disabled={isDirty || isSavingGlobal}
-                  aria-pressed={snapshot.decisionState === 'PENDING'}
-                >
-                  Pending
-                </button>
-                <button
-                  type="button"
-                  className={`review-project-detail__decision-option${
-                    snapshot.decisionState === 'DECIDED' ? ' is-active' : ''
-                  }`}
-                  onClick={() => handleDecisionStateChange('DECIDED')}
-                  disabled={isDirty || isSavingGlobal}
-                  aria-pressed={snapshot.decisionState === 'DECIDED'}
-                >
-                  Decided
-                </button>
+                  <div className="review-project-detail__field review-project-detail__field--translation">
+                    <div className="review-project-detail__label-row">
+                      <div className="review-project-detail__label">Recommended status</div>
+                    </div>
+                    <div
+                      className="review-project-detail__decision-segmented"
+                      role="group"
+                      aria-label="Recommended status"
+                    >
+                      {TERMINOLOGY_FEEDBACK_RECOMMENDATION_OPTIONS.map((recommendation) => (
+                        <button
+                          key={recommendation}
+                          type="button"
+                          className={`review-project-detail__decision-option${
+                            draftTerminologyRecommendation === recommendation ? ' is-active' : ''
+                          }`}
+                          onClick={() => handleTerminologyRecommendationClick(recommendation)}
+                          disabled={isSavingGlobal}
+                          aria-pressed={draftTerminologyRecommendation === recommendation}
+                        >
+                          {TERMINOLOGY_FEEDBACK_RECOMMENDATION_LABELS[recommendation]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="review-project-detail__field">
+                    <div className="review-project-detail__label-row">
+                      <div className="review-project-detail__label">Confidence</div>
+                      <div
+                        className={`review-project-detail__saving-indicator${
+                          showSavingIndicator ? ' is-active' : ''
+                        }`}
+                        role="status"
+                        aria-live="polite"
+                        aria-hidden={!showSavingIndicator}
+                      >
+                        <span className="spinner" aria-hidden="true" />
+                        <span>Saving…</span>
+                      </div>
+                    </div>
+                    <div
+                      className="review-project-detail__decision-segmented"
+                      role="group"
+                      aria-label="Confidence"
+                    >
+                      {TERMINOLOGY_CONFIDENCE_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={`review-project-detail__decision-option${
+                            draftTerminologyConfidence === option.value ? ' is-active' : ''
+                          }`}
+                          onClick={() => handleTerminologyConfidenceClick(option.value)}
+                          disabled={isSavingGlobal}
+                          aria-pressed={draftTerminologyConfidence === option.value}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="review-project-detail__field">
+                    <div className="review-project-detail__label">Recommendation notes</div>
+                    <AutoTextarea
+                      className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+                      ref={decisionNotesRef}
+                      value={draftTerminologyNotes}
+                      onChange={(event) => setDraftTerminologyNotes(event.target.value)}
+                      placeholder="Add source-term context, risks, or why this should not be a glossary term."
+                      onKeyDown={handleEditorKeyDown}
+                      rows={1}
+                      style={{ resize: 'none' }}
+                    />
+                    <div className="review-project-detail__editor-actions">
+                      <button
+                        type="button"
+                        className="review-project-detail__actions-button review-project-detail__actions-button--primary"
+                        onClick={handleAccept}
+                        disabled={!canAccept}
+                      >
+                        Save notes
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+
+              <div className="review-project-detail__field">
+                <div className="review-project-detail__label">Advisor responses</div>
+                <TerminologyFeedbackList feedbacks={textUnit.terminologyFeedbacks ?? []} />
               </div>
-            </div>
-            <div
-              className={`review-project-detail__saving-indicator${
-                showSavingIndicator ? ' is-active' : ''
-              }`}
-              role="status"
-              aria-live="polite"
-              aria-hidden={!showSavingIndicator}
-            >
-              <span className="spinner" aria-hidden="true" />
-              <span>Saving…</span>
-            </div>
-            <div className="review-project-detail__editor-actions">
-              <button
-                type="button"
-                className="review-project-detail__actions-button"
-                onClick={handleReset}
-                disabled={!canReset}
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                className="review-project-detail__actions-button review-project-detail__actions-button--primary"
-                onClick={handleAccept}
-                disabled={!canAccept}
-              >
-                Accept
-              </button>
-            </div>
-          </div>
 
-          {translationWarnings.length > 0 ? (
-            <button
-              type="button"
-              className="review-project-detail__warning-inline"
-              onClick={() => setIsWarningModalOpen(true)}
-              aria-haspopup="dialog"
-              aria-label={`${translationWarnings.length} translation warnings`}
-            >
-              <span className="review-project-detail__warning-inline-pill">
-                {translationWarnings.length} warning
-                {translationWarnings.length === 1 ? '' : 's'}
-              </span>
-              <span className="review-project-detail__warning-inline-summary">
-                <span>{translationWarnings[0]?.message}</span>
-                {translationWarnings.length > 1 ? (
-                  <span> +{translationWarnings.length - 1} more</span>
-                ) : null}
-              </span>
-            </button>
-          ) : null}
+              {!isSpecialistTerminologyProject ? (
+                <>
+                  <div className="review-project-detail__section-label">Decider final decision</div>
 
-          <IcuPreviewSection
-            sourceMessage={source}
-            targetMessage={draftTarget}
-            targetLocale={localeTag}
-            mode={icuPreviewMode}
-            isCollapsed={isIcuCollapsed}
-            onToggleCollapsed={() => setIsIcuCollapsed((current) => !current)}
-            onChangeMode={(mode) => {
-              setIcuPreviewMode(mode);
-              setIsIcuCollapsed(false);
-            }}
-            className="review-project-detail__field review-project-detail__field--icu"
-            titleClassName="review-project-detail__label"
-          />
+                  <div className="review-project-detail__field">
+                    <div className="review-project-detail__label-row">
+                      <div className="review-project-detail__label">Final status</div>
+                      <span className="review-project-detail__decision-current">
+                        Current:{' '}
+                        {TERMINOLOGY_RESOLUTION_STATUS_LABELS[terminologyResolutionSnapshot.status]}
+                      </span>
+                    </div>
+                    <div className="review-project-detail__decision-segmented" role="group">
+                      {TERMINOLOGY_RESOLUTION_STATUS_OPTIONS.map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          className={`review-project-detail__decision-option${
+                            draftTerminologyResolutionStatus === status ? ' is-active' : ''
+                          }`}
+                          onClick={() => setDraftTerminologyResolutionStatus(status)}
+                          disabled={!canResolveTerminology || isSavingGlobal}
+                          aria-pressed={draftTerminologyResolutionStatus === status}
+                        >
+                          {TERMINOLOGY_RESOLUTION_STATUS_LABELS[status]}
+                        </button>
+                      ))}
+                    </div>
+                    {!canResolveTerminology ? (
+                      <div className="review-project-detail__hint">
+                        Final decision is available to decider/admin users when this source maps to
+                        a glossary term.
+                      </div>
+                    ) : null}
+                  </div>
 
-          <div className="review-project-detail__field review-project-detail__field--ai-chat">
-            <div className="review-project-detail__label-row">
-              <div className="review-project-detail__label">AI Chat Review</div>
-              <button
-                type="button"
-                className="review-project-detail__baseline-toggle review-project-detail__label-actions--fade"
-                onClick={() => setIsAiCollapsed((current) => !current)}
-              >
-                {isAiCollapsed ? 'Show' : 'Hide'}
-              </button>
-            </div>
-            {!isAiCollapsed ? (
-              <AiChatReview
-                className="review-project-detail__ai-chat"
-                messages={aiMessages}
-                input={aiInput}
-                onChangeInput={setAiInput}
-                onSubmit={handleSubmitAi}
-                onUseSuggestion={handleUseAiSuggestion}
-                onRetryError={handleRetryAi}
-                isResponding={isAiResponding}
+                  <div className="review-project-detail__field">
+                    <div className="review-project-detail__label">Decision notes</div>
+                    <AutoTextarea
+                      className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+                      value={draftTerminologyResolutionNotes}
+                      onChange={(event) => setDraftTerminologyResolutionNotes(event.target.value)}
+                      placeholder="Record why this final glossary decision was made."
+                      onKeyDown={handleEditorKeyDown}
+                      rows={1}
+                      style={{ resize: 'none' }}
+                      disabled={!canResolveTerminology || isSavingGlobal}
+                    />
+                  </div>
+
+                  <div className="review-project-detail__editor-actions">
+                    <button
+                      type="button"
+                      className="review-project-detail__actions-button review-project-detail__actions-button--primary"
+                      onClick={() => requestSaveTerminologyResolution()}
+                      disabled={!canApplyTerminologyResolution}
+                    >
+                      Apply final decision
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <div className="review-project-detail__field review-project-detail__field--translation">
+                <div className="review-project-detail__label-row">
+                  <div className="review-project-detail__label">Translation</div>
+                </div>
+                <AutoTextarea
+                  className={`review-project-detail__input review-project-detail__input--autosize review-project-detail__input--translation${
+                    isRejected ? ' review-project-detail__input--rejected' : ''
+                  }`}
+                  ref={translationRef}
+                  value={draftTarget}
+                  onChange={(event) => {
+                    setDraftTarget(event.target.value);
+                  }}
+                  spellCheck={true}
+                  lang={translationLang}
+                  onKeyDown={handleEditorKeyDown}
+                  rows={1}
+                  style={{ resize: 'none' }}
+                />
+              </div>
+
+              <div className="review-project-detail__editor-controls">
+                <div className="review-project-detail__decision-cluster">
+                  <div className="review-project-detail__decision-segmented" role="group">
+                    <button
+                      type="button"
+                      className={`review-project-detail__decision-option${
+                        snapshot.decisionState === 'PENDING' ? ' is-active' : ''
+                      }`}
+                      onClick={() => handleDecisionStateChange('PENDING')}
+                      disabled={isDirty || isSavingGlobal}
+                      aria-pressed={snapshot.decisionState === 'PENDING'}
+                    >
+                      Pending
+                    </button>
+                    <button
+                      type="button"
+                      className={`review-project-detail__decision-option${
+                        snapshot.decisionState === 'DECIDED' ? ' is-active' : ''
+                      }`}
+                      onClick={() => handleDecisionStateChange('DECIDED')}
+                      disabled={isDirty || isSavingGlobal}
+                      aria-pressed={snapshot.decisionState === 'DECIDED'}
+                    >
+                      Decided
+                    </button>
+                  </div>
+                </div>
+                <div
+                  className={`review-project-detail__saving-indicator${
+                    showSavingIndicator ? ' is-active' : ''
+                  }`}
+                  role="status"
+                  aria-live="polite"
+                  aria-hidden={!showSavingIndicator}
+                >
+                  <span className="spinner" aria-hidden="true" />
+                  <span>Saving…</span>
+                </div>
+                <div className="review-project-detail__editor-actions">
+                  <button
+                    type="button"
+                    className="review-project-detail__actions-button"
+                    onClick={handleReset}
+                    disabled={!canReset}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    className="review-project-detail__actions-button review-project-detail__actions-button--primary"
+                    onClick={handleAccept}
+                    disabled={!canAccept}
+                  >
+                    Accept
+                  </button>
+                </div>
+              </div>
+
+              {translationWarnings.length > 0 ? (
+                <button
+                  type="button"
+                  className="review-project-detail__warning-inline"
+                  onClick={() => setIsWarningModalOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-label={`${translationWarnings.length} translation warnings`}
+                >
+                  <span className="review-project-detail__warning-inline-pill">
+                    {translationWarnings.length} warning
+                    {translationWarnings.length === 1 ? '' : 's'}
+                  </span>
+                  <span className="review-project-detail__warning-inline-summary">
+                    <span>{translationWarnings[0]?.message}</span>
+                    {translationWarnings.length > 1 ? (
+                      <span> +{translationWarnings.length - 1} more</span>
+                    ) : null}
+                  </span>
+                </button>
+              ) : null}
+
+              <IcuPreviewSection
+                sourceMessage={source}
+                targetMessage={draftTarget}
+                targetLocale={localeTag}
+                mode={icuPreviewMode}
+                isCollapsed={isIcuCollapsed}
+                onToggleCollapsed={() => setIsIcuCollapsed((current) => !current)}
+                onChangeMode={(mode) => {
+                  setIcuPreviewMode(mode);
+                  setIsIcuCollapsed(false);
+                }}
+                className="review-project-detail__field review-project-detail__field--icu"
+                titleClassName="review-project-detail__label"
               />
-            ) : null}
-          </div>
 
-          <div className="review-project-detail__field">
-            <div className="review-project-detail__label">Comment on translation</div>
-            <AutoTextarea
-              className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
-              ref={commentRef}
-              value={draftComment}
-              onChange={(event) => setDraftComment(event.target.value)}
-              placeholder="Explain why you chose this translation (if not obvious)."
-              onKeyDown={handleEditorKeyDown}
-              rows={1}
-              style={{ resize: 'none' }}
-            />
-          </div>
+              <div className="review-project-detail__field review-project-detail__field--ai-chat">
+                <div className="review-project-detail__label-row">
+                  <div className="review-project-detail__label">AI Chat Review</div>
+                  <button
+                    type="button"
+                    className="review-project-detail__baseline-toggle review-project-detail__label-actions--fade"
+                    onClick={() => setIsAiCollapsed((current) => !current)}
+                  >
+                    {isAiCollapsed ? 'Show' : 'Hide'}
+                  </button>
+                </div>
+                {!isAiCollapsed ? (
+                  <AiChatReview
+                    className="review-project-detail__ai-chat"
+                    messages={aiMessages}
+                    input={aiInput}
+                    onChangeInput={setAiInput}
+                    onSubmit={handleSubmitAi}
+                    onUseSuggestion={handleUseAiSuggestion}
+                    onRetryError={handleRetryAi}
+                    isResponding={isAiResponding}
+                  />
+                ) : null}
+              </div>
 
-          <div className="review-project-detail__field">
-            <div className="review-project-detail__label">Decision notes</div>
-            <AutoTextarea
-              className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
-              ref={decisionNotesRef}
-              value={draftDecisionNotes}
-              onChange={(event) => setDraftDecisionNotes(event.target.value)}
-              placeholder="Explain why the baseline translation was bad (to improve AI translation)."
-              onKeyDown={handleEditorKeyDown}
-              rows={1}
-              style={{ resize: 'none' }}
-            />
-          </div>
+              <div className="review-project-detail__field">
+                <div className="review-project-detail__label">Comment on translation</div>
+                <AutoTextarea
+                  className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+                  ref={commentRef}
+                  value={draftComment}
+                  onChange={(event) => setDraftComment(event.target.value)}
+                  placeholder="Explain why you chose this translation (if not obvious)."
+                  onKeyDown={handleEditorKeyDown}
+                  rows={1}
+                  style={{ resize: 'none' }}
+                />
+              </div>
+
+              <div className="review-project-detail__field">
+                <div className="review-project-detail__label">Decision notes</div>
+                <AutoTextarea
+                  className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+                  ref={decisionNotesRef}
+                  value={draftDecisionNotes}
+                  onChange={(event) => setDraftDecisionNotes(event.target.value)}
+                  placeholder="Explain why the baseline translation was bad (to improve AI translation)."
+                  onKeyDown={handleEditorKeyDown}
+                  rows={1}
+                  style={{ resize: 'none' }}
+                />
+              </div>
+            </>
+          )}
 
           {errorMessage ? <div className="review-project-detail__error">{errorMessage}</div> : null}
         </div>
@@ -2825,7 +3324,7 @@ function DetailPane({
                     ? glossaryMatchesQuery.error.message
                     : null
                 }
-                currentTarget={draftTarget}
+                currentTarget={isTerminologyProject ? (source ?? '') : draftTarget}
                 showHeader={false}
               />
             ) : null}
@@ -2867,20 +3366,22 @@ function DetailPane({
             </div>
           </div>
 
-          <div className="review-project-detail__field review-project-detail__field--status">
-            <div className="review-project-detail__label">Status</div>
-            <PillDropdown
-              value={draftStatusChoice}
-              options={STATUS_CHOICES.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-              onChange={handleStatusChange}
-              ariaLabel="Translation status"
-              className="review-project-detail__status-dropdown"
-              disabled={isStatusDropdownDisabled}
-            />
-          </div>
+          {!isTerminologyProject ? (
+            <div className="review-project-detail__field review-project-detail__field--status">
+              <div className="review-project-detail__label">Status</div>
+              <PillDropdown
+                value={draftStatusChoice}
+                options={STATUS_CHOICES.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                }))}
+                onChange={handleStatusChange}
+                ariaLabel="Translation status"
+                className="review-project-detail__status-dropdown"
+                disabled={isStatusDropdownDisabled}
+              />
+            </div>
+          ) : null}
 
           <div className="review-project-detail__field review-project-detail__field--history">
             <button
@@ -3120,6 +3621,7 @@ function ReviewProjectHeader({
   onReviewPending: () => void;
 }) {
   const { dueDate, textUnitCount, wordCount, status, type } = project;
+  const terminologyPhase = project.terminologyPhase ?? null;
   const name = project.reviewProjectRequest?.name ?? null;
   const requestId = project.reviewProjectRequest?.id ?? null;
   const description = project.reviewProjectRequest?.notes ?? '';
@@ -3135,6 +3637,7 @@ function ReviewProjectHeader({
   const locales = useMemo(() => (locale ? [locale] : []), [locale]);
   const nextStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
+  const isTerminologyAssignmentProject = type === 'TERMINOLOGY';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
   const [isProjectDueDateModalOpen, setIsProjectDueDateModalOpen] = useState(false);
@@ -3223,12 +3726,29 @@ function ReviewProjectHeader({
     progressPercent,
     progressPercentLabel,
     progressTitle,
+    specialistInputPercentLabel,
+    specialistInputTitle,
   } = useMemo(() => {
     const selected = textUnits?.length ?? 0;
-    const decided = textUnits?.filter((tu) => getDecisionState(tu) === 'DECIDED').length ?? 0;
+    const hasSpecialistFeedback = (tu: ApiReviewProjectTextUnit) =>
+      (tu.terminologyFeedbacks ?? []).length > 0;
+    const decided =
+      type === 'TERMINOLOGY' && terminologyPhase === 'SPECIALIST_INPUT'
+        ? (textUnits?.filter(hasSpecialistFeedback).length ?? 0)
+        : (textUnits?.filter((tu) => getDecisionState(tu) === 'DECIDED').length ?? 0);
+    const specialistInputCount =
+      type === 'TERMINOLOGY' && terminologyPhase === 'PM_RESOLUTION'
+        ? (textUnits?.filter((tu) => (tu.terminologyFeedbacks ?? []).length > 0).length ?? 0)
+        : 0;
     const pending = Math.max(0, selected - decided);
     const percent = selected > 0 ? (decided / selected) * 100 : 0;
-    const title = selected > 0 ? `${decided}/${selected}` : 'No text units';
+    const progressLabel =
+      type === 'TERMINOLOGY' && terminologyPhase === 'PM_RESOLUTION'
+        ? 'Decider reviewed'
+        : 'Reviewed';
+    const title = selected > 0 ? `${progressLabel}: ${decided}/${selected}` : 'No text units';
+    const specialistInputPercent =
+      selected > 0 && specialistInputCount > 0 ? (specialistInputCount / selected) * 100 : 0;
     return {
       selectedCount: selected,
       decidedCount: decided,
@@ -3236,8 +3756,11 @@ function ReviewProjectHeader({
       progressPercent: percent,
       progressPercentLabel: Math.floor(percent),
       progressTitle: title,
+      specialistInputPercentLabel: Math.floor(specialistInputPercent),
+      specialistInputTitle:
+        selected > 0 ? `Advisor input: ${specialistInputCount}/${selected}` : 'No text units',
     };
-  }, [textUnits]);
+  }, [terminologyPhase, textUnits, type]);
 
   const handleProjectAction = useCallback(() => {
     if (mutations.isProjectStatusSaving) {
@@ -3662,7 +4185,7 @@ function ReviewProjectHeader({
       setAssignmentNoteDraft('');
       setAssignmentSaveStatus(
         triggersSlackNotification
-          ? 'Saved. Team Slack notification is attempted when configured.'
+          ? 'Saved. Slack notification is attempted when configured.'
           : 'Saved.',
       );
     } catch (error) {
@@ -3711,6 +4234,11 @@ function ReviewProjectHeader({
     onReviewPending();
   }, [onReviewPending]);
   const dueDateTooltip = getLocalAndUtcDateTimeTooltip(dueDate);
+  const pendingItemLabel =
+    type === 'TERMINOLOGY' && terminologyPhase === 'SPECIALIST_INPUT'
+      ? 'needs advisor input'
+      : 'needs a decision';
+  const progressDoneLabel = 'reviewed';
 
   return (
     <>
@@ -3748,6 +4276,11 @@ function ReviewProjectHeader({
               >
                 {REVIEW_PROJECT_TYPE_LABELS[type]}
               </Pill>
+              {type === 'TERMINOLOGY' && terminologyPhase != null ? (
+                <Pill className="review-project-page__header-pill">
+                  {REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS[terminologyPhase]}
+                </Pill>
+              ) : null}
             </span>
             <div className="review-project-page__header-locale-row">
               {locales.length > 0 ? (
@@ -3778,6 +4311,17 @@ function ReviewProjectHeader({
               </span>
               <ProgressBar percent={progressPercent} title={progressTitle} />
             </div>
+            {type === 'TERMINOLOGY' && terminologyPhase === 'PM_RESOLUTION' ? (
+              <>
+                <span className="review-project-page__header-dot">•</span>
+                <span
+                  className="review-project-page__header-progress-label"
+                  title={specialistInputTitle}
+                >
+                  Advisor input {specialistInputPercentLabel}%
+                </span>
+              </>
+            ) : null}
           </div>
 
           <div className="review-project-page__header-group review-project-page__header-group--meta">
@@ -3848,8 +4392,8 @@ function ReviewProjectHeader({
         <div className="modal__title">Close with pending items?</div>
         <div className="modal__body">
           {pendingCount} text unit{pendingCount === 1 ? '' : 's'} still{' '}
-          {pendingCount === 1 ? 'needs' : 'need'} a decision ({decidedCount}/{selectedCount}{' '}
-          decided). Close project anyway?
+          {pendingCount === 1 ? pendingItemLabel : pendingItemLabel.replace('needs', 'need')} (
+          {decidedCount}/{selectedCount} {progressDoneLabel}). Close project anyway?
         </div>
         <div className="modal__actions">
           <button type="button" className="modal__button" onClick={dismissCloseWarning}>
@@ -4039,26 +4583,28 @@ function ReviewProjectHeader({
                       Assignment
                     </div>
                     <div className="review-project-page__description-two-up">
-                      <label className="review-project-page__description-field">
-                        <span className="review-project-page__description-label">Team</span>
-                        <SingleSelectDropdown
-                          label="Team"
-                          className="review-project-page__description-select"
-                          options={assignmentTeamOptions}
-                          value={assignmentTeamIdDraft}
-                          onChange={(next) => {
-                            setAssignmentTeamIdDraft(next);
-                            setAssignmentPmUserIdDraft(null);
-                            setAssignmentTranslatorUserIdDraft(null);
-                            setAssignmentSaveStatus(null);
-                            setAssignmentSaveError(null);
-                          }}
-                          noneLabel="No team"
-                          placeholder="No team"
-                          disabled={mutations.isProjectAssignmentSaving || teamsQuery.isLoading}
-                          buttonAriaLabel="Select team assignment"
-                        />
-                      </label>
+                      {!isTerminologyAssignmentProject ? (
+                        <label className="review-project-page__description-field">
+                          <span className="review-project-page__description-label">Team</span>
+                          <SingleSelectDropdown
+                            label="Team"
+                            className="review-project-page__description-select"
+                            options={assignmentTeamOptions}
+                            value={assignmentTeamIdDraft}
+                            onChange={(next) => {
+                              setAssignmentTeamIdDraft(next);
+                              setAssignmentPmUserIdDraft(null);
+                              setAssignmentTranslatorUserIdDraft(null);
+                              setAssignmentSaveStatus(null);
+                              setAssignmentSaveError(null);
+                            }}
+                            noneLabel="No team"
+                            placeholder="No team"
+                            disabled={mutations.isProjectAssignmentSaving || teamsQuery.isLoading}
+                            buttonAriaLabel="Select team assignment"
+                          />
+                        </label>
+                      ) : null}
                       <label className="review-project-page__description-field">
                         <span className="review-project-page__description-label">
                           Assignment note
@@ -4092,7 +4638,11 @@ function ReviewProjectHeader({
                           }}
                           noneLabel="No PM"
                           placeholder={
-                            assignmentTeamIdDraft == null ? 'Select a team first' : 'No PM'
+                            assignmentTeamIdDraft == null
+                              ? isTerminologyAssignmentProject
+                                ? 'No review team'
+                                : 'Select a team first'
+                              : 'No PM'
                           }
                           disabled={
                             assignmentTeamIdDraft == null ||
@@ -4103,9 +4653,11 @@ function ReviewProjectHeader({
                         />
                       </label>
                       <label className="review-project-page__description-field">
-                        <span className="review-project-page__description-label">Translator</span>
+                        <span className="review-project-page__description-label">
+                          {isTerminologyAssignmentProject ? 'Specialist' : 'Translator'}
+                        </span>
                         <SingleSelectDropdown
-                          label="Translator"
+                          label={isTerminologyAssignmentProject ? 'Specialist' : 'Translator'}
                           className="review-project-page__description-select"
                           options={assignmentTranslatorOptions}
                           value={assignmentTranslatorUserIdDraft}
@@ -4114,9 +4666,17 @@ function ReviewProjectHeader({
                             setAssignmentSaveStatus(null);
                             setAssignmentSaveError(null);
                           }}
-                          noneLabel="No translator"
+                          noneLabel={
+                            isTerminologyAssignmentProject ? 'No specialist' : 'No translator'
+                          }
                           placeholder={
-                            assignmentTeamIdDraft == null ? 'Select a team first' : 'No translator'
+                            assignmentTeamIdDraft == null
+                              ? isTerminologyAssignmentProject
+                                ? 'No review team'
+                                : 'Select a team first'
+                              : isTerminologyAssignmentProject
+                                ? 'No specialist'
+                                : 'No translator'
                           }
                           disabled={
                             assignmentTeamIdDraft == null ||
@@ -4129,8 +4689,7 @@ function ReviewProjectHeader({
                       </label>
                     </div>
                     <div className="review-project-page__description-assignment-help">
-                      Saving team or translator assignment posts a Slack notification to the
-                      selected team channel when configured.
+                      Saving assignment posts a Slack notification when configured.
                     </div>
                     {teamsQuery.isError ||
                     assignmentUsersQuery.isError ||
@@ -4251,6 +4810,54 @@ function ReviewProjectHeader({
         </section>
       ) : null}
     </>
+  );
+}
+
+function TerminologyFeedbackList({
+  feedbacks,
+}: {
+  feedbacks: NonNullable<ApiReviewProjectTextUnit['terminologyFeedbacks']>;
+}) {
+  if (feedbacks.length === 0) {
+    return <div className="review-project-detail__value">No advisor input yet.</div>;
+  }
+
+  return (
+    <div className="review-project-detail__feedback-list">
+      {feedbacks.map((feedback) => {
+        const recommendation = feedback.recommendation;
+        const recommendationLabel = recommendation
+          ? TERMINOLOGY_FEEDBACK_RECOMMENDATION_LABELS[recommendation]
+          : 'No recommendation';
+        const suggestionParts = [
+          feedback.confidence != null ? `confidence ${feedback.confidence}/5` : null,
+        ].filter(Boolean);
+
+        return (
+          <div key={feedback.id} className="review-project-detail__feedback-item">
+            <div className="review-project-detail__feedback-header">
+              <Pill>{recommendationLabel}</Pill>
+              <span className="review-project-detail__feedback-reviewer">
+                {feedback.reviewerUsername ?? 'Unknown reviewer'}
+              </span>
+              {feedback.lastModifiedDate ? (
+                <span className="review-project-detail__feedback-date">
+                  {formatDateTime(feedback.lastModifiedDate)}
+                </span>
+              ) : null}
+            </div>
+            {suggestionParts.length > 0 ? (
+              <div className="review-project-detail__feedback-meta">
+                {suggestionParts.join(' · ')}
+              </div>
+            ) : null}
+            {feedback.notes ? (
+              <div className="review-project-detail__feedback-notes">{feedback.notes}</div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

@@ -6,9 +6,13 @@ import type {
   ApiReviewProjectStatus,
   ApiReviewProjectTextUnit,
   ApiReviewProjectType,
+  ApiTerminologyFeedbackRecommendation,
+  ApiTerminologyResolutionStatus,
 } from '../../api/review-projects';
 import {
   saveReviewProjectTextUnitDecision,
+  saveReviewProjectTextUnitTerminologyFeedback,
+  saveReviewProjectTextUnitTerminologyResolution,
   setReviewProjectTextUnitDecisionState,
   updateReviewProjectAssignment,
   updateReviewProjectDueDate,
@@ -52,9 +56,25 @@ export type DecisionStateRequest = {
   overrideChangedCurrent?: boolean;
 };
 
+export type TerminologyFeedbackRequest = {
+  textUnitId: number;
+  recommendation: ApiTerminologyFeedbackRecommendation;
+  confidence?: number | null;
+  notes?: string | null;
+};
+
+export type TerminologyResolutionRequest = {
+  textUnitId: number;
+  glossaryId: number;
+  status: ApiTerminologyResolutionStatus;
+  notes?: string | null;
+};
+
 export type PendingAction =
   | { kind: 'save-decision'; request: SaveDecisionRequest }
-  | { kind: 'decision-state'; request: DecisionStateRequest };
+  | { kind: 'decision-state'; request: DecisionStateRequest }
+  | { kind: 'terminology-feedback'; request: TerminologyFeedbackRequest }
+  | { kind: 'terminology-resolution'; request: TerminologyResolutionRequest };
 
 export type PendingValidationSave = {
   title: string;
@@ -91,6 +111,8 @@ export type ReviewProjectMutationControls = {
   onOverwriteConflict: () => void;
   onRequestSaveDecision: (request: SaveDecisionRequest) => void;
   onRequestDecisionState: (request: DecisionStateRequest) => void;
+  onRequestTerminologyFeedback: (request: TerminologyFeedbackRequest) => void;
+  onRequestTerminologyResolution: (request: TerminologyResolutionRequest) => void;
   onRequestProjectStatus: (status: ApiReviewProjectStatus) => void;
   onRequestProjectRequestUpdate: (request: {
     name: string;
@@ -202,6 +224,12 @@ export function useReviewProjectMutations(
           overrideChangedCurrent: action.request.overrideChangedCurrent,
           decisionNotes: action.request.decisionNotes,
         });
+      }
+      if (action.kind === 'terminology-feedback') {
+        return saveReviewProjectTextUnitTerminologyFeedback(action.request);
+      }
+      if (action.kind === 'terminology-resolution') {
+        return saveReviewProjectTextUnitTerminologyResolution(action.request);
       }
       return setReviewProjectTextUnitDecisionState({
         textUnitId: action.request.textUnitId,
@@ -344,6 +372,8 @@ export function useReviewProjectMutations(
         void queryClient.invalidateQueries({
           queryKey: ['review-project-text-unit-history'],
         });
+        void queryClient.invalidateQueries({ queryKey: ['review-project-glossary-term'] });
+        void queryClient.invalidateQueries({ queryKey: ['glossary-terms'] });
         setErrorMessage(null);
         setConflictTextUnit(null);
         setConflictAction(null);
@@ -465,6 +495,20 @@ export function useReviewProjectMutations(
     [performAction],
   );
 
+  const onRequestTerminologyFeedback = useCallback(
+    (request: TerminologyFeedbackRequest) => {
+      performAction({ kind: 'terminology-feedback', request });
+    },
+    [performAction],
+  );
+
+  const onRequestTerminologyResolution = useCallback(
+    (request: TerminologyResolutionRequest) => {
+      performAction({ kind: 'terminology-resolution', request });
+    },
+    [performAction],
+  );
+
   const onRequestProjectStatus = useCallback(
     (nextStatus: ApiReviewProjectStatus) => {
       if (projectId == null || projectStatusMutation.isPending) {
@@ -582,6 +626,14 @@ export function useReviewProjectMutations(
       );
       return;
     }
+    if (conflictAction.kind === 'terminology-feedback') {
+      performAction(conflictAction);
+      return;
+    }
+    if (conflictAction.kind === 'terminology-resolution') {
+      performAction(conflictAction);
+      return;
+    }
     performAction({
       kind: 'decision-state',
       request: {
@@ -626,6 +678,8 @@ export function useReviewProjectMutations(
       onOverwriteConflict,
       onRequestSaveDecision,
       onRequestDecisionState,
+      onRequestTerminologyFeedback,
+      onRequestTerminologyResolution,
       onRequestProjectStatus,
       onRequestProjectRequestUpdate,
       onRequestProjectAssignmentUpdate,
@@ -645,6 +699,8 @@ export function useReviewProjectMutations(
       onRequestProjectAssignmentUpdate,
       onRequestProjectStatus,
       onRequestSaveDecision,
+      onRequestTerminologyFeedback,
+      onRequestTerminologyResolution,
       onUseConflictCurrent,
       onRetryValidationSave,
       pendingValidationSave,

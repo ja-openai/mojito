@@ -25,6 +25,7 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
         rp.closeReason,
         rp.textUnitCount,
         rp.wordCount,
+        rp.terminologyPhase,
         locale.id,
         locale.bcp47Tag,
         request.id,
@@ -79,11 +80,23 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
           """
           update review_project rp
           left join (
-            select rptu.review_project_id, count(rptud.id) decided_count
+            select rptu.review_project_id, count(distinct rptu.id) decided_count
             from review_project_text_unit rptu
-            join review_project_text_unit_decision rptud
+            join review_project rp_inner
+              on rp_inner.id = rptu.review_project_id
+            left join review_project_text_unit_decision rptud
               on rptud.review_project_text_unit_id = rptu.id
+            left join review_project_text_unit_feedback rptuf
+              on rptuf.review_project_text_unit_id = rptu.id
+            where (
+              rp_inner.type = 'TERMINOLOGY'
+              and rp_inner.terminology_phase = 'SPECIALIST_INPUT'
+              and rptuf.id is not null
+            ) or (
+              not (rp_inner.type = 'TERMINOLOGY'
+                and coalesce(rp_inner.terminology_phase, '') = 'SPECIALIST_INPUT')
               and rptud.decision_state = 'DECIDED'
+            )
             group by rptu.review_project_id
           ) decided_counts
             on decided_counts.review_project_id = rp.id

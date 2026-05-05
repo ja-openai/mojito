@@ -180,6 +180,7 @@ const toReviewProjectRow = (project: ApiReviewProjectSummary): ReviewProjectRow 
     requestId: project.reviewProjectRequest?.id ?? null,
     requestCreatedByUsername: project.reviewProjectRequest?.createdByUsername ?? null,
     type: project.type,
+    terminologyPhase: project.terminologyPhase ?? null,
     status: project.status,
     localeTag: project.locale?.bcp47Tag ?? null,
     decidedCount: Number.isFinite(decidedCountRaw) ? decidedCountRaw : 0,

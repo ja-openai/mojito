@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.review;
 
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
+import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -17,6 +18,7 @@ public record SearchReviewProjectsView(List<ReviewProject> reviewProject) {
       Integer wordCount,
       Long decidedCount,
       ReviewProjectType type,
+      ReviewProjectTerminologyPhase terminologyPhase,
       ReviewProjectStatus status,
       String createdByUsername,
       Locale locale,

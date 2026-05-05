@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.review;
 
+import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import java.time.ZonedDateTime;
@@ -18,4 +19,12 @@ public record CreateReviewProjectRequestCommand(
     String name,
     Long teamId,
     Boolean assignTranslator,
-    Long requestedByUserId) {}
+    Long requestedByUserId,
+    List<ProjectSpec> projectSpecs) {
+
+  public record ProjectSpec(
+      ReviewProjectTerminologyPhase terminologyPhase,
+      ZonedDateTime dueDate,
+      Long assignedPmUserId,
+      Long assignedTranslatorUserId) {}
+}

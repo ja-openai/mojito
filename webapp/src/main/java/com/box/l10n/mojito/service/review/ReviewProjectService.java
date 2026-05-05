@@ -3,12 +3,14 @@ package com.box.l10n.mojito.service.review;
 import com.box.l10n.mojito.entity.*;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Locale_;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.review.*;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest_;
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
+import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitFeedback.Recommendation;
 import com.box.l10n.mojito.entity.review.ReviewProject_;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.entity.security.user.User_;
@@ -17,6 +19,7 @@ import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
+import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.security.user.UserRepository;
@@ -43,6 +46,7 @@ import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,9 +71,11 @@ public class ReviewProjectService {
   private final ReviewProjectRepository reviewProjectRepository;
   private final ReviewProjectTextUnitRepository reviewProjectTextUnitRepository;
   private final ReviewProjectTextUnitDecisionRepository reviewProjectTextUnitDecisionRepository;
+  private final ReviewProjectTextUnitFeedbackRepository reviewProjectTextUnitFeedbackRepository;
   private final ReviewProjectRequestRepository reviewProjectRequestRepository;
   private final ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository;
   private final ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository;
+  private final GlossaryTermMetadataRepository glossaryTermMetadataRepository;
   private final LocaleService localeService;
   private final TextUnitSearcher textUnitSearcher;
   private final TMTextUnitRepository tmTextUnitRepository;
@@ -94,9 +100,11 @@ public class ReviewProjectService {
       ReviewProjectRepository reviewProjectRepository,
       ReviewProjectTextUnitRepository reviewProjectTextUnitRepository,
       ReviewProjectTextUnitDecisionRepository reviewProjectTextUnitDecisionRepository,
+      ReviewProjectTextUnitFeedbackRepository reviewProjectTextUnitFeedbackRepository,
       ReviewProjectRequestRepository reviewProjectRequestRepository,
       ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository,
       ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository,
+      GlossaryTermMetadataRepository glossaryTermMetadataRepository,
       LocaleService localeService,
       TextUnitSearcher textUnitSearcher,
       TMTextUnitRepository tmTextUnitRepository,
@@ -117,9 +125,11 @@ public class ReviewProjectService {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
+    this.reviewProjectTextUnitFeedbackRepository = reviewProjectTextUnitFeedbackRepository;
     this.reviewProjectRequestRepository = reviewProjectRequestRepository;
     this.reviewProjectScreenshotRepository = reviewProjectScreenshotRepository;
     this.reviewProjectRequestSlackThreadRepository = reviewProjectRequestSlackThreadRepository;
+    this.glossaryTermMetadataRepository = glossaryTermMetadataRepository;
     this.localeService = localeService;
     this.textUnitSearcher = textUnitSearcher;
     this.tmTextUnitRepository = tmTextUnitRepository;
@@ -160,7 +170,8 @@ public class ReviewProjectService {
             request.name(),
             request.teamId(),
             request.assignTranslator(),
-            requestedByUserId);
+            requestedByUserId,
+            request.projectSpecs());
 
     QuartzJobInfo<CreateReviewProjectRequestCommand, CreateReviewProjectRequestResult>
         quartzJobInfo =
@@ -170,6 +181,128 @@ public class ReviewProjectService {
                 .withMessage("Create review project request")
                 .build();
     return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+  }
+
+  public PollableFuture<CreateReviewProjectRequestResult>
+      createGlossaryTerminologyReviewProjectAsync(
+          Long glossaryId, CreateGlossaryTerminologyReviewProjectCommand request) {
+    if (glossaryId == null) {
+      throw new IllegalArgumentException("glossaryId must be provided");
+    }
+    CreateGlossaryTerminologyReviewProjectCommand resolvedRequest =
+        request == null
+            ? new CreateGlossaryTerminologyReviewProjectCommand(
+                null, null, null, null, null, null, null, null, null, null)
+            : request;
+
+    List<Long> tmTextUnitIds =
+        getReviewableGlossaryTermIds(glossaryId, resolvedRequest.tmTextUnitIds());
+    if (tmTextUnitIds.isEmpty()) {
+      throw new IllegalArgumentException("No reviewable glossary terms found");
+    }
+
+    String name =
+        resolvedRequest.name() == null || resolvedRequest.name().trim().isEmpty()
+            ? "Terminology review"
+            : resolvedRequest.name().trim();
+    ZonedDateTime specialistDueDate =
+        firstNonNull(resolvedRequest.specialistDueDate(), resolvedRequest.dueDate());
+    if (specialistDueDate == null) {
+      specialistDueDate = ZonedDateTime.now().plusDays(2);
+    }
+    ZonedDateTime pmDueDate =
+        resolvedRequest.pmDueDate() == null
+            ? specialistDueDate.plusDays(1)
+            : resolvedRequest.pmDueDate();
+    String notes =
+        resolvedRequest.notes() == null || resolvedRequest.notes().trim().isEmpty()
+            ? "Source terminology review for glossary " + glossaryId + "."
+            : resolvedRequest.notes().trim();
+    List<CreateReviewProjectRequestCommand.ProjectSpec> projectSpecs =
+        buildTerminologyProjectSpecs(
+            resolvedRequest.specialistUserIds(),
+            resolvedRequest.pmUserId(),
+            specialistDueDate,
+            pmDueDate);
+
+    return createReviewProjectRequestAsync(
+        new CreateReviewProjectRequestCommand(
+            List.of("en"),
+            notes,
+            tmTextUnitIds,
+            null,
+            StatusFilter.ALL,
+            false,
+            ReviewProjectType.TERMINOLOGY,
+            specialistDueDate,
+            List.of(),
+            name,
+            resolvedRequest.teamId(),
+            resolvedRequest.assignTranslator() == null ? false : resolvedRequest.assignTranslator(),
+            null,
+            projectSpecs));
+  }
+
+  private ZonedDateTime firstNonNull(ZonedDateTime first, ZonedDateTime second) {
+    return first != null ? first : second;
+  }
+
+  private List<CreateReviewProjectRequestCommand.ProjectSpec> buildTerminologyProjectSpecs(
+      List<Long> specialistUserIds,
+      Long pmUserId,
+      ZonedDateTime specialistDueDate,
+      ZonedDateTime pmDueDate) {
+    List<CreateReviewProjectRequestCommand.ProjectSpec> specs = new ArrayList<>();
+    List<Long> distinctSpecialistUserIds =
+        specialistUserIds == null
+            ? List.of()
+            : specialistUserIds.stream().filter(Objects::nonNull).distinct().toList();
+    if (distinctSpecialistUserIds.isEmpty()) {
+      specs.add(
+          new CreateReviewProjectRequestCommand.ProjectSpec(
+              ReviewProjectTerminologyPhase.SPECIALIST_INPUT, specialistDueDate, pmUserId, null));
+    } else {
+      for (Long specialistUserId : distinctSpecialistUserIds) {
+        specs.add(
+            new CreateReviewProjectRequestCommand.ProjectSpec(
+                ReviewProjectTerminologyPhase.SPECIALIST_INPUT,
+                specialistDueDate,
+                pmUserId,
+                specialistUserId));
+      }
+    }
+    specs.add(
+        new CreateReviewProjectRequestCommand.ProjectSpec(
+            ReviewProjectTerminologyPhase.PM_RESOLUTION, pmDueDate, pmUserId, null));
+    return specs;
+  }
+
+  private List<Long> getReviewableGlossaryTermIds(
+      Long glossaryId, List<Long> requestedTmTextUnitIds) {
+    List<GlossaryTermMetadata> metadata =
+        CollectionUtils.isEmpty(requestedTmTextUnitIds)
+            ? glossaryTermMetadataRepository.findByGlossaryId(glossaryId)
+            : glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitIdIn(
+                glossaryId, requestedTmTextUnitIds);
+
+    return metadata.stream()
+        .filter(this::isReviewableGlossaryTerm)
+        .map(GlossaryTermMetadata::getTmTextUnit)
+        .filter(Objects::nonNull)
+        .map(TMTextUnit::getId)
+        .filter(Objects::nonNull)
+        .distinct()
+        .sorted()
+        .toList();
+  }
+
+  private boolean isReviewableGlossaryTerm(GlossaryTermMetadata metadata) {
+    String status =
+        metadata.getStatus() == null
+            ? GlossaryTermMetadata.STATUS_CANDIDATE
+            : metadata.getStatus().trim().toUpperCase(java.util.Locale.ROOT);
+    return !GlossaryTermMetadata.STATUS_REJECTED.equals(status)
+        && !GlossaryTermMetadata.STATUS_DEPRECATED.equals(status);
   }
 
   @Transactional
@@ -213,6 +346,8 @@ public class ReviewProjectService {
         request.statusFilter(),
         Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects()));
 
+    int projectCountPerPreparedLocale =
+        CollectionUtils.isEmpty(request.projectSpecs()) ? 1 : request.projectSpecs().size();
     List<LocalePlan> localePlans = new ArrayList<>();
     ReviewFeature reviewFeature =
         hasReviewFeatureId ? getReviewFeatureOrThrow(request.reviewFeatureId()) : null;
@@ -226,7 +361,7 @@ public class ReviewProjectService {
       try {
         List<TextUnitDTO> candidates =
             hasTmTextUnitIds
-                ? searchReviewCandidates(request.tmTextUnitIds(), locale, request.statusFilter())
+                ? getTextUnitReviewCandidates(request, locale)
                 : searchReviewFeatureCandidates(
                     reviewFeature,
                     locale,
@@ -255,7 +390,9 @@ public class ReviewProjectService {
             request.name(),
             candidates.size());
 
-        localePlans.add(preparedLocalePlan(locale.getBcp47Tag(), locale, candidates, 1, null));
+        localePlans.add(
+            preparedLocalePlan(
+                locale.getBcp47Tag(), locale, candidates, projectCountPerPreparedLocale, null));
       } catch (RuntimeException e) {
         logger.warn(
             "Failed to prepare review project locale '{}' for request '{}': {}",
@@ -287,6 +424,7 @@ public class ReviewProjectService {
             request.teamId(),
             request.requestedByUserId(),
             request.assignTranslator(),
+            request.projectSpecs(),
             localesToCreate);
 
     return buildCreateReviewProjectRequestResult(
@@ -386,6 +524,7 @@ public class ReviewProjectService {
             request.teamId(),
             request.requestedByUserId(),
             request.assignTranslator(),
+            null,
             localesToCreate);
 
     return buildCreateReviewProjectRequestResult(
@@ -395,6 +534,12 @@ public class ReviewProjectService {
   }
 
   private record LocaleCandidates(Locale locale, List<TextUnitDTO> candidates) {}
+
+  private record ResolvedProjectSpec(
+      ReviewProjectTerminologyPhase terminologyPhase,
+      ZonedDateTime dueDate,
+      User assignedPmUser,
+      User assignedTranslatorUser) {}
 
   private enum LocalePlanStatus {
     PREPARED,
@@ -664,6 +809,7 @@ public class ReviewProjectService {
                 root.get(ReviewProject_.wordCount),
                 root.get(ReviewProject_.decidedCount),
                 root.get(ReviewProject_.type),
+                root.get(ReviewProject_.terminologyPhase),
                 root.get(ReviewProject_.status),
                 createdByUserJoin.get(User_.username),
                 localeJoin.get(Locale_.id),
@@ -782,6 +928,7 @@ public class ReviewProjectService {
                 root.get(ReviewProject_.wordCount),
                 root.get(ReviewProject_.decidedCount),
                 root.get(ReviewProject_.type),
+                root.get(ReviewProject_.terminologyPhase),
                 root.get(ReviewProject_.status),
                 createdByUserJoin.get(User_.username),
                 localeJoin.get(Locale_.id),
@@ -820,6 +967,7 @@ public class ReviewProjectService {
                   detail.wordCount(),
                   Optional.ofNullable(detail.decidedCount()).orElse(0L),
                   detail.type(),
+                  detail.terminologyPhase(),
                   detail.status(),
                   detail.createdByUsername(),
                   new SearchReviewProjectsView.Locale(detail.localeId(), detail.localeTag()),
@@ -914,7 +1062,7 @@ public class ReviewProjectService {
     List<Predicate> visibilityPredicates = new ArrayList<>();
 
     if (assignedScope == SearchReviewProjectsCriteria.AssignedScope.TO_ME) {
-      if (accessContext.pm()) {
+      if (accessContext.pm() || accessContext.translator()) {
         visibilityPredicates.add(cb.equal(assignedPmJoin.get(User_.id), accessContext.userId()));
       }
       if (accessContext.translator()) {
@@ -1023,10 +1171,11 @@ public class ReviewProjectService {
             ? reviewProject.getAssignedTranslatorUser().getId()
             : null;
 
+    if (Objects.equals(assignedPmUserId, accessContext.userId())) {
+      return true;
+    }
+
     if (accessContext.pm()) {
-      if (Objects.equals(assignedPmUserId, accessContext.userId())) {
-        return true;
-      }
       if (teamId != null && accessContext.pmTeamIds().contains(teamId)) {
         return true;
       }
@@ -1112,9 +1261,18 @@ public class ReviewProjectService {
 
     List<ReviewProjectTextUnitDetail> textUnitDetails =
         reviewProjectTextUnitRepository.findDetailByReviewProjectId(projectId);
+    Map<Long, List<ReviewProjectTextUnitFeedback>> feedbacksByReviewProjectTextUnitId =
+        getTerminologyFeedbacksByReviewProjectTextUnitId(reviewProject, textUnitDetails);
 
     List<GetProjectDetailView.ReviewProjectTextUnit> reviewProjectTextUnits =
-        textUnitDetails.stream().map(this::toReviewProjectTextUnit).toList();
+        textUnitDetails.stream()
+            .map(
+                detail ->
+                    toReviewProjectTextUnit(
+                        detail,
+                        feedbacksByReviewProjectTextUnitId.getOrDefault(
+                            detail.reviewProjectTextUnitId(), List.of())))
+            .toList();
 
     List<String> screenshotImageIds =
         project.reviewProjectRequestId() == null
@@ -1125,6 +1283,7 @@ public class ReviewProjectService {
     return new GetProjectDetailView(
         project.id(),
         project.type(),
+        project.terminologyPhase(),
         project.status(),
         project.createdDate(),
         project.dueDate(),
@@ -1404,10 +1563,27 @@ public class ReviewProjectService {
     if (isPm) {
       teamService.assertCurrentUserCanAccessTeam(teamId);
     }
-    if (nextAssignedPm != null
-        && !teamService.isUserInTeamRole(teamId, nextAssignedPm.getId(), TeamUserRole.PM)) {
-      throw new IllegalArgumentException(
-          "Assigned PM is not a PM member of team " + teamId + ": " + nextAssignedPm.getId());
+    boolean terminologyRequest =
+        projects.stream().allMatch(project -> project.getType() == ReviewProjectType.TERMINOLOGY);
+    if (nextAssignedPm != null) {
+      boolean isPmMember =
+          teamService.isUserInTeamRole(teamId, nextAssignedPm.getId(), TeamUserRole.PM);
+      boolean isTranslatorMember =
+          terminologyRequest
+              && teamService.isUserInTeamRole(
+                  teamId, nextAssignedPm.getId(), TeamUserRole.TRANSLATOR);
+      if (!isPmMember && !isTranslatorMember) {
+        throw new IllegalArgumentException(
+            terminologyRequest
+                ? "Assigned decider is not a PM or translator member of team "
+                    + teamId
+                    + ": "
+                    + nextAssignedPm.getId()
+                : "Assigned PM is not a PM member of team "
+                    + teamId
+                    + ": "
+                    + nextAssignedPm.getId());
+      }
     }
 
     int changedCount = 0;
@@ -1516,6 +1692,7 @@ public class ReviewProjectService {
 
     reviewProjectAssignmentHistoryRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitDecisionRepository.deleteByReviewProjectIds(distinctIds);
+    reviewProjectTextUnitFeedbackRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitRepository.deleteByReviewProjectIds(distinctIds);
     int deletedProjects = reviewProjectRepository.deleteByProjectIds(distinctIds);
 
@@ -1665,6 +1842,150 @@ public class ReviewProjectService {
     return fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId);
   }
 
+  @Transactional
+  public GetProjectDetailView.ReviewProjectTextUnit saveTerminologyFeedback(
+      Long reviewProjectTextUnitId,
+      Recommendation recommendation,
+      Integer confidence,
+      String notes) {
+    if (recommendation == null) {
+      throw new IllegalArgumentException("recommendation is required");
+    }
+    if (confidence != null && (confidence < 1 || confidence > 5)) {
+      throw new IllegalArgumentException("confidence must be between 1 and 5");
+    }
+
+    ReviewProjectTextUnit textUnit =
+        reviewProjectTextUnitRepository
+            .findById(reviewProjectTextUnitId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProjectTextUnit with id: "
+                            + reviewProjectTextUnitId
+                            + " not found"));
+    ReviewProject project = textUnit.getReviewProject();
+    assertCurrentUserCanReadProject(project);
+    if (project.getType() != ReviewProjectType.TERMINOLOGY) {
+      throw new IllegalArgumentException(
+          "Terminology feedback is only supported for terminology projects");
+    }
+    if (project.getTerminologyPhase() == ReviewProjectTerminologyPhase.PM_RESOLUTION) {
+      throw new IllegalArgumentException(
+          "Terminology feedback is only supported for specialist input projects");
+    }
+
+    Long currentUserId = teamService.getCurrentUserIdOrThrow();
+    User currentUser =
+        userRepository
+            .findById(currentUserId)
+            .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+
+    ReviewProjectTextUnitFeedback feedback =
+        reviewProjectTextUnitFeedbackRepository
+            .findByReviewProjectTextUnitIdAndReviewerUserId(reviewProjectTextUnitId, currentUserId)
+            .orElseGet(
+                () -> {
+                  ReviewProjectTextUnitFeedback entity = new ReviewProjectTextUnitFeedback();
+                  entity.setReviewProjectTextUnit(textUnit);
+                  entity.setReviewerUser(currentUser);
+                  return entity;
+                });
+    boolean wasDecided =
+        project.getTerminologyPhase() == ReviewProjectTerminologyPhase.SPECIALIST_INPUT
+            && reviewProjectTextUnitFeedbackRepository.existsByReviewProjectTextUnitId(
+                reviewProjectTextUnitId);
+    feedback.setRecommendation(recommendation);
+    feedback.setConfidence(confidence);
+    feedback.setNotes(truncate(normalizeOptional(notes), 4000));
+    reviewProjectTextUnitFeedbackRepository.saveAndFlush(feedback);
+    if (project.getTerminologyPhase() == ReviewProjectTerminologyPhase.SPECIALIST_INPUT) {
+      updateProjectDecidedCount(project.getId(), wasDecided, true);
+    }
+
+    return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
+  }
+
+  @Transactional
+  public GetProjectDetailView.ReviewProjectTextUnit saveTerminologyResolution(
+      Long reviewProjectTextUnitId, Long glossaryId, String status, String notes) {
+    if (glossaryId == null) {
+      throw new IllegalArgumentException("glossaryId is required");
+    }
+
+    String normalizedStatus = normalizeOptional(status);
+    if (normalizedStatus == null) {
+      throw new IllegalArgumentException("status is required");
+    }
+    normalizedStatus = normalizedStatus.toUpperCase(java.util.Locale.ROOT);
+    if (!Set.of(
+            GlossaryTermMetadata.STATUS_APPROVED,
+            GlossaryTermMetadata.STATUS_CANDIDATE,
+            GlossaryTermMetadata.STATUS_REJECTED)
+        .contains(normalizedStatus)) {
+      throw new IllegalArgumentException("Unsupported terminology status: " + status);
+    }
+
+    ReviewProjectTextUnit textUnit =
+        reviewProjectTextUnitRepository
+            .findById(reviewProjectTextUnitId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProjectTextUnit with id: "
+                            + reviewProjectTextUnitId
+                            + " not found"));
+    ReviewProject project = textUnit.getReviewProject();
+    assertCurrentUserCanReadProject(project);
+    if (!userService.isCurrentUserAdminOrPm()) {
+      throw new AccessDeniedException("Only admins and PMs can resolve terminology");
+    }
+    if (project.getType() != ReviewProjectType.TERMINOLOGY) {
+      throw new IllegalArgumentException(
+          "Terminology resolution is only supported for terminology projects");
+    }
+    if (project.getTerminologyPhase() == ReviewProjectTerminologyPhase.SPECIALIST_INPUT) {
+      throw new IllegalArgumentException(
+          "Terminology resolution is only supported for PM resolution projects");
+    }
+
+    GlossaryTermMetadata metadata =
+        glossaryTermMetadataRepository
+            .findByGlossaryIdAndTmTextUnitId(glossaryId, textUnit.getTmTextUnit().getId())
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Glossary term metadata not found for glossaryId: "
+                            + glossaryId
+                            + ", tmTextUnitId: "
+                            + textUnit.getTmTextUnit().getId()));
+    metadata.setStatus(normalizedStatus);
+    glossaryTermMetadataRepository.saveAndFlush(metadata);
+
+    Optional<ReviewProjectTextUnitDecision> existingDecision =
+        reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(
+            reviewProjectTextUnitId);
+    boolean wasDecided =
+        existingDecision
+            .map(decision -> decision.getDecisionState() == DecisionState.DECIDED)
+            .orElse(false);
+    ReviewProjectTextUnitDecision decision =
+        existingDecision.orElseGet(
+            () -> {
+              ReviewProjectTextUnitDecision entity = new ReviewProjectTextUnitDecision();
+              entity.setReviewProjectTextUnit(textUnit);
+              return entity;
+            });
+    decision.setDecisionState(DecisionState.DECIDED);
+    decision.setDecisionVariant(null);
+    decision.setReviewedVariant(null);
+    decision.setNotes(truncate(normalizeOptional(notes), 4000));
+    reviewProjectTextUnitDecisionRepository.saveAndFlush(decision);
+    updateProjectDecidedCount(project.getId(), wasDecided, true);
+
+    return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
+  }
+
   private void updateProjectDecidedCount(Long projectId, boolean wasDecided, boolean isDecided) {
     if (wasDecided == isDecided) {
       return;
@@ -1674,6 +1995,49 @@ public class ReviewProjectService {
     } else {
       reviewProjectRepository.decrementDecidedCount(projectId);
     }
+  }
+
+  private Map<Long, List<ReviewProjectTextUnitFeedback>>
+      getTerminologyFeedbacksByReviewProjectTextUnitId(
+          ReviewProject reviewProject, List<ReviewProjectTextUnitDetail> textUnitDetails) {
+    if (reviewProject.getType() != ReviewProjectType.TERMINOLOGY) {
+      return Map.of();
+    }
+
+    if (reviewProject.getTerminologyPhase() == ReviewProjectTerminologyPhase.PM_RESOLUTION
+        && reviewProject.getReviewProjectRequest() != null
+        && reviewProject.getReviewProjectRequest().getId() != null
+        && !CollectionUtils.isEmpty(textUnitDetails)) {
+      Map<Long, Long> reviewProjectTextUnitIdByTmTextUnitId =
+          textUnitDetails.stream()
+              .collect(
+                  Collectors.toMap(
+                      ReviewProjectTextUnitDetail::tmTextUnitId,
+                      ReviewProjectTextUnitDetail::reviewProjectTextUnitId,
+                      (left, right) -> left,
+                      LinkedHashMap::new));
+      return reviewProjectTextUnitFeedbackRepository
+          .findSpecialistFeedbackByRequestIdAndTmTextUnitIds(
+              reviewProject.getReviewProjectRequest().getId(),
+              new ArrayList<>(reviewProjectTextUnitIdByTmTextUnitId.keySet()))
+          .stream()
+          .collect(
+              Collectors.groupingBy(
+                  feedback ->
+                      reviewProjectTextUnitIdByTmTextUnitId.get(
+                          feedback.getReviewProjectTextUnit().getTmTextUnit().getId()),
+                  LinkedHashMap::new,
+                  Collectors.toList()));
+    }
+
+    return reviewProjectTextUnitFeedbackRepository
+        .findByReviewProjectIdOrderByTextUnitIdAndLastModified(reviewProject.getId())
+        .stream()
+        .collect(
+            Collectors.groupingBy(
+                feedback -> feedback.getReviewProjectTextUnit().getId(),
+                LinkedHashMap::new,
+                Collectors.toList()));
   }
 
   private ReviewProjectTextUnitDetail fetchReviewProjectTextUnitDetail(
@@ -1686,8 +2050,17 @@ public class ReviewProjectService {
                     "reviewProjectTextUnit with id: " + reviewProjectTextUnitId + " not found"));
   }
 
+  private GetProjectDetailView.ReviewProjectTextUnit fetchReviewProjectTextUnitWithFeedback(
+      Long reviewProjectTextUnitId, ReviewProject reviewProject) {
+    ReviewProjectTextUnitDetail detail = fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId);
+    return toReviewProjectTextUnit(
+        detail,
+        getTerminologyFeedbacksByReviewProjectTextUnitId(reviewProject, List.of(detail))
+            .getOrDefault(reviewProjectTextUnitId, List.of()));
+  }
+
   private GetProjectDetailView.ReviewProjectTextUnit toReviewProjectTextUnit(
-      ReviewProjectTextUnitDetail detail) {
+      ReviewProjectTextUnitDetail detail, List<ReviewProjectTextUnitFeedback> feedbacks) {
     GetProjectDetailView.Asset.Repository repository =
         new GetProjectDetailView.Asset.Repository(detail.repositoryId(), detail.repositoryName());
     GetProjectDetailView.Asset assetView =
@@ -1754,7 +2127,22 @@ public class ReviewProjectService {
         tmTextUnitView,
         baselineTmTextUnitVariantView,
         currentTmTextUnitVariantView,
-        reviewProjectTextUnitDecision);
+        reviewProjectTextUnitDecision,
+        feedbacks.stream().map(this::toReviewProjectTextUnitFeedback).toList());
+  }
+
+  private GetProjectDetailView.ReviewProjectTextUnitFeedback toReviewProjectTextUnitFeedback(
+      ReviewProjectTextUnitFeedback feedback) {
+    User reviewer = feedback.getReviewerUser();
+    return new GetProjectDetailView.ReviewProjectTextUnitFeedback(
+        feedback.getId(),
+        feedback.getRecommendation() != null ? feedback.getRecommendation().name() : null,
+        feedback.getConfidence(),
+        feedback.getNotes(),
+        feedback.getCreatedDate(),
+        feedback.getLastModifiedDate(),
+        reviewer != null ? reviewer.getId() : null,
+        reviewer != null ? reviewer.getUsername() : null);
   }
 
   private List<TextUnitDTO> searchReviewCandidates(
@@ -1771,6 +2159,41 @@ public class ReviewProjectService {
     params.setStatusFilter(statusFilter);
 
     return textUnitSearcher.search(params);
+  }
+
+  private List<TextUnitDTO> getTextUnitReviewCandidates(
+      CreateReviewProjectRequestCommand request, Locale locale) {
+    if (request.type() == ReviewProjectType.TERMINOLOGY) {
+      return getSourceTerminologyReviewCandidates(request.tmTextUnitIds());
+    }
+    return searchReviewCandidates(request.tmTextUnitIds(), locale, request.statusFilter());
+  }
+
+  private List<TextUnitDTO> getSourceTerminologyReviewCandidates(List<Long> tmTextUnitIds) {
+    if (tmTextUnitIds == null || tmTextUnitIds.isEmpty()) {
+      throw new IllegalArgumentException("tmTextUnitIds must be provided");
+    }
+    Map<Long, TMTextUnit> textUnitsById =
+        tmTextUnitRepository.findByIdIn(tmTextUnitIds).stream()
+            .collect(Collectors.toMap(TMTextUnit::getId, Function.identity(), (a, b) -> a));
+
+    return tmTextUnitIds.stream()
+        .distinct()
+        .map(textUnitsById::get)
+        .filter(Objects::nonNull)
+        .map(this::toSourceTerminologyReviewCandidate)
+        .toList();
+  }
+
+  private TextUnitDTO toSourceTerminologyReviewCandidate(TMTextUnit tmTextUnit) {
+    TextUnitDTO textUnitDTO = new TextUnitDTO();
+    textUnitDTO.setTmTextUnitId(tmTextUnit.getId());
+    textUnitDTO.setName(tmTextUnit.getName());
+    textUnitDTO.setSource(tmTextUnit.getContent());
+    textUnitDTO.setComment(tmTextUnit.getComment());
+    textUnitDTO.setAssetId(tmTextUnit.getAsset() == null ? null : tmTextUnit.getAsset().getId());
+    textUnitDTO.setTmTextUnitCreatedDate(tmTextUnit.getCreatedDate());
+    return textUnitDTO;
   }
 
   private List<TextUnitDTO> searchReviewFeatureCandidates(
@@ -2045,6 +2468,7 @@ public class ReviewProjectService {
       Long teamId,
       Long requestedByUserId,
       Boolean assignTranslator,
+      List<CreateReviewProjectRequestCommand.ProjectSpec> projectSpecs,
       List<LocaleCandidates> localesToCreate) {
     User requestedByUser = resolveUser(requestedByUserId, "requestedByUser");
 
@@ -2071,50 +2495,53 @@ public class ReviewProjectService {
 
     for (LocaleCandidates localeCandidates : localesToCreate) {
       Locale locale = localeCandidates.locale();
-      ReviewProject reviewProject = new ReviewProject();
-      reviewProject.setType(type);
-      reviewProject.setStatus(ReviewProjectStatus.OPEN);
-      reviewProject.setDueDate(dueDate);
-      reviewProject.setLocale(locale);
-      reviewProject.setReviewProjectRequest(reviewProjectRequest);
-      reviewProject.setTeam(assignmentDefaults.team());
-      reviewProject.setAssignedPmUser(assignmentDefaults.defaultPmUser());
-      reviewProject.setCreatedByUser(requestedByUser);
       String localeTagKey =
           locale.getBcp47Tag() == null ? "" : locale.getBcp47Tag().trim().toLowerCase();
-      if (assignTranslator == null || Boolean.TRUE.equals(assignTranslator)) {
-        reviewProject.setAssignedTranslatorUser(
-            assignmentDefaults.defaultTranslatorByLocaleTagLowercase().get(localeTagKey));
-      }
+      List<ResolvedProjectSpec> resolvedProjectSpecs =
+          resolveProjectSpecs(
+              type, dueDate, assignTranslator, projectSpecs, assignmentDefaults, localeTagKey);
+      for (ResolvedProjectSpec projectSpec : resolvedProjectSpecs) {
+        ReviewProject reviewProject = new ReviewProject();
+        reviewProject.setType(type);
+        reviewProject.setTerminologyPhase(projectSpec.terminologyPhase());
+        reviewProject.setStatus(ReviewProjectStatus.OPEN);
+        reviewProject.setDueDate(projectSpec.dueDate());
+        reviewProject.setLocale(locale);
+        reviewProject.setReviewProjectRequest(reviewProjectRequest);
+        reviewProject.setTeam(assignmentDefaults.team());
+        reviewProject.setAssignedPmUser(projectSpec.assignedPmUser());
+        reviewProject.setAssignedTranslatorUser(projectSpec.assignedTranslatorUser());
+        reviewProject.setCreatedByUser(requestedByUser);
 
-      ReviewProject saved = reviewProjectRepository.save(reviewProject);
+        ReviewProject saved = reviewProjectRepository.save(reviewProject);
 
-      int wordCount = 0;
-      int textUnitCount = 0;
+        int wordCount = 0;
+        int textUnitCount = 0;
 
-      for (TextUnitDTO textUnitDTO : localeCandidates.candidates()) {
-        ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
-        reviewProjectTextUnit.setReviewProject(reviewProject);
-        reviewProjectTextUnit.setTmTextUnit(
-            entityManager.getReference(TMTextUnit.class, textUnitDTO.getTmTextUnitId()));
-        if (textUnitDTO.getTmTextUnitVariantId() != null) {
-          reviewProjectTextUnit.setTmTextUnitVariant(
-              entityManager.getReference(
-                  TMTextUnitVariant.class, textUnitDTO.getTmTextUnitVariantId()));
+        for (TextUnitDTO textUnitDTO : localeCandidates.candidates()) {
+          ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+          reviewProjectTextUnit.setReviewProject(reviewProject);
+          reviewProjectTextUnit.setTmTextUnit(
+              entityManager.getReference(TMTextUnit.class, textUnitDTO.getTmTextUnitId()));
+          if (textUnitDTO.getTmTextUnitVariantId() != null) {
+            reviewProjectTextUnit.setTmTextUnitVariant(
+                entityManager.getReference(
+                    TMTextUnitVariant.class, textUnitDTO.getTmTextUnitVariantId()));
+          }
+          reviewProjectTextUnitRepository.save(reviewProjectTextUnit);
+
+          textUnitCount++;
+          wordCount += wordCountService.getEnglishWordCount(textUnitDTO.getSource());
         }
-        reviewProjectTextUnitRepository.save(reviewProjectTextUnit);
 
-        textUnitCount++;
-        wordCount += wordCountService.getEnglishWordCount(textUnitDTO.getSource());
+        saved.setWordCount(wordCount);
+        saved.setTextUnitCount(textUnitCount);
+        recordAssignmentHistory(
+            saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null, requestedByUser);
+        projectIds.add(saved.getId());
+        createdLocaleTags.add(locale.getBcp47Tag());
+        createdProjects.add(saved);
       }
-
-      saved.setWordCount(wordCount);
-      saved.setTextUnitCount(textUnitCount);
-      recordAssignmentHistory(
-          saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null, requestedByUser);
-      projectIds.add(saved.getId());
-      createdLocaleTags.add(locale.getBcp47Tag());
-      createdProjects.add(saved);
     }
 
     teamSlackNotificationService.sendReviewProjectCreateRequestNotification(
@@ -2259,6 +2686,51 @@ public class ReviewProjectService {
     return new CreateAssignmentDefaults(team, defaultPmUser, translatorsByLocaleTagLowercase);
   }
 
+  private List<ResolvedProjectSpec> resolveProjectSpecs(
+      ReviewProjectType type,
+      ZonedDateTime defaultDueDate,
+      Boolean assignTranslator,
+      List<CreateReviewProjectRequestCommand.ProjectSpec> projectSpecs,
+      CreateAssignmentDefaults assignmentDefaults,
+      String localeTagKey) {
+    if (CollectionUtils.isEmpty(projectSpecs)) {
+      User assignedTranslatorUser = null;
+      if (assignTranslator == null || Boolean.TRUE.equals(assignTranslator)) {
+        assignedTranslatorUser =
+            assignmentDefaults.defaultTranslatorByLocaleTagLowercase().get(localeTagKey);
+      }
+      return List.of(
+          new ResolvedProjectSpec(
+              null, defaultDueDate, assignmentDefaults.defaultPmUser(), assignedTranslatorUser));
+    }
+
+    if (type != ReviewProjectType.TERMINOLOGY) {
+      throw new IllegalArgumentException(
+          "projectSpecs are only supported for terminology projects");
+    }
+
+    List<ResolvedProjectSpec> resolvedProjectSpecs = new ArrayList<>();
+    for (CreateReviewProjectRequestCommand.ProjectSpec projectSpec : projectSpecs) {
+      if (projectSpec == null) {
+        continue;
+      }
+      resolvedProjectSpecs.add(
+          new ResolvedProjectSpec(
+              projectSpec.terminologyPhase(),
+              projectSpec.dueDate() == null ? defaultDueDate : projectSpec.dueDate(),
+              projectSpec.assignedPmUserId() == null
+                  ? null
+                  : resolveUser(projectSpec.assignedPmUserId(), "assignedPmUser"),
+              projectSpec.assignedTranslatorUserId() == null
+                  ? null
+                  : resolveUser(projectSpec.assignedTranslatorUserId(), "assignedTranslatorUser")));
+    }
+    if (resolvedProjectSpecs.isEmpty()) {
+      throw new IllegalArgumentException("At least one projectSpec must be provided");
+    }
+    return resolvedProjectSpecs;
+  }
+
   private User resolveUser(Long userId, String fieldName) {
     if (userId == null) {
       return null;
@@ -2270,6 +2742,20 @@ public class ReviewProjectService {
 
   private Long getEntityId(BaseEntity entity) {
     return entity == null ? null : entity.getId();
+  }
+
+  private String normalizeOptional(String value) {
+    if (value == null || value.trim().isEmpty()) {
+      return null;
+    }
+    return value.trim();
+  }
+
+  private String truncate(String value, int maxLength) {
+    if (value == null || value.length() <= maxLength) {
+      return value;
+    }
+    return value.substring(0, maxLength);
   }
 
   private void recordAssignmentHistory(

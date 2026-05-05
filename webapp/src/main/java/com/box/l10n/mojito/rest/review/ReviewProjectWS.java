@@ -3,13 +3,16 @@ package com.box.l10n.mojito.rest.review;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
+import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState;
+import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitFeedback.Recommendation;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.EntityWithIdNotFoundException;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
+import com.box.l10n.mojito.service.review.CreateGlossaryTerminologyReviewProjectCommand;
 import com.box.l10n.mojito.service.review.CreateReviewProjectRequestCommand;
 import com.box.l10n.mojito.service.review.GetProjectDetailView;
 import com.box.l10n.mojito.service.review.ReviewProjectCurrentVariantConflictException;
@@ -184,6 +187,24 @@ public class ReviewProjectWS {
     return new CreateReviewProjectRequestStartResponse(pollableFuture.getPollableTask().getId());
   }
 
+  @PostMapping("/review-project-requests/glossaries/{glossaryId}/terminology")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public CreateReviewProjectRequestStartResponse createGlossaryTerminologyReviewProject(
+      @PathVariable Long glossaryId,
+      @RequestBody(required = false) CreateGlossaryTerminologyReviewProjectRequest request) {
+    try {
+      PollableFuture<?> pollableFuture =
+          reviewProjectService.createGlossaryTerminologyReviewProjectAsync(
+              glossaryId, toCreateGlossaryTerminologyReviewProjectCommand(request));
+      return new CreateReviewProjectRequestStartResponse(pollableFuture.getPollableTask().getId());
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
   @GetMapping("/review-projects/{projectId}")
   public GetReviewProjectResponse getReviewProject(@PathVariable Long projectId)
       throws EntityWithIdNotFoundException {
@@ -336,10 +357,62 @@ public class ReviewProjectWS {
           : ResponseEntity.status(HttpStatus.CONFLICT).body(toTextUnitResponse(currentTextUnit));
     } catch (AccessDeniedException accessDeniedException) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
+  @PostMapping("/review-project-text-units/{textUnitId}/terminology-feedback")
+  public GetReviewProjectResponse.ReviewProjectTextUnit saveTerminologyFeedback(
+      @PathVariable Long textUnitId, @RequestBody ReviewProjectTextUnitFeedbackRequest request)
+      throws EntityWithIdNotFoundException {
+    if (request == null || request.recommendation() == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "recommendation is required");
+    }
+    try {
+      return toTextUnitResponse(
+          reviewProjectService.saveTerminologyFeedback(
+              textUnitId, request.recommendation(), request.confidence(), request.notes()));
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
+  @PostMapping("/review-project-text-units/{textUnitId}/terminology-resolution")
+  public GetReviewProjectResponse.ReviewProjectTextUnit saveTerminologyResolution(
+      @PathVariable Long textUnitId, @RequestBody ReviewProjectTextUnitResolutionRequest request) {
+    if (request == null || request.status() == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
+    }
+    try {
+      return toTextUnitResponse(
+          reviewProjectService.saveTerminologyResolution(
+              textUnitId, request.glossaryId(), request.status(), request.notes()));
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
     }
   }
 
   public record CreateReviewProjectRequestStartResponse(Long pollableTaskId) {}
+
+  public record CreateGlossaryTerminologyReviewProjectRequest(
+      String name,
+      String notes,
+      ZonedDateTime dueDate,
+      Long teamId,
+      Boolean assignTranslator,
+      List<Long> tmTextUnitIds,
+      List<Long> specialistUserIds,
+      Long pmUserId,
+      ZonedDateTime specialistDueDate,
+      ZonedDateTime pmDueDate) {}
 
   public record UpdateReviewProjectStatusRequest(ReviewProjectStatus status, String closeReason) {}
 
@@ -378,6 +451,12 @@ public class ReviewProjectWS {
 
   public record AdminBatchActionResponse(int affectedCount) {}
 
+  public record ReviewProjectTextUnitFeedbackRequest(
+      Recommendation recommendation, Integer confidence, String notes) {}
+
+  public record ReviewProjectTextUnitResolutionRequest(
+      Long glossaryId, String status, String notes) {}
+
   /** Summary response used by list/search endpoints. */
   public record SearchReviewProjectsResponse(List<ReviewProject> reviewProjects) {
 
@@ -391,6 +470,7 @@ public class ReviewProjectWS {
         Integer wordCount,
         Long decidedCount,
         ReviewProjectType type,
+        ReviewProjectTerminologyPhase terminologyPhase,
         ReviewProjectStatus status,
         String createdByUsername,
         Locale locale,
@@ -437,6 +517,7 @@ public class ReviewProjectWS {
   public record GetReviewProjectResponse(
       Long id,
       ReviewProjectType type,
+      ReviewProjectTerminologyPhase terminologyPhase,
       ReviewProjectStatus status,
       ZonedDateTime createdDate,
       ZonedDateTime dueDate,
@@ -471,7 +552,8 @@ public class ReviewProjectWS {
         TmTextUnit tmTextUnit,
         TmTextUnitVariant baselineTmTextUnitVariant,
         TmTextUnitVariant currentTmTextUnitVariant,
-        ReviewProjectTextUnitDecision reviewProjectTextUnitDecision) {}
+        ReviewProjectTextUnitDecision reviewProjectTextUnitDecision,
+        List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
 
     public record TmTextUnit(
         Long id,
@@ -496,6 +578,16 @@ public class ReviewProjectWS {
         TmTextUnitVariant decisionTmTextUnitVariant,
         ZonedDateTime lastModifiedDate,
         String lastModifiedByUsername) {}
+
+    public record ReviewProjectTextUnitFeedback(
+        Long id,
+        String recommendation,
+        Integer confidence,
+        String notes,
+        ZonedDateTime createdDate,
+        ZonedDateTime lastModifiedDate,
+        Long reviewerUserId,
+        String reviewerUsername) {}
   }
 
   // Mapping helpers
@@ -511,6 +603,7 @@ public class ReviewProjectWS {
         view.wordCount(),
         view.decidedCount(),
         view.type(),
+        view.terminologyPhase(),
         view.status(),
         view.createdByUsername(),
         view.locale() != null
@@ -603,7 +696,28 @@ public class ReviewProjectWS {
         request.name(),
         request.teamId(),
         request.assignTranslator(),
+        null,
         null);
+  }
+
+  private CreateGlossaryTerminologyReviewProjectCommand
+      toCreateGlossaryTerminologyReviewProjectCommand(
+          CreateGlossaryTerminologyReviewProjectRequest request) {
+    if (request == null) {
+      return new CreateGlossaryTerminologyReviewProjectCommand(
+          null, null, null, null, null, null, null, null, null, null);
+    }
+    return new CreateGlossaryTerminologyReviewProjectCommand(
+        request.name(),
+        request.notes(),
+        request.dueDate(),
+        request.teamId(),
+        request.assignTranslator(),
+        request.tmTextUnitIds(),
+        request.specialistUserIds(),
+        request.pmUserId(),
+        request.specialistDueDate(),
+        request.pmDueDate());
   }
 
   private SearchReviewProjectsCriteria toCriteria(SearchReviewProjectsRequest request) {
@@ -654,6 +768,7 @@ public class ReviewProjectWS {
     return new GetReviewProjectResponse(
         detail.id(),
         detail.type(),
+        detail.terminologyPhase(),
         detail.status(),
         detail.createdDate(),
         detail.dueDate(),
@@ -701,6 +816,8 @@ public class ReviewProjectWS {
                 decision.decisionTmTextUnitVariant().includedInLocalizedFile(),
                 decision.decisionTmTextUnitVariant().comment())
             : null;
+    List<GetProjectDetailView.ReviewProjectTextUnitFeedback> terminologyFeedbacks =
+        view.terminologyFeedbacks() == null ? List.of() : view.terminologyFeedbacks();
     return new GetReviewProjectResponse.ReviewProjectTextUnit(
         view.id(),
         new GetReviewProjectResponse.TmTextUnit(
@@ -735,7 +852,8 @@ public class ReviewProjectWS {
                 decisionStateName,
                 decisionVariant,
                 decision.lastModifiedDate(),
-                decision.lastModifiedByUsername()));
+                decision.lastModifiedByUsername()),
+        terminologyFeedbacks.stream().map(this::toTerminologyFeedbackResponse).toList());
   }
 
   private GetReviewProjectResponse.ReviewProjectTextUnit toTextUnitResponse(
@@ -804,7 +922,25 @@ public class ReviewProjectWS {
             : null;
 
     return new GetReviewProjectResponse.ReviewProjectTextUnit(
-        detail.reviewProjectTextUnitId(), tmTextUnit, baselineVariant, currentVariant, decision);
+        detail.reviewProjectTextUnitId(),
+        tmTextUnit,
+        baselineVariant,
+        currentVariant,
+        decision,
+        List.of());
+  }
+
+  private GetReviewProjectResponse.ReviewProjectTextUnitFeedback toTerminologyFeedbackResponse(
+      GetProjectDetailView.ReviewProjectTextUnitFeedback feedback) {
+    return new GetReviewProjectResponse.ReviewProjectTextUnitFeedback(
+        feedback.id(),
+        feedback.recommendation(),
+        feedback.confidence(),
+        feedback.notes(),
+        feedback.createdDate(),
+        feedback.lastModifiedDate(),
+        feedback.reviewerUserId(),
+        feedback.reviewerUsername());
   }
 
   private ReviewProjectAssignmentHistoryResponse.Entry toAssignmentHistoryEntry(

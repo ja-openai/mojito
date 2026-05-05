@@ -15,6 +15,9 @@ export const REVIEW_PROJECT_TYPES = [
 ] as const;
 export type ApiReviewProjectType = (typeof REVIEW_PROJECT_TYPES)[number];
 
+export const REVIEW_PROJECT_TERMINOLOGY_PHASES = ['SPECIALIST_INPUT', 'PM_RESOLUTION'] as const;
+export type ApiReviewProjectTerminologyPhase = (typeof REVIEW_PROJECT_TERMINOLOGY_PHASES)[number];
+
 // Keep in sync with com.box.l10n.mojito.service.tm.search.StatusFilter
 export const REVIEW_PROJECT_CREATE_STATUS_FILTERS = [
   'ALL',
@@ -40,6 +43,41 @@ export const REVIEW_PROJECT_TYPE_LABELS: Record<ApiReviewProjectType, string> = 
   TERMINOLOGY: 'Terminology',
   UNKNOWN: 'Unknown',
 };
+
+export const REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS: Record<
+  ApiReviewProjectTerminologyPhase,
+  string
+> = {
+  SPECIALIST_INPUT: 'Advisor',
+  PM_RESOLUTION: 'Decider',
+};
+
+export const TERMINOLOGY_FEEDBACK_RECOMMENDATIONS = [
+  'APPROVE',
+  'KEEP_CANDIDATE',
+  'REJECT',
+] as const;
+export type ApiTerminologyFeedbackRecommendation =
+  (typeof TERMINOLOGY_FEEDBACK_RECOMMENDATIONS)[number];
+
+export const TERMINOLOGY_RESOLUTION_STATUSES = ['APPROVED', 'CANDIDATE', 'REJECTED'] as const;
+export type ApiTerminologyResolutionStatus = (typeof TERMINOLOGY_RESOLUTION_STATUSES)[number];
+
+export const TERMINOLOGY_FEEDBACK_RECOMMENDATION_LABELS: Record<
+  ApiTerminologyFeedbackRecommendation,
+  string
+> = {
+  APPROVE: 'Approved',
+  KEEP_CANDIDATE: 'Candidate',
+  REJECT: 'Rejected',
+};
+
+export const TERMINOLOGY_RESOLUTION_STATUS_LABELS: Record<ApiTerminologyResolutionStatus, string> =
+  {
+    APPROVED: 'Approved',
+    CANDIDATE: 'Candidate',
+    REJECTED: 'Rejected',
+  };
 
 export const REVIEW_PROJECT_CREATE_STATUS_FILTER_LABELS: Record<
   ReviewProjectCreateStatusFilter,
@@ -100,6 +138,16 @@ export type ApiReviewProjectTextUnit = {
       comment?: string | null;
     } | null;
   } | null;
+  terminologyFeedbacks?: Array<{
+    id: number;
+    recommendation?: ApiTerminologyFeedbackRecommendation | null;
+    confidence?: number | null;
+    notes?: string | null;
+    createdDate?: string | null;
+    lastModifiedDate?: string | null;
+    reviewerUserId?: number | null;
+    reviewerUsername?: string | null;
+  }> | null;
 };
 
 export type ApiReviewProjectDetail = {
@@ -110,6 +158,7 @@ export type ApiReviewProjectDetail = {
   textUnitCount?: number | null;
   wordCount?: number | null;
   type: ApiReviewProjectType;
+  terminologyPhase?: ApiReviewProjectTerminologyPhase | null;
   status: ApiReviewProjectStatus;
   reviewProjectRequest?: {
     id: number | null;
@@ -179,6 +228,7 @@ export type ApiReviewProjectSummary = {
   wordCount?: number | null;
   decidedCount?: number | null;
   type: ApiReviewProjectType;
+  terminologyPhase?: ApiReviewProjectTerminologyPhase | null;
   status: ApiReviewProjectStatus;
   locale?: { id: number | null; bcp47Tag?: string | null } | null;
   reviewProjectRequest?: {
@@ -238,6 +288,19 @@ export type ReviewProjectCreateRequest = {
   name: string;
   teamId?: number | null;
   assignTranslator?: boolean | null;
+};
+
+export type GlossaryTerminologyReviewProjectCreateRequest = {
+  name?: string | null;
+  notes?: string | null;
+  dueDate?: string | null;
+  teamId?: number | null;
+  assignTranslator?: boolean | null;
+  tmTextUnitIds?: number[] | null;
+  specialistUserIds?: number[] | null;
+  pmUserId?: number | null;
+  specialistDueDate?: string | null;
+  pmDueDate?: string | null;
 };
 
 export type ReviewProjectCreateResponse = {
@@ -447,6 +510,48 @@ export const createReviewProjectRequest = async (
   if (!outputResponse.ok) {
     const message = await outputResponse.text().catch(() => '');
     throw new Error(message || 'Failed to create review project');
+  }
+
+  return (await outputResponse.json()) as ReviewProjectCreateResponse;
+};
+
+export const createGlossaryTerminologyReviewProjectRequest = async (
+  glossaryId: number,
+  payload: GlossaryTerminologyReviewProjectCreateRequest,
+): Promise<ReviewProjectCreateResponse> => {
+  const startResponse = await fetch(
+    `/api/review-project-requests/glossaries/${glossaryId}/terminology`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: jsonHeaders,
+      body: JSON.stringify(payload ?? {}),
+    },
+  );
+
+  if (!startResponse.ok) {
+    const message = await startResponse.text().catch(() => '');
+    throw new Error(message || 'Failed to create terminology review project');
+  }
+
+  const { pollableTaskId } =
+    (await startResponse.json()) as StartCreateReviewProjectRequestResponse;
+
+  const completedTask = await waitForCreateReviewProjectTaskToFinish(pollableTaskId);
+  const normalizedErrorMessage = normalizePollableTaskErrorMessage(completedTask.errorMessage);
+  if (normalizedErrorMessage) {
+    throw new Error(normalizedErrorMessage);
+  }
+
+  const outputResponse = await fetch(`/api/pollableTasks/${pollableTaskId}/output`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!outputResponse.ok) {
+    const message = await outputResponse.text().catch(() => '');
+    throw new Error(message || 'Failed to create terminology review project');
   }
 
   return (await outputResponse.json()) as ReviewProjectCreateResponse;
@@ -743,6 +848,72 @@ export const saveReviewProjectTextUnitDecision = async ({
   }
 
   return data as ApiReviewProjectTextUnit;
+};
+
+export const saveReviewProjectTextUnitTerminologyFeedback = async ({
+  textUnitId,
+  recommendation,
+  confidence,
+  notes,
+}: {
+  textUnitId: number;
+  recommendation: ApiTerminologyFeedbackRecommendation;
+  confidence?: number | null;
+  notes?: string | null;
+}): Promise<ApiReviewProjectTextUnit> => {
+  const response = await fetch(
+    `/api/review-project-text-units/${textUnitId}/terminology-feedback`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        recommendation,
+        confidence,
+        notes,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to save terminology feedback');
+  }
+
+  return (await response.json()) as ApiReviewProjectTextUnit;
+};
+
+export const saveReviewProjectTextUnitTerminologyResolution = async ({
+  textUnitId,
+  glossaryId,
+  status,
+  notes,
+}: {
+  textUnitId: number;
+  glossaryId: number;
+  status: ApiTerminologyResolutionStatus;
+  notes?: string | null;
+}): Promise<ApiReviewProjectTextUnit> => {
+  const response = await fetch(
+    `/api/review-project-text-units/${textUnitId}/terminology-resolution`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        glossaryId,
+        status,
+        notes,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to save terminology resolution');
+  }
+
+  return (await response.json()) as ApiReviewProjectTextUnit;
 };
 
 export const setReviewProjectTextUnitDecisionState = async ({

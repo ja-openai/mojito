@@ -47,6 +47,9 @@ type Props = {
   visibleLocaleColumnLimitOptions: number[];
   localeColumnSummary: string | null;
   selectedTermIdsCount: number;
+  isCreatingTerminologyReview: boolean;
+  onCreateTerminologyReview: () => void;
+  onCreateSelectedTerminologyReview: () => void;
   onOpenBatch: () => void;
   onClearSelection: () => void;
   statusNotice: {
@@ -246,6 +249,9 @@ export function GlossaryTermsListView({
   visibleLocaleColumnLimitOptions,
   localeColumnSummary,
   selectedTermIdsCount,
+  isCreatingTerminologyReview,
+  onCreateTerminologyReview,
+  onCreateSelectedTerminologyReview,
   onOpenBatch,
   onClearSelection,
   statusNotice,
@@ -427,10 +433,20 @@ export function GlossaryTermsListView({
           </div>
           <div className="glossary-term-admin__actions">
             {canManageTerms ? (
-              <GlossaryPrimaryActionMenu
-                onOpenCreate={onOpenCreate}
-                onOpenExtract={onOpenExtract}
-              />
+              <>
+                <button
+                  type="button"
+                  className="settings-button glossary-term-admin__review-action"
+                  onClick={onCreateTerminologyReview}
+                  disabled={isCreatingTerminologyReview || termsTotalCount === 0}
+                >
+                  {isCreatingTerminologyReview ? 'Creating review…' : 'Review glossary'}
+                </button>
+                <GlossaryPrimaryActionMenu
+                  onOpenCreate={onOpenCreate}
+                  onOpenExtract={onOpenExtract}
+                />
+              </>
             ) : (
               <button
                 type="button"
@@ -551,6 +567,17 @@ export function GlossaryTermsListView({
                 onClick={onOpenBatch}
               >
                 Batch edit
+              </button>
+              <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
+                ·
+              </span>
+              <button
+                type="button"
+                className="glossary-term-admin__subbar-button"
+                onClick={onCreateSelectedTerminologyReview}
+                disabled={isCreatingTerminologyReview}
+              >
+                {isCreatingTerminologyReview ? 'Creating review…' : 'Review selected'}
               </button>
               <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
                 ·

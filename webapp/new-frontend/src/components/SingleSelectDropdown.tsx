@@ -121,7 +121,9 @@ export function SingleSelectDropdown<T extends string | number>({
   const resolvedPlaceholder = placeholder ?? label;
   const summary = buttonSummary ?? (selectedOption ? selectedOption.label : resolvedPlaceholder);
   const isPlaceholder = !selectedOption;
-  const isDisabled = disabled || (options.length === 0 && value === null);
+  const hasAnyPanelContent =
+    normalizedOptions.length > 0 || noneLabel != null || footerAction != null;
+  const isDisabled = disabled || (!hasAnyPanelContent && value === null);
 
   const visibleOptions = useMemo(() => {
     const query = filterQuery.trim().toLowerCase();
@@ -133,9 +135,6 @@ export function SingleSelectDropdown<T extends string | number>({
 
   const filterInputPlaceholder = searchPlaceholder ?? `Filter ${label.toLowerCase()}`;
   const emptyLabel = noResultsLabel ?? 'No matches';
-  const hasAnyPanelContent =
-    normalizedOptions.length > 0 || noneLabel != null || footerAction != null;
-
   return (
     <div
       className={['chip-dropdown', className].filter(Boolean).join(' ')}
