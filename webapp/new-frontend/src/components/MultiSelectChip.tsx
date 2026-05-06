@@ -1,7 +1,10 @@
 import './chip-dropdown.css';
 import './multi-select-chip.css';
 
-import { useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+
+import { getAnchoredDropdownPanelStyle } from './dropdownPosition';
 
 export type MultiSelectOption<T extends string | number> = {
   value: T;
@@ -62,8 +65,31 @@ export function MultiSelectChip<T extends string | number>({
 }: MultiSelectChipProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const filterInputRef = useRef<HTMLInputElement | null>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>();
   const [filterQuery, setFilterQuery] = useState('');
+
+  const updatePanelPosition = useCallback(() => {
+    if (!buttonRef.current) {
+      return;
+    }
+    const rect = buttonRef.current.getBoundingClientRect();
+    const viewportPadding = 16;
+    const gap = 8;
+    const maxWidth = Math.min(448, window.innerWidth - viewportPadding * 2);
+
+    setPanelStyle(
+      getAnchoredDropdownPanelStyle({
+        rect,
+        align,
+        viewportPadding,
+        gap,
+        maxWidth,
+      }),
+    );
+  }, [align]);
 
   useEffect(() => {
     if (disabled && isOpen) {
@@ -76,14 +102,23 @@ export function MultiSelectChip<T extends string | number>({
     }
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         setIsOpen(false);
       }
     };
+    const handleReposition = () => updatePanelPosition();
 
+    updatePanelPosition();
     window.addEventListener('pointerdown', handlePointerDown);
-    return () => window.removeEventListener('pointerdown', handlePointerDown);
-  }, [disabled, isOpen]);
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [disabled, isOpen, updatePanelPosition]);
 
   useEffect(() => {
     if (!isOpen || !options.length) {
@@ -195,112 +230,116 @@ export function MultiSelectChip<T extends string | number>({
         disabled={!canOpen}
         aria-expanded={isOpen}
         aria-label={resolvedButtonAriaLabel}
+        ref={buttonRef}
       >
         <span className={`chip-dropdown__summary${isPlaceholder ? ' is-placeholder' : ''}`}>
           {summary}
         </span>
         <span className="chip-dropdown__chevron" aria-hidden="true" />
       </button>
-      {isOpen ? (
-        <div className="chip-dropdown__panel" role="menu">
-          {options.length ? (
-            <>
-              <input
-                ref={filterInputRef}
-                type="search"
-                value={filterQuery}
-                onChange={(event) => setFilterQuery(event.target.value)}
-                placeholder={filterInputPlaceholder}
-                className="multi-select-chip__search"
-              />
-              <div className="multi-select-chip__actions">
-                <button
-                  type="button"
-                  className="multi-select-chip__action-button"
-                  onClick={selectAll}
-                  disabled={allVisibleSelected}
-                >
-                  {selectAllText}
-                </button>
-                <button
-                  type="button"
-                  className="multi-select-chip__action-button"
-                  onClick={clearAll}
-                  disabled={selectedValues.length === 0}
-                >
-                  {clearAllText}
-                </button>
-              </div>
-              {resolvedCustomActions.length ? (
-                <div className="multi-select-chip__actions multi-select-chip__actions--secondary">
-                  {resolvedCustomActions.map((action) => (
+      {isOpen
+        ? createPortal(
+            <div className="chip-dropdown__panel" role="menu" ref={panelRef} style={panelStyle}>
+              {options.length ? (
+                <>
+                  <input
+                    ref={filterInputRef}
+                    type="search"
+                    value={filterQuery}
+                    onChange={(event) => setFilterQuery(event.target.value)}
+                    placeholder={filterInputPlaceholder}
+                    className="multi-select-chip__search"
+                  />
+                  <div className="multi-select-chip__actions">
                     <button
                       type="button"
-                      key={action.label}
-                      className="multi-select-chip__action-button multi-select-chip__action-button--link"
-                      onClick={action.onClick}
-                      disabled={Boolean(action.disabled)}
-                      aria-label={action.ariaLabel ?? action.label}
+                      className="multi-select-chip__action-button"
+                      onClick={selectAll}
+                      disabled={allVisibleSelected}
                     >
-                      {action.label}
+                      {selectAllText}
                     </button>
-                  ))}
-                </div>
-              ) : null}
-              <div className="multi-select-chip__options">
-                {visibleOptions.length ? (
-                  visibleOptions.map((option) => {
-                    const checked = selectedSet.has(option.value);
-                    return (
-                      <label key={String(option.value)} className="multi-select-chip__option">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleValue(option.value)}
-                        />
-                        <span>{option.label}</span>
+                    <button
+                      type="button"
+                      className="multi-select-chip__action-button"
+                      onClick={clearAll}
+                      disabled={selectedValues.length === 0}
+                    >
+                      {clearAllText}
+                    </button>
+                  </div>
+                  {resolvedCustomActions.length ? (
+                    <div className="multi-select-chip__actions multi-select-chip__actions--secondary">
+                      {resolvedCustomActions.map((action) => (
                         <button
                           type="button"
-                          className="multi-select-chip__only"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            onChange([option.value]);
-                          }}
+                          key={action.label}
+                          className="multi-select-chip__action-button multi-select-chip__action-button--link"
+                          onClick={action.onClick}
+                          disabled={Boolean(action.disabled)}
+                          aria-label={action.ariaLabel ?? action.label}
                         >
-                          {onlyText}
+                          {action.label}
                         </button>
-                      </label>
-                    );
-                  })
-                ) : (
-                  <div className="multi-select-chip__empty">{noResultsText}</div>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              {resolvedCustomActions.length ? (
-                <div className="multi-select-chip__actions multi-select-chip__actions--secondary">
-                  {resolvedCustomActions.map((action) => (
-                    <button
-                      type="button"
-                      key={action.label}
-                      className="multi-select-chip__action-button multi-select-chip__action-button--link"
-                      onClick={action.onClick}
-                      disabled={Boolean(action.disabled)}
-                      aria-label={action.ariaLabel ?? action.label}
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              <div className="multi-select-chip__empty">{emptyOptionsLabel}</div>
-            </>
-          )}
-        </div>
-      ) : null}
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="multi-select-chip__options">
+                    {visibleOptions.length ? (
+                      visibleOptions.map((option) => {
+                        const checked = selectedSet.has(option.value);
+                        return (
+                          <label key={String(option.value)} className="multi-select-chip__option">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleValue(option.value)}
+                            />
+                            <span>{option.label}</span>
+                            <button
+                              type="button"
+                              className="multi-select-chip__only"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                onChange([option.value]);
+                              }}
+                            >
+                              {onlyText}
+                            </button>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <div className="multi-select-chip__empty">{noResultsText}</div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {resolvedCustomActions.length ? (
+                    <div className="multi-select-chip__actions multi-select-chip__actions--secondary">
+                      {resolvedCustomActions.map((action) => (
+                        <button
+                          type="button"
+                          key={action.label}
+                          className="multi-select-chip__action-button multi-select-chip__action-button--link"
+                          onClick={action.onClick}
+                          disabled={Boolean(action.disabled)}
+                          aria-label={action.ariaLabel ?? action.label}
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="multi-select-chip__empty">{emptyOptionsLabel}</div>
+                </>
+              )}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

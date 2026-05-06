@@ -97,6 +97,11 @@
   color: #fff;
 }
 
+.modal__button--primary:disabled {
+  color: #fff;
+  opacity: 0.6;
+}
+
 .modal__button--danger {
   background: var(--color-danger);
   border-color: var(--color-danger);
