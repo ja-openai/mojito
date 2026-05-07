@@ -12,6 +12,7 @@ import com.box.l10n.mojito.rest.EntityWithIdNotFoundException;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
+import com.box.l10n.mojito.service.review.CreateGlossaryTermCandidateReviewProjectCommand;
 import com.box.l10n.mojito.service.review.CreateGlossaryTerminologyReviewProjectCommand;
 import com.box.l10n.mojito.service.review.CreateReviewProjectRequestCommand;
 import com.box.l10n.mojito.service.review.GetProjectDetailView;
@@ -196,6 +197,24 @@ public class ReviewProjectWS {
       PollableFuture<?> pollableFuture =
           reviewProjectService.createGlossaryTerminologyReviewProjectAsync(
               glossaryId, toCreateGlossaryTerminologyReviewProjectCommand(request));
+      return new CreateReviewProjectRequestStartResponse(pollableFuture.getPollableTask().getId());
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
+  @PostMapping("/review-project-requests/glossaries/{glossaryId}/term-candidates")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public CreateReviewProjectRequestStartResponse createGlossaryTermCandidateReviewProject(
+      @PathVariable Long glossaryId,
+      @RequestBody(required = false) CreateGlossaryTermCandidateReviewProjectRequest request) {
+    try {
+      PollableFuture<?> pollableFuture =
+          reviewProjectService.createGlossaryTermCandidateReviewProjectAsync(
+              glossaryId, toCreateGlossaryTermCandidateReviewProjectCommand(request));
       return new CreateReviewProjectRequestStartResponse(pollableFuture.getPollableTask().getId());
     } catch (AccessDeniedException accessDeniedException) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
@@ -411,6 +430,18 @@ public class ReviewProjectWS {
       Long teamId,
       Boolean assignTranslator,
       List<Long> tmTextUnitIds,
+      List<Long> specialistUserIds,
+      Long pmUserId,
+      ZonedDateTime specialistDueDate,
+      ZonedDateTime pmDueDate) {}
+
+  public record CreateGlossaryTermCandidateReviewProjectRequest(
+      String name,
+      String notes,
+      ZonedDateTime dueDate,
+      Long teamId,
+      Boolean assignTranslator,
+      List<Long> termIndexCandidateIds,
       List<Long> specialistUserIds,
       Long pmUserId,
       ZonedDateTime specialistDueDate,
@@ -718,6 +749,26 @@ public class ReviewProjectWS {
         request.teamId(),
         request.assignTranslator(),
         request.tmTextUnitIds(),
+        request.specialistUserIds(),
+        request.pmUserId(),
+        request.specialistDueDate(),
+        request.pmDueDate());
+  }
+
+  private CreateGlossaryTermCandidateReviewProjectCommand
+      toCreateGlossaryTermCandidateReviewProjectCommand(
+          CreateGlossaryTermCandidateReviewProjectRequest request) {
+    if (request == null) {
+      return new CreateGlossaryTermCandidateReviewProjectCommand(
+          null, null, null, null, null, null, null, null, null, null);
+    }
+    return new CreateGlossaryTermCandidateReviewProjectCommand(
+        request.name(),
+        request.notes(),
+        request.dueDate(),
+        request.teamId(),
+        request.assignTranslator(),
+        request.termIndexCandidateIds(),
         request.specialistUserIds(),
         request.pmUserId(),
         request.specialistDueDate(),

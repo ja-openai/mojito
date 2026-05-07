@@ -31,7 +31,10 @@ import {
   ignoreGlossaryTermIndexSuggestion,
   updateGlossaryTerm,
 } from '../../api/glossaries';
-import { createGlossaryTerminologyReviewProjectRequest } from '../../api/review-projects';
+import {
+  createGlossaryTermCandidateReviewProjectRequest,
+  createGlossaryTerminologyReviewProjectRequest,
+} from '../../api/review-projects';
 import { type ApiTeamUserSummary, fetchTeams, fetchTeamUsersByRole } from '../../api/teams';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -96,6 +99,7 @@ const PROVENANCE_LABELS: Record<(typeof PROVENANCES)[number], string> = {
 };
 type ReferenceType = ApiGlossaryTermEvidence['evidenceType'];
 type SuggestionPendingAction = 'ACCEPT' | 'IGNORE';
+type TerminologyReviewKind = 'TERMINOLOGY' | 'TERM_CANDIDATE';
 type TerminologyReviewScope = 'glossary' | 'selected';
 const REFERENCE_TYPES = [
   'SCREENSHOT',
@@ -251,9 +255,11 @@ type BatchDraft = {
 };
 
 type TerminologyReviewDraft = {
+  kind: TerminologyReviewKind;
   scope: TerminologyReviewScope;
   teamId: number | null;
   tmTextUnitIds: number[];
+  termIndexCandidateIds: number[];
   specialistUserIds: number[];
   pmUserId: number | null;
   specialistDueDate: string;
@@ -1213,6 +1219,21 @@ export function AdminGlossaryTermsPanel({
       if (!specialistDueDate || !pmDueDate) {
         throw new Error('Advisor and decider due dates are required.');
       }
+      if (request.kind === 'TERM_CANDIDATE') {
+        return createGlossaryTermCandidateReviewProjectRequest(glossary.id, {
+          name: `Term candidate review · ${glossary.name} · selected candidates`,
+          notes: `Candidate curation review for selected term candidates in glossary ${glossary.name} (#${glossary.id}).`,
+          dueDate: specialistDueDate,
+          teamId: request.teamId,
+          specialistDueDate,
+          pmDueDate,
+          specialistUserIds:
+            request.specialistUserIds.length > 0 ? request.specialistUserIds : null,
+          pmUserId: request.pmUserId,
+          assignTranslator: false,
+          termIndexCandidateIds: request.termIndexCandidateIds,
+        });
+      }
       return createGlossaryTerminologyReviewProjectRequest(glossary.id, {
         name:
           request.scope === 'selected'
@@ -1257,9 +1278,33 @@ export function AdminGlossaryTermsPanel({
       terminologyReviewMutation.reset();
       setTerminologyReviewDeciderShowAllUsers(false);
       setTerminologyReviewDraft({
+        kind: 'TERMINOLOGY',
         scope,
         teamId: null,
         tmTextUnitIds,
+        termIndexCandidateIds: [],
+        specialistUserIds: [],
+        pmUserId: null,
+        specialistDueDate: getDefaultTerminologyReviewDueDateInput(),
+        pmDueDate: getDefaultTerminologyReviewDueDateInput(
+          TERMINOLOGY_REVIEW_DUE_DATE_OFFSET_DAYS + 1,
+        ),
+      });
+      setStatusNotice(null);
+    },
+    [terminologyReviewMutation],
+  );
+
+  const openTermCandidateReviewModal = useCallback(
+    (termIndexCandidateIds: number[]) => {
+      terminologyReviewMutation.reset();
+      setTerminologyReviewDeciderShowAllUsers(false);
+      setTerminologyReviewDraft({
+        kind: 'TERM_CANDIDATE',
+        scope: 'selected',
+        teamId: null,
+        tmTextUnitIds: [],
+        termIndexCandidateIds,
         specialistUserIds: [],
         pmUserId: null,
         specialistDueDate: getDefaultTerminologyReviewDueDateInput(),
@@ -1273,9 +1318,11 @@ export function AdminGlossaryTermsPanel({
   );
 
   const terminologyReviewTermCount =
-    terminologyReviewDraft?.scope === 'selected'
-      ? terminologyReviewDraft.tmTextUnitIds.length
-      : (termsQuery.data?.totalCount ?? 0);
+    terminologyReviewDraft?.kind === 'TERM_CANDIDATE'
+      ? terminologyReviewDraft.termIndexCandidateIds.length
+      : terminologyReviewDraft?.scope === 'selected'
+        ? terminologyReviewDraft.tmTextUnitIds.length
+        : (termsQuery.data?.totalCount ?? 0);
   const canSubmitTerminologyReview =
     terminologyReviewDraft != null &&
     terminologyReviewDraft.teamId != null &&
@@ -2066,6 +2113,15 @@ export function AdminGlossaryTermsPanel({
               }
               onAcceptSelected={() => batchAcceptSuggestionsMutation.mutate(selectedSuggestions)}
               isAcceptingSelected={batchAcceptSuggestionsMutation.isPending}
+              onCreateSelectedReview={() => {
+                openTermCandidateReviewModal(
+                  selectedSuggestions.map((suggestion) => suggestion.termIndexCandidateId),
+                );
+              }}
+              isCreatingSelectedReview={
+                terminologyReviewMutation.isPending &&
+                terminologyReviewDraft?.kind === 'TERM_CANDIDATE'
+              }
               activeSuggestionId={suggestionInEditor?.termIndexCandidateId ?? activeSuggestionId}
               onActivateSuggestion={(suggestion) => {
                 setActiveSuggestionId(suggestion.termIndexCandidateId);
@@ -2811,7 +2867,11 @@ export function AdminGlossaryTermsPanel({
         open={terminologyReviewDraft != null}
         size="lg"
         className="glossary-term-admin__terminology-review-modal"
-        ariaLabel="Create terminology review"
+        ariaLabel={
+          terminologyReviewDraft?.kind === 'TERM_CANDIDATE'
+            ? 'Create candidate review'
+            : 'Create terminology review'
+        }
         onClose={closeTerminologyReviewModal}
         closeOnBackdrop={!terminologyReviewMutation.isPending}
       >
@@ -2819,44 +2879,63 @@ export function AdminGlossaryTermsPanel({
           <>
             <div className="modal__header">
               <div>
-                <h3 className="modal__title">Create terminology review</h3>
+                <h3 className="modal__title">
+                  {terminologyReviewDraft.kind === 'TERM_CANDIDATE'
+                    ? 'Create candidate review'
+                    : 'Create terminology review'}
+                </h3>
                 <p className="settings-hint">
-                  Creates one advisor row per selected advisor, plus one decider row.
+                  {terminologyReviewDraft.kind === 'TERM_CANDIDATE'
+                    ? 'Creates vendor advisor rows to decide which selected candidates should become glossary terminology.'
+                    : 'Creates one advisor row per selected advisor, plus one decider row.'}
                 </p>
               </div>
             </div>
             <div className="glossary-term-admin__terminology-review-modal-body">
               <div className="settings-grid settings-grid--two-column">
-                <label className="settings-field">
-                  <span className="settings-field__label">Scope</span>
-                  <select
-                    className="settings-input"
-                    value={terminologyReviewDraft.scope}
-                    disabled={terminologyReviewMutation.isPending}
-                    onChange={(event) => {
-                      const scope = event.target.value as TerminologyReviewScope;
-                      setTerminologyReviewDraft((current) =>
-                        current == null
-                          ? current
-                          : {
-                              ...current,
-                              scope,
-                              tmTextUnitIds: scope === 'selected' ? selectedTermIds : [],
-                            },
-                      );
-                    }}
-                  >
-                    <option value="glossary">All reviewable terms</option>
-                    <option value="selected" disabled={selectedTermIds.length === 0}>
-                      {`Selected text unit${selectedTermIds.length === 1 ? '' : 's'} (${selectedTermIds.length})`}
-                    </option>
-                  </select>
-                </label>
+                {terminologyReviewDraft.kind === 'TERM_CANDIDATE' ? (
+                  <div className="settings-field">
+                    <span className="settings-field__label">Scope</span>
+                    <div className="glossary-term-admin__terminology-review-summary">
+                      Selected candidates
+                    </div>
+                  </div>
+                ) : (
+                  <label className="settings-field">
+                    <span className="settings-field__label">Scope</span>
+                    <select
+                      className="settings-input"
+                      value={terminologyReviewDraft.scope}
+                      disabled={terminologyReviewMutation.isPending}
+                      onChange={(event) => {
+                        const scope = event.target.value as TerminologyReviewScope;
+                        setTerminologyReviewDraft((current) =>
+                          current == null
+                            ? current
+                            : {
+                                ...current,
+                                scope,
+                                tmTextUnitIds: scope === 'selected' ? selectedTermIds : [],
+                              },
+                        );
+                      }}
+                    >
+                      <option value="glossary">All reviewable terms</option>
+                      <option value="selected" disabled={selectedTermIds.length === 0}>
+                        {`Selected text unit${selectedTermIds.length === 1 ? '' : 's'} (${selectedTermIds.length})`}
+                      </option>
+                    </select>
+                  </label>
+                )}
                 <div className="settings-field">
-                  <span className="settings-field__label">Terms</span>
+                  <span className="settings-field__label">
+                    {terminologyReviewDraft.kind === 'TERM_CANDIDATE' ? 'Candidates' : 'Terms'}
+                  </span>
                   <div className="glossary-term-admin__terminology-review-summary">
-                    {terminologyReviewTermCount.toLocaleString()} term
-                    {terminologyReviewTermCount === 1 ? '' : 's'}
+                    {terminologyReviewTermCount.toLocaleString()}{' '}
+                    {terminologyReviewDraft.kind === 'TERM_CANDIDATE'
+                      ? `candidate${terminologyReviewTermCount === 1 ? '' : 's'}`
+                      : `term${terminologyReviewTermCount === 1 ? '' : 's'}`}
                   </div>
                 </div>
                 <div className="settings-field settings-field--full">

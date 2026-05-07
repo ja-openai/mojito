@@ -30,6 +30,7 @@ import type {
   ApiTerminologyResolutionStatus,
 } from '../../api/review-projects';
 import {
+  isTerminologyReviewProjectType,
   REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
   REVIEW_PROJECT_TYPES,
@@ -1574,7 +1575,7 @@ function DetailPane({
   focusTranslationKey: number;
 }) {
   const user = useUser();
-  const isTerminologyProject = projectType === 'TERMINOLOGY';
+  const isTerminologyProject = isTerminologyReviewProjectType(projectType);
   const isSpecialistTerminologyProject = terminologyPhase === 'SPECIALIST_INPUT';
   const isPmTerminologyProject = terminologyPhase === 'PM_RESOLUTION';
   const [isScreenshotsCollapsed, setIsScreenshotsCollapsed] = useState(false);
@@ -3681,7 +3682,7 @@ function ReviewProjectHeader({
     [project.reviewProjectRequest?.screenshotImageIds],
   );
   const assignment = project.assignment ?? null;
-  const isTerminologyProject = type === 'TERMINOLOGY';
+  const isTerminologyProject = isTerminologyReviewProjectType(type);
   const pmAssignmentLabel = isTerminologyProject ? 'Decider' : 'PM';
   const translatorAssignmentLabel = isTerminologyProject ? 'Advisor' : 'Translator';
   const teamDisplayName =
@@ -3840,17 +3841,17 @@ function ReviewProjectHeader({
     const hasSpecialistFeedback = (tu: ApiReviewProjectTextUnit) =>
       (tu.terminologyFeedbacks ?? []).length > 0;
     const decided =
-      type === 'TERMINOLOGY' && terminologyPhase === 'SPECIALIST_INPUT'
+      isTerminologyProject && terminologyPhase === 'SPECIALIST_INPUT'
         ? (textUnits?.filter(hasSpecialistFeedback).length ?? 0)
         : (textUnits?.filter((tu) => getDecisionState(tu) === 'DECIDED').length ?? 0);
     const specialistInputCount =
-      type === 'TERMINOLOGY' && terminologyPhase === 'PM_RESOLUTION'
+      isTerminologyProject && terminologyPhase === 'PM_RESOLUTION'
         ? (textUnits?.filter((tu) => (tu.terminologyFeedbacks ?? []).length > 0).length ?? 0)
         : 0;
     const pending = Math.max(0, selected - decided);
     const percent = selected > 0 ? (decided / selected) * 100 : 0;
     const progressLabel =
-      type === 'TERMINOLOGY' && terminologyPhase === 'PM_RESOLUTION'
+      isTerminologyProject && terminologyPhase === 'PM_RESOLUTION'
         ? 'Decider reviewed'
         : 'Reviewed';
     const title = selected > 0 ? `${progressLabel}: ${decided}/${selected}` : 'No text units';
@@ -3867,7 +3868,7 @@ function ReviewProjectHeader({
       specialistInputTitle:
         selected > 0 ? `Advisor input: ${specialistInputCount}/${selected}` : 'No text units',
     };
-  }, [terminologyPhase, textUnits, type]);
+  }, [isTerminologyProject, terminologyPhase, textUnits]);
 
   const handleProjectAction = useCallback(() => {
     if (mutations.isProjectStatusSaving) {
@@ -4212,7 +4213,7 @@ function ReviewProjectHeader({
   }, [onReviewPending]);
   const dueDateTooltip = getLocalAndUtcDateTimeTooltip(dueDate);
   const pendingItemLabel =
-    type === 'TERMINOLOGY' && terminologyPhase === 'SPECIALIST_INPUT'
+    isTerminologyProject && terminologyPhase === 'SPECIALIST_INPUT'
       ? 'needs advisor input'
       : 'needs a decision';
   const progressDoneLabel = 'reviewed';
@@ -4253,7 +4254,7 @@ function ReviewProjectHeader({
               >
                 {REVIEW_PROJECT_TYPE_LABELS[type]}
               </Pill>
-              {type === 'TERMINOLOGY' && terminologyPhase != null ? (
+              {isTerminologyProject && terminologyPhase != null ? (
                 <Pill className="review-project-page__header-pill">
                   {REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS[terminologyPhase]}
                 </Pill>
@@ -4288,7 +4289,7 @@ function ReviewProjectHeader({
               </span>
               <ProgressBar percent={progressPercent} title={progressTitle} />
             </div>
-            {type === 'TERMINOLOGY' && terminologyPhase === 'PM_RESOLUTION' ? (
+            {isTerminologyProject && terminologyPhase === 'PM_RESOLUTION' ? (
               <>
                 <span className="review-project-page__header-dot">•</span>
                 <span
@@ -4610,12 +4611,14 @@ function ReviewProjectHeader({
                     <SingleSelectDropdown
                       label="Type"
                       className="review-project-page__description-select"
-                      options={REVIEW_PROJECT_TYPES.filter((option) => option !== 'UNKNOWN').map(
-                        (option) => ({
-                          value: option,
-                          label: REVIEW_PROJECT_TYPE_LABELS[option],
-                        }),
-                      )}
+                      options={REVIEW_PROJECT_TYPES.filter(
+                        (option) =>
+                          option !== 'UNKNOWN' &&
+                          (option !== 'TERM_CANDIDATE' || projectTypeDraft === 'TERM_CANDIDATE'),
+                      ).map((option) => ({
+                        value: option,
+                        label: REVIEW_PROJECT_TYPE_LABELS[option],
+                      }))}
                       value={projectTypeDraft}
                       onChange={(next) => {
                         if (next == null) {

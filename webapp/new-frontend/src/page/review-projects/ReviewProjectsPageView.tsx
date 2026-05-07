@@ -11,6 +11,7 @@ import {
   type ApiReviewProjectStatus,
   type ApiReviewProjectTerminologyPhase,
   type ApiReviewProjectType,
+  isTerminologyReviewProjectType,
   REVIEW_PROJECT_STATUS_LABELS,
   REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
@@ -391,7 +392,7 @@ function ContentSection({
   }, [reassignProject]);
 
   const activeTeamId = reassignProject?.teamId ?? null;
-  const isTerminologyReassignProject = reassignProject?.type === 'TERMINOLOGY';
+  const isTerminologyReassignProject = isTerminologyReviewProjectType(reassignProject?.type);
   const teamTranslatorUsersQuery = useQuery({
     queryKey: ['team-users', activeTeamId, 'TRANSLATOR', 'review-projects-list-reassign'],
     queryFn: () => fetchTeamUsersByRole(activeTeamId as number, 'TRANSLATOR'),
@@ -820,7 +821,7 @@ function getRequestGroupTypeBadge(group: ReviewProjectRequestGroupRow): {
 }
 
 function isTerminologyProject(project: ReviewProjectRow) {
-  return project.type === 'TERMINOLOGY';
+  return isTerminologyReviewProjectType(project.type);
 }
 
 function isTerminologyRequestGroup(group: ReviewProjectRequestGroupRow) {
@@ -1288,8 +1289,9 @@ function ReviewProjectRowView({
     project.type === 'EMERGENCY'
       ? 'review-projects-page__type-pill--emergency'
       : 'review-projects-page__type-pill--default';
-  const pmRoleLabel = project.type === 'TERMINOLOGY' ? 'Decider' : 'PM';
-  const translatorRoleLabel = project.type === 'TERMINOLOGY' ? 'Advisor' : 'Translator';
+  const isTerminology = isTerminologyProject(project);
+  const pmRoleLabel = isTerminology ? 'Decider' : 'PM';
+  const translatorRoleLabel = isTerminology ? 'Advisor' : 'Translator';
 
   return (
     <div className="review-projects-page__row-card">
@@ -1323,7 +1325,7 @@ function ReviewProjectRowView({
           <Pill className={`review-projects-page__type-pill ${typeClass}`}>
             {REVIEW_PROJECT_TYPE_LABELS[project.type] ?? REVIEW_PROJECT_TYPE_LABELS.NORMAL}
           </Pill>
-          {project.type === 'TERMINOLOGY' && project.terminologyPhase != null ? (
+          {isTerminology && project.terminologyPhase != null ? (
             <Pill className="review-projects-page__type-pill">
               {REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS[project.terminologyPhase]}
             </Pill>
@@ -1368,12 +1370,10 @@ function ReviewProjectRowView({
                   }
                 }}
                 disabled={isReassignSaving}
-                aria-label={
-                  project.type === 'TERMINOLOGY' ? 'Reassign advisor' : 'Reassign translator'
-                }
+                aria-label={isTerminology ? 'Reassign advisor' : 'Reassign translator'}
                 title={getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'}
               >
-                {project.type === 'TERMINOLOGY' ? `${translatorRoleLabel} ` : ''}
+                {isTerminology ? `${translatorRoleLabel} ` : ''}
                 {getCompactUserDisplayName(project.assignedTranslatorUsername)}
               </button>
             ) : (
@@ -1381,14 +1381,14 @@ function ReviewProjectRowView({
                 className="review-projects-page__request-assignee"
                 title={getUserTitle(project.assignedTranslatorUsername)}
               >
-                {project.type === 'TERMINOLOGY' ? `${translatorRoleLabel} ` : ''}
+                {isTerminology ? `${translatorRoleLabel} ` : ''}
                 {getCompactUserDisplayName(project.assignedTranslatorUsername)}
               </span>
             )}
           </span>
         </div>
         <div className="review-projects-page__locales">
-          {project.type === 'TERMINOLOGY' ? (
+          {isTerminology ? (
             <div className="review-projects-page__pill-list">
               <Pill className="review-projects-page__type-pill">
                 {getTerminologyProjectPhaseLabel(project)}
@@ -1805,10 +1805,11 @@ function RequestGroupsSection({
   }, [reassignMutation.isPending]);
 
   const isSpecialistReassignTarget =
-    reassignTarget?.kind === 'translator' && reassignTarget.project.type === 'TERMINOLOGY';
+    reassignTarget?.kind === 'translator' &&
+    isTerminologyReviewProjectType(reassignTarget.project.type);
   const isTerminologyReassignTarget =
     reassignTarget?.kind === 'translator'
-      ? reassignTarget.project.type === 'TERMINOLOGY'
+      ? isTerminologyReviewProjectType(reassignTarget.project.type)
       : (reassignTarget?.projects.length ?? 0) > 0 &&
         reassignTarget?.projects.every(isTerminologyProject);
   const translatorRoleLabel = isSpecialistReassignTarget ? 'Advisor' : 'Translator';
@@ -2091,6 +2092,7 @@ function RequestGroupsSection({
                     ) : null}
                     {visibleProjects.map((project) => {
                       const isSelected = selectedProjectIdSet.has(project.id);
+                      const isTerminology = isTerminologyProject(project);
                       const projectProgressDoneLabel = getProjectProgressDoneLabel();
                       const {
                         decided: projectDecided,
@@ -2114,7 +2116,7 @@ function RequestGroupsSection({
                             className="review-projects-page__request-project-link review-projects-page__link"
                           >
                             <div className="review-projects-page__request-project-locale">
-                              {project.type === 'TERMINOLOGY' ? (
+                              {isTerminology ? (
                                 <Pill className="review-projects-page__type-pill">
                                   {getTerminologyProjectPhaseLabel(project)}
                                 </Pill>
@@ -2139,8 +2141,7 @@ function RequestGroupsSection({
                                 #{project.id}
                               </span>
                             </div>
-                            {project.type === 'TERMINOLOGY' &&
-                            project.terminologyPhase === 'PM_RESOLUTION' ? (
+                            {isTerminology && project.terminologyPhase === 'PM_RESOLUTION' ? (
                               <div
                                 className="review-projects-page__request-project-translator"
                                 title={getUserTitle(project.assignedPmUsername)}
@@ -2172,15 +2173,13 @@ function RequestGroupsSection({
                                 }}
                                 aria-disabled={reassignMutation.isPending}
                                 aria-label={
-                                  project.type === 'TERMINOLOGY'
-                                    ? 'Reassign advisor'
-                                    : 'Reassign translator'
+                                  isTerminology ? 'Reassign advisor' : 'Reassign translator'
                                 }
                                 title={
                                   getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'
                                 }
                               >
-                                {project.type === 'TERMINOLOGY'
+                                {isTerminology
                                   ? getTerminologyProjectAssigneeLabel(project)
                                   : getCompactUserDisplayName(project.assignedTranslatorUsername)}
                               </span>
@@ -2189,7 +2188,7 @@ function RequestGroupsSection({
                                 className="review-projects-page__request-project-translator"
                                 title={getUserTitle(project.assignedTranslatorUsername)}
                               >
-                                {project.type === 'TERMINOLOGY'
+                                {isTerminology
                                   ? getTerminologyProjectAssigneeLabel(project)
                                   : getCompactUserDisplayName(project.assignedTranslatorUsername)}
                               </div>

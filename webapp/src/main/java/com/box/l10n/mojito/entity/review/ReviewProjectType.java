@@ -6,5 +6,6 @@ public enum ReviewProjectType {
   NORMAL,
   BUG_FIXES,
   TERMINOLOGY,
+  TERM_CANDIDATE,
   UNKNOWN
 }

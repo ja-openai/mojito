@@ -11,9 +11,13 @@ export const REVIEW_PROJECT_TYPES = [
   'NORMAL',
   'BUG_FIXES',
   'TERMINOLOGY',
+  'TERM_CANDIDATE',
   'UNKNOWN',
 ] as const;
 export type ApiReviewProjectType = (typeof REVIEW_PROJECT_TYPES)[number];
+
+export const isTerminologyReviewProjectType = (type?: ApiReviewProjectType | null) =>
+  type === 'TERMINOLOGY' || type === 'TERM_CANDIDATE';
 
 export const REVIEW_PROJECT_TERMINOLOGY_PHASES = ['SPECIALIST_INPUT', 'PM_RESOLUTION'] as const;
 export type ApiReviewProjectTerminologyPhase = (typeof REVIEW_PROJECT_TERMINOLOGY_PHASES)[number];
@@ -41,6 +45,7 @@ export const REVIEW_PROJECT_TYPE_LABELS: Record<ApiReviewProjectType, string> = 
   EMERGENCY: 'Emergency',
   BUG_FIXES: 'Bug fixes',
   TERMINOLOGY: 'Terminology',
+  TERM_CANDIDATE: 'Term candidates',
   UNKNOWN: 'Unknown',
 };
 
@@ -303,6 +308,19 @@ export type GlossaryTerminologyReviewProjectCreateRequest = {
   pmDueDate?: string | null;
 };
 
+export type GlossaryTermCandidateReviewProjectCreateRequest = {
+  name?: string | null;
+  notes?: string | null;
+  dueDate?: string | null;
+  teamId?: number | null;
+  assignTranslator?: boolean | null;
+  termIndexCandidateIds?: number[] | null;
+  specialistUserIds?: number[] | null;
+  pmUserId?: number | null;
+  specialistDueDate?: string | null;
+  pmDueDate?: string | null;
+};
+
 export type ReviewProjectCreateResponse = {
   requestId: number | null;
   requestName?: string | null;
@@ -552,6 +570,48 @@ export const createGlossaryTerminologyReviewProjectRequest = async (
   if (!outputResponse.ok) {
     const message = await outputResponse.text().catch(() => '');
     throw new Error(message || 'Failed to create terminology review project');
+  }
+
+  return (await outputResponse.json()) as ReviewProjectCreateResponse;
+};
+
+export const createGlossaryTermCandidateReviewProjectRequest = async (
+  glossaryId: number,
+  payload: GlossaryTermCandidateReviewProjectCreateRequest,
+): Promise<ReviewProjectCreateResponse> => {
+  const startResponse = await fetch(
+    `/api/review-project-requests/glossaries/${glossaryId}/term-candidates`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: jsonHeaders,
+      body: JSON.stringify(payload ?? {}),
+    },
+  );
+
+  if (!startResponse.ok) {
+    const message = await startResponse.text().catch(() => '');
+    throw new Error(message || 'Failed to create term candidate review project');
+  }
+
+  const { pollableTaskId } =
+    (await startResponse.json()) as StartCreateReviewProjectRequestResponse;
+
+  const completedTask = await waitForCreateReviewProjectTaskToFinish(pollableTaskId);
+  const normalizedErrorMessage = normalizePollableTaskErrorMessage(completedTask.errorMessage);
+  if (normalizedErrorMessage) {
+    throw new Error(normalizedErrorMessage);
+  }
+
+  const outputResponse = await fetch(`/api/pollableTasks/${pollableTaskId}/output`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!outputResponse.ok) {
+    const message = await outputResponse.text().catch(() => '');
+    throw new Error(message || 'Failed to create term candidate review project');
   }
 
   return (await outputResponse.json()) as ReviewProjectCreateResponse;

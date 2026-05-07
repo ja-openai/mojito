@@ -1,7 +1,9 @@
 package com.box.l10n.mojito.service.glossary;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -25,6 +27,7 @@ import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -108,6 +111,105 @@ public class GlossaryTermIndexCurationServiceTest {
         .isEqualTo(extractedTerm.getId());
   }
 
+  @Test
+  public void acceptSuggestionDefaultsNullDoNotTranslateFromCandidate() {
+    Glossary glossary = glossary(17L, "en");
+    TermIndexExtractedTerm extractedTerm = extractedTerm(501L, "en", "api", "API");
+    TermIndexCandidate candidate = candidate(502L, extractedTerm);
+    candidate.setDoNotTranslate(Boolean.TRUE);
+    GlossaryTermMetadata metadata = metadata(1001L, glossary, "api", "API");
+
+    when(userService.isCurrentUserAdminOrPm()).thenReturn(true);
+    when(glossaryRepository.findByIdWithBindings(glossary.getId()))
+        .thenReturn(Optional.of(glossary));
+    when(termIndexCandidateRepository.findById(candidate.getId()))
+        .thenReturn(Optional.of(candidate));
+    when(glossaryTermService.upsertTerm(
+            eq(glossary.getId()), isNull(), any(GlossaryTermService.TermUpsertCommand.class)))
+        .thenReturn(termView(metadata.getId(), metadata.getTmTextUnit().getId(), "API"));
+    when(glossaryTermMetadataRepository.findById(metadata.getId()))
+        .thenReturn(Optional.of(metadata));
+    when(glossaryTermIndexLinkRepository
+            .findByGlossaryTermMetadataIdAndTermIndexCandidateIdAndRelationType(
+                metadata.getId(), candidate.getId(), GlossaryTermIndexLink.RELATION_TYPE_PRIMARY))
+        .thenReturn(Optional.empty());
+    when(glossaryTermIndexDecisionRepository.findByGlossaryIdAndTermIndexCandidateId(
+            glossary.getId(), candidate.getId()))
+        .thenReturn(Optional.empty());
+
+    glossaryTermIndexCurationService.acceptSuggestion(
+        glossary.getId(),
+        candidate.getId(),
+        new GlossaryTermIndexCurationService.AcceptSuggestionCommand(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            GlossaryTermMetadata.STATUS_CANDIDATE,
+            null,
+            null,
+            null,
+            null,
+            List.of()));
+
+    ArgumentCaptor<GlossaryTermService.TermUpsertCommand> commandCaptor =
+        ArgumentCaptor.forClass(GlossaryTermService.TermUpsertCommand.class);
+    verify(glossaryTermService).upsertTerm(eq(glossary.getId()), isNull(), commandCaptor.capture());
+    assertThat(commandCaptor.getValue().doNotTranslate()).isTrue();
+    assertThat(commandCaptor.getValue().status()).isEqualTo(GlossaryTermMetadata.STATUS_CANDIDATE);
+  }
+
+  @Test
+  public void acceptSuggestionDefaultsMissingDoNotTranslateToFalse() {
+    Glossary glossary = glossary(17L, "en");
+    TermIndexExtractedTerm extractedTerm =
+        extractedTerm(501L, "en", "billing portal", "Billing portal");
+    TermIndexCandidate candidate = candidate(502L, extractedTerm);
+    GlossaryTermMetadata metadata = metadata(1001L, glossary, "billing_portal", "Billing portal");
+
+    when(userService.isCurrentUserAdminOrPm()).thenReturn(true);
+    when(glossaryRepository.findByIdWithBindings(glossary.getId()))
+        .thenReturn(Optional.of(glossary));
+    when(termIndexCandidateRepository.findById(candidate.getId()))
+        .thenReturn(Optional.of(candidate));
+    when(glossaryTermService.upsertTerm(
+            eq(glossary.getId()), isNull(), any(GlossaryTermService.TermUpsertCommand.class)))
+        .thenReturn(termView(metadata.getId(), metadata.getTmTextUnit().getId(), "Billing portal"));
+    when(glossaryTermMetadataRepository.findById(metadata.getId()))
+        .thenReturn(Optional.of(metadata));
+    when(glossaryTermIndexLinkRepository
+            .findByGlossaryTermMetadataIdAndTermIndexCandidateIdAndRelationType(
+                metadata.getId(), candidate.getId(), GlossaryTermIndexLink.RELATION_TYPE_PRIMARY))
+        .thenReturn(Optional.empty());
+    when(glossaryTermIndexDecisionRepository.findByGlossaryIdAndTermIndexCandidateId(
+            glossary.getId(), candidate.getId()))
+        .thenReturn(Optional.empty());
+
+    glossaryTermIndexCurationService.acceptSuggestion(
+        glossary.getId(),
+        candidate.getId(),
+        new GlossaryTermIndexCurationService.AcceptSuggestionCommand(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            GlossaryTermMetadata.STATUS_CANDIDATE,
+            null,
+            null,
+            null,
+            null,
+            List.of()));
+
+    ArgumentCaptor<GlossaryTermService.TermUpsertCommand> commandCaptor =
+        ArgumentCaptor.forClass(GlossaryTermService.TermUpsertCommand.class);
+    verify(glossaryTermService).upsertTerm(eq(glossary.getId()), isNull(), commandCaptor.capture());
+    assertThat(commandCaptor.getValue().doNotTranslate()).isFalse();
+  }
+
   private Glossary glossary(Long id, String sourceLocaleTag) {
     Locale sourceLocale = new Locale();
     sourceLocale.setBcp47Tag(sourceLocaleTag);
@@ -155,5 +257,30 @@ public class GlossaryTermIndexCurationServiceTest {
     candidate.setSourceName("term-index");
     candidate.setConfidence(80);
     return candidate;
+  }
+
+  private GlossaryTermService.TermView termView(Long metadataId, Long tmTextUnitId, String source) {
+    return new GlossaryTermService.TermView(
+        metadataId,
+        null,
+        null,
+        tmTextUnitId,
+        source.toLowerCase(),
+        source,
+        null,
+        null,
+        null,
+        null,
+        null,
+        GlossaryTermMetadata.STATUS_CANDIDATE,
+        null,
+        false,
+        true,
+        null,
+        null,
+        null,
+        null,
+        List.of(),
+        List.of());
   }
 }

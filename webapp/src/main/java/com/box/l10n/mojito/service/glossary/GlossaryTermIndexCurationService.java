@@ -2206,6 +2206,10 @@ public class GlossaryTermIndexCurationService {
   private AcceptSuggestionCommand normalize(
       AcceptSuggestionCommand command, TermIndexCandidate candidate) {
     String defaultTerm = candidate.getTerm();
+    Boolean doNotTranslate =
+        coalesce(
+            command == null ? null : command.doNotTranslate(),
+            coalesce(candidate.getDoNotTranslate(), shouldPreserveSource(defaultTerm)));
     return new AcceptSuggestionCommand(
         command == null ? null : command.termKey(),
         coalesce(command == null ? null : normalizeOptional(command.source()), defaultTerm),
@@ -2234,11 +2238,7 @@ public class GlossaryTermIndexCurationService {
             GlossaryTermMetadata.STATUSES,
             GlossaryTermMetadata.STATUS_CANDIDATE),
         command == null ? null : command.caseSensitive(),
-        command == null
-            ? (candidate.getDoNotTranslate() == null
-                ? shouldPreserveSource(defaultTerm)
-                : candidate.getDoNotTranslate())
-            : command.doNotTranslate(),
+        coalesce(doNotTranslate, false),
         clampConfidence(command == null ? candidate.getConfidence() : command.confidence()),
         coalesce(
             command == null ? null : normalizeOptional(command.rationale()),

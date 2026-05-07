@@ -18,7 +18,10 @@ import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamUserRole;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
 import com.box.l10n.mojito.entity.review.ReviewFeature;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
@@ -34,7 +37,11 @@ import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
+import com.box.l10n.mojito.service.glossary.GlossaryTermIndexCurationService;
+import com.box.l10n.mojito.service.glossary.GlossaryTermIndexLinkRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
+import com.box.l10n.mojito.service.glossary.GlossaryTermService;
+import com.box.l10n.mojito.service.glossary.TermIndexCandidateRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
@@ -81,6 +88,12 @@ public class ReviewProjectServiceTest {
           Mockito.mock(ReviewProjectRequestSlackThreadRepository.class);
   private final GlossaryTermMetadataRepository glossaryTermMetadataRepository =
       Mockito.mock(GlossaryTermMetadataRepository.class);
+  private final GlossaryTermIndexCurationService glossaryTermIndexCurationService =
+      Mockito.mock(GlossaryTermIndexCurationService.class);
+  private final GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository =
+      Mockito.mock(GlossaryTermIndexLinkRepository.class);
+  private final TermIndexCandidateRepository termIndexCandidateRepository =
+      Mockito.mock(TermIndexCandidateRepository.class);
   private final LocaleService localeService = Mockito.mock(LocaleService.class);
   private final TextUnitSearcher textUnitSearcher = Mockito.mock(TextUnitSearcher.class);
   private final TMTextUnitRepository tmTextUnitRepository =
@@ -123,6 +136,9 @@ public class ReviewProjectServiceTest {
                 reviewProjectRequestScreenshotRepository,
                 reviewProjectRequestSlackThreadRepository,
                 glossaryTermMetadataRepository,
+                glossaryTermIndexCurationService,
+                glossaryTermIndexLinkRepository,
+                termIndexCandidateRepository,
                 localeService,
                 textUnitSearcher,
                 tmTextUnitRepository,
@@ -699,6 +715,53 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void saveTermCandidateResolutionWritesBackCandidateReview() {
+    ReviewProject reviewProject =
+        project(12L, team(7L), locale(14L, "en"), user(101L, "pm-a"), currentUser);
+    reviewProject.setType(ReviewProjectType.TERM_CANDIDATE);
+    reviewProject.setTerminologyPhase(ReviewProjectTerminologyPhase.PM_RESOLUTION);
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+    GlossaryTermMetadata metadata = new GlossaryTermMetadata();
+    metadata.setId(88L);
+    metadata.setStatus(GlossaryTermMetadata.STATUS_CANDIDATE);
+    TermIndexCandidate candidate = new TermIndexCandidate();
+    candidate.setId(501L);
+    GlossaryTermIndexLink link = new GlossaryTermIndexLink();
+    link.setGlossaryTermMetadata(metadata);
+    link.setTermIndexCandidate(candidate);
+    link.setRelationType(GlossaryTermIndexLink.RELATION_TYPE_PRIMARY);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitId(17L, 321L))
+        .thenReturn(Optional.of(metadata));
+    when(glossaryTermIndexLinkRepository.findByGlossaryTermMetadataId(88L))
+        .thenReturn(List.of(link));
+    when(userService.getCurrentUser()).thenReturn(Optional.of(currentUser));
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+    when(reviewProjectTextUnitFeedbackRepository
+            .findByReviewProjectTextUnitIdOrderByLastModifiedDateDesc(55L))
+        .thenReturn(List.of());
+
+    reviewProjectService.saveTerminologyResolution(
+        55L, 17L, GlossaryTermMetadata.STATUS_REJECTED, " false positive ");
+
+    assertEquals(TermIndexReview.STATUS_REJECTED, candidate.getReviewStatus());
+    assertEquals(TermIndexReview.AUTHORITY_HUMAN, candidate.getReviewAuthority());
+    assertEquals("false positive", candidate.getReviewRationale());
+    assertEquals(currentUser, candidate.getReviewChangedByUser());
+    verify(termIndexCandidateRepository).save(candidate);
+  }
+
+  @Test
   public void createGlossaryTerminologyReviewProjectBuildsEnProjectFromReviewableTerms() {
     ZonedDateTime dueDate = ZonedDateTime.parse("2026-05-12T09:00:00Z");
     GlossaryTermMetadata candidate =
@@ -749,6 +812,74 @@ public class ReviewProjectServiceTest {
         ReviewProjectTerminologyPhase.PM_RESOLUTION,
         command.projectSpecs().get(1).terminologyPhase());
     assertEquals(dueDate.plusDays(1), command.projectSpecs().get(1).dueDate());
+  }
+
+  @Test
+  public void createGlossaryTermCandidateReviewProjectMaterializesDraftTerms() {
+    ZonedDateTime dueDate = ZonedDateTime.parse("2026-05-12T09:00:00Z");
+    when(glossaryTermIndexCurationService.acceptSuggestion(
+            eq(17L), eq(501L), any(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class)))
+        .thenReturn(glossaryTermView(1001L, "Billing portal"));
+    when(glossaryTermIndexCurationService.acceptSuggestion(
+            eq(17L), eq(502L), any(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class)))
+        .thenReturn(glossaryTermView(1002L, "Admin panel"));
+
+    reviewProjectService.createGlossaryTermCandidateReviewProjectAsync(
+        17L,
+        new CreateGlossaryTermCandidateReviewProjectCommand(
+            "Candidate review",
+            "Review candidates",
+            dueDate,
+            7L,
+            false,
+            List.of(501L, 502L),
+            List.of(88L),
+            77L,
+            dueDate,
+            dueDate.plusDays(1)));
+
+    verify(teamService, times(2)).assertUserCanAccessTeam(7L, 99L);
+    ArgumentCaptor<QuartzJobInfo> jobCaptor = ArgumentCaptor.forClass(QuartzJobInfo.class);
+    verify(quartzPollableTaskScheduler).scheduleJob(jobCaptor.capture());
+    CreateReviewProjectRequestCommand command =
+        (CreateReviewProjectRequestCommand) jobCaptor.getValue().getInput();
+
+    assertEquals(List.of("en"), command.localeTags());
+    assertEquals("Review candidates", command.notes());
+    assertEquals(List.of(1001L, 1002L), command.tmTextUnitIds());
+    assertEquals(ReviewProjectType.TERM_CANDIDATE, command.type());
+    assertEquals("Candidate review", command.name());
+    assertEquals(Long.valueOf(7L), command.teamId());
+    assertEquals(Boolean.FALSE, command.assignTranslator());
+    assertEquals(Long.valueOf(99L), command.requestedByUserId());
+    assertEquals(2, command.projectSpecs().size());
+    assertEquals(Long.valueOf(88L), command.projectSpecs().get(0).assignedTranslatorUserId());
+    assertEquals(Long.valueOf(77L), command.projectSpecs().get(1).assignedPmUserId());
+  }
+
+  private GlossaryTermService.TermView glossaryTermView(Long tmTextUnitId, String source) {
+    return new GlossaryTermService.TermView(
+        null,
+        null,
+        null,
+        tmTextUnitId,
+        source,
+        source,
+        null,
+        null,
+        null,
+        null,
+        null,
+        GlossaryTermMetadata.STATUS_CANDIDATE,
+        null,
+        false,
+        false,
+        null,
+        null,
+        null,
+        null,
+        List.of(),
+        List.of());
   }
 
   private ReviewProject project(

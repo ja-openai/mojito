@@ -3,7 +3,9 @@ package com.box.l10n.mojito.service.review;
 import com.box.l10n.mojito.entity.*;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Locale_;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
 import com.box.l10n.mojito.entity.review.*;
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
@@ -19,7 +21,10 @@ import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
+import com.box.l10n.mojito.service.glossary.GlossaryTermIndexCurationService;
+import com.box.l10n.mojito.service.glossary.GlossaryTermIndexLinkRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
+import com.box.l10n.mojito.service.glossary.TermIndexCandidateRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.security.user.UserRepository;
@@ -76,6 +81,9 @@ public class ReviewProjectService {
   private final ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository;
   private final ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository;
   private final GlossaryTermMetadataRepository glossaryTermMetadataRepository;
+  private final GlossaryTermIndexCurationService glossaryTermIndexCurationService;
+  private final GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository;
+  private final TermIndexCandidateRepository termIndexCandidateRepository;
   private final LocaleService localeService;
   private final TextUnitSearcher textUnitSearcher;
   private final TMTextUnitRepository tmTextUnitRepository;
@@ -105,6 +113,9 @@ public class ReviewProjectService {
       ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository,
       ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository,
       GlossaryTermMetadataRepository glossaryTermMetadataRepository,
+      GlossaryTermIndexCurationService glossaryTermIndexCurationService,
+      GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository,
+      TermIndexCandidateRepository termIndexCandidateRepository,
       LocaleService localeService,
       TextUnitSearcher textUnitSearcher,
       TMTextUnitRepository tmTextUnitRepository,
@@ -130,6 +141,9 @@ public class ReviewProjectService {
     this.reviewProjectScreenshotRepository = reviewProjectScreenshotRepository;
     this.reviewProjectRequestSlackThreadRepository = reviewProjectRequestSlackThreadRepository;
     this.glossaryTermMetadataRepository = glossaryTermMetadataRepository;
+    this.glossaryTermIndexCurationService = glossaryTermIndexCurationService;
+    this.glossaryTermIndexLinkRepository = glossaryTermIndexLinkRepository;
+    this.termIndexCandidateRepository = termIndexCandidateRepository;
     this.localeService = localeService;
     this.textUnitSearcher = textUnitSearcher;
     this.tmTextUnitRepository = tmTextUnitRepository;
@@ -243,8 +257,107 @@ public class ReviewProjectService {
             projectSpecs));
   }
 
+  public PollableFuture<CreateReviewProjectRequestResult>
+      createGlossaryTermCandidateReviewProjectAsync(
+          Long glossaryId, CreateGlossaryTermCandidateReviewProjectCommand request) {
+    if (glossaryId == null) {
+      throw new IllegalArgumentException("glossaryId must be provided");
+    }
+    CreateGlossaryTermCandidateReviewProjectCommand resolvedRequest =
+        request == null
+            ? new CreateGlossaryTermCandidateReviewProjectCommand(
+                null, null, null, null, null, null, null, null, null, null)
+            : request;
+    Long requestedByUserId = teamService.getCurrentUserIdOrThrow();
+    if (resolvedRequest.teamId() != null) {
+      teamService.assertUserCanAccessTeam(resolvedRequest.teamId(), requestedByUserId);
+    }
+    List<Long> tmTextUnitIds =
+        materializeTermCandidateReviewTerms(glossaryId, resolvedRequest.termIndexCandidateIds());
+    if (tmTextUnitIds.isEmpty()) {
+      throw new IllegalArgumentException("No reviewable term candidates found");
+    }
+
+    String name =
+        resolvedRequest.name() == null || resolvedRequest.name().trim().isEmpty()
+            ? "Term candidate review"
+            : resolvedRequest.name().trim();
+    ZonedDateTime specialistDueDate =
+        firstNonNull(resolvedRequest.specialistDueDate(), resolvedRequest.dueDate());
+    if (specialistDueDate == null) {
+      specialistDueDate = ZonedDateTime.now().plusDays(2);
+    }
+    ZonedDateTime pmDueDate =
+        resolvedRequest.pmDueDate() == null
+            ? specialistDueDate.plusDays(1)
+            : resolvedRequest.pmDueDate();
+    String notes =
+        resolvedRequest.notes() == null || resolvedRequest.notes().trim().isEmpty()
+            ? "Term candidate review for glossary " + glossaryId + "."
+            : resolvedRequest.notes().trim();
+    List<CreateReviewProjectRequestCommand.ProjectSpec> projectSpecs =
+        buildTerminologyProjectSpecs(
+            resolvedRequest.specialistUserIds(),
+            resolvedRequest.pmUserId(),
+            specialistDueDate,
+            pmDueDate);
+
+    return createReviewProjectRequestAsync(
+        new CreateReviewProjectRequestCommand(
+            List.of("en"),
+            notes,
+            tmTextUnitIds,
+            null,
+            StatusFilter.ALL,
+            false,
+            ReviewProjectType.TERM_CANDIDATE,
+            specialistDueDate,
+            List.of(),
+            name,
+            resolvedRequest.teamId(),
+            resolvedRequest.assignTranslator() == null ? false : resolvedRequest.assignTranslator(),
+            null,
+            projectSpecs));
+  }
+
+  private List<Long> materializeTermCandidateReviewTerms(
+      Long glossaryId, List<Long> termIndexCandidateIds) {
+    if (CollectionUtils.isEmpty(termIndexCandidateIds)) {
+      throw new IllegalArgumentException("termIndexCandidateIds must be provided");
+    }
+    List<Long> tmTextUnitIds = new ArrayList<>();
+    for (Long termIndexCandidateId :
+        termIndexCandidateIds.stream().filter(Objects::nonNull).distinct().toList()) {
+      var term =
+          glossaryTermIndexCurationService.acceptSuggestion(
+              glossaryId,
+              termIndexCandidateId,
+              new GlossaryTermIndexCurationService.AcceptSuggestionCommand(
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  GlossaryTermMetadata.STATUS_CANDIDATE,
+                  null,
+                  null,
+                  null,
+                  null,
+                  List.of()));
+      if (term.tmTextUnitId() != null) {
+        tmTextUnitIds.add(term.tmTextUnitId());
+      }
+    }
+    return tmTextUnitIds.stream().distinct().sorted().toList();
+  }
+
   private ZonedDateTime firstNonNull(ZonedDateTime first, ZonedDateTime second) {
     return first != null ? first : second;
+  }
+
+  private boolean isTerminologyWorkflowType(ReviewProjectType type) {
+    return type == ReviewProjectType.TERMINOLOGY || type == ReviewProjectType.TERM_CANDIDATE;
   }
 
   private List<CreateReviewProjectRequestCommand.ProjectSpec> buildTerminologyProjectSpecs(
@@ -908,6 +1021,7 @@ public class ReviewProjectService {
     predicates.add(
         buildScopePredicate(
             cb,
+            root,
             localeJoin,
             teamJoin,
             assignedPmJoin,
@@ -1007,7 +1121,7 @@ public class ReviewProjectService {
     }
 
     if (request.localeTags() != null) {
-      predicates.add(localeJoin.get(Locale_.bcp47Tag).in(request.localeTags()));
+      predicates.add(buildLocaleFilterPredicate(cb, root, localeJoin, request.localeTags()));
     }
 
     if (request.createdAfter() != null) {
@@ -1032,6 +1146,7 @@ public class ReviewProjectService {
     predicates.add(
         buildScopePredicate(
             cb,
+            root,
             localeJoin,
             teamJoin,
             assignedPmJoin,
@@ -1044,6 +1159,7 @@ public class ReviewProjectService {
 
   private Predicate buildScopePredicate(
       CriteriaBuilder cb,
+      Root<ReviewProject> root,
       Join<ReviewProject, Locale> localeJoin,
       Join<ReviewProject, Team> teamJoin,
       Join<ReviewProject, User> assignedPmJoin,
@@ -1076,11 +1192,7 @@ public class ReviewProjectService {
       if (accessContext.translator() && !accessContext.translatorTeamIds().isEmpty()) {
         Predicate teamPredicate = teamJoin.get(Team_.id).in(accessContext.translatorTeamIds());
         Predicate localePredicate =
-            accessContext.canTranslateAllLocales()
-                ? cb.conjunction()
-                : accessContext.editableLocaleIds().isEmpty()
-                    ? cb.disjunction()
-                    : localeJoin.get(Locale_.id).in(accessContext.editableLocaleIds());
+            buildTranslatorLocaleAccessPredicate(cb, root, localeJoin, accessContext);
         visibilityPredicates.add(cb.and(teamPredicate, localePredicate));
       }
     }
@@ -1092,6 +1204,36 @@ public class ReviewProjectService {
       return visibilityPredicates.get(0);
     }
     return cb.or(visibilityPredicates.toArray(Predicate[]::new));
+  }
+
+  private Predicate buildLocaleFilterPredicate(
+      CriteriaBuilder cb,
+      Root<ReviewProject> root,
+      Join<ReviewProject, Locale> localeJoin,
+      List<String> localeTags) {
+    return cb.or(
+        localeJoin.get(Locale_.bcp47Tag).in(localeTags), buildTerminologyWorkflowPredicate(root));
+  }
+
+  private Predicate buildTranslatorLocaleAccessPredicate(
+      CriteriaBuilder cb,
+      Root<ReviewProject> root,
+      Join<ReviewProject, Locale> localeJoin,
+      ProjectAccessContext accessContext) {
+    if (accessContext.canTranslateAllLocales()) {
+      return cb.conjunction();
+    }
+    Predicate terminologyPredicate = buildTerminologyWorkflowPredicate(root);
+    if (accessContext.editableLocaleIds().isEmpty()) {
+      return terminologyPredicate;
+    }
+    return cb.or(
+        localeJoin.get(Locale_.id).in(accessContext.editableLocaleIds()), terminologyPredicate);
+  }
+
+  private Predicate buildTerminologyWorkflowPredicate(Root<ReviewProject> root) {
+    return root.get(ReviewProject_.type)
+        .in(ReviewProjectType.TERMINOLOGY, ReviewProjectType.TERM_CANDIDATE);
   }
 
   private ProjectAccessContext createProjectAccessContext() {
@@ -1186,7 +1328,8 @@ public class ReviewProjectService {
         return true;
       }
       boolean localeAllowed =
-          accessContext.canTranslateAllLocales()
+          isTerminologyWorkflowType(reviewProject.getType())
+              || accessContext.canTranslateAllLocales()
               || (localeId != null && accessContext.editableLocaleIds().contains(localeId));
       if (localeAllowed && teamId != null && accessContext.translatorTeamIds().contains(teamId)) {
         return true;
@@ -1602,7 +1745,7 @@ public class ReviewProjectService {
       teamService.assertCurrentUserCanAccessTeam(teamId);
     }
     boolean terminologyRequest =
-        projects.stream().allMatch(project -> project.getType() == ReviewProjectType.TERMINOLOGY);
+        projects.stream().allMatch(project -> isTerminologyWorkflowType(project.getType()));
     if (nextAssignedPm != null) {
       boolean isPmMember =
           teamService.isUserInTeamRole(teamId, nextAssignedPm.getId(), TeamUserRole.PM);
@@ -1904,7 +2047,7 @@ public class ReviewProjectService {
                             + " not found"));
     ReviewProject project = textUnit.getReviewProject();
     assertCurrentUserCanReadProject(project);
-    if (project.getType() != ReviewProjectType.TERMINOLOGY) {
+    if (!isTerminologyWorkflowType(project.getType())) {
       throw new IllegalArgumentException(
           "Terminology feedback is only supported for terminology projects");
     }
@@ -1978,7 +2121,7 @@ public class ReviewProjectService {
     if (!userService.isCurrentUserAdminOrPm()) {
       throw new AccessDeniedException("Only admins and PMs can resolve terminology");
     }
-    if (project.getType() != ReviewProjectType.TERMINOLOGY) {
+    if (!isTerminologyWorkflowType(project.getType())) {
       throw new IllegalArgumentException(
           "Terminology resolution is only supported for terminology projects");
     }
@@ -1999,6 +2142,9 @@ public class ReviewProjectService {
                             + textUnit.getTmTextUnit().getId()));
     metadata.setStatus(normalizedStatus);
     glossaryTermMetadataRepository.saveAndFlush(metadata);
+    if (project.getType() == ReviewProjectType.TERM_CANDIDATE) {
+      updateLinkedCandidateReview(metadata, normalizedStatus, notes);
+    }
 
     Optional<ReviewProjectTextUnitDecision> existingDecision =
         reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(
@@ -2024,6 +2170,38 @@ public class ReviewProjectService {
     return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
   }
 
+  private void updateLinkedCandidateReview(
+      GlossaryTermMetadata metadata, String terminologyStatus, String notes) {
+    if (metadata.getId() == null) {
+      return;
+    }
+    glossaryTermIndexLinkRepository.findByGlossaryTermMetadataId(metadata.getId()).stream()
+        .filter(
+            link ->
+                GlossaryTermIndexLink.RELATION_TYPE_PRIMARY.equals(link.getRelationType())
+                    && link.getTermIndexCandidate() != null)
+        .map(GlossaryTermIndexLink::getTermIndexCandidate)
+        .findFirst()
+        .ifPresent(
+            candidate -> {
+              candidate.setReviewStatus(toCandidateReviewStatus(terminologyStatus));
+              candidate.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+              candidate.setReviewReason(TermIndexReview.REASON_OTHER);
+              candidate.setReviewRationale(truncate(normalizeOptional(notes), 2048));
+              candidate.setReviewConfidence(null);
+              candidate.setReviewChangedAt(ZonedDateTime.now());
+              candidate.setReviewChangedByUser(userService.getCurrentUser().orElse(null));
+              termIndexCandidateRepository.save(candidate);
+            });
+  }
+
+  private String toCandidateReviewStatus(String terminologyStatus) {
+    if (GlossaryTermMetadata.STATUS_REJECTED.equals(terminologyStatus)) {
+      return TermIndexReview.STATUS_REJECTED;
+    }
+    return TermIndexReview.STATUS_ACCEPTED;
+  }
+
   private void updateProjectDecidedCount(Long projectId, boolean wasDecided, boolean isDecided) {
     if (wasDecided == isDecided) {
       return;
@@ -2038,7 +2216,7 @@ public class ReviewProjectService {
   private Map<Long, List<ReviewProjectTextUnitFeedback>>
       getTerminologyFeedbacksByReviewProjectTextUnitId(
           ReviewProject reviewProject, List<ReviewProjectTextUnitDetail> textUnitDetails) {
-    if (reviewProject.getType() != ReviewProjectType.TERMINOLOGY) {
+    if (!isTerminologyWorkflowType(reviewProject.getType())) {
       return Map.of();
     }
 
@@ -2201,7 +2379,7 @@ public class ReviewProjectService {
 
   private List<TextUnitDTO> getTextUnitReviewCandidates(
       CreateReviewProjectRequestCommand request, Locale locale) {
-    if (request.type() == ReviewProjectType.TERMINOLOGY) {
+    if (isTerminologyWorkflowType(request.type())) {
       return getSourceTerminologyReviewCandidates(request.tmTextUnitIds());
     }
     return searchReviewCandidates(request.tmTextUnitIds(), locale, request.statusFilter());
@@ -2661,12 +2839,12 @@ public class ReviewProjectService {
         boolean isPmMember =
             teamService.isUserInTeamRole(effectiveTeamId, nextAssignedPm.getId(), TeamUserRole.PM);
         boolean isTranslatorDecider =
-            reviewProject.getType() == ReviewProjectType.TERMINOLOGY
+            isTerminologyWorkflowType(reviewProject.getType())
                 && teamService.isUserInTeamRole(
                     effectiveTeamId, nextAssignedPm.getId(), TeamUserRole.TRANSLATOR);
         if (!isPmMember && !isTranslatorDecider) {
           throw new IllegalArgumentException(
-              reviewProject.getType() == ReviewProjectType.TERMINOLOGY
+              isTerminologyWorkflowType(reviewProject.getType())
                   ? "Assigned decider is not a PM or translator member of team "
                       + effectiveTeamId
                       + ": "
@@ -2753,7 +2931,7 @@ public class ReviewProjectService {
               null, defaultDueDate, assignmentDefaults.defaultPmUser(), assignedTranslatorUser));
     }
 
-    if (type != ReviewProjectType.TERMINOLOGY) {
+    if (!isTerminologyWorkflowType(type)) {
       throw new IllegalArgumentException(
           "projectSpecs are only supported for terminology projects");
     }

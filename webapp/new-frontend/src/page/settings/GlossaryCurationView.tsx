@@ -42,6 +42,8 @@ type Props = {
   onToggleSelectAll: () => void;
   onAcceptSelected: () => void;
   isAcceptingSelected: boolean;
+  onCreateSelectedReview: () => void;
+  isCreatingSelectedReview: boolean;
   activeSuggestionId: number | null;
   onActivateSuggestion: (suggestion: ApiGlossaryTermIndexSuggestion) => void;
   onAcceptSuggestion: (suggestion: ApiGlossaryTermIndexSuggestion) => void;
@@ -316,6 +318,8 @@ export function GlossaryCurationView({
   onToggleSelectAll,
   onAcceptSelected,
   isAcceptingSelected,
+  onCreateSelectedReview,
+  isCreatingSelectedReview,
   activeSuggestionId,
   onActivateSuggestion,
   onAcceptSuggestion,
@@ -531,9 +535,20 @@ export function GlossaryCurationView({
             type="button"
             className="glossary-term-admin__subbar-button"
             onClick={onAcceptSelected}
-            disabled={isAcceptingSelected || selectedCount === 0}
+            disabled={isAcceptingSelected || isCreatingSelectedReview || selectedCount === 0}
           >
             {isAcceptingSelected ? 'Accepting...' : `Accept selected (${selectedCount})`}
+          </button>
+          <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
+            ·
+          </span>
+          <button
+            type="button"
+            className="glossary-term-admin__subbar-button"
+            onClick={onCreateSelectedReview}
+            disabled={isCreatingSelectedReview || isAcceptingSelected || selectedCount === 0}
+          >
+            {isCreatingSelectedReview ? 'Creating review...' : `Create review (${selectedCount})`}
           </button>
         </div>
       </div>

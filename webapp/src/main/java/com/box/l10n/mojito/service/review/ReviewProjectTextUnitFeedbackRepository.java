@@ -34,7 +34,10 @@ public interface ReviewProjectTextUnitFeedbackRepository
       join fetch f.reviewerUser reviewer
       join rptu.reviewProject rp
       where rp.reviewProjectRequest.id = :requestId
-        and rp.type = com.box.l10n.mojito.entity.review.ReviewProjectType.TERMINOLOGY
+        and rp.type in (
+          com.box.l10n.mojito.entity.review.ReviewProjectType.TERMINOLOGY,
+          com.box.l10n.mojito.entity.review.ReviewProjectType.TERM_CANDIDATE
+        )
         and rp.terminologyPhase = com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase.SPECIALIST_INPUT
         and ttu.id in :tmTextUnitIds
       order by ttu.id asc, f.lastModifiedDate desc
