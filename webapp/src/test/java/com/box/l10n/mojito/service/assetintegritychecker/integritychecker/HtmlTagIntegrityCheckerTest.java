@@ -102,6 +102,14 @@ public class HtmlTagIntegrityCheckerTest {
   }
 
   @Test
+  public void testHtmlTagCheckWorksForHyphenatedAttributes() {
+    String source = "Start <item data-name=\"value\">%1</item> end";
+    String target = "Begin <item data-name=\"value\">%1</item> finish";
+
+    checker.check(source, target);
+  }
+
+  @Test
   public void testHtmlTagCheckWorksForSelfClosingTags() {
     String source = "There are <p/>%1 files and %2 folders";
     String target = "Il y a <p/>%1 fichiers et %2 dossiers";

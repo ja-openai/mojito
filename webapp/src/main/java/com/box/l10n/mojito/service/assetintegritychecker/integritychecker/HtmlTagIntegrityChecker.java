@@ -26,7 +26,7 @@ public class HtmlTagIntegrityChecker extends RegexIntegrityChecker {
 
   @Override
   public String getRegex() {
-    return "(<[a-zA-Z][\\w-]*(\\s+\\w+(\\s*=\\s*('([^']*?)'|\"([^\"]*?)\"))?)*\\s*/?>|<\\/[a-zA-Z][\\w-]*>)";
+    return "(<[a-zA-Z][\\w-]*(\\s+[\\w-]+(\\s*=\\s*('([^']*?)'|\"([^\"]*?)\"))?)*\\s*/?>|<\\/[a-zA-Z][\\w-]*>)";
   }
 
   @Override
