@@ -91,8 +91,8 @@ export type ReviewProjectMutationControls = {
   isSaving: boolean;
   isProjectStatusSaving: boolean;
   isProjectRequestSaving: boolean;
-  isProjectAssignmentSaving: boolean;
   isProjectDueDateSaving: boolean;
+  isProjectAssignmentSaving: boolean;
   errorMessage: string | null;
   activeTextUnitId: number | null;
   conflictTextUnit: ApiReviewProjectTextUnit | null;
@@ -120,14 +120,16 @@ export type ReviewProjectMutationControls = {
     type?: ApiReviewProjectType | null;
     dueDate?: string | null;
     screenshotImageIds?: string[] | null;
+    teamId?: number | null;
+    updateTeam?: boolean | null;
   }) => Promise<void>;
+  onRequestProjectDueDateUpdate: (dueDate: string) => Promise<void>;
   onRequestProjectAssignmentUpdate: (request: {
     teamId?: number | null;
     assignedPmUserId?: number | null;
     assignedTranslatorUserId?: number | null;
     note?: string | null;
   }) => Promise<void>;
-  onRequestProjectDueDateUpdate: (dueDate: string) => Promise<void>;
 };
 
 type MutationError = Error & { status?: number; data?: ApiReviewProjectTextUnit | null };
@@ -299,6 +301,30 @@ export function useReviewProjectMutations(
     },
   });
 
+  const projectDueDateMutation = useMutation<ApiReviewProjectDetail, Error, string>({
+    mutationFn: async (dueDate) => {
+      if (projectId == null) {
+        throw new Error('Missing project id');
+      }
+      return updateReviewProjectDueDate(projectId, dueDate);
+    },
+    onSuccess: (updatedProject) => {
+      if (projectId == null) {
+        return;
+      }
+      queryClient.setQueryData<ApiReviewProjectDetail>(
+        [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
+        updatedProject,
+      );
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
+      setErrorMessage(null);
+    },
+    onError: (error) => {
+      setErrorMessage(error.message || 'Failed to update project due date');
+    },
+  });
+
   const projectAssignmentMutation = useMutation<
     ApiReviewProjectDetail,
     Error,
@@ -329,30 +355,6 @@ export function useReviewProjectMutations(
     },
     onError: (error) => {
       setErrorMessage(error.message || 'Failed to update project assignment');
-    },
-  });
-
-  const projectDueDateMutation = useMutation<ApiReviewProjectDetail, Error, string>({
-    mutationFn: async (dueDate) => {
-      if (projectId == null) {
-        throw new Error('Missing project id');
-      }
-      return updateReviewProjectDueDate(projectId, dueDate);
-    },
-    onSuccess: (updatedProject) => {
-      if (projectId == null) {
-        return;
-      }
-      queryClient.setQueryData<ApiReviewProjectDetail>(
-        [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
-        updatedProject,
-      );
-      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
-      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
-      setErrorMessage(null);
-    },
-    onError: (error) => {
-      setErrorMessage(error.message || 'Failed to update project due date');
     },
   });
 
@@ -535,6 +537,16 @@ export function useReviewProjectMutations(
     [projectId, projectRequestMutation],
   );
 
+  const onRequestProjectDueDateUpdate = useCallback(
+    async (dueDate: string) => {
+      if (projectId == null || projectDueDateMutation.isPending) {
+        return;
+      }
+      await projectDueDateMutation.mutateAsync(dueDate);
+    },
+    [projectDueDateMutation, projectId],
+  );
+
   const onRequestProjectAssignmentUpdate = useCallback(
     async (request: {
       teamId?: number | null;
@@ -548,16 +560,6 @@ export function useReviewProjectMutations(
       await projectAssignmentMutation.mutateAsync(request);
     },
     [projectAssignmentMutation, projectId],
-  );
-
-  const onRequestProjectDueDateUpdate = useCallback(
-    async (dueDate: string) => {
-      if (projectId == null || projectDueDateMutation.isPending) {
-        return;
-      }
-      await projectDueDateMutation.mutateAsync(dueDate);
-    },
-    [projectDueDateMutation, projectId],
   );
 
   const onConfirmValidationSave = useCallback(() => {
@@ -658,8 +660,8 @@ export function useReviewProjectMutations(
       isSaving: mutation.isPending,
       isProjectStatusSaving: projectStatusMutation.isPending,
       isProjectRequestSaving: projectRequestMutation.isPending,
-      isProjectAssignmentSaving: projectAssignmentMutation.isPending,
       isProjectDueDateSaving: projectDueDateMutation.isPending,
+      isProjectAssignmentSaving: projectAssignmentMutation.isPending,
       errorMessage,
       activeTextUnitId,
       conflictTextUnit,
@@ -682,8 +684,8 @@ export function useReviewProjectMutations(
       onRequestTerminologyResolution,
       onRequestProjectStatus,
       onRequestProjectRequestUpdate,
-      onRequestProjectAssignmentUpdate,
       onRequestProjectDueDateUpdate,
+      onRequestProjectAssignmentUpdate,
     }),
     [
       activeTextUnitId,
@@ -694,9 +696,9 @@ export function useReviewProjectMutations(
       onDismissValidationSave,
       onOverwriteConflict,
       onRequestDecisionState,
+      onRequestProjectAssignmentUpdate,
       onRequestProjectDueDateUpdate,
       onRequestProjectRequestUpdate,
-      onRequestProjectAssignmentUpdate,
       onRequestProjectStatus,
       onRequestSaveDecision,
       onRequestTerminologyFeedback,
@@ -704,9 +706,9 @@ export function useReviewProjectMutations(
       onUseConflictCurrent,
       onRetryValidationSave,
       pendingValidationSave,
+      projectAssignmentMutation.isPending,
       projectDueDateMutation.isPending,
       projectRequestMutation.isPending,
-      projectAssignmentMutation.isPending,
       projectStatusMutation.isPending,
     ],
   );

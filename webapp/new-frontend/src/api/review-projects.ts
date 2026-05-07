@@ -631,6 +631,8 @@ export const updateReviewProjectRequest = async (
     type?: ApiReviewProjectType | null;
     dueDate?: string | null;
     screenshotImageIds?: string[] | null;
+    teamId?: number | null;
+    updateTeam?: boolean | null;
   },
 ): Promise<ApiReviewProjectDetail> => {
   const response = await fetch(`/api/review-projects/${projectId}/request`, {

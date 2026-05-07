@@ -38,10 +38,9 @@ import {
 } from '../../api/review-projects';
 import {
   type ApiTeam,
-  fetchTeamLocalePools,
-  fetchTeamPmPool,
+  type ApiTeamUserSummary,
   fetchTeams,
-  fetchTeamTranslators,
+  fetchTeamUsersByRole,
 } from '../../api/teams';
 import {
   type ApiAiTranslateTextUnitAttempt,
@@ -49,7 +48,6 @@ import {
   fetchAiTranslateTextUnitAttempts,
   fetchTextUnitHistory,
 } from '../../api/text-units';
-import { type ApiUser, fetchAllUsersAdmin } from '../../api/users';
 import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatReview';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
@@ -174,6 +172,8 @@ const TERMINOLOGY_RESOLUTION_STATUS_OPTIONS: TerminologyResolutionStatusChoice[]
   'CANDIDATE',
   'REJECTED',
 ];
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 const formatGlossaryMetadataValue = (value?: string | null) =>
   value?.trim() ? value.trim().toLowerCase().replace(/_/g, ' ') : null;
 
@@ -215,6 +215,54 @@ function mapVariantToChoice(status?: string | null, includedInLocalizedFile?: bo
     default:
       return 'NEEDS_TRANSLATION' as const;
   }
+}
+
+function buildAssignmentTeamOptions(
+  teams: ApiTeam[],
+  currentTeamId: number | null | undefined,
+  currentTeamName: string | null | undefined,
+) {
+  const options = teams.map((team) => ({
+    value: team.id,
+    label: `${team.name} (#${team.id})`,
+  }));
+  if (currentTeamId != null && !options.some((option) => option.value === currentTeamId)) {
+    options.unshift({
+      value: currentTeamId,
+      label: `${currentTeamName?.trim() || 'Team'} (#${currentTeamId})`,
+    });
+  }
+  return options;
+}
+
+function mergeTeamUsers(...groups: Array<ApiTeamUserSummary[] | undefined>) {
+  const byId = new Map<number, ApiTeamUserSummary>();
+  groups.forEach((users) => {
+    (users ?? []).forEach((user) => {
+      if (!byId.has(user.id)) {
+        byId.set(user.id, user);
+      }
+    });
+  });
+  return Array.from(byId.values());
+}
+
+function buildAssignmentUserOptions(
+  users: ApiTeamUserSummary[],
+  currentUserId: number | null | undefined,
+  currentUsername: string | null | undefined,
+) {
+  const options = users.map((user) => ({
+    value: user.id,
+    label: user.commonName ? `${user.commonName} (${user.username})` : user.username,
+  }));
+  if (currentUserId != null && !options.some((option) => option.value === currentUserId)) {
+    options.unshift({
+      value: currentUserId,
+      label: currentUsername?.trim() || `User #${currentUserId}`,
+    });
+  }
+  return options;
 }
 
 function getEffectiveVariant(textUnit: ApiReviewProjectTextUnit): TextUnitVariant {
@@ -3632,12 +3680,18 @@ function ReviewProjectHeader({
     () => project.reviewProjectRequest?.screenshotImageIds ?? [],
     [project.reviewProjectRequest?.screenshotImageIds],
   );
+  const assignment = project.assignment ?? null;
+  const isTerminologyProject = type === 'TERMINOLOGY';
+  const pmAssignmentLabel = isTerminologyProject ? 'Decider' : 'PM';
+  const translatorAssignmentLabel = isTerminologyProject ? 'Advisor' : 'Translator';
+  const teamDisplayName =
+    assignment?.teamName?.trim() ||
+    (assignment?.teamId != null ? `#${assignment.teamId}` : 'No team');
   const locale = project.locale ?? null;
   const textUnits = useMemo(() => textUnitsProp ?? [], [textUnitsProp]);
   const locales = useMemo(() => (locale ? [locale] : []), [locale]);
   const nextStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
-  const isTerminologyAssignmentProject = type === 'TERMINOLOGY';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
   const [isProjectDueDateModalOpen, setIsProjectDueDateModalOpen] = useState(false);
@@ -3645,9 +3699,20 @@ function ReviewProjectHeader({
   const [descriptionDraft, setDescriptionDraft] = useState(description);
   const [projectTypeDraft, setProjectTypeDraft] = useState<ApiReviewProjectType>(type);
   const [dueDateDraft, setDueDateDraft] = useState(toDateTimeLocalInputValue(dueDate));
+  const [requestTeamDraftId, setRequestTeamDraftId] = useState<number | null>(
+    assignment?.teamId ?? null,
+  );
   const [projectDueDateDraft, setProjectDueDateDraft] = useState(
     toDateTimeLocalInputValue(dueDate),
   );
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [assignmentDraftPmUserId, setAssignmentDraftPmUserId] = useState<number | null>(
+    assignment?.assignedPmUserId ?? null,
+  );
+  const [assignmentDraftTranslatorUserId, setAssignmentDraftTranslatorUserId] = useState<
+    number | null
+  >(assignment?.assignedTranslatorUserId ?? null);
+  const [assignmentSaveError, setAssignmentSaveError] = useState<string | null>(null);
   const [attachmentDrafts, setAttachmentDrafts] = useState<string[]>(requestAttachments);
   const [attachmentUploadQueue, setAttachmentUploadQueue] = useState<
     RequestAttachmentUploadQueueItem[]
@@ -3658,18 +3723,6 @@ function ReviewProjectHeader({
   const [attachmentUploadError, setAttachmentUploadError] = useState<string | null>(null);
   const [requestSaveError, setRequestSaveError] = useState<string | null>(null);
   const [projectDueDateSaveError, setProjectDueDateSaveError] = useState<string | null>(null);
-  const [assignmentTeamIdDraft, setAssignmentTeamIdDraft] = useState<number | null>(
-    project.assignment?.teamId ?? null,
-  );
-  const [assignmentPmUserIdDraft, setAssignmentPmUserIdDraft] = useState<number | null>(
-    project.assignment?.assignedPmUserId ?? null,
-  );
-  const [assignmentTranslatorUserIdDraft, setAssignmentTranslatorUserIdDraft] = useState<
-    number | null
-  >(project.assignment?.assignedTranslatorUserId ?? null);
-  const [assignmentNoteDraft, setAssignmentNoteDraft] = useState('');
-  const [assignmentSaveStatus, setAssignmentSaveStatus] = useState<string | null>(null);
-  const [assignmentSaveError, setAssignmentSaveError] = useState<string | null>(null);
   const actionClass =
     status === 'OPEN'
       ? 'review-project-page__header-action--close'
@@ -3684,40 +3737,94 @@ function ReviewProjectHeader({
     params.set(REVIEW_PROJECTS_SESSION_QUERY_KEY, reviewProjectsSessionKey);
     return `/review-projects?${params.toString()}`;
   }, [reviewProjectsSessionKey]);
-
-  // Assignment editing is moving to the review-projects request view.
-  // Keeping it off here avoids project-level PM edits, which conflict with the request-level PM model.
-  const canEditAssignment = false;
+  const activeAssignmentTeamId = assignment?.teamId ?? null;
   const teamsQuery = useQuery<ApiTeam[]>({
-    queryKey: ['teams', 'review-project-assignment'],
+    queryKey: ['teams', 'review-project-request-details'],
     queryFn: fetchTeams,
-    enabled: canEditAssignment && showDescription,
+    enabled: canEditRequest && showDescription,
     staleTime: 30_000,
   });
-  const assignmentUsersQuery = useQuery({
-    queryKey: ['users', 'admin', 'review-project-assignment'],
-    queryFn: fetchAllUsersAdmin,
-    enabled: canEditAssignment && showDescription,
+  const assignmentPmUsersQuery = useQuery({
+    queryKey: ['team-users', activeAssignmentTeamId, 'PM', 'review-project-detail-assignment'],
+    queryFn: () => fetchTeamUsersByRole(activeAssignmentTeamId as number, 'PM'),
+    enabled: canEditRequest && isAssignmentModalOpen && activeAssignmentTeamId != null,
     staleTime: 30_000,
   });
-  const assignmentPmPoolQuery = useQuery({
-    queryKey: ['team-pm-pool', assignmentTeamIdDraft, 'review-project-assignment'],
-    queryFn: () => fetchTeamPmPool(assignmentTeamIdDraft as number),
-    enabled: canEditAssignment && showDescription && assignmentTeamIdDraft != null,
+  const assignmentTranslatorUsersQuery = useQuery({
+    queryKey: [
+      'team-users',
+      activeAssignmentTeamId,
+      'TRANSLATOR',
+      'review-project-detail-assignment',
+    ],
+    queryFn: () => fetchTeamUsersByRole(activeAssignmentTeamId as number, 'TRANSLATOR'),
+    enabled: canEditRequest && isAssignmentModalOpen && activeAssignmentTeamId != null,
     staleTime: 30_000,
   });
-  const assignmentTranslatorsQuery = useQuery({
-    queryKey: ['team-translators', assignmentTeamIdDraft, 'review-project-assignment'],
-    queryFn: () => fetchTeamTranslators(assignmentTeamIdDraft as number),
-    enabled: canEditAssignment && showDescription && assignmentTeamIdDraft != null,
-    staleTime: 30_000,
-  });
-  const assignmentLocalePoolsQuery = useQuery({
-    queryKey: ['team-locale-pools', assignmentTeamIdDraft, 'review-project-assignment'],
-    queryFn: () => fetchTeamLocalePools(assignmentTeamIdDraft as number),
-    enabled: canEditAssignment && showDescription && assignmentTeamIdDraft != null,
-    staleTime: 30_000,
-  });
+  const requestTeamOptions = useMemo(
+    () =>
+      buildAssignmentTeamOptions(teamsQuery.data ?? [], assignment?.teamId, assignment?.teamName),
+    [assignment?.teamId, assignment?.teamName, teamsQuery.data],
+  );
+  const assignmentPmUsers = useMemo(
+    () =>
+      isTerminologyProject
+        ? mergeTeamUsers(
+            assignmentPmUsersQuery.data?.users,
+            assignmentTranslatorUsersQuery.data?.users,
+          )
+        : (assignmentPmUsersQuery.data?.users ?? []),
+    [
+      assignmentPmUsersQuery.data?.users,
+      assignmentTranslatorUsersQuery.data?.users,
+      isTerminologyProject,
+    ],
+  );
+  const assignmentPmOptions = useMemo(
+    () =>
+      buildAssignmentUserOptions(
+        assignmentPmUsers,
+        assignment?.assignedPmUserId,
+        assignment?.assignedPmUsername,
+      ),
+    [assignment?.assignedPmUserId, assignment?.assignedPmUsername, assignmentPmUsers],
+  );
+  const assignmentTranslatorOptions = useMemo(
+    () =>
+      buildAssignmentUserOptions(
+        assignmentTranslatorUsersQuery.data?.users ?? [],
+        assignment?.assignedTranslatorUserId,
+        assignment?.assignedTranslatorUsername,
+      ),
+    [
+      assignment?.assignedTranslatorUserId,
+      assignment?.assignedTranslatorUsername,
+      assignmentTranslatorUsersQuery.data?.users,
+    ],
+  );
+  const assignmentLoadError =
+    activeAssignmentTeamId == null
+      ? null
+      : assignmentPmUsersQuery.error != null
+        ? getErrorMessage(assignmentPmUsersQuery.error, `Failed to load ${pmAssignmentLabel}s`)
+        : assignmentTranslatorUsersQuery.error != null
+          ? getErrorMessage(
+              assignmentTranslatorUsersQuery.error,
+              `Failed to load ${translatorAssignmentLabel.toLowerCase()}s`,
+            )
+          : null;
+  const assignmentHasAssigneeWithoutTeam =
+    activeAssignmentTeamId == null &&
+    (assignmentDraftPmUserId != null || assignmentDraftTranslatorUserId != null);
+  const assignmentIsChanged =
+    assignmentDraftPmUserId !== (assignment?.assignedPmUserId ?? null) ||
+    assignmentDraftTranslatorUserId !== (assignment?.assignedTranslatorUserId ?? null);
+  const canSaveAssignment =
+    canEditRequest &&
+    assignmentIsChanged &&
+    !mutations.isProjectAssignmentSaving &&
+    assignmentLoadError == null &&
+    !assignmentHasAssigneeWithoutTeam;
 
   const {
     selectedCount,
@@ -3790,6 +3897,7 @@ function ReviewProjectHeader({
     setDescriptionDraft(description);
     setProjectTypeDraft(type);
     setDueDateDraft(toDateTimeLocalInputValue(dueDate));
+    setRequestTeamDraftId(assignment?.teamId ?? null);
     setProjectDueDateDraft(toDateTimeLocalInputValue(dueDate));
     setAttachmentDrafts(requestAttachments);
     setAttachmentUploadQueue([]);
@@ -3797,129 +3905,7 @@ function ReviewProjectHeader({
     setAttachmentUploadError(null);
     setRequestSaveError(null);
     setProjectDueDateSaveError(null);
-    setAssignmentTeamIdDraft(project.assignment?.teamId ?? null);
-    setAssignmentPmUserIdDraft(project.assignment?.assignedPmUserId ?? null);
-    setAssignmentTranslatorUserIdDraft(project.assignment?.assignedTranslatorUserId ?? null);
-    setAssignmentNoteDraft('');
-    setAssignmentSaveStatus(null);
-    setAssignmentSaveError(null);
-  }, [
-    description,
-    dueDate,
-    name,
-    project.assignment?.assignedPmUserId,
-    project.assignment?.assignedTranslatorUserId,
-    project.assignment?.teamId,
-    requestAttachments,
-    showDescription,
-    type,
-  ]);
-
-  const assignmentUsersById = useMemo(() => {
-    const map = new Map<number, ApiUser>();
-    (assignmentUsersQuery.data ?? []).forEach((entry) => {
-      map.set(entry.id, entry);
-    });
-    return map;
-  }, [assignmentUsersQuery.data]);
-
-  const assignmentTeamOptions = useMemo(
-    () =>
-      (teamsQuery.data ?? []).map((team) => ({
-        value: team.id,
-        label: `${team.name} (#${team.id})`,
-      })),
-    [teamsQuery.data],
-  );
-
-  const projectLocaleTagLower = (project.locale?.bcp47Tag ?? '').trim().toLowerCase();
-
-  const assignmentPmOptions = useMemo(() => {
-    const orderedIds = assignmentPmPoolQuery.data?.userIds ?? [];
-    const seen = new Set<number>();
-    const options = orderedIds
-      .filter((id): id is number => Number.isInteger(id) && id > 0)
-      .filter((id) => {
-        if (seen.has(id)) {
-          return false;
-        }
-        seen.add(id);
-        return true;
-      })
-      .map((id) => {
-        const user = assignmentUsersById.get(id);
-        return {
-          value: id,
-          label: user?.commonName
-            ? `${user.commonName} (${user.username})`
-            : (user?.username ?? `User #${id}`),
-        };
-      });
-    if (
-      assignmentPmUserIdDraft != null &&
-      !options.some((option) => option.value === assignmentPmUserIdDraft)
-    ) {
-      const user = assignmentUsersById.get(assignmentPmUserIdDraft);
-      options.unshift({
-        value: assignmentPmUserIdDraft,
-        label: user?.username ?? `User #${assignmentPmUserIdDraft}`,
-      });
-    }
-    return options;
-  }, [assignmentPmPoolQuery.data?.userIds, assignmentPmUserIdDraft, assignmentUsersById]);
-
-  const assignmentTranslatorOptions = useMemo(() => {
-    const localePoolRow =
-      assignmentLocalePoolsQuery.data?.entries.find(
-        (entry) => entry.localeTag.trim().toLowerCase() === projectLocaleTagLower,
-      ) ?? null;
-    const sourceIds =
-      (localePoolRow?.translatorUserIds?.length ?? 0) > 0
-        ? (localePoolRow?.translatorUserIds ?? [])
-        : (assignmentTranslatorsQuery.data?.userIds ?? []);
-    const seen = new Set<number>();
-    const options = sourceIds
-      .filter((id): id is number => Number.isInteger(id) && id > 0)
-      .filter((id) => {
-        if (seen.has(id)) {
-          return false;
-        }
-        seen.add(id);
-        return true;
-      })
-      .map((id) => {
-        const user = assignmentUsersById.get(id);
-        return {
-          value: id,
-          label: user?.commonName
-            ? `${user.commonName} (${user.username})`
-            : (user?.username ?? `User #${id}`),
-        };
-      });
-    if (
-      assignmentTranslatorUserIdDraft != null &&
-      !options.some((option) => option.value === assignmentTranslatorUserIdDraft)
-    ) {
-      const user = assignmentUsersById.get(assignmentTranslatorUserIdDraft);
-      options.unshift({
-        value: assignmentTranslatorUserIdDraft,
-        label: user?.username ?? `User #${assignmentTranslatorUserIdDraft}`,
-      });
-    }
-    return options;
-  }, [
-    assignmentLocalePoolsQuery.data?.entries,
-    assignmentTranslatorsQuery.data?.userIds,
-    assignmentTranslatorUserIdDraft,
-    assignmentUsersById,
-    projectLocaleTagLower,
-  ]);
-
-  const isAssignmentDirty =
-    assignmentTeamIdDraft !== (project.assignment?.teamId ?? null) ||
-    assignmentPmUserIdDraft !== (project.assignment?.assignedPmUserId ?? null) ||
-    assignmentTranslatorUserIdDraft !== (project.assignment?.assignedTranslatorUserId ?? null) ||
-    assignmentNoteDraft.trim().length > 0;
+  }, [assignment?.teamId, description, dueDate, name, requestAttachments, showDescription, type]);
 
   useEffect(() => {
     const nextUrls = new Set(
@@ -3954,28 +3940,6 @@ function ReviewProjectHeader({
     onRequestDetailsQueryHandled();
   }, [onRequestDetailsQueryHandled, openRequestDetailsQuery, requestId]);
 
-  useEffect(() => {
-    if (assignmentPmUserIdDraft == null) {
-      return;
-    }
-    if (assignmentPmOptions.some((option) => option.value === assignmentPmUserIdDraft)) {
-      return;
-    }
-    setAssignmentPmUserIdDraft(null);
-  }, [assignmentPmOptions, assignmentPmUserIdDraft]);
-
-  useEffect(() => {
-    if (assignmentTranslatorUserIdDraft == null) {
-      return;
-    }
-    if (
-      assignmentTranslatorOptions.some((option) => option.value === assignmentTranslatorUserIdDraft)
-    ) {
-      return;
-    }
-    setAssignmentTranslatorUserIdDraft(null);
-  }, [assignmentTranslatorOptions, assignmentTranslatorUserIdDraft]);
-
   const closeDescriptionModal = useCallback(() => {
     if (mutations.isProjectRequestSaving || isAttachmentUploading) {
       return;
@@ -4005,6 +3969,21 @@ function ReviewProjectHeader({
     setProjectDueDateDraft(toDateTimeLocalInputValue(dueDate));
     setProjectDueDateSaveError(null);
   }, [dueDate, mutations.isProjectDueDateSaving]);
+
+  const openAssignmentModal = useCallback(() => {
+    setAssignmentDraftPmUserId(assignment?.assignedPmUserId ?? null);
+    setAssignmentDraftTranslatorUserId(assignment?.assignedTranslatorUserId ?? null);
+    setAssignmentSaveError(null);
+    setIsAssignmentModalOpen(true);
+  }, [assignment?.assignedPmUserId, assignment?.assignedTranslatorUserId]);
+
+  const closeAssignmentModal = useCallback(() => {
+    if (mutations.isProjectAssignmentSaving) {
+      return;
+    }
+    setIsAssignmentModalOpen(false);
+    setAssignmentSaveError(null);
+  }, [mutations.isProjectAssignmentSaving]);
 
   const addAttachmentKeys = useCallback((raw: string[]) => {
     const next = raw
@@ -4138,6 +4117,8 @@ function ReviewProjectHeader({
         type: projectTypeDraft,
         dueDate: dueDateIso,
         screenshotImageIds: attachmentDrafts,
+        teamId: requestTeamDraftId,
+        updateTeam: requestTeamDraftId !== (assignment?.teamId ?? null),
       });
       onRequestDetailsFlowFinished();
       if (shouldReturnToReviewProjects) {
@@ -4163,45 +4144,9 @@ function ReviewProjectHeader({
     projectTypeDraft,
     requestId,
     requestNameDraft,
+    requestTeamDraftId,
     shouldReturnToReviewProjects,
-  ]);
-
-  const saveAssignmentDetails = useCallback(async () => {
-    if (!canEditAssignment) {
-      return;
-    }
-    const triggersSlackNotification =
-      assignmentTeamIdDraft !== (project.assignment?.teamId ?? null) ||
-      assignmentTranslatorUserIdDraft !== (project.assignment?.assignedTranslatorUserId ?? null);
-    try {
-      setAssignmentSaveError(null);
-      setAssignmentSaveStatus(null);
-      await mutations.onRequestProjectAssignmentUpdate({
-        teamId: assignmentTeamIdDraft,
-        assignedPmUserId: assignmentPmUserIdDraft,
-        assignedTranslatorUserId: assignmentTranslatorUserIdDraft,
-        note: assignmentNoteDraft.trim() || null,
-      });
-      setAssignmentNoteDraft('');
-      setAssignmentSaveStatus(
-        triggersSlackNotification
-          ? 'Saved. Slack notification is attempted when configured.'
-          : 'Saved.',
-      );
-    } catch (error) {
-      setAssignmentSaveError(
-        error instanceof Error ? error.message : 'Failed to update project assignment.',
-      );
-    }
-  }, [
-    assignmentNoteDraft,
-    assignmentPmUserIdDraft,
-    assignmentTeamIdDraft,
-    assignmentTranslatorUserIdDraft,
-    canEditAssignment,
-    mutations,
-    project.assignment?.assignedTranslatorUserId,
-    project.assignment?.teamId,
+    assignment?.teamId,
   ]);
 
   const saveProjectDueDate = useCallback(async () => {
@@ -4228,6 +4173,38 @@ function ReviewProjectHeader({
       );
     }
   }, [canEditRequest, mutations, projectDueDateDraft]);
+
+  const saveProjectAssignment = useCallback(async () => {
+    if (!canEditRequest) {
+      return;
+    }
+    if (assignmentHasAssigneeWithoutTeam) {
+      setAssignmentSaveError('Select a team before assigning people.');
+      return;
+    }
+
+    try {
+      setAssignmentSaveError(null);
+      await mutations.onRequestProjectAssignmentUpdate({
+        teamId: assignment?.teamId ?? null,
+        assignedPmUserId: assignmentDraftPmUserId,
+        assignedTranslatorUserId: assignmentDraftTranslatorUserId,
+        note: null,
+      });
+      setIsAssignmentModalOpen(false);
+    } catch (error) {
+      setAssignmentSaveError(
+        error instanceof Error ? error.message : 'Failed to update project assignment.',
+      );
+    }
+  }, [
+    assignment?.teamId,
+    assignmentDraftPmUserId,
+    assignmentDraftTranslatorUserId,
+    assignmentHasAssigneeWithoutTeam,
+    canEditRequest,
+    mutations,
+  ]);
 
   const handleReviewPending = useCallback(() => {
     setShowCloseWarning(false);
@@ -4325,6 +4302,21 @@ function ReviewProjectHeader({
           </div>
 
           <div className="review-project-page__header-group review-project-page__header-group--meta">
+            {canEditRequest ? (
+              <button
+                type="button"
+                className="review-project-page__header-link"
+                onClick={openAssignmentModal}
+                title={`Team ${teamDisplayName}`}
+              >
+                Assignment
+              </button>
+            ) : null}
+            {canEditRequest && requestId != null ? (
+              <span className="review-project-page__header-dot" aria-hidden>
+                •
+              </span>
+            ) : null}
             {requestId != null ? (
               <button
                 type="button"
@@ -4335,7 +4327,7 @@ function ReviewProjectHeader({
                 Request details
               </button>
             ) : null}
-            {requestId != null ? (
+            {requestId != null || canEditRequest ? (
               <span className="review-project-page__header-dot" aria-hidden>
                 •
               </span>
@@ -4458,6 +4450,106 @@ function ReviewProjectHeader({
           </button>
         </div>
       </Modal>
+      <Modal
+        open={isAssignmentModalOpen}
+        size="md"
+        role="dialog"
+        ariaLabel="Edit project assignment"
+        onClose={closeAssignmentModal}
+        closeOnBackdrop={!mutations.isProjectAssignmentSaving}
+      >
+        <div className="modal__title">Edit assignment</div>
+        <div className="modal__body review-project-page__description-modal-body">
+          <div className="review-project-page__assignment-summary">
+            <span>Project #{projectId}</span>
+            {locale?.bcp47Tag ? <span>{locale.bcp47Tag}</span> : null}
+          </div>
+          <div className="review-project-page__description-two-up">
+            <label className="review-project-page__description-field">
+              <span className="review-project-page__description-label">{pmAssignmentLabel}</span>
+              <SingleSelectDropdown<number>
+                label={pmAssignmentLabel}
+                className="review-project-page__description-select"
+                options={assignmentPmOptions}
+                value={assignmentDraftPmUserId}
+                onChange={(next) => {
+                  setAssignmentDraftPmUserId(next);
+                  setAssignmentSaveError(null);
+                }}
+                noneLabel={`No ${pmAssignmentLabel.toLowerCase()}`}
+                placeholder={
+                  activeAssignmentTeamId == null
+                    ? 'Select a team first'
+                    : assignmentPmUsersQuery.isLoading
+                      ? `Loading ${pmAssignmentLabel.toLowerCase()}s`
+                      : `Select ${pmAssignmentLabel.toLowerCase()}`
+                }
+                buttonAriaLabel={`Select ${pmAssignmentLabel.toLowerCase()}`}
+                disabled={
+                  mutations.isProjectAssignmentSaving ||
+                  activeAssignmentTeamId == null ||
+                  assignmentPmUsersQuery.isLoading
+                }
+              />
+            </label>
+            <label className="review-project-page__description-field">
+              <span className="review-project-page__description-label">
+                {translatorAssignmentLabel}
+              </span>
+              <SingleSelectDropdown<number>
+                label={translatorAssignmentLabel}
+                className="review-project-page__description-select"
+                options={assignmentTranslatorOptions}
+                value={assignmentDraftTranslatorUserId}
+                onChange={(next) => {
+                  setAssignmentDraftTranslatorUserId(next);
+                  setAssignmentSaveError(null);
+                }}
+                noneLabel={`No ${translatorAssignmentLabel.toLowerCase()}`}
+                placeholder={
+                  activeAssignmentTeamId == null
+                    ? 'Select a team first'
+                    : assignmentTranslatorUsersQuery.isLoading
+                      ? `Loading ${translatorAssignmentLabel.toLowerCase()}s`
+                      : `Select ${translatorAssignmentLabel.toLowerCase()}`
+                }
+                buttonAriaLabel={`Select ${translatorAssignmentLabel.toLowerCase()}`}
+                disabled={
+                  mutations.isProjectAssignmentSaving ||
+                  activeAssignmentTeamId == null ||
+                  assignmentTranslatorUsersQuery.isLoading
+                }
+              />
+            </label>
+          </div>
+          {assignmentLoadError ? (
+            <div className="review-project-page__description-error">{assignmentLoadError}</div>
+          ) : null}
+          {assignmentSaveError ? (
+            <div className="review-project-page__description-error">{assignmentSaveError}</div>
+          ) : null}
+        </div>
+        <div className="modal__actions">
+          <button
+            type="button"
+            className="modal__button"
+            onClick={closeAssignmentModal}
+            disabled={mutations.isProjectAssignmentSaving}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="modal__button modal__button--primary"
+            onClick={() => {
+              void saveProjectAssignment();
+            }}
+            disabled={!canSaveAssignment}
+          >
+            {mutations.isProjectAssignmentSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </Modal>
       {showDescription ? (
         <section
           className="review-project-page__description-screen"
@@ -4555,6 +4647,38 @@ function ReviewProjectHeader({
                     ) : null}
                   </label>
                 </div>
+                <label className="review-project-page__description-field">
+                  <span className="review-project-page__description-label">Team</span>
+                  <SingleSelectDropdown<number>
+                    label="Team"
+                    className="review-project-page__description-select"
+                    options={requestTeamOptions}
+                    value={requestTeamDraftId}
+                    onChange={(next) => {
+                      setRequestTeamDraftId(next);
+                      setRequestSaveError(null);
+                    }}
+                    noneLabel="No team"
+                    placeholder={teamsQuery.isLoading ? 'Loading teams' : 'Select team'}
+                    buttonAriaLabel="Select request team"
+                    disabled={
+                      !canEditRequest ||
+                      mutations.isProjectRequestSaving ||
+                      isAttachmentUploading ||
+                      teamsQuery.isLoading
+                    }
+                  />
+                  {requestTeamDraftId !== (assignment?.teamId ?? null) ? (
+                    <span className="review-project-page__description-help">
+                      Applies to all projects in this request and clears current project assignees.
+                    </span>
+                  ) : null}
+                  {teamsQuery.error ? (
+                    <span className="review-project-page__description-error">
+                      {getErrorMessage(teamsQuery.error, 'Failed to load teams')}
+                    </span>
+                  ) : null}
+                </label>
                 <div className="review-project-page__description-two-up">
                   <label className="review-project-page__description-field">
                     <span className="review-project-page__description-label">Created by</span>
@@ -4577,159 +4701,6 @@ function ReviewProjectHeader({
                     />
                   </label>
                 </div>
-                {canEditAssignment ? (
-                  <div className="review-project-page__description-assignment">
-                    <div className="review-project-page__description-assignment-header">
-                      Assignment
-                    </div>
-                    <div className="review-project-page__description-two-up">
-                      {!isTerminologyAssignmentProject ? (
-                        <label className="review-project-page__description-field">
-                          <span className="review-project-page__description-label">Team</span>
-                          <SingleSelectDropdown
-                            label="Team"
-                            className="review-project-page__description-select"
-                            options={assignmentTeamOptions}
-                            value={assignmentTeamIdDraft}
-                            onChange={(next) => {
-                              setAssignmentTeamIdDraft(next);
-                              setAssignmentPmUserIdDraft(null);
-                              setAssignmentTranslatorUserIdDraft(null);
-                              setAssignmentSaveStatus(null);
-                              setAssignmentSaveError(null);
-                            }}
-                            noneLabel="No team"
-                            placeholder="No team"
-                            disabled={mutations.isProjectAssignmentSaving || teamsQuery.isLoading}
-                            buttonAriaLabel="Select team assignment"
-                          />
-                        </label>
-                      ) : null}
-                      <label className="review-project-page__description-field">
-                        <span className="review-project-page__description-label">
-                          Assignment note
-                        </span>
-                        <input
-                          className="review-project-page__description-input"
-                          type="text"
-                          value={assignmentNoteDraft}
-                          onChange={(event) => {
-                            setAssignmentNoteDraft(event.target.value);
-                            setAssignmentSaveStatus(null);
-                            setAssignmentSaveError(null);
-                          }}
-                          placeholder="Optional note for assignment history / notification"
-                          disabled={mutations.isProjectAssignmentSaving}
-                        />
-                      </label>
-                    </div>
-                    <div className="review-project-page__description-two-up">
-                      <label className="review-project-page__description-field">
-                        <span className="review-project-page__description-label">PM</span>
-                        <SingleSelectDropdown
-                          label="PM"
-                          className="review-project-page__description-select"
-                          options={assignmentPmOptions}
-                          value={assignmentPmUserIdDraft}
-                          onChange={(next) => {
-                            setAssignmentPmUserIdDraft(next);
-                            setAssignmentSaveStatus(null);
-                            setAssignmentSaveError(null);
-                          }}
-                          noneLabel="No PM"
-                          placeholder={
-                            assignmentTeamIdDraft == null
-                              ? isTerminologyAssignmentProject
-                                ? 'No review team'
-                                : 'Select a team first'
-                              : 'No PM'
-                          }
-                          disabled={
-                            assignmentTeamIdDraft == null ||
-                            mutations.isProjectAssignmentSaving ||
-                            assignmentPmPoolQuery.isLoading
-                          }
-                          buttonAriaLabel="Select assigned PM"
-                        />
-                      </label>
-                      <label className="review-project-page__description-field">
-                        <span className="review-project-page__description-label">
-                          {isTerminologyAssignmentProject ? 'Specialist' : 'Translator'}
-                        </span>
-                        <SingleSelectDropdown
-                          label={isTerminologyAssignmentProject ? 'Specialist' : 'Translator'}
-                          className="review-project-page__description-select"
-                          options={assignmentTranslatorOptions}
-                          value={assignmentTranslatorUserIdDraft}
-                          onChange={(next) => {
-                            setAssignmentTranslatorUserIdDraft(next);
-                            setAssignmentSaveStatus(null);
-                            setAssignmentSaveError(null);
-                          }}
-                          noneLabel={
-                            isTerminologyAssignmentProject ? 'No specialist' : 'No translator'
-                          }
-                          placeholder={
-                            assignmentTeamIdDraft == null
-                              ? isTerminologyAssignmentProject
-                                ? 'No review team'
-                                : 'Select a team first'
-                              : isTerminologyAssignmentProject
-                                ? 'No specialist'
-                                : 'No translator'
-                          }
-                          disabled={
-                            assignmentTeamIdDraft == null ||
-                            mutations.isProjectAssignmentSaving ||
-                            assignmentLocalePoolsQuery.isLoading ||
-                            assignmentTranslatorsQuery.isLoading
-                          }
-                          buttonAriaLabel="Select assigned translator"
-                        />
-                      </label>
-                    </div>
-                    <div className="review-project-page__description-assignment-help">
-                      Saving assignment posts a Slack notification when configured.
-                    </div>
-                    {teamsQuery.isError ||
-                    assignmentUsersQuery.isError ||
-                    assignmentPmPoolQuery.isError ||
-                    assignmentLocalePoolsQuery.isError ||
-                    assignmentTranslatorsQuery.isError ? (
-                      <div className="review-project-page__description-error">
-                        Failed to load team assignment options.
-                      </div>
-                    ) : null}
-                    {assignmentSaveError ? (
-                      <div className="review-project-page__description-error">
-                        {assignmentSaveError}
-                      </div>
-                    ) : null}
-                    {assignmentSaveStatus ? (
-                      <div className="review-project-page__description-info">
-                        {assignmentSaveStatus}
-                      </div>
-                    ) : null}
-                    <div className="review-project-page__description-actions review-project-page__description-actions--assignment">
-                      {isAssignmentDirty ? (
-                        <button
-                          type="button"
-                          className="review-project-detail__actions-button review-project-detail__actions-button--primary"
-                          onClick={() => {
-                            void saveAssignmentDetails();
-                          }}
-                          disabled={
-                            mutations.isProjectAssignmentSaving ||
-                            teamsQuery.isLoading ||
-                            assignmentUsersQuery.isLoading
-                          }
-                        >
-                          {mutations.isProjectAssignmentSaving ? 'Saving…' : 'Save assignment'}
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
                 <div className="review-project-page__description-field">
                   <RequestDescriptionEditor
                     value={descriptionDraft}

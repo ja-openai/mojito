@@ -1347,7 +1347,9 @@ public class ReviewProjectService {
       String notes,
       ReviewProjectType type,
       ZonedDateTime dueDate,
-      List<String> screenshotImageIds) {
+      List<String> screenshotImageIds,
+      Long teamId,
+      Boolean updateTeam) {
     String trimmedName = name == null ? null : name.trim();
     if (trimmedName == null || trimmedName.isEmpty()) {
       throw new IllegalArgumentException("name must be provided");
@@ -1377,18 +1379,54 @@ public class ReviewProjectService {
     request.setNotes(trimmedNotes == null || trimmedNotes.isEmpty() ? null : trimmedNotes);
     reviewProjectRequestRepository.save(request);
 
-    if (type != null || dueDate != null) {
-      reviewProjectRepository
-          .findByRequestIdWithAssignment(request.getId())
-          .forEach(
-              project -> {
-                if (type != null) {
-                  project.setType(type);
-                }
-                if (dueDate != null) {
-                  project.setDueDate(dueDate);
-                }
-              });
+    boolean shouldUpdateTeam = Boolean.TRUE.equals(updateTeam);
+    if (shouldUpdateTeam && !userService.isCurrentUserAdmin()) {
+      throw new AccessDeniedException("Only admins can change assigned team");
+    }
+    Team nextTeam = shouldUpdateTeam ? resolveTeam(teamId) : null;
+    boolean assignmentChanged = false;
+
+    if (type != null || dueDate != null || shouldUpdateTeam) {
+      List<ReviewProject> projects =
+          reviewProjectRepository.findByRequestIdWithAssignment(request.getId());
+      for (ReviewProject project : projects) {
+        if (type != null) {
+          project.setType(type);
+        }
+        if (dueDate != null) {
+          project.setDueDate(dueDate);
+        }
+        if (shouldUpdateTeam) {
+          Team previousTeam = project.getTeam();
+          User previousAssignedPm = project.getAssignedPmUser();
+          User previousAssignedTranslator = project.getAssignedTranslatorUser();
+          boolean teamChanged = !Objects.equals(getEntityId(previousTeam), getEntityId(nextTeam));
+          if (teamChanged) {
+            project.setTeam(nextTeam);
+            project.setAssignedPmUser(null);
+            project.setAssignedTranslatorUser(null);
+
+            boolean hadAssignment =
+                previousTeam != null
+                    || previousAssignedPm != null
+                    || previousAssignedTranslator != null;
+            ReviewProjectAssignmentEventType eventType;
+            if (!hadAssignment && nextTeam != null) {
+              eventType = ReviewProjectAssignmentEventType.ASSIGNED;
+            } else if (nextTeam == null) {
+              eventType = ReviewProjectAssignmentEventType.UNASSIGNED;
+            } else {
+              eventType = ReviewProjectAssignmentEventType.REASSIGNED;
+            }
+            recordAssignmentHistory(project, eventType, "Request team changed");
+            assignmentChanged = true;
+          }
+        }
+      }
+      if (assignmentChanged) {
+        teamSlackNotificationService.sendReviewProjectRequestAssignmentNotification(
+            request, projects);
+      }
     }
     reviewProjectRepository.flush();
 
@@ -2619,14 +2657,25 @@ public class ReviewProjectService {
 
     Long effectiveTeamId = nextTeamId;
     if (effectiveTeamId != null) {
-      if (nextAssignedPm != null
-          && !teamService.isUserInTeamRole(
-              effectiveTeamId, nextAssignedPm.getId(), TeamUserRole.PM)) {
-        throw new IllegalArgumentException(
-            "Assigned PM is not a PM member of team "
-                + effectiveTeamId
-                + ": "
-                + nextAssignedPm.getId());
+      if (nextAssignedPm != null) {
+        boolean isPmMember =
+            teamService.isUserInTeamRole(effectiveTeamId, nextAssignedPm.getId(), TeamUserRole.PM);
+        boolean isTranslatorDecider =
+            reviewProject.getType() == ReviewProjectType.TERMINOLOGY
+                && teamService.isUserInTeamRole(
+                    effectiveTeamId, nextAssignedPm.getId(), TeamUserRole.TRANSLATOR);
+        if (!isPmMember && !isTranslatorDecider) {
+          throw new IllegalArgumentException(
+              reviewProject.getType() == ReviewProjectType.TERMINOLOGY
+                  ? "Assigned decider is not a PM or translator member of team "
+                      + effectiveTeamId
+                      + ": "
+                      + nextAssignedPm.getId()
+                  : "Assigned PM is not a PM member of team "
+                      + effectiveTeamId
+                      + ": "
+                      + nextAssignedPm.getId());
+        }
       }
       if (nextAssignedTranslator != null
           && !teamService.isUserInTeamRole(

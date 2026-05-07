@@ -200,6 +200,42 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void updateProjectRequestTeamAppliesToAllProjectsAndClearsAssignees() {
+    Team previousTeam = team(7L);
+    Team nextTeam = team(8L);
+    ReviewProjectRequest request = reviewProjectRequest(44L, "Catalog refresh");
+    ReviewProject projectA =
+        project(21L, previousTeam, locale(31L, "fr-FR"), user(101L, "pm-a"), null);
+    ReviewProject projectB =
+        project(
+            22L,
+            previousTeam,
+            locale(32L, "de-DE"),
+            user(102L, "pm-b"),
+            user(103L, "translator-a"));
+    projectA.setReviewProjectRequest(request);
+    projectB.setReviewProjectRequest(request);
+
+    when(reviewProjectRepository.findById(21L)).thenReturn(Optional.of(projectA));
+    when(reviewProjectRepository.findByRequestIdWithAssignment(44L))
+        .thenReturn(List.of(projectA, projectB));
+    when(teamRepository.findByIdAndEnabledTrue(8L)).thenReturn(Optional.of(nextTeam));
+
+    reviewProjectService.updateProjectRequest(
+        21L, "Catalog refresh", "notes", null, null, null, 8L, true);
+
+    assertEquals(nextTeam, projectA.getTeam());
+    assertEquals(nextTeam, projectB.getTeam());
+    assertNull(projectA.getAssignedPmUser());
+    assertNull(projectB.getAssignedPmUser());
+    assertNull(projectB.getAssignedTranslatorUser());
+    verify(reviewProjectAssignmentHistoryRepository, times(2))
+        .save(any(ReviewProjectAssignmentHistory.class));
+    verify(teamSlackNotificationService)
+        .sendReviewProjectRequestAssignmentNotification(request, List.of(projectA, projectB));
+  }
+
+  @Test
   public void updateRequestAssignedPmKeepsBatchNotification() {
     Team team = team(7L);
     ReviewProjectRequest request = reviewProjectRequest(44L, "Catalog refresh");
@@ -246,6 +282,29 @@ public class ReviewProjectServiceTest {
     assertEquals(decider, projectB.getAssignedPmUser());
     verify(teamSlackNotificationService)
         .sendReviewProjectRequestAssignmentNotification(request, List.of(projectA, projectB));
+  }
+
+  @Test
+  public void updateProjectAssignmentAllowsTranslatorDeciderForTerminologyProject() {
+    Team team = team(7L);
+    User decider = user(202L, "translator-decider");
+    User advisor = user(103L, "advisor-a");
+    ReviewProject project = project(21L, team, locale(31L, "en"), null, advisor);
+    project.setType(ReviewProjectType.TERMINOLOGY);
+
+    when(reviewProjectRepository.findById(21L)).thenReturn(Optional.of(project));
+    when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team));
+    when(userRepository.findById(202L)).thenReturn(Optional.of(decider));
+    when(userRepository.findById(103L)).thenReturn(Optional.of(advisor));
+    when(teamService.isUserInTeamRole(7L, 202L, TeamUserRole.PM)).thenReturn(false);
+    when(teamService.isUserInTeamRole(7L, 202L, TeamUserRole.TRANSLATOR)).thenReturn(true);
+    when(teamService.isUserInTeamRole(7L, 103L, TeamUserRole.TRANSLATOR)).thenReturn(true);
+
+    reviewProjectService.updateProjectAssignment(21L, 7L, 202L, 103L, "decider change");
+
+    assertEquals(decider, project.getAssignedPmUser());
+    verify(reviewProjectAssignmentHistoryRepository)
+        .save(any(ReviewProjectAssignmentHistory.class));
   }
 
   @Test

@@ -239,7 +239,9 @@ public class ReviewProjectWS {
             request.notes(),
             request.type(),
             request.dueDate(),
-            request.screenshotImageIds());
+            request.screenshotImageIds(),
+            request.teamId(),
+            request.updateTeam());
     return toDetailResponse(projectDetail);
   }
 
@@ -421,7 +423,9 @@ public class ReviewProjectWS {
       String notes,
       ReviewProjectType type,
       ZonedDateTime dueDate,
-      List<String> screenshotImageIds) {}
+      List<String> screenshotImageIds,
+      Long teamId,
+      Boolean updateTeam) {}
 
   public record UpdateReviewProjectDueDateRequest(ZonedDateTime dueDate) {}
 
