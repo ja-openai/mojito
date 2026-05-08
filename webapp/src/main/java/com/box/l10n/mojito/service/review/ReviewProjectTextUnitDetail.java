@@ -34,4 +34,7 @@ public record ReviewProjectTextUnitDetail(
     String decisionNotes,
     DecisionState decisionState,
     ZonedDateTime decisionLastModifiedDate,
-    String decisionLastModifiedByUsername) {}
+    String decisionLastModifiedByUsername,
+    Long termIndexCandidateId,
+    Long targetGlossaryId,
+    String targetGlossaryName) {}

@@ -213,7 +213,7 @@ function GlossaryPrimaryActionMenu({
                 className="glossary-term-admin__primary-action-option"
                 onClick={() => runAction(onOpenExtract)}
               >
-                Build from candidates
+                Open candidate queue
               </button>
             </div>,
             document.body,

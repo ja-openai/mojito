@@ -941,6 +941,10 @@
   gap: var(--space-3);
 }
 
+.term-index-explorer__candidate-review-picker.chip-dropdown {
+  width: 100%;
+}
+
 .term-index-explorer__generation-facts,
 .term-index-explorer__generation-overrides dl {
   display: grid;

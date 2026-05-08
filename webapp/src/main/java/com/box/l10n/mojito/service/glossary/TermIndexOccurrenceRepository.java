@@ -87,6 +87,17 @@ public interface TermIndexOccurrenceRepository extends JpaRepository<TermIndexOc
   long countDistinctRepositoriesByTermIndexExtractedTerm(
       @Param("termIndexExtractedTerm") TermIndexExtractedTerm termIndexExtractedTerm);
 
+  @Query(
+      """
+      select occurrence.termIndexExtractedTerm.id as termIndexExtractedTermId,
+             min(occurrence.tmTextUnit.id) as tmTextUnitId
+      from TermIndexOccurrence occurrence
+      where occurrence.termIndexExtractedTerm.id in :termIndexExtractedTermIds
+      group by occurrence.termIndexExtractedTerm.id
+      """)
+  List<RepresentativeTextUnitRow> findRepresentativeTextUnitIdsByExtractedTermIdIn(
+      @Param("termIndexExtractedTermIds") Collection<Long> termIndexExtractedTermIds);
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       """
@@ -133,5 +144,11 @@ public interface TermIndexOccurrenceRepository extends JpaRepository<TermIndexOc
     Integer getConfidence();
 
     ZonedDateTime getCreatedDate();
+  }
+
+  interface RepresentativeTextUnitRow {
+    Long getTermIndexExtractedTermId();
+
+    Long getTmTextUnitId();
   }
 }

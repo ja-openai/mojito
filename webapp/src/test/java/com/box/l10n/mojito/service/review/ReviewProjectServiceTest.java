@@ -18,6 +18,7 @@ import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamUserRole;
+import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
@@ -42,6 +43,7 @@ import com.box.l10n.mojito.service.glossary.GlossaryTermIndexLinkRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermService;
 import com.box.l10n.mojito.service.glossary.TermIndexCandidateRepository;
+import com.box.l10n.mojito.service.glossary.TermIndexOccurrenceRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
@@ -94,6 +96,9 @@ public class ReviewProjectServiceTest {
       Mockito.mock(GlossaryTermIndexLinkRepository.class);
   private final TermIndexCandidateRepository termIndexCandidateRepository =
       Mockito.mock(TermIndexCandidateRepository.class);
+  private final TermIndexOccurrenceRepository termIndexOccurrenceRepository =
+      Mockito.mock(TermIndexOccurrenceRepository.class);
+  private final GlossaryTermService glossaryTermService = Mockito.mock(GlossaryTermService.class);
   private final LocaleService localeService = Mockito.mock(LocaleService.class);
   private final TextUnitSearcher textUnitSearcher = Mockito.mock(TextUnitSearcher.class);
   private final TMTextUnitRepository tmTextUnitRepository =
@@ -139,6 +144,8 @@ public class ReviewProjectServiceTest {
                 glossaryTermIndexCurationService,
                 glossaryTermIndexLinkRepository,
                 termIndexCandidateRepository,
+                termIndexOccurrenceRepository,
+                glossaryTermService,
                 localeService,
                 textUnitSearcher,
                 tmTextUnitRepository,
@@ -762,6 +769,149 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void saveTermCandidateResolutionPromotesLinkedCandidateAtPmResolution() {
+    ReviewProject reviewProject =
+        project(12L, team(7L), locale(14L, "en"), user(101L, "pm-a"), currentUser);
+    reviewProject.setType(ReviewProjectType.TERM_CANDIDATE);
+    reviewProject.setTerminologyPhase(ReviewProjectTerminologyPhase.PM_RESOLUTION);
+    ReviewProjectRequest request = new ReviewProjectRequest();
+    request.setId(44L);
+    reviewProject.setReviewProjectRequest(request);
+
+    TMTextUnit representativeTextUnit = new TMTextUnit();
+    representativeTextUnit.setId(321L);
+    TMTextUnit promotedTextUnit = new TMTextUnit();
+    promotedTextUnit.setId(654L);
+    TermIndexCandidate candidate = new TermIndexCandidate();
+    candidate.setId(501L);
+    candidate.setTerm("Google Drive");
+    candidate.setDefinition("Cloud storage service");
+    candidate.setPartOfSpeech("proper noun");
+    candidate.setTermType(GlossaryTermMetadata.TERM_TYPE_BRAND);
+    candidate.setEnforcement(GlossaryTermMetadata.ENFORCEMENT_SOFT);
+    candidate.setDoNotTranslate(null);
+    candidate.setConfidence(98);
+    candidate.setRationale("Known product name");
+
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(representativeTextUnit);
+    reviewProjectTextUnit.setTermIndexCandidate(candidate);
+    Glossary targetGlossary = new Glossary();
+    targetGlossary.setId(17L);
+    reviewProjectTextUnit.setTargetGlossary(targetGlossary);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(glossaryTermIndexCurationService.acceptSuggestion(
+            eq(17L), eq(501L), any(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class)))
+        .thenReturn(
+            new GlossaryTermService.TermView(
+                88L,
+                null,
+                null,
+                654L,
+                "google drive",
+                "Google Drive",
+                null,
+                "Cloud storage service",
+                "proper noun",
+                GlossaryTermMetadata.TERM_TYPE_BRAND,
+                GlossaryTermMetadata.ENFORCEMENT_SOFT,
+                GlossaryTermMetadata.STATUS_APPROVED,
+                GlossaryTermMetadata.PROVENANCE_AI_EXTRACTED,
+                false,
+                false,
+                501L,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of()));
+    when(tmTextUnitRepository.findById(654L)).thenReturn(Optional.of(promotedTextUnit));
+    when(reviewProjectTextUnitRepository
+            .findByReviewProject_ReviewProjectRequest_IdAndTermIndexCandidate_Id(44L, 501L))
+        .thenReturn(List.of(reviewProjectTextUnit));
+    when(userService.getCurrentUser()).thenReturn(Optional.of(currentUser));
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+    when(reviewProjectTextUnitFeedbackRepository
+            .findByReviewProjectTextUnitIdOrderByLastModifiedDateDesc(55L))
+        .thenReturn(List.of());
+
+    reviewProjectService.saveTerminologyResolution(
+        55L, null, GlossaryTermMetadata.STATUS_APPROVED, " approved ");
+
+    ArgumentCaptor<GlossaryTermIndexCurationService.AcceptSuggestionCommand> commandCaptor =
+        ArgumentCaptor.forClass(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class);
+    verify(glossaryTermIndexCurationService)
+        .acceptSuggestion(eq(17L), eq(501L), commandCaptor.capture());
+    GlossaryTermIndexCurationService.AcceptSuggestionCommand command = commandCaptor.getValue();
+    assertEquals("Google Drive", command.source());
+    assertEquals("Cloud storage service", command.definition());
+    assertEquals(GlossaryTermMetadata.STATUS_APPROVED, command.status());
+    assertNull(command.doNotTranslate());
+    assertEquals(promotedTextUnit, reviewProjectTextUnit.getTmTextUnit());
+    assertEquals(TermIndexReview.STATUS_ACCEPTED, candidate.getReviewStatus());
+    assertEquals(TermIndexReview.AUTHORITY_HUMAN, candidate.getReviewAuthority());
+    assertEquals("approved", candidate.getReviewRationale());
+    verify(reviewProjectTextUnitRepository).saveAll(List.of(reviewProjectTextUnit));
+    verify(termIndexCandidateRepository).save(candidate);
+  }
+
+  @Test
+  public void saveTermCandidateResolutionRejectsLinkedCandidateWithoutPromoting() {
+    ReviewProject reviewProject =
+        project(12L, team(7L), locale(14L, "en"), user(101L, "pm-a"), currentUser);
+    reviewProject.setType(ReviewProjectType.TERM_CANDIDATE);
+    reviewProject.setTerminologyPhase(ReviewProjectTerminologyPhase.PM_RESOLUTION);
+    TMTextUnit representativeTextUnit = new TMTextUnit();
+    representativeTextUnit.setId(321L);
+    TermIndexCandidate candidate = new TermIndexCandidate();
+    candidate.setId(501L);
+
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(representativeTextUnit);
+    reviewProjectTextUnit.setTermIndexCandidate(candidate);
+    Glossary targetGlossary = new Glossary();
+    targetGlossary.setId(17L);
+    reviewProjectTextUnit.setTargetGlossary(targetGlossary);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(userService.getCurrentUser()).thenReturn(Optional.of(currentUser));
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+    when(reviewProjectTextUnitFeedbackRepository
+            .findByReviewProjectTextUnitIdOrderByLastModifiedDateDesc(55L))
+        .thenReturn(List.of());
+
+    reviewProjectService.saveTerminologyResolution(
+        55L, null, GlossaryTermMetadata.STATUS_REJECTED, " noisy ");
+
+    verify(glossaryTermIndexCurationService)
+        .ignoreSuggestion(
+            eq(17L), eq(501L), any(GlossaryTermIndexCurationService.IgnoreSuggestionCommand.class));
+    verify(glossaryTermIndexCurationService, never())
+        .acceptSuggestion(
+            anyLong(),
+            anyLong(),
+            any(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class));
+    assertEquals(representativeTextUnit, reviewProjectTextUnit.getTmTextUnit());
+    assertEquals(TermIndexReview.STATUS_REJECTED, candidate.getReviewStatus());
+    assertEquals(TermIndexReview.AUTHORITY_HUMAN, candidate.getReviewAuthority());
+    assertEquals("noisy", candidate.getReviewRationale());
+    verify(termIndexCandidateRepository).save(candidate);
+  }
+
+  @Test
   public void createGlossaryTerminologyReviewProjectBuildsEnProjectFromReviewableTerms() {
     ZonedDateTime dueDate = ZonedDateTime.parse("2026-05-12T09:00:00Z");
     GlossaryTermMetadata candidate =
@@ -815,14 +965,8 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
-  public void createGlossaryTermCandidateReviewProjectMaterializesDraftTerms() {
+  public void createGlossaryTermCandidateReviewProjectSchedulesCandidateReviewJob() {
     ZonedDateTime dueDate = ZonedDateTime.parse("2026-05-12T09:00:00Z");
-    when(glossaryTermIndexCurationService.acceptSuggestion(
-            eq(17L), eq(501L), any(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class)))
-        .thenReturn(glossaryTermView(1001L, "Billing portal"));
-    when(glossaryTermIndexCurationService.acceptSuggestion(
-            eq(17L), eq(502L), any(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class)))
-        .thenReturn(glossaryTermView(1002L, "Admin panel"));
 
     reviewProjectService.createGlossaryTermCandidateReviewProjectAsync(
         17L,
@@ -838,48 +982,24 @@ public class ReviewProjectServiceTest {
             dueDate,
             dueDate.plusDays(1)));
 
-    verify(teamService, times(2)).assertUserCanAccessTeam(7L, 99L);
+    verify(teamService).assertUserCanAccessTeam(7L, 99L);
+    verify(glossaryTermIndexCurationService, never())
+        .acceptSuggestion(
+            any(), any(), any(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class));
     ArgumentCaptor<QuartzJobInfo> jobCaptor = ArgumentCaptor.forClass(QuartzJobInfo.class);
     verify(quartzPollableTaskScheduler).scheduleJob(jobCaptor.capture());
-    CreateReviewProjectRequestCommand command =
-        (CreateReviewProjectRequestCommand) jobCaptor.getValue().getInput();
+    CreateGlossaryTermCandidateReviewProjectJobInput command =
+        (CreateGlossaryTermCandidateReviewProjectJobInput) jobCaptor.getValue().getInput();
 
-    assertEquals(List.of("en"), command.localeTags());
+    assertEquals(Long.valueOf(17L), command.glossaryId());
     assertEquals("Review candidates", command.notes());
-    assertEquals(List.of(1001L, 1002L), command.tmTextUnitIds());
-    assertEquals(ReviewProjectType.TERM_CANDIDATE, command.type());
+    assertEquals(List.of(501L, 502L), command.termIndexCandidateIds());
     assertEquals("Candidate review", command.name());
     assertEquals(Long.valueOf(7L), command.teamId());
     assertEquals(Boolean.FALSE, command.assignTranslator());
     assertEquals(Long.valueOf(99L), command.requestedByUserId());
-    assertEquals(2, command.projectSpecs().size());
-    assertEquals(Long.valueOf(88L), command.projectSpecs().get(0).assignedTranslatorUserId());
-    assertEquals(Long.valueOf(77L), command.projectSpecs().get(1).assignedPmUserId());
-  }
-
-  private GlossaryTermService.TermView glossaryTermView(Long tmTextUnitId, String source) {
-    return new GlossaryTermService.TermView(
-        null,
-        null,
-        null,
-        tmTextUnitId,
-        source,
-        source,
-        null,
-        null,
-        null,
-        null,
-        null,
-        GlossaryTermMetadata.STATUS_CANDIDATE,
-        null,
-        false,
-        false,
-        null,
-        null,
-        null,
-        null,
-        List.of(),
-        List.of());
+    assertEquals(List.of(88L), command.specialistUserIds());
+    assertEquals(Long.valueOf(77L), command.pmUserId());
   }
 
   private ReviewProject project(
@@ -956,6 +1076,9 @@ public class ReviewProjectServiceTest {
         "glossary",
         7L,
         "repo",
+        null,
+        null,
+        null,
         null,
         null,
         null,

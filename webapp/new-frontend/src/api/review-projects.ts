@@ -143,6 +143,7 @@ export type ApiReviewProjectTextUnit = {
       comment?: string | null;
     } | null;
   } | null;
+  terminologyTerm?: ApiReviewProjectTerminologyTerm | null;
   terminologyFeedbacks?: Array<{
     id: number;
     recommendation?: ApiTerminologyFeedbackRecommendation | null;
@@ -153,6 +154,65 @@ export type ApiReviewProjectTextUnit = {
     reviewerUserId?: number | null;
     reviewerUsername?: string | null;
   }> | null;
+};
+
+export type ApiReviewProjectTerminologyTerm = {
+  glossaryId?: number | null;
+  glossaryName?: string | null;
+  metadataId?: number | null;
+  tmTextUnitId?: number | null;
+  termKey?: string | null;
+  source?: string | null;
+  definition?: string | null;
+  rationale?: string | null;
+  partOfSpeech?: string | null;
+  termType?: string | null;
+  enforcement?: string | null;
+  status?: string | null;
+  provenance?: string | null;
+  caseSensitive?: boolean | null;
+  doNotTranslate?: boolean | null;
+  termIndexCandidateId?: number | null;
+  termIndexExtractedTermId?: number | null;
+  occurrenceCount?: number | null;
+  repositoryCount?: number | null;
+  candidateReviewStatus?: string | null;
+  candidateReviewAuthority?: string | null;
+  candidateReviewReason?: string | null;
+  candidateReviewRationale?: string | null;
+  candidateReviewConfidence?: number | null;
+  candidateReviewChangedAt?: string | null;
+  candidateReviewChangedByUsername?: string | null;
+  sources?: Array<{
+    id?: number | null;
+    sourceType?: string | null;
+    sourceName?: string | null;
+    sourceExternalId?: string | null;
+  }> | null;
+  examples?: Array<{
+    id?: number | null;
+    repositoryId?: number | null;
+    repositoryName?: string | null;
+    assetId?: number | null;
+    assetPath?: string | null;
+    tmTextUnitId?: number | null;
+    textUnitName?: string | null;
+    sourceText?: string | null;
+    matchedText?: string | null;
+    startIndex?: number | null;
+    endIndex?: number | null;
+    extractionMethod?: string | null;
+    confidence?: number | null;
+  }> | null;
+};
+
+export type ApiReviewProjectTerminologyMetadataRequest = {
+  definition?: string | null;
+  rationale?: string | null;
+  partOfSpeech?: string | null;
+  termType?: string | null;
+  enforcement?: string | null;
+  doNotTranslate?: boolean | null;
 };
 
 export type ApiReviewProjectDetail = {
@@ -973,6 +1033,31 @@ export const saveReviewProjectTextUnitTerminologyResolution = async ({
   if (!response.ok) {
     const message = await response.text().catch(() => '');
     throw new Error(message || 'Failed to save terminology resolution');
+  }
+
+  return (await response.json()) as ApiReviewProjectTextUnit;
+};
+
+export const updateReviewProjectTextUnitTerminologyMetadata = async ({
+  textUnitId,
+  request,
+}: {
+  textUnitId: number;
+  request: ApiReviewProjectTerminologyMetadataRequest;
+}): Promise<ApiReviewProjectTextUnit> => {
+  const response = await fetch(
+    `/api/review-project-text-units/${textUnitId}/terminology-metadata`,
+    {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: jsonHeaders,
+      body: JSON.stringify(request),
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to update terminology metadata');
   }
 
   return (await response.json()) as ApiReviewProjectTextUnit;

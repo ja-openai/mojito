@@ -3,6 +3,8 @@ package com.box.l10n.mojito.entity.review;
 import com.box.l10n.mojito.entity.SettableAuditableEntity;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.entity.glossary.Glossary;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
@@ -39,6 +41,18 @@ public class ReviewProjectTextUnit extends SettableAuditableEntity {
       foreignKey = @ForeignKey(name = "FK__REVIEW_PROJECT_TEXT_UNIT__TM_TEXT_UNIT"))
   private TMTextUnit tmTextUnit;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(
+      name = "term_index_candidate_id",
+      foreignKey = @ForeignKey(name = "FK__REVIEW_PROJECT_TEXT_UNIT__TERM_INDEX_CANDIDATE"))
+  private TermIndexCandidate termIndexCandidate;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(
+      name = "target_glossary_id",
+      foreignKey = @ForeignKey(name = "FK__REVIEW_PROJECT_TEXT_UNIT__TARGET_GLOSSARY"))
+  private Glossary targetGlossary;
+
   public ReviewProject getReviewProject() {
     return reviewProject;
   }
@@ -61,5 +75,21 @@ public class ReviewProjectTextUnit extends SettableAuditableEntity {
 
   public void setTmTextUnit(TMTextUnit tmTextUnit) {
     this.tmTextUnit = tmTextUnit;
+  }
+
+  public TermIndexCandidate getTermIndexCandidate() {
+    return termIndexCandidate;
+  }
+
+  public void setTermIndexCandidate(TermIndexCandidate termIndexCandidate) {
+    this.termIndexCandidate = termIndexCandidate;
+  }
+
+  public Glossary getTargetGlossary() {
+    return targetGlossary;
+  }
+
+  public void setTargetGlossary(Glossary targetGlossary) {
+    this.targetGlossary = targetGlossary;
   }
 }

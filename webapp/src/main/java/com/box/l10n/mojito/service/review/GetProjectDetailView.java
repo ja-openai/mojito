@@ -46,7 +46,56 @@ public record GetProjectDetailView(
       TmTextUnitVariant baselineTmTextUnitVariant,
       TmTextUnitVariant currentTmTextUnitVariant,
       ReviewProjectTextUnitDecision reviewProjectTextUnitDecision,
+      TerminologyTerm terminologyTerm,
       List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
+
+  public record TerminologyTerm(
+      Long glossaryId,
+      String glossaryName,
+      Long metadataId,
+      Long tmTextUnitId,
+      String termKey,
+      String source,
+      String definition,
+      String rationale,
+      String partOfSpeech,
+      String termType,
+      String enforcement,
+      String status,
+      String provenance,
+      Boolean caseSensitive,
+      Boolean doNotTranslate,
+      Long termIndexCandidateId,
+      Long termIndexExtractedTermId,
+      Long occurrenceCount,
+      Integer repositoryCount,
+      String candidateReviewStatus,
+      String candidateReviewAuthority,
+      String candidateReviewReason,
+      String candidateReviewRationale,
+      Integer candidateReviewConfidence,
+      ZonedDateTime candidateReviewChangedAt,
+      String candidateReviewChangedByUsername,
+      List<TerminologyTermSource> sources,
+      List<TerminologyTermExample> examples) {}
+
+  public record TerminologyTermSource(
+      Long id, String sourceType, String sourceName, String sourceExternalId) {}
+
+  public record TerminologyTermExample(
+      Long id,
+      Long repositoryId,
+      String repositoryName,
+      Long assetId,
+      String assetPath,
+      Long tmTextUnitId,
+      String textUnitName,
+      String sourceText,
+      String matchedText,
+      Integer startIndex,
+      Integer endIndex,
+      String extractionMethod,
+      Integer confidence) {}
 
   public record TmTextUnit(
       Long id,

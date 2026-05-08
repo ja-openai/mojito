@@ -23,7 +23,9 @@ import {
 } from '../../api/glossaries';
 import type {
   ApiReviewProjectDetail,
+  ApiReviewProjectTerminologyMetadataRequest,
   ApiReviewProjectTerminologyPhase,
+  ApiReviewProjectTerminologyTerm,
   ApiReviewProjectTextUnit,
   ApiReviewProjectType,
   ApiTerminologyFeedbackRecommendation,
@@ -173,6 +175,8 @@ const TERMINOLOGY_RESOLUTION_STATUS_OPTIONS: TerminologyResolutionStatusChoice[]
   'CANDIDATE',
   'REJECTED',
 ];
+const TERMINOLOGY_TERM_TYPES = ['BRAND', 'PRODUCT', 'UI_LABEL', 'LEGAL', 'TECHNICAL', 'GENERAL'];
+const TERMINOLOGY_ENFORCEMENTS = ['HARD', 'SOFT', 'REVIEW_ONLY'];
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 const formatGlossaryMetadataValue = (value?: string | null) =>
@@ -1664,6 +1668,9 @@ function DetailPane({
       }),
     [assetPath, glossaryTargetsQuery.data?.glossaries, repositoryId, repositoryName],
   );
+  const terminologyTerm = textUnit.terminologyTerm ?? null;
+  const terminologyGlossaryId =
+    terminologyTerm?.glossaryId ?? glossaryTermTarget?.glossaryId ?? null;
   const glossaryTermQuery = useQuery({
     queryKey: [
       'review-project-glossary-term',
@@ -1672,7 +1679,11 @@ function DetailPane({
       source,
       localeTag,
     ],
-    enabled: glossaryTermTarget != null && workbenchTextUnitId != null && Boolean(source?.trim()),
+    enabled:
+      terminologyTerm == null &&
+      glossaryTermTarget != null &&
+      workbenchTextUnitId != null &&
+      Boolean(source?.trim()),
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
@@ -1688,24 +1699,38 @@ function DetailPane({
     },
   });
   const glossaryTerm = glossaryTermQuery.data ?? null;
-  const glossaryTermHref = glossaryTermTarget
-    ? `/glossaries/${glossaryTermTarget.glossaryId}${
-        glossaryTerm ? `?termId=${glossaryTerm.tmTextUnitId}` : ''
-      }`
-    : null;
+  const glossaryTermHref =
+    terminologyGlossaryId != null
+      ? `/glossaries/${terminologyGlossaryId}${
+          terminologyTerm?.tmTextUnitId != null
+            ? `?termId=${terminologyTerm.tmTextUnitId}`
+            : glossaryTerm
+              ? `?termId=${glossaryTerm.tmTextUnitId}`
+              : ''
+        }`
+      : null;
   const glossaryTermComment =
-    glossaryTerm?.definition?.trim() || glossaryTerm?.sourceComment?.trim() || sourceComment;
-  const glossaryPartOfSpeech = formatGlossaryMetadataValue(glossaryTerm?.partOfSpeech);
-  const glossaryTermType = formatGlossaryMetadataValue(glossaryTerm?.termType);
+    terminologyTerm?.definition?.trim() ||
+    glossaryTerm?.definition?.trim() ||
+    glossaryTerm?.sourceComment?.trim() ||
+    sourceComment;
+  const glossaryPartOfSpeech = formatGlossaryMetadataValue(
+    terminologyTerm?.partOfSpeech ?? glossaryTerm?.partOfSpeech,
+  );
+  const glossaryTermType = formatGlossaryMetadataValue(
+    terminologyTerm?.termType ?? glossaryTerm?.termType,
+  );
   const terminologyResolutionSnapshot = useMemo(
     () => ({
-      status: normalizeTerminologyResolutionStatus(glossaryTerm?.status),
+      status: normalizeTerminologyResolutionStatus(terminologyTerm?.status ?? glossaryTerm?.status),
       notes: decision?.notes ?? '',
     }),
-    [decision?.notes, glossaryTerm?.status],
+    [decision?.notes, glossaryTerm?.status, terminologyTerm?.status],
   );
   const canResolveTerminology =
-    canManageGlossaryTerms(user) && glossaryTermTarget?.glossaryId != null && glossaryTerm != null;
+    canManageGlossaryTerms(user) &&
+    terminologyGlossaryId != null &&
+    (terminologyTerm != null || glossaryTerm != null);
   const [draftTerminologyResolutionStatus, setDraftTerminologyResolutionStatus] =
     useState<TerminologyResolutionStatusChoice>(terminologyResolutionSnapshot.status);
   const [draftTerminologyResolutionNotes, setDraftTerminologyResolutionNotes] = useState(
@@ -2168,12 +2193,12 @@ function DetailPane({
 
   const requestSaveTerminologyResolution = useCallback(
     (overrides?: { status?: TerminologyResolutionStatusChoice }) => {
-      if (glossaryTermTarget?.glossaryId == null) {
+      if (terminologyGlossaryId == null) {
         return;
       }
       mutations.onRequestTerminologyResolution({
         textUnitId: textUnit.id,
-        glossaryId: glossaryTermTarget.glossaryId,
+        glossaryId: terminologyGlossaryId,
         status: overrides?.status ?? draftTerminologyResolutionStatus,
         notes: draftTerminologyResolutionNotesNormalized || null,
       });
@@ -2181,8 +2206,8 @@ function DetailPane({
     [
       draftTerminologyResolutionNotesNormalized,
       draftTerminologyResolutionStatus,
-      glossaryTermTarget?.glossaryId,
       mutations,
+      terminologyGlossaryId,
       textUnit.id,
     ],
   );
@@ -2982,6 +3007,22 @@ function DetailPane({
 
           {isTerminologyProject ? (
             <>
+              {terminologyTerm ? (
+                <TerminologyMetadataPanel
+                  term={terminologyTerm}
+                  glossaryTermHref={glossaryTermHref}
+                  isTermCandidateProject={projectType === 'TERM_CANDIDATE'}
+                  canEdit={canManageGlossaryTerms(user)}
+                  isSaving={isSavingGlobal}
+                  onSave={(request) =>
+                    mutations.onRequestTerminologyMetadata({
+                      textUnitId: textUnit.id,
+                      request,
+                    })
+                  }
+                />
+              ) : null}
+
               {!isPmTerminologyProject ? (
                 <>
                   <div className="review-project-detail__section-label">Advisor input</div>
@@ -3319,38 +3360,44 @@ function DetailPane({
         </div>
 
         <div className="review-project-detail__side">
-          <div className="review-project-detail__field review-project-detail__field--source">
-            <div className="review-project-detail__label">
-              <span>Source</span>
-              {glossaryTermHref ? (
-                <Link className="review-project-detail__source-affordance" to={glossaryTermHref}>
-                  <Pill>Glossary term</Pill>
-                </Link>
-              ) : null}
+          {!terminologyTerm ? (
+            <div className="review-project-detail__field review-project-detail__field--source">
+              <div className="review-project-detail__label">
+                <span>Source</span>
+                {glossaryTermHref ? (
+                  <Link className="review-project-detail__source-affordance" to={glossaryTermHref}>
+                    <Pill>Glossary term</Pill>
+                  </Link>
+                ) : null}
+              </div>
+              <div className="review-project-detail__value review-project-detail__value--source">
+                {source || '—'}
+              </div>
             </div>
-            <div className="review-project-detail__value review-project-detail__value--source">
-              {source || '—'}
+          ) : null}
+
+          {!terminologyTerm ? (
+            <div className="review-project-detail__field">
+              <div className="review-project-detail__label">Comment</div>
+              <div className="review-project-detail__value">{glossaryTermComment ?? '—'}</div>
             </div>
-          </div>
+          ) : null}
 
-          <div className="review-project-detail__field">
-            <div className="review-project-detail__label">Comment</div>
-            <div className="review-project-detail__value">{glossaryTermComment ?? '—'}</div>
-          </div>
-
-          {glossaryTermTarget && glossaryPartOfSpeech ? (
+          {!terminologyTerm && glossaryTermTarget && glossaryPartOfSpeech ? (
             <div className="review-project-detail__field">
               <div className="review-project-detail__label">POS</div>
               <div className="review-project-detail__value">{glossaryPartOfSpeech}</div>
             </div>
           ) : null}
 
-          {glossaryTermTarget && glossaryTermType ? (
+          {!terminologyTerm && glossaryTermTarget && glossaryTermType ? (
             <div className="review-project-detail__field">
               <div className="review-project-detail__label">Type</div>
               <div className="review-project-detail__value">{glossaryTermType}</div>
             </div>
           ) : null}
+
+          {terminologyTerm ? <TerminologyEvidencePanel term={terminologyTerm} /> : null}
 
           <div className="review-project-detail__field">
             <button
@@ -4784,6 +4831,297 @@ function ReviewProjectHeader({
         </section>
       ) : null}
     </>
+  );
+}
+
+function TerminologyMetadataPanel({
+  term,
+  glossaryTermHref,
+  isTermCandidateProject,
+  canEdit,
+  isSaving,
+  onSave,
+}: {
+  term: ApiReviewProjectTerminologyTerm;
+  glossaryTermHref: string | null;
+  isTermCandidateProject: boolean;
+  canEdit: boolean;
+  isSaving: boolean;
+  onSave: (request: ApiReviewProjectTerminologyMetadataRequest) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [definition, setDefinition] = useState(term.definition ?? '');
+  const [rationale, setRationale] = useState(term.rationale ?? '');
+  const [partOfSpeech, setPartOfSpeech] = useState(term.partOfSpeech ?? '');
+  const [termType, setTermType] = useState(term.termType ?? 'GENERAL');
+  const [enforcement, setEnforcement] = useState(term.enforcement ?? 'SOFT');
+  const [doNotTranslate, setDoNotTranslate] = useState(Boolean(term.doNotTranslate));
+
+  useEffect(() => {
+    setDefinition(term.definition ?? '');
+    setRationale(term.rationale ?? '');
+    setPartOfSpeech(term.partOfSpeech ?? '');
+    setTermType(term.termType ?? 'GENERAL');
+    setEnforcement(term.enforcement ?? 'SOFT');
+    setDoNotTranslate(Boolean(term.doNotTranslate));
+    setIsEditing(false);
+  }, [
+    term.definition,
+    term.doNotTranslate,
+    term.enforcement,
+    term.metadataId,
+    term.partOfSpeech,
+    term.rationale,
+    term.termIndexCandidateId,
+    term.termType,
+  ]);
+
+  const normalizedDefinition = normalizeOptional(definition) ?? '';
+  const normalizedRationale = normalizeOptional(rationale) ?? '';
+  const normalizedPartOfSpeech = normalizeOptional(partOfSpeech) ?? '';
+  const isDirty =
+    normalizedDefinition !== (term.definition?.trim() ?? '') ||
+    normalizedRationale !== (term.rationale?.trim() ?? '') ||
+    normalizedPartOfSpeech !== (term.partOfSpeech?.trim() ?? '') ||
+    termType !== (term.termType ?? 'GENERAL') ||
+    enforcement !== (term.enforcement ?? 'SOFT') ||
+    doNotTranslate !== Boolean(term.doNotTranslate);
+  const isCandidateTerm =
+    isTermCandidateProject || term.status?.toLocaleUpperCase() === 'CANDIDATE';
+
+  return (
+    <div className="review-project-detail__field review-project-detail__terminology-panel">
+      <div className="review-project-detail__label-row">
+        <div className="review-project-detail__label">Term details</div>
+        {canEdit ? (
+          <button
+            type="button"
+            className="review-project-detail__actions-button review-project-detail__terminology-edit-button"
+            onClick={() => setIsEditing((current) => !current)}
+            disabled={isSaving}
+          >
+            {isEditing ? 'Cancel' : 'Edit details'}
+          </button>
+        ) : null}
+      </div>
+
+      <div className="review-project-detail__terminology-summary">
+        <div className="review-project-detail__terminology-term">
+          <span>Term</span>
+          <strong>{term.source ?? '—'}</strong>
+        </div>
+        <div className="review-project-detail__terminology-facts">
+          <div>
+            <span>Status</span>
+            <strong>{formatGlossaryMetadataValue(term.status) ?? '—'}</strong>
+          </div>
+          <div>
+            <span>Type</span>
+            <strong>{formatGlossaryMetadataValue(term.termType) ?? '—'}</strong>
+          </div>
+          <div>
+            <span>POS</span>
+            <strong>{formatGlossaryMetadataValue(term.partOfSpeech) ?? '—'}</strong>
+          </div>
+          <div>
+            <span>Enforcement</span>
+            <strong>{formatGlossaryMetadataValue(term.enforcement) ?? '—'}</strong>
+          </div>
+          <div>
+            <span>Translation</span>
+            <strong>{term.doNotTranslate ? 'Do not translate' : 'Translate'}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="review-project-detail__terminology-meta">
+        <div>
+          <span>Glossary</span>
+          <strong>{term.glossaryName ?? term.glossaryId ?? '—'}</strong>
+        </div>
+        <div>
+          <span>Candidate review</span>
+          <strong>{formatGlossaryMetadataValue(term.candidateReviewStatus) ?? '—'}</strong>
+        </div>
+        {glossaryTermHref && !isCandidateTerm ? (
+          <Link className="review-project-detail__terminology-link" to={glossaryTermHref}>
+            Open glossary term
+          </Link>
+        ) : null}
+      </div>
+
+      {isEditing ? (
+        <div className="review-project-detail__terminology-editor">
+          <label className="review-project-detail__terminology-edit-field">
+            <span>Definition</span>
+            <AutoTextarea
+              className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+              value={definition}
+              onChange={(event) => setDefinition(event.target.value)}
+              rows={1}
+              style={{ resize: 'none' }}
+            />
+          </label>
+          <label className="review-project-detail__terminology-edit-field">
+            <span>Rationale</span>
+            <AutoTextarea
+              className="review-project-detail__input review-project-detail__input--compact review-project-detail__input--autosize"
+              value={rationale}
+              onChange={(event) => setRationale(event.target.value)}
+              rows={1}
+              style={{ resize: 'none' }}
+            />
+          </label>
+          <div className="review-project-detail__terminology-edit-grid">
+            <label className="review-project-detail__terminology-edit-field">
+              <span>Term type</span>
+              <select
+                className="review-project-detail__input review-project-detail__input--compact"
+                value={termType}
+                onChange={(event) => setTermType(event.target.value)}
+              >
+                {TERMINOLOGY_TERM_TYPES.map((option) => (
+                  <option key={option} value={option}>
+                    {formatGlossaryMetadataValue(option)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="review-project-detail__terminology-edit-field">
+              <span>Enforcement</span>
+              <select
+                className="review-project-detail__input review-project-detail__input--compact"
+                value={enforcement}
+                onChange={(event) => setEnforcement(event.target.value)}
+              >
+                {TERMINOLOGY_ENFORCEMENTS.map((option) => (
+                  <option key={option} value={option}>
+                    {formatGlossaryMetadataValue(option)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="review-project-detail__terminology-edit-field">
+            <span>Part of speech</span>
+            <input
+              className="review-project-detail__input review-project-detail__input--compact"
+              value={partOfSpeech}
+              onChange={(event) => setPartOfSpeech(event.target.value)}
+            />
+          </label>
+          <label className="review-project-detail__terminology-checkbox">
+            <input
+              type="checkbox"
+              checked={doNotTranslate}
+              onChange={(event) => setDoNotTranslate(event.target.checked)}
+            />
+            <span>Do not translate</span>
+          </label>
+          <div className="review-project-detail__editor-actions">
+            <button
+              type="button"
+              className="review-project-detail__actions-button review-project-detail__actions-button--primary"
+              disabled={!isDirty || isSaving}
+              onClick={() =>
+                onSave({
+                  definition: normalizedDefinition || null,
+                  rationale: normalizedRationale || null,
+                  partOfSpeech: normalizedPartOfSpeech || null,
+                  termType,
+                  enforcement,
+                  doNotTranslate,
+                })
+              }
+            >
+              Save term details
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="review-project-detail__terminology-copy">
+          {term.definition ? (
+            <div className="review-project-detail__terminology-note">
+              <span>Definition</span>
+              <p>{term.definition}</p>
+            </div>
+          ) : null}
+          {term.rationale ? (
+            <div className="review-project-detail__terminology-note">
+              <span>Rationale</span>
+              <p>{term.rationale}</p>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TerminologyEvidencePanel({ term }: { term: ApiReviewProjectTerminologyTerm }) {
+  const sources = term.sources ?? [];
+  const examples = term.examples ?? [];
+  const reviewChanged = term.candidateReviewChangedAt
+    ? `Updated ${formatDateTime(term.candidateReviewChangedAt)}${
+        term.candidateReviewChangedByUsername ? ` by ${term.candidateReviewChangedByUsername}` : ''
+      }`
+    : null;
+
+  if (!term.candidateReviewRationale && sources.length === 0 && examples.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="review-project-detail__field review-project-detail__terminology-panel review-project-detail__terminology-panel--evidence">
+      <div className="review-project-detail__label">Term evidence</div>
+      {term.candidateReviewRationale ? (
+        <div className="review-project-detail__terminology-note">
+          <span>Review rationale</span>
+          <p>{term.candidateReviewRationale}</p>
+          {reviewChanged ? <small>{reviewChanged}</small> : null}
+        </div>
+      ) : null}
+      {sources.length > 0 ? (
+        <div className="review-project-detail__terminology-list">
+          <span>Sources</span>
+          {sources.map((source, index) => (
+            <div key={source.id ?? index}>
+              {source.sourceType ?? 'Source'}
+              {source.sourceName ? ` · ${source.sourceName}` : ''}
+              {source.sourceExternalId ? ` · ${source.sourceExternalId}` : ''}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {examples.length > 0 ? (
+        <div className="review-project-detail__terminology-list">
+          <span>Examples</span>
+          {examples.map((example, index) => {
+            const matchedText = normalizeOptional(example.matchedText ?? '');
+            const termText = normalizeOptional(term.source ?? '');
+            const showMatchedText =
+              matchedText != null &&
+              matchedText.toLocaleLowerCase() !== termText?.toLocaleLowerCase();
+            const location = [example.repositoryName, example.assetPath]
+              .filter(Boolean)
+              .join(' · ');
+            const fallbackHeading = example.sourceText ? null : (matchedText ?? termText ?? 'Term');
+
+            return (
+              <div key={example.id ?? index}>
+                {showMatchedText ? <strong>{matchedText}</strong> : null}
+                {showMatchedText && location ? ` · ${location}` : location}
+                {!showMatchedText && !location && fallbackHeading ? (
+                  <strong>{fallbackHeading}</strong>
+                ) : null}
+                {example.sourceText ? <p>{example.sourceText}</p> : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

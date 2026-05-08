@@ -39,6 +39,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -421,6 +422,28 @@ public class ReviewProjectWS {
     }
   }
 
+  @PatchMapping("/review-project-text-units/{textUnitId}/terminology-metadata")
+  public GetReviewProjectResponse.ReviewProjectTextUnit updateTerminologyMetadata(
+      @PathVariable Long textUnitId, @RequestBody ReviewProjectTerminologyMetadataRequest request) {
+    try {
+      return toTextUnitResponse(
+          reviewProjectService.updateTerminologyMetadata(
+              textUnitId,
+              new ReviewProjectService.UpdateTerminologyMetadataCommand(
+                  request == null ? null : request.definition(),
+                  request == null ? null : request.rationale(),
+                  request == null ? null : request.partOfSpeech(),
+                  request == null ? null : request.termType(),
+                  request == null ? null : request.enforcement(),
+                  request == null ? null : request.doNotTranslate())));
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
   public record CreateReviewProjectRequestStartResponse(Long pollableTaskId) {}
 
   public record CreateGlossaryTerminologyReviewProjectRequest(
@@ -491,6 +514,14 @@ public class ReviewProjectWS {
 
   public record ReviewProjectTextUnitResolutionRequest(
       Long glossaryId, String status, String notes) {}
+
+  public record ReviewProjectTerminologyMetadataRequest(
+      String definition,
+      String rationale,
+      String partOfSpeech,
+      String termType,
+      String enforcement,
+      Boolean doNotTranslate) {}
 
   /** Summary response used by list/search endpoints. */
   public record SearchReviewProjectsResponse(List<ReviewProject> reviewProjects) {
@@ -588,7 +619,56 @@ public class ReviewProjectWS {
         TmTextUnitVariant baselineTmTextUnitVariant,
         TmTextUnitVariant currentTmTextUnitVariant,
         ReviewProjectTextUnitDecision reviewProjectTextUnitDecision,
+        TerminologyTerm terminologyTerm,
         List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
+
+    public record TerminologyTerm(
+        Long glossaryId,
+        String glossaryName,
+        Long metadataId,
+        Long tmTextUnitId,
+        String termKey,
+        String source,
+        String definition,
+        String rationale,
+        String partOfSpeech,
+        String termType,
+        String enforcement,
+        String status,
+        String provenance,
+        Boolean caseSensitive,
+        Boolean doNotTranslate,
+        Long termIndexCandidateId,
+        Long termIndexExtractedTermId,
+        Long occurrenceCount,
+        Integer repositoryCount,
+        String candidateReviewStatus,
+        String candidateReviewAuthority,
+        String candidateReviewReason,
+        String candidateReviewRationale,
+        Integer candidateReviewConfidence,
+        ZonedDateTime candidateReviewChangedAt,
+        String candidateReviewChangedByUsername,
+        List<TerminologyTermSource> sources,
+        List<TerminologyTermExample> examples) {}
+
+    public record TerminologyTermSource(
+        Long id, String sourceType, String sourceName, String sourceExternalId) {}
+
+    public record TerminologyTermExample(
+        Long id,
+        Long repositoryId,
+        String repositoryName,
+        Long assetId,
+        String assetPath,
+        Long tmTextUnitId,
+        String textUnitName,
+        String sourceText,
+        String matchedText,
+        Integer startIndex,
+        Integer endIndex,
+        String extractionMethod,
+        Integer confidence) {}
 
     public record TmTextUnit(
         Long id,
@@ -908,6 +988,7 @@ public class ReviewProjectWS {
                 decisionVariant,
                 decision.lastModifiedDate(),
                 decision.lastModifiedByUsername()),
+        toTerminologyTermResponse(view.terminologyTerm()),
         terminologyFeedbacks.stream().map(this::toTerminologyFeedbackResponse).toList());
   }
 
@@ -982,7 +1063,73 @@ public class ReviewProjectWS {
         baselineVariant,
         currentVariant,
         decision,
+        null,
         List.of());
+  }
+
+  private GetReviewProjectResponse.TerminologyTerm toTerminologyTermResponse(
+      GetProjectDetailView.TerminologyTerm term) {
+    if (term == null) {
+      return null;
+    }
+    return new GetReviewProjectResponse.TerminologyTerm(
+        term.glossaryId(),
+        term.glossaryName(),
+        term.metadataId(),
+        term.tmTextUnitId(),
+        term.termKey(),
+        term.source(),
+        term.definition(),
+        term.rationale(),
+        term.partOfSpeech(),
+        term.termType(),
+        term.enforcement(),
+        term.status(),
+        term.provenance(),
+        term.caseSensitive(),
+        term.doNotTranslate(),
+        term.termIndexCandidateId(),
+        term.termIndexExtractedTermId(),
+        term.occurrenceCount(),
+        term.repositoryCount(),
+        term.candidateReviewStatus(),
+        term.candidateReviewAuthority(),
+        term.candidateReviewReason(),
+        term.candidateReviewRationale(),
+        term.candidateReviewConfidence(),
+        term.candidateReviewChangedAt(),
+        term.candidateReviewChangedByUsername(),
+        term.sources() == null
+            ? List.of()
+            : term.sources().stream()
+                .map(
+                    source ->
+                        new GetReviewProjectResponse.TerminologyTermSource(
+                            source.id(),
+                            source.sourceType(),
+                            source.sourceName(),
+                            source.sourceExternalId()))
+                .toList(),
+        term.examples() == null
+            ? List.of()
+            : term.examples().stream()
+                .map(
+                    example ->
+                        new GetReviewProjectResponse.TerminologyTermExample(
+                            example.id(),
+                            example.repositoryId(),
+                            example.repositoryName(),
+                            example.assetId(),
+                            example.assetPath(),
+                            example.tmTextUnitId(),
+                            example.textUnitName(),
+                            example.sourceText(),
+                            example.matchedText(),
+                            example.startIndex(),
+                            example.endIndex(),
+                            example.extractionMethod(),
+                            example.confidence()))
+                .toList());
   }
 
   private GetReviewProjectResponse.ReviewProjectTextUnitFeedback toTerminologyFeedbackResponse(

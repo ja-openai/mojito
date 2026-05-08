@@ -47,13 +47,18 @@ public interface ReviewProjectTextUnitRepository
         rptud.notes,
         rptud.decisionState,
         rptud.lastModifiedDate,
-        decisionModifiedBy.username
+        decisionModifiedBy.username,
+        termIndexCandidate.id,
+        targetGlossary.id,
+        targetGlossary.name
       )
       from ReviewProjectTextUnit rptu
       join rptu.reviewProject rp
       join rptu.tmTextUnit ttu
       join ttu.asset asset
       join asset.repository repo
+      left join rptu.termIndexCandidate termIndexCandidate
+      left join rptu.targetGlossary targetGlossary
       left join rptu.tmTextUnitVariant ttuv
       left join TMTextUnitCurrentVariant ttucv
         on ttucv.tmTextUnit = ttu
@@ -101,13 +106,18 @@ public interface ReviewProjectTextUnitRepository
         rptud.notes,
         rptud.decisionState,
         rptud.lastModifiedDate,
-        decisionModifiedBy.username
+        decisionModifiedBy.username,
+        termIndexCandidate.id,
+        targetGlossary.id,
+        targetGlossary.name
       )
       from ReviewProjectTextUnit rptu
       join rptu.reviewProject rp
       join rptu.tmTextUnit ttu
       join ttu.asset asset
       join asset.repository repo
+      left join rptu.termIndexCandidate termIndexCandidate
+      left join rptu.targetGlossary targetGlossary
       left join rptu.tmTextUnitVariant ttuv
       left join TMTextUnitCurrentVariant ttucv
         on ttucv.tmTextUnit = ttu
@@ -121,6 +131,12 @@ public interface ReviewProjectTextUnitRepository
       """)
   Optional<ReviewProjectTextUnitDetail> findDetailByReviewProjectTextUnitId(
       @Param("reviewProjectTextUnitId") Long reviewProjectTextUnitId);
+
+  List<ReviewProjectTextUnit> findByReviewProject_ReviewProjectRequest_IdAndTmTextUnit_Id(
+      Long reviewProjectRequestId, Long tmTextUnitId);
+
+  List<ReviewProjectTextUnit> findByReviewProject_ReviewProjectRequest_IdAndTermIndexCandidate_Id(
+      Long reviewProjectRequestId, Long termIndexCandidateId);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(

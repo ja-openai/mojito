@@ -208,12 +208,48 @@ The glossary workspace now uses this foundation for per-glossary curation:
 - Suggestion search returns stored candidate and occurrence data only; generation,
   import, manual add, MCP, or external submissions are the write paths that put
   more suggestions into the table.
-- Accepting a suggestion creates a normal glossary term, attaches note/string
-  usage evidence, and writes a `PRIMARY` `glossary_term_index_link`.
+- Term-candidate review projects can now be created from generated
+  `term_index_candidate` rows without creating glossary metadata up front. Review
+  rows keep the target glossary and candidate id, display the proposal metadata
+  and evidence, and let assigned reviewers provide specialist input.
+- Accepting a term-candidate review during PM resolution creates the normal
+  glossary term, attaches note/string usage evidence, writes a `PRIMARY`
+  `glossary_term_index_link`, and marks the candidate human-accepted. Rejecting
+  the review marks the candidate human-rejected and writes a glossary-specific
+  ignore decision instead of creating a glossary term.
+- Accepting a suggestion directly from the glossary curation workspace still
+  creates a normal glossary term, attaches note/string usage evidence, and writes
+  a `PRIMARY` `glossary_term_index_link`.
 - Ignoring a suggestion writes `glossary_term_index_decision`.
 
 The system settings pages remain extractor/debug views. Glossary-specific
-selection happens in `/glossaries/:glossaryId`.
+selection happens in `/glossaries/:glossaryId`; assigned vendors should review
+candidate proposals through review projects rather than the system term-index
+pages.
+
+## Glossary Build Workflow
+
+1. PM/admin creates the glossary and defines its repository or product scope.
+2. Trusted existing terminology, such as legacy glossary files or already-reviewed
+   imports, can be imported directly into the glossary.
+3. The term index extracts raw source terms from repositories. AI or another
+   source reviews those raw extractions and generates candidate metadata:
+   definition, rationale, term type, part of speech, enforcement, and
+   `doNotTranslate`.
+4. PM/admin creates a candidate review project from generated candidates and
+   chooses the target glossary. Vendor/advisor reviewers work in the review
+   project, not in the system term-index pages.
+5. PM/admin resolves the review project. Approval promotes the candidate into the
+   target glossary. Rejection records a human rejection and a glossary-specific
+   ignore decision without creating a glossary term.
+6. Glossary review projects are for already-created glossary terms and cleanup,
+   not for initial generated-candidate intake.
+
+Current limitations: candidate review creation is anchored to extracted-term
+occurrences, so pure MCP/manual candidates without a source text-unit occurrence
+need follow-up support before they can enter review projects directly. Candidate
+review currently shows text/rationale evidence; screenshot evidence belongs to
+accepted glossary terms.
 
 ## Extraction Types
 

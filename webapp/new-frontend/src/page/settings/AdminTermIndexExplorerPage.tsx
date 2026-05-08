@@ -13,8 +13,11 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 
+import { type ApiGlossarySummary, fetchGlossaries } from '../../api/glossaries';
+import { createGlossaryTermCandidateReviewProjectRequest } from '../../api/review-projects';
+import { type ApiTeamUserSummary, fetchTeams, fetchTeamUsersByRole } from '../../api/teams';
 import {
   type ApiGenerateTermIndexCandidatesResponse,
   type ApiTermIndexEntry,
@@ -40,19 +43,23 @@ import {
   MultiSectionFilterChip,
 } from '../../components/filters/MultiSectionFilterChip';
 import { Modal } from '../../components/Modal';
-import type { MultiSelectCustomAction } from '../../components/MultiSelectChip';
+import { MultiSelectChip, type MultiSelectCustomAction } from '../../components/MultiSelectChip';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { PillDropdown } from '../../components/PillDropdown';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
 import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
-import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import {
+  SingleSelectDropdown,
+  type SingleSelectOption,
+} from '../../components/SingleSelectDropdown';
 import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import { useRepositories } from '../../hooks/useRepositories';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import { formatLocalDateTime } from '../../utils/dateTime';
+import { getUserLabel } from '../../utils/userDisplayName';
 import {
   type RepositorySelectionOption,
   useRepositorySelection,
@@ -190,6 +197,16 @@ type CandidateGenerationRequest = {
   entryIds: number[];
   entries: ApiTermIndexEntry[];
   draft: CandidateDraft | null;
+};
+
+type CandidateReviewRequest = {
+  entries: ApiTermIndexEntry[];
+  candidateIds: number[];
+  selectedEntryCount: number;
+  glossaryId: number | null;
+  teamId: number | null;
+  specialistUserIds: number[];
+  pmUserId: number | null;
 };
 
 type ExtractedTermTriageRequest = {
@@ -1476,6 +1493,7 @@ export function AdminTermIndexTermsPage() {
 export function AdminTermIndexCandidateGenerationPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: repositories } = useRepositories();
   const repositoryOptions = useRepositorySelectionOptions(repositories ?? []);
@@ -1506,6 +1524,9 @@ export function AdminTermIndexCandidateGenerationPage() {
   );
   const [candidateGenerationRequest, setCandidateGenerationRequest] =
     useState<CandidateGenerationRequest | null>(null);
+  const [candidateReviewRequest, setCandidateReviewRequest] =
+    useState<CandidateReviewRequest | null>(null);
+  const candidateReviewTeamId = candidateReviewRequest?.teamId ?? null;
   const [candidateGenerationReport, setCandidateGenerationReport] =
     useState<ApiGenerateTermIndexCandidatesResponse | null>(null);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
@@ -1550,6 +1571,31 @@ export function AdminTermIndexCandidateGenerationPage() {
     queryKey: ['term-index-status', effectiveRepositoryIds],
     queryFn: () => fetchTermIndexStatus({ repositoryIds: effectiveRepositoryIds }),
     enabled: isAdmin && repositoryOptions.length > 0,
+    staleTime: 30_000,
+  });
+
+  const glossariesQuery = useQuery({
+    queryKey: ['glossaries', 'term-index-candidate-review-targets'],
+    queryFn: () => fetchGlossaries({ enabled: true, limit: 500 }),
+    enabled: isAdmin,
+    staleTime: 30_000,
+  });
+  const candidateReviewTeamsQuery = useQuery({
+    queryKey: ['teams', 'term-index-candidate-review'],
+    queryFn: fetchTeams,
+    enabled: isAdmin,
+    staleTime: 30_000,
+  });
+  const candidateReviewSpecialistsQuery = useQuery({
+    queryKey: ['team-users', candidateReviewTeamId, 'TRANSLATOR', 'term-index-candidate-review'],
+    queryFn: () => fetchTeamUsersByRole(candidateReviewTeamId as number, 'TRANSLATOR'),
+    enabled: isAdmin && candidateReviewRequest != null && candidateReviewTeamId != null,
+    staleTime: 30_000,
+  });
+  const candidateReviewPmUsersQuery = useQuery({
+    queryKey: ['team-users', candidateReviewTeamId, 'PM', 'term-index-candidate-review'],
+    queryFn: () => fetchTeamUsersByRole(candidateReviewTeamId as number, 'PM'),
+    enabled: isAdmin && candidateReviewRequest != null && candidateReviewTeamId != null,
     staleTime: 30_000,
   });
 
@@ -1599,6 +1645,76 @@ export function AdminTermIndexCandidateGenerationPage() {
     () => entries.filter((entry) => selectedEntryIds.includes(entry.id)),
     [entries, selectedEntryIds],
   );
+  const selectedCandidateEntries = useMemo(
+    () => selectedEntries.filter((entry) => entry.termIndexCandidateId != null),
+    [selectedEntries],
+  );
+  const selectedCandidateIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          selectedCandidateEntries
+            .map((entry) => entry.termIndexCandidateId)
+            .filter((candidateId): candidateId is number => candidateId != null),
+        ),
+      ),
+    [selectedCandidateEntries],
+  );
+  const candidateReviewTeamOptions = useMemo(
+    () =>
+      (candidateReviewTeamsQuery.data ?? [])
+        .filter((team) => team.enabled !== false)
+        .map((team) => ({
+          value: team.id,
+          label: `${team.name} (#${team.id})`,
+        }))
+        .sort((first, second) =>
+          first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }),
+        ),
+    [candidateReviewTeamsQuery.data],
+  );
+  const candidateReviewSpecialistOptions = useMemo(
+    () =>
+      (candidateReviewSpecialistsQuery.data?.users ?? [])
+        .map(toTeamUserSelectOption)
+        .sort((first, second) =>
+          first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }),
+        ),
+    [candidateReviewSpecialistsQuery.data?.users],
+  );
+  const candidateReviewDeciderOptions = useMemo(() => {
+    const optionsByUserId = new Map<
+      number,
+      { value: number; label: string; helper: string; roles: Set<string> }
+    >();
+    const addUsers = (users: ApiTeamUserSummary[] | undefined, role: string) => {
+      (users ?? []).forEach((teamUser) => {
+        const existing = optionsByUserId.get(teamUser.id);
+        if (existing) {
+          existing.roles.add(role);
+          existing.helper = Array.from(existing.roles).join(' + ');
+          return;
+        }
+        optionsByUserId.set(teamUser.id, {
+          value: teamUser.id,
+          label: getUserLabel(teamUser) || `User #${teamUser.id}`,
+          helper: role,
+          roles: new Set([role]),
+        });
+      });
+    };
+    addUsers(candidateReviewPmUsersQuery.data?.users, 'PM');
+    addUsers(candidateReviewSpecialistsQuery.data?.users, 'Advisor');
+    return Array.from(optionsByUserId.values())
+      .map((option) => ({
+        value: option.value,
+        label: option.label,
+        helper: option.helper,
+      }))
+      .sort((first, second) =>
+        first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }),
+      );
+  }, [candidateReviewPmUsersQuery.data?.users, candidateReviewSpecialistsQuery.data?.users]);
   const allEntriesSelected =
     entries.length > 0 && entries.every((entry) => selectedEntryIds.includes(entry.id));
   const repositoryScopeLabel = formatRepositorySelectionSummary({
@@ -1708,6 +1824,46 @@ export function AdminTermIndexCandidateGenerationPage() {
     },
   });
 
+  const createCandidateReviewMutation = useMutation({
+    mutationFn: (request: CandidateReviewRequest) => {
+      if (request.glossaryId == null) {
+        throw new Error('Select a target glossary.');
+      }
+      if (request.teamId == null) {
+        throw new Error('Select a review team.');
+      }
+      return createGlossaryTermCandidateReviewProjectRequest(request.glossaryId, {
+        name: 'Term candidate review',
+        notes:
+          'Review generated term candidates before promoting accepted proposals into the target glossary.',
+        teamId: request.teamId,
+        assignTranslator: false,
+        specialistUserIds: request.specialistUserIds.length > 0 ? request.specialistUserIds : null,
+        pmUserId: request.pmUserId,
+        termIndexCandidateIds: request.candidateIds,
+      });
+    },
+    onSuccess: (response) => {
+      setCandidateReviewRequest(null);
+      setSelectedEntryIds([]);
+      const projectId = response.projectIds[0];
+      if (projectId != null) {
+        void navigate(`/review-projects/${projectId}`);
+        return;
+      }
+      setNotice({
+        kind: 'error',
+        message: 'No candidate review project was created.',
+      });
+    },
+    onError: (error: Error) => {
+      setNotice({
+        kind: 'error',
+        message: error.message || 'Failed to create candidate review project.',
+      });
+    },
+  });
+
   const closeCandidateGenerationModal = () => {
     if (generateCandidatesMutation.isPending) {
       return;
@@ -1751,6 +1907,42 @@ export function AdminTermIndexCandidateGenerationPage() {
       entries: selectedEntries,
       draft: null,
     });
+  };
+
+  const openCandidateReviewRequest = () => {
+    if (selectedCandidateIds.length === 0 || createCandidateReviewMutation.isPending) {
+      return;
+    }
+    const defaultGlossaryId = glossariesQuery.data?.glossaries[0]?.id ?? null;
+    const defaultTeamId =
+      candidateReviewTeamOptions.length === 1
+        ? (candidateReviewTeamOptions[0]?.value ?? null)
+        : null;
+    setNotice(null);
+    setCandidateReviewRequest({
+      entries: selectedCandidateEntries,
+      candidateIds: selectedCandidateIds,
+      selectedEntryCount: selectedEntries.length,
+      glossaryId: defaultGlossaryId,
+      teamId: defaultTeamId,
+      specialistUserIds: [],
+      pmUserId: null,
+    });
+  };
+
+  const closeCandidateReviewModal = () => {
+    if (createCandidateReviewMutation.isPending) {
+      return;
+    }
+    setCandidateReviewRequest(null);
+  };
+
+  const confirmCandidateReviewProject = () => {
+    if (!candidateReviewRequest || createCandidateReviewMutation.isPending) {
+      return;
+    }
+    setNotice(null);
+    createCandidateReviewMutation.mutate(candidateReviewRequest);
   };
 
   const generateSelectedEntryCandidate = () => {
@@ -1970,8 +2162,30 @@ export function AdminTermIndexCandidateGenerationPage() {
                   <button
                     type="button"
                     className="term-index-explorer__subbar-button"
+                    onClick={openCandidateReviewRequest}
+                    disabled={
+                      createCandidateReviewMutation.isPending ||
+                      selectedCandidateIds.length === 0 ||
+                      glossariesQuery.isLoading ||
+                      candidateReviewTeamsQuery.isLoading
+                    }
+                    title={
+                      selectedCandidateIds.length === 0
+                        ? 'Generate candidates for the selected terms first'
+                        : undefined
+                    }
+                  >
+                    Create candidate review
+                  </button>
+                  <TermIndexSubbarSeparator />
+                  <button
+                    type="button"
+                    className="term-index-explorer__subbar-button"
                     onClick={() => setSelectedEntryIds([])}
-                    disabled={generateCandidatesMutation.isPending}
+                    disabled={
+                      generateCandidatesMutation.isPending ||
+                      createCandidateReviewMutation.isPending
+                    }
                   >
                     Clear selection
                   </button>
@@ -2067,6 +2281,46 @@ export function AdminTermIndexCandidateGenerationPage() {
         error={generateCandidatesMutation.error}
         onClose={closeCandidateGenerationModal}
         onGenerate={confirmCandidateGeneration}
+      />
+      <CandidateReviewProjectModal
+        open={candidateReviewRequest != null}
+        request={candidateReviewRequest}
+        glossaries={glossariesQuery.data?.glossaries ?? []}
+        isLoadingGlossaries={glossariesQuery.isLoading}
+        teamOptions={candidateReviewTeamOptions}
+        specialistOptions={candidateReviewSpecialistOptions}
+        deciderOptions={candidateReviewDeciderOptions}
+        isLoadingTeams={candidateReviewTeamsQuery.isLoading}
+        isLoadingSpecialists={candidateReviewSpecialistsQuery.isFetching}
+        isLoadingDeciders={
+          candidateReviewPmUsersQuery.isFetching || candidateReviewSpecialistsQuery.isFetching
+        }
+        isCreating={createCandidateReviewMutation.isPending}
+        error={createCandidateReviewMutation.error}
+        onChangeGlossary={(glossaryId) =>
+          setCandidateReviewRequest((current) =>
+            current == null ? current : { ...current, glossaryId },
+          )
+        }
+        onChangeTeam={(teamId) =>
+          setCandidateReviewRequest((current) =>
+            current == null
+              ? current
+              : { ...current, teamId, specialistUserIds: [], pmUserId: null },
+          )
+        }
+        onChangeSpecialists={(specialistUserIds) =>
+          setCandidateReviewRequest((current) =>
+            current == null ? current : { ...current, specialistUserIds },
+          )
+        }
+        onChangeDecider={(pmUserId) =>
+          setCandidateReviewRequest((current) =>
+            current == null ? current : { ...current, pmUserId },
+          )
+        }
+        onClose={closeCandidateReviewModal}
+        onCreate={confirmCandidateReviewProject}
       />
     </div>
   );
@@ -2756,6 +3010,181 @@ function ExtractedTermTriageModal({
             {isReviewing ? 'Reviewing...' : 'Start AI review'}
           </button>
         )}
+      </div>
+    </Modal>
+  );
+}
+
+function CandidateReviewProjectModal({
+  open,
+  request,
+  glossaries,
+  isLoadingGlossaries,
+  teamOptions,
+  specialistOptions,
+  deciderOptions,
+  isLoadingTeams,
+  isLoadingSpecialists,
+  isLoadingDeciders,
+  isCreating,
+  error,
+  onChangeGlossary,
+  onChangeTeam,
+  onChangeSpecialists,
+  onChangeDecider,
+  onClose,
+  onCreate,
+}: {
+  open: boolean;
+  request: CandidateReviewRequest | null;
+  glossaries: ApiGlossarySummary[];
+  isLoadingGlossaries: boolean;
+  teamOptions: SingleSelectOption<number>[];
+  specialistOptions: Array<{ value: number; label: string }>;
+  deciderOptions: SingleSelectOption<number>[];
+  isLoadingTeams: boolean;
+  isLoadingSpecialists: boolean;
+  isLoadingDeciders: boolean;
+  isCreating: boolean;
+  error: Error | null;
+  onChangeGlossary: (glossaryId: number | null) => void;
+  onChangeTeam: (teamId: number | null) => void;
+  onChangeSpecialists: (specialistUserIds: number[]) => void;
+  onChangeDecider: (pmUserId: number | null) => void;
+  onClose: () => void;
+  onCreate: () => void;
+}) {
+  const selectedGlossaryId = request?.glossaryId ?? '';
+  const selectedTeamId = request?.teamId ?? null;
+  return (
+    <Modal
+      open={open}
+      size="md"
+      onClose={onClose}
+      closeOnBackdrop={!isCreating}
+      ariaLabel="Create candidate review project"
+    >
+      <div className="modal__header">
+        <div>
+          <h3 className="modal__title">Create candidate review</h3>
+          <p className="settings-hint">
+            Review generated candidates as proposals. Accepted proposals are promoted into the
+            target glossary during decider resolution.
+          </p>
+        </div>
+      </div>
+      <div className="modal__body term-index-explorer__generation-modal-body">
+        <div className="settings-field">
+          <label className="settings-field__label" htmlFor="term-index-candidate-review-glossary">
+            Target glossary
+          </label>
+          <select
+            id="term-index-candidate-review-glossary"
+            className="settings-input"
+            value={selectedGlossaryId}
+            onChange={(event) =>
+              onChangeGlossary(event.target.value ? Number(event.target.value) : null)
+            }
+            disabled={isCreating || isLoadingGlossaries}
+          >
+            <option value="">Select glossary</option>
+            {glossaries.map((glossary) => (
+              <option key={glossary.id} value={glossary.id}>
+                {glossary.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="settings-field">
+          <span className="settings-field__label">Review team</span>
+          <SingleSelectDropdown<number>
+            label="Review team"
+            options={teamOptions}
+            value={selectedTeamId}
+            onChange={onChangeTeam}
+            className="term-index-explorer__candidate-review-picker"
+            placeholder={isLoadingTeams ? 'Loading teams...' : 'Select review team'}
+            disabled={isCreating || isLoadingTeams}
+            buttonAriaLabel="Choose candidate review team"
+            searchPlaceholder="Filter teams"
+            noResultsLabel="No teams found"
+          />
+        </div>
+        <div className="settings-field">
+          <span className="settings-field__label">Advisors</span>
+          <MultiSelectChip<number>
+            label="Advisors"
+            options={specialistOptions}
+            selectedValues={request?.specialistUserIds ?? []}
+            onChange={onChangeSpecialists}
+            className="term-index-explorer__candidate-review-picker"
+            placeholder="Choose advisors"
+            emptyOptionsLabel={
+              selectedTeamId == null
+                ? 'Select a team first'
+                : isLoadingSpecialists
+                  ? 'Loading advisors...'
+                  : 'No advisor users in this team'
+            }
+            disabled={isCreating || selectedTeamId == null || isLoadingSpecialists}
+            buttonAriaLabel="Choose candidate review advisors"
+            searchPlaceholder="Filter advisors"
+            noResultsLabel="No advisors found"
+          />
+          <span className="settings-hint">
+            Leave empty to create one unassigned advisor row for this team.
+          </span>
+        </div>
+        <div className="settings-field">
+          <span className="settings-field__label">Decider</span>
+          <SingleSelectDropdown<number>
+            label="Decider"
+            options={deciderOptions}
+            value={request?.pmUserId ?? null}
+            onChange={onChangeDecider}
+            className="term-index-explorer__candidate-review-picker"
+            placeholder={
+              selectedTeamId == null
+                ? 'Select team first'
+                : isLoadingDeciders
+                  ? 'Loading deciders...'
+                  : 'Leave unassigned'
+            }
+            noneLabel="Leave unassigned"
+            disabled={isCreating || selectedTeamId == null || isLoadingDeciders}
+            buttonAriaLabel="Choose candidate review decider"
+            searchPlaceholder="Filter deciders"
+            noResultsLabel="No deciders found"
+          />
+        </div>
+        <p className="settings-hint">
+          {request == null
+            ? 'No candidates selected.'
+            : `${request.candidateIds.length.toLocaleString()} generated candidate${
+                request.candidateIds.length === 1 ? '' : 's'
+              } will be reviewed from ${request.selectedEntryCount.toLocaleString()} selected extracted term${
+                request.selectedEntryCount === 1 ? '' : 's'
+              }.`}
+        </p>
+        {error ? <p className="settings-hint is-error">{getErrorMessage(error)}</p> : null}
+      </div>
+      <div className="modal__footer term-index-explorer__modal-footer">
+        <button type="button" className="modal__button" onClick={onClose} disabled={isCreating}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="modal__button modal__button--primary"
+          onClick={onCreate}
+          disabled={
+            isCreating ||
+            request?.glossaryId == null ||
+            request.teamId == null ||
+            request.candidateIds.length === 0
+          }
+        >
+          {isCreating ? 'Creating...' : 'Create review project'}
+        </button>
       </div>
     </Modal>
   );
@@ -4234,6 +4663,13 @@ function formatCappedListLabel(label: string, visibleCount: number, limit: numbe
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function toTeamUserSelectOption(user: ApiTeamUserSummary) {
+  return {
+    value: user.id,
+    label: getUserLabel(user) || `User #${user.id}`,
+  };
 }
 
 function formatTermIndexQueryFilterSummary(

@@ -3,8 +3,10 @@ package com.box.l10n.mojito.service.review;
 import com.box.l10n.mojito.entity.*;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Locale_;
+import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
 import com.box.l10n.mojito.entity.review.*;
 import com.box.l10n.mojito.entity.review.ReviewProject;
@@ -24,7 +26,9 @@ import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.Integr
 import com.box.l10n.mojito.service.glossary.GlossaryTermIndexCurationService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermIndexLinkRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
+import com.box.l10n.mojito.service.glossary.GlossaryTermService;
 import com.box.l10n.mojito.service.glossary.TermIndexCandidateRepository;
+import com.box.l10n.mojito.service.glossary.TermIndexOccurrenceRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.security.user.UserRepository;
@@ -55,6 +59,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -84,6 +89,8 @@ public class ReviewProjectService {
   private final GlossaryTermIndexCurationService glossaryTermIndexCurationService;
   private final GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository;
   private final TermIndexCandidateRepository termIndexCandidateRepository;
+  private final TermIndexOccurrenceRepository termIndexOccurrenceRepository;
+  private final GlossaryTermService glossaryTermService;
   private final LocaleService localeService;
   private final TextUnitSearcher textUnitSearcher;
   private final TMTextUnitRepository tmTextUnitRepository;
@@ -116,6 +123,8 @@ public class ReviewProjectService {
       GlossaryTermIndexCurationService glossaryTermIndexCurationService,
       GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository,
       TermIndexCandidateRepository termIndexCandidateRepository,
+      TermIndexOccurrenceRepository termIndexOccurrenceRepository,
+      GlossaryTermService glossaryTermService,
       LocaleService localeService,
       TextUnitSearcher textUnitSearcher,
       TMTextUnitRepository tmTextUnitRepository,
@@ -144,6 +153,8 @@ public class ReviewProjectService {
     this.glossaryTermIndexCurationService = glossaryTermIndexCurationService;
     this.glossaryTermIndexLinkRepository = glossaryTermIndexLinkRepository;
     this.termIndexCandidateRepository = termIndexCandidateRepository;
+    this.termIndexOccurrenceRepository = termIndexOccurrenceRepository;
+    this.glossaryTermService = glossaryTermService;
     this.localeService = localeService;
     this.textUnitSearcher = textUnitSearcher;
     this.tmTextUnitRepository = tmTextUnitRepository;
@@ -272,84 +283,152 @@ public class ReviewProjectService {
     if (resolvedRequest.teamId() != null) {
       teamService.assertUserCanAccessTeam(resolvedRequest.teamId(), requestedByUserId);
     }
-    List<Long> tmTextUnitIds =
-        materializeTermCandidateReviewTerms(glossaryId, resolvedRequest.termIndexCandidateIds());
-    if (tmTextUnitIds.isEmpty()) {
+
+    CreateGlossaryTermCandidateReviewProjectJobInput asyncRequest =
+        new CreateGlossaryTermCandidateReviewProjectJobInput(
+            glossaryId,
+            resolvedRequest.name(),
+            resolvedRequest.notes(),
+            resolvedRequest.dueDate(),
+            resolvedRequest.teamId(),
+            resolvedRequest.assignTranslator(),
+            resolvedRequest.termIndexCandidateIds(),
+            resolvedRequest.specialistUserIds(),
+            resolvedRequest.pmUserId(),
+            resolvedRequest.specialistDueDate(),
+            resolvedRequest.pmDueDate(),
+            requestedByUserId);
+    QuartzJobInfo<
+            CreateGlossaryTermCandidateReviewProjectJobInput, CreateReviewProjectRequestResult>
+        quartzJobInfo =
+            QuartzJobInfo.newBuilder(ReviewProjectCreateGlossaryTermCandidateRequestJob.class)
+                .withInlineInput(false)
+                .withInput(asyncRequest)
+                .withMessage("Create term candidate review project request")
+                .build();
+    return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+  }
+
+  @Transactional
+  public CreateReviewProjectRequestResult createGlossaryTermCandidateReviewProject(
+      CreateGlossaryTermCandidateReviewProjectJobInput request) {
+    if (request == null || request.glossaryId() == null) {
+      throw new IllegalArgumentException("glossaryId must be provided");
+    }
+    if (CollectionUtils.isEmpty(request.termIndexCandidateIds())) {
+      throw new IllegalArgumentException("termIndexCandidateIds must be provided");
+    }
+    if (request.requestedByUserId() == null) {
+      throw new IllegalArgumentException("requestedByUserId must be provided");
+    }
+
+    Set<Long> requestedCandidateIds =
+        request.termIndexCandidateIds().stream()
+            .filter(Objects::nonNull)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    if (requestedCandidateIds.isEmpty()) {
+      throw new IllegalArgumentException("termIndexCandidateIds must be provided");
+    }
+
+    Set<Long> linkedCandidateIds =
+        new HashSet<>(
+            glossaryTermIndexLinkRepository.findLinkedTermIndexCandidateIdsByGlossaryId(
+                request.glossaryId(), requestedCandidateIds));
+    Map<Long, TermIndexCandidate> candidatesById =
+        termIndexCandidateRepository.findAllById(requestedCandidateIds).stream()
+            .collect(Collectors.toMap(TermIndexCandidate::getId, Function.identity(), (a, b) -> a));
+    List<Long> extractedTermIds =
+        candidatesById.values().stream()
+            .map(TermIndexCandidate::getTermIndexExtractedTerm)
+            .filter(Objects::nonNull)
+            .map(extractedTerm -> extractedTerm.getId())
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+    Map<Long, Long> representativeTmTextUnitIdByExtractedTermId =
+        extractedTermIds.isEmpty()
+            ? Map.of()
+            : termIndexOccurrenceRepository
+                .findRepresentativeTextUnitIdsByExtractedTermIdIn(extractedTermIds)
+                .stream()
+                .filter(row -> row.getTermIndexExtractedTermId() != null)
+                .collect(
+                    Collectors.toMap(
+                        TermIndexOccurrenceRepository.RepresentativeTextUnitRow
+                            ::getTermIndexExtractedTermId,
+                        TermIndexOccurrenceRepository.RepresentativeTextUnitRow::getTmTextUnitId,
+                        (first, ignored) -> first,
+                        LinkedHashMap::new));
+
+    List<TextUnitDTO> reviewCandidates = new ArrayList<>();
+    for (Long candidateId : requestedCandidateIds) {
+      if (linkedCandidateIds.contains(candidateId)) {
+        continue;
+      }
+      TermIndexCandidate candidate = candidatesById.get(candidateId);
+      if (candidate == null || candidate.getTermIndexExtractedTerm() == null) {
+        continue;
+      }
+      Long tmTextUnitId =
+          representativeTmTextUnitIdByExtractedTermId.get(
+              candidate.getTermIndexExtractedTerm().getId());
+      if (tmTextUnitId == null) {
+        continue;
+      }
+      CandidateReviewTextUnitDTO dto =
+          new CandidateReviewTextUnitDTO(candidate.getId(), request.glossaryId());
+      dto.setTmTextUnitId(tmTextUnitId);
+      dto.setName(candidate.getNormalizedKey());
+      dto.setSource(candidate.getTerm());
+      dto.setComment(candidate.getDefinition());
+      reviewCandidates.add(dto);
+    }
+    if (reviewCandidates.isEmpty()) {
       throw new IllegalArgumentException("No reviewable term candidates found");
     }
 
     String name =
-        resolvedRequest.name() == null || resolvedRequest.name().trim().isEmpty()
+        request.name() == null || request.name().trim().isEmpty()
             ? "Term candidate review"
-            : resolvedRequest.name().trim();
-    ZonedDateTime specialistDueDate =
-        firstNonNull(resolvedRequest.specialistDueDate(), resolvedRequest.dueDate());
+            : request.name().trim();
+    ZonedDateTime specialistDueDate = firstNonNull(request.specialistDueDate(), request.dueDate());
     if (specialistDueDate == null) {
       specialistDueDate = ZonedDateTime.now().plusDays(2);
     }
     ZonedDateTime pmDueDate =
-        resolvedRequest.pmDueDate() == null
-            ? specialistDueDate.plusDays(1)
-            : resolvedRequest.pmDueDate();
+        request.pmDueDate() == null ? specialistDueDate.plusDays(1) : request.pmDueDate();
     String notes =
-        resolvedRequest.notes() == null || resolvedRequest.notes().trim().isEmpty()
-            ? "Term candidate review for glossary " + glossaryId + "."
-            : resolvedRequest.notes().trim();
+        request.notes() == null || request.notes().trim().isEmpty()
+            ? "Term candidate review for glossary " + request.glossaryId() + "."
+            : request.notes().trim();
     List<CreateReviewProjectRequestCommand.ProjectSpec> projectSpecs =
         buildTerminologyProjectSpecs(
-            resolvedRequest.specialistUserIds(),
-            resolvedRequest.pmUserId(),
-            specialistDueDate,
-            pmDueDate);
+            request.specialistUserIds(), request.pmUserId(), specialistDueDate, pmDueDate);
+    Locale sourceLocale = localeService.findByBcp47Tag("en");
+    if (sourceLocale == null) {
+      throw new IllegalArgumentException("Unknown locale: en");
+    }
 
-    return createReviewProjectRequestAsync(
-        new CreateReviewProjectRequestCommand(
-            List.of("en"),
+    LocalePlan localePlan =
+        preparedLocalePlan(
+            "en",
+            sourceLocale,
+            reviewCandidates,
+            CollectionUtils.isEmpty(projectSpecs) ? 1 : projectSpecs.size(),
+            null);
+    PersistedReviewProjectRequest persisted =
+        persistPreparedReviewProjectRequest(
+            name,
             notes,
-            tmTextUnitIds,
-            null,
-            StatusFilter.ALL,
-            false,
+            List.of(),
             ReviewProjectType.TERM_CANDIDATE,
             specialistDueDate,
-            List.of(),
-            name,
-            resolvedRequest.teamId(),
-            resolvedRequest.assignTranslator() == null ? false : resolvedRequest.assignTranslator(),
-            null,
-            projectSpecs));
-  }
-
-  private List<Long> materializeTermCandidateReviewTerms(
-      Long glossaryId, List<Long> termIndexCandidateIds) {
-    if (CollectionUtils.isEmpty(termIndexCandidateIds)) {
-      throw new IllegalArgumentException("termIndexCandidateIds must be provided");
-    }
-    List<Long> tmTextUnitIds = new ArrayList<>();
-    for (Long termIndexCandidateId :
-        termIndexCandidateIds.stream().filter(Objects::nonNull).distinct().toList()) {
-      var term =
-          glossaryTermIndexCurationService.acceptSuggestion(
-              glossaryId,
-              termIndexCandidateId,
-              new GlossaryTermIndexCurationService.AcceptSuggestionCommand(
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  GlossaryTermMetadata.STATUS_CANDIDATE,
-                  null,
-                  null,
-                  null,
-                  null,
-                  List.of()));
-      if (term.tmTextUnitId() != null) {
-        tmTextUnitIds.add(term.tmTextUnitId());
-      }
-    }
-    return tmTextUnitIds.stream().distinct().sorted().toList();
+            request.teamId(),
+            request.requestedByUserId(),
+            request.assignTranslator(),
+            projectSpecs,
+            List.of(new LocaleCandidates(sourceLocale, reviewCandidates)));
+    return buildCreateReviewProjectRequestResult(persisted, List.of("en"), List.of(localePlan));
   }
 
   private ZonedDateTime firstNonNull(ZonedDateTime first, ZonedDateTime second) {
@@ -647,6 +726,24 @@ public class ReviewProjectService {
   }
 
   private record LocaleCandidates(Locale locale, List<TextUnitDTO> candidates) {}
+
+  private static class CandidateReviewTextUnitDTO extends TextUnitDTO {
+    private final Long termIndexCandidateId;
+    private final Long targetGlossaryId;
+
+    CandidateReviewTextUnitDTO(Long termIndexCandidateId, Long targetGlossaryId) {
+      this.termIndexCandidateId = termIndexCandidateId;
+      this.targetGlossaryId = targetGlossaryId;
+    }
+
+    Long termIndexCandidateId() {
+      return termIndexCandidateId;
+    }
+
+    Long targetGlossaryId() {
+      return targetGlossaryId;
+    }
+  }
 
   private record ResolvedProjectSpec(
       ReviewProjectTerminologyPhase terminologyPhase,
@@ -1406,6 +1503,8 @@ public class ReviewProjectService {
         reviewProjectTextUnitRepository.findDetailByReviewProjectId(projectId);
     Map<Long, List<ReviewProjectTextUnitFeedback>> feedbacksByReviewProjectTextUnitId =
         getTerminologyFeedbacksByReviewProjectTextUnitId(reviewProject, textUnitDetails);
+    Map<Long, GetProjectDetailView.TerminologyTerm> terminologyTermsByReviewProjectTextUnitId =
+        getTerminologyTermsByReviewProjectTextUnitId(reviewProject, textUnitDetails);
 
     List<GetProjectDetailView.ReviewProjectTextUnit> reviewProjectTextUnits =
         textUnitDetails.stream()
@@ -1414,7 +1513,9 @@ public class ReviewProjectService {
                     toReviewProjectTextUnit(
                         detail,
                         feedbacksByReviewProjectTextUnitId.getOrDefault(
-                            detail.reviewProjectTextUnitId(), List.of())))
+                            detail.reviewProjectTextUnitId(), List.of()),
+                        terminologyTermsByReviewProjectTextUnitId.get(
+                            detail.reviewProjectTextUnitId())))
             .toList();
 
     List<String> screenshotImageIds =
@@ -2090,10 +2191,6 @@ public class ReviewProjectService {
   @Transactional
   public GetProjectDetailView.ReviewProjectTextUnit saveTerminologyResolution(
       Long reviewProjectTextUnitId, Long glossaryId, String status, String notes) {
-    if (glossaryId == null) {
-      throw new IllegalArgumentException("glossaryId is required");
-    }
-
     String normalizedStatus = normalizeOptional(status);
     if (normalizedStatus == null) {
       throw new IllegalArgumentException("status is required");
@@ -2130,20 +2227,33 @@ public class ReviewProjectService {
           "Terminology resolution is only supported for PM resolution projects");
     }
 
-    GlossaryTermMetadata metadata =
-        glossaryTermMetadataRepository
-            .findByGlossaryIdAndTmTextUnitId(glossaryId, textUnit.getTmTextUnit().getId())
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "Glossary term metadata not found for glossaryId: "
-                            + glossaryId
-                            + ", tmTextUnitId: "
-                            + textUnit.getTmTextUnit().getId()));
-    metadata.setStatus(normalizedStatus);
-    glossaryTermMetadataRepository.saveAndFlush(metadata);
-    if (project.getType() == ReviewProjectType.TERM_CANDIDATE) {
-      updateLinkedCandidateReview(metadata, normalizedStatus, notes);
+    Long resolvedGlossaryId =
+        glossaryId != null
+            ? glossaryId
+            : textUnit.getTargetGlossary() == null ? null : textUnit.getTargetGlossary().getId();
+    if (resolvedGlossaryId == null) {
+      throw new IllegalArgumentException("glossaryId is required");
+    }
+
+    if (project.getType() == ReviewProjectType.TERM_CANDIDATE
+        && textUnit.getTermIndexCandidate() != null) {
+      resolveTermCandidateReview(textUnit, resolvedGlossaryId, normalizedStatus, notes);
+    } else {
+      GlossaryTermMetadata metadata =
+          glossaryTermMetadataRepository
+              .findByGlossaryIdAndTmTextUnitId(resolvedGlossaryId, textUnit.getTmTextUnit().getId())
+              .orElseThrow(
+                  () ->
+                      new IllegalArgumentException(
+                          "Glossary term metadata not found for glossaryId: "
+                              + resolvedGlossaryId
+                              + ", tmTextUnitId: "
+                              + textUnit.getTmTextUnit().getId()));
+      metadata.setStatus(normalizedStatus);
+      glossaryTermMetadataRepository.saveAndFlush(metadata);
+      if (project.getType() == ReviewProjectType.TERM_CANDIDATE) {
+        updateLinkedCandidateReview(metadata, normalizedStatus, notes);
+      }
     }
 
     Optional<ReviewProjectTextUnitDecision> existingDecision =
@@ -2168,6 +2278,241 @@ public class ReviewProjectService {
     updateProjectDecidedCount(project.getId(), wasDecided, true);
 
     return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
+  }
+
+  private void resolveTermCandidateReview(
+      ReviewProjectTextUnit textUnit, Long glossaryId, String normalizedStatus, String notes) {
+    TermIndexCandidate candidate = textUnit.getTermIndexCandidate();
+    if (GlossaryTermMetadata.STATUS_REJECTED.equals(normalizedStatus)) {
+      updateCandidateReview(candidate, TermIndexReview.STATUS_REJECTED, notes);
+      glossaryTermIndexCurationService.ignoreSuggestion(
+          glossaryId,
+          candidate.getId(),
+          new GlossaryTermIndexCurationService.IgnoreSuggestionCommand(notes));
+      return;
+    }
+
+    GlossaryTermService.TermView term =
+        glossaryTermIndexCurationService.acceptSuggestion(
+            glossaryId,
+            candidate.getId(),
+            new GlossaryTermIndexCurationService.AcceptSuggestionCommand(
+                null,
+                candidate.getTerm(),
+                candidate.getDefinition(),
+                candidate.getPartOfSpeech(),
+                candidate.getTermType(),
+                candidate.getEnforcement(),
+                normalizedStatus,
+                null,
+                candidate.getDoNotTranslate(),
+                candidate.getConfidence(),
+                candidate.getRationale(),
+                List.of()));
+    updateCandidateReview(candidate, TermIndexReview.STATUS_ACCEPTED, notes);
+    if (term.tmTextUnitId() == null) {
+      return;
+    }
+
+    TMTextUnit promotedTextUnit =
+        tmTextUnitRepository
+            .findById(term.tmTextUnitId())
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException("TM text unit not found: " + term.tmTextUnitId()));
+    Long requestId =
+        textUnit.getReviewProject().getReviewProjectRequest() == null
+            ? null
+            : textUnit.getReviewProject().getReviewProjectRequest().getId();
+    List<ReviewProjectTextUnit> rowsToUpdate =
+        requestId == null
+            ? List.of(textUnit)
+            : reviewProjectTextUnitRepository
+                .findByReviewProject_ReviewProjectRequest_IdAndTermIndexCandidate_Id(
+                    requestId, candidate.getId());
+    if (rowsToUpdate.isEmpty()) {
+      rowsToUpdate = List.of(textUnit);
+    }
+    rowsToUpdate.forEach(row -> row.setTmTextUnit(promotedTextUnit));
+    reviewProjectTextUnitRepository.saveAll(rowsToUpdate);
+    textUnit.setTmTextUnit(promotedTextUnit);
+  }
+
+  private void updateCandidateReview(
+      TermIndexCandidate candidate, String reviewStatus, String reviewRationale) {
+    candidate.setReviewStatus(reviewStatus);
+    candidate.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+    candidate.setReviewReason(TermIndexReview.REASON_OTHER);
+    candidate.setReviewRationale(truncate(normalizeOptional(reviewRationale), 2048));
+    candidate.setReviewConfidence(null);
+    candidate.setReviewChangedAt(ZonedDateTime.now());
+    candidate.setReviewChangedByUser(userService.getCurrentUser().orElse(null));
+    termIndexCandidateRepository.save(candidate);
+  }
+
+  @Transactional
+  public GetProjectDetailView.ReviewProjectTextUnit updateTerminologyMetadata(
+      Long reviewProjectTextUnitId, UpdateTerminologyMetadataCommand command) {
+    ReviewProjectTextUnit textUnit =
+        reviewProjectTextUnitRepository
+            .findById(reviewProjectTextUnitId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProjectTextUnit with id: "
+                            + reviewProjectTextUnitId
+                            + " not found"));
+    ReviewProject project = textUnit.getReviewProject();
+    assertCurrentUserCanReadProject(project);
+    if (!userService.isCurrentUserAdminOrPm()) {
+      throw new AccessDeniedException("Only admins and PMs can edit terminology metadata");
+    }
+    if (!isTerminologyWorkflowType(project.getType())) {
+      throw new IllegalArgumentException(
+          "Terminology metadata edits are only supported for terminology projects");
+    }
+
+    Long originalTmTextUnitId = textUnit.getTmTextUnit().getId();
+    Long tmTextUnitId = originalTmTextUnitId;
+    Optional<GlossaryTermMetadata> maybeMetadata =
+        glossaryTermMetadataRepository.findByTmTextUnitIdIn(List.of(originalTmTextUnitId)).stream()
+            .findFirst();
+    if (maybeMetadata.isEmpty()) {
+      if (project.getType() == ReviewProjectType.TERM_CANDIDATE
+          && textUnit.getTermIndexCandidate() != null) {
+        updateCandidateMetadata(textUnit.getTermIndexCandidate(), command);
+        return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
+      }
+      throw new IllegalArgumentException(
+          "Glossary term metadata not found for tmTextUnitId: " + originalTmTextUnitId);
+    }
+    GlossaryTermMetadata metadata = maybeMetadata.get();
+    Long glossaryId = metadata.getGlossary().getId();
+    GlossaryTermService.TermView currentTerm =
+        glossaryTermService.getTerm(glossaryId, tmTextUnitId, List.of());
+
+    String definition =
+        command == null ? currentTerm.definition() : normalizeOptional(command.definition());
+    String rationale =
+        command == null ? null : truncate(normalizeOptional(command.rationale()), 2048);
+    String partOfSpeech =
+        command == null ? currentTerm.partOfSpeech() : normalizeOptional(command.partOfSpeech());
+    String termType =
+        command == null || command.termType() == null
+            ? currentTerm.termType()
+            : normalizeKnownValue(command.termType(), GlossaryTermMetadata.TERM_TYPES, "term type");
+    String enforcement =
+        command == null || command.enforcement() == null
+            ? currentTerm.enforcement()
+            : normalizeKnownValue(
+                command.enforcement(), GlossaryTermMetadata.ENFORCEMENTS, "enforcement");
+    Boolean doNotTranslate =
+        command == null || command.doNotTranslate() == null
+            ? currentTerm.doNotTranslate()
+            : command.doNotTranslate();
+
+    GlossaryTermService.TermView updatedTerm =
+        glossaryTermService.upsertTerm(
+            glossaryId,
+            tmTextUnitId,
+            new GlossaryTermService.TermUpsertCommand(
+                currentTerm.termKey(),
+                currentTerm.source(),
+                definition,
+                null,
+                partOfSpeech,
+                termType,
+                enforcement,
+                currentTerm.status(),
+                currentTerm.provenance(),
+                currentTerm.caseSensitive(),
+                doNotTranslate,
+                true,
+                true,
+                "KEEP_CURRENT",
+                null,
+                currentTerm.evidence().stream()
+                    .map(
+                        evidence ->
+                            new GlossaryTermService.EvidenceInput(
+                                evidence.evidenceType(),
+                                evidence.caption(),
+                                evidence.imageKey(),
+                                evidence.tmTextUnitId(),
+                                evidence.cropX(),
+                                evidence.cropY(),
+                                evidence.cropWidth(),
+                                evidence.cropHeight()))
+                    .toList()));
+    if (!Objects.equals(updatedTerm.tmTextUnitId(), tmTextUnitId)) {
+      TMTextUnit refreshedTextUnit =
+          tmTextUnitRepository
+              .findById(updatedTerm.tmTextUnitId())
+              .orElseThrow(
+                  () ->
+                      new IllegalArgumentException(
+                          "TM text unit not found: " + updatedTerm.tmTextUnitId()));
+      Long requestId =
+          project.getReviewProjectRequest() == null
+              ? null
+              : project.getReviewProjectRequest().getId();
+      List<ReviewProjectTextUnit> rowsToUpdate =
+          requestId == null
+              ? List.of(textUnit)
+              : reviewProjectTextUnitRepository
+                  .findByReviewProject_ReviewProjectRequest_IdAndTmTextUnit_Id(
+                      requestId, tmTextUnitId);
+      if (rowsToUpdate.isEmpty()) {
+        rowsToUpdate = List.of(textUnit);
+      }
+      rowsToUpdate.forEach(row -> row.setTmTextUnit(refreshedTextUnit));
+      reviewProjectTextUnitRepository.saveAll(rowsToUpdate);
+      textUnit.setTmTextUnit(refreshedTextUnit);
+    }
+
+    glossaryTermIndexLinkRepository.findByGlossaryTermMetadataId(updatedTerm.metadataId()).stream()
+        .filter(
+            link ->
+                GlossaryTermIndexLink.RELATION_TYPE_PRIMARY.equals(link.getRelationType())
+                    && link.getTermIndexCandidate() != null)
+        .map(GlossaryTermIndexLink::getTermIndexCandidate)
+        .findFirst()
+        .ifPresent(
+            candidate -> {
+              candidate.setDefinition(definition);
+              candidate.setRationale(rationale);
+              candidate.setPartOfSpeech(partOfSpeech);
+              candidate.setTermType(termType);
+              candidate.setEnforcement(enforcement);
+              candidate.setDoNotTranslate(doNotTranslate);
+              termIndexCandidateRepository.save(candidate);
+            });
+
+    return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
+  }
+
+  private void updateCandidateMetadata(
+      TermIndexCandidate candidate, UpdateTerminologyMetadataCommand command) {
+    if (command == null) {
+      return;
+    }
+    candidate.setDefinition(normalizeOptional(command.definition()));
+    candidate.setRationale(truncate(normalizeOptional(command.rationale()), 2048));
+    candidate.setPartOfSpeech(normalizeOptional(command.partOfSpeech()));
+    candidate.setTermType(
+        command.termType() == null
+            ? candidate.getTermType()
+            : normalizeKnownValue(
+                command.termType(), GlossaryTermMetadata.TERM_TYPES, "term type"));
+    candidate.setEnforcement(
+        command.enforcement() == null
+            ? candidate.getEnforcement()
+            : normalizeKnownValue(
+                command.enforcement(), GlossaryTermMetadata.ENFORCEMENTS, "enforcement"));
+    if (command.doNotTranslate() != null) {
+      candidate.setDoNotTranslate(command.doNotTranslate());
+    }
+    termIndexCandidateRepository.save(candidate);
   }
 
   private void updateLinkedCandidateReview(
@@ -2256,6 +2601,259 @@ public class ReviewProjectService {
                 Collectors.toList()));
   }
 
+  private Map<Long, GetProjectDetailView.TerminologyTerm>
+      getTerminologyTermsByReviewProjectTextUnitId(
+          ReviewProject reviewProject, List<ReviewProjectTextUnitDetail> textUnitDetails) {
+    if (!isTerminologyWorkflowType(reviewProject.getType()) || textUnitDetails.isEmpty()) {
+      return Map.of();
+    }
+
+    List<Long> tmTextUnitIds =
+        textUnitDetails.stream()
+            .map(ReviewProjectTextUnitDetail::tmTextUnitId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+    if (tmTextUnitIds.isEmpty()) {
+      return getCandidateTerminologyTermsByReviewProjectTextUnitId(textUnitDetails, Map.of());
+    }
+
+    Map<Long, GlossaryTermMetadata> metadataByTmTextUnitId =
+        glossaryTermMetadataRepository.findByTmTextUnitIdIn(tmTextUnitIds).stream()
+            .filter(metadata -> metadata.getTmTextUnit() != null)
+            .collect(
+                Collectors.toMap(
+                    metadata -> metadata.getTmTextUnit().getId(),
+                    Function.identity(),
+                    (first, ignored) -> first,
+                    LinkedHashMap::new));
+    List<Long> metadataIds =
+        metadataByTmTextUnitId.values().stream()
+            .map(GlossaryTermMetadata::getId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+    Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
+        metadataIds.isEmpty()
+            ? Map.of()
+            : glossaryTermIndexLinkRepository
+                .findByGlossaryTermMetadataIdInAndRelationType(
+                    metadataIds, GlossaryTermIndexLink.RELATION_TYPE_PRIMARY)
+                .stream()
+                .filter(link -> link.getGlossaryTermMetadata() != null)
+                .collect(
+                    Collectors.toMap(
+                        link -> link.getGlossaryTermMetadata().getId(),
+                        Function.identity(),
+                        (first, ignored) -> first,
+                        LinkedHashMap::new));
+
+    Map<Long, ReviewProjectTextUnitDetail> detailByTmTextUnitId =
+        textUnitDetails.stream()
+            .filter(detail -> detail.tmTextUnitId() != null)
+            .collect(
+                Collectors.toMap(
+                    ReviewProjectTextUnitDetail::tmTextUnitId,
+                    Function.identity(),
+                    (first, ignored) -> first,
+                    LinkedHashMap::new));
+
+    Map<Long, GetProjectDetailView.TerminologyTerm> result = new LinkedHashMap<>();
+    for (Map.Entry<Long, GlossaryTermMetadata> entry : metadataByTmTextUnitId.entrySet()) {
+      Long tmTextUnitId = entry.getKey();
+      ReviewProjectTextUnitDetail detail = detailByTmTextUnitId.get(tmTextUnitId);
+      if (detail == null) {
+        continue;
+      }
+      GlossaryTermMetadata metadata = entry.getValue();
+      GlossaryTermIndexLink primaryLink = primaryLinksByMetadataId.get(metadata.getId());
+      result.put(
+          detail.reviewProjectTextUnitId(), toTerminologyTerm(detail, metadata, primaryLink));
+    }
+    result.putAll(getCandidateTerminologyTermsByReviewProjectTextUnitId(textUnitDetails, result));
+    return result;
+  }
+
+  private Map<Long, GetProjectDetailView.TerminologyTerm>
+      getCandidateTerminologyTermsByReviewProjectTextUnitId(
+          List<ReviewProjectTextUnitDetail> textUnitDetails,
+          Map<Long, GetProjectDetailView.TerminologyTerm> existingTermsByReviewProjectTextUnitId) {
+    List<Long> candidateIds =
+        textUnitDetails.stream()
+            .filter(
+                detail ->
+                    detail.termIndexCandidateId() != null
+                        && !existingTermsByReviewProjectTextUnitId.containsKey(
+                            detail.reviewProjectTextUnitId()))
+            .map(ReviewProjectTextUnitDetail::termIndexCandidateId)
+            .distinct()
+            .toList();
+    if (candidateIds.isEmpty()) {
+      return Map.of();
+    }
+    Map<Long, TermIndexCandidate> candidateById =
+        termIndexCandidateRepository.findAllById(candidateIds).stream()
+            .collect(
+                Collectors.toMap(
+                    TermIndexCandidate::getId,
+                    Function.identity(),
+                    (first, ignored) -> first,
+                    LinkedHashMap::new));
+    Map<Long, GetProjectDetailView.TerminologyTerm> result = new LinkedHashMap<>();
+    for (ReviewProjectTextUnitDetail detail : textUnitDetails) {
+      if (detail.termIndexCandidateId() == null
+          || existingTermsByReviewProjectTextUnitId.containsKey(detail.reviewProjectTextUnitId())) {
+        continue;
+      }
+      TermIndexCandidate candidate = candidateById.get(detail.termIndexCandidateId());
+      if (candidate != null) {
+        result.put(detail.reviewProjectTextUnitId(), toCandidateTerminologyTerm(detail, candidate));
+      }
+    }
+    return result;
+  }
+
+  private GetProjectDetailView.TerminologyTerm toTerminologyTerm(
+      ReviewProjectTextUnitDetail detail,
+      GlossaryTermMetadata metadata,
+      GlossaryTermIndexLink primaryLink) {
+    TermIndexCandidate candidate = primaryLink == null ? null : primaryLink.getTermIndexCandidate();
+    var extractedTerm = candidate == null ? null : candidate.getTermIndexExtractedTerm();
+    List<GetProjectDetailView.TerminologyTermExample> examples =
+        extractedTerm == null || extractedTerm.getId() == null
+            ? List.of()
+            : termIndexOccurrenceRepository
+                .findDetailsByTermIndexExtractedTermId(
+                    extractedTerm.getId(), true, List.of(-1L), null, PageRequest.of(0, 5))
+                .stream()
+                .map(
+                    row ->
+                        new GetProjectDetailView.TerminologyTermExample(
+                            row.getId(),
+                            row.getRepositoryId(),
+                            row.getRepositoryName(),
+                            row.getAssetId(),
+                            row.getAssetPath(),
+                            row.getTmTextUnitId(),
+                            row.getTextUnitName(),
+                            row.getSourceText(),
+                            row.getMatchedText(),
+                            row.getStartIndex(),
+                            row.getEndIndex(),
+                            row.getExtractionMethod(),
+                            row.getConfidence()))
+                .toList();
+    List<GetProjectDetailView.TerminologyTermSource> sources =
+        candidate == null
+            ? List.of()
+            : List.of(
+                new GetProjectDetailView.TerminologyTermSource(
+                    candidate.getId(),
+                    candidate.getSourceType(),
+                    candidate.getSourceName(),
+                    candidate.getSourceExternalId()));
+
+    return new GetProjectDetailView.TerminologyTerm(
+        metadata.getGlossary() == null ? null : metadata.getGlossary().getId(),
+        metadata.getGlossary() == null ? null : metadata.getGlossary().getName(),
+        metadata.getId(),
+        detail.tmTextUnitId(),
+        detail.tmTextUnitName(),
+        detail.tmTextUnitContent(),
+        detail.tmTextUnitComment(),
+        candidate == null ? null : candidate.getRationale(),
+        metadata.getPartOfSpeech(),
+        metadata.getTermType(),
+        metadata.getEnforcement(),
+        metadata.getStatus(),
+        metadata.getProvenance(),
+        metadata.getCaseSensitive(),
+        metadata.getDoNotTranslate(),
+        candidate == null ? null : candidate.getId(),
+        extractedTerm == null ? null : extractedTerm.getId(),
+        extractedTerm == null ? null : extractedTerm.getOccurrenceCount(),
+        extractedTerm == null ? null : extractedTerm.getRepositoryCount(),
+        candidate == null ? null : candidate.getReviewStatus(),
+        candidate == null ? null : candidate.getReviewAuthority(),
+        candidate == null ? null : candidate.getReviewReason(),
+        candidate == null ? null : candidate.getReviewRationale(),
+        candidate == null ? null : candidate.getReviewConfidence(),
+        candidate == null ? null : candidate.getReviewChangedAt(),
+        candidate == null || candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getUsername(),
+        sources,
+        examples);
+  }
+
+  private GetProjectDetailView.TerminologyTerm toCandidateTerminologyTerm(
+      ReviewProjectTextUnitDetail detail, TermIndexCandidate candidate) {
+    var extractedTerm = candidate.getTermIndexExtractedTerm();
+    List<GetProjectDetailView.TerminologyTermExample> examples =
+        extractedTerm == null || extractedTerm.getId() == null
+            ? List.of()
+            : termIndexOccurrenceRepository
+                .findDetailsByTermIndexExtractedTermId(
+                    extractedTerm.getId(), true, List.of(-1L), null, PageRequest.of(0, 5))
+                .stream()
+                .map(
+                    row ->
+                        new GetProjectDetailView.TerminologyTermExample(
+                            row.getId(),
+                            row.getRepositoryId(),
+                            row.getRepositoryName(),
+                            row.getAssetId(),
+                            row.getAssetPath(),
+                            row.getTmTextUnitId(),
+                            row.getTextUnitName(),
+                            row.getSourceText(),
+                            row.getMatchedText(),
+                            row.getStartIndex(),
+                            row.getEndIndex(),
+                            row.getExtractionMethod(),
+                            row.getConfidence()))
+                .toList();
+    List<GetProjectDetailView.TerminologyTermSource> sources =
+        List.of(
+            new GetProjectDetailView.TerminologyTermSource(
+                candidate.getId(),
+                candidate.getSourceType(),
+                candidate.getSourceName(),
+                candidate.getSourceExternalId()));
+
+    return new GetProjectDetailView.TerminologyTerm(
+        detail.targetGlossaryId(),
+        detail.targetGlossaryName(),
+        null,
+        null,
+        candidate.getNormalizedKey(),
+        candidate.getTerm(),
+        candidate.getDefinition(),
+        candidate.getRationale(),
+        candidate.getPartOfSpeech(),
+        candidate.getTermType(),
+        candidate.getEnforcement(),
+        GlossaryTermMetadata.STATUS_CANDIDATE,
+        GlossaryTermMetadata.PROVENANCE_AI_EXTRACTED,
+        false,
+        candidate.getDoNotTranslate(),
+        candidate.getId(),
+        extractedTerm == null ? null : extractedTerm.getId(),
+        extractedTerm == null ? null : extractedTerm.getOccurrenceCount(),
+        extractedTerm == null ? null : extractedTerm.getRepositoryCount(),
+        candidate.getReviewStatus(),
+        candidate.getReviewAuthority(),
+        candidate.getReviewReason(),
+        candidate.getReviewRationale(),
+        candidate.getReviewConfidence(),
+        candidate.getReviewChangedAt(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getUsername(),
+        sources,
+        examples);
+  }
+
   private ReviewProjectTextUnitDetail fetchReviewProjectTextUnitDetail(
       Long reviewProjectTextUnitId) {
     return reviewProjectTextUnitRepository
@@ -2272,11 +2870,15 @@ public class ReviewProjectService {
     return toReviewProjectTextUnit(
         detail,
         getTerminologyFeedbacksByReviewProjectTextUnitId(reviewProject, List.of(detail))
-            .getOrDefault(reviewProjectTextUnitId, List.of()));
+            .getOrDefault(reviewProjectTextUnitId, List.of()),
+        getTerminologyTermsByReviewProjectTextUnitId(reviewProject, List.of(detail))
+            .get(detail.reviewProjectTextUnitId()));
   }
 
   private GetProjectDetailView.ReviewProjectTextUnit toReviewProjectTextUnit(
-      ReviewProjectTextUnitDetail detail, List<ReviewProjectTextUnitFeedback> feedbacks) {
+      ReviewProjectTextUnitDetail detail,
+      List<ReviewProjectTextUnitFeedback> feedbacks,
+      GetProjectDetailView.TerminologyTerm terminologyTerm) {
     GetProjectDetailView.Asset.Repository repository =
         new GetProjectDetailView.Asset.Repository(detail.repositoryId(), detail.repositoryName());
     GetProjectDetailView.Asset assetView =
@@ -2344,6 +2946,7 @@ public class ReviewProjectService {
         baselineTmTextUnitVariantView,
         currentTmTextUnitVariantView,
         reviewProjectTextUnitDecision,
+        terminologyTerm,
         feedbacks.stream().map(this::toReviewProjectTextUnitFeedback).toList());
   }
 
@@ -2739,6 +3342,14 @@ public class ReviewProjectService {
           reviewProjectTextUnit.setReviewProject(reviewProject);
           reviewProjectTextUnit.setTmTextUnit(
               entityManager.getReference(TMTextUnit.class, textUnitDTO.getTmTextUnitId()));
+          if (textUnitDTO instanceof CandidateReviewTextUnitDTO candidateReviewTextUnitDTO) {
+            reviewProjectTextUnit.setTermIndexCandidate(
+                entityManager.getReference(
+                    TermIndexCandidate.class, candidateReviewTextUnitDTO.termIndexCandidateId()));
+            reviewProjectTextUnit.setTargetGlossary(
+                entityManager.getReference(
+                    Glossary.class, candidateReviewTextUnitDTO.targetGlossaryId()));
+          }
           if (textUnitDTO.getTmTextUnitVariantId() != null) {
             reviewProjectTextUnit.setTmTextUnitVariant(
                 entityManager.getReference(
@@ -2978,6 +3589,18 @@ public class ReviewProjectService {
     return value.trim();
   }
 
+  private String normalizeKnownValue(String value, Set<String> allowedValues, String fieldName) {
+    String normalized = normalizeOptional(value);
+    if (normalized == null) {
+      return null;
+    }
+    normalized = normalized.toUpperCase(java.util.Locale.ROOT);
+    if (!allowedValues.contains(normalized)) {
+      throw new IllegalArgumentException("Unknown glossary " + fieldName + ": " + value);
+    }
+    return normalized;
+  }
+
   private String truncate(String value, int maxLength) {
     if (value == null || value.length() <= maxLength) {
       return value;
@@ -3009,4 +3632,12 @@ public class ReviewProjectService {
     history.setNote(normalizedNote == null || normalizedNote.isEmpty() ? null : normalizedNote);
     reviewProjectAssignmentHistoryRepository.save(history);
   }
+
+  public record UpdateTerminologyMetadataCommand(
+      String definition,
+      String rationale,
+      String partOfSpeech,
+      String termType,
+      String enforcement,
+      Boolean doNotTranslate) {}
 }

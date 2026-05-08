@@ -23,6 +23,9 @@ public interface GlossaryTermMetadataRepository extends JpaRepository<GlossaryTe
   List<GlossaryTermMetadata> findByGlossaryIdAndTmTextUnitIdIn(
       @Param("glossaryId") Long glossaryId, @Param("tmTextUnitIds") List<Long> tmTextUnitIds);
 
+  @EntityGraph(attributePaths = {"glossary", "tmTextUnit"})
+  List<GlossaryTermMetadata> findByTmTextUnitIdIn(@Param("tmTextUnitIds") List<Long> tmTextUnitIds);
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       """

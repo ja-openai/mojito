@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ApiReviewProjectDetail,
   ApiReviewProjectStatus,
+  ApiReviewProjectTerminologyMetadataRequest,
   ApiReviewProjectTextUnit,
   ApiReviewProjectType,
   ApiTerminologyFeedbackRecommendation,
@@ -18,6 +19,7 @@ import {
   updateReviewProjectDueDate,
   updateReviewProjectRequest,
   updateReviewProjectStatus,
+  updateReviewProjectTextUnitTerminologyMetadata,
 } from '../../api/review-projects';
 import type { TextUnitIntegrityCheckResult } from '../../api/text-units';
 import { useUser } from '../../components/RequireUser';
@@ -70,10 +72,16 @@ export type TerminologyResolutionRequest = {
   notes?: string | null;
 };
 
+export type TerminologyMetadataRequest = {
+  textUnitId: number;
+  request: ApiReviewProjectTerminologyMetadataRequest;
+};
+
 export type PendingAction =
   | { kind: 'save-decision'; request: SaveDecisionRequest }
   | { kind: 'decision-state'; request: DecisionStateRequest }
   | { kind: 'terminology-feedback'; request: TerminologyFeedbackRequest }
+  | { kind: 'terminology-metadata'; request: TerminologyMetadataRequest }
   | { kind: 'terminology-resolution'; request: TerminologyResolutionRequest };
 
 export type PendingValidationSave = {
@@ -112,6 +120,7 @@ export type ReviewProjectMutationControls = {
   onRequestSaveDecision: (request: SaveDecisionRequest) => void;
   onRequestDecisionState: (request: DecisionStateRequest) => void;
   onRequestTerminologyFeedback: (request: TerminologyFeedbackRequest) => void;
+  onRequestTerminologyMetadata: (request: TerminologyMetadataRequest) => void;
   onRequestTerminologyResolution: (request: TerminologyResolutionRequest) => void;
   onRequestProjectStatus: (status: ApiReviewProjectStatus) => void;
   onRequestProjectRequestUpdate: (request: {
@@ -232,6 +241,9 @@ export function useReviewProjectMutations(
       }
       if (action.kind === 'terminology-resolution') {
         return saveReviewProjectTextUnitTerminologyResolution(action.request);
+      }
+      if (action.kind === 'terminology-metadata') {
+        return updateReviewProjectTextUnitTerminologyMetadata(action.request);
       }
       return setReviewProjectTextUnitDecisionState({
         textUnitId: action.request.textUnitId,
@@ -511,6 +523,13 @@ export function useReviewProjectMutations(
     [performAction],
   );
 
+  const onRequestTerminologyMetadata = useCallback(
+    (request: TerminologyMetadataRequest) => {
+      performAction({ kind: 'terminology-metadata', request });
+    },
+    [performAction],
+  );
+
   const onRequestProjectStatus = useCallback(
     (nextStatus: ApiReviewProjectStatus) => {
       if (projectId == null || projectStatusMutation.isPending) {
@@ -636,6 +655,10 @@ export function useReviewProjectMutations(
       performAction(conflictAction);
       return;
     }
+    if (conflictAction.kind === 'terminology-metadata') {
+      performAction(conflictAction);
+      return;
+    }
     performAction({
       kind: 'decision-state',
       request: {
@@ -681,6 +704,7 @@ export function useReviewProjectMutations(
       onRequestSaveDecision,
       onRequestDecisionState,
       onRequestTerminologyFeedback,
+      onRequestTerminologyMetadata,
       onRequestTerminologyResolution,
       onRequestProjectStatus,
       onRequestProjectRequestUpdate,
@@ -702,6 +726,7 @@ export function useReviewProjectMutations(
       onRequestProjectStatus,
       onRequestSaveDecision,
       onRequestTerminologyFeedback,
+      onRequestTerminologyMetadata,
       onRequestTerminologyResolution,
       onUseConflictCurrent,
       onRetryValidationSave,

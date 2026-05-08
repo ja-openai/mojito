@@ -87,7 +87,7 @@ Codebase mining workflow
 1. The client uses the raw term index refresh/review flow for observed Mojito strings.
 2. If the client has additional product/code/screenshot context, it calls `image.upload` as needed and then `glossary.term_index.seed_candidates`.
 3. If an existing Mojito glossary is useful prior art, the client calls `glossary.term_index.seed_candidates_from_glossary` to put those terms into the same review queue.
-4. A curator reviews the merged suggestions in `/glossaries/:glossaryId`, where accepting a suggestion creates the glossary term and links it back to the raw entry when available.
+4. A curator can review the merged suggestions directly in `/glossaries/:glossaryId`, or create a term-candidate review project for generated candidates so assigned reviewers work only in review-project UI. PM resolution accepts promote candidates into glossary terms; rejection leaves no glossary term behind.
 5. After approved glossary terms exist, a repository-scoped term-index refresh can rescan product strings and create `EXTERNAL_GLOSSARY_IMPORT` usage occurrences for exact normalized matches.
 6. The client can still use `glossary.term.bulk_upsert` for already-reviewed bootstrap files where bypassing the raw suggestion queue is intentional.
 7. If terms were imported directly, the client calls `glossary.term_index.link_glossary_terms_to_candidates` to attach existing terms to existing candidates and raw usage evidence where the source text matches.
