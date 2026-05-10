@@ -3,7 +3,6 @@ package com.box.l10n.mojito.cli.command;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.box.l10n.mojito.cli.console.ConsoleWriter;
-import com.box.l10n.mojito.immutables.NoPrefixNoBuiltinContainer;
 import com.box.l10n.mojito.io.Files;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -13,7 +12,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,42 +62,12 @@ public class PerformanceDataGenerationCommand extends Command {
 
     ImmutableList<RepositoryInfo> repositoryInfos =
         ImmutableList.of(
-            RepositoryInfo.builder()
-                .numberOfAssets(100)
-                .numberOfTextUnitsInMaster(10)
-                .numberOfBranches(0)
-                .numberOfTextUnitsInBranches(0)
-                .build(),
-            RepositoryInfo.builder()
-                .numberOfAssets(1)
-                .numberOfTextUnitsInMaster(1000)
-                .numberOfBranches(10)
-                .numberOfTextUnitsInBranches(5)
-                .build(),
-            RepositoryInfo.builder()
-                .numberOfAssets(1000)
-                .numberOfTextUnitsInMaster(10)
-                .numberOfBranches(0)
-                .numberOfTextUnitsInBranches(0)
-                .build(),
-            RepositoryInfo.builder()
-                .numberOfAssets(1)
-                .numberOfTextUnitsInMaster(10000)
-                .numberOfBranches(10)
-                .numberOfTextUnitsInBranches(5)
-                .build(),
-            RepositoryInfo.builder()
-                .numberOfAssets(1)
-                .numberOfTextUnitsInMaster(10000)
-                .numberOfBranches(100)
-                .numberOfTextUnitsInBranches(5)
-                .build(),
-            RepositoryInfo.builder()
-                .numberOfAssets(1)
-                .numberOfTextUnitsInMaster(50000)
-                .numberOfBranches(10)
-                .numberOfTextUnitsInBranches(5)
-                .build());
+            new RepositoryInfo(100, 10, 0, 0),
+            new RepositoryInfo(1, 1000, 5, 10),
+            new RepositoryInfo(1000, 10, 0, 0),
+            new RepositoryInfo(1, 10000, 5, 10),
+            new RepositoryInfo(1, 10000, 5, 100),
+            new RepositoryInfo(1, 50000, 5, 10));
 
     String commands =
         repositoryInfos.stream()
@@ -126,7 +94,7 @@ public class PerformanceDataGenerationCommand extends Command {
                   generateFiles(repositoryInfo, MASTER_BRANCH_IDX);
 
                   String branchPushCommands =
-                      IntStream.range(0, repositoryInfo.getNumberOfBranches())
+                      IntStream.range(0, repositoryInfo.numberOfBranches())
                           .mapToObj(
                               branchNumber -> {
                                 generateFiles(repositoryInfo, branchNumber);
@@ -163,7 +131,7 @@ public class PerformanceDataGenerationCommand extends Command {
   }
 
   void generateFiles(RepositoryInfo repositoryInfo, int branchNumber) {
-    IntStream.range(0, repositoryInfo.getNumberOfAssets())
+    IntStream.range(0, repositoryInfo.numberOfAssets())
         .forEach(
             assetIdx -> {
               Path path =
@@ -176,12 +144,12 @@ public class PerformanceDataGenerationCommand extends Command {
                   path,
                   MASTER_BRANCH_IDX == branchNumber
                       ? 0
-                      : repositoryInfo.getNumberOfTextUnitsInMaster()
+                      : repositoryInfo.numberOfTextUnitsInMaster()
                           + 1
-                          + branchNumber * repositoryInfo.getNumberOfTextUnitsInBranches(),
+                          + branchNumber * repositoryInfo.numberOfTextUnitsInBranches(),
                   MASTER_BRANCH_IDX == branchNumber
-                      ? repositoryInfo.getNumberOfTextUnitsInMaster()
-                      : repositoryInfo.getNumberOfTextUnitsInBranches());
+                      ? repositoryInfo.numberOfTextUnitsInMaster()
+                      : repositoryInfo.numberOfTextUnitsInBranches());
             });
   }
 
@@ -202,14 +170,14 @@ public class PerformanceDataGenerationCommand extends Command {
 
   String getRepositoryName(RepositoryInfo repositoryInfo) {
     return MessageFormat.format(
-        repositoryInfo.getNamePattern(),
+        RepositoryInfo.NAME_PATTERN,
         ImmutableMap.of(
-            "numberOfAssets", Integer.toString(repositoryInfo.getNumberOfAssets()),
-            "numberOfBranches", Integer.toString(repositoryInfo.getNumberOfBranches()),
+            "numberOfAssets", Integer.toString(repositoryInfo.numberOfAssets()),
+            "numberOfBranches", Integer.toString(repositoryInfo.numberOfBranches()),
             "numberOfTextUnitsInBranches",
-                Integer.toString(repositoryInfo.getNumberOfTextUnitsInBranches()),
+                Integer.toString(repositoryInfo.numberOfTextUnitsInBranches()),
             "numberOfTextUnitsInMaster",
-                Integer.toString(repositoryInfo.getNumberOfTextUnitsInMaster())));
+                Integer.toString(repositoryInfo.numberOfTextUnitsInMaster())));
   }
 
   String getDeleteRepositoryCommand(String commandName, String repository) {
@@ -253,26 +221,12 @@ public class PerformanceDataGenerationCommand extends Command {
         ImmutableMap.of("commandName", commandName, "repository", repository, "branch", branch));
   }
 
-  @Value.Immutable
-  @NoPrefixNoBuiltinContainer
-  abstract static class AbstractRepositoryInfo {
-
-    abstract int getNumberOfAssets();
-
-    abstract int getNumberOfTextUnitsInMaster();
-
-    abstract int getNumberOfTextUnitsInBranches();
-
-    abstract int getNumberOfBranches();
-
-    @Value.Default
-    String getNamePattern() {
-      return "{numberOfAssets}A_{numberOfTextUnitsInMaster}TUM_{numberOfBranches}B_{numberOfTextUnitsInBranches}TUB";
-    }
-
-    @Value.Default
-    String locales() {
-      return "cs-CZ da-DK de-DE el-GR en-GB es-AR es-ES es-MX fi-FI fr-FR hi-IN hu-HU id-ID it-IT ja-JP ko-KR ms-MY nb-NO nl-NL pl-PL pt-BR pt-PT ro-RO ru-RU sk-SK sv-SE th-TH tl-PH tr-TR uk-UA vi-VN";
-    }
+  record RepositoryInfo(
+      int numberOfAssets,
+      int numberOfTextUnitsInMaster,
+      int numberOfTextUnitsInBranches,
+      int numberOfBranches) {
+    static final String NAME_PATTERN =
+        "{numberOfAssets}A_{numberOfTextUnitsInMaster}TUM_{numberOfBranches}B_{numberOfTextUnitsInBranches}TUB";
   }
 }
