@@ -4,7 +4,6 @@ import static com.google.common.base.Strings.nullToEmpty;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.box.l10n.mojito.cli.command.extraction.AbstractExtractionDiffStatistics;
 import com.box.l10n.mojito.cli.command.extraction.ExtractionDiffPaths;
 import com.box.l10n.mojito.cli.command.extraction.ExtractionDiffService;
 import com.box.l10n.mojito.cli.command.extraction.ExtractionDiffStatistics;
@@ -127,7 +126,7 @@ public class PhabricatorExtractionDiffNotificationCommand
     }
   }
 
-  String getMessage(AbstractExtractionDiffStatistics extractionDiffStatistics) {
+  String getMessage(ExtractionDiffStatistics extractionDiffStatistics) {
 
     ImmutableMap<String, Object> messageParamMap =
         ImmutableMap.<String, Object>builder()
