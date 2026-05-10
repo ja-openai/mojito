@@ -115,13 +115,6 @@
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <parameters>true</parameters>
-                    <annotationProcessorPaths>
-                        <dependency>
-                            <groupId>org.immutables</groupId>
-                            <artifactId>value</artifactId>
-                            <version>${immutables-value.version}</version>
-                        </dependency>
-                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
 

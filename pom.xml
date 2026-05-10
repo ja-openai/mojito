@@ -28,7 +28,6 @@
         <!-- org.codehaus.mojo doesn't support Java 17+, use fork for now -->
         <aspectj-maven-plugin.group-id>dev.aspectj</aspectj-maven-plugin.group-id>
         <auto-value.version>1.7.4</auto-value.version>
-        <immutables-value.version>2.8.2</immutables-value.version>
         <plugin.version.google-java-format>1.22.0</plugin.version.google-java-format>
         <jjwt.version>0.12.6</jjwt.version>
         <github.api.version>1.325</github.api.version>
@@ -48,13 +47,6 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>${guava.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.immutables</groupId>
-            <artifactId>value</artifactId>
-            <version>${immutables-value.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- to fix warning in maven: can't find aspectrj in classpath -->
@@ -101,13 +93,6 @@
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <parameters>true</parameters>
-                    <annotationProcessorPaths>
-                        <dependency>
-                            <groupId>org.immutables</groupId>
-                            <artifactId>value</artifactId>
-                            <version>${immutables-value.version}</version>
-                        </dependency>
-                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
 

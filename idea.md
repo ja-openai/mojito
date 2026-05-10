@@ -52,16 +52,8 @@ The goal there is to reuse Intellij incremental build that is way faster but I c
 Import project as Maven project, but it shows an error with
 
 Some attempt at making annotation processor and aspectj all work:
-- Add dependency provided in common.pom
-  <dependency>
-  <!-- Needed for intellij to setup processor properly, not needed with maven only -->
-  <groupId>org.immutables</groupId>
-  <artifactId>value</artifactId>
-  <version>${immutables-value.version}</version>
-  <scope>provided</scope>
-  </dependency>
 
-and in webapp.pom
+In webapp.pom
 
 <dependency>
             <groupId>org.hibernate</groupId>
@@ -116,4 +108,3 @@ FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
               ON tc.constraint_name = kcu.constraint_name
 WHERE tc.constraint_name = 'SYS_CT_252844';
 ```
-
