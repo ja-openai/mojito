@@ -257,7 +257,7 @@ public class AssetExtractionService {
     AssetExtraction lastSuccessfulAssetExtraction = getOrCreateLastSuccessfulAssetExtraction(asset);
     MultiBranchState lastSuccessfulMultiBranchState =
         updateAssetExtractionWithState(
-            lastSuccessfulAssetExtraction.getId(), currentState, AssetContentMd5s.of());
+            lastSuccessfulAssetExtraction.getId(), currentState, new AssetContentMd5s(null, null));
   }
 
   @Pollable(message = "Updating branch asset text units")
@@ -269,9 +269,8 @@ public class AssetExtractionService {
     AssetExtractionByBranch assetExtractionByBranch =
         getUndeletedOrCreateAssetExtractionByBranch(assetContent);
     AssetContentMd5s assetContentMd5s =
-        AssetContentMd5s.of()
-            .withContentMd5(assetContent.getContentMd5())
-            .withFilterOptionsMd5(filterOptionsMd5Builder.md5(filterOptions));
+        new AssetContentMd5s(
+            assetContent.getContentMd5(), filterOptionsMd5Builder.md5(filterOptions));
     updateAssetExtractionWithState(
         assetExtractionByBranch.getAssetExtraction().getId(), currentState, assetContentMd5s);
   }
@@ -383,11 +382,11 @@ public class AssetExtractionService {
       AssetContentMd5s assetContentMd5s)
       throws DataIntegrityViolationException {
 
-    removeAssetTextUnits(assetExtraction, modifications.getRemoved());
-    updateAssetTextUnits(assetExtraction, modifications.getUpdated());
+    removeAssetTextUnits(assetExtraction, modifications.removed());
+    updateAssetTextUnits(assetExtraction, modifications.updated());
 
     ImmutableList<BranchStateTextUnit> createAssetTextUnits =
-        createAssetTextUnits(assetExtraction, modifications.getAdded());
+        createAssetTextUnits(assetExtraction, modifications.added());
     MultiBranchState currentStateWithAssetTextUnitIds =
         updateStateWithCreatedAssetTextUnitIds(currentState, createAssetTextUnits);
 
@@ -404,8 +403,8 @@ public class AssetExtractionService {
     logger.debug(
         "Change asset extraction last modified date to create a new version for optimistic locking");
     assetExtraction.setLastModifiedDate(JSR310Migration.newDateTimeEmptyCtor());
-    assetExtraction.setContentMd5(assetContentMd5s.getContentMd5());
-    assetExtraction.setFilterOptionsMd5(assetContentMd5s.getFilterOptionsMd5());
+    assetExtraction.setContentMd5(assetContentMd5s.contentMd5());
+    assetExtraction.setFilterOptionsMd5(assetContentMd5s.filterOptionsMd5());
     assetExtractionRepository.save(assetExtraction);
     return currentState;
   }
@@ -688,10 +687,7 @@ public class AssetExtractionService {
 
     logger.debug("updated: {}", updated);
 
-    Modifications modifications =
-        Modifications.builder().removed(removed).added(added).updated(updated).build();
-
-    return modifications;
+    return new Modifications(added, removed, updated);
   }
 
   private Sets.SetView<String> getMd5sForUsedInBoth(
@@ -1521,7 +1517,7 @@ public class AssetExtractionService {
         asset.getLastSuccessfulAssetExtraction(),
         withBranchRemoved,
         modifications,
-        AssetContentMd5s.of());
+        new AssetContentMd5s(null, null));
     assetExtractionByBranch.setDeleted(true);
     assetExtractionByBranchRepository.save(assetExtractionByBranch);
   }
