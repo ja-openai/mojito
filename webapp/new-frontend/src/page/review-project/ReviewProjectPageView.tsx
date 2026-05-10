@@ -1197,12 +1197,12 @@ export function ReviewProjectPageView({
   const isTerminologyDeciderProject = project.terminologyPhase === 'PM_RESOLUTION';
   const primaryShortcutLabel = isTerminologyProject
     ? isTerminologyDeciderProject
-      ? 'Apply final decision and blur'
+      ? 'Save selected decision and blur'
       : 'Save advisor input and blur'
     : 'Accept and blur';
   const primaryAdvanceShortcutLabel = isTerminologyProject
     ? isTerminologyDeciderProject
-      ? 'Apply final decision and go to next term.'
+      ? 'Save selected decision and go to next term.'
       : 'Save advisor input and go to next term.'
     : 'Accept and go to next text unit. If unchanged, mark decided and go to next.';
 
@@ -1580,6 +1580,7 @@ function DetailPane({
 }) {
   const user = useUser();
   const isTerminologyProject = isTerminologyReviewProjectType(projectType);
+  const isTermCandidateProject = projectType === 'TERM_CANDIDATE';
   const isSpecialistTerminologyProject = terminologyPhase === 'SPECIALIST_INPUT';
   const isPmTerminologyProject = terminologyPhase === 'PM_RESOLUTION';
   const [isScreenshotsCollapsed, setIsScreenshotsCollapsed] = useState(false);
@@ -1724,17 +1725,34 @@ function DetailPane({
     () => ({
       status: normalizeTerminologyResolutionStatus(terminologyTerm?.status ?? glossaryTerm?.status),
       notes: decision?.notes ?? '',
+      promoteToGlossary:
+        projectType === 'TERM_CANDIDATE' && decision?.decisionState === 'DECIDED'
+          ? terminologyTerm?.tmTextUnitId != null
+          : true,
     }),
-    [decision?.notes, glossaryTerm?.status, terminologyTerm?.status],
+    [
+      decision?.decisionState,
+      decision?.notes,
+      glossaryTerm?.status,
+      projectType,
+      terminologyTerm?.status,
+      terminologyTerm?.tmTextUnitId,
+    ],
   );
+  const terminologyDecisionState = decision?.decisionState ?? 'PENDING';
+  const hasTermCandidate = isTermCandidateProject && terminologyTerm?.termIndexCandidateId != null;
+  const canPromoteTermCandidate = hasTermCandidate && terminologyGlossaryId != null;
   const canResolveTerminology =
     canManageGlossaryTerms(user) &&
-    terminologyGlossaryId != null &&
-    (terminologyTerm != null || glossaryTerm != null);
+    (hasTermCandidate ||
+      (terminologyGlossaryId != null && (terminologyTerm != null || glossaryTerm != null)));
   const [draftTerminologyResolutionStatus, setDraftTerminologyResolutionStatus] =
     useState<TerminologyResolutionStatusChoice>(terminologyResolutionSnapshot.status);
   const [draftTerminologyResolutionNotes, setDraftTerminologyResolutionNotes] = useState(
     terminologyResolutionSnapshot.notes,
+  );
+  const [draftPromoteToGlossary, setDraftPromoteToGlossary] = useState(
+    terminologyResolutionSnapshot.promoteToGlossary,
   );
   const glossaryMatchesQuery = useQuery({
     queryKey: [
@@ -1933,6 +1951,7 @@ function DetailPane({
   useEffect(() => {
     setDraftTerminologyResolutionStatus(terminologyResolutionSnapshot.status);
     setDraftTerminologyResolutionNotes(terminologyResolutionSnapshot.notes);
+    setDraftPromoteToGlossary(terminologyResolutionSnapshot.promoteToGlossary);
   }, [terminologyResolutionSnapshot, textUnit.id]);
 
   useEffect(() => {
@@ -2032,7 +2051,9 @@ function DetailPane({
     draftTerminologyNotesNormalized !== terminologySnapshot.notes;
   const isTerminologyResolutionDirty =
     draftTerminologyResolutionStatus !== terminologyResolutionSnapshot.status ||
-    draftTerminologyResolutionNotesNormalized !== terminologyResolutionSnapshot.notes;
+    draftTerminologyResolutionNotesNormalized !== terminologyResolutionSnapshot.notes ||
+    (canPromoteTermCandidate &&
+      draftPromoteToGlossary !== terminologyResolutionSnapshot.promoteToGlossary);
   const isTranslationDirty = draftTarget !== snapshot.target;
   const isTranslationReviewDirty =
     isTranslationDirty ||
@@ -2193,23 +2214,36 @@ function DetailPane({
 
   const requestSaveTerminologyResolution = useCallback(
     (overrides?: { status?: TerminologyResolutionStatusChoice }) => {
-      if (terminologyGlossaryId == null) {
-        return;
-      }
+      const status = overrides?.status ?? draftTerminologyResolutionStatus;
       mutations.onRequestTerminologyResolution({
         textUnitId: textUnit.id,
         glossaryId: terminologyGlossaryId,
-        status: overrides?.status ?? draftTerminologyResolutionStatus,
+        status,
         notes: draftTerminologyResolutionNotesNormalized || null,
+        promoteToGlossary:
+          canPromoteTermCandidate && status !== 'REJECTED' ? draftPromoteToGlossary : false,
       });
     },
     [
+      canPromoteTermCandidate,
+      draftPromoteToGlossary,
       draftTerminologyResolutionNotesNormalized,
       draftTerminologyResolutionStatus,
       mutations,
       terminologyGlossaryId,
       textUnit.id,
     ],
+  );
+
+  const handleTerminologyResolutionClick = useCallback(
+    (status: TerminologyResolutionStatusChoice) => {
+      if (!canResolveTerminology || isSavingGlobal) {
+        return;
+      }
+      setDraftTerminologyResolutionStatus(status);
+      requestSaveTerminologyResolution({ status });
+    },
+    [canResolveTerminology, isSavingGlobal, requestSaveTerminologyResolution],
   );
 
   const handleTerminologyStatusShortcut = useCallback(
@@ -2236,8 +2270,7 @@ function DetailPane({
         if (!canResolveTerminology || status == null) {
           return true;
         }
-        setDraftTerminologyResolutionStatus(status);
-        requestSaveTerminologyResolution({ status });
+        handleTerminologyResolutionClick(status);
         return true;
       }
       handleTerminologyRecommendationClick(recommendation);
@@ -2246,10 +2279,10 @@ function DetailPane({
     [
       canResolveTerminology,
       handleTerminologyRecommendationClick,
+      handleTerminologyResolutionClick,
       isPmTerminologyProject,
       mutations.isSaving,
       mutations.showValidationDialog,
-      requestSaveTerminologyResolution,
     ],
   );
 
@@ -3127,11 +3160,20 @@ function DetailPane({
 
                   <div className="review-project-detail__field">
                     <div className="review-project-detail__label-row">
-                      <div className="review-project-detail__label">Final status</div>
-                      <span className="review-project-detail__decision-current">
-                        Current:{' '}
-                        {TERMINOLOGY_RESOLUTION_STATUS_LABELS[terminologyResolutionSnapshot.status]}
-                      </span>
+                      <div className="review-project-detail__label">Review decision</div>
+                      <div className="review-project-detail__decision-current">
+                        <span>
+                          Current status:{' '}
+                          {
+                            TERMINOLOGY_RESOLUTION_STATUS_LABELS[
+                              terminologyResolutionSnapshot.status
+                            ]
+                          }
+                        </span>
+                        <span>
+                          Project: {terminologyDecisionState === 'DECIDED' ? 'Decided' : 'Pending'}
+                        </span>
+                      </div>
                     </div>
                     <div className="review-project-detail__decision-segmented" role="group">
                       {TERMINOLOGY_RESOLUTION_STATUS_OPTIONS.map((status) => (
@@ -3141,7 +3183,7 @@ function DetailPane({
                           className={`review-project-detail__decision-option${
                             draftTerminologyResolutionStatus === status ? ' is-active' : ''
                           }`}
-                          onClick={() => setDraftTerminologyResolutionStatus(status)}
+                          onClick={() => handleTerminologyResolutionClick(status)}
                           disabled={!canResolveTerminology || isSavingGlobal}
                           aria-pressed={draftTerminologyResolutionStatus === status}
                         >
@@ -3152,10 +3194,33 @@ function DetailPane({
                     {!canResolveTerminology ? (
                       <div className="review-project-detail__hint">
                         Final decision is available to decider/admin users when this source maps to
-                        a glossary term.
+                        a glossary term or term candidate.
                       </div>
                     ) : null}
                   </div>
+
+                  {hasTermCandidate ? (
+                    <div className="review-project-detail__field">
+                      <label className="review-project-detail__terminology-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={canPromoteTermCandidate && draftPromoteToGlossary}
+                          disabled={
+                            !canPromoteTermCandidate || !canResolveTerminology || isSavingGlobal
+                          }
+                          onChange={(event) => setDraftPromoteToGlossary(event.target.checked)}
+                        />
+                        <span>
+                          Include accepted candidate in target glossary
+                          <small>
+                            {canPromoteTermCandidate
+                              ? ' Used when saving Approved or Candidate; Rejected decisions never promote.'
+                              : ' No target glossary is set, so this decision updates candidate status only.'}
+                          </small>
+                        </span>
+                      </label>
+                    </div>
+                  ) : null}
 
                   <div className="review-project-detail__field">
                     <div className="review-project-detail__label">Decision notes</div>
@@ -3169,17 +3234,6 @@ function DetailPane({
                       style={{ resize: 'none' }}
                       disabled={!canResolveTerminology || isSavingGlobal}
                     />
-                  </div>
-
-                  <div className="review-project-detail__editor-actions">
-                    <button
-                      type="button"
-                      className="review-project-detail__actions-button review-project-detail__actions-button--primary"
-                      onClick={() => requestSaveTerminologyResolution()}
-                      disabled={!canApplyTerminologyResolution}
-                    >
-                      Apply final decision
-                    </button>
                   </div>
                 </>
               ) : null}

@@ -230,15 +230,19 @@ public class ReviewProjectService {
         resolvedRequest.name() == null || resolvedRequest.name().trim().isEmpty()
             ? "Terminology review"
             : resolvedRequest.name().trim();
+    boolean hasSpecialists = hasSpecialistUserIds(resolvedRequest.specialistUserIds());
     ZonedDateTime specialistDueDate =
-        firstNonNull(resolvedRequest.specialistDueDate(), resolvedRequest.dueDate());
-    if (specialistDueDate == null) {
+        resolveSpecialistDueDate(
+            hasSpecialists, resolvedRequest.specialistDueDate(), resolvedRequest.dueDate());
+    if (hasSpecialists && specialistDueDate == null) {
       specialistDueDate = ZonedDateTime.now().plusDays(2);
     }
     ZonedDateTime pmDueDate =
-        resolvedRequest.pmDueDate() == null
-            ? specialistDueDate.plusDays(1)
-            : resolvedRequest.pmDueDate();
+        resolvePmDueDate(
+            hasSpecialists,
+            specialistDueDate,
+            resolvedRequest.pmDueDate(),
+            resolvedRequest.dueDate());
     String notes =
         resolvedRequest.notes() == null || resolvedRequest.notes().trim().isEmpty()
             ? "Source terminology review for glossary " + glossaryId + "."
@@ -259,7 +263,7 @@ public class ReviewProjectService {
             StatusFilter.ALL,
             false,
             ReviewProjectType.TERMINOLOGY,
-            specialistDueDate,
+            hasSpecialists ? specialistDueDate : pmDueDate,
             List.of(),
             name,
             resolvedRequest.teamId(),
@@ -271,9 +275,6 @@ public class ReviewProjectService {
   public PollableFuture<CreateReviewProjectRequestResult>
       createGlossaryTermCandidateReviewProjectAsync(
           Long glossaryId, CreateGlossaryTermCandidateReviewProjectCommand request) {
-    if (glossaryId == null) {
-      throw new IllegalArgumentException("glossaryId must be provided");
-    }
     CreateGlossaryTermCandidateReviewProjectCommand resolvedRequest =
         request == null
             ? new CreateGlossaryTermCandidateReviewProjectCommand(
@@ -312,8 +313,8 @@ public class ReviewProjectService {
   @Transactional
   public CreateReviewProjectRequestResult createGlossaryTermCandidateReviewProject(
       CreateGlossaryTermCandidateReviewProjectJobInput request) {
-    if (request == null || request.glossaryId() == null) {
-      throw new IllegalArgumentException("glossaryId must be provided");
+    if (request == null) {
+      throw new IllegalArgumentException("request must be provided");
     }
     if (CollectionUtils.isEmpty(request.termIndexCandidateIds())) {
       throw new IllegalArgumentException("termIndexCandidateIds must be provided");
@@ -331,9 +332,11 @@ public class ReviewProjectService {
     }
 
     Set<Long> linkedCandidateIds =
-        new HashSet<>(
-            glossaryTermIndexLinkRepository.findLinkedTermIndexCandidateIdsByGlossaryId(
-                request.glossaryId(), requestedCandidateIds));
+        request.glossaryId() == null
+            ? Set.of()
+            : new HashSet<>(
+                glossaryTermIndexLinkRepository.findLinkedTermIndexCandidateIdsByGlossaryId(
+                    request.glossaryId(), requestedCandidateIds));
     Map<Long, TermIndexCandidate> candidatesById =
         termIndexCandidateRepository.findAllById(requestedCandidateIds).stream()
             .collect(Collectors.toMap(TermIndexCandidate::getId, Function.identity(), (a, b) -> a));
@@ -391,15 +394,19 @@ public class ReviewProjectService {
         request.name() == null || request.name().trim().isEmpty()
             ? "Term candidate review"
             : request.name().trim();
-    ZonedDateTime specialistDueDate = firstNonNull(request.specialistDueDate(), request.dueDate());
-    if (specialistDueDate == null) {
+    boolean hasSpecialists = hasSpecialistUserIds(request.specialistUserIds());
+    ZonedDateTime specialistDueDate =
+        resolveSpecialistDueDate(hasSpecialists, request.specialistDueDate(), request.dueDate());
+    if (hasSpecialists && specialistDueDate == null) {
       specialistDueDate = ZonedDateTime.now().plusDays(2);
     }
     ZonedDateTime pmDueDate =
-        request.pmDueDate() == null ? specialistDueDate.plusDays(1) : request.pmDueDate();
+        resolvePmDueDate(hasSpecialists, specialistDueDate, request.pmDueDate(), request.dueDate());
     String notes =
         request.notes() == null || request.notes().trim().isEmpty()
-            ? "Term candidate review for glossary " + request.glossaryId() + "."
+            ? request.glossaryId() == null
+                ? "Term candidate quality review."
+                : "Term candidate review for glossary " + request.glossaryId() + "."
             : request.notes().trim();
     List<CreateReviewProjectRequestCommand.ProjectSpec> projectSpecs =
         buildTerminologyProjectSpecs(
@@ -422,7 +429,7 @@ public class ReviewProjectService {
             notes,
             List.of(),
             ReviewProjectType.TERM_CANDIDATE,
-            specialistDueDate,
+            hasSpecialists ? specialistDueDate : pmDueDate,
             request.teamId(),
             request.requestedByUserId(),
             request.assignTranslator(),
@@ -433,6 +440,25 @@ public class ReviewProjectService {
 
   private ZonedDateTime firstNonNull(ZonedDateTime first, ZonedDateTime second) {
     return first != null ? first : second;
+  }
+
+  private ZonedDateTime resolveSpecialistDueDate(
+      boolean hasSpecialists, ZonedDateTime specialistDueDate, ZonedDateTime fallbackDueDate) {
+    return hasSpecialists ? firstNonNull(specialistDueDate, fallbackDueDate) : null;
+  }
+
+  private ZonedDateTime resolvePmDueDate(
+      boolean hasSpecialists,
+      ZonedDateTime specialistDueDate,
+      ZonedDateTime pmDueDate,
+      ZonedDateTime fallbackDueDate) {
+    if (pmDueDate != null) {
+      return pmDueDate;
+    }
+    if (hasSpecialists) {
+      return specialistDueDate.plusDays(1);
+    }
+    return fallbackDueDate == null ? ZonedDateTime.now().plusDays(2) : fallbackDueDate;
   }
 
   private boolean isTerminologyWorkflowType(ReviewProjectType type) {
@@ -449,24 +475,22 @@ public class ReviewProjectService {
         specialistUserIds == null
             ? List.of()
             : specialistUserIds.stream().filter(Objects::nonNull).distinct().toList();
-    if (distinctSpecialistUserIds.isEmpty()) {
+    for (Long specialistUserId : distinctSpecialistUserIds) {
       specs.add(
           new CreateReviewProjectRequestCommand.ProjectSpec(
-              ReviewProjectTerminologyPhase.SPECIALIST_INPUT, specialistDueDate, pmUserId, null));
-    } else {
-      for (Long specialistUserId : distinctSpecialistUserIds) {
-        specs.add(
-            new CreateReviewProjectRequestCommand.ProjectSpec(
-                ReviewProjectTerminologyPhase.SPECIALIST_INPUT,
-                specialistDueDate,
-                pmUserId,
-                specialistUserId));
-      }
+              ReviewProjectTerminologyPhase.SPECIALIST_INPUT,
+              specialistDueDate,
+              pmUserId,
+              specialistUserId));
     }
     specs.add(
         new CreateReviewProjectRequestCommand.ProjectSpec(
             ReviewProjectTerminologyPhase.PM_RESOLUTION, pmDueDate, pmUserId, null));
     return specs;
+  }
+
+  private boolean hasSpecialistUserIds(List<Long> specialistUserIds) {
+    return specialistUserIds != null && specialistUserIds.stream().anyMatch(Objects::nonNull);
   }
 
   private List<Long> getReviewableGlossaryTermIds(
@@ -2190,7 +2214,11 @@ public class ReviewProjectService {
 
   @Transactional
   public GetProjectDetailView.ReviewProjectTextUnit saveTerminologyResolution(
-      Long reviewProjectTextUnitId, Long glossaryId, String status, String notes) {
+      Long reviewProjectTextUnitId,
+      Long glossaryId,
+      String status,
+      String notes,
+      Boolean promoteToGlossary) {
     String normalizedStatus = normalizeOptional(status);
     if (normalizedStatus == null) {
       throw new IllegalArgumentException("status is required");
@@ -2231,14 +2259,19 @@ public class ReviewProjectService {
         glossaryId != null
             ? glossaryId
             : textUnit.getTargetGlossary() == null ? null : textUnit.getTargetGlossary().getId();
-    if (resolvedGlossaryId == null) {
-      throw new IllegalArgumentException("glossaryId is required");
-    }
 
     if (project.getType() == ReviewProjectType.TERM_CANDIDATE
         && textUnit.getTermIndexCandidate() != null) {
-      resolveTermCandidateReview(textUnit, resolvedGlossaryId, normalizedStatus, notes);
+      resolveTermCandidateReview(
+          textUnit,
+          resolvedGlossaryId,
+          normalizedStatus,
+          notes,
+          promoteToGlossary == null ? true : promoteToGlossary);
     } else {
+      if (resolvedGlossaryId == null) {
+        throw new IllegalArgumentException("glossaryId is required");
+      }
       GlossaryTermMetadata metadata =
           glossaryTermMetadataRepository
               .findByGlossaryIdAndTmTextUnitId(resolvedGlossaryId, textUnit.getTmTextUnit().getId())
@@ -2281,14 +2314,25 @@ public class ReviewProjectService {
   }
 
   private void resolveTermCandidateReview(
-      ReviewProjectTextUnit textUnit, Long glossaryId, String normalizedStatus, String notes) {
+      ReviewProjectTextUnit textUnit,
+      Long glossaryId,
+      String normalizedStatus,
+      String notes,
+      boolean promoteToGlossary) {
     TermIndexCandidate candidate = textUnit.getTermIndexCandidate();
     if (GlossaryTermMetadata.STATUS_REJECTED.equals(normalizedStatus)) {
       updateCandidateReview(candidate, TermIndexReview.STATUS_REJECTED, notes);
-      glossaryTermIndexCurationService.ignoreSuggestion(
-          glossaryId,
-          candidate.getId(),
-          new GlossaryTermIndexCurationService.IgnoreSuggestionCommand(notes));
+      if (glossaryId != null) {
+        glossaryTermIndexCurationService.ignoreSuggestion(
+            glossaryId,
+            candidate.getId(),
+            new GlossaryTermIndexCurationService.IgnoreSuggestionCommand(notes));
+      }
+      return;
+    }
+
+    updateCandidateReview(candidate, TermIndexReview.STATUS_ACCEPTED, notes);
+    if (!promoteToGlossary || glossaryId == null) {
       return;
     }
 
@@ -2309,7 +2353,6 @@ public class ReviewProjectService {
                 candidate.getConfidence(),
                 candidate.getRationale(),
                 List.of()));
-    updateCandidateReview(candidate, TermIndexReview.STATUS_ACCEPTED, notes);
     if (term.tmTextUnitId() == null) {
       return;
     }
@@ -3346,9 +3389,11 @@ public class ReviewProjectService {
             reviewProjectTextUnit.setTermIndexCandidate(
                 entityManager.getReference(
                     TermIndexCandidate.class, candidateReviewTextUnitDTO.termIndexCandidateId()));
-            reviewProjectTextUnit.setTargetGlossary(
-                entityManager.getReference(
-                    Glossary.class, candidateReviewTextUnitDTO.targetGlossaryId()));
+            if (candidateReviewTextUnitDTO.targetGlossaryId() != null) {
+              reviewProjectTextUnit.setTargetGlossary(
+                  entityManager.getReference(
+                      Glossary.class, candidateReviewTextUnitDTO.targetGlossaryId()));
+            }
           }
           if (textUnitDTO.getTmTextUnitVariantId() != null) {
             reviewProjectTextUnit.setTmTextUnitVariant(

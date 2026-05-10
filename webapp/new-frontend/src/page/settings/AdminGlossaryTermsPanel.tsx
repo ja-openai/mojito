@@ -1214,16 +1214,22 @@ export function AdminGlossaryTermsPanel({
 
   const terminologyReviewMutation = useMutation({
     mutationFn: (request: TerminologyReviewDraft) => {
-      const specialistDueDate = localDateTimeInputToIso(request.specialistDueDate);
+      const hasAdvisors = request.specialistUserIds.length > 0;
+      const specialistDueDate = hasAdvisors
+        ? localDateTimeInputToIso(request.specialistDueDate)
+        : null;
       const pmDueDate = localDateTimeInputToIso(request.pmDueDate);
-      if (!specialistDueDate || !pmDueDate) {
-        throw new Error('Advisor and decider due dates are required.');
+      if (hasAdvisors && !specialistDueDate) {
+        throw new Error('Advisor due date is required when advisors are selected.');
+      }
+      if (!pmDueDate) {
+        throw new Error('Decider due date is required.');
       }
       if (request.kind === 'TERM_CANDIDATE') {
         return createGlossaryTermCandidateReviewProjectRequest(glossary.id, {
           name: `Term candidate review · ${glossary.name} · selected candidates`,
           notes: `Candidate curation review for selected term candidates in glossary ${glossary.name} (#${glossary.id}).`,
-          dueDate: specialistDueDate,
+          dueDate: specialistDueDate ?? pmDueDate,
           teamId: request.teamId,
           specialistDueDate,
           pmDueDate,
@@ -1243,7 +1249,7 @@ export function AdminGlossaryTermsPanel({
           request.scope === 'selected'
             ? `Source terminology review for selected terms in glossary ${glossary.name} (#${glossary.id}).`
             : `Source terminology review for glossary ${glossary.name} (#${glossary.id}).`,
-        dueDate: specialistDueDate,
+        dueDate: specialistDueDate ?? pmDueDate,
         teamId: request.teamId,
         specialistDueDate,
         pmDueDate,
@@ -1327,7 +1333,8 @@ export function AdminGlossaryTermsPanel({
     terminologyReviewDraft != null &&
     terminologyReviewDraft.teamId != null &&
     terminologyReviewTermCount > 0 &&
-    Boolean(localDateTimeInputToIso(terminologyReviewDraft.specialistDueDate)) &&
+    (terminologyReviewDraft.specialistUserIds.length === 0 ||
+      Boolean(localDateTimeInputToIso(terminologyReviewDraft.specialistDueDate))) &&
     Boolean(localDateTimeInputToIso(terminologyReviewDraft.pmDueDate)) &&
     !terminologyReviewMutation.isPending;
   const closeTerminologyReviewModal = useCallback(() => {
@@ -2886,8 +2893,8 @@ export function AdminGlossaryTermsPanel({
                 </h3>
                 <p className="settings-hint">
                   {terminologyReviewDraft.kind === 'TERM_CANDIDATE'
-                    ? 'Creates vendor advisor rows to decide which selected candidates should become glossary terminology.'
-                    : 'Creates one advisor row per selected advisor, plus one decider row.'}
+                    ? 'Creates a decider row, plus advisor rows when advisors are selected.'
+                    : 'Creates a decider row, plus advisor rows when advisors are selected.'}
                 </p>
               </div>
             </div>
@@ -3004,7 +3011,7 @@ export function AdminGlossaryTermsPanel({
                     noResultsLabel="No advisors found"
                   />
                   <span className="settings-hint">
-                    Leave empty to create one unassigned advisor row for this team.
+                    Leave empty to skip advisor review and create only the decider row.
                   </span>
                 </div>
                 <div className="settings-field settings-field--full">
@@ -3067,8 +3074,15 @@ export function AdminGlossaryTermsPanel({
                   <input
                     type="datetime-local"
                     className="settings-input"
-                    value={terminologyReviewDraft.specialistDueDate}
-                    disabled={terminologyReviewMutation.isPending}
+                    value={
+                      terminologyReviewDraft.specialistUserIds.length > 0
+                        ? terminologyReviewDraft.specialistDueDate
+                        : ''
+                    }
+                    disabled={
+                      terminologyReviewMutation.isPending ||
+                      terminologyReviewDraft.specialistUserIds.length === 0
+                    }
                     onChange={(event) =>
                       setTerminologyReviewDraft((current) =>
                         current == null
@@ -3077,6 +3091,7 @@ export function AdminGlossaryTermsPanel({
                       )
                     }
                   />
+                  <span className="settings-hint">Only needed when advisor rows are selected.</span>
                 </label>
                 <label className="settings-field">
                   <span className="settings-field__label">Decider due</span>

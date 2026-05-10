@@ -225,6 +225,23 @@ public class ReviewProjectWS {
     }
   }
 
+  @PostMapping("/review-project-requests/term-candidates")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public CreateReviewProjectRequestStartResponse createTermCandidateReviewProject(
+      @RequestBody(required = false) CreateGlossaryTermCandidateReviewProjectRequest request) {
+    try {
+      PollableFuture<?> pollableFuture =
+          reviewProjectService.createGlossaryTermCandidateReviewProjectAsync(
+              null, toCreateGlossaryTermCandidateReviewProjectCommand(request));
+      return new CreateReviewProjectRequestStartResponse(pollableFuture.getPollableTask().getId());
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
   @GetMapping("/review-projects/{projectId}")
   public GetReviewProjectResponse getReviewProject(@PathVariable Long projectId)
       throws EntityWithIdNotFoundException {
@@ -413,7 +430,11 @@ public class ReviewProjectWS {
     try {
       return toTextUnitResponse(
           reviewProjectService.saveTerminologyResolution(
-              textUnitId, request.glossaryId(), request.status(), request.notes()));
+              textUnitId,
+              request.glossaryId(),
+              request.status(),
+              request.notes(),
+              request.promoteToGlossary()));
     } catch (AccessDeniedException accessDeniedException) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
     } catch (IllegalArgumentException illegalArgumentException) {
@@ -513,7 +534,7 @@ public class ReviewProjectWS {
       Recommendation recommendation, Integer confidence, String notes) {}
 
   public record ReviewProjectTextUnitResolutionRequest(
-      Long glossaryId, String status, String notes) {}
+      Long glossaryId, String status, String notes, Boolean promoteToGlossary) {}
 
   public record ReviewProjectTerminologyMetadataRequest(
       String definition,

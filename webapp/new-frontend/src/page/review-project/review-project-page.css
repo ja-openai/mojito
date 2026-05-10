@@ -1498,6 +1498,9 @@
 }
 
 .review-project-detail__decision-current {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
@@ -2703,6 +2706,17 @@
   gap: var(--space-2);
   color: var(--color-text);
   font-size: var(--font-size-sm);
+}
+
+.review-project-detail__terminology-checkbox span {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.review-project-detail__terminology-checkbox small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
 }
 
 @media (max-width: 760px) {

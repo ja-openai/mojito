@@ -67,9 +67,10 @@ export type TerminologyFeedbackRequest = {
 
 export type TerminologyResolutionRequest = {
   textUnitId: number;
-  glossaryId: number;
+  glossaryId?: number | null;
   status: ApiTerminologyResolutionStatus;
   notes?: string | null;
+  promoteToGlossary?: boolean | null;
 };
 
 export type TerminologyMetadataRequest = {

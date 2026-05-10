@@ -1495,6 +1495,22 @@ function RequestGroupsSection({
     () => new Set(adminControls?.selectedProjectIds ?? []),
     [adminControls?.selectedProjectIds],
   );
+  const visibleGroupRows = useMemo(
+    () =>
+      groups
+        .map((group) => ({
+          group,
+          visibleProjects: sortProjectsForRequestRows(
+            getVisibleProjectsForRequest(
+              group.projects,
+              projectStatusFilter,
+              projectCompletionFilter,
+            ),
+          ),
+        }))
+        .filter(({ visibleProjects }) => visibleProjects.length > 0),
+    [groups, projectCompletionFilter, projectStatusFilter],
+  );
   const [reassignTarget, setReassignTarget] = useState<AssignmentReassignTarget | null>(null);
   const [reassignDraftUserId, setReassignDraftUserId] = useState<number | null>(null);
   const [reassignShowAllAssignees, setReassignShowAllAssignees] = useState(false);
@@ -1834,7 +1850,7 @@ function RequestGroupsSection({
     !hasMixedTeamsForPmTarget &&
     activeTeamId != null;
 
-  if (groups.length === 0) {
+  if (visibleGroupRows.length === 0) {
     return (
       <div className="review-projects-page__rows-frame">
         <div className="review-projects-page__rows review-projects-page__rows--empty">
@@ -1848,15 +1864,8 @@ function RequestGroupsSection({
     <div className="review-projects-page__rows-frame">
       <div className="review-projects-page__rows-shell">
         <div className="review-projects-page__rows">
-          {groups.map((group) => {
+          {visibleGroupRows.map(({ group, visibleProjects }) => {
             const isExpanded = expandedKey === group.key;
-            const visibleProjects = sortProjectsForRequestRows(
-              getVisibleProjectsForRequest(
-                group.projects,
-                projectStatusFilter,
-                projectCompletionFilter,
-              ),
-            );
             const isTerminologyGroup = isTerminologyRequestGroup(group);
             const visibleGroupProjectIds = visibleProjects.map((project) => project.id);
             const requestEditProjectId = group.projects[0]?.id ?? null;

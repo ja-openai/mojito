@@ -707,7 +707,7 @@ public class ReviewProjectServiceTest {
         .thenReturn(List.of());
 
     reviewProjectService.saveTerminologyResolution(
-        55L, 17L, GlossaryTermMetadata.STATUS_APPROVED, " final ");
+        55L, 17L, GlossaryTermMetadata.STATUS_APPROVED, " final ", true);
 
     assertEquals(GlossaryTermMetadata.STATUS_APPROVED, metadata.getStatus());
     verify(glossaryTermMetadataRepository).saveAndFlush(metadata);
@@ -759,7 +759,7 @@ public class ReviewProjectServiceTest {
         .thenReturn(List.of());
 
     reviewProjectService.saveTerminologyResolution(
-        55L, 17L, GlossaryTermMetadata.STATUS_REJECTED, " false positive ");
+        55L, 17L, GlossaryTermMetadata.STATUS_REJECTED, " false positive ", true);
 
     assertEquals(TermIndexReview.STATUS_REJECTED, candidate.getReviewStatus());
     assertEquals(TermIndexReview.AUTHORITY_HUMAN, candidate.getReviewAuthority());
@@ -843,7 +843,7 @@ public class ReviewProjectServiceTest {
         .thenReturn(List.of());
 
     reviewProjectService.saveTerminologyResolution(
-        55L, null, GlossaryTermMetadata.STATUS_APPROVED, " approved ");
+        55L, null, GlossaryTermMetadata.STATUS_APPROVED, " approved ", true);
 
     ArgumentCaptor<GlossaryTermIndexCurationService.AcceptSuggestionCommand> commandCaptor =
         ArgumentCaptor.forClass(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class);
@@ -859,6 +859,53 @@ public class ReviewProjectServiceTest {
     assertEquals(TermIndexReview.AUTHORITY_HUMAN, candidate.getReviewAuthority());
     assertEquals("approved", candidate.getReviewRationale());
     verify(reviewProjectTextUnitRepository).saveAll(List.of(reviewProjectTextUnit));
+    verify(termIndexCandidateRepository).save(candidate);
+  }
+
+  @Test
+  public void saveTermCandidateResolutionCanAcceptWithoutGlossaryPromotion() {
+    ReviewProject reviewProject =
+        project(12L, team(7L), locale(14L, "en"), user(101L, "pm-a"), currentUser);
+    reviewProject.setType(ReviewProjectType.TERM_CANDIDATE);
+    reviewProject.setTerminologyPhase(ReviewProjectTerminologyPhase.PM_RESOLUTION);
+    TMTextUnit representativeTextUnit = new TMTextUnit();
+    representativeTextUnit.setId(321L);
+    TermIndexCandidate candidate = new TermIndexCandidate();
+    candidate.setId(501L);
+    candidate.setTerm("Google Drive");
+
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(representativeTextUnit);
+    reviewProjectTextUnit.setTermIndexCandidate(candidate);
+    Glossary targetGlossary = new Glossary();
+    targetGlossary.setId(17L);
+    reviewProjectTextUnit.setTargetGlossary(targetGlossary);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(userService.getCurrentUser()).thenReturn(Optional.of(currentUser));
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+    when(reviewProjectTextUnitFeedbackRepository
+            .findByReviewProjectTextUnitIdOrderByLastModifiedDateDesc(55L))
+        .thenReturn(List.of());
+
+    reviewProjectService.saveTerminologyResolution(
+        55L, null, GlossaryTermMetadata.STATUS_APPROVED, " valid term ", false);
+
+    verify(glossaryTermIndexCurationService, never())
+        .acceptSuggestion(
+            anyLong(),
+            anyLong(),
+            any(GlossaryTermIndexCurationService.AcceptSuggestionCommand.class));
+    assertEquals(representativeTextUnit, reviewProjectTextUnit.getTmTextUnit());
+    assertEquals(TermIndexReview.STATUS_ACCEPTED, candidate.getReviewStatus());
+    assertEquals(TermIndexReview.AUTHORITY_HUMAN, candidate.getReviewAuthority());
+    assertEquals("valid term", candidate.getReviewRationale());
     verify(termIndexCandidateRepository).save(candidate);
   }
 
@@ -894,7 +941,7 @@ public class ReviewProjectServiceTest {
         .thenReturn(List.of());
 
     reviewProjectService.saveTerminologyResolution(
-        55L, null, GlossaryTermMetadata.STATUS_REJECTED, " noisy ");
+        55L, null, GlossaryTermMetadata.STATUS_REJECTED, " noisy ", true);
 
     verify(glossaryTermIndexCurationService)
         .ignoreSuggestion(
@@ -953,15 +1000,11 @@ public class ReviewProjectServiceTest {
     assertEquals(Long.valueOf(7L), command.teamId());
     assertEquals(Boolean.FALSE, command.assignTranslator());
     assertEquals(Long.valueOf(99L), command.requestedByUserId());
-    assertEquals(2, command.projectSpecs().size());
-    assertEquals(
-        ReviewProjectTerminologyPhase.SPECIALIST_INPUT,
-        command.projectSpecs().get(0).terminologyPhase());
-    assertEquals(dueDate, command.projectSpecs().get(0).dueDate());
+    assertEquals(1, command.projectSpecs().size());
     assertEquals(
         ReviewProjectTerminologyPhase.PM_RESOLUTION,
-        command.projectSpecs().get(1).terminologyPhase());
-    assertEquals(dueDate.plusDays(1), command.projectSpecs().get(1).dueDate());
+        command.projectSpecs().get(0).terminologyPhase());
+    assertEquals(dueDate, command.projectSpecs().get(0).dueDate());
   }
 
   @Test

@@ -636,18 +636,19 @@ export const createGlossaryTerminologyReviewProjectRequest = async (
 };
 
 export const createGlossaryTermCandidateReviewProjectRequest = async (
-  glossaryId: number,
+  glossaryId: number | null,
   payload: GlossaryTermCandidateReviewProjectCreateRequest,
 ): Promise<ReviewProjectCreateResponse> => {
-  const startResponse = await fetch(
-    `/api/review-project-requests/glossaries/${glossaryId}/term-candidates`,
-    {
-      method: 'POST',
-      credentials: 'include',
-      headers: jsonHeaders,
-      body: JSON.stringify(payload ?? {}),
-    },
-  );
+  const url =
+    glossaryId == null
+      ? '/api/review-project-requests/term-candidates'
+      : `/api/review-project-requests/glossaries/${glossaryId}/term-candidates`;
+  const startResponse = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload ?? {}),
+  });
 
   if (!startResponse.ok) {
     const message = await startResponse.text().catch(() => '');
@@ -1010,11 +1011,13 @@ export const saveReviewProjectTextUnitTerminologyResolution = async ({
   glossaryId,
   status,
   notes,
+  promoteToGlossary,
 }: {
   textUnitId: number;
-  glossaryId: number;
+  glossaryId?: number | null;
   status: ApiTerminologyResolutionStatus;
   notes?: string | null;
+  promoteToGlossary?: boolean | null;
 }): Promise<ApiReviewProjectTextUnit> => {
   const response = await fetch(
     `/api/review-project-text-units/${textUnitId}/terminology-resolution`,
@@ -1026,6 +1029,7 @@ export const saveReviewProjectTextUnitTerminologyResolution = async ({
         glossaryId,
         status,
         notes,
+        promoteToGlossary,
       }),
     },
   );
