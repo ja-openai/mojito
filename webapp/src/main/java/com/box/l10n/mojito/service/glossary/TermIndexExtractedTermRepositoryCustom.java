@@ -21,4 +21,19 @@ public interface TermIndexExtractedTermRepositoryCustom {
       ZonedDateTime reviewChangedBefore,
       String sortBy,
       Pageable pageable);
+
+  List<TermIndexExtractedTermRepository.SearchRow> searchEntriesForCandidateGeneration(
+      boolean repositoryIdsEmpty,
+      Collection<Long> repositoryIds,
+      String searchQuery,
+      String extractionMethod,
+      String reviewStatusFilter,
+      String reviewAuthorityFilter,
+      long minOccurrences,
+      ZonedDateTime lastOccurrenceAfter,
+      ZonedDateTime lastOccurrenceBefore,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore,
+      boolean excludeExistingExtractionCandidates,
+      Pageable pageable);
 }

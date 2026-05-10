@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.glossary;
 
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexAutomationRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
@@ -36,6 +37,7 @@ public class TermIndexExplorerService {
   private final TermIndexOccurrenceRepository termIndexOccurrenceRepository;
   private final TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository;
   private final TermIndexRefreshRunRepository termIndexRefreshRunRepository;
+  private final TermIndexAutomationRunRepository termIndexAutomationRunRepository;
 
   public TermIndexExplorerService(
       UserService userService,
@@ -43,7 +45,8 @@ public class TermIndexExplorerService {
       TermIndexCandidateRepository termIndexCandidateRepository,
       TermIndexOccurrenceRepository termIndexOccurrenceRepository,
       TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository,
-      TermIndexRefreshRunRepository termIndexRefreshRunRepository) {
+      TermIndexRefreshRunRepository termIndexRefreshRunRepository,
+      TermIndexAutomationRunRepository termIndexAutomationRunRepository) {
     this.userService = Objects.requireNonNull(userService);
     this.termIndexExtractedTermRepository =
         Objects.requireNonNull(termIndexExtractedTermRepository);
@@ -52,6 +55,8 @@ public class TermIndexExplorerService {
     this.termIndexRepositoryCursorRepository =
         Objects.requireNonNull(termIndexRepositoryCursorRepository);
     this.termIndexRefreshRunRepository = Objects.requireNonNull(termIndexRefreshRunRepository);
+    this.termIndexAutomationRunRepository =
+        Objects.requireNonNull(termIndexAutomationRunRepository);
   }
 
   @Transactional(readOnly = true)
@@ -109,6 +114,66 @@ public class TermIndexExplorerService {
     return toEntrySummaryView(saved, findCandidateByExtractedTermId(saved.getId()));
   }
 
+  @Transactional(readOnly = true)
+  public CandidateSearchView searchCandidates(CandidateSearchCommand command) {
+    requireAdmin();
+    CandidateSearchCommand normalized = normalize(command);
+    List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
+    boolean repositoryIdsEmpty = normalized.repositoryIds().isEmpty();
+
+    List<CandidateSummaryView> candidates =
+        termIndexCandidateRepository
+            .searchForExplorer(
+                repositoryIdsEmpty,
+                repositoryIds,
+                normalizeOptional(normalized.searchQuery()),
+                normalized.reviewStatusFilter(),
+                normalized.reviewAuthorityFilter(),
+                normalized.minOccurrences(),
+                normalized.reviewChangedAfter(),
+                normalized.reviewChangedBefore(),
+                pageRequest(normalized.limit()))
+            .stream()
+            .map(this::toCandidateSummaryView)
+            .toList();
+    return new CandidateSearchView(candidates);
+  }
+
+  @Transactional
+  public CandidateSummaryView updateCandidate(
+      Long termIndexCandidateId, CandidateUpdateCommand command) {
+    requireAdmin();
+    TermIndexCandidate candidate =
+        termIndexCandidateRepository
+            .findById(termIndexCandidateId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Term index candidate not found: " + termIndexCandidateId));
+    CandidateUpdateCommand normalized = normalize(command);
+    candidate.setDefinition(truncate(normalized.definition(), 2048));
+    candidate.setRationale(truncate(normalized.rationale(), 2048));
+    candidate.setTermType(truncate(normalized.termType(), 32));
+    candidate.setPartOfSpeech(truncate(normalized.partOfSpeech(), 64));
+    candidate.setEnforcement(truncate(normalized.enforcement(), 32));
+    candidate.setDoNotTranslate(normalized.doNotTranslate());
+    candidate.setConfidence(clampConfidence(normalized.confidence()));
+
+    if (normalized.reviewStatus() != null
+        && !normalized.reviewStatus().equals(candidate.getReviewStatus())) {
+      applyHumanReview(
+          candidate,
+          normalized.reviewStatus(),
+          normalized.reviewReason(),
+          normalized.reviewRationale(),
+          normalized.reviewConfidence(),
+          currentUserOrNull());
+    }
+
+    TermIndexCandidate saved = termIndexCandidateRepository.save(candidate);
+    return toCandidateSummaryView(saved);
+  }
+
   @Transactional
   public BatchReviewUpdateView updateEntryReviews(BatchReviewUpdateCommand command) {
     requireAdmin();
@@ -142,6 +207,33 @@ public class TermIndexExplorerService {
     }
     termIndexExtractedTermRepository.saveAll(entries);
     return new BatchReviewUpdateView(entries.size());
+  }
+
+  @Transactional
+  public CandidateBatchReviewUpdateView updateCandidateReviews(
+      CandidateBatchReviewUpdateCommand command) {
+    requireAdmin();
+    CandidateBatchReviewUpdateCommand normalized = normalize(command);
+    List<Long> termIndexCandidateIds =
+        normalized.termIndexCandidateIds().stream().filter(Objects::nonNull).distinct().toList();
+    if (termIndexCandidateIds.isEmpty()) {
+      throw new IllegalArgumentException("termIndexCandidateIds are required");
+    }
+
+    List<TermIndexCandidate> candidates =
+        termIndexCandidateRepository.findAllById(termIndexCandidateIds);
+    User currentUser = currentUserOrNull();
+    for (TermIndexCandidate candidate : candidates) {
+      applyHumanReview(
+          candidate,
+          normalized.reviewStatus(),
+          candidate.getReviewReason(),
+          candidate.getReviewRationale(),
+          candidate.getReviewConfidence(),
+          currentUser);
+    }
+    termIndexCandidateRepository.saveAll(candidates);
+    return new CandidateBatchReviewUpdateView(candidates.size());
   }
 
   @Transactional(readOnly = true)
@@ -186,8 +278,14 @@ public class TermIndexExplorerService {
             .stream()
             .map(this::toRefreshRunView)
             .toList();
+    List<JobView> recentJobs =
+        termIndexAutomationRunRepository
+            .findAllByOrderByIdDesc(PageRequest.of(0, normalizedRecentRunLimit))
+            .stream()
+            .map(this::toJobView)
+            .toList();
     List<String> extractionMethods = termIndexOccurrenceRepository.findDistinctExtractionMethods();
-    return new StatusView(cursors, recentRuns, extractionMethods);
+    return new StatusView(cursors, recentRuns, recentJobs, extractionMethods);
   }
 
   private EntrySummaryView toEntrySummaryView(
@@ -328,6 +426,87 @@ public class TermIndexExplorerService {
             : candidate.getReviewChangedByUser().getCommonName());
   }
 
+  private CandidateSummaryView toCandidateSummaryView(
+      TermIndexCandidateRepository.CandidateExplorerRow row) {
+    return new CandidateSummaryView(
+        row.getId(),
+        row.getTermIndexExtractedTermId(),
+        row.getNormalizedKey(),
+        row.getTerm(),
+        row.getLabel(),
+        row.getSourceLocaleTag(),
+        row.getMetadataJson(),
+        row.getDefinition(),
+        row.getRationale(),
+        row.getTermType(),
+        row.getPartOfSpeech(),
+        row.getEnforcement(),
+        row.getDoNotTranslate(),
+        row.getConfidence(),
+        row.getReviewStatus(),
+        row.getReviewAuthority(),
+        row.getReviewReason(),
+        row.getReviewRationale(),
+        row.getReviewConfidence(),
+        row.getReviewChangedAt(),
+        row.getReviewChangedByUserId(),
+        row.getReviewChangedByUsername(),
+        row.getReviewChangedByCommonName(),
+        nullToZero(row.getOccurrenceCount()),
+        Math.toIntExact(nullToZero(row.getRepositoryCount())),
+        row.getLastOccurrenceAt(),
+        row.getCandidateCreatedDate());
+  }
+
+  private CandidateSummaryView toCandidateSummaryView(TermIndexCandidate candidate) {
+    Long termIndexExtractedTermId =
+        candidate.getTermIndexExtractedTerm() == null
+            ? null
+            : candidate.getTermIndexExtractedTerm().getId();
+    return new CandidateSummaryView(
+        candidate.getId(),
+        termIndexExtractedTermId,
+        candidate.getNormalizedKey(),
+        candidate.getTerm(),
+        candidate.getLabel(),
+        candidate.getSourceLocaleTag(),
+        candidate.getMetadataJson(),
+        candidate.getDefinition(),
+        candidate.getRationale(),
+        candidate.getTermType(),
+        candidate.getPartOfSpeech(),
+        candidate.getEnforcement(),
+        candidate.getDoNotTranslate(),
+        candidate.getConfidence(),
+        candidate.getReviewStatus(),
+        candidate.getReviewAuthority(),
+        candidate.getReviewReason(),
+        candidate.getReviewRationale(),
+        candidate.getReviewConfidence(),
+        candidate.getReviewChangedAt(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getId(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getUsername(),
+        candidate.getReviewChangedByUser() == null
+            ? null
+            : candidate.getReviewChangedByUser().getCommonName(),
+        candidate.getTermIndexExtractedTerm() == null
+            ? 0
+            : nullToZero(candidate.getTermIndexExtractedTerm().getOccurrenceCount()),
+        candidate.getTermIndexExtractedTerm() == null
+            ? 0
+            : candidate.getTermIndexExtractedTerm().getRepositoryCount() == null
+                ? 0
+                : candidate.getTermIndexExtractedTerm().getRepositoryCount(),
+        candidate.getTermIndexExtractedTerm() == null
+            ? null
+            : candidate.getTermIndexExtractedTerm().getLastSeenAt(),
+        candidate.getCreatedDate());
+  }
+
   private OccurrenceView toOccurrenceView(TermIndexOccurrenceRepository.DetailRow row) {
     return new OccurrenceView(
         row.getId(),
@@ -375,6 +554,25 @@ public class TermIndexExplorerService {
         run.getErrorMessage());
   }
 
+  private JobView toJobView(TermIndexAutomationRun run) {
+    return new JobView(
+        run.getId(),
+        run.getType(),
+        run.getPollableTaskId(),
+        toJobStatus(run.getStatus()),
+        run.getMessage(),
+        run.getErrorMessage(),
+        run.getStartedAt(),
+        run.getCompletedAt());
+  }
+
+  private String toJobStatus(String runStatus) {
+    if (TermIndexAutomationRun.STATUS_SUCCEEDED.equals(runStatus)) {
+      return "COMPLETED";
+    }
+    return runStatus;
+  }
+
   private EntrySearchCommand normalize(EntrySearchCommand command) {
     if (command == null) {
       return new EntrySearchCommand(
@@ -404,6 +602,29 @@ public class TermIndexExplorerService {
         command.reviewChangedAfter(),
         command.reviewChangedBefore(),
         normalizeEntrySort(command.sortBy()));
+  }
+
+  private CandidateSearchCommand normalize(CandidateSearchCommand command) {
+    if (command == null) {
+      return new CandidateSearchCommand(
+          List.of(),
+          null,
+          TermIndexReview.STATUS_FILTER_NON_REJECTED,
+          TermIndexReview.AUTHORITY_FILTER_ALL,
+          0L,
+          DEFAULT_LIMIT,
+          null,
+          null);
+    }
+    return new CandidateSearchCommand(
+        normalizeRepositoryIds(command.repositoryIds()),
+        command.searchQuery(),
+        normalizeReviewStatusFilter(command.reviewStatusFilter()),
+        normalizeReviewAuthorityFilter(command.reviewAuthorityFilter(), true),
+        Math.max(0L, command.minOccurrences() == null ? 0L : command.minOccurrences()),
+        normalizeLimit(command.limit()),
+        command.reviewChangedAfter(),
+        command.reviewChangedBefore());
   }
 
   private OccurrenceSearchCommand normalize(OccurrenceSearchCommand command) {
@@ -455,6 +676,33 @@ public class TermIndexExplorerService {
         clampConfidence(command.reviewConfidence()));
   }
 
+  private CandidateBatchReviewUpdateCommand normalize(CandidateBatchReviewUpdateCommand command) {
+    if (command == null) {
+      throw new IllegalArgumentException("reviewStatus is required");
+    }
+    return new CandidateBatchReviewUpdateCommand(
+        command.termIndexCandidateIds() == null ? List.of() : command.termIndexCandidateIds(),
+        normalizeReviewStatus(command.reviewStatus()));
+  }
+
+  private CandidateUpdateCommand normalize(CandidateUpdateCommand command) {
+    if (command == null) {
+      throw new IllegalArgumentException("candidate update is required");
+    }
+    return new CandidateUpdateCommand(
+        normalizeOptional(command.definition()),
+        normalizeOptional(command.rationale()),
+        normalizeOptional(command.termType()),
+        normalizeOptional(command.partOfSpeech()),
+        normalizeOptional(command.enforcement()),
+        command.doNotTranslate(),
+        clampConfidence(command.confidence()),
+        command.reviewStatus() == null ? null : normalizeReviewStatus(command.reviewStatus()),
+        truncate(normalizeOptional(command.reviewReason()), 64),
+        truncate(normalizeOptional(command.reviewRationale()), 2048),
+        clampConfidence(command.reviewConfidence()));
+  }
+
   private String normalizeReviewStatus(String reviewStatus) {
     String normalized = normalizeOptional(reviewStatus);
     if (normalized == null) {
@@ -488,9 +736,14 @@ public class TermIndexExplorerService {
   }
 
   private String normalizeReviewAuthorityFilter(String reviewAuthorityFilter) {
+    return normalizeReviewAuthorityFilter(reviewAuthorityFilter, false);
+  }
+
+  private String normalizeReviewAuthorityFilter(
+      String reviewAuthorityFilter, boolean defaultToAll) {
     String normalized = normalizeOptional(reviewAuthorityFilter);
     if (normalized == null) {
-      return null;
+      return defaultToAll ? TermIndexReview.AUTHORITY_FILTER_ALL : null;
     }
     normalized = normalized.toUpperCase(Locale.ROOT);
     return switch (normalized) {
@@ -571,6 +824,22 @@ public class TermIndexExplorerService {
     entry.setReviewChangedByUser(currentUser);
   }
 
+  private void applyHumanReview(
+      TermIndexCandidate candidate,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence,
+      User currentUser) {
+    candidate.setReviewStatus(reviewStatus);
+    candidate.setReviewAuthority(TermIndexReview.AUTHORITY_HUMAN);
+    candidate.setReviewReason(reviewReason);
+    candidate.setReviewRationale(reviewRationale);
+    candidate.setReviewConfidence(reviewConfidence);
+    candidate.setReviewChangedAt(ZonedDateTime.now());
+    candidate.setReviewChangedByUser(currentUser);
+  }
+
   private User currentUserOrNull() {
     return userService.getCurrentUser().orElse(null);
   }
@@ -595,6 +864,29 @@ public class TermIndexExplorerService {
       ZonedDateTime reviewChangedBefore,
       String sortBy) {}
 
+  public record CandidateSearchCommand(
+      List<Long> repositoryIds,
+      String searchQuery,
+      String reviewStatusFilter,
+      String reviewAuthorityFilter,
+      Long minOccurrences,
+      Integer limit,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore) {}
+
+  public record CandidateUpdateCommand(
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Integer confidence,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
+
   public record ReviewUpdateCommand(
       String reviewStatus, String reviewReason, String reviewRationale, Integer reviewConfidence) {}
 
@@ -610,10 +902,17 @@ public class TermIndexExplorerService {
 
   public record BatchReviewUpdateView(int updatedEntryCount) {}
 
+  public record CandidateBatchReviewUpdateCommand(
+      List<Long> termIndexCandidateIds, String reviewStatus) {}
+
+  public record CandidateBatchReviewUpdateView(int updatedCandidateCount) {}
+
   public record OccurrenceSearchCommand(
       List<Long> repositoryIds, String extractionMethod, Integer limit) {}
 
   public record EntrySearchView(List<EntrySummaryView> entries) {}
+
+  public record CandidateSearchView(List<CandidateSummaryView> candidates) {}
 
   public record EntrySummaryView(
       Long id,
@@ -671,6 +970,35 @@ public class TermIndexExplorerService {
       String reviewChangedByUsername,
       String reviewChangedByCommonName) {}
 
+  public record CandidateSummaryView(
+      Long id,
+      Long termIndexExtractedTermId,
+      String normalizedKey,
+      String term,
+      String label,
+      String sourceLocaleTag,
+      String metadataJson,
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Integer confidence,
+      String reviewStatus,
+      String reviewAuthority,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence,
+      ZonedDateTime reviewChangedAt,
+      Long reviewChangedByUserId,
+      String reviewChangedByUsername,
+      String reviewChangedByCommonName,
+      long occurrenceCount,
+      int repositoryCount,
+      ZonedDateTime lastOccurrenceAt,
+      ZonedDateTime candidateCreatedDate) {}
+
   public record OccurrenceSearchView(List<OccurrenceView> occurrences) {}
 
   public record OccurrenceView(
@@ -691,7 +1019,10 @@ public class TermIndexExplorerService {
       ZonedDateTime createdDate) {}
 
   public record StatusView(
-      List<CursorView> cursors, List<RefreshRunView> recentRuns, List<String> extractionMethods) {}
+      List<CursorView> cursors,
+      List<RefreshRunView> recentRuns,
+      List<JobView> recentJobs,
+      List<String> extractionMethods) {}
 
   public record CursorView(
       Long repositoryId,
@@ -716,4 +1047,14 @@ public class TermIndexExplorerService {
       ZonedDateTime startedAt,
       ZonedDateTime completedAt,
       String errorMessage) {}
+
+  public record JobView(
+      Long id,
+      String name,
+      Long pollableTaskId,
+      String status,
+      String message,
+      String errorMessage,
+      ZonedDateTime createdDate,
+      ZonedDateTime finishedDate) {}
 }

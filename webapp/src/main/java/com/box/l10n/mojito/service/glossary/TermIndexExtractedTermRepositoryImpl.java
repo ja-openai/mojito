@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.glossary;
 
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
@@ -16,6 +17,7 @@ import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -50,6 +52,70 @@ public class TermIndexExtractedTermRepositoryImpl
       ZonedDateTime reviewChangedAfter,
       ZonedDateTime reviewChangedBefore,
       String sortBy,
+      Pageable pageable) {
+    return searchEntriesInternal(
+        repositoryIdsEmpty,
+        repositoryIds,
+        searchQuery,
+        extractionMethod,
+        reviewStatusFilter,
+        reviewAuthorityFilter,
+        minOccurrences,
+        lastOccurrenceAfter,
+        lastOccurrenceBefore,
+        reviewChangedAfter,
+        reviewChangedBefore,
+        sortBy,
+        false,
+        pageable);
+  }
+
+  @Override
+  public List<TermIndexExtractedTermRepository.SearchRow> searchEntriesForCandidateGeneration(
+      boolean repositoryIdsEmpty,
+      Collection<Long> repositoryIds,
+      String searchQuery,
+      String extractionMethod,
+      String reviewStatusFilter,
+      String reviewAuthorityFilter,
+      long minOccurrences,
+      ZonedDateTime lastOccurrenceAfter,
+      ZonedDateTime lastOccurrenceBefore,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore,
+      boolean excludeExistingExtractionCandidates,
+      Pageable pageable) {
+    return searchEntriesInternal(
+        repositoryIdsEmpty,
+        repositoryIds,
+        searchQuery,
+        extractionMethod,
+        reviewStatusFilter,
+        reviewAuthorityFilter,
+        minOccurrences,
+        lastOccurrenceAfter,
+        lastOccurrenceBefore,
+        reviewChangedAfter,
+        reviewChangedBefore,
+        SORT_HITS,
+        excludeExistingExtractionCandidates,
+        pageable);
+  }
+
+  private List<TermIndexExtractedTermRepository.SearchRow> searchEntriesInternal(
+      boolean repositoryIdsEmpty,
+      Collection<Long> repositoryIds,
+      String searchQuery,
+      String extractionMethod,
+      String reviewStatusFilter,
+      String reviewAuthorityFilter,
+      long minOccurrences,
+      ZonedDateTime lastOccurrenceAfter,
+      ZonedDateTime lastOccurrenceBefore,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore,
+      String sortBy,
+      boolean excludeExistingExtractionCandidates,
       Pageable pageable) {
     CriteriaBuilder cb = entityManager.getCriteriaBuilder();
     CriteriaQuery<Tuple> query = cb.createTupleQuery();
@@ -120,6 +186,14 @@ public class TermIndexExtractedTermRepositoryImpl
     }
     if (reviewChangedBefore != null) {
       predicates.add(cb.lessThan(reviewChangedAt, reviewChangedBefore));
+    }
+    if (excludeExistingExtractionCandidates) {
+      Subquery<Long> existingCandidateQuery = query.subquery(Long.class);
+      Root<TermIndexCandidate> candidate = existingCandidateQuery.from(TermIndexCandidate.class);
+      existingCandidateQuery
+          .select(candidate.get("id"))
+          .where(cb.equal(candidate.get("termIndexExtractedTerm").get("id"), entryId));
+      predicates.add(cb.not(cb.exists(existingCandidateQuery)));
     }
     query.where(predicates.toArray(Predicate[]::new));
 

@@ -13,6 +13,12 @@ public class TermIndexCandidateGenerationJob
   @Override
   public GlossaryTermIndexCurationService.GenerateCandidatesResult call(
       GlossaryTermIndexCurationService.GenerateCandidatesJobCommand input) {
-    return glossaryTermIndexCurationService.generateCandidates(input);
+    Long pollableTaskId = getCurrentPollableTask().getId();
+    try {
+      return glossaryTermIndexCurationService.generateCandidates(input, pollableTaskId);
+    } catch (RuntimeException e) {
+      glossaryTermIndexCurationService.markAutomationRunFailed(pollableTaskId, e);
+      throw e;
+    }
   }
 }

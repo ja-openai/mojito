@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -16,6 +18,7 @@ import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
@@ -30,7 +33,9 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GlossaryTermIndexCurationServiceTest {
@@ -43,6 +48,7 @@ public class GlossaryTermIndexCurationServiceTest {
   @Mock TermIndexExtractedTermRepository termIndexExtractedTermRepository;
   @Mock TermIndexOccurrenceRepository termIndexOccurrenceRepository;
   @Mock TermIndexCandidateRepository termIndexCandidateRepository;
+  @Mock TermIndexAutomationRunRepository termIndexAutomationRunRepository;
   @Mock GlossaryTermService glossaryTermService;
   @Mock GlossaryAiExtractionService glossaryAiExtractionService;
   @Mock TextUnitSearcher textUnitSearcher;
@@ -65,6 +71,7 @@ public class GlossaryTermIndexCurationServiceTest {
             termIndexExtractedTermRepository,
             termIndexOccurrenceRepository,
             termIndexCandidateRepository,
+            termIndexAutomationRunRepository,
             glossaryTermService,
             glossaryAiExtractionService,
             textUnitSearcher,
@@ -73,6 +80,7 @@ public class GlossaryTermIndexCurationServiceTest {
             quartzPollableTaskScheduler,
             pollableTaskService,
             transactionManager);
+    when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
   }
 
   @Test
@@ -210,6 +218,138 @@ public class GlossaryTermIndexCurationServiceTest {
     assertThat(commandCaptor.getValue().doNotTranslate()).isFalse();
   }
 
+  @Test
+  public void generateCandidatesFromExtractedTermsCanUseBatchFilters() {
+    when(termIndexExtractedTermRepository.searchEntriesForCandidateGeneration(
+            eq(false),
+            eq(List.of(7L)),
+            eq("drive"),
+            isNull(),
+            eq(TermIndexReview.STATUS_ACCEPTED),
+            eq(TermIndexReview.AUTHORITY_FILTER_ALL),
+            eq(2L),
+            isNull(),
+            isNull(),
+            isNull(),
+            isNull(),
+            eq(false),
+            any(Pageable.class)))
+        .thenReturn(List.of());
+
+    GlossaryTermIndexCurationService.GenerateCandidatesResult result =
+        glossaryTermIndexCurationService.generateCandidatesFromExtractedTermsInternal(
+            new GlossaryTermIndexCurationService.GenerateCandidatesFromExtractedTermsCommand(
+                null,
+                List.of(7L),
+                " drive ",
+                null,
+                TermIndexReview.STATUS_ACCEPTED,
+                TermIndexReview.AUTHORITY_FILTER_ALL,
+                2L,
+                25,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null));
+
+    assertThat(result.candidateCount()).isZero();
+    verify(termIndexExtractedTermRepository)
+        .searchEntriesForCandidateGeneration(
+            eq(false),
+            eq(List.of(7L)),
+            eq("drive"),
+            isNull(),
+            eq(TermIndexReview.STATUS_ACCEPTED),
+            eq(TermIndexReview.AUTHORITY_FILTER_ALL),
+            eq(2L),
+            isNull(),
+            isNull(),
+            isNull(),
+            isNull(),
+            eq(false),
+            any(Pageable.class));
+  }
+
+  @Test
+  public void generateCandidatesFromExtractedTermsDefaultsToSkippingExistingCandidates() {
+    when(termIndexExtractedTermRepository.searchEntriesForCandidateGeneration(
+            eq(true),
+            any(),
+            isNull(),
+            isNull(),
+            eq(TermIndexReview.STATUS_ACCEPTED),
+            eq(TermIndexReview.AUTHORITY_FILTER_ALL),
+            eq(1L),
+            isNull(),
+            isNull(),
+            isNull(),
+            isNull(),
+            eq(true),
+            any(Pageable.class)))
+        .thenReturn(List.of());
+
+    GlossaryTermIndexCurationService.GenerateCandidatesResult result =
+        glossaryTermIndexCurationService.generateCandidatesFromExtractedTermsInternal(null);
+
+    assertThat(result.candidateCount()).isZero();
+    verify(termIndexExtractedTermRepository)
+        .searchEntriesForCandidateGeneration(
+            eq(true),
+            any(),
+            isNull(),
+            isNull(),
+            eq(TermIndexReview.STATUS_ACCEPTED),
+            eq(TermIndexReview.AUTHORITY_FILTER_ALL),
+            eq(1L),
+            isNull(),
+            isNull(),
+            isNull(),
+            isNull(),
+            eq(true),
+            any(Pageable.class));
+  }
+
+  @Test
+  public void generateCandidatesFromExtractedTermsSkipsExistingCandidatesMatchedByHash() {
+    TermIndexExtractedTermRepository.SearchRow row = searchRow(501L, "en", "api", "API");
+    TermIndexCandidate existingCandidate = new TermIndexCandidate();
+    existingCandidate.setId(900L);
+
+    when(termIndexExtractedTermRepository.findCandidateGenerationRowsByIdIn(
+            eq(List.of(501L)), eq(true), any()))
+        .thenReturn(List.of(row));
+    when(termIndexCandidateRepository.findBySourceTypeAndSourceNameAndCandidateHash(
+            eq(TermIndexCandidate.SOURCE_TYPE_EXTRACTION), eq("term-index"), any()))
+        .thenReturn(Optional.of(existingCandidate));
+
+    GlossaryTermIndexCurationService.GenerateCandidatesResult result =
+        glossaryTermIndexCurationService.generateCandidatesFromExtractedTermsInternal(
+            new GlossaryTermIndexCurationService.GenerateCandidatesFromExtractedTermsCommand(
+                List.of(501L),
+                null,
+                null,
+                null,
+                TermIndexReview.STATUS_ACCEPTED,
+                TermIndexReview.AUTHORITY_FILTER_ALL,
+                1L,
+                25,
+                null,
+                null,
+                null,
+                null,
+                true,
+                null));
+
+    assertThat(result.candidateCount()).isZero();
+    assertThat(result.createdCandidateCount()).isZero();
+    assertThat(result.updatedCandidateCount()).isZero();
+    assertThat(result.skippedExistingCandidateCount()).isEqualTo(1);
+    verify(termIndexCandidateRepository, never()).save(any());
+    verify(termIndexExtractedTermRepository, never()).getReferenceById(501L);
+  }
+
   private Glossary glossary(Long id, String sourceLocaleTag) {
     Locale sourceLocale = new Locale();
     sourceLocale.setBcp47Tag(sourceLocaleTag);
@@ -244,6 +384,19 @@ public class GlossaryTermIndexCurationServiceTest {
     extractedTerm.setNormalizedKey(normalizedKey);
     extractedTerm.setDisplayTerm(displayTerm);
     return extractedTerm;
+  }
+
+  private TermIndexExtractedTermRepository.SearchRow searchRow(
+      Long id, String sourceLocaleTag, String normalizedKey, String displayTerm) {
+    TermIndexExtractedTermRepository.SearchRow row =
+        mock(TermIndexExtractedTermRepository.SearchRow.class);
+    when(row.getId()).thenReturn(id);
+    when(row.getSourceLocaleTag()).thenReturn(sourceLocaleTag);
+    when(row.getNormalizedKey()).thenReturn(normalizedKey);
+    when(row.getDisplayTerm()).thenReturn(displayTerm);
+    when(row.getOccurrenceCount()).thenReturn(10L);
+    when(row.getRepositoryCount()).thenReturn(1L);
+    return row;
   }
 
   private TermIndexCandidate candidate(Long id, TermIndexExtractedTerm extractedTerm) {

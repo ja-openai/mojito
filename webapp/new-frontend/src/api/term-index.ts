@@ -25,9 +25,14 @@ export type ApiTermIndexTaskProgress = {
   type?: string;
   status?: string;
   entryCount?: number;
+  processedEntryCount?: number;
   reviewableEntryCount?: number;
   reviewedEntryCount?: number;
   updatedEntryCount?: number;
+  candidateCount?: number;
+  createdCandidateCount?: number;
+  updatedCandidateCount?: number;
+  skippedExistingCandidateCount?: number;
   acceptedCount?: number;
   toReviewCount?: number;
   rejectedCount?: number;
@@ -45,6 +50,7 @@ export type ApiTermIndexRefreshRequest = {
 
 export type ApiTermIndexEntry = {
   id: number;
+  termIndexExtractedTermId?: number | null;
   termIndexCandidateId?: number | null;
   candidateDefinition?: string | null;
   candidateRationale?: string | null;
@@ -99,8 +105,46 @@ export type ApiTermIndexEntriesResponse = {
   entries: ApiTermIndexEntry[];
 };
 
+export type ApiTermIndexCandidate = {
+  id: number;
+  termIndexExtractedTermId?: number | null;
+  normalizedKey: string;
+  term: string;
+  label?: string | null;
+  sourceLocaleTag: string;
+  metadataJson?: string | null;
+  definition?: string | null;
+  rationale?: string | null;
+  termType?: string | null;
+  partOfSpeech?: string | null;
+  enforcement?: string | null;
+  doNotTranslate?: boolean | null;
+  confidence?: number | null;
+  reviewStatus: ApiTermIndexReviewStatus;
+  reviewAuthority: ApiTermIndexReviewAuthority;
+  reviewReason?: string | null;
+  reviewRationale?: string | null;
+  reviewConfidence?: number | null;
+  reviewChangedAt?: string | null;
+  reviewChangedByUserId?: number | null;
+  reviewChangedByUsername?: string | null;
+  reviewChangedByCommonName?: string | null;
+  occurrenceCount: number;
+  repositoryCount: number;
+  lastOccurrenceAt?: string | null;
+  candidateCreatedDate?: string | null;
+};
+
+export type ApiTermIndexCandidatesResponse = {
+  candidates: ApiTermIndexCandidate[];
+};
+
 export type ApiTermIndexBatchReviewResponse = {
   updatedEntryCount: number;
+};
+
+export type ApiTermIndexCandidateBatchReviewResponse = {
+  updatedCandidateCount: number;
 };
 
 export type ApiTriageTermIndexEntriesRequest = {
@@ -139,8 +183,19 @@ export type ApiTriageTermIndexEntriesResponse = {
 };
 
 export type ApiGenerateTermIndexCandidatesRequest = {
-  termIndexEntryIds: number[];
+  termIndexEntryIds?: number[];
   repositoryIds?: number[];
+  search?: string | null;
+  extractionMethod?: string | null;
+  termIndexReviewStatus?: ApiTermIndexReviewStatusFilter | null;
+  termIndexReviewAuthority?: ApiTermIndexReviewAuthorityFilter | null;
+  minOccurrences?: number | null;
+  limit?: number | null;
+  lastOccurrenceAfter?: string | null;
+  lastOccurrenceBefore?: string | null;
+  reviewChangedAfter?: string | null;
+  reviewChangedBefore?: string | null;
+  skipExistingCandidates?: boolean | null;
   definition?: string | null;
   rationale?: string | null;
   termType?: string | null;
@@ -158,6 +213,7 @@ export type ApiGenerateTermIndexCandidatesResponse = {
   candidateCount: number;
   createdCandidateCount: number;
   updatedCandidateCount: number;
+  skippedExistingCandidateCount?: number;
   candidates: Array<{
     termIndexCandidateId: number;
     termIndexExtractedTermId?: number | null;
@@ -233,9 +289,22 @@ export type ApiTermIndexRefreshRun = {
   errorMessage?: string | null;
 };
 
+export type ApiTermIndexJob = {
+  id: number;
+  name: string;
+  pollableTaskId?: number | null;
+  status: string;
+  message?: unknown;
+  progress?: ApiTermIndexTaskProgress | null;
+  errorMessage?: string | null;
+  createdDate?: string | null;
+  finishedDate?: string | null;
+};
+
 export type ApiTermIndexStatus = {
   cursors: ApiTermIndexCursor[];
   recentRuns: ApiTermIndexRefreshRun[];
+  recentJobs: ApiTermIndexJob[];
   extractionMethods: string[];
 };
 
@@ -307,9 +376,14 @@ function normalizeTermIndexTaskProgress(message: unknown): ApiTermIndexTaskProgr
     type: getOptionalString(value.type),
     status: getOptionalString(value.status),
     entryCount: getOptionalNumber(value.entryCount),
+    processedEntryCount: getOptionalNumber(value.processedEntryCount),
     reviewableEntryCount: getOptionalNumber(value.reviewableEntryCount),
     reviewedEntryCount: getOptionalNumber(value.reviewedEntryCount),
     updatedEntryCount: getOptionalNumber(value.updatedEntryCount),
+    candidateCount: getOptionalNumber(value.candidateCount),
+    createdCandidateCount: getOptionalNumber(value.createdCandidateCount),
+    updatedCandidateCount: getOptionalNumber(value.updatedCandidateCount),
+    skippedExistingCandidateCount: getOptionalNumber(value.skippedExistingCandidateCount),
     acceptedCount: getOptionalNumber(value.acceptedCount),
     toReviewCount: getOptionalNumber(value.toReviewCount),
     rejectedCount: getOptionalNumber(value.rejectedCount),
@@ -491,6 +565,114 @@ export async function updateTermIndexEntryReview(
   return (await response.json()) as ApiTermIndexEntry;
 }
 
+export async function fetchTermIndexCandidates(options?: {
+  repositoryIds?: number[];
+  search?: string;
+  reviewStatus?: ApiTermIndexReviewStatusFilter | null;
+  reviewAuthority?: ApiTermIndexReviewAuthorityFilter | null;
+  minOccurrences?: number;
+  limit?: number;
+  reviewChangedAfter?: string | null;
+  reviewChangedBefore?: string | null;
+}): Promise<ApiTermIndexCandidatesResponse> {
+  const params = new URLSearchParams();
+  appendRepositoryParams(params, options?.repositoryIds);
+  if (options?.search?.trim()) {
+    params.set('search', options.search.trim());
+  }
+  if (options?.reviewStatus) {
+    params.set('reviewStatus', options.reviewStatus);
+  }
+  if (options?.reviewAuthority) {
+    params.set('reviewAuthority', options.reviewAuthority);
+  }
+  if (typeof options?.minOccurrences === 'number') {
+    params.set('minOccurrences', String(options.minOccurrences));
+  }
+  if (typeof options?.limit === 'number') {
+    params.set('limit', String(options.limit));
+  }
+  if (options?.reviewChangedAfter) {
+    params.set('reviewChangedAfter', options.reviewChangedAfter);
+  }
+  if (options?.reviewChangedBefore) {
+    params.set('reviewChangedBefore', options.reviewChangedBefore);
+  }
+
+  const response = await fetch(
+    `/api/glossary-term-index/candidates${params.size ? `?${params.toString()}` : ''}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to load term candidates'));
+  }
+
+  return (await response.json()) as ApiTermIndexCandidatesResponse;
+}
+
+export async function updateTermIndexCandidate(
+  termIndexCandidateId: number,
+  request: {
+    definition?: string | null;
+    rationale?: string | null;
+    termType?: string | null;
+    partOfSpeech?: string | null;
+    enforcement?: string | null;
+    doNotTranslate?: boolean | null;
+    confidence?: number | null;
+    reviewStatus?: ApiTermIndexReviewStatus | null;
+    reviewReason?: string | null;
+    reviewRationale?: string | null;
+    reviewConfidence?: number | null;
+  },
+): Promise<ApiTermIndexCandidate> {
+  const response = await fetch(`/api/glossary-term-index/candidates/${termIndexCandidateId}`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to update term candidate'));
+  }
+
+  return (await response.json()) as ApiTermIndexCandidate;
+}
+
+export async function updateTermIndexCandidateReviews(
+  termIndexCandidateIds: number[],
+  request: {
+    reviewStatus: ApiTermIndexReviewStatus;
+  },
+): Promise<ApiTermIndexCandidateBatchReviewResponse> {
+  const response = await fetch('/api/glossary-term-index/candidates/review', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      termIndexCandidateIds,
+      ...request,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to update candidate reviews'));
+  }
+
+  return (await response.json()) as ApiTermIndexCandidateBatchReviewResponse;
+}
+
 export async function updateTermIndexEntryReviews(
   termIndexEntryIds: number[],
   request: {
@@ -527,6 +709,20 @@ export async function triageTermIndexEntries(
   request: ApiTriageTermIndexEntriesRequest,
   options?: { onProgress?: (progress: ApiTermIndexTaskProgress | null) => void },
 ): Promise<ApiTriageTermIndexEntriesResponse> {
+  const task = await startTriageTermIndexEntries(request);
+  options?.onProgress?.(task.progress ?? null);
+  await waitForTermIndexPollableTask(
+    task.id,
+    LONG_TERM_INDEX_JOB_TIMEOUT_MS,
+    'Timed out while waiting for extracted term triage',
+    (pollableTask) => options?.onProgress?.(pollableTask.progress ?? null),
+  );
+  return fetchTermIndexTriageOutput(task.id);
+}
+
+export async function startTriageTermIndexEntries(
+  request: ApiTriageTermIndexEntriesRequest,
+): Promise<ApiTermIndexPollableTask> {
   const response = await fetch('/api/glossary-term-index/entries/triage', {
     method: 'POST',
     credentials: 'same-origin',
@@ -542,15 +738,7 @@ export async function triageTermIndexEntries(
   }
 
   const payload = (await response.json()) as StartTriageEntriesResponse;
-  const task = normalizePollableTask(payload.pollableTask);
-  options?.onProgress?.(task.progress ?? null);
-  await waitForTermIndexPollableTask(
-    task.id,
-    LONG_TERM_INDEX_JOB_TIMEOUT_MS,
-    'Timed out while waiting for extracted term triage',
-    (pollableTask) => options?.onProgress?.(pollableTask.progress ?? null),
-  );
-  return fetchTermIndexTriageOutput(task.id);
+  return normalizePollableTask(payload.pollableTask);
 }
 
 async function fetchTermIndexTriageOutput(
@@ -571,6 +759,18 @@ async function fetchTermIndexTriageOutput(
 export async function generateTermIndexCandidatesFromEntries(
   request: ApiGenerateTermIndexCandidatesRequest,
 ): Promise<ApiGenerateTermIndexCandidatesResponse> {
+  const task = await startGenerateTermIndexCandidatesFromEntries(request);
+  await waitForTermIndexPollableTask(
+    task.id,
+    LONG_TERM_INDEX_JOB_TIMEOUT_MS,
+    'Timed out while waiting for term candidate generation',
+  );
+  return fetchTermIndexCandidateGenerationOutput(task.id);
+}
+
+export async function startGenerateTermIndexCandidatesFromEntries(
+  request: ApiGenerateTermIndexCandidatesRequest,
+): Promise<ApiTermIndexPollableTask> {
   const response = await fetch('/api/glossary-term-index/candidates/generate', {
     method: 'POST',
     credentials: 'same-origin',
@@ -586,13 +786,7 @@ export async function generateTermIndexCandidatesFromEntries(
   }
 
   const payload = (await response.json()) as StartGenerateCandidatesResponse;
-  const task = normalizePollableTask(payload.pollableTask);
-  await waitForTermIndexPollableTask(
-    task.id,
-    LONG_TERM_INDEX_JOB_TIMEOUT_MS,
-    'Timed out while waiting for term candidate generation',
-  );
-  return fetchTermIndexCandidateGenerationOutput(task.id);
+  return normalizePollableTask(payload.pollableTask);
 }
 
 async function fetchTermIndexCandidateGenerationOutput(
@@ -754,5 +948,12 @@ export async function fetchTermIndexStatus(options?: {
     throw new Error(await getErrorMessage(response, 'Failed to load term index status'));
   }
 
-  return (await response.json()) as ApiTermIndexStatus;
+  const status = (await response.json()) as ApiTermIndexStatus;
+  return {
+    ...status,
+    recentJobs: (status.recentJobs ?? []).map((job) => ({
+      ...job,
+      progress: normalizeTermIndexTaskProgress(job.message),
+    })),
+  };
 }

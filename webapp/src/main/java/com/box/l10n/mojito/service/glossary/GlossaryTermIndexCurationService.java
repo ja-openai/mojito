@@ -5,6 +5,7 @@ import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexDecision;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
+import com.box.l10n.mojito.entity.glossary.termindex.TermIndexAutomationRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
@@ -60,6 +61,7 @@ public class GlossaryTermIndexCurationService {
   private static final long AI_REVIEW_RETRY_BACKOFF_MILLIS = 1_000L;
   private static final int TRIAGE_RESULT_ENTRY_LIMIT = 100;
   private static final int DEFAULT_GENERATION_LIMIT = 500;
+  private static final int MAX_GENERATION_LIMIT = 10_000;
   private static final int DEFAULT_CANDIDATE_EXPORT_LIMIT = 1_000;
   private static final List<Long> EMPTY_FILTER_SENTINEL = List.of(-1L);
   private static final String EXTRACTION_SOURCE_NAME = "term-index";
@@ -94,6 +96,7 @@ public class GlossaryTermIndexCurationService {
   private final TermIndexExtractedTermRepository termIndexExtractedTermRepository;
   private final TermIndexOccurrenceRepository termIndexOccurrenceRepository;
   private final TermIndexCandidateRepository termIndexCandidateRepository;
+  private final TermIndexAutomationRunRepository termIndexAutomationRunRepository;
   private final GlossaryTermService glossaryTermService;
   private final GlossaryAiExtractionService glossaryAiExtractionService;
   private final TextUnitSearcher textUnitSearcher;
@@ -112,6 +115,7 @@ public class GlossaryTermIndexCurationService {
       TermIndexExtractedTermRepository termIndexExtractedTermRepository,
       TermIndexOccurrenceRepository termIndexOccurrenceRepository,
       TermIndexCandidateRepository termIndexCandidateRepository,
+      TermIndexAutomationRunRepository termIndexAutomationRunRepository,
       GlossaryTermService glossaryTermService,
       GlossaryAiExtractionService glossaryAiExtractionService,
       TextUnitSearcher textUnitSearcher,
@@ -130,6 +134,8 @@ public class GlossaryTermIndexCurationService {
         Objects.requireNonNull(termIndexExtractedTermRepository);
     this.termIndexOccurrenceRepository = Objects.requireNonNull(termIndexOccurrenceRepository);
     this.termIndexCandidateRepository = Objects.requireNonNull(termIndexCandidateRepository);
+    this.termIndexAutomationRunRepository =
+        Objects.requireNonNull(termIndexAutomationRunRepository);
     this.glossaryTermService = Objects.requireNonNull(glossaryTermService);
     this.glossaryAiExtractionService = Objects.requireNonNull(glossaryAiExtractionService);
     this.textUnitSearcher = Objects.requireNonNull(textUnitSearcher);
@@ -365,7 +371,7 @@ public class GlossaryTermIndexCurationService {
     GenerateCandidatesCommand normalized = normalize(command);
     List<Long> scopeRepositoryIds = resolveScopeRepositoryIds(glossary);
     if (scopeRepositoryIds.isEmpty()) {
-      return new GenerateCandidatesResult(0, 0, 0, List.of());
+      return new GenerateCandidatesResult(0, 0, 0, 0, List.of());
     }
 
     List<TermIndexExtractedTermRepository.SearchRow> rows =
@@ -407,10 +413,10 @@ public class GlossaryTermIndexCurationService {
         generatedCandidates.size(),
         createdCandidateCount,
         updatedCandidateCount,
+        0,
         generatedCandidates);
   }
 
-  @Transactional
   public GenerateCandidatesResult generateCandidatesFromExtractedTerms(
       GenerateCandidatesFromExtractedTermsCommand command) {
     requireTermManager();
@@ -439,18 +445,26 @@ public class GlossaryTermIndexCurationService {
     return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
   }
 
-  @Transactional
   public GenerateCandidatesResult generateCandidates(GenerateCandidatesJobCommand command) {
+    return generateCandidates(command, null);
+  }
+
+  public GenerateCandidatesResult generateCandidates(
+      GenerateCandidatesJobCommand command, Long pollableTaskId) {
     if (command == null) {
       throw new IllegalArgumentException("candidate generation command is required");
     }
     if (command.generateCandidatesCommand() != null) {
-      return generateCandidatesForGlossaryInternal(
-          command.glossaryId(), command.generateCandidatesCommand());
+      return Objects.requireNonNull(
+          requiresNewTransactionTemplate.execute(
+              status ->
+                  generateCandidatesForGlossaryInternal(
+                      command.glossaryId(), command.generateCandidatesCommand())));
     }
     return generateCandidatesFromExtractedTermsInternal(
         command.generateCandidatesFromExtractedTermsCommand(),
-        userByIdOrNull(command.requestedByUserId()));
+        userByIdOrNull(command.requestedByUserId()),
+        pollableTaskId);
   }
 
   private PollableFuture<GenerateCandidatesResult> scheduleGenerateCandidates(
@@ -464,34 +478,236 @@ public class GlossaryTermIndexCurationService {
     return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
   }
 
-  @Transactional
   GenerateCandidatesResult generateCandidatesFromExtractedTermsInternal(
       GenerateCandidatesFromExtractedTermsCommand command) {
-    return generateCandidatesFromExtractedTermsInternal(command, currentUserOrNull());
+    return generateCandidatesFromExtractedTermsInternal(command, currentUserOrNull(), null);
   }
 
-  @Transactional
   GenerateCandidatesResult generateCandidatesFromExtractedTermsInternal(
       GenerateCandidatesFromExtractedTermsCommand command, User reviewChangedByUser) {
+    return generateCandidatesFromExtractedTermsInternal(command, reviewChangedByUser, null);
+  }
+
+  GenerateCandidatesResult generateCandidatesFromExtractedTermsInternal(
+      GenerateCandidatesFromExtractedTermsCommand command,
+      User reviewChangedByUser,
+      Long pollableTaskId) {
     GenerateCandidatesFromExtractedTermsCommand normalized = normalize(command);
+    createAutomationRunIfMissing(
+        TermIndexAutomationRun.TYPE_GENERATE_CANDIDATES,
+        normalized.repositoryIds(),
+        pollableTaskId);
     List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
     boolean repositoryIdsEmpty = normalized.repositoryIds().isEmpty();
     CandidateFieldOverrides overrides = normalized.overrides();
 
-    List<TermIndexExtractedTermRepository.SearchRow> rows =
-        termIndexExtractedTermRepository.findCandidateGenerationRowsByIdIn(
-            normalized.termIndexExtractedTermIds(), repositoryIdsEmpty, repositoryIds);
-
-    Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId =
-        candidateFieldsByExtractedTermId(rows, repositoryIdsEmpty, repositoryIds, overrides);
-    List<SeededTermView> generatedCandidates = new ArrayList<>(rows.size());
+    List<SeededTermView> generatedCandidates = new ArrayList<>(TRIAGE_RESULT_ENTRY_LIMIT);
     int createdCandidateCount = 0;
     int updatedCandidateCount = 0;
+    int skippedExistingCandidateCount = 0;
+    int requestedRowCount =
+        normalized.termIndexExtractedTermIds().isEmpty()
+            ? normalizeGenerationLimit(normalized.limit())
+            : normalized.termIndexExtractedTermIds().size();
+    int processedRowCount = 0;
+    int batchCount = ceilDiv(requestedRowCount, AI_CANDIDATE_BATCH_SIZE);
+    int completedBatchCount = 0;
+    updateCandidateGenerationProgress(
+        pollableTaskId,
+        new GenerateCandidatesProgressView(
+            "GENERATE_TERM_INDEX_CANDIDATES",
+            batchCount == 0 ? "COMPLETED" : "RUNNING",
+            requestedRowCount,
+            processedRowCount,
+            createdCandidateCount + updatedCandidateCount,
+            createdCandidateCount,
+            updatedCandidateCount,
+            skippedExistingCandidateCount,
+            batchCount,
+            completedBatchCount));
+
+    for (int start = 0;
+        start < normalized.termIndexExtractedTermIds().size();
+        start += AI_CANDIDATE_BATCH_SIZE) {
+      List<Long> batchIds =
+          normalized
+              .termIndexExtractedTermIds()
+              .subList(
+                  start,
+                  Math.min(
+                      normalized.termIndexExtractedTermIds().size(),
+                      start + AI_CANDIDATE_BATCH_SIZE));
+      List<TermIndexExtractedTermRepository.SearchRow> batch =
+          termIndexExtractedTermRepository.findCandidateGenerationRowsByIdIn(
+              batchIds, repositoryIdsEmpty, repositoryIds);
+      GenerateCandidatesBatchResult batchResult =
+          generateCandidateGenerationRowsBatch(
+              batch,
+              repositoryIdsEmpty,
+              repositoryIds,
+              overrides,
+              normalized.skipExistingCandidates(),
+              reviewChangedByUser);
+      createdCandidateCount += batchResult.createdCandidateCount();
+      updatedCandidateCount += batchResult.updatedCandidateCount();
+      skippedExistingCandidateCount += batchResult.skippedExistingCandidateCount();
+      addGeneratedCandidateSamples(generatedCandidates, batchResult.candidates());
+      processedRowCount += batch.size();
+      completedBatchCount++;
+      updateCandidateGenerationProgress(
+          pollableTaskId,
+          new GenerateCandidatesProgressView(
+              "GENERATE_TERM_INDEX_CANDIDATES",
+              "RUNNING",
+              requestedRowCount,
+              processedRowCount,
+              createdCandidateCount + updatedCandidateCount,
+              createdCandidateCount,
+              updatedCandidateCount,
+              skippedExistingCandidateCount,
+              batchCount,
+              completedBatchCount));
+    }
+
+    if (normalized.termIndexExtractedTermIds().isEmpty()) {
+      int limit = normalizeGenerationLimit(normalized.limit());
+      int fetchedRowCount = 0;
+      int page = 0;
+      while (fetchedRowCount < limit) {
+        List<TermIndexExtractedTermRepository.SearchRow> batch =
+            searchRowsForCandidateGeneration(
+                normalized,
+                repositoryIdsEmpty,
+                repositoryIds,
+                PageRequest.of(page, AI_CANDIDATE_BATCH_SIZE));
+        if (batch.isEmpty()) {
+          break;
+        }
+        int remainingRows = limit - fetchedRowCount;
+        if (batch.size() > remainingRows) {
+          batch = batch.subList(0, remainingRows);
+        }
+        GenerateCandidatesBatchResult batchResult =
+            generateCandidateGenerationRowsBatch(
+                batch,
+                repositoryIdsEmpty,
+                repositoryIds,
+                overrides,
+                normalized.skipExistingCandidates(),
+                reviewChangedByUser);
+        createdCandidateCount += batchResult.createdCandidateCount();
+        updatedCandidateCount += batchResult.updatedCandidateCount();
+        skippedExistingCandidateCount += batchResult.skippedExistingCandidateCount();
+        addGeneratedCandidateSamples(generatedCandidates, batchResult.candidates());
+        fetchedRowCount += batch.size();
+        processedRowCount += batch.size();
+        completedBatchCount++;
+        updateCandidateGenerationProgress(
+            pollableTaskId,
+            new GenerateCandidatesProgressView(
+                "GENERATE_TERM_INDEX_CANDIDATES",
+                "RUNNING",
+                requestedRowCount,
+                processedRowCount,
+                createdCandidateCount + updatedCandidateCount,
+                createdCandidateCount,
+                updatedCandidateCount,
+                skippedExistingCandidateCount,
+                batchCount,
+                completedBatchCount));
+        if (!normalized.skipExistingCandidates()) {
+          page++;
+        }
+      }
+    }
+
+    int completedEntryCount =
+        normalized.termIndexExtractedTermIds().isEmpty() ? processedRowCount : requestedRowCount;
+    int completedBatchTotal =
+        normalized.termIndexExtractedTermIds().isEmpty() ? completedBatchCount : batchCount;
+    updateCandidateGenerationProgress(
+        pollableTaskId,
+        new GenerateCandidatesProgressView(
+            "GENERATE_TERM_INDEX_CANDIDATES",
+            "COMPLETED",
+            completedEntryCount,
+            processedRowCount,
+            createdCandidateCount + updatedCandidateCount,
+            createdCandidateCount,
+            updatedCandidateCount,
+            skippedExistingCandidateCount,
+            completedBatchTotal,
+            completedBatchCount));
+
+    return new GenerateCandidatesResult(
+        createdCandidateCount + updatedCandidateCount,
+        createdCandidateCount,
+        updatedCandidateCount,
+        skippedExistingCandidateCount,
+        generatedCandidates);
+  }
+
+  private GenerateCandidatesBatchResult generateCandidateGenerationRowsBatch(
+      List<TermIndexExtractedTermRepository.SearchRow> rows,
+      boolean repositoryIdsEmpty,
+      List<Long> repositoryIds,
+      CandidateFieldOverrides overrides,
+      boolean skipExistingCandidates,
+      User reviewChangedByUser) {
+    ExistingCandidateFilterResult existingCandidateFilter =
+        filterExistingExtractionCandidates(rows, skipExistingCandidates);
+    rows = existingCandidateFilter.rows();
+    if (rows.isEmpty()) {
+      return new GenerateCandidatesBatchResult(
+          0, 0, 0, existingCandidateFilter.skippedExistingCandidateCount(), List.of());
+    }
+    Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId =
+        candidateFieldsByExtractedTermId(rows, repositoryIdsEmpty, repositoryIds, overrides);
+    GenerateCandidatesBatchResult batchResult =
+        writeGeneratedCandidatesBatchInNewTransaction(
+            rows, candidateFieldsByExtractedTermId, reviewChangedByUser, skipExistingCandidates);
+    return new GenerateCandidatesBatchResult(
+        batchResult.candidateCount(),
+        batchResult.createdCandidateCount(),
+        batchResult.updatedCandidateCount(),
+        existingCandidateFilter.skippedExistingCandidateCount()
+            + batchResult.skippedExistingCandidateCount(),
+        batchResult.candidates());
+  }
+
+  private GenerateCandidatesBatchResult writeGeneratedCandidatesBatchInNewTransaction(
+      List<TermIndexExtractedTermRepository.SearchRow> rows,
+      Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId,
+      User reviewChangedByUser,
+      boolean skipExistingCandidates) {
+    return Objects.requireNonNull(
+        requiresNewTransactionTemplate.execute(
+            status ->
+                writeGeneratedCandidatesBatch(
+                    rows,
+                    candidateFieldsByExtractedTermId,
+                    reviewChangedByUser,
+                    skipExistingCandidates)));
+  }
+
+  private GenerateCandidatesBatchResult writeGeneratedCandidatesBatch(
+      List<TermIndexExtractedTermRepository.SearchRow> rows,
+      Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId,
+      User reviewChangedByUser,
+      boolean skipExistingCandidates) {
+    List<SeededTermView> generatedCandidates = new ArrayList<>();
+    int createdCandidateCount = 0;
+    int updatedCandidateCount = 0;
+    int skippedExistingCandidateCount = 0;
     for (TermIndexExtractedTermRepository.SearchRow row : rows) {
       for (GeneratedCandidateFields fields :
           candidateFieldsForRow(candidateFieldsByExtractedTermId, row)) {
         CandidateWriteResult writeResult =
-            upsertExtractionCandidate(row, fields, reviewChangedByUser);
+            upsertExtractionCandidate(row, fields, reviewChangedByUser, skipExistingCandidates);
+        if (writeResult.skipped()) {
+          skippedExistingCandidateCount++;
+          continue;
+        }
         if (writeResult.created()) {
           createdCandidateCount++;
         } else {
@@ -500,12 +716,70 @@ public class GlossaryTermIndexCurationService {
         generatedCandidates.add(toSeededTermView(writeResult.candidate()));
       }
     }
-
-    return new GenerateCandidatesResult(
-        generatedCandidates.size(),
+    return new GenerateCandidatesBatchResult(
+        createdCandidateCount + updatedCandidateCount,
         createdCandidateCount,
         updatedCandidateCount,
+        skippedExistingCandidateCount,
         generatedCandidates);
+  }
+
+  private void addGeneratedCandidateSamples(
+      List<SeededTermView> generatedCandidates, List<SeededTermView> batchCandidates) {
+    if (generatedCandidates.size() >= TRIAGE_RESULT_ENTRY_LIMIT || batchCandidates.isEmpty()) {
+      return;
+    }
+    int remaining = TRIAGE_RESULT_ENTRY_LIMIT - generatedCandidates.size();
+    generatedCandidates.addAll(
+        batchCandidates.subList(0, Math.min(remaining, batchCandidates.size())));
+  }
+
+  private ExistingCandidateFilterResult filterExistingExtractionCandidates(
+      List<TermIndexExtractedTermRepository.SearchRow> rows, boolean skipExistingCandidates) {
+    if (!skipExistingCandidates || rows.isEmpty()) {
+      return new ExistingCandidateFilterResult(rows, 0);
+    }
+    Set<Long> existingExtractedTermIds =
+        termIndexCandidateRepository
+            .findCandidateIdsByExtractedTermIdIn(
+                rows.stream().map(TermIndexExtractedTermRepository.SearchRow::getId).toList())
+            .stream()
+            .map(
+                TermIndexCandidateRepository.ExtractedTermCandidateIdRow
+                    ::getTermIndexExtractedTermId)
+            .collect(Collectors.toSet());
+    if (existingExtractedTermIds.isEmpty()) {
+      return new ExistingCandidateFilterResult(rows, 0);
+    }
+    List<TermIndexExtractedTermRepository.SearchRow> missingCandidateRows =
+        rows.stream().filter(row -> !existingExtractedTermIds.contains(row.getId())).toList();
+    return new ExistingCandidateFilterResult(
+        missingCandidateRows, rows.size() - missingCandidateRows.size());
+  }
+
+  private List<TermIndexExtractedTermRepository.SearchRow> searchRowsForCandidateGeneration(
+      GenerateCandidatesFromExtractedTermsCommand command,
+      boolean repositoryIdsEmpty,
+      List<Long> repositoryIds,
+      PageRequest pageRequest) {
+    return termIndexExtractedTermRepository
+        .searchEntriesForCandidateGeneration(
+            repositoryIdsEmpty,
+            repositoryIds,
+            normalizeOptional(command.searchQuery()),
+            normalizeOptional(command.extractionMethod()),
+            command.termIndexReviewStatusFilter(),
+            command.termIndexReviewAuthorityFilter(),
+            command.minOccurrences(),
+            command.lastOccurrenceAfter(),
+            command.lastOccurrenceBefore(),
+            command.reviewChangedAfter(),
+            command.reviewChangedBefore(),
+            command.skipExistingCandidates(),
+            pageRequest)
+        .stream()
+        .filter(row -> !TermIndexReview.STATUS_REJECTED.equals(row.getReviewStatus()))
+        .toList();
   }
 
   public TriageExtractedTermsResult triageExtractedTerms(TriageExtractedTermsCommand command) {
@@ -515,6 +789,10 @@ public class GlossaryTermIndexCurationService {
   public TriageExtractedTermsResult triageExtractedTerms(
       TriageExtractedTermsCommand command, Long pollableTaskId) {
     TriageExtractedTermsCommand normalized = normalize(command);
+    createAutomationRunIfMissing(
+        TermIndexAutomationRun.TYPE_REVIEW_EXTRACTED_TERMS,
+        normalized.repositoryIds(),
+        pollableTaskId);
     List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
     boolean repositoryIdsEmpty = normalized.repositoryIds().isEmpty();
     List<TermIndexExtractedTermRepository.SearchRow> rows =
@@ -1478,6 +1756,14 @@ public class GlossaryTermIndexCurationService {
       TermIndexExtractedTermRepository.SearchRow row,
       GeneratedCandidateFields fields,
       User reviewChangedByUser) {
+    return upsertExtractionCandidate(row, fields, reviewChangedByUser, false);
+  }
+
+  private CandidateWriteResult upsertExtractionCandidate(
+      TermIndexExtractedTermRepository.SearchRow row,
+      GeneratedCandidateFields fields,
+      User reviewChangedByUser,
+      boolean skipExistingCandidate) {
     CandidateFieldOverrides overrides = fields == null ? null : fields.overrides();
     String sourceLocaleTag =
         coalesce(
@@ -1504,6 +1790,9 @@ public class GlossaryTermIndexCurationService {
     Optional<TermIndexCandidate> existingCandidate =
         termIndexCandidateRepository.findBySourceTypeAndSourceNameAndCandidateHash(
             TermIndexCandidate.SOURCE_TYPE_EXTRACTION, EXTRACTION_SOURCE_NAME, candidateHash);
+    if (existingCandidate.isPresent() && skipExistingCandidate) {
+      return new CandidateWriteResult(existingCandidate.get(), false, true);
+    }
     TermIndexCandidate candidate =
         existingCandidate.orElseGet(
             () -> {
@@ -1546,7 +1835,7 @@ public class GlossaryTermIndexCurationService {
             coalesce(candidate.getDoNotTranslate(), shouldPreserveSource(row.getDisplayTerm()))));
     applyExtractionCandidateReview(candidate, overrides, reviewChangedByUser);
     return new CandidateWriteResult(
-        termIndexCandidateRepository.save(candidate), existingCandidate.isEmpty());
+        termIndexCandidateRepository.save(candidate), existingCandidate.isEmpty(), false);
   }
 
   private void applyExtractionCandidateReview(
@@ -2080,20 +2369,35 @@ public class GlossaryTermIndexCurationService {
 
   private GenerateCandidatesFromExtractedTermsCommand normalize(
       GenerateCandidatesFromExtractedTermsCommand command) {
-    if (command == null
-        || command.termIndexExtractedTermIds() == null
-        || command.termIndexExtractedTermIds().isEmpty()) {
-      throw new IllegalArgumentException("termIndexEntryIds are required");
-    }
     List<Long> termIndexExtractedTermIds =
-        command.termIndexExtractedTermIds().stream().filter(Objects::nonNull).distinct().toList();
-    if (termIndexExtractedTermIds.isEmpty()) {
-      throw new IllegalArgumentException("termIndexEntryIds are required");
-    }
+        command == null || command.termIndexExtractedTermIds() == null
+            ? List.of()
+            : command.termIndexExtractedTermIds().stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
     return new GenerateCandidatesFromExtractedTermsCommand(
         termIndexExtractedTermIds,
-        normalizeRepositoryIds(command.repositoryIds()),
-        normalize(command.overrides()));
+        normalizeRepositoryIds(command == null ? null : command.repositoryIds()),
+        command == null ? null : command.searchQuery(),
+        command == null ? null : command.extractionMethod(),
+        normalizeTermIndexReviewStatusFilter(
+            command == null
+                ? TermIndexReview.STATUS_ACCEPTED
+                : coalesce(command.termIndexReviewStatusFilter(), TermIndexReview.STATUS_ACCEPTED)),
+        normalizeCandidateReviewAuthority(
+            command == null ? null : command.termIndexReviewAuthorityFilter(),
+            TermIndexReview.AUTHORITY_FILTER_ALL),
+        Math.max(
+            1L,
+            command == null || command.minOccurrences() == null ? 1L : command.minOccurrences()),
+        normalizeGenerationLimit(command == null ? null : command.limit()),
+        command == null ? null : command.lastOccurrenceAfter(),
+        command == null ? null : command.lastOccurrenceBefore(),
+        command == null ? null : command.reviewChangedAfter(),
+        command == null ? null : command.reviewChangedBefore(),
+        command == null || command.skipExistingCandidates(),
+        normalize(command == null ? null : command.overrides()));
   }
 
   private TriageExtractedTermsCommand normalize(TriageExtractedTermsCommand command) {
@@ -2279,7 +2583,7 @@ public class GlossaryTermIndexCurationService {
 
   private int normalizeGenerationLimit(Integer limit) {
     int normalized = limit == null ? DEFAULT_GENERATION_LIMIT : limit;
-    return Math.max(1, normalized);
+    return Math.min(Math.max(1, normalized), MAX_GENERATION_LIMIT);
   }
 
   private int normalizeCandidateExportLimit(Integer limit) {
@@ -2400,12 +2704,123 @@ public class GlossaryTermIndexCurationService {
     }
   }
 
+  private void createAutomationRunIfMissing(
+      String type, List<Long> repositoryIds, Long pollableTaskId) {
+    if (pollableTaskId == null) {
+      return;
+    }
+    requiresNewTransactionTemplate.executeWithoutResult(
+        transactionStatus -> {
+          if (termIndexAutomationRunRepository.findByPollableTaskId(pollableTaskId).isPresent()) {
+            return;
+          }
+          TermIndexAutomationRun run = new TermIndexAutomationRun();
+          run.setType(type);
+          run.setStatus(TermIndexAutomationRun.STATUS_RUNNING);
+          run.setRequestedRepositoryIds(formatRepositoryIds(repositoryIds));
+          run.setPollableTaskId(pollableTaskId);
+          run.setStartedAt(ZonedDateTime.now());
+          termIndexAutomationRunRepository.save(run);
+        });
+  }
+
   private void updateTriageProgress(Long pollableTaskId, TriageProgressView progress) {
     if (pollableTaskId == null || progress == null) {
       return;
     }
-    pollableTaskService.updateMessage(
-        pollableTaskId, objectMapper.writeValueAsStringUnchecked(progress));
+    String message = objectMapper.writeValueAsStringUnchecked(progress);
+    pollableTaskService.updateMessage(pollableTaskId, message);
+    requiresNewTransactionTemplate.executeWithoutResult(
+        transactionStatus ->
+            termIndexAutomationRunRepository
+                .findByPollableTaskId(pollableTaskId)
+                .ifPresent(
+                    run -> {
+                      run.setMessage(message);
+                      run.setStatus(toAutomationRunStatus(progress.status()));
+                      run.setEntryCount((long) progress.entryCount());
+                      run.setReviewableEntryCount((long) progress.reviewableEntryCount());
+                      run.setReviewedEntryCount((long) progress.reviewedEntryCount());
+                      run.setProcessedEntryCount((long) progress.reviewedEntryCount());
+                      run.setUpdatedEntryCount((long) progress.updatedEntryCount());
+                      run.setAcceptedCount((long) progress.acceptedCount());
+                      run.setToReviewCount((long) progress.toReviewCount());
+                      run.setRejectedCount((long) progress.rejectedCount());
+                      run.setSkippedHumanReviewedCount((long) progress.skippedHumanReviewedCount());
+                      run.setBatchCount(progress.batchCount());
+                      run.setCompletedBatchCount(progress.completedBatchCount());
+                      if (isTerminalProgressStatus(progress.status())) {
+                        run.setCompletedAt(coalesce(run.getCompletedAt(), ZonedDateTime.now()));
+                      }
+                    }));
+  }
+
+  private void updateCandidateGenerationProgress(
+      Long pollableTaskId, GenerateCandidatesProgressView progress) {
+    if (pollableTaskId == null || progress == null) {
+      return;
+    }
+    String message = objectMapper.writeValueAsStringUnchecked(progress);
+    pollableTaskService.updateMessage(pollableTaskId, message);
+    requiresNewTransactionTemplate.executeWithoutResult(
+        transactionStatus ->
+            termIndexAutomationRunRepository
+                .findByPollableTaskId(pollableTaskId)
+                .ifPresent(
+                    run -> {
+                      run.setMessage(message);
+                      run.setStatus(toAutomationRunStatus(progress.status()));
+                      run.setEntryCount((long) progress.entryCount());
+                      run.setProcessedEntryCount((long) progress.processedEntryCount());
+                      run.setCandidateCount((long) progress.candidateCount());
+                      run.setCreatedCandidateCount((long) progress.createdCandidateCount());
+                      run.setUpdatedCandidateCount((long) progress.updatedCandidateCount());
+                      run.setSkippedExistingCandidateCount(
+                          (long) progress.skippedExistingCandidateCount());
+                      run.setBatchCount(progress.batchCount());
+                      run.setCompletedBatchCount(progress.completedBatchCount());
+                      if (isTerminalProgressStatus(progress.status())) {
+                        run.setCompletedAt(coalesce(run.getCompletedAt(), ZonedDateTime.now()));
+                      }
+                    }));
+  }
+
+  public void markAutomationRunFailed(Long pollableTaskId, Throwable throwable) {
+    if (pollableTaskId == null) {
+      return;
+    }
+    requiresNewTransactionTemplate.executeWithoutResult(
+        transactionStatus ->
+            termIndexAutomationRunRepository
+                .findByPollableTaskId(pollableTaskId)
+                .ifPresent(
+                    run -> {
+                      run.setStatus(TermIndexAutomationRun.STATUS_FAILED);
+                      run.setCompletedAt(coalesce(run.getCompletedAt(), ZonedDateTime.now()));
+                      run.setErrorMessage(
+                          truncate(throwable == null ? null : throwable.getMessage(), 2048));
+                    }));
+  }
+
+  private String toAutomationRunStatus(String progressStatus) {
+    if ("FAILED".equals(progressStatus)) {
+      return TermIndexAutomationRun.STATUS_FAILED;
+    }
+    if ("COMPLETED".equals(progressStatus)) {
+      return TermIndexAutomationRun.STATUS_SUCCEEDED;
+    }
+    return TermIndexAutomationRun.STATUS_RUNNING;
+  }
+
+  private boolean isTerminalProgressStatus(String progressStatus) {
+    return "COMPLETED".equals(progressStatus) || "FAILED".equals(progressStatus);
+  }
+
+  private String formatRepositoryIds(List<Long> repositoryIds) {
+    if (repositoryIds == null || repositoryIds.isEmpty()) {
+      return null;
+    }
+    return repositoryIds.stream().map(String::valueOf).collect(Collectors.joining(","));
   }
 
   private Optional<TermIndexCandidate> findCandidate(
@@ -2961,6 +3376,17 @@ public class GlossaryTermIndexCurationService {
   public record GenerateCandidatesFromExtractedTermsCommand(
       List<Long> termIndexExtractedTermIds,
       List<Long> repositoryIds,
+      String searchQuery,
+      String extractionMethod,
+      String termIndexReviewStatusFilter,
+      String termIndexReviewAuthorityFilter,
+      Long minOccurrences,
+      Integer limit,
+      ZonedDateTime lastOccurrenceAfter,
+      ZonedDateTime lastOccurrenceBefore,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore,
+      boolean skipExistingCandidates,
       CandidateFieldOverrides overrides) {}
 
   public record GenerateCandidatesJobCommand(
@@ -3039,6 +3465,17 @@ public class GlossaryTermIndexCurationService {
       int candidateCount,
       int createdCandidateCount,
       int updatedCandidateCount,
+      int skippedExistingCandidateCount,
+      List<SeededTermView> candidates) {}
+
+  private record ExistingCandidateFilterResult(
+      List<TermIndexExtractedTermRepository.SearchRow> rows, int skippedExistingCandidateCount) {}
+
+  private record GenerateCandidatesBatchResult(
+      int candidateCount,
+      int createdCandidateCount,
+      int updatedCandidateCount,
+      int skippedExistingCandidateCount,
       List<SeededTermView> candidates) {}
 
   public record TriageExtractedTermsResult(
@@ -3062,6 +3499,18 @@ public class GlossaryTermIndexCurationService {
       int toReviewCount,
       int rejectedCount,
       int skippedHumanReviewedCount,
+      int batchCount,
+      int completedBatchCount) {}
+
+  public record GenerateCandidatesProgressView(
+      String type,
+      String status,
+      int entryCount,
+      int processedEntryCount,
+      int candidateCount,
+      int createdCandidateCount,
+      int updatedCandidateCount,
+      int skippedExistingCandidateCount,
       int batchCount,
       int completedBatchCount) {}
 
@@ -3125,7 +3574,8 @@ public class GlossaryTermIndexCurationService {
       String reviewRationale,
       Integer reviewConfidence) {}
 
-  private record CandidateWriteResult(TermIndexCandidate candidate, boolean created) {}
+  private record CandidateWriteResult(
+      TermIndexCandidate candidate, boolean created, boolean skipped) {}
 
   private record GeneratedCandidateFields(
       String label,

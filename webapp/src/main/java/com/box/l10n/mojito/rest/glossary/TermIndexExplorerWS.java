@@ -33,6 +33,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -243,6 +244,57 @@ public class TermIndexExplorerWS {
             repositoryIds, extractionMethod, limit));
   }
 
+  @GetMapping("/candidates")
+  public TermIndexExplorerService.CandidateSearchView searchCandidates(
+      @RequestParam(value = "repositoryId", required = false) List<Long> repositoryIds,
+      @RequestParam(value = "search", required = false) String searchQuery,
+      @RequestParam(value = "reviewStatus", required = false) String reviewStatusFilter,
+      @RequestParam(value = "reviewAuthority", required = false) String reviewAuthorityFilter,
+      @RequestParam(value = "minOccurrences", required = false) Long minOccurrences,
+      @RequestParam(value = "limit", required = false) Integer limit,
+      @RequestParam(value = "reviewChangedAfter", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          ZonedDateTime reviewChangedAfter,
+      @RequestParam(value = "reviewChangedBefore", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          ZonedDateTime reviewChangedBefore) {
+    requireAdmin();
+    return termIndexExplorerService.searchCandidates(
+        new TermIndexExplorerService.CandidateSearchCommand(
+            repositoryIds,
+            searchQuery,
+            reviewStatusFilter,
+            reviewAuthorityFilter,
+            minOccurrences,
+            limit,
+            reviewChangedAfter,
+            reviewChangedBefore));
+  }
+
+  @PutMapping("/candidates/{termIndexCandidateId}")
+  public TermIndexExplorerService.CandidateSummaryView updateCandidate(
+      @PathVariable Long termIndexCandidateId,
+      @RequestBody TermIndexCandidateUpdateRequest request) {
+    try {
+      return termIndexExplorerService.updateCandidate(
+          termIndexCandidateId,
+          new TermIndexExplorerService.CandidateUpdateCommand(
+              request != null ? request.definition() : null,
+              request != null ? request.rationale() : null,
+              request != null ? request.termType() : null,
+              request != null ? request.partOfSpeech() : null,
+              request != null ? request.enforcement() : null,
+              request != null ? request.doNotTranslate() : null,
+              request != null ? request.confidence() : null,
+              request != null ? request.reviewStatus() : null,
+              request != null ? request.reviewReason() : null,
+              request != null ? request.reviewRationale() : null,
+              request != null ? request.reviewConfidence() : null));
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+    }
+  }
+
   @PostMapping("/entries/{termIndexEntryId}/review")
   public TermIndexExplorerService.EntrySummaryView updateEntryReview(
       @PathVariable Long termIndexEntryId, @RequestBody TermIndexEntryReviewRequest request) {
@@ -273,6 +325,19 @@ public class TermIndexExplorerWS {
               request != null ? request.reviewRationale() : null,
               request != null ? request.updateReviewConfidence() : null,
               request != null ? request.reviewConfidence() : null));
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+    }
+  }
+
+  @PostMapping("/candidates/review")
+  public TermIndexExplorerService.CandidateBatchReviewUpdateView updateCandidateReviews(
+      @RequestBody TermIndexCandidateBatchReviewRequest request) {
+    try {
+      return termIndexExplorerService.updateCandidateReviews(
+          new TermIndexExplorerService.CandidateBatchReviewUpdateCommand(
+              request != null ? request.termIndexCandidateIds() : null,
+              request != null ? request.reviewStatus() : null));
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
     }
@@ -315,6 +380,19 @@ public class TermIndexExplorerWS {
               new GlossaryTermIndexCurationService.GenerateCandidatesFromExtractedTermsCommand(
                   request != null ? request.termIndexEntryIds() : null,
                   request != null ? request.repositoryIds() : null,
+                  request != null ? request.search() : null,
+                  request != null ? request.extractionMethod() : null,
+                  request != null ? request.termIndexReviewStatus() : null,
+                  request != null ? request.termIndexReviewAuthority() : null,
+                  request != null ? request.minOccurrences() : null,
+                  request != null ? request.limit() : null,
+                  request != null ? request.lastOccurrenceAfter() : null,
+                  request != null ? request.lastOccurrenceBefore() : null,
+                  request != null ? request.reviewChangedAfter() : null,
+                  request != null ? request.reviewChangedBefore() : null,
+                  request == null
+                      || request.skipExistingCandidates() == null
+                      || request.skipExistingCandidates(),
                   request == null
                       ? null
                       : new GlossaryTermIndexCurationService.CandidateFieldOverrides(
@@ -387,6 +465,19 @@ public class TermIndexExplorerWS {
   public record TermIndexEntryReviewRequest(
       String reviewStatus, String reviewReason, String reviewRationale, Integer reviewConfidence) {}
 
+  public record TermIndexCandidateUpdateRequest(
+      String definition,
+      String rationale,
+      String termType,
+      String partOfSpeech,
+      String enforcement,
+      Boolean doNotTranslate,
+      Integer confidence,
+      String reviewStatus,
+      String reviewReason,
+      String reviewRationale,
+      Integer reviewConfidence) {}
+
   public record TermIndexEntryBatchReviewRequest(
       List<Long> termIndexEntryIds,
       String reviewStatus,
@@ -396,6 +487,9 @@ public class TermIndexExplorerWS {
       String reviewRationale,
       Boolean updateReviewConfidence,
       Integer reviewConfidence) {}
+
+  public record TermIndexCandidateBatchReviewRequest(
+      List<Long> termIndexCandidateIds, String reviewStatus) {}
 
   public record TriageExtractedTermsRequest(
       List<Long> termIndexEntryIds,
@@ -417,6 +511,17 @@ public class TermIndexExplorerWS {
   public record GenerateCandidatesFromEntriesRequest(
       List<Long> termIndexEntryIds,
       List<Long> repositoryIds,
+      String search,
+      String extractionMethod,
+      String termIndexReviewStatus,
+      String termIndexReviewAuthority,
+      Long minOccurrences,
+      Integer limit,
+      ZonedDateTime lastOccurrenceAfter,
+      ZonedDateTime lastOccurrenceBefore,
+      ZonedDateTime reviewChangedAfter,
+      ZonedDateTime reviewChangedBefore,
+      Boolean skipExistingCandidates,
       String definition,
       String rationale,
       String termType,
@@ -433,6 +538,7 @@ public class TermIndexExplorerWS {
       int candidateCount,
       int createdCandidateCount,
       int updatedCandidateCount,
+      int skippedExistingCandidateCount,
       List<GeneratedCandidateResponse> candidates) {}
 
   public record StartGenerateCandidatesFromEntriesResponse(PollableTask pollableTask) {}

@@ -7,6 +7,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -20,6 +21,7 @@ import { createGlossaryTermCandidateReviewProjectRequest } from '../../api/revie
 import { type ApiTeamUserSummary, fetchTeams, fetchTeamUsersByRole } from '../../api/teams';
 import {
   type ApiGenerateTermIndexCandidatesResponse,
+  type ApiTermIndexCandidate,
   type ApiTermIndexEntry,
   type ApiTermIndexEntrySort,
   type ApiTermIndexOccurrence,
@@ -28,12 +30,16 @@ import {
   type ApiTermIndexReviewStatusFilter,
   type ApiTermIndexTaskProgress,
   type ApiTriageTermIndexEntriesResponse,
+  fetchTermIndexCandidates,
   fetchTermIndexEntries,
   fetchTermIndexOccurrences,
   fetchTermIndexStatus,
-  generateTermIndexCandidatesFromEntries,
+  startGenerateTermIndexCandidatesFromEntries,
   startTermIndexRefresh,
+  startTriageTermIndexEntries,
   triageTermIndexEntries,
+  updateTermIndexCandidate,
+  updateTermIndexCandidateReviews,
   updateTermIndexEntryReview,
   updateTermIndexEntryReviews,
   waitForTermIndexRefreshTask,
@@ -59,12 +65,12 @@ import { VirtualList } from '../../components/virtual/VirtualList';
 import { useRepositories } from '../../hooks/useRepositories';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import { formatLocalDateTime } from '../../utils/dateTime';
-import { getUserLabel } from '../../utils/userDisplayName';
 import {
   type RepositorySelectionOption,
   useRepositorySelection,
   useRepositorySelectionOptions,
 } from '../../utils/repositorySelection';
+import { getUserLabel } from '../../utils/userDisplayName';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const TERM_RESULT_LIMIT_DEFAULT = 1000;
@@ -193,10 +199,21 @@ type CandidateDraftField =
   | 'reviewStatus';
 
 type CandidateGenerationRequest = {
-  mode: 'single' | 'bulk';
+  mode: 'single' | 'selected' | 'filter';
   entryIds: number[];
   entries: ApiTermIndexEntry[];
   draft: CandidateDraft | null;
+  searchQuery?: string;
+  extractionMethod?: string | null;
+  limit?: number;
+  minOccurrences?: number;
+  lastOccurrenceAfter?: string | null;
+  lastOccurrenceBefore?: string | null;
+  reviewChangedAfter?: string | null;
+  reviewChangedBefore?: string | null;
+  reviewStatusFilter?: ApiTermIndexReviewStatusFilter;
+  reviewAuthorityFilter?: ApiTermIndexReviewAuthorityFilter;
+  refreshExistingCandidates?: boolean;
 };
 
 type CandidateReviewRequest = {
@@ -213,6 +230,16 @@ type ExtractedTermTriageRequest = {
   mode: 'selected' | 'filter';
   entryIds: number[];
   entries: ApiTermIndexEntry[];
+  searchQuery?: string;
+  extractionMethod?: string | null;
+  reviewStatusFilter?: ApiTermIndexReviewStatusFilter;
+  reviewAuthorityFilter?: ApiTermIndexReviewAuthorityFilter;
+  minOccurrences?: number;
+  limit?: number;
+  lastOccurrenceAfter?: string | null;
+  lastOccurrenceBefore?: string | null;
+  reviewChangedAfter?: string | null;
+  reviewChangedBefore?: string | null;
 };
 
 type TermIndexReviewUpdate = {
@@ -341,6 +368,45 @@ const getRawTermExplorerPath = (entryId: number, search?: string) => {
   return `/settings/system/glossary-term-index/terms?${params.toString()}`;
 };
 
+const candidateToEntry = (candidate: ApiTermIndexCandidate): ApiTermIndexEntry => ({
+  id: candidate.id,
+  termIndexExtractedTermId: candidate.termIndexExtractedTermId ?? null,
+  termIndexCandidateId: candidate.id,
+  candidateDefinition: candidate.definition ?? null,
+  candidateRationale: candidate.rationale ?? null,
+  candidateTermType: candidate.termType ?? null,
+  candidatePartOfSpeech: candidate.partOfSpeech ?? null,
+  candidateEnforcement: candidate.enforcement ?? null,
+  candidateDoNotTranslate: candidate.doNotTranslate ?? null,
+  candidateConfidence: candidate.confidence ?? null,
+  candidateReviewStatus: candidate.reviewStatus,
+  candidateReviewAuthority: candidate.reviewAuthority,
+  candidateReviewReason: candidate.reviewReason ?? null,
+  candidateReviewRationale: candidate.reviewRationale ?? null,
+  candidateReviewConfidence: candidate.reviewConfidence ?? null,
+  candidateReviewChangedAt: candidate.reviewChangedAt ?? null,
+  candidateReviewChangedByUserId: candidate.reviewChangedByUserId ?? null,
+  candidateReviewChangedByUsername: candidate.reviewChangedByUsername ?? null,
+  candidateReviewChangedByCommonName: candidate.reviewChangedByCommonName ?? null,
+  normalizedKey: candidate.normalizedKey,
+  displayTerm: candidate.label?.trim() || candidate.term,
+  sourceLocaleTag: candidate.sourceLocaleTag,
+  createdDate: candidate.candidateCreatedDate ?? null,
+  lastModifiedDate: null,
+  reviewStatus: candidate.reviewStatus,
+  reviewAuthority: candidate.reviewAuthority,
+  reviewReason: candidate.reviewReason ?? null,
+  reviewRationale: candidate.reviewRationale ?? null,
+  reviewConfidence: candidate.reviewConfidence ?? null,
+  reviewChangedAt: candidate.reviewChangedAt ?? null,
+  reviewChangedByUserId: candidate.reviewChangedByUserId ?? null,
+  reviewChangedByUsername: candidate.reviewChangedByUsername ?? null,
+  reviewChangedByCommonName: candidate.reviewChangedByCommonName ?? null,
+  occurrenceCount: candidate.occurrenceCount,
+  repositoryCount: candidate.repositoryCount,
+  lastOccurrenceAt: candidate.lastOccurrenceAt ?? null,
+});
+
 const createCandidateDraft = (entry: ApiTermIndexEntry | null): CandidateDraft => ({
   definition: entry?.candidateDefinition ?? '',
   rationale: entry?.candidateRationale ?? '',
@@ -462,23 +528,6 @@ const cloneCandidateDraft = (draft: CandidateDraft): CandidateDraft => ({
   ...draft,
   editedFields: { ...draft.editedFields },
 });
-
-const candidateDraftTextValue = (draft: CandidateDraft, field: 'definition' | 'rationale') =>
-  draft.editedFields[field] ? nullableTrimmed(draft[field]) : null;
-
-const candidateDraftStringValue = (
-  draft: CandidateDraft,
-  field: 'partOfSpeech' | 'termType' | 'enforcement',
-) => (draft.editedFields[field] ? nullableTrimmed(draft[field]) : null);
-
-const candidateDraftBooleanValue = (draft: CandidateDraft, field: 'doNotTranslate') =>
-  draft.editedFields[field] ? draft[field] : null;
-
-const candidateDraftConfidenceValue = (draft: CandidateDraft) =>
-  draft.editedFields.confidence ? parseOptionalConfidence(draft.confidence) : null;
-
-const candidateDraftReviewStatusValue = (draft: CandidateDraft) =>
-  draft.editedFields.reviewStatus ? draft.reviewStatus : null;
 
 const hasSameRepositoryIds = (left: number[], right: number[]) => {
   if (left.length !== right.length) {
@@ -616,10 +665,10 @@ const useTermIndexRepositorySelection = (repositoryOptions: RepositorySelectionO
 };
 
 export function AdminTermIndexExplorerPage() {
-  return <AdminTermIndexExtractionPage />;
+  return <AdminTermIndexAutomationPage />;
 }
 
-export function AdminTermIndexExtractionPage() {
+export function AdminTermIndexAutomationPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
   const queryClient = useQueryClient();
@@ -628,30 +677,65 @@ export function AdminTermIndexExtractionPage() {
   const {
     allRepositoryIds,
     productRepositoryIds,
-    selectedRepositoryIds,
-    effectiveRepositoryIds,
+    selectedRepositoryIds: selectedCursorRepositoryIds,
+    effectiveRepositoryIds: effectiveCursorRepositoryIds,
     repositorySelectionActions,
     formatRepositorySelectionSummary,
-    updateSelectedRepositoryIds,
+    updateSelectedRepositoryIds: updateSelectedCursorRepositoryIds,
   } = useTermIndexRepositorySelection(repositoryOptions);
+  const automationRepositoryIds =
+    productRepositoryIds.length > 0 ? productRepositoryIds : allRepositoryIds;
   const [refreshModalOpen, setRefreshModalOpen] = useState(false);
   const [refreshRepositoryIds, setRefreshRepositoryIds] = useState<number[]>([]);
   const [refreshFullRefresh, setRefreshFullRefresh] = useState(false);
   const [activeRefreshTaskId, setActiveRefreshTaskId] = useState<number | null>(null);
+  const [activeTriageTaskId, setActiveTriageTaskId] = useState<number | null>(null);
+  const [activeCandidateGenerationTaskId, setActiveCandidateGenerationTaskId] = useState<
+    number | null
+  >(null);
+  const [triageRequest, setTriageRequest] = useState<ExtractedTermTriageRequest | null>(null);
+  const [triageReport, setTriageReport] = useState<ApiTriageTermIndexEntriesResponse | null>(null);
+  const [triageProgress, setTriageProgress] = useState<ApiTermIndexTaskProgress | null>(null);
+  const [triageOverwriteHumanReview, setTriageOverwriteHumanReview] = useState(false);
+  const [candidateGenerationRequest, setCandidateGenerationRequest] =
+    useState<CandidateGenerationRequest | null>(null);
+  const [candidateGenerationReport, setCandidateGenerationReport] =
+    useState<ApiGenerateTermIndexCandidatesResponse | null>(null);
   const [runResultLimit, setRunResultLimit] = useState(RUN_RESULT_LIMIT_DEFAULT);
+  const [automationTaskRunning, setAutomationTaskRunning] = useState(false);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
 
   const statusQuery = useQuery({
-    queryKey: ['term-index-status', effectiveRepositoryIds, runResultLimit],
+    queryKey: ['term-index-status', effectiveCursorRepositoryIds, runResultLimit],
     queryFn: () =>
       fetchTermIndexStatus({
-        repositoryIds: effectiveRepositoryIds,
+        repositoryIds: effectiveCursorRepositoryIds,
         recentRunLimit: runResultLimit,
       }),
     enabled: isAdmin && repositoryOptions.length > 0,
     staleTime: 5_000,
-    refetchInterval: activeRefreshTaskId == null ? false : 3_000,
+    refetchInterval: (query) => {
+      const status = query.state.data;
+      const hasRunningRun = status?.recentRuns.some((run) => run.status === 'RUNNING') ?? false;
+      const hasRunningJob = status?.recentJobs.some((job) => job.status === 'RUNNING') ?? false;
+      return activeRefreshTaskId == null &&
+        activeTriageTaskId == null &&
+        activeCandidateGenerationTaskId == null &&
+        !automationTaskRunning &&
+        !hasRunningRun &&
+        !hasRunningJob
+        ? false
+        : 3_000;
+    },
   });
+  const extractionMethodOptions = useMemo(
+    () =>
+      (statusQuery.data?.extractionMethods ?? []).map((method) => ({
+        value: method,
+        label: formatMethod(method),
+      })),
+    [statusQuery.data?.extractionMethods],
+  );
   const updateRunResultLimit = (next: number) => {
     setRunResultLimit(Math.min(Math.max(1, next), RUN_RESULT_LIMIT_MAX));
   };
@@ -659,6 +743,24 @@ export function AdminTermIndexExtractionPage() {
   const recentRunCountLabel = statusQuery.isLoading
     ? 'Loading extraction runs...'
     : formatCappedListLabel('extraction runs', recentRunCount, runResultLimit);
+
+  useEffect(() => {
+    const recentJobs = statusQuery.data?.recentJobs ?? [];
+    if (activeTriageTaskId != null) {
+      const activeJob = recentJobs.find((job) => job.pollableTaskId === activeTriageTaskId);
+      if (activeJob && activeJob.status !== 'RUNNING') {
+        setActiveTriageTaskId(null);
+      }
+    }
+    if (activeCandidateGenerationTaskId != null) {
+      const activeJob = recentJobs.find(
+        (job) => job.pollableTaskId === activeCandidateGenerationTaskId,
+      );
+      if (activeJob && activeJob.status !== 'RUNNING') {
+        setActiveCandidateGenerationTaskId(null);
+      }
+    }
+  }, [activeCandidateGenerationTaskId, activeTriageTaskId, statusQuery.data?.recentJobs]);
 
   const refreshMutation = useMutation({
     mutationFn: async (request: TermIndexRefreshForm) => {
@@ -685,10 +787,94 @@ export function AdminTermIndexExtractionPage() {
       setNotice({ kind: 'error', message: error.message || 'Term extraction failed.' });
     },
   });
+  const triageMutation = useMutation({
+    mutationFn: ({
+      request,
+      overwriteHumanReview,
+    }: {
+      request: ExtractedTermTriageRequest;
+      overwriteHumanReview: boolean;
+    }) =>
+      startTriageTermIndexEntries({
+        termIndexEntryIds: [],
+        repositoryIds: automationRepositoryIds,
+        search: request.searchQuery ?? null,
+        extractionMethod: request.extractionMethod ?? null,
+        reviewStatus: request.reviewStatusFilter ?? 'NON_REJECTED',
+        reviewAuthority: request.reviewAuthorityFilter ?? 'NONE',
+        minOccurrences: request.minOccurrences ?? MIN_OCCURRENCES_DEFAULT,
+        limit: request.limit ?? TERM_RESULT_LIMIT_DEFAULT,
+        lastOccurrenceAfter: request.lastOccurrenceAfter ?? null,
+        lastOccurrenceBefore: request.lastOccurrenceBefore ?? null,
+        reviewChangedAfter: request.reviewChangedAfter ?? null,
+        reviewChangedBefore: request.reviewChangedBefore ?? null,
+        overwriteHumanReview,
+      }),
+    onMutate: () => {
+      setAutomationTaskRunning(true);
+    },
+    onSuccess: async (startedTask) => {
+      setActiveTriageTaskId(startedTask.id);
+      setTriageRequest(null);
+      setTriageReport(null);
+      setTriageProgress(null);
+      setNotice(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['term-index-status'] }),
+        queryClient.invalidateQueries({ queryKey: ['term-index-entries'] }),
+      ]);
+    },
+    onError: (error: Error) => {
+      setActiveTriageTaskId(null);
+      setTriageProgress(null);
+      setNotice({ kind: 'error', message: error.message || 'Extracted term triage failed.' });
+    },
+    onSettled: () => {
+      setAutomationTaskRunning(false);
+    },
+  });
+  const generateCandidatesMutation = useMutation({
+    mutationFn: ({ request }: { request: CandidateGenerationRequest }) =>
+      startGenerateTermIndexCandidatesFromEntries({
+        termIndexEntryIds: [],
+        repositoryIds: automationRepositoryIds,
+        search: request.searchQuery ?? null,
+        extractionMethod: request.extractionMethod ?? null,
+        termIndexReviewStatus: request.reviewStatusFilter ?? 'ACCEPTED',
+        termIndexReviewAuthority: request.reviewAuthorityFilter ?? 'ALL',
+        minOccurrences: request.minOccurrences ?? MIN_OCCURRENCES_DEFAULT,
+        limit: request.limit ?? TERM_RESULT_LIMIT_DEFAULT,
+        lastOccurrenceAfter: request.lastOccurrenceAfter ?? null,
+        lastOccurrenceBefore: request.lastOccurrenceBefore ?? null,
+        reviewChangedAfter: request.reviewChangedAfter ?? null,
+        reviewChangedBefore: request.reviewChangedBefore ?? null,
+        skipExistingCandidates: request.refreshExistingCandidates !== true,
+      }),
+    onMutate: () => {
+      setAutomationTaskRunning(true);
+    },
+    onSuccess: async (startedTask) => {
+      setActiveCandidateGenerationTaskId(startedTask.id);
+      setCandidateGenerationRequest(null);
+      setCandidateGenerationReport(null);
+      setNotice(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['term-index-status'] }),
+        queryClient.invalidateQueries({ queryKey: ['term-index-entries'] }),
+      ]);
+    },
+    onError: (error: Error) => {
+      setActiveCandidateGenerationTaskId(null);
+      setNotice({ kind: 'error', message: error.message || 'Candidate generation failed.' });
+    },
+    onSettled: () => {
+      setAutomationTaskRunning(false);
+    },
+  });
 
   const openRefreshModal = () => {
     setNotice(null);
-    setRefreshRepositoryIds(selectedRepositoryIds);
+    setRefreshRepositoryIds(productRepositoryIds);
     setRefreshFullRefresh(false);
     setRefreshModalOpen(true);
   };
@@ -707,6 +893,83 @@ export function AdminTermIndexExtractionPage() {
       excludeGlossaryRepositories: hasSameRepositoryIds(repositoryIds, productRepositoryIds),
     });
   };
+  const openTriageModal = () => {
+    setNotice(null);
+    setTriageReport(null);
+    setTriageProgress(null);
+    setTriageOverwriteHumanReview(false);
+    setTriageRequest({
+      mode: 'filter',
+      entryIds: [],
+      entries: [],
+      searchQuery: '',
+      extractionMethod: null,
+      reviewStatusFilter: 'NON_REJECTED',
+      reviewAuthorityFilter: 'NONE',
+      minOccurrences: MIN_OCCURRENCES_DEFAULT,
+      limit: TERM_RESULT_LIMIT_DEFAULT,
+      lastOccurrenceAfter: null,
+      lastOccurrenceBefore: null,
+      reviewChangedAfter: null,
+      reviewChangedBefore: null,
+    });
+  };
+  const closeTriageModal = () => {
+    if (!triageMutation.isPending) {
+      setTriageRequest(null);
+      setTriageReport(null);
+      setTriageProgress(null);
+    }
+  };
+  const confirmTriage = () => {
+    if (!triageRequest || triageMutation.isPending) {
+      return;
+    }
+    setNotice(null);
+    setTriageReport(null);
+    setTriageProgress(null);
+    triageMutation.mutate({
+      request: triageRequest,
+      overwriteHumanReview: triageOverwriteHumanReview,
+    });
+  };
+  const openCandidateGenerationModal = () => {
+    setNotice(null);
+    setCandidateGenerationReport(null);
+    setCandidateGenerationRequest({
+      mode: 'filter',
+      entryIds: [],
+      entries: [],
+      draft: null,
+      searchQuery: '',
+      extractionMethod: null,
+      minOccurrences: MIN_OCCURRENCES_DEFAULT,
+      limit: TERM_RESULT_LIMIT_DEFAULT,
+      lastOccurrenceAfter: null,
+      lastOccurrenceBefore: null,
+      reviewChangedAfter: null,
+      reviewChangedBefore: null,
+      reviewStatusFilter: 'ACCEPTED',
+      reviewAuthorityFilter: 'ALL',
+      refreshExistingCandidates: false,
+    });
+  };
+  const closeCandidateGenerationModal = () => {
+    if (!generateCandidatesMutation.isPending) {
+      setCandidateGenerationRequest(null);
+      setCandidateGenerationReport(null);
+    }
+  };
+  const confirmCandidateGeneration = () => {
+    if (!candidateGenerationRequest || generateCandidatesMutation.isPending) {
+      return;
+    }
+    setNotice(null);
+    setCandidateGenerationReport(null);
+    generateCandidatesMutation.mutate({
+      request: candidateGenerationRequest,
+    });
+  };
 
   if (!isAdmin) {
     return <Navigate to="/repositories" replace />;
@@ -718,51 +981,86 @@ export function AdminTermIndexExtractionPage() {
         backTo="/settings/system"
         backLabel="Back to settings"
         context="Settings > Glossaries"
-        title="Term Extraction"
-        centerContent={<TermIndexSubnav active="extraction" />}
+        title="Glossary Automation"
+        centerContent={<TermIndexSubnav active="automation" />}
       />
       <div className="settings-page settings-page--wide term-index-explorer">
-        <section
-          className="settings-card term-index-explorer__filter-card"
-          aria-label="Term extraction filters"
-        >
-          <div className="term-index-explorer__run-toolbar">
-            <div className="term-index-explorer__repository-control">
-              <RepositoryMultiSelect
-                label="Repositories"
-                options={repositoryOptions}
-                selectedIds={selectedRepositoryIds}
-                onChange={updateSelectedRepositoryIds}
-                className="term-index-explorer__repository-select"
-                buttonAriaLabel="Filter term index status by repository. Use menu actions to switch between repositories and glossaries."
-                customActions={repositorySelectionActions}
-                summaryFormatter={formatRepositorySelectionSummary}
-              />
-            </div>
-            <button
-              type="button"
-              className="settings-button settings-button--primary"
-              disabled={refreshMutation.isPending}
-              onClick={openRefreshModal}
-            >
-              {refreshMutation.isPending ? 'Extracting' : 'Extract'}
-            </button>
-          </div>
-          {notice ? (
+        {notice ? (
+          <section
+            className="settings-card term-index-explorer__notice-card"
+            aria-label="Glossary automation status"
+          >
             <p className={`settings-hint${notice.kind === 'error' ? ' is-error' : ''}`}>
               {notice.message}
             </p>
-          ) : null}
-        </section>
-
-        <section className="term-index-explorer__status-section" aria-label="Extraction status">
-          <IndexStatusTables
-            statusQuery={statusQuery}
-            activeRefreshTaskId={activeRefreshTaskId}
-            runResultLimit={runResultLimit}
-            runCountLabel={recentRunCountLabel}
-            onChangeRunResultLimit={updateRunResultLimit}
-          />
+          </section>
+        ) : null}
+        <section
+          className="term-index-explorer__automation-workflow"
+          aria-label="Automation workflow"
+        >
+          <AutomationActionCard
+            title="Extract terms"
+            description="Scan repositories and update raw extracted terms with occurrence evidence."
+            cta={refreshMutation.isPending ? 'Extracting' : 'Extract terms'}
+            disabled={refreshMutation.isPending}
+            onClick={openRefreshModal}
+            linkTo="/settings/system/glossary-term-index/terms"
+            linkLabel="Inspect extracted terms"
+          >
+            <ExtractionStatusTables
+              statusQuery={statusQuery}
+              activeRefreshTaskId={activeRefreshTaskId}
+              repositoryOptions={repositoryOptions}
+              selectedRepositoryIds={selectedCursorRepositoryIds}
+              repositorySelectionActions={repositorySelectionActions}
+              formatRepositorySelectionSummary={formatRepositorySelectionSummary}
+              onChangeRepositorySelection={updateSelectedCursorRepositoryIds}
+              runResultLimit={runResultLimit}
+              runCountLabel={recentRunCountLabel}
+              onChangeRunResultLimit={updateRunResultLimit}
+            />
+          </AutomationActionCard>
+          <AutomationActionCard
+            title="Review extracted terms"
+            description="Ask AI to classify unreviewed extracted terms before candidate generation."
+            cta={
+              triageMutation.isPending || activeTriageTaskId != null ? 'Reviewing' : 'Run AI review'
+            }
+            disabled={triageMutation.isPending || activeTriageTaskId != null}
+            onClick={openTriageModal}
+            linkTo="/settings/system/glossary-term-index/terms"
+            linkLabel="Manual term review"
+          >
+            <AutomationJobsTable
+              statusQuery={statusQuery}
+              title="Recent review extracted jobs"
+              emptyLabel="No review extracted jobs yet."
+              jobNames={['REVIEW_EXTRACTED_TERMS']}
+            />
+          </AutomationActionCard>
+          <AutomationActionCard
+            title="Generate candidates"
+            description="Create missing candidate proposals from accepted extracted terms."
+            cta={
+              generateCandidatesMutation.isPending || activeCandidateGenerationTaskId != null
+                ? 'Generating'
+                : 'Generate missing candidates'
+            }
+            disabled={
+              generateCandidatesMutation.isPending || activeCandidateGenerationTaskId != null
+            }
+            onClick={openCandidateGenerationModal}
+            linkTo="/settings/system/glossary-term-index/candidates"
+            linkLabel="Review candidates"
+          >
+            <AutomationJobsTable
+              statusQuery={statusQuery}
+              title="Recent candidate generation jobs"
+              emptyLabel="No candidate generation jobs yet."
+              jobNames={['GENERATE_CANDIDATES']}
+            />
+          </AutomationActionCard>
         </section>
       </div>
       <TermIndexRefreshModal
@@ -775,6 +1073,58 @@ export function AdminTermIndexExtractionPage() {
         onFullRefreshChange={setRefreshFullRefresh}
         onClose={() => setRefreshModalOpen(false)}
         onStart={startRefresh}
+      />
+      <ExtractedTermTriageModal
+        open={triageRequest != null}
+        request={triageRequest}
+        report={triageReport}
+        progress={triageProgress}
+        repositoryScopeLabel={formatRepositorySelectionSummary({
+          selectedIds: automationRepositoryIds,
+          defaultSummary:
+            automationRepositoryIds.length === 1
+              ? '1 repository'
+              : `${automationRepositoryIds.length.toLocaleString()} repositories`,
+        })}
+        searchQuery=""
+        extractionMethod={null}
+        extractionMethodOptions={extractionMethodOptions}
+        reviewStatusFilter={triageRequest?.reviewStatusFilter ?? 'NON_REJECTED'}
+        reviewAuthorityFilter={triageRequest?.reviewAuthorityFilter ?? 'NONE'}
+        minOccurrences={MIN_OCCURRENCES_DEFAULT}
+        limit={triageRequest?.limit ?? TERM_RESULT_LIMIT_DEFAULT}
+        lastOccurrenceAfter={null}
+        lastOccurrenceBefore={null}
+        reviewChangedAfter={null}
+        reviewChangedBefore={null}
+        overwriteHumanReview={triageOverwriteHumanReview}
+        isReviewing={triageMutation.isPending}
+        error={triageMutation.error}
+        onRequestChange={setTriageRequest}
+        onOverwriteHumanReviewChange={setTriageOverwriteHumanReview}
+        onClose={closeTriageModal}
+        onTriage={confirmTriage}
+      />
+      <CandidateGenerationModal
+        open={candidateGenerationRequest != null}
+        request={candidateGenerationRequest}
+        report={candidateGenerationReport}
+        repositoryScopeLabel={formatRepositorySelectionSummary({
+          selectedIds: automationRepositoryIds,
+          defaultSummary:
+            automationRepositoryIds.length === 1
+              ? '1 repository'
+              : `${automationRepositoryIds.length.toLocaleString()} repositories`,
+        })}
+        searchQuery=""
+        extractionMethod={null}
+        reviewStatusFilter={candidateGenerationRequest?.reviewStatusFilter ?? 'ACCEPTED'}
+        reviewAuthorityFilter={candidateGenerationRequest?.reviewAuthorityFilter ?? 'ALL'}
+        isGenerating={generateCandidatesMutation.isPending}
+        error={generateCandidatesMutation.error}
+        onClose={closeCandidateGenerationModal}
+        onRequestChange={setCandidateGenerationRequest}
+        onGenerate={confirmCandidateGeneration}
       />
     </div>
   );
@@ -1025,16 +1375,23 @@ export function AdminTermIndexTermsPage() {
         {
           termIndexEntryIds: request.mode === 'selected' ? request.entryIds : [],
           repositoryIds: effectiveRepositoryIds,
-          search: request.mode === 'filter' ? searchQuery : null,
-          extractionMethod: request.mode === 'filter' ? extractionMethod : null,
-          reviewStatus: request.mode === 'filter' ? reviewStatusFilter : null,
-          reviewAuthority: request.mode === 'filter' ? reviewAuthorityFilter : null,
-          minOccurrences: request.mode === 'filter' ? minOccurrences : null,
-          limit: request.mode === 'filter' ? termResultLimit : null,
-          lastOccurrenceAfter: request.mode === 'filter' ? lastOccurrenceAfter : null,
-          lastOccurrenceBefore: request.mode === 'filter' ? lastOccurrenceBefore : null,
-          reviewChangedAfter: request.mode === 'filter' ? reviewChangedAfter : null,
-          reviewChangedBefore: request.mode === 'filter' ? reviewChangedBefore : null,
+          search: request.mode === 'filter' ? (request.searchQuery ?? null) : null,
+          extractionMethod: request.mode === 'filter' ? (request.extractionMethod ?? null) : null,
+          reviewStatus:
+            request.mode === 'filter' ? (request.reviewStatusFilter ?? 'TO_REVIEW') : null,
+          reviewAuthority:
+            request.mode === 'filter' ? (request.reviewAuthorityFilter ?? 'NONE') : null,
+          minOccurrences:
+            request.mode === 'filter' ? (request.minOccurrences ?? MIN_OCCURRENCES_DEFAULT) : null,
+          limit: request.mode === 'filter' ? (request.limit ?? TERM_RESULT_LIMIT_DEFAULT) : null,
+          lastOccurrenceAfter:
+            request.mode === 'filter' ? (request.lastOccurrenceAfter ?? null) : null,
+          lastOccurrenceBefore:
+            request.mode === 'filter' ? (request.lastOccurrenceBefore ?? null) : null,
+          reviewChangedAfter:
+            request.mode === 'filter' ? (request.reviewChangedAfter ?? null) : null,
+          reviewChangedBefore:
+            request.mode === 'filter' ? (request.reviewChangedBefore ?? null) : null,
           overwriteHumanReview,
         },
         {
@@ -1224,7 +1581,7 @@ export function AdminTermIndexTermsPage() {
         backTo="/settings/system"
         backLabel="Back to settings"
         context="Settings > Glossaries"
-        title="Term Review"
+        title="Extracted Terms"
         centerContent={<TermIndexSubnav active="terms" />}
       />
       <div className="settings-page settings-page--wide term-index-explorer">
@@ -1261,6 +1618,7 @@ export function AdminTermIndexTermsPage() {
             />
             <div className="term-index-explorer__filter-controls">
               <TermIndexReviewFilterChip
+                summaryPrefix="Extracted term review"
                 reviewStatus={reviewStatusFilter}
                 reviewAuthority={reviewAuthorityFilter}
                 onReviewStatusChange={(next) => {
@@ -1453,10 +1811,11 @@ export function AdminTermIndexTermsPage() {
         })}
         searchQuery={searchQuery}
         extractionMethod={extractionMethod}
-        reviewStatusFilter={reviewStatusFilter}
-        reviewAuthorityFilter={reviewAuthorityFilter}
+        extractionMethodOptions={extractionMethodOptions}
+        reviewStatusFilter={triageRequest?.reviewStatusFilter ?? reviewStatusFilter}
+        reviewAuthorityFilter={triageRequest?.reviewAuthorityFilter ?? reviewAuthorityFilter}
         minOccurrences={minOccurrences}
-        limit={termResultLimit}
+        limit={triageRequest?.limit ?? termResultLimit}
         lastOccurrenceAfter={lastOccurrenceAfter}
         lastOccurrenceBefore={lastOccurrenceBefore}
         reviewChangedAfter={reviewChangedAfter}
@@ -1464,6 +1823,7 @@ export function AdminTermIndexTermsPage() {
         overwriteHumanReview={triageOverwriteHumanReview}
         isReviewing={triageMutation.isPending}
         error={triageMutation.error}
+        onRequestChange={setTriageRequest}
         onOverwriteHumanReviewChange={setTriageOverwriteHumanReview}
         onClose={closeTriageModal}
         onTriage={confirmTriage}
@@ -1490,7 +1850,7 @@ export function AdminTermIndexTermsPage() {
   );
 }
 
-export function AdminTermIndexCandidateGenerationPage() {
+export function AdminTermIndexCandidatesPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
   const navigate = useNavigate();
@@ -1505,30 +1865,20 @@ export function AdminTermIndexCandidateGenerationPage() {
     updateSelectedRepositoryIds,
   } = useTermIndexRepositorySelection(repositoryOptions);
   const [searchQuery, setSearchQuery] = useState('');
-  const [minOccurrences, setMinOccurrences] = useState(MIN_OCCURRENCES_DEFAULT);
-  const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
+  const minOccurrences = 0;
   const [reviewStatusFilter, setReviewStatusFilter] =
     useState<ApiTermIndexReviewStatusFilter>('NON_REJECTED');
-  const [reviewAuthorityFilter, setReviewAuthorityFilter] =
-    useState<ApiTermIndexReviewAuthorityFilter>('ALL');
-  const [termSort, setTermSort] = useState<ApiTermIndexEntrySort>('REVIEW_CONFIDENCE_DESC');
   const [termResultLimit, setTermResultLimit] = useState(TERM_RESULT_LIMIT_DEFAULT);
-  const [lastOccurrenceAfter, setLastOccurrenceAfter] = useState<string | null>(null);
-  const [lastOccurrenceBefore, setLastOccurrenceBefore] = useState<string | null>(null);
-  const [reviewChangedAfter, setReviewChangedAfter] = useState<string | null>(null);
-  const [reviewChangedBefore, setReviewChangedBefore] = useState<string | null>(null);
+  const reviewChangedAfter: string | null = null;
+  const reviewChangedBefore: string | null = null;
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [selectedEntryIds, setSelectedEntryIds] = useState<number[]>([]);
   const [candidateDraft, setCandidateDraft] = useState<CandidateDraft>(() =>
     createCandidateDraft(null),
   );
-  const [candidateGenerationRequest, setCandidateGenerationRequest] =
-    useState<CandidateGenerationRequest | null>(null);
   const [candidateReviewRequest, setCandidateReviewRequest] =
     useState<CandidateReviewRequest | null>(null);
   const candidateReviewTeamId = candidateReviewRequest?.teamId ?? null;
-  const [candidateGenerationReport, setCandidateGenerationReport] =
-    useState<ApiGenerateTermIndexCandidatesResponse | null>(null);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
   const [termPaneWidthPct, setTermPaneWidthPct] = useState(DEFAULT_TERM_PANE_WIDTH_PCT);
   const [isPaneResizing, setIsPaneResizing] = useState(false);
@@ -1546,33 +1896,6 @@ export function AdminTermIndexCandidateGenerationPage() {
     setTermResultLimit(Math.min(Math.max(1, next), TERM_RESULT_LIMIT_MAX));
     resetTermSelection();
   };
-  const updateMinOccurrences = (next: number) => {
-    setMinOccurrences(Math.max(1, next));
-    resetTermSelection();
-  };
-  const updateLastOccurrenceAfter = (next: string | null) => {
-    setLastOccurrenceAfter(next);
-    resetTermSelection();
-  };
-  const updateLastOccurrenceBefore = (next: string | null) => {
-    setLastOccurrenceBefore(next);
-    resetTermSelection();
-  };
-  const updateReviewChangedAfter = (next: string | null) => {
-    setReviewChangedAfter(next);
-    resetTermSelection();
-  };
-  const updateReviewChangedBefore = (next: string | null) => {
-    setReviewChangedBefore(next);
-    resetTermSelection();
-  };
-
-  const statusQuery = useQuery({
-    queryKey: ['term-index-status', effectiveRepositoryIds],
-    queryFn: () => fetchTermIndexStatus({ repositoryIds: effectiveRepositoryIds }),
-    enabled: isAdmin && repositoryOptions.length > 0,
-    staleTime: 30_000,
-  });
 
   const glossariesQuery = useQuery({
     queryKey: ['glossaries', 'term-index-candidate-review-targets'],
@@ -1601,42 +1924,32 @@ export function AdminTermIndexCandidateGenerationPage() {
 
   const entriesQuery = useQuery({
     queryKey: [
-      'term-index-entries',
-      'candidate-generation',
+      'term-index-candidates',
       effectiveRepositoryIds,
       searchQuery,
-      extractionMethod,
       reviewStatusFilter,
-      reviewAuthorityFilter,
-      termSort,
       minOccurrences,
       termResultLimit,
-      lastOccurrenceAfter,
-      lastOccurrenceBefore,
       reviewChangedAfter,
       reviewChangedBefore,
     ],
     queryFn: () =>
-      fetchTermIndexEntries({
+      fetchTermIndexCandidates({
         repositoryIds: effectiveRepositoryIds,
         search: searchQuery,
-        extractionMethod,
         reviewStatus: reviewStatusFilter,
-        reviewAuthority: reviewAuthorityFilter,
+        reviewAuthority: 'ALL',
         minOccurrences,
         limit: termResultLimit,
-        lastOccurrenceAfter,
-        lastOccurrenceBefore,
         reviewChangedAfter,
         reviewChangedBefore,
-        sortBy: termSort,
       }),
     enabled: isAdmin && repositoryOptions.length > 0,
     staleTime: 5_000,
   });
 
   const entryData = entriesQuery.data;
-  const entries = useMemo(() => entryData?.entries ?? [], [entryData]);
+  const entries = useMemo(() => entryData?.candidates.map(candidateToEntry) ?? [], [entryData]);
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedEntryId) ?? null,
     [entries, selectedEntryId],
@@ -1645,10 +1958,7 @@ export function AdminTermIndexCandidateGenerationPage() {
     () => entries.filter((entry) => selectedEntryIds.includes(entry.id)),
     [entries, selectedEntryIds],
   );
-  const selectedCandidateEntries = useMemo(
-    () => selectedEntries.filter((entry) => entry.termIndexCandidateId != null),
-    [selectedEntries],
-  );
+  const selectedCandidateEntries = selectedEntries;
   const selectedCandidateIds = useMemo(
     () =>
       Array.from(
@@ -1717,14 +2027,6 @@ export function AdminTermIndexCandidateGenerationPage() {
   }, [candidateReviewPmUsersQuery.data?.users, candidateReviewSpecialistsQuery.data?.users]);
   const allEntriesSelected =
     entries.length > 0 && entries.every((entry) => selectedEntryIds.includes(entry.id));
-  const repositoryScopeLabel = formatRepositorySelectionSummary({
-    selectedIds: effectiveRepositoryIds,
-    defaultSummary:
-      effectiveRepositoryIds.length === 1
-        ? '1 repository'
-        : `${effectiveRepositoryIds.length.toLocaleString()} repositories`,
-  });
-
   useEffect(() => {
     if (entries.length === 0) {
       if (!entriesQuery.isFetching) {
@@ -1749,86 +2051,74 @@ export function AdminTermIndexCandidateGenerationPage() {
   const occurrencesQuery = useQuery({
     queryKey: [
       'term-index-occurrences',
-      'candidate-generation',
-      selectedEntryId,
+      'candidate-review',
+      selectedEntry?.termIndexExtractedTermId ?? null,
       effectiveRepositoryIds,
-      extractionMethod,
     ],
     queryFn: () =>
-      fetchTermIndexOccurrences(selectedEntryId ?? 0, {
+      fetchTermIndexOccurrences(selectedEntry?.termIndexExtractedTermId ?? 0, {
         repositoryIds: effectiveRepositoryIds,
-        extractionMethod,
         limit: EXAMPLE_RESULT_LIMIT,
       }),
-    enabled: isAdmin && selectedEntryId != null && repositoryOptions.length > 0,
+    enabled:
+      isAdmin && selectedEntry?.termIndexExtractedTermId != null && repositoryOptions.length > 0,
     staleTime: 5_000,
   });
 
   const occurrenceData = occurrencesQuery.data;
   const occurrences = occurrenceData?.occurrences ?? [];
 
-  const updateReviewMutation = useMutation({
-    mutationFn: ({
-      entryId,
-      reviewStatus,
-      reviewReason,
-      reviewRationale,
-      reviewConfidence,
-    }: {
-      entryId: number;
-      reviewStatus: ApiTermIndexReviewStatus;
-      reviewReason?: string | null;
-      reviewRationale?: string | null;
-      reviewConfidence?: number | null;
-    }) =>
-      updateTermIndexEntryReview(entryId, {
-        reviewStatus,
-        reviewReason: reviewReason ?? null,
-        reviewRationale: reviewRationale ?? null,
-        reviewConfidence: reviewConfidence ?? null,
+  const updateCandidateMutation = useMutation({
+    mutationFn: ({ candidateId, draft }: { candidateId: number; draft: CandidateDraft }) =>
+      updateTermIndexCandidate(candidateId, {
+        definition: nullableTrimmed(draft.definition),
+        rationale: nullableTrimmed(draft.rationale),
+        termType: nullableTrimmed(draft.termType),
+        partOfSpeech: nullableTrimmed(draft.partOfSpeech),
+        enforcement: nullableTrimmed(draft.enforcement),
+        doNotTranslate: draft.doNotTranslate,
+        confidence: parseOptionalConfidence(draft.confidence),
+        reviewStatus: draft.reviewStatus,
       }),
-    onSuccess: async (entry) => {
-      setSelectedEntryId(entry.id);
-      await queryClient.invalidateQueries({ queryKey: ['term-index-entries'] });
+    onSuccess: async (candidate) => {
+      setSelectedEntryId(candidate.id);
+      setNotice({
+        kind: 'success',
+        message: `Saved candidate #${candidate.id}.`,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['term-index-candidates'] });
+    },
+    onError: (error: Error) => {
+      setNotice({ kind: 'error', message: error.message || 'Candidate update failed.' });
     },
   });
 
-  const generateCandidatesMutation = useMutation({
-    mutationFn: ({ entryIds, draft }: { entryIds: number[]; draft?: CandidateDraft | null }) =>
-      generateTermIndexCandidatesFromEntries({
-        termIndexEntryIds: entryIds,
-        repositoryIds: effectiveRepositoryIds,
-        definition: draft ? candidateDraftTextValue(draft, 'definition') : null,
-        rationale: draft ? candidateDraftTextValue(draft, 'rationale') : null,
-        termType: draft ? candidateDraftStringValue(draft, 'termType') : null,
-        partOfSpeech: draft ? candidateDraftStringValue(draft, 'partOfSpeech') : null,
-        enforcement: draft ? candidateDraftStringValue(draft, 'enforcement') : null,
-        doNotTranslate: draft ? candidateDraftBooleanValue(draft, 'doNotTranslate') : null,
-        confidence: draft ? candidateDraftConfidenceValue(draft) : null,
-        reviewStatus: draft ? candidateDraftReviewStatusValue(draft) : null,
-      }),
-    onSuccess: async (result) => {
-      setCandidateGenerationReport(result);
+  const updateSelectedCandidateReviewsMutation = useMutation({
+    mutationFn: ({
+      candidateIds,
+      reviewStatus,
+    }: {
+      candidateIds: number[];
+      reviewStatus: ApiTermIndexReviewStatus;
+    }) => updateTermIndexCandidateReviews(candidateIds, { reviewStatus }),
+    onSuccess: async (response) => {
+      setSelectedEntryIds([]);
       setNotice({
         kind: 'success',
-        message: `Generated ${result.candidateCount.toLocaleString()} candidates (${result.createdCandidateCount.toLocaleString()} new, ${result.updatedCandidateCount.toLocaleString()} refreshed).`,
+        message: `Updated ${response.updatedCandidateCount.toLocaleString()} candidate statuses.`,
       });
-      setSelectedEntryIds([]);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['glossary-term-index-suggestions'] }),
-        queryClient.invalidateQueries({ queryKey: ['term-index-entries'] }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ['term-index-candidates'] });
     },
     onError: (error: Error) => {
-      setNotice({ kind: 'error', message: error.message || 'Candidate generation failed.' });
+      setNotice({
+        kind: 'error',
+        message: error.message || 'Failed to update candidate statuses.',
+      });
     },
   });
 
   const createCandidateReviewMutation = useMutation({
     mutationFn: (request: CandidateReviewRequest) => {
-      if (request.glossaryId == null) {
-        throw new Error('Select a target glossary.');
-      }
       if (request.teamId == null) {
         throw new Error('Select a review team.');
       }
@@ -1864,48 +2154,35 @@ export function AdminTermIndexCandidateGenerationPage() {
     },
   });
 
-  const closeCandidateGenerationModal = () => {
-    if (generateCandidatesMutation.isPending) {
-      return;
-    }
-    setCandidateGenerationRequest(null);
-    setCandidateGenerationReport(null);
-  };
-
-  const confirmCandidateGeneration = () => {
-    if (!candidateGenerationRequest || generateCandidatesMutation.isPending) {
+  const updateCandidateReview = (
+    entry: ApiTermIndexEntry,
+    reviewStatus: ApiTermIndexReviewStatus,
+  ) => {
+    if (updateCandidateMutation.isPending) {
       return;
     }
     setNotice(null);
-    setCandidateGenerationReport(null);
-    generateCandidatesMutation.mutate({
-      entryIds: candidateGenerationRequest.entryIds,
-      draft: candidateGenerationRequest.draft,
+    updateCandidateMutation.mutate({
+      candidateId: entry.id,
+      draft: {
+        ...createCandidateDraft(entry),
+        reviewStatus,
+      },
     });
   };
 
-  const updateEntryReview = (entry: ApiTermIndexEntry, reviewStatus: ApiTermIndexReviewStatus) => {
-    if (updateReviewMutation.isPending) {
+  const updateSelectedCandidateReviewStatus = (reviewStatus: ApiTermIndexReviewStatus | null) => {
+    if (
+      reviewStatus == null ||
+      selectedCandidateIds.length === 0 ||
+      updateSelectedCandidateReviewsMutation.isPending
+    ) {
       return;
     }
     setNotice(null);
-    updateReviewMutation.mutate({
-      entryId: entry.id,
-      ...getManualReviewUpdate(entry, reviewStatus),
-    });
-  };
-
-  const generateSelectedCandidates = () => {
-    if (selectedEntries.length === 0 || generateCandidatesMutation.isPending) {
-      return;
-    }
-    setNotice(null);
-    setCandidateGenerationReport(null);
-    setCandidateGenerationRequest({
-      mode: 'bulk',
-      entryIds: selectedEntries.map((entry) => entry.id),
-      entries: selectedEntries,
-      draft: null,
+    updateSelectedCandidateReviewsMutation.mutate({
+      candidateIds: selectedCandidateIds,
+      reviewStatus,
     });
   };
 
@@ -1913,7 +2190,6 @@ export function AdminTermIndexCandidateGenerationPage() {
     if (selectedCandidateIds.length === 0 || createCandidateReviewMutation.isPending) {
       return;
     }
-    const defaultGlossaryId = glossariesQuery.data?.glossaries[0]?.id ?? null;
     const defaultTeamId =
       candidateReviewTeamOptions.length === 1
         ? (candidateReviewTeamOptions[0]?.value ?? null)
@@ -1923,7 +2199,7 @@ export function AdminTermIndexCandidateGenerationPage() {
       entries: selectedCandidateEntries,
       candidateIds: selectedCandidateIds,
       selectedEntryCount: selectedEntries.length,
-      glossaryId: defaultGlossaryId,
+      glossaryId: null,
       teamId: defaultTeamId,
       specialistUserIds: [],
       pmUserId: null,
@@ -1945,33 +2221,21 @@ export function AdminTermIndexCandidateGenerationPage() {
     createCandidateReviewMutation.mutate(candidateReviewRequest);
   };
 
-  const generateSelectedEntryCandidate = () => {
-    if (!selectedEntry || generateCandidatesMutation.isPending) {
+  const saveSelectedCandidate = () => {
+    if (!selectedEntry || updateCandidateMutation.isPending) {
       return;
     }
     setNotice(null);
-    setCandidateGenerationReport(null);
-    setCandidateGenerationRequest({
-      mode: 'single',
-      entryIds: [selectedEntry.id],
-      entries: [selectedEntry],
+    updateCandidateMutation.mutate({
+      candidateId: selectedEntry.id,
       draft: cloneCandidateDraft(candidateDraft),
     });
   };
 
-  const extractionMethodOptions = useMemo(
-    () =>
-      (statusQuery.data?.extractionMethods ?? []).map((method) => ({
-        value: method,
-        label: formatMethod(method),
-      })),
-    [statusQuery.data?.extractionMethods],
-  );
   const termCountLabel = entriesQuery.isLoading
-    ? 'Terms'
-    : formatCappedListLabel('terms', entries.length, termResultLimit);
+    ? 'Candidates'
+    : formatCappedListLabel('candidates', entries.length, termResultLimit);
   const showWorkspaceLoading = entriesQuery.isFetching && !entriesQuery.isError;
-  const termDateQuickRanges = useMemo(() => getStandardDateQuickRanges(), []);
   const workspaceStyle = useMemo(
     () =>
       ({
@@ -2035,13 +2299,13 @@ export function AdminTermIndexCandidateGenerationPage() {
         backTo="/settings/system"
         backLabel="Back to settings"
         context="Settings > Glossaries"
-        title="Candidate Generation"
+        title="Candidates"
         centerContent={<TermIndexSubnav active="candidates" />}
       />
       <div className="settings-page settings-page--wide term-index-explorer">
         <section
           className="settings-card term-index-explorer__filter-card"
-          aria-label="Candidate source filters"
+          aria-label="Candidate filters"
         >
           <div className="term-index-explorer__filterbar">
             <div className="term-index-explorer__repository-control">
@@ -2054,7 +2318,7 @@ export function AdminTermIndexCandidateGenerationPage() {
                   resetTermSelection();
                 }}
                 className="term-index-explorer__repository-select"
-                buttonAriaLabel="Select repositories for candidate generation. Use menu actions to switch between repositories and glossaries."
+                buttonAriaLabel="Select repositories for candidate review evidence. Use menu actions to switch between repositories and glossaries."
                 customActions={repositorySelectionActions}
                 summaryFormatter={formatRepositorySelectionSummary}
               />
@@ -2066,44 +2330,21 @@ export function AdminTermIndexCandidateGenerationPage() {
                 setSearchQuery(next);
                 resetTermSelection();
               }}
-              placeholder="Search non-rejected extracted terms"
-              inputAriaLabel="Search extracted terms for candidate generation"
+              placeholder="Search candidates"
+              inputAriaLabel="Search generated term candidates"
               className="term-index-explorer__search-control"
             />
             <div className="term-index-explorer__filter-controls">
               <TermIndexReviewFilterChip
+                summaryPrefix="Candidate review"
+                showAuthority={false}
                 reviewStatus={reviewStatusFilter}
-                reviewAuthority={reviewAuthorityFilter}
+                reviewAuthority="ALL"
                 onReviewStatusChange={(next) => {
                   setReviewStatusFilter(next);
                   resetTermSelection();
                 }}
-                onReviewAuthorityChange={(next) => {
-                  setReviewAuthorityFilter(next);
-                  resetTermSelection();
-                }}
                 disabled={entriesQuery.isLoading}
-              />
-              <TermIndexQueryFilterChip
-                extractionMethod={extractionMethod}
-                extractionMethodOptions={extractionMethodOptions}
-                onExtractionMethodChange={(next) => {
-                  setExtractionMethod(next);
-                  resetTermSelection();
-                }}
-                minOccurrences={minOccurrences}
-                onMinOccurrencesChange={updateMinOccurrences}
-                lastOccurrenceAfter={lastOccurrenceAfter}
-                lastOccurrenceBefore={lastOccurrenceBefore}
-                onLastOccurrenceAfterChange={updateLastOccurrenceAfter}
-                onLastOccurrenceBeforeChange={updateLastOccurrenceBefore}
-                reviewChangedAfter={reviewChangedAfter}
-                reviewChangedBefore={reviewChangedBefore}
-                onReviewChangedAfterChange={updateReviewChangedAfter}
-                onReviewChangedBeforeChange={updateReviewChangedBefore}
-                dateQuickRanges={termDateQuickRanges}
-                disabled={entriesQuery.isLoading}
-                ariaLabel="Filter candidate source extractor, hits, last extracted date, and review updated date"
               />
             </div>
           </div>
@@ -2111,22 +2352,13 @@ export function AdminTermIndexCandidateGenerationPage() {
 
         <section
           className="settings-card term-index-explorer__results-card"
-          aria-label="Candidate sources"
+          aria-label="Candidate queue"
         >
           <div className="term-index-explorer__subbar">
             <TermIndexResultSizeDropdown
               countLabel={termCountLabel}
               resultLimit={termResultLimit}
               onChangeResultLimit={updateTermResultLimit}
-              disabled={entriesQuery.isLoading}
-            />
-            <TermIndexSubbarSeparator />
-            <TermIndexSortDropdown
-              sortBy={termSort}
-              onChangeSort={(next) => {
-                setTermSort(next);
-                resetTermSelection();
-              }}
               disabled={entriesQuery.isLoading}
             />
             <div className="term-index-explorer__subbar-actions">
@@ -2137,7 +2369,10 @@ export function AdminTermIndexCandidateGenerationPage() {
                     type="button"
                     className="term-index-explorer__subbar-button"
                     onClick={() => setSelectedEntryIds(entries.map((entry) => entry.id))}
-                    disabled={generateCandidatesMutation.isPending}
+                    disabled={
+                      updateCandidateMutation.isPending ||
+                      updateSelectedCandidateReviewsMutation.isPending
+                    }
                   >
                     Select all
                   </button>
@@ -2150,14 +2385,24 @@ export function AdminTermIndexCandidateGenerationPage() {
                     {selectedEntries.length.toLocaleString()} selected
                   </span>
                   <TermIndexSubbarSeparator />
-                  <button
-                    type="button"
-                    className="term-index-explorer__subbar-button"
-                    onClick={generateSelectedCandidates}
-                    disabled={generateCandidatesMutation.isPending}
-                  >
-                    Generate selected candidates
-                  </button>
+                  <SingleSelectDropdown<ApiTermIndexReviewStatus>
+                    label="Candidate status"
+                    options={REVIEW_STATUS_OPTIONS}
+                    value={null}
+                    onChange={updateSelectedCandidateReviewStatus}
+                    placeholder={
+                      updateSelectedCandidateReviewsMutation.isPending
+                        ? 'Updating...'
+                        : 'Set status'
+                    }
+                    buttonAriaLabel="Set selected candidate status"
+                    searchable={false}
+                    className="term-index-explorer__bulk-dropdown"
+                    disabled={
+                      updateSelectedCandidateReviewsMutation.isPending ||
+                      selectedCandidateIds.length === 0
+                    }
+                  />
                   <TermIndexSubbarSeparator />
                   <button
                     type="button"
@@ -2165,14 +2410,10 @@ export function AdminTermIndexCandidateGenerationPage() {
                     onClick={openCandidateReviewRequest}
                     disabled={
                       createCandidateReviewMutation.isPending ||
+                      updateSelectedCandidateReviewsMutation.isPending ||
                       selectedCandidateIds.length === 0 ||
                       glossariesQuery.isLoading ||
                       candidateReviewTeamsQuery.isLoading
-                    }
-                    title={
-                      selectedCandidateIds.length === 0
-                        ? 'Generate candidates for the selected terms first'
-                        : undefined
                     }
                   >
                     Create candidate review
@@ -2183,7 +2424,8 @@ export function AdminTermIndexCandidateGenerationPage() {
                     className="term-index-explorer__subbar-button"
                     onClick={() => setSelectedEntryIds([])}
                     disabled={
-                      generateCandidatesMutation.isPending ||
+                      updateCandidateMutation.isPending ||
+                      updateSelectedCandidateReviewsMutation.isPending ||
                       createCandidateReviewMutation.isPending
                     }
                   >
@@ -2198,8 +2440,10 @@ export function AdminTermIndexCandidateGenerationPage() {
               {notice.message}
             </p>
           ) : null}
-          {updateReviewMutation.error ? (
-            <p className="settings-hint is-error">{getErrorMessage(updateReviewMutation.error)}</p>
+          {updateCandidateMutation.error ? (
+            <p className="settings-hint is-error">
+              {getErrorMessage(updateCandidateMutation.error)}
+            </p>
           ) : null}
           <div
             className={`term-index-explorer__workspace${showWorkspaceLoading ? ' is-loading' : ''}`}
@@ -2210,7 +2454,7 @@ export function AdminTermIndexCandidateGenerationPage() {
               {entriesQuery.isLoading ? null : entriesQuery.isError ? (
                 <p className="settings-hint is-error">{getErrorMessage(entriesQuery.error)}</p>
               ) : entries.length === 0 ? (
-                <p className="settings-hint">No non-rejected extracted terms match the filters.</p>
+                <p className="settings-hint">No candidates match the filters.</p>
               ) : (
                 <TermList
                   entries={entries}
@@ -2219,8 +2463,8 @@ export function AdminTermIndexCandidateGenerationPage() {
                   rowMetadata="candidate"
                   showReviewConfidence
                   onSelectEntry={setSelectedEntryId}
-                  onUpdateEntryReview={updateEntryReview}
-                  isUpdatingReview={updateReviewMutation.isPending}
+                  onUpdateEntryReview={updateCandidateReview}
+                  isUpdatingReview={updateCandidateMutation.isPending}
                   onToggleEntrySelection={(entryId, checked) =>
                     setSelectedEntryIds((current) =>
                       checked
@@ -2254,34 +2498,20 @@ export function AdminTermIndexCandidateGenerationPage() {
                   occurrences={occurrences}
                   isLoadingOccurrences={occurrencesQuery.isLoading}
                   occurrenceError={occurrencesQuery.error}
-                  isGenerating={generateCandidatesMutation.isPending}
+                  isSaving={updateCandidateMutation.isPending}
                   onDraftChange={setCandidateDraft}
-                  onGenerate={generateSelectedEntryCandidate}
+                  onSave={saveSelectedCandidate}
                 />
               ) : (
-                <p className="settings-hint">Select a term to draft a candidate.</p>
+                <p className="settings-hint">Select a candidate to review.</p>
               )}
             </div>
             {showWorkspaceLoading ? (
-              <TermIndexWorkspaceLoadingOverlay label="Loading terms" />
+              <TermIndexWorkspaceLoadingOverlay label="Loading candidates" />
             ) : null}
           </div>
         </section>
       </div>
-      <CandidateGenerationModal
-        open={candidateGenerationRequest != null}
-        request={candidateGenerationRequest}
-        report={candidateGenerationReport}
-        repositoryScopeLabel={repositoryScopeLabel}
-        searchQuery={searchQuery}
-        extractionMethod={extractionMethod}
-        reviewStatusFilter={reviewStatusFilter}
-        reviewAuthorityFilter={reviewAuthorityFilter}
-        isGenerating={generateCandidatesMutation.isPending}
-        error={generateCandidatesMutation.error}
-        onClose={closeCandidateGenerationModal}
-        onGenerate={confirmCandidateGeneration}
-      />
       <CandidateReviewProjectModal
         open={candidateReviewRequest != null}
         request={candidateReviewRequest}
@@ -2326,28 +2556,85 @@ export function AdminTermIndexCandidateGenerationPage() {
   );
 }
 
-function TermIndexSubnav({ active }: { active: 'extraction' | 'terms' | 'candidates' }) {
+export function TermIndexSubnav({
+  active,
+}: {
+  active: 'workflow' | 'automation' | 'terms' | 'candidates';
+}) {
   return (
     <nav className="term-index-explorer__subnav" aria-label="Term index sections">
       <Link
-        className={`term-index-explorer__subnav-link${active === 'extraction' ? ' is-active' : ''}`}
+        className={`term-index-explorer__subnav-link${active === 'workflow' ? ' is-active' : ''}`}
+        to="/settings/system/glossary-term-index/workflow"
+      >
+        Workflow
+      </Link>
+      <Link
+        className={`term-index-explorer__subnav-link${active === 'automation' ? ' is-active' : ''}`}
         to="/settings/system/glossary-term-index"
       >
-        Term Extraction
+        Automation
       </Link>
       <Link
         className={`term-index-explorer__subnav-link${active === 'terms' ? ' is-active' : ''}`}
         to="/settings/system/glossary-term-index/terms"
       >
-        Term Review
+        Terms
       </Link>
       <Link
         className={`term-index-explorer__subnav-link${active === 'candidates' ? ' is-active' : ''}`}
         to="/settings/system/glossary-term-index/candidates"
       >
-        Candidate Generation
+        Candidates
       </Link>
     </nav>
+  );
+}
+
+function AutomationActionCard({
+  title,
+  description,
+  cta,
+  disabled,
+  onClick,
+  linkTo,
+  linkLabel,
+  children,
+}: {
+  title: string;
+  description: string;
+  cta: string;
+  disabled: boolean;
+  onClick: () => void;
+  linkTo: string;
+  linkLabel: string;
+  children?: ReactNode;
+}) {
+  return (
+    <article className="settings-card term-index-explorer__automation-card">
+      <div className="term-index-explorer__automation-card-main">
+        <div className="term-index-explorer__automation-card-content">
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+        <div className="term-index-explorer__automation-card-actions">
+          <button
+            type="button"
+            className="settings-button settings-button--primary"
+            disabled={disabled}
+            onClick={onClick}
+          >
+            {cta}
+          </button>
+          <Link className="settings-button settings-button--secondary" to={linkTo}>
+            {linkLabel}
+          </Link>
+        </div>
+      </div>
+      {children ? (
+        <div className="term-index-explorer__automation-card-status">{children}</div>
+      ) : null}
+    </article>
   );
 }
 
@@ -2472,26 +2759,35 @@ function TermIndexQueryFilterChip({
 }
 
 function TermIndexReviewFilterChip({
+  summaryPrefix = 'Review',
+  showAuthority = true,
   reviewStatus,
   reviewAuthority,
   onReviewStatusChange,
   onReviewAuthorityChange,
   disabled,
 }: {
+  summaryPrefix?: string;
+  showAuthority?: boolean;
   reviewStatus: ApiTermIndexReviewStatusFilter;
   reviewAuthority: ApiTermIndexReviewAuthorityFilter;
   onReviewStatusChange: (value: ApiTermIndexReviewStatusFilter) => void;
-  onReviewAuthorityChange: (value: ApiTermIndexReviewAuthorityFilter) => void;
+  onReviewAuthorityChange?: (value: ApiTermIndexReviewAuthorityFilter) => void;
   disabled?: boolean;
 }) {
   return (
     <MultiSectionFilterChip
-      ariaLabel="Filter by review status and source"
+      ariaLabel={showAuthority ? 'Filter by review status and source' : 'Filter by review status'}
       align="right"
       className="filter-chip term-index-explorer__review-filter"
       classNames={TERM_INDEX_FILTER_CHIP_CLASS_NAMES}
       disabled={disabled}
-      summary={formatTermIndexReviewFilterSummary(reviewStatus, reviewAuthority)}
+      summary={formatTermIndexReviewFilterSummary(
+        reviewStatus,
+        reviewAuthority,
+        summaryPrefix,
+        showAuthority,
+      )}
       sections={[
         {
           kind: 'radio',
@@ -2500,13 +2796,18 @@ function TermIndexReviewFilterChip({
           value: reviewStatus,
           onChange: (value) => onReviewStatusChange(value as ApiTermIndexReviewStatusFilter),
         },
-        {
-          kind: 'radio',
-          label: 'Source',
-          options: REVIEW_AUTHORITY_FILTER_OPTIONS,
-          value: reviewAuthority,
-          onChange: (value) => onReviewAuthorityChange(value as ApiTermIndexReviewAuthorityFilter),
-        },
+        ...(showAuthority && onReviewAuthorityChange
+          ? [
+              {
+                kind: 'radio' as const,
+                label: 'Source',
+                options: REVIEW_AUTHORITY_FILTER_OPTIONS,
+                value: reviewAuthority,
+                onChange: (value: string | number) =>
+                  onReviewAuthorityChange(value as ApiTermIndexReviewAuthorityFilter),
+              },
+            ]
+          : []),
       ]}
     />
   );
@@ -2727,6 +3028,7 @@ function ExtractedTermTriageModal({
   repositoryScopeLabel,
   searchQuery,
   extractionMethod,
+  extractionMethodOptions,
   reviewStatusFilter,
   reviewAuthorityFilter,
   minOccurrences,
@@ -2738,6 +3040,7 @@ function ExtractedTermTriageModal({
   overwriteHumanReview,
   isReviewing,
   error,
+  onRequestChange,
   onOverwriteHumanReviewChange,
   onClose,
   onTriage,
@@ -2749,6 +3052,7 @@ function ExtractedTermTriageModal({
   repositoryScopeLabel: string;
   searchQuery: string;
   extractionMethod: string | null;
+  extractionMethodOptions: Array<{ value: string; label: string }>;
   reviewStatusFilter: ApiTermIndexReviewStatusFilter;
   reviewAuthorityFilter: ApiTermIndexReviewAuthorityFilter;
   minOccurrences: number;
@@ -2760,10 +3064,38 @@ function ExtractedTermTriageModal({
   overwriteHumanReview: boolean;
   isReviewing: boolean;
   error: unknown;
+  onRequestChange: (request: ExtractedTermTriageRequest | null) => void;
   onOverwriteHumanReviewChange: (overwrite: boolean) => void;
   onClose: () => void;
   onTriage: () => void;
 }) {
+  const isFilterMode = request?.mode === 'filter';
+  const effectiveSearchQuery = isFilterMode ? (request.searchQuery ?? '') : searchQuery;
+  const effectiveExtractionMethod = isFilterMode
+    ? (request.extractionMethod ?? null)
+    : extractionMethod;
+  const effectiveReviewStatusFilter = isFilterMode
+    ? (request.reviewStatusFilter ?? 'NON_REJECTED')
+    : reviewStatusFilter;
+  const effectiveReviewAuthorityFilter = isFilterMode
+    ? (request.reviewAuthorityFilter ?? 'NONE')
+    : reviewAuthorityFilter;
+  const effectiveMinOccurrences = isFilterMode
+    ? (request.minOccurrences ?? MIN_OCCURRENCES_DEFAULT)
+    : minOccurrences;
+  const effectiveLimit = isFilterMode ? (request.limit ?? TERM_RESULT_LIMIT_DEFAULT) : limit;
+  const effectiveLastOccurrenceAfter = isFilterMode
+    ? (request.lastOccurrenceAfter ?? null)
+    : lastOccurrenceAfter;
+  const effectiveLastOccurrenceBefore = isFilterMode
+    ? (request.lastOccurrenceBefore ?? null)
+    : lastOccurrenceBefore;
+  const effectiveReviewChangedAfter = isFilterMode
+    ? (request.reviewChangedAfter ?? null)
+    : reviewChangedAfter;
+  const effectiveReviewChangedBefore = isFilterMode
+    ? (request.reviewChangedBefore ?? null)
+    : reviewChangedBefore;
   const sourceLabel =
     request?.mode === 'selected'
       ? request.entries.length === 1
@@ -2771,20 +3103,41 @@ function ExtractedTermTriageModal({
         : `${request?.entries.length.toLocaleString() ?? 0} selected extracted terms`
       : 'Current filtered result set';
   const reviewStatusFilterLabel =
-    REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === reviewStatusFilter)?.label ??
-    reviewStatusFilter;
-  const reviewAuthorityFilterLabel = formatReviewAuthorityFilter(reviewAuthorityFilter);
+    REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === effectiveReviewStatusFilter)
+      ?.label ?? effectiveReviewStatusFilter;
+  const reviewAuthorityFilterLabel = formatReviewAuthorityFilter(effectiveReviewAuthorityFilter);
   const sampleEntries = request?.entries.slice(0, 6) ?? [];
   const remainingEntryCount = Math.max(0, (request?.entries.length ?? 0) - sampleEntries.length);
   const triagedEntries = report?.entries.slice(0, 10) ?? [];
-  const requestedTermCount = request?.mode === 'filter' ? limit : (request?.entries.length ?? 0);
+  const requestedTermCount =
+    request?.mode === 'filter' ? effectiveLimit : (request?.entries.length ?? 0);
   const batchCount =
     requestedTermCount > 0 ? Math.ceil(requestedTermCount / TERM_INDEX_AI_REVIEW_BATCH_SIZE) : 0;
   const batchLabel = batchCount === 1 ? '1 AI batch' : `${batchCount.toLocaleString()} AI batches`;
   const reviewScopeLabel =
     request?.mode === 'filter'
-      ? `Current filters, up to ${limit.toLocaleString()} extracted terms`
+      ? `Current filters, up to ${effectiveLimit.toLocaleString()} extracted terms`
       : sourceLabel;
+  const updateFilterRequest = (patch: Partial<ExtractedTermTriageRequest>) => {
+    if (!request || request.mode !== 'filter' || isReviewing) {
+      return;
+    }
+    onRequestChange({ ...request, ...patch });
+  };
+  const updateLimit = (value: string) => {
+    const parsedValue = Number(value);
+    const nextLimit = Number.isFinite(parsedValue)
+      ? Math.min(Math.max(1, parsedValue), TERM_RESULT_LIMIT_MAX)
+      : TERM_RESULT_LIMIT_DEFAULT;
+    updateFilterRequest({ limit: nextLimit });
+  };
+  const updateMinimumHits = (value: string) => {
+    const parsedValue = Number(value);
+    const nextMinimum = Number.isFinite(parsedValue)
+      ? Math.max(1, Math.floor(parsedValue))
+      : MIN_OCCURRENCES_DEFAULT;
+    updateFilterRequest({ minOccurrences: nextMinimum });
+  };
   const progressReviewableCount = progress?.reviewableEntryCount ?? requestedTermCount;
   const progressReviewedCount = Math.min(
     progress?.reviewedEntryCount ?? 0,
@@ -2804,14 +3157,14 @@ function ExtractedTermTriageModal({
     <Modal
       open={open}
       size="lg"
-      ariaLabel="AI review extracted terms"
+      ariaLabel="Run AI review"
       onClose={onClose}
       closeOnBackdrop={!isReviewing}
     >
       <div className="modal__header">
         <div>
           <h3 className="modal__title">
-            {report ? 'Extracted term review report' : 'AI review extracted terms'}
+            {report ? 'Extracted term review report' : 'Run AI review'}
           </h3>
           <p className="settings-hint">
             {report
@@ -2909,55 +3262,146 @@ function ExtractedTermTriageModal({
                 </p>
               </div>
             ) : null}
-            <dl className="term-index-explorer__triage-config">
-              <div>
-                <dt>Action</dt>
-                <dd>
-                  Update extracted-term review status only. Candidates and glossary terms stay
-                  unchanged.
-                </dd>
+            {request?.mode === 'filter' ? (
+              <div className="term-index-explorer__generation-controls">
+                <div className="settings-grid settings-grid--two-column">
+                  <label className="settings-field">
+                    <span className="settings-field__label">Search</span>
+                    <input
+                      className="settings-input"
+                      type="search"
+                      value={effectiveSearchQuery}
+                      placeholder="Any term"
+                      onChange={(event) => updateFilterRequest({ searchQuery: event.target.value })}
+                      disabled={isReviewing}
+                    />
+                  </label>
+                  <label className="settings-field">
+                    <span className="settings-field__label">Extraction method</span>
+                    <select
+                      className="settings-input"
+                      value={effectiveExtractionMethod ?? ALL_EXTRACTORS_FILTER_VALUE}
+                      onChange={(event) =>
+                        updateFilterRequest({
+                          extractionMethod:
+                            event.target.value === ALL_EXTRACTORS_FILTER_VALUE
+                              ? null
+                              : event.target.value,
+                        })
+                      }
+                      disabled={isReviewing}
+                    >
+                      <option value={ALL_EXTRACTORS_FILTER_VALUE}>All methods</option>
+                      {extractionMethodOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="settings-field">
+                    <span className="settings-field__label">Status</span>
+                    <select
+                      className="settings-input"
+                      value={effectiveReviewStatusFilter}
+                      onChange={(event) =>
+                        updateFilterRequest({
+                          reviewStatusFilter: event.target.value as ApiTermIndexReviewStatusFilter,
+                        })
+                      }
+                      disabled={isReviewing}
+                    >
+                      {REVIEW_STATUS_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="settings-field">
+                    <span className="settings-field__label">Review source</span>
+                    <select
+                      className="settings-input"
+                      value={effectiveReviewAuthorityFilter}
+                      onChange={(event) =>
+                        updateFilterRequest({
+                          reviewAuthorityFilter: event.target
+                            .value as ApiTermIndexReviewAuthorityFilter,
+                        })
+                      }
+                      disabled={isReviewing}
+                    >
+                      {REVIEW_AUTHORITY_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="settings-field">
+                    <span className="settings-field__label">Minimum hits</span>
+                    <input
+                      className="settings-input"
+                      type="number"
+                      min="1"
+                      value={effectiveMinOccurrences}
+                      onChange={(event) => updateMinimumHits(event.target.value)}
+                      disabled={isReviewing}
+                    />
+                  </label>
+                  <label className="settings-field">
+                    <span className="settings-field__label">Limit</span>
+                    <input
+                      className="settings-input"
+                      type="number"
+                      min="1"
+                      max={TERM_RESULT_LIMIT_MAX}
+                      value={effectiveLimit}
+                      onChange={(event) => updateLimit(event.target.value)}
+                      disabled={isReviewing}
+                    />
+                    <span className="settings-hint">
+                      Maximum {TERM_RESULT_LIMIT_MAX.toLocaleString()} terms per run.
+                    </span>
+                  </label>
+                </div>
+                <div className="term-index-explorer__generation-filter-summary">
+                  <div className="settings-field__label">Current scope</div>
+                  <p className="settings-hint">
+                    {repositoryScopeLabel}; last extracted{' '}
+                    {formatDateRangeFilter(
+                      effectiveLastOccurrenceAfter,
+                      effectiveLastOccurrenceBefore,
+                    )}
+                    ; review updated{' '}
+                    {formatDateRangeFilter(
+                      effectiveReviewChangedAfter,
+                      effectiveReviewChangedBefore,
+                    )}
+                    .
+                  </p>
+                </div>
               </div>
-              <div>
-                <dt>Repository scope</dt>
-                <dd>{repositoryScopeLabel}</dd>
-              </div>
-              {request?.mode === 'filter' ? (
-                <>
-                  <div>
-                    <dt>Search</dt>
-                    <dd>{searchQuery.trim() || 'None'}</dd>
-                  </div>
-                  <div>
-                    <dt>Extraction method</dt>
-                    <dd>{formatMethod(extractionMethod)}</dd>
-                  </div>
-                  <div>
-                    <dt>Status</dt>
-                    <dd>{reviewStatusFilterLabel}</dd>
-                  </div>
-                  <div>
-                    <dt>Source</dt>
-                    <dd>{reviewAuthorityFilterLabel}</dd>
-                  </div>
-                  <div>
-                    <dt>Minimum hits</dt>
-                    <dd>{minOccurrences === 1 ? 'Any' : `${minOccurrences.toLocaleString()}+`}</dd>
-                  </div>
-                  <div>
-                    <dt>Limit</dt>
-                    <dd>{limit.toLocaleString()}</dd>
-                  </div>
-                  <div>
-                    <dt>Last extracted</dt>
-                    <dd>{formatDateRangeFilter(lastOccurrenceAfter, lastOccurrenceBefore)}</dd>
-                  </div>
-                  <div>
-                    <dt>Review updated</dt>
-                    <dd>{formatDateRangeFilter(reviewChangedAfter, reviewChangedBefore)}</dd>
-                  </div>
-                </>
-              ) : null}
-            </dl>
+            ) : (
+              <dl className="term-index-explorer__triage-config">
+                <div>
+                  <dt>Action</dt>
+                  <dd>
+                    Update extracted-term review status only. Candidates and glossary terms stay
+                    unchanged.
+                  </dd>
+                </div>
+                <div>
+                  <dt>Repository scope</dt>
+                  <dd>{repositoryScopeLabel}</dd>
+                </div>
+              </dl>
+            )}
+            <p className="settings-hint">
+              Action: update extracted-term review status only. Candidates and glossary terms stay
+              unchanged. Default scope is {reviewStatusFilterLabel.toLowerCase()} terms from{' '}
+              {reviewAuthorityFilterLabel.toLowerCase()}.
+            </p>
             <label className="settings-toggle">
               <input
                 type="checkbox"
@@ -3056,6 +3500,8 @@ function CandidateReviewProjectModal({
 }) {
   const selectedGlossaryId = request?.glossaryId ?? '';
   const selectedTeamId = request?.teamId ?? null;
+  const selectedCandidateCount = request?.candidateIds.length ?? 0;
+  const selectedSourceCount = request?.selectedEntryCount ?? selectedCandidateCount;
   return (
     <Modal
       open={open}
@@ -3068,8 +3514,8 @@ function CandidateReviewProjectModal({
         <div>
           <h3 className="modal__title">Create candidate review</h3>
           <p className="settings-hint">
-            Review generated candidates as proposals. Accepted proposals are promoted into the
-            target glossary during decider resolution.
+            Review generated candidates as proposals. Select a target glossary to promote accepted
+            proposals during decider resolution.
           </p>
         </div>
       </div>
@@ -3087,13 +3533,17 @@ function CandidateReviewProjectModal({
             }
             disabled={isCreating || isLoadingGlossaries}
           >
-            <option value="">Select glossary</option>
+            <option value="">No glossary, candidate status only</option>
             {glossaries.map((glossary) => (
               <option key={glossary.id} value={glossary.id}>
                 {glossary.name}
               </option>
             ))}
           </select>
+          <span className="settings-hint">
+            If selected, accepted candidates are promoted into this glossary by default. Deciders
+            can still accept individual candidates without glossary inclusion.
+          </span>
         </div>
         <div className="settings-field">
           <span className="settings-field__label">Review team</span>
@@ -3132,7 +3582,7 @@ function CandidateReviewProjectModal({
             noResultsLabel="No advisors found"
           />
           <span className="settings-hint">
-            Leave empty to create one unassigned advisor row for this team.
+            Leave empty to skip advisor review and create only the decider row.
           </span>
         </div>
         <div className="settings-field">
@@ -3160,10 +3610,10 @@ function CandidateReviewProjectModal({
         <p className="settings-hint">
           {request == null
             ? 'No candidates selected.'
-            : `${request.candidateIds.length.toLocaleString()} generated candidate${
-                request.candidateIds.length === 1 ? '' : 's'
-              } will be reviewed from ${request.selectedEntryCount.toLocaleString()} selected extracted term${
-                request.selectedEntryCount === 1 ? '' : 's'
+            : `${selectedCandidateCount.toLocaleString()} candidate${
+                selectedCandidateCount === 1 ? '' : 's'
+              } will be reviewed from ${selectedSourceCount.toLocaleString()} selected row${
+                selectedSourceCount === 1 ? '' : 's'
               }.`}
         </p>
         {error ? <p className="settings-hint is-error">{getErrorMessage(error)}</p> : null}
@@ -3202,6 +3652,7 @@ function CandidateGenerationModal({
   isGenerating,
   error,
   onClose,
+  onRequestChange,
   onGenerate,
 }: {
   open: boolean;
@@ -3215,6 +3666,7 @@ function CandidateGenerationModal({
   isGenerating: boolean;
   error: unknown;
   onClose: () => void;
+  onRequestChange: (request: CandidateGenerationRequest | null) => void;
   onGenerate: () => void;
 }) {
   const selectedEntryCount = request?.entries.length ?? 0;
@@ -3222,21 +3674,63 @@ function CandidateGenerationModal({
   const sourceLabel =
     request?.mode === 'single'
       ? (request.entries[0]?.displayTerm ?? 'Selected extracted term')
-      : selectedEntryCount === 1
-        ? '1 selected extracted term'
-        : `${selectedEntryCount.toLocaleString()} selected extracted terms`;
+      : request?.mode === 'filter'
+        ? 'Accepted extracted terms in default scope'
+        : selectedEntryCount === 1
+          ? '1 selected extracted term'
+          : `${selectedEntryCount.toLocaleString()} selected extracted terms`;
+  const effectiveSearchQuery =
+    request?.mode === 'filter' ? (request.searchQuery ?? '') : searchQuery;
+  const effectiveExtractionMethod =
+    request?.mode === 'filter' ? (request.extractionMethod ?? null) : extractionMethod;
+  const effectiveReviewStatusFilter =
+    request?.mode === 'filter' ? (request.reviewStatusFilter ?? 'ACCEPTED') : reviewStatusFilter;
+  const effectiveReviewAuthorityFilter =
+    request?.mode === 'filter' ? (request.reviewAuthorityFilter ?? 'ALL') : reviewAuthorityFilter;
+  const effectiveMinOccurrences =
+    request?.mode === 'filter'
+      ? (request.minOccurrences ?? MIN_OCCURRENCES_DEFAULT)
+      : MIN_OCCURRENCES_DEFAULT;
   const sampleEntries = request?.entries.slice(0, 6) ?? [];
   const remainingEntryCount = Math.max(0, selectedEntryCount - sampleEntries.length);
   const reviewStatusLabel =
     REVIEW_STATUS_OPTIONS.find((option) => option.value === draft?.reviewStatus)?.label ??
     'To review';
   const reviewStatusFilterLabel =
-    REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === reviewStatusFilter)?.label ??
-    reviewStatusFilter;
-  const reviewAuthorityFilterLabel = formatReviewAuthorityFilter(reviewAuthorityFilter);
+    REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === effectiveReviewStatusFilter)
+      ?.label ?? effectiveReviewStatusFilter;
+  const reviewAuthorityFilterLabel = formatReviewAuthorityFilter(effectiveReviewAuthorityFilter);
   const hasDraftOverrides =
     draft != null && Object.values(draft.editedFields).some((isEdited) => Boolean(isEdited));
   const generatedCandidates = report?.candidates.slice(0, 10) ?? [];
+  const updateBatchLimit = (value: string) => {
+    if (!request || request.mode !== 'filter') {
+      return;
+    }
+    const parsedValue = Number(value);
+    const nextLimit = Number.isFinite(parsedValue)
+      ? Math.min(Math.max(1, parsedValue), TERM_RESULT_LIMIT_MAX)
+      : TERM_RESULT_LIMIT_DEFAULT;
+    onRequestChange({ ...request, limit: nextLimit });
+  };
+  const updateRefreshExistingCandidates = (refreshExistingCandidates: boolean) => {
+    if (!request || request.mode !== 'filter') {
+      return;
+    }
+    onRequestChange({ ...request, refreshExistingCandidates });
+  };
+  const updateReviewStatusFilter = (value: ApiTermIndexReviewStatusFilter) => {
+    if (!request || request.mode !== 'filter') {
+      return;
+    }
+    onRequestChange({ ...request, reviewStatusFilter: value });
+  };
+  const updateReviewAuthorityFilter = (value: ApiTermIndexReviewAuthorityFilter) => {
+    if (!request || request.mode !== 'filter') {
+      return;
+    }
+    onRequestChange({ ...request, reviewAuthorityFilter: value });
+  };
 
   return (
     <Modal
@@ -3253,41 +3747,56 @@ function CandidateGenerationModal({
               ? 'Candidate generation report'
               : request?.mode === 'single'
                 ? 'Generate this candidate'
-                : 'Generate selected candidates'}
+                : request?.mode === 'filter'
+                  ? 'Generate candidates'
+                  : 'Generate candidates for selection'}
           </h3>
           <p className="settings-hint">
             {report
               ? 'The candidate table has been refreshed from the selected extracted terms.'
-              : 'Create or refresh stored candidates from reviewed extracted terms. AI fills candidate fields when they are not edited here.'}
+              : request?.mode === 'filter'
+                ? 'Create stored candidates for accepted extracted terms that do not already have one.'
+                : 'Create or refresh stored candidates from reviewed extracted terms. AI fills candidate fields when they are not edited here.'}
           </p>
         </div>
       </div>
 
       <div className="modal__body term-index-explorer__generation-modal-body">
-        <dl className="term-index-explorer__generation-facts">
-          <div>
-            <dt>Source</dt>
-            <dd>{sourceLabel}</dd>
-          </div>
-          <div>
-            <dt>Repository scope</dt>
-            <dd>{repositoryScopeLabel}</dd>
-          </div>
-          <div>
-            <dt>Search filter</dt>
-            <dd>{searchQuery.trim() || 'None'}</dd>
-          </div>
-          <div>
-            <dt>Extraction method</dt>
-            <dd>{formatMethod(extractionMethod)}</dd>
-          </div>
-          <div>
-            <dt>Raw term review filter</dt>
-            <dd>
-              {reviewStatusFilterLabel} · {reviewAuthorityFilterLabel}
-            </dd>
-          </div>
-        </dl>
+        {report || request?.mode !== 'filter' ? (
+          <dl className="term-index-explorer__generation-facts">
+            <div>
+              <dt>Source</dt>
+              <dd>{sourceLabel}</dd>
+            </div>
+            <div>
+              <dt>Repository scope</dt>
+              <dd>{repositoryScopeLabel}</dd>
+            </div>
+            <div>
+              <dt>Search filter</dt>
+              <dd>{effectiveSearchQuery.trim() || 'None'}</dd>
+            </div>
+            <div>
+              <dt>Extraction method</dt>
+              <dd>{formatMethod(effectiveExtractionMethod)}</dd>
+            </div>
+            <div>
+              <dt>Raw term review filter</dt>
+              <dd>
+                {request?.mode === 'filter' ? 'Accepted' : reviewStatusFilterLabel} ·{' '}
+                {reviewAuthorityFilterLabel}
+              </dd>
+            </div>
+            <div>
+              <dt>Limit</dt>
+              <dd>
+                {request?.mode === 'filter'
+                  ? `${(request.limit ?? TERM_RESULT_LIMIT_DEFAULT).toLocaleString()} terms`
+                  : 'Selected terms only'}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
 
         {report ? (
           <>
@@ -3303,6 +3812,10 @@ function CandidateGenerationModal({
               <div>
                 <dt>Refreshed</dt>
                 <dd>{report.updatedCandidateCount.toLocaleString()}</dd>
+              </div>
+              <div>
+                <dt>Skipped existing</dt>
+                <dd>{(report.skippedExistingCandidateCount ?? 0).toLocaleString()}</dd>
               </div>
             </dl>
             {generatedCandidates.length > 0 ? (
@@ -3340,14 +3853,108 @@ function CandidateGenerationModal({
           </>
         ) : (
           <div className="term-index-explorer__generation-summary">
+            {request?.mode === 'filter' ? (
+              <div className="term-index-explorer__generation-controls">
+                <div className="settings-grid settings-grid--two-column">
+                  <label className="settings-field">
+                    <span className="settings-field__label">Status</span>
+                    <select
+                      className="settings-input"
+                      value={effectiveReviewStatusFilter}
+                      onChange={(event) =>
+                        updateReviewStatusFilter(
+                          event.target.value as ApiTermIndexReviewStatusFilter,
+                        )
+                      }
+                      disabled={isGenerating}
+                    >
+                      {REVIEW_STATUS_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="settings-field">
+                    <span className="settings-field__label">Review source</span>
+                    <select
+                      className="settings-input"
+                      value={effectiveReviewAuthorityFilter}
+                      onChange={(event) =>
+                        updateReviewAuthorityFilter(
+                          event.target.value as ApiTermIndexReviewAuthorityFilter,
+                        )
+                      }
+                      disabled={isGenerating}
+                    >
+                      {REVIEW_AUTHORITY_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="settings-field">
+                    <span className="settings-field__label">Batch limit</span>
+                    <input
+                      className="settings-input"
+                      type="number"
+                      min="1"
+                      max={TERM_RESULT_LIMIT_MAX}
+                      value={request.limit ?? TERM_RESULT_LIMIT_DEFAULT}
+                      onChange={(event) => updateBatchLimit(event.target.value)}
+                      disabled={isGenerating}
+                    />
+                    <span className="settings-hint">
+                      Maximum {TERM_RESULT_LIMIT_MAX.toLocaleString()} terms per run.
+                    </span>
+                  </label>
+                  <label className="settings-toggle term-index-explorer__modal-toggle-field">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(request.refreshExistingCandidates)}
+                      onChange={(event) => updateRefreshExistingCandidates(event.target.checked)}
+                      disabled={isGenerating}
+                    />
+                    <span>Refresh existing candidates too</span>
+                  </label>
+                </div>
+                <div className="term-index-explorer__generation-filter-summary">
+                  <div className="settings-field__label">Default scope</div>
+                  <p className="settings-hint">
+                    {reviewStatusFilterLabel} extracted terms from{' '}
+                    {repositoryScopeLabel.toLowerCase()}; {reviewAuthorityFilterLabel.toLowerCase()}
+                    ; no search filter; all extraction methods;{' '}
+                    {effectiveMinOccurrences.toLocaleString()}+ hit. Existing candidates are skipped
+                    unless refresh is enabled.
+                  </p>
+                </div>
+              </div>
+            ) : null}
             <div className="settings-field__label">This will</div>
             <ul>
-              <li>Create missing candidates for the selected extracted terms.</li>
-              <li>Refresh existing extraction-backed candidates for the same extracted terms.</li>
+              <li>
+                {request?.mode === 'filter'
+                  ? 'Create missing candidates for accepted extracted terms in the default scope.'
+                  : 'Create missing candidates for the selected extracted terms.'}
+              </li>
+              {request?.mode === 'filter' && !request.refreshExistingCandidates ? null : (
+                <li>
+                  {request?.mode === 'filter'
+                    ? 'Refresh existing extraction-backed candidates for accepted terms in the current filters.'
+                    : 'Refresh existing extraction-backed candidates for the same extracted terms.'}
+                </li>
+              )}
               <li>Ask AI to fill definition, rationale, and candidate metadata where possible.</li>
-              <li>Use edited fields from this form as overrides.</li>
+              {request?.mode === 'filter' ? null : (
+                <li>Use edited fields from this form as overrides.</li>
+              )}
               <li>Leave glossary terms unchanged until a candidate is accepted in a glossary.</li>
-              <li>Skip rejected extracted terms if any are selected.</li>
+              <li>
+                {request?.mode === 'filter'
+                  ? 'Use the configured batch limit for this run.'
+                  : 'Skip rejected extracted terms if any are selected.'}
+              </li>
             </ul>
             {draft ? (
               <div className="term-index-explorer__generation-overrides">
@@ -3417,8 +4024,9 @@ function CandidateGenerationModal({
               </div>
             ) : (
               <p className="settings-hint">
-                Bulk generation asks AI to fill candidate fields and keeps generated candidates in
-                To review.
+                {request?.mode === 'filter'
+                  ? 'Batch generation asks AI to fill candidate fields for accepted terms and keeps generated candidates in To review.'
+                  : 'Bulk generation asks AI to fill candidate fields and keeps generated candidates in To review.'}
               </p>
             )}
             {sampleEntries.length > 0 ? (
@@ -3460,13 +4068,19 @@ function CandidateGenerationModal({
             type="button"
             className="settings-button settings-button--primary"
             onClick={onGenerate}
-            disabled={isGenerating || !request || request.entryIds.length === 0}
+            disabled={
+              isGenerating ||
+              !request ||
+              (request.mode !== 'filter' && request.entryIds.length === 0)
+            }
           >
             {isGenerating
               ? 'Generating...'
               : request?.mode === 'single'
                 ? 'Generate'
-                : 'Generate selected'}
+                : request?.mode === 'filter'
+                  ? 'Generate candidates'
+                  : 'Generate selected'}
           </button>
         )}
       </div>
@@ -3480,18 +4094,18 @@ function CandidateDraftPanel({
   occurrences,
   isLoadingOccurrences,
   occurrenceError,
-  isGenerating,
+  isSaving,
   onDraftChange,
-  onGenerate,
+  onSave,
 }: {
   entry: ApiTermIndexEntry;
   draft: CandidateDraft;
   occurrences: ApiTermIndexOccurrence[];
   isLoadingOccurrences: boolean;
   occurrenceError: unknown;
-  isGenerating: boolean;
+  isSaving: boolean;
   onDraftChange: (draft: CandidateDraft) => void;
-  onGenerate: () => void;
+  onSave: () => void;
 }) {
   const updateDraft = <K extends CandidateDraftField>(key: K, value: CandidateDraft[K]) => {
     onDraftChange({
@@ -3501,23 +4115,14 @@ function CandidateDraftPanel({
     });
   };
   const createdLabel = entry.createdDate ? formatLocalDateTime(entry.createdDate) : null;
-  const extractedReviewLabel = formatReviewChange(
-    entry.reviewStatus,
-    entry.reviewAuthority,
-    entry.reviewChangedAt,
-    entry.reviewChangedByCommonName,
-    entry.reviewChangedByUsername,
+  const candidateReviewLabel = formatReviewChange(
+    entry.candidateReviewStatus,
+    entry.candidateReviewAuthority,
+    entry.candidateReviewChangedAt,
+    entry.candidateReviewChangedByCommonName,
+    entry.candidateReviewChangedByUsername,
   );
-  const candidateReviewLabel =
-    entry.termIndexCandidateId == null
-      ? null
-      : formatReviewChange(
-          entry.candidateReviewStatus,
-          entry.candidateReviewAuthority,
-          entry.candidateReviewChangedAt,
-          entry.candidateReviewChangedByCommonName,
-          entry.candidateReviewChangedByUsername,
-        );
+  const extractedTermId = entry.termIndexExtractedTermId;
 
   return (
     <div className="term-index-explorer__candidate-panel">
@@ -3527,33 +4132,34 @@ function CandidateDraftPanel({
             <div className="term-index-explorer__candidate-title-line">
               <div className="term-index-explorer__candidate-title">{entry.displayTerm}</div>
               <span className="term-index-explorer__candidate-primary-id">
-                {entry.termIndexCandidateId != null
-                  ? `#${entry.termIndexCandidateId}`
-                  : 'Not generated'}
+                #{entry.termIndexCandidateId ?? entry.id}
               </span>
             </div>
             <div className="term-index-explorer__candidate-meta-line">
-              <Link to={getRawTermExplorerPath(entry.id, entry.displayTerm)}>
-                Extracted term #{entry.id}
-              </Link>
+              {extractedTermId != null ? (
+                <Link to={getRawTermExplorerPath(extractedTermId, entry.displayTerm)}>
+                  Extracted term #{extractedTermId}
+                </Link>
+              ) : (
+                <span>No linked extracted term</span>
+              )}
               <span>{entry.occurrenceCount.toLocaleString()} hits</span>
               <span>{entry.repositoryCount.toLocaleString()} repositories</span>
               {createdLabel ? (
                 <time dateTime={entry.createdDate ?? undefined} title={createdLabel}>
-                  Source created {createdLabel}
+                  Candidate created {createdLabel}
                 </time>
               ) : null}
-              <span>{extractedReviewLabel}</span>
-              {candidateReviewLabel ? <span>Candidate {candidateReviewLabel}</span> : null}
+              <span>{candidateReviewLabel}</span>
             </div>
           </div>
           <button
             type="button"
             className="settings-button settings-button--primary"
-            onClick={onGenerate}
-            disabled={isGenerating || entry.reviewStatus === 'REJECTED'}
+            onClick={onSave}
+            disabled={isSaving}
           >
-            {isGenerating ? 'Generating' : 'Generate'}
+            {isSaving ? 'Saving' : 'Save candidate'}
           </button>
         </div>
         <div className="settings-grid settings-grid--two-column">
@@ -3613,7 +4219,7 @@ function CandidateDraftPanel({
             className="settings-input term-index-explorer__candidate-textarea"
             value={draft.definition}
             onChange={(event) => updateDraft('definition', event.target.value)}
-            placeholder="AI will fill this when generated"
+            placeholder="Optional candidate definition"
           />
         </label>
         <label className="settings-field">
@@ -3622,7 +4228,7 @@ function CandidateDraftPanel({
             className="settings-input term-index-explorer__candidate-textarea"
             value={draft.rationale}
             onChange={(event) => updateDraft('rationale', event.target.value)}
-            placeholder="AI will explain why this should be a glossary candidate"
+            placeholder="Optional review rationale"
           />
         </label>
         <div className="term-index-explorer__candidate-options">
@@ -3648,7 +4254,7 @@ function CandidateDraftPanel({
       <section className="term-index-explorer__candidate-card" aria-label="Usage examples">
         <div className="term-index-explorer__candidate-section-title">Usage examples</div>
         <OccurrencePanel
-          entryId={entry.id}
+          entryId={extractedTermId ?? 0}
           occurrences={occurrences}
           isLoading={isLoadingOccurrences}
           error={occurrenceError}
@@ -4076,15 +4682,25 @@ function TermIndexBatchReviewModal({
   );
 }
 
-function IndexStatusTables({
+function ExtractionStatusTables({
   statusQuery,
   activeRefreshTaskId,
+  repositoryOptions,
+  selectedRepositoryIds,
+  repositorySelectionActions,
+  formatRepositorySelectionSummary,
+  onChangeRepositorySelection,
   runResultLimit,
   runCountLabel,
   onChangeRunResultLimit,
 }: {
   statusQuery: ReturnType<typeof useQuery<Awaited<ReturnType<typeof fetchTermIndexStatus>>, Error>>;
   activeRefreshTaskId: number | null;
+  repositoryOptions: RepositorySelectionOption[];
+  selectedRepositoryIds: number[];
+  repositorySelectionActions: ReturnType<typeof getRepositoryTypeSelectionActions>;
+  formatRepositorySelectionSummary: ReturnType<typeof getRepositorySelectionSummaryFormatter>;
+  onChangeRepositorySelection: (repositoryIds: number[]) => void;
   runResultLimit: number;
   runCountLabel: string;
   onChangeRunResultLimit: (value: number) => void;
@@ -4092,51 +4708,94 @@ function IndexStatusTables({
   const activeRefreshRunId = statusQuery.data?.recentRuns.find(
     (run) => run.status === 'RUNNING',
   )?.id;
+  const cursorCount = statusQuery.data?.cursors.length ?? 0;
 
   return (
     <div className="term-index-explorer__status-grid">
-      <div>
-        <div className="term-index-explorer__subheading">Repository cursors</div>
+      <details className="term-index-explorer__cursor-disclosure">
+        <summary className="term-index-explorer__cursor-summary">
+          <span className="term-index-explorer__cursor-summary-title">Repository cursors</span>
+          <span className="term-index-explorer__cursor-summary-meta">
+            <span>
+              {statusQuery.isLoading
+                ? 'Loading...'
+                : cursorCount === 1
+                  ? '1 repository'
+                  : `${cursorCount.toLocaleString()} repositories`}
+            </span>
+            <span aria-hidden="true" className="term-index-explorer__cursor-summary-chevron">
+              ▾
+            </span>
+          </span>
+        </summary>
         {statusQuery.isLoading ? (
           <p className="settings-hint">Loading cursors...</p>
         ) : statusQuery.isError ? (
           <p className="settings-hint is-error">{getErrorMessage(statusQuery.error)}</p>
         ) : (statusQuery.data?.cursors ?? []).length === 0 ? (
-          <p className="settings-hint">No cursor rows yet.</p>
+          <>
+            <div className="term-index-explorer__cursor-controls">
+              <RepositoryMultiSelect
+                label="Cursor repositories"
+                options={repositoryOptions}
+                selectedIds={selectedRepositoryIds}
+                onChange={onChangeRepositorySelection}
+                className="term-index-explorer__repository-select"
+                buttonAriaLabel="Filter repository cursor rows. Use menu actions to switch between repositories and glossaries."
+                customActions={repositorySelectionActions}
+                summaryFormatter={formatRepositorySelectionSummary}
+              />
+            </div>
+            <p className="settings-hint">No cursor rows yet.</p>
+          </>
         ) : (
-          <div className="settings-table-wrapper">
-            <table className="settings-table term-index-explorer__status-table">
-              <thead>
-                <tr>
-                  <th>Repository</th>
-                  <th>Status</th>
-                  <th>Last success</th>
-                  <th>Lease</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(statusQuery.data?.cursors ?? []).map((cursor) => (
-                  <tr key={cursor.repositoryId}>
-                    <td>{cursor.repositoryName}</td>
-                    <td>{cursor.status}</td>
-                    <td>{formatLocalDateTime(cursor.lastSuccessfulScanAt)}</td>
-                    <td>
-                      {cursor.leaseExpiresAt
-                        ? `Run ${cursor.currentRefreshRunId ?? 'unknown'} until ${formatLocalDateTime(
-                            cursor.leaseExpiresAt,
-                          )}`
-                        : 'None'}
-                      {cursor.errorMessage ? (
-                        <div className="settings-hint is-error">{cursor.errorMessage}</div>
-                      ) : null}
-                    </td>
+          <>
+            <div className="term-index-explorer__cursor-controls">
+              <RepositoryMultiSelect
+                label="Cursor repositories"
+                options={repositoryOptions}
+                selectedIds={selectedRepositoryIds}
+                onChange={onChangeRepositorySelection}
+                className="term-index-explorer__repository-select"
+                buttonAriaLabel="Filter repository cursor rows. Use menu actions to switch between repositories and glossaries."
+                customActions={repositorySelectionActions}
+                summaryFormatter={formatRepositorySelectionSummary}
+              />
+            </div>
+            <div className="settings-table-wrapper">
+              <table className="settings-table term-index-explorer__status-table">
+                <thead>
+                  <tr>
+                    <th>Repository</th>
+                    <th>Status</th>
+                    <th>Last success</th>
+                    <th>Lease</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {(statusQuery.data?.cursors ?? []).map((cursor) => (
+                    <tr key={cursor.repositoryId}>
+                      <td>{cursor.repositoryName}</td>
+                      <td>{cursor.status}</td>
+                      <td>{formatLocalDateTime(cursor.lastSuccessfulScanAt)}</td>
+                      <td>
+                        {cursor.leaseExpiresAt
+                          ? `Run ${cursor.currentRefreshRunId ?? 'unknown'} until ${formatLocalDateTime(
+                              cursor.leaseExpiresAt,
+                            )}`
+                          : 'None'}
+                        {cursor.errorMessage ? (
+                          <div className="settings-hint is-error">{cursor.errorMessage}</div>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
-      </div>
+      </details>
       <div>
         <div className="term-index-explorer__subheading-row">
           <div className="term-index-explorer__subheading">Recent extraction runs</div>
@@ -4203,6 +4862,157 @@ function IndexStatusTables({
       </div>
     </div>
   );
+}
+
+function AutomationJobsTable({
+  statusQuery,
+  title,
+  emptyLabel,
+  jobNames,
+}: {
+  statusQuery: ReturnType<typeof useQuery<Awaited<ReturnType<typeof fetchTermIndexStatus>>, Error>>;
+  title: string;
+  emptyLabel: string;
+  jobNames: string[];
+}) {
+  const recentJobs = (statusQuery.data?.recentJobs ?? []).filter((job) =>
+    jobNames.includes(job.name),
+  );
+
+  return (
+    <div>
+      <div className="term-index-explorer__subheading">{title}</div>
+      {statusQuery.isLoading ? (
+        <p className="settings-hint">Loading jobs...</p>
+      ) : recentJobs.length === 0 ? (
+        <p className="settings-hint">{emptyLabel}</p>
+      ) : (
+        <div className="settings-table-wrapper">
+          <table className="settings-table term-index-explorer__status-table">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Started</th>
+                <th>Finished</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentJobs.map((job) => (
+                <tr key={job.id}>
+                  <td>#{job.id}</td>
+                  <td>{formatTermIndexJobName(job.name)}</td>
+                  <td>
+                    {job.status}
+                    {job.errorMessage ? (
+                      <div className="settings-hint is-error">{job.errorMessage}</div>
+                    ) : null}
+                  </td>
+                  <td>
+                    <TermIndexJobProgress progress={job.progress} status={job.status} />
+                  </td>
+                  <td>{formatLocalDateTime(job.createdDate)}</td>
+                  <td>
+                    {job.finishedDate ? formatLocalDateTime(job.finishedDate) : 'In progress'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatTermIndexJobName(name: string) {
+  if (name === 'REVIEW_EXTRACTED_TERMS') {
+    return 'Review extracted terms';
+  }
+  if (name === 'GENERATE_CANDIDATES') {
+    return 'Generate candidates';
+  }
+  return name;
+}
+
+function TermIndexJobProgress({
+  progress,
+  status,
+}: {
+  progress?: ApiTermIndexTaskProgress | null;
+  status: string;
+}) {
+  const percent = getTermIndexJobProgressPercent(progress, status);
+  const label = formatTermIndexJobProgress(progress);
+  const isIndeterminate = percent == null && status === 'RUNNING';
+
+  return (
+    <div className="term-index-explorer__job-progress">
+      <div className="term-index-explorer__job-progress-header">
+        <span>{label}</span>
+        {percent != null ? <span>{Math.round(percent)}%</span> : null}
+      </div>
+      {percent != null || isIndeterminate ? (
+        <progress max={100} value={percent ?? undefined} aria-label="Term index job progress" />
+      ) : null}
+    </div>
+  );
+}
+
+function getTermIndexJobProgressPercent(
+  progress?: ApiTermIndexTaskProgress | null,
+  status?: string,
+) {
+  if (!progress) {
+    return status === 'COMPLETED' ? 100 : null;
+  }
+  if ((status === 'COMPLETED' || progress.status === 'COMPLETED') && status !== 'FAILED') {
+    return 100;
+  }
+  if (progress.type === 'TRIAGE_EXTRACTED_TERMS') {
+    const total = progress.reviewableEntryCount ?? progress.entryCount ?? 0;
+    if (total <= 0) {
+      return progress.status === 'COMPLETED' ? 100 : null;
+    }
+    return Math.min(100, ((progress.reviewedEntryCount ?? 0) / total) * 100);
+  }
+  if (progress.type === 'GENERATE_TERM_INDEX_CANDIDATES') {
+    const total = progress.entryCount ?? 0;
+    if (total <= 0) {
+      return progress.status === 'COMPLETED' ? 100 : null;
+    }
+    return Math.min(100, ((progress.processedEntryCount ?? 0) / total) * 100);
+  }
+  return progress.status === 'COMPLETED' ? 100 : null;
+}
+
+function formatTermIndexJobProgress(progress?: ApiTermIndexTaskProgress | null) {
+  if (!progress) {
+    return '-';
+  }
+  if (progress.type === 'TRIAGE_EXTRACTED_TERMS') {
+    const reviewed = progress.reviewedEntryCount ?? 0;
+    const total = progress.reviewableEntryCount ?? progress.entryCount ?? 0;
+    return `${reviewed.toLocaleString()} / ${total.toLocaleString()} reviewed · ${(
+      progress.acceptedCount ?? 0
+    ).toLocaleString()} accepted · ${(progress.rejectedCount ?? 0).toLocaleString()} rejected`;
+  }
+  if (progress.type === 'GENERATE_TERM_INDEX_CANDIDATES') {
+    const processed = progress.processedEntryCount ?? 0;
+    const total = progress.entryCount ?? 0;
+    const totalLabel =
+      progress.status === 'COMPLETED' && total > processed
+        ? processed.toLocaleString()
+        : total.toLocaleString();
+    return `${processed.toLocaleString()} / ${totalLabel} terms · ${(
+      progress.createdCandidateCount ?? 0
+    ).toLocaleString()} new · ${(progress.updatedCandidateCount ?? 0).toLocaleString()} refreshed · ${(
+      progress.skippedExistingCandidateCount ?? 0
+    ).toLocaleString()} skipped`;
+  }
+  return progress.status ?? '-';
 }
 
 function TermList({
@@ -4305,12 +5115,13 @@ function TermList({
   }, [scrollToIndex, selectedIndex]);
 
   const hasConfidenceColumn = showReviewConfidence === true;
+  const hasSourceColumn = rowMetadata === 'term';
 
   return (
     <div
       className={`term-index-explorer__term-list${
         hasConfidenceColumn ? ' term-index-explorer__term-list--with-confidence' : ''
-      }`}
+      }${hasSourceColumn ? ' term-index-explorer__term-list--with-source' : ''}`}
       role="listbox"
       aria-label="Indexed terms"
       aria-multiselectable="true"
@@ -4329,6 +5140,9 @@ function TermList({
           <span className="term-index-explorer__term-list-header-cell term-index-explorer__term-list-header-cell--numeric">
             Confidence
           </span>
+        ) : null}
+        {hasSourceColumn ? (
+          <span className="term-index-explorer__term-list-header-cell">Source</span>
         ) : null}
         <span className="term-index-explorer__term-list-header-cell term-index-explorer__term-list-header-cell--status">
           Status
@@ -4483,6 +5297,17 @@ function TermRow({
         >
           <span>{entry.reviewConfidence == null ? 'No' : `${entry.reviewConfidence}%`}</span>
           <span className="term-index-explorer__term-cell-label">conf</span>
+        </span>
+      ) : null}
+      {rowMetadata === 'term' ? (
+        <span className="term-index-explorer__term-review-source">
+          <span
+            className={`term-index-explorer__review-source-pill ${getReviewSourceClassName(
+              entry.reviewAuthority,
+            )}`}
+          >
+            {formatReviewSourceShort(entry.reviewAuthority)}
+          </span>
         </span>
       ) : null}
       <span className="term-index-explorer__term-meta">
@@ -4696,13 +5521,15 @@ function formatTermIndexQueryFilterSummary(
 function formatTermIndexReviewFilterSummary(
   status: ApiTermIndexReviewStatusFilter,
   authority: ApiTermIndexReviewAuthorityFilter,
+  prefix = 'Review',
+  showAuthority = true,
 ) {
   const statusLabel =
     REVIEW_STATUS_FILTER_OPTIONS.find((option) => option.value === status)?.label ?? status;
-  if (authority === 'ALL') {
-    return `Review: ${statusLabel}`;
+  if (!showAuthority || authority === 'ALL') {
+    return `${prefix}: ${statusLabel}`;
   }
-  return `Review: ${statusLabel} · ${formatReviewAuthorityFilter(authority)}`;
+  return `${prefix}: ${statusLabel} · ${formatReviewAuthorityFilter(authority)}`;
 }
 
 function formatReviewAuthorityFilter(authority: ApiTermIndexReviewAuthorityFilter) {
@@ -4752,6 +5579,9 @@ function formatReviewChange(
   changedByCommonName: string | null | undefined,
   changedByUsername: string | null | undefined,
 ) {
+  if (authority === 'NONE') {
+    return 'Not reviewed';
+  }
   const statusLabel = formatReviewStatus(status);
   const actor =
     authority === 'AI'
@@ -4775,6 +5605,32 @@ function reviewAuthorityLabel(authority: string | null | undefined) {
       return 'unknown source';
     default:
       return formatMethod(authority);
+  }
+}
+
+function formatReviewSourceShort(authority: string | null | undefined) {
+  switch (authority) {
+    case 'NONE':
+      return 'Unreviewed';
+    case 'AI':
+      return 'AI';
+    case 'HUMAN':
+      return 'Human';
+    default:
+      return reviewAuthorityLabel(authority);
+  }
+}
+
+function getReviewSourceClassName(authority: string | null | undefined) {
+  switch (authority) {
+    case 'NONE':
+      return 'term-index-explorer__review-source-pill--none';
+    case 'AI':
+      return 'term-index-explorer__review-source-pill--ai';
+    case 'HUMAN':
+      return 'term-index-explorer__review-source-pill--human';
+    default:
+      return 'term-index-explorer__review-source-pill--unknown';
   }
 }
 

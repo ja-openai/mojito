@@ -13,7 +13,12 @@ public class TermIndexExtractedTermTriageJob
   @Override
   public GlossaryTermIndexCurationService.TriageExtractedTermsResult call(
       GlossaryTermIndexCurationService.TriageExtractedTermsCommand input) {
-    return glossaryTermIndexCurationService.triageExtractedTerms(
-        input, getCurrentPollableTask().getId());
+    Long pollableTaskId = getCurrentPollableTask().getId();
+    try {
+      return glossaryTermIndexCurationService.triageExtractedTerms(input, pollableTaskId);
+    } catch (RuntimeException e) {
+      glossaryTermIndexCurationService.markAutomationRunFailed(pollableTaskId, e);
+      throw e;
+    }
   }
 }
