@@ -253,12 +253,8 @@ public class BranchStatisticService {
                             .map(textUnitDTO -> 1L)
                             .orElse(0L);
 
-                    return ForTranslationCountForTmTextUnitId.builder()
-                        .tmTextUnitId(tmTextUnitId)
-                        .forTranslationCount(forTranslationCount)
-                        .totalCount(totalCount)
-                        .branch(branch)
-                        .build();
+                    return new ForTranslationCountForTmTextUnitId(
+                        tmTextUnitId, forTranslationCount, totalCount, branch);
                   });
       return forTranslationCountForTmTextUnitIdStream;
     }
@@ -325,11 +321,9 @@ public class BranchStatisticService {
                         tmTextUnitToBranchTextUnitStatistics.get(tmTextUnitId);
 
                     long forTranslationCount =
-                        tmTextUnitIdToForTranslationCount
-                            .get(tmTextUnitId)
-                            .getForTranslationCount();
+                        tmTextUnitIdToForTranslationCount.get(tmTextUnitId).forTranslationCount();
                     long totalCount =
-                        tmTextUnitIdToForTranslationCount.get(tmTextUnitId).getTotalCount();
+                        tmTextUnitIdToForTranslationCount.get(tmTextUnitId).totalCount();
 
                     BranchTextUnitStatistic branchTextUnitStatistic = new BranchTextUnitStatistic();
                     branchTextUnitStatistic.setBranchStatistic(branchStatistic);
@@ -377,12 +371,12 @@ public class BranchStatisticService {
 
     long sumTotalCount =
         tmTextUnitIdToForTranslationCount.values().stream()
-            .mapToLong(ForTranslationCountForTmTextUnitId::getTotalCount)
+            .mapToLong(ForTranslationCountForTmTextUnitId::totalCount)
             .sum();
 
     long sumForTranslationCount =
         tmTextUnitIdToForTranslationCount.values().stream()
-            .mapToLong(ForTranslationCountForTmTextUnitId::getForTranslationCount)
+            .mapToLong(ForTranslationCountForTmTextUnitId::forTranslationCount)
             .sum();
 
     branchStatistic.setForTranslationCount(sumForTranslationCount);
@@ -412,16 +406,16 @@ public class BranchStatisticService {
           Map<String, ImmutableMap<Long, ForTranslationCountForTmTextUnitId>>>
       toMapBranchNameToTranslationCountForTextUnitId() {
     return Collectors.groupingBy(
-        forTranslationCountForTmTextUnitId ->
-            forTranslationCountForTmTextUnitId.getBranch().getName(),
+        forTranslationCountForTmTextUnitId -> forTranslationCountForTmTextUnitId.branch().getName(),
         ImmutableMap.toImmutableMap(
-            ForTranslationCountForTmTextUnitId::getTmTextUnitId,
+            ForTranslationCountForTmTextUnitId::tmTextUnitId,
             Function.identity(),
-            (t1, t2) -> {
-              return t1.withForTranslationCount(
-                      t1.getForTranslationCount() + t2.getForTranslationCount())
-                  .withTotalCount(t1.getTotalCount() + t2.getTotalCount());
-            }));
+            (t1, t2) ->
+                new ForTranslationCountForTmTextUnitId(
+                    t1.tmTextUnitId(),
+                    t1.forTranslationCount() + t2.forTranslationCount(),
+                    t1.totalCount() + t2.totalCount(),
+                    t1.branch())));
   }
 
   Collector<
@@ -432,15 +426,16 @@ public class BranchStatisticService {
               ImmutableMap<Long, ForTranslationCountForTmTextUnitId>>>
       groupByBranchAndCount() {
     return Collectors.groupingBy(
-        ForTranslationCountForTmTextUnitId::getBranch,
+        ForTranslationCountForTmTextUnitId::branch,
         ImmutableMap.toImmutableMap(
-            ForTranslationCountForTmTextUnitId::getTmTextUnitId,
+            ForTranslationCountForTmTextUnitId::tmTextUnitId,
             Function.identity(),
-            (t1, t2) -> {
-              return t1.withForTranslationCount(
-                      t1.getForTranslationCount() + t2.getForTranslationCount())
-                  .withTotalCount(t1.getTotalCount() + t2.getTotalCount());
-            }));
+            (t1, t2) ->
+                new ForTranslationCountForTmTextUnitId(
+                    t1.tmTextUnitId(),
+                    t1.forTranslationCount() + t2.forTranslationCount(),
+                    t1.totalCount() + t2.totalCount(),
+                    t1.branch())));
   }
 
   @Async("statisticsTaskExecutor")
