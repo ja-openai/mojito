@@ -67,7 +67,7 @@ public class JenkinsStatsCommand extends Command {
     Instant weekEnd = now.truncatedTo(DAYS);
     Instant weekStart = weekEnd.minus(7, DAYS);
 
-    ImmutableList<JenkinsJobResult> jobResults = getJobResults(jenkinsStatsConfig.getJobs());
+    ImmutableList<JenkinsJobResult> jobResults = getJobResults(jenkinsStatsConfig.jobs());
     printSuccessRate(
         jobResults, now, nowMinus1Day, yesterdayEnd, yesterdayStart, weekEnd, weekStart);
     printAvgTimes(jobResults, now, nowMinus1Day, yesterdayEnd, yesterdayStart, weekEnd, weekStart);
@@ -83,39 +83,39 @@ public class JenkinsStatsCommand extends Command {
       Instant weekStart) {
     printAvgTimeHeader();
     jobResults.stream()
-        .collect(Collectors.groupingBy(JenkinsJobResult::getJobName))
+        .collect(Collectors.groupingBy(JenkinsJobResult::jobName))
         .forEach(
             (jobName, jenkinsJobResults) -> {
               long avgCurrentDay =
                   jenkinsJobResults.stream()
                       .filter(
                           jenkinsJobResult ->
-                              nowMinus1Day.toEpochMilli() < jenkinsJobResult.getTimestamp()
-                                  && jenkinsJobResult.getTimestamp() < now.toEpochMilli())
-                      .collect(Collectors.averagingLong(JenkinsJobResult::getDuration))
+                              nowMinus1Day.toEpochMilli() < jenkinsJobResult.timestamp()
+                                  && jenkinsJobResult.timestamp() < now.toEpochMilli())
+                      .collect(Collectors.averagingLong(JenkinsJobResult::duration))
                       .longValue();
 
               long avgYesterday =
                   jenkinsJobResults.stream()
                       .filter(
                           jenkinsJobResult ->
-                              yesterdayStart.toEpochMilli() < jenkinsJobResult.getTimestamp()
-                                  && jenkinsJobResult.getTimestamp() < yesterdayEnd.toEpochMilli())
-                      .collect(Collectors.averagingLong(JenkinsJobResult::getDuration))
+                              yesterdayStart.toEpochMilli() < jenkinsJobResult.timestamp()
+                                  && jenkinsJobResult.timestamp() < yesterdayEnd.toEpochMilli())
+                      .collect(Collectors.averagingLong(JenkinsJobResult::duration))
                       .longValue();
 
               long avgWeek =
                   jenkinsJobResults.stream()
                       .filter(
                           jenkinsJobResult ->
-                              weekStart.toEpochMilli() < jenkinsJobResult.getTimestamp()
-                                  && jenkinsJobResult.getTimestamp() < weekEnd.toEpochMilli())
-                      .collect(Collectors.averagingLong(JenkinsJobResult::getDuration))
+                              weekStart.toEpochMilli() < jenkinsJobResult.timestamp()
+                                  && jenkinsJobResult.timestamp() < weekEnd.toEpochMilli())
+                      .collect(Collectors.averagingLong(JenkinsJobResult::duration))
                       .longValue();
 
               long avgGlobal =
                   jenkinsJobResults.stream()
-                      .collect(Collectors.averagingLong(JenkinsJobResult::getDuration))
+                      .collect(Collectors.averagingLong(JenkinsJobResult::duration))
                       .longValue();
               printAvgTimes(jobName, avgCurrentDay, avgYesterday, avgWeek, avgGlobal);
             });
@@ -132,42 +132,41 @@ public class JenkinsStatsCommand extends Command {
     printSuccessRateHeader();
     printSuccessRate(
         "global",
-        jobResults.stream()
-            .collect(Collectors.groupingBy(o -> o.getResult(), Collectors.counting())));
+        jobResults.stream().collect(Collectors.groupingBy(o -> o.result(), Collectors.counting())));
     printSuccessRate(
         "today",
         jobResults.stream()
             .filter(
                 jenkinsJobResult ->
-                    nowMinus1Day.toEpochMilli() < jenkinsJobResult.getTimestamp()
-                        && jenkinsJobResult.getTimestamp() < now.toEpochMilli())
-            .collect(Collectors.groupingBy(o -> o.getResult(), Collectors.counting())));
+                    nowMinus1Day.toEpochMilli() < jenkinsJobResult.timestamp()
+                        && jenkinsJobResult.timestamp() < now.toEpochMilli())
+            .collect(Collectors.groupingBy(o -> o.result(), Collectors.counting())));
 
     printSuccessRate(
         "yesterday",
         jobResults.stream()
             .filter(
                 jenkinsJobResult ->
-                    yesterdayStart.toEpochMilli() < jenkinsJobResult.getTimestamp()
-                        && jenkinsJobResult.getTimestamp() < yesterdayEnd.toEpochMilli())
-            .collect(Collectors.groupingBy(o -> o.getResult(), Collectors.counting())));
+                    yesterdayStart.toEpochMilli() < jenkinsJobResult.timestamp()
+                        && jenkinsJobResult.timestamp() < yesterdayEnd.toEpochMilli())
+            .collect(Collectors.groupingBy(o -> o.result(), Collectors.counting())));
 
     printSuccessRate(
         "last week",
         jobResults.stream()
             .filter(
                 jenkinsJobResult ->
-                    weekStart.toEpochMilli() < jenkinsJobResult.getTimestamp()
-                        && jenkinsJobResult.getTimestamp() < weekEnd.toEpochMilli())
-            .collect(Collectors.groupingBy(o -> o.getResult(), Collectors.counting())));
+                    weekStart.toEpochMilli() < jenkinsJobResult.timestamp()
+                        && jenkinsJobResult.timestamp() < weekEnd.toEpochMilli())
+            .collect(Collectors.groupingBy(o -> o.result(), Collectors.counting())));
 
     jobResults.stream()
-        .collect(Collectors.groupingBy(JenkinsJobResult::getJobName))
+        .collect(Collectors.groupingBy(JenkinsJobResult::jobName))
         .forEach(
             (jobName, jenkinsJobResults) -> {
               Map<String, Long> counts =
                   jenkinsJobResults.stream()
-                      .collect(Collectors.groupingBy(o -> o.getResult(), Collectors.counting()));
+                      .collect(Collectors.groupingBy(o -> o.result(), Collectors.counting()));
               printSuccessRate(jobName, counts);
             });
   }
@@ -207,11 +206,11 @@ public class JenkinsStatsCommand extends Command {
         .map(this::getJobResults)
         .flatMap(
             jenkinsJobResults ->
-                jenkinsJobResults.getBuilds().stream()
+                jenkinsJobResults.builds().stream()
                     .map(
                         jenkinsJobResult ->
-                            jenkinsJobResult.withJobName(jenkinsJobResults.getDisplayName())))
-        .filter(jenkinsJobResult -> jenkinsJobResult.getResult() != null)
+                            jenkinsJobResult.withJobName(jenkinsJobResults.displayName())))
+        .filter(jenkinsJobResult -> jenkinsJobResult.result() != null)
         .collect(ImmutableList.toImmutableList());
   }
 
@@ -238,7 +237,7 @@ public class JenkinsStatsCommand extends Command {
   }
 
   String getCookieForAuth(String baseJobUrl) {
-    return jenkinsStatsConfig.getAuthCookies().entrySet().stream()
+    return jenkinsStatsConfig.authCookies().entrySet().stream()
         .filter(e -> baseJobUrl.contains(e.getKey()))
         .findFirst()
         .map(Map.Entry::getValue)
@@ -253,14 +252,13 @@ public class JenkinsStatsCommand extends Command {
       throw new CommandException(
           "Invalid config file, format: \n"
               + mapper.writeValueAsStringUnchecked(
-                  JenkinsStatsConfig.builder()
-                      .jobs(ImmutableList.of("https://jenkins1.org/job/mojito-test"))
-                      .jobs(ImmutableList.of("https://jenkins2.org/job/mojito-test2"))
-                      .authCookies(
-                          ImmutableMap.of(
-                              "jenkins1.org", "cookie value",
-                              "jenkins2.org", "cookie2 value"))
-                      .build()));
+                  new JenkinsStatsConfig(
+                      ImmutableList.of(
+                          "https://jenkins1.org/job/mojito-test",
+                          "https://jenkins2.org/job/mojito-test2"),
+                      ImmutableMap.of(
+                          "jenkins1.org", "cookie value",
+                          "jenkins2.org", "cookie2 value"))));
     }
   }
 }
