@@ -239,11 +239,10 @@ public class AssetExtractionService {
         createTextUnitsForNewContent(assetContent, stateForNewContent, leveragingType, currentTask);
 
     updateBranchAssetExtraction(
-        assetContent, createdTextUnitsResult.getUpdatedState(), filterOptions, currentTask);
-    updateLastSuccessfulAssetExtraction(
-        asset, createdTextUnitsResult.getUpdatedState(), currentTask);
-    updatePushRun(asset, createdTextUnitsResult.getUpdatedState(), pushRunId, currentTask);
-    performLeveraging(createdTextUnitsResult.getLeveragingMatches(), currentTask);
+        assetContent, createdTextUnitsResult.updatedState(), filterOptions, currentTask);
+    updateLastSuccessfulAssetExtraction(asset, createdTextUnitsResult.updatedState(), currentTask);
+    updatePushRun(asset, createdTextUnitsResult.updatedState(), pushRunId, currentTask);
+    performLeveraging(createdTextUnitsResult.leveragingMatches(), currentTask);
 
     logger.info("Done processing asset content id: {}", assetContentId);
     return new PollableFutureTaskResult<>(asset);
@@ -533,11 +532,10 @@ public class AssetExtractionService {
                   createTmTextUnitResult.assetScopedTextUnitDTOs());
         };
 
-    return CreateTextUnitsForNewContentResult.builder()
-        .createdTextUnits(createTmTextUnitResult.createdTextUnits())
-        .leveragingMatches(leveragingMatches)
-        .updatedState(createTmTextUnitResult.updatedState())
-        .build();
+    return new CreateTextUnitsForNewContentResult(
+        createTmTextUnitResult.updatedState(),
+        createTmTextUnitResult.createdTextUnits(),
+        leveragingMatches);
   }
 
   record CreateTmTextUnitResult(
@@ -863,14 +861,13 @@ public class AssetExtractionService {
             match -> {
               LeveragerByTmTextUnit leveragerByTmTextUnit =
                   new LeveragerByTmTextUnit(
-                      match.getMatch().getTmTextUnitId(),
-                      match.getTranslationNeededIfUniqueMatch());
-              if (match.getSource().getTmTextUnitId() == null) {
+                      match.match().getTmTextUnitId(), match.translationNeededIfUniqueMatch());
+              if (match.source().getTmTextUnitId() == null) {
                 throw new RuntimeException(
                     "The source must be saved in the database when requesting leveraging");
               }
               TMTextUnit tmTextUnit =
-                  tmTextUnitRepository.findById(match.getSource().getTmTextUnitId()).get();
+                  tmTextUnitRepository.findById(match.source().getTmTextUnitId()).get();
               leveragerByTmTextUnit.performLeveragingFor(
                   new ArrayList<>(Arrays.asList(tmTextUnit)), null, null);
             });
@@ -957,12 +954,11 @@ public class AssetExtractionService {
               if (md5MatchTmTextUnitIds.isEmpty()) {
                 return null;
               }
-              return TextUnitDTOMatch.builder()
-                  .source(createdTextUnit)
-                  .match(textUnitDTOWithTmTextUnitId(md5MatchTmTextUnitIds.get(0)))
-                  .uniqueMatch(md5MatchTmTextUnitIds.size() == 1)
-                  .translationNeededIfUniqueMatch(false)
-                  .build();
+              return new TextUnitDTOMatch(
+                  createdTextUnit,
+                  textUnitDTOWithTmTextUnitId(md5MatchTmTextUnitIds.get(0)),
+                  md5MatchTmTextUnitIds.size() == 1,
+                  false);
             })
         .filter(Objects::nonNull)
         .collect(ImmutableList.toImmutableList());
@@ -1010,12 +1006,11 @@ public class AssetExtractionService {
                 return null;
               }
 
-              return TextUnitDTOMatch.builder()
-                  .source(createdTextUnit)
-                  .match(textUnitDTOWithTmTextUnitId(selectedTmTextUnitId))
-                  .uniqueMatch(sourceAndCommentMatches.size() == 1)
-                  .translationNeededIfUniqueMatch(true)
-                  .build();
+              return new TextUnitDTOMatch(
+                  createdTextUnit,
+                  textUnitDTOWithTmTextUnitId(selectedTmTextUnitId),
+                  sourceAndCommentMatches.size() == 1,
+                  true);
             })
         .filter(Objects::nonNull)
         .collect(ImmutableList.toImmutableList());
@@ -1033,7 +1028,7 @@ public class AssetExtractionService {
 
     ImmutableSet<Long> sourceTmTextUnitIdsWithLeveragingMatch =
         leveragingMatches.stream()
-            .map(match -> match.getSource().getTmTextUnitId())
+            .map(match -> match.source().getTmTextUnitId())
             .filter(Objects::nonNull)
             .collect(ImmutableSet.toImmutableSet());
 
@@ -1154,12 +1149,8 @@ public class AssetExtractionService {
 
               TextUnitDTO match = sortedMatches.get(0);
 
-              return TextUnitDTOMatch.builder()
-                  .source(bstu)
-                  .match(match)
-                  .uniqueMatch(hasSingleTmTextUnitCandidate(sortedMatches))
-                  .translationNeededIfUniqueMatch(true)
-                  .build();
+              return new TextUnitDTOMatch(
+                  bstu, match, hasSingleTmTextUnitCandidate(sortedMatches), true);
             })
         .filter(Objects::nonNull)
         .collect(ImmutableList.toImmutableList());
@@ -1263,12 +1254,7 @@ public class AssetExtractionService {
 
               return match == null
                   ? null
-                  : TextUnitDTOMatch.builder()
-                      .source(bstu)
-                      .match(match)
-                      .uniqueMatch(uniqueMatch)
-                      .translationNeededIfUniqueMatch(translationNeededIfUniqueMatch)
-                      .build();
+                  : new TextUnitDTOMatch(bstu, match, uniqueMatch, translationNeededIfUniqueMatch);
             })
         .filter(Objects::nonNull)
         .collect(ImmutableList.toImmutableList());
