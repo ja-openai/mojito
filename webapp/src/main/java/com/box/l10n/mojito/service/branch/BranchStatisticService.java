@@ -315,8 +315,7 @@ public class BranchStatisticService {
               .stream()
               .collect(
                   ImmutableMap.toImmutableMap(
-                      branchTextUnitStatistic -> branchTextUnitStatistic.getTmTextUnitId(),
-                      Function.identity()));
+                      BranchTextUnitStatisticWithCounts::tmTextUnitId, Function.identity()));
 
       ImmutableList<BranchTextUnitStatistic> branchTextUnitStatistics =
           tmTextUnitIds.stream()
@@ -342,13 +341,13 @@ public class BranchStatisticService {
                     if (branchTextUnitStatisticWithCounts != null) {
                       logger.debug("BranchTextUnitStatistic entity exists, check to update");
                       if (forTranslationCount
-                              != branchTextUnitStatisticWithCounts.getForTranslationCount()
-                          || totalCount != branchTextUnitStatisticWithCounts.getTotalCount()) {
+                              != branchTextUnitStatisticWithCounts.forTranslationCount()
+                          || totalCount != branchTextUnitStatisticWithCounts.totalCount()) {
                         logger.trace(
                             "Update needed (forTranslation: {}, total: {})",
                             forTranslationCount,
                             totalCount);
-                        branchTextUnitStatistic.setId(branchTextUnitStatisticWithCounts.getId());
+                        branchTextUnitStatistic.setId(branchTextUnitStatisticWithCounts.id());
                       } else {
                         logger.trace("Update not needed, count are the same");
                         branchTextUnitStatistic = null;
