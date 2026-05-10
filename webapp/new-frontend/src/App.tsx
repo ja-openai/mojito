@@ -27,6 +27,7 @@ import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzoneP
 import { AdminAiLocalePromptSuffixPage } from './page/settings/AdminAiLocalePromptSuffixPage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
 import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
+import { AdminGlossaryWorkflowPage } from './page/settings/AdminGlossaryWorkflowPage';
 import { AdminReviewAutomationBatchPage } from './page/settings/AdminReviewAutomationBatchPage';
 import { AdminReviewAutomationDetailPage } from './page/settings/AdminReviewAutomationDetailPage';
 import { AdminReviewAutomationRunsPage } from './page/settings/AdminReviewAutomationRunsPage';
@@ -39,8 +40,8 @@ import { AdminTeamPoolsPage } from './page/settings/AdminTeamPoolsPage';
 import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
 import { AdminTemporaryBulkTranslationAcceptPage } from './page/settings/AdminTemporaryBulkTranslationAcceptPage';
 import {
-  AdminTermIndexCandidateGenerationPage,
-  AdminTermIndexExtractionPage,
+  AdminTermIndexAutomationPage,
+  AdminTermIndexCandidatesPage,
   AdminTermIndexTermsPage,
 } from './page/settings/AdminTermIndexExplorerPage';
 import { AdminTranslationIncidentsPage } from './page/settings/AdminTranslationIncidentsPage';
@@ -194,11 +195,19 @@ export function App() {
             <Route path="/settings/system/glossaries" element={<LegacyGlossariesRedirect />} />
             <Route
               path="/settings/admin/glossary-term-index"
-              element={<AdminTermIndexExtractionPage />}
+              element={<AdminTermIndexAutomationPage />}
             />
             <Route
               path="/settings/system/glossary-term-index"
-              element={<AdminTermIndexExtractionPage />}
+              element={<AdminTermIndexAutomationPage />}
+            />
+            <Route
+              path="/settings/admin/glossary-term-index/workflow"
+              element={<AdminGlossaryWorkflowPage />}
+            />
+            <Route
+              path="/settings/system/glossary-term-index/workflow"
+              element={<AdminGlossaryWorkflowPage />}
             />
             <Route
               path="/settings/admin/glossary-term-index/terms"
@@ -210,11 +219,11 @@ export function App() {
             />
             <Route
               path="/settings/admin/glossary-term-index/candidates"
-              element={<AdminTermIndexCandidateGenerationPage />}
+              element={<AdminTermIndexCandidatesPage />}
             />
             <Route
               path="/settings/system/glossary-term-index/candidates"
-              element={<AdminTermIndexCandidateGenerationPage />}
+              element={<AdminTermIndexCandidatesPage />}
             />
             <Route
               path="/settings/admin/review-automations"

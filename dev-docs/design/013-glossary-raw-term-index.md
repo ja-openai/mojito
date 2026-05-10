@@ -162,16 +162,29 @@ after another run has taken over.
   glossary terms against product source text during the same refresh
 - recomputes entry occurrence and repository counts for affected entries
 
-`/settings/system/glossary-term-index` exposes the admin refresh/run view on top
-of that foundation, and `/settings/system/glossary-term-index/terms` exposes the
-extracted-term investigation view. Together they can start an asynchronous repository-scoped
-refresh from an explicit refresh modal, inspect repository cursors and a capped
-recent-run list, search a virtualized extracted-term list with a Workbench-style
-result limit, and drill into a capped set of matched source occurrences. These
-surfaces are for extractor investigation only; they do not create or link
-glossary terms. Extracted-term search uses the same hybrid async shape as Workbench:
-try the request synchronously first, return a polling token if it crosses the
-configured threshold, and store the eventual result briefly in blob storage.
+`/settings/system/glossary-term-index` exposes the glossary automation dashboard
+on top of that foundation: extract terms, run AI review for unreviewed extracted
+terms, generate missing candidates from accepted extracted terms, and monitor
+recent automation jobs. AI review and candidate generation progress is persisted
+in `term_index_automation_run`, with the backing pollable task kept only for
+task execution and direct task polling. The dashboard job tables read the
+term-index-specific run table so they can recover progress after closing the
+modal or reloading the page without scanning generic pollable-task history.
+`/settings/system/glossary-term-index/terms` exposes the manual extracted-term investigation view, and
+`/settings/system/glossary-term-index/candidates` exposes the stored
+`term_index_candidate` review queue. The candidate queue searches candidate rows,
+lets PM/admin users edit candidate metadata, change candidate review status in
+bulk for selected rows, and route selected candidates into review projects. Source occurrences remain
+evidence linked through the optional extracted-term id; they are not the row
+identity for the candidate page. These system surfaces do not directly activate
+glossary terms; candidate acceptance or PM resolution performs that promotion.
+Together the system pages can start asynchronous repository-scoped refreshes,
+inspect repository cursors and capped recent-run lists, search virtualized rows
+with Workbench-style result limits, and drill into capped source occurrence
+examples where they exist.
+Extracted-term search uses the same hybrid async shape as Workbench: try the
+request synchronously first, return a polling token if it crosses the configured
+threshold, and store the eventual result briefly in blob storage.
 
 The glossary workspace now uses this foundation for per-glossary curation:
 
@@ -229,25 +242,48 @@ pages.
 
 ## Glossary Build Workflow
 
-1. PM/admin creates the glossary and defines its repository or product scope.
-2. Trusted existing terminology, such as legacy glossary files or already-reviewed
-   imports, can be imported directly into the glossary.
-3. The term index extracts raw source terms from repositories. AI or another
-   source reviews those raw extractions and generates candidate metadata:
-   definition, rationale, term type, part of speech, enforcement, and
-   `doNotTranslate`.
-4. PM/admin creates a candidate review project from generated candidates and
-   chooses the target glossary. Vendor/advisor reviewers work in the review
-   project, not in the system term-index pages.
-5. PM/admin resolves the review project. Approval promotes the candidate into the
-   target glossary. Rejection records a human rejection and a glossary-specific
-   ignore decision without creating a glossary term.
-6. Glossary review projects are for already-created glossary terms and cleanup,
-   not for initial generated-candidate intake.
+1. Human: PM/admin creates the glossary and defines its repository or product
+   scope. The existing glossary description should capture purpose,
+   include/exclude guidance, and product context for future assignment
+   automation. Future automation may suggest the target glossary from that
+   description plus structured scope and existing terms, but the current release
+   keeps the target glossary explicit.
+2. Human or external automation: trusted existing terminology, such as legacy
+   glossary files, MCP submissions, or already-reviewed imports, can be imported
+   directly into the glossary.
+3. Automation: the term index extracts raw source terms from repositories. This
+   produces glossary-neutral extracted terms and occurrence evidence.
+4. Automation: AI/system triage reviews raw extracted terms. Admins can override
+   this from the system term-index pages when needed, but raw-term triage is not
+   intended to become a normal vendor review lane.
+5. Automation: AI, MCP, import, or another candidate source writes
+   `term_index_candidate` proposals with candidate metadata:
+   term, definition, rationale, term type, part of speech, enforcement,
+   `doNotTranslate`, and confidence. The automation dashboard supports the
+   default batch path from accepted extracted terms in the current scope. Batch
+   candidate generation uses an explicit per-run limit and is capped
+   server-side. This still does not create glossary terms.
+6. Human setup: PM/admin creates a candidate review project from generated candidates
+   and chooses an optional target glossary, review team, optional advisors, and
+   optional decider. This is routing, not linguistic review. Vendor/advisor
+   reviewers work in the review project, not in the system term-index pages.
+7. Optional human review: vendors/advisors review the candidate proposals and
+   provide specialist input when advisors are selected. They do not directly
+   create glossary terms.
+8. Human promotion gate, ideally batch: the PM/admin decider resolves approved
+   and rejected proposals. Approval always accepts the candidate quality decision.
+   If the project has a target glossary and glossary inclusion is enabled for the
+   row, approval also promotes the candidate into that glossary. Rejection records
+   a human rejection and, when a target glossary exists, a glossary-specific ignore
+   decision without creating a glossary term. This should not be treated as a
+   second full linguistic review.
+9. Optional human or automation lanes: active source-term review and glossary
+   translation review are cleanup/quality passes after terms exist. They are not
+   required for every generated-candidate intake.
 
-Current limitations: candidate review creation is anchored to extracted-term
-occurrences, so pure MCP/manual candidates without a source text-unit occurrence
-need follow-up support before they can enter review projects directly. Candidate
+Current limitations: candidate review can route pure MCP/manual candidates, but
+their review evidence is limited to candidate metadata until they are linked to
+occurrences or promoted into glossary terms with screenshot evidence. Candidate
 review currently shows text/rationale evidence; screenshot evidence belongs to
 accepted glossary terms.
 

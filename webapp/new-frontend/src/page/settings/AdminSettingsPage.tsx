@@ -103,12 +103,24 @@ export function AdminSettingsPage() {
                 type="button"
                 className="settings-directory__card"
                 onClick={() => {
+                  void navigate('/settings/system/glossary-term-index/workflow');
+                }}
+              >
+                <div className="settings-directory__title">Glossary workflow</div>
+                <div className="settings-directory__description">
+                  See which glossary build steps are automated and where humans decide.
+                </div>
+              </button>
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
                   void navigate('/settings/system/glossary-term-index');
                 }}
               >
-                <div className="settings-directory__title">Term index runs</div>
+                <div className="settings-directory__title">Glossary automation</div>
                 <div className="settings-directory__description">
-                  Refresh the raw term index and inspect repository cursor status.
+                  Extract terms, run AI review, generate candidates, and monitor automation jobs.
                 </div>
               </button>
               <button
@@ -118,7 +130,7 @@ export function AdminSettingsPage() {
                   void navigate('/settings/system/glossary-term-index/terms');
                 }}
               >
-                <div className="settings-directory__title">Raw term review</div>
+                <div className="settings-directory__title">Extracted terms</div>
                 <div className="settings-directory__description">
                   Search indexed raw terms and inspect source text unit examples.
                 </div>
@@ -130,9 +142,9 @@ export function AdminSettingsPage() {
                   void navigate('/settings/system/glossary-term-index/candidates');
                 }}
               >
-                <div className="settings-directory__title">Candidate generation</div>
+                <div className="settings-directory__title">Candidates</div>
                 <div className="settings-directory__description">
-                  Turn reviewed extracted terms into glossary candidate suggestions.
+                  Inspect generated glossary candidate suggestions and create review projects.
                 </div>
               </button>
             </div>
