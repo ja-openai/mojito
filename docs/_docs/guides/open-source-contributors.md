@@ -311,14 +311,14 @@ OpenJDK 64-Bit Server VM Homebrew (build 21.0.8, mixed mode, sharing)
 
 ### Check Maven version
 
-Maven 3.8+ should work fine. Consider trying the Maven wrapper `mvnw` from the project if you have any issue with Maven or don't want to install it.
+Maven 3.9+ should work fine. Consider trying the Maven wrapper `mvnw` from the project if you have any issue with Maven or don't want to install it.
     
 If you have multiple version of Java installed, make sure Maven uses the right version (forth line):
 
 ```sh
 [01:21:31] ~ $  mvn -version
-Apache Maven 3.8.1 (05c21c65bdfed0f71a2f2ada8b84da59348c4c5d)
-Maven home: /Users/ja/.m2/wrapper/dists/apache-maven-3.8.1-bin/5jr7905sp869ck60ofuug4vpod/apache-maven-3.8.1
+Apache Maven 3.9.15
+Maven home: ~/.m2/wrapper/dists/apache-maven-3.9.15-bin
 Java version: 21.0.8, vendor: Homebrew, runtime: /opt/homebrew/Cellar/openjdk@21/21.0.8/libexec/openjdk.jdk/Contents/Home
 Default locale: en_US, platform encoding: UTF-8
 OS name: "mac os x", version: "15.5", arch: "aarch64", family: "mac"
@@ -330,6 +330,6 @@ If you see an error like:
 
 `Caused by: java.lang.NoClassDefFoundError: javax/xml/bind/ValidationException`
 
-you most likely have a wrong version of Java. Java 8 is required. See [Check Java version](#check-java-version)
+you most likely have a wrong version of Java. Java 21 is required. See [Check Java version](#check-java-version)
 
 

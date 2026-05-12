@@ -441,6 +441,7 @@
                     <showWeaveInfo>false</showWeaveInfo>
                     <deprecation>false</deprecation>
                     <complianceLevel>${java.version}</complianceLevel>
+                    <parameters>true</parameters>
                     <proc>none</proc>
                     <weaveDependencies>
 
