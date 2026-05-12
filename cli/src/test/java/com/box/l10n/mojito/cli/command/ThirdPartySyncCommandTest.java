@@ -95,7 +95,8 @@ public class ThirdPartySyncCommandTest extends CLITestBase {
             "10",
             "-o",
             options.get(0),
-            options.get(1));
+            options.get(1),
+            options.get(2));
 
     String output = outputCapture.toString();
     assertThat(output).contains("repository: " + repository.getName());

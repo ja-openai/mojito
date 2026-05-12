@@ -4,6 +4,7 @@ import static org.fusesource.jansi.Ansi.Color.CYAN;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.beust.jcommander.converters.IParameterSplitter;
 import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.cli.console.ConsoleWriter;
 import com.box.l10n.mojito.rest.ThirdPartySyncAction;
@@ -112,6 +113,7 @@ public class ThirdPartySyncCommand extends Command {
   @Parameter(
       names = {"--options", "-o"},
       variableArity = true,
+      splitter = ThirdPartySyncCommand.NoOptionSplitter.class,
       required = false,
       description = "Options to synchronize")
   List<String> options;
@@ -119,6 +121,14 @@ public class ThirdPartySyncCommand extends Command {
   @Autowired ThirdPartyClient thirdPartyClient;
 
   @Autowired CommandHelper commandHelper;
+
+  public static class NoOptionSplitter implements IParameterSplitter {
+
+    @Override
+    public List<String> split(String value) {
+      return List.of(value);
+    }
+  }
 
   @Override
   public void execute() throws CommandException {
