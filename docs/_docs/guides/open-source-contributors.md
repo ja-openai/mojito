@@ -152,7 +152,7 @@ l10n.flyway.clean=true
 spring.datasource.url=jdbc:mysql://localhost:3306/mojito?characterEncoding=UTF-8&useUnicode=true
 spring.datasource.username=mojito
 spring.datasource.password=mojito
-spring.datasource.driverClassName=com.mysql.jdbc.Driver
+spring.datasource.driverClassName=com.mysql.cj.jdbc.Driver
 
 l10n.org.quartz.jobStore.useProperties=true
 l10n.org.quartz.scheduler.instanceId=AUTO
@@ -162,7 +162,7 @@ l10n.org.quartz.jobStore.class=org.quartz.impl.jdbcjobstore.JobStoreTX
 l10n.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.StdJDBCDelegate
 l10n.org.quartz.jobStore.dataSource=myDS
 l10n.org.quartz.dataSource.myDS.provider=hikaricp
-l10n.org.quartz.dataSource.myDS.driver=com.mysql.jdbc.Driver
+l10n.org.quartz.dataSource.myDS.driver=com.mysql.cj.jdbc.Driver
 l10n.org.quartz.dataSource.myDS.URL=jdbc:mysql://localhost:3306/mojito?characterEncoding=UTF-8&useUnicode=true
 l10n.org.quartz.dataSource.myDS.user=mojito
 l10n.org.quartz.dataSource.myDS.password=mojito
@@ -331,5 +331,3 @@ If you see an error like:
 `Caused by: java.lang.NoClassDefFoundError: javax/xml/bind/ValidationException`
 
 you most likely have a wrong version of Java. Java 21 is required. See [Check Java version](#check-java-version)
-
-
