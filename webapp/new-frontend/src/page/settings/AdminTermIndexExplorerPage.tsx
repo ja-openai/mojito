@@ -4434,9 +4434,7 @@ function TermIndexReviewOverrideModal({
             <select
               className="settings-input"
               value={draft.reviewStatus}
-              onChange={(event) =>
-                updateDraft('reviewStatus', event.target.value as ApiTermIndexReviewStatus)
-              }
+              onChange={(event) => updateDraft('reviewStatus', event.target.value)}
               disabled={isSaving}
             >
               {REVIEW_STATUS_OPTIONS.map((option) => (
@@ -4576,9 +4574,7 @@ function TermIndexBatchReviewModal({
           <select
             className="settings-input"
             value={draft.reviewStatus}
-            onChange={(event) =>
-              updateDraft('reviewStatus', event.target.value as ApiTermIndexReviewStatus)
-            }
+            onChange={(event) => updateDraft('reviewStatus', event.target.value)}
             disabled={isSaving}
           >
             {REVIEW_STATUS_OPTIONS.map((option) => (

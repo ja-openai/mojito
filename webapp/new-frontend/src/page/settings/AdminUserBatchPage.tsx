@@ -248,7 +248,7 @@ export function AdminUserBatchPage() {
     }
     setColumnMapping((prev) => [
       ...prev,
-      ...Array.from({ length: maxColumns - prev.length }, () => 'ignore' as ColumnKey),
+      ...Array.from({ length: maxColumns - prev.length }, (): ColumnKey => 'ignore'),
     ]);
   }, [columnMapping.length, maxColumns]);
 

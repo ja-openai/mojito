@@ -1178,7 +1178,7 @@ function FilterControls({
           {
             kind: 'radio',
             label: 'Type',
-            options: filters.typeOptions as Array<FilterOption<string | number>>,
+            options: filters.typeOptions,
             value: filters.typeValue as string,
             onChange: (value) => filters.onTypeChange(value as ApiReviewProjectType | 'all'),
           },

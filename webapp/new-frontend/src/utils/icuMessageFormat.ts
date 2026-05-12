@@ -195,7 +195,7 @@ export function getPluralCategories(locale: string): IcuPluralCategory[] {
 
   const categories = rules.resolvedOptions().pluralCategories ?? [];
   const normalized = categories.filter((category): category is IcuPluralCategory =>
-    ICU_PLURAL_CATEGORIES.includes(category as IcuPluralCategory),
+    ICU_PLURAL_CATEGORIES.includes(category),
   );
   if (normalized.length === 0) {
     return ['other'];
