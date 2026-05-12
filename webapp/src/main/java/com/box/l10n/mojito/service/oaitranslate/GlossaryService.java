@@ -251,6 +251,9 @@ public class GlossaryService {
         metadataByTmTextUnitId.values().stream().map(GlossaryTermMetadata::getId).toList();
     Map<Long, Long> metadataIdToTmTextUnitId =
         metadataByTmTextUnitId.values().stream()
+            .filter(metadata -> metadata.getId() != null)
+            .filter(metadata -> metadata.getTmTextUnit() != null)
+            .filter(metadata -> metadata.getTmTextUnit().getId() != null)
             .collect(
                 java.util.stream.Collectors.toMap(
                     GlossaryTermMetadata::getId, metadata -> metadata.getTmTextUnit().getId()));

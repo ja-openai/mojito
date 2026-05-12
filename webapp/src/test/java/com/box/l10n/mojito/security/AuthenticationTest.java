@@ -23,6 +23,8 @@ public class AuthenticationTest extends WSTestBase {
   /** logger */
   static Logger logger = LoggerFactory.getLogger(AuthenticationTest.class);
 
+  private static final String AUTHENTICATED_ENDPOINT = "/api/users/session";
+
   @Autowired
   FormLoginAuthenticationCsrfTokenInterceptor formLoginAuthenticationCsrfTokenInterceptor;
 
@@ -40,22 +42,25 @@ public class AuthenticationTest extends WSTestBase {
 
   @Test
   public void testSuccessfulAuth() {
-    ResponseEntity<String> result = authenticatedRestTemplate.getForEntity("", String.class);
+    ResponseEntity<String> result =
+        authenticatedRestTemplate.getForEntity(AUTHENTICATED_ENDPOINT, String.class);
     Assert.assertEquals(HttpStatus.SC_OK, result.getStatusCode().value());
   }
 
   @Test
   public void testSuccessfulAuthMultipleRequests() {
-    ResponseEntity<String> result = authenticatedRestTemplate.getForEntity("", String.class);
+    ResponseEntity<String> result =
+        authenticatedRestTemplate.getForEntity(AUTHENTICATED_ENDPOINT, String.class);
     Assert.assertEquals(HttpStatus.SC_OK, result.getStatusCode().value());
 
-    result = authenticatedRestTemplate.getForEntity("", String.class);
+    result = authenticatedRestTemplate.getForEntity(AUTHENTICATED_ENDPOINT, String.class);
     Assert.assertEquals(HttpStatus.SC_OK, result.getStatusCode().value());
   }
 
   @Test
   public void testSuccessfulAuthAfterResettingCookieStore() {
-    ResponseEntity<String> result = authenticatedRestTemplate.getForEntity("", String.class);
+    ResponseEntity<String> result =
+        authenticatedRestTemplate.getForEntity(AUTHENTICATED_ENDPOINT, String.class);
     Assert.assertEquals(HttpStatus.SC_OK, result.getStatusCode().value());
 
     logger.debug(
@@ -64,7 +69,7 @@ public class AuthenticationTest extends WSTestBase {
     cookieStore.clear();
 
     logger.debug("The subsequent request is still fine");
-    result = authenticatedRestTemplate.getForEntity("", String.class);
+    result = authenticatedRestTemplate.getForEntity(AUTHENTICATED_ENDPOINT, String.class);
     Assert.assertEquals(HttpStatus.SC_OK, result.getStatusCode().value());
   }
 
@@ -83,7 +88,7 @@ public class AuthenticationTest extends WSTestBase {
           }
         });
 
-    String result = authenticatedRestTemplate.getForObject("", String.class);
+    String result = authenticatedRestTemplate.getForObject(AUTHENTICATED_ENDPOINT, String.class);
   }
 
   @Test(expected = SessionAuthenticationException.class)
@@ -101,6 +106,6 @@ public class AuthenticationTest extends WSTestBase {
           }
         });
 
-    String result = authenticatedRestTemplate.getForObject("", String.class);
+    String result = authenticatedRestTemplate.getForObject(AUTHENTICATED_ENDPOINT, String.class);
   }
 }

@@ -33,9 +33,9 @@ public interface PollableTaskRepository extends JpaRepository<PollableTask, Long
    */
   @Query(
       """
-      select pt from #{#entityName} pt
-      where pt.finishedDate is null
-      and (unix_timestamp(pt.createdDate) + pt.timeout) < unix_timestamp(:now)
-      """)
+	      select pt from #{#entityName} pt
+	      where pt.finishedDate is null
+	      and (cast(unix_timestamp(pt.createdDate) as long) + pt.timeout) < cast(unix_timestamp(:now) as long)
+	      """)
   List<PollableTask> findZombiePollableTasks(@Param("now") ZonedDateTime now, Pageable pageable);
 }

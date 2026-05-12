@@ -155,7 +155,22 @@ public class CurrentVariantRollbackService {
     AuditQuery auditQuery = buildInsertAuditQuery(rollbackDateTime, tmId, extraParameters);
     List<TMTextUnitCurrentVariant> tmTextUnitCurrentVariantsToAdd =
         (List<TMTextUnitCurrentVariant>) auditQuery.getResultList();
-    tmTextUnitCurrentVariantRepository.saveAll(tmTextUnitCurrentVariantsToAdd);
+    tmTextUnitCurrentVariantRepository.saveAll(
+        tmTextUnitCurrentVariantsToAdd.stream().map(this::copyAsNewCurrentVariant).toList());
+  }
+
+  private TMTextUnitCurrentVariant copyAsNewCurrentVariant(
+      TMTextUnitCurrentVariant currentVariantAtRollbackDate) {
+    TMTextUnitCurrentVariant currentVariant = new TMTextUnitCurrentVariant();
+    currentVariant.setTm(currentVariantAtRollbackDate.getTm());
+    currentVariant.setAsset(currentVariantAtRollbackDate.getAsset());
+    currentVariant.setTmTextUnit(currentVariantAtRollbackDate.getTmTextUnit());
+    currentVariant.setTmTextUnitVariant(currentVariantAtRollbackDate.getTmTextUnitVariant());
+    currentVariant.setLocale(currentVariantAtRollbackDate.getLocale());
+    currentVariant.setCreatedByUser(currentVariantAtRollbackDate.getCreatedByUser());
+    currentVariant.setCreatedDate(currentVariantAtRollbackDate.getCreatedDate());
+    currentVariant.setLastModifiedDate(currentVariantAtRollbackDate.getLastModifiedDate());
+    return currentVariant;
   }
 
   /**
