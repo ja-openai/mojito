@@ -46,7 +46,7 @@ public class CSVFilter extends CommaSeparatedValuesFilter {
    * @return
    */
   @Override
-  protected boolean processTU(ITextUnit textUnit) {
+  protected boolean processTU(ITextUnit textUnit, ITextUnit referentTus) {
 
     Property note = textUnit.getProperty(NoteAnnotation.LOC_NOTE);
     if (note != null) {
@@ -57,6 +57,6 @@ public class CSVFilter extends CommaSeparatedValuesFilter {
       note.setValue(comments);
     }
 
-    return super.processTU(textUnit);
+    return super.processTU(textUnit, referentTus);
   }
 }
