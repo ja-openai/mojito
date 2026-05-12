@@ -7,9 +7,6 @@ alter table term_index_occurrence
 alter table term_index_refresh_run_entry
     drop foreign key FK__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_ENTRY;
 
-alter table term_index_refresh_run_entry
-    drop index I__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_ENTRY;
-
 alter table glossary_term_index_link
     drop foreign key FK__GLOSSARY_TERM_INDEX_LINK__TERM_METADATA;
 
@@ -59,16 +56,18 @@ alter table term_index_occurrence
     change column term_index_entry_id term_index_extracted_term_id bigint(20) not null;
 
 alter table term_index_occurrence
-    rename index I__TERM_INDEX_OCCURRENCE__REPOSITORY_ENTRY
-    to I__TERM_INDEX_OCCURRENCE__REPOSITORY_EXTRACTED_TERM;
+    add constraint UK__TERM_INDEX_OCCURRENCE__EXTRACTED_TERM_TU_SPAN
+        unique (term_index_extracted_term_id, tm_text_unit_id, start_index, end_index, extractor_id);
+
+create index I__TERM_INDEX_OCCURRENCE__REPOSITORY_EXTRACTED_TERM
+    on term_index_occurrence(repository_id, term_index_extracted_term_id);
 
 alter table term_index_occurrence
     add constraint FK__TERM_INDEX_OCCURRENCE__EXTRACTED_TERM
         foreign key (term_index_extracted_term_id) references term_index_extracted_term (id);
 
 alter table term_index_occurrence
-    add constraint UK__TERM_INDEX_OCCURRENCE__EXTRACTED_TERM_TU_SPAN
-        unique (term_index_extracted_term_id, tm_text_unit_id, start_index, end_index, extractor_id);
+    drop index I__TERM_INDEX_OCCURRENCE__REPOSITORY_ENTRY;
 
 alter table term_index_refresh_run
     change column entry_count extracted_term_count bigint(20) not null default 0,
@@ -84,12 +83,15 @@ create unique index UK__TERM_INDEX_REFRESH_RUN__POLLABLE_TASK
 alter table term_index_refresh_run_entry
     change column term_index_entry_id term_index_extracted_term_id bigint(20) not null;
 
+create index I__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_EXTRACTED_TERM
+    on term_index_refresh_run_entry(term_index_extracted_term_id);
+
 alter table term_index_refresh_run_entry
     add constraint FK__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_EXTRACTED_TERM
         foreign key (term_index_extracted_term_id) references term_index_extracted_term (id);
 
-create index I__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_EXTRACTED_TERM
-    on term_index_refresh_run_entry(term_index_extracted_term_id);
+alter table term_index_refresh_run_entry
+    drop index I__TERM_INDEX_REFRESH_RUN_ENTRY__TERM_INDEX_ENTRY;
 
 create table term_index_candidate (
     id bigint(20) NOT NULL AUTO_INCREMENT,
