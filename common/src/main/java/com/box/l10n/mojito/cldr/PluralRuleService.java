@@ -1,8 +1,12 @@
 package com.box.l10n.mojito.cldr;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.ibm.icu.text.PluralRules;
 import com.ibm.icu.util.ULocale;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -15,15 +19,38 @@ import java.util.Set;
  */
 public class PluralRuleService {
 
+  private static final Set<String> ONE_OTHER_KEYWORDS = ImmutableSet.of("one", "other");
+
+  private static final Map<String, Set<String>> KEYWORDS_BY_LANGUAGE_OVERRIDE =
+      ImmutableMap.<String, Set<String>>builder()
+          .put("ca", ONE_OTHER_KEYWORDS)
+          .put("es", ONE_OTHER_KEYWORDS)
+          .put("fr", ONE_OTHER_KEYWORDS)
+          .put("it", ONE_OTHER_KEYWORDS)
+          .put("pt", ONE_OTHER_KEYWORDS)
+          .put("scn", ONE_OTHER_KEYWORDS)
+          .put("mt", ImmutableSet.of("few", "many", "one", "other"))
+          .put("he", ImmutableSet.of("many", "one", "two", "other"))
+          .put("iw", ImmutableSet.of("many", "one", "two", "other"))
+          .build();
+
   public static Set<String> getKeywords(Locale locale) {
-    return PluralRules.forLocale(locale).getKeywords();
+    return getKeywordOverride(locale.toLanguageTag())
+        .orElseGet(() -> PluralRules.forLocale(locale).getKeywords());
   }
 
   public static Set<String> getKeywords(ULocale locale) {
-    return PluralRules.forLocale(locale).getKeywords();
+    return getKeywordOverride(locale.toLanguageTag())
+        .orElseGet(() -> PluralRules.forLocale(locale).getKeywords());
   }
 
   public static Set<String> getKeywordsForLanguageTag(String bcp47Tag) {
     return getKeywords(ULocale.forLanguageTag(bcp47Tag));
+  }
+
+  private static Optional<Set<String>> getKeywordOverride(String bcp47Tag) {
+    ULocale locale = ULocale.forLanguageTag(bcp47Tag);
+    Set<String> keywords = KEYWORDS_BY_LANGUAGE_OVERRIDE.get(locale.getLanguage());
+    return Optional.ofNullable(keywords);
   }
 }

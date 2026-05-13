@@ -20,9 +20,10 @@ Mojito plural forms that do not exist in standard generated PO files.
 
 ## Decision
 
-Introduce `PluralRuleService` as the single wrapper for CLDR plural keyword lookup. The first
-version delegates directly to ICU and should be behavior-preserving. Its purpose is to make the
-ICU dependency boundary explicit before we decide how to handle changed keyword sets.
+Introduce `PluralRuleService` as the single wrapper for CLDR plural keyword lookup. ICU4J can be
+upgraded behind this boundary while Mojito pins the keyword sets that changed between ICU4J 64.2
+and 78.3. This keeps the dependency update separate from any product decision to expose new CLDR
+forms in the database, PO import/export, or statistics.
 
 ## Tradeoffs
 
