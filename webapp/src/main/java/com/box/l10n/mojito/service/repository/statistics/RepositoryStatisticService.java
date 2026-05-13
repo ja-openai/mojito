@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.repository.statistics;
 import static com.box.l10n.mojito.utils.Predicates.not;
 import static com.box.l10n.mojito.utils.TaskExecutorUtils.waitForAllFutures;
 
+import com.box.l10n.mojito.cldr.PluralRuleService;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.entity.RepositoryLocaleStatistic;
@@ -27,7 +28,6 @@ import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
 import com.google.common.collect.ImmutableList;
-import com.ibm.icu.text.PluralRules;
 import com.ibm.icu.util.ULocale;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -547,7 +547,6 @@ public class RepositoryStatisticService {
 
   private Long computeDiffToSourceLocaleCount(String targetLocaleBcp47Tag) {
     ULocale targetLocale = ULocale.forLanguageTag(targetLocaleBcp47Tag);
-    PluralRules pluralRulesTargetLocale = PluralRules.forLocale(targetLocale);
-    return 6L - pluralRulesTargetLocale.getKeywords().size();
+    return 6L - PluralRuleService.getKeywords(targetLocale).size();
   }
 }

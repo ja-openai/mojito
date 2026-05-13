@@ -1,9 +1,9 @@
 package com.box.l10n.mojito.po;
 
+import com.box.l10n.mojito.cldr.PluralRuleService;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMultimap;
-import com.ibm.icu.text.PluralRules;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -141,8 +141,7 @@ public enum PoPluralRule {
     } else if (mappingForNonDefault.containsKey(forLanguageTag.getLanguage())) {
       poPluralRule = mappingForNonDefault.get(forLanguageTag.getLanguage());
     } else if (!Strings.isNullOrEmpty(bcp47tag) && !"und".equals(bcp47tag)) {
-      PluralRules cldrPluralRule = PluralRules.forLocale(Locale.forLanguageTag(bcp47tag));
-      if (cldrPluralRule.getKeywords().size() == 1) {
+      if (PluralRuleService.getKeywords(Locale.forLanguageTag(bcp47tag)).size() == 1) {
         poPluralRule = PoPluralRule.ONE_FORM;
       }
     }

@@ -1,8 +1,8 @@
 package com.box.l10n.mojito.okapi.filters;
 
+import com.box.l10n.mojito.cldr.PluralRuleService;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
-import com.ibm.icu.text.PluralRules;
 import com.ibm.icu.util.ULocale;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,8 +58,7 @@ public abstract class PluralsHolder {
   void retainForms(LocaleId localeId, List<String> pluralForms) {
     if (localeId != null && !LocaleId.EMPTY.equals(localeId)) {
       ULocale ulocale = ULocale.forLanguageTag(localeId.toBCP47());
-      PluralRules pluralRules = PluralRules.forLocale(ulocale);
-      pluralForms.retainAll(pluralRules.getKeywords());
+      pluralForms.retainAll(PluralRuleService.getKeywords(ulocale));
     }
   }
 

@@ -1,6 +1,6 @@
 package com.box.l10n.mojito.po;
 
-import com.ibm.icu.text.PluralRules;
+import com.box.l10n.mojito.cldr.PluralRuleService;
 import java.util.Arrays;
 import java.util.Locale;
 import org.junit.Assert;
@@ -157,8 +157,7 @@ public class PoPluralRuleTest {
   @Test
   public void testCopyFormSize() {
     for (String bcp47tag : PoPluralRule.mappingForNonDefault.keySet()) {
-      PluralRules cldrPluralRule = PluralRules.forLocale(Locale.forLanguageTag(bcp47tag));
-      int cldrSize = cldrPluralRule.getKeywords().size();
+      int cldrSize = PluralRuleService.getKeywords(Locale.forLanguageTag(bcp47tag)).size();
       int poSize = PoPluralRule.fromBcp47Tag(bcp47tag).getCldrForms().size();
       int copySize =
           PoPluralRule.fromBcp47Tag(bcp47tag).getFormsToCopyOnImport().getFormMap().values().size();

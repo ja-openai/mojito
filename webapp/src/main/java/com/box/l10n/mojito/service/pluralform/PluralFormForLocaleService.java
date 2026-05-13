@@ -1,9 +1,9 @@
 package com.box.l10n.mojito.service.pluralform;
 
+import com.box.l10n.mojito.cldr.PluralRuleService;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.PluralFormForLocale;
 import com.box.l10n.mojito.service.locale.LocaleRepository;
-import com.ibm.icu.text.PluralRules;
 import com.ibm.icu.util.ULocale;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,8 +36,7 @@ public class PluralFormForLocaleService {
 
       ULocale forLanguageTag = ULocale.forLanguageTag(locale.getBcp47Tag());
 
-      PluralRules pluralRules = PluralRules.forLocale(forLanguageTag);
-      for (String keyword : pluralRules.getKeywords()) {
+      for (String keyword : PluralRuleService.getKeywords(forLanguageTag)) {
         logger.debug("{} : {} : {}", locale.getId(), locale.getBcp47Tag(), keyword);
 
         PluralFormForLocale pluralFormForLocale = new PluralFormForLocale();
