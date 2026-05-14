@@ -13,7 +13,6 @@ How to use
 
 Backlog
 
-- FRONTEND-01 — Add ESLint/Prettier/Vitest to `webapp/new-frontend` for consistent code quality.
 - DEV-02 — Replace `npm install` with `npm ci` in Maven plugin executions for reproducible builds.
 - DEV-03 — Plan the Spring Boot 4 migration before Spring Boot 3.5 OSS support ends; 3.5 keeps the app on Spring Framework 6 while security patching the current 3.x line.
 - AUTH-01 — Figure out OSS-friendly auth story for static assets + APIs without Cloudflare: likely a tiny reverse proxy that terminates auth and sets a secure cookie for `/` and `/n/**`; dev can mimic edge by injecting `CF-Access-Jwt-Assertion`/`Authorization` headers via Vite proxy; document requirements (covers assets, avoids CSRF if cookies used) so we don’t restart from scratch.
