@@ -489,7 +489,7 @@ public class AssetService {
         virtual,
         branchId);
 
-    final ArrayList<Specification> specifications = new ArrayList<>();
+    final ArrayList<Specification<Asset>> specifications = new ArrayList<>();
 
     if (repositoryId != null) {
       specifications.add(repositoryIdEquals(repositoryId));
@@ -511,9 +511,7 @@ public class AssetService {
       specifications.add(branchId(branchId, deleted));
     }
 
-    List<Asset> all =
-        assetRepository.findAll(
-            Specification.allOf(specifications.toArray(new Specification[specifications.size()])));
+    List<Asset> all = assetRepository.findAll(Specification.allOf(specifications));
     return all;
   }
 

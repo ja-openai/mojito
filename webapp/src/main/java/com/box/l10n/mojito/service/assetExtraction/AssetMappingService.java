@@ -17,7 +17,7 @@ import com.box.l10n.mojito.service.tm.TMRepository;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
+import jakarta.persistence.TypedQuery;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -208,8 +208,9 @@ public class AssetMappingService {
    */
   @Transactional
   protected List<AssetMappingDTO> getExactMatches(Long assetExtractionId, Long tmId, Long assetId) {
-    Query createNativeQuery =
-        entityManager.createNamedQuery("AssetTextUnitToTMTextUnit.getExactMatches");
+    TypedQuery<AssetMappingDTO> createNativeQuery =
+        entityManager.createNamedQuery(
+            "AssetTextUnitToTMTextUnit.getExactMatches", AssetMappingDTO.class);
     createNativeQuery.setParameter(1, assetExtractionId);
     createNativeQuery.setParameter(2, tmId);
     createNativeQuery.setParameter(3, assetId);
