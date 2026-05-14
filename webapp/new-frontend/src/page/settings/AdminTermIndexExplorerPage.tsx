@@ -3325,8 +3325,7 @@ function ExtractedTermTriageModal({
                       value={effectiveReviewAuthorityFilter}
                       onChange={(event) =>
                         updateFilterRequest({
-                          reviewAuthorityFilter: event.target
-                            .value as ApiTermIndexReviewAuthorityFilter,
+                          reviewAuthorityFilter: event.target.value,
                         })
                       }
                       disabled={isReviewing}
@@ -3880,11 +3879,7 @@ function CandidateGenerationModal({
                     <select
                       className="settings-input"
                       value={effectiveReviewAuthorityFilter}
-                      onChange={(event) =>
-                        updateReviewAuthorityFilter(
-                          event.target.value as ApiTermIndexReviewAuthorityFilter,
-                        )
-                      }
+                      onChange={(event) => updateReviewAuthorityFilter(event.target.value)}
                       disabled={isGenerating}
                     >
                       {REVIEW_AUTHORITY_FILTER_OPTIONS.map((option) => (

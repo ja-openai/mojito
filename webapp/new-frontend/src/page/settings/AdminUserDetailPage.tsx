@@ -153,16 +153,16 @@ export function AdminUserDetailPage() {
 
   const isDirty = Boolean(
     userRecord &&
-      (userRecord.canTranslateAllLocales !== canTranslateAllLocalesDraft ||
-        (userRecord.enabled ?? true) !== enabledDraft ||
-        getPrimaryRole(userRecord) !== roleDraft ||
-        isLocaleDirty ||
-        normalizeText(userRecord.username) !== normalizedUsername ||
-        normalizeText(userRecord.givenName) !== normalizedGivenName ||
-        normalizeText(userRecord.surname) !== normalizedSurname ||
-        normalizeText(userRecord.commonName) !== normalizedCommonName ||
-        passwordDirty ||
-        isTeamDirty),
+    (userRecord.canTranslateAllLocales !== canTranslateAllLocalesDraft ||
+      (userRecord.enabled ?? true) !== enabledDraft ||
+      getPrimaryRole(userRecord) !== roleDraft ||
+      isLocaleDirty ||
+      normalizeText(userRecord.username) !== normalizedUsername ||
+      normalizeText(userRecord.givenName) !== normalizedGivenName ||
+      normalizeText(userRecord.surname) !== normalizedSurname ||
+      normalizeText(userRecord.commonName) !== normalizedCommonName ||
+      passwordDirty ||
+      isTeamDirty),
   );
 
   useEffect(() => {
