@@ -140,6 +140,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>${mojito.test.local-config.arg}
+                        ${mojito.test.mockito-agent.arg}
                         -Dspring.profiles.active=${user.name},test -Xmx1024m
                     </argLine>
                 </configuration>

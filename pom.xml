@@ -36,6 +36,7 @@
         <docker.compose.remove.volumes>true</docker.compose.remove.volumes>
         <aspectj.version>1.9.21</aspectj.version>
         <mojito.test.local-config.arg>-Dspring.config.additional-location=optional:file://${user.home}/.l10n/config/${mojito.test.local-config.dir}/</mojito.test.local-config.arg>
+        <mojito.test.mockito-agent.arg>-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</mojito.test.mockito-agent.arg>
     </properties>
 
     <dependencies>

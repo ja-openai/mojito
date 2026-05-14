@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.authentication.configurers.ldap.LdapAuthenticationProviderConfigurer;
@@ -22,9 +23,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 /**
  * @author wyau
@@ -92,7 +94,7 @@ public class WebSecurityConfig {
     activeDirectoryManagerConfigurer.rootDn(activeDirectoryConfig.getRootDn());
     activeDirectoryManagerConfigurer.userServiceDetailMapper(userDetailsContextMapperImpl);
 
-    auth.apply(activeDirectoryManagerConfigurer);
+    auth.with(activeDirectoryManagerConfigurer, Customizer.withDefaults());
   }
 
   void configureDatabase(AuthenticationManagerBuilder auth) throws Exception {
@@ -147,7 +149,7 @@ public class WebSecurityConfig {
     }
 
     // matcher order matters - "everything else" mapping must be last
-    http.authorizeRequests(
+    http.authorizeHttpRequests(
         authorizeRequests ->
             authorizeRequests
                 .requestMatchers(permitMatchers.toArray(String[]::new))
@@ -159,7 +161,7 @@ public class WebSecurityConfig {
                 .authenticated()
                 // local access only for rotation management and logger config
                 .requestMatchers("/actuator/shutdown", "/actuator/loggers/**", "/api/rotation")
-                .hasIpAddress("127.0.0.1")
+                .access(new WebExpressionAuthorizationManager("hasIpAddress('127.0.0.1')"))
                 // Everyone can access the session endpoint
                 .requestMatchers("/api/users/session", "/api/users/me", "/api/users/pw")
                 .authenticated()
@@ -312,11 +314,13 @@ public class WebSecurityConfig {
     // TODO should we just enable caching of static assets, this disabling cache control for
     // everything
     // https://docs.spring.io/spring-security/site/docs/current/reference/html5/#headers-cache-control
-    http.headers().cacheControl().disable();
+    http.headers(headers -> headers.cacheControl(cacheControl -> cacheControl.disable()));
 
     // no csrf on rotation end point - they are accessible only locally
-    http.csrf()
-        .ignoringRequestMatchers("/actuator/shutdown", "/actuator/loggers/**", "/api/rotation");
+    http.csrf(
+        csrf ->
+            csrf.ignoringRequestMatchers(
+                "/actuator/shutdown", "/actuator/loggers/**", "/api/rotation"));
 
     setAuthorizationRequests(
         http,
@@ -325,18 +329,22 @@ public class WebSecurityConfig {
             securityConfig.getActuator().isPrometheusPermitAll()));
 
     logger.debug("For APIs, we don't redirect to login page. Instead we return a 401");
-    http.exceptionHandling()
-        .defaultAuthenticationEntryPointFor(
-            new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), new AntPathRequestMatcher("/api/*"));
+    var pathPatternRequestMatcherBuilder = PathPatternRequestMatcher.withDefaults();
+    http.exceptionHandling(
+        exceptionHandling ->
+            exceptionHandling.defaultAuthenticationEntryPointFor(
+                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                pathPatternRequestMatcherBuilder.matcher("/api/*")));
 
     if (securityConfig.getUnauthRedirectTo() != null) {
       logger.debug(
           "Redirect to: {} instead of login page on authorization exceptions",
           securityConfig.getUnauthRedirectTo());
-      http.exceptionHandling()
-          .defaultAuthenticationEntryPointFor(
-              new LoginUrlAuthenticationEntryPoint(securityConfig.getUnauthRedirectTo()),
-              new AntPathRequestMatcher("/*"));
+      http.exceptionHandling(
+          exceptionHandling ->
+              exceptionHandling.defaultAuthenticationEntryPointFor(
+                  new LoginUrlAuthenticationEntryPoint(securityConfig.getUnauthRedirectTo()),
+                  pathPatternRequestMatcherBuilder.matcher("/*")));
     }
 
     for (SecurityConfig.AuthenticationType authenticationType :

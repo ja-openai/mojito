@@ -12,16 +12,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.util.ReflectionUtils;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(
-    classes = {CustomCreateSessionAttributeInsertQueryConfiguration.class},
+    classes = {CustomCreateSessionAttributeInsertQueryConfiguration.class, DBUtils.class},
     properties = {
       "l10n.spring.session.use-custom-mysql-create-session-attribute-query=true",
       "spring.session.jdbc.table-name=test_table",
@@ -29,11 +29,11 @@ import org.springframework.util.ReflectionUtils;
     })
 public class CustomCreateSessionAttributeInsertQueryConfigurationTest {
 
-  @MockBean DataSource dataSourceMock;
+  @MockitoBean DataSource dataSourceMock;
 
-  @MockBean PlatformTransactionManager platformTransactionManagerMock;
+  @MockitoBean PlatformTransactionManager platformTransactionManagerMock;
 
-  @SpyBean DBUtils dbUtils;
+  @MockitoSpyBean DBUtils dbUtils;
 
   @Autowired JdbcIndexedSessionRepository jdbcIndexedSessionRepository;
 

@@ -441,6 +441,7 @@
                 <configuration>
                     <!-- Sets the VM argument line used when unit tests are run. -->
                     <argLine>${mojito.test.local-config.arg}
+                        ${mojito.test.mockito-agent.arg}
                         -Dspring.profiles.active=${user.name},test -Duser.timezone=UTC
                     </argLine>
 
