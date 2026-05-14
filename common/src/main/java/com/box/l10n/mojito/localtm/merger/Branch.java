@@ -26,6 +26,10 @@ public record Branch(
     return createdAt;
   }
 
+  public Branch withCreatedAt(ZonedDateTime createdAt) {
+    return new Branch(name, createdAt);
+  }
+
   public static class Builder {
     private String name;
     private ZonedDateTime createdAt;
