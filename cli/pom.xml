@@ -16,6 +16,7 @@
     </parent>
 
     <properties>
+        <mojito.test.local-config.dir>cli</mojito.test.local-config.dir>
     </properties>
 
     <dependencies>
@@ -138,7 +139,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>-Dspring.config.additional-location=optional:file://${user.home}/.l10n/config/cli/
+                    <argLine>${mojito.test.local-config.arg}
                         -Dspring.profiles.active=${user.name},test -Xmx1024m
                     </argLine>
                 </configuration>

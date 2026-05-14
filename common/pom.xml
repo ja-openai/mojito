@@ -13,6 +13,10 @@
         <version>0.111-SNAPSHOT</version>
     </parent>
 
+    <properties>
+        <mojito.test.local-config.dir>common</mojito.test.local-config.dir>
+    </properties>
+
     <dependencies>
 
         <dependency>
@@ -461,7 +465,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <!-- Sets the VM argument line used when unit tests are run. -->
-                    <argLine>-Dspring.config.additional-location=optional:file://${user.home}/.l10n/config/common/
+                    <argLine>${mojito.test.local-config.arg}
                         -Dspring.profiles.active=${user.name},test
                     </argLine>
                 </configuration>
