@@ -43,8 +43,8 @@ public class TieredCache extends AbstractValueAdaptingCache {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public <T> T get(Object key, Callable<T> valueLoader) {
-    //noinspection unchecked
     T cacheEntry = (T) lookup(key);
     if (cacheEntry == null) {
       try {

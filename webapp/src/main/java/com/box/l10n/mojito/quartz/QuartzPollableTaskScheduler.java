@@ -209,11 +209,12 @@ public class QuartzPollableTaskScheduler {
     }
   }
 
+  @SuppressWarnings("unchecked")
   <I, O> Class<O> getJobOutputType(QuartzJobInfo<I, O> quartzJobInfo) {
     QuartzPollableJob<I, O> quartzPollableJob = null;
 
     try {
-      quartzPollableJob = quartzJobInfo.getClazz().newInstance();
+      quartzPollableJob = quartzJobInfo.getClazz().getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new RuntimeException("Can't get the output type of the job", e);
     }

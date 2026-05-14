@@ -1,7 +1,7 @@
 package com.box.l10n.mojito.retry;
 
 import com.google.common.collect.ImmutableMap;
-import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.retry.RetryCallback;
 import org.springframework.retry.backoff.ExponentialRandomBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
@@ -15,7 +15,7 @@ public class DeadLockLoserExceptionRetryTemplate {
 
   public DeadLockLoserExceptionRetryTemplate() {
     SimpleRetryPolicy retryPolicy =
-        new SimpleRetryPolicy(5, ImmutableMap.of(DeadlockLoserDataAccessException.class, true));
+        new SimpleRetryPolicy(5, ImmutableMap.of(PessimisticLockingFailureException.class, true));
 
     ExponentialRandomBackOffPolicy exponentialRandomBackOffPolicy =
         new ExponentialRandomBackOffPolicy();

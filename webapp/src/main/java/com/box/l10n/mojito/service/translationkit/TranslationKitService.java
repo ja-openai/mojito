@@ -24,7 +24,7 @@ import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import com.google.common.base.Objects;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
+import jakarta.persistence.TypedQuery;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -329,12 +329,14 @@ public class TranslationKitService {
 
     logger.debug("Get exported and current tuvs for translationKit id: {}", translationKitId);
 
-    Query createNativeQuery =
-        entityManager.createNamedQuery("TranslationKit.exportedAndCurrentTuvs");
+    TypedQuery<TranslationKitExportedImportedAndCurrentTUV> createNativeQuery =
+        entityManager.createNamedQuery(
+            "TranslationKit.exportedAndCurrentTuvs",
+            TranslationKitExportedImportedAndCurrentTUV.class);
     createNativeQuery.setParameter(1, translationKitId);
 
     List<TranslationKitExportedImportedAndCurrentTUV> translationKitExportedAndCurrentTUVs =
-        (List<TranslationKitExportedImportedAndCurrentTUV>) createNativeQuery.getResultList();
+        createNativeQuery.getResultList();
 
     for (TranslationKitExportedImportedAndCurrentTUV translationKitExportedAndCurrentTUV :
         translationKitExportedAndCurrentTUVs) {

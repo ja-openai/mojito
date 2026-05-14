@@ -84,8 +84,8 @@ public class IntegrityCheckerFactory {
       throws IntegrityCheckerInstantiationException {
     try {
       Class<?> clazz = Class.forName(className);
-      return (TextUnitIntegrityChecker) clazz.newInstance();
-    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      return (TextUnitIntegrityChecker) clazz.getDeclaredConstructor().newInstance();
+    } catch (ReflectiveOperationException e) {
       throw new IntegrityCheckerInstantiationException(
           "Cannot create an instance of TextUnitIntegrityChecker using reflection", e);
     }

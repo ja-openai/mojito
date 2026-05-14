@@ -52,6 +52,7 @@ public abstract class QuartzPollableJob<I, O> implements Job {
   public abstract O call(I input) throws Exception;
 
   @Override
+  @SuppressWarnings("unchecked")
   public void execute(JobExecutionContext context) throws JobExecutionException {
 
     Long pollableTaskId = context.getMergedJobDataMap().getLong(POLLABLE_TASK_ID);

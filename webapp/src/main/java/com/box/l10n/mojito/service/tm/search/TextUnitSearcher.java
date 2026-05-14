@@ -51,7 +51,7 @@ public class TextUnitSearcher {
   static Logger logger = LoggerFactory.getLogger(TextUnitSearcher.class);
 
   @Retryable(
-      value = {TextUnitSearcherError.class},
+      retryFor = {TextUnitSearcherError.class},
       backoff = @Backoff(delay = 500, multiplier = 2))
   public TextUnitAndWordCount countTextUnitAndWordCount(TextUnitSearcherParameters searchParameters)
       throws TextUnitSearcherError {
@@ -106,7 +106,7 @@ public class TextUnitSearcher {
    */
   @Transactional
   @Retryable(
-      value = {TextUnitSearcherError.class},
+      retryFor = {TextUnitSearcherError.class},
       backoff = @Backoff(delay = 500, multiplier = 2))
   public List<TextUnitDTO> search(TextUnitSearcherParameters searchParameters) {
 
