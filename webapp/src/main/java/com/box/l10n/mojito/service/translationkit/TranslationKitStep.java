@@ -72,10 +72,11 @@ public class TranslationKitStep extends BasePipelineStep {
 
     TranslationKitTextUnit translationKitTextUnit = new TranslationKitTextUnit();
 
-    translationKitTextUnit.setTranslationKit(translationKitRepository.getOne(translationKitId));
+    translationKitTextUnit.setTranslationKit(
+        translationKitRepository.getReferenceById(translationKitId));
 
     Long textUnitId = Long.valueOf(textUnit.getId());
-    TMTextUnit tmTextUnit = tmTextUnitRepository.getOne(textUnitId);
+    TMTextUnit tmTextUnit = tmTextUnitRepository.getReferenceById(textUnitId);
     translationKitTextUnit.setTmTextUnit(tmTextUnit);
     wordCount += tmTextUnit.getWordCount();
 
@@ -108,7 +109,8 @@ public class TranslationKitStep extends BasePipelineStep {
     TextUnitDTO textUnitDTO = textUnitDTOAnnotations.getTextUnitDTO(textUnit);
 
     if (textUnitDTO != null && textUnitDTO.getTmTextUnitVariantId() != null) {
-      tmTextUnitVariant = tmTextUnitVariantRepository.getOne(textUnitDTO.getTmTextUnitVariantId());
+      tmTextUnitVariant =
+          tmTextUnitVariantRepository.getReferenceById(textUnitDTO.getTmTextUnitVariantId());
     }
 
     return tmTextUnitVariant;

@@ -328,7 +328,7 @@ public class BranchStatisticService {
                     BranchTextUnitStatistic branchTextUnitStatistic = new BranchTextUnitStatistic();
                     branchTextUnitStatistic.setBranchStatistic(branchStatistic);
                     branchTextUnitStatistic.setTmTextUnit(
-                        tmTextUnitRepository.getOne(tmTextUnitId));
+                        tmTextUnitRepository.getReferenceById(tmTextUnitId));
                     branchTextUnitStatistic.setForTranslationCount(forTranslationCount);
                     branchTextUnitStatistic.setTotalCount(totalCount);
 

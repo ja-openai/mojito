@@ -241,7 +241,7 @@ public class VirtualTextUnitBatchUpdaterService {
 
       if (textUnitDTO.isUsed() && md5ToVirtualTextUnits.get(md5) == null) {
         assetTextUnitsToDelete.add(
-            assetTextUnitRepository.getOne(textUnitDTO.getAssetTextUnitId()));
+            assetTextUnitRepository.getReferenceById(textUnitDTO.getAssetTextUnitId()));
         assetTextUnitToTmTextUnitsToDelete.add(textUnitDTO.getAssetTextUnitId());
       }
     }
@@ -308,9 +308,10 @@ public class VirtualTextUnitBatchUpdaterService {
     logger.debug("Map asset text unit to textunit");
     AssetTextUnitToTMTextUnit assetTextUnitToTMTextUnit = new AssetTextUnitToTMTextUnit();
     assetTextUnitToTMTextUnit.setAssetExtraction(
-        assetExtractionRepository.getOne(asset.getLastSuccessfulAssetExtraction().getId()));
+        assetExtractionRepository.getReferenceById(
+            asset.getLastSuccessfulAssetExtraction().getId()));
     assetTextUnitToTMTextUnit.setAssetTextUnit(assetTextUnit);
-    assetTextUnitToTMTextUnit.setTmTextUnit(tmTextUnitRepository.getOne(tmTextUnitId));
+    assetTextUnitToTMTextUnit.setTmTextUnit(tmTextUnitRepository.getReferenceById(tmTextUnitId));
     assetTextUnitToTMTextUnitRepository.save(assetTextUnitToTMTextUnit);
   }
 }

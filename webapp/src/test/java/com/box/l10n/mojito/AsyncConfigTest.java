@@ -3,11 +3,11 @@ package com.box.l10n.mojito;
 import static org.junit.Assert.*;
 
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.junit.Test;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.AsyncResult;
 
 /**
  * @author jaurambault
@@ -23,6 +23,6 @@ public class AsyncConfigTest extends ServiceTestBase {
 
   @Async
   public Future<String> doAsync() {
-    return new AsyncResult<>(Thread.currentThread().getName());
+    return CompletableFuture.completedFuture(Thread.currentThread().getName());
   }
 }

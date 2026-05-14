@@ -9,8 +9,8 @@ import static com.box.l10n.mojito.rest.repository.BranchStatisticSpecification.d
 import static com.box.l10n.mojito.rest.repository.BranchStatisticSpecification.empty;
 import static com.box.l10n.mojito.rest.repository.BranchStatisticSpecification.search;
 import static com.box.l10n.mojito.specification.Specifications.ifParamNotNull;
+import static com.box.l10n.mojito.specification.Specifications.where;
 import static org.slf4j.LoggerFactory.getLogger;
-import static org.springframework.data.jpa.domain.Specification.where;
 
 import com.box.l10n.mojito.aspect.StopWatch;
 import com.box.l10n.mojito.entity.BranchStatistic;

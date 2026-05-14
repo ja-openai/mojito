@@ -453,7 +453,7 @@ public class UserService {
       boolean partiallyCreated) {
     logger.debug("Creating user: {}", username);
 
-    String randomPassword = RandomStringUtils.randomAlphanumeric(15);
+    String randomPassword = RandomStringUtils.secure().nextAlphanumeric(15);
     User userWithRole =
         createUserWithRole(
             username,

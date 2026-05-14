@@ -189,7 +189,7 @@ public class AssetWS {
     logger.debug(
         "Localizing content payload with asset id = {}, and locale id = {}", assetId, localeId);
 
-    Asset asset = assetRepository.getOne(assetId);
+    Asset asset = assetRepository.getReferenceById(assetId);
 
     RepositoryLocale repositoryLocale =
         repositoryLocaleRepository.findByRepositoryIdAndLocaleId(
@@ -235,7 +235,7 @@ public class AssetWS {
       localizedAssetBody.setAssetId(assetId);
     }
 
-    Asset asset = assetRepository.getOne(assetId);
+    Asset asset = assetRepository.getReferenceById(assetId);
     meterRegistry
         .counter(
             "assetWS.getLocalizedAssetForContentAsync",
@@ -271,7 +271,7 @@ public class AssetWS {
 
     multiLocalizedAssetBody.setSchedulerName(schedulerName);
 
-    Asset asset = assetRepository.getOne(assetId);
+    Asset asset = assetRepository.getReferenceById(assetId);
     meterRegistry
         .counter(
             "assetWS.getLocalizedAssetForContentParallel",
@@ -307,7 +307,7 @@ public class AssetWS {
 
     logger.debug("Pseudo localizing content payload with asset id = {}", assetId);
 
-    Asset asset = assetRepository.getOne(assetId);
+    Asset asset = assetRepository.getReferenceById(assetId);
     String normalizedContent = NormalizationUtils.normalize(localizedAssetBody.getContent());
 
     String generateLocalized =

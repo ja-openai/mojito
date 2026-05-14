@@ -229,11 +229,11 @@ public class AssetMappingService {
       AssetTextUnitToTMTextUnit assetTextUnitToTMTextUnit = new AssetTextUnitToTMTextUnit();
 
       assetTextUnitToTMTextUnit.setAssetExtraction(
-          assetExtractionRepository.getOne(exactMatch.getAssetExtractionId()));
+          assetExtractionRepository.getReferenceById(exactMatch.getAssetExtractionId()));
       assetTextUnitToTMTextUnit.setAssetTextUnit(
-          assetTextUnitRepository.getOne(exactMatch.getAssetTextUnitId()));
+          assetTextUnitRepository.getReferenceById(exactMatch.getAssetTextUnitId()));
       assetTextUnitToTMTextUnit.setTmTextUnit(
-          tmTextUnitRepository.getOne(exactMatch.getTmTextUnitId()));
+          tmTextUnitRepository.getReferenceById(exactMatch.getTmTextUnitId()));
       assetTextUnitToTMTextUnits.add(assetTextUnitToTMTextUnit);
     }
     assetTextUnitToTMTextUnits =

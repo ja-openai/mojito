@@ -3,13 +3,13 @@ package com.box.l10n.mojito.service.repository;
 import static com.box.l10n.mojito.rest.repository.RepositorySpecification.deletedEquals;
 import static com.box.l10n.mojito.rest.repository.RepositorySpecification.nameEquals;
 import static com.box.l10n.mojito.specification.Specifications.ifParamNotNull;
+import static com.box.l10n.mojito.specification.Specifications.where;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.slf4j.LoggerFactory.getLogger;
-import static org.springframework.data.jpa.domain.Specification.where;
 
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;

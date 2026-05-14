@@ -2,7 +2,7 @@ package com.box.l10n.mojito.specification;
 
 import static com.box.l10n.mojito.rest.repository.RepositorySpecification.deletedEquals;
 import static com.box.l10n.mojito.specification.Specifications.ifParamNotNull;
-import static org.springframework.data.jpa.domain.Specification.where;
+import static com.box.l10n.mojito.specification.Specifications.where;
 
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;

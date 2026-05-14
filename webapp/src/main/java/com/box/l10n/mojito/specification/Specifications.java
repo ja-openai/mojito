@@ -76,15 +76,26 @@ public class Specifications {
   }
 
   /**
-   * Like {@link org.springframework.data.jpa.domain.Specification.where} but with the query
-   * returning distinct results.
+   * Null-friendly replacement for {@link org.springframework.data.jpa.domain.Specification#where},
+   * which is deprecated for removal.
+   *
+   * @param spec
+   * @param <T>
+   * @return unrestricted specification if {@code spec} is {@code null}, otherwise {@code spec}.
+   */
+  public static <T> Specification<T> where(Specification<T> spec) {
+    return Specification.<T>unrestricted().and(spec);
+  }
+
+  /**
+   * Like {@link Specifications#where(Specification)} but with the query returning distinct results.
    *
    * @param spec
    * @param <T>
    * @return
    */
   public static <T> Specification<T> distinct(Specification<T> spec) {
-    return Specification.where(
+    return where(
         new Specification<T>() {
           @Override
           public Predicate toPredicate(Root<T> root, CriteriaQuery<?> query, CriteriaBuilder cb) {

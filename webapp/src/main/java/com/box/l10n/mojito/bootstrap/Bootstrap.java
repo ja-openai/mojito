@@ -65,7 +65,7 @@ public class Bootstrap implements ApplicationListener<ContextRefreshedEvent> {
   @Transactional
   public void createSystemUser() {
     logger.info("Creating system user with random password");
-    String randomPassword = RandomStringUtils.randomAlphanumeric(15);
+    String randomPassword = RandomStringUtils.secure().nextAlphanumeric(15);
 
     User systemUser =
         userService.createUserWithRole(

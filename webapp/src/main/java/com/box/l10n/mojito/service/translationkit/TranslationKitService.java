@@ -168,7 +168,7 @@ public class TranslationKitService {
 
     logger.debug("Add translation kit entities for dropId: {} and localeId: {}", dropId, localeId);
 
-    Drop drop = dropRepository.getOne(dropId);
+    Drop drop = dropRepository.getReferenceById(dropId);
 
     TranslationKit translationKit = new TranslationKit();
     translationKit.setDrop(drop);

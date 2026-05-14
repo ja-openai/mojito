@@ -232,7 +232,7 @@ public class GitBlameService {
       if (gitBlame == null) {
         logger.debug("No GitBlame information for tmTextUnitId: {}", tmTextUnitId);
         gitBlame = new GitBlame();
-        gitBlame.setTmTextUnit(tmTextUnitRepository.getOne(tmTextUnitId));
+        gitBlame.setTmTextUnit(tmTextUnitRepository.getReferenceById(tmTextUnitId));
       } else {
         logger.debug("Found GitBlame for tmTextUnitId: {}, update", tmTextUnitId);
       }

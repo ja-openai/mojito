@@ -3,8 +3,8 @@ package com.box.l10n.mojito.rest.security;
 import static com.box.l10n.mojito.rest.security.UserSpecification.enabledEquals;
 import static com.box.l10n.mojito.rest.security.UserSpecification.usernameEquals;
 import static com.box.l10n.mojito.specification.Specifications.ifParamNotNull;
+import static com.box.l10n.mojito.specification.Specifications.where;
 import static org.slf4j.LoggerFactory.getLogger;
-import static org.springframework.data.jpa.domain.Specification.where;
 
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.security.user.Authority;

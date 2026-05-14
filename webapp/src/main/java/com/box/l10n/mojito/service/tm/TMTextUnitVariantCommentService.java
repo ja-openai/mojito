@@ -94,7 +94,7 @@ public class TMTextUnitVariantCommentService {
     TMTextUnitVariantComment tmTextUnitVariantComment = new TMTextUnitVariantComment();
 
     tmTextUnitVariantComment.setTmTextUnitVariant(
-        tmTextUnitVariantRepository.getOne(tmTextUnitVariantId));
+        tmTextUnitVariantRepository.getReferenceById(tmTextUnitVariantId));
     tmTextUnitVariantComment.setType(type);
     tmTextUnitVariantComment.setSeverity(severity);
     tmTextUnitVariantComment.setContent(content);

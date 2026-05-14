@@ -82,7 +82,7 @@ public class RepositoryWSTest extends WSTestBase {
       repositoryClient.getRepositoryById(123456789L);
       fail("HTTP error 404 is expected");
     } catch (HttpClientErrorException httpClientErrorException) {
-      assertEquals(404, httpClientErrorException.getRawStatusCode());
+      assertEquals(404, httpClientErrorException.getStatusCode().value());
       assertTrue(
           "The error must have a body that contains a message with details",
           httpClientErrorException

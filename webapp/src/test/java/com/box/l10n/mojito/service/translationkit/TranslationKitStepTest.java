@@ -1,6 +1,6 @@
 package com.box.l10n.mojito.service.translationkit;
 
-import static com.box.l10n.mojito.common.Mocks.getJpaRepositoryMockForGetOne;
+import static com.box.l10n.mojito.common.Mocks.getJpaRepositoryMockForGetReferenceById;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -69,13 +69,13 @@ public class TranslationKitStepTest {
 
     logger.debug("Create mocks");
     TranslationKitRepository mockTranslationKitRepository =
-        getJpaRepositoryMockForGetOne(
+        getJpaRepositoryMockForGetReferenceById(
             TranslationKitRepository.class, TranslationKit.class, translationKitId);
     TMTextUnitVariantRepository mockTmTextUnitVariantRepository =
-        getJpaRepositoryMockForGetOne(
+        getJpaRepositoryMockForGetReferenceById(
             TMTextUnitVariantRepository.class, TMTextUnitVariant.class, tmTextUnitVariantId);
     TMTextUnitRepository mockTmTextUnitRepository = mock(TMTextUnitRepository.class);
-    when(mockTmTextUnitRepository.getOne(tmTextUnitId)).thenReturn(tmTextUnit);
+    when(mockTmTextUnitRepository.getReferenceById(tmTextUnitId)).thenReturn(tmTextUnit);
 
     logger.debug("Create instance to be tested, inject mocks and state");
     TranslationKitStep translationKitStep = new TranslationKitStep(translationKitId);
@@ -151,7 +151,7 @@ public class TranslationKitStepTest {
 
     logger.debug("Create mocks");
     TMTextUnitVariantRepository mockTmTextUnitVariantRepository =
-        getJpaRepositoryMockForGetOne(
+        getJpaRepositoryMockForGetReferenceById(
             TMTextUnitVariantRepository.class, TMTextUnitVariant.class, tmTextUnitVariantId);
 
     logger.debug("Create instance to be tested, inject mocks and state");

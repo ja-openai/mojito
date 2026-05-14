@@ -61,7 +61,7 @@ public class PollableTaskService {
     PollableTask pollableTask = new PollableTask();
 
     if (parentId != null) {
-      pollableTask.setParentTask(pollableTaskRepository.getOne(parentId));
+      pollableTask.setParentTask(pollableTaskRepository.getReferenceById(parentId));
     }
 
     pollableTask.setExpectedSubTaskNumber(expectedSubTaskNumber);

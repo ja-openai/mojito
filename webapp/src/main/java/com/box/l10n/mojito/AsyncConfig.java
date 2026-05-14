@@ -5,7 +5,7 @@ import org.springframework.context.annotation.AdviceMode;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.AsyncTaskExecutor;
-import org.springframework.scheduling.annotation.AsyncConfigurerSupport;
+import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecutor;
@@ -15,7 +15,7 @@ import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecu
  */
 @Configuration
 @EnableAsync(mode = AdviceMode.ASPECTJ)
-public class AsyncConfig extends AsyncConfigurerSupport {
+public class AsyncConfig implements AsyncConfigurer {
 
   /**
    * When using aspectJ + @EnableAsync, there is no default executor. Need to create one.

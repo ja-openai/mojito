@@ -821,7 +821,7 @@ public class AssetExtractionService {
                     assetTextUnitToTMTextUnit.setAssetExtraction(assetExtraction);
                     assetTextUnitToTMTextUnit.setAssetTextUnit(assetTextUnit);
                     assetTextUnitToTMTextUnit.setTmTextUnit(
-                        tmTextUnitRepository.getOne(bstu.getTmTextUnitId()));
+                        tmTextUnitRepository.getReferenceById(bstu.getTmTextUnitId()));
                     assetTextUnitToTMTextUnitRepository.save(assetTextUnitToTMTextUnit);
 
                     return bstu.withAssetTextUnitId(assetTextUnit.getId());
@@ -1646,7 +1646,7 @@ public class AssetExtractionService {
         comment);
 
     AssetTextUnit assetTextUnit = new AssetTextUnit();
-    assetTextUnit.setAssetExtraction(assetExtractionRepository.getOne(assetExtractionId));
+    assetTextUnit.setAssetExtraction(assetExtractionRepository.getReferenceById(assetExtractionId));
     assetTextUnit.setName(name);
     assetTextUnit.setContent(content);
     assetTextUnit.setComment(comment);

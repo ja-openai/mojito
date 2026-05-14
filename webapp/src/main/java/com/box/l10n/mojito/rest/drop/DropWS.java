@@ -4,7 +4,7 @@ import static com.box.l10n.mojito.rest.drop.DropSpecification.isCanceled;
 import static com.box.l10n.mojito.rest.drop.DropSpecification.isImported;
 import static com.box.l10n.mojito.rest.drop.DropSpecification.repositoryIdEquals;
 import static com.box.l10n.mojito.specification.Specifications.ifParamNotNull;
-import static org.springframework.data.jpa.domain.Specification.where;
+import static com.box.l10n.mojito.specification.Specifications.where;
 
 import com.box.l10n.mojito.entity.Drop;
 import com.box.l10n.mojito.entity.PollableTask;

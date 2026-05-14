@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.CachingConfigurerSupport;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
@@ -25,7 +25,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableCaching(mode = AdviceMode.ASPECTJ)
-public class CachingConfig extends CachingConfigurerSupport {
+public class CachingConfig implements CachingConfigurer {
 
   final MTServiceCacheConfiguration mtServiceCacheConfiguration;
 

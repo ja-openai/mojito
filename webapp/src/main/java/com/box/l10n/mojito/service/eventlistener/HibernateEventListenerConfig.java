@@ -3,9 +3,9 @@ package com.box.l10n.mojito.service.eventlistener;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceUnit;
+import org.hibernate.SessionFactory;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
-import org.hibernate.internal.SessionFactoryImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -23,10 +23,12 @@ public class HibernateEventListenerConfig {
 
   @PostConstruct
   public void registerListeners() {
-    SessionFactoryImpl sessionFactory = emf.unwrap(SessionFactoryImpl.class);
+    SessionFactory sessionFactory = emf.unwrap(SessionFactory.class);
     EventListenerRegistry registry =
-        (EventListenerRegistry)
-            sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
+        sessionFactory
+            .getSessionFactoryOptions()
+            .getServiceRegistry()
+            .getService(EventListenerRegistry.class);
     registry
         .getEventListenerGroup(EventType.POST_COMMIT_INSERT)
         .appendListener(entityCrudEventListener);

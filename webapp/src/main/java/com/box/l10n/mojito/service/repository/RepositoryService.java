@@ -4,7 +4,7 @@ import static com.box.l10n.mojito.rest.repository.RepositorySpecification.delete
 import static com.box.l10n.mojito.rest.repository.RepositorySpecification.hiddenEquals;
 import static com.box.l10n.mojito.rest.repository.RepositorySpecification.nameEquals;
 import static com.box.l10n.mojito.specification.Specifications.ifParamNotNull;
-import static org.springframework.data.jpa.domain.Specification.where;
+import static com.box.l10n.mojito.specification.Specifications.where;
 
 import com.box.l10n.mojito.entity.AssetIntegrityChecker;
 import com.box.l10n.mojito.entity.Locale;

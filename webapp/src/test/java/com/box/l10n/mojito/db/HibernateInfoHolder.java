@@ -2,7 +2,7 @@ package com.box.l10n.mojito.db;
 
 import org.hibernate.boot.Metadata;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.service.spi.SessionFactoryServiceRegistry;
+import org.hibernate.service.spi.ServiceRegistryImplementor;
 
 public class HibernateInfoHolder {
 
@@ -10,7 +10,7 @@ public class HibernateInfoHolder {
 
   private static SessionFactoryImplementor sessionFactory;
 
-  private static SessionFactoryServiceRegistry serviceRegistry;
+  private static ServiceRegistryImplementor serviceRegistry;
 
   public static Metadata getMetadata() {
     return metadata;
@@ -28,11 +28,11 @@ public class HibernateInfoHolder {
     HibernateInfoHolder.sessionFactory = sessionFactory;
   }
 
-  public static SessionFactoryServiceRegistry getServiceRegistry() {
+  public static ServiceRegistryImplementor getServiceRegistry() {
     return serviceRegistry;
   }
 
-  public static void setServiceRegistry(SessionFactoryServiceRegistry serviceRegistry) {
+  public static void setServiceRegistry(ServiceRegistryImplementor serviceRegistry) {
     HibernateInfoHolder.serviceRegistry = serviceRegistry;
   }
 }

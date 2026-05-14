@@ -14,8 +14,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public class Mocks {
 
   /**
-   * Creates a simple mock for a {@link JpaRepository} that mocks the {@link
-   * JpaRepository#getOne(java.io.Serializable)} to return a base entity that only has its id set.
+   * Creates a simple mock for a {@link JpaRepository} that mocks {@link
+   * JpaRepository#getReferenceById(Object)} to return a base entity that only has its id set.
    *
    * @param <U> type of repository
    * @param <T> type of repository entity
@@ -25,18 +25,19 @@ public class Mocks {
    * @return
    */
   public static <U extends JpaRepository<T, Long>, T extends BaseEntity>
-      U getJpaRepositoryMockForGetOne(Class<U> repositoryClass, Class<T> entityClass, Long id) {
+      U getJpaRepositoryMockForGetReferenceById(
+          Class<U> repositoryClass, Class<T> entityClass, Long id) {
 
     try {
-      T baseEntity = entityClass.newInstance();
+      T baseEntity = entityClass.getDeclaredConstructor().newInstance();
       baseEntity.setId(id);
 
       U mock = mock(repositoryClass);
-      when(mock.getOne(id)).thenReturn(baseEntity);
+      when(mock.getReferenceById(id)).thenReturn(baseEntity);
 
       return mock;
 
-    } catch (IllegalAccessException | InstantiationException e) {
+    } catch (ReflectiveOperationException e) {
       throw new RuntimeException("Can't create mock for repository", e);
     }
   }

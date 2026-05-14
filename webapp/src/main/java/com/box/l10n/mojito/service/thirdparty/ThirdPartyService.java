@@ -387,7 +387,8 @@ public class ThirdPartyService {
                             thirdPartyTextUnit.setThirdPartyId(
                                 thirdPartyTextUnitForMapping.getId());
                             thirdPartyTextUnit.setAsset(asset);
-                            TMTextUnit tmTextUnit = tmTextUnitRepository.getOne(tmTextUnitId);
+                            TMTextUnit tmTextUnit =
+                                tmTextUnitRepository.getReferenceById(tmTextUnitId);
 
                             if (tmTextUnitAlreadySaved.containsKey(tmTextUnitId)) {
                               logger.warn(
