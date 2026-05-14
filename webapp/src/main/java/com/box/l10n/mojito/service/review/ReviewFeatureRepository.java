@@ -35,6 +35,22 @@ public interface ReviewFeatureRepository extends JpaRepository<ReviewFeature, Lo
   Optional<ReviewFeature> findByIdWithRepositories(@Param("id") Long id);
 
   @Query(
+      """
+      select new com.box.l10n.mojito.service.review.ReviewFeatureLocaleRow(
+        l.id,
+        l.bcp47Tag
+      )
+      from ReviewFeature rf
+      join rf.repositories r
+      join r.repositoryLocales rl
+      join rl.locale l
+      where rf.id = :id
+        and r.deleted = false
+        and rl.parentLocale is not null
+      """)
+  List<ReviewFeatureLocaleRow> findNonRootLocaleRowsByFeatureId(@Param("id") Long id);
+
+  @Query(
       value =
           """
           select new com.box.l10n.mojito.service.review.ReviewFeatureSummaryRow(

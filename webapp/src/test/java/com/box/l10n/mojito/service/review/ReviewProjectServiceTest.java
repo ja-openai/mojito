@@ -585,6 +585,34 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void createAutomatedReviewProjectRequestLoadsReviewFeatureWithRepositoryLocales() {
+    Locale targetLocale = locale(42L, "fr-FR");
+    when(reviewFeatureRepository.findByIdWithRepositories(53L))
+        .thenReturn(Optional.of(reviewFeature(53L, "Feature C", repository(71L))));
+    when(reviewFeatureRepository.findNonRootLocaleRowsByFeatureId(53L))
+        .thenReturn(
+            List.of(new ReviewFeatureLocaleRow(targetLocale.getId(), targetLocale.getBcp47Tag())));
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class))).thenReturn(List.of());
+
+    CreateReviewProjectRequestResult result =
+        reviewProjectService.createAutomatedReviewProjectRequest(
+            new CreateAutomatedReviewProjectRequestCommand(
+                53L,
+                "Automated feature",
+                null,
+                ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+                7L,
+                null,
+                true,
+                99L));
+
+    assertEquals(1, result.requestedLocaleCount());
+    assertEquals("fr-FR", result.localeResults().get(0).localeTag());
+    verify(reviewFeatureRepository).findByIdWithRepositories(53L);
+    verify(reviewFeatureRepository).findNonRootLocaleRowsByFeatureId(53L);
+  }
+
+  @Test
   public void saveDecisionBlocksTranslatorIntegrityBypass() {
     when(userService.isCurrentUserAdmin()).thenReturn(false);
     when(userService.isCurrentUserTranslator()).thenReturn(true);

@@ -670,6 +670,8 @@ public class ReviewProjectService {
     }
 
     ReviewFeature reviewFeature = getReviewFeatureOrThrow(request.reviewFeatureId());
+    List<ReviewFeatureLocaleRow> reviewFeatureLocales =
+        getReviewFeatureLocales(reviewFeature.getId());
     int maxWordCountPerProject =
         request.maxWordCountPerProject() == null
             ? Integer.MAX_VALUE
@@ -679,13 +681,13 @@ public class ReviewProjectService {
     }
 
     List<LocalePlan> localePlans = new ArrayList<>();
-    for (Locale locale : getReviewFeatureLocales(reviewFeature)) {
+    for (ReviewFeatureLocaleRow locale : reviewFeatureLocales) {
       try {
         List<TextUnitDTO> candidates =
-            searchReviewFeatureCandidates(reviewFeature, locale, StatusFilter.REVIEW_NEEDED);
-        candidates = excludeOpenReviewProjectTextUnits(candidates, locale);
+            searchReviewFeatureCandidates(reviewFeature, locale.id(), StatusFilter.REVIEW_NEEDED);
+        candidates = excludeOpenReviewProjectTextUnits(candidates, locale.id());
         if (candidates.isEmpty()) {
-          localePlans.add(skippedLocalePlan(locale.getBcp47Tag()));
+          localePlans.add(skippedLocalePlan(locale.bcp47Tag()));
           continue;
         }
 
@@ -697,21 +699,22 @@ public class ReviewProjectService {
           }
           chunkCount++;
         }
+        Locale localeReference = entityManager.getReference(Locale.class, locale.id());
         localePlans.add(
-            preparedLocalePlan(locale.getBcp47Tag(), locale, candidates, chunkCount, null));
+            preparedLocalePlan(locale.bcp47Tag(), localeReference, candidates, chunkCount, null));
         logger.info(
             "Prepared automated review project locale '{}' for feature '{}' with {} candidates across {} chunk(s)",
-            locale.getBcp47Tag(),
+            locale.bcp47Tag(),
             reviewFeature.getName(),
             candidates.size(),
             chunkCount);
       } catch (RuntimeException e) {
         logger.warn(
             "Failed to prepare automated review project locale '{}' for feature '{}': {}",
-            locale.getBcp47Tag(),
+            locale.bcp47Tag(),
             reviewFeature.getName(),
             e.getMessage());
-        localePlans.add(errorLocalePlan(locale.getBcp47Tag(), e.getMessage()));
+        localePlans.add(errorLocalePlan(locale.bcp47Tag(), e.getMessage()));
       }
     }
 
@@ -726,7 +729,7 @@ public class ReviewProjectService {
           request.name().trim(),
           request.dueDate(),
           List.of(),
-          getReviewFeatureLocales(reviewFeature).stream().map(Locale::getBcp47Tag).toList(),
+          reviewFeatureLocales.stream().map(ReviewFeatureLocaleRow::bcp47Tag).toList(),
           localePlans);
     }
 
@@ -745,7 +748,7 @@ public class ReviewProjectService {
 
     return buildCreateReviewProjectRequestResult(
         persistedReviewProjectRequest,
-        getReviewFeatureLocales(reviewFeature).stream().map(Locale::getBcp47Tag).toList(),
+        reviewFeatureLocales.stream().map(ReviewFeatureLocaleRow::bcp47Tag).toList(),
         localePlans);
   }
 
@@ -3060,8 +3063,19 @@ public class ReviewProjectService {
 
   private List<TextUnitDTO> searchReviewFeatureCandidates(
       ReviewFeature reviewFeature, Locale locale, StatusFilter statusFilter) {
+    if (locale == null) {
+      throw new IllegalArgumentException("locale must be provided");
+    }
+    return searchReviewFeatureCandidates(reviewFeature, locale.getId(), statusFilter);
+  }
+
+  private List<TextUnitDTO> searchReviewFeatureCandidates(
+      ReviewFeature reviewFeature, Long localeId, StatusFilter statusFilter) {
     if (reviewFeature == null) {
       throw new IllegalArgumentException("reviewFeature must be provided");
+    }
+    if (localeId == null) {
+      throw new IllegalArgumentException("localeId must be provided");
     }
 
     List<Long> repositoryIds =
@@ -3079,7 +3093,7 @@ public class ReviewProjectService {
 
     TextUnitSearcherParameters params = new TextUnitSearcherParameters();
     params.setRepositoryIds(repositoryIds);
-    params.setLocaleId(locale.getId());
+    params.setLocaleId(localeId);
     params.setPluralFormsFiltered(false);
     params.setStatusFilter(statusFilter);
 
@@ -3092,7 +3106,12 @@ public class ReviewProjectService {
 
   private List<TextUnitDTO> excludeOpenReviewProjectTextUnits(
       List<TextUnitDTO> candidates, Locale locale) {
-    if (CollectionUtils.isEmpty(candidates) || locale == null || locale.getId() == null) {
+    return excludeOpenReviewProjectTextUnits(candidates, locale == null ? null : locale.getId());
+  }
+
+  private List<TextUnitDTO> excludeOpenReviewProjectTextUnits(
+      List<TextUnitDTO> candidates, Long localeId) {
+    if (CollectionUtils.isEmpty(candidates) || localeId == null) {
       return candidates;
     }
 
@@ -3110,7 +3129,7 @@ public class ReviewProjectService {
         new HashSet<>(
             reviewProjectTextUnitRepository
                 .findTmTextUnitIdsByReviewProjectStatusAndLocaleIdAndTmTextUnitIds(
-                    ReviewProjectStatus.OPEN, locale.getId(), tmTextUnitIds));
+                    ReviewProjectStatus.OPEN, localeId, tmTextUnitIds));
     if (excludedTmTextUnitIds.isEmpty()) {
       return candidates;
     }
@@ -3120,27 +3139,27 @@ public class ReviewProjectService {
         .toList();
   }
 
-  private List<Locale> getReviewFeatureLocales(ReviewFeature reviewFeature) {
-    if (reviewFeature == null || CollectionUtils.isEmpty(reviewFeature.getRepositories())) {
+  private List<ReviewFeatureLocaleRow> getReviewFeatureLocales(Long reviewFeatureId) {
+    if (reviewFeatureId == null) {
       return List.of();
     }
 
-    return reviewFeature.getRepositories().stream()
-        .filter(repository -> !Boolean.TRUE.equals(repository.getDeleted()))
-        .flatMap(repository -> repository.getRepositoryLocales().stream())
-        .filter(repositoryLocale -> repositoryLocale.getParentLocale() != null)
-        .map(RepositoryLocale::getLocale)
-        .filter(Objects::nonNull)
+    return reviewFeatureRepository.findNonRootLocaleRowsByFeatureId(reviewFeatureId).stream()
+        .filter(locale -> locale != null && locale.id() != null)
         .collect(
             Collectors.toMap(
-                Locale::getId, locale -> locale, (left, right) -> left, LinkedHashMap::new))
+                ReviewFeatureLocaleRow::id,
+                locale -> locale,
+                (left, right) -> left,
+                LinkedHashMap::new))
         .values()
         .stream()
         .sorted(
             Comparator.comparing(
-                    (Locale locale) -> locale.getBcp47Tag() == null ? "" : locale.getBcp47Tag(),
+                    (ReviewFeatureLocaleRow locale) ->
+                        locale.bcp47Tag() == null ? "" : locale.bcp47Tag(),
                     String.CASE_INSENSITIVE_ORDER)
-                .thenComparing(Locale::getId))
+                .thenComparing(ReviewFeatureLocaleRow::id))
         .toList();
   }
 
