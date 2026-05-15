@@ -262,7 +262,8 @@ export function ReviewProjectsPage() {
   const canUseRequestMode = isAdmin || user.role === 'ROLE_PM';
   const assignmentControls = {
     canReassignPm: isAdmin || isPm,
-    canReassignTranslator: isAdmin || isPm || isTranslator,
+    canReassignTranslator: isAdmin || isPm,
+    canClaimTranslator: isTranslator,
   } as const;
 
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>([]);

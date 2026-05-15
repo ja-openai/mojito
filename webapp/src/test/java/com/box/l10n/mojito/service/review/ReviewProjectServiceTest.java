@@ -17,6 +17,7 @@ import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.Team;
+import com.box.l10n.mojito.entity.TeamUser;
 import com.box.l10n.mojito.entity.TeamUserRole;
 import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
@@ -220,6 +221,101 @@ public class ReviewProjectServiceTest {
     verify(teamSlackNotificationService)
         .sendReviewProjectAssignmentNotification(
             project, ReviewProjectAssignmentEventType.REASSIGNED, "translator change");
+  }
+
+  @Test
+  public void updateProjectAssignmentTranslatorCanClaimUnassignedProject() {
+    setCurrentUserRole(false, false, true);
+    Team team = team(7L);
+    User pm = user(101L, "pm-a");
+    ReviewProject project = project(13L, team, locale(15L, "fr-FR"), pm, null);
+
+    when(reviewProjectRepository.findById(13L)).thenReturn(Optional.of(project));
+    when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team));
+    when(userRepository.findById(101L)).thenReturn(Optional.of(pm));
+    when(teamUserRepository.findByUserIdAndRole(99L, TeamUserRole.TRANSLATOR))
+        .thenReturn(List.of(teamUser(team, currentUser, TeamUserRole.TRANSLATOR)));
+    when(teamService.isUserInTeamRole(7L, 101L, TeamUserRole.PM)).thenReturn(true);
+    when(teamService.isUserInTeamRole(7L, 99L, TeamUserRole.TRANSLATOR)).thenReturn(true);
+
+    reviewProjectService.updateProjectAssignment(13L, 7L, 101L, 99L, "claim");
+
+    assertEquals(currentUser, project.getAssignedTranslatorUser());
+    verify(reviewProjectAssignmentHistoryRepository)
+        .save(any(ReviewProjectAssignmentHistory.class));
+  }
+
+  @Test
+  public void claimProjectTranslatorAssignmentUsesCurrentUser() {
+    setCurrentUserRole(false, false, true);
+    Team team = team(7L);
+    User pm = user(101L, "pm-a");
+    ReviewProject project = project(16L, team, locale(18L, "fr-FR"), pm, null);
+
+    when(reviewProjectRepository.findById(16L)).thenReturn(Optional.of(project));
+    when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team));
+    when(userRepository.findById(101L)).thenReturn(Optional.of(pm));
+    when(teamUserRepository.findByUserIdAndRole(99L, TeamUserRole.TRANSLATOR))
+        .thenReturn(List.of(teamUser(team, currentUser, TeamUserRole.TRANSLATOR)));
+    when(teamService.isUserInTeamRole(7L, 101L, TeamUserRole.PM)).thenReturn(true);
+    when(teamService.isUserInTeamRole(7L, 99L, TeamUserRole.TRANSLATOR)).thenReturn(true);
+
+    reviewProjectService.claimProjectTranslatorAssignment(16L);
+
+    assertEquals(currentUser, project.getAssignedTranslatorUser());
+    verify(reviewProjectAssignmentHistoryRepository)
+        .save(any(ReviewProjectAssignmentHistory.class));
+  }
+
+  @Test
+  public void updateProjectAssignmentTranslatorCannotClaimAssignedProject() {
+    setCurrentUserRole(false, false, true);
+    Team team = team(7L);
+    User pm = user(101L, "pm-a");
+    User previousTranslator = user(103L, "translator-a");
+    ReviewProject project = project(14L, team, locale(16L, "fr-FR"), pm, previousTranslator);
+
+    when(reviewProjectRepository.findById(14L)).thenReturn(Optional.of(project));
+    when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team));
+    when(userRepository.findById(101L)).thenReturn(Optional.of(pm));
+    when(teamUserRepository.findByUserIdAndRole(99L, TeamUserRole.TRANSLATOR))
+        .thenReturn(List.of(teamUser(team, currentUser, TeamUserRole.TRANSLATOR)));
+
+    try {
+      reviewProjectService.updateProjectAssignment(14L, 7L, 101L, 99L, "steal");
+      fail("Expected AccessDeniedException");
+    } catch (AccessDeniedException e) {
+      assertEquals("Translators can only claim unassigned projects", e.getMessage());
+    }
+
+    assertEquals(previousTranslator, project.getAssignedTranslatorUser());
+    verify(reviewProjectRepository, never()).save(any(ReviewProject.class));
+  }
+
+  @Test
+  public void updateProjectAssignmentTranslatorCanOnlyAssignThemselves() {
+    setCurrentUserRole(false, false, true);
+    Team team = team(7L);
+    User pm = user(101L, "pm-a");
+    User otherTranslator = user(104L, "translator-b");
+    ReviewProject project = project(15L, team, locale(17L, "fr-FR"), pm, null);
+
+    when(reviewProjectRepository.findById(15L)).thenReturn(Optional.of(project));
+    when(teamRepository.findByIdAndEnabledTrue(7L)).thenReturn(Optional.of(team));
+    when(userRepository.findById(101L)).thenReturn(Optional.of(pm));
+    when(userRepository.findById(104L)).thenReturn(Optional.of(otherTranslator));
+    when(teamUserRepository.findByUserIdAndRole(99L, TeamUserRole.TRANSLATOR))
+        .thenReturn(List.of(teamUser(team, currentUser, TeamUserRole.TRANSLATOR)));
+
+    try {
+      reviewProjectService.updateProjectAssignment(15L, 7L, 101L, 104L, "assign other");
+      fail("Expected AccessDeniedException");
+    } catch (AccessDeniedException e) {
+      assertEquals("Translators can only assign themselves", e.getMessage());
+    }
+
+    assertNull(project.getAssignedTranslatorUser());
+    verify(reviewProjectRepository, never()).save(any(ReviewProject.class));
   }
 
   @Test
@@ -1095,6 +1191,24 @@ public class ReviewProjectServiceTest {
     Team team = new Team();
     team.setId(id);
     return team;
+  }
+
+  private TeamUser teamUser(Team team, User user, TeamUserRole role) {
+    TeamUser teamUser = new TeamUser();
+    teamUser.setTeam(team);
+    teamUser.setUser(user);
+    teamUser.setRole(role);
+    return teamUser;
+  }
+
+  private void setCurrentUserRole(boolean isAdmin, boolean isPm, boolean isTranslator) {
+    currentUser = user(99L, "current-user");
+    currentUser.setCanTranslateAllLocales(true);
+    when(userService.isCurrentUserAdmin()).thenReturn(isAdmin);
+    when(userService.isCurrentUserPm()).thenReturn(isPm);
+    when(userService.isCurrentUserTranslator()).thenReturn(isTranslator);
+    when(userService.isCurrentUserAdminOrPm()).thenReturn(isAdmin || isPm);
+    when(userRepository.findById(99L)).thenReturn(Optional.of(currentUser));
   }
 
   private ReviewFeature reviewFeature(Long id, String name, Repository... repositories) {

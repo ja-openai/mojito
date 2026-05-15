@@ -11,6 +11,7 @@ import {
   type ApiReviewProjectStatus,
   type ApiReviewProjectTerminologyPhase,
   type ApiReviewProjectType,
+  claimReviewProjectTranslatorAssignment,
   isTerminologyReviewProjectType,
   REVIEW_PROJECT_STATUS_LABELS,
   REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
@@ -136,7 +137,10 @@ export type ReviewProjectsAdminControls = {
 type ReviewProjectsAssignmentControls = {
   canReassignPm: boolean;
   canReassignTranslator: boolean;
+  canClaimTranslator: boolean;
 };
+
+type TranslatorAssignmentAction = 'none' | 'claim' | 'reassign';
 
 type Props = {
   status: 'loading' | 'error' | 'ready';
@@ -175,6 +179,19 @@ type TeamUserSummaryOption = {
   username: string;
   commonName?: string | null;
 };
+
+function getTranslatorAssignmentAction(
+  project: ReviewProjectRow,
+  assignmentControls?: ReviewProjectsAssignmentControls,
+): TranslatorAssignmentAction {
+  if (assignmentControls?.canReassignTranslator) {
+    return 'reassign';
+  }
+  if (assignmentControls?.canClaimTranslator && project.assignedTranslatorUserId == null) {
+    return 'claim';
+  }
+  return 'none';
+}
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -370,6 +387,7 @@ function ContentSection({
 }) {
   const isAdmin = adminControls?.enabled ?? false;
   const canReassignTranslator = assignmentControls?.canReassignTranslator ?? false;
+  const canClaimTranslator = assignmentControls?.canClaimTranslator ?? false;
   const queryClient = useQueryClient();
   const selectedProjectIdSet = useMemo(
     () => new Set(adminControls?.selectedProjectIds ?? []),
@@ -393,6 +411,8 @@ function ContentSection({
 
   const activeTeamId = reassignProject?.teamId ?? null;
   const isTerminologyReassignProject = isTerminologyReviewProjectType(reassignProject?.type);
+  const isTranslatorClaimProject =
+    reassignProject != null && !canReassignTranslator && canClaimTranslator;
   const teamTranslatorUsersQuery = useQuery({
     queryKey: ['team-users', activeTeamId, 'TRANSLATOR', 'review-projects-list-reassign'],
     queryFn: () => fetchTeamUsersByRole(activeTeamId as number, 'TRANSLATOR'),
@@ -490,6 +510,10 @@ function ContentSection({
       if (!reassignProject) {
         return;
       }
+      if (isTranslatorClaimProject) {
+        await claimReviewProjectTranslatorAssignment(reassignProject.id);
+        return;
+      }
       await updateReviewProjectAssignment(reassignProject.id, {
         teamId: reassignProject.teamId,
         assignedPmUserId: reassignProject.assignedPmUserId,
@@ -509,7 +533,8 @@ function ContentSection({
   });
   const canSaveTranslatorReassign =
     reassignProject != null &&
-    canReassignTranslator &&
+    (canReassignTranslator ||
+      (isTranslatorClaimProject && reassignProject.assignedTranslatorUserId == null)) &&
     !translatorReassignMutation.isPending &&
     reassignLoadError == null &&
     activeTeamId != null;
@@ -541,23 +566,29 @@ function ContentSection({
               props: {
                 ref: getRowRef(project.id),
               },
-              content: (
-                <ReviewProjectRowView
-                  project={project}
-                  isAdmin={isAdmin}
-                  isSelected={selectedProjectIdSet.has(project.id)}
-                  onToggleSelection={adminControls?.onToggleProjectSelection}
-                  canReassignTranslator={canReassignTranslator}
-                  isReassignSaving={translatorReassignMutation.isPending}
-                  onOpenTranslatorReassign={(nextProject) => {
-                    if (!canReassignTranslator) {
-                      return;
-                    }
-                    setReassignProject(nextProject);
-                  }}
-                  reviewProjectsSessionKey={reviewProjectsSessionKey}
-                />
-              ),
+              content: (() => {
+                const translatorAssignmentAction = getTranslatorAssignmentAction(
+                  project,
+                  assignmentControls,
+                );
+                return (
+                  <ReviewProjectRowView
+                    project={project}
+                    isAdmin={isAdmin}
+                    isSelected={selectedProjectIdSet.has(project.id)}
+                    onToggleSelection={adminControls?.onToggleProjectSelection}
+                    translatorAssignmentAction={translatorAssignmentAction}
+                    isReassignSaving={translatorReassignMutation.isPending}
+                    onOpenTranslatorReassign={(nextProject) => {
+                      if (translatorAssignmentAction === 'none') {
+                        return;
+                      }
+                      setReassignProject(nextProject);
+                    }}
+                    reviewProjectsSessionKey={reviewProjectsSessionKey}
+                  />
+                );
+              })(),
             };
           }}
         />
@@ -566,7 +597,15 @@ function ContentSection({
         open={reassignProject != null}
         size="md"
         className="review-projects-page__reassign-dialog"
-        ariaLabel={isTerminologyReassignProject ? 'Reassign advisor' : 'Reassign translator'}
+        ariaLabel={
+          isTranslatorClaimProject
+            ? isTerminologyReassignProject
+              ? 'Claim advisor'
+              : 'Claim translator'
+            : isTerminologyReassignProject
+              ? 'Reassign advisor'
+              : 'Reassign translator'
+        }
         onClose={() => {
           if (translatorReassignMutation.isPending) {
             return;
@@ -579,7 +618,8 @@ function ContentSection({
         {reassignProject ? (
           <>
             <div className="modal__title">
-              Reassign {isTerminologyReassignProject ? 'advisor' : 'translator'}
+              {isTranslatorClaimProject ? 'Claim' : 'Reassign'}{' '}
+              {isTerminologyReassignProject ? 'advisor' : 'translator'}
             </div>
             <div className="modal__body review-projects-page__reassign-modal">
               <div className="review-projects-page__reassign-modal-line">
@@ -594,6 +634,10 @@ function ContentSection({
                   {isTerminologyReassignProject
                     ? 'No review team is assigned.'
                     : 'No assignment pool is available.'}
+                </div>
+              ) : isTranslatorClaimProject ? (
+                <div className="review-projects-page__reassign-modal-help">
+                  This will assign the project to you.
                 </div>
               ) : reassignLoadError ? (
                 <div className="review-projects-page__reassign-modal-error">
@@ -655,7 +699,11 @@ function ContentSection({
                 onClick={() => void translatorReassignMutation.mutateAsync()}
                 disabled={!canSaveTranslatorReassign}
               >
-                {translatorReassignMutation.isPending ? 'Saving…' : 'Save'}
+                {translatorReassignMutation.isPending
+                  ? 'Saving…'
+                  : isTranslatorClaimProject
+                    ? 'Claim'
+                    : 'Save'}
               </button>
             </div>
           </>
@@ -1265,7 +1313,7 @@ function ReviewProjectRowView({
   isAdmin,
   isSelected,
   onToggleSelection,
-  canReassignTranslator,
+  translatorAssignmentAction,
   isReassignSaving,
   onOpenTranslatorReassign,
   reviewProjectsSessionKey,
@@ -1274,7 +1322,7 @@ function ReviewProjectRowView({
   isAdmin: boolean;
   isSelected: boolean;
   onToggleSelection?: (projectId: number) => void;
-  canReassignTranslator?: boolean;
+  translatorAssignmentAction?: TranslatorAssignmentAction;
   isReassignSaving?: boolean;
   onOpenTranslatorReassign?: (project: ReviewProjectRow) => void;
   reviewProjectsSessionKey?: string | null;
@@ -1292,6 +1340,9 @@ function ReviewProjectRowView({
   const isTerminology = isTerminologyProject(project);
   const pmRoleLabel = isTerminology ? 'Decider' : 'PM';
   const translatorRoleLabel = isTerminology ? 'Advisor' : 'Translator';
+  const effectiveTranslatorAssignmentAction = translatorAssignmentAction ?? 'none';
+  const canUpdateTranslatorAssignment = effectiveTranslatorAssignmentAction !== 'none';
+  const isTranslatorClaimAction = effectiveTranslatorAssignmentAction === 'claim';
 
   return (
     <div className="review-projects-page__row-card">
@@ -1360,7 +1411,7 @@ function ReviewProjectRowView({
             <span className="review-projects-page__request-dot" aria-hidden="true">
               ·
             </span>
-            {canReassignTranslator ? (
+            {canUpdateTranslatorAssignment ? (
               <button
                 type="button"
                 className="review-projects-page__inline-action review-projects-page__request-assignee"
@@ -1370,11 +1421,25 @@ function ReviewProjectRowView({
                   }
                 }}
                 disabled={isReassignSaving}
-                aria-label={isTerminology ? 'Reassign advisor' : 'Reassign translator'}
-                title={getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'}
+                aria-label={
+                  isTranslatorClaimAction
+                    ? isTerminology
+                      ? 'Claim advisor'
+                      : 'Claim translator'
+                    : isTerminology
+                      ? 'Reassign advisor'
+                      : 'Reassign translator'
+                }
+                title={
+                  isTranslatorClaimAction
+                    ? `Claim ${translatorRoleLabel.toLowerCase()} assignment`
+                    : (getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned')
+                }
               >
-                {isTerminology ? `${translatorRoleLabel} ` : ''}
-                {getCompactUserDisplayName(project.assignedTranslatorUsername)}
+                {!isTranslatorClaimAction && isTerminology ? `${translatorRoleLabel} ` : ''}
+                {isTranslatorClaimAction
+                  ? 'Claim'
+                  : getCompactUserDisplayName(project.assignedTranslatorUsername)}
               </button>
             ) : (
               <span
@@ -1490,6 +1555,7 @@ function RequestGroupsSection({
   const isAdmin = adminControls?.enabled ?? false;
   const canReassignPm = assignmentControls?.canReassignPm ?? false;
   const canReassignTranslator = assignmentControls?.canReassignTranslator ?? false;
+  const canClaimTranslator = assignmentControls?.canClaimTranslator ?? false;
   const queryClient = useQueryClient();
   const selectedProjectIdSet = useMemo(
     () => new Set(adminControls?.selectedProjectIds ?? []),
@@ -1740,6 +1806,9 @@ function RequestGroupsSection({
     ],
   );
 
+  const isTranslatorClaimTarget =
+    reassignTarget?.kind === 'translator' && !canReassignTranslator && canClaimTranslator;
+
   const reassignLoadError =
     activeTeamId == null || reassignTarget == null
       ? null
@@ -1766,6 +1835,10 @@ function RequestGroupsSection({
       }
       if (reassignTarget.kind === 'translator') {
         const project = reassignTarget.project;
+        if (isTranslatorClaimTarget) {
+          await claimReviewProjectTranslatorAssignment(project.id);
+          return;
+        }
         await updateReviewProjectAssignment(project.id, {
           teamId: project.teamId,
           assignedPmUserId: project.assignedPmUserId,
@@ -1845,7 +1918,10 @@ function RequestGroupsSection({
         : 'Show all translators';
   const canSaveReassign =
     reassignTarget != null &&
-    (reassignTarget.kind === 'pm' ? canReassignPm : canReassignTranslator) &&
+    (reassignTarget.kind === 'pm'
+      ? canReassignPm
+      : canReassignTranslator ||
+        (isTranslatorClaimTarget && reassignTarget.project.assignedTranslatorUserId == null)) &&
     !reassignMutation.isPending &&
     !hasMixedTeamsForPmTarget &&
     activeTeamId != null;
@@ -2109,6 +2185,12 @@ function RequestGroupsSection({
                         percentWidth: projectPercentWidth,
                         percentLabel: projectPercentLabel,
                       } = getProgressMetrics(project.decidedCount, project.textUnitCount ?? 0);
+                      const translatorAssignmentAction = getTranslatorAssignmentAction(
+                        project,
+                        assignmentControls,
+                      );
+                      const canUpdateTranslatorAssignment = translatorAssignmentAction !== 'none';
+                      const isTranslatorClaimAction = translatorAssignmentAction === 'claim';
                       return (
                         <div key={project.id} className="review-projects-page__request-project-row">
                           {isAdmin ? (
@@ -2157,7 +2239,7 @@ function RequestGroupsSection({
                               >
                                 {getTerminologyProjectAssigneeLabel(project)}
                               </div>
-                            ) : canReassignTranslator ? (
+                            ) : canUpdateTranslatorAssignment ? (
                               <span
                                 role="button"
                                 tabIndex={0}
@@ -2182,15 +2264,26 @@ function RequestGroupsSection({
                                 }}
                                 aria-disabled={reassignMutation.isPending}
                                 aria-label={
-                                  isTerminology ? 'Reassign advisor' : 'Reassign translator'
+                                  isTranslatorClaimAction
+                                    ? isTerminology
+                                      ? 'Claim advisor'
+                                      : 'Claim translator'
+                                    : isTerminology
+                                      ? 'Reassign advisor'
+                                      : 'Reassign translator'
                                 }
                                 title={
-                                  getUserTitle(project.assignedTranslatorUsername) ?? 'Unassigned'
+                                  isTranslatorClaimAction
+                                    ? `Claim ${isTerminology ? 'advisor' : 'translator'} assignment`
+                                    : (getUserTitle(project.assignedTranslatorUsername) ??
+                                      'Unassigned')
                                 }
                               >
-                                {isTerminology
-                                  ? getTerminologyProjectAssigneeLabel(project)
-                                  : getCompactUserDisplayName(project.assignedTranslatorUsername)}
+                                {isTranslatorClaimAction
+                                  ? 'Claim'
+                                  : isTerminology
+                                    ? getTerminologyProjectAssigneeLabel(project)
+                                    : getCompactUserDisplayName(project.assignedTranslatorUsername)}
                               </span>
                             ) : (
                               <div
@@ -2250,7 +2343,7 @@ function RequestGroupsSection({
             ? isTerminologyPmReassignTarget
               ? 'Reassign request decider'
               : 'Reassign request PM'
-            : `Reassign project ${translatorRoleLabel.toLowerCase()}`
+            : `${isTranslatorClaimTarget ? 'Claim' : 'Reassign'} project ${translatorRoleLabel.toLowerCase()}`
         }
         onClose={closeReassignModal}
         closeOnBackdrop={!reassignMutation.isPending}
@@ -2262,7 +2355,7 @@ function RequestGroupsSection({
                 ? isTerminologyPmReassignTarget
                   ? 'Reassign decider'
                   : 'Reassign PM'
-                : `Reassign ${translatorRoleLabel}`}
+                : `${isTranslatorClaimTarget ? 'Claim' : 'Reassign'} ${translatorRoleLabel}`}
             </div>
             <div className="modal__body review-projects-page__reassign-modal">
               <div className="review-projects-page__reassign-modal-line">
@@ -2297,6 +2390,10 @@ function RequestGroupsSection({
                   {isTerminologyReassignTarget
                     ? 'No review team is assigned.'
                     : 'No assignment pool is available.'}
+                </div>
+              ) : isTranslatorClaimTarget ? (
+                <div className="review-projects-page__reassign-modal-help">
+                  This will assign the project to you.
                 </div>
               ) : reassignLoadError ? (
                 <div className="review-projects-page__reassign-modal-error">
@@ -2380,7 +2477,11 @@ function RequestGroupsSection({
                 }}
                 disabled={!canSaveReassign || reassignLoadError != null}
               >
-                {reassignMutation.isPending ? 'Saving…' : 'Save'}
+                {reassignMutation.isPending
+                  ? 'Saving…'
+                  : isTranslatorClaimTarget
+                    ? 'Claim'
+                    : 'Save'}
               </button>
             </div>
           </>

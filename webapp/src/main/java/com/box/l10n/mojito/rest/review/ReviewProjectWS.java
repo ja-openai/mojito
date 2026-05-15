@@ -299,6 +299,14 @@ public class ReviewProjectWS {
     return toDetailResponse(projectDetail);
   }
 
+  @PostMapping("/review-projects/{projectId}/assignment/claim-translator")
+  public GetReviewProjectResponse claimReviewProjectTranslatorAssignment(
+      @PathVariable Long projectId) {
+    GetProjectDetailView projectDetail =
+        reviewProjectService.claimProjectTranslatorAssignment(projectId);
+    return toDetailResponse(projectDetail);
+  }
+
   @PostMapping("/review-projects/{projectId}/due-date")
   public GetReviewProjectResponse updateReviewProjectDueDate(
       @PathVariable Long projectId, @RequestBody UpdateReviewProjectDueDateRequest request) {

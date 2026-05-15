@@ -1746,7 +1746,9 @@ public class ReviewProjectService {
       throw new AccessDeniedException("Assignment update is not allowed for current role");
     }
 
-    if (isTranslator) {
+    boolean isTranslatorOnly = !isAdmin && !isPm && isTranslator;
+
+    if (isTranslatorOnly) {
       userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
     }
 
@@ -1762,7 +1764,7 @@ public class ReviewProjectService {
         reviewProject,
         isAdmin,
         isPm,
-        isTranslator,
+        isTranslatorOnly,
         previousTeam,
         nextTeam,
         previousAssignedPm,
@@ -1812,6 +1814,28 @@ public class ReviewProjectService {
           reviewProject, eventType, note);
     }
     return getProjectDetail(projectId);
+  }
+
+  @Transactional
+  public GetProjectDetailView claimProjectTranslatorAssignment(Long projectId) {
+    if (!userService.isCurrentUserTranslator()) {
+      throw new AccessDeniedException("Translator role required to claim assignment");
+    }
+
+    ReviewProject reviewProject =
+        reviewProjectRepository
+            .findById(projectId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProject with id: " + projectId + " not found"));
+    Long teamId = reviewProject.getTeam() != null ? reviewProject.getTeam().getId() : null;
+    Long assignedPmUserId =
+        reviewProject.getAssignedPmUser() != null
+            ? reviewProject.getAssignedPmUser().getId()
+            : null;
+    return updateProjectAssignment(
+        projectId, teamId, assignedPmUserId, teamService.getCurrentUserIdOrThrow(), null);
   }
 
   @Transactional
@@ -3473,7 +3497,7 @@ public class ReviewProjectService {
       ReviewProject reviewProject,
       boolean isAdmin,
       boolean isPm,
-      boolean isTranslator,
+      boolean isTranslatorOnly,
       Team previousTeam,
       Team nextTeam,
       User previousAssignedPm,
@@ -3493,7 +3517,7 @@ public class ReviewProjectService {
       if (teamChanged) {
         throw new AccessDeniedException("Only admins can change assigned team");
       }
-      if (isTranslator && pmChanged) {
+      if (isTranslatorOnly && pmChanged) {
         throw new AccessDeniedException("Translators can only reassign translator");
       }
       if (previousTeamId == null && (pmChanged || translatorChanged)) {
@@ -3502,9 +3526,21 @@ public class ReviewProjectService {
       if (previousTeamId != null) {
         if (isPm) {
           teamService.assertCurrentUserCanAccessTeam(previousTeamId);
-        } else if (isTranslator) {
+        } else if (isTranslatorOnly) {
           teamService.assertCurrentUserCanReadTeam(previousTeamId);
         }
+      }
+    }
+
+    if (isTranslatorOnly && translatorChanged) {
+      Long previousAssignedTranslatorId = getEntityId(previousAssignedTranslator);
+      Long nextAssignedTranslatorId = getEntityId(nextAssignedTranslator);
+      if (previousAssignedTranslatorId != null) {
+        throw new AccessDeniedException("Translators can only claim unassigned projects");
+      }
+      Long currentUserId = teamService.getCurrentUserIdOrThrow();
+      if (!Objects.equals(nextAssignedTranslatorId, currentUserId)) {
+        throw new AccessDeniedException("Translators can only assign themselves");
       }
     }
 

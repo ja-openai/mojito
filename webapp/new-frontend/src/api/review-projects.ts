@@ -814,6 +814,23 @@ export const updateReviewProjectAssignment = async (
   return (await response.json()) as ApiReviewProjectDetail;
 };
 
+export const claimReviewProjectTranslatorAssignment = async (
+  projectId: number,
+): Promise<ApiReviewProjectDetail> => {
+  const response = await fetch(`/api/review-projects/${projectId}/assignment/claim-translator`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to claim review project assignment');
+  }
+
+  return (await response.json()) as ApiReviewProjectDetail;
+};
+
 export const updateReviewProjectRequestPmAssignment = async (
   requestId: number,
   payload: {
