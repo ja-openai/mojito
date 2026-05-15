@@ -18,224 +18,15 @@ import {
   DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
   DEFAULT_REVIEW_AUTOMATION_TIME_ZONE,
 } from '../../utils/reviewAutomationSchedule';
+import {
+  DEFAULT_REVIEW_AUTOMATION_BATCH_MAX_WORD_COUNT,
+  formatReviewAutomationBatchRow,
+  parseReviewAutomationBatchInput,
+} from './reviewAutomationBatchParsing';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
-type ParsedRow = {
-  lineNumber: number;
-  raw: string;
-  id?: number;
-  action: 'create' | 'update';
-  name: string;
-  enabled: boolean;
-  cronExpression: string;
-  timeZone: string;
-  teamId: number;
-  teamName: string;
-  dueDateOffsetDays: number;
-  maxWordCountPerProject: number;
-  assignTranslator: boolean;
-  featureIds: number[];
-  featureNames: string[];
-  errors: string[];
-};
-
-const DEFAULT_MAX_WORD_COUNT = 2000;
-
 const EXAMPLE_INPUT = `Payments daily | enabled | 0 0 0 * * ? | America/Los_Angeles | Core Localization | assign-translator | 1 | 2000 | Payments
-Vendor catch-up | disabled | 0 30 6 * * ? | UTC | Vendor Team | no-translator | 2 | 1500 | Billing, Checkout`;
-
-const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
-
-const formatBatchExportRow = (row: {
-  name: string;
-  enabled: boolean;
-  cronExpression: string;
-  timeZone: string;
-  teamName: string | null;
-  dueDateOffsetDays: number;
-  maxWordCountPerProject: number;
-  assignTranslator?: boolean | null;
-  featureNames: string[];
-}) =>
-  `${row.name} | ${row.enabled ? 'enabled' : 'disabled'} | ${row.cronExpression} | ${row.timeZone} | ${row.teamName ?? ''} | ${row.assignTranslator === false ? 'no-translator' : 'assign-translator'} | ${row.dueDateOffsetDays} | ${row.maxWordCountPerProject} | ${row.featureNames.join(', ')}`;
-
-const normalizeEnabled = (value?: string | null) => {
-  const trimmed = (value ?? '').trim().toLowerCase();
-  if (!trimmed) {
-    return true;
-  }
-  if (['enabled', 'true', 'yes', 'on'].includes(trimmed)) {
-    return true;
-  }
-  if (['disabled', 'false', 'no', 'off'].includes(trimmed)) {
-    return false;
-  }
-  return null;
-};
-
-const normalizeMaxWordCount = (value?: string | null) => {
-  const trimmed = (value ?? '').trim();
-  if (!trimmed) {
-    return DEFAULT_MAX_WORD_COUNT;
-  }
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
-    return null;
-  }
-  return parsed;
-};
-
-const normalizeDueDateOffsetDays = (value?: string | null) => {
-  const trimmed = (value ?? '').trim();
-  if (!trimmed) {
-    return 1;
-  }
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
-    return null;
-  }
-  return parsed;
-};
-
-const normalizeAssignTranslator = (value?: string | null) => {
-  const trimmed = (value ?? '').trim().toLowerCase();
-  if (!trimmed) {
-    return true;
-  }
-  if (['assign-translator', 'assign', 'true', 'yes', 'on'].includes(trimmed)) {
-    return true;
-  }
-  if (['no-translator', 'skip-translator', 'none', 'false', 'no', 'off'].includes(trimmed)) {
-    return false;
-  }
-  return null;
-};
-
-const normalizeTimeZone = (value?: string | null) => {
-  const trimmed = (value ?? '').trim();
-  return trimmed || DEFAULT_REVIEW_AUTOMATION_TIME_ZONE;
-};
-
-function parseBatchInput(
-  input: string,
-  featureIdsByName: Map<string, number>,
-  featureDisplayNamesByName: Map<string, string>,
-  existingAutomationsByName: Map<string, { id: number }>,
-  teamIdsByName: Map<string, number>,
-  teamDisplayNamesByName: Map<string, string>,
-): ParsedRow[] {
-  const rows = input
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line, index) => {
-      const parts = line.split('|').map((part) => part.trim());
-      const normalizedName = normalizeAutomationName(parts[0] ?? '');
-      const enabled = normalizeEnabled(parts[1] ?? '');
-      const cronExpression = (parts[2] ?? '').trim();
-      const timeZone = normalizeTimeZone(parts[3] ?? '');
-      const teamName = (parts[4] ?? '').trim();
-      const hasAssignTranslatorColumn = parts.length >= 9;
-      const assignTranslator = hasAssignTranslatorColumn
-        ? normalizeAssignTranslator(parts[5] ?? '')
-        : true;
-      const dueDateOffsetDays = normalizeDueDateOffsetDays(
-        parts[hasAssignTranslatorColumn ? 6 : 5] ?? '',
-      );
-      const maxWordCountPerProject = normalizeMaxWordCount(
-        parts[hasAssignTranslatorColumn ? 7 : 6] ?? '',
-      );
-      const featureNames =
-        parts[hasAssignTranslatorColumn ? 8 : 7]
-          ?.split(/[;,]+/)
-          .map((part) => part.trim())
-          .filter(Boolean) ?? [];
-
-      const errors: string[] = [];
-      if (!normalizedName) {
-        errors.push('Missing automation name');
-      }
-      if (enabled == null) {
-        errors.push('Invalid enabled flag');
-      }
-      if (!cronExpression) {
-        errors.push('Missing cron expression');
-      }
-      const normalizedTeamKey = teamName.toLowerCase();
-      const teamId = normalizedTeamKey ? teamIdsByName.get(normalizedTeamKey) : null;
-      if (teamId == null) {
-        errors.push(`Unknown team: ${teamName || '(blank)'}`);
-      }
-      if (dueDateOffsetDays == null) {
-        errors.push('Invalid due date offset days');
-      }
-      if (maxWordCountPerProject == null) {
-        errors.push('Invalid max word count');
-      }
-      if (assignTranslator == null) {
-        errors.push('Invalid translator assignment flag');
-      }
-
-      const resolvedFeatureIds: number[] = [];
-      const resolvedFeatureNames: string[] = [];
-      const seenFeatureIds = new Set<number>();
-      for (const featureName of featureNames) {
-        const key = featureName.toLowerCase();
-        const featureId = featureIdsByName.get(key);
-        if (featureId == null) {
-          errors.push(`Unknown review feature: ${featureName}`);
-          continue;
-        }
-        if (seenFeatureIds.has(featureId)) {
-          continue;
-        }
-        seenFeatureIds.add(featureId);
-        resolvedFeatureIds.push(featureId);
-        resolvedFeatureNames.push(featureDisplayNamesByName.get(key) ?? featureName);
-      }
-
-      const existing = normalizedName
-        ? existingAutomationsByName.get(normalizedName.toLowerCase())
-        : undefined;
-      const action: ParsedRow['action'] = existing ? 'update' : 'create';
-
-      return {
-        lineNumber: index + 1,
-        raw: line,
-        id: existing?.id,
-        action,
-        name: normalizedName,
-        enabled: enabled ?? true,
-        cronExpression,
-        timeZone,
-        teamId: teamId ?? -1,
-        teamName: teamDisplayNamesByName.get(normalizedTeamKey) ?? teamName,
-        dueDateOffsetDays: dueDateOffsetDays ?? 1,
-        maxWordCountPerProject: maxWordCountPerProject ?? DEFAULT_MAX_WORD_COUNT,
-        assignTranslator: assignTranslator ?? true,
-        featureIds: resolvedFeatureIds.sort((left, right) => left - right),
-        featureNames: resolvedFeatureNames,
-        errors,
-      };
-    });
-
-  const countsByName = new Map<string, number>();
-  for (const row of rows) {
-    if (!row.name) {
-      continue;
-    }
-    const key = row.name.toLowerCase();
-    countsByName.set(key, (countsByName.get(key) ?? 0) + 1);
-  }
-
-  return rows.map((row) => {
-    const nextErrors = [...row.errors];
-    if (row.name && (countsByName.get(row.name.toLowerCase()) ?? 0) > 1) {
-      nextErrors.push('Duplicate automation name in batch');
-    }
-    return { ...row, errors: nextErrors };
-  });
-}
+Vendor catch-up | disabled | 0 30 6 * * ? | UTC | Vendor Team | no-translator | 2 | 1500 | Billing; Checkout`;
 
 export function AdminReviewAutomationBatchPage() {
   const user = useUser();
@@ -333,7 +124,7 @@ export function AdminReviewAutomationBatchPage() {
 
   const parsedRows = useMemo(
     () =>
-      parseBatchInput(
+      parseReviewAutomationBatchInput(
         input,
         featureIdsByName,
         featureDisplayNamesByName,
@@ -430,7 +221,7 @@ export function AdminReviewAutomationBatchPage() {
       return;
     }
 
-    const nextText = rowsToLoad.map((row) => formatBatchExportRow(row)).join('\n');
+    const nextText = rowsToLoad.map((row) => formatReviewAutomationBatchRow(row)).join('\n');
     setInput((previous) => {
       if (prefillMode === 'replace' || !previous.trim()) {
         return nextText;
@@ -463,7 +254,7 @@ export function AdminReviewAutomationBatchPage() {
         teamName: '',
         assignTranslator: true,
         dueDateOffsetDays: 1,
-        maxWordCountPerProject: DEFAULT_MAX_WORD_COUNT,
+        maxWordCountPerProject: DEFAULT_REVIEW_AUTOMATION_BATCH_MAX_WORD_COUNT,
         featureNames: [feature.name],
       })),
       {
@@ -568,7 +359,7 @@ export function AdminReviewAutomationBatchPage() {
             <ul className="user-batch-page__intro-list review-automation-batch-page__docs-list">
               <li>
                 `name | enabled|disabled | cron | timezone | team | assign-translator|no-translator
-                | due-date-offset-days | max-word-count | feature-a, feature-b`
+                | due-date-offset-days | max-word-count | feature-a; feature-b`
               </li>
               <li>Blank status defaults to enabled.</li>
               <li>Blank timezone defaults to UTC.</li>
@@ -578,7 +369,10 @@ export function AdminReviewAutomationBatchPage() {
               </li>
               <li>Blank due date offset defaults to 1 day.</li>
               <li>Blank max word count defaults to 2000.</li>
-              <li>Review feature names can be comma- or semicolon-separated.</li>
+              <li>
+                Use semicolons between review feature names. Comma-separated lists still work for
+                feature names without commas.
+              </li>
               <li>Merge skips automation names already present in the editor.</li>
             </ul>
           </aside>
