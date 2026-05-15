@@ -24,8 +24,7 @@ public class HibernateEventListenerConfig {
   @PostConstruct
   public void registerListeners() {
     SessionFactoryImplementor sessionFactory = emf.unwrap(SessionFactoryImplementor.class);
-    EventListenerRegistry registry =
-        sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
+    EventListenerRegistry registry = sessionFactory.getEventEngine().getListenerRegistry();
     registry
         .getEventListenerGroup(EventType.POST_COMMIT_INSERT)
         .appendListener(entityCrudEventListener);
