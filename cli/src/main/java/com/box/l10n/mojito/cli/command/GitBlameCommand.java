@@ -261,11 +261,7 @@ public class GitBlameCommand extends Command {
       logger.debug("Processing source file: {}", sourceFileMatch.getPath().toString());
 
       Path sourceRelativePath =
-          gitRepository
-              .getDirectory()
-              .getParentFile()
-              .toPath()
-              .relativize(sourceFileMatch.getPath());
+          gitRepository.getWorkTree().toPath().relativize(sourceFileMatch.getPath());
       BlameResult blameResultForFile =
           gitRepository.getBlameResultForFile(sourceRelativePath.toString());
 

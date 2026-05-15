@@ -281,9 +281,8 @@ public class GitBlameCommandTest extends CLITestBase {
     String relativePath =
         gitBlameCommand
             .gitRepository
-            .getDirectory()
+            .getWorkTree()
             .toPath()
-            .getParent()
             .relativize(sourceDirectory.toPath())
             .toString();
     relativePath = relativePath + "/res/values/strings.xml";

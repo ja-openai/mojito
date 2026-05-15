@@ -9,11 +9,8 @@ import com.box.l10n.mojito.rest.client.CommitClient;
 import com.box.l10n.mojito.rest.client.RepositoryClient;
 import com.box.l10n.mojito.rest.entity.Commit;
 import com.box.l10n.mojito.rest.entity.Repository;
-import com.google.common.collect.Streams;
 import java.io.IOException;
 import java.time.ZonedDateTime;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -133,17 +130,19 @@ public class CommitCreateCommand extends Command {
 
       if (commitHash != null) {
         RevWalk walk = new RevWalk(gitRepository.jgitRepository);
-        ObjectId commitObjectId = gitRepository.jgitRepository.resolve(commitHash);
+        ObjectId commitObjectId = gitRepository.resolve(commitHash);
         if (commitObjectId == null) {
           throw new CommandException(
               "The provided commit hash: '" + commitHash + "' cannot be resolved");
         }
         revCommit = walk.parseCommit(commitObjectId);
       } else {
-        revCommit =
-            Streams.stream(new Git(gitRepository.jgitRepository).log().setMaxCount(1).call())
-                .findFirst()
-                .orElseThrow(() -> new CommandException("There is no commits in the log"));
+        ObjectId commitObjectId = gitRepository.resolveHead();
+        if (commitObjectId == null) {
+          throw new CommandException("There is no commits in the log");
+        }
+        RevWalk walk = new RevWalk(gitRepository.jgitRepository);
+        revCommit = walk.parseCommit(commitObjectId);
       }
 
       final PersonIdent authorIdent = revCommit.getAuthorIdent();
@@ -168,7 +167,7 @@ public class CommitCreateCommand extends Command {
 
       return commitInfo;
 
-    } catch (IOException | GitAPIException ioException) {
+    } catch (IOException ioException) {
       throw new CommandException("Can't retreive information from Git", ioException);
     }
   }

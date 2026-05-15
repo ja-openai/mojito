@@ -3,6 +3,8 @@ package com.box.l10n.mojito.cli.command;
 import com.box.l10n.mojito.rest.entity.GitBlame;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import org.eclipse.jgit.api.BlameCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -20,6 +22,9 @@ public class GitRepository {
 
   Repository jgitRepository;
 
+  File discoveredGitDir;
+  File commonGitDir;
+
   /**
    * Init a git repository if current directory is within a git repository
    *
@@ -32,10 +37,60 @@ public class GitRepository {
     FileRepositoryBuilder builder = new FileRepositoryBuilder();
 
     try {
-      jgitRepository = builder.findGitDir(new File(gitDir)).readEnvironment().build();
+      builder.findGitDir(new File(gitDir)).readEnvironment();
+      configureForWorktree(builder);
+      jgitRepository = builder.build();
     } catch (IOException ioe) {
-      throw new CommandException("Can't build the git repository");
+      throw new CommandException("Can't build the git repository", ioe);
     }
+  }
+
+  void configureForWorktree(FileRepositoryBuilder builder) throws IOException {
+    discoveredGitDir = builder.getGitDir();
+    if (discoveredGitDir == null) {
+      return;
+    }
+    discoveredGitDir = discoveredGitDir.getCanonicalFile();
+
+    File workTree = getWorkTree(discoveredGitDir);
+    if (workTree != null) {
+      builder.setWorkTree(workTree);
+    }
+
+    File commonDirFile = new File(discoveredGitDir, "commondir");
+    if (!commonDirFile.isFile()) {
+      return;
+    }
+
+    String commonDirPath = Files.readString(commonDirFile.toPath(), StandardCharsets.UTF_8).trim();
+    if (commonDirPath.isEmpty()) {
+      return;
+    }
+
+    commonGitDir = new File(commonDirPath);
+    if (!commonGitDir.isAbsolute()) {
+      commonGitDir = new File(discoveredGitDir, commonDirPath);
+    }
+    commonGitDir = commonGitDir.getCanonicalFile();
+
+    builder.setObjectDirectory(new File(commonGitDir, "objects"));
+  }
+
+  File getWorkTree(File discoveredGitDir) throws IOException {
+    File worktreeGitDirFile = new File(discoveredGitDir, "gitdir");
+    if (worktreeGitDirFile.isFile()) {
+      String worktreeGitDirPath =
+          Files.readString(worktreeGitDirFile.toPath(), StandardCharsets.UTF_8).trim();
+      if (!worktreeGitDirPath.isEmpty()) {
+        File worktreeGitDir = new File(worktreeGitDirPath);
+        if (!worktreeGitDir.isAbsolute()) {
+          worktreeGitDir = new File(discoveredGitDir, worktreeGitDirPath);
+        }
+        return worktreeGitDir.getCanonicalFile().getParentFile();
+      }
+    }
+
+    return discoveredGitDir.getCanonicalFile().getParentFile();
   }
 
   /**
@@ -78,7 +133,7 @@ public class GitRepository {
     logger.debug("getBlameResultForFile: {}", filePath);
     try {
       BlameCommand blamer = new BlameCommand(jgitRepository);
-      ObjectId commitID = jgitRepository.resolve("HEAD");
+      ObjectId commitID = resolveHead();
       blamer.setStartCommit(commitID);
       blamer.setFilePath(filePath);
       BlameResult blame = blamer.call();
@@ -91,7 +146,89 @@ public class GitRepository {
     }
   }
 
+  public ObjectId resolve(String revision) throws IOException {
+    ObjectId objectId = jgitRepository.resolve(revision);
+    if (objectId == null && "HEAD".equals(revision)) {
+      objectId = resolveLinkedWorktreeHead();
+    }
+    return objectId;
+  }
+
+  public ObjectId resolveHead() throws IOException {
+    return resolve("HEAD");
+  }
+
+  ObjectId resolveLinkedWorktreeHead() throws IOException {
+    if (discoveredGitDir == null) {
+      return null;
+    }
+    return resolveHeadFromGitDir(discoveredGitDir);
+  }
+
+  ObjectId resolveHeadFromGitDir(File gitDir) throws IOException {
+    File headFile = new File(gitDir, "HEAD");
+    if (!headFile.isFile()) {
+      return null;
+    }
+
+    return resolveRefValue(Files.readString(headFile.toPath(), StandardCharsets.UTF_8).trim());
+  }
+
+  ObjectId resolveRefValue(String refValue) throws IOException {
+    if (ObjectId.isId(refValue)) {
+      return ObjectId.fromString(refValue);
+    }
+
+    String refPrefix = "ref:";
+    if (!refValue.startsWith(refPrefix)) {
+      return null;
+    }
+
+    String refName = refValue.substring(refPrefix.length()).trim();
+    ObjectId objectId = resolveRef(discoveredGitDir, refName);
+    if (objectId == null && commonGitDir != null) {
+      objectId = resolveRef(commonGitDir, refName);
+    }
+    return objectId;
+  }
+
+  ObjectId resolveRef(File gitDir, String refName) throws IOException {
+    if (gitDir == null) {
+      return null;
+    }
+
+    File refFile = new File(gitDir, refName);
+    if (refFile.isFile()) {
+      return resolveRefValue(Files.readString(refFile.toPath(), StandardCharsets.UTF_8).trim());
+    }
+
+    return resolvePackedRef(gitDir, refName);
+  }
+
+  ObjectId resolvePackedRef(File gitDir, String refName) throws IOException {
+    File packedRefsFile = new File(gitDir, "packed-refs");
+    if (!packedRefsFile.isFile()) {
+      return null;
+    }
+
+    for (String line : Files.readAllLines(packedRefsFile.toPath(), StandardCharsets.UTF_8)) {
+      if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == '^') {
+        continue;
+      }
+
+      String[] parts = line.split(" ", 2);
+      if (parts.length == 2 && refName.equals(parts[1]) && ObjectId.isId(parts[0])) {
+        return ObjectId.fromString(parts[0]);
+      }
+    }
+    return null;
+  }
+
   public File getDirectory() {
     return jgitRepository.getDirectory();
+  }
+
+  public File getWorkTree() {
+    return jgitRepository.getWorkTree();
   }
 }

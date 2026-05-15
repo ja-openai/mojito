@@ -8,13 +8,13 @@ import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.entity.Commit;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.service.commit.CommitService;
-import com.google.common.collect.Streams;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.junit.Assume;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -177,10 +177,11 @@ public class CommitCreateCommandTest extends CLITestBase {
 
     final GitRepository gitRepository = new GitRepository();
     gitRepository.init(getInputResourcesTestDir().toString());
-    final RevCommit revCommit =
-        Streams.stream(new Git(gitRepository.jgitRepository).log().setMaxCount(1).call())
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("test must be run on the mojito git repo"));
+    ObjectId headObjectId = gitRepository.resolveHead();
+    if (headObjectId == null) {
+      throw new RuntimeException("test must be run on the mojito git repo");
+    }
+    final RevCommit revCommit = new RevWalk(gitRepository.jgitRepository).parseCommit(headObjectId);
 
     assertEquals(revCommit.getName(), commit.getName());
   }
