@@ -7,7 +7,6 @@ import com.box.l10n.mojito.service.machinetranslation.MTServiceCacheConfiguratio
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurer;
@@ -50,14 +49,13 @@ public class CachingConfig implements CachingConfigurer {
   }
 
   private TieredCache getMachineTranslationCache() {
-    com.github.benmanes.caffeine.cache.@NonNull Cache<Object, Object>
-        machineTranslationCaffeineCache =
-            Caffeine.newBuilder()
-                .expireAfterWrite(
-                    mtServiceCacheConfiguration.getInMemory().getTtl().toMillis(),
-                    TimeUnit.MILLISECONDS)
-                .maximumSize(mtServiceCacheConfiguration.getInMemory().getMaximumSize())
-                .build();
+    com.github.benmanes.caffeine.cache.Cache<Object, Object> machineTranslationCaffeineCache =
+        Caffeine.newBuilder()
+            .expireAfterWrite(
+                mtServiceCacheConfiguration.getInMemory().getTtl().toMillis(),
+                TimeUnit.MILLISECONDS)
+            .maximumSize(mtServiceCacheConfiguration.getInMemory().getMaximumSize())
+            .build();
 
     CaffeineCache machineTranslationMemoryCache =
         new CaffeineCache("machineTranslationInMemory", machineTranslationCaffeineCache);

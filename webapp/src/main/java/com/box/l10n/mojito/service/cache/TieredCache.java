@@ -2,7 +2,6 @@ package com.box.l10n.mojito.service.cache;
 
 import com.google.common.base.Preconditions;
 import java.util.concurrent.Callable;
-import javax.annotation.Nullable;
 import org.springframework.cache.Cache;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 
@@ -21,7 +20,7 @@ public class TieredCache extends AbstractValueAdaptingCache {
   private final Cache tier1Cache;
   private final Cache tier2Cache;
 
-  public TieredCache(String cacheName, Cache tier1Cache, @Nullable Cache tier2Cache) {
+  public TieredCache(String cacheName, Cache tier1Cache, Cache tier2Cache) {
     super(true);
 
     Preconditions.checkNotNull(cacheName);

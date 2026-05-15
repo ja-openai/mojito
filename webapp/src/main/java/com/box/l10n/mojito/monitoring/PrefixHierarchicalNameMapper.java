@@ -9,7 +9,6 @@ import io.micrometer.core.instrument.config.NamingConvention;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 
 public class PrefixHierarchicalNameMapper implements HierarchicalNameMapper {
 
@@ -22,7 +21,7 @@ public class PrefixHierarchicalNameMapper implements HierarchicalNameMapper {
       String namePrefix,
       String tagKeyPrefix,
       String stripCharacters,
-      @Nullable NamingConvention nameConventionOverride) {
+      NamingConvention nameConventionOverride) {
     this.namePrefix = checkNotNull(namePrefix);
     this.tagKeyPrefix = checkNotNull(tagKeyPrefix);
     this.stripCharacters = stripCharacters;

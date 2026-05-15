@@ -4,19 +4,18 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import java.time.ZonedDateTime;
-import javax.annotation.Nullable;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record BranchStateTextUnit(
-    @JsonProperty("tmTextUnitId") @Nullable Long tmTextUnitId,
-    @JsonProperty("assetTextUnitId") @Nullable Long assetTextUnitId,
-    @JsonProperty("md5") @Nullable String md5,
-    @JsonProperty("createdDate") @Nullable ZonedDateTime createdDate,
-    @JsonProperty("name") @Nullable String name,
-    @JsonProperty("source") @Nullable String source,
-    @JsonProperty("comments") @Nullable String comments,
-    @JsonProperty("pluralForm") @Nullable String pluralForm,
-    @JsonProperty("pluralFormOther") @Nullable String pluralFormOther,
+    @JsonProperty("tmTextUnitId") Long tmTextUnitId,
+    @JsonProperty("assetTextUnitId") Long assetTextUnitId,
+    @JsonProperty("md5") String md5,
+    @JsonProperty("createdDate") ZonedDateTime createdDate,
+    @JsonProperty("name") String name,
+    @JsonProperty("source") String source,
+    @JsonProperty("comments") String comments,
+    @JsonProperty("pluralForm") String pluralForm,
+    @JsonProperty("pluralFormOther") String pluralFormOther,
     @JsonProperty("branchNameToBranchDatas")
         ImmutableMap<String, BranchData> branchNameToBranchDatas) {
 

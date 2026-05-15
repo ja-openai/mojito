@@ -9,7 +9,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import javax.annotation.Nullable;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -174,7 +173,6 @@ public class DatabaseCache extends AbstractValueAdaptingCache {
     return cacheConfig.getValueSerializationPair().write(value);
   }
 
-  @Nullable
   private Object deserializeCacheValue(byte[] value) {
     if (isAllowNullValues() && ObjectUtils.nullSafeEquals(value, BINARY_NULL_VALUE)) {
       return NullValue.INSTANCE;
