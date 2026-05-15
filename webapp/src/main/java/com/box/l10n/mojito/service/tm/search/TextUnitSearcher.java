@@ -3,6 +3,8 @@ package com.box.l10n.mojito.service.tm.search;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.nativecriteria.*;
 import com.box.l10n.mojito.service.NormalizationUtils;
+import com.box.l10n.mojito.service.tm.search.replacement.TextUnitSearcherShadowService;
+import com.box.l10n.mojito.service.tm.search.replacement.TextUnitSearcherShadowService.TimedResult;
 import com.github.pnowy.nc.core.CriteriaResult;
 import com.github.pnowy.nc.core.NativeCriteria;
 import com.github.pnowy.nc.core.NativeExps;
@@ -20,10 +22,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
@@ -50,12 +56,30 @@ public class TextUnitSearcher {
   /** logger */
   static Logger logger = LoggerFactory.getLogger(TextUnitSearcher.class);
 
+  @Autowired ObjectProvider<TextUnitSearcherShadowService> textUnitSearcherShadowService;
+
   @Retryable(
       retryFor = {TextUnitSearcherError.class},
+      noRetryFor = {TextUnitSearcherShadowService.TextUnitSearcherShadowException.class},
+      notRecoverable = {TextUnitSearcherShadowService.TextUnitSearcherShadowException.class},
       backoff = @Backoff(delay = 500, multiplier = 2))
   public TextUnitAndWordCount countTextUnitAndWordCount(TextUnitSearcherParameters searchParameters)
       throws TextUnitSearcherError {
 
+    TimedResult<TextUnitAndWordCount> nativeResult =
+        countNativeTextUnitAndWordCount(searchParameters);
+
+    compareCountWithShadowSearcher(
+        searchParameters,
+        nativeResult.result(),
+        nativeResult.durationMillis(),
+        () -> countNativeTextUnitAndWordCount(searchParameters));
+
+    return nativeResult.result();
+  }
+
+  private TimedResult<TextUnitAndWordCount> countNativeTextUnitAndWordCount(
+      TextUnitSearcherParameters searchParameters) throws TextUnitSearcherError {
     NativeCriteria c = getCriteriaForSearch(searchParameters);
 
     c.setProjection(
@@ -64,14 +88,18 @@ public class TextUnitSearcher {
             .addAggregateProjection(
                 "tu.word_count", "tu_word_count", NativeProjection.AggregateProjection.SUM));
 
+    TextUnitAndWordCount textUnitAndWordCount;
+    long nativeStartedNanos = System.nanoTime();
+    long nativeDurationMillis;
     try {
-      TextUnitAndWordCount textUnitAndWordCount =
-          c.criteriaResult(new CriteriaResultTransformerTextUnitAndWordCount());
-      return textUnitAndWordCount;
+      textUnitAndWordCount = c.criteriaResult(new CriteriaResultTransformerTextUnitAndWordCount());
+      nativeDurationMillis = elapsedMillis(nativeStartedNanos);
     } catch (Exception e) {
       logger.warn("TextUnitSearcher failed to count, query: {}", c.getQueryInfo().toString());
       throw new TextUnitSearcherError(c, "count text unit", e);
     }
+
+    return new TimedResult<>(textUnitAndWordCount, nativeDurationMillis);
   }
 
   @Recover
@@ -107,27 +135,79 @@ public class TextUnitSearcher {
   @Transactional
   @Retryable(
       retryFor = {TextUnitSearcherError.class},
+      noRetryFor = {TextUnitSearcherShadowService.TextUnitSearcherShadowException.class},
+      notRecoverable = {TextUnitSearcherShadowService.TextUnitSearcherShadowException.class},
       backoff = @Backoff(delay = 500, multiplier = 2))
   public List<TextUnitDTO> search(TextUnitSearcherParameters searchParameters) {
 
+    TimedResult<List<TextUnitDTO>> nativeResult = searchNative(searchParameters);
+
+    compareSearchWithShadowSearcher(
+        searchParameters,
+        nativeResult.result(),
+        nativeResult.durationMillis(),
+        () -> searchNative(searchParameters));
+
+    return nativeResult.result();
+  }
+
+  private TimedResult<List<TextUnitDTO>> searchNative(TextUnitSearcherParameters searchParameters) {
     NativeCriteria c = getCriteriaForSearch(searchParameters);
 
+    List<TextUnitDTO> resultAsList;
+    long nativeStartedNanos = System.nanoTime();
+    long nativeDurationMillis;
     try {
       logger.debug("Perform query");
-      List<TextUnitDTO> resultAsList =
+      resultAsList =
           c.criteriaResult(
               new TextUnitDTONativeObjectMapper(searchParameters.getAssetTextUnitUsages() != null));
+      nativeDurationMillis = elapsedMillis(nativeStartedNanos);
 
       if (logger.isDebugEnabled()) {
         logger.debug("Query done, info: {}", c.getQueryInfo());
       }
 
-      return resultAsList;
     } catch (Exception e) {
       logger.warn("TextUnitSearcher failed to search, exception", e);
       logger.warn("TextUnitSearcher failed to search, query: {}", c.getQueryInfo().toString());
       throw new TextUnitSearcherError(c, "search", e);
     }
+
+    return new TimedResult<>(resultAsList, nativeDurationMillis);
+  }
+
+  private void compareCountWithShadowSearcher(
+      TextUnitSearcherParameters searchParameters,
+      TextUnitAndWordCount textUnitAndWordCount,
+      long nativeDurationMillis,
+      Supplier<TimedResult<TextUnitAndWordCount>> nativeCountSupplier) {
+    if (textUnitSearcherShadowService != null) {
+      textUnitSearcherShadowService.ifAvailable(
+          shadowService ->
+              shadowService.compareCount(
+                  searchParameters,
+                  textUnitAndWordCount,
+                  nativeDurationMillis,
+                  nativeCountSupplier));
+    }
+  }
+
+  private void compareSearchWithShadowSearcher(
+      TextUnitSearcherParameters searchParameters,
+      List<TextUnitDTO> resultAsList,
+      long nativeDurationMillis,
+      Supplier<TimedResult<List<TextUnitDTO>>> nativeSearchSupplier) {
+    if (textUnitSearcherShadowService != null) {
+      textUnitSearcherShadowService.ifAvailable(
+          shadowService ->
+              shadowService.compareSearch(
+                  searchParameters, resultAsList, nativeDurationMillis, nativeSearchSupplier));
+    }
+  }
+
+  private static long elapsedMillis(long startedNanos) {
+    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedNanos);
   }
 
   NativeCriteria getCriteriaForSearch(TextUnitSearcherParameters searchParameters) {
