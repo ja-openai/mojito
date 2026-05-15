@@ -269,6 +269,7 @@ public class ReviewAutomationService {
             .findById(automationId)
             .orElseThrow(
                 () -> new IllegalArgumentException("Review automation not found: " + automationId));
+    reviewAutomationRunRepository.deleteByReviewAutomationId(automationId);
     reviewAutomationRepository.delete(reviewAutomation);
     syncSchedulerAfterCommit();
   }

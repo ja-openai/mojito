@@ -4,6 +4,7 @@ import com.box.l10n.mojito.entity.review.ReviewAutomationRun;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -96,4 +97,12 @@ public interface ReviewAutomationRunRepository extends JpaRepository<ReviewAutom
   List<ReviewAutomationRunTimestampRow> findLatestSuccessfulRunTimestampsByAutomationIds(
       @Param("automationIds") List<Long> automationIds,
       @Param("statuses") List<ReviewAutomationRun.Status> statuses);
+
+  @Modifying
+  @Query(
+      """
+      delete from ReviewAutomationRun run
+      where run.reviewAutomation.id = :reviewAutomationId
+      """)
+  int deleteByReviewAutomationId(@Param("reviewAutomationId") Long reviewAutomationId);
 }
