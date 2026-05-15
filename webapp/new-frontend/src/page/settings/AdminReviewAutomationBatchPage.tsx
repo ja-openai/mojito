@@ -13,6 +13,7 @@ import {
 } from '../../api/review-automations';
 import { fetchReviewFeatureOptions } from '../../api/review-features';
 import { fetchTeams } from '../../api/teams';
+import { Modal } from '../../components/Modal';
 import { useUser } from '../../components/RequireUser';
 import {
   DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
@@ -28,6 +29,8 @@ import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 const EXAMPLE_INPUT = `Payments daily | enabled | 0 0 0 * * ? | America/Los_Angeles | Core Localization | assign-translator | 1 | 2000 | Payments
 Vendor catch-up | disabled | 0 30 6 * * ? | UTC | Vendor Team | no-translator | 2 | 1500 | Billing; Checkout`;
 
+type PrefillSource = 'existing-automations' | 'review-feature-roster';
+
 export function AdminReviewAutomationBatchPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
@@ -35,6 +38,9 @@ export function AdminReviewAutomationBatchPage() {
   const queryClient = useQueryClient();
   const [input, setInput] = useState('');
   const [prefillMode, setPrefillMode] = useState<'merge' | 'replace'>('merge');
+  const [isPrefillModalOpen, setIsPrefillModalOpen] = useState(false);
+  const [prefillSource, setPrefillSource] = useState<PrefillSource>('existing-automations');
+  const [includeDisabledPrefillRows, setIncludeDisabledPrefillRows] = useState(false);
   const [statusNotice, setStatusNotice] = useState<{
     kind: 'success' | 'error';
     message: string;
@@ -205,7 +211,7 @@ export function AdminReviewAutomationBatchPage() {
         kind: 'error',
         message: options?.emptyMessage ?? 'Nothing is available to prefill.',
       });
-      return;
+      return false;
     }
 
     const rowsToLoad =
@@ -218,7 +224,7 @@ export function AdminReviewAutomationBatchPage() {
         kind: 'success',
         message: `All ${options?.sourceLabel ?? 'prefill'} rows are already present in the batch editor.`,
       });
-      return;
+      return true;
     }
 
     const nextText = rowsToLoad.map((row) => formatReviewAutomationBatchRow(row)).join('\n');
@@ -235,17 +241,26 @@ export function AdminReviewAutomationBatchPage() {
           ? `Replaced with ${rowsToLoad.length} ${options?.sourceLabel ?? 'prefill'} row${rowsToLoad.length === 1 ? '' : 's'}.`
           : `Merged ${rowsToLoad.length} ${options?.sourceLabel ?? 'prefill'} row${rowsToLoad.length === 1 ? '' : 's'}.`,
     });
+    return true;
   };
 
   const handlePrefillFromExistingAutomations = () => {
-    applyPrefillRows(batchExportQuery.data ?? [], {
-      emptyMessage: 'No existing review automations are available to prefill.',
-      sourceLabel: 'existing automation',
+    const rows = includeDisabledPrefillRows
+      ? (batchExportQuery.data ?? [])
+      : (batchExportQuery.data ?? []).filter((row) => row.enabled);
+
+    return applyPrefillRows(rows, {
+      emptyMessage: includeDisabledPrefillRows
+        ? 'No existing review automations are available to prefill.'
+        : 'No enabled review automations are available to prefill.',
+      sourceLabel: includeDisabledPrefillRows
+        ? 'existing automation'
+        : 'enabled existing automation',
     });
   };
 
   const handlePrefillFromReviewFeatureRoster = () => {
-    applyPrefillRows(
+    return applyPrefillRows(
       (reviewFeaturesQuery.data ?? []).map((feature) => ({
         name: feature.name,
         enabled: false,
@@ -262,6 +277,22 @@ export function AdminReviewAutomationBatchPage() {
         sourceLabel: 'review feature roster',
       },
     );
+  };
+
+  const isPrefillConfirmDisabled =
+    (prefillSource === 'existing-automations' &&
+      (batchExportQuery.isLoading || batchExportQuery.data == null)) ||
+    (prefillSource === 'review-feature-roster' && reviewFeaturesQuery.data == null);
+
+  const handlePrefillModalConfirm = () => {
+    const didPrefill =
+      prefillSource === 'existing-automations'
+        ? handlePrefillFromExistingAutomations()
+        : handlePrefillFromReviewFeatureRoster();
+
+    if (didPrefill) {
+      setIsPrefillModalOpen(false);
+    }
   };
 
   return (
@@ -323,18 +354,13 @@ export function AdminReviewAutomationBatchPage() {
               <button
                 type="button"
                 className="settings-button settings-button--ghost review-automation-batch-page__prefill-button"
-                onClick={handlePrefillFromExistingAutomations}
-                disabled={batchExportQuery.isLoading}
+                onClick={() => {
+                  setIsPrefillModalOpen(true);
+                  setStatusNotice(null);
+                }}
+                disabled={batchExportQuery.isLoading && reviewFeaturesQuery.data == null}
               >
-                Prefill from existing automations
-              </button>
-              <button
-                type="button"
-                className="settings-button settings-button--ghost review-automation-batch-page__prefill-button"
-                onClick={handlePrefillFromReviewFeatureRoster}
-                disabled={reviewFeaturesQuery.data == null}
-              >
-                Prefill from review feature roster
+                Prefill rows
               </button>
             </div>
             <div className="user-batch-page__field user-batch-page__input">
@@ -460,6 +486,101 @@ export function AdminReviewAutomationBatchPage() {
           </button>
         </div>
       </div>
+
+      <Modal
+        open={isPrefillModalOpen}
+        size="md"
+        ariaLabel="Prefill batch rows"
+        onClose={() => setIsPrefillModalOpen(false)}
+        closeOnBackdrop
+      >
+        <div className="modal__title">Prefill batch rows</div>
+        <div className="modal__body review-automation-batch-page__prefill-modal-body">
+          <div
+            className="review-automation-batch-page__prefill-source-list"
+            role="radiogroup"
+            aria-label="Prefill source"
+          >
+            <div className="review-automation-batch-page__prefill-source">
+              <label className="review-automation-batch-page__prefill-source-radio">
+                <input
+                  type="radio"
+                  name="review-automation-prefill-source"
+                  checked={prefillSource === 'existing-automations'}
+                  onChange={() => {
+                    setPrefillSource('existing-automations');
+                  }}
+                />
+                <span className="review-automation-batch-page__prefill-source-copy">
+                  <span className="review-automation-batch-page__prefill-source-title">
+                    Existing automations
+                  </span>
+                  <span className="review-automation-batch-page__prefill-source-hint">
+                    Load configured automation rows. Disabled automations are excluded by default.
+                  </span>
+                </span>
+              </label>
+              {prefillSource === 'existing-automations' ? (
+                <label className="review-automation-batch-page__prefill-source-option">
+                  <input
+                    type="checkbox"
+                    checked={includeDisabledPrefillRows}
+                    onChange={(event) => {
+                      setIncludeDisabledPrefillRows(event.target.checked);
+                    }}
+                  />
+                  <span className="review-automation-batch-page__prefill-source-copy">
+                    <span className="review-automation-batch-page__prefill-source-title">
+                      Include disabled automations
+                    </span>
+                    <span className="review-automation-batch-page__prefill-source-hint">
+                      Use this when batch-fixing disabled rows or re-enabling deleted-by-mistake
+                      automations.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
+            </div>
+            <div className="review-automation-batch-page__prefill-source">
+              <label className="review-automation-batch-page__prefill-source-radio">
+                <input
+                  type="radio"
+                  name="review-automation-prefill-source"
+                  checked={prefillSource === 'review-feature-roster'}
+                  onChange={() => {
+                    setPrefillSource('review-feature-roster');
+                  }}
+                />
+                <span className="review-automation-batch-page__prefill-source-copy">
+                  <span className="review-automation-batch-page__prefill-source-title">
+                    Review feature roster
+                  </span>
+                  <span className="review-automation-batch-page__prefill-source-hint">
+                    Create one disabled draft automation row for each review feature.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div className="modal__actions">
+          <button
+            type="button"
+            className="modal__button"
+            onClick={() => setIsPrefillModalOpen(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="modal__button modal__button--primary"
+            onClick={handlePrefillModalConfirm}
+            disabled={isPrefillConfirmDisabled}
+          >
+            Prefill
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

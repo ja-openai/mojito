@@ -601,7 +601,6 @@ export function AdminReviewAutomationsPage() {
             }
           }}
           requireText={automationPendingDelete?.name}
-          requireTextLabel="Type the automation name to confirm deletion."
         />
       </div>
     </div>

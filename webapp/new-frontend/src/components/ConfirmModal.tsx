@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 import { Modal } from './Modal';
 
@@ -28,6 +28,7 @@ export function ConfirmModal({
   requireTextLabel,
 }: Props) {
   const [confirmationValue, setConfirmationValue] = useState('');
+  const confirmationInputId = useId();
 
   useEffect(() => {
     if (!open) {
@@ -39,18 +40,24 @@ export function ConfirmModal({
     typeof requireText === 'string' && confirmationValue.trim() !== requireText;
 
   return (
-    <Modal open={open} size="sm" role="alertdialog" ariaLabel={title}>
+    <Modal
+      open={open}
+      size={requireText ? 'md' : 'sm'}
+      role="alertdialog"
+      ariaLabel={title}
+      className="confirm-modal"
+    >
       <div className="modal__title">{title}</div>
       <div className="modal__body">{body}</div>
       {requireText ? (
-        <div className="modal__body">
-          <label className="form__label" htmlFor="confirm-modal-input">
+        <div className="confirm-modal__confirmation">
+          <label className="confirm-modal__label" htmlFor={confirmationInputId}>
             {requireTextLabel ?? `Type "${requireText}" to confirm.`}
           </label>
           <input
-            id="confirm-modal-input"
+            id={confirmationInputId}
             type="text"
-            className="form-control"
+            className="confirm-modal__input"
             value={confirmationValue}
             onChange={(event) => {
               setConfirmationValue(event.target.value);

@@ -366,7 +366,6 @@ export function AdminReviewFeaturesPage() {
             }
           }}
           requireText={featurePendingDelete?.name}
-          requireTextLabel="Type the feature name to confirm deletion."
         />
       </div>
     </div>
