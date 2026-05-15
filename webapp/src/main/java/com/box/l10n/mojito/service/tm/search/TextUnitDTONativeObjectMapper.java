@@ -42,15 +42,9 @@ public class TextUnitDTONativeObjectMapper implements NativeObjectMapper<TextUni
     t.setTmTextUnitCurrentVariantId(cr.getLong(idx++));
     t.setStatus(getStatus(cr.getString(idx++)));
 
-    String includedInLocalizedFile = cr.getString(idx++);
-    // TODO(P1) getBoolean doesn't work nor getValue with a cast
-    // to boolean (previous code). It would require more digging in lib
-    // implementation to understand why getBoolean doesn't work. This
-    // seems to work fine, use this code for now.
-    t.setIncludedInLocalizedFile(Boolean.valueOf(includedInLocalizedFile));
+    t.setIncludedInLocalizedFile(parseNativeBoolean(cr.getString(idx++)));
     t.setCreatedDate(JSR310Migration.newDateTimeCtorWithDate(cr.getDate(idx++)));
-    String assetDeleted = cr.getString(idx++);
-    t.setAssetDeleted(Boolean.valueOf(assetDeleted));
+    t.setAssetDeleted(parseNativeBoolean(cr.getString(idx++)));
     t.setPluralForm(cr.getString(idx++));
     t.setPluralFormOther(cr.getString(idx++));
     t.setRepositoryName(cr.getString(idx++));
@@ -58,8 +52,7 @@ public class TextUnitDTONativeObjectMapper implements NativeObjectMapper<TextUni
     t.setAssetTextUnitId(cr.getLong(idx++));
     t.setTmTextUnitCreatedDate(JSR310Migration.newDateTimeCtorWithDate(cr.getDate(idx++)));
 
-    String doNotTranslate = cr.getString(idx++);
-    t.setDoNotTranslate(Boolean.valueOf(doNotTranslate));
+    t.setDoNotTranslate(parseNativeBoolean(cr.getString(idx++)));
 
     t.setBranchId(cr.getLong(idx++));
 
@@ -89,5 +82,13 @@ public class TextUnitDTONativeObjectMapper implements NativeObjectMapper<TextUni
     }
 
     return status;
+  }
+
+  static boolean parseNativeBoolean(String value) {
+    return value != null
+        && ("true".equalsIgnoreCase(value)
+            || "1".equals(value)
+            || "\u0001".equals(value)
+            || "yes".equalsIgnoreCase(value));
   }
 }
