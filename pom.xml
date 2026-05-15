@@ -24,6 +24,7 @@
         <maven.release.version>2.5.3</maven.release.version>
         <okapi.version>1.47.0</okapi.version>
         <guava.version>33.6.0-jre</guava.version>
+        <commons-io.version>2.22.0</commons-io.version>
         <aspectj-maven-plugin.version>1.16.0</aspectj-maven-plugin.version>
         <auto-value.version>1.7.4</auto-value.version>
         <plugin.version.google-java-format>1.22.0</plugin.version.google-java-format>
