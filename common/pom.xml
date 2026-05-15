@@ -418,7 +418,7 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>${aspectj-maven-plugin.group-id}</groupId>
+                <groupId>org.codehaus.mojo</groupId>
                 <artifactId>aspectj-maven-plugin</artifactId>
                 <version>${aspectj-maven-plugin.version}</version>
                 <dependencies>

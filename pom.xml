@@ -24,9 +24,7 @@
         <maven.release.version>2.5.3</maven.release.version>
         <okapi.version>1.47.0</okapi.version>
         <guava.version>29.0-jre</guava.version>
-        <aspectj-maven-plugin.version>1.14</aspectj-maven-plugin.version>
-        <!-- org.codehaus.mojo doesn't support Java 17+, use fork for now -->
-        <aspectj-maven-plugin.group-id>dev.aspectj</aspectj-maven-plugin.group-id>
+        <aspectj-maven-plugin.version>1.16.0</aspectj-maven-plugin.version>
         <auto-value.version>1.7.4</auto-value.version>
         <plugin.version.google-java-format>1.22.0</plugin.version.google-java-format>
         <jjwt.version>0.12.6</jjwt.version>
@@ -34,7 +32,6 @@
         <icu4j.version>78.3</icu4j.version>
         <docker.compose.detached.mode>true</docker.compose.detached.mode>
         <docker.compose.remove.volumes>true</docker.compose.remove.volumes>
-        <aspectj.version>1.9.21</aspectj.version>
         <mojito.test.local-config.arg>-Dspring.config.additional-location=optional:file://${user.home}/.l10n/config/${mojito.test.local-config.dir}/</mojito.test.local-config.arg>
         <mojito.test.mockito-agent.arg>-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</mojito.test.mockito-agent.arg>
     </properties>
