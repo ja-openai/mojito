@@ -31,7 +31,7 @@
         <auto-value.version>1.7.4</auto-value.version>
         <plugin.version.google-java-format>1.22.0</plugin.version.google-java-format>
         <jjwt.version>0.12.6</jjwt.version>
-        <github.api.version>1.325</github.api.version>
+        <github.api.version>1.330</github.api.version>
         <icu4j.version>78.3</icu4j.version>
         <docker.compose.detached.mode>true</docker.compose.detached.mode>
         <docker.compose.remove.volumes>true</docker.compose.remove.volumes>
