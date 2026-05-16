@@ -2,7 +2,7 @@
 layout: doc
 title:  "Authentication (Spring Boot 3 on master)"
 categories: guides
-permalink: /docs/guides/authentication-springboot2/
+permalink: /docs/guides/authentication-springboot3/
 ---
 
 {{ site.mojito_green }}'s default setup comes with a `form login` authentication backed by the database.
@@ -20,14 +20,14 @@ Change or add an authentication mechanisms by updating the configuration. Eg. to
 You can chosse to either show the {{ site.mojito_green }}'s login page or to automatically redirect to another page.
 Eg. to redirect to Github OAuth when the not authenticated
     
-    l10n.security.unauth-redirect-to==/login/oauth2/authorization/github
+    l10n.security.unauth-redirect-to=/login/oauth2/authorization/github
 
 If the redirect is enabled, it is still possible to access {{ site.mojito_green }}'s login page.
                
 ### OAuth 2
 
-{{ site.mojito_green }} support `OAuth 2` using standard
-[Spring 2 / Spring Security configuration](https://docs.spring.io/spring-security/site/docs/5.3.2.RELEASE/reference/html5/#oauth2login-sample-boot)
+{{ site.mojito_green }} supports `OAuth 2` using standard
+[Spring Security OAuth 2.0 Login configuration](https://docs.spring.io/spring-security/reference/6.5/servlet/oauth2/login/index.html)
  with a few additional {{ site.mojito_green }} settings to customize the UI and how the user name is extracted from the user information payload. 
 
 #### Example with GitHub
@@ -48,7 +48,7 @@ Settings to be added, substituting the client `id` and `secret`:
 #### Multiple registrations and providers 
 
 Multiple OAuth registrations and providers can be specified, see 
-[Spring security documentation](https://docs.spring.io/spring-security/site/docs/5.3.2.RELEASE/reference/html5/#oauth2login-boot-property-mappings) 
+[Spring Security documentation](https://docs.spring.io/spring-security/reference/6.5/servlet/oauth2/login/index.html)
 for more details. 
 
 A configuration could look similar to this:
@@ -70,12 +70,12 @@ A configuration could look similar to this:
 
 ### LDAP
 
-{{ site.mojito_green }} can use `LDAP` for authentication (default uses database) 
-by setting the following properties:
+{{ site.mojito_green }} can use an external `LDAP` server for authentication
+(default uses database) by setting the following properties. The server and
+port should be included in `l10n.security.ldap.url`.
 
     l10n.security.authenticationType=LDAP
-    l10n.security.ldap.url=${URL}
-    l10n.security.ldap.port=${PORT}
+    l10n.security.ldap.url=ldap://${HOST}:${PORT}/${ROOT}
     l10n.security.ldap.root=${ROOT}
     l10n.security.ldap.userSearchBase=${USER_SEARCH_BASE}
     l10n.security.ldap.userSearchFilter=${USER_SEARCH_FILTER}

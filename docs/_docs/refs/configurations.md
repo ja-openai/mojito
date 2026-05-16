@@ -158,11 +158,10 @@ With database authentication, {{ site.mojito_green }} users can be added, update
 
 ### LDAP Authentication
 
-You can override the user authentication setting to use LDAP.  Here are the settings required to use LDAP.
+You can override the user authentication setting to use an external LDAP server. The server and port should be included in `l10n.security.ldap.url`.
 
     l10n.security.authenticationType=LDAP
-    l10n.security.ldap.url=${URL}
-    l10n.security.ldap.port=${PORT}
+    l10n.security.ldap.url=ldap://${HOST}:${PORT}/${ROOT}
     l10n.security.ldap.root=${ROOT}
     l10n.security.ldap.userSearchBase=${USER_SEARCH_BASE}
     l10n.security.ldap.userSearchFilter=${USER_SEARCH_FILTER}
