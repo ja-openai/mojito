@@ -16,10 +16,10 @@ feature shape was still moving.
 
 ### Product surfaces
 
-- `/n/glossaries` is the shared glossary directory.
-- `/n/glossaries/:glossaryId` is the daily term workspace.
-- `/n/settings/system/glossaries` remains the admin lifecycle surface.
-- `/n/glossaries/:glossaryId/settings` owns name, description, enabled state,
+- `/glossaries` is the shared glossary directory.
+- `/glossaries/:glossaryId` is the daily term workspace.
+- `/settings/system/glossaries` remains the admin lifecycle surface.
+- `/glossaries/:glossaryId/settings` owns name, description, enabled state,
   locales, and applicability.
 
 The workspace owns term operations. Settings should not duplicate term curation.
