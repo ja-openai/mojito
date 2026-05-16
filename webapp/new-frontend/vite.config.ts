@@ -8,6 +8,10 @@ export default defineConfig({
   server: {
     port: Number(process.env.VITE_PORT ?? 5173),
     strictPort: true,
+    cors: {
+      origin: [/^chrome-extension:\/\//, /^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/],
+      credentials: true,
+    },
     proxy: {
       // Forward API calls to the Spring Boot backend
       '/api': {

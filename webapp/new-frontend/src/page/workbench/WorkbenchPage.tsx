@@ -11,6 +11,10 @@ import { useWorkbenchEdits } from './useWorkbenchEdits';
 import { useWorkbenchSearch } from './useWorkbenchSearch';
 import { clampWorksetSize, serializeSearchRequest } from './workbench-helpers';
 import {
+  legacyWorkbenchLinkErrorTitle,
+  resolveLegacyWorkbenchLink,
+} from './workbench-legacy-links';
+import {
   loadWorkbenchSessionSearch,
   saveWorkbenchSessionSearch,
   WORKBENCH_SESSION_QUERY_KEY,
@@ -308,6 +312,49 @@ export function WorkbenchPage() {
     () => new Map(search.repositories.map((repo) => [repo.name, repo.id])),
     [search.repositories],
   );
+  const legacySearchHydrationSignatureRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (shareId || deepLinkTmId || stateSearchRequest) {
+      return;
+    }
+
+    const legacyLink = resolveLegacyWorkbenchLink(
+      searchParams,
+      repositoryIdByName,
+      search.repositories.length,
+    );
+    if (legacyLink.status === 'none' || legacyLink.status === 'pending') {
+      return;
+    }
+
+    if (legacyLink.status === 'error') {
+      setHydrationModal({
+        title: legacyWorkbenchLinkErrorTitle,
+        body: legacyLink.message,
+      });
+      return;
+    }
+
+    const signature = serializeSearchRequest(legacyLink.request);
+    if (legacySearchHydrationSignatureRef.current === signature) {
+      return;
+    }
+
+    legacySearchHydrationSignatureRef.current = signature;
+    setShareIdToHydrate(null);
+    setHydrationModal(null);
+    setHydratedSearchRequest(legacyLink.request);
+    setSearchParams(legacyLink.nextSearchParams, { replace: true });
+  }, [
+    deepLinkTmId,
+    repositoryIdByName,
+    search.repositories.length,
+    searchParams,
+    setSearchParams,
+    shareId,
+    stateSearchRequest,
+  ]);
 
   const buildCollectionSearchRequest = useCallback(
     (collection: WorkbenchCollection): TextUnitSearchRequest | null => {

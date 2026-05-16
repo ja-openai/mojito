@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mojito ICT Fixture</title>
+    <style>
+      body {
+        max-width: 760px;
+        margin: 48px auto;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.45;
+      }
+
+      .panel {
+        display: grid;
+        gap: 16px;
+        border: 1px solid #d0d5dd;
+        border-radius: 8px;
+        padding: 20px;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      input {
+        width: 320px;
+        padding: 8px;
+      }
+
+      .group {
+        display: grid;
+        gap: 6px;
+      }
+
+      .label {
+        color: #667085;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="panel">
+      <h1>Mojito ICT fixture</h1>
+      <div class="group">
+        <span class="label">Native string</span>
+        <p id="plain"></p>
+      </div>
+      <div class="group">
+        <span class="label">Delta string</span>
+        <button id="button" type="button"></button>
+      </div>
+      <div class="group">
+        <span class="label">MT_REQUIRED string</span>
+        <p id="mt"></p>
+      </div>
+      <label>
+        Placeholder marker:
+        <input id="input" />
+      </label>
+      <p>
+        Hover marked text to see an outline. Shift-click marked text to open the ICT modal.
+      </p>
+    </main>
+
+    <script>
+      const START = '\u{E0022}';
+      const MIDDLE = '\u{E0023}';
+      const END = '\u{E0024}';
+      const INNER = '\u{0013}';
+      const fixtureTimestamp = new Date().toISOString();
+
+      function b64EncodeUnicode(value) {
+        return btoa(
+          encodeURIComponent(value).replace(/%([0-9A-F]{2})/g, (_match, byte) =>
+            String.fromCharCode(`0x${byte}`),
+          ),
+        );
+      }
+
+      function asciiToTagsBlock(value) {
+        return [...value]
+          .map((char) => String.fromCharCode(56128, 56352 - 32 + char.charCodeAt(0)))
+          .join('');
+      }
+
+      function withIctMetadata(textUnitName, translation, translationType = 'NATIVE', locale = 'en') {
+        const metadata = [
+          'Mojito',
+          'fixtures/ict.html',
+          textUnitName,
+          locale,
+          'fixture stack',
+          translationType,
+        ].join(INNER);
+        return `${START}${asciiToTagsBlock(b64EncodeUnicode(metadata))}${MIDDLE}${translation}${END}`;
+      }
+
+      document.getElementById('plain').textContent = withIctMetadata(
+        'fixture.paragraph',
+        'This paragraph has Mojito ICT metadata.',
+      );
+      document.getElementById('button').textContent = withIctMetadata(
+        'fixture.button',
+        'Marked button',
+        'DELTA_OTA',
+      );
+      document.getElementById('mt').textContent = withIctMetadata(
+        'fixture.mt_required',
+        `This source string should be replaced by machine translation. Fixture timestamp: ${fixtureTimestamp}`,
+        'MT_REQUIRED',
+        'fr-FR',
+      );
+      document
+        .getElementById('input')
+        .setAttribute(
+          'placeholder',
+          withIctMetadata('fixture.placeholder', 'Marked placeholder'),
+        );
+    </script>
+  </body>
+</html>

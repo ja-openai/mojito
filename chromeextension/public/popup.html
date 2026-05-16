@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mojito In-Context Translation</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --color-accent: #1f7ae0;
+        --color-accent-soft: rgba(31, 122, 224, 0.08);
+        --color-accent-border: rgba(31, 122, 224, 0.2);
+        --color-focus-outline: rgba(31, 122, 224, 0.2);
+        --color-focus-border: rgba(31, 122, 224, 0.4);
+        --color-text: #0f172a;
+        --color-text-muted: #4b5563;
+        --color-border: #e5e7eb;
+        font-family:
+          Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 13px;
+      }
+
+      body {
+        box-sizing: border-box;
+        width: 380px;
+        margin: 0;
+        color: var(--color-text);
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      h1 {
+        margin: 0;
+        color: #ffffff;
+        font-size: 15.5px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      h2,
+      summary {
+        margin: 0;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      form {
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+        background: #ffffff;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: var(--color-text);
+        font-weight: 600;
+      }
+
+      input[type="text"],
+      input[type="url"] {
+        box-sizing: border-box;
+        width: 100%;
+        border: 1px solid #cfd8e3;
+        border-radius: 6px;
+        padding: 7px 9px;
+        background: #f8fafc;
+        color: var(--color-text);
+        font: inherit;
+        font-weight: 600;
+      }
+
+      input[readonly] {
+        background: #f8fafc;
+        color: #475467;
+      }
+
+      input[type="text"]:focus,
+      input[type="url"]:focus {
+        border-color: var(--color-focus-border);
+        outline: 2px solid var(--color-focus-outline);
+      }
+
+      .titlebar {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 0;
+        padding: 14px 16px;
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent 38%),
+          linear-gradient(180deg, #2f86e8 0%, var(--color-accent) 100%);
+        box-shadow:
+          0 10px 22px rgba(31, 122, 224, 0.24),
+          inset 0 1px 0 rgba(255, 255, 255, 0.22),
+          inset 0 -1px 0 rgba(15, 23, 42, 0.12);
+      }
+
+      .title-stack {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 10px;
+      }
+
+      .logo-mark {
+        display: inline-grid;
+        width: 26px;
+        height: 26px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .section {
+        position: relative;
+        display: grid;
+        gap: 12px;
+        overflow: hidden;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 14px 14px 14px 16px;
+        background: #ffffff;
+        box-shadow:
+          0 12px 28px rgba(15, 23, 42, 0.08),
+          0 2px 6px rgba(15, 23, 42, 0.04);
+      }
+
+      .section::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3px;
+        background: var(--color-accent);
+        content: "";
+      }
+
+      details.section {
+        display: block;
+      }
+
+      details.section[open] {
+        display: grid;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 18px;
+      }
+
+      summary.section-header {
+        cursor: pointer;
+        list-style: none;
+      }
+
+      summary.section-header::-webkit-details-marker {
+        display: none;
+      }
+
+      summary.section-header::after {
+        content: "+";
+        display: inline-grid;
+        width: 22px;
+        height: 22px;
+        place-items: center;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: var(--color-text-muted);
+        font-size: 15px;
+        line-height: 1;
+      }
+
+      details[open] > summary.section-header::after {
+        content: "-";
+      }
+
+      .switch {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 28px;
+        border-radius: 7px;
+        color: var(--color-text);
+        font-weight: 700;
+      }
+
+      .switch input {
+        order: 2;
+        width: 38px;
+        height: 22px;
+        flex: 0 0 auto;
+        margin: 0 0 0 auto;
+        appearance: none;
+        accent-color: var(--color-accent);
+        border: 0;
+        border-radius: 999px;
+        background: #cbd5e1;
+        cursor: pointer;
+        transition:
+          background 150ms ease,
+          box-shadow 150ms ease;
+      }
+
+      .switch input::before {
+        display: block;
+        width: 18px;
+        height: 18px;
+        margin: 2px;
+        border-radius: 999px;
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.26);
+        content: "";
+        transition: transform 150ms ease;
+      }
+
+      .switch input:checked {
+        background: var(--color-accent);
+      }
+
+      .switch input:checked::before {
+        transform: translateX(16px);
+      }
+
+      .switch input:focus-visible {
+        outline: 2px solid var(--color-focus-outline);
+        outline-offset: 2px;
+      }
+
+      .switch-copy {
+        display: grid;
+        gap: 2px;
+      }
+
+      .switch-copy small,
+      .hint {
+        margin: 0;
+        color: var(--color-text-muted);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 1.35;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 82px;
+        gap: 8px;
+      }
+
+      .details-body {
+        display: grid;
+        gap: 10px;
+        padding-top: 12px;
+      }
+
+      #status {
+        min-height: 16px;
+        color: rgba(255, 255, 255, 0.88);
+        font-size: 12px;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="titlebar">
+      <div class="title-stack">
+        <span class="logo-mark" aria-hidden="true">M</span>
+        <h1>Mojito In-Context Translation</h1>
+      </div>
+      <div id="status" role="status" aria-live="polite"></div>
+    </header>
+
+    <form id="ict-options">
+      <section class="section" aria-labelledby="general-section">
+        <div class="section-header">
+          <h2 id="general-section">General</h2>
+        </div>
+
+        <label class="switch">
+          <input id="enabled" type="checkbox" />
+          <span class="switch-copy">
+            <span>Enabled</span>
+          </span>
+        </label>
+
+        <label>
+          Mojito base URL
+          <input id="mojitoBaseUrl" type="url" spellcheck="false" />
+          <span class="hint">Used for workbench links and Mojito API request scoping.</span>
+        </label>
+      </section>
+
+      <section class="section" aria-labelledby="mt-section">
+        <div class="section-header">
+          <h2 id="mt-section">Machine Translation</h2>
+        </div>
+
+        <label class="switch">
+          <input id="mtEnabled" type="checkbox" />
+          <span class="switch-copy">
+            <span>Enabled</span>
+          </span>
+        </label>
+
+        <label class="switch">
+          <input id="mtShowErrors" type="checkbox" />
+          <span class="switch-copy">
+            <span>Show MT errors</span>
+          </span>
+        </label>
+
+        <label>
+          MT endpoint URL
+          <input id="mtEndpointUrlFormat" type="text" spellcheck="false" readonly />
+          <span class="hint">Uses Mojito's /api/machine-translation endpoint.</span>
+        </label>
+      </section>
+
+      <details class="section">
+        <summary class="section-header">Request Header</summary>
+
+        <div class="details-body">
+          <div class="field-grid">
+            <label>
+              Header name
+              <input id="headerName" type="text" spellcheck="false" />
+            </label>
+
+            <label>
+              Header value
+              <input id="headerValue" type="text" list="headerValueOptions" spellcheck="false" />
+              <datalist id="headerValueOptions">
+                <option value="on"></option>
+              </datalist>
+            </label>
+          </div>
+
+          <p class="hint">Sent when ICT is enabled so Mojito can return instrumented strings.</p>
+        </div>
+      </details>
+    </form>
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>
