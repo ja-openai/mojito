@@ -28,6 +28,7 @@
         <commons-codec.version>1.22.0</commons-codec.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <jackson-bom.version>2.21.3</jackson-bom.version>
+        <caffeine.version>3.2.4</caffeine.version>
         <hsqldb.version>2.7.4</hsqldb.version>
         <httpclient5.version>5.6.1</httpclient5.version>
         <httpcore5.version>5.4</httpcore5.version>
