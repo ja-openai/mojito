@@ -17,6 +17,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.awaitility</groupId>
+                    <artifactId>awaitility</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

@@ -1,13 +1,15 @@
 package com.box.l10n.mojito.monitoring;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.quartz.JobBuilder.newJob;
 
+import com.box.l10n.mojito.test.TestAwait;
 import com.google.common.util.concurrent.Uninterruptibles;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.search.MeterNotFoundException;
 import io.micrometer.core.instrument.search.RequiredSearch;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
@@ -49,7 +51,7 @@ public class QuartzMetricsReportingJobListenerTest {
       scheduler.scheduleJob(job, TriggerBuilder.newTrigger().forJob(job).startNow().build());
     }
 
-    await().until(() -> scheduler.isStarted());
+    TestAwait.until(Duration.ofSeconds(10), () -> scheduler.isStarted());
 
     RequiredSearch timerSearchExecution =
         meterRegistry
@@ -65,13 +67,19 @@ public class QuartzMetricsReportingJobListenerTest {
             .tag("jobGroup", "DEFAULT")
             .tag("schedulerName", "DefaultQuartzScheduler");
 
-    await().untilAsserted(() -> assertThat(timerSearchExecution.timers()).isNotEmpty());
+    TestAwait.untilAsserted(
+        Duration.ofSeconds(10),
+        () -> assertThat(timerSearchExecution.timers()).isNotEmpty(),
+        MeterNotFoundException.class);
 
     assertThat(timerSearchExecution.timer().takeSnapshot().count()).isGreaterThanOrEqualTo(5);
     assertThat(timerSearchExecution.timer().takeSnapshot().mean())
         .isGreaterThanOrEqualTo(JOB_SLEEP_TIME);
 
-    await().untilAsserted(() -> assertThat(timerSearchWaiting.timers()).isNotEmpty());
+    TestAwait.untilAsserted(
+        Duration.ofSeconds(10),
+        () -> assertThat(timerSearchWaiting.timers()).isNotEmpty(),
+        MeterNotFoundException.class);
 
     assertThat(timerSearchWaiting.timer().takeSnapshot().count()).isGreaterThanOrEqualTo(5);
     assertThat(timerSearchWaiting.timer().takeSnapshot().mean()).isGreaterThan(0);

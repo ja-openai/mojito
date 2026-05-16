@@ -1,6 +1,5 @@
 package com.box.l10n.mojito.quartz.multi;
 
-import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -8,8 +7,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.quartz.QuartzConfig;
+import com.box.l10n.mojito.test.TestAwait;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
@@ -53,9 +52,8 @@ public class QuartzMultiSchedulerManagerTest {
     assertEquals(10, defaultScheduler.getMetaData().getThreadPoolSize());
     assertEquals("scheduler2", scheduler2.getSchedulerName());
     assertEquals(5, scheduler2.getMetaData().getThreadPoolSize());
-    await()
-        .atMost(Duration.of(10, ChronoUnit.SECONDS))
-        .until(() -> defaultScheduler.isStarted() && scheduler2.isStarted());
+    TestAwait.until(
+        Duration.ofSeconds(10), () -> defaultScheduler.isStarted() && scheduler2.isStarted());
   }
 
   @Test(expected = QuartzMultiSchedulerException.class)
@@ -97,9 +95,8 @@ public class QuartzMultiSchedulerManagerTest {
     Scheduler defaultScheduler = quartzMultiSchedulerManager.getScheduler("default");
     Scheduler scheduler2 = quartzMultiSchedulerManager.getScheduler("scheduler2");
 
-    await()
-        .atMost(Duration.of(10, ChronoUnit.SECONDS))
-        .until(() -> defaultScheduler.isStarted() && scheduler2.isStarted());
+    TestAwait.until(
+        Duration.ofSeconds(10), () -> defaultScheduler.isStarted() && scheduler2.isStarted());
 
     JobDetail jobDetail = JobBuilder.newJob(TestJob.class).withIdentity("job1", "DYNAMIC").build();
     Trigger trigger =
@@ -110,10 +107,8 @@ public class QuartzMultiSchedulerManagerTest {
 
     assertFalse(scheduler2.checkExists(jobDetail.getKey()));
 
-    await()
-        .atMost(Duration.of(10, ChronoUnit.SECONDS))
-        .until(() -> jobDetail.getJobDataMap() != null);
-    assertEquals("default", TestJob.getExecutingScheduler());
+    TestAwait.untilAsserted(
+        Duration.ofSeconds(10), () -> assertEquals("default", TestJob.getExecutingScheduler()));
 
     JobDetail jobDetail2 = JobBuilder.newJob(TestJob.class).withIdentity("job2", "DYNAMIC").build();
     Trigger trigger2 =
@@ -123,9 +118,7 @@ public class QuartzMultiSchedulerManagerTest {
     assertTrue(scheduler2.checkExists(jobDetail2.getKey()));
     assertFalse(defaultScheduler.checkExists(jobDetail2.getKey()));
 
-    await()
-        .atMost(Duration.of(10, ChronoUnit.SECONDS))
-        .until(() -> jobDetail2.getJobDataMap() != null);
-    assertEquals("scheduler2", TestJob.getExecutingScheduler());
+    TestAwait.untilAsserted(
+        Duration.ofSeconds(10), () -> assertEquals("scheduler2", TestJob.getExecutingScheduler()));
   }
 }

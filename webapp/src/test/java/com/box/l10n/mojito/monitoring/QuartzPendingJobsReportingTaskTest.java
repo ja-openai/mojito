@@ -3,12 +3,12 @@ package com.box.l10n.mojito.monitoring;
 import static com.box.l10n.mojito.monitoring.QuartzPendingJobsReportingTask.extractClassName;
 import static com.box.l10n.mojito.quartz.QuartzConfig.DYNAMIC_GROUP_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.quartz.JobBuilder.newJob;
 
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
 import com.box.l10n.mojito.service.DBUtils;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
+import com.box.l10n.mojito.test.TestAwait;
 import com.box.l10n.mojito.test.TestIdWatcher;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
@@ -18,7 +18,6 @@ import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.Map;
 import javax.sql.DataSource;
-import org.awaitility.core.ConditionFactory;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,15 +51,7 @@ public class QuartzPendingJobsReportingTaskTest extends ServiceTestBase {
 
   Scheduler scheduler;
 
-  /*
-   * This sets up the condition we'll use for await() later on. Given jobs can take some time
-   * to start and be processed, we wait at most 5 seconds and we ignore exceptions of Meters not
-   * found while we search for them (at t0 we might not have a specific meter given by the
-   * RequiredSearch conditions, but then at t1 the process that populates that
-   * Meter might have completed and populated that search)
-   */
-  ConditionFactory await =
-      await().atMost(Duration.ofSeconds(5)).ignoreException(MeterNotFoundException.class);
+  static final Duration METER_REGISTRATION_TIMEOUT = Duration.ofSeconds(5);
 
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
 
@@ -113,8 +104,8 @@ public class QuartzPendingJobsReportingTaskTest extends ServiceTestBase {
             .tag("jobGroup", MY_GROUP)
             .tag("jobClass", "QuartzPendingJobsReportingTaskTest$Test2Job");
 
-    await.untilAsserted(() -> assertThat(search1.gauge().value()).isEqualTo(1));
-    await.untilAsserted(() -> assertThat(search2.gauge().value()).isEqualTo(1));
+    untilMeterRegistered(() -> assertThat(search1.gauge().value()).isEqualTo(1));
+    untilMeterRegistered(() -> assertThat(search2.gauge().value()).isEqualTo(1));
   }
 
   @Test
@@ -161,8 +152,8 @@ public class QuartzPendingJobsReportingTaskTest extends ServiceTestBase {
             .tag("jobClass", "EmptyTestJob")
             .tag("jobGroup", DYNAMIC_GROUP_NAME);
 
-    await.untilAsserted(() -> assertThat(test1Gauges.gauges()).isNotEmpty());
-    await.untilAsserted(() -> assertThat(test2Gauges.gauges()).isNotEmpty());
+    untilMeterRegistered(() -> assertThat(test1Gauges.gauges()).isNotEmpty());
+    untilMeterRegistered(() -> assertThat(test2Gauges.gauges()).isNotEmpty());
     assertThat(test1Gauges.gauge().value()).isEqualTo(5);
     assertThat(test2Gauges.gauge().value()).isEqualTo(5);
 
@@ -407,5 +398,9 @@ public class QuartzPendingJobsReportingTaskTest extends ServiceTestBase {
   public static class Test2Job implements Job {
     @Override
     public void execute(JobExecutionContext context) {}
+  }
+
+  private void untilMeterRegistered(TestAwait.ThrowingRunnable assertion) {
+    TestAwait.untilAsserted(METER_REGISTRATION_TIMEOUT, assertion, MeterNotFoundException.class);
   }
 }
