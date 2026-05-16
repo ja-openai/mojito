@@ -299,7 +299,8 @@ public class JSR310MigrationTest {
     String id = "PST8PDT";
     DateTimeZone dateTimeZone = dateTimeZoneForIdOld(id);
     ZoneId zoneId = JSR310Migration.dateTimeZoneForId(id);
-    Assertions.assertThat(dateTimeZone.getID()).isEqualTo(zoneId.getId());
+    Assertions.assertThat(dateTimeZone.toTimeZone().toZoneId().getRules())
+        .isEqualTo(zoneId.getRules());
   }
 
   @Test
