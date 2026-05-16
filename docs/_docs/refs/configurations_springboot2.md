@@ -174,7 +174,6 @@ You can override the user authentication setting to use LDAP.  Here are the sett
     l10n.security.ldap.groupRoleAttribute=${GROUP_ROLE_ATTR}
     l10n.security.ldap.managerDn=${MANAGER_DN}
     l10n.security.ldap.managerPassword=${MANAGER_PASSWORD}
-    l10n.security.ldap.ldif=${LDIF_FILE}
 
 
 ## CLI Configuration

@@ -22,7 +22,6 @@ public class LdapConfig {
   String groupRoleAttribute = "cn";
   String groupSearchBase = "";
   String groupSearchFilter = "(uniqueMember={0})";
-  String ldif = "classpath*:*.ldif";
 
   Integer port;
   String url;
@@ -105,13 +104,5 @@ public class LdapConfig {
 
   public void setGroupSearchBase(String groupSearchBase) {
     this.groupSearchBase = groupSearchBase;
-  }
-
-  public String getLdif() {
-    return ldif;
-  }
-
-  public void setLdif(String ldif) {
-    this.ldif = ldif;
   }
 }

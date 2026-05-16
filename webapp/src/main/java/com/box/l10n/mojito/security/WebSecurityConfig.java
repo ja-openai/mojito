@@ -27,6 +27,7 @@ import org.springframework.security.web.access.expression.WebExpressionAuthoriza
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.util.StringUtils;
 
 /**
  * @author wyau
@@ -104,6 +105,10 @@ public class WebSecurityConfig {
 
   void configureLdap(AuthenticationManagerBuilder auth) throws Exception {
     logger.debug("Configuring ldap server");
+    if (!StringUtils.hasText(ldapConfig.getUrl())) {
+      throw new IllegalStateException("l10n.security.ldap.url is required for LDAP authentication");
+    }
+
     LdapAuthenticationProviderConfigurer<AuthenticationManagerBuilder>.ContextSourceBuilder
         contextSourceBuilder =
             auth.ldapAuthentication()
@@ -123,8 +128,7 @@ public class WebSecurityConfig {
         .root(ldapConfig.getRoot())
         .url(ldapConfig.getUrl())
         .managerDn(ldapConfig.getManagerDn())
-        .managerPassword(ldapConfig.getManagerPassword())
-        .ldif(ldapConfig.getLdif());
+        .managerPassword(ldapConfig.getManagerPassword());
   }
 
   static void setAuthorizationRequests(HttpSecurity http, List<String> extraPermitAllPatterns)
