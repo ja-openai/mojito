@@ -2,6 +2,7 @@ package com.box.l10n.mojito.cli.command;
 
 import static org.fusesource.jansi.Ansi.Color.CYAN;
 
+import com.beust.jcommander.IVariableArity;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.beust.jcommander.converters.IParameterSplitter;
@@ -14,6 +15,7 @@ import com.box.l10n.mojito.rest.entity.Repository;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import org.fusesource.jansi.Ansi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,10 +32,33 @@ import org.springframework.stereotype.Component;
     commandNames = {"thirdparty-sync", "tps"},
     commandDescription =
         "Third-party command to synchronize text units and screenshots with third party TMS")
-public class ThirdPartySyncCommand extends Command {
+public class ThirdPartySyncCommand extends Command implements IVariableArity {
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(ThirdPartySyncCommand.class);
+
+  static final Set<String> OPTION_NAMES =
+      Set.of(
+          Param.REPOSITORY_LONG,
+          Param.REPOSITORY_SHORT,
+          "--project",
+          "-p",
+          "--actions",
+          "-a",
+          "--plural-separator",
+          "-ps",
+          Param.REPOSITORY_LOCALES_MAPPING_LONG,
+          Param.REPOSITORY_LOCALES_MAPPING_SHORT,
+          "--skip-text-units-with-pattern",
+          "-st",
+          "--skip-assets-path-pattern",
+          "-sa",
+          "--include-text-units-with-pattern",
+          "-it",
+          "--timeout",
+          "-t",
+          "--options",
+          "-o");
 
   @Autowired ConsoleWriter consoleWriter;
 
@@ -121,6 +146,15 @@ public class ThirdPartySyncCommand extends Command {
   @Autowired ThirdPartyClient thirdPartyClient;
 
   @Autowired CommandHelper commandHelper;
+
+  @Override
+  public int processVariableArity(String optionName, String[] options) {
+    int count = 0;
+    while (count < options.length && !OPTION_NAMES.contains(options[count])) {
+      count++;
+    }
+    return count;
+  }
 
   public static class NoOptionSplitter implements IParameterSplitter {
 
