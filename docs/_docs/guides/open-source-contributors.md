@@ -170,12 +170,13 @@ l10n.org.quartz.dataSource.myDS.maxConnections=12
 l10n.org.quartz.dataSource.myDS.validationQuery=select 1
 ```
 
-In the second file: `.l10n/config/webapp/application-npm.properties` just override the database URLs and the setting
-to keep the data between server runs:
+In the second file: `.l10n/config/webapp/application-npm.properties`, override the database URLs,
+keep data between server runs, and enable header auth for the Vite dev proxy:
 ```properties
 l10n.flyway.clean=false
 spring.datasource.url=jdbc:mysql://localhost:3306/mojito_dev?characterEncoding=UTF-8&useUnicode=true
 l10n.org.quartz.dataSource.myDS.URL=jdbc:mysql://localhost:3306/mojito_dev?characterEncoding=UTF-8&useUnicode=true
+l10n.security.authenticationType=HEADER,DATABASE
 ```
     
 ## Build
@@ -195,18 +196,35 @@ It is advised to reuse the `npm` version that was downloaded during {{ site.moji
 
 ```sh
 source webapp/use_local_npm.sh
+npm --prefix webapp/new-frontend install
 ```
     
 Else, make sure the global `npm` is compatible.
  
 ## Run {{ site.mojito_green }}
 
+To run the packaged app from the built frontend assets:
+
 ```sh
 cd ${PROJECT_DIR}/webapp
-npm run start-dev
+npm run start-server
 ```
 
 {{ site.mojito_green }} should be running on [http://localhost:8080/login](http://localhost:8080/login).  You can login with admin/ChangeMe.
+
+For frontend development, run the backend without rebuilding frontend assets, then start the Vite dev server in a second terminal:
+
+```sh
+cd ${PROJECT_DIR}/webapp
+npm run start-server-nofe
+```
+
+```sh
+cd ${PROJECT_DIR}
+npm --prefix webapp/new-frontend run dev
+```
+
+The Vite app runs on [http://localhost:5173/](http://localhost:5173/) and proxies `/api/*` to the backend. The dev proxy sends `x-forwarded-user: admin`, so the backend dev profile should use header authentication.
 
 If you didn't [configure Mysql](#create-mysql-databases--configuration-files) previously, {{ site.mojito_green }} will be running 
 with in-memory `HSQL DB`. When you restart the server, all data will be lost. For persistent data you need to setup `Mysql`.
@@ -287,7 +305,7 @@ docker run -v $(pwd):/mnt/mojito -v ~/.m2:/root/.m2 -p 8080:8080 -it aurambaj/mo
 # and then build commands
 mvn install -DskipTests
 cd webapp/
-npm run start-dev
+npm run start-server
 ```
     
 To build from a clean slate:
