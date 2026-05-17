@@ -22,8 +22,8 @@ public class InspectTaskMcpToolTest {
         new PollableTaskInspectionService.TaskInspection(
             50255159L,
             PollableTaskInspectionService.TaskStatus.FAILED,
-            "SmartlingPullLocaleFileJob",
-            "com.box.l10n.mojito.service.thirdparty.smartling.quartz.SmartlingPullLocaleFileJob",
+            "ImportLocalizedAssetJob",
+            "com.box.l10n.mojito.service.tm.ImportLocalizedAssetJob",
             null,
             new PollableTaskInspectionService.TaskRepositoryRef(7L, "privacy-transcend", "input"),
             null,

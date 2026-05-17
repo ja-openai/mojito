@@ -80,7 +80,7 @@ public class ThirdPartyService {
 
   public void removeImage(String projectId, String imageId) {
     logger.debug(
-        "remove image (screenshot) from Smartling, project id: {}, imageId: {}",
+        "remove image (screenshot) from third-party TMS, project id: {}, imageId: {}",
         projectId,
         imageId);
     thirdPartyTMS.removeImage(projectId, imageId);

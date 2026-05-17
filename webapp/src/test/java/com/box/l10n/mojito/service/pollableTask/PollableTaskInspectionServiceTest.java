@@ -21,8 +21,7 @@ public class PollableTaskInspectionServiceTest {
   public void inspectTaskResolvesRepositoryAndParsesUnexpectedFailureDetails() {
     PollableTask pollableTask = new PollableTask();
     pollableTask.setId(50255159L);
-    pollableTask.setName(
-        "com.box.l10n.mojito.service.thirdparty.smartling.quartz.SmartlingPullLocaleFileJob");
+    pollableTask.setName("com.box.l10n.mojito.service.tm.ImportLocalizedAssetJob");
     pollableTask.setCreatedDate(ZonedDateTime.parse("2026-04-20T10:15:30Z"));
     pollableTask.setErrorMessage(
         "{\"expected\":false,\"type\":\"unexpected\",\"message\":\"An unexpected error happened, task=50255159\"}");
@@ -49,7 +48,7 @@ public class PollableTaskInspectionServiceTest {
     PollableTaskInspectionService.TaskInspection inspection = service.inspectTask(50255159L);
 
     assertThat(inspection.status()).isEqualTo(PollableTaskInspectionService.TaskStatus.FAILED);
-    assertThat(inspection.operation()).isEqualTo("SmartlingPullLocaleFileJob");
+    assertThat(inspection.operation()).isEqualTo("ImportLocalizedAssetJob");
     assertThat(inspection.repository().id()).isEqualTo(7L);
     assertThat(inspection.repository().name()).isEqualTo("privacy-transcend");
     assertThat(inspection.repository().resolvedFrom()).isEqualTo("input");
