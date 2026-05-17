@@ -39,10 +39,6 @@ Everything that `Spring boot 2.x` brings can potentially be re-used in Mojito. A
 
 * `spring-session` with JDBC has some transient failures, fix not identified yet
 
-## Not tested yet
-
-* `BoxSDKServiceTest` - needs account setup, I don't have that handy anymore. Seems like the documentation to create a Box account is outdated too
-
 ## Migration details
 
 ### Jar file names and build/deploy scripts

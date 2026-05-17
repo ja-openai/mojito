@@ -133,9 +133,6 @@ Let's say that `java.io.tmpdir` is `/tmp`.  When you create a new project reques
 
 When translators are done, translated xliff files should be put in the `Localized Files` directory.  {{ site.mojito_green }} imports xliff files from this directory.
 
-You can override this default configuration and have project requests to be managed on Box instead of local file system.  Refer to [Integrating with Box]({{ site.url }}/docs/guides/integrating-with-box/).
-
-
 ### Database Authentication
 
 The default user authentication setting in {{ site.mojito_green }} is to use database.  User information is stored in database.  {{ site.mojito_green }} initially is set up with one default user `admin/ChangeMe`.  You can override the default user settings.  These values are only respected on initial bootstrapping.
@@ -237,43 +234,3 @@ l10n.resttemplate.header.headers.CF-Access-Client-Secret=<client-secret>
 Add additional headers as needed by appending more `headers.<Name>=<value>` properties. Values can
 also be provided through environment variables using Spring Boot's relaxed binding, for example
 `L10N_RESTTEMPLATE_HEADER_HEADERS_CF-ACCESS-CLIENT-SECRET`.
-
-## Box Platform Integration
-
-### Custom Configurations
-All `l10n.boxclient.*` configurations are required for `BoxSDK` Tests to run.
-
-    l10n.boxclient.clientId={REQUIRED_FOR_TEST}
-    l10n.boxclient.clientSecret={REQUIRED_FOR_TEST}
-    l10n.boxclient.publicKeyId={REQUIRED_FOR_TEST}
-    l10n.boxclient.privateKey={REQUIRED_FOR_TEST}
-    l10n.boxclient.privateKeyPassword={REQUIRED_FOR_TEST}
-    l10n.boxclient.enterpriseId={REQUIRED_FOR_TEST}
-    l10n.boxclient.appUserId={REQUIRED_FOR_TEST}
-
-    l10n.boxclient.rootFolderId={REQUIRED_FOR_TEST}
-    l10n.boxclient.dropsFolderId={REQUIRED_FOR_TEST}
-
-
-- `l10n.boxclient.rootFolderId` corresponds to the `mojito` folder
-- `l10n.boxclient.dropsFolderId` corresponds to the `Project Requests` folder.
-
-You can also optionally use it in production by setting the following configuration:
-
-    l10n.boxclient.useConfigsFromProperties=true
-
-
-### Box App User
-1. A default Box App User is created when the Box Client Configurations are set.
-2. {{ site.mojito_green }} will create the following folder structure under the App User's root folder.
-
-   The ID of the newly created `mojito` folder will be stored and used as the rootFolderId
-
-        <UserRootRolder>
-        |-> mojito
-          |-> Project Requests
-
-   Most of the time, this folder will be used to exchange files with others.
-   Follow instructions [here](https://community.box.com/t5/For-Admins/How-Do-I-Share-Files-And-Folders-From-The-Admin-Console/ta-p/211) to share with collaborators.
-
-   Tips: Access the Box Account as the Admin of the enterprise using the credentials for the Box Developer Account you created.

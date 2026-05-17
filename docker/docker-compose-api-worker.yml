@@ -92,8 +92,7 @@ services:
       "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.validationQuery" : "select 1",
       "l10n.assetExtraction.quartz.schedulerName" : "lowPriority",
       "logging.level.com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler" : "DEBUG",
-      "logging.level.com.box.l10n.mojito.service.repository.statistics.RepositoryStatisticsJob" : "DEBUG",
-      "logging.level.com.box.l10n.mojito.service.thirdparty.smartling.quartz" : "DEBUG"
+      "logging.level.com.box.l10n.mojito.service.repository.statistics.RepositoryStatisticsJob" : "DEBUG"
       }'
   worker:
     deploy:
@@ -161,8 +160,7 @@ services:
         "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.validationQuery" : "select 1",
         "l10n.assetExtraction.quartz.schedulerName" : "lowPriority",
         "logging.level.com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler" : "DEBUG",
-        "logging.level.com.box.l10n.mojito.service.repository.statistics.RepositoryStatisticsJob" : "DEBUG",
-        "logging.level.com.box.l10n.mojito.service.thirdparty.smartling.quartz" : "DEBUG"
+        "logging.level.com.box.l10n.mojito.service.repository.statistics.RepositoryStatisticsJob" : "DEBUG"
         }'
 
 volumes:

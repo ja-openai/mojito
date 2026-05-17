@@ -20,7 +20,6 @@ Backlog
 - DOC-01 — Refresh published install/contributor docs for the current Spring Boot 3, JDK 21, MySQL 8, Maven-managed Node/npm, `webapp/frontend`, and root-path SPA workflow. Replace old `npm run start-dev` guidance with current Maven/Spring Boot and Vite commands.
 - DOC-02 — Refresh auth/config docs after the embedded LDAP removal: document external LDAP URL-based setup, remove stale embedded-LDIF assumptions, and fix Spring Security 5/Spring Boot 2 wording in Spring Boot 3 docs.
 - DOC-03 — Decide the docs-site tech refresh: remove or replace checked-in Bower dependencies and stale Gitter/Travis/OpenSource Box badges without breaking the static GitHub Pages build.
-- DOC-04 — Tie integration docs to dependency cleanup: remove or clearly mark Box, Phrase, and Smartling docs when their code paths are removed; Chrome ICT extension docs should point at the standalone Vite extension rather than the retired webpack assets.
 - FRONTEND-02a — Build container: React Query fetch/search/filter, selection state, scroll-to-selected, keyboard nav, and tanstack virtualization hooks (estimate/measure) without UI markup.
 - FRONTEND-02b — Implement pure view: virtualized repos table with sticky header and inline search, selection highlight, metric link callbacks, and locales pane layout that mirrors the prototype.
 - FRONTEND-02c — Locale data & accessibility: map selected repo to localeDetails or call `onLoadLocales(repoId)`, handle loading/error/empty states, add scope/aria labels and focusable selected row, and keep CSS state classes minimal.
