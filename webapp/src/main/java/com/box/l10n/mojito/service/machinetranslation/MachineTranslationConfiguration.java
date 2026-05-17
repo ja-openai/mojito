@@ -1,7 +1,10 @@
 package com.box.l10n.mojito.service.machinetranslation;
 
+import com.box.l10n.mojito.openai.OpenAIClient;
 import com.box.l10n.mojito.service.machinetranslation.microsoft.MicrosoftMTEngine;
 import com.box.l10n.mojito.service.machinetranslation.microsoft.MicrosoftMTEngineConfiguration;
+import com.box.l10n.mojito.service.machinetranslation.openai.OpenAIMTEngine;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateConfigurationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -38,6 +41,35 @@ public class MachineTranslationConfiguration {
     public MicrosoftMTEngine microsoftMTEngine() {
       logger.info("Configure microsoftMTEngine");
       return new MicrosoftMTEngine(microsoftMTEngineConfiguration, placeholderEncoder);
+    }
+  }
+
+  @ConditionalOnProperty(value = "l10n.mt.impl", havingValue = "OpenAIMTEngine")
+  @Configuration
+  static class OpenAIEngineConfiguration {
+
+    final AiTranslateConfigurationProperties aiTranslateConfigurationProperties;
+    final PlaceholderEncoder placeholderEncoder;
+
+    public OpenAIEngineConfiguration(
+        AiTranslateConfigurationProperties aiTranslateConfigurationProperties,
+        PlaceholderEncoder placeholderEncoder) {
+      this.aiTranslateConfigurationProperties = aiTranslateConfigurationProperties;
+      this.placeholderEncoder = placeholderEncoder;
+    }
+
+    @Bean
+    public OpenAIMTEngine openAIMTEngine() {
+      logger.info("Configure openAIMTEngine");
+      String openaiClientToken = aiTranslateConfigurationProperties.getOpenaiClientToken();
+      if (openaiClientToken == null || openaiClientToken.isBlank()) {
+        throw new IllegalStateException(
+            "OpenAIMTEngine requires l10n.ai-translate.openai-client-token");
+      }
+      return new OpenAIMTEngine(
+          new OpenAIClient.Builder().apiKey(openaiClientToken).build(),
+          aiTranslateConfigurationProperties,
+          placeholderEncoder);
     }
   }
 

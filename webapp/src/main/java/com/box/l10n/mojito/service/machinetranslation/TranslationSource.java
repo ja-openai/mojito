@@ -7,6 +7,7 @@ package com.box.l10n.mojito.service.machinetranslation;
 public enum TranslationSource {
   MOJITO_TM_LEVERAGE(10),
   GOOGLE_MT(20),
+  OPENAI_MT(25),
   MICROSOFT_MT(30),
   NOOP(100),
   UNTRANSLATED(1000);
