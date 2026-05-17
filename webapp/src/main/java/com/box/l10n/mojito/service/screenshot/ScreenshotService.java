@@ -3,10 +3,6 @@ package com.box.l10n.mojito.service.screenshot;
 import com.box.l10n.mojito.entity.*;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.service.NormalizationUtils;
-import com.box.l10n.mojito.service.thirdparty.ThirdPartyScreenshotRepository;
-import com.box.l10n.mojito.service.thirdparty.ThirdPartyService;
-import com.box.l10n.mojito.service.thirdparty.ThirdPartySyncJobConfig;
-import com.box.l10n.mojito.service.thirdparty.ThirdPartySyncJobsConfig;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.SearchType;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
@@ -44,15 +40,9 @@ public class ScreenshotService {
 
   @Autowired TextUnitSearcher textUnitSearcher;
 
-  @Autowired ThirdPartyScreenshotRepository thirdPartyScreenshotRepository;
-
   @Autowired TMTextUnitRepository tmTextUnitRepository;
 
   @Autowired EntityManager em;
-
-  @Autowired ThirdPartyService thirdPartyService;
-
-  @Autowired ThirdPartySyncJobsConfig thirdPartySyncJobsConfig;
 
   /**
    * Creates or add to a screenshot run including the creation of related screenshots. If the
@@ -396,29 +386,6 @@ public class ScreenshotService {
    */
   @Transactional
   public void deleteScreenshot(Long id) {
-    List<ThirdPartyScreenshot> thirdPartyScreenshots =
-        thirdPartyScreenshotRepository.findAllByScreenshotId(id);
-
-    final Map<String, ThirdPartySyncJobConfig> thirdPartySyncJobs =
-        thirdPartySyncJobsConfig.getThirdPartySyncJobs();
-
-    for (ThirdPartyScreenshot thirdPartyScreenshot : thirdPartyScreenshots) {
-      String repository =
-          thirdPartyScreenshot.getScreenshot().getScreenshotTextUnits().stream()
-              .findFirst()
-              .get()
-              .getTmTextUnit()
-              .getAsset()
-              .getRepository()
-              .getName();
-
-      if (thirdPartySyncJobs.containsKey(repository)) {
-        String projectId = thirdPartySyncJobs.get(repository).getThirdPartyProjectId();
-        thirdPartyService.removeImage(projectId, thirdPartyScreenshot.getThirdPartyId());
-        thirdPartyScreenshotRepository.deleteById(thirdPartyScreenshot.getId());
-      }
-    }
-
     screenshotTextUnitRepository.deleteAllByScreenshot_Id(id);
     screenshotRepository.deleteById(id);
   }

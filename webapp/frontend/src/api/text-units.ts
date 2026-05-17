@@ -197,7 +197,6 @@ export type ApiGitBlameWithUsage = {
   tmTextUnitId?: number | null;
   assetId?: number | null;
   assetTextUnitId?: number | null;
-  thirdPartyTextUnitId?: string | null;
   branch?: {
     id?: number | null;
     name?: string | null;

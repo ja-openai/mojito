@@ -20,7 +20,6 @@ import jakarta.persistence.NamedAttributeNode;
 import jakarta.persistence.NamedEntityGraph;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import org.hibernate.annotations.BatchSize;
@@ -97,9 +96,6 @@ public class Screenshot extends SettableAuditableEntity {
   @BatchSize(size = 1000)
   private Set<ScreenshotTextUnit> screenshotTextUnits = new LinkedHashSet<>();
 
-  @OneToMany(mappedBy = "screenshot")
-  private Set<ThirdPartyScreenshot> thirdPartyScreenshots = new HashSet<>();
-
   public String getName() {
     return name;
   }
@@ -170,13 +166,5 @@ public class Screenshot extends SettableAuditableEntity {
 
   public void setBranch(Branch branch) {
     this.branch = branch;
-  }
-
-  public Set<ThirdPartyScreenshot> getThirdPartyScreenshots() {
-    return thirdPartyScreenshots;
-  }
-
-  public void setThirdPartyScreenshots(Set<ThirdPartyScreenshot> thirdPartyScreenshots) {
-    this.thirdPartyScreenshots = thirdPartyScreenshots;
   }
 }

@@ -515,10 +515,6 @@ export function TextUnitDetailPage() {
       { label: 'PluralFormOther', value: formatValue(textUnitQuery.data?.pluralFormOther) },
       { label: 'TargetComment', value: formatValue(textUnitQuery.data?.targetComment) },
       { label: 'Location', value: formatValue(textUnitLocation) },
-      {
-        label: 'Third party TMS',
-        value: formatValue(gitBlame?.thirdPartyTextUnitId ? 'See in Phrase' : null),
-      },
     ];
 
     const gitBlameRows: TextUnitDetailMetaRow[] = [
@@ -540,7 +536,6 @@ export function TextUnitDetailPage() {
         value: formatNumberish(textUnitQuery.data?.tmTextUnitCurrentVariantId),
       },
       { label: 'AssetTextUnitId', value: formatNumberish(textUnitQuery.data?.assetTextUnitId) },
-      { label: 'ThirdPartyTMSId', value: formatValue(gitBlame?.thirdPartyTextUnitId) },
       { label: 'AssetId', value: formatNumberish(textUnitQuery.data?.assetId) },
       {
         label: 'LastSuccessfulAssetExtractionId',

@@ -29,9 +29,6 @@ public class GitBlameWithUsage {
   Long assetTextUnitId;
 
   @JsonView(View.GitBlameWithUsage.class)
-  String thirdPartyTextUnitId;
-
-  @JsonView(View.GitBlameWithUsage.class)
   String content;
 
   @JsonView(View.GitBlameWithUsage.class)
@@ -87,14 +84,6 @@ public class GitBlameWithUsage {
 
   public void setAssetTextUnitId(Long assetTextUnitId) {
     this.assetTextUnitId = assetTextUnitId;
-  }
-
-  public String getThirdPartyTextUnitId() {
-    return thirdPartyTextUnitId;
-  }
-
-  public void setThirdPartyTextUnitId(String thirdPartyTextUnitId) {
-    this.thirdPartyTextUnitId = thirdPartyTextUnitId;
   }
 
   public String getContent() {

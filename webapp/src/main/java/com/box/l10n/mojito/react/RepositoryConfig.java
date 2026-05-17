@@ -4,7 +4,6 @@ public class RepositoryConfig {
 
   Location location;
   Commit commit;
-  ThirdParty thirdParty;
   PullRequest pullRequest;
   TextUnitNameToTextUnitNameInSource textUnitNameToTextUnitNameInSource;
   CustomMd5 customMd5;
@@ -23,14 +22,6 @@ public class RepositoryConfig {
 
   public void setCommit(Commit commit) {
     this.commit = commit;
-  }
-
-  public ThirdParty getThirdParty() {
-    return thirdParty;
-  }
-
-  public void setThirdParty(ThirdParty thirdParty) {
-    this.thirdParty = thirdParty;
   }
 
   public PullRequest getPullRequest() {
