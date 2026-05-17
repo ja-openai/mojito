@@ -12,7 +12,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
-import com.box.l10n.mojito.boxsdk.BoxSDKServiceException;
 import com.box.l10n.mojito.entity.Drop;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
@@ -488,14 +487,13 @@ public class DropServiceTest extends ServiceTestBase {
     assertEquals(expectedNumberOfUnstranslated, search.size());
   }
 
-  public void localizeDropFiles(Drop drop, int round)
-      throws BoxSDKServiceException, DropExporterException, IOException {
+  public void localizeDropFiles(Drop drop, int round) throws DropExporterException, IOException {
     localizeDropFiles(drop, round, "translated", false);
   }
 
   public void localizeDropFiles(
       Drop drop, int round, String xliffState, boolean introduceSyntaxError)
-      throws BoxSDKServiceException, DropExporterException, IOException {
+      throws DropExporterException, IOException {
 
     logger.debug("Localize files in a drop for testing");
 
@@ -548,8 +546,7 @@ public class DropServiceTest extends ServiceTestBase {
     }
   }
 
-  public void reviewDropFiles(Drop drop)
-      throws DropExporterException, BoxSDKServiceException, IOException {
+  public void reviewDropFiles(Drop drop) throws DropExporterException, IOException {
 
     logger.debug("Review files in a drop for testing");
 
@@ -581,7 +578,7 @@ public class DropServiceTest extends ServiceTestBase {
   }
 
   public void checkImportedFilesContent(Drop drop, int round)
-      throws BoxSDKServiceException, DropExporterException, IOException {
+      throws DropExporterException, IOException {
 
     logger.debug("Check imported files contains text unit variant ids");
 
@@ -731,7 +728,7 @@ public class DropServiceTest extends ServiceTestBase {
   }
 
   public void checkImportedFilesForReviewContent(Drop drop)
-      throws DropExporterException, BoxSDKServiceException, IOException {
+      throws DropExporterException, IOException {
     logger.debug("Check imported files contains text unit variant ids");
 
     FileSystemDropExporter fileSystemDropExporter =
@@ -816,8 +813,7 @@ public class DropServiceTest extends ServiceTestBase {
   }
 
   @Transactional
-  public void checkTranslationKitStatistics(Drop drop)
-      throws BoxSDKServiceException, DropExporterException {
+  public void checkTranslationKitStatistics(Drop drop) throws DropExporterException {
 
     logger.debug("Check statistics");
     Drop d = dropRepository.findById(drop.getId()).orElse(null);

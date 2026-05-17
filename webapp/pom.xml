@@ -207,12 +207,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.box</groupId>
-            <artifactId>box-java-sdk</artifactId>
-            <version>2.1.1</version>
-        </dependency>
-
-        <dependency>
             <groupId>com.ibm.icu</groupId>
             <artifactId>icu4j</artifactId>
             <version>${icu4j.version}</version>
@@ -397,7 +391,6 @@
 
                     <rerunFailingTestsCount>1</rerunFailingTestsCount>
 
-                    <!--<excludedGroups>com.box.l10n.mojito.test.category.BoxSDKTest</excludedGroups>-->
 
                     <!-- Use this to run specific sequence of test to replicate issues-->
                     <!--                    <includes>

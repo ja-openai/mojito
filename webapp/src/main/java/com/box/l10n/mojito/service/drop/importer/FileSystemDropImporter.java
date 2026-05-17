@@ -1,7 +1,6 @@
 package com.box.l10n.mojito.service.drop.importer;
 
 import com.box.l10n.mojito.service.drop.exporter.FileSystemDropExporter;
-import com.box.sdk.BoxFile;
 import com.google.common.io.Files;
 import java.io.File;
 import java.io.IOException;
@@ -72,10 +71,10 @@ public class FileSystemDropImporter implements DropImporter {
   }
 
   /**
-   * Converts a {@link BoxFile} to {@link DropFile}
+   * Converts a {@link File} to {@link DropFile}
    *
    * @param file file to be converted
-   * @return {@link DropFile} resulting of {@link BoxFile} conversion
+   * @return {@link DropFile} resulting of {@link File} conversion
    */
   private DropFile fileToDropFile(File file) {
     String name = file.getName();

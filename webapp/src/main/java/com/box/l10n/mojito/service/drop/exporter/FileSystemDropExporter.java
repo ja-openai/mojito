@@ -96,7 +96,7 @@ public class FileSystemDropExporter implements DropExporter {
       try {
         createDropFolderTree(dropGroupName, dropName, new Date());
       } catch (IOException ioe) {
-        String msg = "Couldn't create the BoxDropFolderTree";
+        String msg = "Couldn't create the file system drop folder tree";
         logger.error(msg, ioe);
         throw new DropExporterInstantiationException(msg, ioe);
       }

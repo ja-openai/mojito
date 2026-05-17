@@ -2,8 +2,6 @@ package com.box.l10n.mojito.cli.command;
 
 import static com.box.l10n.mojito.service.drop.exporter.DropExporterDirectories.DROP_FOLDER_SOURCE_FILES_NAME;
 
-import com.box.l10n.mojito.boxsdk.BoxSDKService;
-import com.box.l10n.mojito.boxsdk.BoxSDKServiceException;
 import com.box.l10n.mojito.cli.CLITestBase;
 import com.box.l10n.mojito.entity.Drop;
 import com.box.l10n.mojito.entity.Repository;
@@ -51,8 +49,6 @@ public class DropXliffImportCommandTest extends CLITestBase {
   @Autowired DropService dropService;
 
   @Autowired DropExporterService dropExporterService;
-
-  @Autowired BoxSDKService boxSDKService;
 
   @Autowired DropRepository dropRepository;
 
@@ -122,8 +118,7 @@ public class DropXliffImportCommandTest extends CLITestBase {
     }
   }
 
-  public void localizeDropFilesAndCopyLocally(Drop drop)
-      throws BoxSDKServiceException, DropExporterException, IOException {
+  public void localizeDropFilesAndCopyLocally(Drop drop) throws DropExporterException, IOException {
 
     logger.debug("Localize files in a drop and copy them locally");
 

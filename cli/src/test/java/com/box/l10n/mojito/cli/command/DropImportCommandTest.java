@@ -8,8 +8,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.box.l10n.mojito.boxsdk.BoxSDKService;
-import com.box.l10n.mojito.boxsdk.BoxSDKServiceException;
 import com.box.l10n.mojito.cli.CLITestBase;
 import com.box.l10n.mojito.cli.console.Console;
 import com.box.l10n.mojito.entity.Drop;
@@ -62,8 +60,6 @@ public class DropImportCommandTest extends CLITestBase {
   @Autowired DropService dropService;
 
   @Autowired DropExporterService dropExporterService;
-
-  @Autowired BoxSDKService boxSDKService;
 
   @Autowired DropRepository dropRepository;
 
@@ -247,8 +243,7 @@ public class DropImportCommandTest extends CLITestBase {
     return Long.valueOf(dropNumber);
   }
 
-  public void localizeDropFiles(Drop drop)
-      throws BoxSDKServiceException, DropExporterException, IOException {
+  public void localizeDropFiles(Drop drop) throws DropExporterException, IOException {
 
     logger.debug("Localize files in a drop");
 

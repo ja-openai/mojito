@@ -4,7 +4,6 @@ import static com.box.l10n.mojito.service.drop.exporter.DropExporterDirectories.
 import static com.box.l10n.mojito.service.drop.exporter.DropExporterDirectories.DROP_FOLDER_SOURCE_FILES_NAME;
 import static org.junit.Assert.*;
 
-import com.box.l10n.mojito.boxsdk.BoxSDKServiceException;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.drop.importer.DropImporterException;
 import com.box.l10n.mojito.service.drop.importer.FileSystemDropImporter;
@@ -28,9 +27,8 @@ public class FileSystemDropExporterTest extends ServiceTestBase {
 
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
 
-  /** All function in one test as it takes long time to create the directories on Box */
   @Test
-  public void all() throws DropExporterException, DropImporterException, BoxSDKServiceException {
+  public void all() throws DropExporterException, DropImporterException {
 
     logger.debug("Test initial creation");
     FileSystemDropExporter fileSystemDropExporter = new FileSystemDropExporter();
@@ -94,8 +92,8 @@ public class FileSystemDropExporterTest extends ServiceTestBase {
     Calendar cal = Calendar.getInstance();
     cal.set(2013, 0, 1, 0, 0, 0);
 
-    BoxDropExporter boxDropExporter = new BoxDropExporter();
-    String res = boxDropExporter.getSourceFileName(cal.getTime(), "fre");
+    FileSystemDropExporter fileSystemDropExporter = new FileSystemDropExporter();
+    String res = fileSystemDropExporter.getSourceFileName(cal.getTime(), "fre");
     assertEquals("fre_01-01-13.xliff", res);
   }
 }
