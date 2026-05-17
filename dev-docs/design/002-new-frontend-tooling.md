@@ -1,8 +1,8 @@
-New Frontend Tooling (ESLint/Prettier/Vitest)
+Frontend Tooling (ESLint/Prettier/Vitest)
 =============================================
 
 Context
-- The new Vite/React/TS frontend (`webapp/new-frontend`) is currently bare-bones with no lint/format/test guardrails.
+- The Vite/React/TS frontend (`webapp/frontend`) needs consistent lint/format/test guardrails.
 - We want lightweight defaults before building pages so conventions stick and CI can enforce them.
 
 Goals

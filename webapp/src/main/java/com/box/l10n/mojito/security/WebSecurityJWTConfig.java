@@ -118,6 +118,7 @@ public class WebSecurityJWTConfig {
         new ArrayList<>(
             List.of(
                 "/",
+                "/login",
                 "/auth/callback",
                 "/repositories",
                 "/project-requests",

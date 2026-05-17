@@ -19,8 +19,8 @@ General Guidance
 Repo Map
 - `webapp/`: Spring Boot web application, REST APIs, legacy server-rendered UI,
   Quartz jobs, Flyway migrations, and the Maven-managed Node/npm install.
-- `webapp/new-frontend/`: React + Vite + TypeScript frontend. It builds into
-  Spring Boot static resources and is the preferred place for new frontend work.
+- `webapp/frontend/`: React + Vite + TypeScript frontend. It builds into
+  Spring Boot static resources and is the preferred place for frontend work.
 - `cli/`: Mojito CLI.
 - `common/`: shared Java code.
 - `docs/`: published Mojito documentation.
@@ -32,23 +32,23 @@ Environment
   `source webapp/use_local_npm.sh`.
 - Backend local run is normally from `webapp/`. Existing docs show the baseline
   Mojito app at `http://localhost:8080/login` with `admin/ChangeMe`.
-- The new frontend dev server lives in `webapp/new-frontend` and proxies
+- The frontend dev server lives in `webapp/frontend` and proxies
   `/api/*` to `http://localhost:8080`.
-- Current new-frontend routes are served at root paths by the built app; legacy
+- Current frontend routes are served at root paths by the built app; legacy
   `/n/...` links redirect to root-path equivalents.
 
 Common Commands
 - Full Java formatting: `mvn spotless:apply`
 - Backend/package compile with frontend profile: `mvn -pl webapp -Pfrontend test-compile -DskipTests`
-- New frontend setup:
+- Frontend setup:
   - `source webapp/use_local_npm.sh`
-  - `npm --prefix webapp/new-frontend install`
-- New frontend dev server: `npm --prefix webapp/new-frontend run dev`
-- New frontend checks:
-  - `npm --prefix webapp/new-frontend run format`
-  - `npm --prefix webapp/new-frontend run lint:fix`
-  - `npm --prefix webapp/new-frontend run tsc`
-  - `npm --prefix webapp/new-frontend run test`
+  - `npm --prefix webapp/frontend install`
+- Frontend dev server: `npm --prefix webapp/frontend run dev`
+- Frontend checks:
+  - `npm --prefix webapp/frontend run format`
+  - `npm --prefix webapp/frontend run lint:fix`
+  - `npm --prefix webapp/frontend run tsc`
+  - `npm --prefix webapp/frontend run test`
 
 Codex Tooling
 - Use `rg`/`rg --files` first for search.
@@ -66,12 +66,12 @@ When you see "finalize commit"
 
 Before committing
 - Run `mvn spotless:apply` from the repo root.
-- For changes under `webapp/new-frontend`, run `source webapp/use_local_npm.sh` and then:
-  - `npm --prefix webapp/new-frontend run format`
-  - `npm --prefix webapp/new-frontend run lint:fix`
-  - `npm --prefix webapp/new-frontend run tsc`
-- Run narrower tests that match the files touched. For new frontend behavior,
-  include `npm --prefix webapp/new-frontend run test` unless the change is docs
+- For changes under `webapp/frontend`, run `source webapp/use_local_npm.sh` and then:
+  - `npm --prefix webapp/frontend run format`
+  - `npm --prefix webapp/frontend run lint:fix`
+  - `npm --prefix webapp/frontend run tsc`
+- Run narrower tests that match the files touched. For frontend behavior,
+  include `npm --prefix webapp/frontend run test` unless the change is docs
   only.
 - If any warnings or failures remain after the standard checks, report them before committing.
 

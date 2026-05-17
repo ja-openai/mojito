@@ -1,8 +1,8 @@
-New Frontend Routing + Shell Layout
+Frontend Routing + Shell Layout
 ===================================
 
 Context
-- The new frontend has grown into the main SPA for most Mojito routes.
+- The frontend has grown into the main SPA for most Mojito routes.
 - The SPA is served from root paths. Old `/n` links are redirected server-side to their root-path equivalents.
 
 Goals
@@ -26,4 +26,4 @@ Open questions
 - Should navigation highlight active routes or adopt a design-system component?
 - Do we want per-route code splitting once pages grow?
 - Where should shared tokens live long-term (global CSS vs. theming system)?
-- When the remaining legacy routes are ported, remove the old frontend route exclusions from `NewFrontendController` and `ReactAppController`.
+- Keep legacy route aliases explicit in `NewFrontendController` and redirect them in the SPA when there is a current replacement route.

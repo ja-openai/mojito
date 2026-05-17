@@ -4,18 +4,18 @@ Review Features Foundation
 Context
 - Review-project automation needs a stable grouping object before we decide final assignment behavior.
 - Repository-only grouping is enough for the first iteration, but the model should leave room for broader scope rules later.
-- Admin users need a familiar CRUD surface in the new frontend so PM-owned configuration does not stay in code or SQL.
+- Admin users need a familiar CRUD surface in the frontend so PM-owned configuration does not stay in code or SQL.
 
 Goals
 - Introduce `ReviewFeature` as the admin-managed grouping entity for repositories.
 - Provide optimized Spring Data reads for list screens and lightweight lookup flows.
-- Reuse established new-frontend admin patterns: searchable table, status filter, result-size control, hover actions, detail editing, and batch upsert.
+- Reuse established frontend admin patterns: searchable table, status filter, result-size control, hover actions, detail editing, and batch upsert.
 - Surface repository coverage so admins can see active repositories that are not covered by an enabled review feature.
 
 Scope
 - New backend entity + migration for `review_feature` and its repository join table.
 - Admin-only REST endpoints for list, detail, create, update, and batch upsert.
-- Admin-only new-frontend pages for review feature list, detail edit, and batch update/create.
+- Admin-only frontend pages for review feature list, detail edit, and batch update/create.
 - Repository selection limited to explicit repository membership for now.
 - Admin-only repository coverage endpoint and UI indicators for repositories with no enabled review feature.
 

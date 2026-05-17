@@ -23,9 +23,15 @@ public class NewFrontendControllerTest {
         NewFrontendController.class.getMethod("forwardNewApp").getAnnotation(RequestMapping.class);
 
     Assert.assertNotNull(requestMapping);
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/login"));
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/auth/callback"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/glossaries"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/glossaries/{path:[^.]*}"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/glossaries/{path:[^.]*}/**"));
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/project-requests"));
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/branches"));
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/screenshots-legacy"));
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/settings/{path:[^.]*}"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/translation-incidents"));
   }
 

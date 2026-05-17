@@ -6,15 +6,17 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
- * Serves the new frontend from the web root while redirecting legacy /n links to their root-path
- * equivalents.
+ * Serves the frontend from the web root while redirecting legacy /n links to root-path equivalents.
  */
 @Controller
 public class NewFrontendController {
 
   @RequestMapping({
     "/",
+    "/login",
+    "/auth/callback",
     "/repositories",
+    "/project-requests",
     "/review-projects",
     "/review-projects/{path:[^.]*}",
     "/review-projects/{path:[^.]*}/**",
@@ -23,15 +25,17 @@ public class NewFrontendController {
     "/glossaries/{path:[^.]*}/**",
     "/translation-incidents",
     "/workbench",
+    "/branches",
     "/monitoring",
     "/statistics",
     "/screenshots",
+    "/screenshots-legacy",
     "/ai-translate",
     "/text-units/{path:[^.]*}",
     "/text-units/{path:[^.]*}/**",
     "/settings",
-    "/settings/{path:^(?!user-management$|box$)[^.]*$}",
-    "/settings/{path:^(?!user-management$|box$)[^.]*$}/**",
+    "/settings/{path:[^.]*}",
+    "/settings/{path:[^.]*}/**",
     "/tools/{path:[^.]*$}",
     "/tools/{path:[^.]*$}/**"
   })

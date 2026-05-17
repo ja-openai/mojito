@@ -18,7 +18,7 @@ Scope
 
 - New backend entity + migration for `review_automation` and its feature join table.
 - Admin-only REST endpoints for list, detail, create, update, delete, and batch upsert/export.
-- Admin-only new-frontend pages for review automation list, detail edit, and batch update/create.
+- Admin-only frontend pages for review automation list, detail edit, and batch update/create.
 - Validation that the same review feature cannot belong to multiple enabled automations at once.
 - Quartz-backed scheduling with one trigger per automation.
 - Manual `Run now` support for a saved automation.

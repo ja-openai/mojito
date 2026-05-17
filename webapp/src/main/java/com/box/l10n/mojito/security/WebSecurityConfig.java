@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.security;
 
 import com.box.l10n.mojito.ActuatorHealthLegacyConfig;
+import com.box.l10n.mojito.react.FrontendConfigController;
 import com.box.l10n.mojito.service.security.user.UserService;
 import java.util.ArrayList;
 import java.util.List;
@@ -138,15 +139,14 @@ public class WebSecurityConfig {
         new ArrayList<>(
             List.of(
                 "/intl/*",
-                "/img/*",
                 "/assets/**",
+                LOGIN_PAGE,
                 "/login/**",
                 "/index.html",
                 "/favicon.ico",
                 "/fonts/*",
                 "/cli/**",
-                "/js/**",
-                "/css/**",
+                FrontendConfigController.CONFIG_PATH,
                 "/error"));
     if (extraPermitAllPatterns != null) {
       permitMatchers.addAll(extraPermitAllPatterns);

@@ -196,7 +196,7 @@ It is advised to reuse the `npm` version that was downloaded during {{ site.moji
 
 ```sh
 source webapp/use_local_npm.sh
-npm --prefix webapp/new-frontend install
+npm --prefix webapp/frontend install
 ```
     
 Else, make sure the global `npm` is compatible.
@@ -221,7 +221,7 @@ npm run start-server-nofe
 
 ```sh
 cd ${PROJECT_DIR}
-npm --prefix webapp/new-frontend run dev
+npm --prefix webapp/frontend run dev
 ```
 
 The Vite app runs on [http://localhost:5173/](http://localhost:5173/) and proxies `/api/*` to the backend. The dev proxy sends `x-forwarded-user: admin`, so the backend dev profile should use header authentication.

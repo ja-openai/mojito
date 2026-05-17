@@ -5,15 +5,15 @@ Context
 - The legacy workbench exposes `Export` and `Import` actions directly in the main workbench toolbar.
 - Export lets users dump the current search result set to CSV or JSON with selectable fields.
 - Import lets users upload CSV or JSON and batch-apply translations through `/api/textunitsBatch`.
-- The new frontend workbench already has the core search, workset, bulk-edit, share, and collection surfaces, but it does not yet expose import/export.
+- The frontend workbench already has the core search, workset, bulk-edit, share, and collection surfaces, but it does not yet expose import/export.
 - The backend endpoint and legacy client flow already exist, so this is primarily a product and frontend integration decision rather than a net-new backend invention.
 
 Goals
 
-- Port the legacy workbench import/export capability into the new frontend workbench.
+- Port the legacy workbench import/export capability into the frontend workbench.
 - Keep the first iteration close to legacy behavior so users do not lose a known workflow.
 - Make the feature feel native to the new workbench instead of a legacy modal transplanted unchanged.
-- Reduce accidental blast radius for bulk import, especially while the new frontend surface is still settling.
+- Reduce accidental blast radius for bulk import, especially while the frontend surface is still settling.
 
 Non-Goals
 
@@ -41,13 +41,12 @@ Import in legacy workbench:
 - posts the batch to `/api/textunitsBatch`
 - waits for the pollable task to finish
 
-Relevant existing files:
+Relevant files:
 
-- legacy export modal: `webapp/src/main/resources/public/js/components/workbench/ExportSearchResultsModal.js`
-- legacy import modal: `webapp/src/main/resources/public/js/components/workbench/ImportSearchResultsModal.js`
+- historical legacy export/import modals were removed with the old webpack frontend
 - batch import endpoint: `webapp/src/main/java/com/box/l10n/mojito/rest/textunit/TextUnitWS.java`
 - batch import payload: `webapp/src/main/java/com/box/l10n/mojito/rest/textunit/ImportTextUnitsBatch.java`
-- new workbench actions area: `webapp/new-frontend/src/page/workbench/WorkbenchWorksetBar.tsx`
+- new workbench actions area: `webapp/frontend/src/page/workbench/WorkbenchWorksetBar.tsx`
 
 Product Recommendation
 
@@ -66,7 +65,7 @@ Rationale:
 
 - export is read-only and low risk
 - import performs bulk writes and is easier to misuse
-- the current backend broadly allows translators, PMs, and admins via `/api/textunits/**`, but the new frontend does not need to inherit that exposure immediately
+- the current backend broadly allows translators, PMs, and admins via `/api/textunits/**`, but the frontend does not need to inherit that exposure immediately
 - we can widen import access later once usage patterns and guardrails are validated
 
 If product prefers simpler consistency, both actions can be shown only to admins in v1. That is not required technically, but it is an acceptable product tradeoff.
@@ -101,7 +100,7 @@ V1 Export Scope
 
 Implementation notes:
 
-- reuse the new typed search API in `webapp/new-frontend/src/api/text-units.ts`
+- reuse the new typed search API in `webapp/frontend/src/api/text-units.ts`
 - add a dedicated export helper that pages through `searchTextUnits(...)` until the requested limit is reached
 - keep the default field set aligned with legacy unless product wants to simplify it
 - preserve stable column names so legacy import templates and downstream consumers do not break
@@ -134,14 +133,14 @@ V1 should reuse the existing backend endpoint and payload shape.
 
 Minimal backend additions that may still be worthwhile:
 
-- add explicit role gating for `/api/textunitsBatch` if we decide import is admin-only in the new frontend and want backend enforcement, not just hidden UI
+- add explicit role gating for `/api/textunitsBatch` if we decide import is admin-only in the frontend and want backend enforcement, not just hidden UI
 - document the accepted import fields and semantics more clearly in code or API comments
 
 Typed frontend API additions:
 
 - `exportSearchTextUnits(...)` helper built on top of `searchTextUnits(...)`
 - `importTextUnitsBatch(...)` helper that posts `ImportTextUnitsBatch`
-- pollable task handling reused from existing new-frontend polling patterns or extracted into a small shared helper
+- pollable task handling reused from existing frontend polling patterns or extracted into a small shared helper
 
 Behavioral Notes / Risks
 
@@ -160,7 +159,7 @@ Future Follow-on Work
 
 Implementation Plan
 
-1. Add typed new-frontend import/export API helpers.
+1. Add typed frontend import/export API helpers.
 2. Add export modal and import modal components in the new workbench area.
 3. Add workset bar actions and role-based visibility.
 4. Reuse the existing backend endpoint for import.
