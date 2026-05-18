@@ -41,7 +41,7 @@ public class TemporaryBulkTranslationAcceptService {
   static final int WRITE_CHUNK_SIZE = 100;
 
   public enum Selector {
-    PHRASE_IMPORTED_NEEDS_REVIEW,
+    IMPORTED_NEEDS_REVIEW,
     NEEDS_REVIEW_OLDER_THAN
   }
 
@@ -211,8 +211,8 @@ public class TemporaryBulkTranslationAcceptService {
     PageRequest pageRequest = PageRequest.of(0, FETCH_PAGE_SIZE);
 
     return switch (request.selector) {
-      case PHRASE_IMPORTED_NEEDS_REVIEW ->
-          repository.findPhraseImportedNeedsReviewCandidates(
+      case IMPORTED_NEEDS_REVIEW ->
+          repository.findImportedNeedsReviewCandidates(
               request.repositoryIds,
               TMTextUnitVariant.Status.REVIEW_NEEDED,
               TMTextUnitVariantComment.Type.THIRD_PARTY_TMS_PULL,
@@ -229,8 +229,8 @@ public class TemporaryBulkTranslationAcceptService {
   private List<RepositoryCount> getRepositoryCounts(ValidatedRequest request) {
     List<TemporaryBulkTranslationAcceptRepository.RepositoryCountRow> rows =
         switch (request.selector) {
-          case PHRASE_IMPORTED_NEEDS_REVIEW ->
-              repository.countPhraseImportedNeedsReviewByRepository(
+          case IMPORTED_NEEDS_REVIEW ->
+              repository.countImportedNeedsReviewByRepository(
                   request.repositoryIds,
                   TMTextUnitVariant.Status.REVIEW_NEEDED,
                   TMTextUnitVariantComment.Type.THIRD_PARTY_TMS_PULL);

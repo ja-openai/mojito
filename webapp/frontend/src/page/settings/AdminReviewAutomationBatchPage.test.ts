@@ -26,12 +26,12 @@ const existingAutomationsByName = new Map([
   ['codex, general agents and tools', { id: 11 }],
 ]);
 
-const teamIdsByName = new Map([['smartling product', 20]]);
-const teamDisplayNamesByName = new Map([['smartling product', 'Smartling Product']]);
+const teamIdsByName = new Map([['localization product', 20]]);
+const teamDisplayNamesByName = new Map([['localization product', 'Localization Product']]);
 
 const parseRows = (features: string) =>
   parseReviewAutomationBatchInput(
-    `Admin, Billing and Payments | enabled | 0 0 10 ? * MON-SAT | America/Los_Angeles | Smartling Product | no-translator | 1 | 2000 | ${features}`,
+    `Admin, Billing and Payments | enabled | 0 0 10 ? * MON-SAT | America/Los_Angeles | Localization Product | no-translator | 1 | 2000 | ${features}`,
     featureIdsByName,
     featureDisplayNamesByName,
     existingAutomationsByName,
@@ -47,14 +47,14 @@ describe('formatReviewAutomationBatchRow', () => {
         enabled: true,
         cronExpression: '0 0 10 ? * MON-SAT',
         timeZone: 'America/Los_Angeles',
-        teamName: 'Smartling Product',
+        teamName: 'Localization Product',
         assignTranslator: false,
         dueDateOffsetDays: 1,
         maxWordCountPerProject: 2000,
         featureNames: ['Admin, Billing and Payments', 'Android'],
       }),
     ).toBe(
-      'Admin, Billing and Payments | enabled | 0 0 10 ? * MON-SAT | America/Los_Angeles | Smartling Product | no-translator | 1 | 2000 | Admin, Billing and Payments; Android',
+      'Admin, Billing and Payments | enabled | 0 0 10 ? * MON-SAT | America/Los_Angeles | Localization Product | no-translator | 1 | 2000 | Admin, Billing and Payments; Android',
     );
   });
 });

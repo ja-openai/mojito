@@ -21,7 +21,7 @@ import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type Selector = BulkTranslationAcceptRequest['selector'];
 
-const DEFAULT_SELECTOR: Selector = 'PHRASE_IMPORTED_NEEDS_REVIEW';
+const DEFAULT_SELECTOR: Selector = 'IMPORTED_NEEDS_REVIEW';
 
 function getDefaultCreatedBeforeDate() {
   const date = new Date();
@@ -31,8 +31,8 @@ function getDefaultCreatedBeforeDate() {
 
 function getSelectorLabel(selector: Selector) {
   switch (selector) {
-    case 'PHRASE_IMPORTED_NEEDS_REVIEW':
-      return 'Phrase imported and needs review';
+    case 'IMPORTED_NEEDS_REVIEW':
+      return 'Imported and needs review';
     case 'NEEDS_REVIEW_OLDER_THAN':
       return 'Needs review older than date';
   }
@@ -173,9 +173,7 @@ export function AdminTemporaryBulkTranslationAcceptPage() {
                 }}
                 disabled={isWorking}
               >
-                <option value="PHRASE_IMPORTED_NEEDS_REVIEW">
-                  Phrase imported and needs review
-                </option>
+                <option value="IMPORTED_NEEDS_REVIEW">Imported and needs review</option>
                 <option value="NEEDS_REVIEW_OLDER_THAN">Needs review older than date</option>
               </select>
             </label>

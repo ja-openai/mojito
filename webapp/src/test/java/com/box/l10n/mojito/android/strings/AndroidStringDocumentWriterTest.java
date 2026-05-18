@@ -147,7 +147,7 @@ public class AndroidStringDocumentWriterTest {
     // machine-to-machine communication, pure XML
     // seems to be the best option. However, it appears that escapeQuotes() tries to mimic the
     // Android format
-    // overloads. I'm wondering if this was required by Smartling.
+    // overloads.
     result =
         """
               <?xml version="1.0" encoding="UTF-8"?><resources>

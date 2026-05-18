@@ -196,7 +196,7 @@ export function AdminSettingsPage() {
               >
                 <div className="settings-directory__title">Bulk translation accept</div>
                 <div className="settings-directory__description">
-                  One-off admin tool to accept Phrase-imported or older review-needed translations.
+                  One-off admin tool to accept imported or older review-needed translations.
                 </div>
               </button>
             </div>

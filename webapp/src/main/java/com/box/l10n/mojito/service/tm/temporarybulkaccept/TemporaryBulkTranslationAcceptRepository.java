@@ -67,7 +67,7 @@ public interface TemporaryBulkTranslationAcceptRepository
         and variantComment.type = :commentType
       order by cv.id
       """)
-  List<CandidateRow> findPhraseImportedNeedsReviewCandidates(
+  List<CandidateRow> findImportedNeedsReviewCandidates(
       @Param("repositoryIds") List<Long> repositoryIds,
       @Param("status") TMTextUnitVariant.Status status,
       @Param("commentType") TMTextUnitVariantComment.Type commentType,
@@ -90,7 +90,7 @@ public interface TemporaryBulkTranslationAcceptRepository
       group by repo.id, repo.name
       order by repo.name
       """)
-  List<RepositoryCountRow> countPhraseImportedNeedsReviewByRepository(
+  List<RepositoryCountRow> countImportedNeedsReviewByRepository(
       @Param("repositoryIds") List<Long> repositoryIds,
       @Param("status") TMTextUnitVariant.Status status,
       @Param("commentType") TMTextUnitVariantComment.Type commentType);

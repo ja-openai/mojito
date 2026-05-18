@@ -1,9 +1,7 @@
 import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
 import { isTransientHttpError, poll } from '../utils/poller';
 
-export type BulkTranslationAcceptSelector =
-  | 'PHRASE_IMPORTED_NEEDS_REVIEW'
-  | 'NEEDS_REVIEW_OLDER_THAN';
+export type BulkTranslationAcceptSelector = 'IMPORTED_NEEDS_REVIEW' | 'NEEDS_REVIEW_OLDER_THAN';
 
 export type BulkTranslationAcceptRequest = {
   selector: BulkTranslationAcceptSelector;

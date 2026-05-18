@@ -48,7 +48,7 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
 
   @Test
-  public void phraseImportedNeedsReviewDryRunAndExecuteCopiesComments() throws Exception {
+  public void importedNeedsReviewDryRunAndExecuteCopiesComments() throws Exception {
     Repository repository = wsTestDataFactory.createRepoAndAssetAndTextUnits(testIdWatcher);
     Locale frFrLocale = localeService.findByBcp47Tag("fr-FR");
     TMTextUnit tmTextUnit = tmTextUnitRepository.findByTm_id(repository.getTm().getId()).get(0);
@@ -57,7 +57,7 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
         tmService.addTMTextUnitCurrentVariant(
             tmTextUnit.getId(),
             frFrLocale.getId(),
-            "Phrase imported review variant",
+            "Imported review variant",
             null,
             TMTextUnitVariant.Status.REVIEW_NEEDED,
             true,
@@ -68,11 +68,11 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
         sourceVariantId,
         TMTextUnitVariantComment.Type.THIRD_PARTY_TMS_PULL,
         TMTextUnitVariantComment.Severity.INFO,
-        "Import from Phrase Strings");
+        "Import from external system");
 
     TemporaryBulkTranslationAcceptService.Request request =
         new TemporaryBulkTranslationAcceptService.Request(
-            TemporaryBulkTranslationAcceptService.Selector.PHRASE_IMPORTED_NEEDS_REVIEW,
+            TemporaryBulkTranslationAcceptService.Selector.IMPORTED_NEEDS_REVIEW,
             List.of(repository.getId()),
             null);
 
@@ -101,7 +101,7 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
   }
 
   @Test
-  public void phraseImportedNeedsReviewDryRunAsyncReturnsTaskResponse() throws Exception {
+  public void importedNeedsReviewDryRunAsyncReturnsTaskResponse() throws Exception {
     Repository repository = wsTestDataFactory.createRepoAndAssetAndTextUnits(testIdWatcher);
     Locale frFrLocale = localeService.findByBcp47Tag("fr-FR");
     TMTextUnit tmTextUnit = tmTextUnitRepository.findByTm_id(repository.getTm().getId()).get(0);
@@ -110,7 +110,7 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
         tmService.addTMTextUnitCurrentVariant(
             tmTextUnit.getId(),
             frFrLocale.getId(),
-            "Phrase imported async review variant",
+            "Imported async review variant",
             null,
             TMTextUnitVariant.Status.REVIEW_NEEDED,
             true,
@@ -120,11 +120,11 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
         currentVariant.getTmTextUnitVariant().getId(),
         TMTextUnitVariantComment.Type.THIRD_PARTY_TMS_PULL,
         TMTextUnitVariantComment.Severity.INFO,
-        "Import from Phrase Strings");
+        "Import from external system");
 
     TemporaryBulkTranslationAcceptService.Request request =
         new TemporaryBulkTranslationAcceptService.Request(
-            TemporaryBulkTranslationAcceptService.Selector.PHRASE_IMPORTED_NEEDS_REVIEW,
+            TemporaryBulkTranslationAcceptService.Selector.IMPORTED_NEEDS_REVIEW,
             List.of(repository.getId()),
             null);
 
