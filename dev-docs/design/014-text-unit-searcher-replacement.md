@@ -1,12 +1,13 @@
 # TextUnitSearcher Replacement Options
 
-Status: Hibernate Criteria candidate implemented with opt-in shadow checks
+Status: Hibernate Criteria promoted to the main `TextUnitSearcher`
 
 ## Context
 
-`TextUnitSearcher` still builds a large native SQL query through
-`com.github.pnowy.nc:nativeCriteria-core:2.0`. Mojito is now on Java 21, Spring Boot 3.5.14,
-Hibernate ORM 6.6.49.Final, and Jakarta Persistence API 3.1.0.
+`TextUnitSearcher` used to build a large native SQL query through a third-party native query
+builder. Mojito is now on Java 21, Spring Boot 3.5.14, Hibernate ORM 6.6.49.Final, and Jakarta
+Persistence API 3.1.0. The searcher now uses Hibernate Criteria directly and the old native
+implementation, native query dependency, and shadow comparison path have been removed.
 
 The hard part is not the filtering itself. It is preserving the searcher's join graph:
 
@@ -35,15 +36,15 @@ The hard part is not the filtering itself. It is preserving the searcher's join 
   explicit SQL model.
   <https://www.jooq.org/doc/latest/manual/sql-building/>
 
-## Implementation Added
+## Implementation
 
 ### Hibernate Criteria Extension
 
 Package:
-`com.box.l10n.mojito.service.tm.search.replacement.hibernatecriteria`
+`com.box.l10n.mojito.service.tm.search`
 
 Entry point:
-`HibernateCriteriaTextUnitSearcher`
+`TextUnitSearcher`
 
 What it does:
 
@@ -52,40 +53,26 @@ What it does:
 - We can keep dialect rendering in Hibernate rather than hand-writing MySQL/HSQL/Postgres SQL.
 - We can drop `ANY_VALUE` by grouping all non-aggregate projections when usages are joined.
 - Usages can use Hibernate's `listagg` Criteria extension instead of raw `GROUP_CONCAT`.
-- Existing `TextUnitSearcher` can shadow-run this implementation when
-  `l10n.text-unit-searcher.shadow.enabled=true`.
-- When enabled, the shadow service logs an `INFO` startup line and an `INFO` timing line for every
-  shadowed search/count comparison, including native and Hibernate Criteria durations in
-  milliseconds.
-- Shadow mismatches are logged as errors and become test failures when
-  `l10n.text-unit-searcher.shadow.fail-on-mismatch=true`.
-- The HSQL `webapp` unit suite passes with those shadow flags enabled, so the existing search tests
-  now exercise the replacement query alongside the current nativeCriteria query. Run parity checks
-  with `-Duser.timezone=UTC` while the native implementation is still the comparison baseline.
-- The HSQL `cli` unit suite also passes with those shadow flags enabled. While checking that, the
-  CLI git helper needed a small linked-worktree fix for JGit 4.5.2 so Codex worktrees resolve the
-  common object database and work tree correctly.
-- In a PDT JVM, shadow comparison found a seven-hour difference only on `createdDate` /
+- The HSQL `webapp` search tests and `cli` tests passed during the comparison phase before
+  promotion.
+- In a PDT JVM, comparison found a seven-hour difference only on `createdDate` /
   `tmTextUnitCreatedDate` milliseconds. The legacy native mapper reads dates from
   `CriteriaResult#getDate` and wraps them through `JSR310Migration.newDateTimeCtorWithDate`, making
   the baseline sensitive to the JVM default zone. The Hibernate Criteria path reads
-  Hibernate-managed `ZonedDateTime` values directly, which is the better behavior. When Criteria is
-  promoted to primary, call this out as a visible timestamp-mapping cleanup rather than a query
-  parity regression.
-- MySQL shadow comparison also exposed a legacy native DTO projection issue for boolean columns such
+  Hibernate-managed `ZonedDateTime` values directly.
+- MySQL comparison also exposed a legacy native DTO projection issue for boolean columns such
   as `includedInLocalizedFile`. The old native search still filtered rejected/not-rejected rows in
   SQL with `tuv.included_in_localized_file = ...`; the mismatch was in converting selected boolean
-  values from the native result row into `TextUnitDTO`. The mapper now accepts MySQL/HSQL textual and
-  BIT string representations while nativeCriteria remains the baseline. The Hibernate Criteria path
-  reads typed `Boolean` values directly.
+  values from the native result row into `TextUnitDTO`. The Hibernate Criteria path reads typed
+  `Boolean` values directly, so the native mapper and its compatibility fix were removed with the
+  native implementation.
 
 Tradeoffs:
 
 - This is not pure Jakarta Persistence 3.1 Criteria. It depends on Hibernate's Criteria extension
   interfaces.
-- The code is verbose. It should be split further only if more filters are added or parity fixes
-  make the current helper boundaries too large.
-- We still need broad parity runs against current `TextUnitSearcher` on MySQL fixtures.
+- The code is verbose. It should be split further only if more filters are added or production
+  profiling shows a specific query path that needs isolated tuning.
 
 Recommendation:
 
@@ -108,7 +95,7 @@ Native SQL is rejected for now; no production-code prototype is kept.
   dynamic identifiers or fragments than Criteria/HQL.
 - It keeps dialect work in Mojito. `GROUP_CONCAT`, `REGEXP_LIKE`, boolean literals, and pagination
   would all need HSQL/MySQL/Postgres-specific handling.
-- It removes `nativeCriteria-core` without removing the real maintenance problem: handwritten SQL.
+- It removes a dependency without removing the real maintenance problem: handwritten SQL.
 
 ## Options Not Prototyped Yet
 
@@ -121,9 +108,6 @@ Native SQL is rejected for now; no production-code prototype is kept.
 
 ## Next Steps
 
-1. Run the same shadow suite against MySQL fixtures.
-2. Compare generated SQL on HSQL and MySQL for the Criteria implementation.
-3. Decide whether `listagg` fully replaces current `GROUP_CONCAT` semantics for usages ordering and
+1. Monitor generated SQL and DB load in production.
+2. Decide whether `listagg` fully replaces current `GROUP_CONCAT` semantics for usages ordering and
    separators.
-4. Promote `HibernateCriteriaTextUnitSearcher` to the primary implementation, then delete
-   `nativeCriteria-core` after parity is stable.

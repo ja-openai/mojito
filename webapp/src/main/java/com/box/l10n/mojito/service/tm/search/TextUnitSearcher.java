@@ -1,660 +1,619 @@
 package com.box.l10n.mojito.service.tm.search;
 
+import com.box.l10n.mojito.entity.Asset;
+import com.box.l10n.mojito.entity.AssetTextUnit;
+import com.box.l10n.mojito.entity.AssetTextUnitToTMTextUnit;
+import com.box.l10n.mojito.entity.Locale;
+import com.box.l10n.mojito.entity.PluralForm;
+import com.box.l10n.mojito.entity.PluralFormForLocale;
+import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.entity.RepositoryLocale;
+import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
-import com.box.l10n.mojito.nativecriteria.*;
 import com.box.l10n.mojito.service.NormalizationUtils;
-import com.box.l10n.mojito.service.tm.search.replacement.TextUnitSearcherShadowService;
-import com.box.l10n.mojito.service.tm.search.replacement.TextUnitSearcherShadowService.TimedResult;
-import com.github.pnowy.nc.core.CriteriaResult;
-import com.github.pnowy.nc.core.NativeCriteria;
-import com.github.pnowy.nc.core.NativeExps;
-import com.github.pnowy.nc.core.expressions.NativeExp;
-import com.github.pnowy.nc.core.expressions.NativeIsNotNullExp;
-import com.github.pnowy.nc.core.expressions.NativeIsNullExp;
-import com.github.pnowy.nc.core.expressions.NativeJoin;
-import com.github.pnowy.nc.core.expressions.NativeJunctionExp;
-import com.github.pnowy.nc.core.expressions.NativeOrderExp;
-import com.github.pnowy.nc.core.expressions.NativeProjection;
-import com.github.pnowy.nc.core.mappers.CriteriaResultTransformer;
-import com.google.common.base.Preconditions;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Order;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Selection;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.hibernate.Session;
+import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
+import org.hibernate.query.criteria.JpaCrossJoin;
+import org.hibernate.query.criteria.JpaEntityJoin;
+import org.hibernate.query.criteria.JpaJoin;
+import org.hibernate.query.criteria.JpaRoot;
+import org.hibernate.query.criteria.JpaSetJoin;
+import org.hibernate.query.sqm.tree.SqmJoinType;
 import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Text Unit searcher allows to search/build a list of translated and/or untranslated text units for
- * multiple locales at the same time.
+ * Text unit searcher implemented with Hibernate's Criteria extension API.
  *
- * <p>It is possible to filter the result set based on different criteria: by text unit name, source
- * and target content, comment, etc. Only exact matches on content is supported for now.
- *
- * <p>Result set can be paginated, all filter are passed using {@link TextUnitSearcherParameters}
- *
- * <p>This class is aimed be used by the workbench. It can also be used to generate translation kits
- * (query could be simplified in that case).
- *
- * @author jaurambault
+ * <p>It uses Hibernate 6.6 entity joins to preserve the current native searcher's left joins
+ * against entities that are not directly mapped as collections from {@link TMTextUnit}.
  */
 @Service
 public class TextUnitSearcher {
 
-  /** logger */
-  static Logger logger = LoggerFactory.getLogger(TextUnitSearcher.class);
+  private static final String TM_TEXT_UNIT_ID = "tmTextUnitId";
+  private static final String TM_TEXT_UNIT_VARIANT_ID = "tmTextUnitVariantId";
+  private static final String LOCALE_ID = "localeId";
+  private static final String TARGET_LOCALE = "targetLocale";
+  private static final String NAME = "name";
+  private static final String SOURCE = "source";
+  private static final String COMMENT = "comment";
+  private static final String TARGET = "target";
+  private static final String TARGET_COMMENT = "targetComment";
+  private static final String ASSET_ID = "assetId";
+  private static final String LAST_SUCCESSFUL_ASSET_EXTRACTION_ID =
+      "lastSuccessfulAssetExtractionId";
+  private static final String ASSET_EXTRACTION_ID = "assetExtractionId";
+  private static final String TM_TEXT_UNIT_CURRENT_VARIANT_ID = "tmTextUnitCurrentVariantId";
+  private static final String STATUS = "status";
+  private static final String INCLUDED_IN_LOCALIZED_FILE = "includedInLocalizedFile";
+  private static final String CREATED_DATE = "createdDate";
+  private static final String ASSET_DELETED = "assetDeleted";
+  private static final String PLURAL_FORM = "pluralForm";
+  private static final String PLURAL_FORM_OTHER = "pluralFormOther";
+  private static final String REPOSITORY_NAME = "repositoryName";
+  private static final String ASSET_PATH = "assetPath";
+  private static final String ASSET_TEXT_UNIT_ID = "assetTextUnitId";
+  private static final String TM_TEXT_UNIT_CREATED_DATE = "tmTextUnitCreatedDate";
+  private static final String DO_NOT_TRANSLATE = "doNotTranslate";
+  private static final String BRANCH_ID = "branchId";
+  private static final String USAGES = "usages";
+  private static final String TEXT_UNIT_COUNT = "textUnitCount";
+  private static final String TEXT_UNIT_WORD_COUNT = "textUnitWordCount";
 
-  @Autowired ObjectProvider<TextUnitSearcherShadowService> textUnitSearcherShadowService;
+  private final EntityManager entityManager;
 
-  @Retryable(
-      retryFor = {TextUnitSearcherError.class},
-      noRetryFor = {TextUnitSearcherShadowService.TextUnitSearcherShadowException.class},
-      notRecoverable = {TextUnitSearcherShadowService.TextUnitSearcherShadowException.class},
-      backoff = @Backoff(delay = 500, multiplier = 2))
-  public TextUnitAndWordCount countTextUnitAndWordCount(TextUnitSearcherParameters searchParameters)
-      throws TextUnitSearcherError {
-
-    TimedResult<TextUnitAndWordCount> nativeResult =
-        countNativeTextUnitAndWordCount(searchParameters);
-
-    compareCountWithShadowSearcher(
-        searchParameters,
-        nativeResult.result(),
-        nativeResult.durationMillis(),
-        () -> countNativeTextUnitAndWordCount(searchParameters));
-
-    return nativeResult.result();
+  public TextUnitSearcher(EntityManager entityManager) {
+    this.entityManager = entityManager;
   }
 
-  private TimedResult<TextUnitAndWordCount> countNativeTextUnitAndWordCount(
-      TextUnitSearcherParameters searchParameters) throws TextUnitSearcherError {
-    NativeCriteria c = getCriteriaForSearch(searchParameters);
-
-    c.setProjection(
-        NativeExps.projection()
-            .addAggregateProjection("tu.id", "tu_count", NativeProjection.AggregateProjection.COUNT)
-            .addAggregateProjection(
-                "tu.word_count", "tu_word_count", NativeProjection.AggregateProjection.SUM));
-
-    TextUnitAndWordCount textUnitAndWordCount;
-    long nativeStartedNanos = System.nanoTime();
-    long nativeDurationMillis;
-    try {
-      textUnitAndWordCount = c.criteriaResult(new CriteriaResultTransformerTextUnitAndWordCount());
-      nativeDurationMillis = elapsedMillis(nativeStartedNanos);
-    } catch (Exception e) {
-      logger.warn("TextUnitSearcher failed to count, query: {}", c.getQueryInfo().toString());
-      throw new TextUnitSearcherError(c, "count text unit", e);
-    }
-
-    return new TimedResult<>(textUnitAndWordCount, nativeDurationMillis);
-  }
-
-  @Recover
-  public TextUnitAndWordCount recoverCountTextUnitAndWordCount(
-      TextUnitSearcherError textUnitSearcherError, TextUnitSearcherParameters searchParameters)
-      throws Throwable {
-    logTextUnitSearcherError(textUnitSearcherError);
-    throw textUnitSearcherError.getCause();
-  }
-
-  @Recover
-  public List<TextUnitDTO> recoverSearch(
-      TextUnitSearcherError textUnitSearcherError, TextUnitSearcherParameters searchParameters)
-      throws Throwable {
-    logTextUnitSearcherError(textUnitSearcherError);
-    throw textUnitSearcherError.getCause();
-  }
-
-  void logTextUnitSearcherError(TextUnitSearcherError textUnitSearcherError)
-      throws TextUnitSearcherError {
-    logger.error(
-        "TextUnitSearcher couldn't recover for \"call\": {}\n{}",
-        textUnitSearcherError.getMessage(),
-        textUnitSearcherError.nativeCriteria.getQueryInfo().toString());
-  }
-
-  /**
-   * Search/Build text units.
-   *
-   * @param searchParameters the search parameter to specify filters and pagination
-   * @return the list of text units
-   */
-  @Transactional
-  @Retryable(
-      retryFor = {TextUnitSearcherError.class},
-      noRetryFor = {TextUnitSearcherShadowService.TextUnitSearcherShadowException.class},
-      notRecoverable = {TextUnitSearcherShadowService.TextUnitSearcherShadowException.class},
-      backoff = @Backoff(delay = 500, multiplier = 2))
+  @Retryable(backoff = @Backoff(delay = 500, multiplier = 2))
+  @Transactional(readOnly = true)
   public List<TextUnitDTO> search(TextUnitSearcherParameters searchParameters) {
-
-    TimedResult<List<TextUnitDTO>> nativeResult = searchNative(searchParameters);
-
-    compareSearchWithShadowSearcher(
-        searchParameters,
-        nativeResult.result(),
-        nativeResult.durationMillis(),
-        () -> searchNative(searchParameters));
-
-    return nativeResult.result();
-  }
-
-  private TimedResult<List<TextUnitDTO>> searchNative(TextUnitSearcherParameters searchParameters) {
-    NativeCriteria c = getCriteriaForSearch(searchParameters);
-
-    List<TextUnitDTO> resultAsList;
-    long nativeStartedNanos = System.nanoTime();
-    long nativeDurationMillis;
-    try {
-      logger.debug("Perform query");
-      resultAsList =
-          c.criteriaResult(
-              new TextUnitDTONativeObjectMapper(searchParameters.getAssetTextUnitUsages() != null));
-      nativeDurationMillis = elapsedMillis(nativeStartedNanos);
-
-      if (logger.isDebugEnabled()) {
-        logger.debug("Query done, info: {}", c.getQueryInfo());
-      }
-
-    } catch (Exception e) {
-      logger.warn("TextUnitSearcher failed to search, exception", e);
-      logger.warn("TextUnitSearcher failed to search, query: {}", c.getQueryInfo().toString());
-      throw new TextUnitSearcherError(c, "search", e);
-    }
-
-    return new TimedResult<>(resultAsList, nativeDurationMillis);
-  }
-
-  private void compareCountWithShadowSearcher(
-      TextUnitSearcherParameters searchParameters,
-      TextUnitAndWordCount textUnitAndWordCount,
-      long nativeDurationMillis,
-      Supplier<TimedResult<TextUnitAndWordCount>> nativeCountSupplier) {
-    if (textUnitSearcherShadowService != null) {
-      textUnitSearcherShadowService.ifAvailable(
-          shadowService ->
-              shadowService.compareCount(
-                  searchParameters,
-                  textUnitAndWordCount,
-                  nativeDurationMillis,
-                  nativeCountSupplier));
-    }
-  }
-
-  private void compareSearchWithShadowSearcher(
-      TextUnitSearcherParameters searchParameters,
-      List<TextUnitDTO> resultAsList,
-      long nativeDurationMillis,
-      Supplier<TimedResult<List<TextUnitDTO>>> nativeSearchSupplier) {
-    if (textUnitSearcherShadowService != null) {
-      textUnitSearcherShadowService.ifAvailable(
-          shadowService ->
-              shadowService.compareSearch(
-                  searchParameters, resultAsList, nativeDurationMillis, nativeSearchSupplier));
-    }
-  }
-
-  private static long elapsedMillis(long startedNanos) {
-    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedNanos);
-  }
-
-  NativeCriteria getCriteriaForSearch(TextUnitSearcherParameters searchParameters) {
-
-    Preconditions.checkNotNull(searchParameters, "Search parameters should not be null");
-
-    logger.debug("Creating the native criteria with joins");
-
-    NativeCriteria c = new NativeCriteria(new JpaQueryProvider(), "tm_text_unit", "tu");
-    c.addJoin(NativeExps.crossJoin("locale", "l"));
-    c.addJoin(NativeExps.innerJoin("asset", "a", "a.id", "tu.asset_id"));
-    c.addJoin(NativeExps.innerJoin("repository", "r", "r.id", "a.repository_id"));
-
-    NativeJunctionExp onClauseRepositoryLocale = NativeExps.conjunction();
-    onClauseRepositoryLocale.add(new NativeColumnEqExp("rl.locale_id", "l.id"));
-    onClauseRepositoryLocale.add(new NativeColumnEqExp("rl.repository_id", "r.id"));
-    if (searchParameters.isForRootLocale()) {
-      onClauseRepositoryLocale.add(new NativeIsNullExp("rl.parent_locale"));
-    } else if (searchParameters.isRootLocaleExcluded()) {
-      onClauseRepositoryLocale.add(new NativeIsNotNullExp("rl.parent_locale"));
-    }
-    c.addJoin(NativeExps.innerJoin("repository_locale", "rl", onClauseRepositoryLocale));
-
-    NativeJunctionExp onClauseTMTextUnitCurrentVariant = NativeExps.conjunction();
-    onClauseTMTextUnitCurrentVariant.add(new NativeColumnEqExp("tu.id", "tuvc.tm_text_unit_id"));
-    onClauseTMTextUnitCurrentVariant.add(new NativeColumnEqExp("l.id", "tuvc.locale_id"));
-    c.addJoin(
-        new NativeJoin(
-            "tm_text_unit_current_variant",
-            "tuvc",
-            NativeJoin.JoinType.LEFT_OUTER,
-            onClauseTMTextUnitCurrentVariant));
-    c.addJoin(
-        NativeExps.leftJoin(
-            "tm_text_unit_variant", "tuv", "tuvc.tm_text_unit_variant_id", "tuv.id"));
-
-    // We only want mapping for the last asset extraction
-    NativeJunctionExp onClauseAssetTextUnit = NativeExps.conjunction();
-    onClauseAssetTextUnit.add(new NativeColumnEqExp("map.tm_text_unit_id", "tu.id"));
-    onClauseAssetTextUnit.add(
-        new NativeColumnEqExp("a.last_successful_asset_extraction_id", "map.asset_extraction_id"));
-    c.addJoin(
-        new NativeJoin(
-            "asset_text_unit_to_tm_text_unit",
-            "map",
-            NativeJoin.JoinType.LEFT_OUTER,
-            onClauseAssetTextUnit));
-
-    c.addJoin(NativeExps.leftJoin("asset_text_unit", "atu", "atu.id", "map.asset_text_unit_id"));
-
+    HibernateCriteriaBuilder cb = criteriaBuilder();
+    JpaCriteriaQuery<Tuple> query = cb.createTupleQuery();
+    SearchContext context = buildSearchContext(cb, query, searchParameters);
     boolean usesAssetTextUnitUsages = usesAssetTextUnitUsages(searchParameters);
 
+    addSearchProjection(query, cb, context, usesAssetTextUnitUsages);
+    addOrdering(query, cb, context, searchParameters);
+
+    TypedQuery<Tuple> typedQuery = entityManager.createQuery(query);
+    if (searchParameters.getOffset() != null) {
+      typedQuery.setFirstResult(searchParameters.getOffset());
+    }
+    if (searchParameters.getLimit() != null) {
+      typedQuery.setMaxResults(searchParameters.getLimit());
+    }
+
+    return typedQuery.getResultList().stream()
+        .map(
+            tuple ->
+                toTextUnitDTO(tuple, searchParameters.getAssetTextUnitUsages() != null))
+        .toList();
+  }
+
+  @Retryable(backoff = @Backoff(delay = 500, multiplier = 2))
+  @Transactional(readOnly = true)
+  public TextUnitAndWordCount countTextUnitAndWordCount(
+      TextUnitSearcherParameters searchParameters) {
+    HibernateCriteriaBuilder cb = criteriaBuilder();
+    JpaCriteriaQuery<Tuple> query = cb.createTupleQuery();
+    SearchContext context = buildSearchContext(cb, query, searchParameters);
+
+    query.multiselect(
+        cb.count(context.textUnit.get("id")).alias(TEXT_UNIT_COUNT),
+        cb.coalesce(cb.sumAsLong(context.textUnit.get("wordCount")), 0L)
+            .alias(TEXT_UNIT_WORD_COUNT));
+
+    Tuple tuple = entityManager.createQuery(query).getSingleResult();
+    Long textUnitCount = tuple.get(TEXT_UNIT_COUNT, Long.class);
+    Long textUnitWordCount = tuple.get(TEXT_UNIT_WORD_COUNT, Long.class);
+    return new TextUnitAndWordCount(
+        textUnitCount == null ? 0 : textUnitCount,
+        textUnitWordCount == null ? 0 : textUnitWordCount);
+  }
+
+  private HibernateCriteriaBuilder criteriaBuilder() {
+    return entityManager.unwrap(Session.class).getCriteriaBuilder();
+  }
+
+  private SearchContext buildSearchContext(
+      CriteriaBuilder cb,
+      JpaCriteriaQuery<Tuple> query,
+      TextUnitSearcherParameters searchParameters) {
+    SearchContext context = new SearchContext();
+    context.textUnit = query.from(TMTextUnit.class);
+    context.locale = context.textUnit.crossJoin(Locale.class);
+    context.asset = context.textUnit.join("asset");
+    context.repository = context.asset.join("repository");
+
+    context.repositoryLocale = context.repository.join(RepositoryLocale.class, SqmJoinType.INNER);
+    context.repositoryLocale.on(
+        cb.equal(context.repositoryLocale.get("locale"), context.locale),
+        cb.equal(context.repositoryLocale.get("repository"), context.repository),
+        repositoryLocaleParentPredicate(cb, context, searchParameters));
+
+    context.currentVariant =
+        context.textUnit.join(TMTextUnitCurrentVariant.class, SqmJoinType.LEFT);
+    context.currentVariant.on(
+        cb.equal(context.currentVariant.get("tmTextUnit"), context.textUnit),
+        cb.equal(context.currentVariant.get("locale"), context.locale));
+    context.variant = context.currentVariant.join("tmTextUnitVariant", JoinType.LEFT);
+
+    context.mapping = context.textUnit.join(AssetTextUnitToTMTextUnit.class, SqmJoinType.LEFT);
+    context.mapping.on(
+        cb.equal(context.mapping.get("tmTextUnit"), context.textUnit),
+        cb.equal(
+            context.mapping.get("assetExtraction"),
+            context.asset.get("lastSuccessfulAssetExtraction")));
+    context.assetTextUnit = context.mapping.join("assetTextUnit", JoinType.LEFT);
+
+    context.pluralForm = context.textUnit.join("pluralForm", JoinType.LEFT);
+    context.pluralFormForLocale =
+        context.textUnit.join(PluralFormForLocale.class, SqmJoinType.LEFT);
+    context.pluralFormForLocale.on(
+        cb.equal(context.pluralFormForLocale.get("pluralForm"), context.textUnit.get("pluralForm")),
+        cb.equal(context.pluralFormForLocale.get("locale"), context.locale));
+
+    if (usesAssetTextUnitUsages(searchParameters)) {
+      context.usage = context.assetTextUnit.joinSet("usages", JoinType.LEFT);
+    }
+
+    List<Predicate> predicates = buildPredicates(cb, context, searchParameters);
+    if (!predicates.isEmpty()) {
+      query.where(predicates.toArray(Predicate[]::new));
+    }
+    return context;
+  }
+
+  private Predicate repositoryLocaleParentPredicate(
+      CriteriaBuilder cb, SearchContext context, TextUnitSearcherParameters searchParameters) {
+    if (searchParameters.isForRootLocale()) {
+      return cb.isNull(context.repositoryLocale.get("parentLocale"));
+    }
+    if (searchParameters.isRootLocaleExcluded()) {
+      return cb.isNotNull(context.repositoryLocale.get("parentLocale"));
+    }
+    return cb.conjunction();
+  }
+
+  private void addSearchProjection(
+      JpaCriteriaQuery<Tuple> query,
+      HibernateCriteriaBuilder cb,
+      SearchContext context,
+      boolean usesAssetTextUnitUsages) {
+    List<Selection<?>> selections = new ArrayList<>();
+    List<Expression<?>> groupBy = new ArrayList<>();
+
+    add(selections, groupBy, context.textUnit.get("id"), TM_TEXT_UNIT_ID);
+    add(selections, groupBy, context.variant.get("id"), TM_TEXT_UNIT_VARIANT_ID);
+    add(selections, groupBy, context.locale.get("id"), LOCALE_ID);
+    add(selections, groupBy, context.locale.get("bcp47Tag"), TARGET_LOCALE);
+    add(selections, groupBy, context.textUnit.get("name"), NAME);
+    add(selections, groupBy, context.textUnit.get("content"), SOURCE);
+    add(selections, groupBy, context.textUnit.get("comment"), COMMENT);
+    add(selections, groupBy, context.variant.get("content"), TARGET);
+    add(selections, groupBy, context.variant.get("comment"), TARGET_COMMENT);
+    add(selections, groupBy, context.asset.get("id"), ASSET_ID);
+    add(
+        selections,
+        groupBy,
+        context.asset.get("lastSuccessfulAssetExtraction").get("id"),
+        LAST_SUCCESSFUL_ASSET_EXTRACTION_ID);
+    add(
+        selections,
+        groupBy,
+        context.assetTextUnit.get("assetExtraction").get("id"),
+        ASSET_EXTRACTION_ID);
+    add(selections, groupBy, context.currentVariant.get("id"), TM_TEXT_UNIT_CURRENT_VARIANT_ID);
+    add(selections, groupBy, context.variant.get("status"), STATUS);
+    add(
+        selections,
+        groupBy,
+        context.variant.get("includedInLocalizedFile"),
+        INCLUDED_IN_LOCALIZED_FILE);
+    add(selections, groupBy, context.variant.get("createdDate"), CREATED_DATE);
+    add(selections, groupBy, context.asset.get("deleted"), ASSET_DELETED);
+    add(selections, groupBy, context.pluralForm.get("name"), PLURAL_FORM);
+    add(selections, groupBy, context.textUnit.get("pluralFormOther"), PLURAL_FORM_OTHER);
+    add(selections, groupBy, context.repository.get("name"), REPOSITORY_NAME);
+    add(selections, groupBy, context.asset.get("path"), ASSET_PATH);
+    add(selections, groupBy, context.assetTextUnit.get("id"), ASSET_TEXT_UNIT_ID);
+    add(selections, groupBy, context.textUnit.get("createdDate"), TM_TEXT_UNIT_CREATED_DATE);
+    add(selections, groupBy, context.assetTextUnit.get("doNotTranslate"), DO_NOT_TRANSLATE);
+    add(selections, groupBy, context.assetTextUnit.get("branch").get("id"), BRANCH_ID);
+
     if (usesAssetTextUnitUsages) {
-      // Requires GROUP_BY
-      c.addJoin(
-          NativeExps.leftJoin(
-              "asset_text_unit_usages", "atuu", "atu.id", "atuu.asset_text_unit_id"));
+      selections.add(cb.listagg(cb.asc(context.usage), context.usage, ",").alias(USAGES));
+      query.groupBy(groupBy);
     }
 
-    // Handle plural forms with potential filter per locale
-    c.addJoin(NativeExps.leftJoin("plural_form", "pf", "tu.plural_form_id", "pf.id"));
-    NativeJunctionExp onClausePluralForm = NativeExps.conjunction();
-    onClausePluralForm.add(new NativeColumnEqExp("pffl.plural_form_id", "tu.plural_form_id"));
-    onClausePluralForm.add(new NativeColumnEqExp("pffl.locale_id", "l.id"));
-    c.addJoin(
-        new NativeJoin(
-            "plural_form_for_locale", "pffl", NativeJoin.JoinType.LEFT_OUTER, onClausePluralForm));
+    query.multiselect(selections);
+  }
 
-    logger.debug("Set projections");
+  private void add(
+      List<Selection<?>> selections,
+      List<Expression<?>> groupBy,
+      Expression<?> expression,
+      String alias) {
+    selections.add(expression.alias(alias));
+    groupBy.add(expression);
+  }
 
-    // TODO(P1) Might want to some of those projection as optional for perf reason
-    NativeProjection projection;
-
-    if (!usesAssetTextUnitUsages) {
-      projection =
-          NativeExps.projection()
-              .addProjection("tu.id", "tmTextUnitId")
-              .addProjection("tuv.id", "tmTextUnitVariantId")
-              .addProjection("l.id", "localeId")
-              .addProjection("l.bcp47_tag", "targetLocale")
-              .addProjection("tu.name", "name")
-              .addProjection("tu.content", "source")
-              .addProjection("tu.comment", "comment")
-              .addProjection("tuv.content", "target")
-              .addProjection("tuv.comment", "targetComment")
-              .addProjection("tu.asset_id", "assetId")
-              .addProjection(
-                  "a.last_successful_asset_extraction_id", "lastSuccessfulAssetExtractionId")
-              .addProjection("atu.asset_extraction_id", "assetExtractionId")
-              .addProjection("tuvc.id", "tmTextUnitCurrentVariantId")
-              .addProjection("tuv.status", "status")
-              .addProjection("tuv.included_in_localized_file", "includedInLocalizedFile")
-              .addProjection("tuv.created_date", "createdDate")
-              .addProjection("a.deleted", "assetDeleted")
-              .addProjection("pf.name", "pluralForm")
-              .addProjection("tu.plural_form_other", "pluralFormOther")
-              .addProjection("r.name", "repositoryName")
-              .addProjection("a.path", "assetPath")
-              .addProjection("atu.id", "assetTextUnitId")
-              .addProjection("tu.created_date", "tmTextUnitCreatedDate")
-              .addProjection("atu.do_not_translate", "doNotTranslate")
-              .addProjection("atu.branch_id", "branch_id");
-    } else {
-
-      projection =
-          NativeExps.projection()
-              .addProjection(new NativeAnyValueExp("tu.id", "tmTextUnitId"))
-              .addProjection(new NativeAnyValueExp("tuv.id", "tmTextUnitVariantId"))
-              .addProjection(new NativeAnyValueExp("l.id", "localeId"))
-              .addProjection(new NativeAnyValueExp("l.bcp47_tag", "targetLocale"))
-              .addProjection(new NativeAnyValueExp("tu.name", "name"))
-              .addProjection(new NativeAnyValueExp("tu.content", "source"))
-              .addProjection(new NativeAnyValueExp("tu.comment", "comment"))
-              .addProjection(new NativeAnyValueExp("tuv.content", "target"))
-              .addProjection(new NativeAnyValueExp("tuv.comment", "targetComment"))
-              .addProjection(new NativeAnyValueExp("tu.asset_id", "assetId"))
-              .addProjection(
-                  new NativeAnyValueExp(
-                      "a.last_successful_asset_extraction_id", "lastSuccessfulAssetExtractionId"))
-              .addProjection(new NativeAnyValueExp("atu.asset_extraction_id", "assetExtractionId"))
-              .addProjection(new NativeAnyValueExp("tuvc.id", "tmTextUnitCurrentVariantId"))
-              .addProjection(new NativeAnyValueExp("tuv.status", "status"))
-              .addProjection(
-                  new NativeAnyValueExp(
-                      "tuv.included_in_localized_file", "includedInLocalizedFile"))
-              .addProjection(new NativeAnyValueExp("tuv.created_date", "createdDate"))
-              .addProjection(new NativeAnyValueExp("a.deleted", "assetDeleted"))
-              .addProjection(new NativeAnyValueExp("pf.name", "pluralForm"))
-              .addProjection(new NativeAnyValueExp("tu.plural_form_other", "pluralFormOther"))
-              .addProjection(new NativeAnyValueExp("r.name", "repositoryName"))
-              .addProjection(new NativeAnyValueExp("a.path", "assetPath"))
-              .addProjection("atu.id", "assetTextUnitId")
-              .addProjection(new NativeAnyValueExp("tu.created_date", "tmTextUnitCreatedDate"))
-              .addProjection(new NativeAnyValueExp("atu.do_not_translate", "doNotTranslate"))
-              .addProjection(new NativeAnyValueExp("atu.branch_id", "branch_id"))
-              .addProjection(new NativeGroupConcatExp("atuu.usages", "usages"));
-
-      projection.addGroupProjection("atu.id").addGroupProjection("l.id");
-    }
-
-    c.setProjection(projection);
-
-    logger.debug("Add search filters");
-    NativeJunctionExp conjunction = NativeExps.conjunction();
+  private List<Predicate> buildPredicates(
+      CriteriaBuilder cb, SearchContext context, TextUnitSearcherParameters searchParameters) {
+    List<Predicate> predicates = new ArrayList<>();
 
     if (searchParameters.isPluralFormsFiltered()) {
-      NativeJunctionExp pluralFormForLocale = NativeExps.disjunction();
-      pluralFormForLocale.add(NativeExps.isNotNull("pffl.plural_form_id"));
-      pluralFormForLocale.add(NativeExps.isNull("tu.plural_form_id"));
-      conjunction.add(pluralFormForLocale);
+      predicates.add(
+          cb.or(
+              cb.isNotNull(context.pluralFormForLocale.get("pluralForm")),
+              cb.isNull(context.textUnit.get("pluralForm"))));
     }
 
     if (searchParameters.getRepositoryIds() != null
         && !searchParameters.getRepositoryIds().isEmpty()) {
-      conjunction.add(new NativeInExpFix("r.id", searchParameters.getRepositoryIds()));
+      predicates.add(context.repository.get("id").in(searchParameters.getRepositoryIds()));
     }
-
     if (searchParameters.getRepositoryNames() != null
         && !searchParameters.getRepositoryNames().isEmpty()) {
-      conjunction.add(new NativeInExpFix("r.name", searchParameters.getRepositoryNames()));
+      predicates.add(context.repository.get("name").in(searchParameters.getRepositoryNames()));
     }
 
-    NativeExp textSearchExp = getTextSearchNativeExp(searchParameters);
-    if (textSearchExp != null) {
-      conjunction.add(textSearchExp);
+    Predicate textSearchPredicate = textSearchPredicate(cb, context, searchParameters);
+    if (textSearchPredicate != null) {
+      predicates.add(textSearchPredicate);
     }
 
     if (searchParameters.getMd5() != null) {
-      conjunction.add(new NativeEqExpFix("tu.md5", searchParameters.getMd5()));
+      predicates.add(cb.equal(context.textUnit.get("md5"), searchParameters.getMd5()));
     }
-
     if (searchParameters.getAssetTextUnitUsages() != null) {
-      conjunction.add(
-          getSearchTypeNativeExp(
+      predicates.add(
+          searchTypePredicate(
+              cb,
+              context.usage,
+              null,
               searchParameters.getSearchType(),
-              "atuu.usages",
               searchParameters.getAssetTextUnitUsages()));
     }
-
     if (searchParameters.getAssetPath() != null) {
-      conjunction.add(
-          getSearchTypeNativeExp(
-              searchParameters.getSearchType(), "a.path", searchParameters.getAssetPath()));
+      predicates.add(
+          searchTypePredicate(
+              cb,
+              context.asset.get("path"),
+              null,
+              searchParameters.getSearchType(),
+              searchParameters.getAssetPath()));
     }
-
     if (searchParameters.getAssetId() != null) {
-      conjunction.add(new NativeEqExpFix("tu.asset_id", searchParameters.getAssetId()));
+      predicates.add(
+          cb.equal(context.textUnit.get("asset").get("id"), searchParameters.getAssetId()));
     }
-
     if (searchParameters.getLocaleTags() != null && !searchParameters.getLocaleTags().isEmpty()) {
-      // TODO(P1) probably want to work on ids only at this level, here for testing (see also moving
-      // to constant for locale id)
-      conjunction.add(new NativeInExpFix("l.bcp47_tag", searchParameters.getLocaleTags()));
+      predicates.add(context.locale.get("bcp47Tag").in(searchParameters.getLocaleTags()));
     }
-
     if (searchParameters.getLocaleId() != null) {
-      conjunction.add(new NativeEqExpFix("l.id", searchParameters.getLocaleId()));
+      predicates.add(cb.equal(context.locale.get("id"), searchParameters.getLocaleId()));
     }
-
     if (searchParameters.getToBeFullyTranslatedFilter() != null) {
-      conjunction.add(
-          new NativeEqExpFix(
-              "rl.to_be_fully_translated", searchParameters.getToBeFullyTranslatedFilter()));
+      predicates.add(
+          cb.equal(
+              context.repositoryLocale.get("toBeFullyTranslated"),
+              searchParameters.getToBeFullyTranslatedFilter()));
     }
-
     if (searchParameters.getTmTextUnitIds() != null) {
-      conjunction.add(new NativeInExpFix("tu.id", searchParameters.getTmTextUnitIds()));
+      predicates.add(context.textUnit.get("id").in(searchParameters.getTmTextUnitIds()));
     }
-
     if (searchParameters.getTmId() != null) {
-      conjunction.add(new NativeEqExpFix("tu.tm_id", searchParameters.getTmId()));
+      predicates.add(cb.equal(context.textUnit.get("tm").get("id"), searchParameters.getTmId()));
     }
-
     if (searchParameters.getPluralFormId() != null) {
-      conjunction.add(new NativeEqExpFix("tu.plural_form_id", searchParameters.getPluralFormId()));
+      predicates.add(
+          cb.equal(
+              context.textUnit.get("pluralForm").get("id"), searchParameters.getPluralFormId()));
     }
-
     if (searchParameters.isPluralFormsExcluded()) {
-      conjunction.add(new NativeIsNullExp("tu.plural_form_id"));
+      predicates.add(cb.isNull(context.textUnit.get("pluralForm")));
     }
-
     if (searchParameters.getDoNotTranslateFilter() != null) {
-      conjunction.add(
-          new NativeEqExpFix("atu.do_not_translate", searchParameters.getDoNotTranslateFilter()));
+      predicates.add(
+          cb.equal(
+              context.assetTextUnit.get("doNotTranslate"),
+              searchParameters.getDoNotTranslateFilter()));
     }
-
     if (searchParameters.getBranchId() != null) {
-      conjunction.add(new NativeEqExpFix("atu.branch_id", searchParameters.getBranchId()));
+      predicates.add(
+          cb.equal(context.assetTextUnit.get("branch").get("id"), searchParameters.getBranchId()));
     }
-
     if (searchParameters.getSkipTextUnitWithPattern() != null) {
-      conjunction.add(
-          new NativeNotILikeExp("tu.name", searchParameters.getSkipTextUnitWithPattern()));
+      predicates.add(
+          cb.not(
+              cb.like(
+                  cb.lower(context.textUnit.get("name")),
+                  searchParameters.getSkipTextUnitWithPattern().toLowerCase())));
     }
-
     if (searchParameters.getIncludeTextUnitsWithPattern() != null) {
-      conjunction.add(
-          new NativeILikeExp("tu.name", searchParameters.getIncludeTextUnitsWithPattern()));
+      predicates.add(
+          cb.like(
+              cb.lower(context.textUnit.get("name")),
+              searchParameters.getIncludeTextUnitsWithPattern().toLowerCase()));
     }
-
     if (searchParameters.getSkipAssetPathWithPattern() != null) {
-      conjunction.add(
-          new NativeNotILikeExp("a.path", searchParameters.getSkipAssetPathWithPattern()));
+      predicates.add(
+          cb.not(
+              cb.like(
+                  cb.lower(context.asset.get("path")),
+                  searchParameters.getSkipAssetPathWithPattern().toLowerCase())));
     }
 
-    StatusFilter statusFilter = searchParameters.getStatusFilter();
-
-    if (statusFilter != null) {
-
-      switch (statusFilter) {
-        case ALL:
-          break;
-        case NOT_REJECTED:
-          conjunction.add(new NativeEqExpFix("tuv.included_in_localized_file", Boolean.TRUE));
-          break;
-        case REJECTED:
-          conjunction.add(new NativeEqExpFix("tuv.included_in_localized_file", Boolean.FALSE));
-          break;
-        case REVIEW_NEEDED:
-          conjunction.add(
-              new NativeEqExpFix("tuv.status", TMTextUnitVariant.Status.REVIEW_NEEDED.toString()));
-          break;
-        case REVIEW_NEEDED_OR_REJECTED:
-          conjunction.add(
-              NativeExps.disjunction(
-                  Arrays.asList(
-                      new NativeEqExpFix(
-                          "tuv.status", TMTextUnitVariant.Status.REVIEW_NEEDED.toString()),
-                      new NativeEqExpFix("tuv.included_in_localized_file", Boolean.FALSE))));
-          break;
-        case REVIEW_NOT_NEEDED:
-          conjunction.add(
-              NativeExps.notEq("tuv.status", TMTextUnitVariant.Status.REVIEW_NEEDED.toString()));
-          break;
-        case TRANSLATION_NEEDED:
-          conjunction.add(
-              new NativeEqExpFix(
-                  "tuv.status", TMTextUnitVariant.Status.TRANSLATION_NEEDED.toString()));
-          break;
-        case NOT_ACCEPTED:
-          conjunction.add(
-              NativeExps.disjunction(
-                  Arrays.asList(
-                      NativeExps.isNull("tuv.id"),
-                      NativeExps.notEq("tuv.status", TMTextUnitVariant.Status.APPROVED.toString()),
-                      new NativeEqExpFix("tuv.included_in_localized_file", Boolean.FALSE))));
-          break;
-        case TRANSLATED:
-          conjunction.add(NativeExps.isNotNull("tuv.id"));
-          break;
-        case APPROVED_AND_NOT_REJECTED:
-          conjunction.add(
-              new NativeEqExpFix("tuv.status", TMTextUnitVariant.Status.APPROVED.toString()));
-          conjunction.add(new NativeEqExpFix("tuv.included_in_localized_file", Boolean.TRUE));
-          break;
-        case APPROVED_OR_NEEDS_REVIEW_AND_NOT_REJECTED:
-          List<String> statuses =
-              Arrays.asList(
-                  TMTextUnitVariant.Status.APPROVED.toString(),
-                  TMTextUnitVariant.Status.REVIEW_NEEDED.toString());
-          conjunction.add(new NativeInExpFix("tuv.status", statuses));
-          conjunction.add(new NativeEqExpFix("tuv.included_in_localized_file", Boolean.TRUE));
-          break;
-        case TRANSLATED_AND_NOT_REJECTED:
-          conjunction.add(NativeExps.isNotNull("tuv.id"));
-          conjunction.add(new NativeEqExpFix("tuv.included_in_localized_file", Boolean.TRUE));
-          break;
-        case UNTRANSLATED:
-          conjunction.add(NativeExps.isNull("tuv.id"));
-          break;
-        case FOR_TRANSLATION:
-          conjunction.add(
-              NativeExps.disjunction(
-                  Arrays.asList(
-                      NativeExps.isNull("tuv.id"),
-                      new NativeEqExpFix(
-                          "tuv.status", TMTextUnitVariant.Status.TRANSLATION_NEEDED.toString()),
-                      new NativeEqExpFix("tuv.included_in_localized_file", Boolean.FALSE))));
-          break;
-        default:
-          throw new RuntimeException("Filter type not implemented");
-      }
-    }
-
-    UsedFilter usedFilter = searchParameters.getUsedFilter();
-    if (usedFilter != null) {
-      if (UsedFilter.USED.equals(usedFilter)) {
-        conjunction.add(NativeExps.isNotNull("atu.id"));
-        conjunction.add(new NativeEqExpFix("a.deleted", Boolean.FALSE));
-      } else {
-        conjunction.add(
-            NativeExps.disjunction(
-                Arrays.asList(
-                    NativeExps.isNull("atu.id"), new NativeEqExpFix("a.deleted", Boolean.TRUE))));
-      }
-    }
+    addStatusFilter(cb, context, predicates, searchParameters.getStatusFilter());
+    addUsedFilter(cb, context, predicates, searchParameters.getUsedFilter());
 
     if (searchParameters.getTmTextUnitCreatedBefore() != null) {
-      conjunction.add(
-          new NativeDateLteExp("tu.created_date", searchParameters.getTmTextUnitCreatedBefore()));
+      predicates.add(
+          cb.lessThanOrEqualTo(
+              context.textUnit.get("createdDate"), searchParameters.getTmTextUnitCreatedBefore()));
     }
-
     if (searchParameters.getTmTextUnitCreatedAfter() != null) {
-      conjunction.add(
-          new NativeDateGteExp("tu.created_date", searchParameters.getTmTextUnitCreatedAfter()));
+      predicates.add(
+          cb.greaterThanOrEqualTo(
+              context.textUnit.get("createdDate"), searchParameters.getTmTextUnitCreatedAfter()));
     }
-
     if (searchParameters.getTmTextUnitVariantId() != null) {
-      conjunction.add(new NativeEqExpFix("tuv.id", searchParameters.getTmTextUnitVariantId()));
+      predicates.add(
+          cb.equal(context.variant.get("id"), searchParameters.getTmTextUnitVariantId()));
     }
-
     if (searchParameters.getTmTextUnitVariantCreatedBefore() != null) {
-      conjunction.add(
-          new NativeDateLteExp(
-              "tuv.created_date", searchParameters.getTmTextUnitVariantCreatedBefore()));
+      predicates.add(
+          cb.lessThanOrEqualTo(
+              context.variant.get("createdDate"),
+              searchParameters.getTmTextUnitVariantCreatedBefore()));
     }
-
     if (searchParameters.getTmTextUnitVariantCreatedAfter() != null) {
-      conjunction.add(
-          new NativeDateGteExp(
-              "tuv.created_date", searchParameters.getTmTextUnitVariantCreatedAfter()));
+      predicates.add(
+          cb.greaterThanOrEqualTo(
+              context.variant.get("createdDate"),
+              searchParameters.getTmTextUnitVariantCreatedAfter()));
     }
 
-    if (!conjunction.toSQL().isEmpty()) {
-      c.add(conjunction);
+    return predicates.stream().filter(Objects::nonNull).toList();
+  }
+
+  private Predicate textSearchPredicate(
+      CriteriaBuilder cb, SearchContext context, TextUnitSearcherParameters searchParameters) {
+    TextUnitTextSearch textSearch = effectiveTextSearch(searchParameters);
+    List<Predicate> predicates =
+        predicates(textSearch).stream()
+            .map(predicate -> textSearchPredicate(cb, context, predicate))
+            .filter(Objects::nonNull)
+            .toList();
+
+    if (predicates.isEmpty()) {
+      return null;
+    }
+    return isOr(textSearch)
+        ? cb.or(predicates.toArray(Predicate[]::new))
+        : cb.and(predicates.toArray(Predicate[]::new));
+  }
+
+  private Predicate textSearchPredicate(
+      CriteriaBuilder cb, SearchContext context, TextUnitTextSearchPredicate predicate) {
+    if (predicate == null || predicate.getField() == null || predicate.getValue() == null) {
+      return null;
     }
 
-    if (searchParameters.getLimit() != null) {
-      c.setLimit(searchParameters.getLimit());
+    SearchType searchType =
+        predicate.getSearchType() == null ? SearchType.EXACT : predicate.getSearchType();
+    String value = normalizeTextSearchValue(predicate);
+
+    return switch (predicate.getField()) {
+      case STRING_ID ->
+          searchTypePredicate(cb, context.textUnit.get("name"), null, searchType, value);
+      case SOURCE ->
+          searchTypePredicate(
+              cb,
+              context.textUnit.get("content"),
+              context.textUnit.get("contentMd5"),
+              searchType,
+              value);
+      case TARGET ->
+          searchTypePredicate(
+              cb,
+              context.variant.get("content"),
+              context.variant.get("contentMD5"),
+              searchType,
+              value);
+      case COMMENT ->
+          searchTypePredicate(cb, context.textUnit.get("comment"), null, searchType, value);
+      case ASSET -> searchTypePredicate(cb, context.asset.get("path"), null, searchType, value);
+      case LOCATION -> searchTypePredicate(cb, context.usage, null, searchType, value);
+      case PLURAL_FORM_OTHER ->
+          searchTypePredicate(cb, context.textUnit.get("pluralFormOther"), null, searchType, value);
+      case TM_TEXT_UNIT_IDS -> context.textUnit.get("id").in(parseTextUnitIds(value));
+    };
+  }
+
+  private Predicate searchTypePredicate(
+      CriteriaBuilder cb,
+      Expression<String> column,
+      Expression<String> md5Column,
+      SearchType searchType,
+      String value) {
+    SearchType effectiveSearchType = searchType == null ? SearchType.EXACT : searchType;
+    return switch (effectiveSearchType) {
+      case EXACT ->
+          md5Column == null
+              ? cb.equal(column, value)
+              : cb.equal(md5Column, DigestUtils.md5Hex(value));
+      case CONTAINS -> cb.like(column, containsPattern(value), '\\');
+      case ILIKE -> cb.like(cb.lower(column), value.toLowerCase());
+      case REGEX -> cb.isTrue(cb.function("REGEXP_LIKE", Boolean.class, column, cb.literal(value)));
+    };
+  }
+
+  private void addStatusFilter(
+      CriteriaBuilder cb,
+      SearchContext context,
+      List<Predicate> predicates,
+      StatusFilter statusFilter) {
+    if (statusFilter == null) {
+      return;
     }
 
-    if (searchParameters.getOffset() != null) {
-      c.setOffset(searchParameters.getOffset());
+    switch (statusFilter) {
+      case ALL:
+        break;
+      case NOT_REJECTED:
+        predicates.add(cb.equal(context.variant.get("includedInLocalizedFile"), Boolean.TRUE));
+        break;
+      case REJECTED:
+        predicates.add(cb.equal(context.variant.get("includedInLocalizedFile"), Boolean.FALSE));
+        break;
+      case REVIEW_NEEDED:
+        predicates.add(
+            cb.equal(context.variant.get("status"), TMTextUnitVariant.Status.REVIEW_NEEDED));
+        break;
+      case REVIEW_NEEDED_OR_REJECTED:
+        predicates.add(
+            cb.or(
+                cb.equal(context.variant.get("status"), TMTextUnitVariant.Status.REVIEW_NEEDED),
+                cb.equal(context.variant.get("includedInLocalizedFile"), Boolean.FALSE)));
+        break;
+      case REVIEW_NOT_NEEDED:
+        predicates.add(
+            cb.notEqual(context.variant.get("status"), TMTextUnitVariant.Status.REVIEW_NEEDED));
+        break;
+      case TRANSLATION_NEEDED:
+        predicates.add(
+            cb.equal(context.variant.get("status"), TMTextUnitVariant.Status.TRANSLATION_NEEDED));
+        break;
+      case NOT_ACCEPTED:
+        predicates.add(
+            cb.or(
+                cb.isNull(context.variant.get("id")),
+                cb.notEqual(context.variant.get("status"), TMTextUnitVariant.Status.APPROVED),
+                cb.equal(context.variant.get("includedInLocalizedFile"), Boolean.FALSE)));
+        break;
+      case TRANSLATED:
+        predicates.add(cb.isNotNull(context.variant.get("id")));
+        break;
+      case APPROVED_AND_NOT_REJECTED:
+        predicates.add(cb.equal(context.variant.get("status"), TMTextUnitVariant.Status.APPROVED));
+        predicates.add(cb.equal(context.variant.get("includedInLocalizedFile"), Boolean.TRUE));
+        break;
+      case APPROVED_OR_NEEDS_REVIEW_AND_NOT_REJECTED:
+        predicates.add(
+            context
+                .variant
+                .get("status")
+                .in(
+                    Arrays.asList(
+                        TMTextUnitVariant.Status.APPROVED,
+                        TMTextUnitVariant.Status.REVIEW_NEEDED)));
+        predicates.add(cb.equal(context.variant.get("includedInLocalizedFile"), Boolean.TRUE));
+        break;
+      case TRANSLATED_AND_NOT_REJECTED:
+        predicates.add(cb.isNotNull(context.variant.get("id")));
+        predicates.add(cb.equal(context.variant.get("includedInLocalizedFile"), Boolean.TRUE));
+        break;
+      case UNTRANSLATED:
+        predicates.add(cb.isNull(context.variant.get("id")));
+        break;
+      case FOR_TRANSLATION:
+        predicates.add(
+            cb.or(
+                cb.isNull(context.variant.get("id")),
+                cb.equal(
+                    context.variant.get("status"), TMTextUnitVariant.Status.TRANSLATION_NEEDED),
+                cb.equal(context.variant.get("includedInLocalizedFile"), Boolean.FALSE)));
+        break;
+    }
+  }
+
+  private void addUsedFilter(
+      CriteriaBuilder cb,
+      SearchContext context,
+      List<Predicate> predicates,
+      UsedFilter usedFilter) {
+    if (usedFilter == null) {
+      return;
     }
 
+    if (UsedFilter.USED.equals(usedFilter)) {
+      predicates.add(cb.isNotNull(context.assetTextUnit.get("id")));
+      predicates.add(cb.equal(context.asset.get("deleted"), Boolean.FALSE));
+    } else {
+      predicates.add(
+          cb.or(
+              cb.isNull(context.assetTextUnit.get("id")),
+              cb.equal(context.asset.get("deleted"), Boolean.TRUE)));
+    }
+  }
+
+  private void addOrdering(
+      JpaCriteriaQuery<Tuple> query,
+      CriteriaBuilder cb,
+      SearchContext context,
+      TextUnitSearcherParameters searchParameters) {
+    List<Order> orders = new ArrayList<>();
     if (searchParameters.isOrderedByTextUnitID()) {
-      c.setOrder(NativeExps.order().add("tu.id", NativeOrderExp.OrderType.ASC));
+      orders.add(cb.asc(context.textUnit.get("id")));
     }
-
-    if (searchParameters instanceof TextUnitSearcherParametersForTesting) {
-      TextUnitSearcherParametersForTesting textUnitSearcherParametersForTesting =
-          (TextUnitSearcherParametersForTesting) searchParameters;
-
-      if (textUnitSearcherParametersForTesting.isOrdered()) {
-        c.setOrder(
-            NativeExps.order()
-                .add("tu.id", NativeOrderExp.OrderType.ASC)
-                .add("l.id", NativeOrderExp.OrderType.ASC));
-      }
+    if (searchParameters instanceof TextUnitSearcherParametersForTesting testingParameters
+        && testingParameters.isOrdered()) {
+      orders.clear();
+      orders.add(cb.asc(context.textUnit.get("id")));
+      orders.add(cb.asc(context.locale.get("id")));
     }
-
-    return c;
+    if (!orders.isEmpty()) {
+      query.orderBy(orders);
+    }
   }
 
-  /**
-   * Based on the {@link SearchType} builds the proper {@link NativeExp} to be used in the search
-   * query.
-   *
-   * @param searchType the search type
-   * @param columnName the column name
-   * @param value the value
-   * @return the {@link NativeExp} to be used in the query
-   */
-  NativeExp getSearchTypeNativeExp(SearchType searchType, String columnName, String value) {
-    return getSearchTypeNativeExp(searchType, columnName, null, value);
-  }
-
-  /**
-   * Based on the {@link SearchType} builds the proper {@link NativeExp} to be used in the search
-   * query.
-   *
-   * @param searchType the search type
-   * @param columnName the column name
-   * @param columnNameForMd5Match optional column name that will be used to to an optimized
-   *     comparison by check MD5s
-   * @param value the value
-   * @return the {@link NativeExp} to be used in the query
-   */
-  NativeExp getSearchTypeNativeExp(
-      SearchType searchType, String columnName, String columnNameForMd5Match, String value) {
-
-    NativeExp nativeExp = null;
-
-    if (searchType == null || SearchType.EXACT.equals(searchType)) {
-
-      if (columnNameForMd5Match == null) {
-        nativeExp = new NativeEqExpFix(columnName, value);
-      } else {
-        nativeExp = new NativeEqExpFix(columnNameForMd5Match, DigestUtils.md5Hex(value));
-      }
-
-    } else if (SearchType.CONTAINS.equals(searchType)) {
-      nativeExp = new NativeContainsExp(columnName, value);
-    } else if (SearchType.ILIKE.equals(searchType)) {
-      nativeExp = new NativeILikeExp(columnName, value);
-    } else if (SearchType.REGEX.equals(searchType)) {
-      nativeExp = new NativeRegexExp(columnName, value);
+  private static boolean usesAssetTextUnitUsages(TextUnitSearcherParameters searchParameters) {
+    if (searchParameters.getAssetTextUnitUsages() != null) {
+      return true;
     }
 
-    return nativeExp;
+    TextUnitTextSearch textSearch = searchParameters.getTextSearch();
+    return textSearch != null
+        && textSearch.getPredicates() != null
+        && textSearch.getPredicates().stream()
+            .anyMatch(
+                predicate ->
+                    predicate != null
+                        && TextUnitTextSearchField.LOCATION.equals(predicate.getField()));
   }
 
-  NativeExp getTextSearchNativeExp(TextUnitSearcherParameters searchParameters) {
+  private static TextUnitTextSearch effectiveTextSearch(
+      TextUnitSearcherParameters searchParameters) {
     if (searchParameters.getTextSearch() != null
         && searchParameters.getTextSearch().getPredicates() != null
         && !searchParameters.getTextSearch().getPredicates().isEmpty()) {
-      return getTextSearchNativeExp(searchParameters.getTextSearch());
+      return searchParameters.getTextSearch();
     }
 
     List<TextUnitTextSearchPredicate> predicates = new ArrayList<>();
@@ -684,74 +643,21 @@ public class TextUnitSearcher {
 
     TextUnitTextSearch textSearch = new TextUnitTextSearch();
     textSearch.setPredicates(predicates);
-    return getTextSearchNativeExp(textSearch);
+    return textSearch;
   }
 
-  private void addLegacyPredicate(
-      List<TextUnitTextSearchPredicate> predicates,
-      TextUnitTextSearchField field,
-      SearchType searchType,
-      String value) {
-    if (value == null) {
-      return;
-    }
-
-    TextUnitTextSearchPredicate predicate = new TextUnitTextSearchPredicate();
-    predicate.setField(field);
-    predicate.setSearchType(searchType);
-    predicate.setValue(value);
-    predicates.add(predicate);
+  private static List<TextUnitTextSearchPredicate> predicates(TextUnitTextSearch textSearch) {
+    return textSearch == null || textSearch.getPredicates() == null
+        ? Collections.emptyList()
+        : textSearch.getPredicates();
   }
 
-  NativeExp getTextSearchNativeExp(TextUnitTextSearch textSearch) {
-    NativeJunctionExp junction =
-        TextUnitTextSearchBooleanOperator.OR.equals(textSearch.getOperator())
-            ? NativeExps.disjunction()
-            : NativeExps.conjunction();
-
-    List<TextUnitTextSearchPredicate> predicates =
-        textSearch.getPredicates() == null ? Collections.emptyList() : textSearch.getPredicates();
-
-    predicates.stream()
-        .map(this::getTextSearchPredicateNativeExp)
-        .filter(Objects::nonNull)
-        .forEach(junction::add);
-
-    return junction.toSQL().isEmpty() ? null : junction;
+  private static boolean isOr(TextUnitTextSearch textSearch) {
+    return textSearch != null
+        && TextUnitTextSearchBooleanOperator.OR.equals(textSearch.getOperator());
   }
 
-  NativeExp getTextSearchPredicateNativeExp(TextUnitTextSearchPredicate predicate) {
-    if (predicate == null || predicate.getField() == null || predicate.getValue() == null) {
-      return null;
-    }
-
-    SearchType searchType =
-        predicate.getSearchType() == null ? SearchType.EXACT : predicate.getSearchType();
-    String value = normalizeTextSearchValue(predicate);
-
-    switch (predicate.getField()) {
-      case STRING_ID:
-        return getSearchTypeNativeExp(searchType, "tu.name", value);
-      case SOURCE:
-        return getSearchTypeNativeExp(searchType, "tu.content", "tu.content_md5", value);
-      case TARGET:
-        return getSearchTypeNativeExp(searchType, "tuv.content", "tuv.content_md5", value);
-      case COMMENT:
-        return getSearchTypeNativeExp(searchType, "tu.comment", value);
-      case ASSET:
-        return getSearchTypeNativeExp(searchType, "a.path", value);
-      case LOCATION:
-        return getSearchTypeNativeExp(searchType, "atuu.usages", value);
-      case PLURAL_FORM_OTHER:
-        return getSearchTypeNativeExp(searchType, "tu.plural_form_other", value);
-      case TM_TEXT_UNIT_IDS:
-        return new NativeInExpFix("tu.id", parseTextUnitIds(value));
-      default:
-        return null;
-    }
-  }
-
-  private String normalizeTextSearchValue(TextUnitTextSearchPredicate predicate) {
+  private static String normalizeTextSearchValue(TextUnitTextSearchPredicate predicate) {
     String value = predicate.getValue();
     SearchType searchType =
         predicate.getSearchType() == null ? SearchType.EXACT : predicate.getSearchType();
@@ -767,47 +673,105 @@ public class TextUnitSearcher {
     }
   }
 
-  private List<Long> parseTextUnitIds(String value) {
+  private static List<Long> parseTextUnitIds(String value) {
     List<Long> ids =
         Arrays.stream(value.split("[,\\s]+"))
             .map(String::trim)
             .filter(token -> !token.isEmpty())
-            .map(
-                token -> {
-                  try {
-                    return Long.parseLong(token);
-                  } catch (NumberFormatException e) {
-                    return null;
-                  }
-                })
+            .map(TextUnitSearcher::parseLongOrNull)
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
 
     return ids.isEmpty() ? Collections.singletonList(0L) : ids;
   }
 
-  private boolean usesAssetTextUnitUsages(TextUnitSearcherParameters searchParameters) {
-    if (searchParameters.getAssetTextUnitUsages() != null) {
-      return true;
-    }
-
-    TextUnitTextSearch textSearch = searchParameters.getTextSearch();
-    return textSearch != null
-        && textSearch.getPredicates() != null
-        && textSearch.getPredicates().stream()
-            .anyMatch(
-                predicate ->
-                    predicate != null
-                        && TextUnitTextSearchField.LOCATION.equals(predicate.getField()));
+  private static String containsPattern(String value) {
+    String escaped = value.replace("%", "\\%").replace("_", "\\_");
+    return "%" + escaped + "%";
   }
 
-  private static class CriteriaResultTransformerTextUnitAndWordCount
-      implements CriteriaResultTransformer<TextUnitAndWordCount> {
+  private static TextUnitDTO toTextUnitDTO(Tuple tuple, boolean mapAssetTextUnitUsages) {
+    TextUnitDTO dto = new TextUnitDTO();
+    dto.setTmTextUnitId(tuple.get(TM_TEXT_UNIT_ID, Long.class));
+    dto.setTmTextUnitVariantId(tuple.get(TM_TEXT_UNIT_VARIANT_ID, Long.class));
+    dto.setLocaleId(tuple.get(LOCALE_ID, Long.class));
+    dto.setTargetLocale(tuple.get(TARGET_LOCALE, String.class));
+    dto.setName(tuple.get(NAME, String.class));
+    dto.setSource(tuple.get(SOURCE, String.class));
+    dto.setComment(tuple.get(COMMENT, String.class));
+    dto.setTarget(tuple.get(TARGET, String.class));
+    dto.setTargetComment(tuple.get(TARGET_COMMENT, String.class));
+    dto.setAssetId(tuple.get(ASSET_ID, Long.class));
+    dto.setLastSuccessfulAssetExtractionId(
+        tuple.get(LAST_SUCCESSFUL_ASSET_EXTRACTION_ID, Long.class));
+    dto.setAssetExtractionId(tuple.get(ASSET_EXTRACTION_ID, Long.class));
+    dto.setTmTextUnitCurrentVariantId(tuple.get(TM_TEXT_UNIT_CURRENT_VARIANT_ID, Long.class));
+    dto.setStatus(toStatus(tuple.get(STATUS)));
+    dto.setIncludedInLocalizedFile(Boolean.TRUE.equals(tuple.get(INCLUDED_IN_LOCALIZED_FILE)));
+    dto.setCreatedDate(tuple.get(CREATED_DATE, ZonedDateTime.class));
+    dto.setAssetDeleted(Boolean.TRUE.equals(tuple.get(ASSET_DELETED)));
+    dto.setPluralForm(tuple.get(PLURAL_FORM, String.class));
+    dto.setPluralFormOther(tuple.get(PLURAL_FORM_OTHER, String.class));
+    dto.setRepositoryName(tuple.get(REPOSITORY_NAME, String.class));
+    dto.setAssetPath(tuple.get(ASSET_PATH, String.class));
+    dto.setAssetTextUnitId(tuple.get(ASSET_TEXT_UNIT_ID, Long.class));
+    dto.setTmTextUnitCreatedDate(tuple.get(TM_TEXT_UNIT_CREATED_DATE, ZonedDateTime.class));
+    dto.setDoNotTranslate(Boolean.TRUE.equals(tuple.get(DO_NOT_TRANSLATE)));
+    dto.setBranchId(tuple.get(BRANCH_ID, Long.class));
 
-    @Override
-    public TextUnitAndWordCount transform(CriteriaResult cr) {
-      cr.next();
-      return new TextUnitAndWordCount(cr.getLong(0), cr.getLong(1) == null ? 0 : cr.getLong(1));
+    if (mapAssetTextUnitUsages) {
+      dto.setAssetTextUnitUsages(tuple.get(USAGES, String.class));
     }
+
+    return dto;
+  }
+
+  private static TMTextUnitVariant.Status toStatus(Object status) {
+    if (status == null) {
+      return TMTextUnitVariant.Status.TRANSLATION_NEEDED;
+    }
+    if (status instanceof TMTextUnitVariant.Status variantStatus) {
+      return variantStatus;
+    }
+    return TMTextUnitVariant.Status.valueOf(status.toString());
+  }
+
+  private static void addLegacyPredicate(
+      List<TextUnitTextSearchPredicate> predicates,
+      TextUnitTextSearchField field,
+      SearchType searchType,
+      String value) {
+    if (value == null) {
+      return;
+    }
+
+    TextUnitTextSearchPredicate predicate = new TextUnitTextSearchPredicate();
+    predicate.setField(field);
+    predicate.setSearchType(searchType);
+    predicate.setValue(value);
+    predicates.add(predicate);
+  }
+
+  private static Long parseLongOrNull(String token) {
+    try {
+      return Long.parseLong(token);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  private static class SearchContext {
+    JpaRoot<TMTextUnit> textUnit;
+    JpaCrossJoin<Locale> locale;
+    JpaJoin<TMTextUnit, Asset> asset;
+    JpaJoin<Asset, Repository> repository;
+    JpaEntityJoin<RepositoryLocale> repositoryLocale;
+    JpaEntityJoin<TMTextUnitCurrentVariant> currentVariant;
+    JpaJoin<TMTextUnitCurrentVariant, TMTextUnitVariant> variant;
+    JpaEntityJoin<AssetTextUnitToTMTextUnit> mapping;
+    JpaJoin<AssetTextUnitToTMTextUnit, AssetTextUnit> assetTextUnit;
+    JpaJoin<TMTextUnit, PluralForm> pluralForm;
+    JpaEntityJoin<PluralFormForLocale> pluralFormForLocale;
+    JpaSetJoin<AssetTextUnit, String> usage;
   }
 }

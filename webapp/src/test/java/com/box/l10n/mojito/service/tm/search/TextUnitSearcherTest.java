@@ -8,11 +8,13 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.entity.Asset;
+import com.box.l10n.mojito.entity.AssetTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.service.asset.AssetService;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
+import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTestData;
@@ -22,8 +24,10 @@ import com.box.l10n.mojito.test.TestIdWatcher;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.junit.Assert;
@@ -56,6 +60,8 @@ public class TextUnitSearcherTest extends ServiceTestBase {
   @Autowired TMTextUnitRepository tmTextUnitRepository;
 
   @Autowired AssetService assetService;
+
+  @Autowired AssetTextUnitRepository assetTextUnitRepository;
 
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
 
@@ -762,6 +768,43 @@ public class TextUnitSearcherTest extends ServiceTestBase {
     assertThat(textUnits)
         .allSatisfy(textUnit -> assertThat(textUnit.getName()).doesNotContain("ignore"));
     assertThat(textUnits).extracting(TextUnitDTO::getTmTextUnitId).contains(tu3.getId());
+  }
+
+  @Transactional
+  @Test
+  public void testLocationTextSearch() {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+    AssetTextUnit assetTextUnit = tmTestData.createAssetTextUnit1;
+    assetTextUnit.setUsages(
+        new HashSet<>(Set.of("src/messages.properties:10", "src/messages.properties:20")));
+    assetTextUnitRepository.saveAndFlush(assetTextUnit);
+
+    TextUnitTextSearchPredicate sourcePredicate = new TextUnitTextSearchPredicate();
+    sourcePredicate.setField(TextUnitTextSearchField.SOURCE);
+    sourcePredicate.setSearchType(SearchType.EXACT);
+    sourcePredicate.setValue("Please enter a valid state, region or province");
+
+    TextUnitTextSearchPredicate locationPredicate = new TextUnitTextSearchPredicate();
+    locationPredicate.setField(TextUnitTextSearchField.LOCATION);
+    locationPredicate.setSearchType(SearchType.CONTAINS);
+    locationPredicate.setValue("messages.properties");
+
+    TextUnitTextSearch textSearch = new TextUnitTextSearch();
+    textSearch.setPredicates(Arrays.asList(sourcePredicate, locationPredicate));
+
+    TextUnitSearcherParametersForTesting textUnitSearcherParameters =
+        new TextUnitSearcherParametersForTesting();
+    textUnitSearcherParameters.setOrdered(false);
+    textUnitSearcherParameters.setRepositoryIds(tmTestData.repository.getId());
+    textUnitSearcherParameters.setLocaleTags(Arrays.asList("ko-KR"));
+    textUnitSearcherParameters.setTextSearch(textSearch);
+
+    List<TextUnitDTO> textUnitDTOs = textUnitSearcher.search(textUnitSearcherParameters);
+
+    assertThat(textUnitDTOs).hasSize(1);
+    assertThat(textUnitDTOs.get(0).getTargetLocale()).isEqualTo("ko-KR");
+    assertThat(textUnitDTOs.get(0).getSource())
+        .isEqualTo("Please enter a valid state, region or province");
   }
 
   @Transactional
