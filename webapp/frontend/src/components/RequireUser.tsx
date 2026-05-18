@@ -20,9 +20,14 @@ export function RequireUser({ children }: { children: ReactNode }) {
     );
   }
 
-  // TODO(ja) error message is top left corner, we need to make it centered
   if (isError || !data) {
-    return <div>Could not load user information.</div>;
+    return (
+      <div className="app-loading-state" role="alert" aria-live="assertive">
+        <div className="app-loading-state__card">
+          <div className="app-loading-state__text">Could not load user information.</div>
+        </div>
+      </div>
+    );
   }
 
   return <UserContext.Provider value={data}>{children}</UserContext.Provider>;
