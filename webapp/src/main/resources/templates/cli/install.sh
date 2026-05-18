@@ -68,4 +68,4 @@ CURL_HEADERS=(
 {{/hasHeaders}}
 
 # Download/Upgrade the jar file if needed to match server version
-mojito --check-server-version 2>/dev/null || curl -L -s{{#hasHeaders}} "${CURL_HEADERS[@]}"{{/hasHeaders}} -o {{installDirectory}}/mojito-cli.jar {{scheme}}://{{host}}:{{port}}/cli/mojito-cli.jar
+mojito --check-server-version 2>/dev/null || curl -L -s{{#hasHeaders}} "${CURL_HEADERS[@]}"{{/hasHeaders}} -o {{installDirectory}}/mojito-cli.jar "{{scheme}}://{{host}}:{{port}}/cli/mojito-cli.jar?v={{cliFileCacheKey}}"

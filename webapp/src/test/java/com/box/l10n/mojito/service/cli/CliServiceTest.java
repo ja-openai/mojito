@@ -59,6 +59,7 @@ public class CliServiceTest extends ServiceTestBase {
 
   @Test
   public void generateInstallCliScript() throws IOException {
+    useStableCliFileCacheKey();
     String installScript =
         cliService.generateInstallCliScript(
             "http://localhost:8080/cli/install.sh", "${PWD}/.mojito", null);
@@ -74,6 +75,7 @@ public class CliServiceTest extends ServiceTestBase {
 
   @Test
   public void generateInstallCliScriptWithHeaders() throws IOException {
+    useStableCliFileCacheKey();
     String installScript =
         cliService.generateInstallCliScript(
             "http://localhost:8080/cli/install.sh",
@@ -89,6 +91,7 @@ public class CliServiceTest extends ServiceTestBase {
 
   @Test
   public void generateInstallCliScriptWithCfJwtHeader() throws IOException {
+    useStableCliFileCacheKey();
     String installScript =
         cliService.generateInstallCliScript(
             "http://localhost:8080/cli/install.sh",
@@ -117,5 +120,9 @@ public class CliServiceTest extends ServiceTestBase {
   public void getPort() throws IOException {
     assertEquals("443", cliService.getPort(new URL("https://somehost.org")));
     assertEquals("8080", cliService.getPort(new URL("http://localhost:8080")));
+  }
+
+  void useStableCliFileCacheKey() {
+    cliService.gitInfo.getCommit().setId("test-git-commit");
   }
 }

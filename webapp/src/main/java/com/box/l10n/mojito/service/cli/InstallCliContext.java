@@ -10,6 +10,7 @@ public class InstallCliContext extends MustacheBaseContext {
   String scheme;
   String host;
   String port;
+  String cliFileCacheKey;
   String authenticationMode;
   boolean hasHeaders;
   List<Header> headers = Collections.emptyList();

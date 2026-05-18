@@ -62,4 +62,4 @@ CURL_HEADERS=(
 )
 
 # Download/Upgrade the jar file if needed to match server version
-mojito --check-server-version 2>/dev/null || curl -L -s "${CURL_HEADERS[@]}" -o ${PWD}/.mojito/mojito-cli.jar http://localhost:8080/cli/mojito-cli.jar
+mojito --check-server-version 2>/dev/null || curl -L -s "${CURL_HEADERS[@]}" -o ${PWD}/.mojito/mojito-cli.jar "http://localhost:8080/cli/mojito-cli.jar?v=test-git-commit"

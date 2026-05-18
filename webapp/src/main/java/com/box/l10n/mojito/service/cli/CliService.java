@@ -113,6 +113,7 @@ public class CliService {
       URL url = new URL(requestUrl);
       InstallCliContext installCliContext =
           new InstallCliContext(installDirectory, url.getProtocol(), url.getHost(), getPort(url));
+      installCliContext.cliFileCacheKey = getCliFileCacheKey();
 
       if (authenticationMode != null
           && headerNameToEnvVar != null
@@ -171,6 +172,14 @@ public class CliService {
     }
 
     return Integer.toString(port);
+  }
+
+  String getCliFileCacheKey() {
+    if (gitInfo != null && gitInfo.getCommit() != null && gitInfo.getCommit().getId() != null) {
+      return gitInfo.getCommit().getId();
+    }
+
+    return version;
   }
 
   public String getVersion() {
