@@ -210,6 +210,8 @@ public class L10nJCommander {
     logger.debug("Create JCommander instance");
     jCommander = new JCommander();
 
+    jCommander.setAcceptUnknownOptions(true);
+
     logger.debug("Initialize the JCommander instance");
     jCommander.setProgramName(PROGRAM_NAME);
 
