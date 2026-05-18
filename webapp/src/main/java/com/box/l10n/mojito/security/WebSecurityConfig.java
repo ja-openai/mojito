@@ -272,6 +272,9 @@ public class WebSecurityConfig {
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/*/assignment")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
+                .requestMatchers(
+                    HttpMethod.POST, "/api/review-projects/*/assignment/claim-translator")
+                .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 // USERs are not allowed to change translations
                 .requestMatchers("/api/textunits/**")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
