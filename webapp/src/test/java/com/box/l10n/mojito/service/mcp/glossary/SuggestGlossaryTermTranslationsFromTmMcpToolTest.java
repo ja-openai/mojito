@@ -117,6 +117,10 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
     private List<String> lastLocaleTags;
     private Integer lastLimit;
 
+    private FakeTextUnitSearcher() {
+      super(null);
+    }
+
     @Override
     public List<TextUnitDTO> search(TextUnitSearcherParameters searchParameters) {
       lastRepositoryNames = searchParameters.getRepositoryNames();

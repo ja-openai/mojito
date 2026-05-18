@@ -29,7 +29,6 @@ import com.box.l10n.mojito.service.tm.GenerateMultiLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMXliffRepository;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.github.pnowy.nc.utils.Strings;
 import com.google.common.base.MoreObjects;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
@@ -37,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -130,7 +130,7 @@ public class AssetWS {
                 () -> new RepositoryWithIdNotFoundException(sourceAsset.getRepositoryId()));
 
     PushRun pushRun =
-        !Strings.isBlank(sourceAsset.getPushRunName())
+        StringUtils.isNotBlank(sourceAsset.getPushRunName())
             ? getOrCreatePushRun(sourceAsset.getPushRunName(), repository)
             : null;
 
