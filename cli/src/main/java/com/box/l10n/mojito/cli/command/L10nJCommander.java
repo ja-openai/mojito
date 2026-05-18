@@ -198,7 +198,7 @@ public class L10nJCommander {
    */
   public void usage(String commandName) {
     StringBuilder stringBuilder = new StringBuilder();
-    jCommander.getUsageFormatter().usage(commandName, stringBuilder, "");
+    jCommander.usage(commandName, stringBuilder, "");
     consoleWriter.a(stringBuilder).println();
   }
 
