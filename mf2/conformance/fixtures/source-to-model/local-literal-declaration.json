@@ -1,0 +1,32 @@
+{
+  "name": "local-literal-declaration",
+  "source": ".local $product = {|Mojito|}\n{{Welcome to {$product}.}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "product",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "Mojito" }
+        }
+      }
+    ],
+    "pattern": [
+      "Welcome to ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "product" }
+      },
+      "."
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Welcome to Mojito."
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "messages": {
+    "cart.items": {
+      "en": {
+        "type": "select",
+        "declarations": [
+          {
+            "type": "input",
+            "name": "count",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "count" },
+              "function": { "type": "function", "name": "number" }
+            }
+          }
+        ],
+        "selectors": [{ "type": "variable", "name": "count" }],
+        "variants": [
+          {
+            "keys": [{ "type": "literal", "value": "one" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " item"]
+          },
+          {
+            "keys": [{ "type": "*" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " items"]
+          }
+        ]
+      },
+      "fr": {
+        "type": "select",
+        "declarations": [
+          {
+            "type": "input",
+            "name": "count",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "count" },
+              "function": { "type": "function", "name": "number" }
+            }
+          }
+        ],
+        "selectors": [{ "type": "variable", "name": "count" }],
+        "variants": [
+          {
+            "keys": [{ "type": "literal", "value": "one" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " article"]
+          },
+          {
+            "keys": [{ "type": "*" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " articles"]
+          }
+        ]
+      },
+      "ru": {
+        "type": "select",
+        "declarations": [
+          {
+            "type": "input",
+            "name": "count",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "count" },
+              "function": { "type": "function", "name": "number" }
+            }
+          }
+        ],
+        "selectors": [{ "type": "variable", "name": "count" }],
+        "variants": [
+          {
+            "keys": [{ "type": "literal", "value": "one" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " предмет"]
+          },
+          {
+            "keys": [{ "type": "literal", "value": "few" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " предмета"]
+          },
+          {
+            "keys": [{ "type": "literal", "value": "many" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " предметов"]
+          },
+          {
+            "keys": [{ "type": "*" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " предмета"]
+          }
+        ]
+      }
+    },
+    "welcome": {
+      "en": {
+        "type": "message",
+        "declarations": [],
+        "pattern": ["Welcome, ", { "type": "expression", "arg": { "type": "variable", "name": "name" } }, "!"]
+      },
+      "fr": {
+        "type": "message",
+        "declarations": [],
+        "pattern": ["Bienvenue, ", { "type": "expression", "arg": { "type": "variable", "name": "name" } }, " !"]
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "invalid-placeholder",
+  "source": "Hello, {name}!",
+  "expectedDiagnostics": [
+    { "code": "unsupported-expression" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "match-without-selector",
+  "source": ".match\n* {{Other}}",
+  "expectedDiagnostics": [
+    { "code": "missing-match-selector" }
+  ]
+}

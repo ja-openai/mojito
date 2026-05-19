@@ -1,0 +1,123 @@
+{
+  "name": "plural-cardinal-ar",
+  "source": ".input {$count :number}\n.match $count\nzero {{{$count} zero}}\none {{{$count} one}}\ntwo {{{$count} two}}\nfew {{{$count} few}}\nmany {{{$count} many}}\nother {{{$count} other}}\n* {{{$count} other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "count" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "zero" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " zero"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " one"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "two" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " two"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "few" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " few"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "many" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " many"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "other" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " other"
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " other"
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "ar",
+      "arguments": { "count": 0 },
+      "expected": "0 zero"
+    },
+    {
+      "locale": "ar",
+      "arguments": { "count": 1 },
+      "expected": "1 one"
+    },
+    {
+      "locale": "ar",
+      "arguments": { "count": 2 },
+      "expected": "2 two"
+    },
+    {
+      "locale": "ar",
+      "arguments": { "count": 3 },
+      "expected": "3 few"
+    },
+    {
+      "locale": "ar",
+      "arguments": { "count": 11 },
+      "expected": "11 many"
+    },
+    {
+      "locale": "ar",
+      "arguments": { "count": 100 },
+      "expected": "100 other"
+    }
+  ]
+}

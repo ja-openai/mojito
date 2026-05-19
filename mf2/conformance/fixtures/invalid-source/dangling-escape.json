@@ -1,0 +1,7 @@
+{
+  "name": "dangling-escape",
+  "source": "Hello \\",
+  "expectedDiagnostics": [
+    { "code": "dangling-escape" }
+  ]
+}

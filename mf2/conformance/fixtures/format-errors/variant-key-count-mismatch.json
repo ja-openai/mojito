@@ -1,0 +1,25 @@
+{
+  "name": "variant-key-count-mismatch",
+  "model": {
+    "type": "select",
+    "declarations": [],
+    "selectors": [
+      { "type": "variable", "name": "status" },
+      { "type": "variable", "name": "count" }
+    ],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "active" }],
+        "value": ["Active"]
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": {
+    "status": "active",
+    "count": 1
+  },
+  "expectedError": {
+    "code": "missing-select-variant"
+  }
+}

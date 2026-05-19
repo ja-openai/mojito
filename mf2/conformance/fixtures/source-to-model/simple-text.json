@@ -1,0 +1,16 @@
+{
+  "name": "simple-text",
+  "source": "Hello, World!",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": ["Hello, World!"]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Hello, World!"
+    }
+  ]
+}

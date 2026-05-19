@@ -1,0 +1,93 @@
+{
+  "name": "plural-cardinal-ru",
+  "source": ".input {$count :number}\n.match $count\none {{{$count} файл}}\nfew {{{$count} файла}}\nmany {{{$count} файлов}}\nother {{{$count} файла}}\n* {{{$count} файла}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "count" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " файл"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "few" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " файла"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "many" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " файлов"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "other" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " файла"
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " файла"
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "ru",
+      "arguments": { "count": 1 },
+      "expected": "1 файл"
+    },
+    {
+      "locale": "ru",
+      "arguments": { "count": 2 },
+      "expected": "2 файла"
+    },
+    {
+      "locale": "ru",
+      "arguments": { "count": 5 },
+      "expected": "5 файлов"
+    },
+    {
+      "locale": "ru",
+      "arguments": { "count": 1.5 },
+      "expected": "1.5 файла"
+    }
+  ]
+}

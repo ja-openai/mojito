@@ -1,0 +1,559 @@
+{
+  "cardinal": {
+    "locales": {
+      "ar": "r3",
+      "en": "r0",
+      "fr": "r1",
+      "ja": "r4",
+      "ru": "r2"
+    },
+    "rules": [
+      {
+        "categories": [
+          {
+            "category": "one",
+            "condition": [
+              [
+                {
+                  "operand": "i",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      1,
+                      1
+                    ]
+                  ]
+                },
+                {
+                  "operand": "v",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "other",
+            "condition": null
+          }
+        ],
+        "id": "r0"
+      },
+      {
+        "categories": [
+          {
+            "category": "one",
+            "condition": [
+              [
+                {
+                  "operand": "i",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ],
+                    [
+                      1,
+                      1
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "many",
+            "condition": [
+              [
+                {
+                  "operand": "e",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "operand": "i",
+                  "operator": "!=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 1000000,
+                  "operand": "i",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "operand": "v",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                }
+              ],
+              [
+                {
+                  "operand": "e",
+                  "operator": "!=",
+                  "ranges": [
+                    [
+                      0,
+                      5
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "other",
+            "condition": null
+          }
+        ],
+        "id": "r1"
+      },
+      {
+        "categories": [
+          {
+            "category": "one",
+            "condition": [
+              [
+                {
+                  "operand": "v",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 10,
+                  "operand": "i",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      1,
+                      1
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 100,
+                  "operand": "i",
+                  "operator": "!=",
+                  "ranges": [
+                    [
+                      11,
+                      11
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "few",
+            "condition": [
+              [
+                {
+                  "operand": "v",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 10,
+                  "operand": "i",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      2,
+                      4
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 100,
+                  "operand": "i",
+                  "operator": "!=",
+                  "ranges": [
+                    [
+                      12,
+                      14
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "many",
+            "condition": [
+              [
+                {
+                  "operand": "v",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 10,
+                  "operand": "i",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                }
+              ],
+              [
+                {
+                  "operand": "v",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 10,
+                  "operand": "i",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      5,
+                      9
+                    ]
+                  ]
+                }
+              ],
+              [
+                {
+                  "operand": "v",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 100,
+                  "operand": "i",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      11,
+                      14
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "other",
+            "condition": null
+          }
+        ],
+        "id": "r2"
+      },
+      {
+        "categories": [
+          {
+            "category": "zero",
+            "condition": [
+              [
+                {
+                  "operand": "n",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "one",
+            "condition": [
+              [
+                {
+                  "operand": "n",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      1,
+                      1
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "two",
+            "condition": [
+              [
+                {
+                  "operand": "n",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      2,
+                      2
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "few",
+            "condition": [
+              [
+                {
+                  "modulo": 100,
+                  "operand": "n",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      3,
+                      10
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "many",
+            "condition": [
+              [
+                {
+                  "modulo": 100,
+                  "operand": "n",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      11,
+                      99
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "other",
+            "condition": null
+          }
+        ],
+        "id": "r3"
+      },
+      {
+        "categories": [
+          {
+            "category": "other",
+            "condition": null
+          }
+        ],
+        "id": "r4"
+      }
+    ]
+  },
+  "locales": [
+    "en",
+    "fr",
+    "ru",
+    "ar",
+    "ja"
+  ],
+  "metadata": {
+    "cldrRef": "main",
+    "generator": "mf2/cldr/generator/generate_plural_rules.py",
+    "source": "unicode-org/cldr-json cldr-core supplemental plurals/ordinals"
+  },
+  "ordinal": {
+    "locales": {
+      "ar": "r2",
+      "en": "r0",
+      "fr": "r1",
+      "ja": "r2",
+      "ru": "r2"
+    },
+    "rules": [
+      {
+        "categories": [
+          {
+            "category": "one",
+            "condition": [
+              [
+                {
+                  "modulo": 10,
+                  "operand": "n",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      1,
+                      1
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 100,
+                  "operand": "n",
+                  "operator": "!=",
+                  "ranges": [
+                    [
+                      11,
+                      11
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "two",
+            "condition": [
+              [
+                {
+                  "modulo": 10,
+                  "operand": "n",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      2,
+                      2
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 100,
+                  "operand": "n",
+                  "operator": "!=",
+                  "ranges": [
+                    [
+                      12,
+                      12
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "few",
+            "condition": [
+              [
+                {
+                  "modulo": 10,
+                  "operand": "n",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      3,
+                      3
+                    ]
+                  ]
+                },
+                {
+                  "modulo": 100,
+                  "operand": "n",
+                  "operator": "!=",
+                  "ranges": [
+                    [
+                      13,
+                      13
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "other",
+            "condition": null
+          }
+        ],
+        "id": "r0"
+      },
+      {
+        "categories": [
+          {
+            "category": "one",
+            "condition": [
+              [
+                {
+                  "operand": "n",
+                  "operator": "=",
+                  "ranges": [
+                    [
+                      1,
+                      1
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "category": "other",
+            "condition": null
+          }
+        ],
+        "id": "r1"
+      },
+      {
+        "categories": [
+          {
+            "category": "other",
+            "condition": null
+          }
+        ],
+        "id": "r2"
+      }
+    ]
+  }
+}

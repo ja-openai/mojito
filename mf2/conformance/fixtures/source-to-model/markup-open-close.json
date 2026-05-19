@@ -1,0 +1,22 @@
+{
+  "name": "markup-open-close",
+  "source": "Click {#link}here{/link}.",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Click ",
+      { "type": "markup", "kind": "open", "name": "link" },
+      "here",
+      { "type": "markup", "kind": "close", "name": "link" },
+      "."
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Click here."
+    }
+  ]
+}

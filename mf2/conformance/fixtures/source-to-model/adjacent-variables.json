@@ -1,0 +1,25 @@
+{
+  "name": "adjacent-variables",
+  "source": "{$first}{$last}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "first" }
+      },
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "last" }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "first": "Ada", "last": "Lovelace" },
+      "expected": "AdaLovelace"
+    }
+  ]
+}

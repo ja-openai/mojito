@@ -1,0 +1,23 @@
+{
+  "name": "variable-basic",
+  "source": "Hello, {$name}!",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Hello, ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" }
+      },
+      "!"
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Alex" },
+      "expected": "Hello, Alex!"
+    }
+  ]
+}

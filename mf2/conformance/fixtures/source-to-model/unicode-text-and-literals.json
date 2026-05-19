@@ -1,0 +1,27 @@
+{
+  "name": "unicode-text-and-literals",
+  "source": "こんにちは {$name}: {|مرحبا 👋🏽 é|}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "こんにちは ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" }
+      },
+      ": ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "مرحبا 👋🏽 é" }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Zoë 🧪" },
+      "expected": "こんにちは Zoë 🧪: مرحبا 👋🏽 é"
+    }
+  ]
+}
