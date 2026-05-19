@@ -24,6 +24,11 @@ The program has three tracks:
   canonicalize separators/case without losing meaningful subtags such as
   `pt-PT`, because plural rules and later formatting data can differ from the
   base language fallback.
+- Keep plural locale resolution narrower than general resource-bundle fallback.
+  The plural package may use generated plural-specific parent overrides, but it
+  must not blindly apply CLDR's general `parentLocales` data; ICU4J validates
+  cases such as `pt-AO` against the generic `pt` plural rule, not the `pt-PT`
+  resource parent.
 - Keep parser AST, interchange model, and runtime IR separate:
   - parser AST: implementation-specific, editor-oriented, may include recovery
     nodes, source spans, trivia, and invalid content
@@ -188,8 +193,9 @@ Before calling any library production-ready:
 
 ## Immediate Work Items
 
-1. Add a shared locale-id normalization/lookup helper for Rust, Swift, and
-   Python before broadening locale-dependent behavior beyond plural rules.
+1. Extend the shared locale-id helpers beyond the current tiny BCP47
+   normalization/structural lookup: decide which aliases, available-locale
+   matching, and catalog fallback policies belong outside the plural runtime.
 2. Expand generated CLDR plural coverage beyond the minimal locale set: all V0
    locales, ordinal selection, sample comparisons, and package-size gates.
 3. Expand placeholder/plural conformance: all V0 locales, ordinal selection,

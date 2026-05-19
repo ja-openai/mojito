@@ -98,6 +98,9 @@ def locale_variants(locale: str) -> list[str]:
     hyphenated = locale.replace("_", "-")
     variants.append(hyphenated)
     variants.append(bcp47_cased(hyphenated))
+    underscored = hyphenated.replace("-", "_")
+    variants.append(underscored)
+    variants.append(underscored.upper())
     return list(dict.fromkeys(variants))
 
 

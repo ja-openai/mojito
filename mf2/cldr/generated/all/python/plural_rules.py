@@ -102,7 +102,7 @@ DATA = {'cardinal': {'locales': {'af': 'r0',
                           'kn': 'r2',
                           'ko': 'r7',
                           'kok': 'r2',
-                          'kok_latn': 'r2',
+                          'kok-Latn': 'r2',
                           'ks': 'r0',
                           'ksb': 'r0',
                           'ksh': 'r6',
@@ -155,7 +155,7 @@ DATA = {'cardinal': {'locales': {'af': 'r0',
                           'prg': 'r28',
                           'ps': 'r0',
                           'pt': 'r33',
-                          'pt_pt': 'r10',
+                          'pt-PT': 'r10',
                           'rm': 'r0',
                           'ro': 'r30',
                           'rof': 'r0',
@@ -228,6 +228,7 @@ DATA = {'cardinal': {'locales': {'af': 'r0',
                           'yue': 'r7',
                           'zh': 'r7',
                           'zu': 'r2'},
+              'parents': {},
               'rules': [{'categories': [{'category': 'one',
                                          'condition': [[{'operand': 'n',
                                                          'operator': '=',
@@ -1241,7 +1242,7 @@ DATA = {'cardinal': {'locales': {'af': 'r0',
              'kn',
              'ko',
              'kok',
-             'kok_latn',
+             'kok-Latn',
              'ks',
              'ksb',
              'ksh',
@@ -1294,7 +1295,7 @@ DATA = {'cardinal': {'locales': {'af': 'r0',
              'prg',
              'ps',
              'pt',
-             'pt_pt',
+             'pt-PT',
              'rm',
              'ro',
              'rof',
@@ -1424,7 +1425,7 @@ DATA = {'cardinal': {'locales': {'af': 'r0',
                          'kn': 'r0',
                          'ko': 'r0',
                          'kok': 'r15',
-                         'kok_latn': 'r15',
+                         'kok-Latn': 'r15',
                          'kw': 'r16',
                          'ky': 'r0',
                          'lij': 'r17',
@@ -1478,6 +1479,7 @@ DATA = {'cardinal': {'locales': {'af': 'r0',
                          'yue': 'r0',
                          'zh': 'r0',
                          'zu': 'r0'},
+             'parents': {},
              'rules': [{'categories': [{'category': 'other', 'condition': None}], 'id': 'r0'},
                        {'categories': [{'category': 'one',
                                         'condition': [[{'operand': 'n',
@@ -1923,7 +1925,11 @@ def select(value: Any, locale: str, plural_type: str = "cardinal") -> str:
     rules_for_type = DATA.get(plural_type)
     if rules_for_type is None:
         return "other"
-    rule_id = _lookup_rule_id(rules_for_type["locales"], locale)
+    rule_id = _lookup_rule_id(
+        rules_for_type["locales"],
+        rules_for_type.get("parents", {}),
+        locale,
+    )
     if rule_id is None:
         return "other"
     rule_set = next(rule for rule in rules_for_type["rules"] if rule["id"] == rule_id)
@@ -1935,18 +1941,55 @@ def select(value: Any, locale: str, plural_type: str = "cardinal") -> str:
     return "other"
 
 
-def _lookup_rule_id(locales: dict[str, str], locale: str) -> str | None:
-    for candidate in _locale_lookup_chain(locale):
+def _lookup_rule_id(locales: dict[str, str], parents: dict[str, str], locale: str) -> str | None:
+    for candidate in _plural_lookup_chain(locale, parents):
         rule_id = locales.get(candidate)
         if rule_id is not None:
             return rule_id
     return None
 
 
-def _locale_lookup_chain(locale: str) -> list[str]:
-    normalized = locale.strip().replace("-", "_").lower()
-    parts = [part for part in normalized.split("_") if part]
-    return ["_".join(parts[:length]) for length in range(len(parts), 0, -1)]
+def _plural_lookup_chain(locale: str, parents: dict[str, str]) -> list[str]:
+    chain: list[str] = []
+    _append_lookup_chain(_canonical_locale_tag(locale), parents, chain)
+    return chain
+
+
+def _append_lookup_chain(locale: str, parents: dict[str, str], chain: list[str]) -> None:
+    current = locale
+    while current:
+        if current in chain:
+            return
+        chain.append(current)
+        parent = parents.get(current)
+        if parent is not None:
+            _append_lookup_chain(parent, parents, chain)
+        current = _structural_parent(current)
+
+
+def _canonical_locale_tag(locale: str) -> str:
+    parts = []
+    for index, part in enumerate(locale.strip().replace("_", "-").split("-")):
+        if not part:
+            continue
+        if len(part) == 1:
+            break
+        parts.append(_canonical_subtag(index, part))
+    return "-".join(parts)
+
+
+def _canonical_subtag(index: int, part: str) -> str:
+    if index == 0:
+        return part.lower()
+    if len(part) == 4 and part.isalpha():
+        return part.title()
+    if (len(part) == 2 and part.isalpha()) or (len(part) == 3 and part.isdigit()):
+        return part.upper()
+    return part.lower()
+
+
+def _structural_parent(locale: str) -> str:
+    return locale.rsplit("-", 1)[0] if "-" in locale else ""
 
 
 def _matches_condition(operands: NumberOperands, condition: list[list[dict[str, Any]]]) -> bool:

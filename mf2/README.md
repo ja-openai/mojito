@@ -33,6 +33,8 @@ The implementation work is deliberately kept dry and separable:
 - `mf2-runtime`: formatting from the model or a compiled runtime form, with no
   dependency on source parsing
 - `mf2-cldr`: generated plural rules and locale data used by runtimes
+- `mf2-locale-core`: tiny BCP47-first locale identifiers and structural lookup;
+  richer aliases and locale negotiation stay outside the tiny runtime
 - `mf2-compiler`: catalog/source to model or compact runtime output
 - `mf2-reference`: comparisons against ICU and other reference implementations
 - `mf2-perf`: warm runtime benchmarks, package-size checks, and profiling
@@ -41,9 +43,10 @@ The implementation work is deliberately kept dry and separable:
 The starter implementations mirror those boundaries even before they become
 separate published packages. Rust has `parser`, `model`, `runtime`, `cldr`, and
 `diagnostic` modules, with plural selection wired through generated CLDR code.
-Python has `formatter`, `plural`, generated plural rules, `errors`, and a
-compatibility `model` facade. Swift has `Model`, `Formatter`, generated plural
-rules, `PluralRules`, and `Errors` files inside the runtime target.
+Python has `formatter`, `plural`, generated plural rules, `locale`, `errors`,
+and a compatibility `model` facade. Swift has `Model`, `Formatter`, generated
+plural rules, `PluralRules`, `Locale`, and `Errors` files inside the runtime
+target.
 
 ## Current Slice
 
@@ -59,6 +62,8 @@ The current conformance slice covers:
 - exact-match `.match` selectors with catch-all fallback
 - cardinal plural category selection for the initial locale set: `ar`, `en`,
   `fr`, `ja`, `ru` and related same-rule language fallbacks in code
+- BCP47-first locale canonicalization and structural lookup, including
+  underscore compatibility and extension stripping for plural lookup
 
 Rust currently parses MF2 source into the official data model for this slice.
 Swift and Python currently consume the expected official data model from

@@ -49,7 +49,7 @@ struct NumberOperands {
 }
 
 func selectCardinal(locale: String, operands: NumberOperands) -> String {
-    switch lookupRuleId(locales: cardinalLocales, locale: locale) {
+    switch lookupRuleId(locales: cardinalLocales, parents: cardinalParents, locale: locale) {
     case "r0": selectCardinalR0(operands)
     case "r1": selectCardinalR1(operands)
     case "r2": selectCardinalR2(operands)
@@ -60,7 +60,7 @@ func selectCardinal(locale: String, operands: NumberOperands) -> String {
 }
 
 func selectOrdinal(locale: String, operands: NumberOperands) -> String {
-    switch lookupRuleId(locales: ordinalLocales, locale: locale) {
+    switch lookupRuleId(locales: ordinalLocales, parents: ordinalParents, locale: locale) {
     case "r0": selectOrdinalR0(operands)
     case "r1": selectOrdinalR1(operands)
     case "r2": selectOrdinalR2(operands)
@@ -84,19 +84,62 @@ private let ordinalLocales: [String: String] = [
     "ru": "r2",
 ]
 
-private func lookupRuleId(locales: [String: String], locale: String) -> String? {
-    for candidate in localeLookupChain(locale) {
+private let cardinalParents: [String: String] = [:]
+
+private let ordinalParents: [String: String] = [:]
+
+private func lookupRuleId(locales: [String: String], parents: [String: String], locale: String) -> String? {
+    for candidate in pluralLookupChain(locale, parents: parents) {
         if let rule = locales[candidate] { return rule }
     }
     return nil
 }
 
-private func localeLookupChain(_ locale: String) -> [String] {
-    let normalized = locale.trimmingCharacters(in: .whitespacesAndNewlines)
-        .replacingOccurrences(of: "-", with: "_")
-        .lowercased()
-    let parts = normalized.split(separator: "_").map(String.init)
-    return stride(from: parts.count, through: 1, by: -1).map { parts.prefix($0).joined(separator: "_") }
+private func pluralLookupChain(_ locale: String, parents: [String: String]) -> [String] {
+    var chain: [String] = []
+    appendLookupChain(canonicalLocaleTag(locale), parents: parents, chain: &chain)
+    return chain
+}
+
+private func appendLookupChain(_ locale: String, parents: [String: String], chain: inout [String]) {
+    var current = locale
+    while !current.isEmpty {
+        if chain.contains(current) { return }
+        chain.append(current)
+        if let parent = parents[current] {
+            appendLookupChain(parent, parents: parents, chain: &chain)
+        }
+        current = structuralParent(current) ?? ""
+    }
+}
+
+private func canonicalLocaleTag(_ locale: String) -> String {
+    let rawParts = locale.trimmingCharacters(in: .whitespacesAndNewlines)
+        .replacingOccurrences(of: "_", with: "-")
+        .split(separator: "-")
+        .map(String.init)
+    var parts: [String] = []
+    for (index, part) in rawParts.enumerated() {
+        if part.count == 1 { break }
+        parts.append(canonicalSubtag(index: index, part: part))
+    }
+    return parts.joined(separator: "-")
+}
+
+private func canonicalSubtag(index: Int, part: String) -> String {
+    if index == 0 { return part.lowercased() }
+    if part.count == 4, part.allSatisfy(\.isLetter) {
+        return part.prefix(1).uppercased() + part.dropFirst().lowercased()
+    }
+    if (part.count == 2 && part.allSatisfy(\.isLetter)) || (part.count == 3 && part.allSatisfy(\.isNumber)) {
+        return part.uppercased()
+    }
+    return part.lowercased()
+}
+
+private func structuralParent(_ locale: String) -> String? {
+    guard let index = locale.lastIndex(of: "-") else { return nil }
+    return String(locale[..<index])
 }
 
 private func selectCardinalR0(_ operands: NumberOperands) -> String {

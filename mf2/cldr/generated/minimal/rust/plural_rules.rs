@@ -15,31 +15,18 @@ pub struct NumberOperands {
 impl NumberOperands {
     pub fn from_str(value: &str) -> Option<Self> {
         let n = value.parse::<f64>().ok()?.abs();
-        if !n.is_finite() {
-            return None;
-        }
+        if !n.is_finite() { return None; }
         let normalized = value.trim_start_matches(['-', '+']).to_ascii_lowercase();
         let base = normalized.split('e').next().unwrap_or(&normalized);
-        let fraction = base
-            .split_once('.')
-            .map(|(_, fraction)| fraction)
-            .unwrap_or("");
+        let fraction = base.split_once('.').map(|(_, fraction)| fraction).unwrap_or("");
         let fraction_trimmed = fraction.trim_end_matches('0');
         Some(Self {
             n,
             i: n.trunc() as i64,
             v: fraction.len() as i64,
             w: fraction_trimmed.len() as i64,
-            f: if fraction.is_empty() {
-                0
-            } else {
-                fraction.parse().ok()?
-            },
-            t: if fraction_trimmed.is_empty() {
-                0
-            } else {
-                fraction_trimmed.parse().ok()?
-            },
+            f: if fraction.is_empty() { 0 } else { fraction.parse().ok()? },
+            t: if fraction_trimmed.is_empty() { 0 } else { fraction_trimmed.parse().ok()? },
             e: 0,
             c: 0,
         })
@@ -47,29 +34,19 @@ impl NumberOperands {
 
     fn operand_i64(&self, name: &str) -> i64 {
         match name {
-            "i" => self.i,
-            "v" => self.v,
-            "w" => self.w,
-            "f" => self.f,
-            "t" => self.t,
-            "e" => self.e,
-            "c" => self.c,
+            "i" => self.i, "v" => self.v, "w" => self.w, "f" => self.f, "t" => self.t, "e" => self.e, "c" => self.c,
             "n" => self.n as i64,
             _ => 0,
         }
     }
 
     fn operand_f64(&self, name: &str) -> f64 {
-        if name == "n" {
-            self.n
-        } else {
-            self.operand_i64(name) as f64
-        }
+        if name == "n" { self.n } else { self.operand_i64(name) as f64 }
     }
 }
 
 pub fn select_cardinal(locale: &str, operands: NumberOperands) -> &'static str {
-    match lookup_rule_id(CARDINAL_LOCALES, locale) {
+    match lookup_rule_id(CARDINAL_LOCALES, CARDINAL_PARENTS, locale) {
         Some("r0") => select_cardinal_r0(operands),
         Some("r1") => select_cardinal_r1(operands),
         Some("r2") => select_cardinal_r2(operands),
@@ -80,7 +57,7 @@ pub fn select_cardinal(locale: &str, operands: NumberOperands) -> &'static str {
 }
 
 pub fn select_ordinal(locale: &str, operands: NumberOperands) -> &'static str {
-    match lookup_rule_id(ORDINAL_LOCALES, locale) {
+    match lookup_rule_id(ORDINAL_LOCALES, ORDINAL_PARENTS, locale) {
         Some("r0") => select_ordinal_r0(operands),
         Some("r1") => select_ordinal_r1(operands),
         Some("r2") => select_ordinal_r2(operands),
@@ -104,127 +81,94 @@ static ORDINAL_LOCALES: &[(&str, &str)] = &[
     ("ru", "r2"),
 ];
 
+static CARDINAL_PARENTS: &[(&str, &str)] = &[
+];
+
+static ORDINAL_PARENTS: &[(&str, &str)] = &[
+];
+
 fn lookup_rule_id(
     locales: &'static [(&'static str, &'static str)],
+    parents: &'static [(&'static str, &'static str)],
     locale: &str,
 ) -> Option<&'static str> {
-    locale_lookup_chain(locale).into_iter().find_map(|lookup| {
-        locales
-            .iter()
-            .find(|(candidate, _)| *candidate == lookup)
-            .map(|(_, rule)| *rule)
-    })
+    plural_lookup_chain(locale, parents)
+        .into_iter()
+        .find_map(|lookup| locales.iter().find(|(candidate, _)| *candidate == lookup).map(|(_, rule)| *rule))
 }
 
-fn locale_lookup_chain(locale: &str) -> Vec<String> {
-    let normalized = locale.trim().replace('-', "_").to_ascii_lowercase();
-    let parts: Vec<_> = normalized
-        .split('_')
-        .filter(|part| !part.is_empty())
-        .collect();
-    (1..=parts.len())
-        .rev()
-        .map(|length| parts[..length].join("_"))
-        .collect()
+fn plural_lookup_chain(locale: &str, parents: &'static [(&'static str, &'static str)]) -> Vec<String> {
+    let mut chain = Vec::new();
+    append_lookup_chain(&canonical_locale_tag(locale), parents, &mut chain);
+    chain
+}
+
+fn append_lookup_chain(locale: &str, parents: &'static [(&'static str, &'static str)], chain: &mut Vec<String>) {
+    let mut current = locale.to_string();
+    while !current.is_empty() {
+        if chain.iter().any(|candidate| candidate == &current) { return; }
+        chain.push(current.clone());
+        if let Some(parent) = parents.iter().find(|(child, _)| *child == current).map(|(_, parent)| *parent) {
+            append_lookup_chain(parent, parents, chain);
+        }
+        current = structural_parent(&current).unwrap_or_default();
+    }
+}
+
+fn canonical_locale_tag(locale: &str) -> String {
+    let normalized = locale.trim().replace('_', "-");
+    let mut parts = Vec::new();
+    for (index, part) in normalized.split('-').filter(|part| !part.is_empty()).enumerate() {
+        if part.len() == 1 { break; }
+        parts.push(canonical_subtag(index, part));
+    }
+    parts.join("-")
+}
+
+fn canonical_subtag(index: usize, part: &str) -> String {
+    if index == 0 { return part.to_ascii_lowercase(); }
+    if part.len() == 4 && part.chars().all(|ch| ch.is_ascii_alphabetic()) {
+        let mut chars = part.chars();
+        let first = chars.next().map(|ch| ch.to_ascii_uppercase()).unwrap_or_default();
+        let rest = chars.as_str().to_ascii_lowercase();
+        return format!("{first}{rest}");
+    }
+    if (part.len() == 2 && part.chars().all(|ch| ch.is_ascii_alphabetic()))
+        || (part.len() == 3 && part.chars().all(|ch| ch.is_ascii_digit()))
+    {
+        return part.to_ascii_uppercase();
+    }
+    part.to_ascii_lowercase()
+}
+
+fn structural_parent(locale: &str) -> Option<String> {
+    locale.rsplit_once('-').map(|(parent, _)| parent.to_string())
 }
 
 fn select_cardinal_r0(operands: NumberOperands) -> &'static str {
-    if 1 <= operands.operand_i64("i")
-        && operands.operand_i64("i") <= 1
-        && 0 <= operands.operand_i64("v")
-        && operands.operand_i64("v") <= 0
-    {
-        return "one";
-    }
+    if 1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 { return "one"; }
     "other"
 }
 
 fn select_cardinal_r1(operands: NumberOperands) -> &'static str {
-    if (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0)
-        || (1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1)
-    {
-        return "one";
-    }
-    if (0 <= operands.operand_i64("e")
-        && operands.operand_i64("e") <= 0
-        && !(0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0)
-        && 0 <= (operands.operand_i64("i") % 1000000)
-        && (operands.operand_i64("i") % 1000000) <= 0
-        && 0 <= operands.operand_i64("v")
-        && operands.operand_i64("v") <= 0)
-        || (!(0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 5))
-    {
-        return "many";
-    }
+    if (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) || (1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1) { return "one"; }
+    if (0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 0 && !(0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) && 0 <= (operands.operand_i64("i") % 1000000) && (operands.operand_i64("i") % 1000000) <= 0 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0) || (!(0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 5)) { return "many"; }
     "other"
 }
 
 fn select_cardinal_r2(operands: NumberOperands) -> &'static str {
-    if 0 <= operands.operand_i64("v")
-        && operands.operand_i64("v") <= 0
-        && 1 <= (operands.operand_i64("i") % 10)
-        && (operands.operand_i64("i") % 10) <= 1
-        && !(11 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 11)
-    {
-        return "one";
-    }
-    if 0 <= operands.operand_i64("v")
-        && operands.operand_i64("v") <= 0
-        && 2 <= (operands.operand_i64("i") % 10)
-        && (operands.operand_i64("i") % 10) <= 4
-        && !(12 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 14)
-    {
-        return "few";
-    }
-    if (0 <= operands.operand_i64("v")
-        && operands.operand_i64("v") <= 0
-        && 0 <= (operands.operand_i64("i") % 10)
-        && (operands.operand_i64("i") % 10) <= 0)
-        || (0 <= operands.operand_i64("v")
-            && operands.operand_i64("v") <= 0
-            && 5 <= (operands.operand_i64("i") % 10)
-            && (operands.operand_i64("i") % 10) <= 9)
-        || (0 <= operands.operand_i64("v")
-            && operands.operand_i64("v") <= 0
-            && 11 <= (operands.operand_i64("i") % 100)
-            && (operands.operand_i64("i") % 100) <= 14)
-    {
-        return "many";
-    }
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 1 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 1 && !(11 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 11) { return "one"; }
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 2 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 4 && !(12 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 14) { return "few"; }
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 0 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 0) || (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 5 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 9) || (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 11 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 14) { return "many"; }
     "other"
 }
 
 fn select_cardinal_r3(operands: NumberOperands) -> &'static str {
-    if operands.operand_f64("n").fract() == 0.0
-        && 0.0 <= operands.operand_f64("n")
-        && operands.operand_f64("n") <= 0.0
-    {
-        return "zero";
-    }
-    if operands.operand_f64("n").fract() == 0.0
-        && 1.0 <= operands.operand_f64("n")
-        && operands.operand_f64("n") <= 1.0
-    {
-        return "one";
-    }
-    if operands.operand_f64("n").fract() == 0.0
-        && 2.0 <= operands.operand_f64("n")
-        && operands.operand_f64("n") <= 2.0
-    {
-        return "two";
-    }
-    if (operands.operand_f64("n") % 100.0).fract() == 0.0
-        && 3.0 <= (operands.operand_f64("n") % 100.0)
-        && (operands.operand_f64("n") % 100.0) <= 10.0
-    {
-        return "few";
-    }
-    if (operands.operand_f64("n") % 100.0).fract() == 0.0
-        && 11.0 <= (operands.operand_f64("n") % 100.0)
-        && (operands.operand_f64("n") % 100.0) <= 99.0
-    {
-        return "many";
-    }
+    if operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0 { return "zero"; }
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0 { return "two"; }
+    if (operands.operand_f64("n") % 100.0).fract() == 0.0 && 3.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 10.0 { return "few"; }
+    if (operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 99.0 { return "many"; }
     "other"
 }
 
@@ -233,43 +177,14 @@ fn select_cardinal_r4(_operands: NumberOperands) -> &'static str {
 }
 
 fn select_ordinal_r0(operands: NumberOperands) -> &'static str {
-    if (operands.operand_f64("n") % 10.0).fract() == 0.0
-        && 1.0 <= (operands.operand_f64("n") % 10.0)
-        && (operands.operand_f64("n") % 10.0) <= 1.0
-        && !((operands.operand_f64("n") % 100.0).fract() == 0.0
-            && 11.0 <= (operands.operand_f64("n") % 100.0)
-            && (operands.operand_f64("n") % 100.0) <= 11.0)
-    {
-        return "one";
-    }
-    if (operands.operand_f64("n") % 10.0).fract() == 0.0
-        && 2.0 <= (operands.operand_f64("n") % 10.0)
-        && (operands.operand_f64("n") % 10.0) <= 2.0
-        && !((operands.operand_f64("n") % 100.0).fract() == 0.0
-            && 12.0 <= (operands.operand_f64("n") % 100.0)
-            && (operands.operand_f64("n") % 100.0) <= 12.0)
-    {
-        return "two";
-    }
-    if (operands.operand_f64("n") % 10.0).fract() == 0.0
-        && 3.0 <= (operands.operand_f64("n") % 10.0)
-        && (operands.operand_f64("n") % 10.0) <= 3.0
-        && !((operands.operand_f64("n") % 100.0).fract() == 0.0
-            && 13.0 <= (operands.operand_f64("n") % 100.0)
-            && (operands.operand_f64("n") % 100.0) <= 13.0)
-    {
-        return "few";
-    }
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 1.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 11.0) { return "one"; }
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 2.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 2.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 12.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 12.0) { return "two"; }
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 3.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 3.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 13.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 13.0) { return "few"; }
     "other"
 }
 
 fn select_ordinal_r1(operands: NumberOperands) -> &'static str {
-    if operands.operand_f64("n").fract() == 0.0
-        && 1.0 <= operands.operand_f64("n")
-        && operands.operand_f64("n") <= 1.0
-    {
-        return "one";
-    }
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
     "other"
 }
 

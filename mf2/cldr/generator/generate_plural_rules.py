@@ -16,6 +16,10 @@ CLDR_URLS = {
     "cardinal": "https://raw.githubusercontent.com/unicode-org/cldr-json/{ref}/cldr-json/cldr-core/supplemental/plurals.json",
     "ordinal": "https://raw.githubusercontent.com/unicode-org/cldr-json/{ref}/cldr-json/cldr-core/supplemental/ordinals.json",
 }
+PARENT_LOCALES_URL = (
+    "https://raw.githubusercontent.com/unicode-org/cldr-json/{ref}/"
+    "cldr-json/cldr-core/supplemental/parentLocales.json"
+)
 CLDR_KEYS = {
     "cardinal": "plurals-type-cardinal",
     "ordinal": "plurals-type-ordinal",
@@ -62,9 +66,13 @@ def main(argv: list[str] | None = None) -> int:
     if unknown_types:
         raise SystemExit(f"Unknown plural types: {', '.join(unknown_types)}")
 
-    raw_data = {plural_type: fetch_cldr_rules(plural_type, args.cldr_ref) for plural_type in plural_types}
+    raw_data = {
+        plural_type: fetch_cldr_rules(plural_type, args.cldr_ref)
+        for plural_type in plural_types
+    }
+    parent_locales = fetch_parent_locales(args.cldr_ref)
     selected_locales = select_locales(args.locales, raw_data)
-    generated = build_generated_data(raw_data, selected_locales, args.cldr_ref)
+    generated = build_generated_data(raw_data, parent_locales, selected_locales, args.cldr_ref)
 
     out = Path(args.out)
     write_json(out / "plural_rules.json", generated)
@@ -95,6 +103,15 @@ def fetch_cldr_rules(plural_type: str, cldr_ref: str) -> dict[str, dict[str, str
     return data["supplemental"][CLDR_KEYS[plural_type]]
 
 
+def fetch_parent_locales(cldr_ref: str) -> dict[str, str]:
+    url = PARENT_LOCALES_URL.format(ref=cldr_ref)
+    with urllib.request.urlopen(url, timeout=30) as response:
+        data = json.loads(response.read())
+    parent_locales = data["supplemental"]["parentLocales"]
+    plural_parent_locales = parent_locales.get("plurals", {})
+    return plural_parent_locales.get("parentLocale", {})
+
+
 def select_locales(
     locale_arg: str, raw_data: dict[str, dict[str, dict[str, str]]]
 ) -> list[str]:
@@ -116,7 +133,10 @@ def select_locales(
 
 
 def build_generated_data(
-    raw_data: dict[str, dict[str, dict[str, str]]], locales: list[str], cldr_ref: str
+    raw_data: dict[str, dict[str, dict[str, str]]],
+    parent_locales: dict[str, str],
+    locales: list[str],
+    cldr_ref: str,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "metadata": {
@@ -147,9 +167,41 @@ def build_generated_data(
                 rule_sets.append({"id": rule_id, "categories": parsed})
             locale_map[canonical_locale_key(locale)] = rule_id
 
-        result[plural_type] = {"locales": locale_map, "rules": rule_sets}
+        result[plural_type] = {
+            "locales": locale_map,
+            "parents": build_plural_parent_map(parent_locales, locale_map),
+            "rules": rule_sets,
+        }
 
     return result
+
+
+def build_plural_parent_map(
+    parent_locales: dict[str, str], locale_map: dict[str, str]
+) -> dict[str, str]:
+    parents: dict[str, str] = {}
+    for child, parent in parent_locales.items():
+        child_key = canonical_locale_key(child)
+        parent_key = canonical_locale_key(parent)
+        if parent_key == "und":
+            continue
+        if child_key in locale_map:
+            continue
+        parent_rule = locale_map.get(parent_key)
+        if parent_rule is None:
+            continue
+        structural_rule = first_structural_rule(child_key, locale_map)
+        if structural_rule != parent_rule:
+            parents[child_key] = parent_key
+    return parents
+
+
+def first_structural_rule(locale: str, locale_map: dict[str, str]) -> str | None:
+    for candidate in locale_lookup_chain(locale)[1:]:
+        rule_id = locale_map.get(candidate)
+        if rule_id is not None:
+            return rule_id
+    return None
 
 
 def parse_rule_set(rules: dict[str, str]) -> list[dict[str, Any]]:
@@ -216,7 +268,29 @@ def normalize_locale(locale: str) -> str:
 
 
 def canonical_locale_key(locale: str) -> str:
-    return locale.strip().replace("-", "_").lower()
+    parts: list[str] = []
+    for index, part in enumerate(locale.strip().replace("_", "-").split("-")):
+        if not part:
+            continue
+        if len(part) == 1:
+            break
+        parts.append(canonical_subtag(index, part))
+    return "-".join(parts)
+
+
+def locale_lookup_chain(locale: str) -> list[str]:
+    parts = [part for part in canonical_locale_key(locale).split("-") if part]
+    return ["-".join(parts[:length]) for length in range(len(parts), 0, -1)]
+
+
+def canonical_subtag(index: int, part: str) -> str:
+    if index == 0:
+        return part.lower()
+    if len(part) == 4 and part.isalpha():
+        return part.title()
+    if (len(part) == 2 and part.isalpha()) or (len(part) == 3 and part.isdigit()):
+        return part.upper()
+    return part.lower()
 
 
 def resolve_locale(locale: str, available: list[str]) -> str | None:
@@ -288,7 +362,11 @@ def select(value: Any, locale: str, plural_type: str = "cardinal") -> str:
     rules_for_type = DATA.get(plural_type)
     if rules_for_type is None:
         return "other"
-    rule_id = _lookup_rule_id(rules_for_type["locales"], locale)
+    rule_id = _lookup_rule_id(
+        rules_for_type["locales"],
+        rules_for_type.get("parents", {{}}),
+        locale,
+    )
     if rule_id is None:
         return "other"
     rule_set = next(rule for rule in rules_for_type["rules"] if rule["id"] == rule_id)
@@ -300,18 +378,55 @@ def select(value: Any, locale: str, plural_type: str = "cardinal") -> str:
     return "other"
 
 
-def _lookup_rule_id(locales: dict[str, str], locale: str) -> str | None:
-    for candidate in _locale_lookup_chain(locale):
+def _lookup_rule_id(locales: dict[str, str], parents: dict[str, str], locale: str) -> str | None:
+    for candidate in _plural_lookup_chain(locale, parents):
         rule_id = locales.get(candidate)
         if rule_id is not None:
             return rule_id
     return None
 
 
-def _locale_lookup_chain(locale: str) -> list[str]:
-    normalized = locale.strip().replace("-", "_").lower()
-    parts = [part for part in normalized.split("_") if part]
-    return ["_".join(parts[:length]) for length in range(len(parts), 0, -1)]
+def _plural_lookup_chain(locale: str, parents: dict[str, str]) -> list[str]:
+    chain: list[str] = []
+    _append_lookup_chain(_canonical_locale_tag(locale), parents, chain)
+    return chain
+
+
+def _append_lookup_chain(locale: str, parents: dict[str, str], chain: list[str]) -> None:
+    current = locale
+    while current:
+        if current in chain:
+            return
+        chain.append(current)
+        parent = parents.get(current)
+        if parent is not None:
+            _append_lookup_chain(parent, parents, chain)
+        current = _structural_parent(current)
+
+
+def _canonical_locale_tag(locale: str) -> str:
+    parts = []
+    for index, part in enumerate(locale.strip().replace("_", "-").split("-")):
+        if not part:
+            continue
+        if len(part) == 1:
+            break
+        parts.append(_canonical_subtag(index, part))
+    return "-".join(parts)
+
+
+def _canonical_subtag(index: int, part: str) -> str:
+    if index == 0:
+        return part.lower()
+    if len(part) == 4 and part.isalpha():
+        return part.title()
+    if (len(part) == 2 and part.isalpha()) or (len(part) == 3 and part.isdigit()):
+        return part.upper()
+    return part.lower()
+
+
+def _structural_parent(locale: str) -> str:
+    return locale.rsplit("-", 1)[0] if "-" in locale else ""
 
 
 def _matches_condition(operands: NumberOperands, condition: list[list[dict[str, Any]]]) -> bool:
@@ -387,7 +502,7 @@ def write_rust(path: Path, data: dict[str, Any]) -> None:
         "}",
         "",
         "pub fn select_cardinal(locale: &str, operands: NumberOperands) -> &'static str {",
-        "    match lookup_rule_id(CARDINAL_LOCALES, locale) {",
+        "    match lookup_rule_id(CARDINAL_LOCALES, CARDINAL_PARENTS, locale) {",
     ]
     for rule in data.get("cardinal", {}).get("rules", []):
         source.append(f'        Some("{rule["id"]}") => {rust_rule_function_name("cardinal", rule["id"])}(operands),')
@@ -395,7 +510,7 @@ def write_rust(path: Path, data: dict[str, Any]) -> None:
     source.extend(
         [
             "pub fn select_ordinal(locale: &str, operands: NumberOperands) -> &'static str {",
-            "    match lookup_rule_id(ORDINAL_LOCALES, locale) {",
+            "    match lookup_rule_id(ORDINAL_LOCALES, ORDINAL_PARENTS, locale) {",
         ]
     )
     for rule in data.get("ordinal", {}).get("rules", []):
@@ -403,18 +518,66 @@ def write_rust(path: Path, data: dict[str, Any]) -> None:
     source.extend(["        _ => \"other\",", "    }", "}", ""])
     source.append(render_rust_locale_map("CARDINAL_LOCALES", data.get("cardinal", {}).get("locales", {})))
     source.append(render_rust_locale_map("ORDINAL_LOCALES", data.get("ordinal", {}).get("locales", {})))
+    source.append(render_rust_locale_map("CARDINAL_PARENTS", data.get("cardinal", {}).get("parents", {})))
+    source.append(render_rust_locale_map("ORDINAL_PARENTS", data.get("ordinal", {}).get("parents", {})))
     source.extend(
         [
-            "fn lookup_rule_id(locales: &'static [(&'static str, &'static str)], locale: &str) -> Option<&'static str> {",
-            "    locale_lookup_chain(locale)",
+            "fn lookup_rule_id(",
+            "    locales: &'static [(&'static str, &'static str)],",
+            "    parents: &'static [(&'static str, &'static str)],",
+            "    locale: &str,",
+            ") -> Option<&'static str> {",
+            "    plural_lookup_chain(locale, parents)",
             "        .into_iter()",
             "        .find_map(|lookup| locales.iter().find(|(candidate, _)| *candidate == lookup).map(|(_, rule)| *rule))",
             "}",
             "",
-            "fn locale_lookup_chain(locale: &str) -> Vec<String> {",
-            "    let normalized = locale.trim().replace('-', \"_\").to_ascii_lowercase();",
-            "    let parts: Vec<_> = normalized.split('_').filter(|part| !part.is_empty()).collect();",
-            "    (1..=parts.len()).rev().map(|length| parts[..length].join(\"_\")).collect()",
+            "fn plural_lookup_chain(locale: &str, parents: &'static [(&'static str, &'static str)]) -> Vec<String> {",
+            "    let mut chain = Vec::new();",
+            "    append_lookup_chain(&canonical_locale_tag(locale), parents, &mut chain);",
+            "    chain",
+            "}",
+            "",
+            "fn append_lookup_chain(locale: &str, parents: &'static [(&'static str, &'static str)], chain: &mut Vec<String>) {",
+            "    let mut current = locale.to_string();",
+            "    while !current.is_empty() {",
+            "        if chain.iter().any(|candidate| candidate == &current) { return; }",
+            "        chain.push(current.clone());",
+            "        if let Some(parent) = parents.iter().find(|(child, _)| *child == current).map(|(_, parent)| *parent) {",
+            "            append_lookup_chain(parent, parents, chain);",
+            "        }",
+            "        current = structural_parent(&current).unwrap_or_default();",
+            "    }",
+            "}",
+            "",
+            "fn canonical_locale_tag(locale: &str) -> String {",
+            "    let normalized = locale.trim().replace('_', \"-\");",
+            "    let mut parts = Vec::new();",
+            "    for (index, part) in normalized.split('-').filter(|part| !part.is_empty()).enumerate() {",
+            "        if part.len() == 1 { break; }",
+            "        parts.push(canonical_subtag(index, part));",
+            "    }",
+            "    parts.join(\"-\")",
+            "}",
+            "",
+            "fn canonical_subtag(index: usize, part: &str) -> String {",
+            "    if index == 0 { return part.to_ascii_lowercase(); }",
+            "    if part.len() == 4 && part.chars().all(|ch| ch.is_ascii_alphabetic()) {",
+            "        let mut chars = part.chars();",
+            "        let first = chars.next().map(|ch| ch.to_ascii_uppercase()).unwrap_or_default();",
+            "        let rest = chars.as_str().to_ascii_lowercase();",
+            "        return format!(\"{first}{rest}\");",
+            "    }",
+            "    if (part.len() == 2 && part.chars().all(|ch| ch.is_ascii_alphabetic()))",
+            "        || (part.len() == 3 && part.chars().all(|ch| ch.is_ascii_digit()))",
+            "    {",
+            "        return part.to_ascii_uppercase();",
+            "    }",
+            "    part.to_ascii_lowercase()",
+            "}",
+            "",
+            "fn structural_parent(locale: &str) -> Option<String> {",
+            "    locale.rsplit_once('-').map(|(parent, _)| parent.to_string())",
             "}",
             "",
         ]
@@ -428,7 +591,7 @@ def write_rust(path: Path, data: dict[str, Any]) -> None:
 def render_rust_locale_map(name: str, locale_map: dict[str, str]) -> str:
     lines = [f"static {name}: &[(&str, &str)] = &["]
     for locale, rule_id in sorted(locale_map.items()):
-        lines.append(f'    ("{locale.lower()}", "{rule_id}"),')
+        lines.append(f'    ("{locale}", "{rule_id}"),')
     lines.append("];\n")
     return "\n".join(lines)
 
@@ -543,7 +706,7 @@ def write_swift(path: Path, data: dict[str, Any]) -> None:
         "}",
         "",
         "func selectCardinal(locale: String, operands: NumberOperands) -> String {",
-        "    switch lookupRuleId(locales: cardinalLocales, locale: locale) {",
+        "    switch lookupRuleId(locales: cardinalLocales, parents: cardinalParents, locale: locale) {",
     ]
     for rule in data.get("cardinal", {}).get("rules", []):
         source.append(f'    case "{rule["id"]}": {swift_rule_function_name("cardinal", rule["id"])}(operands)')
@@ -551,7 +714,7 @@ def write_swift(path: Path, data: dict[str, Any]) -> None:
     source.extend(
         [
             "func selectOrdinal(locale: String, operands: NumberOperands) -> String {",
-            "    switch lookupRuleId(locales: ordinalLocales, locale: locale) {",
+            "    switch lookupRuleId(locales: ordinalLocales, parents: ordinalParents, locale: locale) {",
         ]
     )
     for rule in data.get("ordinal", {}).get("rules", []):
@@ -559,21 +722,62 @@ def write_swift(path: Path, data: dict[str, Any]) -> None:
     source.extend(['    default: "other"', "    }", "}", ""])
     source.append(render_swift_locale_map("cardinalLocales", data.get("cardinal", {}).get("locales", {})))
     source.append(render_swift_locale_map("ordinalLocales", data.get("ordinal", {}).get("locales", {})))
+    source.append(render_swift_locale_map("cardinalParents", data.get("cardinal", {}).get("parents", {})))
+    source.append(render_swift_locale_map("ordinalParents", data.get("ordinal", {}).get("parents", {})))
     source.extend(
         [
-            "private func lookupRuleId(locales: [String: String], locale: String) -> String? {",
-            "    for candidate in localeLookupChain(locale) {",
+            "private func lookupRuleId(locales: [String: String], parents: [String: String], locale: String) -> String? {",
+            "    for candidate in pluralLookupChain(locale, parents: parents) {",
             "        if let rule = locales[candidate] { return rule }",
             "    }",
             "    return nil",
             "}",
             "",
-            "private func localeLookupChain(_ locale: String) -> [String] {",
-            "    let normalized = locale.trimmingCharacters(in: .whitespacesAndNewlines)",
-            "        .replacingOccurrences(of: \"-\", with: \"_\")",
-            "        .lowercased()",
-            "    let parts = normalized.split(separator: \"_\").map(String.init)",
-            "    return stride(from: parts.count, through: 1, by: -1).map { parts.prefix($0).joined(separator: \"_\") }",
+            "private func pluralLookupChain(_ locale: String, parents: [String: String]) -> [String] {",
+            "    var chain: [String] = []",
+            "    appendLookupChain(canonicalLocaleTag(locale), parents: parents, chain: &chain)",
+            "    return chain",
+            "}",
+            "",
+            "private func appendLookupChain(_ locale: String, parents: [String: String], chain: inout [String]) {",
+            "    var current = locale",
+            "    while !current.isEmpty {",
+            "        if chain.contains(current) { return }",
+            "        chain.append(current)",
+            "        if let parent = parents[current] {",
+            "            appendLookupChain(parent, parents: parents, chain: &chain)",
+            "        }",
+            "        current = structuralParent(current) ?? \"\"",
+            "    }",
+            "}",
+            "",
+            "private func canonicalLocaleTag(_ locale: String) -> String {",
+            "    let rawParts = locale.trimmingCharacters(in: .whitespacesAndNewlines)",
+            "        .replacingOccurrences(of: \"_\", with: \"-\")",
+            "        .split(separator: \"-\")",
+            "        .map(String.init)",
+            "    var parts: [String] = []",
+            "    for (index, part) in rawParts.enumerated() {",
+            "        if part.count == 1 { break }",
+            "        parts.append(canonicalSubtag(index: index, part: part))",
+            "    }",
+            "    return parts.joined(separator: \"-\")",
+            "}",
+            "",
+            "private func canonicalSubtag(index: Int, part: String) -> String {",
+            "    if index == 0 { return part.lowercased() }",
+            "    if part.count == 4, part.allSatisfy(\\.isLetter) {",
+            "        return part.prefix(1).uppercased() + part.dropFirst().lowercased()",
+            "    }",
+            "    if (part.count == 2 && part.allSatisfy(\\.isLetter)) || (part.count == 3 && part.allSatisfy(\\.isNumber)) {",
+            "        return part.uppercased()",
+            "    }",
+            "    return part.lowercased()",
+            "}",
+            "",
+            "private func structuralParent(_ locale: String) -> String? {",
+            "    guard let index = locale.lastIndex(of: \"-\") else { return nil }",
+            "    return String(locale[..<index])",
             "}",
             "",
         ]
@@ -585,9 +789,11 @@ def write_swift(path: Path, data: dict[str, Any]) -> None:
 
 
 def render_swift_locale_map(name: str, locale_map: dict[str, str]) -> str:
+    if not locale_map:
+        return f"private let {name}: [String: String] = [:]\n"
     lines = [f"private let {name}: [String: String] = ["]
     for locale, rule_id in sorted(locale_map.items()):
-        lines.append(f'    "{locale.lower()}": "{rule_id}",')
+        lines.append(f'    "{locale}": "{rule_id}",')
     lines.append("]\n")
     return "\n".join(lines)
 

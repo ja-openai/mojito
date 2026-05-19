@@ -46,7 +46,7 @@ impl NumberOperands {
 }
 
 pub fn select_cardinal(locale: &str, operands: NumberOperands) -> &'static str {
-    match lookup_rule_id(CARDINAL_LOCALES, locale) {
+    match lookup_rule_id(CARDINAL_LOCALES, CARDINAL_PARENTS, locale) {
         Some("r0") => select_cardinal_r0(operands),
         Some("r1") => select_cardinal_r1(operands),
         Some("r2") => select_cardinal_r2(operands),
@@ -92,7 +92,7 @@ pub fn select_cardinal(locale: &str, operands: NumberOperands) -> &'static str {
 }
 
 pub fn select_ordinal(locale: &str, operands: NumberOperands) -> &'static str {
-    match lookup_rule_id(ORDINAL_LOCALES, locale) {
+    match lookup_rule_id(ORDINAL_LOCALES, ORDINAL_PARENTS, locale) {
         Some("r0") => select_ordinal_r0(operands),
         Some("r1") => select_ordinal_r1(operands),
         Some("r2") => select_ordinal_r2(operands),
@@ -221,7 +221,7 @@ static CARDINAL_LOCALES: &[(&str, &str)] = &[
     ("kn", "r2"),
     ("ko", "r7"),
     ("kok", "r2"),
-    ("kok_latn", "r2"),
+    ("kok-Latn", "r2"),
     ("ks", "r0"),
     ("ksb", "r0"),
     ("ksh", "r6"),
@@ -274,7 +274,7 @@ static CARDINAL_LOCALES: &[(&str, &str)] = &[
     ("prg", "r28"),
     ("ps", "r0"),
     ("pt", "r33"),
-    ("pt_pt", "r10"),
+    ("pt-PT", "r10"),
     ("rm", "r0"),
     ("ro", "r30"),
     ("rof", "r0"),
@@ -404,7 +404,7 @@ static ORDINAL_LOCALES: &[(&str, &str)] = &[
     ("kn", "r0"),
     ("ko", "r0"),
     ("kok", "r15"),
-    ("kok_latn", "r15"),
+    ("kok-Latn", "r15"),
     ("kw", "r16"),
     ("ky", "r0"),
     ("lij", "r17"),
@@ -460,16 +460,68 @@ static ORDINAL_LOCALES: &[(&str, &str)] = &[
     ("zu", "r0"),
 ];
 
-fn lookup_rule_id(locales: &'static [(&'static str, &'static str)], locale: &str) -> Option<&'static str> {
-    locale_lookup_chain(locale)
+static CARDINAL_PARENTS: &[(&str, &str)] = &[
+];
+
+static ORDINAL_PARENTS: &[(&str, &str)] = &[
+];
+
+fn lookup_rule_id(
+    locales: &'static [(&'static str, &'static str)],
+    parents: &'static [(&'static str, &'static str)],
+    locale: &str,
+) -> Option<&'static str> {
+    plural_lookup_chain(locale, parents)
         .into_iter()
         .find_map(|lookup| locales.iter().find(|(candidate, _)| *candidate == lookup).map(|(_, rule)| *rule))
 }
 
-fn locale_lookup_chain(locale: &str) -> Vec<String> {
-    let normalized = locale.trim().replace('-', "_").to_ascii_lowercase();
-    let parts: Vec<_> = normalized.split('_').filter(|part| !part.is_empty()).collect();
-    (1..=parts.len()).rev().map(|length| parts[..length].join("_")).collect()
+fn plural_lookup_chain(locale: &str, parents: &'static [(&'static str, &'static str)]) -> Vec<String> {
+    let mut chain = Vec::new();
+    append_lookup_chain(&canonical_locale_tag(locale), parents, &mut chain);
+    chain
+}
+
+fn append_lookup_chain(locale: &str, parents: &'static [(&'static str, &'static str)], chain: &mut Vec<String>) {
+    let mut current = locale.to_string();
+    while !current.is_empty() {
+        if chain.iter().any(|candidate| candidate == &current) { return; }
+        chain.push(current.clone());
+        if let Some(parent) = parents.iter().find(|(child, _)| *child == current).map(|(_, parent)| *parent) {
+            append_lookup_chain(parent, parents, chain);
+        }
+        current = structural_parent(&current).unwrap_or_default();
+    }
+}
+
+fn canonical_locale_tag(locale: &str) -> String {
+    let normalized = locale.trim().replace('_', "-");
+    let mut parts = Vec::new();
+    for (index, part) in normalized.split('-').filter(|part| !part.is_empty()).enumerate() {
+        if part.len() == 1 { break; }
+        parts.push(canonical_subtag(index, part));
+    }
+    parts.join("-")
+}
+
+fn canonical_subtag(index: usize, part: &str) -> String {
+    if index == 0 { return part.to_ascii_lowercase(); }
+    if part.len() == 4 && part.chars().all(|ch| ch.is_ascii_alphabetic()) {
+        let mut chars = part.chars();
+        let first = chars.next().map(|ch| ch.to_ascii_uppercase()).unwrap_or_default();
+        let rest = chars.as_str().to_ascii_lowercase();
+        return format!("{first}{rest}");
+    }
+    if (part.len() == 2 && part.chars().all(|ch| ch.is_ascii_alphabetic()))
+        || (part.len() == 3 && part.chars().all(|ch| ch.is_ascii_digit()))
+    {
+        return part.to_ascii_uppercase();
+    }
+    part.to_ascii_lowercase()
+}
+
+fn structural_parent(locale: &str) -> Option<String> {
+    locale.rsplit_once('-').map(|(parent, _)| parent.to_string())
 }
 
 fn select_cardinal_r0(operands: NumberOperands) -> &'static str {

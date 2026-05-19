@@ -50,8 +50,12 @@ public final class Icu4jReference {
     JsonNode generated = OBJECT_MAPPER.readTree(generatedPluralRulesPath.toFile());
     for (String pluralTypeName : List.of("cardinal", "ordinal")) {
       JsonNode locales = generated.path(pluralTypeName).path("locales");
-      List<String> localeIds = new ArrayList<>();
-      locales.fieldNames().forEachRemaining(localeIds::add);
+      JsonNode parents = generated.path(pluralTypeName).path("parents");
+      Set<String> localeIdSet = new LinkedHashSet<>();
+      locales.fieldNames().forEachRemaining(localeIdSet::add);
+      parents.fieldNames().forEachRemaining(localeIdSet::add);
+      addPluralProbeLocales(localeIdSet);
+      List<String> localeIds = new ArrayList<>(localeIdSet);
       localeIds.sort(String::compareTo);
 
       PluralRules.PluralType pluralType =
@@ -72,6 +76,25 @@ public final class Icu4jReference {
           System.out.println(OBJECT_MAPPER.writeValueAsString(row));
         }
       }
+    }
+  }
+
+  private static void addPluralProbeLocales(Set<String> localeIds) {
+    if (localeIds.contains("az")) {
+      localeIds.add("az-Arab");
+    }
+    if (localeIds.contains("en")) {
+      localeIds.add("en-US-u-nu-latn");
+    }
+    if (localeIds.contains("pt")) {
+      localeIds.add("pt-AO");
+      localeIds.add("pt-PT-u-nu-latn");
+    }
+    if (localeIds.contains("sr")) {
+      localeIds.add("sr-Latn");
+    }
+    if (localeIds.contains("zh")) {
+      localeIds.add("zh-Hant-TW");
     }
   }
 

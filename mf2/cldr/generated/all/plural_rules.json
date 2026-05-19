@@ -99,7 +99,7 @@
       "kn": "r2",
       "ko": "r7",
       "kok": "r2",
-      "kok_latn": "r2",
+      "kok-Latn": "r2",
       "ks": "r0",
       "ksb": "r0",
       "ksh": "r6",
@@ -152,7 +152,7 @@
       "prg": "r28",
       "ps": "r0",
       "pt": "r33",
-      "pt_pt": "r10",
+      "pt-PT": "r10",
       "rm": "r0",
       "ro": "r30",
       "rof": "r0",
@@ -226,6 +226,7 @@
       "zh": "r7",
       "zu": "r2"
     },
+    "parents": {},
     "rules": [
       {
         "categories": [
@@ -3763,7 +3764,7 @@
     "kn",
     "ko",
     "kok",
-    "kok_latn",
+    "kok-Latn",
     "ks",
     "ksb",
     "ksh",
@@ -3816,7 +3817,7 @@
     "prg",
     "ps",
     "pt",
-    "pt_pt",
+    "pt-PT",
     "rm",
     "ro",
     "rof",
@@ -3951,7 +3952,7 @@
       "kn": "r0",
       "ko": "r0",
       "kok": "r15",
-      "kok_latn": "r15",
+      "kok-Latn": "r15",
       "kw": "r16",
       "ky": "r0",
       "lij": "r17",
@@ -4006,6 +4007,7 @@
       "zh": "r0",
       "zu": "r0"
     },
+    "parents": {},
     "rules": [
       {
         "categories": [

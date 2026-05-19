@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 DATA = {'cardinal': {'locales': {'ar': 'r3', 'en': 'r0', 'fr': 'r1', 'ja': 'r4', 'ru': 'r2'},
+              'parents': {},
               'rules': [{'categories': [{'category': 'one',
                                          'condition': [[{'operand': 'i',
                                                          'operator': '=',
@@ -115,6 +116,7 @@ DATA = {'cardinal': {'locales': {'ar': 'r3', 'en': 'r0', 'fr': 'r1', 'ja': 'r4',
               'generator': 'mf2/cldr/generator/generate_plural_rules.py',
               'source': 'unicode-org/cldr-json cldr-core supplemental plurals/ordinals'},
  'ordinal': {'locales': {'ar': 'r2', 'en': 'r0', 'fr': 'r1', 'ja': 'r2', 'ru': 'r2'},
+             'parents': {},
              'rules': [{'categories': [{'category': 'one',
                                         'condition': [[{'modulo': 10,
                                                         'operand': 'n',
@@ -193,7 +195,11 @@ def select(value: Any, locale: str, plural_type: str = "cardinal") -> str:
     rules_for_type = DATA.get(plural_type)
     if rules_for_type is None:
         return "other"
-    rule_id = _lookup_rule_id(rules_for_type["locales"], locale)
+    rule_id = _lookup_rule_id(
+        rules_for_type["locales"],
+        rules_for_type.get("parents", {}),
+        locale,
+    )
     if rule_id is None:
         return "other"
     rule_set = next(rule for rule in rules_for_type["rules"] if rule["id"] == rule_id)
@@ -205,18 +211,55 @@ def select(value: Any, locale: str, plural_type: str = "cardinal") -> str:
     return "other"
 
 
-def _lookup_rule_id(locales: dict[str, str], locale: str) -> str | None:
-    for candidate in _locale_lookup_chain(locale):
+def _lookup_rule_id(locales: dict[str, str], parents: dict[str, str], locale: str) -> str | None:
+    for candidate in _plural_lookup_chain(locale, parents):
         rule_id = locales.get(candidate)
         if rule_id is not None:
             return rule_id
     return None
 
 
-def _locale_lookup_chain(locale: str) -> list[str]:
-    normalized = locale.strip().replace("-", "_").lower()
-    parts = [part for part in normalized.split("_") if part]
-    return ["_".join(parts[:length]) for length in range(len(parts), 0, -1)]
+def _plural_lookup_chain(locale: str, parents: dict[str, str]) -> list[str]:
+    chain: list[str] = []
+    _append_lookup_chain(_canonical_locale_tag(locale), parents, chain)
+    return chain
+
+
+def _append_lookup_chain(locale: str, parents: dict[str, str], chain: list[str]) -> None:
+    current = locale
+    while current:
+        if current in chain:
+            return
+        chain.append(current)
+        parent = parents.get(current)
+        if parent is not None:
+            _append_lookup_chain(parent, parents, chain)
+        current = _structural_parent(current)
+
+
+def _canonical_locale_tag(locale: str) -> str:
+    parts = []
+    for index, part in enumerate(locale.strip().replace("_", "-").split("-")):
+        if not part:
+            continue
+        if len(part) == 1:
+            break
+        parts.append(_canonical_subtag(index, part))
+    return "-".join(parts)
+
+
+def _canonical_subtag(index: int, part: str) -> str:
+    if index == 0:
+        return part.lower()
+    if len(part) == 4 and part.isalpha():
+        return part.title()
+    if (len(part) == 2 and part.isalpha()) or (len(part) == 3 and part.isdigit()):
+        return part.upper()
+    return part.lower()
+
+
+def _structural_parent(locale: str) -> str:
+    return locale.rsplit("-", 1)[0] if "-" in locale else ""
 
 
 def _matches_condition(operands: NumberOperands, condition: list[list[dict[str, Any]]]) -> bool:

@@ -27,9 +27,9 @@ Both outputs are useful:
 
 Current size smoke results from CLDR `main` on 2026-05-19:
 
-- `en,fr,ru,ar,ja`: JSON ~12 KB, Python ~14 KB, Rust ~8 KB, Swift ~9 KB
-- all CLDR plural locales: JSON ~124 KB, Python ~116 KB, Rust ~61 KB, Swift
-  ~81 KB
+- `en,fr,ru,ar,ja`: JSON ~12 KB, Python ~15 KB, Rust ~9 KB, Swift ~10 KB
+- all CLDR plural locales: JSON ~125 KB, Python ~117 KB, Rust ~63 KB, Swift
+  ~82 KB
 
 For embedded clients, start with the product locale allowlist. The all-locale
 Rust/Swift generated implementation is still small, but the allowlist keeps app
@@ -41,6 +41,14 @@ The generator emits:
 - `python/plural_rules.py`: Python evaluator and generated data
 - `rust/plural_rules.rs`: Rust evaluator and generated data
 - `swift/PluralRules.swift`: Swift evaluator and generated data
+
+Locale IDs in generated data are canonical BCP47-style keys such as `pt-PT`,
+not CLDR underscore keys. The generated evaluators accept underscore input for
+compatibility, strip extensions such as `u-nu-latn` for plural lookup, and walk
+the structural fallback chain. The `parents` maps are generated only from
+plural-specific parent locale data. CLDR's general resource `parentLocales`
+rules are intentionally not applied to plural selection; ICU4J comparison probes
+cover cases like `pt-AO`, `sr-Latn`, `az-Arab`, and Unicode extensions.
 
 The current Rust runtime includes the generated Rust file by path. The Python
 and Swift runtime starters vendor the generated minimal file into their package

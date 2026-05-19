@@ -9,6 +9,7 @@ The Python package keeps the runtime layers separate:
 - `mf2_runtime.formatter`: model-to-string formatting and selector matching
 - `mf2_runtime.plural`: small runtime wrapper around generated CLDR plural code
 - `mf2_runtime.generated_plural_rules`: generated CLDR cardinal/ordinal rules
+- `mf2_runtime.locale`: tiny BCP47-first locale IDs and structural lookup
 - `mf2_runtime.errors`: public runtime errors
 - `mf2_runtime.model`: compatibility facade for the early API
 - `mf2_runtime.conformance`: shared fixture runner
@@ -27,12 +28,14 @@ Current scope:
   function pass-through, markup-as-parts-stripped string output, and exact-match
   selectors with catch-all fallback
 - cardinal plural category selection for the initial locale set
+- BCP47 locale canonicalization, underscore compatibility, extension stripping,
+  and structural fallback for plural/catalog lookup
 
 Planned:
 
 - source parser and diagnostics
 - `format_to_parts`
-- locale-sensitive number/date/plural behavior
+- locale-sensitive number/date formatting and richer locale negotiation
 - pytest-compatible conformance runner once the core package shape is stable
 
 Run:
