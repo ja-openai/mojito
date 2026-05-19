@@ -2,6 +2,7 @@ import './admin-glossary-terms-panel.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  type ComponentProps,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   useCallback,
@@ -65,7 +66,7 @@ import {
 } from '../../utils/request-attachments';
 import { getUserLabel } from '../../utils/userDisplayName';
 import { GlossaryCurationView, GlossarySuggestionDetailView } from './GlossaryCurationView';
-import { GlossaryTermsListView } from './GlossaryTermsListView';
+import { GlossaryTermsListControls, GlossaryTermsListView } from './GlossaryTermsListView';
 
 const TERM_TYPES = ['BRAND', 'PRODUCT', 'UI_LABEL', 'LEGAL', 'TECHNICAL', 'GENERAL'] as const;
 const ENFORCEMENTS = ['HARD', 'SOFT', 'REVIEW_ONLY'] as const;
@@ -2063,6 +2064,134 @@ export function AdminGlossaryTermsPanel({
     '--glossary-term-admin-primary-width': `${primaryPaneWidthPct}%`,
   } as CSSProperties;
 
+  const glossaryTermsListProps = {
+    canManageTerms,
+    searchDraft,
+    onChangeSearch: (value) => {
+      setSearchDraft(value);
+      setStatusNotice(null);
+    },
+    searchField,
+    searchFieldOptions: TERM_SEARCH_FIELD_OPTIONS,
+    onChangeSearchField: (value) => {
+      setSearchField(value);
+      setStatusNotice(null);
+    },
+    localeOptions,
+    selectedLocaleTags,
+    onChangeSelectedLocaleTags: (next) => {
+      setSelectedLocaleTags(sortLocaleTagsByOptions(next, localeOptions));
+      setStatusNotice(null);
+    },
+    statusFilterOptions: STATUS_FILTER_OPTIONS.map((option) => ({
+      value: option.value,
+      label: option.label,
+    })),
+    selectedStatusFilter,
+    onChangeSelectedStatusFilter: setSelectedStatusFilter,
+    onOpenExtract: () => {
+      setActiveSuggestionId(null);
+      setExtractOpen(true);
+    },
+    onOpenCreate: openCreateModal,
+    canImport: canImport && typeof onOpenImport === 'function',
+    onOpenImport: () => onOpenImport?.(),
+    canExport: canExport && typeof onOpenExport === 'function',
+    onOpenExport: () => onOpenExport?.(),
+    termsTotalCount: termsQuery.data?.totalCount ?? 0,
+    visibleTermsCount: terms.length,
+    termsLimit: termsLimitNumber,
+    onChangeTermsLimit: (value) => setTermsLimit(String(normalizeTermsLimit(value))),
+    termsLimitOptions: TERMS_LIMIT_PRESETS,
+    visibleLocaleColumnLimit,
+    onChangeVisibleLocaleColumnLimit: (value) =>
+      setVisibleLocaleColumnLimit(
+        Math.min(Math.max(1, value), Math.max(selectedLocaleTags.length, 1)),
+      ),
+    visibleLocaleColumnLimitOptions,
+    localeColumnSummary,
+    selectedTermIdsCount: selectedTermIds.length,
+    isCreatingTerminologyReview: terminologyReviewMutation.isPending,
+    onCreateTerminologyReview: () =>
+      openTerminologyReviewModal(
+        selectedTermIds.length > 0 ? 'selected' : 'glossary',
+        selectedTermIds.length > 0 ? selectedTermIds : [],
+      ),
+    onCreateSelectedTerminologyReview: () =>
+      openTerminologyReviewModal('selected', selectedTermIds),
+    onOpenBatch: () => setBatchOpen(true),
+    onClearSelection: () => setSelectedTermIds([]),
+    statusNotice: !editorOpen ? statusNotice : null,
+    isLoading: termsQuery.isLoading,
+    errorMessage: termsQuery.isError
+      ? termsQuery.error instanceof Error
+        ? termsQuery.error.message
+        : 'Could not load glossary terms.'
+      : null,
+    terms,
+    displayedLocaleTags,
+    allVisibleSelected,
+    onToggleSelectAll: () =>
+      setSelectedTermIds(allVisibleSelected ? [] : terms.map((term) => term.tmTextUnitId)),
+    onOpenEditTerm: openEditModal,
+    onOpenInlineTranslationEdit: openEditModal,
+    activeTermId: editorOpen ? (editorDraft.tmTextUnitId ?? null) : null,
+    selectedTermIds,
+    onToggleTermSelection: (tmTextUnitId, checked) =>
+      setSelectedTermIds((current) =>
+        checked
+          ? Array.from(new Set([...current, tmTextUnitId]))
+          : current.filter((id) => id !== tmTextUnitId),
+      ),
+    getWorkbenchHref: (tmTextUnitId, localeTags = workbenchLocaleTags) => {
+      const params = new URLSearchParams();
+      params.set('tmTextUnitId', String(tmTextUnitId));
+      params.set('repo', String(glossary.backingRepository.id));
+      localeTags.forEach((localeTag) => params.append('locale', localeTag));
+      return `/workbench?${params.toString()}`;
+    },
+    getWorkbenchState: (tmTextUnitId, localeTags = workbenchLocaleTags) =>
+      buildGlossaryWorkbenchState({
+        glossaryId: glossary.id,
+        glossaryName: glossary.name,
+        backingRepositoryId: glossary.backingRepository.id,
+        backingRepositoryName: glossary.backingRepository.name,
+        assetPath: glossary.assetPath,
+        localeTags,
+        tmTextUnitId,
+      }),
+    statusOptions: [...STATUSES],
+    getStatusLabel: (status) => STATUS_LABELS[status as (typeof STATUSES)[number]] ?? status,
+    getTermTypeLabel: (termType) =>
+      TERM_TYPE_LABELS[termType as (typeof TERM_TYPES)[number]] ?? termType,
+    getEnforcementLabel: (enforcement) =>
+      ENFORCEMENT_LABELS[enforcement as (typeof ENFORCEMENTS)[number]] ?? enforcement,
+    isChangingStatus: statusMutation.isPending,
+    openStatusTermId,
+    onOpenStatusTermIdChange: (tmTextUnitId, nextOpen) => {
+      setOpenStatusTermId((current) => {
+        if (nextOpen) {
+          return tmTextUnitId;
+        }
+        return current === tmTextUnitId ? null : current;
+      });
+    },
+    onChangeTermStatus: (term, status) => statusMutation.mutate({ term, status }),
+    canEditTranslationLocale: (localeTag) => canManageTerms || canEditLocale(user, localeTag),
+    savingTranslationKey:
+      inlineTranslationMutation.isPending && inlineTranslationMutation.variables
+        ? `${inlineTranslationMutation.variables.term.tmTextUnitId}:${inlineTranslationMutation.variables.localeTag.toLowerCase()}`
+        : null,
+    onSaveTermTranslation: async (term, localeTag, value) => {
+      await inlineTranslationMutation.mutateAsync({
+        term,
+        localeTag,
+        target: value.target,
+        targetComment: value.targetComment,
+      });
+    },
+  } satisfies ComponentProps<typeof GlossaryTermsListView>;
+
   return (
     <section
       className={`settings-card glossary-term-admin${editorOpen ? ' glossary-term-admin--editing' : ''}`}
@@ -2072,6 +2201,7 @@ export function AdminGlossaryTermsPanel({
           {statusNotice.message}
         </p>
       ) : null}
+      {!extractOpen ? <GlossaryTermsListControls {...glossaryTermsListProps} /> : null}
 
       <div
         className={`glossary-term-admin__workspace${
@@ -2174,148 +2304,7 @@ export function AdminGlossaryTermsPanel({
               pendingSuggestionActions={pendingSuggestionActions}
             />
           ) : (
-            <GlossaryTermsListView
-              canManageTerms={canManageTerms}
-              searchDraft={searchDraft}
-              onChangeSearch={(value) => {
-                setSearchDraft(value);
-                setStatusNotice(null);
-              }}
-              searchField={searchField}
-              searchFieldOptions={TERM_SEARCH_FIELD_OPTIONS}
-              onChangeSearchField={(value) => {
-                setSearchField(value);
-                setStatusNotice(null);
-              }}
-              localeOptions={localeOptions}
-              selectedLocaleTags={selectedLocaleTags}
-              onChangeSelectedLocaleTags={(next) => {
-                setSelectedLocaleTags(sortLocaleTagsByOptions(next, localeOptions));
-                setStatusNotice(null);
-              }}
-              statusFilterOptions={STATUS_FILTER_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-              selectedStatusFilter={selectedStatusFilter}
-              onChangeSelectedStatusFilter={setSelectedStatusFilter}
-              onOpenExtract={() => {
-                setActiveSuggestionId(null);
-                setExtractOpen(true);
-              }}
-              onOpenCreate={openCreateModal}
-              canImport={canImport && typeof onOpenImport === 'function'}
-              onOpenImport={() => onOpenImport?.()}
-              canExport={canExport && typeof onOpenExport === 'function'}
-              onOpenExport={() => onOpenExport?.()}
-              termsTotalCount={termsQuery.data?.totalCount ?? 0}
-              visibleTermsCount={terms.length}
-              termsLimit={termsLimitNumber}
-              onChangeTermsLimit={(value) => setTermsLimit(String(normalizeTermsLimit(value)))}
-              termsLimitOptions={TERMS_LIMIT_PRESETS}
-              visibleLocaleColumnLimit={visibleLocaleColumnLimit}
-              onChangeVisibleLocaleColumnLimit={(value) =>
-                setVisibleLocaleColumnLimit(
-                  Math.min(Math.max(1, value), Math.max(selectedLocaleTags.length, 1)),
-                )
-              }
-              visibleLocaleColumnLimitOptions={visibleLocaleColumnLimitOptions}
-              localeColumnSummary={localeColumnSummary}
-              selectedTermIdsCount={selectedTermIds.length}
-              isCreatingTerminologyReview={terminologyReviewMutation.isPending}
-              onCreateTerminologyReview={() =>
-                openTerminologyReviewModal(
-                  selectedTermIds.length > 0 ? 'selected' : 'glossary',
-                  selectedTermIds.length > 0 ? selectedTermIds : [],
-                )
-              }
-              onCreateSelectedTerminologyReview={() =>
-                openTerminologyReviewModal('selected', selectedTermIds)
-              }
-              onOpenBatch={() => setBatchOpen(true)}
-              onClearSelection={() => setSelectedTermIds([])}
-              statusNotice={!editorOpen ? statusNotice : null}
-              isLoading={termsQuery.isLoading}
-              errorMessage={
-                termsQuery.isError
-                  ? termsQuery.error instanceof Error
-                    ? termsQuery.error.message
-                    : 'Could not load glossary terms.'
-                  : null
-              }
-              terms={terms}
-              displayedLocaleTags={displayedLocaleTags}
-              allVisibleSelected={allVisibleSelected}
-              onToggleSelectAll={() =>
-                setSelectedTermIds(allVisibleSelected ? [] : terms.map((term) => term.tmTextUnitId))
-              }
-              onOpenEditTerm={openEditModal}
-              onOpenInlineTranslationEdit={openEditModal}
-              activeTermId={editorOpen ? (editorDraft.tmTextUnitId ?? null) : null}
-              selectedTermIds={selectedTermIds}
-              onToggleTermSelection={(tmTextUnitId, checked) =>
-                setSelectedTermIds((current) =>
-                  checked
-                    ? Array.from(new Set([...current, tmTextUnitId]))
-                    : current.filter((id) => id !== tmTextUnitId),
-                )
-              }
-              getWorkbenchHref={(tmTextUnitId, localeTags = workbenchLocaleTags) => {
-                const params = new URLSearchParams();
-                params.set('tmTextUnitId', String(tmTextUnitId));
-                params.set('repo', String(glossary.backingRepository.id));
-                localeTags.forEach((localeTag) => params.append('locale', localeTag));
-                return `/workbench?${params.toString()}`;
-              }}
-              getWorkbenchState={(tmTextUnitId, localeTags = workbenchLocaleTags) =>
-                buildGlossaryWorkbenchState({
-                  glossaryId: glossary.id,
-                  glossaryName: glossary.name,
-                  backingRepositoryId: glossary.backingRepository.id,
-                  backingRepositoryName: glossary.backingRepository.name,
-                  assetPath: glossary.assetPath,
-                  localeTags,
-                  tmTextUnitId,
-                })
-              }
-              statusOptions={[...STATUSES]}
-              getStatusLabel={(status) =>
-                STATUS_LABELS[status as (typeof STATUSES)[number]] ?? status
-              }
-              getTermTypeLabel={(termType) =>
-                TERM_TYPE_LABELS[termType as (typeof TERM_TYPES)[number]] ?? termType
-              }
-              getEnforcementLabel={(enforcement) =>
-                ENFORCEMENT_LABELS[enforcement as (typeof ENFORCEMENTS)[number]] ?? enforcement
-              }
-              isChangingStatus={statusMutation.isPending}
-              openStatusTermId={openStatusTermId}
-              onOpenStatusTermIdChange={(tmTextUnitId, nextOpen) => {
-                setOpenStatusTermId((current) => {
-                  if (nextOpen) {
-                    return tmTextUnitId;
-                  }
-                  return current === tmTextUnitId ? null : current;
-                });
-              }}
-              onChangeTermStatus={(term, status) => statusMutation.mutate({ term, status })}
-              canEditTranslationLocale={(localeTag) =>
-                canManageTerms || canEditLocale(user, localeTag)
-              }
-              savingTranslationKey={
-                inlineTranslationMutation.isPending && inlineTranslationMutation.variables
-                  ? `${inlineTranslationMutation.variables.term.tmTextUnitId}:${inlineTranslationMutation.variables.localeTag.toLowerCase()}`
-                  : null
-              }
-              onSaveTermTranslation={async (term, localeTag, value) => {
-                await inlineTranslationMutation.mutateAsync({
-                  term,
-                  localeTag,
-                  target: value.target,
-                  targetComment: value.targetComment,
-                });
-              }}
-            />
+            <GlossaryTermsListView {...glossaryTermsListProps} showControls={false} />
           )}
         </div>
         <div

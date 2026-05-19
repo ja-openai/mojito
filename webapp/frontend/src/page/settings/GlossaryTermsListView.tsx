@@ -26,6 +26,7 @@ type LocaleOption = {
 };
 
 type Props = {
+  showControls?: boolean;
   canManageTerms: boolean;
   searchDraft: string;
   onChangeSearch: (value: string) => void;
@@ -246,7 +247,53 @@ function GlossaryPrimaryActionMenu({
   );
 }
 
-export function GlossaryTermsListView({
+type GlossaryTermsListControlsProps = Pick<
+  Props,
+  | 'canManageTerms'
+  | 'searchDraft'
+  | 'onChangeSearch'
+  | 'searchField'
+  | 'searchFieldOptions'
+  | 'onChangeSearchField'
+  | 'localeOptions'
+  | 'selectedLocaleTags'
+  | 'onChangeSelectedLocaleTags'
+  | 'statusFilterOptions'
+  | 'selectedStatusFilter'
+  | 'onChangeSelectedStatusFilter'
+  | 'onOpenExtract'
+  | 'onOpenCreate'
+  | 'canImport'
+  | 'onOpenImport'
+  | 'canExport'
+  | 'onOpenExport'
+  | 'termsTotalCount'
+  | 'visibleTermsCount'
+  | 'termsLimit'
+  | 'onChangeTermsLimit'
+  | 'termsLimitOptions'
+  | 'visibleLocaleColumnLimit'
+  | 'onChangeVisibleLocaleColumnLimit'
+  | 'visibleLocaleColumnLimitOptions'
+  | 'localeColumnSummary'
+  | 'selectedTermIdsCount'
+  | 'isCreatingTerminologyReview'
+  | 'onCreateTerminologyReview'
+  | 'onCreateSelectedTerminologyReview'
+  | 'onOpenBatch'
+  | 'onClearSelection'
+  | 'statusNotice'
+>;
+
+function GlossarySubbarSeparator() {
+  return (
+    <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
+      ·
+    </span>
+  );
+}
+
+export function GlossaryTermsListControls({
   canManageTerms,
   searchDraft,
   onChangeSearch,
@@ -281,31 +328,256 @@ export function GlossaryTermsListView({
   onOpenBatch,
   onClearSelection,
   statusNotice,
-  isLoading,
-  errorMessage,
-  terms,
-  displayedLocaleTags,
-  allVisibleSelected,
-  onToggleSelectAll,
-  onOpenEditTerm,
-  onOpenInlineTranslationEdit,
-  activeTermId,
-  selectedTermIds,
-  onToggleTermSelection,
-  getWorkbenchHref,
-  getWorkbenchState,
-  statusOptions,
-  getStatusLabel,
-  getTermTypeLabel,
-  getEnforcementLabel,
-  isChangingStatus,
-  openStatusTermId,
-  onOpenStatusTermIdChange,
-  onChangeTermStatus,
-  canEditTranslationLocale,
-  savingTranslationKey,
-  onSaveTermTranslation,
-}: Props) {
+}: GlossaryTermsListControlsProps) {
+  const showLocaleColumnLimit = selectedLocaleTags.length > AUTO_VISIBLE_LOCALE_COLUMNS_CAP;
+  const selectedSearchFieldLabel =
+    searchFieldOptions.find((option) => option.value === searchField)?.label ?? 'Source';
+  const hasSelectedTerms = canManageTerms && selectedTermIdsCount > 0;
+  const reviewLabel = hasSelectedTerms
+    ? isCreatingTerminologyReview
+      ? 'Creating review…'
+      : 'Review selected'
+    : isCreatingTerminologyReview
+      ? 'Creating review…'
+      : 'Review glossary';
+  const canReviewTerms = hasSelectedTerms || termsTotalCount > 0;
+  const reviewAction = hasSelectedTerms
+    ? onCreateSelectedTerminologyReview
+    : onCreateTerminologyReview;
+
+  return (
+    <>
+      <div className="glossary-term-admin__toolbar">
+        <div className="glossary-term-admin__search">
+          <SearchControl
+            value={searchDraft}
+            onChange={onChangeSearch}
+            placeholder={getSearchPlaceholder(searchField)}
+            inputAriaLabel="Search glossary terms"
+            className="glossary-term-admin__search-control"
+            leading={
+              <MultiSectionFilterChip
+                ariaLabel="Choose glossary term search field"
+                closeOnSelection
+                align="left"
+                className="filter-chip glossary-term-admin__search-field"
+                classNames={{
+                  button: 'filter-chip__button',
+                  panel: 'filter-chip__panel',
+                  section: 'filter-chip__section',
+                  label: 'filter-chip__label',
+                  list: 'filter-chip__list',
+                  option: 'filter-chip__option',
+                }}
+                summary={selectedSearchFieldLabel}
+                sections={[
+                  {
+                    kind: 'radio',
+                    label: 'Search field',
+                    options: searchFieldOptions,
+                    value: searchField,
+                    onChange: (value) => onChangeSearchField(value as ApiGlossaryTermSearchField),
+                  },
+                ]}
+              />
+            }
+          />
+        </div>
+        <div className="glossary-term-admin__toolbar-row">
+          <div className="glossary-term-admin__filters">
+            <LocaleMultiSelect
+              label="Locale columns"
+              options={localeOptions}
+              selectedTags={selectedLocaleTags}
+              onChange={onChangeSelectedLocaleTags}
+              className="glossary-term-admin__filter-dropdown glossary-term-admin__filter-dropdown--locale"
+              buttonAriaLabel="Choose glossary locale columns"
+              align="right"
+            />
+            <SingleSelectDropdown
+              label="Status"
+              options={statusFilterOptions}
+              value={selectedStatusFilter}
+              onChange={onChangeSelectedStatusFilter}
+              className="glossary-term-admin__filter-dropdown glossary-term-admin__filter-dropdown--status"
+              buttonAriaLabel="Filter glossary terms by status"
+              placeholder="Status"
+              noResultsLabel="No statuses found"
+              searchable={false}
+            />
+          </div>
+          <div className="glossary-term-admin__actions">
+            {canManageTerms ? (
+              <GlossaryPrimaryActionMenu
+                onOpenCreate={onOpenCreate}
+                onOpenExtract={onOpenExtract}
+              />
+            ) : (
+              <button
+                type="button"
+                className="settings-button settings-button--primary"
+                onClick={onOpenCreate}
+              >
+                Propose term
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="glossary-term-admin__subbar">
+        <div className="glossary-term-admin__subbar-meta">
+          <span className="settings-hint">
+            {termsTotalCount > visibleTermsCount
+              ? `Showing first ${visibleTermsCount.toLocaleString()} of ${termsTotalCount.toLocaleString()} terms`
+              : `${termsTotalCount.toLocaleString()} terms`}
+          </span>
+          {localeColumnSummary ? (
+            <>
+              <GlossarySubbarSeparator />
+              <span className="settings-hint">{localeColumnSummary}</span>
+            </>
+          ) : null}
+        </div>
+        <div className="glossary-term-admin__subbar-actions">
+          {showLocaleColumnLimit ? (
+            <>
+              <NumericPresetDropdown
+                value={visibleLocaleColumnLimit}
+                buttonLabel={`Columns: ${visibleLocaleColumnLimit}`}
+                menuLabel="Visible locale columns"
+                presetOptions={visibleLocaleColumnLimitOptions.map((count) => ({
+                  value: count,
+                  label: String(count),
+                }))}
+                onChange={onChangeVisibleLocaleColumnLimit}
+                ariaLabel="Visible locale columns"
+                customInitialValue={selectedLocaleTags.length}
+                className="glossary-term-admin__subbar-dropdown"
+                buttonClassName="glossary-term-admin__subbar-button glossary-term-admin__subbar-button--dropdown"
+              />
+              <GlossarySubbarSeparator />
+            </>
+          ) : null}
+          <NumericPresetDropdown
+            value={termsLimit}
+            buttonLabel={`Limit: ${termsLimit}`}
+            menuLabel="Result limit"
+            presetOptions={termsLimitOptions.map((size) => ({
+              value: size,
+              label: String(size),
+            }))}
+            onChange={onChangeTermsLimit}
+            ariaLabel="Result limit"
+            className="glossary-term-admin__subbar-dropdown"
+            buttonClassName="glossary-term-admin__subbar-button glossary-term-admin__subbar-button--dropdown"
+          />
+          {canImport ? (
+            <>
+              <GlossarySubbarSeparator />
+              <button
+                type="button"
+                className="glossary-term-admin__subbar-button"
+                onClick={onOpenImport}
+              >
+                Import
+              </button>
+            </>
+          ) : null}
+          {canExport ? (
+            <>
+              <GlossarySubbarSeparator />
+              <button
+                type="button"
+                className="glossary-term-admin__subbar-button"
+                onClick={onOpenExport}
+              >
+                Export
+              </button>
+            </>
+          ) : null}
+          {hasSelectedTerms ? (
+            <>
+              <GlossarySubbarSeparator />
+              <span className="settings-hint glossary-term-admin__selection-summary">
+                {selectedTermIdsCount.toLocaleString()} selected
+              </span>
+              <GlossarySubbarSeparator />
+              <button
+                type="button"
+                className="glossary-term-admin__subbar-button"
+                onClick={onOpenBatch}
+              >
+                Batch edit
+              </button>
+            </>
+          ) : null}
+          {canManageTerms ? (
+            <>
+              <GlossarySubbarSeparator />
+              <button
+                type="button"
+                className="glossary-term-admin__subbar-button"
+                onClick={reviewAction}
+                disabled={isCreatingTerminologyReview || !canReviewTerms}
+              >
+                {reviewLabel}
+              </button>
+            </>
+          ) : null}
+          {hasSelectedTerms ? (
+            <>
+              <GlossarySubbarSeparator />
+              <button
+                type="button"
+                className="glossary-term-admin__subbar-button"
+                onClick={onClearSelection}
+              >
+                Clear selection
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
+
+      {statusNotice ? (
+        <p className={`settings-hint${statusNotice.kind === 'error' ? ' is-error' : ''}`}>
+          {statusNotice.message}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+export function GlossaryTermsListView(props: Props) {
+  const {
+    showControls = true,
+    canManageTerms,
+    isLoading,
+    errorMessage,
+    terms,
+    displayedLocaleTags,
+    allVisibleSelected,
+    onToggleSelectAll,
+    onOpenEditTerm,
+    onOpenInlineTranslationEdit,
+    activeTermId,
+    selectedTermIds,
+    onToggleTermSelection,
+    getWorkbenchHref,
+    getWorkbenchState,
+    statusOptions,
+    getStatusLabel,
+    getTermTypeLabel,
+    getEnforcementLabel,
+    isChangingStatus,
+    openStatusTermId,
+    onOpenStatusTermIdChange,
+    onChangeTermStatus,
+    canEditTranslationLocale,
+    savingTranslationKey,
+    onSaveTermTranslation,
+  } = props;
   const [editingTranslation, setEditingTranslation] = useState<{
     tmTextUnitId: number;
     localeTag: string;
@@ -314,7 +586,6 @@ export function GlossaryTermsListView({
   const [pendingEditExit, setPendingEditExit] = useState<PendingEditExit | null>(null);
   const termRowRefs = useRef(new Map<number, HTMLTableRowElement>());
   const emptyColSpan = displayedLocaleTags.length + (canManageTerms ? 3 : 2);
-  const showLocaleColumnLimit = selectedLocaleTags.length > AUTO_VISIBLE_LOCALE_COLUMNS_CAP;
   const tableStyle = {
     '--glossary-term-admin-grid-template': getTableGridTemplate(
       canManageTerms,
@@ -340,8 +611,6 @@ export function GlossaryTermsListView({
     onOpenEditTerm(term);
   };
   const activeTermIndex = terms.findIndex((term) => term.tmTextUnitId === activeTermId);
-  const selectedSearchFieldLabel =
-    searchFieldOptions.find((option) => option.value === searchField)?.label ?? 'Source';
   const focusTermRow = (tmTextUnitId: number) => {
     requestAnimationFrame(() => {
       termRowRefs.current.get(tmTextUnitId)?.focus();
@@ -426,234 +695,7 @@ export function GlossaryTermsListView({
 
   return (
     <>
-      <div className="glossary-term-admin__toolbar">
-        <div className="glossary-term-admin__search">
-          <SearchControl
-            value={searchDraft}
-            onChange={onChangeSearch}
-            placeholder={getSearchPlaceholder(searchField)}
-            inputAriaLabel="Search glossary terms"
-            className="glossary-term-admin__search-control"
-            leading={
-              <MultiSectionFilterChip
-                ariaLabel="Choose glossary term search field"
-                closeOnSelection
-                align="left"
-                className="filter-chip glossary-term-admin__search-field"
-                classNames={{
-                  button: 'filter-chip__button',
-                  panel: 'filter-chip__panel',
-                  section: 'filter-chip__section',
-                  label: 'filter-chip__label',
-                  list: 'filter-chip__list',
-                  option: 'filter-chip__option',
-                }}
-                summary={selectedSearchFieldLabel}
-                sections={[
-                  {
-                    kind: 'radio',
-                    label: 'Search field',
-                    options: searchFieldOptions,
-                    value: searchField,
-                    onChange: (value) => onChangeSearchField(value as ApiGlossaryTermSearchField),
-                  },
-                ]}
-              />
-            }
-          />
-        </div>
-        <div className="glossary-term-admin__toolbar-row">
-          <div className="glossary-term-admin__filters">
-            <LocaleMultiSelect
-              label="Locale columns"
-              options={localeOptions}
-              selectedTags={selectedLocaleTags}
-              onChange={onChangeSelectedLocaleTags}
-              className="glossary-term-admin__filter-dropdown glossary-term-admin__filter-dropdown--locale"
-              buttonAriaLabel="Choose glossary locale columns"
-              align="right"
-            />
-            <SingleSelectDropdown
-              label="Status"
-              options={statusFilterOptions}
-              value={selectedStatusFilter}
-              onChange={onChangeSelectedStatusFilter}
-              className="glossary-term-admin__filter-dropdown glossary-term-admin__filter-dropdown--status"
-              buttonAriaLabel="Filter glossary terms by status"
-              placeholder="Status"
-              noResultsLabel="No statuses found"
-              searchable={false}
-            />
-          </div>
-          <div className="glossary-term-admin__actions">
-            {canManageTerms ? (
-              <>
-                <button
-                  type="button"
-                  className="settings-button glossary-term-admin__review-action"
-                  onClick={onCreateTerminologyReview}
-                  disabled={isCreatingTerminologyReview || termsTotalCount === 0}
-                >
-                  {isCreatingTerminologyReview ? 'Creating review…' : 'Review glossary'}
-                </button>
-                <GlossaryPrimaryActionMenu
-                  onOpenCreate={onOpenCreate}
-                  onOpenExtract={onOpenExtract}
-                />
-              </>
-            ) : (
-              <button
-                type="button"
-                className="settings-button settings-button--primary"
-                onClick={onOpenCreate}
-              >
-                Propose term
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="glossary-term-admin__subbar">
-        <div className="glossary-term-admin__subbar-meta">
-          <span className="settings-hint">
-            {termsTotalCount > visibleTermsCount
-              ? `Showing first ${visibleTermsCount.toLocaleString()} of ${termsTotalCount.toLocaleString()} terms`
-              : `${termsTotalCount.toLocaleString()} terms`}
-          </span>
-          {localeColumnSummary ? (
-            <>
-              <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
-                ·
-              </span>
-              <span className="settings-hint">{localeColumnSummary}</span>
-            </>
-          ) : null}
-        </div>
-        <div className="glossary-term-admin__subbar-actions">
-          {showLocaleColumnLimit ? (
-            <>
-              <NumericPresetDropdown
-                value={visibleLocaleColumnLimit}
-                buttonLabel={`Columns: ${visibleLocaleColumnLimit}`}
-                menuLabel="Visible locale columns"
-                presetOptions={visibleLocaleColumnLimitOptions.map((count) => ({
-                  value: count,
-                  label: String(count),
-                }))}
-                onChange={onChangeVisibleLocaleColumnLimit}
-                ariaLabel="Visible locale columns"
-                customInitialValue={selectedLocaleTags.length}
-                className="glossary-term-admin__subbar-dropdown"
-                buttonClassName="glossary-term-admin__subbar-button glossary-term-admin__subbar-button--dropdown"
-              />
-              <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
-                ·
-              </span>
-            </>
-          ) : null}
-          <NumericPresetDropdown
-            value={termsLimit}
-            buttonLabel={`Limit: ${termsLimit}`}
-            menuLabel="Result limit"
-            presetOptions={termsLimitOptions.map((size) => ({
-              value: size,
-              label: String(size),
-            }))}
-            onChange={onChangeTermsLimit}
-            ariaLabel="Result limit"
-            className="glossary-term-admin__subbar-dropdown"
-            buttonClassName="glossary-term-admin__subbar-button glossary-term-admin__subbar-button--dropdown"
-          />
-          {canImport || canExport || (canManageTerms && selectedTermIdsCount > 0) ? (
-            <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
-              ·
-            </span>
-          ) : null}
-          {canImport ? (
-            <>
-              <button
-                type="button"
-                className="glossary-term-admin__subbar-button"
-                onClick={onOpenImport}
-              >
-                Import
-              </button>
-              {canExport || (canManageTerms && selectedTermIdsCount > 0) ? (
-                <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
-                  ·
-                </span>
-              ) : null}
-            </>
-          ) : null}
-          {canExport ? (
-            <>
-              <button
-                type="button"
-                className="glossary-term-admin__subbar-button"
-                onClick={onOpenExport}
-              >
-                Export
-              </button>
-              {canManageTerms && selectedTermIdsCount > 0 ? (
-                <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
-                  ·
-                </span>
-              ) : null}
-            </>
-          ) : null}
-          {canManageTerms && selectedTermIdsCount > 0 ? (
-            <>
-              {canImport || canExport ? (
-                <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
-                  ·
-                </span>
-              ) : null}
-              <span className="settings-hint glossary-term-admin__selection-summary">
-                {selectedTermIdsCount.toLocaleString()} selected
-              </span>
-              <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
-                ·
-              </span>
-              <button
-                type="button"
-                className="glossary-term-admin__subbar-button"
-                onClick={onOpenBatch}
-              >
-                Batch edit
-              </button>
-              <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
-                ·
-              </span>
-              <button
-                type="button"
-                className="glossary-term-admin__subbar-button"
-                onClick={onCreateSelectedTerminologyReview}
-                disabled={isCreatingTerminologyReview}
-              >
-                {isCreatingTerminologyReview ? 'Creating review…' : 'Review selected'}
-              </button>
-              <span className="glossary-term-admin__subbar-separator" aria-hidden="true">
-                ·
-              </span>
-              <button
-                type="button"
-                className="glossary-term-admin__subbar-button"
-                onClick={onClearSelection}
-              >
-                Clear selection
-              </button>
-            </>
-          ) : null}
-        </div>
-      </div>
-
-      {statusNotice ? (
-        <p className={`settings-hint${statusNotice.kind === 'error' ? ' is-error' : ''}`}>
-          {statusNotice.message}
-        </p>
-      ) : null}
-
+      {showControls ? <GlossaryTermsListControls {...props} /> : null}
       <div className="settings-table-wrapper">
         <table
           className={`settings-table glossary-term-admin__table${

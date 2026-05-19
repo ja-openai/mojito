@@ -160,14 +160,14 @@
 }
 
 .glossary-term-admin__toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
 }
 
 .glossary-term-admin__search {
-  min-width: 0;
+  flex: 1 1 24rem;
+  min-width: min(18rem, 100%);
 }
 
 .glossary-term-admin .settings-field--full {
@@ -185,14 +185,16 @@
 
 .glossary-term-admin__toolbar-row {
   align-items: center;
+  flex: 0 0 auto;
   justify-content: flex-end;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
+  margin-left: auto;
 }
 
 .glossary-term-admin__filters {
   align-items: center;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
   justify-content: flex-end;
   min-width: 0;
@@ -229,10 +231,6 @@
 
 .glossary-term-admin__primary-action {
   display: inline-flex;
-}
-
-.glossary-term-admin__review-action {
-  white-space: nowrap;
 }
 
 .glossary-term-admin__primary-action-button {
@@ -1422,7 +1420,6 @@
   }
 
   .glossary-term-admin__toolbar {
-    grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
   }
 
@@ -1444,8 +1441,7 @@
     justify-content: flex-start;
   }
 
-  .glossary-term-admin__toolbar-row,
-  .glossary-term-admin__filters {
+  .glossary-term-admin__toolbar-row {
     flex-wrap: wrap;
   }
 
