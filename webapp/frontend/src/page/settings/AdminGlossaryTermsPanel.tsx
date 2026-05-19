@@ -21,6 +21,7 @@ import {
   type ApiGlossaryTermIndexSuggestion,
   type ApiGlossaryTermIndexSuggestionGlossaryPresenceFilter,
   type ApiGlossaryTermIndexSuggestionReviewStatusFilter,
+  type ApiGlossaryTermSearchField,
   type ApiUpsertGlossaryTermRequest,
   batchUpdateGlossaryTerms,
   createGlossaryTerm,
@@ -121,6 +122,17 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'DEPRECATED', label: 'Deprecated' },
   { value: 'REJECTED', label: 'Rejected' },
 ] as const;
+const DEFAULT_TERM_SEARCH_FIELD: ApiGlossaryTermSearchField = 'SOURCE';
+const TERM_SEARCH_FIELD_OPTIONS: Array<{
+  value: ApiGlossaryTermSearchField;
+  label: string;
+}> = [
+  { value: 'SOURCE', label: 'Source' },
+  { value: 'TARGET', label: 'Target' },
+  { value: 'DEFINITION', label: 'Definition' },
+  { value: 'REFERENCES', label: 'References' },
+  { value: 'ALL', label: 'All' },
+];
 const DEFAULT_SUGGESTION_LIMIT = 50;
 const SUGGESTION_LIMIT_OPTIONS = [
   { value: 25, label: '25' },
@@ -154,6 +166,7 @@ type RepositoryOption = {
 
 type GlossaryWorkspacePrefs = {
   searchDraft: string;
+  searchField: ApiGlossaryTermSearchField;
   selectedLocaleTags: string[];
   selectedStatusFilter: string | null;
   termsLimit: number;
@@ -546,6 +559,15 @@ function normalizePersistedStatusFilter(value: unknown): string | null {
     : ACTIVE_STATUS_FILTER;
 }
 
+function normalizePersistedSearchField(value: unknown): ApiGlossaryTermSearchField {
+  if (typeof value !== 'string') {
+    return DEFAULT_TERM_SEARCH_FIELD;
+  }
+  return TERM_SEARCH_FIELD_OPTIONS.some((option) => option.value === value)
+    ? (value as ApiGlossaryTermSearchField)
+    : DEFAULT_TERM_SEARCH_FIELD;
+}
+
 function normalizePersistedPositiveNumber(value: unknown, fallback: number) {
   const next = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(next) && next >= 1 ? Math.round(next) : fallback;
@@ -624,6 +646,7 @@ function loadGlossaryWorkspacePrefs(glossaryId: number): GlossaryWorkspacePrefs 
     }
     return {
       searchDraft: typeof parsed.searchDraft === 'string' ? parsed.searchDraft : '',
+      searchField: normalizePersistedSearchField(parsed.searchField),
       selectedLocaleTags: dedupeLocaleTags(
         Array.isArray(parsed.selectedLocaleTags)
           ? parsed.selectedLocaleTags.filter(
@@ -788,6 +811,9 @@ export function AdminGlossaryTermsPanel({
   const referenceScreenshotInputRef = useRef<HTMLInputElement | null>(null);
   const initialSelectedLocaleTags = persistedWorkspacePrefs?.selectedLocaleTags ?? [];
   const [searchDraft, setSearchDraft] = useState(persistedWorkspacePrefs?.searchDraft ?? '');
+  const [searchField, setSearchField] = useState<ApiGlossaryTermSearchField>(
+    persistedWorkspacePrefs?.searchField ?? DEFAULT_TERM_SEARCH_FIELD,
+  );
   const [selectedLocaleTags, setSelectedLocaleTags] = useState<string[]>(initialSelectedLocaleTags);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string | null>(
     persistedWorkspacePrefs?.selectedStatusFilter ?? ACTIVE_STATUS_FILTER,
@@ -898,6 +924,7 @@ export function AdminGlossaryTermsPanel({
     const nextPrefs = loadGlossaryWorkspacePrefs(glossary.id);
     const nextSelectedLocaleTags = nextPrefs?.selectedLocaleTags ?? [];
     setSearchDraft(nextPrefs?.searchDraft ?? '');
+    setSearchField(nextPrefs?.searchField ?? DEFAULT_TERM_SEARCH_FIELD);
     setSelectedLocaleTags(nextSelectedLocaleTags);
     setSelectedStatusFilter(nextPrefs?.selectedStatusFilter ?? ACTIVE_STATUS_FILTER);
     setTermsLimit(String(normalizeTermsLimit(nextPrefs?.termsLimit)));
@@ -940,6 +967,7 @@ export function AdminGlossaryTermsPanel({
     }
     saveGlossaryWorkspacePrefs(glossary.id, {
       searchDraft,
+      searchField,
       selectedLocaleTags,
       selectedStatusFilter,
       termsLimit: normalizeTermsLimit(termsLimit),
@@ -955,6 +983,7 @@ export function AdminGlossaryTermsPanel({
     glossary.id,
     primaryPaneWidthPct,
     searchDraft,
+    searchField,
     selectedLocaleTags,
     selectedStatusFilter,
     termsLimit,
@@ -992,12 +1021,14 @@ export function AdminGlossaryTermsPanel({
       'glossary-terms',
       glossary.id,
       searchDraft,
+      searchField,
       selectedLocaleTags.join('|'),
       termsLimitNumber,
     ],
     queryFn: () =>
       fetchGlossaryTerms(glossary.id, {
         search: searchDraft,
+        searchField,
         localeTags: selectedLocaleTags,
         limit: termsLimitNumber,
       }),
@@ -2148,6 +2179,12 @@ export function AdminGlossaryTermsPanel({
               searchDraft={searchDraft}
               onChangeSearch={(value) => {
                 setSearchDraft(value);
+                setStatusNotice(null);
+              }}
+              searchField={searchField}
+              searchFieldOptions={TERM_SEARCH_FIELD_OPTIONS}
+              onChangeSearchField={(value) => {
+                setSearchField(value);
                 setStatusNotice(null);
               }}
               localeOptions={localeOptions}

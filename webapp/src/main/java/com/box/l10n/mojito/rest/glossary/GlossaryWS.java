@@ -936,11 +936,16 @@ public class GlossaryWS {
   public SearchGlossaryTermsResponse searchGlossaryTerms(
       @PathVariable Long glossaryId,
       @RequestParam(name = "search", required = false) String searchQuery,
+      @RequestParam(name = "searchField", required = false) String searchField,
       @RequestParam(name = "locale", required = false) List<String> localeTags,
       @RequestParam(name = "limit", required = false) Integer limit) {
     try {
+      GlossaryTermService.SearchField resolvedSearchField =
+          GlossaryTermService.SearchField.fromRequest(
+              searchField, GlossaryTermService.SearchField.SOURCE);
       GlossaryTermService.SearchTermsView view =
-          glossaryTermService.searchTerms(glossaryId, searchQuery, localeTags, limit);
+          glossaryTermService.searchTerms(
+              glossaryId, searchQuery, resolvedSearchField, localeTags, limit);
       return new SearchGlossaryTermsResponse(
           view.terms().stream().map(this::toGlossaryTermResponse).toList(),
           view.totalCount(),

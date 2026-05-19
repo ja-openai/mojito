@@ -110,6 +110,25 @@ public class GlossaryTermService {
           "with",
           "your");
 
+  public enum SearchField {
+    SOURCE,
+    DEFINITION,
+    TARGET,
+    REFERENCES,
+    ALL;
+
+    public static SearchField fromRequest(String value, SearchField defaultValue) {
+      if (value == null || value.trim().isEmpty()) {
+        return defaultValue;
+      }
+      try {
+        return SearchField.valueOf(value.trim().replace('-', '_').toUpperCase(Locale.ROOT));
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("Unknown glossary term search field: " + value);
+      }
+    }
+  }
+
   private final GlossaryRepository glossaryRepository;
   private final GlossaryStorageService glossaryStorageService;
   private final GlossaryTermMetadataRepository glossaryTermMetadataRepository;
@@ -171,6 +190,16 @@ public class GlossaryTermService {
   @Transactional(readOnly = true)
   public SearchTermsView searchTerms(
       Long glossaryId, String searchQuery, List<String> localeTags, Integer limit) {
+    return searchTerms(glossaryId, searchQuery, SearchField.ALL, localeTags, limit);
+  }
+
+  @Transactional(readOnly = true)
+  public SearchTermsView searchTerms(
+      Long glossaryId,
+      String searchQuery,
+      SearchField searchField,
+      List<String> localeTags,
+      Integer limit) {
     requireGlossaryReader();
 
     Glossary glossary = getGlossary(glossaryId);
@@ -196,6 +225,7 @@ public class GlossaryTermService {
         loadLocalizedTextUnits(asset, resolvedLocaleTags);
 
     String normalizedSearchQuery = normalizeSearchQuery(searchQuery);
+    SearchField resolvedSearchField = searchField == null ? SearchField.SOURCE : searchField;
     List<TermView> termViews =
         sourceTextUnits.stream()
             .map(
@@ -207,7 +237,7 @@ public class GlossaryTermService {
                         evidenceByMetadataId,
                         primaryLinksByMetadataId,
                         extractedTermsByNormalizedKey))
-            .filter(term -> matchesSearch(term, normalizedSearchQuery))
+            .filter(term -> matchesSearch(term, normalizedSearchQuery, resolvedSearchField))
             .sorted(
                 Comparator.comparing(TermView::source, String.CASE_INSENSITIVE_ORDER)
                     .thenComparing(TermView::termKey, String.CASE_INSENSITIVE_ORDER))
@@ -1442,28 +1472,49 @@ public class GlossaryTermService {
     }
   }
 
-  private boolean matchesSearch(TermView term, String normalizedSearchQuery) {
+  private boolean matchesSearch(
+      TermView term, String normalizedSearchQuery, SearchField searchField) {
     if (normalizedSearchQuery == null) {
       return true;
     }
-    if (contains(term.source(), normalizedSearchQuery)
-        || contains(term.termKey(), normalizedSearchQuery)
-        || contains(term.sourceComment(), normalizedSearchQuery)
-        || contains(term.definition(), normalizedSearchQuery)
-        || contains(term.partOfSpeech(), normalizedSearchQuery)
-        || contains(term.termType(), normalizedSearchQuery)
-        || contains(term.status(), normalizedSearchQuery)
-        || contains(term.enforcement(), normalizedSearchQuery)) {
-      return true;
-    }
-    return term.translations().stream()
+    switch (searchField == null ? SearchField.SOURCE : searchField) {
+      case SOURCE:
+        return contains(term.source(), normalizedSearchQuery);
+      case DEFINITION:
+        return contains(term.sourceComment(), normalizedSearchQuery)
+            || contains(term.definition(), normalizedSearchQuery);
+      case TARGET:
+        return term.translations().stream()
             .anyMatch(
                 translation ->
                     contains(translation.localeTag(), normalizedSearchQuery)
                         || contains(translation.target(), normalizedSearchQuery)
-                        || contains(translation.targetComment(), normalizedSearchQuery))
-        || term.evidence().stream()
+                        || contains(translation.targetComment(), normalizedSearchQuery));
+      case REFERENCES:
+        return term.evidence().stream()
             .anyMatch(evidence -> contains(evidence.caption(), normalizedSearchQuery));
+      case ALL:
+        if (contains(term.source(), normalizedSearchQuery)
+            || contains(term.termKey(), normalizedSearchQuery)
+            || contains(term.sourceComment(), normalizedSearchQuery)
+            || contains(term.definition(), normalizedSearchQuery)
+            || contains(term.partOfSpeech(), normalizedSearchQuery)
+            || contains(term.termType(), normalizedSearchQuery)
+            || contains(term.status(), normalizedSearchQuery)
+            || contains(term.enforcement(), normalizedSearchQuery)
+            || contains(term.provenance(), normalizedSearchQuery)) {
+          return true;
+        }
+        return term.translations().stream()
+                .anyMatch(
+                    translation ->
+                        contains(translation.localeTag(), normalizedSearchQuery)
+                            || contains(translation.target(), normalizedSearchQuery)
+                            || contains(translation.targetComment(), normalizedSearchQuery))
+            || term.evidence().stream()
+                .anyMatch(evidence -> contains(evidence.caption(), normalizedSearchQuery));
+    }
+    return false;
   }
 
   private boolean contains(String value, String normalizedSearchQuery) {

@@ -90,6 +90,8 @@ export type ApiGlossaryTermsResponse = {
   localeTags: string[];
 };
 
+export type ApiGlossaryTermSearchField = 'SOURCE' | 'DEFINITION' | 'TARGET' | 'REFERENCES' | 'ALL';
+
 export type ApiGlossaryWorkspaceSummary = {
   totalTerms: number;
   approvedTermCount: number;
@@ -501,6 +503,7 @@ export async function fetchGlossaryTerms(
   glossaryId: number,
   options?: {
     search?: string;
+    searchField?: ApiGlossaryTermSearchField;
     localeTags?: string[];
     limit?: number;
   },
@@ -508,6 +511,9 @@ export async function fetchGlossaryTerms(
   const params = new URLSearchParams();
   if (options?.search?.trim()) {
     params.set('search', options.search.trim());
+  }
+  if (options?.searchField) {
+    params.set('searchField', options.searchField);
   }
   options?.localeTags?.forEach((localeTag) => {
     const normalized = localeTag.trim();

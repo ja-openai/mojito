@@ -174,8 +174,13 @@
   grid-column: 1 / -1;
 }
 
-.glossary-term-admin__search .settings-input {
+.glossary-term-admin__search .settings-input,
+.glossary-term-admin__search-control {
   width: 100%;
+}
+
+.glossary-term-admin__search-field .chip-dropdown__summary {
+  white-space: nowrap;
 }
 
 .glossary-term-admin__toolbar-row {

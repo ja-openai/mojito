@@ -1,18 +1,22 @@
+import '../../components/filters/filter-chip.css';
+
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 
-import type { ApiGlossaryTerm } from '../../api/glossaries';
+import type { ApiGlossaryTerm, ApiGlossaryTermSearchField } from '../../api/glossaries';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { getAnchoredDropdownPanelStyle } from '../../components/dropdownPosition';
+import { MultiSectionFilterChip } from '../../components/filters/MultiSectionFilterChip';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { PillDropdown } from '../../components/PillDropdown';
+import { SearchControl } from '../../components/SearchControl';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 
-type SelectOption = {
-  value: string;
+type SelectOption<T extends string = string> = {
+  value: T;
   label: string;
 };
 
@@ -25,6 +29,9 @@ type Props = {
   canManageTerms: boolean;
   searchDraft: string;
   onChangeSearch: (value: string) => void;
+  searchField: ApiGlossaryTermSearchField;
+  searchFieldOptions: Array<SelectOption<ApiGlossaryTermSearchField>>;
+  onChangeSearchField: (value: ApiGlossaryTermSearchField) => void;
   localeOptions: LocaleOption[];
   selectedLocaleTags: string[];
   onChangeSelectedLocaleTags: (next: string[]) => void;
@@ -121,6 +128,22 @@ function getTableGridTemplate(canManageTerms: boolean, localeColumnCount: number
   const localeTracks =
     localeColumnCount > 0 ? ` repeat(${localeColumnCount}, minmax(12rem, 1fr))` : '';
   return `${checkboxTrack}${sourceTrack} ${statusTrack}${localeTracks}`;
+}
+
+function getSearchPlaceholder(searchField: ApiGlossaryTermSearchField) {
+  switch (searchField) {
+    case 'DEFINITION':
+      return 'Search definitions';
+    case 'TARGET':
+      return 'Search targets';
+    case 'REFERENCES':
+      return 'Search references';
+    case 'ALL':
+      return 'Search all term fields';
+    case 'SOURCE':
+    default:
+      return 'Search source terms';
+  }
 }
 
 function GlossaryPrimaryActionMenu({
@@ -227,6 +250,9 @@ export function GlossaryTermsListView({
   canManageTerms,
   searchDraft,
   onChangeSearch,
+  searchField,
+  searchFieldOptions,
+  onChangeSearchField,
   localeOptions,
   selectedLocaleTags,
   onChangeSelectedLocaleTags,
@@ -314,6 +340,8 @@ export function GlossaryTermsListView({
     onOpenEditTerm(term);
   };
   const activeTermIndex = terms.findIndex((term) => term.tmTextUnitId === activeTermId);
+  const selectedSearchFieldLabel =
+    searchFieldOptions.find((option) => option.value === searchField)?.label ?? 'Source';
   const focusTermRow = (tmTextUnitId: number) => {
     requestAnimationFrame(() => {
       termRowRefs.current.get(tmTextUnitId)?.focus();
@@ -400,12 +428,38 @@ export function GlossaryTermsListView({
     <>
       <div className="glossary-term-admin__toolbar">
         <div className="glossary-term-admin__search">
-          <input
-            type="search"
-            className="settings-input"
-            placeholder="Search source, definition, target, or references"
+          <SearchControl
             value={searchDraft}
-            onChange={(event) => onChangeSearch(event.target.value)}
+            onChange={onChangeSearch}
+            placeholder={getSearchPlaceholder(searchField)}
+            inputAriaLabel="Search glossary terms"
+            className="glossary-term-admin__search-control"
+            leading={
+              <MultiSectionFilterChip
+                ariaLabel="Choose glossary term search field"
+                closeOnSelection
+                align="left"
+                className="filter-chip glossary-term-admin__search-field"
+                classNames={{
+                  button: 'filter-chip__button',
+                  panel: 'filter-chip__panel',
+                  section: 'filter-chip__section',
+                  label: 'filter-chip__label',
+                  list: 'filter-chip__list',
+                  option: 'filter-chip__option',
+                }}
+                summary={selectedSearchFieldLabel}
+                sections={[
+                  {
+                    kind: 'radio',
+                    label: 'Search field',
+                    options: searchFieldOptions,
+                    value: searchField,
+                    onChange: (value) => onChangeSearchField(value as ApiGlossaryTermSearchField),
+                  },
+                ]}
+              />
+            }
           />
         </div>
         <div className="glossary-term-admin__toolbar-row">

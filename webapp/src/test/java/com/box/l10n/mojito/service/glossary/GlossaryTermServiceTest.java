@@ -201,6 +201,45 @@ public class GlossaryTermServiceTest {
     assertThat(term.termIndexRepositoryCount()).isEqualTo(2);
   }
 
+  @Test
+  public void searchTermsCanScopeSearchToSourceOrDefinition() {
+    Glossary glossary = glossary(1L, "en");
+    Asset asset = asset(2L, glossary.getBackingRepository());
+    TextUnitDTO sourceMatch = sourceTextUnit(3L, "launch_plan", "Launch plan");
+    TextUnitDTO definitionMatch = sourceTextUnit(4L, "billing", "Billing");
+    definitionMatch.setComment("Launch plan terminology");
+
+    when(userService.isCurrentUserTranslationRole()).thenReturn(true);
+    when(glossaryRepository.findByIdWithBindings(glossary.getId()))
+        .thenReturn(Optional.of(glossary));
+    when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(asset);
+    when(textUnitSearcher.search(any())).thenReturn(List.of(sourceMatch, definitionMatch));
+    when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitIdIn(
+            glossary.getId(),
+            List.of(sourceMatch.getTmTextUnitId(), definitionMatch.getTmTextUnitId())))
+        .thenReturn(List.of());
+    when(termIndexExtractedTermRepository.findBySourceLocaleTagAndNormalizedKeyIn(eq("en"), any()))
+        .thenReturn(List.of());
+
+    GlossaryTermService.SearchTermsView sourceView =
+        glossaryTermService.searchTerms(
+            glossary.getId(), "launch plan", GlossaryTermService.SearchField.SOURCE, List.of(), 50);
+    GlossaryTermService.SearchTermsView definitionView =
+        glossaryTermService.searchTerms(
+            glossary.getId(),
+            "launch plan",
+            GlossaryTermService.SearchField.DEFINITION,
+            List.of(),
+            50);
+
+    assertThat(sourceView.terms())
+        .extracting(GlossaryTermService.TermView::source)
+        .containsExactly("Launch plan");
+    assertThat(definitionView.terms())
+        .extracting(GlossaryTermService.TermView::source)
+        .containsExactly("Billing");
+  }
+
   private Glossary glossary(Long id, String sourceLocaleTag) {
     Locale sourceLocale = new Locale();
     sourceLocale.setBcp47Tag(sourceLocaleTag);
