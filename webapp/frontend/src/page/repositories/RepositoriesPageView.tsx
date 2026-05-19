@@ -3,9 +3,11 @@ import '../../components/filters/filter-chip.css';
 import '../workbench/workbench-page.css';
 import './repositories-page.css';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 
+import { getAnchoredDropdownPanelStyle } from '../../components/dropdownPosition';
 import { MultiSectionFilterChip } from '../../components/filters/MultiSectionFilterChip';
 import type { LocaleOption } from '../../components/LocaleMultiSelect';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
@@ -110,7 +112,8 @@ type Props = {
   isRepositorySelectionEmpty: boolean;
 };
 
-const formatCount = (value: number) => (value === 0 ? '' : value);
+const countFormatter = new Intl.NumberFormat(undefined);
+const formatCount = (value: number) => (value === 0 ? '' : countFormatter.format(value));
 const getMetricNumber = (value: RepositoryMetricValue, metric: RepositoryMetric) =>
   metric === 'words' ? value.words : value.count;
 const getAlternateMetricTitle = (value: RepositoryMetricValue, metric: RepositoryMetric) => {
@@ -316,23 +319,116 @@ function CellLink({
   );
 }
 
-function ReviewCoverageBadge({ coverage }: { coverage?: RepositoryReviewFeatureCoverage }) {
-  if (!coverage || coverage.enabledReviewFeatureCount > 0) {
+function ReviewCoverageWarning({
+  coverage,
+  repositoryName,
+}: {
+  coverage?: RepositoryReviewFeatureCoverage;
+  repositoryName: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>();
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  const shouldShowWarning = Boolean(coverage && coverage.enabledReviewFeatureCount === 0);
+  const hasAnyReviewFeature = Boolean(coverage && coverage.reviewFeatureCount > 0);
+  const title = hasAnyReviewFeature ? 'Review feature disabled' : 'Review feature missing';
+  const description = hasAnyReviewFeature
+    ? 'This repository has review features attached, but none are enabled. Enable one before using review coverage for this repository.'
+    : 'This repository is not attached to any review feature. Add one before using review coverage for this repository.';
+  const featureNames = coverage?.reviewFeatureNames.join(', ') ?? '';
+  const ariaLabel = `${title} for ${repositoryName}`;
+
+  const updatePanelPosition = useCallback(() => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
+    setPanelStyle({
+      ...getAnchoredDropdownPanelStyle({
+        rect,
+        align: 'left',
+        viewportPadding: 12,
+        gap: 6,
+        maxWidth: Math.min(320, window.innerWidth - 24),
+      }),
+      minWidth: '16rem',
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    updatePanelPosition();
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || panelRef.current?.contains(target)) {
+        return;
+      }
+      setIsOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+    const handleReposition = () => updatePanelPosition();
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [isOpen, updatePanelPosition]);
+
+  if (!shouldShowWarning) {
     return null;
   }
 
-  const hasAnyReviewFeature = coverage.reviewFeatureCount > 0;
-  const label = hasAnyReviewFeature ? 'No enabled review feature' : 'No review feature';
-  const title = hasAnyReviewFeature
-    ? `Only disabled review features: ${coverage.reviewFeatureNames.join(', ')}`
-    : 'This repository is not assigned to any review feature.';
-
   return (
-    <span
-      className="repositories-page__repo-badge repositories-page__repo-badge--warning"
-      title={title}
-    >
-      {label}
+    <span className="repositories-page__repo-warning">
+      <button
+        type="button"
+        className="repositories-page__repo-warning-button"
+        aria-label={ariaLabel}
+        aria-expanded={isOpen}
+        ref={buttonRef}
+        onClick={(event) => {
+          event.stopPropagation();
+          setIsOpen((current) => !current);
+        }}
+      >
+        <span aria-hidden="true">!</span>
+      </button>
+      {isOpen
+        ? createPortal(
+            <div
+              className="repositories-page__repo-warning-popover"
+              role="status"
+              ref={panelRef}
+              style={panelStyle}
+            >
+              <div className="repositories-page__repo-warning-title">{title}</div>
+              <div className="repositories-page__repo-warning-copy">{description}</div>
+              {hasAnyReviewFeature && featureNames ? (
+                <div className="repositories-page__repo-warning-meta">
+                  Attached review features: {featureNames}
+                </div>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </span>
   );
 }
@@ -468,10 +564,11 @@ function RepositoryTable({
                   }`}
                 ></div>
                 <div className="repositories-page__cell repositories-page__cell--name">
-                  <div className="repositories-page__name-group">
+                  <div className="repositories-page__name-line">
                     <CellLink
                       className="repositories-page__cell-link--name"
                       stopPropagation
+                      title={repo.name}
                       onClick={() =>
                         onOpenWorkbench({
                           repositoryId: repo.id,
@@ -482,6 +579,8 @@ function RepositoryTable({
                     >
                       {repo.name}
                     </CellLink>
+                  </div>
+                  <div className="repositories-page__repo-meta">
                     <span className="repositories-page__repo-id" aria-hidden="true">
                       #{repo.id}
                     </span>
@@ -497,18 +596,22 @@ function RepositoryTable({
                     ) : repo.isGlossary ? (
                       <span className="repositories-page__repo-badge">Glossary</span>
                     ) : null}
-                    <ReviewCoverageBadge coverage={repo.reviewFeatureCoverage} />
+                    <ReviewCoverageWarning
+                      coverage={repo.reviewFeatureCoverage}
+                      repositoryName={repo.name}
+                    />
+                    <button
+                      type="button"
+                      className="repositories-page__row-action"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenAiTranslate(repo.id);
+                      }}
+                      aria-label={`Open AI Translate for ${repo.name}`}
+                    >
+                      AI Translate
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className="repositories-page__row-action"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onOpenAiTranslate(repo.id);
-                    }}
-                  >
-                    AI Translate
-                  </button>
                 </div>
                 <div className="repositories-page__cell repositories-page__cell--number">
                   <CellLink
@@ -760,7 +863,11 @@ export function RepositoriesPageView({
           </div>
         </div>
       </div>
-      <div className="repositories-page__content repositories-page--split">
+      <div
+        className={`repositories-page__content ${
+          hasSelection ? 'repositories-page--split' : 'repositories-page--single'
+        }`}
+      >
         <RepositoryTable
           repositories={repositories}
           metric={metric}
@@ -769,29 +876,31 @@ export function RepositoriesPageView({
           onOpenAiTranslate={onOpenAiTranslate}
           onOpenWorkbench={onOpenWorkbench}
         />
-        <div className="repositories-page__divider">
-          {hasSelection ? (
-            <button
-              type="button"
-              className="repositories-page__divider-action"
-              onClick={() => {
-                if (selectedRepoId != null) {
-                  onSelectRepository(selectedRepoId);
-                }
-              }}
-              aria-label="Hide locale stats"
-            >
-              ×
-            </button>
-          ) : null}
-        </div>
-        <LocaleTable
-          locales={locales}
-          metric={metric}
-          hasSelection={hasSelection}
-          repositoryId={selectedRepoId}
-          onOpenWorkbench={onOpenWorkbench}
-        />
+        {hasSelection ? (
+          <>
+            <div className="repositories-page__divider">
+              <button
+                type="button"
+                className="repositories-page__divider-action"
+                onClick={() => {
+                  if (selectedRepoId != null) {
+                    onSelectRepository(selectedRepoId);
+                  }
+                }}
+                aria-label="Hide locale stats"
+              >
+                ×
+              </button>
+            </div>
+            <LocaleTable
+              locales={locales}
+              metric={metric}
+              hasSelection={hasSelection}
+              repositoryId={selectedRepoId}
+              onOpenWorkbench={onOpenWorkbench}
+            />
+          </>
+        ) : null}
       </div>
     </div>
   );
