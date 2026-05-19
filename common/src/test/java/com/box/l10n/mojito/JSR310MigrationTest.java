@@ -201,19 +201,20 @@ public class JSR310MigrationTest {
                 .toEpochMilli());
   }
 
-  /**
-   * This test might be brittle but cannot reproduce.
-   *
-   * <p>Saw a failure with: "expected: 1702591002127L but was: 1702591002126L"
-   */
   @Test
   public void newDateTimeCtorWithDate() {
     Date date = new Date();
     Assertions.assertThat(newDateTimeCtorWithDateOld(date).toInstant().getMillis())
         .isEqualTo(JSR310Migration.newDateTimeCtorWithDate(date).toInstant().toEpochMilli());
 
-    Assertions.assertThat(newDateTimeCtorWithDateOld(null).toInstant().getMillis())
-        .isEqualTo(JSR310Migration.newDateTimeCtorWithDate(null).toInstant().toEpochMilli());
+    long beforeNullDateCtor = System.currentTimeMillis();
+    long oldNullDateCtor = newDateTimeCtorWithDateOld(null).toInstant().getMillis();
+    long jsr310NullDateCtor =
+        JSR310Migration.newDateTimeCtorWithDate(null).toInstant().toEpochMilli();
+    long afterNullDateCtor = System.currentTimeMillis();
+
+    Assertions.assertThat(oldNullDateCtor).isBetween(beforeNullDateCtor, afterNullDateCtor);
+    Assertions.assertThat(jsr310NullDateCtor).isBetween(beforeNullDateCtor, afterNullDateCtor);
   }
 
   @Test
