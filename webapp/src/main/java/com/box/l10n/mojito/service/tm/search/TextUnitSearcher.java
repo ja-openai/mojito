@@ -109,7 +109,7 @@ public class TextUnitSearcher {
 
     return typedQuery.getResultList().stream()
         .map(tuple -> toTextUnitDTO(tuple, searchParameters.getAssetTextUnitUsages() != null))
-        .toList();
+        .collect(Collectors.toList());
   }
 
   @Retryable(backoff = @Backoff(delay = 500, multiplier = 2))
