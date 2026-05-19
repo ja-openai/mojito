@@ -305,6 +305,21 @@
   vertical-align: baseline;
 }
 
+.text-unit-detail-page__inline-toggle {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  padding: 0;
+}
+
+.text-unit-detail-page__inline-toggle:hover,
+.text-unit-detail-page__inline-toggle:focus-visible {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
 .text-unit-detail-page__source-affordance:hover .pill,
 .text-unit-detail-page__source-affordance:focus-visible .pill {
   border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));

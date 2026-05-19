@@ -36,7 +36,7 @@ The glossary workspace is a two-pane surface:
 The term table supports:
 
 - text search that defaults to source terms, with a field selector for source,
-  target, definition, references, or all fields
+  target, definition, references, or all
 - status filtering
 - multi-locale columns
 - an automatic visible-locale cap of five columns

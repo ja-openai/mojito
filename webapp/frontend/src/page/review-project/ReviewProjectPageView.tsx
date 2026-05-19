@@ -92,6 +92,7 @@ import {
   filterSelfGlossaryMatches,
   sortGlossaryMatches,
 } from '../../utils/glossary-matches';
+import { getGlossaryTermScreenshotKeys } from '../../utils/glossaryTermEvidence';
 import {
   findGlossaryTargetForTextUnit,
   findGlossaryTermByTmTextUnitId,
@@ -133,6 +134,22 @@ const Chevron = ({ direction }: { direction: 'left' | 'right' | 'up' | 'down' })
     />
   </svg>
 );
+
+const mergeScreenshotImageKeys = (...groups: string[][]) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const key of groups.flat()) {
+    const normalizedKey = key.trim();
+    if (!normalizedKey || seen.has(normalizedKey)) {
+      continue;
+    }
+    seen.add(normalizedKey);
+    result.push(normalizedKey);
+  }
+
+  return result;
+};
 
 type StatusChoice = 'ACCEPTED' | 'NEEDS_REVIEW' | 'NEEDS_TRANSLATION' | 'REJECTED';
 
@@ -798,6 +815,7 @@ export function ReviewProjectPageView({
   const lastAppliedQueryIdRef = useRef<number | null>(null);
   const pendingQuerySelectionIdRef = useRef<number | null>(null);
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
+  const [screenshotModalImages, setScreenshotModalImages] = useState<string[]>([]);
   const [selectedScreenshotIdx, setSelectedScreenshotIdx] = useState<number>(0);
   const { onDismissValidationSave, showValidationDialog } = mutations;
 
@@ -1358,7 +1376,10 @@ export function ReviewProjectPageView({
               screenshotImages={screenshotImages}
               currentScreenshotIdx={selectedScreenshotIdx}
               onChangeScreenshotIdx={setSelectedScreenshotIdx}
-              onOpenGallery={() => setIsScreenshotModalOpen(true)}
+              onOpenGallery={(images) => {
+                setScreenshotModalImages(images);
+                setIsScreenshotModalOpen(true);
+              }}
               detailPaneRef={detailPaneRef}
               onDirtyChange={setDetailIsDirty}
               onQueueAdvance={queueAdvance}
@@ -1371,10 +1392,13 @@ export function ReviewProjectPageView({
       </div>
       {isScreenshotModalOpen ? (
         <ScreenshotOverlay
-          screenshotImages={screenshotImages}
+          screenshotImages={screenshotModalImages}
           selectedScreenshotIdx={selectedScreenshotIdx}
           onChangeScreenshotIdx={setSelectedScreenshotIdx}
-          onClose={() => setIsScreenshotModalOpen(false)}
+          onClose={() => {
+            setIsScreenshotModalOpen(false);
+            setScreenshotModalImages([]);
+          }}
         />
       ) : null}
       <IntegrityCheckAlertModal
@@ -1572,7 +1596,7 @@ function DetailPane({
   screenshotImages: string[];
   currentScreenshotIdx: number;
   onChangeScreenshotIdx: (index: number) => void;
-  onOpenGallery: () => void;
+  onOpenGallery: (images: string[]) => void;
   detailPaneRef: React.RefObject<HTMLDivElement | null>;
   onDirtyChange: (dirty: boolean) => void;
   onQueueAdvance: (focusTranslation: boolean) => void;
@@ -1700,6 +1724,17 @@ function DetailPane({
     },
   });
   const glossaryTerm = glossaryTermQuery.data ?? null;
+  const glossaryTermScreenshotImages = useMemo(
+    () => getGlossaryTermScreenshotKeys(glossaryTerm?.evidence),
+    [glossaryTerm?.evidence],
+  );
+  const detailScreenshotImages = useMemo(
+    () => mergeScreenshotImageKeys(screenshotImages, glossaryTermScreenshotImages),
+    [glossaryTermScreenshotImages, screenshotImages],
+  );
+  const safeScreenshotIdx = detailScreenshotImages.length
+    ? Math.min(currentScreenshotIdx, detailScreenshotImages.length - 1)
+    : 0;
   const glossaryTermHref =
     terminologyGlossaryId != null
       ? `/glossaries/${terminologyGlossaryId}${
@@ -2684,8 +2719,14 @@ function DetailPane({
   const conflictVariant = conflictTextUnit ? getEffectiveVariant(conflictTextUnit) : null;
   const conflictStatusKey = getStatusKey(conflictVariant);
 
+  useEffect(() => {
+    if (currentScreenshotIdx !== safeScreenshotIdx) {
+      onChangeScreenshotIdx(safeScreenshotIdx);
+    }
+  }, [currentScreenshotIdx, onChangeScreenshotIdx, safeScreenshotIdx]);
+
   const recomputeHeroHeight = useCallback(() => {
-    if (!heroRef.current || !detailPaneRef.current || !screenshotImages.length) {
+    if (!heroRef.current || !detailPaneRef.current || !detailScreenshotImages.length) {
       return;
     }
     const containerHeight = detailPaneRef.current.clientHeight;
@@ -2701,14 +2742,14 @@ function DetailPane({
     const clamp = (value: number) => Math.min(maxHeight, Math.max(minHeight, value));
     setHeroHeight((prev) => (prev == null ? targetHeight : clamp(prev)));
     setLastHeroHeight((prev) => (prev == null ? targetHeight : clamp(prev)));
-  }, [detailPaneRef, screenshotImages.length]);
+  }, [detailPaneRef, detailScreenshotImages.length]);
 
   useEffect(() => {
     recomputeHeroHeight();
   }, [recomputeHeroHeight, textUnit.id]);
 
   useEffect(() => {
-    if (!detailPaneRef.current || !screenshotImages.length) {
+    if (!detailPaneRef.current || !detailScreenshotImages.length) {
       return;
     }
     if (typeof ResizeObserver === 'undefined') {
@@ -2720,15 +2761,15 @@ function DetailPane({
     });
     observer.observe(detailPaneRef.current);
     return () => observer.disconnect();
-  }, [detailPaneRef, recomputeHeroHeight, screenshotImages.length]);
+  }, [detailPaneRef, recomputeHeroHeight, detailScreenshotImages.length]);
 
   useEffect(() => {
-    if (!screenshotImages.length) {
+    if (!detailScreenshotImages.length) {
       setHeroHeight(null);
       setLastHeroHeight(null);
       setIsScreenshotsCollapsed(false);
     }
-  }, [screenshotImages.length]);
+  }, [detailScreenshotImages.length]);
 
   useEffect(() => {
     if (isScreenshotsCollapsed) {
@@ -2795,19 +2836,19 @@ function DetailPane({
       </div>
       <div
         className={`review-project-detail__hero${
-          screenshotImages.length ? ' review-project-detail__hero--has-shots' : ''
+          detailScreenshotImages.length ? ' review-project-detail__hero--has-shots' : ''
         }${isScreenshotsCollapsed ? ' review-project-detail__hero--collapsed' : ''}`}
         ref={heroRef}
         style={
           !isScreenshotsCollapsed && heroHeight != null ? { height: `${heroHeight}px` } : undefined
         }
       >
-        {screenshotImages.length ? (
+        {detailScreenshotImages.length ? (
           <div className="review-project-detail__shots-badge">
-            {`${currentScreenshotIdx + 1} / ${screenshotImages.length}`}
+            {`${safeScreenshotIdx + 1} / ${detailScreenshotImages.length}`}
           </div>
         ) : null}
-        {screenshotImages.length ? (
+        {detailScreenshotImages.length ? (
           <>
             {isScreenshotsCollapsed ? null : (
               <div className="review-project-detail__gallery review-project-detail__gallery--hero">
@@ -2816,8 +2857,8 @@ function DetailPane({
                   className="review-project-detail__gallery-nav"
                   onClick={() =>
                     onChangeScreenshotIdx(
-                      (currentScreenshotIdx - 1 + screenshotImages.length) %
-                        screenshotImages.length,
+                      (safeScreenshotIdx - 1 + detailScreenshotImages.length) %
+                        detailScreenshotImages.length,
                     )
                   }
                   aria-label="Previous screenshot"
@@ -2826,14 +2867,14 @@ function DetailPane({
                 </button>
                 <div className="review-project-detail__gallery-main review-project-detail__gallery-main--hero">
                   {renderMedia(
-                    screenshotImages[currentScreenshotIdx],
+                    detailScreenshotImages[safeScreenshotIdx],
                     'review-project-detail__gallery-image review-project-detail__gallery-image--interactive',
                     {
-                      controls: isVideoAttachmentKey(screenshotImages[currentScreenshotIdx]),
+                      controls: isVideoAttachmentKey(detailScreenshotImages[safeScreenshotIdx]),
                       muted: true,
                       loop: true,
                       preload: 'metadata',
-                      onClick: onOpenGallery,
+                      onClick: () => onOpenGallery(detailScreenshotImages),
                       ariaLabel: 'Open screenshot gallery',
                       onLoad: recomputeHeroHeight,
                       onLoadedMetadata: recomputeHeroHeight,
@@ -2844,7 +2885,7 @@ function DetailPane({
                   type="button"
                   className="review-project-detail__gallery-nav"
                   onClick={() =>
-                    onChangeScreenshotIdx((currentScreenshotIdx + 1) % screenshotImages.length)
+                    onChangeScreenshotIdx((safeScreenshotIdx + 1) % detailScreenshotImages.length)
                   }
                   aria-label="Next screenshot"
                 >
@@ -2855,7 +2896,7 @@ function DetailPane({
           </>
         ) : null}
       </div>
-      {screenshotImages.length ? (
+      {detailScreenshotImages.length ? (
         <div
           className={`review-project-detail__hero-resize-handle${
             isHeroResizing ? ' is-resizing' : ''

@@ -1,7 +1,7 @@
 import '../review-project/review-project-page.css';
 import './text-unit-detail-page.css';
 
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { AiReviewSuggestion } from '../../api/ai-review';
@@ -10,6 +10,7 @@ import { AiChatReview, type AiChatReviewMessage } from '../../components/AiChatR
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { GlossaryMatchesPanel } from '../../components/GlossaryMatchesPanel';
+import { GlossaryTermEvidenceThumbnails } from '../../components/GlossaryTermEvidenceThumbnails';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
 import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { Pill } from '../../components/Pill';
@@ -19,6 +20,7 @@ import {
   type TextUnitHistoryTimelineComment as TextUnitDetailHistoryComment,
   type TextUnitHistoryTimelineEntry as TextUnitDetailHistoryRow,
 } from '../../components/TextUnitHistoryTimeline';
+import { getGlossaryTermScreenshotEvidence } from '../../utils/glossaryTermEvidence';
 
 export type TextUnitDetailMetaRow = {
   label: string;
@@ -194,9 +196,15 @@ export function TextUnitDetailPageView({
     glossaryTerm?.definition?.trim() || glossaryTerm?.sourceComment?.trim() || keyInfo.comment;
   const glossaryTermType = formatGlossaryMetadataValue(glossaryTerm?.termType);
   const glossaryPartOfSpeech = formatGlossaryMetadataValue(glossaryTerm?.partOfSpeech);
+  const glossaryTermScreenshots = getGlossaryTermScreenshotEvidence(glossaryTerm?.evidence);
+  const [isGlossaryScreenshotsCollapsed, setIsGlossaryScreenshotsCollapsed] = useState(false);
   const historyCount =
     historyRows.length + (showDeletedHistoryEntry ? 1 : 0) + (historyInitialDate ? 1 : 0);
   const historyTitle = isHistoryCountReady ? `History (${historyCount})` : 'History';
+
+  useEffect(() => {
+    setIsGlossaryScreenshotsCollapsed(false);
+  }, [glossaryTerm?.tmTextUnitId, glossaryTermScreenshots.length]);
 
   return (
     <div className="review-project-page text-unit-detail-page">
@@ -405,6 +413,26 @@ export function TextUnitDetailPageView({
                     <dt>Type</dt>
                     <dd>
                       <pre className="text-unit-detail-page__key-info-text">{glossaryTermType}</pre>
+                    </dd>
+                  </div>
+                ) : null}
+                {glossaryTermScreenshots.length > 0 ? (
+                  <div className="text-unit-detail-page__key-info-row">
+                    <dt className="text-unit-detail-page__key-info-label">
+                      <span>Screenshots</span>
+                      <button
+                        type="button"
+                        className="text-unit-detail-page__inline-toggle"
+                        onClick={() => setIsGlossaryScreenshotsCollapsed((current) => !current)}
+                        aria-expanded={!isGlossaryScreenshotsCollapsed}
+                      >
+                        {isGlossaryScreenshotsCollapsed ? 'Show' : 'Hide'}
+                      </button>
+                    </dt>
+                    <dd>
+                      {isGlossaryScreenshotsCollapsed ? null : (
+                        <GlossaryTermEvidenceThumbnails evidence={glossaryTermScreenshots} />
+                      )}
                     </dd>
                   </div>
                 ) : null}
