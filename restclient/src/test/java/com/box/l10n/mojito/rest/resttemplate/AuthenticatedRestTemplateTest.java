@@ -40,10 +40,8 @@ public class AuthenticatedRestTemplateTest {
       "<html>\n"
           + "<head>\n"
           + "</head>\n"
-          + "<script type=\"text/javascript\">\n"
-          + "   CSRF_TOKEN = '87023b1d-0e6f-48dd-bb06-d80802954572';\n"
-          + "</script>\n"
           + "<body>\n"
+          + "<div id=\"root\"></div>\n"
           + "</body>\n"
           + "</html>";
 
@@ -140,6 +138,12 @@ public class AuthenticatedRestTemplateTest {
     WireMock.verify(
         2,
         WireMock.postRequestedFor(WireMock.urlMatching("/login"))
+            .withHeader("Accept", WireMock.matching("text/plain.*"))
+            .withHeader("X-CSRF-TOKEN", WireMock.matching("madeup-login-csrf-value")));
+    WireMock.verify(
+        2,
+        WireMock.getRequestedFor(
+                WireMock.urlMatching("/" + formLoginConfig.getFrontendConfigPath()))
             .withHeader("Accept", WireMock.matching("text/plain.*")));
     WireMock.verify(
         2,
@@ -180,7 +184,8 @@ public class AuthenticatedRestTemplateTest {
     WireMock.verify(
         2,
         WireMock.postRequestedFor(WireMock.urlMatching("/login"))
-            .withHeader("Accept", WireMock.matching("text/plain.*")));
+            .withHeader("Accept", WireMock.matching("text/plain.*"))
+            .withHeader("X-CSRF-TOKEN", WireMock.matching("madeup-login-csrf-value")));
     WireMock.verify(
         2,
         WireMock.postRequestedFor(WireMock.urlMatching("/random-403-endpoint"))
@@ -220,7 +225,8 @@ public class AuthenticatedRestTemplateTest {
     WireMock.verify(
         2,
         WireMock.postRequestedFor(WireMock.urlMatching("/login"))
-            .withHeader("Accept", WireMock.matching("text/plain.*")));
+            .withHeader("Accept", WireMock.matching("text/plain.*"))
+            .withHeader("X-CSRF-TOKEN", WireMock.matching("madeup-login-csrf-value")));
     WireMock.verify(
         2,
         WireMock.postRequestedFor(WireMock.urlMatching("/random-401-endpoint"))
@@ -272,6 +278,14 @@ public class AuthenticatedRestTemplateTest {
                     .withStatus(HttpStatus.OK.value())
                     .withHeader("Content-Type", "text/html")
                     .withBody(LOGIN_PAGE_HTML)));
+
+    WireMock.stubFor(
+        WireMock.get(WireMock.urlEqualTo("/" + formLoginConfig.getFrontendConfigPath()))
+            .willReturn(
+                WireMock.aResponse()
+                    .withStatus(HttpStatus.OK.value())
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"csrfToken\":\"madeup-login-csrf-value\"}")));
 
     WireMock.stubFor(
         WireMock.post(WireMock.urlEqualTo("/" + formLoginConfig.getLoginPostPath()))

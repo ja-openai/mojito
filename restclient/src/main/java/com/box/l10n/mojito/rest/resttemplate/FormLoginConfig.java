@@ -20,6 +20,8 @@ public class FormLoginConfig {
 
   String csrfTokenPath = "api/csrf-token";
 
+  String frontendConfigPath = "api/frontend/config";
+
   public String getLoginFormPath() {
     return loginFormPath;
   }
@@ -50,5 +52,13 @@ public class FormLoginConfig {
 
   public void setCsrfTokenPath(String csrfTokenPath) {
     this.csrfTokenPath = csrfTokenPath;
+  }
+
+  public String getFrontendConfigPath() {
+    return frontendConfigPath;
+  }
+
+  public void setFrontendConfigPath(String frontendConfigPath) {
+    this.frontendConfigPath = frontendConfigPath;
   }
 }

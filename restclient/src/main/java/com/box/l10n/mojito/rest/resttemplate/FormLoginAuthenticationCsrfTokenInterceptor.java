@@ -1,5 +1,8 @@
 package com.box.l10n.mojito.rest.resttemplate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
@@ -45,6 +48,7 @@ public class FormLoginAuthenticationCsrfTokenInterceptor implements ClientHttpRe
   public static final String CSRF_PARAM_NAME = "_csrf";
   public static final String CSRF_HEADER_NAME = "X-CSRF-TOKEN";
   public static final Set<String> COOKIE_SESSION_NAMES = Set.of("SESSION", "JSESSIONID");
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   @Autowired FormLoginConfig formLoginConfig;
 
@@ -263,16 +267,16 @@ public class FormLoginAuthenticationCsrfTokenInterceptor implements ClientHttpRe
   protected synchronized void startAuthenticationFlow() throws AuthenticationException {
     logger.debug("Getting authenticated session");
 
-    logger.debug(
-        "Start by loading up the login form to get a valid unauthenticated session and CSRF token");
+    logger.debug("Start by loading up the login form to get a valid unauthenticated session");
     ResponseEntity<String> loginResponseEntity =
         restTemplateForAuthenticationFlow.getForEntity(
             restTemplateUtil.getURIForResource(formLoginConfig.getLoginFormPath()), String.class);
 
-    latestCsrfToken = getCsrfTokenFromLoginHtml(loginResponseEntity.getBody());
+    latestCsrfToken = getInitialCsrfToken(loginResponseEntity.getBody());
     latestSessionIdForLatestCsrfToken = getAuthenticationSessionIdFromCookieStore();
     logger.debug(
-        "Update CSRF token for interceptor ({}) from login form", latestCsrfToken.getToken());
+        "Update CSRF token for interceptor ({}) from initial authentication flow",
+        latestCsrfToken.getToken());
 
     MultiValueMap<String, Object> loginPostParams = new LinkedMultiValueMap<>();
     loginPostParams.add("username", credentialProvider.getUsername());
@@ -318,6 +322,18 @@ public class FormLoginAuthenticationCsrfTokenInterceptor implements ClientHttpRe
     }
   }
 
+  protected CsrfToken getInitialCsrfToken(String loginHtml) throws AuthenticationException {
+    try {
+      return getCsrfTokenFromLoginHtml(loginHtml);
+    } catch (SessionAuthenticationException sessionAuthenticationException) {
+      logger.debug(
+          "Could not get CSRF token from login HTML, falling back to frontend config endpoint",
+          sessionAuthenticationException);
+      return getCsrfTokenFromFrontendConfig(
+          restTemplateUtil.getURIForResource(formLoginConfig.getFrontendConfigPath()));
+    }
+  }
+
   /**
    * Gets the CSRF token from login html because the CSRF token endpoint needs to be authenticated
    * first.
@@ -329,6 +345,10 @@ public class FormLoginAuthenticationCsrfTokenInterceptor implements ClientHttpRe
    * @throws AuthenticationException
    */
   protected CsrfToken getCsrfTokenFromLoginHtml(String loginHtml) throws AuthenticationException {
+    if (loginHtml == null) {
+      throw new SessionAuthenticationException("Could not find CSRF_TOKEN variable on login page");
+    }
+
     Pattern pattern = Pattern.compile("CSRF_TOKEN = '(.*?)';");
     Matcher matcher = pattern.matcher(loginHtml);
 
@@ -340,6 +360,45 @@ public class FormLoginAuthenticationCsrfTokenInterceptor implements ClientHttpRe
     } else {
       throw new SessionAuthenticationException("Could not find CSRF_TOKEN variable on login page");
     }
+  }
+
+  /**
+   * Gets the initial CSRF token the same way the React login page does: from the runtime frontend
+   * config endpoint.
+   *
+   * @param frontendConfigUrl The full URL for the frontend config endpoint
+   * @return
+   * @throws AuthenticationException
+   */
+  protected CsrfToken getCsrfTokenFromFrontendConfig(String frontendConfigUrl)
+      throws AuthenticationException {
+    ResponseEntity<String> frontendConfigEntity =
+        restTemplateForAuthenticationFlow.getForEntity(frontendConfigUrl, String.class, "");
+    String csrfTokenString = getCsrfTokenValueFromFrontendConfig(frontendConfigEntity.getBody());
+    logger.debug("CSRF token from {} is {}", frontendConfigUrl, csrfTokenString);
+    return new DefaultCsrfToken(CSRF_HEADER_NAME, CSRF_PARAM_NAME, csrfTokenString);
+  }
+
+  protected String getCsrfTokenValueFromFrontendConfig(String frontendConfigJson)
+      throws AuthenticationException {
+    if (frontendConfigJson == null || frontendConfigJson.isBlank()) {
+      throw new SessionAuthenticationException(
+          "Could not find csrfToken property in frontend config");
+    }
+
+    try {
+      JsonNode csrfTokenNode = OBJECT_MAPPER.readTree(frontendConfigJson).path("csrfToken");
+      if (csrfTokenNode.isTextual() && !csrfTokenNode.asText().isBlank()) {
+        return csrfTokenNode.asText();
+      }
+    } catch (JsonProcessingException jsonProcessingException) {
+      throw new SessionAuthenticationException(
+          "Could not parse frontend config for CSRF token: "
+              + jsonProcessingException.getMessage());
+    }
+
+    throw new SessionAuthenticationException(
+        "Could not find csrfToken property in frontend config");
   }
 
   /**
