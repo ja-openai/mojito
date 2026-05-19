@@ -689,11 +689,14 @@ export function WorkbenchPage() {
         userLocales={userLocales}
         isLimitedTranslator={isLimitedTranslator}
         statusFilter={search.statusFilter}
+        glossaryStatusFilter={search.glossaryStatusFilter}
+        hasSelectedGlossaryRepository={search.hasSelectedGlossaryRepository}
         includeUsed={search.includeUsed}
         includeUnused={search.includeUnused}
         includeTranslate={search.includeTranslate}
         includeDoNotTranslate={search.includeDoNotTranslate}
         onChangeStatusFilter={search.onChangeStatusFilter}
+        onChangeGlossaryStatusFilter={search.onChangeGlossaryStatusFilter}
         onChangeIncludeUsed={search.onChangeIncludeUsed}
         onChangeIncludeUnused={search.onChangeIncludeUnused}
         onChangeIncludeTranslate={search.onChangeIncludeTranslate}

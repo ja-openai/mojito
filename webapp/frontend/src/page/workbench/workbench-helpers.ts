@@ -44,6 +44,7 @@ export function serializeSearchRequest(request: TextUnitSearchRequest): string {
     localeTags: normalized.localeTags,
     textSearch: canonicalTextSearch,
     statusFilter: normalized.statusFilter ?? null,
+    glossaryStatusFilter: normalized.glossaryStatusFilter ?? null,
     usedFilter: normalized.usedFilter ?? null,
     doNotTranslateFilter:
       typeof normalized.doNotTranslateFilter === 'boolean' ? normalized.doNotTranslateFilter : null,

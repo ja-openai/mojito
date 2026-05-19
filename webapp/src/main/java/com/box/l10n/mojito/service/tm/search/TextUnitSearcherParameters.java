@@ -29,6 +29,7 @@ public class TextUnitSearcherParameters {
   Long localeId;
   UsedFilter usedFilter;
   StatusFilter statusFilter;
+  GlossaryStatusFilter glossaryStatusFilter;
   Integer offset;
   Integer limit;
   Long assetId;
@@ -210,6 +211,14 @@ public class TextUnitSearcherParameters {
 
   public void setStatusFilter(StatusFilter statusFilter) {
     this.statusFilter = statusFilter;
+  }
+
+  public GlossaryStatusFilter getGlossaryStatusFilter() {
+    return glossaryStatusFilter;
+  }
+
+  public void setGlossaryStatusFilter(GlossaryStatusFilter glossaryStatusFilter) {
+    this.glossaryStatusFilter = glossaryStatusFilter;
   }
 
   public String getPluralFormOther() {

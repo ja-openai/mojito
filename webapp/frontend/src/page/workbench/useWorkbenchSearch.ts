@@ -24,6 +24,7 @@ import { WORKSET_SIZE_DEFAULT } from './workbench-constants';
 import { clampWorksetSize, mapApiTextUnitToRow, serializeSearchRequest } from './workbench-helpers';
 import { loadPreferredWorksetSize } from './workbench-preferences';
 import type {
+  GlossaryStatusFilterValue,
   StatusFilterValue,
   WorkbenchResultSortDirection,
   WorkbenchResultSortField,
@@ -66,11 +67,14 @@ type SearchState = {
   onRemoveTextSearchCondition: (id: string) => void;
   onSubmitSearch: () => void;
   statusFilter: StatusFilterValue;
+  glossaryStatusFilter: GlossaryStatusFilterValue;
+  hasSelectedGlossaryRepository: boolean;
   includeUsed: boolean;
   includeUnused: boolean;
   includeTranslate: boolean;
   includeDoNotTranslate: boolean;
   onChangeStatusFilter: (value: StatusFilterValue) => void;
+  onChangeGlossaryStatusFilter: (value: GlossaryStatusFilterValue) => void;
   onChangeIncludeUsed: (value: boolean) => void;
   onChangeIncludeUnused: (value: boolean) => void;
   onChangeIncludeTranslate: (value: boolean) => void;
@@ -106,6 +110,8 @@ type SearchRequestInputs = {
   textSearch?: TextSearch;
   searchLimit: number;
   statusFilter: StatusFilterValue;
+  glossaryStatusFilter: GlossaryStatusFilterValue;
+  hasSelectedGlossaryRepository: boolean;
   includeUsed: boolean;
   includeUnused: boolean;
   includeTranslate: boolean;
@@ -121,6 +127,7 @@ const workbenchRowSortCollator = new Intl.Collator(undefined, {
   numeric: true,
   sensitivity: 'base',
 });
+const DEFAULT_GLOSSARY_STATUS_FILTER: GlossaryStatusFilterValue = 'APPROVED';
 
 function getWorkbenchRowSortValue(
   row: WorkbenchRow,
@@ -194,6 +201,7 @@ function getNonTextSignature(request: TextUnitSearchRequest): string {
     repositoryIds: [...request.repositoryIds].sort((a, b) => a - b),
     localeTags: [...request.localeTags].sort((a, b) => a.localeCompare(b)),
     statusFilter: request.statusFilter ?? null,
+    glossaryStatusFilter: request.glossaryStatusFilter ?? null,
     usedFilter: request.usedFilter ?? null,
     doNotTranslateFilter:
       typeof request.doNotTranslateFilter === 'boolean' ? request.doNotTranslateFilter : null,
@@ -212,6 +220,8 @@ function buildSearchRequestFromInputs({
   textSearch,
   searchLimit,
   statusFilter,
+  glossaryStatusFilter,
+  hasSelectedGlossaryRepository,
   includeUsed,
   includeUnused,
   includeTranslate,
@@ -258,6 +268,7 @@ function buildSearchRequestFromInputs({
     limit: searchLimit,
     offset: 0,
     statusFilter: statusFilter === 'ALL' ? undefined : statusFilter,
+    glossaryStatusFilter: hasSelectedGlossaryRepository ? glossaryStatusFilter : undefined,
     usedFilter,
     doNotTranslateFilter,
     tmTextUnitCreatedBefore: createdBefore ?? undefined,
@@ -303,6 +314,9 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     () => [createSimpleTextSearchCondition()],
   );
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('ALL');
+  const [glossaryStatusFilter, setGlossaryStatusFilter] =
+    useState<GlossaryStatusFilterValue>('ALL');
+  const [hasTouchedGlossaryStatusFilter, setHasTouchedGlossaryStatusFilter] = useState(false);
   const [includeUsed, setIncludeUsed] = useState(true);
   const [includeUnused, setIncludeUnused] = useState(false);
   const [includeTranslate, setIncludeTranslate] = useState(true);
@@ -340,6 +354,27 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     initialSelected: initialSearchRequest?.repositoryIds ?? [],
     allowStaleSelections: true,
   });
+
+  const selectedRepositoryIdSet = useMemo(
+    () => new Set(selectedRepositoryIds),
+    [selectedRepositoryIds],
+  );
+  const selectedRepositoryOptions = useMemo(
+    () => repositoryOptions.filter((option) => selectedRepositoryIdSet.has(option.id)),
+    [repositoryOptions, selectedRepositoryIdSet],
+  );
+  const hasSelectedGlossaryRepository = selectedRepositoryOptions.some((option) =>
+    Boolean(option.isGlossary),
+  );
+  const hasResolvedSelectedRepositories =
+    selectedRepositoryIds.length === 0 ||
+    selectedRepositoryIds.every((id) => repositoryOptions.some((option) => option.id === id));
+  const effectiveGlossaryStatusFilter =
+    hasSelectedGlossaryRepository &&
+    !hasTouchedGlossaryStatusFilter &&
+    glossaryStatusFilter === 'ALL'
+      ? DEFAULT_GLOSSARY_STATUS_FILTER
+      : glossaryStatusFilter;
 
   const allowedRepositoryIds = useMemo(
     () =>
@@ -396,6 +431,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
         : [createSimpleTextSearchCondition()],
     );
     setStatusFilter((initialSearchRequest.statusFilter as StatusFilterValue | undefined) ?? 'ALL');
+    setGlossaryStatusFilter(initialSearchRequest.glossaryStatusFilter ?? 'ALL');
+    setHasTouchedGlossaryStatusFilter(initialSearchRequest.glossaryStatusFilter != null);
 
     const usedFilter = initialSearchRequest.usedFilter;
     const initialIncludeUsed = usedFilter === 'UNUSED' ? false : true;
@@ -425,6 +462,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
         textSearch: initialTextSearch,
         searchLimit: initialLimit,
         statusFilter: (initialSearchRequest.statusFilter as StatusFilterValue | undefined) ?? 'ALL',
+        glossaryStatusFilter: initialSearchRequest.glossaryStatusFilter ?? 'ALL',
+        hasSelectedGlossaryRepository: initialSearchRequest.glossaryStatusFilter != null,
         includeUsed: initialIncludeUsed,
         includeUnused: initialIncludeUnused,
         includeTranslate: initialIncludeTranslate,
@@ -463,6 +502,36 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     setLocaleSelection([], { markTouched: false });
   }, [hasHydratedSearch, localeOptions.length, setLocaleSelection]);
 
+  useEffect(() => {
+    if (!hasResolvedSelectedRepositories) {
+      return;
+    }
+
+    if (!hasSelectedGlossaryRepository) {
+      if (glossaryStatusFilter !== 'ALL') {
+        setGlossaryStatusFilter('ALL');
+      }
+      if (hasTouchedGlossaryStatusFilter) {
+        setHasTouchedGlossaryStatusFilter(false);
+      }
+      return;
+    }
+
+    if (!hasTouchedGlossaryStatusFilter && glossaryStatusFilter === 'ALL') {
+      setGlossaryStatusFilter(DEFAULT_GLOSSARY_STATUS_FILTER);
+    }
+  }, [
+    glossaryStatusFilter,
+    hasResolvedSelectedRepositories,
+    hasSelectedGlossaryRepository,
+    hasTouchedGlossaryStatusFilter,
+  ]);
+
+  const handleChangeGlossaryStatusFilter = useCallback((value: GlossaryStatusFilterValue) => {
+    setHasTouchedGlossaryStatusFilter(true);
+    setGlossaryStatusFilter(value);
+  }, []);
+
   const canSearch = selectedRepositoryIds.length > 0 && selectedLocaleTags.length > 0;
   const searchLimit = clampWorksetSize(worksetSize);
   const pendingTextSearch = useMemo(
@@ -479,6 +548,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
         textSearch,
         searchLimit,
         statusFilter,
+        glossaryStatusFilter: effectiveGlossaryStatusFilter,
+        hasSelectedGlossaryRepository,
         includeUsed,
         includeUnused,
         includeTranslate,
@@ -491,6 +562,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     [
       createdAfter,
       createdBefore,
+      effectiveGlossaryStatusFilter,
+      hasSelectedGlossaryRepository,
       translationCreatedAfter,
       translationCreatedBefore,
       includeDoNotTranslate,
@@ -530,6 +603,8 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     setTextSearchOperator('AND');
     setTextSearchConditions([createSimpleTextSearchCondition()]);
     setStatusFilter('ALL');
+    setGlossaryStatusFilter('ALL');
+    setHasTouchedGlossaryStatusFilter(false);
     setIncludeUsed(true);
     setIncludeUnused(false);
     setIncludeTranslate(true);
@@ -787,11 +862,14 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
     onRemoveTextSearchCondition,
     onSubmitSearch,
     statusFilter,
+    glossaryStatusFilter: effectiveGlossaryStatusFilter,
+    hasSelectedGlossaryRepository,
     includeUsed,
     includeUnused,
     includeTranslate,
     includeDoNotTranslate,
     onChangeStatusFilter: setStatusFilter,
+    onChangeGlossaryStatusFilter: handleChangeGlossaryStatusFilter,
     onChangeIncludeUsed: setIncludeUsed,
     onChangeIncludeUnused: setIncludeUnused,
     onChangeIncludeTranslate: setIncludeTranslate,

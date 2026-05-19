@@ -1,4 +1,5 @@
 import type {
+  GlossaryStatusFilter,
   SearchAttribute,
   SearchType,
   TextSearchOperator,
@@ -35,6 +36,8 @@ export type StatusFilterValue =
   | 'REJECTED'
   | 'NOT_REJECTED'
   | 'APPROVED_AND_NOT_REJECTED';
+
+export type GlossaryStatusFilterValue = GlossaryStatusFilter;
 
 export type WorkbenchTextSearchCondition = {
   id: string;

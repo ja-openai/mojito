@@ -12,6 +12,7 @@ import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import type { RepositorySelectionOption } from '../../utils/repositorySelection';
 import type {
+  GlossaryStatusFilterValue,
   StatusFilterValue,
   WorkbenchCollection,
   WorkbenchDiffModalData,
@@ -115,11 +116,14 @@ type Props = {
   userLocales: string[];
   isLimitedTranslator: boolean;
   statusFilter: StatusFilterValue;
+  glossaryStatusFilter: GlossaryStatusFilterValue;
+  hasSelectedGlossaryRepository: boolean;
   includeUsed: boolean;
   includeUnused: boolean;
   includeTranslate: boolean;
   includeDoNotTranslate: boolean;
   onChangeStatusFilter: (value: StatusFilterValue) => void;
+  onChangeGlossaryStatusFilter: (value: GlossaryStatusFilterValue) => void;
   onChangeIncludeUsed: (value: boolean) => void;
   onChangeIncludeUnused: (value: boolean) => void;
   onChangeIncludeTranslate: (value: boolean) => void;
@@ -274,11 +278,14 @@ export function WorkbenchPageView({
   userLocales,
   isLimitedTranslator,
   statusFilter,
+  glossaryStatusFilter,
+  hasSelectedGlossaryRepository,
   includeUsed,
   includeUnused,
   includeTranslate,
   includeDoNotTranslate,
   onChangeStatusFilter,
+  onChangeGlossaryStatusFilter,
   onChangeIncludeUsed,
   onChangeIncludeUnused,
   onChangeIncludeTranslate,
@@ -358,11 +365,14 @@ export function WorkbenchPageView({
         onRemoveTextSearchCondition={onRemoveTextSearchCondition}
         onSubmitSearch={onSubmitSearch}
         statusFilter={statusFilter}
+        glossaryStatusFilter={glossaryStatusFilter}
+        hasSelectedGlossaryRepository={hasSelectedGlossaryRepository}
         includeUsed={includeUsed}
         includeUnused={includeUnused}
         includeTranslate={includeTranslate}
         includeDoNotTranslate={includeDoNotTranslate}
         onChangeStatusFilter={onChangeStatusFilter}
+        onChangeGlossaryStatusFilter={onChangeGlossaryStatusFilter}
         onChangeIncludeUsed={onChangeIncludeUsed}
         onChangeIncludeUnused={onChangeIncludeUnused}
         onChangeIncludeTranslate={onChangeIncludeTranslate}

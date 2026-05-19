@@ -11,6 +11,7 @@ import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -174,6 +175,13 @@ public class TextUnitSearcher {
     context.pluralFormForLocale.on(
         cb.equal(context.pluralFormForLocale.get("pluralForm"), context.textUnit.get("pluralForm")),
         cb.equal(context.pluralFormForLocale.get("locale"), context.locale));
+
+    if (usesGlossaryTermMetadata(searchParameters)) {
+      context.glossaryTermMetadata =
+          context.textUnit.join(GlossaryTermMetadata.class, SqmJoinType.INNER);
+      context.glossaryTermMetadata.on(
+          cb.equal(context.glossaryTermMetadata.get("tmTextUnit"), context.textUnit));
+    }
 
     if (usesAssetTextUnitUsages(searchParameters)) {
       context.usage = context.assetTextUnit.joinSet("usages", JoinType.LEFT);
@@ -368,6 +376,7 @@ public class TextUnitSearcher {
     }
 
     addStatusFilter(cb, context, predicates, searchParameters.getStatusFilter());
+    addGlossaryStatusFilter(cb, context, predicates, searchParameters.getGlossaryStatusFilter());
     addUsedFilter(cb, context, predicates, searchParameters.getUsedFilter());
 
     if (searchParameters.getTmTextUnitCreatedBefore() != null) {
@@ -571,6 +580,19 @@ public class TextUnitSearcher {
     }
   }
 
+  private void addGlossaryStatusFilter(
+      CriteriaBuilder cb,
+      SearchContext context,
+      List<Predicate> predicates,
+      GlossaryStatusFilter glossaryStatusFilter) {
+    if (glossaryStatusFilter == null || GlossaryStatusFilter.ALL.equals(glossaryStatusFilter)) {
+      return;
+    }
+
+    predicates.add(
+        cb.equal(context.glossaryTermMetadata.get("status"), glossaryStatusFilter.name()));
+  }
+
   private void addOrdering(
       JpaCriteriaQuery<Tuple> query,
       CriteriaBuilder cb,
@@ -604,6 +626,11 @@ public class TextUnitSearcher {
                 predicate ->
                     predicate != null
                         && TextUnitTextSearchField.LOCATION.equals(predicate.getField()));
+  }
+
+  private static boolean usesGlossaryTermMetadata(TextUnitSearcherParameters searchParameters) {
+    GlossaryStatusFilter glossaryStatusFilter = searchParameters.getGlossaryStatusFilter();
+    return glossaryStatusFilter != null && !GlossaryStatusFilter.ALL.equals(glossaryStatusFilter);
   }
 
   private static TextUnitTextSearch effectiveTextSearch(
@@ -770,6 +797,7 @@ public class TextUnitSearcher {
     JpaJoin<AssetTextUnitToTMTextUnit, AssetTextUnit> assetTextUnit;
     JpaJoin<TMTextUnit, PluralForm> pluralForm;
     JpaEntityJoin<PluralFormForLocale> pluralFormForLocale;
+    JpaEntityJoin<GlossaryTermMetadata> glossaryTermMetadata;
     JpaSetJoin<AssetTextUnit, String> usage;
   }
 }

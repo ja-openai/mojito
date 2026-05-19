@@ -26,6 +26,7 @@ export type TextSearch = {
 // Backend-defined status values for a translation variant.
 // Note: untranslated rows can still appear in results, but will have `target: null` (and `status` may be null/undefined).
 export type ApiTextUnitStatus = 'APPROVED' | 'REVIEW_NEEDED' | 'TRANSLATION_NEEDED';
+export type GlossaryStatusFilter = 'ALL' | 'APPROVED' | 'CANDIDATE' | 'REJECTED' | 'DEPRECATED';
 
 export type ApiTextUnit = {
   tmTextUnitId: number;
@@ -73,6 +74,7 @@ export type TextUnitSearchRequest = {
   offset?: number;
   limit?: number;
   statusFilter?: string;
+  glossaryStatusFilter?: GlossaryStatusFilter;
   usedFilter?: 'USED' | 'UNUSED';
   doNotTranslateFilter?: boolean;
   tmTextUnitCreatedBefore?: string;
@@ -245,6 +247,7 @@ type TextUnitSearchBody = {
   searchType?: string;
   usedFilter?: 'USED' | 'UNUSED';
   statusFilter?: string;
+  glossaryStatusFilter?: GlossaryStatusFilter;
   doNotTranslateFilter?: boolean;
   tmTextUnitCreatedBefore?: string;
   tmTextUnitCreatedAfter?: string;
@@ -484,6 +487,10 @@ function buildSearchBody(request: TextUnitSearchRequest): TextUnitSearchBody {
 
   if (request.statusFilter) {
     body.statusFilter = request.statusFilter;
+  }
+
+  if (request.glossaryStatusFilter && request.glossaryStatusFilter !== 'ALL') {
+    body.glossaryStatusFilter = request.glossaryStatusFilter;
   }
 
   if (request.usedFilter) {

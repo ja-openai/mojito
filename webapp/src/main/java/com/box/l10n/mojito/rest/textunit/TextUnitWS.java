@@ -411,6 +411,8 @@ public class TextUnitWS {
     textUnitSearcherParameters.setLocaleTags(textUnitSearchBody.getLocaleTags());
     textUnitSearcherParameters.setUsedFilter(textUnitSearchBody.getUsedFilter());
     textUnitSearcherParameters.setStatusFilter(textUnitSearchBody.getStatusFilter());
+    textUnitSearcherParameters.setGlossaryStatusFilter(
+        textUnitSearchBody.getGlossaryStatusFilter());
     textUnitSearcherParameters.setDoNotTranslateFilter(
         textUnitSearchBody.getDoNotTranslateFilter());
     textUnitSearcherParameters.setTmTextUnitCreatedBefore(

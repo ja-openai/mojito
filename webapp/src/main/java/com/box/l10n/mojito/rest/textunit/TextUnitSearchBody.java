@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.rest.textunit;
 
+import com.box.l10n.mojito.service.tm.search.GlossaryStatusFilter;
 import com.box.l10n.mojito.service.tm.search.SearchType;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearch;
@@ -24,6 +25,7 @@ class TextUnitSearchBody {
   ArrayList<String> localeTags;
   UsedFilter usedFilter;
   StatusFilter statusFilter;
+  GlossaryStatusFilter glossaryStatusFilter;
   Boolean doNotTranslateFilter;
   ZonedDateTime tmTextUnitCreatedBefore;
   ZonedDateTime tmTextUnitCreatedAfter;
@@ -159,6 +161,14 @@ class TextUnitSearchBody {
 
   public void setStatusFilter(StatusFilter statusFilter) {
     this.statusFilter = statusFilter;
+  }
+
+  public GlossaryStatusFilter getGlossaryStatusFilter() {
+    return glossaryStatusFilter;
+  }
+
+  public void setGlossaryStatusFilter(GlossaryStatusFilter glossaryStatusFilter) {
+    this.glossaryStatusFilter = glossaryStatusFilter;
   }
 
   public Boolean getDoNotTranslateFilter() {

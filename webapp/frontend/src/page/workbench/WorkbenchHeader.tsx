@@ -1,7 +1,10 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import type { SearchAttribute, SearchType } from '../../api/text-units';
-import { MultiSectionFilterChip } from '../../components/filters/MultiSectionFilterChip';
+import {
+  type FilterSection,
+  MultiSectionFilterChip,
+} from '../../components/filters/MultiSectionFilterChip';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import {
   RepositoryMultiSelect,
@@ -15,6 +18,7 @@ import { filterMyLocales } from '../../utils/localeSelection';
 import { resultSizePresets, WORKSET_SIZE_DEFAULT, WORKSET_SIZE_MIN } from './workbench-constants';
 import { loadPreferredLocales, PREFERRED_LOCALES_KEY } from './workbench-preferences';
 import type {
+  GlossaryStatusFilterValue,
   StatusFilterValue,
   WorkbenchTextSearchCondition,
   WorkbenchTextSearchOperator,
@@ -23,6 +27,7 @@ import type {
 type SearchAttributeOption = { value: SearchAttribute; label: string; helper?: string };
 type SearchTypeOption = { value: SearchType; label: string; helper?: string };
 type StatusFilterOption = { value: StatusFilterValue; label: string };
+type GlossaryStatusFilterOption = { value: GlossaryStatusFilterValue; label: string };
 
 const searchAttributeOptions: SearchAttributeOption[] = [
   { value: 'target', label: 'Translation' },
@@ -56,6 +61,14 @@ const statusFilterOptions: StatusFilterOption[] = [
   { value: 'REVIEW_NEEDED', label: 'To review' },
   { value: 'REJECTED', label: 'Rejected' },
   { value: 'APPROVED_AND_NOT_REJECTED', label: 'Accepted' },
+];
+
+const glossaryStatusFilterOptions: GlossaryStatusFilterOption[] = [
+  { value: 'ALL', label: 'All glossary statuses' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'CANDIDATE', label: 'Candidate' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'DEPRECATED', label: 'Deprecated' },
 ];
 
 type CompoundTextSearchBuilderProps = {
@@ -308,11 +321,14 @@ type WorkbenchHeaderProps = {
   onRemoveTextSearchCondition: (id: string) => void;
   onSubmitSearch: () => void;
   statusFilter: StatusFilterValue;
+  glossaryStatusFilter: GlossaryStatusFilterValue;
+  hasSelectedGlossaryRepository: boolean;
   includeUsed: boolean;
   includeUnused: boolean;
   includeTranslate: boolean;
   includeDoNotTranslate: boolean;
   onChangeStatusFilter: (value: StatusFilterValue) => void;
+  onChangeGlossaryStatusFilter: (value: GlossaryStatusFilterValue) => void;
   onChangeIncludeUsed: (value: boolean) => void;
   onChangeIncludeUnused: (value: boolean) => void;
   onChangeIncludeTranslate: (value: boolean) => void;
@@ -353,11 +369,14 @@ export function WorkbenchHeader({
   onRemoveTextSearchCondition,
   onSubmitSearch,
   statusFilter,
+  glossaryStatusFilter,
+  hasSelectedGlossaryRepository,
   includeUsed,
   includeUnused,
   includeTranslate,
   includeDoNotTranslate,
   onChangeStatusFilter,
+  onChangeGlossaryStatusFilter,
   onChangeIncludeUsed,
   onChangeIncludeUnused,
   onChangeIncludeTranslate,
@@ -483,6 +502,8 @@ export function WorkbenchHeader({
         <SearchFilter
           disabled={searchControlsDisabled}
           statusFilter={statusFilter}
+          glossaryStatusFilter={glossaryStatusFilter}
+          showGlossaryStatusFilter={hasSelectedGlossaryRepository}
           includeUsed={includeUsed}
           includeUnused={includeUnused}
           includeTranslate={includeTranslate}
@@ -498,6 +519,7 @@ export function WorkbenchHeader({
           worksetSize={worksetSize}
           onChangeWorksetSize={onChangeWorksetSize}
           onChangeStatusFilter={onChangeStatusFilter}
+          onChangeGlossaryStatusFilter={onChangeGlossaryStatusFilter}
           onChangeIncludeUsed={onChangeIncludeUsed}
           onChangeIncludeUnused={onChangeIncludeUnused}
           onChangeIncludeTranslate={onChangeIncludeTranslate}
@@ -511,6 +533,8 @@ export function WorkbenchHeader({
 type FilterChipProps = {
   disabled: boolean;
   statusFilter: StatusFilterValue;
+  glossaryStatusFilter: GlossaryStatusFilterValue;
+  showGlossaryStatusFilter: boolean;
   includeUsed: boolean;
   includeUnused: boolean;
   includeTranslate: boolean;
@@ -526,6 +550,7 @@ type FilterChipProps = {
   worksetSize: number;
   onChangeWorksetSize: (value: number) => void;
   onChangeStatusFilter: (value: StatusFilterValue) => void;
+  onChangeGlossaryStatusFilter: (value: GlossaryStatusFilterValue) => void;
   onChangeIncludeUsed: (value: boolean) => void;
   onChangeIncludeUnused: (value: boolean) => void;
   onChangeIncludeTranslate: (value: boolean) => void;
@@ -535,6 +560,8 @@ type FilterChipProps = {
 function SearchFilter({
   disabled,
   statusFilter,
+  glossaryStatusFilter,
+  showGlossaryStatusFilter,
   includeUsed,
   includeUnused,
   includeTranslate,
@@ -550,6 +577,7 @@ function SearchFilter({
   worksetSize,
   onChangeWorksetSize,
   onChangeStatusFilter,
+  onChangeGlossaryStatusFilter,
   onChangeIncludeUsed,
   onChangeIncludeUnused,
   onChangeIncludeTranslate,
@@ -558,6 +586,9 @@ function SearchFilter({
   const worksetPresets = resultSizePresets;
   const statusLabel =
     statusFilterOptions.find((option) => option.value === statusFilter)?.label ?? 'All statuses';
+  const glossaryStatusLabel =
+    glossaryStatusFilterOptions.find((option) => option.value === glossaryStatusFilter)?.label ??
+    'All glossary statuses';
   const defaultWorksetSize = WORKSET_SIZE_DEFAULT;
 
   type UsageFilterValue = 'any' | 'used' | 'unused';
@@ -604,6 +635,9 @@ function SearchFilter({
   const usageLabel =
     includeUsed && includeUnused ? 'Used: any' : !includeUsed && includeUnused ? 'Unused' : null;
   const summaryParts: string[] = [statusLabel];
+  if (showGlossaryStatusFilter && glossaryStatusFilter !== 'ALL') {
+    summaryParts.push(glossaryStatusLabel);
+  }
   if (usageLabel) {
     summaryParts.push(usageLabel);
   }
@@ -625,6 +659,83 @@ function SearchFilter({
   const summary = summaryParts.join(' · ');
 
   const quickRanges = getStandardDateQuickRanges();
+  const sections: FilterSection[] = [
+    {
+      kind: 'radio',
+      label: 'Status',
+      options: statusFilterOptions,
+      value: statusFilter,
+      onChange: (value) => onChangeStatusFilter(value as StatusFilterValue),
+    },
+    {
+      kind: 'radio',
+      label: 'Used',
+      options: [
+        { value: 'any', label: 'Any' },
+        { value: 'used', label: 'Yes' },
+        { value: 'unused', label: 'No' },
+      ],
+      value: usageValue,
+      onChange: (value) => handleUsageChange(value as UsageFilterValue),
+    },
+    {
+      kind: 'radio',
+      label: 'Translate',
+      options: [
+        { value: 'any', label: 'Any' },
+        { value: 'translate', label: 'Yes' },
+        { value: 'do-not-translate', label: 'No' },
+      ],
+      value: translateValue,
+      onChange: (value) => handleTranslateChange(value as TranslateFilterValue),
+    },
+    {
+      kind: 'date',
+      label: 'Text unit created',
+      after: createdAfter ?? undefined,
+      before: createdBefore ?? undefined,
+      onChangeAfter: onChangeCreatedAfter,
+      onChangeBefore: onChangeCreatedBefore,
+      quickRanges,
+      onClear: () => {
+        onChangeCreatedBefore(null);
+        onChangeCreatedAfter(null);
+      },
+      clearLabel: 'Clear dates',
+    },
+    {
+      kind: 'date',
+      label: 'Translation created',
+      after: translationCreatedAfter ?? undefined,
+      before: translationCreatedBefore ?? undefined,
+      onChangeAfter: onChangeTranslationCreatedAfter,
+      onChangeBefore: onChangeTranslationCreatedBefore,
+      quickRanges,
+      onClear: () => {
+        onChangeTranslationCreatedBefore(null);
+        onChangeTranslationCreatedAfter(null);
+      },
+      clearLabel: 'Clear dates',
+    },
+    {
+      kind: 'size',
+      label: 'Result size limit',
+      options: worksetPresets,
+      value: worksetSize,
+      onChange: onChangeWorksetSize,
+      min: WORKSET_SIZE_MIN,
+    },
+  ];
+
+  if (showGlossaryStatusFilter) {
+    sections.splice(1, 0, {
+      kind: 'radio',
+      label: 'Glossary status',
+      options: glossaryStatusFilterOptions,
+      value: glossaryStatusFilter,
+      onChange: (value) => onChangeGlossaryStatusFilter(value as GlossaryStatusFilterValue),
+    });
+  }
 
   return (
     <MultiSectionFilterChip
@@ -632,73 +743,7 @@ function SearchFilter({
       ariaLabel="Filter workbench results"
       disabled={disabled}
       summary={summary}
-      sections={[
-        {
-          kind: 'radio',
-          label: 'Status',
-          options: statusFilterOptions,
-          value: statusFilter,
-          onChange: (value) => onChangeStatusFilter(value as StatusFilterValue),
-        },
-        {
-          kind: 'radio',
-          label: 'Used',
-          options: [
-            { value: 'any', label: 'Any' },
-            { value: 'used', label: 'Yes' },
-            { value: 'unused', label: 'No' },
-          ],
-          value: usageValue,
-          onChange: (value) => handleUsageChange(value as UsageFilterValue),
-        },
-        {
-          kind: 'radio',
-          label: 'Translate',
-          options: [
-            { value: 'any', label: 'Any' },
-            { value: 'translate', label: 'Yes' },
-            { value: 'do-not-translate', label: 'No' },
-          ],
-          value: translateValue,
-          onChange: (value) => handleTranslateChange(value as TranslateFilterValue),
-        },
-        {
-          kind: 'date',
-          label: 'Text unit created',
-          after: createdAfter ?? undefined,
-          before: createdBefore ?? undefined,
-          onChangeAfter: onChangeCreatedAfter,
-          onChangeBefore: onChangeCreatedBefore,
-          quickRanges,
-          onClear: () => {
-            onChangeCreatedBefore(null);
-            onChangeCreatedAfter(null);
-          },
-          clearLabel: 'Clear dates',
-        },
-        {
-          kind: 'date',
-          label: 'Translation created',
-          after: translationCreatedAfter ?? undefined,
-          before: translationCreatedBefore ?? undefined,
-          onChangeAfter: onChangeTranslationCreatedAfter,
-          onChangeBefore: onChangeTranslationCreatedBefore,
-          quickRanges,
-          onClear: () => {
-            onChangeTranslationCreatedBefore(null);
-            onChangeTranslationCreatedAfter(null);
-          },
-          clearLabel: 'Clear dates',
-        },
-        {
-          kind: 'size',
-          label: 'Result size limit',
-          options: worksetPresets,
-          value: worksetSize,
-          onChange: onChangeWorksetSize,
-          min: WORKSET_SIZE_MIN,
-        },
-      ]}
+      sections={sections}
     />
   );
 }

@@ -229,6 +229,12 @@ Workbench also detects rows from glossary backing repositories and shows a
 compact glossary-term affordance that opens the clicked row back in the glossary
 workspace.
 
+When selected Workbench repositories include a glossary backing repository, the
+standard Workbench filter includes a glossary status facet. It defaults to
+approved terms, can be changed to all glossary statuses, and filters by
+`GlossaryTermMetadata.status`; the all state does not require joining glossary
+metadata.
+
 ## Follow-Ups
 
 - Add readiness/audit signals: missing locale coverage, pending candidates,
