@@ -37,8 +37,9 @@ Supported now:
 - `.local` declarations
 - quoted literal expressions such as `{|Mojito|}`
 - function annotations such as `{$count :number}`
-- literal/variable function options in the data model
-- expression and markup attributes
+- literal/variable function options in the data model, including quoted values
+  containing spaces
+- expression and markup attributes, including quoted values containing spaces
 - markup placeholders such as `{#link}`, `{/link}`, and `{#br/}`
 - `format_model_to_parts_with_locale` for text, expression, and markup boundary
   output

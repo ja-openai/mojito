@@ -8,7 +8,8 @@ Current target:
   JSON by test/demo tooling
 - parse MF2 source into the official MF2 Interchange Data Model for the current
   supported fixture slice
-- preserve expression and markup attributes in parsed/decoded models
+- preserve expression and markup attributes in parsed/decoded models, including
+  quoted option/attribute values containing spaces
 - format the supported shared conformance fixture slice
 - expose `formatToParts` for text, expression, and markup boundary output
 - use generated CLDR cardinal and ordinal plural rules

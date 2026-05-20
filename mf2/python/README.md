@@ -38,7 +38,6 @@ Current scope:
 Planned:
 
 - source parser and diagnostics
-- `format_to_parts`
 - locale-sensitive number/date formatting and richer locale negotiation
 - pytest-compatible conformance runner once the core package shape is stable
 

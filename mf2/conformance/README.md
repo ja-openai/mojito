@@ -95,7 +95,7 @@ The source-to-model fixtures currently cover:
 - variables
 - Unicode text, argument values, and quoted literals
 - escaped braces and backslash
-- function annotations and options
+- function annotations and options, including quoted option values containing spaces
 - `.input`
 - `.local`
 - markup open/close/standalone placeholders
@@ -114,6 +114,7 @@ The invalid-source fixtures currently cover:
 - unsupported placeholders
 - unclosed placeholders
 - unclosed quoted patterns
+- unclosed quoted values in expression tails
 - missing match selectors
 
 The format-error fixtures currently cover:

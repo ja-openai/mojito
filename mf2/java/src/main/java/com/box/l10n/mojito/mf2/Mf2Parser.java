@@ -419,9 +419,12 @@ final class Mf2Parser {
 
         Mf2Message.FunctionRef function = null;
         Map<String, Mf2Message.AttributeValue> attributes = new LinkedHashMap<>();
-        String[] tokens = rest.trim().split("\\s+");
+        List<String> tokens = splitTailTokens(rest, start, end);
+        if (tokens == null) {
+            return null;
+        }
         int index = 0;
-        if (index < tokens.length && tokens[index].startsWith(":")) {
+        if (index < tokens.size() && tokens.get(index).startsWith(":")) {
             FunctionParseResult result = parseFunctionAnnotation(tokens, index, start, end);
             if (result == null) {
                 return null;
@@ -429,8 +432,8 @@ final class Mf2Parser {
             function = result.function();
             index = result.nextIndex();
         }
-        while (index < tokens.length) {
-            String token = tokens[index++];
+        while (index < tokens.size()) {
+            String token = tokens.get(index++);
             if (!token.startsWith("@")) {
                 pushDiagnostic(
                         "unsupported-expression",
@@ -449,8 +452,52 @@ final class Mf2Parser {
         return new Tail(function, attributes);
     }
 
-    private FunctionParseResult parseFunctionAnnotation(String[] tokens, int index, int start, int end) {
-        NameSplit split = splitName(tokens[index].substring(1));
+    private List<String> splitTailTokens(String rest, int start, int end) {
+        List<String> tokens = new ArrayList<>();
+        int tokenStart = -1;
+        boolean inQuote = false;
+
+        for (int index = 0; index < rest.length(); ) {
+            int codePoint = rest.codePointAt(index);
+            int charCount = Character.charCount(codePoint);
+            if (codePoint == '|') {
+                inQuote = !inQuote;
+                if (tokenStart < 0) {
+                    tokenStart = index;
+                }
+                index += charCount;
+                continue;
+            }
+            if (Character.isWhitespace(codePoint) && !inQuote) {
+                if (tokenStart >= 0) {
+                    tokens.add(rest.substring(tokenStart, index));
+                    tokenStart = -1;
+                }
+                index += charCount;
+                continue;
+            }
+            if (tokenStart < 0) {
+                tokenStart = index;
+            }
+            index += charCount;
+        }
+
+        if (inQuote) {
+            pushDiagnostic(
+                    "unclosed-quoted-literal",
+                    "Quoted literal is missing closing '|'.",
+                    start,
+                    end);
+            return null;
+        }
+        if (tokenStart >= 0) {
+            tokens.add(rest.substring(tokenStart));
+        }
+        return tokens;
+    }
+
+    private FunctionParseResult parseFunctionAnnotation(List<String> tokens, int index, int start, int end) {
+        NameSplit split = splitName(tokens.get(index).substring(1));
         if (split.name().isEmpty()) {
             pushDiagnostic(
                     "missing-function-name",
@@ -470,8 +517,8 @@ final class Mf2Parser {
 
         Map<String, Mf2Message.ExpressionArgument> options = new LinkedHashMap<>();
         index++;
-        while (index < tokens.length && !tokens[index].startsWith("@")) {
-            String token = tokens[index++];
+        while (index < tokens.size() && !tokens.get(index).startsWith("@")) {
+            String token = tokens.get(index++);
             int equals = token.indexOf('=');
             if (equals <= 0 || equals == token.length() - 1) {
                 pushDiagnostic(

@@ -463,7 +463,7 @@ impl<'a> Parser<'a> {
             });
         }
 
-        let tokens: Vec<_> = rest.split_whitespace().collect();
+        let tokens = self.split_tail_tokens(rest, start, end)?;
         let mut index = 0;
         let function = if tokens.first().is_some_and(|token| token.starts_with(':')) {
             let parsed = self.parse_function_annotation(&tokens, index, start, end)?;
@@ -494,6 +494,47 @@ impl<'a> Parser<'a> {
             function,
             attributes,
         })
+    }
+
+    fn split_tail_tokens<'b>(
+        &mut self,
+        rest: &'b str,
+        start: usize,
+        end: usize,
+    ) -> Option<Vec<&'b str>> {
+        let mut tokens = Vec::new();
+        let mut token_start = None;
+        let mut in_quote = false;
+
+        for (index, ch) in rest.char_indices() {
+            if ch == '|' {
+                in_quote = !in_quote;
+                token_start.get_or_insert(index);
+                continue;
+            }
+            if ch.is_whitespace() && !in_quote {
+                if let Some(start) = token_start.take() {
+                    tokens.push(&rest[start..index]);
+                }
+                continue;
+            }
+            token_start.get_or_insert(index);
+        }
+
+        if in_quote {
+            self.push_diagnostic(
+                "unclosed-quoted-literal",
+                "Quoted literal is missing closing '|'.",
+                start,
+                end,
+            );
+            return None;
+        }
+        if let Some(start) = token_start {
+            tokens.push(&rest[start..]);
+        }
+
+        Some(tokens)
     }
 
     fn parse_function_annotation(

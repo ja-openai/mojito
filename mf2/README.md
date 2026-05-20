@@ -60,8 +60,10 @@ The current conformance slice covers:
 - escaped `\{`, `\}`, and `\\`
 - variable placeholders such as `{$name}`
 - Unicode text, argument values, and quoted literals
-- function annotations and literal/variable options in the data model
-- expression and markup attributes in the data model
+- function annotations and literal/variable options in the data model, including
+  quoted option values containing spaces
+- expression and markup attributes in the data model, including quoted attribute
+  values containing spaces
 - `.input` and `.local` declarations
 - markup placeholders, stripped from string output for now
 - `format_to_parts` / `formatToParts` output for text, expression output, and
