@@ -11,6 +11,7 @@ public struct MF2FunctionRegistry: @unchecked Sendable {
         formatters: [
             "string": passthroughFunction,
             "number": passthroughFunction,
+            "integer": passthroughFunction,
             "datetime": passthroughFunction,
             "date": passthroughFunction,
             "time": passthroughFunction,

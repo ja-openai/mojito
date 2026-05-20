@@ -286,7 +286,7 @@ class _FormatContext:
 
     def _selection_key(self, selector_name: str, value: Any) -> str | None:
         annotation = self.selector_annotations.get(selector_name)
-        if annotation is None or annotation.function != "number":
+        if annotation is None or not annotation.is_numeric:
             return None
         return select_plural_category(self.locale, value, annotation.number_select)
 
@@ -308,8 +308,12 @@ class _SelectorAnnotation:
     @property
     def exact_match(self) -> bool:
         return self.function == "string" or (
-            self.function == "number" and self.number_select == "exact"
+            self.is_numeric and self.number_select == "exact"
         )
+
+    @property
+    def is_numeric(self) -> bool:
+        return self.function in {"number", "integer"}
 
 
 @dataclass(frozen=True)

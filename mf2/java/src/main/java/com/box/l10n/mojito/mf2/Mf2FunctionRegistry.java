@@ -13,7 +13,8 @@ public final class Mf2FunctionRegistry {
     public static Mf2FunctionRegistry defaults() {
         Map<String, Formatter> formatters = new HashMap<>();
         Formatter passthrough = call -> call.value();
-        for (String name : new String[] {"string", "number", "datetime", "date", "time"}) {
+        for (String name :
+                new String[] {"string", "number", "integer", "datetime", "date", "time"}) {
             formatters.put(name, passthrough);
         }
         return new Mf2FunctionRegistry(formatters);

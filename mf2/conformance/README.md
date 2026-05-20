@@ -96,7 +96,8 @@ The source-to-model fixtures currently cover:
 - Unicode text, argument values, and quoted literals
 - Unicode variable names, bidi controls around names, and namespaced identifiers
 - escaped braces and backslash
-- function annotations and options, including quoted option values containing spaces
+- function annotations and options, including `:number`, `:integer`, `:string`,
+  and quoted option values containing spaces
 - `:currency` parsing as a custom function annotation, with unregistered custom
   functions rejected by default formatters
 - `.input`
@@ -104,11 +105,13 @@ The source-to-model fixtures currently cover:
 - markup open/close/standalone placeholders
 - parts output for expression and markup attributes
 - exact-match `.match` selectors and catch-all fallback, including
-  `:number select=exact`
+  `:number select=exact`, `:integer select=exact`, and primitive `:string`
+  selector values
 - direct and simple indirect selector annotations for `.match`
 - cardinal plural category selection for English, French, Russian, Arabic, and
-  Japanese fixtures
-- ordinal plural category selection for English fixtures
+  Japanese fixtures, including `:integer` selection for English
+- ordinal plural category selection for English fixtures, including `:integer`
+  selection
 
 Variable, function, markup, option, and attribute identifiers now have fixture
 coverage for Unicode names, edge bidi controls, namespaces, and basic invalid

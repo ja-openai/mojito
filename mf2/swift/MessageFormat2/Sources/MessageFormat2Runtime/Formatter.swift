@@ -232,7 +232,7 @@ private struct MF2FormatContext {
     }
 
     private func selectionKey(selectorName: String, value: MF2Value) -> String? {
-        guard let annotation = selectorAnnotations[selectorName], annotation.function == "number" else {
+        guard let annotation = selectorAnnotations[selectorName], annotation.isNumeric else {
             return nil
         }
         return selectPluralCategory(
@@ -276,7 +276,11 @@ private struct MF2SelectorAnnotation {
     }
 
     var exactMatch: Bool {
-        function == "string" || (function == "number" && numberSelect == .exact)
+        function == "string" || (isNumeric && numberSelect == .exact)
+    }
+
+    var isNumeric: Bool {
+        function == "number" || function == "integer"
     }
 
     private static func numberSelect(from option: MF2ExpressionArgument?) -> MF2NumberSelect {

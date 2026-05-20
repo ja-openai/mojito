@@ -97,7 +97,7 @@ impl FunctionRegistry {
 impl Default for FunctionRegistry {
     fn default() -> Self {
         let mut registry = Self::empty();
-        for name in ["string", "number", "datetime", "date", "time"] {
+        for name in ["string", "number", "integer", "datetime", "date", "time"] {
             registry.register(name, passthrough_function);
         }
         registry
@@ -487,7 +487,7 @@ impl<'a> FormatContext<'a> {
         value: &serde_json::Value,
     ) -> Option<String> {
         let annotation = self.selector_annotations.get(selector_name)?;
-        if annotation.function != "number" {
+        if !annotation.is_numeric() {
             return None;
         }
         let operands = NumberOperands::from_json(value)?;
@@ -518,11 +518,11 @@ impl SelectorAnnotation {
 
     fn exact_match(&self) -> bool {
         self.function == "string"
-            || (self.function == "number" && self.number_select == NumberSelect::Exact)
+            || (self.is_numeric() && self.number_select == NumberSelect::Exact)
     }
 
     fn selection_key(&self, locale: &str, operands: NumberOperands) -> Option<String> {
-        if self.function != "number" {
+        if !self.is_numeric() {
             return None;
         }
         match self.number_select {
@@ -534,6 +534,10 @@ impl SelectorAnnotation {
             }
             NumberSelect::Exact => None,
         }
+    }
+
+    fn is_numeric(&self) -> bool {
+        self.function == "number" || self.function == "integer"
     }
 }
 

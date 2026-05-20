@@ -76,10 +76,10 @@ The current conformance slice covers:
 - `format_to_parts` / `formatToParts` output for text, expression output, and
   markup boundaries, preserving expression and markup attributes for UI renderers
 - exact-match `.match` selectors with catch-all fallback, including
-  `:number select=exact`
+  `:number select=exact` and `:integer select=exact`
 - direct and simple indirect selector annotation validation for `.match`
-- cardinal and ordinal plural category selection for the generated all-CLDR
-  locale set
+- cardinal and ordinal plural category selection for `:number` and `:integer`
+  selectors across the generated all-CLDR locale set
 - BCP47-first locale-key canonicalization and structural lookup, including
   underscore compatibility and extension stripping for plural and catalog lookup
 - structural model validation for duplicate declarations, select variant key
@@ -97,7 +97,7 @@ The immediate milestone is placeholders plus CLDR plural selection:
 
 - named placeholders
 - `.input` selector annotations
-- `:number` cardinal/ordinal plural selection
+- `:number` and `:integer` cardinal/ordinal plural selection
 - `:string` exact selection
 - parts output for UI-owned markup/link rendering
 - expression and markup attributes preserved in parsed/decoded models

@@ -31,6 +31,7 @@ class FunctionRegistry:
             {
                 "string": _passthrough,
                 "number": _passthrough,
+                "integer": _passthrough,
                 "datetime": _passthrough,
                 "date": _passthrough,
                 "time": _passthrough,

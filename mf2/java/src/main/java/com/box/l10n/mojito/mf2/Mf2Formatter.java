@@ -278,7 +278,7 @@ final class Mf2Formatter {
 
         private String selectionKey(String selectorName, Object value) {
             SelectorAnnotation annotation = selectorAnnotation(selectorName);
-            if (annotation == null || !annotation.function().equals("number")) {
+            if (annotation == null || !annotation.isNumeric()) {
                 return null;
             }
             return PluralRules.selectPluralCategory(locale, value, annotation.numberSelect());
@@ -424,7 +424,11 @@ final class Mf2Formatter {
         }
 
         boolean exactMatch() {
-            return function.equals("string") || (function.equals("number") && numberSelect == NumberSelect.EXACT);
+            return function.equals("string") || (isNumeric() && numberSelect == NumberSelect.EXACT);
+        }
+
+        boolean isNumeric() {
+            return function.equals("number") || function.equals("integer");
         }
     }
 
