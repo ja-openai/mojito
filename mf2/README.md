@@ -12,6 +12,9 @@ It is intentionally split into conformance data and implementation prototypes:
 - `reference/`: ICU reference comparison harnesses
 - `cldr/`: generated CLDR plural-rule data and generators
 - `examples/`: shared parser-free catalog demo used by all starter runtimes
+- `third_party/message-format-wg/test/`: vendored Unicode MessageFormat WG
+  official tests, consumed directly by the Rust `unicode-tests` scoreboard
+  runner
 
 The contract is:
 

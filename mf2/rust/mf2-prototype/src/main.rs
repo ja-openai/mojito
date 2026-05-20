@@ -13,6 +13,8 @@ use mf2_prototype::{
 };
 use serde::Deserialize;
 
+mod unicode_tests;
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SourceFixture {
@@ -136,6 +138,15 @@ fn main() {
         "bench-parse" => {
             let path = next_required_arg(&mut args);
             bench_parse(&path, args.next(), args.next());
+        }
+        "unicode-tests" => {
+            let path = args
+                .next()
+                .unwrap_or_else(|| "../../third_party/message-format-wg/test".to_string());
+            let baseline = args
+                .next()
+                .unwrap_or_else(|| "../../conformance/unicode-official-baseline.json".to_string());
+            unicode_tests::run(Path::new(&path), Path::new(&baseline));
         }
         _ => usage_and_exit(),
     }
@@ -530,7 +541,7 @@ fn fail(message: impl std::fmt::Display) -> ! {
 
 fn usage_and_exit() -> ! {
     eprintln!(
-        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype conformance [source-fixture-dir]\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]\n  mf2-prototype bench-parse <fixture-dir> [iterations] [warmup-iterations]"
+        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype conformance [source-fixture-dir]\n  mf2-prototype unicode-tests [unicode-test-dir] [baseline-json]\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]\n  mf2-prototype bench-parse <fixture-dir> [iterations] [warmup-iterations]"
     );
     process::exit(2);
 }

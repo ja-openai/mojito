@@ -8,6 +8,8 @@ that proves the repo shape:
 - parse simple MF2 source into the official Interchange Data Model shape
 - format the model with string arguments
 - run shared conformance fixtures
+- report a scoreboard against the vendored Unicode MessageFormat WG official
+  tests, guarded by `../../conformance/unicode-official-baseline.json`
 - emit stable diagnostic codes
 
 ## Shape
@@ -66,6 +68,7 @@ cargo test
 cargo run --example translate_demo
 cargo run --example inline_translate_demo
 cargo run -- conformance ../../conformance/fixtures/source-to-model
+cargo run -- unicode-tests
 cargo run -- compile ../../conformance/fixtures/source-to-model/variable-basic.json
 cargo run -- format-first-case ../../conformance/fixtures/source-to-model/match-string.json
 ```
