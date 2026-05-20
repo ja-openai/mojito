@@ -63,6 +63,16 @@
       "locale": "fr",
       "arguments": { "count": 2 },
       "expected": "2 éléments"
+    },
+    {
+      "locale": "fr-CA",
+      "arguments": { "count": 1 },
+      "expected": "1 élément"
+    },
+    {
+      "locale": "FR_ca",
+      "arguments": { "count": 2 },
+      "expected": "2 éléments"
     }
   ]
 }

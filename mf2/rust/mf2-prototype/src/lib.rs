@@ -1,12 +1,12 @@
 mod cldr;
 mod diagnostic;
-mod locale;
+mod locale_key;
 mod model;
 mod parser;
 mod runtime;
 
 pub use diagnostic::Diagnostic;
-pub use locale::{canonical_locale_key, locale_lookup_chain, lookup_locale, LocaleId};
+pub use locale_key::{canonical_locale_key, locale_lookup_chain, lookup_locale};
 pub use model::{
     AttributeValue, Declaration, Expression, ExpressionArg, FunctionRef, Markup, MessageModel,
     Pattern, PatternPart, VariableRef, Variant, VariantKey,

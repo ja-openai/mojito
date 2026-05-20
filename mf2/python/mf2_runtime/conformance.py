@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .locale_key import canonical_locale_key, locale_lookup_chain
 from .model import MF2Error, format_message
 
 
@@ -40,12 +41,14 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         checked_error_cases = _check_format_error_fixtures(fixture_dir.parent)
+        checked_locale_key_cases = _check_locale_key_fixtures(fixture_dir.parent)
     except ConformanceFailure as error:
         print(str(error), file=sys.stderr)
         return 1
     print(
         "Python MF2 conformance runner passed "
-        f"{checked_cases} format cases and {checked_error_cases} format error cases."
+        f"{checked_cases} format cases, {checked_error_cases} format error cases, "
+        f"and {checked_locale_key_cases} locale key cases."
     )
     return 0
 
@@ -73,6 +76,32 @@ def _check_format_error_fixtures(fixture_root: Path) -> int:
                 )
         else:
             raise ConformanceFailure(f"{fixture_path.name}: expected format error, got {actual!r}")
+        checked_cases += 1
+
+    return checked_cases
+
+
+def _check_locale_key_fixtures(fixture_root: Path) -> int:
+    fixture_path = fixture_root / "locale-key" / "cases.json"
+    if not fixture_path.exists():
+        return 0
+
+    checked_cases = 0
+    fixture = _read_json(fixture_path)
+    for item in fixture.get("canonical", []):
+        actual = canonical_locale_key(item["source"])
+        if actual != item["expected"]:
+            raise ConformanceFailure(
+                f"{fixture_path.name}: expected canonical {item['expected']!r}, got {actual!r}"
+            )
+        checked_cases += 1
+
+    for item in fixture.get("lookupChains", []):
+        actual = locale_lookup_chain(item["source"])
+        if actual != item["expected"]:
+            raise ConformanceFailure(
+                f"{fixture_path.name}: expected lookup chain {item['expected']!r}, got {actual!r}"
+            )
         checked_cases += 1
 
     return checked_cases

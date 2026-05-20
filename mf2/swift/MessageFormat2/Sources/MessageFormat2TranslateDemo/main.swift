@@ -44,7 +44,7 @@ private struct Catalog: Decodable {
         guard let localized = messages[messageID] else {
             throw DemoError.missingMessage(messageID)
         }
-        guard let fallback = MF2LocaleID.lookup(in: localized, locale: locale) else {
+        guard let fallback = MF2LocaleKey.lookup(in: localized, locale: locale) else {
             throw DemoError.missingLocale(messageID: messageID, locale: locale)
         }
         return fallback

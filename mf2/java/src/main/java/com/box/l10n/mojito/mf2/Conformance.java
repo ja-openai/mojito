@@ -54,10 +54,11 @@ public final class Conformance {
 
         int checkedInvalidSources = checkInvalidSourceFixtures(fixtureDir.getParent());
         int checkedErrorCases = checkFormatErrorFixtures(fixtureDir.getParent());
+        int checkedLocaleKeyCases = checkLocaleKeyFixtures(fixtureDir.getParent());
         System.out.printf(
                 "Java MF2 conformance runner passed %d source models, %d format cases, "
-                        + "%d invalid source cases, and %d format error cases.%n",
-                checkedModels, checkedCases, checkedInvalidSources, checkedErrorCases);
+                        + "%d invalid source cases, %d format error cases, and %d locale key cases.%n",
+                checkedModels, checkedCases, checkedInvalidSources, checkedErrorCases, checkedLocaleKeyCases);
         return 0;
     }
 
@@ -111,6 +112,39 @@ public final class Conformance {
                             "%s: expected error %s, got %s%n",
                             fixturePath.getFileName(), expectedCode, error.code()));
                 }
+            }
+            checkedCases++;
+        }
+        return checkedCases;
+    }
+
+    private static int checkLocaleKeyFixtures(Path fixtureRoot) throws Exception {
+        Path fixturePath = fixtureRoot.resolve("locale-key").resolve("cases.json");
+        if (!Files.isRegularFile(fixturePath)) {
+            return 0;
+        }
+
+        int checkedCases = 0;
+        Map<String, Object> fixture = object(JsonParser.parse(fixturePath));
+        for (Object rawCase : arrayOrEmpty(fixture.get("canonical"))) {
+            Map<String, Object> item = object(rawCase);
+            String actual = LocaleKey.canonicalKey(string(item.get("source")));
+            String expected = string(item.get("expected"));
+            if (!actual.equals(expected)) {
+                throw new ConformanceFailure(String.format(
+                        "%s: expected canonical %s, got %s", fixturePath.getFileName(), expected, actual));
+            }
+            checkedCases++;
+        }
+        for (Object rawCase : arrayOrEmpty(fixture.get("lookupChains"))) {
+            Map<String, Object> item = object(rawCase);
+            List<String> actual = LocaleKey.lookupChain(string(item.get("source")));
+            List<String> expected = arrayOrEmpty(item.get("expected")).stream()
+                    .map(Conformance::string)
+                    .toList();
+            if (!actual.equals(expected)) {
+                throw new ConformanceFailure(String.format(
+                        "%s: expected lookup chain %s, got %s", fixturePath.getFileName(), expected, actual));
             }
             checkedCases++;
         }

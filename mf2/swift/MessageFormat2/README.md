@@ -17,7 +17,7 @@ Current target:
 - `Formatter.swift`: parser-free formatting and selector matching
 - `GeneratedPluralRules.swift`: generated CLDR cardinal/ordinal rules
 - `PluralRules.swift`: small runtime wrapper for MF2 values
-- `Locale.swift`: tiny BCP47-first locale IDs and structural lookup
+- `Locale.swift`: tiny BCP47-first locale-key string helpers and structural lookup
 - `Errors.swift`: public runtime errors
 
 The target remains parser-free so an app can ship only compiled messages and

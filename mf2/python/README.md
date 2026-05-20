@@ -9,7 +9,7 @@ The Python package keeps the runtime layers separate:
 - `mf2_runtime.formatter`: model-to-string formatting and selector matching
 - `mf2_runtime.plural`: small runtime wrapper around generated CLDR plural code
 - `mf2_runtime.generated_plural_rules`: generated CLDR cardinal/ordinal rules
-- `mf2_runtime.locale`: tiny BCP47-first locale IDs and structural lookup
+- `mf2_runtime.locale_key`: tiny BCP47-first string helpers and structural lookup
 - `mf2_runtime.errors`: public runtime errors
 - `mf2_runtime.model`: compatibility facade for the early API
 - `mf2_runtime.conformance`: shared fixture runner
@@ -29,7 +29,8 @@ Current scope:
   selectors, and `:number select=exact` with catch-all fallback
 - cardinal and ordinal plural category selection for the initial locale set
 - BCP47 locale canonicalization, underscore compatibility, extension stripping,
-  and structural fallback for plural/catalog lookup
+  and structural fallback for catalog lookup. Plural rules keep their own
+  string-only lookup so they do not depend on a locale object.
 
 Planned:
 

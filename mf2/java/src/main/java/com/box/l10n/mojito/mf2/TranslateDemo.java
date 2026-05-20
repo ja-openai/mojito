@@ -23,20 +23,8 @@ public final class TranslateDemo {
 
         String translate(String id, String locale, Map<String, ?> arguments) throws Mf2Exception {
             Map<String, Object> localized = object(messages.get(id));
-            String current = locale;
-            while (!current.isEmpty()) {
-                Object model = localized.get(current);
-                if (model != null) {
-                    return Mf2Message.fromJson(model).format(arguments, current);
-                }
-                current = parent(current);
-            }
-            return Mf2Message.fromJson(localized.get("en")).format(arguments, "en");
-        }
-
-        private static String parent(String locale) {
-            int index = locale.lastIndexOf('-');
-            return index < 0 ? "" : locale.substring(0, index);
+            Object model = LocaleKey.lookup(localized, locale);
+            return Mf2Message.fromJson(model).format(arguments, locale);
         }
     }
 

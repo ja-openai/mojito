@@ -36,9 +36,12 @@ do {
     let checkedErrorCases = try runFormatErrorFixtures(
         fixtureRoot: fixtureDirectory.deletingLastPathComponent()
     )
+    let checkedLocaleKeyCases = try runLocaleKeyFixtures(
+        fixtureRoot: fixtureDirectory.deletingLastPathComponent()
+    )
 
     print(
-        "Swift MF2 conformance runner passed \(checkedCases) format cases and \(checkedErrorCases) format error cases."
+        "Swift MF2 conformance runner passed \(checkedCases) format cases, \(checkedErrorCases) format error cases, and \(checkedLocaleKeyCases) locale key cases."
     )
 } catch {
     fputs("Swift MF2 conformance runner failed: \(error)\n", stderr)
@@ -139,6 +142,47 @@ private func runFormatErrorFixtures(fixtureRoot: URL) throws -> Int {
     return checkedCases
 }
 
+private func runLocaleKeyFixtures(fixtureRoot: URL) throws -> Int {
+    let fixtureURL = fixtureRoot
+        .appendingPathComponent("locale-key")
+        .appendingPathComponent("cases.json")
+    guard FileManager.default.fileExists(atPath: fixtureURL.path) else {
+        return 0
+    }
+
+    let fixture = try JSONDecoder().decode(
+        LocaleKeyFixture.self,
+        from: Data(contentsOf: fixtureURL)
+    )
+
+    var checkedCases = 0
+    for item in fixture.canonical {
+        let actual = MF2LocaleKey.canonicalKey(item.source)
+        if actual != item.expected {
+            throw ConformanceError.localeKeyMismatch(
+                fixture: fixtureURL.lastPathComponent,
+                expected: item.expected,
+                actual: actual
+            )
+        }
+        checkedCases += 1
+    }
+
+    for item in fixture.lookupChains {
+        let actual = MF2LocaleKey.lookupChain(item.source)
+        if actual != item.expected {
+            throw ConformanceError.localeKeyMismatch(
+                fixture: fixtureURL.lastPathComponent,
+                expected: "\(item.expected)",
+                actual: "\(actual)"
+            )
+        }
+        checkedCases += 1
+    }
+
+    return checkedCases
+}
+
 private func fixtureURLs(in directory: URL) throws -> [URL] {
     try FileManager.default
         .contentsOfDirectory(
@@ -171,6 +215,21 @@ private struct ExpectedError: Decodable {
     let code: String
 }
 
+private struct LocaleKeyFixture: Decodable {
+    let canonical: [LocaleCanonicalCase]
+    let lookupChains: [LocaleLookupChainCase]
+}
+
+private struct LocaleCanonicalCase: Decodable {
+    let source: String
+    let expected: String
+}
+
+private struct LocaleLookupChainCase: Decodable {
+    let source: String
+    let expected: [String]
+}
+
 private struct BenchCase {
     let model: MF2Message
     let locale: String
@@ -182,6 +241,7 @@ private enum ConformanceError: Error, CustomStringConvertible {
     case formatMismatch(fixture: String, expected: String, actual: String)
     case expectedFormatError(fixture: String, actual: String)
     case formatErrorMismatch(fixture: String, expected: String, actual: String)
+    case localeKeyMismatch(fixture: String, expected: String, actual: String)
 
     var description: String {
         switch self {
@@ -193,6 +253,8 @@ private enum ConformanceError: Error, CustomStringConvertible {
             "\(fixture): expected format error, got '\(actual)'"
         case let .formatErrorMismatch(fixture, expected, actual):
             "\(fixture): expected error '\(expected)', got '\(actual)'"
+        case let .localeKeyMismatch(fixture, expected, actual):
+            "\(fixture): expected locale key '\(expected)', got '\(actual)'"
         }
     }
 }

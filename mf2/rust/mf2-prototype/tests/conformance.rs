@@ -2,7 +2,10 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use mf2_prototype::{format_model_with_locale, parse_to_model, Diagnostic, MessageModel};
+use mf2_prototype::{
+    canonical_locale_key, format_model_with_locale, locale_lookup_chain, parse_to_model,
+    Diagnostic, MessageModel,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -29,6 +32,25 @@ struct FormatErrorFixture {
     locale: String,
     arguments: BTreeMap<String, serde_json::Value>,
     expected_error: ExpectedDiagnostic,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocaleKeyFixture {
+    canonical: Vec<LocaleCanonicalCase>,
+    lookup_chains: Vec<LocaleLookupChainCase>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LocaleCanonicalCase {
+    source: String,
+    expected: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LocaleLookupChainCase {
+    source: String,
+    expected: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -125,6 +147,17 @@ fn invalid_source_fixtures_emit_expected_diagnostics() {
             "invalid fixture produced a model: {}",
             fixture_path.display()
         );
+    }
+}
+
+#[test]
+fn locale_key_fixtures_pass() {
+    let fixture: LocaleKeyFixture = read_fixture(&conformance_dir().join("locale-key/cases.json"));
+    for item in fixture.canonical {
+        assert_eq!(canonical_locale_key(&item.source), item.expected);
+    }
+    for item in fixture.lookup_chains {
+        assert_eq!(locale_lookup_chain(&item.source), item.expected);
     }
 }
 

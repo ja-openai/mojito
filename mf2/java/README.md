@@ -10,6 +10,7 @@ Current target:
   supported fixture slice
 - format the supported shared conformance fixture slice
 - use generated CLDR cardinal and ordinal plural rules
+- keep locale-key canonicalization/fallback string-only
 - keep ICU4J as a reference comparison target, not a runtime dependency
 
 The runtime is parser-free: production callers can pass compiled message models

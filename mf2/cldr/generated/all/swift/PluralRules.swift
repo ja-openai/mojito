@@ -468,57 +468,10 @@ private let cardinalParents: [String: String] = [:]
 private let ordinalParents: [String: String] = [:]
 
 private func lookupRuleId(locales: [String: String], parents: [String: String], locale: String) -> String? {
-    for candidate in pluralLookupChain(locale, parents: parents) {
+    for candidate in MF2LocaleKey.pluralLookupChain(locale, parents: parents) {
         if let rule = locales[candidate] { return rule }
     }
     return nil
-}
-
-private func pluralLookupChain(_ locale: String, parents: [String: String]) -> [String] {
-    var chain: [String] = []
-    appendLookupChain(canonicalLocaleTag(locale), parents: parents, chain: &chain)
-    return chain
-}
-
-private func appendLookupChain(_ locale: String, parents: [String: String], chain: inout [String]) {
-    var current = locale
-    while !current.isEmpty {
-        if chain.contains(current) { return }
-        chain.append(current)
-        if let parent = parents[current] {
-            appendLookupChain(parent, parents: parents, chain: &chain)
-        }
-        current = structuralParent(current) ?? ""
-    }
-}
-
-private func canonicalLocaleTag(_ locale: String) -> String {
-    let rawParts = locale.trimmingCharacters(in: .whitespacesAndNewlines)
-        .replacingOccurrences(of: "_", with: "-")
-        .split(separator: "-")
-        .map(String.init)
-    var parts: [String] = []
-    for (index, part) in rawParts.enumerated() {
-        if part.count == 1 { break }
-        parts.append(canonicalSubtag(index: index, part: part))
-    }
-    return parts.joined(separator: "-")
-}
-
-private func canonicalSubtag(index: Int, part: String) -> String {
-    if index == 0 { return part.lowercased() }
-    if part.count == 4, part.allSatisfy(\.isLetter) {
-        return part.prefix(1).uppercased() + part.dropFirst().lowercased()
-    }
-    if (part.count == 2 && part.allSatisfy(\.isLetter)) || (part.count == 3 && part.allSatisfy(\.isNumber)) {
-        return part.uppercased()
-    }
-    return part.lowercased()
-}
-
-private func structuralParent(_ locale: String) -> String? {
-    guard let index = locale.lastIndex(of: "-") else { return nil }
-    return String(locale[..<index])
 }
 
 private func selectCardinalR0(_ operands: NumberOperands) -> String {

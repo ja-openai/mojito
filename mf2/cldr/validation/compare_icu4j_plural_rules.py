@@ -67,6 +67,8 @@ def resolve_path(base: Path, value: str) -> Path:
 
 
 def load_generated_rules(path: Path) -> Any:
+    sys.path.insert(0, str(path.parent))
+    sys.path.insert(0, str(path.parents[4] / "python" / "mf2_runtime"))
     spec = importlib.util.spec_from_file_location("generated_plural_rules", path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Failed to load generated Python plural rules from {path}")

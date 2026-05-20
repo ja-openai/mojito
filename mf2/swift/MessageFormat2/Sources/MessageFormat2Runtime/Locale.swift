@@ -1,40 +1,12 @@
 import Foundation
 
-public struct MF2LocaleID: Equatable, Hashable {
-    public let parts: [String]
-
-    public init(_ locale: String) {
-        let rawParts = locale
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "_", with: "-")
-            .split(separator: "-")
-            .map(String.init)
-
-        var canonicalParts: [String] = []
-        for (index, part) in rawParts.enumerated() {
-            if part.count == 1 {
-                break
-            }
-            canonicalParts.append(Self.canonicalSubtag(index: index, part: part))
-        }
-        parts = canonicalParts
-    }
-
-    public var canonicalTag: String {
-        parts.joined(separator: "-")
-    }
-
-    public var lookupChain: [String] {
-        stride(from: parts.count, through: 1, by: -1)
-            .map { parts.prefix($0).joined(separator: "-") }
-    }
-
+public enum MF2LocaleKey {
     public static func canonicalKey(_ locale: String) -> String {
-        MF2LocaleID(locale).canonicalTag
+        parts(locale).joined(separator: "-")
     }
 
     public static func lookupChain(_ locale: String) -> [String] {
-        MF2LocaleID(locale).lookupChain
+        structuralLookupChain(canonicalKey(locale))
     }
 
     public static func lookup<T>(
@@ -54,6 +26,47 @@ public struct MF2LocaleID: Equatable, Hashable {
         return canonicalValues[canonicalKey(fallback)]
     }
 
+    static func pluralLookupChain(_ locale: String, parents: [String: String]) -> [String] {
+        var chain: [String] = []
+        appendPluralLookupChain(canonicalKey(locale), parents: parents, chain: &chain)
+        return chain
+    }
+
+    private static func appendPluralLookupChain(_ locale: String, parents: [String: String], chain: inout [String]) {
+        var current = locale
+        while !current.isEmpty {
+            if chain.contains(current) { return }
+            chain.append(current)
+            if let parent = parents[current] {
+                appendPluralLookupChain(parent, parents: parents, chain: &chain)
+            }
+            current = structuralParent(current) ?? ""
+        }
+    }
+
+    private static func structuralLookupChain(_ locale: String) -> [String] {
+        let parts = locale.split(separator: "-").map(String.init)
+        return stride(from: parts.count, through: 1, by: -1)
+            .map { parts.prefix($0).joined(separator: "-") }
+    }
+
+    private static func parts(_ locale: String) -> [String] {
+        let rawParts = locale
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "_", with: "-")
+            .split(separator: "-")
+            .map(String.init)
+
+        var canonicalParts: [String] = []
+        for (index, part) in rawParts.enumerated() {
+            if part.count == 1 {
+                break
+            }
+            canonicalParts.append(Self.canonicalSubtag(index: index, part: part))
+        }
+        return canonicalParts
+    }
+
     private static func canonicalSubtag(index: Int, part: String) -> String {
         if index == 0 {
             return part.lowercased()
@@ -67,5 +80,10 @@ public struct MF2LocaleID: Equatable, Hashable {
             return part.uppercased()
         }
         return part.lowercased()
+    }
+
+    private static func structuralParent(_ locale: String) -> String? {
+        guard let index = locale.lastIndex(of: "-") else { return nil }
+        return String(locale[..<index])
     }
 }

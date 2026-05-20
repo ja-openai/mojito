@@ -18,6 +18,8 @@ The crate mirrors the intended production packages as modules:
 - `model`: official Unicode MF2 Interchange Data Model structs
 - `runtime`: parser-free model formatter and selector matching
 - `cldr`: runtime wrapper around generated CLDR plural-rule code
+- `locale_key`: string-only catalog lookup helpers; plural rules do not depend on a
+  locale object
 - `diagnostic`: stable parser diagnostic type and codes
 
 The runtime module does not depend on parser internals. That keeps the embedded

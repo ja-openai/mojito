@@ -27,10 +27,10 @@ Both outputs are useful:
 
 Current size smoke results from CLDR `main` on 2026-05-19:
 
-- `en,fr,ru,ar,ja`: JSON ~12 KB, Python ~15 KB, Rust ~9 KB, Swift ~10 KB,
-  Java ~12 KB
-- all CLDR plural locales: JSON ~125 KB, Python ~117 KB, Rust ~63 KB, Swift
-  ~82 KB, Java ~74 KB
+- `en,fr,ru,ar,ja`: JSON ~12 KB, Python ~14 KB, Rust ~7 KB, Swift ~9 KB,
+  Java ~10 KB
+- all CLDR plural locales: JSON ~125 KB, Python ~116 KB, Rust ~62 KB, Swift
+  ~81 KB, Java ~71 KB
 
 For embedded clients, start with the product locale allowlist. The all-locale
 Rust/Swift generated implementation is still small, but the allowlist keeps app
@@ -44,6 +44,11 @@ The generator emits:
 - `swift/PluralRules.swift`: Swift evaluator and generated data
 - `java/com/box/l10n/mojito/mf2/GeneratedPluralRules.java`: Java evaluator
   and generated data
+
+The generated evaluators intentionally depend on each runtime's tiny
+`LocaleKey` helper for canonicalization and structural lookup. The generated
+part owns plural rule data and plural-specific parent maps; `LocaleKey` owns the
+shared string algorithm and remains independent of parser/runtime formatting.
 
 Locale IDs in generated data are canonical BCP47-style keys such as `pt-PT`,
 not CLDR underscore keys. The generated evaluators accept underscore input for
