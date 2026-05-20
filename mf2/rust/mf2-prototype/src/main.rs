@@ -2,11 +2,14 @@ use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::hint::black_box;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
 use std::time::Instant;
 
-use mf2_prototype::{format_model_with_locale, parse_to_model, MessageModel};
+use mf2_prototype::{
+    canonical_locale_key, format_model_to_parts_with_locale, format_model_with_locale,
+    locale_lookup_chain, parse_to_model, FormattedPart, MessageModel,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -20,10 +23,80 @@ struct SourceFixture {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct SourceConformanceFixture {
+    source: String,
+    expected_model: MessageModel,
+    #[serde(default)]
+    format_cases: Vec<ExpectedFormatCase>,
+    #[serde(default)]
+    parts_cases: Vec<PartsCase>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct InvalidSourceFixture {
+    source: String,
+    expected_diagnostics: Vec<ExpectedDiagnostic>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FormatErrorFixture {
+    model: MessageModel,
+    #[serde(default = "default_locale")]
+    locale: String,
+    arguments: BTreeMap<String, serde_json::Value>,
+    expected_error: ExpectedDiagnostic,
+}
+
+#[derive(Debug, Deserialize)]
+struct ExpectedDiagnostic {
+    code: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct FormatCase {
     #[serde(default = "default_locale")]
     locale: String,
     arguments: BTreeMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExpectedFormatCase {
+    #[serde(default = "default_locale")]
+    locale: String,
+    arguments: BTreeMap<String, serde_json::Value>,
+    expected: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PartsCase {
+    #[serde(default = "default_locale")]
+    locale: String,
+    arguments: BTreeMap<String, serde_json::Value>,
+    expected: Vec<FormattedPart>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LocaleKeyFixture {
+    canonical: Vec<LocaleCanonicalCase>,
+    #[serde(rename = "lookupChains")]
+    lookup_chains: Vec<LocaleLookupChainCase>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LocaleCanonicalCase {
+    source: String,
+    expected: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LocaleLookupChainCase {
+    source: String,
+    expected: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -37,17 +110,36 @@ fn main() {
     let Some(command) = args.next() else {
         usage_and_exit();
     };
-    let Some(path) = args.next() else {
-        usage_and_exit();
-    };
 
     match command.as_str() {
-        "compile" => compile(&read_to_string(&path)),
-        "format-first-case" => format_first_case(&read_to_string(&path)),
-        "bench" => bench(&path, args.next(), args.next()),
-        "bench-parse" => bench_parse(&path, args.next(), args.next()),
+        "compile" => {
+            let path = next_required_arg(&mut args);
+            compile(&read_to_string(&path));
+        }
+        "format-first-case" => {
+            let path = next_required_arg(&mut args);
+            format_first_case(&read_to_string(&path));
+        }
+        "conformance" => {
+            let path = args
+                .next()
+                .unwrap_or_else(|| "../../conformance/fixtures/source-to-model".to_string());
+            conformance(Path::new(&path));
+        }
+        "bench" => {
+            let path = next_required_arg(&mut args);
+            bench(&path, args.next(), args.next());
+        }
+        "bench-parse" => {
+            let path = next_required_arg(&mut args);
+            bench_parse(&path, args.next(), args.next());
+        }
         _ => usage_and_exit(),
     }
+}
+
+fn next_required_arg(args: &mut impl Iterator<Item = String>) -> String {
+    args.next().unwrap_or_else(|| usage_and_exit())
 }
 
 fn compile(source: &str) {
@@ -97,6 +189,190 @@ fn format_first_case(source: &str) {
         process::exit(1);
     });
     println!("{output}");
+}
+
+fn conformance(fixture_dir: &Path) {
+    let mut checked_models = 0usize;
+    let mut checked_format_cases = 0usize;
+    let mut checked_parts_cases = 0usize;
+
+    for fixture_path in json_fixture_paths(fixture_dir) {
+        let fixture: SourceConformanceFixture = read_json_fixture(&fixture_path);
+        let result = parse_to_model(&fixture.source);
+        if !result.diagnostics.is_empty() {
+            fail(format!(
+                "{}: expected parse success, got diagnostics {:?}",
+                fixture_path.display(),
+                result.diagnostics
+            ));
+        }
+        let Some(model) = result.model.as_ref() else {
+            fail(format!("{}: expected parsed model", fixture_path.display()));
+        };
+        if model != &fixture.expected_model {
+            fail(format!(
+                "{}: parsed model did not match expected model",
+                fixture_path.display()
+            ));
+        }
+        checked_models += 1;
+
+        for format_case in fixture.format_cases {
+            let actual =
+                format_model_with_locale(model, &format_case.arguments, &format_case.locale)
+                    .unwrap_or_else(|diagnostic| {
+                        fail(format!(
+                            "{}: format failed with {}",
+                            fixture_path.display(),
+                            diagnostic.code
+                        ));
+                    });
+            if actual != format_case.expected {
+                fail(format!(
+                    "{}: expected {:?}, got {:?}",
+                    fixture_path.display(),
+                    format_case.expected,
+                    actual
+                ));
+            }
+            checked_format_cases += 1;
+        }
+
+        for parts_case in fixture.parts_cases {
+            let actual =
+                format_model_to_parts_with_locale(model, &parts_case.arguments, &parts_case.locale)
+                    .unwrap_or_else(|diagnostic| {
+                        fail(format!(
+                            "{}: format parts failed with {}",
+                            fixture_path.display(),
+                            diagnostic.code
+                        ));
+                    });
+            if actual != parts_case.expected {
+                fail(format!(
+                    "{}: expected parts {:?}, got {:?}",
+                    fixture_path.display(),
+                    parts_case.expected,
+                    actual
+                ));
+            }
+            checked_parts_cases += 1;
+        }
+    }
+
+    let fixture_root = fixture_dir.parent().unwrap_or_else(|| Path::new("."));
+    let checked_invalid_sources = check_invalid_source_fixtures(fixture_root);
+    let checked_format_error_cases = check_format_error_fixtures(fixture_root);
+    let checked_locale_key_cases = check_locale_key_fixtures(fixture_root);
+
+    println!(
+        "Rust MF2 conformance runner passed {checked_models} source models, \
+         {checked_format_cases} format cases, {checked_parts_cases} parts cases, \
+         {checked_invalid_sources} invalid source cases, {checked_format_error_cases} format error cases, \
+         and {checked_locale_key_cases} locale key cases."
+    );
+}
+
+fn check_invalid_source_fixtures(fixture_root: &Path) -> usize {
+    let fixture_dir = fixture_root.join("invalid-source");
+    if !fixture_dir.is_dir() {
+        return 0;
+    }
+
+    let mut checked_cases = 0usize;
+    for fixture_path in json_fixture_paths(&fixture_dir) {
+        let fixture: InvalidSourceFixture = read_json_fixture(&fixture_path);
+        let result = parse_to_model(&fixture.source);
+        let actual_codes: Vec<_> = result
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.code.as_str())
+            .collect();
+        let expected_codes: Vec<_> = fixture
+            .expected_diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.code.as_str())
+            .collect();
+        if actual_codes != expected_codes {
+            fail(format!(
+                "{}: expected diagnostics {:?}, got {:?}",
+                fixture_path.display(),
+                expected_codes,
+                actual_codes
+            ));
+        }
+        if result.model.is_some() {
+            fail(format!(
+                "{}: invalid fixture produced a model",
+                fixture_path.display()
+            ));
+        }
+        checked_cases += 1;
+    }
+    checked_cases
+}
+
+fn check_format_error_fixtures(fixture_root: &Path) -> usize {
+    let fixture_dir = fixture_root.join("format-errors");
+    if !fixture_dir.is_dir() {
+        return 0;
+    }
+
+    let mut checked_cases = 0usize;
+    for fixture_path in json_fixture_paths(&fixture_dir) {
+        let fixture: FormatErrorFixture = read_json_fixture(&fixture_path);
+        match format_model_with_locale(&fixture.model, &fixture.arguments, &fixture.locale) {
+            Ok(output) => fail(format!(
+                "{}: expected format error, got {:?}",
+                fixture_path.display(),
+                output
+            )),
+            Err(diagnostic) if diagnostic.code == fixture.expected_error.code => {}
+            Err(diagnostic) => fail(format!(
+                "{}: expected error {}, got {}",
+                fixture_path.display(),
+                fixture.expected_error.code,
+                diagnostic.code
+            )),
+        }
+        checked_cases += 1;
+    }
+    checked_cases
+}
+
+fn check_locale_key_fixtures(fixture_root: &Path) -> usize {
+    let fixture_path = fixture_root.join("locale-key").join("cases.json");
+    if !fixture_path.is_file() {
+        return 0;
+    }
+
+    let fixture: LocaleKeyFixture = read_json_fixture(&fixture_path);
+    let mut checked_cases = 0usize;
+    for item in fixture.canonical {
+        let actual = canonical_locale_key(&item.source);
+        if actual != item.expected {
+            fail(format!(
+                "{}: expected canonical {}, got {}",
+                fixture_path.display(),
+                item.expected,
+                actual
+            ));
+        }
+        checked_cases += 1;
+    }
+    for item in fixture.lookup_chains {
+        let actual = locale_lookup_chain(&item.source);
+        if actual != item.expected {
+            fail(format!(
+                "{}: expected lookup chain {:?}, got {:?}",
+                fixture_path.display(),
+                item.expected,
+                actual
+            ));
+        }
+        checked_cases += 1;
+    }
+    checked_cases
 }
 
 fn bench_parse(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>) {
@@ -190,33 +466,23 @@ fn parse_iterations(value: &str, label: &str) -> usize {
 }
 
 fn read_sources(dir: &Path) -> Vec<String> {
-    let mut paths: Vec<_> = fs::read_dir(dir)
-        .unwrap_or_else(|error| {
-            eprintln!("Failed to read {}: {error}", dir.display());
-            process::exit(2);
-        })
-        .map(|entry| entry.expect("fixture entry").path())
-        .filter(|path| {
-            path.extension()
-                .is_some_and(|extension| extension == "json")
-        })
-        .collect();
-    paths.sort();
-    paths
+    json_fixture_paths(dir)
         .into_iter()
         .map(|path| {
-            let content = read_to_string(path.to_str().unwrap());
-            serde_json::from_str::<SourceOnlyFixture>(&content)
-                .map(|fixture| fixture.source)
-                .unwrap_or_else(|error| {
-                    eprintln!("Failed to parse source from {}: {error}", path.display());
-                    process::exit(2);
-                })
+            let fixture: SourceOnlyFixture = read_json_fixture(&path);
+            fixture.source
         })
         .collect()
 }
 
 fn read_fixture_dir(dir: &Path) -> Vec<SourceFixture> {
+    json_fixture_paths(dir)
+        .into_iter()
+        .map(|path| read_json_fixture(&path))
+        .collect()
+}
+
+fn json_fixture_paths(dir: &Path) -> Vec<PathBuf> {
     let mut paths: Vec<_> = fs::read_dir(dir)
         .unwrap_or_else(|error| {
             eprintln!("Failed to read {}: {error}", dir.display());
@@ -230,15 +496,17 @@ fn read_fixture_dir(dir: &Path) -> Vec<SourceFixture> {
         .collect();
     paths.sort();
     paths
-        .into_iter()
-        .map(|path| {
-            serde_json::from_str::<SourceFixture>(&read_to_string(path.to_str().unwrap()))
-                .unwrap_or_else(|error| {
-                    eprintln!("Failed to parse {}: {error}", path.display());
-                    process::exit(2);
-                })
-        })
-        .collect()
+}
+
+fn read_json_fixture<T: for<'de> Deserialize<'de>>(path: &Path) -> T {
+    let content = fs::read_to_string(path).unwrap_or_else(|error| {
+        eprintln!("Failed to read {}: {error}", path.display());
+        process::exit(2);
+    });
+    serde_json::from_str(&content).unwrap_or_else(|error| {
+        eprintln!("Failed to parse {}: {error}", path.display());
+        process::exit(2);
+    })
 }
 
 fn read_to_string(path: &str) -> String {
@@ -248,9 +516,14 @@ fn read_to_string(path: &str) -> String {
     })
 }
 
+fn fail(message: impl std::fmt::Display) -> ! {
+    eprintln!("{message}");
+    process::exit(1);
+}
+
 fn usage_and_exit() -> ! {
     eprintln!(
-        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]\n  mf2-prototype bench-parse <fixture-dir> [iterations] [warmup-iterations]"
+        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype conformance [source-fixture-dir]\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]\n  mf2-prototype bench-parse <fixture-dir> [iterations] [warmup-iterations]"
     );
     process::exit(2);
 }

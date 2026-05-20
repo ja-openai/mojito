@@ -64,6 +64,7 @@ Run:
 cargo test
 cargo run --example translate_demo
 cargo run --example inline_translate_demo
+cargo run -- conformance ../../conformance/fixtures/source-to-model
 cargo run -- compile ../../conformance/fixtures/source-to-model/variable-basic.json
 cargo run -- format-first-case ../../conformance/fixtures/source-to-model/match-string.json
 ```

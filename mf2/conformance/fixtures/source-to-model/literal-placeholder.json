@@ -1,0 +1,34 @@
+{
+  "name": "literal-placeholder",
+  "source": "Status: {|ready|}.",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Status: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "ready" }
+      },
+      "."
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Status: ready."
+    }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": [
+        { "type": "text", "value": "Status: " },
+        { "type": "expression", "value": "ready" },
+        { "type": "text", "value": "." }
+      ]
+    }
+  ]
+}

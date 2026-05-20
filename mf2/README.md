@@ -58,7 +58,7 @@ The current conformance slice covers:
 
 - literal text
 - escaped `\{`, `\}`, and `\\`
-- variable placeholders such as `{$name}`
+- variable and literal placeholders such as `{$name}` and `{|ready|}`
 - Unicode text, argument values, quoted literals, and preservation of
   canonically equivalent but byte-distinct names
 - Unicode MF2 names for variables, including combining marks, plus namespaced
@@ -68,13 +68,13 @@ The current conformance slice covers:
   and attribute identifiers, malformed match variants, plus duplicate function
   option and attribute names
 - function annotations and literal/variable options in the data model, including
-  quoted option values containing spaces
+  quoted option values containing spaces and variable-valued options
 - formatter function registries in Rust/Swift/Python/Java; default runtimes
   pass through the current standard-function slice, while demos register a
   narrow dependency-free `:currency` function outside the core formatter
 - expression and markup attributes in the data model, including quoted attribute
   values containing spaces
-- `.input` and `.local` declarations
+- `.input` and `.local` declarations, including multiple inputs and chained locals
 - markup placeholders, stripped from string output for now
 - `format_to_parts` / `formatToParts` output for text, expression output, and
   markup boundaries, preserving expression and markup attributes for UI renderers

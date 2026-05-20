@@ -1,0 +1,46 @@
+{
+  "name": "input-multiple-declarations",
+  "source": ".input {$name :string}\n.input {$count :integer}\n{{{$name} has {$count} files.}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "name",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "name" },
+          "function": { "type": "function", "name": "string" }
+        }
+      },
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" },
+          "function": { "type": "function", "name": "integer" }
+        }
+      }
+    ],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" }
+      },
+      " has ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "count" }
+      },
+      " files."
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Alex", "count": 4 },
+      "expected": "Alex has 4 files."
+    }
+  ]
+}

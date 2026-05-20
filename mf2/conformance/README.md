@@ -92,17 +92,17 @@ TypeScript can all consume it without bespoke tooling.
 The source-to-model fixtures currently cover:
 
 - simple text
-- variables
+- variables and quoted literal placeholders
 - Unicode text, argument values, quoted literals, and preservation of
   canonically equivalent but byte-distinct names
 - Unicode variable names, bidi controls around names, and namespaced identifiers
 - escaped braces and backslash
 - function annotations and options, including `:number`, `:integer`, `:string`,
-  and quoted option values containing spaces
+  quoted option values containing spaces, and variable-valued options
 - `:currency` parsing as a custom function annotation, with unregistered custom
   functions rejected by default formatters
-- `.input`
-- `.local`
+- `.input`, including multiple declarations before a quoted pattern
+- `.local`, including chained locals
 - markup open/close/standalone placeholders
 - parts output for expression and markup attributes
 - exact-match `.match` selectors and catch-all fallback, including multi-selector
