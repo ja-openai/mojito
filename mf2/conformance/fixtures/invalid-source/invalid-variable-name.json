@@ -1,0 +1,7 @@
+{
+  "name": "invalid-variable-name",
+  "source": "Hello, {$-name}!",
+  "expectedDiagnostics": [
+    { "code": "invalid-variable-name" }
+  ]
+}

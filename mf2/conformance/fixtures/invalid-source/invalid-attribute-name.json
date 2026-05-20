@@ -1,0 +1,7 @@
+{
+  "name": "invalid-attribute-name",
+  "source": "Hello, {$name @-note=|display name|}!",
+  "expectedDiagnostics": [
+    { "code": "invalid-attribute" }
+  ]
+}

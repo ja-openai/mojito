@@ -108,8 +108,9 @@ The source-to-model fixtures currently cover:
 - ordinal plural category selection for English fixtures
 
 Variable, function, markup, option, and attribute identifiers now have fixture
-coverage for Unicode names, edge bidi controls, and namespaces. Deeper invalid
-identifier and canonical-equivalence coverage remains open.
+coverage for Unicode names, edge bidi controls, namespaces, and basic invalid
+identifier diagnostics. Deeper identifier edge cases and canonical-equivalence
+coverage remain open.
 
 The invalid-source fixtures currently cover:
 
@@ -119,6 +120,7 @@ The invalid-source fixtures currently cover:
 - unclosed quoted patterns
 - unclosed quoted values in expression tails
 - missing match selectors
+- invalid variable, function, option, and attribute names
 
 The format-error fixtures currently cover:
 

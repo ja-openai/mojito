@@ -364,10 +364,11 @@ final class Mf2Parser {
         Mf2Message.Expression expression;
         String rest;
         if (content.startsWith("$")) {
-            NameSplit split = splitName(content.substring(1));
+            String rawName = content.substring(1);
+            NameSplit split = splitName(rawName);
             if (split.name().isEmpty()) {
                 pushDiagnostic(
-                        "missing-variable-name",
+                        variableNameDiagnosticCode(rawName),
                         "Variable placeholder is missing a name.",
                         start,
                         end);
@@ -497,10 +498,11 @@ final class Mf2Parser {
     }
 
     private FunctionParseResult parseFunctionAnnotation(List<String> tokens, int index, int start, int end) {
-        NameSplit split = splitIdentifier(tokens.get(index).substring(1));
+        String content = tokens.get(index).substring(1);
+        NameSplit split = splitIdentifier(content);
         if (split.name().isEmpty()) {
             pushDiagnostic(
-                    "missing-function-name",
+                    content.isEmpty() ? "missing-function-name" : "invalid-function-name",
                     "Function annotation is missing a name.",
                     start,
                     end);
@@ -644,7 +646,7 @@ final class Mf2Parser {
         NameScan scan = scanName(source, index);
         if (scan.name().isEmpty()) {
             pushDiagnostic(
-                    "missing-variable-name",
+                    variableNameDiagnosticCode(source, index),
                     "Variable is missing a name.",
                     start,
                     index);
@@ -721,6 +723,20 @@ final class Mf2Parser {
             return new Mf2Message.LiteralArgument(rawValue.substring(1, rawValue.length() - 1));
         }
         return new Mf2Message.LiteralArgument(rawValue);
+    }
+
+    private static String variableNameDiagnosticCode(String input) {
+        return variableNameDiagnosticCode(input, 0);
+    }
+
+    private static String variableNameDiagnosticCode(String input, int offset) {
+        if (offset >= input.length()) {
+            return "missing-variable-name";
+        }
+        return switch (input.charAt(offset)) {
+            case '}', ' ', '\t', '\n', '\r' -> "missing-variable-name";
+            default -> "invalid-variable-name";
+        };
     }
 
     private static NameSplit splitName(String input) {

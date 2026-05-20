@@ -407,8 +407,9 @@ impl<'a> Parser<'a> {
         let (mut expression, rest) = if let Some(rest) = content.strip_prefix('$') {
             let (name, rest) = split_name(rest);
             if name.is_empty() {
+                let code = variable_name_diagnostic_code(rest);
                 self.push_diagnostic(
-                    "missing-variable-name",
+                    code,
                     "Variable placeholder is missing a name.",
                     start,
                     end,
@@ -549,8 +550,13 @@ impl<'a> Parser<'a> {
             .expect("annotation starts with ':'");
         let (name, rest) = split_identifier(content);
         if name.is_empty() {
+            let code = if content.is_empty() {
+                "missing-function-name"
+            } else {
+                "invalid-function-name"
+            };
             self.push_diagnostic(
-                "missing-function-name",
+                code,
                 "Function annotation is missing a name.",
                 start,
                 end,
@@ -720,10 +726,12 @@ impl<'a> Parser<'a> {
         }
         self.advance_char();
         let name_start = self.index;
-        let (name, rest) = split_name(&self.source[name_start..]);
+        let raw_name = &self.source[name_start..];
+        let (name, rest) = split_name(raw_name);
         if name.is_empty() {
+            let code = variable_name_diagnostic_code(raw_name);
             self.push_diagnostic(
-                "missing-variable-name",
+                code,
                 "Variable is missing a name.",
                 start,
                 self.index,
@@ -820,6 +828,13 @@ fn parse_literal_or_variable(raw_value: &str) -> ExpressionArg {
         ExpressionArg::Literal {
             value: raw_value.to_string(),
         }
+    }
+}
+
+fn variable_name_diagnostic_code(input: &str) -> &'static str {
+    match input.chars().next() {
+        None | Some('}' | ' ' | '\t' | '\n' | '\r') => "missing-variable-name",
+        Some(_) => "invalid-variable-name",
     }
 }
 
