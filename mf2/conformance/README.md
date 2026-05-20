@@ -93,7 +93,8 @@ The source-to-model fixtures currently cover:
 
 - simple text
 - variables
-- Unicode text, argument values, and quoted literals
+- Unicode text, argument values, quoted literals, and preservation of
+  canonically equivalent but byte-distinct names
 - Unicode variable names, bidi controls around names, and namespaced identifiers
 - escaped braces and backslash
 - function annotations and options, including `:number`, `:integer`, `:string`,
@@ -114,9 +115,9 @@ The source-to-model fixtures currently cover:
   selection
 
 Variable, function, markup, option, and attribute identifiers now have fixture
-coverage for Unicode names, edge bidi controls, namespaces, and basic invalid
-identifier diagnostics. Deeper identifier edge cases and canonical-equivalence
-coverage remain open.
+coverage for Unicode names, edge bidi controls, namespaces, combining marks in
+names, canonical-equivalence preservation, and basic invalid identifier
+diagnostics. Deeper identifier edge cases remain open.
 
 The invalid-source fixtures currently cover:
 

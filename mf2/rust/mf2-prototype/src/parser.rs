@@ -975,7 +975,7 @@ fn is_name_char(ch: char) -> bool {
     if ch.is_ascii() {
         return ch.is_ascii_alphanumeric() || matches!(ch, '+' | '_' | '-' | '.');
     }
-    is_name_start(ch)
+    is_name_start(ch) || is_combining_mark(ch)
 }
 
 fn is_ascii_name_start(byte: u8) -> bool {
@@ -990,6 +990,17 @@ fn is_bidi_marker(ch: char) -> bool {
     matches!(
         ch,
         '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{2066}'..='\u{2069}'
+    )
+}
+
+fn is_combining_mark(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{0300}'..='\u{036F}'
+            | '\u{1AB0}'..='\u{1AFF}'
+            | '\u{1DC0}'..='\u{1DFF}'
+            | '\u{20D0}'..='\u{20FF}'
+            | '\u{FE20}'..='\u{FE2F}'
     )
 }
 

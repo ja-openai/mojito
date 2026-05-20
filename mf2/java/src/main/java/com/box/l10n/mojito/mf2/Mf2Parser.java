@@ -868,8 +868,16 @@ final class Mf2Parser {
         }
         return isNameStart(codePoint)
                 || (codePoint >= '0' && codePoint <= '9')
+                || isCombiningMark(codePoint)
                 || codePoint == '-'
                 || codePoint == '.';
+    }
+
+    private static boolean isCombiningMark(int codePoint) {
+        int type = Character.getType(codePoint);
+        return type == Character.NON_SPACING_MARK
+                || type == Character.COMBINING_SPACING_MARK
+                || type == Character.ENCLOSING_MARK;
     }
 
     private static boolean isAsciiNameStart(char ch) {

@@ -59,9 +59,11 @@ The current conformance slice covers:
 - literal text
 - escaped `\{`, `\}`, and `\\`
 - variable placeholders such as `{$name}`
-- Unicode text, argument values, and quoted literals
-- Unicode MF2 names for variables plus namespaced identifiers for functions,
-  options, attributes, and markup in the Rust/Java source parsers
+- Unicode text, argument values, quoted literals, and preservation of
+  canonically equivalent but byte-distinct names
+- Unicode MF2 names for variables, including combining marks, plus namespaced
+  identifiers for functions, options, attributes, and markup in the Rust/Java
+  source parsers
 - basic invalid-source diagnostics for malformed variable, function, option,
   and attribute identifiers, plus duplicate function option and attribute names
 - function annotations and literal/variable options in the data model, including

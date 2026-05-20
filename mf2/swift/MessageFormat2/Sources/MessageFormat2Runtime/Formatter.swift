@@ -15,7 +15,13 @@ public extension MF2Message {
         functions: MF2FunctionRegistry = .defaults
     ) throws -> [MF2FormattedPart] {
         try validate()
-        var context = MF2FormatContext(values: arguments, locale: locale, functions: functions)
+        var context = MF2FormatContext(
+            values: Dictionary(
+                uniqueKeysWithValues: arguments.map { (MF2NameKey($0.key), $0.value) }
+            ),
+            locale: locale,
+            functions: functions
+        )
         try context.apply(declarations: declarations)
         switch self {
         case let .message(_, pattern):
@@ -46,13 +52,13 @@ public extension MF2Message {
     }
 
     private func validate(declarations: [MF2Declaration]) throws {
-        var names: Set<String> = []
+        var names: Set<MF2NameKey> = []
         for declaration in declarations {
             if case let .input(name, value) = declaration {
                 try validateInputDeclaration(name: name, value: value)
             }
             let name = declaration.name
-            guard names.insert(name).inserted else {
+            guard names.insert(MF2NameKey(name)).inserted else {
                 throw MF2Error.duplicateDeclaration(name)
             }
         }
@@ -60,7 +66,7 @@ public extension MF2Message {
 
     private func validateInputDeclaration(name: String, value: MF2Expression) throws {
         guard case let .variable(variableName)? = value.arg,
-              variableName == name
+              MF2NameKey(variableName) == MF2NameKey(name)
         else {
             throw MF2Error.invalidInputDeclaration(name)
         }
@@ -91,7 +97,7 @@ public extension MF2Message {
         selectors: [MF2VariableRef]
     ) throws {
         let annotations = collectSelectorAnnotations(for: declarations)
-        for selector in selectors where annotations[selector.name] == nil {
+        for selector in selectors where annotations[MF2NameKey(selector.name)] == nil {
             throw MF2Error.missingSelectorAnnotation(selector.name)
         }
     }
@@ -99,8 +105,8 @@ public extension MF2Message {
 }
 
 private struct MF2FormatContext {
-    var values: [String: MF2Value]
-    var selectorAnnotations: [String: MF2SelectorAnnotation] = [:]
+    var values: [MF2NameKey: MF2Value]
+    var selectorAnnotations: [MF2NameKey: MF2SelectorAnnotation] = [:]
     var locale: String
     var functions: MF2FunctionRegistry
 
@@ -111,14 +117,14 @@ private struct MF2FormatContext {
             case .input:
                 continue
             case let .local(name, value):
-                values[name] = .string(try format(expression: value))
+                values[MF2NameKey(name)] = .string(try format(expression: value))
             }
         }
     }
 
     func formatToParts(selectors: [MF2VariableRef], variants: [MF2Variant]) throws -> [MF2FormattedPart] {
         let selectorValues = try selectors.map { selector in
-            guard let value = values[selector.name] else {
+            guard let value = values[MF2NameKey(selector.name)] else {
                 throw MF2Error.missingArgument(selector.name)
             }
             return MF2SelectorValue(
@@ -186,7 +192,7 @@ private struct MF2FormatContext {
         case let .literal(literal):
             value = literal
         case let .variable(name):
-            guard let argument = values[name] else {
+            guard let argument = values[MF2NameKey(name)] else {
                 throw MF2Error.missingArgument(name)
             }
             value = argument.rendered
@@ -220,7 +226,7 @@ private struct MF2FormatContext {
         case let .literal(value):
             return value
         case let .variable(name):
-            guard let argument = values[name] else {
+            guard let argument = values[MF2NameKey(name)] else {
                 throw MF2Error.missingArgument(name)
             }
             return argument.rendered
@@ -228,11 +234,11 @@ private struct MF2FormatContext {
     }
 
     private func exactMatch(selectorName: String) -> Bool {
-        selectorAnnotations[selectorName]?.exactMatch ?? true
+        selectorAnnotations[MF2NameKey(selectorName)]?.exactMatch ?? true
     }
 
     private func selectionKey(selectorName: String, value: MF2Value) -> String? {
-        guard let annotation = selectorAnnotations[selectorName], annotation.isNumeric else {
+        guard let annotation = selectorAnnotations[MF2NameKey(selectorName)], annotation.isNumeric else {
             return nil
         }
         return selectPluralCategory(
@@ -243,8 +249,11 @@ private struct MF2FormatContext {
     }
 }
 
-private func collectSelectorAnnotations(for declarations: [MF2Declaration]) -> [String: MF2SelectorAnnotation] {
-    let expressions = Dictionary(uniqueKeysWithValues: declarations.map { ($0.name, $0.value) })
+private func collectSelectorAnnotations(for declarations: [MF2Declaration]) -> [MF2NameKey: MF2SelectorAnnotation] {
+    var expressions: [MF2NameKey: MF2Expression] = [:]
+    for declaration in declarations {
+        expressions[MF2NameKey(declaration.name)] = declaration.value
+    }
     var annotations = expressions.compactMapValues { expression in
         expression.function.map(MF2SelectorAnnotation.init(function:))
     }
@@ -254,7 +263,7 @@ private func collectSelectorAnnotations(for declarations: [MF2Declaration]) -> [
         changed = false
         for (name, expression) in expressions where annotations[name] == nil {
             guard case let .variable(source)? = expression.arg,
-                  let annotation = annotations[source]
+                  let annotation = annotations[MF2NameKey(source)]
             else {
                 continue
             }
@@ -264,6 +273,25 @@ private func collectSelectorAnnotations(for declarations: [MF2Declaration]) -> [
     }
 
     return annotations
+}
+
+private struct MF2NameKey: Hashable {
+    private let value: String
+
+    init(_ value: String) {
+        self.value = value
+    }
+
+    static func == (left: MF2NameKey, right: MF2NameKey) -> Bool {
+        left.value.utf8.elementsEqual(right.value.utf8)
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(value.utf8.count)
+        for byte in value.utf8 {
+            hasher.combine(byte)
+        }
+    }
 }
 
 private struct MF2SelectorAnnotation {
