@@ -99,9 +99,11 @@ The source-to-model fixtures currently cover:
 - `.input`
 - `.local`
 - markup open/close/standalone placeholders
-- exact-match `.match` selectors and catch-all fallback
+- exact-match `.match` selectors and catch-all fallback, including
+  `:number select=exact`
 - cardinal plural category selection for English, French, Russian, Arabic, and
   Japanese fixtures
+- ordinal plural category selection for English fixtures
 
 Variable, function, markup, and option names are still tested only with ASCII
 names. Full MF2 `name` grammar coverage remains open.

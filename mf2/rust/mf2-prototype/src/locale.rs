@@ -10,7 +10,11 @@ impl LocaleId {
         let normalized = locale.trim().replace('_', "-");
         let mut parts = Vec::new();
 
-        for (index, part) in normalized.split('-').filter(|part| !part.is_empty()).enumerate() {
+        for (index, part) in normalized
+            .split('-')
+            .filter(|part| !part.is_empty())
+            .enumerate()
+        {
             if part.len() == 1 {
                 break;
             }

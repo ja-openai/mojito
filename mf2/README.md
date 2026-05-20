@@ -59,9 +59,10 @@ The current conformance slice covers:
 - function annotations and literal/variable options in the data model
 - `.input` and `.local` declarations
 - markup placeholders, stripped from string output for now
-- exact-match `.match` selectors with catch-all fallback
+- exact-match `.match` selectors with catch-all fallback, including
+  `:number select=exact`
 - cardinal plural category selection for the initial locale set: `ar`, `en`,
-  `fr`, `ja`, `ru` and related same-rule language fallbacks in code
+  `fr`, `ja`, `ru` and ordinal selection for the generated locale set
 - BCP47-first locale canonicalization and structural lookup, including
   underscore compatibility and extension stripping for plural lookup
 

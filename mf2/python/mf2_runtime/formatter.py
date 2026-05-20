@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .errors import MF2Error
-from .plural import select_cardinal_plural_category
+from .plural import select_plural_category
 
 
 def format_message(
@@ -27,14 +27,16 @@ class _FormatContext:
     def __init__(self, values: dict[str, Any], locale: str) -> None:
         self.values = values
         self.locale = locale
-        self.input_functions: dict[str, str] = {}
+        self.selector_annotations: dict[str, _SelectorAnnotation] = {}
 
     def apply_declarations(self, declarations: list[dict[str, Any]]) -> None:
         for declaration in declarations:
             if declaration.get("type") == "input":
                 function = declaration.get("value", {}).get("function")
                 if function is not None:
-                    self.input_functions[declaration["name"]] = function.get("name", "")
+                    self.selector_annotations[declaration["name"]] = _SelectorAnnotation.from_function(
+                        function
+                    )
             elif declaration.get("type") == "local":
                 self.values[declaration["name"]] = self.format_expression(declaration["value"])
 
@@ -50,7 +52,8 @@ class _FormatContext:
             selector_values.append(
                 _SelectorValue(
                     rendered=_render_value(value),
-                    plural_category=self._plural_category(name, value),
+                    exact_match=self._exact_match(name),
+                    selection_key=self._selection_key(name, value),
                 )
             )
 
@@ -112,16 +115,43 @@ class _FormatContext:
             raise MF2Error("missing-argument", f"Missing argument ${name}.")
         return self.values[name]
 
-    def _plural_category(self, selector_name: str, value: Any) -> str | None:
-        if self.input_functions.get(selector_name) != "number":
+    def _exact_match(self, selector_name: str) -> bool:
+        annotation = self.selector_annotations.get(selector_name)
+        return True if annotation is None else annotation.exact_match
+
+    def _selection_key(self, selector_name: str, value: Any) -> str | None:
+        annotation = self.selector_annotations.get(selector_name)
+        if annotation is None or annotation.function != "number":
             return None
-        return select_cardinal_plural_category(self.locale, value)
+        return select_plural_category(self.locale, value, annotation.number_select)
+
+
+@dataclass(frozen=True)
+class _SelectorAnnotation:
+    function: str
+    number_select: str = "plural"
+
+    @classmethod
+    def from_function(cls, function: dict[str, Any]) -> "_SelectorAnnotation":
+        options = function.get("options", {})
+        select = options.get("select", {})
+        number_select = select.get("value", "plural") if select.get("type") == "literal" else "plural"
+        if number_select not in {"plural", "ordinal", "exact"}:
+            number_select = "plural"
+        return cls(function.get("name", ""), number_select)
+
+    @property
+    def exact_match(self) -> bool:
+        return self.function == "string" or (
+            self.function == "number" and self.number_select == "exact"
+        )
 
 
 @dataclass(frozen=True)
 class _SelectorValue:
     rendered: str
-    plural_category: str | None
+    exact_match: bool
+    selection_key: str | None
 
 
 def _variant_matches(keys: list[dict[str, Any]], selector_values: list[_SelectorValue]) -> bool:
@@ -129,8 +159,8 @@ def _variant_matches(keys: list[dict[str, Any]], selector_values: list[_Selector
         return False
     return all(
         key.get("type") == "*"
-        or key.get("value") == selector.rendered
-        or key.get("value") == selector.plural_category
+        or (selector.exact_match and key.get("value") == selector.rendered)
+        or key.get("value") == selector.selection_key
         for key, selector in zip(keys, selector_values)
     )
 

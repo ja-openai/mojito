@@ -25,9 +25,9 @@ Current scope:
 - load the official MF2 Interchange Data Model from dictionaries/JSON
 - format the shared conformance fixture slice
 - support declarations, local variables, variable/literal expressions, basic
-  function pass-through, markup-as-parts-stripped string output, and exact-match
-  selectors with catch-all fallback
-- cardinal plural category selection for the initial locale set
+  function pass-through, markup-as-parts-stripped string output, exact-match
+  selectors, and `:number select=exact` with catch-all fallback
+- cardinal and ordinal plural category selection for the initial locale set
 - BCP47 locale canonicalization, underscore compatibility, extension stripping,
   and structural fallback for plural/catalog lookup
 

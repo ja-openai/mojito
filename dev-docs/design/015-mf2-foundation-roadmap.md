@@ -198,9 +198,9 @@ Before calling any library production-ready:
    matching, and catalog fallback policies belong outside the plural runtime.
 2. Expand generated CLDR plural coverage beyond the minimal locale set: all V0
    locales, ordinal selection, sample comparisons, and package-size gates.
-3. Expand placeholder/plural conformance: all V0 locales, ordinal selection,
-   exact number selection, annotated `:string` selectors, missing arguments, and
-   invalid selector declarations.
+3. Expand placeholder/plural conformance: all V0 locales, annotated `:string`
+   selectors, missing arguments, invalid selector declarations, and reference
+   behavior for explicit number selector options across ICU implementations.
 4. Align Rust parser fixtures with ICU requirements for annotated selectors.
 5. Define small V0 runtime APIs for formatting from the Unicode model without
    shipping source parsers.

@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use crate::cldr::{select_cardinal_plural_category, NumberOperands};
+use crate::cldr::{
+    select_cardinal_plural_category, select_ordinal_plural_category, NumberOperands,
+};
 use crate::diagnostic::Diagnostic;
 use crate::model::{
     Declaration, Expression, ExpressionArg, MessageModel, PatternPart, VariableRef, Variant,
@@ -33,7 +35,7 @@ pub fn format_model_with_locale(
 
 struct FormatContext {
     values: BTreeMap<String, serde_json::Value>,
-    input_functions: BTreeMap<String, String>,
+    selector_annotations: BTreeMap<String, SelectorAnnotation>,
     locale: String,
 }
 
@@ -41,7 +43,7 @@ impl FormatContext {
     fn new(arguments: &BTreeMap<String, serde_json::Value>, locale: &str) -> Self {
         Self {
             values: arguments.clone(),
-            input_functions: BTreeMap::new(),
+            selector_annotations: BTreeMap::new(),
             locale: locale.to_string(),
         }
     }
@@ -51,8 +53,8 @@ impl FormatContext {
             match declaration {
                 Declaration::Input { name, value } => {
                     if let Some(function) = &value.function {
-                        self.input_functions
-                            .insert(name.clone(), function.name.clone());
+                        self.selector_annotations
+                            .insert(name.clone(), SelectorAnnotation::from_function(function));
                     }
                 }
                 Declaration::Local { name, value } => {
@@ -79,7 +81,8 @@ impl FormatContext {
                     .ok_or_else(|| missing_argument(&selector.name))?;
                 Ok(SelectorValue {
                     rendered: value_to_string(value),
-                    plural_category: self.plural_category_for_selector(&selector.name, value),
+                    exact_match: self.exact_match_for_selector(&selector.name),
+                    selection_key: self.selection_key_for_selector(&selector.name, value),
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -147,24 +150,89 @@ impl FormatContext {
         }
     }
 
-    fn plural_category_for_selector(
+    fn exact_match_for_selector(&self, selector_name: &str) -> bool {
+        self.selector_annotations
+            .get(selector_name)
+            .map(|annotation| annotation.exact_match())
+            .unwrap_or(true)
+    }
+
+    fn selection_key_for_selector(
         &self,
         selector_name: &str,
         value: &serde_json::Value,
     ) -> Option<String> {
-        let function = self.input_functions.get(selector_name)?;
-        if function != "number" {
+        let annotation = self.selector_annotations.get(selector_name)?;
+        if annotation.function != "number" {
             return None;
         }
         let operands = NumberOperands::from_json(value)?;
-        Some(select_cardinal_plural_category(&self.locale, operands).to_string())
+        annotation.selection_key(&self.locale, operands)
     }
 }
 
 #[derive(Debug, Clone)]
 struct SelectorValue {
     rendered: String,
-    plural_category: Option<String>,
+    exact_match: bool,
+    selection_key: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct SelectorAnnotation {
+    function: String,
+    number_select: NumberSelect,
+}
+
+impl SelectorAnnotation {
+    fn from_function(function: &crate::model::FunctionRef) -> Self {
+        Self {
+            function: function.name.clone(),
+            number_select: NumberSelect::from_options(function.options.as_ref()),
+        }
+    }
+
+    fn exact_match(&self) -> bool {
+        self.function == "string"
+            || (self.function == "number" && self.number_select == NumberSelect::Exact)
+    }
+
+    fn selection_key(&self, locale: &str, operands: NumberOperands) -> Option<String> {
+        if self.function != "number" {
+            return None;
+        }
+        match self.number_select {
+            NumberSelect::Plural => {
+                Some(select_cardinal_plural_category(locale, operands).to_string())
+            }
+            NumberSelect::Ordinal => {
+                Some(select_ordinal_plural_category(locale, operands).to_string())
+            }
+            NumberSelect::Exact => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NumberSelect {
+    Plural,
+    Ordinal,
+    Exact,
+}
+
+impl NumberSelect {
+    fn from_options(options: Option<&BTreeMap<String, ExpressionArg>>) -> Self {
+        let Some(ExpressionArg::Literal { value }) =
+            options.and_then(|options| options.get("select"))
+        else {
+            return Self::Plural;
+        };
+        match value.as_str() {
+            "ordinal" => Self::Ordinal,
+            "exact" => Self::Exact,
+            _ => Self::Plural,
+        }
+    }
 }
 
 fn variant_matches(variant: &Variant, selector_values: &[SelectorValue]) -> bool {
@@ -178,9 +246,9 @@ fn variant_matches(variant: &Variant, selector_values: &[SelectorValue]) -> bool
         .all(|(key, selector)| match key {
             VariantKey::CatchAll => true,
             VariantKey::Literal { value } => {
-                value == &selector.rendered
+                (selector.exact_match && value == &selector.rendered)
                     || selector
-                        .plural_category
+                        .selection_key
                         .as_ref()
                         .is_some_and(|category| category == value)
             }

@@ -1,0 +1,109 @@
+{
+  "name": "plural-ordinal-en",
+  "source": ".input {$rank :number select=ordinal}\n.match $rank\none {{{$rank}st}}\ntwo {{{$rank}nd}}\nfew {{{$rank}rd}}\n* {{{$rank}th}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "rank",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "rank" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "select": { "type": "literal", "value": "ordinal" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "rank" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "rank" }
+          },
+          "st"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "two" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "rank" }
+          },
+          "nd"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "few" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "rank" }
+          },
+          "rd"
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "rank" }
+          },
+          "th"
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "rank": 1 },
+      "expected": "1st"
+    },
+    {
+      "locale": "en",
+      "arguments": { "rank": 2 },
+      "expected": "2nd"
+    },
+    {
+      "locale": "en",
+      "arguments": { "rank": 3 },
+      "expected": "3rd"
+    },
+    {
+      "locale": "en",
+      "arguments": { "rank": 4 },
+      "expected": "4th"
+    },
+    {
+      "locale": "en",
+      "arguments": { "rank": 11 },
+      "expected": "11th"
+    },
+    {
+      "locale": "en",
+      "arguments": { "rank": 21 },
+      "expected": "21st"
+    },
+    {
+      "locale": "en",
+      "arguments": { "rank": 22 },
+      "expected": "22nd"
+    },
+    {
+      "locale": "en",
+      "arguments": { "rank": 23 },
+      "expected": "23rd"
+    }
+  ]
+}

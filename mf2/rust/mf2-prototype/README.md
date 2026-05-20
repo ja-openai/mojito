@@ -37,8 +37,10 @@ Supported now:
 - function annotations such as `{$count :number}`
 - literal/variable function options in the data model
 - markup placeholders such as `{#link}`, `{/link}`, and `{#br/}`
-- basic `.match` selectors with exact literal keys and `*` fallback
-- cardinal plural category matching for number inputs in the initial locale set
+- basic `.match` selectors with exact literal keys and `*` fallback, including
+  `:number select=exact`
+- cardinal and ordinal plural category matching for number inputs in the initial
+  locale set
 
 Unsupported for this first slice:
 

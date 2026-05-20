@@ -20,3 +20,10 @@ pub(crate) fn select_cardinal_plural_category(
 ) -> &'static str {
     generated_plural_rules::select_cardinal(locale, operands)
 }
+
+pub(crate) fn select_ordinal_plural_category(
+    locale: &str,
+    operands: NumberOperands,
+) -> &'static str {
+    generated_plural_rules::select_ordinal(locale, operands)
+}

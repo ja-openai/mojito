@@ -22,7 +22,7 @@ public extension MF2Message {
 
 private struct MF2FormatContext {
     var values: [String: MF2Value]
-    var inputFunctions: [String: String] = [:]
+    var selectorAnnotations: [String: MF2SelectorAnnotation] = [:]
     var locale: String
 
     mutating func apply(declarations: [MF2Declaration]) throws {
@@ -30,7 +30,7 @@ private struct MF2FormatContext {
             switch declaration {
             case let .input(name, value):
                 if let function = value.function {
-                    inputFunctions[name] = function.name
+                    selectorAnnotations[name] = MF2SelectorAnnotation(function: function)
                 }
             case let .local(name, value):
                 values[name] = .string(try format(expression: value))
@@ -45,7 +45,8 @@ private struct MF2FormatContext {
             }
             return MF2SelectorValue(
                 rendered: value.rendered,
-                pluralCategory: pluralCategory(selectorName: selector.name, value: value)
+                exactMatch: exactMatch(selectorName: selector.name),
+                selectionKey: selectionKey(selectorName: selector.name, value: value)
             )
         }
 
@@ -99,11 +100,47 @@ private struct MF2FormatContext {
         }
     }
 
-    private func pluralCategory(selectorName: String, value: MF2Value) -> String? {
-        guard inputFunctions[selectorName] == "number" else {
+    private func exactMatch(selectorName: String) -> Bool {
+        selectorAnnotations[selectorName]?.exactMatch ?? true
+    }
+
+    private func selectionKey(selectorName: String, value: MF2Value) -> String? {
+        guard let annotation = selectorAnnotations[selectorName], annotation.function == "number" else {
             return nil
         }
-        return selectCardinalPluralCategory(locale: locale, value: value)
+        return selectPluralCategory(
+            locale: locale,
+            value: value,
+            numberSelect: annotation.numberSelect
+        )
+    }
+}
+
+private struct MF2SelectorAnnotation {
+    let function: String
+    let numberSelect: MF2NumberSelect
+
+    init(function: MF2Function) {
+        self.function = function.name
+        numberSelect = Self.numberSelect(from: function.options["select"])
+    }
+
+    var exactMatch: Bool {
+        function == "string" || (function == "number" && numberSelect == .exact)
+    }
+
+    private static func numberSelect(from option: MF2ExpressionArgument?) -> MF2NumberSelect {
+        guard case let .literal(value) = option else {
+            return .plural
+        }
+        switch value {
+        case "ordinal":
+            return .ordinal
+        case "exact":
+            return .exact
+        default:
+            return .plural
+        }
     }
 }
 
@@ -117,7 +154,7 @@ private extension MF2Variant {
             case .catchAll:
                 true
             case let .literal(value):
-                value == selector.rendered || value == selector.pluralCategory
+                (selector.exactMatch && value == selector.rendered) || value == selector.selectionKey
             }
         }
     }
@@ -125,5 +162,6 @@ private extension MF2Variant {
 
 private struct MF2SelectorValue {
     let rendered: String
-    let pluralCategory: String?
+    let exactMatch: Bool
+    let selectionKey: String?
 }

@@ -5,7 +5,8 @@ Native zero-runtime-dependency Swift package for the MF2 foundation.
 Current target:
 
 - `MessageFormat2Runtime`: consumes the official MF2 Interchange Data Model and
-  formats the supported fixture slice.
+  formats the supported fixture slice, including exact, cardinal, and ordinal
+  selector matching.
 - `MessageFormat2Conformance`: executable correctness and benchmark runner.
 - `MessageFormat2TranslateDemo`: tiny `translate(id, locale, args)` catalog
   demo.
