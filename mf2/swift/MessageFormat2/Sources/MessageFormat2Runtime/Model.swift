@@ -219,7 +219,7 @@ public struct MF2Variant: Equatable, Decodable {
     public let value: [MF2PatternPart]
 }
 
-public enum MF2VariantKey: Equatable, Decodable {
+public enum MF2VariantKey: Hashable, Decodable {
     case literal(String)
     case catchAll
 

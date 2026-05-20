@@ -20,6 +20,7 @@ def format_message_to_parts(
     arguments: dict[str, Any] | None = None,
     locale: str = "en",
 ) -> list[dict[str, str]]:
+    _validate_model(model)
     context = _FormatContext(dict(arguments or {}), locale)
     context.apply_declarations(model.get("declarations", []))
 
@@ -29,6 +30,31 @@ def format_message_to_parts(
     if message_type == "select":
         return context.format_select_to_parts(model.get("selectors", []), model.get("variants", []))
     raise MF2Error("unsupported-message-type", f"Unsupported message type: {message_type}")
+
+
+def _validate_model(model: dict[str, Any]) -> None:
+    _validate_declarations(model.get("declarations", []))
+
+
+def _validate_declarations(declarations: list[dict[str, Any]]) -> None:
+    if len(declarations) < 2:
+        return
+    names: set[str] = set()
+    for declaration in declarations:
+        name = declaration.get("name", "")
+        if name in names:
+            raise MF2Error(
+                "duplicate-declaration",
+                f"Declaration ${name} is defined more than once.",
+            )
+        names.add(name)
+
+
+def _variant_key_signature(keys: list[dict[str, Any]]) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        ("*", "") if key.get("type") == "*" else ("=", key.get("value", ""))
+        for key in keys
+    )
 
 
 class _FormatContext:
@@ -66,22 +92,34 @@ class _FormatContext:
             )
 
         fallback = None
+        selected = None
+        signatures: set[tuple[tuple[str, str], ...]] = set()
         for variant in variants:
             keys = variant.get("keys", [])
             if len(keys) != len(selector_values):
-                continue
+                raise MF2Error(
+                    "variant-key-count-mismatch",
+                    "Variant key count must match selector count.",
+                )
+            signature = _variant_key_signature(keys)
+            if signature in signatures:
+                raise MF2Error(
+                    "duplicate-variant",
+                    "Select variants must have unique key tuples.",
+                )
+            signatures.add(signature)
             if all(key.get("type") == "*" for key in keys):
                 fallback = variant
-            if _variant_matches(keys, selector_values):
-                return self.format_pattern_to_parts(variant.get("value", []))
+            if selected is None and _variant_matches(keys, selector_values):
+                selected = variant
 
-        if fallback is not None:
-            return self.format_pattern_to_parts(fallback.get("value", []))
+        if fallback is None:
+            raise MF2Error(
+                "missing-fallback-variant",
+                "Select messages must include a catch-all fallback variant.",
+            )
 
-        raise MF2Error(
-            "missing-select-variant",
-            "No select variant matched and no catch-all variant is present.",
-        )
+        return self.format_pattern_to_parts((selected or fallback).get("value", []))
 
     def format_pattern(self, pattern: list[Any]) -> str:
         return _parts_to_string(self.format_pattern_to_parts(pattern))

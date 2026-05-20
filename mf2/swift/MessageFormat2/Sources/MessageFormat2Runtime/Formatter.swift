@@ -6,6 +6,7 @@ public extension MF2Message {
     }
 
     func formatToParts(arguments: [String: MF2Value] = [:], locale: String = "en") throws -> [MF2FormattedPart] {
+        try validate()
         var context = MF2FormatContext(values: arguments, locale: locale)
         try context.apply(declarations: declarations)
         switch self {
@@ -22,6 +23,24 @@ public extension MF2Message {
             declarations
         }
     }
+
+    private func validate() throws {
+        try validate(declarations: declarations)
+    }
+
+    private func validate(declarations: [MF2Declaration]) throws {
+        guard declarations.count > 1 else {
+            return
+        }
+        var names: Set<String> = []
+        for declaration in declarations {
+            let name = declaration.name
+            guard names.insert(name).inserted else {
+                throw MF2Error.duplicateDeclaration(name)
+            }
+        }
+    }
+
 }
 
 private struct MF2FormatContext {
@@ -54,17 +73,30 @@ private struct MF2FormatContext {
             )
         }
 
-        let selected = variants.first { variant in
-            variant.matches(selectorValues: selectorValues)
-        } ?? variants.first { variant in
-            variant.keys.allSatisfy { $0 == .catchAll }
+        var signatures: Set<[MF2VariantKey]> = []
+        var fallback: MF2Variant?
+        var selected: MF2Variant?
+        for variant in variants {
+            guard variant.keys.count == selectorValues.count else {
+                throw MF2Error.variantKeyCountMismatch
+            }
+            guard signatures.insert(variant.keys).inserted else {
+                throw MF2Error.duplicateVariant
+            }
+            if fallback == nil, variant.isFallback {
+                fallback = variant
+            }
+            if selected == nil, variant.matches(selectorValues: selectorValues) {
+                selected = variant
+            }
         }
 
-        guard let selected else {
-            throw MF2Error.missingSelectVariant
+        guard let fallback else {
+            throw MF2Error.missingFallbackVariant
         }
 
-        return try formatToParts(pattern: selected.value)
+        let selectedVariant = selected ?? fallback
+        return try formatToParts(pattern: selectedVariant.value)
     }
 
     func format(pattern: [MF2PatternPart]) throws -> String {
@@ -172,6 +204,21 @@ private struct MF2SelectorValue {
     let rendered: String
     let exactMatch: Bool
     let selectionKey: String?
+}
+
+private extension MF2Declaration {
+    var name: String {
+        switch self {
+        case let .input(name, _), let .local(name, _):
+            name
+        }
+    }
+}
+
+private extension MF2Variant {
+    var isFallback: Bool {
+        keys.allSatisfy { $0 == .catchAll }
+    }
 }
 
 public enum MF2FormattedPart: Equatable, Decodable {

@@ -29,4 +29,28 @@ public final class Mf2Exception extends Exception {
                 "unsupported-function-format",
                 "Function :" + name + " is not supported by this prototype formatter.");
     }
+
+    static Mf2Exception duplicateDeclaration(String name) {
+        return new Mf2Exception(
+                "duplicate-declaration",
+                "Declaration $" + name + " is defined more than once.");
+    }
+
+    static Mf2Exception variantKeyCountMismatch() {
+        return new Mf2Exception(
+                "variant-key-count-mismatch",
+                "Variant key count must match selector count.");
+    }
+
+    static Mf2Exception duplicateVariant() {
+        return new Mf2Exception(
+                "duplicate-variant",
+                "Select variants must have unique key tuples.");
+    }
+
+    static Mf2Exception missingFallbackVariant() {
+        return new Mf2Exception(
+                "missing-fallback-variant",
+                "Select messages must include a catch-all fallback variant.");
+    }
 }

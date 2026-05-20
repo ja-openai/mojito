@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::cldr::{
     select_cardinal_plural_category, select_ordinal_plural_category, NumberOperands,
@@ -52,6 +52,7 @@ pub fn format_model_to_parts_with_locale(
     arguments: &BTreeMap<String, serde_json::Value>,
     locale: &str,
 ) -> Result<Vec<FormattedPart>, Diagnostic> {
+    validate_model(model)?;
     let mut context = FormatContext::new(arguments, locale);
     context.apply_declarations(model.declarations())?;
     match model {
@@ -62,6 +63,30 @@ pub fn format_model_to_parts_with_locale(
             ..
         } => context.format_select_to_parts(selectors, variants),
     }
+}
+
+fn validate_model(model: &MessageModel) -> Result<(), Diagnostic> {
+    validate_declarations(model.declarations())?;
+    Ok(())
+}
+
+fn validate_declarations(declarations: &[Declaration]) -> Result<(), Diagnostic> {
+    if declarations.len() < 2 {
+        return Ok(());
+    }
+    let mut names = BTreeSet::new();
+    for declaration in declarations {
+        let name = match declaration {
+            Declaration::Input { name, .. } | Declaration::Local { name, .. } => name,
+        };
+        if !names.insert(name) {
+            return Err(model_error(
+                "duplicate-declaration",
+                format!("Declaration ${name} is defined more than once."),
+            ));
+        }
+    }
+    Ok(())
 }
 
 struct FormatContext {
@@ -118,24 +143,32 @@ impl FormatContext {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let fallback = variants.iter().find(|variant| {
-            variant
-                .keys
-                .iter()
-                .all(|key| matches!(key, VariantKey::CatchAll))
-        });
-        let selected = variants
-            .iter()
-            .find(|variant| variant_matches(variant, &selector_values))
-            .or(fallback)
-            .ok_or_else(|| {
-                Diagnostic::new(
-                    "missing-select-variant",
-                    "No select variant matched and no catch-all variant is present.",
-                    0,
-                    0,
-                )
-            })?;
+        let mut signatures = BTreeSet::new();
+        let mut fallback = None;
+        let mut selected = None;
+        for variant in variants {
+            validate_variant(variant, selector_values.len(), &mut signatures)?;
+            if fallback.is_none() && is_fallback_variant(variant) {
+                fallback = Some(variant);
+            }
+            if selected.is_none() && variant_matches(variant, &selector_values) {
+                selected = Some(variant);
+            }
+        }
+        let fallback = fallback.ok_or_else(|| {
+            model_error(
+                "missing-fallback-variant",
+                "Select messages must include a catch-all fallback variant.",
+            )
+        })?;
+        let selected = selected.or(Some(fallback)).ok_or_else(|| {
+            Diagnostic::new(
+                "missing-select-variant",
+                "No select variant matched and no catch-all variant is present.",
+                0,
+                0,
+            )
+        })?;
 
         self.format_pattern_to_parts(&selected.value)
     }
@@ -293,6 +326,48 @@ fn variant_matches(variant: &Variant, selector_values: &[SelectorValue]) -> bool
         })
 }
 
+fn validate_variant<'a>(
+    variant: &'a Variant,
+    selector_count: usize,
+    signatures: &mut BTreeSet<Vec<VariantKeySignature<'a>>>,
+) -> Result<(), Diagnostic> {
+    if variant.keys.len() != selector_count {
+        return Err(model_error(
+            "variant-key-count-mismatch",
+            "Variant key count must match selector count.",
+        ));
+    }
+    if !signatures.insert(variant_key_signature(&variant.keys)) {
+        return Err(model_error(
+            "duplicate-variant",
+            "Select variants must have unique key tuples.",
+        ));
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum VariantKeySignature<'a> {
+    CatchAll,
+    Literal(&'a str),
+}
+
+fn variant_key_signature(keys: &[VariantKey]) -> Vec<VariantKeySignature<'_>> {
+    keys.iter()
+        .map(|key| match key {
+            VariantKey::CatchAll => VariantKeySignature::CatchAll,
+            VariantKey::Literal { value } => VariantKeySignature::Literal(value),
+        })
+        .collect()
+}
+
+fn is_fallback_variant(variant: &Variant) -> bool {
+    variant
+        .keys
+        .iter()
+        .all(|key| matches!(key, VariantKey::CatchAll))
+}
+
 fn missing_argument(name: &str) -> Diagnostic {
     Diagnostic::new(
         "missing-argument",
@@ -300,6 +375,10 @@ fn missing_argument(name: &str) -> Diagnostic {
         0,
         0,
     )
+}
+
+fn model_error(code: impl Into<String>, message: impl Into<String>) -> Diagnostic {
+    Diagnostic::new(code, message, 0, 0)
 }
 
 fn value_to_string(value: &serde_json::Value) -> String {

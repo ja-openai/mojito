@@ -43,6 +43,8 @@ Supported now:
 - markup placeholders such as `{#link}`, `{/link}`, and `{#br/}`
 - `format_model_to_parts_with_locale` for text, expression, and markup boundary
   output
+- structural model validation for duplicate declarations, select variant key
+  arity, duplicate variants, and missing fallback variants
 - basic `.match` selectors with exact literal keys and `*` fallback, including
   `:number select=exact`
 - cardinal and ordinal plural category matching for number inputs in every

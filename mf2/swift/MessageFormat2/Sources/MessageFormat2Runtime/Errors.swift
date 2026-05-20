@@ -5,6 +5,10 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
     case missingSelectVariant
     case unsupportedFunction(String)
     case unsupportedExpression
+    case duplicateDeclaration(String)
+    case variantKeyCountMismatch
+    case duplicateVariant
+    case missingFallbackVariant
 
     public var code: String {
         switch self {
@@ -16,6 +20,14 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "unsupported-function"
         case .unsupportedExpression:
             "unsupported-expression"
+        case .duplicateDeclaration:
+            "duplicate-declaration"
+        case .variantKeyCountMismatch:
+            "variant-key-count-mismatch"
+        case .duplicateVariant:
+            "duplicate-variant"
+        case .missingFallbackVariant:
+            "missing-fallback-variant"
         }
     }
 
@@ -29,6 +41,14 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "Function :\(name) is not supported by this runtime slice."
         case .unsupportedExpression:
             "Expression shape is not supported by this runtime slice."
+        case let .duplicateDeclaration(name):
+            "Declaration $\(name) is defined more than once."
+        case .variantKeyCountMismatch:
+            "Variant key count must match selector count."
+        case .duplicateVariant:
+            "Select variants must have unique key tuples."
+        case .missingFallbackVariant:
+            "Select messages must include a catch-all fallback variant."
         }
     }
 }

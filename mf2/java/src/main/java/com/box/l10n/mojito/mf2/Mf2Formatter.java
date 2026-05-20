@@ -2,6 +2,7 @@ package com.box.l10n.mojito.mf2;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -20,12 +21,30 @@ final class Mf2Formatter {
 
     static List<Mf2Message.FormattedPart> formatToParts(
             Mf2Message message, Map<String, ?> arguments, String locale) throws Mf2Exception {
+        validate(message);
         FormatContext context = new FormatContext(snapshotArguments(arguments), locale);
         context.apply(message.declarations());
         return switch (message) {
             case Mf2Message.Message simple -> context.formatPatternToParts(simple.pattern());
             case Mf2Message.Select select -> context.formatSelectToParts(select.selectors(), select.variants());
         };
+    }
+
+    private static void validate(Mf2Message message) throws Mf2Exception {
+        validateDeclarations(message.declarations());
+    }
+
+    private static void validateDeclarations(List<Mf2Message.Declaration> declarations)
+            throws Mf2Exception {
+        if (declarations.size() < 2) {
+            return;
+        }
+        Set<String> names = new HashSet<>();
+        for (Mf2Message.Declaration declaration : declarations) {
+            if (!names.add(declaration.name())) {
+                throw Mf2Exception.duplicateDeclaration(declaration.name());
+            }
+        }
     }
 
     private static final class FormatContext {
@@ -63,19 +82,22 @@ final class Mf2Formatter {
                 selectorValues.add(selectorValue(selector));
             }
 
+            Set<List<Mf2Message.VariantKey>> signatures = new HashSet<>();
             Mf2Message.Variant fallback = null;
+            Mf2Message.Variant selected = null;
             for (Mf2Message.Variant variant : variants) {
-                if (variantMatches(variant, selectorValues)) {
-                    return formatPatternToParts(variant.value());
-                }
+                validateVariant(variant, selectorValues.size(), signatures);
                 if (fallback == null && isFallbackVariant(variant)) {
                     fallback = variant;
                 }
+                if (selected == null && variantMatches(variant, selectorValues)) {
+                    selected = variant;
+                }
             }
-            if (fallback != null) {
-                return formatPatternToParts(fallback.value());
+            if (fallback == null) {
+                throw Mf2Exception.missingFallbackVariant();
             }
-            throw Mf2Exception.missingSelectVariant();
+            return formatPatternToParts((selected == null ? fallback : selected).value());
         }
 
         private SelectorValue selectorValue(Mf2Message.VariableRef selector) throws Mf2Exception {
@@ -201,6 +223,17 @@ final class Mf2Formatter {
             }
         }
         return true;
+    }
+
+    private static void validateVariant(
+            Mf2Message.Variant variant, int selectorCount, Set<List<Mf2Message.VariantKey>> signatures)
+            throws Mf2Exception {
+        if (variant.keys().size() != selectorCount) {
+            throw Mf2Exception.variantKeyCountMismatch();
+        }
+        if (!signatures.add(variant.keys())) {
+            throw Mf2Exception.duplicateVariant();
+        }
     }
 
     private static boolean keyMatches(Mf2Message.VariantKey key, SelectorValue selector) {

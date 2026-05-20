@@ -12,6 +12,8 @@ Current target:
   quoted option/attribute values containing spaces
 - format the supported shared conformance fixture slice
 - expose `formatToParts` for text, expression, and markup boundary output
+- reject invalid model structure for duplicate declarations, select variant key
+  arity, duplicate variants, and missing fallback variants
 - use generated CLDR cardinal and ordinal plural rules
 - keep locale-key canonicalization/fallback string-only
 - keep ICU4J as a reference comparison target, not a runtime dependency

@@ -1,12 +1,9 @@
 {
-  "name": "variant-key-count-mismatch",
+  "name": "missing-fallback-variant",
   "model": {
     "type": "select",
     "declarations": [],
-    "selectors": [
-      { "type": "variable", "name": "status" },
-      { "type": "variable", "name": "count" }
-    ],
+    "selectors": [{ "type": "variable", "name": "status" }],
     "variants": [
       {
         "keys": [{ "type": "literal", "value": "active" }],
@@ -16,10 +13,9 @@
   },
   "locale": "en",
   "arguments": {
-    "status": "active",
-    "count": 1
+    "status": "active"
   },
   "expectedError": {
-    "code": "variant-key-count-mismatch"
+    "code": "missing-fallback-variant"
   }
 }

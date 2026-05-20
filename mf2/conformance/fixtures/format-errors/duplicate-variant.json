@@ -1,0 +1,29 @@
+{
+  "name": "duplicate-variant",
+  "model": {
+    "type": "select",
+    "declarations": [],
+    "selectors": [{ "type": "variable", "name": "status" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "active" }],
+        "value": ["Active"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "active" }],
+        "value": ["Still active"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": {
+    "status": "active"
+  },
+  "expectedError": {
+    "code": "duplicate-variant"
+  }
+}

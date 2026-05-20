@@ -74,6 +74,8 @@ The current conformance slice covers:
   locale set
 - BCP47-first locale-key canonicalization and structural lookup, including
   underscore compatibility and extension stripping for plural and catalog lookup
+- structural model validation for duplicate declarations, select variant key
+  arity, duplicate variants, and required catch-all fallback variants
 
 Rust and Java currently parse MF2 source into the official data model for this
 slice. Swift and Python currently consume the expected official data model from

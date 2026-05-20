@@ -29,6 +29,8 @@ Current scope:
   selectors, and `:number select=exact` with catch-all fallback
 - expose `format_message_to_parts` for text, expression, and markup boundary
   output in the supported runtime slice
+- reject invalid model structure for duplicate declarations, select variant key
+  arity, duplicate variants, and missing fallback variants
 - cardinal and ordinal plural category selection for every generated CLDR plural
   locale
 - BCP47 locale canonicalization, underscore compatibility, extension stripping,

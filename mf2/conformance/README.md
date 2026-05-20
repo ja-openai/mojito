@@ -120,3 +120,6 @@ The invalid-source fixtures currently cover:
 The format-error fixtures currently cover:
 
 - selector/variant key arity mismatches
+- missing catch-all fallback variants
+- duplicate select variants
+- duplicate declarations
