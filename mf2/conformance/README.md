@@ -105,7 +105,8 @@ The source-to-model fixtures currently cover:
 - `.local`
 - markup open/close/standalone placeholders
 - parts output for expression and markup attributes
-- exact-match `.match` selectors and catch-all fallback, including
+- exact-match `.match` selectors and catch-all fallback, including multi-selector
+  matching,
   `:number select=exact`, `:integer select=exact`, and primitive `:string`
   selector values
 - direct and simple indirect selector annotations for `.match`
