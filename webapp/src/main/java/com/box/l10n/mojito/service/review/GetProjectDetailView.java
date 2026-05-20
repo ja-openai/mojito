@@ -47,6 +47,7 @@ public record GetProjectDetailView(
       TmTextUnitVariant currentTmTextUnitVariant,
       ReviewProjectTextUnitDecision reviewProjectTextUnitDecision,
       TerminologyTerm terminologyTerm,
+      List<TerminologyTermEvidence> glossaryTermEvidence,
       List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
 
   public record TerminologyTerm(

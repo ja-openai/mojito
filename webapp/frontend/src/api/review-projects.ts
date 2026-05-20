@@ -145,6 +145,7 @@ export type ApiReviewProjectTextUnit = {
     } | null;
   } | null;
   terminologyTerm?: ApiReviewProjectTerminologyTerm | null;
+  glossaryTermEvidence?: ApiGlossaryTermEvidence[] | null;
   terminologyFeedbacks?: Array<{
     id: number;
     recommendation?: ApiTerminologyFeedbackRecommendation | null;

@@ -1537,6 +1537,9 @@ public class ReviewProjectService {
         getTerminologyFeedbacksByReviewProjectTextUnitId(reviewProject, textUnitDetails);
     Map<Long, GetProjectDetailView.TerminologyTerm> terminologyTermsByReviewProjectTextUnitId =
         getTerminologyTermsByReviewProjectTextUnitId(reviewProject, textUnitDetails);
+    Map<Long, List<GetProjectDetailView.TerminologyTermEvidence>>
+        glossaryTermEvidenceByReviewProjectTextUnitId =
+            getGlossaryTermEvidenceByReviewProjectTextUnitId(textUnitDetails);
 
     List<GetProjectDetailView.ReviewProjectTextUnit> reviewProjectTextUnits =
         textUnitDetails.stream()
@@ -1547,7 +1550,9 @@ public class ReviewProjectService {
                         feedbacksByReviewProjectTextUnitId.getOrDefault(
                             detail.reviewProjectTextUnitId(), List.of()),
                         terminologyTermsByReviewProjectTextUnitId.get(
-                            detail.reviewProjectTextUnitId())))
+                            detail.reviewProjectTextUnitId()),
+                        glossaryTermEvidenceByReviewProjectTextUnitId.getOrDefault(
+                            detail.reviewProjectTextUnitId(), List.of())))
             .toList();
 
     List<String> screenshotImageIds =
@@ -2722,21 +2727,8 @@ public class ReviewProjectService {
                         Function.identity(),
                         (first, ignored) -> first,
                         LinkedHashMap::new));
-    Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId =
-        metadataIds.isEmpty()
-            ? Map.of()
-            : glossaryTermEvidenceRepository
-                .findByGlossaryTermMetadataIdInOrderBySortOrderAsc(metadataIds)
-                .stream()
-                .filter(
-                    evidence ->
-                        evidence.getGlossaryTermMetadata() != null
-                            && evidence.getGlossaryTermMetadata().getId() != null)
-                .collect(
-                    Collectors.groupingBy(
-                        evidence -> evidence.getGlossaryTermMetadata().getId(),
-                        LinkedHashMap::new,
-                        Collectors.toList()));
+    Map<Long, List<GetProjectDetailView.TerminologyTermEvidence>> evidenceByMetadataId =
+        getGlossaryTermEvidenceByMetadataId(metadataIds);
 
     Map<Long, ReviewProjectTextUnitDetail> detailByTmTextUnitId =
         textUnitDetails.stream()
@@ -2767,6 +2759,84 @@ public class ReviewProjectService {
     }
     result.putAll(getCandidateTerminologyTermsByReviewProjectTextUnitId(textUnitDetails, result));
     return result;
+  }
+
+  private Map<Long, List<GetProjectDetailView.TerminologyTermEvidence>>
+      getGlossaryTermEvidenceByReviewProjectTextUnitId(
+          List<ReviewProjectTextUnitDetail> textUnitDetails) {
+    if (textUnitDetails.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<Long, ReviewProjectTextUnitDetail> detailByTmTextUnitId =
+        textUnitDetails.stream()
+            .filter(detail -> detail.tmTextUnitId() != null)
+            .collect(
+                Collectors.toMap(
+                    ReviewProjectTextUnitDetail::tmTextUnitId,
+                    Function.identity(),
+                    (first, ignored) -> first,
+                    LinkedHashMap::new));
+    if (detailByTmTextUnitId.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<Long, Long> reviewProjectTextUnitIdByMetadataId =
+        glossaryTermMetadataRepository
+            .findByTmTextUnitIdIn(new ArrayList<>(detailByTmTextUnitId.keySet()))
+            .stream()
+            .filter(
+                metadata ->
+                    metadata.getId() != null
+                        && metadata.getTmTextUnit() != null
+                        && metadata.getTmTextUnit().getId() != null
+                        && detailByTmTextUnitId.containsKey(metadata.getTmTextUnit().getId()))
+            .collect(
+                Collectors.toMap(
+                    GlossaryTermMetadata::getId,
+                    metadata ->
+                        detailByTmTextUnitId
+                            .get(metadata.getTmTextUnit().getId())
+                            .reviewProjectTextUnitId(),
+                    (first, ignored) -> first,
+                    LinkedHashMap::new));
+    if (reviewProjectTextUnitIdByMetadataId.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<Long, List<GetProjectDetailView.TerminologyTermEvidence>> evidenceByMetadataId =
+        getGlossaryTermEvidenceByMetadataId(
+            new ArrayList<>(reviewProjectTextUnitIdByMetadataId.keySet()));
+    Map<Long, List<GetProjectDetailView.TerminologyTermEvidence>> evidenceByReviewTextUnitId =
+        new LinkedHashMap<>();
+    for (Map.Entry<Long, List<GetProjectDetailView.TerminologyTermEvidence>> entry :
+        evidenceByMetadataId.entrySet()) {
+      Long reviewProjectTextUnitId = reviewProjectTextUnitIdByMetadataId.get(entry.getKey());
+      if (reviewProjectTextUnitId != null) {
+        evidenceByReviewTextUnitId.put(reviewProjectTextUnitId, entry.getValue());
+      }
+    }
+    return evidenceByReviewTextUnitId;
+  }
+
+  private Map<Long, List<GetProjectDetailView.TerminologyTermEvidence>>
+      getGlossaryTermEvidenceByMetadataId(Collection<Long> metadataIds) {
+    if (metadataIds == null || metadataIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return glossaryTermEvidenceRepository
+        .findByGlossaryTermMetadataIdInOrderBySortOrderAsc(metadataIds)
+        .stream()
+        .filter(
+            evidence ->
+                evidence.getGlossaryTermMetadata() != null
+                    && evidence.getGlossaryTermMetadata().getId() != null)
+        .collect(
+            Collectors.groupingBy(
+                evidence -> evidence.getGlossaryTermMetadata().getId(),
+                LinkedHashMap::new,
+                Collectors.mapping(this::toTerminologyTermEvidence, Collectors.toList())));
   }
 
   private Map<Long, GetProjectDetailView.TerminologyTerm>
@@ -2812,7 +2882,7 @@ public class ReviewProjectService {
       ReviewProjectTextUnitDetail detail,
       GlossaryTermMetadata metadata,
       GlossaryTermIndexLink primaryLink,
-      List<GlossaryTermEvidence> evidenceItems) {
+      List<GetProjectDetailView.TerminologyTermEvidence> evidenceItems) {
     TermIndexCandidate candidate = primaryLink == null ? null : primaryLink.getTermIndexCandidate();
     var extractedTerm = candidate == null ? null : candidate.getTermIndexExtractedTerm();
     List<GetProjectDetailView.TerminologyTermExample> examples =
@@ -2849,9 +2919,7 @@ public class ReviewProjectService {
                     candidate.getSourceName(),
                     candidate.getSourceExternalId()));
     List<GetProjectDetailView.TerminologyTermEvidence> evidence =
-        evidenceItems == null
-            ? List.of()
-            : evidenceItems.stream().map(this::toTerminologyTermEvidence).toList();
+        evidenceItems == null ? List.of() : evidenceItems;
 
     return new GetProjectDetailView.TerminologyTerm(
         metadata.getGlossary() == null ? null : metadata.getGlossary().getId(),
@@ -2989,13 +3057,16 @@ public class ReviewProjectService {
         getTerminologyFeedbacksByReviewProjectTextUnitId(reviewProject, List.of(detail))
             .getOrDefault(reviewProjectTextUnitId, List.of()),
         getTerminologyTermsByReviewProjectTextUnitId(reviewProject, List.of(detail))
-            .get(detail.reviewProjectTextUnitId()));
+            .get(detail.reviewProjectTextUnitId()),
+        getGlossaryTermEvidenceByReviewProjectTextUnitId(List.of(detail))
+            .getOrDefault(detail.reviewProjectTextUnitId(), List.of()));
   }
 
   private GetProjectDetailView.ReviewProjectTextUnit toReviewProjectTextUnit(
       ReviewProjectTextUnitDetail detail,
       List<ReviewProjectTextUnitFeedback> feedbacks,
-      GetProjectDetailView.TerminologyTerm terminologyTerm) {
+      GetProjectDetailView.TerminologyTerm terminologyTerm,
+      List<GetProjectDetailView.TerminologyTermEvidence> glossaryTermEvidence) {
     GetProjectDetailView.Asset.Repository repository =
         new GetProjectDetailView.Asset.Repository(detail.repositoryId(), detail.repositoryName());
     GetProjectDetailView.Asset assetView =
@@ -3064,6 +3135,7 @@ public class ReviewProjectService {
         currentTmTextUnitVariantView,
         reviewProjectTextUnitDecision,
         terminologyTerm,
+        glossaryTermEvidence == null ? List.of() : glossaryTermEvidence,
         feedbacks.stream().map(this::toReviewProjectTextUnitFeedback).toList());
   }
 

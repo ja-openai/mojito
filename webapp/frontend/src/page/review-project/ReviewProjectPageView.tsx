@@ -1727,7 +1727,8 @@ function DetailPane({
     },
   });
   const glossaryTerm = glossaryTermQuery.data ?? null;
-  const glossaryEvidence = terminologyTerm?.evidence ?? glossaryTerm?.evidence;
+  const glossaryEvidence =
+    terminologyTerm?.evidence ?? textUnit.glossaryTermEvidence ?? glossaryTerm?.evidence;
   const glossaryTermScreenshotImages = useMemo(
     () => getGlossaryTermScreenshotKeys(glossaryEvidence),
     [glossaryEvidence],

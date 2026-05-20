@@ -649,6 +649,7 @@ public class ReviewProjectWS {
         TmTextUnitVariant currentTmTextUnitVariant,
         ReviewProjectTextUnitDecision reviewProjectTextUnitDecision,
         TerminologyTerm terminologyTerm,
+        List<TerminologyTermEvidence> glossaryTermEvidence,
         List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
 
     public record TerminologyTerm(
@@ -995,6 +996,8 @@ public class ReviewProjectWS {
             : null;
     List<GetProjectDetailView.ReviewProjectTextUnitFeedback> terminologyFeedbacks =
         view.terminologyFeedbacks() == null ? List.of() : view.terminologyFeedbacks();
+    List<GetProjectDetailView.TerminologyTermEvidence> glossaryTermEvidence =
+        view.glossaryTermEvidence() == null ? List.of() : view.glossaryTermEvidence();
     return new GetReviewProjectResponse.ReviewProjectTextUnit(
         view.id(),
         new GetReviewProjectResponse.TmTextUnit(
@@ -1031,6 +1034,7 @@ public class ReviewProjectWS {
                 decision.lastModifiedDate(),
                 decision.lastModifiedByUsername()),
         toTerminologyTermResponse(view.terminologyTerm()),
+        glossaryTermEvidence.stream().map(this::toTerminologyTermEvidenceResponse).toList(),
         terminologyFeedbacks.stream().map(this::toTerminologyFeedbackResponse).toList());
   }
 
@@ -1106,6 +1110,7 @@ public class ReviewProjectWS {
         currentVariant,
         decision,
         null,
+        List.of(),
         List.of());
   }
 
@@ -1174,21 +1179,22 @@ public class ReviewProjectWS {
                 .toList(),
         term.evidence() == null
             ? List.of()
-            : term.evidence().stream()
-                .map(
-                    evidence ->
-                        new GetReviewProjectResponse.TerminologyTermEvidence(
-                            evidence.id(),
-                            evidence.evidenceType(),
-                            evidence.caption(),
-                            evidence.imageKey(),
-                            evidence.tmTextUnitId(),
-                            evidence.cropX(),
-                            evidence.cropY(),
-                            evidence.cropWidth(),
-                            evidence.cropHeight(),
-                            evidence.sortOrder()))
-                .toList());
+            : term.evidence().stream().map(this::toTerminologyTermEvidenceResponse).toList());
+  }
+
+  private GetReviewProjectResponse.TerminologyTermEvidence toTerminologyTermEvidenceResponse(
+      GetProjectDetailView.TerminologyTermEvidence evidence) {
+    return new GetReviewProjectResponse.TerminologyTermEvidence(
+        evidence.id(),
+        evidence.evidenceType(),
+        evidence.caption(),
+        evidence.imageKey(),
+        evidence.tmTextUnitId(),
+        evidence.cropX(),
+        evidence.cropY(),
+        evidence.cropWidth(),
+        evidence.cropHeight(),
+        evidence.sortOrder());
   }
 
   private GetReviewProjectResponse.ReviewProjectTextUnitFeedback toTerminologyFeedbackResponse(

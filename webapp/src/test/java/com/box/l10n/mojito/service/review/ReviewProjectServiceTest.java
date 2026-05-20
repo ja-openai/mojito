@@ -1220,6 +1220,39 @@ public class ReviewProjectServiceTest {
     assertEquals("glossary/screenshots/sidebar.png", term.evidence().get(0).imageKey());
   }
 
+  @Test
+  @SuppressWarnings("unchecked")
+  public void getGlossaryTermEvidenceIncludesNormalReviewTextUnits() {
+    ReviewProjectTextUnitDetail detail = reviewProjectTextUnitDetail(55L);
+
+    GlossaryTermMetadata metadata =
+        glossaryTermMetadata(321L, GlossaryTermMetadata.STATUS_APPROVED);
+    metadata.setId(88L);
+
+    GlossaryTermEvidence evidence = new GlossaryTermEvidence();
+    evidence.setId(99L);
+    evidence.setGlossaryTermMetadata(metadata);
+    evidence.setEvidenceType(GlossaryTermEvidence.EVIDENCE_TYPE_SCREENSHOT);
+    evidence.setImageKey("glossary/screenshots/sidebar.png");
+    evidence.setSortOrder(1);
+
+    when(glossaryTermMetadataRepository.findByTmTextUnitIdIn(List.of(321L)))
+        .thenReturn(List.of(metadata));
+    when(glossaryTermEvidenceRepository.findByGlossaryTermMetadataIdInOrderBySortOrderAsc(
+            List.of(88L)))
+        .thenReturn(List.of(evidence));
+
+    Map<Long, List<GetProjectDetailView.TerminologyTermEvidence>> evidenceByTextUnitId =
+        ReflectionTestUtils.invokeMethod(
+            reviewProjectService,
+            "getGlossaryTermEvidenceByReviewProjectTextUnitId",
+            List.of(detail));
+
+    assertEquals(1, evidenceByTextUnitId.get(55L).size());
+    assertEquals(
+        "glossary/screenshots/sidebar.png", evidenceByTextUnitId.get(55L).get(0).imageKey());
+  }
+
   private ReviewProject project(
       Long id, Team team, Locale locale, User assignedPmUser, User assignedTranslatorUser) {
     ReviewProject project = new ReviewProject();
