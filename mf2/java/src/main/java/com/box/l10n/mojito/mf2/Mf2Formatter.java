@@ -39,15 +39,24 @@ final class Mf2Formatter {
 
     private static void validateDeclarations(List<Mf2Message.Declaration> declarations)
             throws Mf2Exception {
-        if (declarations.size() < 2) {
-            return;
-        }
         Set<String> names = new HashSet<>();
         for (Mf2Message.Declaration declaration : declarations) {
+            if (declaration instanceof Mf2Message.InputDeclaration input) {
+                validateInputDeclaration(input);
+            }
             if (!names.add(declaration.name())) {
                 throw Mf2Exception.duplicateDeclaration(declaration.name());
             }
         }
+    }
+
+    private static void validateInputDeclaration(Mf2Message.InputDeclaration input)
+            throws Mf2Exception {
+        if (input.value().arg() instanceof Mf2Message.VariableArgument variable
+                && variable.name().equals(input.name())) {
+            return;
+        }
+        throw Mf2Exception.invalidInputDeclaration(input.name());
     }
 
     private static void validateSelectorAnnotations(

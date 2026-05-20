@@ -42,17 +42,28 @@ def _validate_model(model: dict[str, Any]) -> None:
 
 
 def _validate_declarations(declarations: list[dict[str, Any]]) -> None:
-    if len(declarations) < 2:
-        return
     names: set[str] = set()
     for declaration in declarations:
         name = declaration.get("name", "")
+        if declaration.get("type") == "input":
+            _validate_input_declaration(declaration)
         if name in names:
             raise MF2Error(
                 "duplicate-declaration",
                 f"Declaration ${name} is defined more than once.",
             )
         names.add(name)
+
+
+def _validate_input_declaration(declaration: dict[str, Any]) -> None:
+    name = declaration.get("name", "")
+    arg = declaration.get("value", {}).get("arg", {})
+    if arg.get("type") == "variable" and arg.get("name") == name:
+        return
+    raise MF2Error(
+        "invalid-input-declaration",
+        f"Input declaration ${name} must bind the same variable name.",
+    )
 
 
 def _selector_annotations(

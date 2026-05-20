@@ -32,15 +32,23 @@ public extension MF2Message {
     }
 
     private func validate(declarations: [MF2Declaration]) throws {
-        guard declarations.count > 1 else {
-            return
-        }
         var names: Set<String> = []
         for declaration in declarations {
+            if case let .input(name, value) = declaration {
+                try validateInputDeclaration(name: name, value: value)
+            }
             let name = declaration.name
             guard names.insert(name).inserted else {
                 throw MF2Error.duplicateDeclaration(name)
             }
+        }
+    }
+
+    private func validateInputDeclaration(name: String, value: MF2Expression) throws {
+        guard case let .variable(variableName)? = value.arg,
+              variableName == name
+        else {
+            throw MF2Error.invalidInputDeclaration(name)
         }
     }
 

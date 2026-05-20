@@ -10,6 +10,7 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
     case duplicateVariant
     case missingFallbackVariant
     case missingSelectorAnnotation(String)
+    case invalidInputDeclaration(String)
 
     public var code: String {
         switch self {
@@ -31,6 +32,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "missing-fallback-variant"
         case .missingSelectorAnnotation:
             "missing-selector-annotation"
+        case .invalidInputDeclaration:
+            "invalid-input-declaration"
         }
     }
 
@@ -54,6 +57,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "Select messages must include a catch-all fallback variant."
         case let .missingSelectorAnnotation(name):
             "Selector $\(name) must reference a declaration with a function."
+        case let .invalidInputDeclaration(name):
+            "Input declaration $\(name) must bind the same variable name."
         }
     }
 }

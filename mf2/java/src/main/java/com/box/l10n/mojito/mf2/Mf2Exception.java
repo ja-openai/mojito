@@ -59,4 +59,10 @@ public final class Mf2Exception extends Exception {
                 "missing-selector-annotation",
                 "Selector $" + name + " must reference a declaration with a function.");
     }
+
+    static Mf2Exception invalidInputDeclaration(String name) {
+        return new Mf2Exception(
+                "invalid-input-declaration",
+                "Input declaration $" + name + " must bind the same variable name.");
+    }
 }

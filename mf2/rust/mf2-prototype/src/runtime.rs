@@ -88,13 +88,14 @@ fn validate_model(model: &MessageModel) -> Result<(), Diagnostic> {
 }
 
 fn validate_declarations(declarations: &[Declaration]) -> Result<(), Diagnostic> {
-    if declarations.len() < 2 {
-        return Ok(());
-    }
     let mut names = BTreeSet::new();
     for declaration in declarations {
         let name = match declaration {
-            Declaration::Input { name, .. } | Declaration::Local { name, .. } => name,
+            Declaration::Input { name, value } => {
+                validate_input_declaration(name, value)?;
+                name
+            }
+            Declaration::Local { name, .. } => name,
         };
         if !names.insert(name) {
             return Err(model_error(
@@ -104,6 +105,16 @@ fn validate_declarations(declarations: &[Declaration]) -> Result<(), Diagnostic>
         }
     }
     Ok(())
+}
+
+fn validate_input_declaration(name: &str, value: &Expression) -> Result<(), Diagnostic> {
+    match &value.arg {
+        Some(ExpressionArg::Variable { name: variable_name }) if variable_name == name => Ok(()),
+        _ => Err(model_error(
+            "invalid-input-declaration",
+            format!("Input declaration ${name} must bind the same variable name."),
+        )),
+    }
 }
 
 fn validate_selector_annotations(
