@@ -1,5 +1,6 @@
 import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
 import { isTransientHttpError, poll } from '../utils/poller';
+import type { ApiGlossaryTermEvidence } from './glossaries';
 
 // Keep in sync with com.box.l10n.mojito.entity.review.ReviewProjectStatus
 export const REVIEW_PROJECT_STATUSES = ['OPEN', 'CLOSED'] as const;
@@ -204,6 +205,7 @@ export type ApiReviewProjectTerminologyTerm = {
     extractionMethod?: string | null;
     confidence?: number | null;
   }> | null;
+  evidence?: ApiGlossaryTermEvidence[] | null;
 };
 
 export type ApiReviewProjectTerminologyMetadataRequest = {

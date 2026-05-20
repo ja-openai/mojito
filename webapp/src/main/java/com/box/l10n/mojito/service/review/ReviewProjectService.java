@@ -4,6 +4,7 @@ import com.box.l10n.mojito.entity.*;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Locale_;
 import com.box.l10n.mojito.entity.glossary.Glossary;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermEvidence;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
@@ -23,6 +24,7 @@ import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
+import com.box.l10n.mojito.service.glossary.GlossaryTermEvidenceRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermIndexCurationService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermIndexLinkRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
@@ -86,6 +88,7 @@ public class ReviewProjectService {
   private final ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository;
   private final ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository;
   private final GlossaryTermMetadataRepository glossaryTermMetadataRepository;
+  private final GlossaryTermEvidenceRepository glossaryTermEvidenceRepository;
   private final GlossaryTermIndexCurationService glossaryTermIndexCurationService;
   private final GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository;
   private final TermIndexCandidateRepository termIndexCandidateRepository;
@@ -120,6 +123,7 @@ public class ReviewProjectService {
       ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository,
       ReviewProjectRequestSlackThreadRepository reviewProjectRequestSlackThreadRepository,
       GlossaryTermMetadataRepository glossaryTermMetadataRepository,
+      GlossaryTermEvidenceRepository glossaryTermEvidenceRepository,
       GlossaryTermIndexCurationService glossaryTermIndexCurationService,
       GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository,
       TermIndexCandidateRepository termIndexCandidateRepository,
@@ -150,6 +154,7 @@ public class ReviewProjectService {
     this.reviewProjectScreenshotRepository = reviewProjectScreenshotRepository;
     this.reviewProjectRequestSlackThreadRepository = reviewProjectRequestSlackThreadRepository;
     this.glossaryTermMetadataRepository = glossaryTermMetadataRepository;
+    this.glossaryTermEvidenceRepository = glossaryTermEvidenceRepository;
     this.glossaryTermIndexCurationService = glossaryTermIndexCurationService;
     this.glossaryTermIndexLinkRepository = glossaryTermIndexLinkRepository;
     this.termIndexCandidateRepository = termIndexCandidateRepository;
@@ -2717,6 +2722,21 @@ public class ReviewProjectService {
                         Function.identity(),
                         (first, ignored) -> first,
                         LinkedHashMap::new));
+    Map<Long, List<GlossaryTermEvidence>> evidenceByMetadataId =
+        metadataIds.isEmpty()
+            ? Map.of()
+            : glossaryTermEvidenceRepository
+                .findByGlossaryTermMetadataIdInOrderBySortOrderAsc(metadataIds)
+                .stream()
+                .filter(
+                    evidence ->
+                        evidence.getGlossaryTermMetadata() != null
+                            && evidence.getGlossaryTermMetadata().getId() != null)
+                .collect(
+                    Collectors.groupingBy(
+                        evidence -> evidence.getGlossaryTermMetadata().getId(),
+                        LinkedHashMap::new,
+                        Collectors.toList()));
 
     Map<Long, ReviewProjectTextUnitDetail> detailByTmTextUnitId =
         textUnitDetails.stream()
@@ -2738,7 +2758,12 @@ public class ReviewProjectService {
       GlossaryTermMetadata metadata = entry.getValue();
       GlossaryTermIndexLink primaryLink = primaryLinksByMetadataId.get(metadata.getId());
       result.put(
-          detail.reviewProjectTextUnitId(), toTerminologyTerm(detail, metadata, primaryLink));
+          detail.reviewProjectTextUnitId(),
+          toTerminologyTerm(
+              detail,
+              metadata,
+              primaryLink,
+              evidenceByMetadataId.getOrDefault(metadata.getId(), List.of())));
     }
     result.putAll(getCandidateTerminologyTermsByReviewProjectTextUnitId(textUnitDetails, result));
     return result;
@@ -2786,7 +2811,8 @@ public class ReviewProjectService {
   private GetProjectDetailView.TerminologyTerm toTerminologyTerm(
       ReviewProjectTextUnitDetail detail,
       GlossaryTermMetadata metadata,
-      GlossaryTermIndexLink primaryLink) {
+      GlossaryTermIndexLink primaryLink,
+      List<GlossaryTermEvidence> evidenceItems) {
     TermIndexCandidate candidate = primaryLink == null ? null : primaryLink.getTermIndexCandidate();
     var extractedTerm = candidate == null ? null : candidate.getTermIndexExtractedTerm();
     List<GetProjectDetailView.TerminologyTermExample> examples =
@@ -2822,6 +2848,10 @@ public class ReviewProjectService {
                     candidate.getSourceType(),
                     candidate.getSourceName(),
                     candidate.getSourceExternalId()));
+    List<GetProjectDetailView.TerminologyTermEvidence> evidence =
+        evidenceItems == null
+            ? List.of()
+            : evidenceItems.stream().map(this::toTerminologyTermEvidence).toList();
 
     return new GetProjectDetailView.TerminologyTerm(
         metadata.getGlossary() == null ? null : metadata.getGlossary().getId(),
@@ -2853,7 +2883,23 @@ public class ReviewProjectService {
             ? null
             : candidate.getReviewChangedByUser().getUsername(),
         sources,
-        examples);
+        examples,
+        evidence);
+  }
+
+  private GetProjectDetailView.TerminologyTermEvidence toTerminologyTermEvidence(
+      GlossaryTermEvidence evidence) {
+    return new GetProjectDetailView.TerminologyTermEvidence(
+        evidence.getId(),
+        evidence.getEvidenceType(),
+        evidence.getCaption(),
+        evidence.getImageKey(),
+        evidence.getTmTextUnit() == null ? null : evidence.getTmTextUnit().getId(),
+        evidence.getCropX(),
+        evidence.getCropY(),
+        evidence.getCropWidth(),
+        evidence.getCropHeight(),
+        evidence.getSortOrder());
   }
 
   private GetProjectDetailView.TerminologyTerm toCandidateTerminologyTerm(
@@ -2921,7 +2967,8 @@ public class ReviewProjectService {
             ? null
             : candidate.getReviewChangedByUser().getUsername(),
         sources,
-        examples);
+        examples,
+        List.of());
   }
 
   private ReviewProjectTextUnitDetail fetchReviewProjectTextUnitDetail(

@@ -1677,9 +1677,13 @@ function DetailPane({
   const decisionVariant = decision?.decisionTmTextUnitVariant ?? null;
   const decisionVariantId = decisionVariant?.id ?? null;
   const translationLang = toHtmlLangTag(localeTag);
+  const terminologyTerm = textUnit.terminologyTerm ?? null;
   const glossaryTargetsQuery = useQuery({
     queryKey: ['review-project-glossary-targets'],
-    enabled: Boolean(assetPath) && (repositoryId != null || Boolean(repositoryName?.trim())),
+    enabled:
+      terminologyTerm?.glossaryId == null &&
+      Boolean(assetPath) &&
+      (repositoryId != null || Boolean(repositoryName?.trim())),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     queryFn: () => fetchGlossaries({ limit: 200 }),
@@ -1693,7 +1697,6 @@ function DetailPane({
       }),
     [assetPath, glossaryTargetsQuery.data?.glossaries, repositoryId, repositoryName],
   );
-  const terminologyTerm = textUnit.terminologyTerm ?? null;
   const terminologyGlossaryId =
     terminologyTerm?.glossaryId ?? glossaryTermTarget?.glossaryId ?? null;
   const glossaryTermQuery = useQuery({
@@ -1724,9 +1727,10 @@ function DetailPane({
     },
   });
   const glossaryTerm = glossaryTermQuery.data ?? null;
+  const glossaryEvidence = terminologyTerm?.evidence ?? glossaryTerm?.evidence;
   const glossaryTermScreenshotImages = useMemo(
-    () => getGlossaryTermScreenshotKeys(glossaryTerm?.evidence),
-    [glossaryTerm?.evidence],
+    () => getGlossaryTermScreenshotKeys(glossaryEvidence),
+    [glossaryEvidence],
   );
   const detailScreenshotImages = useMemo(
     () => mergeScreenshotImageKeys(screenshotImages, glossaryTermScreenshotImages),

@@ -20,6 +20,7 @@ import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamUser;
 import com.box.l10n.mojito.entity.TeamUserRole;
 import com.box.l10n.mojito.entity.glossary.Glossary;
+import com.box.l10n.mojito.entity.glossary.GlossaryTermEvidence;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermIndexLink;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexCandidate;
@@ -39,6 +40,7 @@ import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
+import com.box.l10n.mojito.service.glossary.GlossaryTermEvidenceRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermIndexCurationService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermIndexLinkRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
@@ -63,6 +65,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.Before;
@@ -91,6 +94,8 @@ public class ReviewProjectServiceTest {
           Mockito.mock(ReviewProjectRequestSlackThreadRepository.class);
   private final GlossaryTermMetadataRepository glossaryTermMetadataRepository =
       Mockito.mock(GlossaryTermMetadataRepository.class);
+  private final GlossaryTermEvidenceRepository glossaryTermEvidenceRepository =
+      Mockito.mock(GlossaryTermEvidenceRepository.class);
   private final GlossaryTermIndexCurationService glossaryTermIndexCurationService =
       Mockito.mock(GlossaryTermIndexCurationService.class);
   private final GlossaryTermIndexLinkRepository glossaryTermIndexLinkRepository =
@@ -142,6 +147,7 @@ public class ReviewProjectServiceTest {
                 reviewProjectRequestScreenshotRepository,
                 reviewProjectRequestSlackThreadRepository,
                 glossaryTermMetadataRepository,
+                glossaryTermEvidenceRepository,
                 glossaryTermIndexCurationService,
                 glossaryTermIndexLinkRepository,
                 termIndexCandidateRepository,
@@ -1167,6 +1173,51 @@ public class ReviewProjectServiceTest {
     assertEquals(Long.valueOf(99L), command.requestedByUserId());
     assertEquals(List.of(88L), command.specialistUserIds());
     assertEquals(Long.valueOf(77L), command.pmUserId());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void getTerminologyTermsIncludesGlossaryEvidence() {
+    ReviewProject reviewProject = new ReviewProject();
+    reviewProject.setType(ReviewProjectType.TERMINOLOGY);
+    ReviewProjectTextUnitDetail detail = reviewProjectTextUnitDetail(55L);
+
+    Glossary glossary = new Glossary();
+    glossary.setId(17L);
+    glossary.setName("Product UI");
+    GlossaryTermMetadata metadata =
+        glossaryTermMetadata(321L, GlossaryTermMetadata.STATUS_APPROVED);
+    metadata.setId(88L);
+    metadata.setGlossary(glossary);
+
+    GlossaryTermEvidence evidence = new GlossaryTermEvidence();
+    evidence.setId(99L);
+    evidence.setGlossaryTermMetadata(metadata);
+    evidence.setEvidenceType(GlossaryTermEvidence.EVIDENCE_TYPE_SCREENSHOT);
+    evidence.setCaption("Primary sidebar");
+    evidence.setImageKey("glossary/screenshots/sidebar.png");
+    evidence.setSortOrder(1);
+
+    when(glossaryTermMetadataRepository.findByTmTextUnitIdIn(List.of(321L)))
+        .thenReturn(List.of(metadata));
+    when(glossaryTermIndexLinkRepository.findByGlossaryTermMetadataIdInAndRelationType(
+            List.of(88L), GlossaryTermIndexLink.RELATION_TYPE_PRIMARY))
+        .thenReturn(List.of());
+    when(glossaryTermEvidenceRepository.findByGlossaryTermMetadataIdInOrderBySortOrderAsc(
+            List.of(88L)))
+        .thenReturn(List.of(evidence));
+
+    Map<Long, GetProjectDetailView.TerminologyTerm> termsByTextUnitId =
+        ReflectionTestUtils.invokeMethod(
+            reviewProjectService,
+            "getTerminologyTermsByReviewProjectTextUnitId",
+            reviewProject,
+            List.of(detail));
+
+    GetProjectDetailView.TerminologyTerm term = termsByTextUnitId.get(55L);
+    assertEquals(17L, term.glossaryId().longValue());
+    assertEquals(1, term.evidence().size());
+    assertEquals("glossary/screenshots/sidebar.png", term.evidence().get(0).imageKey());
   }
 
   private ReviewProject project(

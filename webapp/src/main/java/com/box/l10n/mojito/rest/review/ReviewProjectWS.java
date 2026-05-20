@@ -679,7 +679,20 @@ public class ReviewProjectWS {
         ZonedDateTime candidateReviewChangedAt,
         String candidateReviewChangedByUsername,
         List<TerminologyTermSource> sources,
-        List<TerminologyTermExample> examples) {}
+        List<TerminologyTermExample> examples,
+        List<TerminologyTermEvidence> evidence) {}
+
+    public record TerminologyTermEvidence(
+        Long id,
+        String evidenceType,
+        String caption,
+        String imageKey,
+        Long tmTextUnitId,
+        Integer cropX,
+        Integer cropY,
+        Integer cropWidth,
+        Integer cropHeight,
+        Integer sortOrder) {}
 
     public record TerminologyTermSource(
         Long id, String sourceType, String sourceName, String sourceExternalId) {}
@@ -1158,6 +1171,23 @@ public class ReviewProjectWS {
                             example.endIndex(),
                             example.extractionMethod(),
                             example.confidence()))
+                .toList(),
+        term.evidence() == null
+            ? List.of()
+            : term.evidence().stream()
+                .map(
+                    evidence ->
+                        new GetReviewProjectResponse.TerminologyTermEvidence(
+                            evidence.id(),
+                            evidence.evidenceType(),
+                            evidence.caption(),
+                            evidence.imageKey(),
+                            evidence.tmTextUnitId(),
+                            evidence.cropX(),
+                            evidence.cropY(),
+                            evidence.cropWidth(),
+                            evidence.cropHeight(),
+                            evidence.sortOrder()))
                 .toList());
   }
 
