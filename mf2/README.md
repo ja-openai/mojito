@@ -68,8 +68,8 @@ The current conformance slice covers:
 - BCP47-first locale canonicalization and structural lookup, including
   underscore compatibility and extension stripping for plural lookup
 
-Rust currently parses MF2 source into the official data model for this slice.
-Swift, Python, and Java currently consume the expected official data model from
+Rust and Java currently parse MF2 source into the official data model for this
+slice. Swift and Python currently consume the expected official data model from
 fixtures and format it. They do not parse MF2 source yet.
 
 ## V0 Target

@@ -19,12 +19,27 @@ public final class Conformance {
                 : Path.of("../conformance/fixtures/source-to-model");
 
         int checkedCases = 0;
+        int checkedModels = 0;
         for (Path fixturePath : jsonFiles(fixtureDir)) {
             Map<String, Object> fixture = object(JsonParser.parse(fixturePath));
-            Mf2Message message = Mf2Message.fromJson(fixture.get("expectedModel"));
+            Mf2Message expectedModel = Mf2Message.fromJson(fixture.get("expectedModel"));
+            ParseResult parseResult = Mf2Parser.parseToModel(string(fixture.get("source")));
+            if (parseResult.hasDiagnostics()) {
+                System.err.printf(
+                        "%s: expected parse success, got diagnostics %s%n",
+                        fixturePath.getFileName(), parseResult.diagnostics());
+                return 1;
+            }
+            if (!expectedModel.equals(parseResult.model())) {
+                System.err.printf(
+                        "%s: parsed model did not match expected model%n",
+                        fixturePath.getFileName());
+                return 1;
+            }
+            checkedModels++;
             for (Object rawCase : arrayOrEmpty(fixture.get("formatCases"))) {
                 Map<String, Object> formatCase = object(rawCase);
-                String actual = message.format(
+                String actual = parseResult.model().format(
                         objectOrEmpty(formatCase.get("arguments")),
                         stringOrDefault(formatCase.get("locale"), "en"));
                 String expected = string(formatCase.get("expected"));
@@ -37,11 +52,40 @@ public final class Conformance {
             }
         }
 
+        int checkedInvalidSources = checkInvalidSourceFixtures(fixtureDir.getParent());
         int checkedErrorCases = checkFormatErrorFixtures(fixtureDir.getParent());
         System.out.printf(
-                "Java MF2 conformance runner passed %d format cases and %d format error cases.%n",
-                checkedCases, checkedErrorCases);
+                "Java MF2 conformance runner passed %d source models, %d format cases, "
+                        + "%d invalid source cases, and %d format error cases.%n",
+                checkedModels, checkedCases, checkedInvalidSources, checkedErrorCases);
         return 0;
+    }
+
+    private static int checkInvalidSourceFixtures(Path fixtureRoot) throws Exception {
+        Path fixtureDir = fixtureRoot.resolve("invalid-source");
+        if (!Files.isDirectory(fixtureDir)) {
+            return 0;
+        }
+
+        int checkedCases = 0;
+        for (Path fixturePath : jsonFiles(fixtureDir)) {
+            Map<String, Object> fixture = object(JsonParser.parse(fixturePath));
+            ParseResult parseResult = Mf2Parser.parseToModel(string(fixture.get("source")));
+            List<String> actualCodes = parseResult.diagnostics().stream()
+                    .map(Diagnostic::code)
+                    .toList();
+            List<String> expectedCodes = arrayOrEmpty(fixture.get("expectedDiagnostics")).stream()
+                    .map(Conformance::object)
+                    .map(diagnostic -> string(diagnostic.get("code")))
+                    .toList();
+            if (!actualCodes.equals(expectedCodes)) {
+                throw new ConformanceFailure(String.format(
+                        "%s: expected diagnostics %s, got %s%n",
+                        fixturePath.getFileName(), expectedCodes, actualCodes));
+            }
+            checkedCases++;
+        }
+        return checkedCases;
     }
 
     private static int checkFormatErrorFixtures(Path fixtureRoot) throws Exception {
@@ -58,15 +102,14 @@ public final class Conformance {
                 String actual = message.format(
                         objectOrEmpty(fixture.get("arguments")),
                         stringOrDefault(fixture.get("locale"), "en"));
-                System.err.printf("%s: expected format error, got %s%n", fixturePath.getFileName(), actual);
-                return 1;
+                throw new ConformanceFailure(String.format(
+                        "%s: expected format error, got %s", fixturePath.getFileName(), actual));
             } catch (Mf2Exception error) {
                 String expectedCode = string(object(fixture.get("expectedError")).get("code"));
                 if (!error.code().equals(expectedCode)) {
-                    System.err.printf(
+                    throw new ConformanceFailure(String.format(
                             "%s: expected error %s, got %s%n",
-                            fixturePath.getFileName(), expectedCode, error.code());
-                    return 1;
+                            fixturePath.getFileName(), expectedCode, error.code()));
                 }
             }
             checkedCases++;
@@ -103,5 +146,13 @@ public final class Conformance {
 
     private static String stringOrDefault(Object value, String fallback) {
         return value instanceof String text ? text : fallback;
+    }
+
+    private static final class ConformanceFailure extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        ConformanceFailure(String message) {
+            super(message);
+        }
     }
 }
