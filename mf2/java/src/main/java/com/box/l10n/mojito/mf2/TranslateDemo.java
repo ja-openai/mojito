@@ -18,6 +18,12 @@ public final class TranslateDemo {
         System.out.println("cart.items[en] -> \"" + catalog.translate("cart.items", "en", Map.of("count", 5)) + "\"");
         System.out.println("cart.items[ru] -> \"" + catalog.translate("cart.items", "ru", Map.of("count", 2)) + "\"");
         System.out.println("cart.items[ru] -> \"" + catalog.translate("cart.items", "ru", Map.of("count", 5)) + "\"");
+        System.out.println("assignee.files[en] -> \""
+                + catalog.translate("assignee.files", "en", Map.of("gender", "male", "count", 1)) + "\"");
+        System.out.println("assignee.files[en] -> \""
+                + catalog.translate("assignee.files", "en", Map.of("gender", "female", "count", 3)) + "\"");
+        System.out.println("assignee.files[en] -> \""
+                + catalog.translate("assignee.files", "en", Map.of("gender", "unknown", "count", 2)) + "\"");
     }
 
     private record Catalog(Map<String, Object> messages, Mf2FunctionRegistry functions) {

@@ -87,6 +87,33 @@ fn main() {
             args([("count", 5.into())]),
             "5 предметов",
         ),
+        (
+            "assignee.files",
+            "en",
+            args([
+                ("gender", serde_json::Value::String("male".to_string())),
+                ("count", 1.into()),
+            ]),
+            "He reviewed 1 file",
+        ),
+        (
+            "assignee.files",
+            "en",
+            args([
+                ("gender", serde_json::Value::String("female".to_string())),
+                ("count", 3.into()),
+            ]),
+            "She reviewed 3 files",
+        ),
+        (
+            "assignee.files",
+            "en",
+            args([
+                ("gender", serde_json::Value::String("unknown".to_string())),
+                ("count", 2.into()),
+            ]),
+            "They reviewed 2 files",
+        ),
     ];
 
     for (message_id, locale, arguments, expected) in examples {

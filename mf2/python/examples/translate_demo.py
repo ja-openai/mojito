@@ -55,6 +55,9 @@ def main() -> int:
         ("cart.items", "en", {"count": 5}, "5 items"),
         ("cart.items", "ru", {"count": 2}, "2 предмета"),
         ("cart.items", "ru", {"count": 5}, "5 предметов"),
+        ("assignee.files", "en", {"gender": "male", "count": 1}, "He reviewed 1 file"),
+        ("assignee.files", "en", {"gender": "female", "count": 3}, "She reviewed 3 files"),
+        ("assignee.files", "en", {"gender": "unknown", "count": 2}, "They reviewed 2 files"),
     ]
 
     for message_id, locale, arguments, expected in examples:

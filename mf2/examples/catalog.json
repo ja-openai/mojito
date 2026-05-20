@@ -1,5 +1,71 @@
 {
   "messages": {
+    "assignee.files": {
+      "en": {
+        "type": "select",
+        "declarations": [
+          {
+            "type": "input",
+            "name": "gender",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "gender" },
+              "function": { "type": "function", "name": "string" }
+            }
+          },
+          {
+            "type": "input",
+            "name": "count",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "count" },
+              "function": { "type": "function", "name": "number" }
+            }
+          }
+        ],
+        "selectors": [
+          { "type": "variable", "name": "gender" },
+          { "type": "variable", "name": "count" }
+        ],
+        "variants": [
+          {
+            "keys": [
+              { "type": "literal", "value": "male" },
+              { "type": "literal", "value": "one" }
+            ],
+            "value": ["He reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " file"]
+          },
+          {
+            "keys": [
+              { "type": "literal", "value": "female" },
+              { "type": "literal", "value": "one" }
+            ],
+            "value": ["She reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " file"]
+          },
+          {
+            "keys": [
+              { "type": "literal", "value": "male" },
+              { "type": "*" }
+            ],
+            "value": ["He reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " files"]
+          },
+          {
+            "keys": [
+              { "type": "literal", "value": "female" },
+              { "type": "*" }
+            ],
+            "value": ["She reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " files"]
+          },
+          {
+            "keys": [
+              { "type": "*" },
+              { "type": "*" }
+            ],
+            "value": ["They reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " files"]
+          }
+        ]
+      }
+    },
     "cart.items": {
       "en": {
         "type": "select",

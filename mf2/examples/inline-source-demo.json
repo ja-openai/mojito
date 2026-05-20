@@ -48,6 +48,27 @@
       "locale": "ru",
       "arguments": { "count": 5 },
       "expected": "5 предметов"
+    },
+    {
+      "label": "assignee.files",
+      "source": ".input {$gender :string}\n.input {$count :number}\n.match $gender $count\nmale one {{He reviewed {$count} file}}\nfemale one {{She reviewed {$count} file}}\nmale * {{He reviewed {$count} files}}\nfemale * {{She reviewed {$count} files}}\n* * {{They reviewed {$count} files}}",
+      "locale": "en",
+      "arguments": { "gender": "male", "count": 1 },
+      "expected": "He reviewed 1 file"
+    },
+    {
+      "label": "assignee.files",
+      "source": ".input {$gender :string}\n.input {$count :number}\n.match $gender $count\nmale one {{He reviewed {$count} file}}\nfemale one {{She reviewed {$count} file}}\nmale * {{He reviewed {$count} files}}\nfemale * {{She reviewed {$count} files}}\n* * {{They reviewed {$count} files}}",
+      "locale": "en",
+      "arguments": { "gender": "female", "count": 3 },
+      "expected": "She reviewed 3 files"
+    },
+    {
+      "label": "assignee.files",
+      "source": ".input {$gender :string}\n.input {$count :number}\n.match $gender $count\nmale one {{He reviewed {$count} file}}\nfemale one {{She reviewed {$count} file}}\nmale * {{He reviewed {$count} files}}\nfemale * {{She reviewed {$count} files}}\n* * {{They reviewed {$count} files}}",
+      "locale": "en",
+      "arguments": { "gender": "unknown", "count": 2 },
+      "expected": "They reviewed 2 files"
     }
   ]
 }

@@ -17,6 +17,9 @@ private let examples: [(String, String, [String: MF2Value], String)] = [
     ("cart.items", "en", ["count": .number("5")], "5 items"),
     ("cart.items", "ru", ["count": .number("2")], "2 предмета"),
     ("cart.items", "ru", ["count": .number("5")], "5 предметов"),
+    ("assignee.files", "en", ["gender": .string("male"), "count": .number("1")], "He reviewed 1 file"),
+    ("assignee.files", "en", ["gender": .string("female"), "count": .number("3")], "She reviewed 3 files"),
+    ("assignee.files", "en", ["gender": .string("unknown"), "count": .number("2")], "They reviewed 2 files"),
 ]
 
 for (messageID, locale, arguments, expected) in examples {
