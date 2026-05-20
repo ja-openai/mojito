@@ -28,7 +28,8 @@ Current scope:
   function pass-through, markup-as-parts-stripped string output, exact-match
   selectors, and `:number select=exact` with catch-all fallback
 - expose `format_message_to_parts` for text, expression, and markup boundary
-  output in the supported runtime slice
+  output in the supported runtime slice, preserving expression/markup attributes
+  for UI renderers
 - reject invalid model structure for duplicate declarations, select variant key
   arity, duplicate variants, and missing fallback variants
 - cardinal and ordinal plural category selection for every generated CLDR plural

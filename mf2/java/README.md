@@ -11,7 +11,8 @@ Current target:
 - preserve expression and markup attributes in parsed/decoded models, including
   quoted option/attribute values containing spaces
 - format the supported shared conformance fixture slice
-- expose `formatToParts` for text, expression, and markup boundary output
+- expose `formatToParts` for text, expression, and markup boundary output,
+  preserving expression/markup attributes for UI renderers
 - reject invalid model structure for duplicate declarations, select variant key
   arity, duplicate variants, and missing fallback variants
 - use generated CLDR cardinal and ordinal plural rules

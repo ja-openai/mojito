@@ -5,8 +5,8 @@ use crate::cldr::{
 };
 use crate::diagnostic::Diagnostic;
 use crate::model::{
-    Declaration, Expression, ExpressionArg, Markup, MessageModel, PatternPart, VariableRef,
-    Variant, VariantKey,
+    AttributeValue, Declaration, Expression, ExpressionArg, Markup, MessageModel, PatternPart,
+    VariableRef, Variant, VariantKey,
 };
 use serde::{Deserialize, Serialize};
 
@@ -16,15 +16,24 @@ pub enum FormattedPart {
     #[serde(rename = "text")]
     Text { value: String },
     #[serde(rename = "expression")]
-    Expression { value: String },
+    Expression {
+        value: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        attributes: Option<BTreeMap<String, AttributeValue>>,
+    },
     #[serde(rename = "markup")]
-    Markup { kind: String, name: String },
+    Markup {
+        kind: String,
+        name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        attributes: Option<BTreeMap<String, AttributeValue>>,
+    },
 }
 
 impl FormattedPart {
     fn string_value(&self) -> Option<&str> {
         match self {
-            Self::Text { value } | Self::Expression { value } => Some(value),
+            Self::Text { value } | Self::Expression { value, .. } => Some(value),
             Self::Markup { .. } => None,
         }
     }
@@ -186,6 +195,7 @@ impl FormatContext {
                 PatternPart::Expression(expression) => {
                     output.push(FormattedPart::Expression {
                         value: self.format_expression(expression)?,
+                        attributes: expression.attributes.clone(),
                     });
                 }
                 PatternPart::Markup(markup) => output.push(markup_to_part(markup)),
@@ -395,6 +405,7 @@ fn markup_to_part(markup: &Markup) -> FormattedPart {
     FormattedPart::Markup {
         kind: markup.kind.clone(),
         name: markup.name.clone(),
+        attributes: markup.attributes.clone(),
     }
 }
 

@@ -122,9 +122,13 @@ final class Mf2Formatter {
                 switch (part) {
                     case Mf2Message.TextPart text -> output.add(new Mf2Message.FormattedText(text.value()));
                     case Mf2Message.ExpressionPart expression -> output.add(
-                            new Mf2Message.FormattedExpression(formatExpression(expression.expression())));
+                            new Mf2Message.FormattedExpression(
+                                    formatExpression(expression.expression()),
+                                    expression.expression().attributes()));
                     case Mf2Message.MarkupPart markup -> output.add(new Mf2Message.FormattedMarkup(
-                            markup.markup().kind(), markup.markup().name()));
+                            markup.markup().kind(),
+                            markup.markup().name(),
+                            markup.markup().attributes()));
                 }
             }
             return output;

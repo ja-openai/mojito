@@ -99,6 +99,7 @@ The source-to-model fixtures currently cover:
 - `.input`
 - `.local`
 - markup open/close/standalone placeholders
+- parts output for expression and markup attributes
 - exact-match `.match` selectors and catch-all fallback, including
   `:number select=exact`
 - cardinal plural category selection for English, French, Russian, Arabic, and

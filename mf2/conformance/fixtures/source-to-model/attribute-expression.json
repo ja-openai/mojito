@@ -23,5 +23,23 @@
       "arguments": { "name": "Alex" },
       "expected": "Hello, Alex!"
     }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Alex" },
+      "expected": [
+        { "type": "text", "value": "Hello, " },
+        {
+          "type": "expression",
+          "value": "Alex",
+          "attributes": {
+            "title": { "type": "literal", "value": "user" },
+            "private": true
+          }
+        },
+        { "type": "text", "value": "!" }
+      ]
+    }
   ]
 }

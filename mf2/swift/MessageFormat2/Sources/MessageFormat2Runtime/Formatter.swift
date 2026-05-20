@@ -110,9 +110,16 @@ private struct MF2FormatContext {
             case let .text(text):
                 output.append(.text(text))
             case let .expression(expression):
-                output.append(.expression(try format(expression: expression)))
+                output.append(.expression(
+                    try format(expression: expression),
+                    attributes: expression.attributes
+                ))
             case let .markup(markup):
-                output.append(.markup(kind: markup.kind, name: markup.name))
+                output.append(.markup(
+                    kind: markup.kind,
+                    name: markup.name,
+                    attributes: markup.attributes
+                ))
             }
         }
         return output
@@ -223,14 +230,15 @@ private extension MF2Variant {
 
 public enum MF2FormattedPart: Equatable, Decodable {
     case text(String)
-    case expression(String)
-    case markup(kind: String, name: String)
+    case expression(String, attributes: [String: MF2AttributeValue])
+    case markup(kind: String, name: String, attributes: [String: MF2AttributeValue])
 
     private enum CodingKeys: String, CodingKey {
         case type
         case value
         case kind
         case name
+        case attributes
     }
 
     public init(from decoder: Decoder) throws {
@@ -240,11 +248,21 @@ public enum MF2FormattedPart: Equatable, Decodable {
         case "text":
             self = .text(try container.decode(String.self, forKey: .value))
         case "expression":
-            self = .expression(try container.decode(String.self, forKey: .value))
+            self = .expression(
+                try container.decode(String.self, forKey: .value),
+                attributes: try container.decodeIfPresent(
+                    [String: MF2AttributeValue].self,
+                    forKey: .attributes
+                ) ?? [:]
+            )
         case "markup":
             self = .markup(
                 kind: try container.decode(String.self, forKey: .kind),
-                name: try container.decode(String.self, forKey: .name)
+                name: try container.decode(String.self, forKey: .name),
+                attributes: try container.decodeIfPresent(
+                    [String: MF2AttributeValue].self,
+                    forKey: .attributes
+                ) ?? [:]
             )
         default:
             throw DecodingError.dataCorruptedError(
@@ -260,7 +278,7 @@ private extension Array where Element == MF2FormattedPart {
     var stringValue: String {
         map { part in
             switch part {
-            case let .text(value), let .expression(value):
+            case let .text(value), let .expression(value, _):
                 value
             case .markup:
                 ""

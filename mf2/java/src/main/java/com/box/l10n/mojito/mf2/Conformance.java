@@ -53,14 +53,14 @@ public final class Conformance {
             }
             for (Object rawCase : arrayOrEmpty(fixture.get("partsCases"))) {
                 Map<String, Object> partsCase = object(rawCase);
-                List<Map<String, String>> actual = parseResult.model().formatToParts(
+                List<Map<String, Object>> actual = parseResult.model().formatToParts(
                                 objectOrEmpty(partsCase.get("arguments")),
                                 stringOrDefault(partsCase.get("locale"), "en"))
                         .stream()
                         .map(Conformance::partToMap)
                         .toList();
-                List<Map<String, String>> expected = arrayOrEmpty(partsCase.get("expected")).stream()
-                        .map(Conformance::stringMap)
+                List<Map<String, Object>> expected = arrayOrEmpty(partsCase.get("expected")).stream()
+                        .map(Conformance::object)
                         .toList();
                 if (!actual.equals(expected)) {
                     System.err.printf(
@@ -193,17 +193,8 @@ public final class Conformance {
         return value == null ? Map.of() : object(value);
     }
 
-    private static Map<String, String> stringMap(Object value) {
-        return object(value).entrySet().stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> string(entry.getValue()),
-                        (left, right) -> right,
-                        java.util.LinkedHashMap::new));
-    }
-
-    private static Map<String, String> partToMap(Mf2Message.FormattedPart part) {
-        Map<String, String> map = new java.util.LinkedHashMap<>();
+    private static Map<String, Object> partToMap(Mf2Message.FormattedPart part) {
+        Map<String, Object> map = new java.util.LinkedHashMap<>();
         switch (part) {
             case Mf2Message.FormattedText text -> {
                 map.put("type", "text");
@@ -212,14 +203,50 @@ public final class Conformance {
             case Mf2Message.FormattedExpression expression -> {
                 map.put("type", "expression");
                 map.put("value", expression.value());
+                putAttributes(map, expression.attributes());
             }
             case Mf2Message.FormattedMarkup markup -> {
                 map.put("type", "markup");
                 map.put("kind", markup.kind());
                 map.put("name", markup.name());
+                putAttributes(map, markup.attributes());
             }
         }
         return map;
+    }
+
+    private static void putAttributes(
+            Map<String, Object> output, Map<String, Mf2Message.AttributeValue> attributes) {
+        if (attributes.isEmpty()) {
+            return;
+        }
+        Map<String, Object> rawAttributes = new java.util.LinkedHashMap<>();
+        for (Map.Entry<String, Mf2Message.AttributeValue> entry : attributes.entrySet()) {
+            rawAttributes.put(entry.getKey(), attributeToMap(entry.getValue()));
+        }
+        output.put("attributes", rawAttributes);
+    }
+
+    private static Object attributeToMap(Mf2Message.AttributeValue attribute) {
+        return switch (attribute) {
+            case Mf2Message.PresentAttribute present -> present.value();
+            case Mf2Message.LiteralAttribute literal -> expressionArgumentToMap(literal.value());
+        };
+    }
+
+    private static Map<String, Object> expressionArgumentToMap(Mf2Message.ExpressionArgument argument) {
+        Map<String, Object> output = new java.util.LinkedHashMap<>();
+        switch (argument) {
+            case Mf2Message.LiteralArgument literal -> {
+                output.put("type", "literal");
+                output.put("value", literal.value());
+            }
+            case Mf2Message.VariableArgument variable -> {
+                output.put("type", "variable");
+                output.put("name", variable.name());
+            }
+        }
+        return output;
     }
 
     @SuppressWarnings("unchecked")

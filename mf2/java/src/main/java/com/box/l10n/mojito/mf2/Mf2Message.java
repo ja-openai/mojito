@@ -123,9 +123,19 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
 
     record FormattedText(String value) implements FormattedPart {}
 
-    record FormattedExpression(String value) implements FormattedPart {}
+    record FormattedExpression(String value, Map<String, AttributeValue> attributes)
+            implements FormattedPart {
+        public FormattedExpression {
+            attributes = Map.copyOf(attributes);
+        }
+    }
 
-    record FormattedMarkup(String kind, String name) implements FormattedPart {}
+    record FormattedMarkup(String kind, String name, Map<String, AttributeValue> attributes)
+            implements FormattedPart {
+        public FormattedMarkup {
+            attributes = Map.copyOf(attributes);
+        }
+    }
 
     private static List<Declaration> parseDeclarations(Object value) {
         if (value == null) {

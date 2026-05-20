@@ -67,7 +67,7 @@ The current conformance slice covers:
 - `.input` and `.local` declarations
 - markup placeholders, stripped from string output for now
 - `format_to_parts` / `formatToParts` output for text, expression output, and
-  markup boundaries
+  markup boundaries, preserving expression and markup attributes for UI renderers
 - exact-match `.match` selectors with catch-all fallback, including
   `:number select=exact`
 - cardinal and ordinal plural category selection for the generated all-CLDR

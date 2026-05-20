@@ -19,7 +19,7 @@ def format_message_to_parts(
     model: dict[str, Any],
     arguments: dict[str, Any] | None = None,
     locale: str = "en",
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     _validate_model(model)
     context = _FormatContext(dict(arguments or {}), locale)
     context.apply_declarations(model.get("declarations", []))
@@ -78,7 +78,7 @@ class _FormatContext:
         self,
         selectors: list[dict[str, Any]],
         variants: list[dict[str, Any]],
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, Any]]:
         selector_values = []
         for selector in selectors:
             name = selector["name"]
@@ -124,23 +124,27 @@ class _FormatContext:
     def format_pattern(self, pattern: list[Any]) -> str:
         return _parts_to_string(self.format_pattern_to_parts(pattern))
 
-    def format_pattern_to_parts(self, pattern: list[Any]) -> list[dict[str, str]]:
-        parts: list[dict[str, str]] = []
+    def format_pattern_to_parts(self, pattern: list[Any]) -> list[dict[str, Any]]:
+        parts: list[dict[str, Any]] = []
         for part in pattern:
             if isinstance(part, str):
                 parts.append({"type": "text", "value": part})
                 continue
             part_type = part.get("type")
             if part_type == "expression":
-                parts.append({"type": "expression", "value": self.format_expression(part)})
+                expression_part = {"type": "expression", "value": self.format_expression(part)}
+                if attributes := part.get("attributes"):
+                    expression_part["attributes"] = attributes
+                parts.append(expression_part)
             elif part_type == "markup":
-                parts.append(
-                    {
-                        "type": "markup",
-                        "kind": part.get("kind", ""),
-                        "name": part.get("name", ""),
-                    }
-                )
+                markup_part = {
+                    "type": "markup",
+                    "kind": part.get("kind", ""),
+                    "name": part.get("name", ""),
+                }
+                if attributes := part.get("attributes"):
+                    markup_part["attributes"] = attributes
+                parts.append(markup_part)
             else:
                 raise MF2Error("unsupported-pattern-part", f"Unsupported pattern part: {part_type}")
         return parts
@@ -228,7 +232,7 @@ def _render_value(value: Any) -> str:
     return str(value)
 
 
-def _parts_to_string(parts: list[dict[str, str]]) -> str:
+def _parts_to_string(parts: list[dict[str, Any]]) -> str:
     return "".join(
         part.get("value", "")
         for part in parts

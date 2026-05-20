@@ -42,7 +42,7 @@ Supported now:
 - expression and markup attributes, including quoted values containing spaces
 - markup placeholders such as `{#link}`, `{/link}`, and `{#br/}`
 - `format_model_to_parts_with_locale` for text, expression, and markup boundary
-  output
+  output, preserving expression/markup attributes for UI renderers
 - structural model validation for duplicate declarations, select variant key
   arity, duplicate variants, and missing fallback variants
 - basic `.match` selectors with exact literal keys and `*` fallback, including
