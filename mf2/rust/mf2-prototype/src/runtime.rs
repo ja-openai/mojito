@@ -5,9 +5,30 @@ use crate::cldr::{
 };
 use crate::diagnostic::Diagnostic;
 use crate::model::{
-    Declaration, Expression, ExpressionArg, MessageModel, PatternPart, VariableRef, Variant,
-    VariantKey,
+    Declaration, Expression, ExpressionArg, Markup, MessageModel, PatternPart, VariableRef,
+    Variant, VariantKey,
 };
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum FormattedPart {
+    #[serde(rename = "text")]
+    Text { value: String },
+    #[serde(rename = "expression")]
+    Expression { value: String },
+    #[serde(rename = "markup")]
+    Markup { kind: String, name: String },
+}
+
+impl FormattedPart {
+    fn string_value(&self) -> Option<&str> {
+        match self {
+            Self::Text { value } | Self::Expression { value } => Some(value),
+            Self::Markup { .. } => None,
+        }
+    }
+}
 
 pub fn format_model(
     model: &MessageModel,
@@ -21,15 +42,25 @@ pub fn format_model_with_locale(
     arguments: &BTreeMap<String, serde_json::Value>,
     locale: &str,
 ) -> Result<String, Diagnostic> {
+    Ok(parts_to_string(&format_model_to_parts_with_locale(
+        model, arguments, locale,
+    )?))
+}
+
+pub fn format_model_to_parts_with_locale(
+    model: &MessageModel,
+    arguments: &BTreeMap<String, serde_json::Value>,
+    locale: &str,
+) -> Result<Vec<FormattedPart>, Diagnostic> {
     let mut context = FormatContext::new(arguments, locale);
     context.apply_declarations(model.declarations())?;
     match model {
-        MessageModel::Message { pattern, .. } => context.format_pattern(pattern),
+        MessageModel::Message { pattern, .. } => context.format_pattern_to_parts(pattern),
         MessageModel::Select {
             selectors,
             variants,
             ..
-        } => context.format_select(selectors, variants),
+        } => context.format_select_to_parts(selectors, variants),
     }
 }
 
@@ -67,11 +98,11 @@ impl FormatContext {
         Ok(())
     }
 
-    fn format_select(
+    fn format_select_to_parts(
         &self,
         selectors: &[VariableRef],
         variants: &[Variant],
-    ) -> Result<String, Diagnostic> {
+    ) -> Result<Vec<FormattedPart>, Diagnostic> {
         let selector_values = selectors
             .iter()
             .map(|selector| {
@@ -106,18 +137,25 @@ impl FormatContext {
                 )
             })?;
 
-        self.format_pattern(&selected.value)
+        self.format_pattern_to_parts(&selected.value)
     }
 
-    fn format_pattern(&self, pattern: &[PatternPart]) -> Result<String, Diagnostic> {
-        let mut output = String::new();
+    fn format_pattern_to_parts(
+        &self,
+        pattern: &[PatternPart],
+    ) -> Result<Vec<FormattedPart>, Diagnostic> {
+        let mut output = Vec::new();
         for part in pattern {
             match part {
-                PatternPart::Text(text) => output.push_str(text),
+                PatternPart::Text(text) => output.push(FormattedPart::Text {
+                    value: text.clone(),
+                }),
                 PatternPart::Expression(expression) => {
-                    output.push_str(&self.format_expression(expression)?);
+                    output.push(FormattedPart::Expression {
+                        value: self.format_expression(expression)?,
+                    });
                 }
-                PatternPart::Markup(_) => {}
+                PatternPart::Markup(markup) => output.push(markup_to_part(markup)),
             }
         }
         Ok(output)
@@ -272,4 +310,18 @@ fn value_to_string(value: &serde_json::Value) -> String {
         serde_json::Value::Null => String::new(),
         other => other.to_string(),
     }
+}
+
+fn markup_to_part(markup: &Markup) -> FormattedPart {
+    FormattedPart::Markup {
+        kind: markup.kind.clone(),
+        name: markup.name.clone(),
+    }
+}
+
+fn parts_to_string(parts: &[FormattedPart]) -> String {
+    parts
+        .iter()
+        .filter_map(FormattedPart::string_value)
+        .collect()
 }

@@ -27,6 +27,8 @@ Current scope:
 - support declarations, local variables, variable/literal expressions, basic
   function pass-through, markup-as-parts-stripped string output, exact-match
   selectors, and `:number select=exact` with catch-all fallback
+- expose `format_message_to_parts` for text, expression, and markup boundary
+  output in the supported runtime slice
 - cardinal and ordinal plural category selection for every generated CLDR plural
   locale
 - BCP47 locale canonicalization, underscore compatibility, extension stripping,

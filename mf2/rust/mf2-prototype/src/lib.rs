@@ -12,4 +12,6 @@ pub use model::{
     Pattern, PatternPart, VariableRef, Variant, VariantKey,
 };
 pub use parser::{parse_to_model, ParseResult};
-pub use runtime::{format_model, format_model_with_locale};
+pub use runtime::{
+    format_model, format_model_to_parts_with_locale, format_model_with_locale, FormattedPart,
+};

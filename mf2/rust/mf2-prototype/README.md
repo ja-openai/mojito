@@ -39,6 +39,8 @@ Supported now:
 - function annotations such as `{$count :number}`
 - literal/variable function options in the data model
 - markup placeholders such as `{#link}`, `{/link}`, and `{#br/}`
+- `format_model_to_parts_with_locale` for text, expression, and markup boundary
+  output
 - basic `.match` selectors with exact literal keys and `*` fallback, including
   `:number select=exact`
 - cardinal and ordinal plural category matching for number inputs in every
@@ -47,7 +49,6 @@ Supported now:
 Unsupported for this first slice:
 
 - locale-sensitive number/date/time formatting
-- `format_to_parts`
 - attributes
 - nested/selectable function semantics beyond pass-through string output
 - full MF2 Unicode `name` grammar for variables, functions, markup, and options

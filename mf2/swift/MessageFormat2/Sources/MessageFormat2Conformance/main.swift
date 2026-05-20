@@ -10,6 +10,7 @@ do {
 
     let fixtureDirectory = try resolveFixtureDirectory(arguments: arguments)
     var checkedCases = 0
+    var checkedPartsCases = 0
 
     for fixtureURL in try fixtureURLs(in: fixtureDirectory) {
         let fixture = try JSONDecoder().decode(
@@ -31,6 +32,20 @@ do {
             }
             checkedCases += 1
         }
+        for partsCase in fixture.partsCases {
+            let actual = try fixture.expectedModel.formatToParts(
+                arguments: partsCase.arguments,
+                locale: partsCase.locale
+            )
+            if actual != partsCase.expected {
+                throw ConformanceError.partsMismatch(
+                    fixture: fixtureURL.lastPathComponent,
+                    expected: "\(partsCase.expected)",
+                    actual: "\(actual)"
+                )
+            }
+            checkedPartsCases += 1
+        }
     }
 
     let checkedErrorCases = try runFormatErrorFixtures(
@@ -41,7 +56,7 @@ do {
     )
 
     print(
-        "Swift MF2 conformance runner passed \(checkedCases) format cases, \(checkedErrorCases) format error cases, and \(checkedLocaleKeyCases) locale key cases."
+        "Swift MF2 conformance runner passed \(checkedCases) format cases, \(checkedPartsCases) parts cases, \(checkedErrorCases) format error cases, and \(checkedLocaleKeyCases) locale key cases."
     )
 } catch {
     fputs("Swift MF2 conformance runner failed: \(error)\n", stderr)
@@ -196,12 +211,32 @@ private func fixtureURLs(in directory: URL) throws -> [URL] {
 private struct SourceToModelFixture: Decodable {
     let expectedModel: MF2Message
     let formatCases: [FormatCase]
+    let partsCases: [PartsCase]
+
+    private enum CodingKeys: String, CodingKey {
+        case expectedModel
+        case formatCases
+        case partsCases
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        expectedModel = try container.decode(MF2Message.self, forKey: .expectedModel)
+        formatCases = try container.decodeIfPresent([FormatCase].self, forKey: .formatCases) ?? []
+        partsCases = try container.decodeIfPresent([PartsCase].self, forKey: .partsCases) ?? []
+    }
 }
 
 private struct FormatCase: Decodable {
     let locale: String
     let arguments: [String: MF2Value]
     let expected: String
+}
+
+private struct PartsCase: Decodable {
+    let locale: String
+    let arguments: [String: MF2Value]
+    let expected: [MF2FormattedPart]
 }
 
 private struct FormatErrorFixture: Decodable {
@@ -239,6 +274,7 @@ private struct BenchCase {
 private enum ConformanceError: Error, CustomStringConvertible {
     case noFormatCases
     case formatMismatch(fixture: String, expected: String, actual: String)
+    case partsMismatch(fixture: String, expected: String, actual: String)
     case expectedFormatError(fixture: String, actual: String)
     case formatErrorMismatch(fixture: String, expected: String, actual: String)
     case localeKeyMismatch(fixture: String, expected: String, actual: String)
@@ -249,6 +285,8 @@ private enum ConformanceError: Error, CustomStringConvertible {
             "No format cases found."
         case let .formatMismatch(fixture, expected, actual):
             "\(fixture): expected '\(expected)', got '\(actual)'"
+        case let .partsMismatch(fixture, expected, actual):
+            "\(fixture): expected parts '\(expected)', got '\(actual)'"
         case let .expectedFormatError(fixture, actual):
             "\(fixture): expected format error, got '\(actual)'"
         case let .formatErrorMismatch(fixture, expected, actual):

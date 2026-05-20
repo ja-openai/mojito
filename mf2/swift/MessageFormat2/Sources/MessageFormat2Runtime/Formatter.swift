@@ -2,13 +2,17 @@ import Foundation
 
 public extension MF2Message {
     func format(arguments: [String: MF2Value] = [:], locale: String = "en") throws -> String {
+        try formatToParts(arguments: arguments, locale: locale).stringValue
+    }
+
+    func formatToParts(arguments: [String: MF2Value] = [:], locale: String = "en") throws -> [MF2FormattedPart] {
         var context = MF2FormatContext(values: arguments, locale: locale)
         try context.apply(declarations: declarations)
         switch self {
         case let .message(_, pattern):
-            return try context.format(pattern: pattern)
+            return try context.formatToParts(pattern: pattern)
         case let .select(_, selectors, variants):
-            return try context.format(selectors: selectors, variants: variants)
+            return try context.formatToParts(selectors: selectors, variants: variants)
         }
     }
 
@@ -38,7 +42,7 @@ private struct MF2FormatContext {
         }
     }
 
-    func format(selectors: [MF2VariableRef], variants: [MF2Variant]) throws -> String {
+    func formatToParts(selectors: [MF2VariableRef], variants: [MF2Variant]) throws -> [MF2FormattedPart] {
         let selectorValues = try selectors.map { selector in
             guard let value = values[selector.name] else {
                 throw MF2Error.missingArgument(selector.name)
@@ -60,19 +64,23 @@ private struct MF2FormatContext {
             throw MF2Error.missingSelectVariant
         }
 
-        return try format(pattern: selected.value)
+        return try formatToParts(pattern: selected.value)
     }
 
     func format(pattern: [MF2PatternPart]) throws -> String {
-        var output = ""
+        try formatToParts(pattern: pattern).stringValue
+    }
+
+    func formatToParts(pattern: [MF2PatternPart]) throws -> [MF2FormattedPart] {
+        var output: [MF2FormattedPart] = []
         for part in pattern {
             switch part {
             case let .text(text):
-                output += text
+                output.append(.text(text))
             case let .expression(expression):
-                output += try format(expression: expression)
-            case .markup:
-                continue
+                output.append(.expression(try format(expression: expression)))
+            case let .markup(markup):
+                output.append(.markup(kind: markup.kind, name: markup.name))
             }
         }
         return output
@@ -164,4 +172,52 @@ private struct MF2SelectorValue {
     let rendered: String
     let exactMatch: Bool
     let selectionKey: String?
+}
+
+public enum MF2FormattedPart: Equatable, Decodable {
+    case text(String)
+    case expression(String)
+    case markup(kind: String, name: String)
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case value
+        case kind
+        case name
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "text":
+            self = .text(try container.decode(String.self, forKey: .value))
+        case "expression":
+            self = .expression(try container.decode(String.self, forKey: .value))
+        case "markup":
+            self = .markup(
+                kind: try container.decode(String.self, forKey: .kind),
+                name: try container.decode(String.self, forKey: .name)
+            )
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: .type,
+                in: container,
+                debugDescription: "Unsupported MF2 formatted part type: \(type)"
+            )
+        }
+    }
+}
+
+private extension Array where Element == MF2FormattedPart {
+    var stringValue: String {
+        map { part in
+            switch part {
+            case let .text(value), let .expression(value):
+                value
+            case .markup:
+                ""
+            }
+        }.joined()
+    }
 }

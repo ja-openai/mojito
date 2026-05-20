@@ -12,14 +12,22 @@ def format_message(
     arguments: dict[str, Any] | None = None,
     locale: str = "en",
 ) -> str:
+    return _parts_to_string(format_message_to_parts(model, arguments, locale))
+
+
+def format_message_to_parts(
+    model: dict[str, Any],
+    arguments: dict[str, Any] | None = None,
+    locale: str = "en",
+) -> list[dict[str, str]]:
     context = _FormatContext(dict(arguments or {}), locale)
     context.apply_declarations(model.get("declarations", []))
 
     message_type = model.get("type")
     if message_type == "message":
-        return context.format_pattern(model.get("pattern", []))
+        return context.format_pattern_to_parts(model.get("pattern", []))
     if message_type == "select":
-        return context.format_select(model.get("selectors", []), model.get("variants", []))
+        return context.format_select_to_parts(model.get("selectors", []), model.get("variants", []))
     raise MF2Error("unsupported-message-type", f"Unsupported message type: {message_type}")
 
 
@@ -40,11 +48,11 @@ class _FormatContext:
             elif declaration.get("type") == "local":
                 self.values[declaration["name"]] = self.format_expression(declaration["value"])
 
-    def format_select(
+    def format_select_to_parts(
         self,
         selectors: list[dict[str, Any]],
         variants: list[dict[str, Any]],
-    ) -> str:
+    ) -> list[dict[str, str]]:
         selector_values = []
         for selector in selectors:
             name = selector["name"]
@@ -65,10 +73,10 @@ class _FormatContext:
             if all(key.get("type") == "*" for key in keys):
                 fallback = variant
             if _variant_matches(keys, selector_values):
-                return self.format_pattern(variant.get("value", []))
+                return self.format_pattern_to_parts(variant.get("value", []))
 
         if fallback is not None:
-            return self.format_pattern(fallback.get("value", []))
+            return self.format_pattern_to_parts(fallback.get("value", []))
 
         raise MF2Error(
             "missing-select-variant",
@@ -76,19 +84,28 @@ class _FormatContext:
         )
 
     def format_pattern(self, pattern: list[Any]) -> str:
-        parts: list[str] = []
+        return _parts_to_string(self.format_pattern_to_parts(pattern))
+
+    def format_pattern_to_parts(self, pattern: list[Any]) -> list[dict[str, str]]:
+        parts: list[dict[str, str]] = []
         for part in pattern:
             if isinstance(part, str):
-                parts.append(part)
+                parts.append({"type": "text", "value": part})
                 continue
             part_type = part.get("type")
             if part_type == "expression":
-                parts.append(self.format_expression(part))
+                parts.append({"type": "expression", "value": self.format_expression(part)})
             elif part_type == "markup":
-                continue
+                parts.append(
+                    {
+                        "type": "markup",
+                        "kind": part.get("kind", ""),
+                        "name": part.get("name", ""),
+                    }
+                )
             else:
                 raise MF2Error("unsupported-pattern-part", f"Unsupported pattern part: {part_type}")
-        return "".join(parts)
+        return parts
 
     def format_expression(self, expression: dict[str, Any]) -> str:
         arg = expression.get("arg")
@@ -171,3 +188,11 @@ def _render_value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)
+
+
+def _parts_to_string(parts: list[dict[str, str]]) -> str:
+    return "".join(
+        part.get("value", "")
+        for part in parts
+        if part.get("type") in {"text", "expression"}
+    )

@@ -3,8 +3,8 @@ use std::fs;
 use std::path::Path;
 
 use mf2_prototype::{
-    canonical_locale_key, format_model_with_locale, locale_lookup_chain, parse_to_model,
-    Diagnostic, MessageModel,
+    canonical_locale_key, format_model_to_parts_with_locale, format_model_with_locale,
+    locale_lookup_chain, parse_to_model, Diagnostic, FormattedPart, MessageModel,
 };
 use serde::Deserialize;
 
@@ -15,6 +15,8 @@ struct SourceToModelFixture {
     expected_model: MessageModel,
     #[serde(default)]
     format_cases: Vec<FormatCase>,
+    #[serde(default)]
+    parts_cases: Vec<PartsCase>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -66,6 +68,15 @@ struct FormatCase {
     expected: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PartsCase {
+    #[serde(default = "default_locale")]
+    locale: String,
+    arguments: BTreeMap<String, serde_json::Value>,
+    expected: Vec<FormattedPart>,
+}
+
 #[test]
 fn source_to_model_fixtures_pass() {
     let fixture_dir = conformance_dir().join("source-to-model");
@@ -97,6 +108,26 @@ fn source_to_model_fixtures_pass() {
                 formatted,
                 format_case.expected,
                 "format mismatch for {}",
+                fixture_path.display()
+            );
+        }
+        for parts_case in fixture.parts_cases {
+            let actual = format_model_to_parts_with_locale(
+                result.model.as_ref().expect("model exists"),
+                &parts_case.arguments,
+                &parts_case.locale,
+            )
+            .unwrap_or_else(|diagnostic| {
+                panic!(
+                    "format parts failed for {}: {:?}",
+                    fixture_path.display(),
+                    diagnostic
+                )
+            });
+            assert_eq!(
+                actual,
+                parts_case.expected,
+                "format parts mismatch for {}",
                 fixture_path.display()
             );
         }

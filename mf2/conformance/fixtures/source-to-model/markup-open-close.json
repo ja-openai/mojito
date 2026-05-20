@@ -18,5 +18,18 @@
       "arguments": {},
       "expected": "Click here."
     }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": [
+        { "type": "text", "value": "Click " },
+        { "type": "markup", "kind": "open", "name": "link" },
+        { "type": "text", "value": "here" },
+        { "type": "markup", "kind": "close", "name": "link" },
+        { "type": "text", "value": "." }
+      ]
+    }
   ]
 }

@@ -63,6 +63,8 @@ The current conformance slice covers:
 - function annotations and literal/variable options in the data model
 - `.input` and `.local` declarations
 - markup placeholders, stripped from string output for now
+- `format_to_parts` / `formatToParts` output for text, expression output, and
+  markup boundaries
 - exact-match `.match` selectors with catch-all fallback, including
   `:number select=exact`
 - cardinal and ordinal plural category selection for the generated all-CLDR
@@ -82,6 +84,7 @@ The immediate milestone is placeholders plus CLDR plural selection:
 - `.input` selector annotations
 - `:number` cardinal/ordinal plural selection
 - `:string` exact selection
+- parts output for UI-owned markup/link rendering
 - generated CLDR plural rules for every CLDR plural locale by default
 - Rust/Swift/Python/Java formatting from the Unicode MF2 model
 

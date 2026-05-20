@@ -15,11 +15,16 @@ final class Mf2Formatter {
 
     static String format(Mf2Message message, Map<String, ?> arguments, String locale)
             throws Mf2Exception {
+        return partsToString(formatToParts(message, arguments, locale));
+    }
+
+    static List<Mf2Message.FormattedPart> formatToParts(
+            Mf2Message message, Map<String, ?> arguments, String locale) throws Mf2Exception {
         FormatContext context = new FormatContext(snapshotArguments(arguments), locale);
         context.apply(message.declarations());
         return switch (message) {
-            case Mf2Message.Message simple -> context.formatPattern(simple.pattern());
-            case Mf2Message.Select select -> context.formatSelect(select.selectors(), select.variants());
+            case Mf2Message.Message simple -> context.formatPatternToParts(simple.pattern());
+            case Mf2Message.Select select -> context.formatSelectToParts(select.selectors(), select.variants());
         };
     }
 
@@ -50,7 +55,8 @@ final class Mf2Formatter {
             }
         }
 
-        String formatSelect(List<Mf2Message.VariableRef> selectors, List<Mf2Message.Variant> variants)
+        List<Mf2Message.FormattedPart> formatSelectToParts(
+                List<Mf2Message.VariableRef> selectors, List<Mf2Message.Variant> variants)
                 throws Mf2Exception {
             List<SelectorValue> selectorValues = new ArrayList<>(selectors.size());
             for (Mf2Message.VariableRef selector : selectors) {
@@ -60,14 +66,14 @@ final class Mf2Formatter {
             Mf2Message.Variant fallback = null;
             for (Mf2Message.Variant variant : variants) {
                 if (variantMatches(variant, selectorValues)) {
-                    return formatPattern(variant.value());
+                    return formatPatternToParts(variant.value());
                 }
                 if (fallback == null && isFallbackVariant(variant)) {
                     fallback = variant;
                 }
             }
             if (fallback != null) {
-                return formatPattern(fallback.value());
+                return formatPatternToParts(fallback.value());
             }
             throw Mf2Exception.missingSelectVariant();
         }
@@ -84,17 +90,22 @@ final class Mf2Formatter {
         }
 
         String formatPattern(List<Mf2Message.PatternPart> pattern) throws Mf2Exception {
-            StringBuilder output = new StringBuilder();
+            return partsToString(formatPatternToParts(pattern));
+        }
+
+        List<Mf2Message.FormattedPart> formatPatternToParts(List<Mf2Message.PatternPart> pattern)
+                throws Mf2Exception {
+            List<Mf2Message.FormattedPart> output = new ArrayList<>(pattern.size());
             for (Mf2Message.PatternPart part : pattern) {
                 switch (part) {
-                    case Mf2Message.TextPart text -> output.append(text.value());
-                    case Mf2Message.ExpressionPart expression ->
-                            output.append(formatExpression(expression.expression()));
-                    case Mf2Message.MarkupPart ignored -> {
-                    }
+                    case Mf2Message.TextPart text -> output.add(new Mf2Message.FormattedText(text.value()));
+                    case Mf2Message.ExpressionPart expression -> output.add(
+                            new Mf2Message.FormattedExpression(formatExpression(expression.expression())));
+                    case Mf2Message.MarkupPart markup -> output.add(new Mf2Message.FormattedMarkup(
+                            markup.markup().kind(), markup.markup().name()));
                 }
             }
-            return output.toString();
+            return output;
         }
 
         String formatExpression(Mf2Message.Expression expression) throws Mf2Exception {
@@ -228,6 +239,19 @@ final class Mf2Formatter {
             return Double.toString(number);
         }
         return value.toString();
+    }
+
+    private static String partsToString(List<Mf2Message.FormattedPart> parts) {
+        StringBuilder output = new StringBuilder();
+        for (Mf2Message.FormattedPart part : parts) {
+            switch (part) {
+                case Mf2Message.FormattedText text -> output.append(text.value());
+                case Mf2Message.FormattedExpression expression -> output.append(expression.value());
+                case Mf2Message.FormattedMarkup ignored -> {
+                }
+            }
+        }
+        return output.toString();
     }
 
     private record SelectorAnnotation(String function, NumberSelect numberSelect) {

@@ -16,6 +16,11 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
         return Mf2Formatter.format(this, arguments, locale);
     }
 
+    default List<FormattedPart> formatToParts(Map<String, ?> arguments, String locale)
+            throws Mf2Exception {
+        return Mf2Formatter.formatToParts(this, arguments, locale);
+    }
+
     static Mf2Message fromJson(Object value) {
         Map<String, Object> map = object(value, "message");
         return switch (string(map.get("type"), "message.type")) {
@@ -98,6 +103,14 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
     record LiteralVariantKey(String value) implements VariantKey {}
 
     record CatchAllVariantKey() implements VariantKey {}
+
+    sealed interface FormattedPart permits FormattedText, FormattedExpression, FormattedMarkup {}
+
+    record FormattedText(String value) implements FormattedPart {}
+
+    record FormattedExpression(String value) implements FormattedPart {}
+
+    record FormattedMarkup(String kind, String name) implements FormattedPart {}
 
     private static List<Declaration> parseDeclarations(Object value) {
         if (value == null) {

@@ -6,7 +6,7 @@ Current target:
 
 - `MessageFormat2Runtime`: consumes the official MF2 Interchange Data Model and
   formats the supported fixture slice, including exact, cardinal, and ordinal
-  selector matching.
+  selector matching plus text/expression/markup parts output.
 - `MessageFormat2Conformance`: executable correctness and benchmark runner.
 - `MessageFormat2TranslateDemo`: tiny `translate(id, locale, args)` catalog
   demo.

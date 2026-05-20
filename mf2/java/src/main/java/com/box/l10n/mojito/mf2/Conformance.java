@@ -19,6 +19,7 @@ public final class Conformance {
                 : Path.of("../conformance/fixtures/source-to-model");
 
         int checkedCases = 0;
+        int checkedPartsCases = 0;
         int checkedModels = 0;
         for (Path fixturePath : jsonFiles(fixtureDir)) {
             Map<String, Object> fixture = object(JsonParser.parse(fixturePath));
@@ -50,15 +51,38 @@ public final class Conformance {
                 }
                 checkedCases++;
             }
+            for (Object rawCase : arrayOrEmpty(fixture.get("partsCases"))) {
+                Map<String, Object> partsCase = object(rawCase);
+                List<Map<String, String>> actual = parseResult.model().formatToParts(
+                                objectOrEmpty(partsCase.get("arguments")),
+                                stringOrDefault(partsCase.get("locale"), "en"))
+                        .stream()
+                        .map(Conformance::partToMap)
+                        .toList();
+                List<Map<String, String>> expected = arrayOrEmpty(partsCase.get("expected")).stream()
+                        .map(Conformance::stringMap)
+                        .toList();
+                if (!actual.equals(expected)) {
+                    System.err.printf(
+                            "%s: expected parts %s, got %s%n", fixturePath.getFileName(), expected, actual);
+                    return 1;
+                }
+                checkedPartsCases++;
+            }
         }
 
         int checkedInvalidSources = checkInvalidSourceFixtures(fixtureDir.getParent());
         int checkedErrorCases = checkFormatErrorFixtures(fixtureDir.getParent());
         int checkedLocaleKeyCases = checkLocaleKeyFixtures(fixtureDir.getParent());
         System.out.printf(
-                "Java MF2 conformance runner passed %d source models, %d format cases, "
+                "Java MF2 conformance runner passed %d source models, %d format cases, %d parts cases, "
                         + "%d invalid source cases, %d format error cases, and %d locale key cases.%n",
-                checkedModels, checkedCases, checkedInvalidSources, checkedErrorCases, checkedLocaleKeyCases);
+                checkedModels,
+                checkedCases,
+                checkedPartsCases,
+                checkedInvalidSources,
+                checkedErrorCases,
+                checkedLocaleKeyCases);
         return 0;
     }
 
@@ -167,6 +191,35 @@ public final class Conformance {
 
     private static Map<String, Object> objectOrEmpty(Object value) {
         return value == null ? Map.of() : object(value);
+    }
+
+    private static Map<String, String> stringMap(Object value) {
+        return object(value).entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> string(entry.getValue()),
+                        (left, right) -> right,
+                        java.util.LinkedHashMap::new));
+    }
+
+    private static Map<String, String> partToMap(Mf2Message.FormattedPart part) {
+        Map<String, String> map = new java.util.LinkedHashMap<>();
+        switch (part) {
+            case Mf2Message.FormattedText text -> {
+                map.put("type", "text");
+                map.put("value", text.value());
+            }
+            case Mf2Message.FormattedExpression expression -> {
+                map.put("type", "expression");
+                map.put("value", expression.value());
+            }
+            case Mf2Message.FormattedMarkup markup -> {
+                map.put("type", "markup");
+                map.put("kind", markup.kind());
+                map.put("name", markup.name());
+            }
+        }
+        return map;
     }
 
     @SuppressWarnings("unchecked")

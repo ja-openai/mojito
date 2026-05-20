@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .locale_key import canonical_locale_key, locale_lookup_chain
-from .model import MF2Error, format_message
+from .model import MF2Error, format_message, format_message_to_parts
 
 
 class ConformanceFailure(Exception):
@@ -22,6 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     checked_cases = 0
+    checked_parts_cases = 0
     for fixture_path in sorted(fixture_dir.glob("*.json")):
         fixture = _read_json(fixture_path)
         for format_case in fixture.get("formatCases", []):
@@ -38,6 +39,20 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return 1
             checked_cases += 1
+        for parts_case in fixture.get("partsCases", []):
+            actual = format_message_to_parts(
+                fixture["expectedModel"],
+                parts_case.get("arguments", {}),
+                parts_case.get("locale", "en"),
+            )
+            expected = parts_case["expected"]
+            if actual != expected:
+                print(
+                    f"{fixture_path.name}: expected parts {expected!r}, got {actual!r}",
+                    file=sys.stderr,
+                )
+                return 1
+            checked_parts_cases += 1
 
     try:
         checked_error_cases = _check_format_error_fixtures(fixture_dir.parent)
@@ -47,7 +62,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(
         "Python MF2 conformance runner passed "
-        f"{checked_cases} format cases, {checked_error_cases} format error cases, "
+        f"{checked_cases} format cases, {checked_parts_cases} parts cases, "
+        f"{checked_error_cases} format error cases, "
         f"and {checked_locale_key_cases} locale key cases."
     )
     return 0

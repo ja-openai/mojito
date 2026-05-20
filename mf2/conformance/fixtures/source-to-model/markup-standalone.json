@@ -16,5 +16,16 @@
       "arguments": {},
       "expected": "LineBreak"
     }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": [
+        { "type": "text", "value": "Line" },
+        { "type": "markup", "kind": "standalone", "name": "br" },
+        { "type": "text", "value": "Break" }
+      ]
+    }
   ]
 }
