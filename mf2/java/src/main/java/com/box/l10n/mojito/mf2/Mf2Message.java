@@ -16,9 +16,21 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
         return Mf2Formatter.format(this, arguments, locale);
     }
 
+    default String format(
+            Map<String, ?> arguments, String locale, Mf2FunctionRegistry functions)
+            throws Mf2Exception {
+        return Mf2Formatter.format(this, arguments, locale, functions);
+    }
+
     default List<FormattedPart> formatToParts(Map<String, ?> arguments, String locale)
             throws Mf2Exception {
         return Mf2Formatter.formatToParts(this, arguments, locale);
+    }
+
+    default List<FormattedPart> formatToParts(
+            Map<String, ?> arguments, String locale, Mf2FunctionRegistry functions)
+            throws Mf2Exception {
+        return Mf2Formatter.formatToParts(this, arguments, locale, functions);
     }
 
     static Mf2Message fromJson(Object value) {

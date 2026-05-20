@@ -97,7 +97,8 @@ The source-to-model fixtures currently cover:
 - Unicode variable names, bidi controls around names, and namespaced identifiers
 - escaped braces and backslash
 - function annotations and options, including quoted option values containing spaces
-- demo-level currency formatting with literal and variable `currency` options
+- `:currency` parsing as a custom function annotation, with unregistered custom
+  functions rejected by default formatters
 - `.input`
 - `.local`
 - markup open/close/standalone placeholders

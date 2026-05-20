@@ -7,18 +7,24 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from mf2_runtime import format_message, lookup_locale
+from demo_functions import demo_function_registry
+from mf2_runtime import FunctionRegistry, format_message, lookup_locale
 
 
 class Catalog:
-    def __init__(self, messages: dict[str, dict[str, dict[str, Any]]]) -> None:
+    def __init__(
+        self,
+        messages: dict[str, dict[str, dict[str, Any]]],
+        functions: FunctionRegistry,
+    ) -> None:
         self.messages = messages
+        self.functions = functions
 
     @classmethod
     def load(cls, path: Path) -> "Catalog":
         with path.open(encoding="utf-8") as file:
             data = json.load(file)
-        return cls(data["messages"])
+        return cls(data["messages"], demo_function_registry())
 
     def translate(
         self,
@@ -27,7 +33,7 @@ class Catalog:
         arguments: dict[str, Any] | None = None,
     ) -> str:
         model = self._model(message_id, locale)
-        return format_message(model, arguments or {}, locale)
+        return format_message(model, arguments or {}, locale, self.functions)
 
     def _model(self, message_id: str, locale: str) -> dict[str, Any]:
         localized = self.messages[message_id]

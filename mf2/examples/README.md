@@ -25,7 +25,9 @@ The Rust and Java `inline_translate_demo` commands intentionally parse MF2
 source strings at runtime. They are useful for demos and dynamic messages, but
 the catalog demos remain the preferred shape for production resource bundles.
 
-The catalog includes a deliberately narrow `:currency` demo function. It is
+The catalog includes messages that use a deliberately narrow `:currency` demo
+function. Each demo registers that function through the runtime function
+registry; the core formatters do not special-case currency. The demo formatter is
 dependency-free and useful for showing how function options flow through the
 model, but it is not a CLDR-complete replacement for production number and
 currency formatting. See `../reference/fixtures/currency-simple-vs-icu4j.json`

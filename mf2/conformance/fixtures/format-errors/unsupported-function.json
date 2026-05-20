@@ -1,11 +1,9 @@
 {
-  "name": "currency-format",
-  "source": "Total: {$amount :currency currency=$currency}",
-  "expectedModel": {
+  "name": "unsupported-function",
+  "model": {
     "type": "message",
     "declarations": [],
     "pattern": [
-      "Total: ",
       {
         "type": "expression",
         "arg": { "type": "variable", "name": "amount" },
@@ -13,10 +11,13 @@
           "type": "function",
           "name": "currency",
           "options": {
-            "currency": { "type": "variable", "name": "currency" }
+            "currency": { "type": "literal", "value": "USD" }
           }
         }
       }
     ]
-  }
+  },
+  "locale": "en",
+  "arguments": { "amount": 1234.5 },
+  "expectedError": { "code": "unsupported-function" }
 }

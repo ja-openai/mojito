@@ -26,8 +26,8 @@ public final class Mf2Exception extends Exception {
 
     static Mf2Exception unsupportedFunction(String name) {
         return new Mf2Exception(
-                "unsupported-function-format",
-                "Function :" + name + " is not supported by this prototype formatter.");
+                "unsupported-function",
+                "Function :" + name + " is not supported by this formatter registry.");
     }
 
     static Mf2Exception badOperand(String message) {

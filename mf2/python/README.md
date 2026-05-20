@@ -25,8 +25,8 @@ Current scope:
 - load the official MF2 Interchange Data Model from dictionaries/JSON
 - format the shared conformance fixture slice
 - support declarations, local variables, variable/literal expressions, basic
-  function pass-through, markup-as-parts-stripped string output, exact-match
-  selectors, and `:number select=exact` with catch-all fallback
+  function registry pass-through, markup-as-parts-stripped string output,
+  exact-match selectors, and `:number select=exact` with catch-all fallback
 - expose `format_message_to_parts` for text, expression, and markup boundary
   output in the supported runtime slice, preserving expression/markup attributes
   for UI renderers

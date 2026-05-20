@@ -10,13 +10,15 @@ public final class InlineTranslateDemo {
     private InlineTranslateDemo() {}
 
     public static void main(String[] args) throws Exception {
+        Mf2FunctionRegistry functions = DemoFunctions.registry();
         Map<String, Object> demo =
                 object(JsonParser.parse(Path.of("../examples/inline-source-demo.json")), "$");
         List<Object> cases = array(requiredField(demo, "cases", "$"), "$.cases");
         for (int index = 0; index < cases.size(); index++) {
             String path = "$.cases[" + index + "]";
             DemoCase demoCase = DemoCase.from(object(cases.get(index), path), path);
-            String actual = translate(demoCase.source(), demoCase.locale(), demoCase.arguments());
+            String actual = translate(
+                    demoCase.source(), demoCase.locale(), demoCase.arguments(), functions);
             if (!actual.equals(demoCase.expected())) {
                 throw new AssertionError(
                         demoCase.label() + "[" + demoCase.locale() + "] expected \""
@@ -27,13 +29,17 @@ public final class InlineTranslateDemo {
         }
     }
 
-    private static String translate(String source, String locale, Map<String, ?> arguments)
+    private static String translate(
+            String source,
+            String locale,
+            Map<String, ?> arguments,
+            Mf2FunctionRegistry functions)
             throws Mf2Exception {
         ParseResult result = Mf2Parser.parseToModel(source);
         if (result.hasDiagnostics()) {
             throw new Mf2Exception("parse-error", result.diagnostics().toString());
         }
-        return result.model().format(arguments, locale);
+        return result.model().format(arguments, locale, functions);
     }
 
     private record DemoCase(

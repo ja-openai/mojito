@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .errors import MF2Error
+from .functions import DEFAULT_FUNCTION_REGISTRY, FunctionCall, FunctionRegistry
 from .plural import select_plural_category
 
 
@@ -11,17 +12,23 @@ def format_message(
     model: dict[str, Any],
     arguments: dict[str, Any] | None = None,
     locale: str = "en",
+    functions: FunctionRegistry | None = None,
 ) -> str:
-    return _parts_to_string(format_message_to_parts(model, arguments, locale))
+    return _parts_to_string(format_message_to_parts(model, arguments, locale, functions))
 
 
 def format_message_to_parts(
     model: dict[str, Any],
     arguments: dict[str, Any] | None = None,
     locale: str = "en",
+    functions: FunctionRegistry | None = None,
 ) -> list[dict[str, Any]]:
     _validate_model(model)
-    context = _FormatContext(dict(arguments or {}), locale)
+    context = _FormatContext(
+        dict(arguments or {}),
+        locale,
+        functions or DEFAULT_FUNCTION_REGISTRY,
+    )
     context.apply_declarations(model.get("declarations", []))
 
     message_type = model.get("type")
@@ -143,9 +150,10 @@ def _variant_key_signature(keys: list[dict[str, Any]]) -> tuple[tuple[str, str],
 
 
 class _FormatContext:
-    def __init__(self, values: dict[str, Any], locale: str) -> None:
+    def __init__(self, values: dict[str, Any], locale: str, functions: FunctionRegistry) -> None:
         self.values = values
         self.locale = locale
+        self.functions = functions
         self.selector_annotations: dict[str, _SelectorAnnotation] = {}
 
     def apply_declarations(self, declarations: list[dict[str, Any]]) -> None:
@@ -241,26 +249,23 @@ class _FormatContext:
             raise MF2Error("unsupported-expression-arg", f"Unsupported expression arg: {arg}")
 
         function = expression.get("function")
-        if function is None or function.get("name") in {"string", "number", "datetime", "date", "time"}:
+        if function is None:
             return value
-        if function.get("name") == "currency":
-            return self._format_currency(value, function)
-
-        raise MF2Error(
-            "unsupported-function",
-            f"Function :{function.get('name')} is not supported by this runtime slice.",
+        return self.functions.format(
+            FunctionCall(
+                value=value,
+                function=function,
+                locale=self.locale,
+                _option_resolver=lambda name, default: self._option_value(function, name, default),
+            )
         )
-
-    def _format_currency(self, value: str, function: dict[str, Any]) -> str:
-        currency = self._option_value(function, "currency", "USD")
-        return _format_currency_value(value, currency, self.locale)
 
     def _option_value(
         self,
         function: dict[str, Any],
         option_name: str,
-        default: str,
-    ) -> str:
+        default: str | None,
+    ) -> str | None:
         option = function.get("options", {}).get(option_name)
         if option is None:
             return default
@@ -339,63 +344,3 @@ def _parts_to_string(parts: list[dict[str, Any]]) -> str:
         for part in parts
         if part.get("type") in {"text", "expression"}
     )
-
-
-def _format_currency_value(value: str, currency: str, locale: str) -> str:
-    try:
-        amount = float(value)
-    except ValueError as error:
-        raise MF2Error("bad-operand", f"Currency value must be numeric, got {value}.") from error
-    if amount in {float("inf"), float("-inf")} or amount != amount:
-        raise MF2Error("bad-operand", "Currency value must be finite.")
-
-    currency = currency.upper()
-    fraction_digits = _currency_fraction_digits(currency)
-    scale = 10**fraction_digits
-    rounded = round(abs(amount) * scale)
-    major = rounded // scale
-    fraction = rounded % scale
-    french = _canonical_locale_prefix(locale) == "fr"
-    grouped = _group_digits(str(major), "\u202f" if french else ",")
-    if fraction_digits == 0:
-        number = grouped
-    else:
-        decimal = "," if french else "."
-        number = f"{grouped}{decimal}{fraction:0{fraction_digits}d}"
-    symbol = _currency_symbol(currency, french)
-    negative = "-" if amount < 0 else ""
-
-    if french:
-        return f"{negative}{number} {symbol}"
-    if len(symbol) == 3:
-        return f"{negative}{symbol} {number}"
-    return f"{negative}{symbol}{number}"
-
-
-def _currency_fraction_digits(currency: str) -> int:
-    return 0 if currency in {"JPY", "KRW"} else 2
-
-
-def _currency_symbol(currency: str, french: bool) -> str:
-    if currency == "USD":
-        return "$US" if french else "$"
-    if currency == "EUR":
-        return "€"
-    if currency == "JPY":
-        return "¥"
-    if currency == "GBP":
-        return "£"
-    return currency
-
-
-def _canonical_locale_prefix(locale: str) -> str:
-    return locale.replace("_", "-").split("-", 1)[0].lower() or "en"
-
-
-def _group_digits(digits: str, separator: str) -> str:
-    groups: list[str] = []
-    while len(digits) > 3:
-        groups.append(digits[-3:])
-        digits = digits[:-3]
-    groups.append(digits)
-    return separator.join(reversed(groups))

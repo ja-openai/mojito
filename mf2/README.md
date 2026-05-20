@@ -66,8 +66,9 @@ The current conformance slice covers:
   and attribute identifiers, plus duplicate function option names
 - function annotations and literal/variable options in the data model, including
   quoted option values containing spaces
-- a narrow dependency-free `:currency` demo formatter for USD/EUR/JPY/GBP
-  display, including literal and variable `currency` options
+- formatter function registries in Rust/Swift/Python/Java; default runtimes
+  pass through the current standard-function slice, while demos register a
+  narrow dependency-free `:currency` function outside the core formatter
 - expression and markup attributes in the data model, including quoted attribute
   values containing spaces
 - `.input` and `.local` declarations

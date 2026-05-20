@@ -13,5 +13,7 @@ pub use model::{
 };
 pub use parser::{parse_to_model, ParseResult};
 pub use runtime::{
-    format_model, format_model_to_parts_with_locale, format_model_with_locale, FormattedPart,
+    format_model, format_model_to_parts_with_locale,
+    format_model_to_parts_with_locale_and_functions, format_model_with_locale,
+    format_model_with_locale_and_functions, FormattedPart, FunctionCall, FunctionRegistry,
 };

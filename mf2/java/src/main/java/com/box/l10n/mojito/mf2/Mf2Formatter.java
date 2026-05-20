@@ -9,20 +9,37 @@ import java.util.Objects;
 import java.util.Set;
 
 final class Mf2Formatter {
-    private static final Set<String> PASSTHROUGH_FUNCTIONS =
-            Set.of("string", "number", "datetime", "date", "time");
+    private static final Mf2FunctionRegistry DEFAULT_FUNCTIONS = Mf2FunctionRegistry.defaults();
 
     private Mf2Formatter() {}
 
     static String format(Mf2Message message, Map<String, ?> arguments, String locale)
             throws Mf2Exception {
-        return partsToString(formatToParts(message, arguments, locale));
+        return format(message, arguments, locale, DEFAULT_FUNCTIONS);
+    }
+
+    static String format(
+            Mf2Message message,
+            Map<String, ?> arguments,
+            String locale,
+            Mf2FunctionRegistry functions)
+            throws Mf2Exception {
+        return partsToString(formatToParts(message, arguments, locale, functions));
     }
 
     static List<Mf2Message.FormattedPart> formatToParts(
             Mf2Message message, Map<String, ?> arguments, String locale) throws Mf2Exception {
+        return formatToParts(message, arguments, locale, DEFAULT_FUNCTIONS);
+    }
+
+    static List<Mf2Message.FormattedPart> formatToParts(
+            Mf2Message message,
+            Map<String, ?> arguments,
+            String locale,
+            Mf2FunctionRegistry functions)
+            throws Mf2Exception {
         validate(message);
-        FormatContext context = new FormatContext(snapshotArguments(arguments), locale);
+        FormatContext context = new FormatContext(snapshotArguments(arguments), locale, functions);
         context.apply(message.declarations());
         return switch (message) {
             case Mf2Message.Message simple -> context.formatPatternToParts(simple.pattern());
@@ -133,10 +150,12 @@ final class Mf2Formatter {
         private SelectorAnnotation selectorAnnotation;
         private Map<String, SelectorAnnotation> selectorAnnotations;
         private final String locale;
+        private final Mf2FunctionRegistry functions;
 
-        FormatContext(ArgumentValues arguments, String locale) {
+        FormatContext(ArgumentValues arguments, String locale, Mf2FunctionRegistry functions) {
             this.arguments = arguments;
             this.locale = locale == null || locale.isBlank() ? "en" : locale;
+            this.functions = Objects.requireNonNull(functions);
         }
 
         void apply(List<Mf2Message.Declaration> declarations) throws Mf2Exception {
@@ -224,19 +243,14 @@ final class Mf2Formatter {
             };
 
             Mf2Message.FunctionRef function = expression.function();
-            if (function == null || PASSTHROUGH_FUNCTIONS.contains(function.name())) {
+            if (function == null) {
                 return value;
             }
-            if (function.name().equals("currency")) {
-                return formatCurrency(value, function);
-            }
-            throw Mf2Exception.unsupportedFunction(function.name());
-        }
-
-        private String formatCurrency(String value, Mf2Message.FunctionRef function)
-                throws Mf2Exception {
-            String currency = optionValue(function, "currency", "USD");
-            return formatCurrencyValue(value, currency, locale);
+            return functions.format(new Mf2FunctionRegistry.FunctionCall(
+                    value,
+                    function,
+                    locale,
+                    (optionName, defaultValue) -> optionValue(function, optionName, defaultValue)));
         }
 
         private String optionValue(
@@ -391,89 +405,6 @@ final class Mf2Formatter {
                 case Mf2Message.FormattedMarkup ignored -> {
                 }
             }
-        }
-        return output.toString();
-    }
-
-    private static String formatCurrencyValue(String value, String currency, String locale)
-            throws Mf2Exception {
-        double amount;
-        try {
-            amount = Double.parseDouble(value);
-        } catch (NumberFormatException error) {
-            throw Mf2Exception.badOperand("Currency value must be numeric, got " + value + ".");
-        }
-        if (!Double.isFinite(amount)) {
-            throw Mf2Exception.badOperand("Currency value must be finite.");
-        }
-
-        String normalizedCurrency = currency.toUpperCase(java.util.Locale.ROOT);
-        int fractionDigits = currencyFractionDigits(normalizedCurrency);
-        long scale = (long) Math.pow(10, fractionDigits);
-        long rounded = Math.round(Math.abs(amount) * scale);
-        long major = rounded / scale;
-        long fraction = rounded % scale;
-        boolean french = canonicalLocalePrefix(locale).equals("fr");
-        String grouped = groupDigits(Long.toString(major), french ? "\u202f" : ",");
-        String number = fractionDigits == 0
-                ? grouped
-                : grouped
-                        + (french ? "," : ".")
-                        + String.format(java.util.Locale.ROOT, "%0" + fractionDigits + "d", fraction);
-        String symbol = currencySymbol(normalizedCurrency, french);
-        String negative = amount < 0 ? "-" : "";
-        if (french) {
-            return negative + number + " " + symbol;
-        }
-        if (symbol.length() == 3) {
-            return negative + symbol + " " + number;
-        }
-        return negative + symbol + number;
-    }
-
-    private static int currencyFractionDigits(String currency) {
-        return switch (currency) {
-            case "JPY", "KRW" -> 0;
-            default -> 2;
-        };
-    }
-
-    private static String currencySymbol(String currency, boolean french) {
-        return switch (currency) {
-            case "USD" -> french ? "$US" : "$";
-            case "EUR" -> "€";
-            case "JPY" -> "¥";
-            case "GBP" -> "£";
-            default -> currency;
-        };
-    }
-
-    private static String canonicalLocalePrefix(String locale) {
-        if (locale == null || locale.isBlank()) {
-            return "en";
-        }
-        int hyphen = locale.indexOf('-');
-        int underscore = locale.indexOf('_');
-        int end;
-        if (hyphen < 0) {
-            end = underscore < 0 ? locale.length() : underscore;
-        } else if (underscore < 0) {
-            end = hyphen;
-        } else {
-            end = Math.min(hyphen, underscore);
-        }
-        return locale.substring(0, end).toLowerCase(java.util.Locale.ROOT);
-    }
-
-    private static String groupDigits(String digits, String separator) {
-        StringBuilder output = new StringBuilder();
-        int firstGroup = digits.length() % 3;
-        if (firstGroup == 0) {
-            firstGroup = 3;
-        }
-        output.append(digits, 0, firstGroup);
-        for (int index = firstGroup; index < digits.length(); index += 3) {
-            output.append(separator).append(digits, index, index + 3);
         }
         return output.toString();
     }

@@ -7,7 +7,7 @@ public final class TranslateDemo {
     private TranslateDemo() {}
 
     public static void main(String[] args) throws Exception {
-        Catalog catalog = Catalog.load(Path.of("../examples/catalog.json"));
+        Catalog catalog = Catalog.load(Path.of("../examples/catalog.json"), DemoFunctions.registry());
         System.out.println("welcome[fr] -> \"" + catalog.translate("welcome", "fr", Map.of("name", "Mojito")) + "\"");
         System.out.println("welcome[fr-CA] -> \"" + catalog.translate("welcome", "fr-CA", Map.of("name", "Mojito")) + "\"");
         System.out.println("checkout.total[en] -> \""
@@ -20,15 +20,15 @@ public final class TranslateDemo {
         System.out.println("cart.items[ru] -> \"" + catalog.translate("cart.items", "ru", Map.of("count", 5)) + "\"");
     }
 
-    private record Catalog(Map<String, Object> messages) {
-        static Catalog load(Path path) throws Exception {
-            return new Catalog(object(object(JsonParser.parse(path)).get("messages")));
+    private record Catalog(Map<String, Object> messages, Mf2FunctionRegistry functions) {
+        static Catalog load(Path path, Mf2FunctionRegistry functions) throws Exception {
+            return new Catalog(object(object(JsonParser.parse(path)).get("messages")), functions);
         }
 
         String translate(String id, String locale, Map<String, ?> arguments) throws Mf2Exception {
             Map<String, Object> localized = object(messages.get(id));
             Object model = LocaleKey.lookup(localized, locale);
-            return Mf2Message.fromJson(model).format(arguments, locale);
+            return Mf2Message.fromJson(model).format(arguments, locale, functions);
         }
     }
 

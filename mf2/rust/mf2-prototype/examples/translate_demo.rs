@@ -2,8 +2,13 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use mf2_prototype::{format_model_with_locale, lookup_locale, MessageModel};
+use demo_functions::demo_function_registry;
+use mf2_prototype::{
+    format_model_with_locale_and_functions, lookup_locale, FunctionRegistry, MessageModel,
+};
 use serde::Deserialize;
+
+mod demo_functions;
 
 #[derive(Debug, Deserialize)]
 struct Catalog {
@@ -23,9 +28,10 @@ impl Catalog {
         message_id: &str,
         locale: &str,
         arguments: BTreeMap<String, serde_json::Value>,
+        functions: &FunctionRegistry,
     ) -> String {
         let model = self.model(message_id, locale);
-        format_model_with_locale(model, &arguments, locale)
+        format_model_with_locale_and_functions(model, &arguments, locale, functions)
             .unwrap_or_else(|diagnostic| panic!("format failed: {diagnostic:?}"))
     }
 
@@ -41,6 +47,7 @@ impl Catalog {
 
 fn main() {
     let catalog = Catalog::load(Path::new("../../examples/catalog.json"));
+    let functions = demo_function_registry();
     let examples = [
         (
             "welcome",
@@ -83,7 +90,7 @@ fn main() {
     ];
 
     for (message_id, locale, arguments, expected) in examples {
-        let actual = catalog.translate(message_id, locale, arguments);
+        let actual = catalog.translate(message_id, locale, arguments, &functions);
         assert_eq!(actual, expected, "{message_id}/{locale}");
         println!("{message_id}[{locale}] -> \"{actual}\"");
     }

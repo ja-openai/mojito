@@ -79,8 +79,39 @@ This compares category keywords only, not formatted message output. Number
 formatting and localized decimal separators belong in later number-formatting
 tests.
 
-Keep full number/date/calendar CLDR data out of this subproject until needed.
-Plural rules are small; full locale formatting data is not.
+## Experimental Number Data
+
+`generated/experimental-number/number_data.json` is an experimental,
+drop-without-migration probe for generated number/currency data. It is not used
+by the runtime packages yet, and it should not be treated as a stable data
+contract. The current artifact keeps a deliberately tiny set of probe locales
+and currencies so we can compare shape, size, and ICU behavior before deciding
+whether generated number formatting is worth productizing.
+
+Regenerate the experimental data:
+
+```sh
+python3 generator/generate_number_data.py --out generated/experimental-number --clean
+```
+
+Generate a custom probe set:
+
+```sh
+python3 generator/generate_number_data.py \
+  --locales en-US,fr-FR,ja-JP,ar-EG \
+  --currencies USD,EUR,JPY \
+  --out /tmp/mf2-number-probe
+```
+
+Validate the checked-in experimental artifact:
+
+```sh
+sh validate_number_data.sh
+```
+
+Keep full date/calendar data out of this subproject until needed. Plural rules
+are small enough to ship broadly; number/currency data needs this separate
+experimental track before it becomes a runtime dependency.
 
 The generator currently sets compact decimal operands `c`/`e` to zero. That is
 correct for ordinary numeric arguments but not enough for compact-decimal

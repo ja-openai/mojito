@@ -1,13 +1,21 @@
 import Foundation
 
 public extension MF2Message {
-    func format(arguments: [String: MF2Value] = [:], locale: String = "en") throws -> String {
-        try formatToParts(arguments: arguments, locale: locale).stringValue
+    func format(
+        arguments: [String: MF2Value] = [:],
+        locale: String = "en",
+        functions: MF2FunctionRegistry = .defaults
+    ) throws -> String {
+        try formatToParts(arguments: arguments, locale: locale, functions: functions).stringValue
     }
 
-    func formatToParts(arguments: [String: MF2Value] = [:], locale: String = "en") throws -> [MF2FormattedPart] {
+    func formatToParts(
+        arguments: [String: MF2Value] = [:],
+        locale: String = "en",
+        functions: MF2FunctionRegistry = .defaults
+    ) throws -> [MF2FormattedPart] {
         try validate()
-        var context = MF2FormatContext(values: arguments, locale: locale)
+        var context = MF2FormatContext(values: arguments, locale: locale, functions: functions)
         try context.apply(declarations: declarations)
         switch self {
         case let .message(_, pattern):
@@ -94,6 +102,7 @@ private struct MF2FormatContext {
     var values: [String: MF2Value]
     var selectorAnnotations: [String: MF2SelectorAnnotation] = [:]
     var locale: String
+    var functions: MF2FunctionRegistry
 
     mutating func apply(declarations: [MF2Declaration]) throws {
         selectorAnnotations = collectSelectorAnnotations(for: declarations)
@@ -186,24 +195,24 @@ private struct MF2FormatContext {
         }
 
         switch expression.function?.name {
-        case .none, "string", "number", "datetime", "date", "time":
+        case .none:
             return value
-        case "currency":
+        case .some(_):
             guard let function = expression.function else {
                 return value
             }
-            return try formatCurrency(value: value, function: function)
-        case let .some(name):
-            throw MF2Error.unsupportedFunction(name)
+            return try functions.format(MF2FunctionCall(
+                value: value,
+                function: function,
+                locale: locale,
+                optionResolver: { optionName, defaultValue in
+                    try optionValue(function: function, name: optionName, default: defaultValue)
+                }
+            ))
         }
     }
 
-    private func formatCurrency(value: String, function: MF2Function) throws -> String {
-        let currency = try optionValue(function: function, name: "currency", default: "USD")
-        return try formatCurrencyValue(value: value, currency: currency, locale: locale)
-    }
-
-    private func optionValue(function: MF2Function, name: String, default defaultValue: String) throws -> String {
+    private func optionValue(function: MF2Function, name: String, default defaultValue: String?) throws -> String? {
         guard let option = function.options[name] else {
             return defaultValue
         }
@@ -386,80 +395,4 @@ private extension Array where Element == MF2FormattedPart {
             }
         }.joined()
     }
-}
-
-private func formatCurrencyValue(value: String, currency: String, locale: String) throws -> String {
-    guard let amount = Double(value) else {
-        throw MF2Error.badOperand("Currency value must be numeric, got \(value).")
-    }
-    guard amount.isFinite else {
-        throw MF2Error.badOperand("Currency value must be finite.")
-    }
-
-    let currency = currency.uppercased()
-    let fractionDigits = currencyFractionDigits(currency)
-    let scale = Int(pow(10.0, Double(fractionDigits)))
-    let rounded = Int((abs(amount) * Double(scale)).rounded())
-    let major = rounded / scale
-    let fraction = rounded % scale
-    let french = canonicalLocalePrefix(locale) == "fr"
-    let grouped = groupDigits(String(major), separator: french ? "\u{202f}" : ",")
-    let number: String
-    if fractionDigits == 0 {
-        number = grouped
-    } else {
-        number = "\(grouped)\(french ? "," : ".")\(String(format: "%0\(fractionDigits)d", fraction))"
-    }
-    let symbol = currencySymbol(currency, french: french)
-    let negative = amount < 0 ? "-" : ""
-
-    if french {
-        return "\(negative)\(number) \(symbol)"
-    }
-    if symbol.count == 3 {
-        return "\(negative)\(symbol) \(number)"
-    }
-    return "\(negative)\(symbol)\(number)"
-}
-
-private func currencyFractionDigits(_ currency: String) -> Int {
-    switch currency {
-    case "JPY", "KRW":
-        0
-    default:
-        2
-    }
-}
-
-private func currencySymbol(_ currency: String, french: Bool) -> String {
-    switch currency {
-    case "USD":
-        french ? "$US" : "$"
-    case "EUR":
-        "€"
-    case "JPY":
-        "¥"
-    case "GBP":
-        "£"
-    default:
-        currency
-    }
-}
-
-private func canonicalLocalePrefix(_ locale: String) -> String {
-    locale.replacingOccurrences(of: "_", with: "-")
-        .split(separator: "-", maxSplits: 1)
-        .first
-        .map { String($0).lowercased() } ?? "en"
-}
-
-private func groupDigits(_ digits: String, separator: String) -> String {
-    var remaining = digits
-    var groups: [String] = []
-    while remaining.count > 3 {
-        groups.append(String(remaining.suffix(3)))
-        remaining.removeLast(3)
-    }
-    groups.append(remaining)
-    return groups.reversed().joined(separator: separator)
 }

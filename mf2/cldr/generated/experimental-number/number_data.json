@@ -1,0 +1,296 @@
+{
+  "currencyFractions": {
+    "DEFAULT": {
+      "digits": 2,
+      "rounding": 0,
+      "source": "DEFAULT"
+    },
+    "EUR": {
+      "digits": 2,
+      "rounding": 0,
+      "source": "DEFAULT"
+    },
+    "GBP": {
+      "digits": 2,
+      "rounding": 0,
+      "source": "DEFAULT"
+    },
+    "JPY": {
+      "digits": 0,
+      "rounding": 0,
+      "source": "JPY"
+    },
+    "USD": {
+      "digits": 2,
+      "rounding": 0,
+      "source": "DEFAULT"
+    }
+  },
+  "locales": {
+    "ar-EG": {
+      "currencies": {
+        "EUR": {
+          "displayName": "\u064a\u0648\u0631\u0648",
+          "narrowSymbol": "\u20ac",
+          "symbol": "\u20ac"
+        },
+        "GBP": {
+          "displayName": "\u062c\u0646\u064a\u0647 \u0625\u0633\u062a\u0631\u0644\u064a\u0646\u064a",
+          "narrowSymbol": "UK\u00a3",
+          "symbol": "UK\u00a3"
+        },
+        "JPY": {
+          "displayName": "\u064a\u0646 \u064a\u0627\u0628\u0627\u0646\u064a",
+          "narrowSymbol": "JP\u00a5",
+          "symbol": "JP\u00a5"
+        },
+        "USD": {
+          "displayName": "\u062f\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064a\u0643\u064a",
+          "narrowSymbol": "US$",
+          "symbol": "US$"
+        }
+      },
+      "currenciesSourceLocale": "ar-EG",
+      "currencyPattern": "\u200f#,##0.00\u00a0\u00a4",
+      "currencySpacing": {
+        "afterCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        },
+        "beforeCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        }
+      },
+      "decimalPattern": "#,##0.###",
+      "numberingSystem": "arab",
+      "numbersSourceLocale": "ar-EG",
+      "requestedLocale": "ar-EG",
+      "symbols": {
+        "approximatelySign": "~",
+        "decimal": "\u066b",
+        "group": "\u066c",
+        "minusSign": "\u061c-",
+        "plusSign": "\u061c+"
+      }
+    },
+    "de-DE": {
+      "currencies": {
+        "EUR": {
+          "displayName": "Euro",
+          "narrowSymbol": "\u20ac",
+          "symbol": "\u20ac"
+        },
+        "GBP": {
+          "displayName": "Britisches Pfund",
+          "narrowSymbol": "\u00a3",
+          "symbol": "\u00a3"
+        },
+        "JPY": {
+          "displayName": "Japanischer Yen",
+          "narrowSymbol": "\u00a5",
+          "symbol": "\u00a5"
+        },
+        "USD": {
+          "displayName": "US-Dollar",
+          "narrowSymbol": "$",
+          "symbol": "$"
+        }
+      },
+      "currenciesSourceLocale": "de",
+      "currencyPattern": "#,##0.00\u00a0\u00a4",
+      "currencySpacing": {
+        "afterCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        },
+        "beforeCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        }
+      },
+      "decimalPattern": "#,##0.###",
+      "numberingSystem": "latn",
+      "numbersSourceLocale": "de",
+      "requestedLocale": "de-DE",
+      "symbols": {
+        "approximatelySign": "\u2248",
+        "decimal": ",",
+        "group": ".",
+        "minusSign": "-",
+        "plusSign": "+"
+      }
+    },
+    "en-US": {
+      "currencies": {
+        "EUR": {
+          "displayName": "Euro",
+          "narrowSymbol": "\u20ac",
+          "symbol": "\u20ac"
+        },
+        "GBP": {
+          "displayName": "British Pound",
+          "narrowSymbol": "\u00a3",
+          "symbol": "\u00a3"
+        },
+        "JPY": {
+          "displayName": "Japanese Yen",
+          "narrowSymbol": "\u00a5",
+          "symbol": "\u00a5"
+        },
+        "USD": {
+          "displayName": "US Dollar",
+          "narrowSymbol": "$",
+          "symbol": "$"
+        }
+      },
+      "currenciesSourceLocale": "en",
+      "currencyPattern": "\u00a4#,##0.00",
+      "currencySpacing": {
+        "afterCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        },
+        "beforeCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        }
+      },
+      "decimalPattern": "#,##0.###",
+      "numberingSystem": "latn",
+      "numbersSourceLocale": "en",
+      "requestedLocale": "en-US",
+      "symbols": {
+        "approximatelySign": "~",
+        "decimal": ".",
+        "group": ",",
+        "minusSign": "-",
+        "plusSign": "+"
+      }
+    },
+    "fr-FR": {
+      "currencies": {
+        "EUR": {
+          "displayName": "euro",
+          "narrowSymbol": "\u20ac",
+          "symbol": "\u20ac"
+        },
+        "GBP": {
+          "displayName": "livre sterling",
+          "narrowSymbol": "\u00a3",
+          "symbol": "\u00a3GB"
+        },
+        "JPY": {
+          "displayName": "yen japonais",
+          "narrowSymbol": "\u00a5",
+          "symbol": "JPY"
+        },
+        "USD": {
+          "displayName": "dollar des \u00c9tats-Unis",
+          "narrowSymbol": "$",
+          "symbol": "$US"
+        }
+      },
+      "currenciesSourceLocale": "fr",
+      "currencyPattern": "#,##0.00\u00a0\u00a4",
+      "currencySpacing": {
+        "afterCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        },
+        "beforeCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        }
+      },
+      "decimalPattern": "#,##0.###",
+      "numberingSystem": "latn",
+      "numbersSourceLocale": "fr",
+      "requestedLocale": "fr-FR",
+      "symbols": {
+        "approximatelySign": "\u2243",
+        "decimal": ",",
+        "group": "\u202f",
+        "minusSign": "-",
+        "plusSign": "+"
+      }
+    },
+    "ja-JP": {
+      "currencies": {
+        "EUR": {
+          "displayName": "\u30e6\u30fc\u30ed",
+          "narrowSymbol": "\u20ac",
+          "symbol": "\u20ac"
+        },
+        "GBP": {
+          "displayName": "\u82f1\u56fd\u30dd\u30f3\u30c9",
+          "narrowSymbol": "\u00a3",
+          "symbol": "\u00a3"
+        },
+        "JPY": {
+          "displayName": "\u65e5\u672c\u5186",
+          "narrowSymbol": "\uffe5",
+          "symbol": "\uffe5"
+        },
+        "USD": {
+          "displayName": "\u7c73\u30c9\u30eb",
+          "narrowSymbol": "$",
+          "symbol": "$"
+        }
+      },
+      "currenciesSourceLocale": "ja",
+      "currencyPattern": "\u00a4#,##0.00",
+      "currencySpacing": {
+        "afterCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        },
+        "beforeCurrency": {
+          "currencyMatch": "[[:^S:]&[:^Z:]]",
+          "insertBetween": "\u00a0",
+          "surroundingMatch": "[:digit:]"
+        }
+      },
+      "decimalPattern": "#,##0.###",
+      "numberingSystem": "latn",
+      "numbersSourceLocale": "ja",
+      "requestedLocale": "ja-JP",
+      "symbols": {
+        "approximatelySign": "\u7d04",
+        "decimal": ".",
+        "group": ",",
+        "minusSign": "-",
+        "plusSign": "+"
+      }
+    }
+  },
+  "metadata": {
+    "cldrRef": "main",
+    "currenciesRequested": [
+      "USD",
+      "EUR",
+      "JPY",
+      "GBP"
+    ],
+    "dropWithoutMigration": true,
+    "experimental": true,
+    "generator": "mf2/cldr/generator/generate_number_data.py",
+    "localesRequested": [
+      "en-US",
+      "fr-FR",
+      "de-DE",
+      "ja-JP",
+      "ar-EG"
+    ],
+    "source": "unicode-org/cldr-json cldr-numbers-full main numbers/currencies + cldr-core supplemental currencyData"
+  }
+}

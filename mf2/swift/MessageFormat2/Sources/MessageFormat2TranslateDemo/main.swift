@@ -6,6 +6,7 @@ private let catalog = try Catalog.load(
         .appendingPathComponent("../../examples/catalog.json")
         .standardizedFileURL
 )
+private let functions = demoFunctionRegistry()
 
 private let examples: [(String, String, [String: MF2Value], String)] = [
     ("welcome", "fr", ["name": .string("Mojito")], "Bienvenue, Mojito !"),
@@ -19,7 +20,12 @@ private let examples: [(String, String, [String: MF2Value], String)] = [
 ]
 
 for (messageID, locale, arguments, expected) in examples {
-    let actual = try catalog.translate(messageID, locale: locale, arguments: arguments)
+    let actual = try catalog.translate(
+        messageID,
+        locale: locale,
+        arguments: arguments,
+        functions: functions
+    )
     guard actual == expected else {
         throw DemoError.mismatch(messageID: messageID, locale: locale, expected: expected, actual: actual)
     }
@@ -36,10 +42,11 @@ private struct Catalog: Decodable {
     func translate(
         _ messageID: String,
         locale: String,
-        arguments: [String: MF2Value]
+        arguments: [String: MF2Value],
+        functions: MF2FunctionRegistry
     ) throws -> String {
         let model = try model(messageID, locale: locale)
-        return try model.format(arguments: arguments, locale: locale)
+        return try model.format(arguments: arguments, locale: locale, functions: functions)
     }
 
     private func model(_ messageID: String, locale: String) throws -> MF2Message {
@@ -51,6 +58,91 @@ private struct Catalog: Decodable {
         }
         return fallback
     }
+}
+
+private func demoFunctionRegistry() -> MF2FunctionRegistry {
+    MF2FunctionRegistry.defaults.withFunction("currency", formatter: formatCurrency)
+}
+
+private func formatCurrency(_ call: MF2FunctionCall) throws -> String {
+    let currency = try call.optionValue("currency", default: "USD") ?? "USD"
+    return try formatCurrencyValue(value: call.value, currency: currency, locale: call.locale)
+}
+
+private func formatCurrencyValue(value: String, currency: String, locale: String) throws -> String {
+    guard let amount = Double(value) else {
+        throw MF2Error.badOperand("Currency value must be numeric, got \(value).")
+    }
+    guard amount.isFinite else {
+        throw MF2Error.badOperand("Currency value must be finite.")
+    }
+
+    let currency = currency.uppercased()
+    let fractionDigits = currencyFractionDigits(currency)
+    let scale = Int(pow(10.0, Double(fractionDigits)))
+    let rounded = Int((abs(amount) * Double(scale)).rounded())
+    let major = rounded / scale
+    let fraction = rounded % scale
+    let french = canonicalLocalePrefix(locale) == "fr"
+    let grouped = groupDigits(String(major), separator: french ? "\u{202f}" : ",")
+    let number: String
+    if fractionDigits == 0 {
+        number = grouped
+    } else {
+        number = "\(grouped)\(french ? "," : ".")\(String(format: "%0\(fractionDigits)d", fraction))"
+    }
+    let symbol = currencySymbol(currency, french: french)
+    let negative = amount < 0 ? "-" : ""
+
+    if french {
+        return "\(negative)\(number) \(symbol)"
+    }
+    if symbol.count == 3 {
+        return "\(negative)\(symbol) \(number)"
+    }
+    return "\(negative)\(symbol)\(number)"
+}
+
+private func currencyFractionDigits(_ currency: String) -> Int {
+    switch currency {
+    case "JPY", "KRW":
+        0
+    default:
+        2
+    }
+}
+
+private func currencySymbol(_ currency: String, french: Bool) -> String {
+    switch currency {
+    case "USD":
+        french ? "$US" : "$"
+    case "EUR":
+        "€"
+    case "JPY":
+        "¥"
+    case "GBP":
+        "£"
+    default:
+        currency
+    }
+}
+
+private func canonicalLocalePrefix(_ locale: String) -> String {
+    locale.replacingOccurrences(of: "_", with: "-")
+        .split(separator: "-", maxSplits: 1)
+        .first
+        .map { String($0).lowercased() } ?? "en"
+}
+
+private func groupDigits(_ digits: String, separator: String) -> String {
+    var remaining = digits
+    var groups: [String] = []
+    while remaining.count > 3 {
+        groups.append(String(remaining.suffix(3)))
+        remaining.removeLast(3)
+    }
+    groups.append(remaining)
+    return groups.reversed().joined(separator: separator)
 }
 
 private enum DemoError: Error, CustomStringConvertible {

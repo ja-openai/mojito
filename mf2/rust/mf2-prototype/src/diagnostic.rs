@@ -7,7 +7,7 @@ pub struct Diagnostic {
 }
 
 impl Diagnostic {
-    pub(crate) fn new(
+    pub fn new(
         code: impl Into<String>,
         message: impl Into<String>,
         start: usize,

@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::OnceLock;
 
 use crate::cldr::{
     select_cardinal_plural_category, select_ordinal_plural_category, NumberOperands,
@@ -39,6 +40,120 @@ impl FormattedPart {
     }
 }
 
+pub type FunctionFormatter = for<'a> fn(FunctionCall<'a>) -> Result<String, Diagnostic>;
+
+#[derive(Clone)]
+pub struct FunctionRegistry {
+    formatters: BTreeMap<String, FunctionFormatter>,
+}
+
+impl FunctionRegistry {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            formatters: BTreeMap::new(),
+        }
+    }
+
+    pub fn with_function(mut self, name: impl Into<String>, formatter: FunctionFormatter) -> Self {
+        self.formatters.insert(name.into(), formatter);
+        self
+    }
+
+    pub fn register(&mut self, name: impl Into<String>, formatter: FunctionFormatter) {
+        self.formatters.insert(name.into(), formatter);
+    }
+
+    fn format(
+        &self,
+        value: &str,
+        function: &FunctionRef,
+        locale: &str,
+        values: &BTreeMap<String, serde_json::Value>,
+    ) -> Result<String, Diagnostic> {
+        let Some(formatter) = self.formatters.get(&function.name) else {
+            return Err(Diagnostic::new(
+                "unsupported-function",
+                format!(
+                    "Function :{} is not supported by this formatter registry.",
+                    function.name
+                ),
+                0,
+                0,
+            ));
+        };
+        formatter(FunctionCall {
+            value,
+            function,
+            locale,
+            values,
+        })
+    }
+}
+
+impl Default for FunctionRegistry {
+    fn default() -> Self {
+        let mut registry = Self::empty();
+        for name in ["string", "number", "datetime", "date", "time"] {
+            registry.register(name, passthrough_function);
+        }
+        registry
+    }
+}
+
+pub struct FunctionCall<'a> {
+    value: &'a str,
+    function: &'a FunctionRef,
+    locale: &'a str,
+    values: &'a BTreeMap<String, serde_json::Value>,
+}
+
+impl<'a> FunctionCall<'a> {
+    pub fn value(&self) -> &'a str {
+        self.value
+    }
+
+    pub fn function(&self) -> &'a FunctionRef {
+        self.function
+    }
+
+    pub fn locale(&self) -> &'a str {
+        self.locale
+    }
+
+    pub fn option_value(&self, name: &str) -> Result<Option<String>, Diagnostic> {
+        let Some(option) = self
+            .function
+            .options
+            .as_ref()
+            .and_then(|options| options.get(name))
+        else {
+            return Ok(None);
+        };
+        match option {
+            ExpressionArg::Literal { value } => Ok(Some(value.clone())),
+            ExpressionArg::Variable { name } => self
+                .values
+                .get(name)
+                .map(value_to_string)
+                .map(Some)
+                .ok_or_else(|| missing_argument(name)),
+        }
+    }
+}
+
+fn passthrough_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    Ok(call.value().to_string())
+}
+
+fn default_function_registry() -> &'static FunctionRegistry {
+    static DEFAULT_FUNCTIONS: OnceLock<FunctionRegistry> = OnceLock::new();
+    DEFAULT_FUNCTIONS.get_or_init(FunctionRegistry::default)
+}
+
 pub fn format_model(
     model: &MessageModel,
     arguments: &BTreeMap<String, serde_json::Value>,
@@ -51,9 +166,18 @@ pub fn format_model_with_locale(
     arguments: &BTreeMap<String, serde_json::Value>,
     locale: &str,
 ) -> Result<String, Diagnostic> {
-    Ok(parts_to_string(&format_model_to_parts_with_locale(
-        model, arguments, locale,
-    )?))
+    format_model_with_locale_and_functions(model, arguments, locale, default_function_registry())
+}
+
+pub fn format_model_with_locale_and_functions(
+    model: &MessageModel,
+    arguments: &BTreeMap<String, serde_json::Value>,
+    locale: &str,
+    functions: &FunctionRegistry,
+) -> Result<String, Diagnostic> {
+    Ok(parts_to_string(
+        &format_model_to_parts_with_locale_and_functions(model, arguments, locale, functions)?,
+    ))
 }
 
 pub fn format_model_to_parts_with_locale(
@@ -61,8 +185,22 @@ pub fn format_model_to_parts_with_locale(
     arguments: &BTreeMap<String, serde_json::Value>,
     locale: &str,
 ) -> Result<Vec<FormattedPart>, Diagnostic> {
+    format_model_to_parts_with_locale_and_functions(
+        model,
+        arguments,
+        locale,
+        default_function_registry(),
+    )
+}
+
+pub fn format_model_to_parts_with_locale_and_functions(
+    model: &MessageModel,
+    arguments: &BTreeMap<String, serde_json::Value>,
+    locale: &str,
+    functions: &FunctionRegistry,
+) -> Result<Vec<FormattedPart>, Diagnostic> {
     validate_model(model)?;
-    let mut context = FormatContext::new(arguments, locale);
+    let mut context = FormatContext::new(arguments, locale, functions);
     context.apply_declarations(model.declarations())?;
     match model {
         MessageModel::Message { pattern, .. } => context.format_pattern_to_parts(pattern),
@@ -209,18 +347,24 @@ fn declaration_name_value(declaration: &Declaration) -> (&str, &Expression) {
     }
 }
 
-struct FormatContext {
+struct FormatContext<'a> {
     values: BTreeMap<String, serde_json::Value>,
     selector_annotations: BTreeMap<String, SelectorAnnotation>,
     locale: String,
+    functions: &'a FunctionRegistry,
 }
 
-impl FormatContext {
-    fn new(arguments: &BTreeMap<String, serde_json::Value>, locale: &str) -> Self {
+impl<'a> FormatContext<'a> {
+    fn new(
+        arguments: &BTreeMap<String, serde_json::Value>,
+        locale: &str,
+        functions: &'a FunctionRegistry,
+    ) -> Self {
         Self {
             values: arguments.clone(),
             selector_annotations: BTreeMap::new(),
             locale: locale.to_string(),
+            functions,
         }
     }
 
@@ -322,47 +466,11 @@ impl FormatContext {
             None => String::new(),
         };
 
-        let function = expression.function.as_ref();
-        match function.map(|function| function.name.as_str()) {
-            None | Some("string") | Some("number") | Some("datetime") | Some("date")
-            | Some("time") => Ok(value),
-            Some("currency") => self.format_currency(&value, function.expect("function exists")),
-            Some(name) => Err(Diagnostic::new(
-                "unsupported-function-format",
-                format!("Function :{name} is not supported by this prototype formatter."),
-                0,
-                0,
-            )),
-        }
-    }
-
-    fn format_currency(&self, value: &str, function: &FunctionRef) -> Result<String, Diagnostic> {
-        let currency = self
-            .option_value(function, "currency")?
-            .unwrap_or_else(|| "USD".to_string());
-        format_currency_value(value, &currency, &self.locale)
-    }
-
-    fn option_value(
-        &self,
-        function: &FunctionRef,
-        name: &str,
-    ) -> Result<Option<String>, Diagnostic> {
-        let Some(option) = function
-            .options
-            .as_ref()
-            .and_then(|options| options.get(name))
-        else {
-            return Ok(None);
-        };
-        match option {
-            ExpressionArg::Literal { value } => Ok(Some(value.clone())),
-            ExpressionArg::Variable { name } => self
-                .values
-                .get(name)
-                .map(value_to_string)
-                .map(Some)
-                .ok_or_else(|| missing_argument(name)),
+        match expression.function.as_ref() {
+            None => Ok(value),
+            Some(function) => self
+                .functions
+                .format(&value, function, &self.locale, &self.values),
         }
     }
 
@@ -549,103 +657,4 @@ fn parts_to_string(parts: &[FormattedPart]) -> String {
         .iter()
         .filter_map(FormattedPart::string_value)
         .collect()
-}
-
-fn format_currency_value(value: &str, currency: &str, locale: &str) -> Result<String, Diagnostic> {
-    let amount = value.parse::<f64>().map_err(|_| {
-        Diagnostic::new(
-            "bad-operand",
-            format!("Currency value must be numeric, got {value}."),
-            0,
-            0,
-        )
-    })?;
-    if !amount.is_finite() {
-        return Err(Diagnostic::new(
-            "bad-operand",
-            "Currency value must be finite.",
-            0,
-            0,
-        ));
-    }
-
-    let currency = currency.to_ascii_uppercase();
-    let fraction_digits = currency_fraction_digits(&currency);
-    let scale = 10_i64.pow(fraction_digits);
-    let rounded = (amount.abs() * scale as f64).round() as i64;
-    let major = rounded / scale;
-    let fraction = rounded % scale;
-    let is_french = canonical_locale_prefix(locale) == "fr";
-    let grouped = group_digits(&major.to_string(), if is_french { "\u{202f}" } else { "," });
-    let number = if fraction_digits == 0 {
-        grouped
-    } else {
-        format!(
-            "{grouped}{}{fraction:0width$}",
-            if is_french { "," } else { "." },
-            width = fraction_digits as usize
-        )
-    };
-    let symbol = currency_symbol(&currency, is_french);
-    let negative = amount.is_sign_negative();
-
-    if is_french {
-        Ok(format!(
-            "{}{} {}",
-            if negative { "-" } else { "" },
-            number,
-            symbol
-        ))
-    } else if symbol.len() == 3 {
-        Ok(format!(
-            "{}{} {}",
-            if negative { "-" } else { "" },
-            symbol,
-            number
-        ))
-    } else {
-        Ok(format!(
-            "{}{}{}",
-            if negative { "-" } else { "" },
-            symbol,
-            number
-        ))
-    }
-}
-
-fn currency_fraction_digits(currency: &str) -> u32 {
-    match currency {
-        "JPY" | "KRW" => 0,
-        _ => 2,
-    }
-}
-
-fn currency_symbol(currency: &str, french: bool) -> String {
-    match currency {
-        "USD" if french => "$US".to_string(),
-        "USD" => "$".to_string(),
-        "EUR" => "€".to_string(),
-        "JPY" => "¥".to_string(),
-        "GBP" => "£".to_string(),
-        _ => currency.to_string(),
-    }
-}
-
-fn canonical_locale_prefix(locale: &str) -> String {
-    locale
-        .split(['-', '_'])
-        .next()
-        .unwrap_or("en")
-        .to_ascii_lowercase()
-}
-
-fn group_digits(digits: &str, separator: &str) -> String {
-    let mut output = String::new();
-    for (index, ch) in digits.chars().rev().enumerate() {
-        if index > 0 && index % 3 == 0 {
-            output.push_str(separator);
-        }
-        output.push(ch);
-    }
-    output.chars().rev().collect()
 }

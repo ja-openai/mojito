@@ -4,6 +4,7 @@ set -eu
 cd "$(dirname "$0")"
 
 (cd cldr && sh validate_plural_rules.sh)
+(cd cldr && sh validate_number_data.sh)
 (cd rust/mf2-prototype && cargo test)
 (cd rust/mf2-prototype && cargo run --example translate_demo)
 (cd rust/mf2-prototype && cargo run --example inline_translate_demo)
