@@ -61,6 +61,7 @@ The current conformance slice covers:
 - variable placeholders such as `{$name}`
 - Unicode text, argument values, and quoted literals
 - function annotations and literal/variable options in the data model
+- expression and markup attributes in the data model
 - `.input` and `.local` declarations
 - markup placeholders, stripped from string output for now
 - `format_to_parts` / `formatToParts` output for text, expression output, and
@@ -85,6 +86,7 @@ The immediate milestone is placeholders plus CLDR plural selection:
 - `:number` cardinal/ordinal plural selection
 - `:string` exact selection
 - parts output for UI-owned markup/link rendering
+- expression and markup attributes preserved in parsed/decoded models
 - generated CLDR plural rules for every CLDR plural locale by default
 - Rust/Swift/Python/Java formatting from the Unicode MF2 model
 

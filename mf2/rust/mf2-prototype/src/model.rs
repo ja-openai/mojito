@@ -92,6 +92,15 @@ impl Expression {
         self.function = Some(function);
         self
     }
+
+    pub(crate) fn with_attributes(mut self, attributes: BTreeMap<String, AttributeValue>) -> Self {
+        self.attributes = if attributes.is_empty() {
+            None
+        } else {
+            Some(attributes)
+        };
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -181,6 +190,15 @@ impl Markup {
             options: None,
             attributes: None,
         }
+    }
+
+    pub(crate) fn with_attributes(mut self, attributes: BTreeMap<String, AttributeValue>) -> Self {
+        self.attributes = if attributes.is_empty() {
+            None
+        } else {
+            Some(attributes)
+        };
+        self
     }
 }
 

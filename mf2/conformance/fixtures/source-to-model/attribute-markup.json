@@ -1,0 +1,29 @@
+{
+  "name": "attribute-markup",
+  "source": "Click {#link @href=|profile|}here{/link}.",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Click ",
+      {
+        "type": "markup",
+        "kind": "open",
+        "name": "link",
+        "attributes": {
+          "href": { "type": "literal", "value": "profile" }
+        }
+      },
+      "here",
+      { "type": "markup", "kind": "close", "name": "link" },
+      "."
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Click here."
+    }
+  ]
+}

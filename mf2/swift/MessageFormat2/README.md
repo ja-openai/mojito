@@ -20,6 +20,9 @@ Current target:
 - `Locale.swift`: tiny BCP47-first locale-key string helpers and structural lookup
 - `Errors.swift`: public runtime errors
 
+The runtime decodes expression and markup attributes into the model, preserving
+them for tooling and future parts/rendering workflows.
+
 The target remains parser-free so an app can ship only compiled messages and
 runtime formatting code. Dynamic source parsing should live in a future optional
 target.

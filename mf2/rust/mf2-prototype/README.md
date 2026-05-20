@@ -38,6 +38,7 @@ Supported now:
 - quoted literal expressions such as `{|Mojito|}`
 - function annotations such as `{$count :number}`
 - literal/variable function options in the data model
+- expression and markup attributes
 - markup placeholders such as `{#link}`, `{/link}`, and `{#br/}`
 - `format_model_to_parts_with_locale` for text, expression, and markup boundary
   output
@@ -49,7 +50,6 @@ Supported now:
 Unsupported for this first slice:
 
 - locale-sensitive number/date/time formatting
-- attributes
 - nested/selectable function semantics beyond pass-through string output
 - full MF2 Unicode `name` grammar for variables, functions, markup, and options
 

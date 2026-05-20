@@ -373,7 +373,8 @@ final class Mf2Parser {
                         end);
                 return null;
             }
-            expression = new Mf2Message.Expression(new Mf2Message.VariableArgument(split.name()), null);
+            expression = new Mf2Message.Expression(
+                    new Mf2Message.VariableArgument(split.name()), null, Map.of());
             rest = split.rest().stripLeading();
         } else if (content.startsWith("|")) {
             int close = content.indexOf('|', 1);
@@ -385,10 +386,11 @@ final class Mf2Parser {
                         end);
                 return null;
             }
-            expression = new Mf2Message.Expression(new Mf2Message.LiteralArgument(content.substring(1, close)), null);
+            expression = new Mf2Message.Expression(
+                    new Mf2Message.LiteralArgument(content.substring(1, close)), null, Map.of());
             rest = content.substring(close + 1).stripLeading();
         } else if (content.startsWith(":")) {
-            expression = new Mf2Message.Expression(null, null);
+            expression = new Mf2Message.Expression(null, null, Map.of());
             rest = content;
         } else {
             pushDiagnostic(
@@ -399,27 +401,56 @@ final class Mf2Parser {
             return null;
         }
 
-        if (!rest.isEmpty()) {
-            if (!rest.startsWith(":")) {
+        if (rest.isEmpty()) {
+            return expression;
+        }
+
+        Tail tail = parseTail(rest, start, end);
+        if (tail == null) {
+            return null;
+        }
+        return new Mf2Message.Expression(expression.arg(), tail.function(), tail.attributes());
+    }
+
+    private Tail parseTail(String rest, int start, int end) {
+        if (rest.isBlank()) {
+            return new Tail(null, Map.of());
+        }
+
+        Mf2Message.FunctionRef function = null;
+        Map<String, Mf2Message.AttributeValue> attributes = new LinkedHashMap<>();
+        String[] tokens = rest.trim().split("\\s+");
+        int index = 0;
+        if (index < tokens.length && tokens[index].startsWith(":")) {
+            FunctionParseResult result = parseFunctionAnnotation(tokens, index, start, end);
+            if (result == null) {
+                return null;
+            }
+            function = result.function();
+            index = result.nextIndex();
+        }
+        while (index < tokens.length) {
+            String token = tokens[index++];
+            if (!token.startsWith("@")) {
                 pushDiagnostic(
                         "unsupported-expression",
-                        "Expression content after the argument must be a function annotation.",
+                        "Expression content after the argument must be a function annotation or attribute.",
                         start,
                         end);
                 return null;
             }
-            Mf2Message.FunctionRef function = parseFunctionAnnotation(rest, start, end);
-            if (function == null) {
+            AttributeParseResult attribute = parseAttribute(token, start, end);
+            if (attribute == null) {
                 return null;
             }
-            expression = new Mf2Message.Expression(expression.arg(), function);
+            attributes.put(attribute.name(), attribute.value());
         }
 
-        return expression;
+        return new Tail(function, attributes);
     }
 
-    private Mf2Message.FunctionRef parseFunctionAnnotation(String content, int start, int end) {
-        NameSplit split = splitName(content.substring(1));
+    private FunctionParseResult parseFunctionAnnotation(String[] tokens, int index, int start, int end) {
+        NameSplit split = splitName(tokens[index].substring(1));
         if (split.name().isEmpty()) {
             pushDiagnostic(
                     "missing-function-name",
@@ -428,27 +459,57 @@ final class Mf2Parser {
                     end);
             return null;
         }
-
-        Map<String, Mf2Message.ExpressionArgument> options = new LinkedHashMap<>();
-        String rest = split.rest().trim();
-        if (!rest.isEmpty()) {
-            for (String token : rest.split("\\s+")) {
-                int equals = token.indexOf('=');
-                if (equals <= 0 || equals == token.length() - 1) {
-                    pushDiagnostic(
-                            "invalid-function-option",
-                            "Function options must use key=value syntax.",
-                            start,
-                            end);
-                    return null;
-                }
-                String key = token.substring(0, equals);
-                String rawValue = token.substring(equals + 1);
-                options.put(key, parseLiteralOrVariable(rawValue));
-            }
+        if (!split.rest().isEmpty()) {
+            pushDiagnostic(
+                    "unsupported-expression",
+                    "Function annotation must separate options with whitespace.",
+                    start,
+                    end);
+            return null;
         }
 
-        return new Mf2Message.FunctionRef(split.name(), options);
+        Map<String, Mf2Message.ExpressionArgument> options = new LinkedHashMap<>();
+        index++;
+        while (index < tokens.length && !tokens[index].startsWith("@")) {
+            String token = tokens[index++];
+            int equals = token.indexOf('=');
+            if (equals <= 0 || equals == token.length() - 1) {
+                pushDiagnostic(
+                        "invalid-function-option",
+                        "Function options must use key=value syntax.",
+                        start,
+                        end);
+                return null;
+            }
+            String key = token.substring(0, equals);
+            String rawValue = token.substring(equals + 1);
+            options.put(key, parseLiteralOrVariable(rawValue));
+        }
+
+        return new FunctionParseResult(new Mf2Message.FunctionRef(split.name(), options), index);
+    }
+
+    private AttributeParseResult parseAttribute(String token, int start, int end) {
+        String content = token.substring(1);
+        if (content.isEmpty()) {
+            pushDiagnostic("missing-attribute-name", "Attribute is missing a name.", start, end);
+            return null;
+        }
+        int equals = content.indexOf('=');
+        if (equals < 0) {
+            return new AttributeParseResult(content, new Mf2Message.PresentAttribute(true));
+        }
+        if (equals == 0 || equals == content.length() - 1) {
+            pushDiagnostic(
+                    "invalid-attribute",
+                    "Attribute key and value must be non-empty.",
+                    start,
+                    end);
+            return null;
+        }
+        return new AttributeParseResult(
+                content.substring(0, equals),
+                new Mf2Message.LiteralAttribute(parseLiteralOrVariable(content.substring(equals + 1))));
     }
 
     private Mf2Message.Markup parseMarkupContent(String content, int start, int end) {
@@ -477,7 +538,22 @@ final class Mf2Parser {
                     end);
             return null;
         }
-        return new Mf2Message.Markup(kind, split.name());
+        if (split.rest().isBlank()) {
+            return new Mf2Message.Markup(kind, split.name(), Map.of());
+        }
+        Tail tail = parseTail(split.rest(), start, end);
+        if (tail == null) {
+            return null;
+        }
+        if (tail.function() != null) {
+            pushDiagnostic(
+                    "unsupported-markup",
+                    "Markup placeholders do not support function annotations.",
+                    start,
+                    end);
+            return null;
+        }
+        return new Mf2Message.Markup(kind, split.name(), tail.attributes());
     }
 
     private String parseVariableName() {
@@ -597,6 +673,12 @@ final class Mf2Parser {
     }
 
     private record NameSplit(String name, String rest) {}
+
+    private record Tail(Mf2Message.FunctionRef function, Map<String, Mf2Message.AttributeValue> attributes) {}
+
+    private record FunctionParseResult(Mf2Message.FunctionRef function, int nextIndex) {}
+
+    private record AttributeParseResult(String name, Mf2Message.AttributeValue value) {}
 
     @FunctionalInterface
     private interface CharPredicate {

@@ -73,7 +73,12 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
 
     record MarkupPart(Markup markup) implements PatternPart {}
 
-    record Expression(ExpressionArgument arg, FunctionRef function) {}
+    record Expression(
+            ExpressionArgument arg, FunctionRef function, Map<String, AttributeValue> attributes) {
+        public Expression {
+            attributes = Map.copyOf(attributes);
+        }
+    }
 
     sealed interface ExpressionArgument permits LiteralArgument, VariableArgument {}
 
@@ -87,7 +92,17 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
         }
     }
 
-    record Markup(String kind, String name) {}
+    sealed interface AttributeValue permits LiteralAttribute, PresentAttribute {}
+
+    record LiteralAttribute(ExpressionArgument value) implements AttributeValue {}
+
+    record PresentAttribute(boolean value) implements AttributeValue {}
+
+    record Markup(String kind, String name, Map<String, AttributeValue> attributes) {
+        public Markup {
+            attributes = Map.copyOf(attributes);
+        }
+    }
 
     record VariableRef(String name) {}
 
@@ -153,7 +168,8 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
         Object rawFunction = map.get("function");
         return new Expression(
                 rawArg == null ? null : parseExpressionArgument(rawArg),
-                rawFunction == null ? null : parseFunction(rawFunction));
+                rawFunction == null ? null : parseFunction(rawFunction),
+                parseAttributes(map.get("attributes")));
     }
 
     private static ExpressionArgument parseExpressionArgument(Object value) {
@@ -179,7 +195,25 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
 
     private static Markup parseMarkup(Object value) {
         Map<String, Object> map = object(value, "markup");
-        return new Markup(string(map.get("kind"), "markup.kind"), string(map.get("name"), "markup.name"));
+        return new Markup(
+                string(map.get("kind"), "markup.kind"),
+                string(map.get("name"), "markup.name"),
+                parseAttributes(map.get("attributes")));
+    }
+
+    private static Map<String, AttributeValue> parseAttributes(Object value) {
+        if (value == null) {
+            return Map.of();
+        }
+        Map<String, AttributeValue> attributes = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : object(value, "attributes").entrySet()) {
+            if (entry.getValue() instanceof Boolean present) {
+                attributes.put(entry.getKey(), new PresentAttribute(present));
+            } else {
+                attributes.put(entry.getKey(), new LiteralAttribute(parseExpressionArgument(entry.getValue())));
+            }
+        }
+        return attributes;
     }
 
     private static List<VariableRef> parseVariableRefs(Object value) {

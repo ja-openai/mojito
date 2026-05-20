@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::diagnostic::Diagnostic;
 use crate::model::{
-    Declaration, Expression, ExpressionArg, FunctionRef, Markup, MessageModel, Pattern,
+    AttributeValue, Declaration, Expression, ExpressionArg, FunctionRef, Markup, MessageModel, Pattern,
     PatternPart, VariableRef, Variant, VariantKey,
 };
 
@@ -20,6 +20,16 @@ pub fn parse_to_model(source: &str) -> ParseResult {
         model: if diagnostics.is_empty() { model } else { None },
         diagnostics,
     }
+}
+
+struct Tail {
+    function: Option<FunctionRef>,
+    attributes: BTreeMap<String, AttributeValue>,
+}
+
+struct FunctionParseResult {
+    function: FunctionRef,
+    next_index: usize,
 }
 
 struct Parser<'a> {
@@ -432,30 +442,68 @@ impl<'a> Parser<'a> {
             return None;
         };
 
-        if !rest.is_empty() {
-            if !rest.starts_with(':') {
+        if rest.is_empty() {
+            return Some(expression);
+        }
+
+        let tail = self.parse_tail(rest, start, end)?;
+        if let Some(function) = tail.function {
+            expression = expression.with_function(function);
+        }
+        expression = expression.with_attributes(tail.attributes);
+
+        Some(expression)
+    }
+
+    fn parse_tail(&mut self, rest: &str, start: usize, end: usize) -> Option<Tail> {
+        if rest.is_empty() {
+            return Some(Tail {
+                function: None,
+                attributes: BTreeMap::new(),
+            });
+        }
+
+        let tokens: Vec<_> = rest.split_whitespace().collect();
+        let mut index = 0;
+        let function = if tokens.first().is_some_and(|token| token.starts_with(':')) {
+            let parsed = self.parse_function_annotation(&tokens, index, start, end)?;
+            index = parsed.next_index;
+            Some(parsed.function)
+        } else {
+            None
+        };
+
+        let mut attributes = BTreeMap::new();
+        while index < tokens.len() {
+            let token = tokens[index];
+            index += 1;
+            if !token.starts_with('@') {
                 self.push_diagnostic(
                     "unsupported-expression",
-                    "Expression content after the argument must be a function annotation.",
+                    "Expression content after the argument must be a function annotation or attribute.",
                     start,
                     end,
                 );
                 return None;
             }
-            let function = self.parse_function_annotation(rest, start, end)?;
-            expression = expression.with_function(function);
+            let (name, value) = self.parse_attribute(token, start, end)?;
+            attributes.insert(name, value);
         }
 
-        Some(expression)
+        Some(Tail {
+            function,
+            attributes,
+        })
     }
 
     fn parse_function_annotation(
         &mut self,
-        content: &str,
+        tokens: &[&str],
+        mut index: usize,
         start: usize,
         end: usize,
-    ) -> Option<FunctionRef> {
-        let content = content
+    ) -> Option<FunctionParseResult> {
+        let content = tokens[index]
             .strip_prefix(':')
             .expect("annotation starts with ':'");
         let (name, rest) = split_name(content);
@@ -468,9 +516,21 @@ impl<'a> Parser<'a> {
             );
             return None;
         }
+        if !rest.is_empty() {
+            self.push_diagnostic(
+                "unsupported-expression",
+                "Function annotation must separate options with whitespace.",
+                start,
+                end,
+            );
+            return None;
+        }
 
         let mut options = BTreeMap::new();
-        for token in rest.split_whitespace() {
+        index += 1;
+        while index < tokens.len() && !tokens[index].starts_with('@') {
+            let token = tokens[index];
+            index += 1;
             let Some((key, raw_value)) = token.split_once('=') else {
                 self.push_diagnostic(
                     "invalid-function-option",
@@ -492,7 +552,44 @@ impl<'a> Parser<'a> {
             options.insert(key.to_string(), parse_literal_or_variable(raw_value));
         }
 
-        Some(FunctionRef::new(name, options))
+        Some(FunctionParseResult {
+            function: FunctionRef::new(name, options),
+            next_index: index,
+        })
+    }
+
+    fn parse_attribute(
+        &mut self,
+        token: &str,
+        start: usize,
+        end: usize,
+    ) -> Option<(String, AttributeValue)> {
+        let content = token.strip_prefix('@').expect("attribute starts with @");
+        if content.is_empty() {
+            self.push_diagnostic(
+                "missing-attribute-name",
+                "Attribute is missing a name.",
+                start,
+                end,
+            );
+            return None;
+        }
+        let Some((name, raw_value)) = content.split_once('=') else {
+            return Some((content.to_string(), AttributeValue::Present(true)));
+        };
+        if name.is_empty() || raw_value.is_empty() {
+            self.push_diagnostic(
+                "invalid-attribute",
+                "Attribute key and value must be non-empty.",
+                start,
+                end,
+            );
+            return None;
+        }
+        Some((
+            name.to_string(),
+            AttributeValue::Literal(parse_literal_or_variable(raw_value)),
+        ))
     }
 
     fn parse_markup_content(&mut self, content: &str, start: usize, end: usize) -> Option<Markup> {
@@ -509,7 +606,7 @@ impl<'a> Parser<'a> {
             unreachable!("caller checked markup prefix")
         };
 
-        let (name, _rest) = split_name(rest.trim_start());
+        let (name, rest) = split_name(rest.trim_start());
         if name.is_empty() {
             self.push_diagnostic(
                 "missing-markup-name",
@@ -519,8 +616,22 @@ impl<'a> Parser<'a> {
             );
             return None;
         }
+        if rest.trim().is_empty() {
+            return Some(Markup::new(kind, name));
+        }
 
-        Some(Markup::new(kind, name))
+        let tail = self.parse_tail(rest, start, end)?;
+        if tail.function.is_some() {
+            self.push_diagnostic(
+                "unsupported-markup",
+                "Markup placeholders do not support function annotations.",
+                start,
+                end,
+            );
+            return None;
+        }
+
+        Some(Markup::new(kind, name).with_attributes(tail.attributes))
     }
 
     fn parse_variable_name(&mut self) -> Option<String> {
