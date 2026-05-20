@@ -47,6 +47,7 @@ public record GetProjectDetailView(
       TmTextUnitVariant currentTmTextUnitVariant,
       ReviewProjectTextUnitDecision reviewProjectTextUnitDecision,
       TerminologyTerm terminologyTerm,
+      List<TerminologyTermEvidence> glossaryTermEvidence,
       List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
 
   public record TerminologyTerm(
@@ -77,7 +78,20 @@ public record GetProjectDetailView(
       ZonedDateTime candidateReviewChangedAt,
       String candidateReviewChangedByUsername,
       List<TerminologyTermSource> sources,
-      List<TerminologyTermExample> examples) {}
+      List<TerminologyTermExample> examples,
+      List<TerminologyTermEvidence> evidence) {}
+
+  public record TerminologyTermEvidence(
+      Long id,
+      String evidenceType,
+      String caption,
+      String imageKey,
+      Long tmTextUnitId,
+      Integer cropX,
+      Integer cropY,
+      Integer cropWidth,
+      Integer cropHeight,
+      Integer sortOrder) {}
 
   public record TerminologyTermSource(
       Long id, String sourceType, String sourceName, String sourceExternalId) {}
