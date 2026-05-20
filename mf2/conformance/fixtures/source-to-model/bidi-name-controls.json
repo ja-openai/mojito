@@ -1,0 +1,23 @@
+{
+  "name": "bidi-name-controls",
+  "source": "Hello, {$\u2066اسم\u2069}!",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Hello, ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "اسم" }
+      },
+      "!"
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "ar",
+      "arguments": { "اسم": "ليلى" },
+      "expected": "Hello, ليلى!"
+    }
+  ]
+}

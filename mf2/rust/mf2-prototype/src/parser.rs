@@ -547,7 +547,7 @@ impl<'a> Parser<'a> {
         let content = tokens[index]
             .strip_prefix(':')
             .expect("annotation starts with ':'");
-        let (name, rest) = split_name(content);
+        let (name, rest) = split_identifier(content);
         if name.is_empty() {
             self.push_diagnostic(
                 "missing-function-name",
@@ -590,7 +590,17 @@ impl<'a> Parser<'a> {
                 );
                 return None;
             }
-            options.insert(key.to_string(), parse_literal_or_variable(raw_value));
+            let (key, key_rest) = split_identifier(key);
+            if key.is_empty() || !key_rest.is_empty() || raw_value.is_empty() {
+                self.push_diagnostic(
+                    "invalid-function-option",
+                    "Function option key and value must be non-empty.",
+                    start,
+                    end,
+                );
+                return None;
+            }
+            options.insert(key, parse_literal_or_variable(raw_value));
         }
 
         Some(FunctionParseResult {
@@ -616,7 +626,17 @@ impl<'a> Parser<'a> {
             return None;
         }
         let Some((name, raw_value)) = content.split_once('=') else {
-            return Some((content.to_string(), AttributeValue::Present(true)));
+            let (name, rest) = split_identifier(content);
+            if name.is_empty() || !rest.is_empty() {
+                self.push_diagnostic(
+                    "invalid-attribute",
+                    "Attribute name must be a valid identifier.",
+                    start,
+                    end,
+                );
+                return None;
+            }
+            return Some((name, AttributeValue::Present(true)));
         };
         if name.is_empty() || raw_value.is_empty() {
             self.push_diagnostic(
@@ -628,7 +648,19 @@ impl<'a> Parser<'a> {
             return None;
         }
         Some((
-            name.to_string(),
+            {
+                let (name, rest) = split_identifier(name);
+                if name.is_empty() || !rest.is_empty() {
+                    self.push_diagnostic(
+                        "invalid-attribute",
+                        "Attribute name must be a valid identifier.",
+                        start,
+                        end,
+                    );
+                    return None;
+                }
+                name
+            },
             AttributeValue::Literal(parse_literal_or_variable(raw_value)),
         ))
     }
@@ -647,7 +679,7 @@ impl<'a> Parser<'a> {
             unreachable!("caller checked markup prefix")
         };
 
-        let (name, rest) = split_name(rest.trim_start());
+        let (name, rest) = split_identifier(rest.trim_start());
         if name.is_empty() {
             self.push_diagnostic(
                 "missing-markup-name",
@@ -687,7 +719,8 @@ impl<'a> Parser<'a> {
             return None;
         }
         self.advance_char();
-        let name = self.take_while(is_name_char);
+        let name_start = self.index;
+        let (name, rest) = split_name(&self.source[name_start..]);
         if name.is_empty() {
             self.push_diagnostic(
                 "missing-variable-name",
@@ -697,7 +730,8 @@ impl<'a> Parser<'a> {
             );
             return None;
         }
-        Some(name)
+        self.index = self.source.len() - rest.len();
+        Some(name.to_string())
     }
 
     fn skip_whitespace(&mut self) {
@@ -769,6 +803,12 @@ impl<'a> Parser<'a> {
 
 fn parse_literal_or_variable(raw_value: &str) -> ExpressionArg {
     if let Some(name) = raw_value.strip_prefix('$') {
+        let (name, rest) = split_name(name);
+        if !name.is_empty() && rest.is_empty() {
+            return ExpressionArg::Variable {
+                name: name.to_string(),
+            };
+        }
         ExpressionArg::Variable {
             name: name.to_string(),
         }
@@ -784,16 +824,142 @@ fn parse_literal_or_variable(raw_value: &str) -> ExpressionArg {
 }
 
 fn split_name(input: &str) -> (&str, &str) {
-    let mut end = 0;
-    for ch in input.chars() {
+    if input
+        .as_bytes()
+        .first()
+        .is_some_and(|byte| byte.is_ascii())
+    {
+        if let Some(split) = split_ascii_name(input, 0) {
+            return split;
+        }
+    }
+
+    let mut scan = 0;
+    if let Some(ch) = input.chars().next() {
+        if is_bidi_marker(ch) {
+            scan += ch.len_utf8();
+        }
+    }
+    if input[scan..]
+        .as_bytes()
+        .first()
+        .is_some_and(|byte| byte.is_ascii())
+    {
+        if let Some(split) = split_ascii_name(input, scan) {
+            return split;
+        }
+    }
+
+    let name_start = scan;
+    let Some(ch) = input[name_start..].chars().next() else {
+        return ("", input);
+    };
+    if !is_name_start(ch) {
+        return ("", input);
+    }
+    scan += ch.len_utf8();
+
+    while let Some(ch) = input[scan..].chars().next() {
         if !is_name_char(ch) {
             break;
         }
-        end += ch.len_utf8();
+        scan += ch.len_utf8();
     }
-    (&input[..end], &input[end..])
+    let name_end = scan;
+
+    if let Some(ch) = input[scan..].chars().next() {
+        if is_bidi_marker(ch) {
+            scan += ch.len_utf8();
+        }
+    }
+
+    (&input[name_start..name_end], &input[scan..])
+}
+
+fn split_ascii_name(input: &str, mut scan: usize) -> Option<(&str, &str)> {
+    let name_start = scan;
+    let bytes = input.as_bytes();
+    let byte = bytes.get(scan).copied()?;
+    if !byte.is_ascii() {
+        return None;
+    }
+    if !is_ascii_name_start(byte) {
+        return Some(("", input));
+    }
+    scan += 1;
+    while let Some(byte) = bytes.get(scan).copied() {
+        if !byte.is_ascii() {
+            break;
+        }
+        if !is_ascii_name_char(byte) {
+            break;
+        }
+        scan += 1;
+    }
+    if bytes.get(scan).is_some_and(|byte| !byte.is_ascii()) {
+        let ch = input[scan..].chars().next().expect("non-ascii char exists");
+        if !is_bidi_marker(ch) {
+            return None;
+        }
+        let name_end = scan;
+        scan += ch.len_utf8();
+        return Some((&input[name_start..name_end], &input[scan..]));
+    };
+    let name_end = scan;
+    Some((&input[name_start..name_end], &input[scan..]))
+}
+
+fn split_identifier(input: &str) -> (String, &str) {
+    let (namespace_or_name, rest) = split_name(input);
+    if namespace_or_name.is_empty() {
+        return (String::new(), input);
+    }
+    let original_rest = rest;
+    let Some(after_colon) = rest.strip_prefix(':') else {
+        return (namespace_or_name.to_string(), rest);
+    };
+    let (name, rest) = split_name(after_colon);
+    if name.is_empty() {
+        return (namespace_or_name.to_string(), original_rest);
+    }
+    (format!("{namespace_or_name}:{name}"), rest)
+}
+
+fn is_name_start(ch: char) -> bool {
+    if ch.is_ascii() {
+        return ch.is_ascii_alphabetic() || ch == '+' || ch == '_';
+    }
+    let code = ch as u32;
+    code >= 0xA1
+        && code <= 0x10FFFD
+        && !is_bidi_marker(ch)
+        && !ch.is_control()
+        && !ch.is_whitespace()
+        && !is_noncharacter(code)
 }
 
 fn is_name_char(ch: char) -> bool {
-    ch.is_ascii_alphanumeric() || ch == '_' || ch == '-'
+    if ch.is_ascii() {
+        return ch.is_ascii_alphanumeric() || matches!(ch, '+' | '_' | '-' | '.');
+    }
+    is_name_start(ch)
+}
+
+fn is_ascii_name_start(byte: u8) -> bool {
+    byte.is_ascii_alphabetic() || matches!(byte, b'+' | b'_')
+}
+
+fn is_ascii_name_char(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'_' | b'-' | b'.')
+}
+
+fn is_bidi_marker(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{2066}'..='\u{2069}'
+    )
+}
+
+fn is_noncharacter(code: u32) -> bool {
+    (0xFDD0..=0xFDEF).contains(&code) || (code & 0xFFFE == 0xFFFE)
 }

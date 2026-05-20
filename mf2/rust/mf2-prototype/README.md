@@ -32,6 +32,8 @@ Supported now:
 - escaped `\{`, `\}`, and `\\`
 - variable placeholders of the form `{$name}`
 - Unicode text, argument values, and quoted literals
+- Unicode MF2 variable names, edge bidi controls around names, and namespaced
+  identifiers
 - quoted pattern bodies for complex messages
 - `.input` declarations
 - `.local` declarations

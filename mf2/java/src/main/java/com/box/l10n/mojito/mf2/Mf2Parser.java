@@ -497,7 +497,7 @@ final class Mf2Parser {
     }
 
     private FunctionParseResult parseFunctionAnnotation(List<String> tokens, int index, int start, int end) {
-        NameSplit split = splitName(tokens.get(index).substring(1));
+        NameSplit split = splitIdentifier(tokens.get(index).substring(1));
         if (split.name().isEmpty()) {
             pushDiagnostic(
                     "missing-function-name",
@@ -530,7 +530,16 @@ final class Mf2Parser {
             }
             String key = token.substring(0, equals);
             String rawValue = token.substring(equals + 1);
-            options.put(key, parseLiteralOrVariable(rawValue));
+            NameSplit keySplit = splitIdentifier(key);
+            if (keySplit.name().isEmpty() || !keySplit.rest().isEmpty()) {
+                pushDiagnostic(
+                        "invalid-function-option",
+                        "Function option key must be a valid identifier.",
+                        start,
+                        end);
+                return null;
+            }
+            options.put(keySplit.name(), parseLiteralOrVariable(rawValue));
         }
 
         return new FunctionParseResult(new Mf2Message.FunctionRef(split.name(), options), index);
@@ -544,7 +553,16 @@ final class Mf2Parser {
         }
         int equals = content.indexOf('=');
         if (equals < 0) {
-            return new AttributeParseResult(content, new Mf2Message.PresentAttribute(true));
+            NameSplit split = splitIdentifier(content);
+            if (split.name().isEmpty() || !split.rest().isEmpty()) {
+                pushDiagnostic(
+                        "invalid-attribute",
+                        "Attribute name must be a valid identifier.",
+                        start,
+                        end);
+                return null;
+            }
+            return new AttributeParseResult(split.name(), new Mf2Message.PresentAttribute(true));
         }
         if (equals == 0 || equals == content.length() - 1) {
             pushDiagnostic(
@@ -554,8 +572,17 @@ final class Mf2Parser {
                     end);
             return null;
         }
+        NameSplit split = splitIdentifier(content.substring(0, equals));
+        if (split.name().isEmpty() || !split.rest().isEmpty()) {
+            pushDiagnostic(
+                    "invalid-attribute",
+                    "Attribute name must be a valid identifier.",
+                    start,
+                    end);
+            return null;
+        }
         return new AttributeParseResult(
-                content.substring(0, equals),
+                split.name(),
                 new Mf2Message.LiteralAttribute(parseLiteralOrVariable(content.substring(equals + 1))));
     }
 
@@ -576,7 +603,7 @@ final class Mf2Parser {
             rest = content.substring(1).trim();
         }
 
-        NameSplit split = splitName(rest.stripLeading());
+        NameSplit split = splitIdentifier(rest.stripLeading());
         if (split.name().isEmpty()) {
             pushDiagnostic(
                     "missing-markup-name",
@@ -614,8 +641,8 @@ final class Mf2Parser {
             return null;
         }
         advanceChar();
-        String name = takeWhile(Mf2Parser::isNameChar);
-        if (name.isEmpty()) {
+        NameScan scan = scanName(source, index);
+        if (scan.name().isEmpty()) {
             pushDiagnostic(
                     "missing-variable-name",
                     "Variable is missing a name.",
@@ -623,7 +650,8 @@ final class Mf2Parser {
                     index);
             return null;
         }
-        return name;
+        index = scan.endIndex();
+        return scan.name();
     }
 
     private void skipWhitespace() {
@@ -683,6 +711,10 @@ final class Mf2Parser {
 
     private static Mf2Message.ExpressionArgument parseLiteralOrVariable(String rawValue) {
         if (rawValue.startsWith("$")) {
+            NameSplit split = splitName(rawValue.substring(1));
+            if (!split.name().isEmpty() && split.rest().isEmpty()) {
+                return new Mf2Message.VariableArgument(split.name());
+            }
             return new Mf2Message.VariableArgument(rawValue.substring(1));
         }
         if (rawValue.startsWith("|") && rawValue.endsWith("|") && rawValue.length() >= 2) {
@@ -692,23 +724,143 @@ final class Mf2Parser {
     }
 
     private static NameSplit splitName(String input) {
-        int end = 0;
-        while (end < input.length()) {
-            char ch = input.charAt(end);
-            if (!isNameChar(ch)) {
-                break;
-            }
-            end += Character.charCount(ch);
-        }
-        return new NameSplit(input.substring(0, end), input.substring(end));
+        NameScan scan = scanName(input, 0);
+        return new NameSplit(scan.name(), input.substring(scan.endIndex()), scan.endIndex());
     }
 
-    private static boolean isNameChar(char ch) {
+    private static NameScan scanName(String input, int offset) {
+        int absoluteScan = offset;
+        if (absoluteScan < input.length()) {
+            int codePoint = input.codePointAt(absoluteScan);
+            if (isBidiMarker(codePoint)) {
+                absoluteScan += Character.charCount(codePoint);
+            }
+        }
+
+        int nameStart = absoluteScan;
+        if (nameStart >= input.length()) {
+            return new NameScan("", offset);
+        }
+        char first = input.charAt(nameStart);
+        if (first <= 0x7F) {
+            NameScan ascii = scanAsciiName(input, offset, nameStart);
+            if (ascii != null) {
+                return ascii;
+            }
+        }
+        int codePoint = input.codePointAt(nameStart);
+        if (!isNameStart(codePoint)) {
+            return new NameScan("", offset);
+        }
+        absoluteScan += Character.charCount(codePoint);
+
+        while (absoluteScan < input.length()) {
+            codePoint = input.codePointAt(absoluteScan);
+            if (!isNameChar(codePoint)) {
+                break;
+            }
+            absoluteScan += Character.charCount(codePoint);
+        }
+        int nameEnd = absoluteScan;
+
+        if (absoluteScan < input.length()) {
+            codePoint = input.codePointAt(absoluteScan);
+            if (isBidiMarker(codePoint)) {
+                absoluteScan += Character.charCount(codePoint);
+            }
+        }
+
+        return new NameScan(input.substring(nameStart, nameEnd), absoluteScan);
+    }
+
+    private static NameScan scanAsciiName(String input, int offset, int nameStart) {
+        char first = input.charAt(nameStart);
+        if (!isAsciiNameStart(first)) {
+            return new NameScan("", offset);
+        }
+        int scan = nameStart + 1;
+        while (scan < input.length() && isAsciiNameChar(input.charAt(scan))) {
+            scan++;
+        }
+        int nameEnd = scan;
+        if (scan < input.length()) {
+            int codePoint = input.codePointAt(scan);
+            if (codePoint > 0x7F) {
+                if (!isBidiMarker(codePoint)) {
+                    return null;
+                }
+                return new NameScan(
+                        input.substring(nameStart, nameEnd),
+                        scan + Character.charCount(codePoint));
+            }
+        }
+        return new NameScan(input.substring(nameStart, nameEnd), scan);
+    }
+
+    private static NameSplit splitIdentifier(String input) {
+        NameSplit namespaceOrName = splitName(input);
+        if (namespaceOrName.name().isEmpty()) {
+            return new NameSplit("", input, 0);
+        }
+        if (!namespaceOrName.rest().startsWith(":")) {
+            return namespaceOrName;
+        }
+        NameSplit name = splitName(namespaceOrName.rest().substring(1));
+        if (name.name().isEmpty()) {
+            return namespaceOrName;
+        }
+        return new NameSplit(
+                namespaceOrName.name() + ":" + name.name(),
+                name.rest(),
+                namespaceOrName.consumedLength() + 1 + name.consumedLength());
+    }
+
+    private static boolean isNameStart(int codePoint) {
+        if (codePoint <= 0x7F) {
+            return isAsciiNameStart((char) codePoint);
+        }
+        int type = Character.getType(codePoint);
+        return codePoint >= 0xA1
+                && codePoint <= 0x10FFFD
+                && !isBidiMarker(codePoint)
+                && type != Character.CONTROL
+                && type != Character.SURROGATE
+                && !Character.isWhitespace(codePoint)
+                && !Character.isSpaceChar(codePoint)
+                && !isNoncharacter(codePoint);
+    }
+
+    private static boolean isNameChar(int codePoint) {
+        if (codePoint <= 0x7F) {
+            return isAsciiNameChar((char) codePoint);
+        }
+        return isNameStart(codePoint)
+                || (codePoint >= '0' && codePoint <= '9')
+                || codePoint == '-'
+                || codePoint == '.';
+    }
+
+    private static boolean isAsciiNameStart(char ch) {
         return (ch >= 'a' && ch <= 'z')
                 || (ch >= 'A' && ch <= 'Z')
-                || (ch >= '0' && ch <= '9')
-                || ch == '_'
-                || ch == '-';
+                || ch == '+'
+                || ch == '_';
+    }
+
+    private static boolean isAsciiNameChar(char ch) {
+        return isAsciiNameStart(ch) || (ch >= '0' && ch <= '9') || ch == '-' || ch == '.';
+    }
+
+    private static boolean isBidiMarker(int codePoint) {
+        return codePoint == 0x061C
+                || codePoint == 0x200E
+                || codePoint == 0x200F
+                || (codePoint >= 0x2066 && codePoint <= 0x2069);
+    }
+
+    private static boolean isNoncharacter(int codePoint) {
+        return (codePoint >= 0xFDD0 && codePoint <= 0xFDEF)
+                || ((codePoint & 0xFFFE) == 0xFFFE);
     }
 
     private static String stripTrailingWhitespace(String value) {
@@ -719,7 +871,9 @@ final class Mf2Parser {
         return value.substring(0, end);
     }
 
-    private record NameSplit(String name, String rest) {}
+    private record NameSplit(String name, String rest, int consumedLength) {}
+
+    private record NameScan(String name, int endIndex) {}
 
     private record Tail(Mf2Message.FunctionRef function, Map<String, Mf2Message.AttributeValue> attributes) {}
 

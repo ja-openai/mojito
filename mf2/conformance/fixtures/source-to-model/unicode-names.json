@@ -1,0 +1,44 @@
+{
+  "name": "unicode-names",
+  "source": ".input {$café :number}\n.local $ユーザー = {|Mojito|}\n{{{$ユーザー}: {$café}}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "café",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "café" },
+          "function": { "type": "function", "name": "number" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "ユーザー",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "Mojito" }
+        }
+      }
+    ],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "ユーザー" }
+      },
+      ": ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "café" }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "café": 3 },
+      "expected": "Mojito: 3"
+    }
+  ]
+}

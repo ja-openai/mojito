@@ -8,6 +8,8 @@ Current target:
   JSON by test/demo tooling
 - parse MF2 source into the official MF2 Interchange Data Model for the current
   supported fixture slice
+- support Unicode MF2 variable names, edge bidi controls around names, and
+  namespaced identifiers in the source parser
 - preserve expression and markup attributes in parsed/decoded models, including
   quoted option/attribute values containing spaces
 - format the supported shared conformance fixture slice

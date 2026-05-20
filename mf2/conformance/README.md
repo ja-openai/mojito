@@ -94,6 +94,7 @@ The source-to-model fixtures currently cover:
 - simple text
 - variables
 - Unicode text, argument values, and quoted literals
+- Unicode variable names, bidi controls around names, and namespaced identifiers
 - escaped braces and backslash
 - function annotations and options, including quoted option values containing spaces
 - `.input`
@@ -106,8 +107,9 @@ The source-to-model fixtures currently cover:
   Japanese fixtures
 - ordinal plural category selection for English fixtures
 
-Variable, function, markup, and option names are still tested only with ASCII
-names. Full MF2 `name` grammar coverage remains open.
+Variable, function, markup, option, and attribute identifiers now have fixture
+coverage for Unicode names, edge bidi controls, and namespaces. Deeper invalid
+identifier and canonical-equivalence coverage remains open.
 
 The invalid-source fixtures currently cover:
 

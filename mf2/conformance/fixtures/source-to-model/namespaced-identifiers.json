@@ -1,0 +1,37 @@
+{
+  "name": "namespaced-identifiers",
+  "source": "Use {$value :ns:flag ns:mode=|display mode| @ns:note=|custom note|} and {#ui:link @ui:href=|profile|}open{/ui:link}.",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Use ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "value" },
+        "function": {
+          "type": "function",
+          "name": "ns:flag",
+          "options": {
+            "ns:mode": { "type": "literal", "value": "display mode" }
+          }
+        },
+        "attributes": {
+          "ns:note": { "type": "literal", "value": "custom note" }
+        }
+      },
+      " and ",
+      {
+        "type": "markup",
+        "kind": "open",
+        "name": "ui:link",
+        "attributes": {
+          "ui:href": { "type": "literal", "value": "profile" }
+        }
+      },
+      "open",
+      { "type": "markup", "kind": "close", "name": "ui:link" },
+      "."
+    ]
+  }
+}
