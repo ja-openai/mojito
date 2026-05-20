@@ -488,6 +488,15 @@ impl<'a> Parser<'a> {
                 return None;
             }
             let (name, value) = self.parse_attribute(token, start, end)?;
+            if attributes.contains_key(&name) {
+                self.push_diagnostic(
+                    "duplicate-attribute-name",
+                    "Attribute names must be unique within an expression or markup placeholder.",
+                    start,
+                    end,
+                );
+                return None;
+            }
             attributes.insert(name, value);
         }
 

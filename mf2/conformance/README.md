@@ -128,6 +128,7 @@ The invalid-source fixtures currently cover:
 - missing match selectors
 - invalid variable, function, option, and attribute names
 - duplicate function option names
+- duplicate expression and markup attribute names
 
 The format-error fixtures currently cover:
 

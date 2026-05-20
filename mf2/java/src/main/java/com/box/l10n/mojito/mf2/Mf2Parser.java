@@ -447,6 +447,14 @@ final class Mf2Parser {
             if (attribute == null) {
                 return null;
             }
+            if (attributes.containsKey(attribute.name())) {
+                pushDiagnostic(
+                        "duplicate-attribute-name",
+                        "Attribute names must be unique within an expression or markup placeholder.",
+                        start,
+                        end);
+                return null;
+            }
             attributes.put(attribute.name(), attribute.value());
         }
 
