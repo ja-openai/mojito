@@ -27,9 +27,10 @@ Both outputs are useful:
 
 Current size smoke results from CLDR `main` on 2026-05-19:
 
-- `en,fr,ru,ar,ja`: JSON ~12 KB, Python ~15 KB, Rust ~9 KB, Swift ~10 KB
+- `en,fr,ru,ar,ja`: JSON ~12 KB, Python ~15 KB, Rust ~9 KB, Swift ~10 KB,
+  Java ~12 KB
 - all CLDR plural locales: JSON ~125 KB, Python ~117 KB, Rust ~63 KB, Swift
-  ~82 KB
+  ~82 KB, Java ~74 KB
 
 For embedded clients, start with the product locale allowlist. The all-locale
 Rust/Swift generated implementation is still small, but the allowlist keeps app
@@ -41,6 +42,8 @@ The generator emits:
 - `python/plural_rules.py`: Python evaluator and generated data
 - `rust/plural_rules.rs`: Rust evaluator and generated data
 - `swift/PluralRules.swift`: Swift evaluator and generated data
+- `java/com/box/l10n/mojito/mf2/GeneratedPluralRules.java`: Java evaluator
+  and generated data
 
 Locale IDs in generated data are canonical BCP47-style keys such as `pt-PT`,
 not CLDR underscore keys. The generated evaluators accept underscore input for
@@ -50,9 +53,10 @@ plural-specific parent locale data. CLDR's general resource `parentLocales`
 rules are intentionally not applied to plural selection; ICU4J comparison probes
 cover cases like `pt-AO`, `sr-Latn`, `az-Arab`, and Unicode extensions.
 
-The current Rust runtime includes the generated Rust file by path. The Python
-and Swift runtime starters vendor the generated minimal file into their package
-trees so they remain installable without reaching outside the package.
+The current Rust and Java runtimes compile the generated minimal file by path.
+The Python and Swift runtime starters vendor the generated minimal file into
+their package trees so they remain installable without reaching outside the
+package.
 
 Validate generated all-locale cardinal and ordinal category selection against
 ICU4J `PluralRules`:

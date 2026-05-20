@@ -15,8 +15,8 @@ The third argument is untimed warmup iterations. This matters for JVM and other
 managed runtimes, but we use it for every language so the comparison shape stays
 consistent.
 
-`compare.sh` includes Mojito's Rust, Swift, and Python runtime starters plus the
-ICU4J and optional ICU4C++ reference harnesses. Reference harnesses compile
+`compare.sh` includes Mojito's Rust, Swift, Python, and Java runtime starters
+plus the ICU4J and optional ICU4C++ reference harnesses. Reference harnesses compile
 `MessageFormatter` instances before the timed loop and skip unsupported fixture
 cases with an explicit count.
 
@@ -39,11 +39,12 @@ the RSS measurements.
 
 Run on 2026-05-19 with 100,000 timed iterations and 10,000 warmup iterations:
 
-- Rust prototype: 35 cases, about 2.1M ops/sec
-- Swift runtime: 35 cases, about 1.4M ops/sec
-- Python runtime: 35 cases, about 0.32M ops/sec
-- ICU4J 78.3: 31 supported cases, about 0.18M ops/sec
-- ICU4C++ 77.1: 31 supported cases, about 0.05M ops/sec
+- Rust prototype: 45 cases, about 2.3M ops/sec
+- Swift runtime: 45 cases, about 1.0M ops/sec
+- Java runtime: 45 cases, about 1.3M ops/sec
+- Python runtime: 45 cases, about 0.23M ops/sec
+- ICU4J 78.3: 41 supported cases, about 0.15M ops/sec
+- ICU4C++ 77.1: 41 supported cases, about 0.04M ops/sec
 
 RSS smoke run with 10,000 timed iterations and 2,000 warmup iterations:
 

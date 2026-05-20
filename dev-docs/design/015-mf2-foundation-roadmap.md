@@ -10,9 +10,9 @@ The program has three tracks:
 
 - Mojito UI: best-in-class MF2 translation, review, diagnostics, preview, and
   migration tooling.
-- Runtime libraries: production-grade Python and native Swift first, with Rust
-  as the parser/tooling/LSP core unless a production Rust runtime becomes a
-  direct priority.
+- Runtime libraries: production-grade Python and native Swift first, Java/JVM as
+  the low-friction Mojito/Kotlin path, with Rust as the parser/tooling/LSP core
+  unless a production Rust runtime becomes a direct priority.
 - Conformance: one shared suite that every parser, formatter, compiler, and
   runtime must pass.
 
@@ -43,6 +43,8 @@ The program has three tracks:
   ship a parser unless they need dynamic runtime messages.
 - Python remains a real runtime gap. Babel provides useful i18n/catalog/CLDR
   infrastructure, but not an MF2 parser/formatter/runtime.
+- Java should stay zero runtime dependency for Mojito and Kotlin interop. ICU4J
+  remains a reference and comparison harness, not the default runtime dependency.
 
 ## Architecture
 
@@ -87,9 +89,10 @@ V0 scope:
 - support `.input` declarations for selector annotations
 - support `.match` with `:number` plural selection and `:string` exact selection
 - generate CLDR cardinal and ordinal plural rules for a locale allowlist
-- format from the Unicode MF2 Interchange Data Model in Rust, Swift, and Python
-- ship Swift/Rust embedded runtimes without parser or JSON CLDR data when using
-  generated code
+- format from the Unicode MF2 Interchange Data Model in Rust, Swift, Python, and
+  Java
+- ship Swift/Rust/Java embedded runtimes without parser or JSON CLDR data when
+  using generated code
 - compare supported cases against ICU4J and ICU4C++ reference harnesses
 
 V0 explicitly excludes:

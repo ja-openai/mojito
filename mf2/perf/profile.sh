@@ -25,6 +25,7 @@ case "${MODE}" in
   rss)
     (cd reference/icu4j && sh run.sh --prepare-only)
     (cd reference/icu4cxx && sh run.sh --prepare-only "../../${FIXTURES}")
+    (cd java && sh run.sh --prepare-only)
     run_with_time \
       "rust release format" \
       sh -c "cd rust/mf2-prototype && cargo run --release -- bench '../../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
@@ -34,6 +35,9 @@ case "${MODE}" in
     run_with_time \
       "python format" \
       sh -c "cd python && python3 -m mf2_runtime.benchmark '../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
+    run_with_time \
+      "java warmed format" \
+      sh -c "cd java && sh run.sh --no-prepare bench '../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
     run_with_time \
       "icu4j warmed format" \
       sh -c "cd reference/icu4j && sh run.sh --no-prepare bench '../../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
