@@ -32,3 +32,7 @@ dependency-free and useful for showing how function options flow through the
 model, but it is not a CLDR-complete replacement for production number and
 currency formatting. See `../reference/fixtures/currency-simple-vs-icu4j.json`
 for examples that separate current demo matches from known ICU4J divergences.
+
+The demos also include a `file.saved` case that requests default bidi isolation
+around a Hebrew filename embedded in English text. The isolate controls are
+invisible in most terminals, but the case asserts the actual FSI/PDI characters.

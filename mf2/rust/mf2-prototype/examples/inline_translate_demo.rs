@@ -3,7 +3,10 @@ use std::fs;
 use std::path::Path;
 
 use demo_functions::demo_function_registry;
-use mf2_prototype::{format_model_with_locale_and_functions, parse_to_model, FunctionRegistry};
+use mf2_prototype::{
+    format_model_with_locale_and_functions_and_bidi, parse_to_model, BidiIsolation,
+    FunctionRegistry,
+};
 use serde::Deserialize;
 
 mod demo_functions;
@@ -18,6 +21,9 @@ struct DemoCase {
     label: String,
     source: String,
     locale: String,
+    #[serde(rename = "bidiIsolation")]
+    #[serde(default)]
+    bidi_isolation: Option<String>,
     arguments: BTreeMap<String, serde_json::Value>,
     expected: String,
 }
@@ -27,21 +33,35 @@ fn translate(
     locale: &str,
     arguments: BTreeMap<String, serde_json::Value>,
     functions: &FunctionRegistry,
+    bidi_isolation: BidiIsolation,
 ) -> String {
     let parsed = parse_to_model(source);
     if !parsed.diagnostics.is_empty() {
         panic!("parse failed: {:?}", parsed.diagnostics);
     }
     let model = parsed.model.expect("parser returned model");
-    format_model_with_locale_and_functions(&model, &arguments, locale, functions)
-        .unwrap_or_else(|diagnostic| panic!("format failed: {diagnostic:?}"))
+    format_model_with_locale_and_functions_and_bidi(
+        &model,
+        &arguments,
+        locale,
+        functions,
+        bidi_isolation,
+    )
+    .unwrap_or_else(|diagnostic| panic!("format failed: {diagnostic:?}"))
 }
 
 fn main() {
     let demo = load_demo(Path::new("../../examples/inline-source-demo.json"));
     let functions = demo_function_registry();
     for case in demo.cases {
-        let actual = translate(&case.source, &case.locale, case.arguments, &functions);
+        let bidi_isolation = BidiIsolation::from_name(case.bidi_isolation.as_deref());
+        let actual = translate(
+            &case.source,
+            &case.locale,
+            case.arguments,
+            &functions,
+            bidi_isolation,
+        );
         assert_eq!(actual, case.expected, "{}/{}", case.label, case.locale);
         println!("{}[{}] -> \"{actual}\"", case.label, case.locale);
     }

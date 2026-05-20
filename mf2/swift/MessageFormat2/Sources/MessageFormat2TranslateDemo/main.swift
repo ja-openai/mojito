@@ -8,26 +8,28 @@ private let catalog = try Catalog.load(
 )
 private let functions = demoFunctionRegistry()
 
-private let examples: [(String, String, [String: MF2Value], String)] = [
-    ("welcome", "fr", ["name": .string("Mojito")], "Bienvenue, Mojito !"),
-    ("welcome", "fr-CA", ["name": .string("Mojito")], "Bienvenue, Mojito !"),
-    ("checkout.total", "en", ["amount": .number("1234.5")], "Total: $1,234.50"),
-    ("checkout.total", "fr", ["amount": .number("1234.5")], "Total : 1\u{202f}234,50 €"),
-    ("cart.items", "en", ["count": .number("1")], "1 item"),
-    ("cart.items", "en", ["count": .number("5")], "5 items"),
-    ("cart.items", "ru", ["count": .number("2")], "2 предмета"),
-    ("cart.items", "ru", ["count": .number("5")], "5 предметов"),
-    ("assignee.files", "en", ["gender": .string("male"), "count": .number("1")], "He reviewed 1 file"),
-    ("assignee.files", "en", ["gender": .string("female"), "count": .number("3")], "She reviewed 3 files"),
-    ("assignee.files", "en", ["gender": .string("unknown"), "count": .number("2")], "They reviewed 2 files"),
+private let examples: [(String, String, [String: MF2Value], MF2BidiIsolation, String)] = [
+    ("welcome", "fr", ["name": .string("Mojito")], .none, "Bienvenue, Mojito !"),
+    ("welcome", "fr-CA", ["name": .string("Mojito")], .none, "Bienvenue, Mojito !"),
+    ("checkout.total", "en", ["amount": .number("1234.5")], .none, "Total: $1,234.50"),
+    ("checkout.total", "fr", ["amount": .number("1234.5")], .none, "Total : 1\u{202f}234,50 €"),
+    ("file.saved", "en", ["fileName": .string("שלום.txt")], .default, "File \u{2068}שלום.txt\u{2069} saved."),
+    ("cart.items", "en", ["count": .number("1")], .none, "1 item"),
+    ("cart.items", "en", ["count": .number("5")], .none, "5 items"),
+    ("cart.items", "ru", ["count": .number("2")], .none, "2 предмета"),
+    ("cart.items", "ru", ["count": .number("5")], .none, "5 предметов"),
+    ("assignee.files", "en", ["gender": .string("male"), "count": .number("1")], .none, "He reviewed 1 file"),
+    ("assignee.files", "en", ["gender": .string("female"), "count": .number("3")], .none, "She reviewed 3 files"),
+    ("assignee.files", "en", ["gender": .string("unknown"), "count": .number("2")], .none, "They reviewed 2 files"),
 ]
 
-for (messageID, locale, arguments, expected) in examples {
+for (messageID, locale, arguments, bidiIsolation, expected) in examples {
     let actual = try catalog.translate(
         messageID,
         locale: locale,
         arguments: arguments,
-        functions: functions
+        functions: functions,
+        bidiIsolation: bidiIsolation
     )
     guard actual == expected else {
         throw DemoError.mismatch(messageID: messageID, locale: locale, expected: expected, actual: actual)
@@ -46,10 +48,16 @@ private struct Catalog: Decodable {
         _ messageID: String,
         locale: String,
         arguments: [String: MF2Value],
-        functions: MF2FunctionRegistry
+        functions: MF2FunctionRegistry,
+        bidiIsolation: MF2BidiIsolation = .none
     ) throws -> String {
         let model = try model(messageID, locale: locale)
-        return try model.format(arguments: arguments, locale: locale, functions: functions)
+        return try model.format(
+            arguments: arguments,
+            locale: locale,
+            functions: functions,
+            bidiIsolation: bidiIsolation
+        )
     }
 
     private func model(_ messageID: String, locale: String) throws -> MF2Message {

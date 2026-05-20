@@ -31,9 +31,16 @@ class Catalog:
         message_id: str,
         locale: str,
         arguments: dict[str, Any] | None = None,
+        bidi_isolation: str = "none",
     ) -> str:
         model = self._model(message_id, locale)
-        return format_message(model, arguments or {}, locale, self.functions)
+        return format_message(
+            model,
+            arguments or {},
+            locale,
+            self.functions,
+            bidi_isolation=bidi_isolation,
+        )
 
     def _model(self, message_id: str, locale: str) -> dict[str, Any]:
         localized = self.messages[message_id]
@@ -47,21 +54,28 @@ def main() -> int:
     catalog = Catalog.load(Path(__file__).resolve().parents[2] / "examples" / "catalog.json")
 
     examples = [
-        ("welcome", "fr", {"name": "Mojito"}, "Bienvenue, Mojito !"),
-        ("welcome", "fr-CA", {"name": "Mojito"}, "Bienvenue, Mojito !"),
-        ("checkout.total", "en", {"amount": 1234.5}, "Total: $1,234.50"),
-        ("checkout.total", "fr", {"amount": 1234.5}, "Total : 1\u202f234,50 €"),
-        ("cart.items", "en", {"count": 1}, "1 item"),
-        ("cart.items", "en", {"count": 5}, "5 items"),
-        ("cart.items", "ru", {"count": 2}, "2 предмета"),
-        ("cart.items", "ru", {"count": 5}, "5 предметов"),
-        ("assignee.files", "en", {"gender": "male", "count": 1}, "He reviewed 1 file"),
-        ("assignee.files", "en", {"gender": "female", "count": 3}, "She reviewed 3 files"),
-        ("assignee.files", "en", {"gender": "unknown", "count": 2}, "They reviewed 2 files"),
+        ("welcome", "fr", {"name": "Mojito"}, "none", "Bienvenue, Mojito !"),
+        ("welcome", "fr-CA", {"name": "Mojito"}, "none", "Bienvenue, Mojito !"),
+        ("checkout.total", "en", {"amount": 1234.5}, "none", "Total: $1,234.50"),
+        ("checkout.total", "fr", {"amount": 1234.5}, "none", "Total : 1\u202f234,50 €"),
+        (
+            "file.saved",
+            "en",
+            {"fileName": "שלום.txt"},
+            "default",
+            "File \u2068שלום.txt\u2069 saved.",
+        ),
+        ("cart.items", "en", {"count": 1}, "none", "1 item"),
+        ("cart.items", "en", {"count": 5}, "none", "5 items"),
+        ("cart.items", "ru", {"count": 2}, "none", "2 предмета"),
+        ("cart.items", "ru", {"count": 5}, "none", "5 предметов"),
+        ("assignee.files", "en", {"gender": "male", "count": 1}, "none", "He reviewed 1 file"),
+        ("assignee.files", "en", {"gender": "female", "count": 3}, "none", "She reviewed 3 files"),
+        ("assignee.files", "en", {"gender": "unknown", "count": 2}, "none", "They reviewed 2 files"),
     ]
 
-    for message_id, locale, arguments, expected in examples:
-        actual = catalog.translate(message_id, locale, arguments)
+    for message_id, locale, arguments, bidi_isolation, expected in examples:
+        actual = catalog.translate(message_id, locale, arguments, bidi_isolation)
         if actual != expected:
             raise AssertionError(f"{message_id}/{locale}: expected {expected!r}, got {actual!r}")
         print(f'{message_id}[{locale}] -> "{actual}"')

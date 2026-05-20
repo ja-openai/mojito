@@ -14,6 +14,13 @@ public final class TranslateDemo {
                 + catalog.translate("checkout.total", "en", Map.of("amount", 1234.5)) + "\"");
         System.out.println("checkout.total[fr] -> \""
                 + catalog.translate("checkout.total", "fr", Map.of("amount", 1234.5)) + "\"");
+        System.out.println("file.saved[en] -> \""
+                + catalog.translate(
+                        "file.saved",
+                        "en",
+                        Map.of("fileName", "שלום.txt"),
+                        Mf2BidiIsolation.DEFAULT)
+                + "\"");
         System.out.println("cart.items[en] -> \"" + catalog.translate("cart.items", "en", Map.of("count", 1)) + "\"");
         System.out.println("cart.items[en] -> \"" + catalog.translate("cart.items", "en", Map.of("count", 5)) + "\"");
         System.out.println("cart.items[ru] -> \"" + catalog.translate("cart.items", "ru", Map.of("count", 2)) + "\"");
@@ -32,9 +39,15 @@ public final class TranslateDemo {
         }
 
         String translate(String id, String locale, Map<String, ?> arguments) throws Mf2Exception {
+            return translate(id, locale, arguments, Mf2BidiIsolation.NONE);
+        }
+
+        String translate(
+                String id, String locale, Map<String, ?> arguments, Mf2BidiIsolation bidiIsolation)
+                throws Mf2Exception {
             Map<String, Object> localized = object(messages.get(id));
             Object model = LocaleKey.lookup(localized, locale);
-            return Mf2Message.fromJson(model).format(arguments, locale, functions);
+            return Mf2Message.fromJson(model).format(arguments, locale, functions, bidiIsolation);
         }
     }
 

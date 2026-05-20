@@ -22,6 +22,14 @@
       "expected": "Total : 1\u202f234,50 €"
     },
     {
+      "label": "file.saved",
+      "source": "File {$fileName} saved.",
+      "locale": "en",
+      "bidiIsolation": "default",
+      "arguments": { "fileName": "\u05e9\u05dc\u05d5\u05dd.txt" },
+      "expected": "File \u2068\u05e9\u05dc\u05d5\u05dd.txt\u2069 saved."
+    },
+    {
       "label": "cart.items",
       "source": ".input {$count :number}\n.match $count\none {{{$count} item}}\n* {{{$count} items}}",
       "locale": "en",

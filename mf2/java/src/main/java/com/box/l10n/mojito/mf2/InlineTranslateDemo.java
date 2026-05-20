@@ -18,7 +18,11 @@ public final class InlineTranslateDemo {
             String path = "$.cases[" + index + "]";
             DemoCase demoCase = DemoCase.from(object(cases.get(index), path), path);
             String actual = translate(
-                    demoCase.source(), demoCase.locale(), demoCase.arguments(), functions);
+                    demoCase.source(),
+                    demoCase.locale(),
+                    demoCase.arguments(),
+                    functions,
+                    demoCase.bidiIsolation());
             if (!actual.equals(demoCase.expected())) {
                 throw new AssertionError(
                         demoCase.label() + "[" + demoCase.locale() + "] expected \""
@@ -33,19 +37,21 @@ public final class InlineTranslateDemo {
             String source,
             String locale,
             Map<String, ?> arguments,
-            Mf2FunctionRegistry functions)
+            Mf2FunctionRegistry functions,
+            Mf2BidiIsolation bidiIsolation)
             throws Mf2Exception {
         ParseResult result = Mf2Parser.parseToModel(source);
         if (result.hasDiagnostics()) {
             throw new Mf2Exception("parse-error", result.diagnostics().toString());
         }
-        return result.model().format(arguments, locale, functions);
+        return result.model().format(arguments, locale, functions, bidiIsolation);
     }
 
     private record DemoCase(
             String label,
             String source,
             String locale,
+            Mf2BidiIsolation bidiIsolation,
             Map<String, Object> arguments,
             String expected) {
         static DemoCase from(Map<String, Object> raw, String path) {
@@ -53,9 +59,15 @@ public final class InlineTranslateDemo {
                     string(requiredField(raw, "label", path), path + ".label"),
                     string(requiredField(raw, "source", path), path + ".source"),
                     string(requiredField(raw, "locale", path), path + ".locale"),
+                    Mf2BidiIsolation.fromName(
+                            string(optionalField(raw, "bidiIsolation", "none"), path + ".bidiIsolation")),
                     object(requiredField(raw, "arguments", path), path + ".arguments"),
                     string(requiredField(raw, "expected", path), path + ".expected"));
         }
+    }
+
+    private static Object optionalField(Map<String, Object> object, String field, Object defaultValue) {
+        return object.containsKey(field) ? object.get(field) : defaultValue;
     }
 
     private static Object requiredField(Map<String, Object> object, String field, String path) {

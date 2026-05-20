@@ -4,7 +4,8 @@ use std::path::Path;
 
 use demo_functions::demo_function_registry;
 use mf2_prototype::{
-    format_model_with_locale_and_functions, lookup_locale, FunctionRegistry, MessageModel,
+    format_model_with_locale_and_functions_and_bidi, lookup_locale, BidiIsolation,
+    FunctionRegistry, MessageModel,
 };
 use serde::Deserialize;
 
@@ -29,10 +30,17 @@ impl Catalog {
         locale: &str,
         arguments: BTreeMap<String, serde_json::Value>,
         functions: &FunctionRegistry,
+        bidi_isolation: BidiIsolation,
     ) -> String {
         let model = self.model(message_id, locale);
-        format_model_with_locale_and_functions(model, &arguments, locale, functions)
-            .unwrap_or_else(|diagnostic| panic!("format failed: {diagnostic:?}"))
+        format_model_with_locale_and_functions_and_bidi(
+            model,
+            &arguments,
+            locale,
+            functions,
+            bidi_isolation,
+        )
+        .unwrap_or_else(|diagnostic| panic!("format failed: {diagnostic:?}"))
     }
 
     fn model(&self, message_id: &str, locale: &str) -> &MessageModel {
@@ -53,38 +61,66 @@ fn main() {
             "welcome",
             "fr",
             args([("name", serde_json::Value::String("Mojito".to_string()))]),
+            BidiIsolation::None,
             "Bienvenue, Mojito !",
         ),
         (
             "welcome",
             "fr-CA",
             args([("name", serde_json::Value::String("Mojito".to_string()))]),
+            BidiIsolation::None,
             "Bienvenue, Mojito !",
         ),
         (
             "checkout.total",
             "en",
             args([("amount", serde_json::Value::from(1234.5))]),
+            BidiIsolation::None,
             "Total: $1,234.50",
         ),
         (
             "checkout.total",
             "fr",
             args([("amount", serde_json::Value::from(1234.5))]),
+            BidiIsolation::None,
             "Total : 1\u{202f}234,50 €",
         ),
-        ("cart.items", "en", args([("count", 1.into())]), "1 item"),
-        ("cart.items", "en", args([("count", 5.into())]), "5 items"),
+        (
+            "file.saved",
+            "en",
+            args([(
+                "fileName",
+                serde_json::Value::String("שלום.txt".to_string()),
+            )]),
+            BidiIsolation::Default,
+            "File \u{2068}שלום.txt\u{2069} saved.",
+        ),
+        (
+            "cart.items",
+            "en",
+            args([("count", 1.into())]),
+            BidiIsolation::None,
+            "1 item",
+        ),
+        (
+            "cart.items",
+            "en",
+            args([("count", 5.into())]),
+            BidiIsolation::None,
+            "5 items",
+        ),
         (
             "cart.items",
             "ru",
             args([("count", 2.into())]),
+            BidiIsolation::None,
             "2 предмета",
         ),
         (
             "cart.items",
             "ru",
             args([("count", 5.into())]),
+            BidiIsolation::None,
             "5 предметов",
         ),
         (
@@ -94,6 +130,7 @@ fn main() {
                 ("gender", serde_json::Value::String("male".to_string())),
                 ("count", 1.into()),
             ]),
+            BidiIsolation::None,
             "He reviewed 1 file",
         ),
         (
@@ -103,6 +140,7 @@ fn main() {
                 ("gender", serde_json::Value::String("female".to_string())),
                 ("count", 3.into()),
             ]),
+            BidiIsolation::None,
             "She reviewed 3 files",
         ),
         (
@@ -112,12 +150,13 @@ fn main() {
                 ("gender", serde_json::Value::String("unknown".to_string())),
                 ("count", 2.into()),
             ]),
+            BidiIsolation::None,
             "They reviewed 2 files",
         ),
     ];
 
-    for (message_id, locale, arguments, expected) in examples {
-        let actual = catalog.translate(message_id, locale, arguments, &functions);
+    for (message_id, locale, arguments, bidi_isolation, expected) in examples {
+        let actual = catalog.translate(message_id, locale, arguments, &functions, bidi_isolation);
         assert_eq!(actual, expected, "{message_id}/{locale}");
         println!("{message_id}[{locale}] -> \"{actual}\"");
     }
