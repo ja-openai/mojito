@@ -15,11 +15,14 @@ Current target:
 
 `pom.xml` runs the shared CLDR plural generator during Maven's
 `generate-sources` phase and compiles the generated Java source from
-`target/generated-sources/mf2-cldr/java`. The checked-in
+`target/generated-sources/java`. The checked-in
 `../cldr/generated/all` tree remains generator/reference output, not a Java
 source root. The project has no runtime dependencies; Maven plugins are
 build-time only. Override the generated locale set with
-`-Dmf2.cldr.locales=en,fr` for custom build experiments.
+`-Dmf2.cldr.locales=en,fr` for custom build experiments. Java builds pass
+`--targets java --java-source-root --java-package ...` to the generator so Maven
+does not emit unused Python, Rust, or Swift files and the generated source root
+contains only normal Java package directories.
 
 The runtime is parser-free: production callers can pass compiled message models
 or catalog resources without shipping a source parser. `JsonParser` is included

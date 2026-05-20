@@ -14,9 +14,11 @@
 
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
-    <mf2.cldr.generated.dir>${project.build.directory}/generated-sources/mf2-cldr</mf2.cldr.generated.dir>
+    <mf2.cldr.generated.dir>${project.build.directory}/generated-sources/java</mf2.cldr.generated.dir>
     <mf2.cldr.locales>all</mf2.cldr.locales>
     <mf2.cldr.ref>main</mf2.cldr.ref>
+    <mf2.cldr.targets>java</mf2.cldr.targets>
+    <mf2.java.package>com.box.l10n.mojito.mf2</mf2.java.package>
     <mf2.python.executable>python3</mf2.python.executable>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -43,6 +45,13 @@
                 <argument>${mf2.cldr.locales}</argument>
                 <argument>--cldr-ref</argument>
                 <argument>${mf2.cldr.ref}</argument>
+                <argument>--targets</argument>
+                <argument>${mf2.cldr.targets}</argument>
+                <argument>--java-package</argument>
+                <argument>${mf2.java.package}</argument>
+                <argument>--java-source-root</argument>
+                <argument>--clean</argument>
+                <argument>--quiet</argument>
                 <argument>--out</argument>
                 <argument>${mf2.cldr.generated.dir}</argument>
               </arguments>
@@ -63,7 +72,7 @@
             </goals>
             <configuration>
               <sources>
-                <source>${mf2.cldr.generated.dir}/java</source>
+                <source>${mf2.cldr.generated.dir}</source>
               </sources>
             </configuration>
           </execution>

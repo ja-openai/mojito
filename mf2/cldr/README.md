@@ -16,6 +16,8 @@ Generate a custom locale subset for an embedded or product-specific build:
 ```sh
 python3 generator/generate_plural_rules.py \
   --locales en,fr,ru,ar,ja \
+  --targets java \
+  --java-source-root \
   --out /tmp/mf2-plurals-custom
 ```
 
@@ -41,6 +43,11 @@ The generator emits:
 - `swift/PluralRules.swift`: Swift evaluator and generated data
 - `java/com/box/l10n/mojito/mf2/GeneratedPluralRules.java`: Java evaluator
   and generated data
+
+Use `--targets` to emit only the files a language build needs. For example,
+Java's Maven build runs the shared generator with
+`--targets java --java-source-root --quiet` into `target/generated-sources`, and
+`--java-package` controls the generated package name.
 
 The generated evaluators intentionally depend on each runtime's tiny
 `LocaleKey` helper for canonicalization and structural lookup. The generated

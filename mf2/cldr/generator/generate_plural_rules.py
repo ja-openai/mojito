@@ -5,6 +5,7 @@ import argparse
 import json
 import pprint
 import re
+import shutil
 import sys
 import urllib.request
 from dataclasses import dataclass
@@ -26,6 +27,7 @@ CLDR_KEYS = {
 }
 PLURAL_CATEGORIES = ("zero", "one", "two", "few", "many", "other")
 OPERANDS = ("n", "i", "v", "w", "f", "t", "e", "c")
+OUTPUT_TARGETS = ("json", "python", "rust", "swift", "java")
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", default="generated/all", help="Output directory.")
     parser.add_argument("--cldr-ref", default="main", help="unicode-org/cldr-json git ref.")
     parser.add_argument(
+        "--targets",
+        default="all",
+        help="Comma-separated output targets: json,python,rust,swift,java, or 'all'.",
+    )
+    parser.add_argument(
+        "--java-package",
+        default="com.box.l10n.mojito.mf2",
+        help="Java package for generated Java sources.",
+    )
+    parser.add_argument(
+        "--java-source-root",
+        action="store_true",
+        help="Write Java package directories directly under --out instead of --out/java.",
+    )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Remove the output directory before writing generated files.",
+    )
+    parser.add_argument("--quiet", action="store_true", help="Do not print a generation summary.")
+    parser.add_argument(
         "--types",
         default="cardinal,ordinal",
         help="Comma-separated plural types to generate: cardinal,ordinal.",
@@ -66,6 +89,8 @@ def main(argv: list[str] | None = None) -> int:
     if unknown_types:
         raise SystemExit(f"Unknown plural types: {', '.join(unknown_types)}")
 
+    output_targets = select_output_targets(args.targets)
+
     raw_data = {
         plural_type: fetch_cldr_rules(plural_type, args.cldr_ref)
         for plural_type in plural_types
@@ -75,32 +100,78 @@ def main(argv: list[str] | None = None) -> int:
     generated = build_generated_data(raw_data, parent_locales, selected_locales, args.cldr_ref)
 
     out = Path(args.out)
-    write_json(out / "plural_rules.json", generated)
-    write_python(out / "python" / "plural_rules.py", generated)
-    write_rust(out / "rust" / "plural_rules.rs", generated)
-    write_swift(out / "swift" / "PluralRules.swift", generated)
-    write_java(
-        out / "java" / "com" / "box" / "l10n" / "mojito" / "mf2" / "GeneratedPluralRules.java",
-        generated,
-    )
+    if args.clean:
+        shutil.rmtree(out, ignore_errors=True)
 
-    size_summary = {
-        "json": (out / "plural_rules.json").stat().st_size,
-        "python": (out / "python" / "plural_rules.py").stat().st_size,
-        "rust": (out / "rust" / "plural_rules.rs").stat().st_size,
-        "swift": (out / "swift" / "PluralRules.swift").stat().st_size,
-        "java": (
-            out / "java" / "com" / "box" / "l10n" / "mojito" / "mf2" / "GeneratedPluralRules.java"
-        ).stat().st_size,
-    }
-    print(
-        "Generated CLDR plural rules "
-        f"locales={len(generated['locales'])} "
-        f"cardinalRuleSets={len(generated.get('cardinal', {}).get('rules', []))} "
-        f"ordinalRuleSets={len(generated.get('ordinal', {}).get('rules', []))} "
-        f"bytes={size_summary}"
+    output_paths = write_outputs(
+        out,
+        generated,
+        output_targets,
+        args.java_package,
+        args.java_source_root,
     )
+    if not args.quiet:
+        size_summary = {
+            target: path.stat().st_size
+            for target, path in output_paths.items()
+        }
+        print(
+            "Generated CLDR plural rules "
+            f"locales={len(generated['locales'])} "
+            f"cardinalRuleSets={len(generated.get('cardinal', {}).get('rules', []))} "
+            f"ordinalRuleSets={len(generated.get('ordinal', {}).get('rules', []))} "
+            f"targets={output_targets} "
+            f"bytes={size_summary}"
+        )
     return 0
+
+
+def select_output_targets(target_arg: str) -> list[str]:
+    if target_arg.strip().lower() == "all":
+        return list(OUTPUT_TARGETS)
+    selected = [item.strip().lower() for item in target_arg.split(",") if item.strip()]
+    unknown = sorted(set(selected) - set(OUTPUT_TARGETS))
+    if unknown:
+        raise SystemExit(f"Unknown output targets: {', '.join(unknown)}")
+    if not selected:
+        raise SystemExit("At least one output target is required.")
+    return list(dict.fromkeys(selected))
+
+
+def write_outputs(
+    out: Path,
+    generated: dict[str, Any],
+    output_targets: list[str],
+    java_package: str,
+    java_source_root: bool,
+) -> dict[str, Path]:
+    java_base = out if java_source_root else out / "java"
+    paths = {
+        "json": out / "plural_rules.json",
+        "python": out / "python" / "plural_rules.py",
+        "rust": out / "rust" / "plural_rules.rs",
+        "swift": out / "swift" / "PluralRules.swift",
+        "java": java_base / java_package_path(java_package) / "GeneratedPluralRules.java",
+    }
+    writers = {
+        "json": write_json,
+        "python": write_python,
+        "rust": write_rust,
+        "swift": write_swift,
+    }
+    for target in output_targets:
+        if target == "java":
+            write_java(paths[target], generated, java_package)
+        else:
+            writers[target](paths[target], generated)
+    return {target: paths[target] for target in output_targets}
+
+
+def java_package_path(java_package: str) -> Path:
+    parts = java_package.split(".")
+    if not parts or any(not re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", part) for part in parts):
+        raise SystemExit(f"Invalid Java package: {java_package}")
+    return Path(*parts)
 
 
 def fetch_cldr_rules(plural_type: str, cldr_ref: str) -> dict[str, dict[str, str]]:
@@ -721,11 +792,11 @@ def render_swift_relation(relation: dict[str, Any]) -> str:
     return expression if relation["operator"] == "=" else f"!{expression}"
 
 
-def write_java(path: Path, data: dict[str, Any]) -> None:
+def write_java(path: Path, data: dict[str, Any], java_package: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     source = [
         "// Generated by mf2/cldr/generator/generate_plural_rules.py.",
-        "package com.box.l10n.mojito.mf2;",
+        f"package {java_package};",
         "",
         "import java.util.Locale;",
         "import java.util.Map;",
