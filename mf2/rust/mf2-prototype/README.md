@@ -41,8 +41,8 @@ Supported now:
 - markup placeholders such as `{#link}`, `{/link}`, and `{#br/}`
 - basic `.match` selectors with exact literal keys and `*` fallback, including
   `:number select=exact`
-- cardinal and ordinal plural category matching for number inputs in the initial
-  locale set
+- cardinal and ordinal plural category matching for number inputs in every
+  generated CLDR plural locale
 
 Unsupported for this first slice:
 

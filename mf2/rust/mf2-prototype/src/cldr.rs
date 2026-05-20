@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-#[path = "../../../cldr/generated/minimal/rust/plural_rules.rs"]
+#[path = "../../../cldr/generated/all/rust/plural_rules.rs"]
 mod generated_plural_rules;
 
 pub(crate) use generated_plural_rules::NumberOperands;

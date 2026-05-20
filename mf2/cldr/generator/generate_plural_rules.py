@@ -51,8 +51,8 @@ Condition = tuple[tuple[Relation, ...], ...]
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate CLDR plural rule implementations.")
-    parser.add_argument("--locales", default="en,fr,ru,ar,ja", help="Comma-separated locales or 'all'.")
-    parser.add_argument("--out", default="generated/minimal", help="Output directory.")
+    parser.add_argument("--locales", default="all", help="Comma-separated locales or 'all'.")
+    parser.add_argument("--out", default="generated/all", help="Output directory.")
     parser.add_argument("--cldr-ref", default="main", help="unicode-org/cldr-json git ref.")
     parser.add_argument(
         "--types",

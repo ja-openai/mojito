@@ -27,7 +27,8 @@ Current scope:
 - support declarations, local variables, variable/literal expressions, basic
   function pass-through, markup-as-parts-stripped string output, exact-match
   selectors, and `:number select=exact` with catch-all fallback
-- cardinal and ordinal plural category selection for the initial locale set
+- cardinal and ordinal plural category selection for every generated CLDR plural
+  locale
 - BCP47 locale canonicalization, underscore compatibility, extension stripping,
   and structural fallback for catalog lookup. Plural rules keep their own
   string-only lookup so they do not depend on a locale object.

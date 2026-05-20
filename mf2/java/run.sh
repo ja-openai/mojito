@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 build() {
   mkdir -p build/classes
-  find src/main/java ../cldr/generated/minimal/java -name '*.java' -print > build/sources.txt
+  find src/main/java ../cldr/generated/all/java -name '*.java' -print > build/sources.txt
   javac -d build/classes @build/sources.txt
 }
 

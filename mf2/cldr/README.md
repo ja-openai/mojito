@@ -4,37 +4,34 @@ This subproject owns generated locale data used by MF2 runtimes. It starts with
 plural rules because plural data is small enough to ship selectively and is
 updated independently from parser/runtime code.
 
-Generate plural rule implementations for a target locale set:
+Generate plural rule implementations for every locale present in CLDR
+supplemental plural data:
+
+```sh
+python3 generator/generate_plural_rules.py
+```
+
+Generate a custom locale subset for an embedded or product-specific build:
 
 ```sh
 python3 generator/generate_plural_rules.py \
   --locales en,fr,ru,ar,ja \
-  --out generated/minimal
+  --out /tmp/mf2-plurals-custom
 ```
 
-Generate every locale present in CLDR supplemental plural data:
+The checked-in runtime data is:
 
-```sh
-python3 generator/generate_plural_rules.py --locales all --out generated/all
-```
-
-Both outputs are useful:
-
-- `generated/minimal`: embedded/runtime starter allowlist for `en`, `fr`, `ru`,
-  `ar`, and `ja`
-- `generated/all`: every locale present in CLDR supplemental plural data, used
-  for full coverage work and size/perf comparisons
+- `generated/all`: every locale present in CLDR supplemental plural data. This
+  is the default runtime data used by Rust, Swift, Python, and Java.
 
 Current size smoke results from CLDR `main` on 2026-05-19:
 
-- `en,fr,ru,ar,ja`: JSON ~12 KB, Python ~14 KB, Rust ~7 KB, Swift ~9 KB,
-  Java ~10 KB
 - all CLDR plural locales: JSON ~125 KB, Python ~116 KB, Rust ~62 KB, Swift
   ~81 KB, Java ~71 KB
 
-For embedded clients, start with the product locale allowlist. The all-locale
-Rust/Swift generated implementation is still small, but the allowlist keeps app
-catalogs and test matrices explicit.
+Locale filtering remains a generator capability, not a first-class checked-in
+artifact. For embedded clients, generate a product locale allowlist in the
+client build and validate it against the same conformance/ICU comparison tools.
 
 The generator emits:
 
@@ -58,10 +55,10 @@ plural-specific parent locale data. CLDR's general resource `parentLocales`
 rules are intentionally not applied to plural selection; ICU4J comparison probes
 cover cases like `pt-AO`, `sr-Latn`, `az-Arab`, and Unicode extensions.
 
-The current Rust and Java runtimes compile the generated minimal file by path.
-The Python and Swift runtime starters vendor the generated minimal file into
-their package trees so they remain installable without reaching outside the
-package.
+The current Rust and Java runtimes compile the generated all-locale file by
+path. The Python and Swift runtime starters vendor that all-locale generated
+file into their package trees so they remain installable without reaching
+outside the package.
 
 Validate generated all-locale cardinal and ordinal category selection against
 ICU4J `PluralRules`:

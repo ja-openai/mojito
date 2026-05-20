@@ -65,8 +65,8 @@ The current conformance slice covers:
 - markup placeholders, stripped from string output for now
 - exact-match `.match` selectors with catch-all fallback, including
   `:number select=exact`
-- cardinal plural category selection for the initial locale set: `ar`, `en`,
-  `fr`, `ja`, `ru` and ordinal selection for the generated locale set
+- cardinal and ordinal plural category selection for the generated all-CLDR
+  locale set
 - BCP47-first locale-key canonicalization and structural lookup, including
   underscore compatibility and extension stripping for plural and catalog lookup
 
@@ -82,7 +82,7 @@ The immediate milestone is placeholders plus CLDR plural selection:
 - `.input` selector annotations
 - `:number` cardinal/ordinal plural selection
 - `:string` exact selection
-- generated CLDR plural rules for selected locales
+- generated CLDR plural rules for every CLDR plural locale by default
 - Rust/Swift/Python/Java formatting from the Unicode MF2 model
 
 This is the smallest useful runtime that can already beat gettext for many
