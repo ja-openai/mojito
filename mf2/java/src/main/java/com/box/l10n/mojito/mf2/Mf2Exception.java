@@ -30,6 +30,10 @@ public final class Mf2Exception extends Exception {
                 "Function :" + name + " is not supported by this prototype formatter.");
     }
 
+    static Mf2Exception badOperand(String message) {
+        return new Mf2Exception("bad-operand", message);
+    }
+
     static Mf2Exception duplicateDeclaration(String name) {
         return new Mf2Exception(
                 "duplicate-declaration",

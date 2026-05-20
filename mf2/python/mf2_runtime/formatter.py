@@ -243,11 +243,32 @@ class _FormatContext:
         function = expression.get("function")
         if function is None or function.get("name") in {"string", "number", "datetime", "date", "time"}:
             return value
+        if function.get("name") == "currency":
+            return self._format_currency(value, function)
 
         raise MF2Error(
             "unsupported-function",
             f"Function :{function.get('name')} is not supported by this runtime slice.",
         )
+
+    def _format_currency(self, value: str, function: dict[str, Any]) -> str:
+        currency = self._option_value(function, "currency", "USD")
+        return _format_currency_value(value, currency, self.locale)
+
+    def _option_value(
+        self,
+        function: dict[str, Any],
+        option_name: str,
+        default: str,
+    ) -> str:
+        option = function.get("options", {}).get(option_name)
+        if option is None:
+            return default
+        if option.get("type") == "literal":
+            return str(option.get("value", ""))
+        if option.get("type") == "variable":
+            return _render_value(self._argument(option["name"]))
+        return default
 
     def _argument(self, name: str) -> Any:
         if name not in self.values:
@@ -318,3 +339,63 @@ def _parts_to_string(parts: list[dict[str, Any]]) -> str:
         for part in parts
         if part.get("type") in {"text", "expression"}
     )
+
+
+def _format_currency_value(value: str, currency: str, locale: str) -> str:
+    try:
+        amount = float(value)
+    except ValueError as error:
+        raise MF2Error("bad-operand", f"Currency value must be numeric, got {value}.") from error
+    if amount in {float("inf"), float("-inf")} or amount != amount:
+        raise MF2Error("bad-operand", "Currency value must be finite.")
+
+    currency = currency.upper()
+    fraction_digits = _currency_fraction_digits(currency)
+    scale = 10**fraction_digits
+    rounded = round(abs(amount) * scale)
+    major = rounded // scale
+    fraction = rounded % scale
+    french = _canonical_locale_prefix(locale) == "fr"
+    grouped = _group_digits(str(major), "\u202f" if french else ",")
+    if fraction_digits == 0:
+        number = grouped
+    else:
+        decimal = "," if french else "."
+        number = f"{grouped}{decimal}{fraction:0{fraction_digits}d}"
+    symbol = _currency_symbol(currency, french)
+    negative = "-" if amount < 0 else ""
+
+    if french:
+        return f"{negative}{number} {symbol}"
+    if len(symbol) == 3:
+        return f"{negative}{symbol} {number}"
+    return f"{negative}{symbol}{number}"
+
+
+def _currency_fraction_digits(currency: str) -> int:
+    return 0 if currency in {"JPY", "KRW"} else 2
+
+
+def _currency_symbol(currency: str, french: bool) -> str:
+    if currency == "USD":
+        return "$US" if french else "$"
+    if currency == "EUR":
+        return "€"
+    if currency == "JPY":
+        return "¥"
+    if currency == "GBP":
+        return "£"
+    return currency
+
+
+def _canonical_locale_prefix(locale: str) -> str:
+    return locale.replace("_", "-").split("-", 1)[0].lower() or "en"
+
+
+def _group_digits(digits: str, separator: str) -> str:
+    groups: list[str] = []
+    while len(digits) > 3:
+        groups.append(digits[-3:])
+        digits = digits[:-3]
+    groups.append(digits)
+    return separator.join(reversed(groups))

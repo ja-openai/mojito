@@ -54,6 +54,18 @@ fn main() {
             args([("name", serde_json::Value::String("Mojito".to_string()))]),
             "Bienvenue, Mojito !",
         ),
+        (
+            "checkout.total",
+            "en",
+            args([("amount", serde_json::Value::from(1234.5))]),
+            "Total: $1,234.50",
+        ),
+        (
+            "checkout.total",
+            "fr",
+            args([("amount", serde_json::Value::from(1234.5))]),
+            "Total : 1\u{202f}234,50 €",
+        ),
         ("cart.items", "en", args([("count", 1.into())]), "1 item"),
         ("cart.items", "en", args([("count", 5.into())]), "5 items"),
         (

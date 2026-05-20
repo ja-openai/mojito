@@ -21,6 +21,11 @@ This is not the final public API. It is a sanity check for the app-facing shape:
 resource bundle lookup should be separate from parsing, compiling, and runtime
 formatting.
 
-The Rust-only `inline_translate_demo` intentionally parses MF2 source strings at
-runtime. It is useful for demos and dynamic messages, but the catalog demos
-remain the preferred shape for production resource bundles.
+The Rust and Java `inline_translate_demo` commands intentionally parse MF2
+source strings at runtime. They are useful for demos and dynamic messages, but
+the catalog demos remain the preferred shape for production resource bundles.
+
+The catalog includes a deliberately narrow `:currency` demo function. It is
+dependency-free and useful for showing how function options flow through the
+model, but it is not a CLDR-complete replacement for production number and
+currency formatting.

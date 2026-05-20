@@ -10,6 +10,8 @@ private let catalog = try Catalog.load(
 private let examples: [(String, String, [String: MF2Value], String)] = [
     ("welcome", "fr", ["name": .string("Mojito")], "Bienvenue, Mojito !"),
     ("welcome", "fr-CA", ["name": .string("Mojito")], "Bienvenue, Mojito !"),
+    ("checkout.total", "en", ["amount": .number("1234.5")], "Total: $1,234.50"),
+    ("checkout.total", "fr", ["amount": .number("1234.5")], "Total : 1\u{202f}234,50 €"),
     ("cart.items", "en", ["count": .number("1")], "1 item"),
     ("cart.items", "en", ["count": .number("5")], "5 items"),
     ("cart.items", "ru", ["count": .number("2")], "2 предмета"),

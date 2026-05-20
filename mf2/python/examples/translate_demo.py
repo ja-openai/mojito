@@ -43,6 +43,8 @@ def main() -> int:
     examples = [
         ("welcome", "fr", {"name": "Mojito"}, "Bienvenue, Mojito !"),
         ("welcome", "fr-CA", {"name": "Mojito"}, "Bienvenue, Mojito !"),
+        ("checkout.total", "en", {"amount": 1234.5}, "Total: $1,234.50"),
+        ("checkout.total", "fr", {"amount": 1234.5}, "Total : 1\u202f234,50 €"),
         ("cart.items", "en", {"count": 1}, "1 item"),
         ("cart.items", "en", {"count": 5}, "5 items"),
         ("cart.items", "ru", {"count": 2}, "2 предмета"),

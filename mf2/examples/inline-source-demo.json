@@ -8,6 +8,20 @@
       "expected": "Welcome, Mojito!"
     },
     {
+      "label": "checkout.total",
+      "source": "Total: {$amount :currency currency=USD}",
+      "locale": "en",
+      "arguments": { "amount": 1234.5 },
+      "expected": "Total: $1,234.50"
+    },
+    {
+      "label": "checkout.total",
+      "source": "Total : {$amount :currency currency=EUR}",
+      "locale": "fr",
+      "arguments": { "amount": 1234.5 },
+      "expected": "Total : 1\u202f234,50 €"
+    },
+    {
       "label": "cart.items",
       "source": ".input {$count :number}\n.match $count\none {{{$count} item}}\n* {{{$count} items}}",
       "locale": "en",
