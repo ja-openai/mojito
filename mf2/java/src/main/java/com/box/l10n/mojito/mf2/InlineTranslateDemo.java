@@ -30,6 +30,14 @@ public final class InlineTranslateDemo {
             }
             System.out.println(
                     demoCase.label() + "[" + demoCase.locale() + "] -> \"" + actual + "\"");
+            if (demoCase.bidiIsolation() != Mf2BidiIsolation.NONE) {
+                System.out.println(demoCase.label()
+                        + "["
+                        + demoCase.locale()
+                        + "].escaped -> \""
+                        + escapedNonAscii(actual)
+                        + "\"");
+            }
         }
     }
 
@@ -114,5 +122,19 @@ public final class InlineTranslateDemo {
                         + ", got "
                         + (actual == null ? "null" : actual.getClass().getSimpleName())
                         + ".");
+    }
+
+    private static String escapedNonAscii(String value) {
+        StringBuilder output = new StringBuilder();
+        for (int offset = 0; offset < value.length(); ) {
+            int codePoint = value.codePointAt(offset);
+            if (codePoint >= 0x20 && codePoint <= 0x7e) {
+                output.appendCodePoint(codePoint);
+            } else {
+                output.append(String.format("\\u%04X", codePoint));
+            }
+            offset += Character.charCount(codePoint);
+        }
+        return output.toString();
     }
 }

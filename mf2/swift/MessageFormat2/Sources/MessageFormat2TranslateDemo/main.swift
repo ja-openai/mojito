@@ -35,6 +35,9 @@ for (messageID, locale, arguments, bidiIsolation, expected) in examples {
         throw DemoError.mismatch(messageID: messageID, locale: locale, expected: expected, actual: actual)
     }
     print("\(messageID)[\(locale)] -> \"\(actual)\"")
+    if bidiIsolation != .none {
+        print("\(messageID)[\(locale)].escaped -> \"\(escapedNonASCII(actual))\"")
+    }
 }
 
 private struct Catalog: Decodable {
@@ -154,6 +157,15 @@ private func groupDigits(_ digits: String, separator: String) -> String {
     }
     groups.append(remaining)
     return groups.reversed().joined(separator: separator)
+}
+
+private func escapedNonASCII(_ value: String) -> String {
+    value.unicodeScalars.map { scalar in
+        if scalar.value >= 0x20, scalar.value <= 0x7E {
+            return String(scalar)
+        }
+        return String(format: "\\u%04X", scalar.value)
+    }.joined()
 }
 
 private enum DemoError: Error, CustomStringConvertible {

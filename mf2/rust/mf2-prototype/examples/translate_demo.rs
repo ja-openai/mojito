@@ -159,7 +159,25 @@ fn main() {
         let actual = catalog.translate(message_id, locale, arguments, &functions, bidi_isolation);
         assert_eq!(actual, expected, "{message_id}/{locale}");
         println!("{message_id}[{locale}] -> \"{actual}\"");
+        if bidi_isolation != BidiIsolation::None {
+            println!(
+                "{message_id}[{locale}].escaped -> \"{}\"",
+                escaped_non_ascii(&actual)
+            );
+        }
     }
+}
+
+fn escaped_non_ascii(value: &str) -> String {
+    let mut output = String::new();
+    for ch in value.chars() {
+        if ch.is_ascii_graphic() || ch == ' ' {
+            output.push(ch);
+        } else {
+            output.push_str(&format!("\\u{:04X}", ch as u32));
+        }
+    }
+    output
 }
 
 fn args<const N: usize>(

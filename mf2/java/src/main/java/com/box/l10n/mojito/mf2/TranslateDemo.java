@@ -14,13 +14,13 @@ public final class TranslateDemo {
                 + catalog.translate("checkout.total", "en", Map.of("amount", 1234.5)) + "\"");
         System.out.println("checkout.total[fr] -> \""
                 + catalog.translate("checkout.total", "fr", Map.of("amount", 1234.5)) + "\"");
-        System.out.println("file.saved[en] -> \""
-                + catalog.translate(
-                        "file.saved",
-                        "en",
-                        Map.of("fileName", "שלום.txt"),
-                        Mf2BidiIsolation.DEFAULT)
-                + "\"");
+        String fileSaved = catalog.translate(
+                "file.saved",
+                "en",
+                Map.of("fileName", "שלום.txt"),
+                Mf2BidiIsolation.DEFAULT);
+        System.out.println("file.saved[en] -> \"" + fileSaved + "\"");
+        System.out.println("file.saved[en].escaped -> \"" + escapedNonAscii(fileSaved) + "\"");
         System.out.println("cart.items[en] -> \"" + catalog.translate("cart.items", "en", Map.of("count", 1)) + "\"");
         System.out.println("cart.items[en] -> \"" + catalog.translate("cart.items", "en", Map.of("count", 5)) + "\"");
         System.out.println("cart.items[ru] -> \"" + catalog.translate("cart.items", "ru", Map.of("count", 2)) + "\"");
@@ -54,5 +54,19 @@ public final class TranslateDemo {
     @SuppressWarnings("unchecked")
     private static Map<String, Object> object(Object value) {
         return (Map<String, Object>) value;
+    }
+
+    private static String escapedNonAscii(String value) {
+        StringBuilder output = new StringBuilder();
+        for (int offset = 0; offset < value.length(); ) {
+            int codePoint = value.codePointAt(offset);
+            if (codePoint >= 0x20 && codePoint <= 0x7e) {
+                output.appendCodePoint(codePoint);
+            } else {
+                output.append(String.format("\\u%04X", codePoint));
+            }
+            offset += Character.charCount(codePoint);
+        }
+        return output.toString();
     }
 }

@@ -35,4 +35,8 @@ for examples that separate current demo matches from known ICU4J divergences.
 
 The demos also include a `file.saved` case that requests default bidi isolation
 around a Hebrew filename embedded in English text. The isolate controls are
-invisible in most terminals, but the case asserts the actual FSI/PDI characters.
+invisible in most terminals, so the demos also print an `.escaped` line with
+the actual `\u2068` FSI and `\u2069` PDI characters. This demonstrates
+isolation only; production filename, URL, and code-like formatting still needs
+value-direction metadata from the formatter or caller instead of relying only on
+first-strong-character auto direction.

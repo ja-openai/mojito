@@ -79,8 +79,17 @@ def main() -> int:
         if actual != expected:
             raise AssertionError(f"{message_id}/{locale}: expected {expected!r}, got {actual!r}")
         print(f'{message_id}[{locale}] -> "{actual}"')
+        if bidi_isolation != "none":
+            print(f'{message_id}[{locale}].escaped -> "{escaped_non_ascii(actual)}"')
 
     return 0
+
+
+def escaped_non_ascii(value: str) -> str:
+    return "".join(
+        ch if 0x20 <= ord(ch) <= 0x7E else f"\\u{ord(ch):04X}"
+        for ch in value
+    )
 
 
 if __name__ == "__main__":

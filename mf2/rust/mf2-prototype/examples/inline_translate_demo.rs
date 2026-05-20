@@ -64,7 +64,27 @@ fn main() {
         );
         assert_eq!(actual, case.expected, "{}/{}", case.label, case.locale);
         println!("{}[{}] -> \"{actual}\"", case.label, case.locale);
+        if bidi_isolation != BidiIsolation::None {
+            println!(
+                "{}[{}].escaped -> \"{}\"",
+                case.label,
+                case.locale,
+                escaped_non_ascii(&actual)
+            );
+        }
     }
+}
+
+fn escaped_non_ascii(value: &str) -> String {
+    let mut output = String::new();
+    for ch in value.chars() {
+        if ch.is_ascii_graphic() || ch == ' ' {
+            output.push(ch);
+        } else {
+            output.push_str(&format!("\\u{:04X}", ch as u32));
+        }
+    }
+    output
 }
 
 fn load_demo(path: &Path) -> Demo {
