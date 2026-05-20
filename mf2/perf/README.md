@@ -37,13 +37,14 @@ the RSS measurements.
 
 ## Current Local Smoke Results
 
-Run on 2026-05-19 with 100,000 timed iterations and 10,000 warmup iterations:
+Run on 2026-05-19 with 1,000,000 timed iterations and 100,000 warmup
+iterations:
 
-- Rust prototype: 45 cases, about 2.3M ops/sec
+- Java runtime: 45 cases, about 5.7M ops/sec
+- Rust prototype: 45 cases, about 2.4M ops/sec
 - Swift runtime: 45 cases, about 1.0M ops/sec
-- Java runtime: 45 cases, about 1.3M ops/sec
-- Python runtime: 45 cases, about 0.23M ops/sec
-- ICU4J 78.3: 41 supported cases, about 0.15M ops/sec
+- Python runtime: 45 cases, about 0.24M ops/sec
+- ICU4J 78.3: 41 supported cases, about 0.25M ops/sec
 - ICU4C++ 77.1: 41 supported cases, about 0.04M ops/sec
 
 RSS smoke run with 10,000 timed iterations and 2,000 warmup iterations:

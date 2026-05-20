@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 final class Mf2Formatter {
@@ -14,7 +15,7 @@ final class Mf2Formatter {
 
     static String format(Mf2Message message, Map<String, ?> arguments, String locale)
             throws Mf2Exception {
-        FormatContext context = new FormatContext(arguments, locale);
+        FormatContext context = new FormatContext(snapshotArguments(arguments), locale);
         context.apply(message.declarations());
         return switch (message) {
             case Mf2Message.Message simple -> context.formatPattern(simple.pattern());
@@ -23,15 +24,15 @@ final class Mf2Formatter {
     }
 
     private static final class FormatContext {
-        private final Map<String, Object> values;
-        private final Map<String, SelectorAnnotation> selectorAnnotations = new HashMap<>();
+        private final ArgumentValues arguments;
+        private Map<String, Object> locals;
+        private String selectorAnnotationName;
+        private SelectorAnnotation selectorAnnotation;
+        private Map<String, SelectorAnnotation> selectorAnnotations;
         private final String locale;
 
-        FormatContext(Map<String, ?> arguments, String locale) {
-            this.values = new HashMap<>();
-            if (arguments != null) {
-                this.values.putAll(arguments);
-            }
+        FormatContext(ArgumentValues arguments, String locale) {
+            this.arguments = arguments;
             this.locale = locale == null || locale.isBlank() ? "en" : locale;
         }
 
@@ -41,35 +42,64 @@ final class Mf2Formatter {
                     case Mf2Message.InputDeclaration input -> {
                         Mf2Message.FunctionRef function = input.value().function();
                         if (function != null) {
-                            selectorAnnotations.put(input.name(), SelectorAnnotation.from(function));
+                            addSelectorAnnotation(input.name(), SelectorAnnotation.from(function));
                         }
                     }
-                    case Mf2Message.LocalDeclaration local -> values.put(
-                            local.name(), formatExpression(local.value()));
+                    case Mf2Message.LocalDeclaration local -> putLocal(local.name(), formatExpression(local.value()));
                 }
             }
         }
 
         String formatSelect(List<Mf2Message.VariableRef> selectors, List<Mf2Message.Variant> variants)
                 throws Mf2Exception {
-            List<SelectorValue> selectorValues = new ArrayList<>();
+            if (selectors.size() == 1) {
+                return formatSelectOne(selectors.get(0), variants);
+            }
+
+            List<SelectorValue> selectorValues = new ArrayList<>(selectors.size());
             for (Mf2Message.VariableRef selector : selectors) {
                 selectorValues.add(selectorValue(selector));
             }
 
-            Mf2Message.Variant selected = variants.stream()
-                    .filter(variant -> variantMatches(variant, selectorValues))
-                    .findFirst()
-                    .or(() -> variants.stream().filter(Mf2Formatter::isFallbackVariant).findFirst())
-                    .orElseThrow(Mf2Exception::missingSelectVariant);
-            return formatPattern(selected.value());
+            Mf2Message.Variant fallback = null;
+            for (Mf2Message.Variant variant : variants) {
+                if (variantMatches(variant, selectorValues)) {
+                    return formatPattern(variant.value());
+                }
+                if (fallback == null && isFallbackVariant(variant)) {
+                    fallback = variant;
+                }
+            }
+            if (fallback != null) {
+                return formatPattern(fallback.value());
+            }
+            throw Mf2Exception.missingSelectVariant();
+        }
+
+        private String formatSelectOne(
+                Mf2Message.VariableRef selector, List<Mf2Message.Variant> variants)
+                throws Mf2Exception {
+            SelectorValue selectorValue = selectorValue(selector);
+            Mf2Message.Variant fallback = null;
+            for (Mf2Message.Variant variant : variants) {
+                if (variantMatchesOne(variant, selectorValue)) {
+                    return formatPattern(variant.value());
+                }
+                if (fallback == null && isFallbackVariant(variant)) {
+                    fallback = variant;
+                }
+            }
+            if (fallback != null) {
+                return formatPattern(fallback.value());
+            }
+            throw Mf2Exception.missingSelectVariant();
         }
 
         private SelectorValue selectorValue(Mf2Message.VariableRef selector) throws Mf2Exception {
-            if (!values.containsKey(selector.name())) {
+            if (!hasValue(selector.name())) {
                 throw Mf2Exception.missingArgument(selector.name());
             }
-            Object value = values.get(selector.name());
+            Object value = value(selector.name());
             return new SelectorValue(
                     valueToString(value),
                     exactMatch(selector.name()),
@@ -95,10 +125,10 @@ final class Mf2Formatter {
                 case null -> "";
                 case Mf2Message.LiteralArgument literal -> literal.value();
                 case Mf2Message.VariableArgument variable -> {
-                    if (!values.containsKey(variable.name())) {
+                    if (!hasValue(variable.name())) {
                         throw Mf2Exception.missingArgument(variable.name());
                     }
-                    yield valueToString(values.get(variable.name()));
+                    yield valueToString(value(variable.name()));
                 }
             };
 
@@ -110,17 +140,64 @@ final class Mf2Formatter {
         }
 
         private boolean exactMatch(String selectorName) {
-            SelectorAnnotation annotation = selectorAnnotations.get(selectorName);
+            SelectorAnnotation annotation = selectorAnnotation(selectorName);
             return annotation == null || annotation.exactMatch();
         }
 
         private String selectionKey(String selectorName, Object value) {
-            SelectorAnnotation annotation = selectorAnnotations.get(selectorName);
+            SelectorAnnotation annotation = selectorAnnotation(selectorName);
             if (annotation == null || !annotation.function().equals("number")) {
                 return null;
             }
             return PluralRules.selectPluralCategory(locale, value, annotation.numberSelect());
         }
+
+        private boolean hasValue(String name) {
+            return (locals != null && locals.containsKey(name)) || arguments.contains(name);
+        }
+
+        private Object value(String name) {
+            return locals != null && locals.containsKey(name) ? locals.get(name) : arguments.get(name);
+        }
+
+        private void putLocal(String name, Object value) {
+            if (locals == null) {
+                locals = new HashMap<>();
+            }
+            locals.put(name, value);
+        }
+
+        private void addSelectorAnnotation(String name, SelectorAnnotation annotation) {
+            if (selectorAnnotationName == null) {
+                selectorAnnotationName = name;
+                selectorAnnotation = annotation;
+                return;
+            }
+            if (selectorAnnotations == null) {
+                selectorAnnotations = new HashMap<>(4);
+                selectorAnnotations.put(selectorAnnotationName, selectorAnnotation);
+            }
+            selectorAnnotations.put(name, annotation);
+        }
+
+        private SelectorAnnotation selectorAnnotation(String name) {
+            if (selectorAnnotations != null) {
+                return selectorAnnotations.get(name);
+            }
+            return name.equals(selectorAnnotationName) ? selectorAnnotation : null;
+        }
+    }
+
+    private static ArgumentValues snapshotArguments(Map<String, ?> arguments) {
+        // Keep format() isolated from caller map mutation without penalizing the common one-arg path.
+        if (arguments == null || arguments.isEmpty()) {
+            return EmptyArgumentValues.INSTANCE;
+        }
+        if (arguments.size() == 1) {
+            Map.Entry<String, ?> entry = arguments.entrySet().iterator().next();
+            return new SingleArgumentValue(entry.getKey(), entry.getValue());
+        }
+        return new MapArgumentValues(new HashMap<>(arguments));
     }
 
     private static boolean variantMatches(
@@ -138,6 +215,10 @@ final class Mf2Formatter {
         return true;
     }
 
+    private static boolean variantMatchesOne(Mf2Message.Variant variant, SelectorValue selectorValue) {
+        return variant.keys().size() == 1 && keyMatches(variant.keys().get(0), selectorValue);
+    }
+
     private static boolean keyMatches(Mf2Message.VariantKey key, SelectorValue selector) {
         return switch (key) {
             case Mf2Message.CatchAllVariantKey ignored -> true;
@@ -148,7 +229,12 @@ final class Mf2Formatter {
     }
 
     private static boolean isFallbackVariant(Mf2Message.Variant variant) {
-        return variant.keys().stream().allMatch(Mf2Message.CatchAllVariantKey.class::isInstance);
+        for (Mf2Message.VariantKey key : variant.keys()) {
+            if (!(key instanceof Mf2Message.CatchAllVariantKey)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     static String valueToString(Object value) {
@@ -191,4 +277,48 @@ final class Mf2Formatter {
     }
 
     private record SelectorValue(String rendered, boolean exactMatch, String selectionKey) {}
+
+    private interface ArgumentValues {
+        boolean contains(String name);
+
+        Object get(String name);
+    }
+
+    private enum EmptyArgumentValues implements ArgumentValues {
+        INSTANCE;
+
+        @Override
+        public boolean contains(String name) {
+            return false;
+        }
+
+        @Override
+        public Object get(String name) {
+            return null;
+        }
+    }
+
+    private record SingleArgumentValue(String name, Object value) implements ArgumentValues {
+        @Override
+        public boolean contains(String candidate) {
+            return Objects.equals(name, candidate);
+        }
+
+        @Override
+        public Object get(String candidate) {
+            return Objects.equals(name, candidate) ? value : null;
+        }
+    }
+
+    private record MapArgumentValues(Map<String, ?> values) implements ArgumentValues {
+        @Override
+        public boolean contains(String name) {
+            return values.containsKey(name);
+        }
+
+        @Override
+        public Object get(String name) {
+            return values.get(name);
+        }
+    }
 }
