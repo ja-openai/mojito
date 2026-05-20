@@ -76,13 +76,18 @@ pub fn format_model_to_parts_with_locale(
 
 fn validate_model(model: &MessageModel) -> Result<(), Diagnostic> {
     validate_declarations(model.declarations())?;
-    if let MessageModel::Select {
-        declarations,
-        selectors,
-        ..
-    } = model
-    {
-        validate_selector_annotations(declarations, selectors)?;
+    match model {
+        MessageModel::Message { pattern, .. } => validate_pattern(pattern)?,
+        MessageModel::Select {
+            declarations,
+            selectors,
+            variants,
+        } => {
+            validate_selector_annotations(declarations, selectors)?;
+            for variant in variants {
+                validate_pattern(&variant.value)?;
+            }
+        }
     }
     Ok(())
 }
@@ -115,6 +120,18 @@ fn validate_input_declaration(name: &str, value: &Expression) -> Result<(), Diag
             format!("Input declaration ${name} must bind the same variable name."),
         )),
     }
+}
+
+fn validate_pattern(pattern: &[PatternPart]) -> Result<(), Diagnostic> {
+    for part in pattern {
+        if matches!(part, PatternPart::Text(text) if text.is_empty()) {
+            return Err(model_error(
+                "invalid-pattern-text",
+                "Pattern text parts must be non-empty.",
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn validate_selector_annotations(

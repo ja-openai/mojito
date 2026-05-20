@@ -65,4 +65,9 @@ public final class Mf2Exception extends Exception {
                 "invalid-input-declaration",
                 "Input declaration $" + name + " must bind the same variable name.");
     }
+
+    static Mf2Exception invalidPatternText() {
+        return new Mf2Exception(
+                "invalid-pattern-text", "Pattern text parts must be non-empty.");
+    }
 }

@@ -32,8 +32,14 @@ final class Mf2Formatter {
 
     private static void validate(Mf2Message message) throws Mf2Exception {
         validateDeclarations(message.declarations());
-        if (message instanceof Mf2Message.Select select) {
-            validateSelectorAnnotations(select.declarations(), select.selectors());
+        switch (message) {
+            case Mf2Message.Message simple -> validatePattern(simple.pattern());
+            case Mf2Message.Select select -> {
+                validateSelectorAnnotations(select.declarations(), select.selectors());
+                for (Mf2Message.Variant variant : select.variants()) {
+                    validatePattern(variant.value());
+                }
+            }
         }
     }
 
@@ -57,6 +63,15 @@ final class Mf2Formatter {
             return;
         }
         throw Mf2Exception.invalidInputDeclaration(input.name());
+    }
+
+    private static void validatePattern(List<Mf2Message.PatternPart> pattern)
+            throws Mf2Exception {
+        for (Mf2Message.PatternPart part : pattern) {
+            if (part instanceof Mf2Message.TextPart text && text.value().isEmpty()) {
+                throw Mf2Exception.invalidPatternText();
+            }
+        }
     }
 
     private static void validateSelectorAnnotations(

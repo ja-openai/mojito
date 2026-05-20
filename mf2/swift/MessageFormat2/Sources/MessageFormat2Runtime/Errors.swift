@@ -11,6 +11,7 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
     case missingFallbackVariant
     case missingSelectorAnnotation(String)
     case invalidInputDeclaration(String)
+    case invalidPatternText
 
     public var code: String {
         switch self {
@@ -34,6 +35,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "missing-selector-annotation"
         case .invalidInputDeclaration:
             "invalid-input-declaration"
+        case .invalidPatternText:
+            "invalid-pattern-text"
         }
     }
 
@@ -59,6 +62,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "Selector $\(name) must reference a declaration with a function."
         case let .invalidInputDeclaration(name):
             "Input declaration $\(name) must bind the same variable name."
+        case .invalidPatternText:
+            "Pattern text parts must be non-empty."
         }
     }
 }

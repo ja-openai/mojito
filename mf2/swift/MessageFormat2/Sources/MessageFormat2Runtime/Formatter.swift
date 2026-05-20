@@ -26,8 +26,14 @@ public extension MF2Message {
 
     private func validate() throws {
         try validate(declarations: declarations)
-        if case let .select(declarations, selectors, _) = self {
+        switch self {
+        case let .message(_, pattern):
+            try validate(pattern: pattern)
+        case let .select(declarations, selectors, variants):
             try validateSelectorAnnotations(declarations: declarations, selectors: selectors)
+            for variant in variants {
+                try validate(pattern: variant.value)
+            }
         }
     }
 
@@ -49,6 +55,14 @@ public extension MF2Message {
               variableName == name
         else {
             throw MF2Error.invalidInputDeclaration(name)
+        }
+    }
+
+    private func validate(pattern: [MF2PatternPart]) throws {
+        for part in pattern {
+            if case let .text(text) = part, text.isEmpty {
+                throw MF2Error.invalidPatternText
+            }
         }
     }
 

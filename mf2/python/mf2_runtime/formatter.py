@@ -34,11 +34,15 @@ def format_message_to_parts(
 
 def _validate_model(model: dict[str, Any]) -> None:
     _validate_declarations(model.get("declarations", []))
-    if model.get("type") == "select":
+    if model.get("type") == "message":
+        _validate_pattern(model.get("pattern", []))
+    elif model.get("type") == "select":
         _validate_selector_annotations(
             model.get("declarations", []),
             model.get("selectors", []),
         )
+        for variant in model.get("variants", []):
+            _validate_pattern(variant.get("value", []))
 
 
 def _validate_declarations(declarations: list[dict[str, Any]]) -> None:
@@ -64,6 +68,15 @@ def _validate_input_declaration(declaration: dict[str, Any]) -> None:
         "invalid-input-declaration",
         f"Input declaration ${name} must bind the same variable name.",
     )
+
+
+def _validate_pattern(pattern: list[Any]) -> None:
+    for part in pattern:
+        if isinstance(part, str) and part == "":
+            raise MF2Error(
+                "invalid-pattern-text",
+                "Pattern text parts must be non-empty.",
+            )
 
 
 def _selector_annotations(

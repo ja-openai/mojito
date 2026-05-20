@@ -129,5 +129,6 @@ The format-error fixtures currently cover:
 - missing catch-all fallback variants
 - missing selector annotations
 - invalid input declaration variable binding
+- empty pattern text
 - duplicate select variants
 - duplicate declarations
