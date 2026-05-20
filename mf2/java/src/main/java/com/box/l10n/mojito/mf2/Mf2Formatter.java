@@ -52,10 +52,6 @@ final class Mf2Formatter {
 
         String formatSelect(List<Mf2Message.VariableRef> selectors, List<Mf2Message.Variant> variants)
                 throws Mf2Exception {
-            if (selectors.size() == 1) {
-                return formatSelectOne(selectors.get(0), variants);
-            }
-
             List<SelectorValue> selectorValues = new ArrayList<>(selectors.size());
             for (Mf2Message.VariableRef selector : selectors) {
                 selectorValues.add(selectorValue(selector));
@@ -64,25 +60,6 @@ final class Mf2Formatter {
             Mf2Message.Variant fallback = null;
             for (Mf2Message.Variant variant : variants) {
                 if (variantMatches(variant, selectorValues)) {
-                    return formatPattern(variant.value());
-                }
-                if (fallback == null && isFallbackVariant(variant)) {
-                    fallback = variant;
-                }
-            }
-            if (fallback != null) {
-                return formatPattern(fallback.value());
-            }
-            throw Mf2Exception.missingSelectVariant();
-        }
-
-        private String formatSelectOne(
-                Mf2Message.VariableRef selector, List<Mf2Message.Variant> variants)
-                throws Mf2Exception {
-            SelectorValue selectorValue = selectorValue(selector);
-            Mf2Message.Variant fallback = null;
-            for (Mf2Message.Variant variant : variants) {
-                if (variantMatchesOne(variant, selectorValue)) {
                     return formatPattern(variant.value());
                 }
                 if (fallback == null && isFallbackVariant(variant)) {
@@ -213,10 +190,6 @@ final class Mf2Formatter {
             }
         }
         return true;
-    }
-
-    private static boolean variantMatchesOne(Mf2Message.Variant variant, SelectorValue selectorValue) {
-        return variant.keys().size() == 1 && keyMatches(variant.keys().get(0), selectorValue);
     }
 
     private static boolean keyMatches(Mf2Message.VariantKey key, SelectorValue selector) {

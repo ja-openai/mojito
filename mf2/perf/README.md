@@ -40,7 +40,7 @@ the RSS measurements.
 Run on 2026-05-19 with 1,000,000 timed iterations and 100,000 warmup
 iterations:
 
-- Java runtime: 45 cases, about 5.7M ops/sec
+- Java runtime: 45 cases, about 5.5M ops/sec
 - Rust prototype: 45 cases, about 2.4M ops/sec
 - Swift runtime: 45 cases, about 1.0M ops/sec
 - Python runtime: 45 cases, about 0.24M ops/sec
