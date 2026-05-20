@@ -124,14 +124,28 @@ fn validate_input_declaration(name: &str, value: &Expression) -> Result<(), Diag
 
 fn validate_pattern(pattern: &[PatternPart]) -> Result<(), Diagnostic> {
     for part in pattern {
-        if matches!(part, PatternPart::Text(text) if text.is_empty()) {
-            return Err(model_error(
-                "invalid-pattern-text",
-                "Pattern text parts must be non-empty.",
-            ));
+        match part {
+            PatternPart::Text(text) if text.is_empty() => {
+                return Err(model_error(
+                    "invalid-pattern-text",
+                    "Pattern text parts must be non-empty.",
+                ));
+            }
+            PatternPart::Markup(markup) => validate_markup(markup)?,
+            _ => {}
         }
     }
     Ok(())
+}
+
+fn validate_markup(markup: &Markup) -> Result<(), Diagnostic> {
+    match markup.kind.as_str() {
+        "open" | "standalone" | "close" => Ok(()),
+        _ => Err(model_error(
+            "invalid-markup-kind",
+            "Markup kind must be open, standalone, or close.",
+        )),
+    }
 }
 
 fn validate_selector_annotations(

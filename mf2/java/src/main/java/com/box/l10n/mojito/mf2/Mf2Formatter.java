@@ -71,6 +71,16 @@ final class Mf2Formatter {
             if (part instanceof Mf2Message.TextPart text && text.value().isEmpty()) {
                 throw Mf2Exception.invalidPatternText();
             }
+            if (part instanceof Mf2Message.MarkupPart markup) {
+                validateMarkup(markup.markup());
+            }
+        }
+    }
+
+    private static void validateMarkup(Mf2Message.Markup markup) throws Mf2Exception {
+        switch (markup.kind()) {
+            case "open", "standalone", "close" -> {}
+            default -> throw Mf2Exception.invalidMarkupKind();
         }
     }
 

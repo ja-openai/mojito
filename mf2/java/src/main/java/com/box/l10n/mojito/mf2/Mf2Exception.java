@@ -70,4 +70,9 @@ public final class Mf2Exception extends Exception {
         return new Mf2Exception(
                 "invalid-pattern-text", "Pattern text parts must be non-empty.");
     }
+
+    static Mf2Exception invalidMarkupKind() {
+        return new Mf2Exception(
+                "invalid-markup-kind", "Markup kind must be open, standalone, or close.");
+    }
 }

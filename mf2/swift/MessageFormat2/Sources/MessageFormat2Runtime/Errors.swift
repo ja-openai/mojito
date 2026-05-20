@@ -12,6 +12,7 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
     case missingSelectorAnnotation(String)
     case invalidInputDeclaration(String)
     case invalidPatternText
+    case invalidMarkupKind
 
     public var code: String {
         switch self {
@@ -37,6 +38,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "invalid-input-declaration"
         case .invalidPatternText:
             "invalid-pattern-text"
+        case .invalidMarkupKind:
+            "invalid-markup-kind"
         }
     }
 
@@ -64,6 +67,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "Input declaration $\(name) must bind the same variable name."
         case .invalidPatternText:
             "Pattern text parts must be non-empty."
+        case .invalidMarkupKind:
+            "Markup kind must be open, standalone, or close."
         }
     }
 }

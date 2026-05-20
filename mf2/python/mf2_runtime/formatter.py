@@ -77,6 +77,17 @@ def _validate_pattern(pattern: list[Any]) -> None:
                 "invalid-pattern-text",
                 "Pattern text parts must be non-empty.",
             )
+        if isinstance(part, dict) and part.get("type") == "markup":
+            _validate_markup(part)
+
+
+def _validate_markup(markup: dict[str, Any]) -> None:
+    if markup.get("kind") in {"open", "standalone", "close"}:
+        return
+    raise MF2Error(
+        "invalid-markup-kind",
+        "Markup kind must be open, standalone, or close.",
+    )
 
 
 def _selector_annotations(

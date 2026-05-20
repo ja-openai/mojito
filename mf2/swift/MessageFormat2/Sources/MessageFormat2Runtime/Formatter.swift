@@ -63,6 +63,18 @@ public extension MF2Message {
             if case let .text(text) = part, text.isEmpty {
                 throw MF2Error.invalidPatternText
             }
+            if case let .markup(markup) = part {
+                try validate(markup: markup)
+            }
+        }
+    }
+
+    private func validate(markup: MF2Markup) throws {
+        switch markup.kind {
+        case "open", "standalone", "close":
+            return
+        default:
+            throw MF2Error.invalidMarkupKind
         }
     }
 
