@@ -4,7 +4,8 @@ use std::path::Path;
 
 use mf2_prototype::{
     canonical_locale_key, format_model_to_parts_with_locale, format_model_with_locale,
-    locale_lookup_chain, parse_to_model, Diagnostic, FormattedPart, MessageModel,
+    format_model_with_locale_and_bidi, locale_lookup_chain, parse_to_model, BidiIsolation,
+    Diagnostic, FormattedPart, MessageModel,
 };
 use serde::Deserialize;
 
@@ -61,9 +62,12 @@ struct ExpectedDiagnostic {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct FormatCase {
     #[serde(default = "default_locale")]
     locale: String,
+    #[serde(default)]
+    bidi_isolation: Option<String>,
     arguments: BTreeMap<String, serde_json::Value>,
     expected: String,
 }
@@ -92,10 +96,11 @@ fn source_to_model_fixtures_pass() {
         );
 
         for format_case in fixture.format_cases {
-            let formatted = format_model_with_locale(
+            let formatted = format_model_with_locale_and_bidi(
                 result.model.as_ref().expect("model exists"),
                 &format_case.arguments,
                 &format_case.locale,
+                BidiIsolation::from_name(format_case.bidi_isolation.as_deref()),
             )
             .unwrap_or_else(|diagnostic| {
                 panic!(

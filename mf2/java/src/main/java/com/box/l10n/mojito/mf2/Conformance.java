@@ -42,7 +42,9 @@ public final class Conformance {
                 Map<String, Object> formatCase = object(rawCase);
                 String actual = parseResult.model().format(
                         objectOrEmpty(formatCase.get("arguments")),
-                        stringOrDefault(formatCase.get("locale"), "en"));
+                        stringOrDefault(formatCase.get("locale"), "en"),
+                        Mf2BidiIsolation.fromName(
+                                stringOrDefault(formatCase.get("bidiIsolation"), "none")));
                 String expected = string(formatCase.get("expected"));
                 if (!actual.equals(expected)) {
                     System.err.printf(

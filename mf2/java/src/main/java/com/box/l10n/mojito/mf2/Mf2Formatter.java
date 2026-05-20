@@ -22,9 +22,28 @@ final class Mf2Formatter {
             Mf2Message message,
             Map<String, ?> arguments,
             String locale,
+            Mf2BidiIsolation bidiIsolation)
+            throws Mf2Exception {
+        return format(message, arguments, locale, DEFAULT_FUNCTIONS, bidiIsolation);
+    }
+
+    static String format(
+            Mf2Message message,
+            Map<String, ?> arguments,
+            String locale,
             Mf2FunctionRegistry functions)
             throws Mf2Exception {
-        return partsToString(formatToParts(message, arguments, locale, functions));
+        return format(message, arguments, locale, functions, Mf2BidiIsolation.NONE);
+    }
+
+    static String format(
+            Mf2Message message,
+            Map<String, ?> arguments,
+            String locale,
+            Mf2FunctionRegistry functions,
+            Mf2BidiIsolation bidiIsolation)
+            throws Mf2Exception {
+        return partsToString(formatToParts(message, arguments, locale, functions), bidiIsolation);
     }
 
     static List<Mf2Message.FormattedPart> formatToParts(
@@ -208,7 +227,7 @@ final class Mf2Formatter {
         }
 
         String formatPattern(List<Mf2Message.PatternPart> pattern) throws Mf2Exception {
-            return partsToString(formatPatternToParts(pattern));
+            return partsToString(formatPatternToParts(pattern), Mf2BidiIsolation.NONE);
         }
 
         List<Mf2Message.FormattedPart> formatPatternToParts(List<Mf2Message.PatternPart> pattern)
@@ -396,17 +415,26 @@ final class Mf2Formatter {
         return value.toString();
     }
 
-    private static String partsToString(List<Mf2Message.FormattedPart> parts) {
+    private static String partsToString(
+            List<Mf2Message.FormattedPart> parts, Mf2BidiIsolation bidiIsolation) {
         StringBuilder output = new StringBuilder();
         for (Mf2Message.FormattedPart part : parts) {
             switch (part) {
                 case Mf2Message.FormattedText text -> output.append(text.value());
-                case Mf2Message.FormattedExpression expression -> output.append(expression.value());
+                case Mf2Message.FormattedExpression expression ->
+                        output.append(isolateExpression(expression.value(), bidiIsolation));
                 case Mf2Message.FormattedMarkup ignored -> {
                 }
             }
         }
         return output.toString();
+    }
+
+    private static String isolateExpression(String value, Mf2BidiIsolation bidiIsolation) {
+        if (bidiIsolation == Mf2BidiIsolation.DEFAULT) {
+            return "\u2068" + value + "\u2069";
+        }
+        return value;
     }
 
     private record SelectorAnnotation(String function, NumberSelect numberSelect) {

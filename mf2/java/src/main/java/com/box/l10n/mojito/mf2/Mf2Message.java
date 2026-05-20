@@ -17,9 +17,24 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
     }
 
     default String format(
+            Map<String, ?> arguments, String locale, Mf2BidiIsolation bidiIsolation)
+            throws Mf2Exception {
+        return Mf2Formatter.format(this, arguments, locale, bidiIsolation);
+    }
+
+    default String format(
             Map<String, ?> arguments, String locale, Mf2FunctionRegistry functions)
             throws Mf2Exception {
         return Mf2Formatter.format(this, arguments, locale, functions);
+    }
+
+    default String format(
+            Map<String, ?> arguments,
+            String locale,
+            Mf2FunctionRegistry functions,
+            Mf2BidiIsolation bidiIsolation)
+            throws Mf2Exception {
+        return Mf2Formatter.format(this, arguments, locale, functions, bidiIsolation);
     }
 
     default List<FormattedPart> formatToParts(Map<String, ?> arguments, String locale)

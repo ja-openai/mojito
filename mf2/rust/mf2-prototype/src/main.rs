@@ -8,7 +8,8 @@ use std::time::Instant;
 
 use mf2_prototype::{
     canonical_locale_key, format_model_to_parts_with_locale, format_model_with_locale,
-    locale_lookup_chain, parse_to_model, FormattedPart, MessageModel,
+    format_model_with_locale_and_bidi, locale_lookup_chain, parse_to_model, BidiIsolation,
+    FormattedPart, MessageModel,
 };
 use serde::Deserialize;
 
@@ -67,6 +68,8 @@ struct FormatCase {
 struct ExpectedFormatCase {
     #[serde(default = "default_locale")]
     locale: String,
+    #[serde(default)]
+    bidi_isolation: Option<String>,
     arguments: BTreeMap<String, serde_json::Value>,
     expected: String,
 }
@@ -218,15 +221,19 @@ fn conformance(fixture_dir: &Path) {
         checked_models += 1;
 
         for format_case in fixture.format_cases {
-            let actual =
-                format_model_with_locale(model, &format_case.arguments, &format_case.locale)
-                    .unwrap_or_else(|diagnostic| {
-                        fail(format!(
-                            "{}: format failed with {}",
-                            fixture_path.display(),
-                            diagnostic.code
-                        ));
-                    });
+            let actual = format_model_with_locale_and_bidi(
+                model,
+                &format_case.arguments,
+                &format_case.locale,
+                BidiIsolation::from_name(format_case.bidi_isolation.as_deref()),
+            )
+            .unwrap_or_else(|diagnostic| {
+                fail(format!(
+                    "{}: format failed with {}",
+                    fixture_path.display(),
+                    diagnostic.code
+                ));
+            });
             if actual != format_case.expected {
                 fail(format!(
                     "{}: expected {:?}, got {:?}",

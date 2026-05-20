@@ -105,6 +105,8 @@ The source-to-model fixtures currently cover:
 - `.local`, including chained locals
 - markup open/close/standalone placeholders
 - parts output for expression and markup attributes
+- opt-in `bidiIsolation: "default"` string formatting around expression output,
+  with parts output preserving raw values for UI renderers
 - exact-match `.match` selectors and catch-all fallback, including multi-selector
   matching,
   `:number select=exact`, `:integer select=exact`, and primitive `:string`

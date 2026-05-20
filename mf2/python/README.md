@@ -30,6 +30,8 @@ Current scope:
 - expose `format_message_to_parts` for text, expression, and markup boundary
   output in the supported runtime slice, preserving expression/markup attributes
   for UI renderers
+- support opt-in `bidi_isolation="default"` string output around expression
+  values
 - reject invalid model structure for duplicate declarations, select variant key
   arity, duplicate variants, and missing fallback variants
 - cardinal and ordinal plural category selection for every generated CLDR plural

@@ -31,11 +31,17 @@ pub enum FormattedPart {
     },
 }
 
-impl FormattedPart {
-    fn string_value(&self) -> Option<&str> {
-        match self {
-            Self::Text { value } | Self::Expression { value, .. } => Some(value),
-            Self::Markup { .. } => None,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BidiIsolation {
+    None,
+    Default,
+}
+
+impl BidiIsolation {
+    pub fn from_name(value: Option<&str>) -> Self {
+        match value {
+            Some("default") => Self::Default,
+            _ => Self::None,
         }
     }
 }
@@ -175,8 +181,40 @@ pub fn format_model_with_locale_and_functions(
     locale: &str,
     functions: &FunctionRegistry,
 ) -> Result<String, Diagnostic> {
+    format_model_with_locale_and_functions_and_bidi(
+        model,
+        arguments,
+        locale,
+        functions,
+        BidiIsolation::None,
+    )
+}
+
+pub fn format_model_with_locale_and_bidi(
+    model: &MessageModel,
+    arguments: &BTreeMap<String, serde_json::Value>,
+    locale: &str,
+    bidi_isolation: BidiIsolation,
+) -> Result<String, Diagnostic> {
+    format_model_with_locale_and_functions_and_bidi(
+        model,
+        arguments,
+        locale,
+        default_function_registry(),
+        bidi_isolation,
+    )
+}
+
+pub fn format_model_with_locale_and_functions_and_bidi(
+    model: &MessageModel,
+    arguments: &BTreeMap<String, serde_json::Value>,
+    locale: &str,
+    functions: &FunctionRegistry,
+    bidi_isolation: BidiIsolation,
+) -> Result<String, Diagnostic> {
     Ok(parts_to_string(
         &format_model_to_parts_with_locale_and_functions(model, arguments, locale, functions)?,
+        bidi_isolation,
     ))
 }
 
@@ -656,9 +694,27 @@ fn markup_to_part(markup: &Markup) -> FormattedPart {
     }
 }
 
-fn parts_to_string(parts: &[FormattedPart]) -> String {
-    parts
-        .iter()
-        .filter_map(FormattedPart::string_value)
-        .collect()
+fn parts_to_string(parts: &[FormattedPart], bidi_isolation: BidiIsolation) -> String {
+    let mut output = String::new();
+    for part in parts {
+        match part {
+            FormattedPart::Text { value } => output.push_str(value),
+            FormattedPart::Expression { value, .. } => {
+                push_expression(&mut output, value, bidi_isolation);
+            }
+            FormattedPart::Markup { .. } => {}
+        }
+    }
+    output
+}
+
+fn push_expression(output: &mut String, value: &str, bidi_isolation: BidiIsolation) {
+    match bidi_isolation {
+        BidiIsolation::None => output.push_str(value),
+        BidiIsolation::Default => {
+            output.push('\u{2068}');
+            output.push_str(value);
+            output.push('\u{2069}');
+        }
+    }
 }

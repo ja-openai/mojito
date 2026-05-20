@@ -30,6 +30,7 @@ def main(argv: list[str] | None = None) -> int:
                 fixture["expectedModel"],
                 format_case.get("arguments", {}),
                 format_case.get("locale", "en"),
+                bidi_isolation=format_case.get("bidiIsolation", "none"),
             )
             expected = format_case["expected"]
             if actual != expected:

@@ -262,7 +262,9 @@ public final class Icu4jReference {
           String name = fixture.path("name").asText(fixturePath.getFileName().toString());
           Map<String, Object> arguments = toMap(formatCase.path("arguments"));
           String expected = formatCase.path("expected").asText();
-          cases.add(buildCase(name + "[" + locale + "]", source, locale, arguments, expected));
+          String bidiIsolation = formatCase.path("bidiIsolation").asText("none");
+          cases.add(buildCase(
+              name + "[" + locale + "]", source, locale, bidiIsolation, arguments, expected));
         }
       }
     }
@@ -270,12 +272,17 @@ public final class Icu4jReference {
   }
 
   private static ReferenceCase buildCase(
-      String name, String source, String locale, Map<String, Object> arguments, String expected) {
+      String name,
+      String source,
+      String locale,
+      String bidiIsolation,
+      Map<String, Object> arguments,
+      String expected) {
     try {
       MessageFormatter formatter =
           MessageFormatter.builder()
               .setLocale(Locale.forLanguageTag(locale.replace('_', '-')))
-              .setBidiIsolation(MessageFormatter.BidiIsolation.NONE)
+              .setBidiIsolation(toBidiIsolation(bidiIsolation))
               .setErrorHandlingBehavior(MessageFormatter.ErrorHandlingBehavior.STRICT)
               .setPattern(source)
               .build();
@@ -284,6 +291,12 @@ public final class Icu4jReference {
     } catch (RuntimeException e) {
       return new ReferenceCase(name, null, arguments, expected, e.getMessage());
     }
+  }
+
+  private static MessageFormatter.BidiIsolation toBidiIsolation(String value) {
+    return "default".equals(value)
+        ? MessageFormatter.BidiIsolation.DEFAULT
+        : MessageFormatter.BidiIsolation.NONE;
   }
 
   private static Map<String, Object> toMap(JsonNode node) {

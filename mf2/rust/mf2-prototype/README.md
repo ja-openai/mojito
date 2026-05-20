@@ -45,6 +45,7 @@ Supported now:
 - markup placeholders such as `{#link}`, `{/link}`, and `{#br/}`
 - `format_model_to_parts_with_locale` for text, expression, and markup boundary
   output, preserving expression/markup attributes for UI renderers
+- opt-in `BidiIsolation::Default` string output around expression values
 - structural model validation for duplicate declarations, select variant key
   arity, duplicate variants, and missing fallback variants
 - basic `.match` selectors with exact literal keys and `*` fallback, including

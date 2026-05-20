@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
                 {
                     "name": f"{fixture['name']}[{format_case.get('locale', 'en')}]",
                     "locale": format_case.get("locale", "en"),
+                    "bidiIsolation": format_case.get("bidiIsolation", "none"),
                     "source": fixture["source"],
                     "expected": format_case["expected"],
                     "arguments": format_case.get("arguments", {}),
@@ -56,6 +57,7 @@ def render(cases: list[dict[str, Any]]) -> str:
         "struct GeneratedCase {",
         "    std::string name;",
         "    std::string locale;",
+        "    std::string bidiIsolation;",
         "    std::string source;",
         "    std::string expected;",
         "    std::vector<GeneratedArg> arguments;",
@@ -68,6 +70,7 @@ def render(cases: list[dict[str, Any]]) -> str:
         lines.append("    cases.push_back({")
         lines.append(f"        {cpp_string(case['name'])},")
         lines.append(f"        {cpp_string(case['locale'])},")
+        lines.append(f"        {cpp_string(case['bidiIsolation'])},")
         lines.append(f"        {cpp_string(case['source'])},")
         lines.append(f"        {cpp_string(case['expected'])},")
         lines.append("        {")

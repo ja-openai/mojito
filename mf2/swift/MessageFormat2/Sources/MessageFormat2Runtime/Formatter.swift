@@ -4,9 +4,14 @@ public extension MF2Message {
     func format(
         arguments: [String: MF2Value] = [:],
         locale: String = "en",
-        functions: MF2FunctionRegistry = .defaults
+        functions: MF2FunctionRegistry = .defaults,
+        bidiIsolation: MF2BidiIsolation = .none
     ) throws -> String {
-        try formatToParts(arguments: arguments, locale: locale, functions: functions).stringValue
+        try formatToParts(
+            arguments: arguments,
+            locale: locale,
+            functions: functions
+        ).stringValue(bidiIsolation: bidiIsolation)
     }
 
     func formatToParts(
@@ -161,7 +166,7 @@ private struct MF2FormatContext {
     }
 
     func format(pattern: [MF2PatternPart]) throws -> String {
-        try formatToParts(pattern: pattern).stringValue
+        try formatToParts(pattern: pattern).stringValue()
     }
 
     func formatToParts(pattern: [MF2PatternPart]) throws -> [MF2FormattedPart] {
@@ -416,15 +421,31 @@ public enum MF2FormattedPart: Equatable, Decodable {
     }
 }
 
+public enum MF2BidiIsolation: String, Decodable {
+    case none
+    case `default`
+}
+
 private extension Array where Element == MF2FormattedPart {
-    var stringValue: String {
+    func stringValue(bidiIsolation: MF2BidiIsolation = .none) -> String {
         map { part in
             switch part {
-            case let .text(value), let .expression(value, _):
+            case let .text(value):
                 value
+            case let .expression(value, _):
+                isolateExpression(value, bidiIsolation: bidiIsolation)
             case .markup:
                 ""
             }
         }.joined()
+    }
+}
+
+private func isolateExpression(_ value: String, bidiIsolation: MF2BidiIsolation) -> String {
+    switch bidiIsolation {
+    case .none:
+        value
+    case .default:
+        "\u{2068}\(value)\u{2069}"
     }
 }

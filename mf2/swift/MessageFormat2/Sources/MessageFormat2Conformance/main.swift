@@ -21,7 +21,8 @@ do {
         for formatCase in fixture.formatCases {
             let actual = try fixture.expectedModel.format(
                 arguments: formatCase.arguments,
-                locale: formatCase.locale
+                locale: formatCase.locale,
+                bidiIsolation: formatCase.bidiIsolation ?? .none
             )
             if actual != formatCase.expected {
                 throw ConformanceError.formatMismatch(
@@ -229,6 +230,7 @@ private struct SourceToModelFixture: Decodable {
 
 private struct FormatCase: Decodable {
     let locale: String
+    let bidiIsolation: MF2BidiIsolation?
     let arguments: [String: MF2Value]
     let expected: String
 }

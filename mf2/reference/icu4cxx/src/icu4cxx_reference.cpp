@@ -101,6 +101,10 @@ PreparedCase prepareCase(const GeneratedCase& generated) {
         prepared.unsupportedReason = errorName(status);
         return prepared;
     }
+    if (generated.bidiIsolation != "none") {
+        prepared.unsupportedReason = "bidi isolation option not wired in ICU4C++ harness";
+        return prepared;
+    }
 
     builder.setLocale(Locale::createFromName(generated.locale.c_str()))
            .setErrorHandlingBehavior(MessageFormatter::U_MF_STRICT)

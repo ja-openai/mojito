@@ -15,5 +15,7 @@ pub use parser::{parse_to_model, ParseResult};
 pub use runtime::{
     format_model, format_model_to_parts_with_locale,
     format_model_to_parts_with_locale_and_functions, format_model_with_locale,
-    format_model_with_locale_and_functions, FormattedPart, FunctionCall, FunctionRegistry,
+    format_model_with_locale_and_bidi, format_model_with_locale_and_functions,
+    format_model_with_locale_and_functions_and_bidi, BidiIsolation, FormattedPart, FunctionCall,
+    FunctionRegistry,
 };

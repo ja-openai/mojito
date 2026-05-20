@@ -78,6 +78,8 @@ The current conformance slice covers:
 - markup placeholders, stripped from string output for now
 - `format_to_parts` / `formatToParts` output for text, expression output, and
   markup boundaries, preserving expression and markup attributes for UI renderers
+- opt-in `default` bidi isolation for string formatting, wrapping expression
+  output in Unicode FSI/PDI while keeping parts output raw
 - exact-match `.match` selectors with catch-all fallback, including
   multi-selector matching,
   `:number select=exact` and `:integer select=exact`

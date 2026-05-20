@@ -15,6 +15,8 @@ Current target:
 - format the supported shared conformance fixture slice
 - expose `formatToParts` for text, expression, and markup boundary output,
   preserving expression/markup attributes for UI renderers
+- support opt-in `Mf2BidiIsolation.DEFAULT` string output around expression
+  values
 - reject invalid model structure for duplicate declarations, select variant key
   arity, duplicate variants, and missing fallback variants
 - use generated CLDR cardinal and ordinal plural rules

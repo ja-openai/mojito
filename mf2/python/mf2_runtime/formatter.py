@@ -13,8 +13,12 @@ def format_message(
     arguments: dict[str, Any] | None = None,
     locale: str = "en",
     functions: FunctionRegistry | None = None,
+    bidi_isolation: str = "none",
 ) -> str:
-    return _parts_to_string(format_message_to_parts(model, arguments, locale, functions))
+    return _parts_to_string(
+        format_message_to_parts(model, arguments, locale, functions),
+        bidi_isolation,
+    )
 
 
 def format_message_to_parts(
@@ -342,9 +346,18 @@ def _render_value(value: Any) -> str:
     return str(value)
 
 
-def _parts_to_string(parts: list[dict[str, Any]]) -> str:
-    return "".join(
-        part.get("value", "")
-        for part in parts
-        if part.get("type") in {"text", "expression"}
-    )
+def _parts_to_string(parts: list[dict[str, Any]], bidi_isolation: str = "none") -> str:
+    output = []
+    for part in parts:
+        part_type = part.get("type")
+        if part_type == "text":
+            output.append(part.get("value", ""))
+        elif part_type == "expression":
+            output.append(_isolate_expression(part.get("value", ""), bidi_isolation))
+    return "".join(output)
+
+
+def _isolate_expression(value: str, bidi_isolation: str) -> str:
+    if bidi_isolation == "default":
+        return f"\u2068{value}\u2069"
+    return value
