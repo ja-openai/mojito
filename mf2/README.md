@@ -102,6 +102,7 @@ Run the tiny app-facing catalog demos directly:
 (cd swift/MessageFormat2 && swift run MessageFormat2TranslateDemo)
 (cd python && python3 examples/translate_demo.py)
 (cd java && sh run.sh demo)
+(cd java && sh run.sh inline-demo)
 ```
 
 Run a simple cross-language format benchmark:

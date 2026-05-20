@@ -1,6 +1,23 @@
 use std::collections::BTreeMap;
+use std::fs;
+use std::path::Path;
 
 use mf2_prototype::{format_model_with_locale, parse_to_model};
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+struct Demo {
+    cases: Vec<DemoCase>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DemoCase {
+    label: String,
+    source: String,
+    locale: String,
+    arguments: BTreeMap<String, serde_json::Value>,
+    expected: String,
+}
 
 fn translate(source: &str, locale: &str, arguments: BTreeMap<String, serde_json::Value>) -> String {
     let parsed = parse_to_model(source);
@@ -13,68 +30,17 @@ fn translate(source: &str, locale: &str, arguments: BTreeMap<String, serde_json:
 }
 
 fn main() {
-    let welcome = "Welcome, {$name}!";
-    let cart_items_en = r#".input {$count :number}
-.match $count
-one {{{$count} item}}
-* {{{$count} items}}"#;
-    let cart_items_ru = r#".input {$count :number}
-.match $count
-one {{{$count} предмет}}
-few {{{$count} предмета}}
-many {{{$count} предметов}}
-* {{{$count} предмета}}"#;
-
-    let examples = [
-        (
-            "welcome",
-            "en",
-            welcome,
-            args([("name", serde_json::Value::String("Mojito".to_string()))]),
-            "Welcome, Mojito!",
-        ),
-        (
-            "cart.items",
-            "en",
-            cart_items_en,
-            args([("count", 1.into())]),
-            "1 item",
-        ),
-        (
-            "cart.items",
-            "en",
-            cart_items_en,
-            args([("count", 5.into())]),
-            "5 items",
-        ),
-        (
-            "cart.items",
-            "ru",
-            cart_items_ru,
-            args([("count", 2.into())]),
-            "2 предмета",
-        ),
-        (
-            "cart.items",
-            "ru",
-            cart_items_ru,
-            args([("count", 5.into())]),
-            "5 предметов",
-        ),
-    ];
-
-    for (label, locale, source, arguments, expected) in examples {
-        let actual = translate(source, locale, arguments);
-        assert_eq!(actual, expected, "{label}/{locale}");
-        println!("{label}[{locale}] -> \"{actual}\"");
+    let demo = load_demo(Path::new("../../examples/inline-source-demo.json"));
+    for case in demo.cases {
+        let actual = translate(&case.source, &case.locale, case.arguments);
+        assert_eq!(actual, case.expected, "{}/{}", case.label, case.locale);
+        println!("{}[{}] -> \"{actual}\"", case.label, case.locale);
     }
 }
 
-fn args<const N: usize>(
-    values: [(&'static str, serde_json::Value); N],
-) -> BTreeMap<String, serde_json::Value> {
-    values
-        .into_iter()
-        .map(|(key, value)| (key.to_string(), value))
-        .collect()
+fn load_demo(path: &Path) -> Demo {
+    let contents = fs::read_to_string(path)
+        .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
+    serde_json::from_str(&contents)
+        .unwrap_or_else(|error| panic!("failed to parse {}: {error}", path.display()))
 }

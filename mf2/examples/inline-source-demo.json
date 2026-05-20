@@ -1,0 +1,39 @@
+{
+  "cases": [
+    {
+      "label": "welcome",
+      "source": "Welcome, {$name}!",
+      "locale": "en",
+      "arguments": { "name": "Mojito" },
+      "expected": "Welcome, Mojito!"
+    },
+    {
+      "label": "cart.items",
+      "source": ".input {$count :number}\n.match $count\none {{{$count} item}}\n* {{{$count} items}}",
+      "locale": "en",
+      "arguments": { "count": 1 },
+      "expected": "1 item"
+    },
+    {
+      "label": "cart.items",
+      "source": ".input {$count :number}\n.match $count\none {{{$count} item}}\n* {{{$count} items}}",
+      "locale": "en",
+      "arguments": { "count": 5 },
+      "expected": "5 items"
+    },
+    {
+      "label": "cart.items",
+      "source": ".input {$count :number}\n.match $count\none {{{$count} предмет}}\nfew {{{$count} предмета}}\nmany {{{$count} предметов}}\n* {{{$count} предмета}}",
+      "locale": "ru",
+      "arguments": { "count": 2 },
+      "expected": "2 предмета"
+    },
+    {
+      "label": "cart.items",
+      "source": ".input {$count :number}\n.match $count\none {{{$count} предмет}}\nfew {{{$count} предмета}}\nmany {{{$count} предметов}}\n* {{{$count} предмета}}",
+      "locale": "ru",
+      "arguments": { "count": 5 },
+      "expected": "5 предметов"
+    }
+  ]
+}

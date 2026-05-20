@@ -31,5 +31,6 @@ Run:
 mvn compile
 sh run.sh conformance
 sh run.sh demo
+sh run.sh inline-demo
 sh run.sh bench ../conformance/fixtures/source-to-model 100000 10000
 ```

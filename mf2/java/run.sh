@@ -32,6 +32,9 @@ case "$command" in
   demo)
     java -cp target/classes com.box.l10n.mojito.mf2.TranslateDemo
     ;;
+  inline-demo)
+    java -cp target/classes com.box.l10n.mojito.mf2.InlineTranslateDemo
+    ;;
   *)
     echo "unknown command: $command" >&2
     exit 2
