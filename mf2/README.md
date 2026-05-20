@@ -65,7 +65,8 @@ The current conformance slice covers:
   identifiers for functions, options, attributes, and markup in the Rust/Java
   source parsers
 - basic invalid-source diagnostics for malformed variable, function, option,
-  and attribute identifiers, plus duplicate function option and attribute names
+  and attribute identifiers, malformed match variants, plus duplicate function
+  option and attribute names
 - function annotations and literal/variable options in the data model, including
   quoted option values containing spaces
 - formatter function registries in Rust/Swift/Python/Java; default runtimes

@@ -1,0 +1,7 @@
+{
+  "name": "match-without-variants",
+  "source": ".input {$status :string}\n.match $status",
+  "expectedDiagnostics": [
+    { "code": "missing-match-variants" }
+  ]
+}

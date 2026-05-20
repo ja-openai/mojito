@@ -1,0 +1,7 @@
+{
+  "name": "match-without-variant-pattern",
+  "source": ".input {$status :string}\n.match $status\nactive",
+  "expectedDiagnostics": [
+    { "code": "missing-variant-pattern" }
+  ]
+}

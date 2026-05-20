@@ -127,7 +127,7 @@ final class Mf2Parser {
         List<Mf2Message.VariableRef> selectors = new ArrayList<>();
         while (true) {
             skipHorizontalWhitespace();
-            if (peekChar() == '$') {
+            if (!isDone() && peekChar() == '$') {
                 String name = parseVariableName();
                 if (name != null) {
                     selectors.add(new Mf2Message.VariableRef(name));
