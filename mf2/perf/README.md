@@ -11,6 +11,12 @@ Use `compare.sh` for comparable hot-loop throughput:
 sh perf/compare.sh conformance/fixtures/source-to-model 100000 10000
 ```
 
+Use `compare_parse.sh` for source parser throughput:
+
+```sh
+sh perf/compare_parse.sh conformance/fixtures/source-to-model conformance/fixtures/invalid-source 100000 10000
+```
+
 The third argument is untimed warmup iterations. This matters for JVM and other
 managed runtimes, but we use it for every language so the comparison shape stays
 consistent.
@@ -57,6 +63,16 @@ RSS smoke run with 10,000 timed iterations and 2,000 warmup iterations:
 
 These are development-machine smoke numbers, not release benchmarks. They are
 useful for trend detection and obvious bottlenecks only.
+
+Parser smoke run with 1,000,000 timed iterations and 100,000 warmup iterations:
+
+- Valid source fixtures: Rust about 1.77M parses/sec, Java about 2.16M parses/sec
+- Invalid source fixtures: Rust about 6.15M parses/sec, Java about 8.06M parses/sec
+
+Java JFR smoke profiles point at ordinary string/parser work after warmup:
+quoted-pattern scanning, name splitting, immutable model list construction, and
+benchmark byte counting. Treat those as optimization targets only after the
+grammar and fixture coverage harden.
 
 Use `profile.sh python-cpu` to find Python hotspots:
 

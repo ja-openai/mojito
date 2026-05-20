@@ -77,7 +77,7 @@ impl<'a> Parser<'a> {
         let pattern = self.parse_pattern_until_end();
         Some(MessageModel::Message {
             declarations,
-            pattern: merge_adjacent_text(pattern),
+            pattern,
         })
     }
 
@@ -258,8 +258,10 @@ impl<'a> Parser<'a> {
                 self.index = scan + 2;
                 let mut nested = Parser::new(content, self.base_offset + content_start);
                 let pattern = nested.parse_pattern_until_end();
-                self.diagnostics.extend(nested.diagnostics);
-                return Some(merge_adjacent_text(pattern));
+                if !nested.diagnostics.is_empty() {
+                    self.diagnostics.extend(nested.diagnostics);
+                }
+                return Some(pattern);
             }
             let Some(ch) = self.source[scan..].chars().next() else {
                 break;
@@ -322,7 +324,7 @@ impl<'a> Parser<'a> {
         if !text.is_empty() {
             parts.push(PatternPart::Text(text));
         }
-        merge_adjacent_text(parts)
+        parts
     }
 
     fn parse_escape_into(&mut self, text: &mut String) {
@@ -638,19 +640,6 @@ fn split_name(input: &str) -> (&str, &str) {
         end += ch.len_utf8();
     }
     (&input[..end], &input[end..])
-}
-
-fn merge_adjacent_text(pattern: Pattern) -> Pattern {
-    let mut merged: Pattern = Vec::new();
-    for part in pattern {
-        match (merged.last_mut(), part) {
-            (Some(PatternPart::Text(previous)), PatternPart::Text(next)) => {
-                previous.push_str(&next)
-            }
-            (_, next) => merged.push(next),
-        }
-    }
-    merged
 }
 
 fn is_name_char(ch: char) -> bool {

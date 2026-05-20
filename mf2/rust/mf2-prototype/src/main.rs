@@ -26,6 +26,12 @@ struct FormatCase {
     arguments: BTreeMap<String, serde_json::Value>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SourceOnlyFixture {
+    source: String,
+}
+
 fn main() {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
@@ -39,6 +45,7 @@ fn main() {
         "compile" => compile(&read_to_string(&path)),
         "format-first-case" => format_first_case(&read_to_string(&path)),
         "bench" => bench(&path, args.next(), args.next()),
+        "bench-parse" => bench_parse(&path, args.next(), args.next()),
         _ => usage_and_exit(),
     }
 }
@@ -92,27 +99,48 @@ fn format_first_case(source: &str) {
     println!("{output}");
 }
 
+fn bench_parse(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>) {
+    let iterations = parse_iterations(iterations_arg.as_deref().unwrap_or("100000"), "iteration");
+    let warmup_iterations = parse_iterations(warmup_arg.as_deref().unwrap_or("10000"), "warmup");
+    let sources = read_sources(Path::new(path));
+
+    if sources.is_empty() {
+        eprintln!("No source fixtures found.");
+        process::exit(2);
+    }
+
+    for index in 0..warmup_iterations {
+        let result = parse_to_model(&sources[index % sources.len()]);
+        black_box(result);
+    }
+
+    let started = Instant::now();
+    let mut bytes = 0usize;
+    let mut diagnostics = 0usize;
+    let mut models = 0usize;
+    for index in 0..iterations {
+        let source = &sources[index % sources.len()];
+        let result = parse_to_model(source);
+        bytes += black_box(source.len());
+        diagnostics += black_box(result.diagnostics.len());
+        models += usize::from(result.model.is_some());
+        black_box(result);
+    }
+    let seconds = started.elapsed().as_secs_f64();
+    println!(
+        "rust parse iterations={iterations} warmup={warmup_iterations} sources={} seconds={seconds:.6} ops_per_second={:.0} bytes={bytes} diagnostics={diagnostics} models={models}",
+        sources.len(),
+        iterations as f64 / seconds
+    );
+}
+
 fn default_locale() -> String {
     "en".to_string()
 }
 
 fn bench(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>) {
-    let iterations = iterations_arg
-        .as_deref()
-        .unwrap_or("100000")
-        .parse::<usize>()
-        .unwrap_or_else(|error| {
-            eprintln!("Invalid iteration count: {error}");
-            process::exit(2);
-        });
-    let warmup_iterations = warmup_arg
-        .as_deref()
-        .unwrap_or("10000")
-        .parse::<usize>()
-        .unwrap_or_else(|error| {
-            eprintln!("Invalid warmup iteration count: {error}");
-            process::exit(2);
-        });
+    let iterations = parse_iterations(iterations_arg.as_deref().unwrap_or("100000"), "iteration");
+    let warmup_iterations = parse_iterations(warmup_arg.as_deref().unwrap_or("10000"), "warmup");
     let fixtures = read_fixture_dir(Path::new(path));
     let cases: Vec<_> = fixtures
         .iter()
@@ -154,6 +182,40 @@ fn bench(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>)
     );
 }
 
+fn parse_iterations(value: &str, label: &str) -> usize {
+    value.parse::<usize>().unwrap_or_else(|error| {
+        eprintln!("Invalid {label} count: {error}");
+        process::exit(2);
+    })
+}
+
+fn read_sources(dir: &Path) -> Vec<String> {
+    let mut paths: Vec<_> = fs::read_dir(dir)
+        .unwrap_or_else(|error| {
+            eprintln!("Failed to read {}: {error}", dir.display());
+            process::exit(2);
+        })
+        .map(|entry| entry.expect("fixture entry").path())
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "json")
+        })
+        .collect();
+    paths.sort();
+    paths
+        .into_iter()
+        .map(|path| {
+            let content = read_to_string(path.to_str().unwrap());
+            serde_json::from_str::<SourceOnlyFixture>(&content)
+                .map(|fixture| fixture.source)
+                .unwrap_or_else(|error| {
+                    eprintln!("Failed to parse source from {}: {error}", path.display());
+                    process::exit(2);
+                })
+        })
+        .collect()
+}
+
 fn read_fixture_dir(dir: &Path) -> Vec<SourceFixture> {
     let mut paths: Vec<_> = fs::read_dir(dir)
         .unwrap_or_else(|error| {
@@ -188,7 +250,7 @@ fn read_to_string(path: &str) -> String {
 
 fn usage_and_exit() -> ! {
     eprintln!(
-        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]"
+        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]\n  mf2-prototype bench-parse <fixture-dir> [iterations] [warmup-iterations]"
     );
     process::exit(2);
 }

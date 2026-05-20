@@ -230,8 +230,10 @@ final class Mf2Parser {
                 index = scan + 2;
                 Mf2Parser nested = new Mf2Parser(content, baseOffset + contentStart);
                 List<Mf2Message.PatternPart> pattern = nested.parsePatternUntilEnd();
-                diagnostics.addAll(nested.diagnostics);
-                return mergeAdjacentText(pattern);
+                if (!nested.diagnostics.isEmpty()) {
+                    diagnostics.addAll(nested.diagnostics);
+                }
+                return pattern;
             }
 
             int codePoint = source.codePointAt(scan);
@@ -295,7 +297,7 @@ final class Mf2Parser {
         if (!text.isEmpty()) {
             parts.add(new Mf2Message.TextPart(text.toString()));
         }
-        return mergeAdjacentText(parts);
+        return parts;
     }
 
     private void parseEscapeInto(StringBuilder text) {
@@ -576,20 +578,6 @@ final class Mf2Parser {
             end += Character.charCount(ch);
         }
         return new NameSplit(input.substring(0, end), input.substring(end));
-    }
-
-    private static List<Mf2Message.PatternPart> mergeAdjacentText(List<Mf2Message.PatternPart> pattern) {
-        List<Mf2Message.PatternPart> merged = new ArrayList<>();
-        for (Mf2Message.PatternPart part : pattern) {
-            if (part instanceof Mf2Message.TextPart text
-                    && !merged.isEmpty()
-                    && merged.getLast() instanceof Mf2Message.TextPart previous) {
-                merged.set(merged.size() - 1, new Mf2Message.TextPart(previous.value() + text.value()));
-            } else {
-                merged.add(part);
-            }
-        }
-        return merged;
     }
 
     private static boolean isNameChar(char ch) {

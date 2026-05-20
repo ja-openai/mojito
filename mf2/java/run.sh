@@ -28,6 +28,9 @@ case "$command" in
   bench)
     java -cp build/classes com.box.l10n.mojito.mf2.Benchmark "${2:-../conformance/fixtures/source-to-model}" "${3:-100000}" "${4:-10000}"
     ;;
+  bench-parse)
+    java -cp build/classes com.box.l10n.mojito.mf2.ParseBenchmark "${2:-../conformance/fixtures/source-to-model}" "${3:-100000}" "${4:-10000}"
+    ;;
   demo)
     java -cp build/classes com.box.l10n.mojito.mf2.TranslateDemo
     ;;
