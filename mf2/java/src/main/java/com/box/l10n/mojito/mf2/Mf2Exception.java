@@ -53,4 +53,10 @@ public final class Mf2Exception extends Exception {
                 "missing-fallback-variant",
                 "Select messages must include a catch-all fallback variant.");
     }
+
+    static Mf2Exception missingSelectorAnnotation(String name) {
+        return new Mf2Exception(
+                "missing-selector-annotation",
+                "Selector $" + name + " must reference a declaration with a function.");
+    }
 }

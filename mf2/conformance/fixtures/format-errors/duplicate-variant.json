@@ -2,7 +2,17 @@
   "name": "duplicate-variant",
   "model": {
     "type": "select",
-    "declarations": [],
+    "declarations": [
+      {
+        "type": "input",
+        "name": "status",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "status" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
     "selectors": [{ "type": "variable", "name": "status" }],
     "variants": [
       {

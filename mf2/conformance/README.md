@@ -103,6 +103,7 @@ The source-to-model fixtures currently cover:
 - parts output for expression and markup attributes
 - exact-match `.match` selectors and catch-all fallback, including
   `:number select=exact`
+- direct and simple indirect selector annotations for `.match`
 - cardinal plural category selection for English, French, Russian, Arabic, and
   Japanese fixtures
 - ordinal plural category selection for English fixtures
@@ -126,5 +127,6 @@ The format-error fixtures currently cover:
 
 - selector/variant key arity mismatches
 - missing catch-all fallback variants
+- missing selector annotations
 - duplicate select variants
 - duplicate declarations

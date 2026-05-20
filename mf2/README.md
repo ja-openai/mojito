@@ -74,12 +74,14 @@ The current conformance slice covers:
   markup boundaries, preserving expression and markup attributes for UI renderers
 - exact-match `.match` selectors with catch-all fallback, including
   `:number select=exact`
+- direct and simple indirect selector annotation validation for `.match`
 - cardinal and ordinal plural category selection for the generated all-CLDR
   locale set
 - BCP47-first locale-key canonicalization and structural lookup, including
   underscore compatibility and extension stripping for plural and catalog lookup
 - structural model validation for duplicate declarations, select variant key
-  arity, duplicate variants, and required catch-all fallback variants
+  arity, duplicate variants, required catch-all fallback variants, and missing
+  selector annotations
 
 Rust and Java currently parse MF2 source into the official data model for this
 slice. Swift and Python currently consume the expected official data model from

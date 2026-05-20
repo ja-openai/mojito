@@ -1,0 +1,49 @@
+{
+  "name": "selector-annotation-indirect",
+  "source": ".input {$count :number}\n.local $items = {$count}\n.match $items\none {{one}}\n* {{other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" },
+          "function": { "type": "function", "name": "number" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "items",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "items" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": ["one"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "count": 1 },
+      "expected": "one"
+    },
+    {
+      "locale": "en",
+      "arguments": { "count": 2 },
+      "expected": "other"
+    }
+  ]
+}

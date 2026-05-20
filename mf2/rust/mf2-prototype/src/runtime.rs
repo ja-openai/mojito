@@ -76,6 +76,14 @@ pub fn format_model_to_parts_with_locale(
 
 fn validate_model(model: &MessageModel) -> Result<(), Diagnostic> {
     validate_declarations(model.declarations())?;
+    if let MessageModel::Select {
+        declarations,
+        selectors,
+        ..
+    } = model
+    {
+        validate_selector_annotations(declarations, selectors)?;
+    }
     Ok(())
 }
 
@@ -98,6 +106,64 @@ fn validate_declarations(declarations: &[Declaration]) -> Result<(), Diagnostic>
     Ok(())
 }
 
+fn validate_selector_annotations(
+    declarations: &[Declaration],
+    selectors: &[VariableRef],
+) -> Result<(), Diagnostic> {
+    let annotations = selector_annotations(declarations);
+    for selector in selectors {
+        if !annotations.contains_key(&selector.name) {
+            return Err(model_error(
+                "missing-selector-annotation",
+                format!(
+                    "Selector ${} must reference a declaration with a function.",
+                    selector.name
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn selector_annotations(
+    declarations: &[Declaration],
+) -> BTreeMap<String, SelectorAnnotation> {
+    let mut annotations = BTreeMap::new();
+    for declaration in declarations {
+        let (name, value) = declaration_name_value(declaration);
+        if let Some(function) = &value.function {
+            annotations.insert(name.to_string(), SelectorAnnotation::from_function(function));
+        }
+    }
+
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for declaration in declarations {
+            let (name, value) = declaration_name_value(declaration);
+            if annotations.contains_key(name) {
+                continue;
+            }
+            let Some(ExpressionArg::Variable { name: source }) = &value.arg else {
+                continue;
+            };
+            let Some(annotation) = annotations.get(source).cloned() else {
+                continue;
+            };
+            annotations.insert(name.to_string(), annotation);
+            changed = true;
+        }
+    }
+
+    annotations
+}
+
+fn declaration_name_value(declaration: &Declaration) -> (&str, &Expression) {
+    match declaration {
+        Declaration::Input { name, value } | Declaration::Local { name, value } => (name, value),
+    }
+}
+
 struct FormatContext {
     values: BTreeMap<String, serde_json::Value>,
     selector_annotations: BTreeMap<String, SelectorAnnotation>,
@@ -114,14 +180,10 @@ impl FormatContext {
     }
 
     fn apply_declarations(&mut self, declarations: &[Declaration]) -> Result<(), Diagnostic> {
+        self.selector_annotations = selector_annotations(declarations);
         for declaration in declarations {
             match declaration {
-                Declaration::Input { name, value } => {
-                    if let Some(function) = &value.function {
-                        self.selector_annotations
-                            .insert(name.clone(), SelectorAnnotation::from_function(function));
-                    }
-                }
+                Declaration::Input { .. } => {}
                 Declaration::Local { name, value } => {
                     let rendered = self.format_expression(value)?;
                     self.values

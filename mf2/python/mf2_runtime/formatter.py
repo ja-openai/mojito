@@ -34,6 +34,11 @@ def format_message_to_parts(
 
 def _validate_model(model: dict[str, Any]) -> None:
     _validate_declarations(model.get("declarations", []))
+    if model.get("type") == "select":
+        _validate_selector_annotations(
+            model.get("declarations", []),
+            model.get("selectors", []),
+        )
 
 
 def _validate_declarations(declarations: list[dict[str, Any]]) -> None:
@@ -50,6 +55,51 @@ def _validate_declarations(declarations: list[dict[str, Any]]) -> None:
         names.add(name)
 
 
+def _selector_annotations(
+    declarations: list[dict[str, Any]],
+) -> dict[str, "_SelectorAnnotation"]:
+    expressions = {
+        declaration.get("name", ""): declaration.get("value", {})
+        for declaration in declarations
+    }
+    annotations = {
+        name: _SelectorAnnotation.from_function(expression["function"])
+        for name, expression in expressions.items()
+        if expression.get("function") is not None
+    }
+
+    changed = True
+    while changed:
+        changed = False
+        for name, expression in expressions.items():
+            if name in annotations:
+                continue
+            arg = expression.get("arg", {})
+            if arg.get("type") != "variable":
+                continue
+            annotation = annotations.get(arg.get("name"))
+            if annotation is None:
+                continue
+            annotations[name] = annotation
+            changed = True
+
+    return annotations
+
+
+def _validate_selector_annotations(
+    declarations: list[dict[str, Any]],
+    selectors: list[dict[str, Any]],
+) -> None:
+    annotations = _selector_annotations(declarations)
+    for selector in selectors:
+        name = selector.get("name", "")
+        if name not in annotations:
+            raise MF2Error(
+                "missing-selector-annotation",
+                f"Selector ${name} must reference a declaration with a function.",
+            )
+
+
 def _variant_key_signature(keys: list[dict[str, Any]]) -> tuple[tuple[str, str], ...]:
     return tuple(
         ("*", "") if key.get("type") == "*" else ("=", key.get("value", ""))
@@ -64,14 +114,9 @@ class _FormatContext:
         self.selector_annotations: dict[str, _SelectorAnnotation] = {}
 
     def apply_declarations(self, declarations: list[dict[str, Any]]) -> None:
+        self.selector_annotations = _selector_annotations(declarations)
         for declaration in declarations:
-            if declaration.get("type") == "input":
-                function = declaration.get("value", {}).get("function")
-                if function is not None:
-                    self.selector_annotations[declaration["name"]] = _SelectorAnnotation.from_function(
-                        function
-                    )
-            elif declaration.get("type") == "local":
+            if declaration.get("type") == "local":
                 self.values[declaration["name"]] = self.format_expression(declaration["value"])
 
     def format_select_to_parts(

@@ -32,6 +32,9 @@ final class Mf2Formatter {
 
     private static void validate(Mf2Message message) throws Mf2Exception {
         validateDeclarations(message.declarations());
+        if (message instanceof Mf2Message.Select select) {
+            validateSelectorAnnotations(select.declarations(), select.selectors());
+        }
     }
 
     private static void validateDeclarations(List<Mf2Message.Declaration> declarations)
@@ -45,6 +48,48 @@ final class Mf2Formatter {
                 throw Mf2Exception.duplicateDeclaration(declaration.name());
             }
         }
+    }
+
+    private static void validateSelectorAnnotations(
+            List<Mf2Message.Declaration> declarations, List<Mf2Message.VariableRef> selectors)
+            throws Mf2Exception {
+        Map<String, SelectorAnnotation> annotations = selectorAnnotations(declarations);
+        for (Mf2Message.VariableRef selector : selectors) {
+            if (!annotations.containsKey(selector.name())) {
+                throw Mf2Exception.missingSelectorAnnotation(selector.name());
+            }
+        }
+    }
+
+    private static Map<String, SelectorAnnotation> selectorAnnotations(
+            List<Mf2Message.Declaration> declarations) {
+        Map<String, Mf2Message.Expression> expressions = new HashMap<>();
+        Map<String, SelectorAnnotation> annotations = new HashMap<>();
+        for (Mf2Message.Declaration declaration : declarations) {
+            expressions.put(declaration.name(), declaration.value());
+            Mf2Message.FunctionRef function = declaration.value().function();
+            if (function != null) {
+                annotations.put(declaration.name(), SelectorAnnotation.from(function));
+            }
+        }
+
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (Map.Entry<String, Mf2Message.Expression> entry : expressions.entrySet()) {
+                if (annotations.containsKey(entry.getKey())) {
+                    continue;
+                }
+                if (entry.getValue().arg() instanceof Mf2Message.VariableArgument variable) {
+                    SelectorAnnotation annotation = annotations.get(variable.name());
+                    if (annotation != null) {
+                        annotations.put(entry.getKey(), annotation);
+                        changed = true;
+                    }
+                }
+            }
+        }
+        return annotations;
     }
 
     private static final class FormatContext {
@@ -61,14 +106,12 @@ final class Mf2Formatter {
         }
 
         void apply(List<Mf2Message.Declaration> declarations) throws Mf2Exception {
+            for (Map.Entry<String, SelectorAnnotation> entry : selectorAnnotations(declarations).entrySet()) {
+                addSelectorAnnotation(entry.getKey(), entry.getValue());
+            }
             for (Mf2Message.Declaration declaration : declarations) {
                 switch (declaration) {
-                    case Mf2Message.InputDeclaration input -> {
-                        Mf2Message.FunctionRef function = input.value().function();
-                        if (function != null) {
-                            addSelectorAnnotation(input.name(), SelectorAnnotation.from(function));
-                        }
-                    }
+                    case Mf2Message.InputDeclaration ignored -> {}
                     case Mf2Message.LocalDeclaration local -> putLocal(local.name(), formatExpression(local.value()));
                 }
             }

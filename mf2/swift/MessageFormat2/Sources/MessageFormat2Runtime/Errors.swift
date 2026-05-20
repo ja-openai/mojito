@@ -9,6 +9,7 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
     case variantKeyCountMismatch
     case duplicateVariant
     case missingFallbackVariant
+    case missingSelectorAnnotation(String)
 
     public var code: String {
         switch self {
@@ -28,6 +29,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "duplicate-variant"
         case .missingFallbackVariant:
             "missing-fallback-variant"
+        case .missingSelectorAnnotation:
+            "missing-selector-annotation"
         }
     }
 
@@ -49,6 +52,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "Select variants must have unique key tuples."
         case .missingFallbackVariant:
             "Select messages must include a catch-all fallback variant."
+        case let .missingSelectorAnnotation(name):
+            "Selector $\(name) must reference a declaration with a function."
         }
     }
 }

@@ -1,15 +1,14 @@
 {
-  "name": "missing-fallback-variant",
+  "name": "missing-selector-annotation-local",
   "model": {
     "type": "select",
     "declarations": [
       {
-        "type": "input",
+        "type": "local",
         "name": "status",
         "value": {
           "type": "expression",
-          "arg": { "type": "variable", "name": "status" },
-          "function": { "type": "function", "name": "string" }
+          "arg": { "type": "literal", "value": "active" }
         }
       }
     ],
@@ -18,14 +17,16 @@
       {
         "keys": [{ "type": "literal", "value": "active" }],
         "value": ["Active"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
       }
     ]
   },
   "locale": "en",
-  "arguments": {
-    "status": "active"
-  },
+  "arguments": {},
   "expectedError": {
-    "code": "missing-fallback-variant"
+    "code": "missing-selector-annotation"
   }
 }

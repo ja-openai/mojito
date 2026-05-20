@@ -26,6 +26,9 @@ public extension MF2Message {
 
     private func validate() throws {
         try validate(declarations: declarations)
+        if case let .select(declarations, selectors, _) = self {
+            try validateSelectorAnnotations(declarations: declarations, selectors: selectors)
+        }
     }
 
     private func validate(declarations: [MF2Declaration]) throws {
@@ -41,6 +44,16 @@ public extension MF2Message {
         }
     }
 
+    private func validateSelectorAnnotations(
+        declarations: [MF2Declaration],
+        selectors: [MF2VariableRef]
+    ) throws {
+        let annotations = collectSelectorAnnotations(for: declarations)
+        for selector in selectors where annotations[selector.name] == nil {
+            throw MF2Error.missingSelectorAnnotation(selector.name)
+        }
+    }
+
 }
 
 private struct MF2FormatContext {
@@ -49,12 +62,11 @@ private struct MF2FormatContext {
     var locale: String
 
     mutating func apply(declarations: [MF2Declaration]) throws {
+        selectorAnnotations = collectSelectorAnnotations(for: declarations)
         for declaration in declarations {
             switch declaration {
-            case let .input(name, value):
-                if let function = value.function {
-                    selectorAnnotations[name] = MF2SelectorAnnotation(function: function)
-                }
+            case .input:
+                continue
             case let .local(name, value):
                 values[name] = .string(try format(expression: value))
             }
@@ -163,6 +175,29 @@ private struct MF2FormatContext {
     }
 }
 
+private func collectSelectorAnnotations(for declarations: [MF2Declaration]) -> [String: MF2SelectorAnnotation] {
+    let expressions = Dictionary(uniqueKeysWithValues: declarations.map { ($0.name, $0.value) })
+    var annotations = expressions.compactMapValues { expression in
+        expression.function.map(MF2SelectorAnnotation.init(function:))
+    }
+
+    var changed = true
+    while changed {
+        changed = false
+        for (name, expression) in expressions where annotations[name] == nil {
+            guard case let .variable(source)? = expression.arg,
+                  let annotation = annotations[source]
+            else {
+                continue
+            }
+            annotations[name] = annotation
+            changed = true
+        }
+    }
+
+    return annotations
+}
+
 private struct MF2SelectorAnnotation {
     let function: String
     let numberSelect: MF2NumberSelect
@@ -218,6 +253,13 @@ private extension MF2Declaration {
         switch self {
         case let .input(name, _), let .local(name, _):
             name
+        }
+    }
+
+    var value: MF2Expression {
+        switch self {
+        case let .input(_, value), let .local(_, value):
+            value
         }
     }
 }
