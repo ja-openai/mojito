@@ -141,3 +141,4 @@ The format-error fixtures currently cover:
 - invalid markup kind
 - duplicate select variants
 - duplicate declarations
+- missing runtime arguments in expressions, locals, and selectors

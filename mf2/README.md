@@ -87,7 +87,8 @@ The current conformance slice covers:
 - structural model validation for duplicate declarations, select variant key
   arity, duplicate variants, required catch-all fallback variants, and missing
   selector annotations, input declaration variable binding, and non-empty
-  pattern text parts, plus valid markup kind values
+  pattern text parts, plus valid markup kind values and missing runtime argument
+  errors
 
 Rust and Java currently parse MF2 source into the official data model for this
 slice. Swift and Python currently consume the expected official data model from
