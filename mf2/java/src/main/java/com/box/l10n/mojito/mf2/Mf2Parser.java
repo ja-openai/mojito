@@ -541,6 +541,14 @@ final class Mf2Parser {
                         end);
                 return null;
             }
+            if (options.containsKey(keySplit.name())) {
+                pushDiagnostic(
+                        "duplicate-option-name",
+                        "Function option names must be unique within an expression.",
+                        start,
+                        end);
+                return null;
+            }
             options.put(keySplit.name(), parseLiteralOrVariable(rawValue));
         }
 

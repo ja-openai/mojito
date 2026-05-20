@@ -122,6 +122,7 @@ The invalid-source fixtures currently cover:
 - unclosed quoted values in expression tails
 - missing match selectors
 - invalid variable, function, option, and attribute names
+- duplicate function option names
 
 The format-error fixtures currently cover:
 

@@ -606,6 +606,15 @@ impl<'a> Parser<'a> {
                 );
                 return None;
             }
+            if options.contains_key(&key) {
+                self.push_diagnostic(
+                    "duplicate-option-name",
+                    "Function option names must be unique within an expression.",
+                    start,
+                    end,
+                );
+                return None;
+            }
             options.insert(key, parse_literal_or_variable(raw_value));
         }
 

@@ -1,0 +1,7 @@
+{
+  "name": "duplicate-function-option-local",
+  "source": ".local $foo = {:ns:func one=1 two=2 one=3}\n{{Value: {$foo}}}",
+  "expectedDiagnostics": [
+    { "code": "duplicate-option-name" }
+  ]
+}
