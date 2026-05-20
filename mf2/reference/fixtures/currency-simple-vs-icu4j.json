@@ -1,0 +1,73 @@
+{
+  "name": "currency-simple-vs-icu4j",
+  "reference": {
+    "backend": "ICU4J",
+    "version": "78.3",
+    "api": "com.ibm.icu.text.NumberFormat.getCurrencyInstance",
+    "generatedWith": "manual JShell probe from mf2/reference/icu4j classpath"
+  },
+  "demoFormatter": {
+    "description": "Current dependency-free :currency demo formatter. This fixture documents where it matches ICU4J and where it is knowingly insufficient.",
+    "scope": "diagnostic fixture only; not part of pass/fail runtime conformance"
+  },
+  "cases": [
+    {
+      "label": "en-us-usd-positive",
+      "locale": "en-US",
+      "currency": "USD",
+      "amount": 1234.5,
+      "icu4jExpected": "$1,234.50",
+      "demoFormatterExpected": "$1,234.50",
+      "matchesDemoFormatter": true
+    },
+    {
+      "label": "en-us-usd-negative",
+      "locale": "en-US",
+      "currency": "USD",
+      "amount": -1234.5,
+      "icu4jExpected": "-$1,234.50",
+      "demoFormatterExpected": "-$1,234.50",
+      "matchesDemoFormatter": true
+    },
+    {
+      "label": "fr-fr-eur-spacing",
+      "locale": "fr-FR",
+      "currency": "EUR",
+      "amount": 1234.5,
+      "icu4jExpected": "1\u202f234,50\u00a0\u20ac",
+      "demoFormatterExpected": "1\u202f234,50 \u20ac",
+      "matchesDemoFormatter": false,
+      "knownGap": "Currency spacing differs; ICU4J uses a non-breaking space before the currency symbol."
+    },
+    {
+      "label": "de-de-eur-order-and-separators",
+      "locale": "de-DE",
+      "currency": "EUR",
+      "amount": 1234.5,
+      "icu4jExpected": "1.234,50\u00a0\u20ac",
+      "demoFormatterExpected": "\u20ac1,234.50",
+      "matchesDemoFormatter": false,
+      "knownGap": "The demo formatter has no German locale pattern, decimal separator, grouping separator, or currency placement."
+    },
+    {
+      "label": "ja-jp-jpy-symbol",
+      "locale": "ja-JP",
+      "currency": "JPY",
+      "amount": 1234,
+      "icu4jExpected": "\uffe51,234",
+      "demoFormatterExpected": "\u00a51,234",
+      "matchesDemoFormatter": false,
+      "knownGap": "ICU4J uses the locale-preferred fullwidth yen symbol."
+    },
+    {
+      "label": "ar-eg-usd-numbering-and-bidi",
+      "locale": "ar-EG",
+      "currency": "USD",
+      "amount": 1234.5,
+      "icu4jExpected": "\u200f\u0661\u066c\u0662\u0663\u0664\u066b\u0665\u0660\u00a0US$",
+      "demoFormatterExpected": "$1,234.50",
+      "matchesDemoFormatter": false,
+      "knownGap": "The demo formatter has no Arabic numbering-system, separator, currency placement, or bidi behavior."
+    }
+  ]
+}

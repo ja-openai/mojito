@@ -8,6 +8,9 @@ Current harnesses:
 
 - `icu4j/`: ICU4J MessageFormat 2 technical preview
 - `icu4cxx/`: optional ICU4C++ MessageFormat 2 technical preview harness
+- `fixtures/currency-simple-vs-icu4j.json`: diagnostic fixture showing where
+  the current dependency-free `:currency` demo formatter matches or diverges
+  from ICU4J currency formatting
 
 Reference results are compatibility signals, not a production API commitment.
 ICU's MF2 APIs and syntax support are still marked technical preview.
