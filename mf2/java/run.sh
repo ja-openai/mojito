@@ -4,9 +4,7 @@ set -eu
 cd "$(dirname "$0")"
 
 build() {
-  mkdir -p build/classes
-  find src/main/java ../cldr/generated/all/java -name '*.java' -print > build/sources.txt
-  javac -d build/classes @build/sources.txt
+  mvn -q compile
 }
 
 if [ "${1:-}" = "--prepare-only" ]; then
@@ -23,16 +21,16 @@ fi
 command="${1:-conformance}"
 case "$command" in
   conformance)
-    java -cp build/classes com.box.l10n.mojito.mf2.Conformance "${2:-../conformance/fixtures/source-to-model}"
+    java -cp target/classes com.box.l10n.mojito.mf2.Conformance "${2:-../conformance/fixtures/source-to-model}"
     ;;
   bench)
-    java -cp build/classes com.box.l10n.mojito.mf2.Benchmark "${2:-../conformance/fixtures/source-to-model}" "${3:-100000}" "${4:-10000}"
+    java -cp target/classes com.box.l10n.mojito.mf2.Benchmark "${2:-../conformance/fixtures/source-to-model}" "${3:-100000}" "${4:-10000}"
     ;;
   bench-parse)
-    java -cp build/classes com.box.l10n.mojito.mf2.ParseBenchmark "${2:-../conformance/fixtures/source-to-model}" "${3:-100000}" "${4:-10000}"
+    java -cp target/classes com.box.l10n.mojito.mf2.ParseBenchmark "${2:-../conformance/fixtures/source-to-model}" "${3:-100000}" "${4:-10000}"
     ;;
   demo)
-    java -cp build/classes com.box.l10n.mojito.mf2.TranslateDemo
+    java -cp target/classes com.box.l10n.mojito.mf2.TranslateDemo
     ;;
   *)
     echo "unknown command: $command" >&2

@@ -55,10 +55,11 @@ plural-specific parent locale data. CLDR's general resource `parentLocales`
 rules are intentionally not applied to plural selection; ICU4J comparison probes
 cover cases like `pt-AO`, `sr-Latn`, `az-Arab`, and Unicode extensions.
 
-The current Rust and Java runtimes compile the generated all-locale file by
-path. The Python and Swift runtime starters vendor that all-locale generated
-file into their package trees so they remain installable without reaching
-outside the package.
+The current Rust runtime compiles the generated all-locale file by path. The
+Java Maven project runs the generator into `target/generated-sources` during
+`generate-sources`. The Python and Swift runtime starters vendor the all-locale
+generated file into their package trees so they remain installable without
+reaching outside the package.
 
 Validate generated all-locale cardinal and ordinal category selection against
 ICU4J `PluralRules`:

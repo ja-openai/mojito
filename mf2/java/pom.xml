@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.box.l10n.mojito.mf2</groupId>
+  <artifactId>messageformat2-java</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>MessageFormat2 Java</name>
+  <description>Zero-runtime-dependency Java implementation for the Mojito MF2 foundation.</description>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <mf2.cldr.generated.dir>${project.build.directory}/generated-sources/mf2-cldr</mf2.cldr.generated.dir>
+    <mf2.cldr.locales>all</mf2.cldr.locales>
+    <mf2.cldr.ref>main</mf2.cldr.ref>
+    <mf2.python.executable>python3</mf2.python.executable>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.6.3</version>
+        <executions>
+          <execution>
+            <id>generate-cldr-plural-rules</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.basedir}/../cldr</workingDirectory>
+              <executable>${mf2.python.executable}</executable>
+              <arguments>
+                <argument>generator/generate_plural_rules.py</argument>
+                <argument>--locales</argument>
+                <argument>${mf2.cldr.locales}</argument>
+                <argument>--cldr-ref</argument>
+                <argument>${mf2.cldr.ref}</argument>
+                <argument>--out</argument>
+                <argument>${mf2.cldr.generated.dir}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>add-generated-cldr-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${mf2.cldr.generated.dir}/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
