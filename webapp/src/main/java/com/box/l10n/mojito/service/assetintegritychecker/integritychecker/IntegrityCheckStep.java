@@ -20,26 +20,29 @@ import net.sf.okapi.common.resource.RawDocument;
 import net.sf.okapi.common.resource.TextContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author aloison
  */
-@Configurable
 public class IntegrityCheckStep extends BasePipelineStep {
 
   /** Logger */
   static Logger logger = LoggerFactory.getLogger(IntegrityCheckStep.class);
 
-  @Autowired TMTextUnitRepository tmTextUnitRepository;
+  TMTextUnitRepository tmTextUnitRepository;
 
-  @Autowired IntegrityCheckerFactory integrityCheckerFactory;
+  IntegrityCheckerFactory integrityCheckerFactory;
 
   Map<Long, Set<TextUnitIntegrityChecker>> textUnitIntegrityCheckerMap = new HashMap<>();
 
   private LocaleId targetLocale;
   private RawDocument rawDocument;
+
+  public IntegrityCheckStep(
+      TMTextUnitRepository tmTextUnitRepository, IntegrityCheckerFactory integrityCheckerFactory) {
+    this.tmTextUnitRepository = tmTextUnitRepository;
+    this.integrityCheckerFactory = integrityCheckerFactory;
+  }
 
   @SuppressWarnings("deprecation")
   @StepParameterMapping(parameterType = StepParameterType.TARGET_LOCALE)
