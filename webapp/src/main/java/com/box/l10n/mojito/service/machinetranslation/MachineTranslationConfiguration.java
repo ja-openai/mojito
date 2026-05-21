@@ -5,6 +5,7 @@ import com.box.l10n.mojito.service.machinetranslation.microsoft.MicrosoftMTEngin
 import com.box.l10n.mojito.service.machinetranslation.microsoft.MicrosoftMTEngineConfiguration;
 import com.box.l10n.mojito.service.machinetranslation.openai.OpenAIMTEngine;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateConfigurationProperties;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -29,18 +30,22 @@ public class MachineTranslationConfiguration {
 
     final MicrosoftMTEngineConfiguration microsoftMTEngineConfiguration;
     final PlaceholderEncoder placeholderEncoder;
+    final MeterRegistry meterRegistry;
 
     public MicrosoftEngineConfiguration(
         MicrosoftMTEngineConfiguration microsoftMTEngineConfiguration,
-        PlaceholderEncoder placeholderEncoder) {
+        PlaceholderEncoder placeholderEncoder,
+        MeterRegistry meterRegistry) {
       this.microsoftMTEngineConfiguration = microsoftMTEngineConfiguration;
       this.placeholderEncoder = placeholderEncoder;
+      this.meterRegistry = meterRegistry;
     }
 
     @Bean
     public MicrosoftMTEngine microsoftMTEngine() {
       logger.info("Configure microsoftMTEngine");
-      return new MicrosoftMTEngine(microsoftMTEngineConfiguration, placeholderEncoder);
+      return new MicrosoftMTEngine(
+          microsoftMTEngineConfiguration, placeholderEncoder, meterRegistry);
     }
   }
 
@@ -50,12 +55,15 @@ public class MachineTranslationConfiguration {
 
     final AiTranslateConfigurationProperties aiTranslateConfigurationProperties;
     final PlaceholderEncoder placeholderEncoder;
+    final MeterRegistry meterRegistry;
 
     public OpenAIEngineConfiguration(
         AiTranslateConfigurationProperties aiTranslateConfigurationProperties,
-        PlaceholderEncoder placeholderEncoder) {
+        PlaceholderEncoder placeholderEncoder,
+        MeterRegistry meterRegistry) {
       this.aiTranslateConfigurationProperties = aiTranslateConfigurationProperties;
       this.placeholderEncoder = placeholderEncoder;
+      this.meterRegistry = meterRegistry;
     }
 
     @Bean
@@ -69,7 +77,8 @@ public class MachineTranslationConfiguration {
       return new OpenAIMTEngine(
           new OpenAIClient.Builder().apiKey(openaiClientToken).build(),
           aiTranslateConfigurationProperties,
-          placeholderEncoder);
+          placeholderEncoder,
+          meterRegistry);
     }
   }
 

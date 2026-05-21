@@ -15,6 +15,7 @@ import com.box.l10n.mojito.service.machinetranslation.TranslationSource;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateConfigurationProperties;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -42,7 +43,10 @@ public class OpenAIMTEngineTest {
     aiTranslateConfigurationProperties.getResponses().setTextVerbosity("high");
     openAIMTEngine =
         new OpenAIMTEngine(
-            openAIClient, aiTranslateConfigurationProperties, new PlaceholderEncoder());
+            openAIClient,
+            aiTranslateConfigurationProperties,
+            new PlaceholderEncoder(),
+            new SimpleMeterRegistry());
   }
 
   @Test
@@ -114,7 +118,8 @@ public class OpenAIMTEngineTest {
         new OpenAIMTEngine(
             new OpenAIClient.Builder().apiKey(apiKey).build(),
             properties,
-            new PlaceholderEncoder());
+            new PlaceholderEncoder(),
+            new SimpleMeterRegistry());
 
     String sourceText = "Good morning";
     ImmutableMap<String, ImmutableList<TranslationDTO>> translationsBySourceText =

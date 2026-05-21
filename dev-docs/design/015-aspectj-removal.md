@@ -67,6 +67,8 @@ In progress:
   with explicit `Timer.Sample` and local `try/finally` blocks.
 - `TextUnitDTOsCacheService` no longer uses `@Timed`; its four cache refresh/read metrics are
   recorded with explicit `Timer.Sample` and local `try/finally` blocks.
+- `OpenAIMTEngine` and `MicrosoftMTEngine` no longer use `@Timed`; MT engine translate metrics are
+  recorded with explicit `Timer.Sample` and local `try/finally` blocks.
 
 ## Migration Principles
 
