@@ -196,7 +196,7 @@ public class ReviewProjectServiceTest {
                 meterRegistry,
                 transactionManager));
     ReflectionTestUtils.setField(reviewProjectService, "entityManager", entityManager);
-    doReturn(null).when(reviewProjectService).getProjectDetail(anyLong());
+    doReturn(null).when(reviewProjectService).getProjectDetailNoTx(anyLong());
     when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
 
     currentUser = user(99L, "admin");
@@ -348,6 +348,43 @@ public class ReviewProjectServiceTest {
     try {
       reviewProjectService.searchReviewProjectRequests(request);
       fail("Expected searchReviewProjectRequests to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(true, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
+  @Test
+  public void getProjectDetailCommitsReadOnlyTransaction() {
+    GetProjectDetailView result =
+        new GetProjectDetailView(
+            1L, null, null, null, null, null, null, 0, 0, null, null, null, List.of());
+    doReturn(result).when(reviewProjectService).getProjectDetailNoTx(1L);
+
+    assertEquals(result, reviewProjectService.getProjectDetail(1L));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(true, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void getProjectDetailRollsBackReadOnlyTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("detail failed");
+    doThrow(failure).when(reviewProjectService).getProjectDetailNoTx(1L);
+
+    try {
+      reviewProjectService.getProjectDetail(1L);
+      fail("Expected getProjectDetail to rethrow failure");
     } catch (RuntimeException e) {
       assertEquals(failure, e);
     }

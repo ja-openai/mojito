@@ -240,6 +240,8 @@ Removed during this workstream:
 - `ReviewProjectService` review-project search and review-project-request search no longer use
   `@Transactional`; both read paths now open and commit read-only transaction boundaries
   explicitly.
+- `ReviewProjectService.getProjectDetail` no longer uses `@Transactional`; project detail loading
+  now opens and commits its read-only transaction boundary explicitly.
 
 In progress:
 
