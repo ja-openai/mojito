@@ -1,6 +1,6 @@
 package com.box.l10n.mojito;
 
-/** Typed cache names to be used from @Cacheable annotations. */
+/** Typed cache names to be used with CacheService. */
 public enum CacheType {
   DEFAULT(Names.DEFAULT),
   LOCALES(Names.LOCALES),

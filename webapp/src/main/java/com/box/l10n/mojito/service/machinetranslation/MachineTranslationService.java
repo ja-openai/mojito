@@ -3,6 +3,8 @@ package com.box.l10n.mojito.service.machinetranslation;
 import static com.box.l10n.mojito.CacheType.Names.MACHINE_TRANSLATION;
 
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.service.cache.CacheKey;
+import com.box.l10n.mojito.service.cache.CacheService;
 import com.box.l10n.mojito.service.leveraging.LeveragerByContentAndRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
@@ -20,7 +22,6 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -40,17 +41,51 @@ public class MachineTranslationService {
 
   final MeterRegistry meterRegistry;
 
+  final CacheService cacheService;
+
   public MachineTranslationService(
       MachineTranslationEngine machineTranslationEngine,
       TranslationMerger translationMerger,
-      MeterRegistry meterRegistry) {
+      MeterRegistry meterRegistry,
+      CacheService cacheService) {
     this.machineTranslationEngine = machineTranslationEngine;
     this.translationMerger = translationMerger;
     this.meterRegistry = meterRegistry;
+    this.cacheService = cacheService;
   }
 
-  @Cacheable(MACHINE_TRANSLATION)
   public TranslationsResponseDTO getTranslations(
+      List<String> textSources,
+      String sourceBcp47Tag,
+      List<String> targetBcp47Tags,
+      boolean skipFunctionalProtection,
+      boolean skipLeveraging,
+      List<Long> repositoryIds,
+      List<String> repositoryNames) {
+    return cacheService.get(
+        MACHINE_TRANSLATION,
+        CacheKey.of(
+            MachineTranslationService.class,
+            "getTranslations",
+            textSources,
+            sourceBcp47Tag,
+            targetBcp47Tags,
+            skipFunctionalProtection,
+            skipLeveraging,
+            repositoryIds,
+            repositoryNames),
+        () ->
+            getTranslationsUncached(
+                textSources,
+                sourceBcp47Tag,
+                targetBcp47Tags,
+                skipFunctionalProtection,
+                skipLeveraging,
+                repositoryIds,
+                repositoryNames));
+  }
+
+  private TranslationsResponseDTO getTranslationsUncached(
       List<String> textSources,
       String sourceBcp47Tag,
       List<String> targetBcp47Tags,
@@ -166,13 +201,31 @@ public class MachineTranslationService {
     }
   }
 
-  @SuppressWarnings("SpringCacheableComponentsInspection")
-  @Cacheable(MACHINE_TRANSLATION)
   ImmutableMap<String, ImmutableList<TranslationDTO>> getMachineTranslationBySourceText(
       String sourceBcp47Tag,
       List<String> targetBcp47Tags,
       List<String> textSources,
       Boolean skipFunctionalProtection) {
+    return cacheService.get(
+        MACHINE_TRANSLATION,
+        CacheKey.of(
+            MachineTranslationService.class,
+            "getMachineTranslationBySourceText",
+            sourceBcp47Tag,
+            targetBcp47Tags,
+            textSources,
+            skipFunctionalProtection),
+        () ->
+            getMachineTranslationBySourceTextUncached(
+                sourceBcp47Tag, targetBcp47Tags, textSources, skipFunctionalProtection));
+  }
+
+  private ImmutableMap<String, ImmutableList<TranslationDTO>>
+      getMachineTranslationBySourceTextUncached(
+          String sourceBcp47Tag,
+          List<String> targetBcp47Tags,
+          List<String> textSources,
+          Boolean skipFunctionalProtection) {
     Timer.Sample sample = Timer.start(meterRegistry);
     String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
 
@@ -230,13 +283,31 @@ public class MachineTranslationService {
    * Leverages translations by source text from Mojito. Note: it relies on the localeTag on being an
    * exact match.
    */
-  @SuppressWarnings("SpringCacheableComponentsInspection")
-  @Cacheable(MACHINE_TRANSLATION)
   ImmutableMap<String, ImmutableList<TranslationDTO>> getLeveragedTranslationsBySourceText(
       List<String> textSources,
       List<String> targetBcp47Tags,
       List<Long> repositoryIds,
       List<String> repositoryNames) {
+    return cacheService.get(
+        MACHINE_TRANSLATION,
+        CacheKey.of(
+            MachineTranslationService.class,
+            "getLeveragedTranslationsBySourceText",
+            textSources,
+            targetBcp47Tags,
+            repositoryIds,
+            repositoryNames),
+        () ->
+            getLeveragedTranslationsBySourceTextUncached(
+                textSources, targetBcp47Tags, repositoryIds, repositoryNames));
+  }
+
+  private ImmutableMap<String, ImmutableList<TranslationDTO>>
+      getLeveragedTranslationsBySourceTextUncached(
+          List<String> textSources,
+          List<String> targetBcp47Tags,
+          List<Long> repositoryIds,
+          List<String> repositoryNames) {
     Timer.Sample sample = Timer.start(meterRegistry);
     String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
 

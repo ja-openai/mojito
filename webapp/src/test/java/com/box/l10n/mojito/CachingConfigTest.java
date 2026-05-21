@@ -3,28 +3,19 @@ package com.box.l10n.mojito;
 import static com.box.l10n.mojito.CacheType.Names.DEFAULT;
 import static org.junit.Assert.assertEquals;
 
-import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
-import org.junit.After;
-import org.junit.Before;
+import com.box.l10n.mojito.service.cache.CacheKey;
+import com.box.l10n.mojito.service.cache.CacheService;
 import org.junit.Test;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
 /**
  * @author jaurambault
  */
-public class CachingConfigTest extends ServiceTestBase {
+public class CachingConfigTest {
 
   int i = 0;
 
-  /**
-   * Because the "default" cache is shared, we need to make sure it is empty before testing it.
-   * Otherwise, if a value of another type is stored in it, an exception will be thrown.
-   */
-  @After
-  @Before
-  @CacheEvict(DEFAULT)
-  public void post() {}
+  CacheService cacheService = new CacheService(new ConcurrentMapCacheManager(DEFAULT));
 
   @Test
   public void testCacheable() {
@@ -32,8 +23,12 @@ public class CachingConfigTest extends ServiceTestBase {
     assertEquals(1, getInt());
   }
 
-  @Cacheable(DEFAULT)
   public int getInt() {
+    return cacheService.get(
+        DEFAULT, CacheKey.of(CachingConfigTest.class, "getInt"), this::getIntUncached);
+  }
+
+  public int getIntUncached() {
     return ++i;
   }
 }

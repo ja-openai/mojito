@@ -27,7 +27,6 @@ Framework modes:
 
 - `Application` uses `@EnableSpringConfigured` and
   `@EnableTransactionManagement(mode = AdviceMode.ASPECTJ)`.
-- `CachingConfig` uses `@EnableCaching(mode = AdviceMode.ASPECTJ)`.
 - `WebSecurityConfig` uses `@EnableGlobalMethodSecurity(..., mode = AdviceMode.ASPECTJ)`.
 - `cli.App` uses `@EnableSpringConfigured`.
 
@@ -66,6 +65,8 @@ Removed during this workstream:
 - `@Async` and `@EnableAsync(mode = AdviceMode.ASPECTJ)`. Async work now submits directly to the
   existing `asyncExecutor` and `statisticsTaskExecutor` beans, which preserves self-invoked async
   behavior without weaving.
+- `@Cacheable`, `@CacheEvict`, and `@EnableCaching(mode = AdviceMode.ASPECTJ)`. Cached operations
+  now use explicit `CacheService` lookups and writes.
 
 In progress:
 
