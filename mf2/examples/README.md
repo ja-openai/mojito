@@ -15,6 +15,7 @@ Run the language demos:
 (cd ../rust/mf2-prototype && cargo run --example inline_translate_demo)
 (cd ../swift/MessageFormat2 && swift run MessageFormat2TranslateDemo)
 (cd ../python && python3 examples/translate_demo.py)
+(cd ../java && sh run.sh showcase)
 ```
 
 This is not the final public API. It is a sanity check for the app-facing shape:
@@ -24,6 +25,8 @@ formatting.
 The Rust and Java `inline_translate_demo` commands intentionally parse MF2
 source strings at runtime. They are useful for demos and dynamic messages, but
 the catalog demos remain the preferred shape for production resource bundles.
+The Java `showcase` command runs both shapes and also prints parts output plus
+fallback formatting, which are easier to inspect in Java's object output.
 
 The catalog includes messages that use a deliberately narrow `:currency` demo
 function. Each demo registers that function through the runtime function

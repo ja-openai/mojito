@@ -36,6 +36,13 @@ case "$command" in
   inline-demo)
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.InlineTranslateDemo
     ;;
+  showcase)
+    echo "== catalog demo: precompiled model/resource bundle =="
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.TranslateDemo
+    echo
+    echo "== inline source demo: parser + runtime + parts/fallback =="
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.InlineTranslateDemo
+    ;;
   *)
     echo "unknown command: $command" >&2
     exit 2

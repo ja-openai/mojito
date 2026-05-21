@@ -13,6 +13,14 @@ public final class InlineTranslateDemo {
         Mf2FunctionRegistry functions = DemoFunctions.registry();
         Map<String, Object> demo =
                 object(JsonParser.parse(Path.of("../examples/inline-source-demo.json")), "$");
+
+        runFormatCases(demo, functions);
+        runPartsCases(demo, functions);
+        runFallbackCases(demo, functions);
+    }
+
+    private static void runFormatCases(Map<String, Object> demo, Mf2FunctionRegistry functions)
+            throws Mf2Exception {
         List<Object> cases = array(requiredField(demo, "cases", "$"), "$.cases");
         for (int index = 0; index < cases.size(); index++) {
             String path = "$.cases[" + index + "]";
@@ -41,6 +49,99 @@ public final class InlineTranslateDemo {
         }
     }
 
+    private static void runPartsCases(Map<String, Object> demo, Mf2FunctionRegistry functions)
+            throws Mf2Exception {
+        List<Object> cases = array(optionalField(demo, "partsCases", List.of()), "$.partsCases");
+        for (int index = 0; index < cases.size(); index++) {
+            String path = "$.partsCases[" + index + "]";
+            PartsCase partsCase = PartsCase.from(object(cases.get(index), path), path);
+            Mf2Message model = parse(partsCase.source());
+            List<Map<String, Object>> actual = FormattedPartJson.toMaps(
+                    model.formatToParts(partsCase.arguments(), partsCase.locale(), functions));
+            if (!actual.equals(partsCase.expected())) {
+                throw new AssertionError(partsCase.label()
+                        + "["
+                        + partsCase.locale()
+                        + "] expected parts "
+                        + partsCase.expected()
+                        + ", got "
+                        + actual);
+            }
+            System.out.println(partsCase.label()
+                    + "["
+                    + partsCase.locale()
+                    + "].parts -> "
+                    + actual);
+        }
+    }
+
+    private static void runFallbackCases(Map<String, Object> demo, Mf2FunctionRegistry functions)
+            throws Mf2Exception {
+        List<Object> cases = array(optionalField(demo, "fallbackCases", List.of()), "$.fallbackCases");
+        for (int index = 0; index < cases.size(); index++) {
+            String path = "$.fallbackCases[" + index + "]";
+            FallbackCase fallbackCase = FallbackCase.from(object(cases.get(index), path), path);
+            Mf2Message model = parse(fallbackCase.source());
+
+            Mf2Message.FallbackFormatResult actual =
+                    model.formatWithFallback(fallbackCase.arguments(), fallbackCase.locale());
+            if (!actual.value().equals(fallbackCase.expected())) {
+                throw new AssertionError(fallbackCase.label()
+                        + "["
+                        + fallbackCase.locale()
+                        + "] expected \""
+                        + fallbackCase.expected()
+                        + "\", got \""
+                        + actual.value()
+                        + "\"");
+            }
+            List<String> actualErrors = actual.errors().stream().map(Mf2Exception::code).toList();
+            if (!actualErrors.equals(fallbackCase.expectedErrors())) {
+                throw new AssertionError(fallbackCase.label()
+                        + "["
+                        + fallbackCase.locale()
+                        + "] expected errors "
+                        + fallbackCase.expectedErrors()
+                        + ", got "
+                        + actualErrors);
+            }
+
+            Mf2Formatter.FallbackPartsResult actualParts = Mf2Formatter.formatToPartsWithFallback(
+                    model, fallbackCase.arguments(), fallbackCase.locale(), functions);
+            List<Map<String, Object>> actualPartMaps = FormattedPartJson.toMaps(actualParts.parts());
+            if (!actualPartMaps.equals(fallbackCase.expectedParts())) {
+                throw new AssertionError(fallbackCase.label()
+                        + "["
+                        + fallbackCase.locale()
+                        + "] expected fallback parts "
+                        + fallbackCase.expectedParts()
+                        + ", got "
+                        + actualPartMaps);
+            }
+
+            System.out.println(fallbackCase.label()
+                    + "["
+                    + fallbackCase.locale()
+                    + "].fallback -> \""
+                    + actual.value()
+                    + "\" errors="
+                    + actualErrors);
+            System.out.println(fallbackCase.label()
+                    + "["
+                    + fallbackCase.locale()
+                    + "].fallback.parts -> "
+                    + actualPartMaps);
+        }
+    }
+
+    private static Mf2Message parse(String source) throws Mf2Exception {
+        ParseResult result = Mf2Parser.parseToModel(source);
+        if (result.hasDiagnostics()) {
+            throw new Mf2Exception("parse-error", result.diagnostics().toString());
+        }
+        return result.model();
+    }
+
     private static String translate(
             String source,
             String locale,
@@ -48,11 +149,7 @@ public final class InlineTranslateDemo {
             Mf2FunctionRegistry functions,
             Mf2BidiIsolation bidiIsolation)
             throws Mf2Exception {
-        ParseResult result = Mf2Parser.parseToModel(source);
-        if (result.hasDiagnostics()) {
-            throw new Mf2Exception("parse-error", result.diagnostics().toString());
-        }
-        return result.model().format(arguments, locale, functions, bidiIsolation);
+        return parse(source).format(arguments, locale, functions, bidiIsolation);
     }
 
     private record DemoCase(
@@ -72,6 +169,55 @@ public final class InlineTranslateDemo {
                     object(requiredField(raw, "arguments", path), path + ".arguments"),
                     string(requiredField(raw, "expected", path), path + ".expected"));
         }
+    }
+
+    private record PartsCase(
+            String label,
+            String source,
+            String locale,
+            Map<String, Object> arguments,
+            List<Map<String, Object>> expected) {
+        static PartsCase from(Map<String, Object> raw, String path) {
+            return new PartsCase(
+                    string(requiredField(raw, "label", path), path + ".label"),
+                    string(requiredField(raw, "source", path), path + ".source"),
+                    string(requiredField(raw, "locale", path), path + ".locale"),
+                    object(requiredField(raw, "arguments", path), path + ".arguments"),
+                    mapArray(requiredField(raw, "expected", path), path + ".expected"));
+        }
+    }
+
+    private record FallbackCase(
+            String label,
+            String source,
+            String locale,
+            Map<String, Object> arguments,
+            String expected,
+            List<Map<String, Object>> expectedParts,
+            List<String> expectedErrors) {
+        static FallbackCase from(Map<String, Object> raw, String path) {
+            return new FallbackCase(
+                    string(requiredField(raw, "label", path), path + ".label"),
+                    string(requiredField(raw, "source", path), path + ".source"),
+                    string(requiredField(raw, "locale", path), path + ".locale"),
+                    object(requiredField(raw, "arguments", path), path + ".arguments"),
+                    string(requiredField(raw, "expected", path), path + ".expected"),
+                    mapArray(requiredField(raw, "expectedParts", path), path + ".expectedParts"),
+                    errorCodes(requiredField(raw, "expectedErrors", path), path + ".expectedErrors"));
+        }
+    }
+
+    private static List<Map<String, Object>> mapArray(Object value, String path) {
+        return array(value, path).stream()
+                .map(item -> object(item, path + "[]"))
+                .toList();
+    }
+
+    private static List<String> errorCodes(Object value, String path) {
+        return array(value, path).stream()
+                .map(item -> object(item, path + "[]"))
+                .map(error -> string(requiredField(error, "code", path + "[]"), path + "[].code"))
+                .toList();
     }
 
     private static Object optionalField(Map<String, Object> object, String field, Object defaultValue) {

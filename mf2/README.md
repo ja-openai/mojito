@@ -165,6 +165,7 @@ Run the tiny app-facing catalog demos directly:
 (cd python && python3 examples/translate_demo.py)
 (cd java && sh run.sh demo)
 (cd java && sh run.sh inline-demo)
+(cd java && sh run.sh showcase)
 ```
 
 Run a simple cross-language format benchmark:

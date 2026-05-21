@@ -30,6 +30,20 @@
       "expected": "File \u2068\u05e9\u05dc\u05d5\u05dd.txt\u2069 saved."
     },
     {
+      "label": "local.alias",
+      "source": ".local $product = {|Mojito|}\n.local $hello = {|Welcome|}\n{{{$hello} to {$product}.}}",
+      "locale": "en",
+      "arguments": {},
+      "expected": "Welcome to Mojito."
+    },
+    {
+      "label": "unicode.identifiers",
+      "source": ".input {$caf\u00e9 :number}\n.local $\u30e6\u30fc\u30b6\u30fc = {|Mojito|}\n{{{$\u30e6\u30fc\u30b6\u30fc}: {$caf\u00e9}}}",
+      "locale": "en",
+      "arguments": { "caf\u00e9": 7 },
+      "expected": "Mojito: 7"
+    },
+    {
       "label": "cart.items",
       "source": ".input {$count :number}\n.match $count\none {{{$count} item}}\n* {{{$count} items}}",
       "locale": "en",
@@ -58,6 +72,20 @@
       "expected": "5 предметов"
     },
     {
+      "label": "rank.ordinal",
+      "source": ".input {$rank :number select=ordinal}\n.match $rank\none {{{$rank}st}}\ntwo {{{$rank}nd}}\nfew {{{$rank}rd}}\n* {{{$rank}th}}",
+      "locale": "en",
+      "arguments": { "rank": 21 },
+      "expected": "21st"
+    },
+    {
+      "label": "stock.exact",
+      "source": ".input {$count :number select=exact}\n.match $count\n1 {{Exactly one left}}\none {{Plural one}}\n* {{Other stock count}}",
+      "locale": "en",
+      "arguments": { "count": 1 },
+      "expected": "Exactly one left"
+    },
+    {
       "label": "assignee.files",
       "source": ".input {$gender :string}\n.input {$count :number}\n.match $gender $count\nmale one {{He reviewed {$count} file}}\nfemale one {{She reviewed {$count} file}}\nmale * {{He reviewed {$count} files}}\nfemale * {{She reviewed {$count} files}}\n* * {{They reviewed {$count} files}}",
       "locale": "en",
@@ -77,6 +105,62 @@
       "locale": "en",
       "arguments": { "gender": "unknown", "count": 2 },
       "expected": "They reviewed 2 files"
+    }
+  ],
+  "partsCases": [
+    {
+      "label": "link.parts",
+      "source": "Tap {#link href = $profileUrl @title = |Profile page|}profile{/link href = |profile|}. {$name :string label = |display name| @kind = person}",
+      "locale": "en",
+      "arguments": {
+        "name": "Jean",
+        "profileUrl": "/people/jean"
+      },
+      "expected": [
+        { "type": "text", "value": "Tap " },
+        {
+          "type": "markup",
+          "kind": "open",
+          "name": "link",
+          "options": {
+            "href": { "type": "variable", "name": "profileUrl" }
+          },
+          "attributes": {
+            "title": { "type": "literal", "value": "Profile page" }
+          }
+        },
+        { "type": "text", "value": "profile" },
+        {
+          "type": "markup",
+          "kind": "close",
+          "name": "link",
+          "options": {
+            "href": { "type": "literal", "value": "profile" }
+          }
+        },
+        { "type": "text", "value": ". " },
+        {
+          "type": "expression",
+          "value": "Jean",
+          "attributes": {
+            "kind": { "type": "literal", "value": "person" }
+          }
+        }
+      ]
+    }
+  ],
+  "fallbackCases": [
+    {
+      "label": "missing.name",
+      "source": "User: {$name}",
+      "locale": "en",
+      "arguments": {},
+      "expected": "User: {$name}",
+      "expectedParts": [
+        { "type": "text", "value": "User: " },
+        { "type": "fallback", "source": "$name" }
+      ],
+      "expectedErrors": [{ "code": "unresolved-variable" }]
     }
   ]
 }
