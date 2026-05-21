@@ -124,6 +124,8 @@ Removed during this workstream:
   loops; each retry attempt opens a read-only transaction explicitly.
 - `AiReviewService.saveAiReviewProtosInTx` no longer relies on self-invoked `@Transactional`;
   review proto persistence now opens its transaction explicitly.
+- `TMTextUnitVariantCommentService` no longer relies on AspectJ for self-invoked comment writes;
+  add/copy comment paths now open their transaction boundaries explicitly.
 
 In progress:
 
