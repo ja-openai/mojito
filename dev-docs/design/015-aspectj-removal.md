@@ -242,6 +242,9 @@ Removed during this workstream:
   explicitly.
 - `ReviewProjectService.getProjectDetail` no longer uses `@Transactional`; project detail loading
   now opens and commits its read-only transaction boundary explicitly.
+- `ReviewProjectService.updateProjectStatus` no longer uses `@Transactional`; status updates now
+  open and commit their write transaction boundary explicitly before loading detail in the same
+  transaction.
 
 In progress:
 

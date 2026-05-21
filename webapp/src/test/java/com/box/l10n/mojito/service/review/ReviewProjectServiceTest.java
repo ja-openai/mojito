@@ -31,6 +31,7 @@ import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
+import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision;
@@ -376,6 +377,44 @@ public class ReviewProjectServiceTest {
         ArgumentCaptor.forClass(TransactionDefinition.class);
     verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
     assertEquals(true, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
+  @Test
+  public void updateProjectStatusCommitsTransaction() {
+    GetProjectDetailView result =
+        new GetProjectDetailView(
+            1L, null, null, null, null, null, null, 0, 0, null, null, null, List.of());
+    doReturn(result)
+        .when(reviewProjectService)
+        .updateProjectStatusNoTx(1L, ReviewProjectStatus.CLOSED, "done");
+
+    assertEquals(
+        result, reviewProjectService.updateProjectStatus(1L, ReviewProjectStatus.CLOSED, "done"));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void updateProjectStatusRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("status failed");
+    doThrow(failure)
+        .when(reviewProjectService)
+        .updateProjectStatusNoTx(1L, ReviewProjectStatus.CLOSED, "done");
+
+    try {
+      reviewProjectService.updateProjectStatus(1L, ReviewProjectStatus.CLOSED, "done");
+      fail("Expected updateProjectStatus to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
     verify(transactionManager).rollback(transactionStatus);
     verify(transactionManager, never()).commit(transactionStatus);
   }
