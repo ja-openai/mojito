@@ -52,6 +52,8 @@ Removed during this workstream:
 
 - The unused custom `@Retry`, `RetryAspect`, and `RetryAspectConfig` path. Existing retry behavior
   uses explicit `RetryTemplate` calls or Spring's `@Retryable`, not the custom annotation.
+- `@StopWatch` and `StopWatchAspect`. The four annotated methods now use explicit local
+  `Stopwatch` logging.
 
 ## Migration Principles
 

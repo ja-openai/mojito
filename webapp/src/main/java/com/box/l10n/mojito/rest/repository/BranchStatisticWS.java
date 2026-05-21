@@ -12,7 +12,6 @@ import static com.box.l10n.mojito.specification.Specifications.ifParamNotNull;
 import static com.box.l10n.mojito.specification.Specifications.where;
 import static org.slf4j.LoggerFactory.getLogger;
 
-import com.box.l10n.mojito.aspect.StopWatch;
 import com.box.l10n.mojito.entity.BranchStatistic;
 import com.box.l10n.mojito.rest.PageView;
 import com.box.l10n.mojito.rest.View;
@@ -20,6 +19,7 @@ import com.box.l10n.mojito.service.branch.BranchRepository;
 import com.box.l10n.mojito.service.branch.BranchStatisticRepository;
 import com.box.l10n.mojito.service.branch.SparseBranchStatisticRepository;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.google.common.base.Stopwatch;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -52,7 +52,6 @@ public class BranchStatisticWS {
 
   @JsonView(View.BranchStatistic.class)
   @RequestMapping(value = "/api/branchStatistics", method = RequestMethod.GET)
-  @StopWatch
   public Page<BranchStatistic> getBranchesOfRepository(
       @RequestParam(value = "createdByUserName", required = false) String createdByUserName,
       @RequestParam(value = "branchId", required = false) Long branchId,
@@ -65,6 +64,7 @@ public class BranchStatisticWS {
       @RequestParam(value = "createdBefore", required = false) ZonedDateTime createdBefore,
       @RequestParam(value = "createdAfter", required = false) ZonedDateTime createdAfter,
       @PageableDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+    Stopwatch stopwatch = Stopwatch.createStarted();
     // Two phase querying: 1. retrieve BranchStatistic IDs for pagination first
     // Retrieve all the Branch Statistic Ids without the totalCountLte filter:
     Page<Long> branchStatisticIds =
@@ -113,6 +113,9 @@ public class BranchStatisticWS {
             branchStatistics,
             branchStatisticIds.getPageable(),
             branchStatisticIds.getTotalElements());
+    stopwatch.stop();
+    logger.debug(
+        "{}#{} took: {}", BranchStatisticWS.class.getName(), "getBranchesOfRepository", stopwatch);
     return new PageView<>(page);
   }
 }

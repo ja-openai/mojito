@@ -6,7 +6,6 @@ import static com.box.l10n.mojito.utils.Predicates.logIfFalse;
 import static java.util.stream.Collectors.toList;
 
 import com.box.l10n.mojito.JSR310Migration;
-import com.box.l10n.mojito.aspect.StopWatch;
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
@@ -38,6 +37,7 @@ import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -182,70 +182,83 @@ public class TextUnitBatchImporterService {
   public record TextUnitDTOWithVariantComment(
       TextUnitDTO textUnitDTO, TMTextUnitVariantComment tmTextUnitVariantComment) {}
 
-  @StopWatch
   public List<ImportResult> importTextUnitsWithVariantComment(
       List<TextUnitDTOWithVariantComment> textUnitDTOWithVariantComments,
       IntegrityChecksType integrityChecksType,
       ImportMode importMode) {
 
-    return meterRegistry
-        .timer("TextUnitBatchImporterService.importTextUnits")
-        .record(
-            () -> {
-              logger.debug("Import {} text units", textUnitDTOWithVariantComments.size());
-              List<TextUnitForBatchMatcherImport> textUnitForBatchImports =
-                  skipInvalidAndConvertToTextUnitForBatchImport(textUnitDTOWithVariantComments);
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    List<ImportResult> importResults =
+        meterRegistry
+            .timer("TextUnitBatchImporterService.importTextUnits")
+            .record(
+                () -> {
+                  logger.debug("Import {} text units", textUnitDTOWithVariantComments.size());
+                  List<TextUnitForBatchMatcherImport> textUnitForBatchImports =
+                      skipInvalidAndConvertToTextUnitForBatchImport(textUnitDTOWithVariantComments);
 
-              logger.debug("Batch by locale and asset to optimize the import");
-              Map<Locale, Map<Asset, List<TextUnitForBatchMatcherImport>>> groupedByLocaleAndAsset =
-                  textUnitForBatchImports.stream()
-                      .collect(
-                          Collectors.groupingBy(
-                              TextUnitForBatchMatcherImport::getLocale,
-                              Collectors.groupingBy(TextUnitForBatchMatcherImport::getAsset)));
+                  logger.debug("Batch by locale and asset to optimize the import");
+                  Map<Locale, Map<Asset, List<TextUnitForBatchMatcherImport>>>
+                      groupedByLocaleAndAsset =
+                          textUnitForBatchImports.stream()
+                              .collect(
+                                  Collectors.groupingBy(
+                                      TextUnitForBatchMatcherImport::getLocale,
+                                      Collectors.groupingBy(
+                                          TextUnitForBatchMatcherImport::getAsset)));
 
-              return groupedByLocaleAndAsset.entrySet().stream()
-                  .flatMap(
-                      e -> {
-                        Locale locale = e.getKey();
-                        Map<Asset, List<TextUnitForBatchMatcherImport>> assetMap = e.getValue();
-                        return assetMap.entrySet().stream()
-                            .flatMap(
-                                am -> {
-                                  Asset asset = am.getKey();
-                                  List<TextUnitForBatchMatcherImport> textUnitsForBatchImport =
-                                      am.getValue();
-                                  try (var timer =
-                                      Timer.resource(
-                                              meterRegistry,
-                                              "TextUnitBatchImporterService.importTextUnits.batch")
-                                          .tag("repository", asset.getRepository().getName())
-                                          .tag("asset", asset.getPath())) {
-
-                                    mapTextUnitsToImportWithExistingTextUnits(
-                                        locale, asset, textUnitsForBatchImport);
-                                    if (!IntegrityChecksType.SKIP.equals(integrityChecksType)) {
-                                      try (var timer2 =
+                  return groupedByLocaleAndAsset.entrySet().stream()
+                      .flatMap(
+                          e -> {
+                            Locale locale = e.getKey();
+                            Map<Asset, List<TextUnitForBatchMatcherImport>> assetMap = e.getValue();
+                            return assetMap.entrySet().stream()
+                                .flatMap(
+                                    am -> {
+                                      Asset asset = am.getKey();
+                                      List<TextUnitForBatchMatcherImport> textUnitsForBatchImport =
+                                          am.getValue();
+                                      try (var timer =
                                           Timer.resource(
                                                   meterRegistry,
-                                                  "TextUnitBatchImporterService.importTextUnits.integrityChecks")
+                                                  "TextUnitBatchImporterService.importTextUnits.batch")
                                               .tag("repository", asset.getRepository().getName())
                                               .tag("asset", asset.getPath())) {
 
-                                        applyIntegrityChecks(
-                                            asset, textUnitsForBatchImport, integrityChecksType);
-                                      }
-                                    }
-                                    List<ImportResult> addTMTextUnitCurrentVariantResults =
-                                        importTextUnitsOfLocaleAndAsset(
-                                            locale, asset, textUnitsForBatchImport, importMode);
+                                        mapTextUnitsToImportWithExistingTextUnits(
+                                            locale, asset, textUnitsForBatchImport);
+                                        if (!IntegrityChecksType.SKIP.equals(integrityChecksType)) {
+                                          try (var timer2 =
+                                              Timer.resource(
+                                                      meterRegistry,
+                                                      "TextUnitBatchImporterService.importTextUnits.integrityChecks")
+                                                  .tag(
+                                                      "repository", asset.getRepository().getName())
+                                                  .tag("asset", asset.getPath())) {
 
-                                    return addTMTextUnitCurrentVariantResults.stream();
-                                  }
-                                });
-                      })
-                  .collect(toList());
-            });
+                                            applyIntegrityChecks(
+                                                asset,
+                                                textUnitsForBatchImport,
+                                                integrityChecksType);
+                                          }
+                                        }
+                                        List<ImportResult> addTMTextUnitCurrentVariantResults =
+                                            importTextUnitsOfLocaleAndAsset(
+                                                locale, asset, textUnitsForBatchImport, importMode);
+
+                                        return addTMTextUnitCurrentVariantResults.stream();
+                                      }
+                                    });
+                          })
+                      .collect(toList());
+                });
+    stopwatch.stop();
+    logger.debug(
+        "{}#{} took: {}",
+        TextUnitBatchImporterService.class.getName(),
+        "importTextUnitsWithVariantComment",
+        stopwatch);
+    return importResults;
   }
 
   public List<ImportResult> importTextUnits(
@@ -277,9 +290,9 @@ public class TextUnitBatchImporterService {
    * @param asset
    * @param textUnitsToImport text units to which the current text units must be added
    */
-  @StopWatch
   void mapTextUnitsToImportWithExistingTextUnits(
       Locale locale, Asset asset, List<TextUnitForBatchMatcherImport> textUnitsToImport) {
+    Stopwatch stopwatch = Stopwatch.createStarted();
     logger.debug(
         "Map the text units to import with current text unit for the given locale and asset");
     List<TextUnitDTO> textUnitTDOsForLocaleAndAsset =
@@ -287,15 +300,21 @@ public class TextUnitBatchImporterService {
     Function<TextUnitForBatchMatcher, Optional<TextUnitDTO>> match =
         textUnitBatchMatcher.match(textUnitTDOsForLocaleAndAsset);
     textUnitsToImport.forEach(tu -> match.apply(tu).ifPresent(m -> tu.setCurrentTextUnit(m)));
+    stopwatch.stop();
+    logger.debug(
+        "{}#{} took: {}",
+        TextUnitBatchImporterService.class.getName(),
+        "mapTextUnitsToImportWithExistingTextUnits",
+        stopwatch);
   }
 
-  @StopWatch
   @Transactional
   List<ImportResult> importTextUnitsOfLocaleAndAsset(
       Locale locale,
       Asset asset,
       List<TextUnitForBatchMatcherImport> textUnitsToImport,
       ImportMode importMode) {
+    Stopwatch stopwatch = Stopwatch.createStarted();
     ZonedDateTime importTime = JSR310Migration.newDateTimeEmptyCtor();
     logger.info(
         "Start import text units for asset: {}, locale: {}, count: {}",
@@ -399,6 +418,12 @@ public class TextUnitBatchImporterService {
                 })
             .collect(toList());
 
+    stopwatch.stop();
+    logger.debug(
+        "{}#{} took: {}",
+        TextUnitBatchImporterService.class.getName(),
+        "importTextUnitsOfLocaleAndAsset",
+        stopwatch);
     return importResults;
   }
 
