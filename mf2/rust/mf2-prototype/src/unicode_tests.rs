@@ -4,8 +4,9 @@ use std::panic::{self, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
 
 use mf2_prototype::{
-    format_model_with_locale_and_bidi, parse_to_model, BidiIsolation, Declaration, MessageModel,
-    ParseResult,
+    format_model_with_locale_and_bidi,
+    format_model_with_locale_and_functions_and_bidi_and_fallback, parse_to_model, BidiIsolation,
+    Declaration, FunctionCall, FunctionRegistry, MessageModel, ParseResult,
 };
 use serde::Deserialize;
 
@@ -139,6 +140,10 @@ fn run_with_suppressed_parser_panics(root: &Path, baseline_path: &Path) {
             path: "tests/functions/string.json",
             mode: CheckMode::Runtime,
         },
+        FileCheck {
+            path: "tests/fallback.json",
+            mode: CheckMode::Runtime,
+        },
     ];
     let wired_paths: BTreeSet<_> = checks.iter().map(|check| check.path).collect();
     let mut summary = Summary::default();
@@ -204,7 +209,7 @@ fn run_file(root: &Path, check: &FileCheck, summary: &mut Summary) {
                 }
             }
             CheckMode::Runtime => {
-                if check_data_model_error_test(&suite.default_test_properties, test) {
+                if check_runtime_test(&suite.default_test_properties, test) {
                     file_passed += 1;
                 } else {
                     file_skipped += 1;
@@ -286,6 +291,76 @@ fn check_data_model_error_test(defaults: &TestProperties, test: &OfficialTest) -
         .any(|actual| expected_codes.iter().any(|expected| expected == actual))
 }
 
+fn check_runtime_test(defaults: &TestProperties, test: &OfficialTest) -> bool {
+    let Some(result) = safe_parse(&test.src) else {
+        return false;
+    };
+    if !result.diagnostics.is_empty() {
+        return false;
+    }
+    let Some(model) = result.model.as_ref() else {
+        return false;
+    };
+
+    let args = runtime_arguments_for(test);
+    let expected_codes = expected_local_codes(defaults, test);
+    let actual = match format_model_with_locale_and_functions_and_bidi_and_fallback(
+        model,
+        &args,
+        &locale(defaults, test),
+        &official_function_registry(),
+        BidiIsolation::from_name(bidi_isolation(defaults, test).as_deref()),
+    ) {
+        Ok(actual) => actual,
+        Err(diagnostic) => {
+            return expected_codes
+                .iter()
+                .any(|expected| expected == &diagnostic.code);
+        }
+    };
+    let actual_codes: Vec<_> = actual
+        .errors
+        .iter()
+        .map(|diagnostic| diagnostic.code.as_str())
+        .collect();
+    if !expected_codes
+        .iter()
+        .all(|expected| actual_codes.iter().any(|actual| actual == expected))
+    {
+        return false;
+    }
+    if expected_codes.is_empty() && !actual_codes.is_empty() {
+        return false;
+    }
+    test.exp
+        .as_ref()
+        .is_some_and(|expected| actual.value == *expected)
+}
+
+fn official_function_registry() -> FunctionRegistry {
+    FunctionRegistry::default().with_function("test:function", official_test_function)
+}
+
+fn official_test_function(call: FunctionCall<'_>) -> Result<String, mf2_prototype::Diagnostic> {
+    let input = call.value().parse::<f64>().map_err(|_| {
+        mf2_prototype::Diagnostic::new(
+            "bad-operand",
+            ":test:function requires a numeric operand.",
+            0,
+            0,
+        )
+    })?;
+    if call.option_value("fails")?.as_deref() == Some("format") {
+        return Err(mf2_prototype::Diagnostic::new(
+            "bad-option",
+            ":test:function fails=format requested a format failure.",
+            0,
+            0,
+        ));
+    }
+    Ok(input.trunc().to_string())
+}
+
 fn safe_parse(source: &str) -> Option<ParseResult> {
     panic::catch_unwind(AssertUnwindSafe(|| parse_to_model(source))).ok()
 }
@@ -319,6 +394,14 @@ fn arguments_for(test: &OfficialTest, model: &MessageModel) -> BTreeMap<String, 
             arguments.insert(name.clone(), serde_json::Value::String("1".to_string()));
         }
     }
+    for param in &test.params {
+        arguments.insert(param.name.clone(), param.value.clone());
+    }
+    arguments
+}
+
+fn runtime_arguments_for(test: &OfficialTest) -> BTreeMap<String, serde_json::Value> {
+    let mut arguments = BTreeMap::new();
     for param in &test.params {
         arguments.insert(param.name.clone(), param.value.clone());
     }

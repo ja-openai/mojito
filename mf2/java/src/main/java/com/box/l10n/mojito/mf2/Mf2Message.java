@@ -37,6 +37,11 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
         return Mf2Formatter.format(this, arguments, locale, functions, bidiIsolation);
     }
 
+    default FallbackFormatResult formatWithFallback(Map<String, ?> arguments, String locale)
+            throws Mf2Exception {
+        return Mf2Formatter.formatWithFallback(this, arguments, locale);
+    }
+
     default List<FormattedPart> formatToParts(Map<String, ?> arguments, String locale)
             throws Mf2Exception {
         return Mf2Formatter.formatToParts(this, arguments, locale);
@@ -151,9 +156,18 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
 
     record CatchAllVariantKey() implements VariantKey {}
 
-    sealed interface FormattedPart permits FormattedText, FormattedExpression, FormattedMarkup {}
+    record FallbackFormatResult(String value, List<Mf2Exception> errors) {
+        public FallbackFormatResult {
+            errors = List.copyOf(errors);
+        }
+    }
+
+    sealed interface FormattedPart
+            permits FormattedText, FormattedFallback, FormattedExpression, FormattedMarkup {}
 
     record FormattedText(String value) implements FormattedPart {}
+
+    record FormattedFallback(String source) implements FormattedPart {}
 
     record FormattedExpression(String value, Map<String, AttributeValue> attributes)
             implements FormattedPart {

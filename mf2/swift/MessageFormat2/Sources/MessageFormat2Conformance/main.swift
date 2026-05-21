@@ -11,6 +11,8 @@ do {
     let fixtureDirectory = try resolveFixtureDirectory(arguments: arguments)
     var checkedCases = 0
     var checkedPartsCases = 0
+    var checkedFallbackCases = 0
+    var checkedFallbackPartsCases = 0
 
     for fixtureURL in try fixtureURLs(in: fixtureDirectory) {
         let fixture = try JSONDecoder().decode(
@@ -47,6 +49,47 @@ do {
             }
             checkedPartsCases += 1
         }
+        for fallbackCase in fixture.fallbackCases {
+            let actual = try fixture.expectedModel.formatWithFallback(
+                arguments: fallbackCase.arguments,
+                locale: fallbackCase.locale,
+                bidiIsolation: fallbackCase.bidiIsolation ?? .none
+            )
+            if actual.value != fallbackCase.expected {
+                throw ConformanceError.formatMismatch(
+                    fixture: fixtureURL.lastPathComponent,
+                    expected: fallbackCase.expected,
+                    actual: actual.value
+                )
+            }
+            try assertErrorCodes(
+                fixture: fixtureURL.lastPathComponent,
+                label: "fallback errors",
+                actual: actual.errors,
+                expected: fallbackCase.expectedErrors
+            )
+            checkedFallbackCases += 1
+        }
+        for partsCase in fixture.fallbackPartsCases {
+            let actual = try fixture.expectedModel.formatToPartsWithFallback(
+                arguments: partsCase.arguments,
+                locale: partsCase.locale
+            )
+            if actual.parts != partsCase.expected {
+                throw ConformanceError.partsMismatch(
+                    fixture: fixtureURL.lastPathComponent,
+                    expected: "\(partsCase.expected)",
+                    actual: "\(actual.parts)"
+                )
+            }
+            try assertErrorCodes(
+                fixture: fixtureURL.lastPathComponent,
+                label: "fallback parts errors",
+                actual: actual.errors,
+                expected: partsCase.expectedErrors
+            )
+            checkedFallbackPartsCases += 1
+        }
     }
 
     let checkedErrorCases = try runFormatErrorFixtures(
@@ -57,7 +100,7 @@ do {
     )
 
     print(
-        "Swift MF2 conformance runner passed \(checkedCases) format cases, \(checkedPartsCases) parts cases, \(checkedErrorCases) format error cases, and \(checkedLocaleKeyCases) locale key cases."
+        "Swift MF2 conformance runner passed \(checkedCases) format cases, \(checkedPartsCases) parts cases, \(checkedFallbackCases) fallback cases, \(checkedFallbackPartsCases) fallback parts cases, \(checkedErrorCases) format error cases, and \(checkedLocaleKeyCases) locale key cases."
     )
 } catch {
     fputs("Swift MF2 conformance runner failed: \(error)\n", stderr)
@@ -199,6 +242,24 @@ private func runLocaleKeyFixtures(fixtureRoot: URL) throws -> Int {
     return checkedCases
 }
 
+private func assertErrorCodes(
+    fixture: String,
+    label: String,
+    actual: [MF2Error],
+    expected: [ExpectedError]
+) throws {
+    let actualCodes = actual.map(\.code)
+    let expectedCodes = expected.map(\.code)
+    if actualCodes != expectedCodes {
+        throw ConformanceError.errorCodesMismatch(
+            fixture: fixture,
+            label: label,
+            expected: "\(expectedCodes)",
+            actual: "\(actualCodes)"
+        )
+    }
+}
+
 private func fixtureURLs(in directory: URL) throws -> [URL] {
     try FileManager.default
         .contentsOfDirectory(
@@ -213,11 +274,15 @@ private struct SourceToModelFixture: Decodable {
     let expectedModel: MF2Message
     let formatCases: [FormatCase]
     let partsCases: [PartsCase]
+    let fallbackCases: [FallbackCase]
+    let fallbackPartsCases: [FallbackPartsCase]
 
     private enum CodingKeys: String, CodingKey {
         case expectedModel
         case formatCases
         case partsCases
+        case fallbackCases
+        case fallbackPartsCases
     }
 
     init(from decoder: Decoder) throws {
@@ -225,6 +290,11 @@ private struct SourceToModelFixture: Decodable {
         expectedModel = try container.decode(MF2Message.self, forKey: .expectedModel)
         formatCases = try container.decodeIfPresent([FormatCase].self, forKey: .formatCases) ?? []
         partsCases = try container.decodeIfPresent([PartsCase].self, forKey: .partsCases) ?? []
+        fallbackCases = try container.decodeIfPresent([FallbackCase].self, forKey: .fallbackCases) ?? []
+        fallbackPartsCases = try container.decodeIfPresent(
+            [FallbackPartsCase].self,
+            forKey: .fallbackPartsCases
+        ) ?? []
     }
 }
 
@@ -239,6 +309,21 @@ private struct PartsCase: Decodable {
     let locale: String
     let arguments: [String: MF2Value]
     let expected: [MF2FormattedPart]
+}
+
+private struct FallbackCase: Decodable {
+    let locale: String
+    let bidiIsolation: MF2BidiIsolation?
+    let arguments: [String: MF2Value]
+    let expected: String
+    let expectedErrors: [ExpectedError]
+}
+
+private struct FallbackPartsCase: Decodable {
+    let locale: String
+    let arguments: [String: MF2Value]
+    let expected: [MF2FormattedPart]
+    let expectedErrors: [ExpectedError]
 }
 
 private struct FormatErrorFixture: Decodable {
@@ -279,6 +364,7 @@ private enum ConformanceError: Error, CustomStringConvertible {
     case partsMismatch(fixture: String, expected: String, actual: String)
     case expectedFormatError(fixture: String, actual: String)
     case formatErrorMismatch(fixture: String, expected: String, actual: String)
+    case errorCodesMismatch(fixture: String, label: String, expected: String, actual: String)
     case localeKeyMismatch(fixture: String, expected: String, actual: String)
 
     var description: String {
@@ -293,6 +379,8 @@ private enum ConformanceError: Error, CustomStringConvertible {
             "\(fixture): expected format error, got '\(actual)'"
         case let .formatErrorMismatch(fixture, expected, actual):
             "\(fixture): expected error '\(expected)', got '\(actual)'"
+        case let .errorCodesMismatch(fixture, label, expected, actual):
+            "\(fixture): expected \(label) '\(expected)', got '\(actual)'"
         case let .localeKeyMismatch(fixture, expected, actual):
             "\(fixture): expected locale key '\(expected)', got '\(actual)'"
         }

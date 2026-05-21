@@ -47,6 +47,14 @@ final class Mf2Formatter {
         return partsToString(formatToParts(message, arguments, locale, functions), bidiIsolation);
     }
 
+    static Mf2Message.FallbackFormatResult formatWithFallback(
+            Mf2Message message, Map<String, ?> arguments, String locale) throws Mf2Exception {
+        FallbackPartsResult result =
+                formatToPartsWithFallback(message, arguments, locale, DEFAULT_FUNCTIONS);
+        return new Mf2Message.FallbackFormatResult(
+                partsToString(result.parts(), Mf2BidiIsolation.NONE), result.errors());
+    }
+
     static List<Mf2Message.FormattedPart> formatToParts(
             Mf2Message message, Map<String, ?> arguments, String locale) throws Mf2Exception {
         return formatToParts(message, arguments, locale, DEFAULT_FUNCTIONS);
@@ -65,6 +73,23 @@ final class Mf2Formatter {
             case Mf2Message.Message simple -> context.formatPatternToParts(simple.pattern());
             case Mf2Message.Select select -> context.formatSelectToParts(select.selectors(), select.variants());
         };
+    }
+
+    static FallbackPartsResult formatToPartsWithFallback(
+            Mf2Message message,
+            Map<String, ?> arguments,
+            String locale,
+            Mf2FunctionRegistry functions)
+            throws Mf2Exception {
+        validate(message);
+        FormatContext context =
+                new FormatContext(snapshotArguments(arguments), locale, functions, true);
+        context.apply(message.declarations());
+        List<Mf2Message.FormattedPart> parts = switch (message) {
+            case Mf2Message.Message simple -> context.formatPatternToParts(simple.pattern());
+            case Mf2Message.Select select -> context.formatSelectToParts(select.selectors(), select.variants());
+        };
+        return new FallbackPartsResult(parts, context.errors);
     }
 
     private static void validate(Mf2Message message) throws Mf2Exception {
@@ -207,16 +232,29 @@ final class Mf2Formatter {
     private static final class FormatContext {
         private final ArgumentValues arguments;
         private Map<String, Object> locals;
+        private Set<String> failedLocals;
+        private final List<Mf2Exception> errors;
         private String selectorAnnotationName;
         private SelectorAnnotation selectorAnnotation;
         private Map<String, SelectorAnnotation> selectorAnnotations;
         private final String locale;
         private final Mf2FunctionRegistry functions;
+        private final boolean fallback;
 
         FormatContext(ArgumentValues arguments, String locale, Mf2FunctionRegistry functions) {
+            this(arguments, locale, functions, false);
+        }
+
+        FormatContext(
+                ArgumentValues arguments,
+                String locale,
+                Mf2FunctionRegistry functions,
+                boolean fallback) {
             this.arguments = arguments;
             this.locale = locale == null || locale.isBlank() ? "en" : locale;
             this.functions = Objects.requireNonNull(functions);
+            this.errors = new ArrayList<>();
+            this.fallback = fallback;
         }
 
         void apply(List<Mf2Message.Declaration> declarations) throws Mf2Exception {
@@ -226,7 +264,14 @@ final class Mf2Formatter {
             for (Mf2Message.Declaration declaration : declarations) {
                 switch (declaration) {
                     case Mf2Message.InputDeclaration ignored -> {}
-                    case Mf2Message.LocalDeclaration local -> putLocal(local.name(), formatExpression(local.value()));
+                    case Mf2Message.LocalDeclaration local -> {
+                        ExpressionOutput output = formatExpressionOutput(local.value());
+                        if (output.hadError()) {
+                            addFailedLocal(local.name());
+                        } else {
+                            putLocal(local.name(), output.value());
+                        }
+                    }
                 }
             }
         }
@@ -259,6 +304,17 @@ final class Mf2Formatter {
 
         private SelectorValue selectorValue(Mf2Message.VariableRef selector) throws Mf2Exception {
             if (!hasValue(selector.name())) {
+                if (fallback) {
+                    if (!isFailedLocal(selector.name())) {
+                        errors.add(Mf2Exception.unresolvedVariable(selector.name()));
+                    }
+                    SelectorAnnotation annotation = selectorAnnotation(selector.name());
+                    return new SelectorValue(
+                            "",
+                            annotation != null && annotation.isString() ? normalizeStringKey("") : null,
+                            false,
+                            null);
+                }
                 throw Mf2Exception.missingArgument(selector.name());
             }
             Object value = value(selector.name());
@@ -281,10 +337,17 @@ final class Mf2Formatter {
             for (Mf2Message.PatternPart part : pattern) {
                 switch (part) {
                     case Mf2Message.TextPart text -> output.add(new Mf2Message.FormattedText(text.value()));
-                    case Mf2Message.ExpressionPart expression -> output.add(
-                            new Mf2Message.FormattedExpression(
-                                    formatExpression(expression.expression()),
+                    case Mf2Message.ExpressionPart expression -> {
+                        ExpressionOutput rendered = formatExpressionOutput(expression.expression());
+                        if (rendered.hadError()) {
+                            output.add(new Mf2Message.FormattedFallback(
+                                    fallbackSource(expression.expression())));
+                        } else {
+                            output.add(new Mf2Message.FormattedExpression(
+                                    rendered.value(),
                                     expression.expression().attributes()));
+                        }
+                    }
                     case Mf2Message.MarkupPart markup -> output.add(new Mf2Message.FormattedMarkup(
                             markup.markup().kind(),
                             markup.markup().name(),
@@ -296,26 +359,56 @@ final class Mf2Formatter {
         }
 
         String formatExpression(Mf2Message.Expression expression) throws Mf2Exception {
+            return formatExpressionOutput(expression).value();
+        }
+
+        ExpressionOutput formatExpressionOutput(Mf2Message.Expression expression)
+                throws Mf2Exception {
+            boolean hadError = false;
             String value = switch (expression.arg()) {
                 case null -> "";
                 case Mf2Message.LiteralArgument literal -> literal.value();
                 case Mf2Message.VariableArgument variable -> {
                     if (!hasValue(variable.name())) {
+                        if (fallback) {
+                            hadError = true;
+                            if (!isFailedLocal(variable.name())) {
+                                errors.add(Mf2Exception.unresolvedVariable(variable.name()));
+                            }
+                            if (expression.function() != null) {
+                                errors.add(Mf2Exception.badOperand("Function operand is not available."));
+                            }
+                            yield fallbackSource(expression);
+                        }
                         throw Mf2Exception.missingArgument(variable.name());
                     }
                     yield valueToString(value(variable.name()));
                 }
             };
 
+            if (hadError) {
+                return new ExpressionOutput(value, true);
+            }
+
             Mf2Message.FunctionRef function = expression.function();
             if (function == null) {
-                return value;
+                return new ExpressionOutput(value, false);
             }
-            return functions.format(new Mf2FunctionRegistry.FunctionCall(
-                    value,
-                    function,
-                    locale,
-                    (optionName, defaultValue) -> optionValue(function, optionName, defaultValue)));
+            try {
+                return new ExpressionOutput(
+                        functions.format(new Mf2FunctionRegistry.FunctionCall(
+                                value,
+                                function,
+                                locale,
+                                (optionName, defaultValue) -> optionValue(function, optionName, defaultValue))),
+                        false);
+            } catch (Mf2Exception error) {
+                if (!fallback) {
+                    throw error;
+                }
+                errors.add(fallbackError(error));
+                return new ExpressionOutput(fallbackSource(expression), true);
+            }
         }
 
         private String optionValue(
@@ -363,6 +456,17 @@ final class Mf2Formatter {
             locals.put(name, value);
         }
 
+        private void addFailedLocal(String name) {
+            if (failedLocals == null) {
+                failedLocals = new HashSet<>();
+            }
+            failedLocals.add(name);
+        }
+
+        private boolean isFailedLocal(String name) {
+            return failedLocals != null && failedLocals.contains(name);
+        }
+
         private void addSelectorAnnotation(String name, SelectorAnnotation annotation) {
             if (selectorAnnotationName == null) {
                 selectorAnnotationName = name;
@@ -383,6 +487,11 @@ final class Mf2Formatter {
             return name.equals(selectorAnnotationName) ? selectorAnnotation : null;
         }
     }
+
+    record FallbackPartsResult(
+            List<Mf2Message.FormattedPart> parts, List<Mf2Exception> errors) {}
+
+    private record ExpressionOutput(String value, boolean hadError) {}
 
     private static ArgumentValues snapshotArguments(Map<String, ?> arguments) {
         // Keep format() isolated from caller map mutation without penalizing the common one-arg path.
@@ -458,6 +567,54 @@ final class Mf2Formatter {
         return Normalizer.normalize(value, Normalizer.Form.NFC);
     }
 
+    private static Mf2Exception fallbackError(Mf2Exception error) {
+        if (error.code().equals("unsupported-function")) {
+            return new Mf2Exception("unknown-function", error.getMessage());
+        }
+        return error;
+    }
+
+    private static String fallbackSource(Mf2Message.Expression expression) {
+        if (expression.arg() != null) {
+            return expressionArgumentSource(expression.arg());
+        }
+        if (expression.function() != null) {
+            return functionSource(expression.function());
+        }
+        return "";
+    }
+
+    private static String expressionArgumentSource(Mf2Message.ExpressionArgument argument) {
+        return switch (argument) {
+            case Mf2Message.LiteralArgument literal -> quoteLiteralSource(literal.value());
+            case Mf2Message.VariableArgument variable -> "$" + variable.name();
+        };
+    }
+
+    private static String functionSource(Mf2Message.FunctionRef function) {
+        StringBuilder source = new StringBuilder(":").append(function.name());
+        for (Map.Entry<String, Mf2Message.ExpressionArgument> option : function.options().entrySet()) {
+            source.append(' ')
+                    .append(option.getKey())
+                    .append('=')
+                    .append(expressionArgumentSource(option.getValue()));
+        }
+        return source.toString();
+    }
+
+    private static String quoteLiteralSource(String value) {
+        StringBuilder source = new StringBuilder("|");
+        for (int offset = 0; offset < value.length(); ) {
+            int codePoint = value.codePointAt(offset);
+            if (codePoint == '\\' || codePoint == '|') {
+                source.append('\\');
+            }
+            source.appendCodePoint(codePoint);
+            offset += Character.charCount(codePoint);
+        }
+        return source.append('|').toString();
+    }
+
     private static boolean isFallbackVariant(Mf2Message.Variant variant) {
         for (Mf2Message.VariantKey key : variant.keys()) {
             if (!(key instanceof Mf2Message.CatchAllVariantKey)) {
@@ -493,6 +650,7 @@ final class Mf2Formatter {
         for (Mf2Message.FormattedPart part : parts) {
             switch (part) {
                 case Mf2Message.FormattedText text -> output.append(text.value());
+                case Mf2Message.FormattedFallback fallback -> output.append('{').append(fallback.source()).append('}');
                 case Mf2Message.FormattedExpression expression ->
                         output.append(isolateExpression(expression.value(), bidiIsolation));
                 case Mf2Message.FormattedMarkup ignored -> {

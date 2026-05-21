@@ -17,6 +17,8 @@ use unicode_normalization::UnicodeNormalization;
 pub enum FormattedPart {
     #[serde(rename = "text")]
     Text { value: String },
+    #[serde(rename = "fallback")]
+    Fallback { source: String },
     #[serde(rename = "expression")]
     Expression {
         value: String,
@@ -32,6 +34,18 @@ pub enum FormattedPart {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         attributes: Option<BTreeMap<String, AttributeValue>>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FallbackFormatResult {
+    pub value: String,
+    pub errors: Vec<Diagnostic>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FallbackPartsResult {
+    pub parts: Vec<FormattedPart>,
+    pub errors: Vec<Diagnostic>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -221,6 +235,35 @@ pub fn format_model_with_locale_and_functions_and_bidi(
     ))
 }
 
+pub fn format_model_with_fallback(
+    model: &MessageModel,
+    arguments: &BTreeMap<String, serde_json::Value>,
+) -> Result<FallbackFormatResult, Diagnostic> {
+    format_model_with_locale_and_functions_and_bidi_and_fallback(
+        model,
+        arguments,
+        "en",
+        default_function_registry(),
+        BidiIsolation::None,
+    )
+}
+
+pub fn format_model_with_locale_and_functions_and_bidi_and_fallback(
+    model: &MessageModel,
+    arguments: &BTreeMap<String, serde_json::Value>,
+    locale: &str,
+    functions: &FunctionRegistry,
+    bidi_isolation: BidiIsolation,
+) -> Result<FallbackFormatResult, Diagnostic> {
+    let result = format_model_to_parts_with_locale_and_functions_and_fallback(
+        model, arguments, locale, functions,
+    )?;
+    Ok(FallbackFormatResult {
+        value: parts_to_string(&result.parts, bidi_isolation),
+        errors: result.errors,
+    })
+}
+
 pub fn format_model_to_parts_with_locale(
     model: &MessageModel,
     arguments: &BTreeMap<String, serde_json::Value>,
@@ -251,6 +294,29 @@ pub fn format_model_to_parts_with_locale_and_functions(
             ..
         } => context.format_select_to_parts(selectors, variants),
     }
+}
+
+pub fn format_model_to_parts_with_locale_and_functions_and_fallback(
+    model: &MessageModel,
+    arguments: &BTreeMap<String, serde_json::Value>,
+    locale: &str,
+    functions: &FunctionRegistry,
+) -> Result<FallbackPartsResult, Diagnostic> {
+    validate_model(model)?;
+    let mut context = FormatContext::new(arguments, locale, functions).with_fallback();
+    context.apply_declarations(model.declarations())?;
+    let parts = match model {
+        MessageModel::Message { pattern, .. } => context.format_pattern_to_parts(pattern)?,
+        MessageModel::Select {
+            selectors,
+            variants,
+            ..
+        } => context.format_select_to_parts(selectors, variants)?,
+    };
+    Ok(FallbackPartsResult {
+        parts,
+        errors: context.errors,
+    })
 }
 
 fn validate_model(model: &MessageModel) -> Result<(), Diagnostic> {
@@ -434,8 +500,11 @@ fn declaration_name_value(declaration: &Declaration) -> (&str, &Expression) {
 struct FormatContext<'a> {
     values: BTreeMap<String, serde_json::Value>,
     selector_annotations: BTreeMap<String, SelectorAnnotation>,
+    failed_locals: BTreeSet<String>,
+    errors: Vec<Diagnostic>,
     locale: String,
     functions: &'a FunctionRegistry,
+    fallback: bool,
 }
 
 impl<'a> FormatContext<'a> {
@@ -447,9 +516,17 @@ impl<'a> FormatContext<'a> {
         Self {
             values: arguments.clone(),
             selector_annotations: BTreeMap::new(),
+            failed_locals: BTreeSet::new(),
+            errors: Vec::new(),
             locale: locale.to_string(),
             functions,
+            fallback: false,
         }
+    }
+
+    fn with_fallback(mut self) -> Self {
+        self.fallback = true;
+        self
     }
 
     fn apply_declarations(&mut self, declarations: &[Declaration]) -> Result<(), Diagnostic> {
@@ -458,9 +535,13 @@ impl<'a> FormatContext<'a> {
             match declaration {
                 Declaration::Input { .. } => {}
                 Declaration::Local { name, value } => {
-                    let rendered = self.format_expression(value)?;
-                    self.values
-                        .insert(name.clone(), serde_json::Value::String(rendered));
+                    let rendered = self.format_expression_output(value)?;
+                    if rendered.had_error {
+                        self.failed_locals.insert(name.clone());
+                    } else {
+                        self.values
+                            .insert(name.clone(), serde_json::Value::String(rendered.value));
+                    }
                 }
             }
         }
@@ -468,17 +549,28 @@ impl<'a> FormatContext<'a> {
     }
 
     fn format_select_to_parts(
-        &self,
+        &mut self,
         selectors: &[VariableRef],
         variants: &[Variant],
     ) -> Result<Vec<FormattedPart>, Diagnostic> {
         let selector_values = selectors
             .iter()
             .map(|selector| {
-                let value = self
-                    .values
-                    .get(&selector.name)
-                    .ok_or_else(|| missing_argument(&selector.name))?;
+                let Some(value) = self.values.get(&selector.name) else {
+                    if self.fallback {
+                        if !self.failed_locals.contains(&selector.name) {
+                            self.errors.push(unresolved_variable(&selector.name));
+                        }
+                        let string_select = self.string_select_for_selector(&selector.name);
+                        return Ok(SelectorValue {
+                            normalized_rendered: string_select.then(|| normalize_string_key("")),
+                            rendered: String::new(),
+                            exact_match: false,
+                            selection_key: None,
+                        });
+                    }
+                    return Err(missing_argument(&selector.name));
+                };
                 let rendered = value_to_string(value);
                 let string_select = self.string_select_for_selector(&selector.name);
                 Ok(SelectorValue {
@@ -521,7 +613,7 @@ impl<'a> FormatContext<'a> {
     }
 
     fn format_pattern_to_parts(
-        &self,
+        &mut self,
         pattern: &[PatternPart],
     ) -> Result<Vec<FormattedPart>, Diagnostic> {
         let mut output = Vec::new();
@@ -531,8 +623,15 @@ impl<'a> FormatContext<'a> {
                     value: text.clone(),
                 }),
                 PatternPart::Expression(expression) => {
+                    let rendered = self.format_expression_output(expression)?;
+                    if rendered.had_error {
+                        output.push(FormattedPart::Fallback {
+                            source: fallback_source(expression),
+                        });
+                        continue;
+                    }
                     output.push(FormattedPart::Expression {
-                        value: self.format_expression(expression)?,
+                        value: rendered.value,
                         attributes: expression.attributes.clone(),
                     });
                 }
@@ -542,22 +641,62 @@ impl<'a> FormatContext<'a> {
         Ok(output)
     }
 
-    fn format_expression(&self, expression: &Expression) -> Result<String, Diagnostic> {
+    fn format_expression_output(
+        &mut self,
+        expression: &Expression,
+    ) -> Result<ExpressionOutput, Diagnostic> {
+        let mut had_error = false;
         let value = match &expression.arg {
             Some(ExpressionArg::Variable { name }) => self
                 .values
                 .get(name)
                 .map(value_to_string)
+                .or_else(|| {
+                    if !self.fallback {
+                        return None;
+                    }
+                    had_error = true;
+                    if !self.failed_locals.contains(name) {
+                        self.errors.push(unresolved_variable(name));
+                    }
+                    if expression.function.is_some() {
+                        self.errors
+                            .push(bad_operand("Function operand is not available."));
+                    }
+                    Some(fallback_source(expression))
+                })
                 .ok_or_else(|| missing_argument(name))?,
             Some(ExpressionArg::Literal { value }) => value.clone(),
             None => String::new(),
         };
 
-        match expression.function.as_ref() {
-            None => Ok(value),
-            Some(function) => self
-                .functions
-                .format(&value, function, &self.locale, &self.values),
+        if had_error {
+            return Ok(ExpressionOutput {
+                value,
+                had_error: true,
+            });
+        }
+
+        let Some(function) = expression.function.as_ref() else {
+            return Ok(ExpressionOutput { value, had_error });
+        };
+
+        match self
+            .functions
+            .format(&value, function, &self.locale, &self.values)
+        {
+            Ok(value) => Ok(ExpressionOutput {
+                value,
+                had_error: false,
+            }),
+            Err(error) if self.fallback => {
+                self.errors.push(fallback_error(error));
+                Ok(ExpressionOutput {
+                    value: fallback_source(expression),
+                    had_error: true,
+                })
+            }
+            Err(error) => Err(error),
         }
     }
 
@@ -586,6 +725,12 @@ impl<'a> FormatContext<'a> {
         let operands = NumberOperands::from_json(value)?;
         annotation.selection_key(&self.locale, operands)
     }
+}
+
+#[derive(Debug, Clone)]
+struct ExpressionOutput {
+    value: String,
+    had_error: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -755,8 +900,69 @@ fn missing_argument(name: &str) -> Diagnostic {
     )
 }
 
+fn unresolved_variable(name: &str) -> Diagnostic {
+    Diagnostic::new(
+        "unresolved-variable",
+        format!("Variable ${name} could not be resolved."),
+        0,
+        0,
+    )
+}
+
+fn bad_operand(message: impl Into<String>) -> Diagnostic {
+    Diagnostic::new("bad-operand", message, 0, 0)
+}
+
+fn fallback_error(error: Diagnostic) -> Diagnostic {
+    if error.code == "unsupported-function" {
+        Diagnostic::new("unknown-function", error.message, error.start, error.end)
+    } else {
+        error
+    }
+}
+
 fn model_error(code: impl Into<String>, message: impl Into<String>) -> Diagnostic {
     Diagnostic::new(code, message, 0, 0)
+}
+
+fn fallback_source(expression: &Expression) -> String {
+    match (&expression.arg, &expression.function) {
+        (Some(arg), _) => expression_arg_source(arg),
+        (None, Some(function)) => function_source(function),
+        (None, None) => String::new(),
+    }
+}
+
+fn expression_arg_source(arg: &ExpressionArg) -> String {
+    match arg {
+        ExpressionArg::Literal { value } => quote_literal_source(value),
+        ExpressionArg::Variable { name } => format!("${name}"),
+    }
+}
+
+fn function_source(function: &FunctionRef) -> String {
+    let mut source = format!(":{}", function.name);
+    if let Some(options) = &function.options {
+        for (name, value) in options {
+            source.push(' ');
+            source.push_str(name);
+            source.push('=');
+            source.push_str(&expression_arg_source(value));
+        }
+    }
+    source
+}
+
+fn quote_literal_source(value: &str) -> String {
+    let mut source = String::from("|");
+    for ch in value.chars() {
+        if ch == '\\' || ch == '|' {
+            source.push('\\');
+        }
+        source.push(ch);
+    }
+    source.push('|');
+    source
 }
 
 fn value_to_string(value: &serde_json::Value) -> String {
@@ -783,6 +989,11 @@ fn parts_to_string(parts: &[FormattedPart], bidi_isolation: BidiIsolation) -> St
     for part in parts {
         match part {
             FormattedPart::Text { value } => output.push_str(value),
+            FormattedPart::Fallback { source } => {
+                output.push('{');
+                output.push_str(source);
+                output.push('}');
+            }
             FormattedPart::Expression { value, .. } => {
                 push_expression(&mut output, value, bidi_isolation);
             }

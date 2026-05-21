@@ -6,12 +6,12 @@ libraries.
 The official Unicode MessageFormat WG test suite is vendored separately under
 `../third_party/message-format-wg/test`. The Rust parser runner reads the
 upstream test shape directly via `cargo run -- unicode-tests`, currently wiring
-syntax success/error, bidi syntax, data-model error, and `:string` function
-checks. Its checked-in baseline lives in `unicode-official-baseline.json`;
-update it in the same commit when official pass/skip/not-wired counts
-intentionally change. Fallback, pattern-selection, remaining function suites,
-parts, and draft `u:` option official tests are counted as not wired until the
-corresponding runtime semantics are implemented.
+syntax success/error, bidi syntax, data-model error, `:string` function, and
+fallback checks. Its checked-in baseline lives in
+`unicode-official-baseline.json`; update it in the same commit when official
+pass/skip/not-wired counts intentionally change. Pattern-selection, remaining
+function suites, parts, and draft `u:` option official tests are counted as not
+wired until the corresponding runtime semantics are implemented.
 
 ## Contract
 
@@ -19,9 +19,11 @@ Fixtures should test these paths:
 
 - `source -> official data model`
 - `official data model + args -> output`
+- `official data model + args -> fallback output + runtime errors`
 - `official data model + args -> runtime error`
 - `source -> diagnostics`
 - `source -> parts`
+- `source -> fallback parts`
 - `source -> print -> source/model stability`
 
 The official Unicode MF2 Interchange Data Model schema is stored in
@@ -127,6 +129,9 @@ The source-to-model fixtures currently cover:
   selector values, plus quoted literal variant keys distinct from catch-all `*`;
   `:string` selection normalizes comparison keys to NFC internally without
   mutating the parsed model or formatted output
+- fallback formatting for unresolved variables and unresolved select selectors,
+  including fallback parts with `source` metadata and collected
+  `unresolved-variable` errors
 - direct and simple indirect selector annotations for `.match`
 - cardinal plural category selection for English, French, Russian, Arabic, and
   Japanese fixtures, including `:integer` selection for English

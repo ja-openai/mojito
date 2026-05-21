@@ -18,6 +18,10 @@ public final class Mf2Exception extends Exception {
         return new Mf2Exception("missing-argument", "Missing argument $" + name + ".");
     }
 
+    static Mf2Exception unresolvedVariable(String name) {
+        return new Mf2Exception("unresolved-variable", "Variable $" + name + " could not be resolved.");
+    }
+
     static Mf2Exception missingSelectVariant() {
         return new Mf2Exception(
                 "missing-select-variant",

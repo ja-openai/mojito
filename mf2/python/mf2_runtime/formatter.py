@@ -9,6 +9,18 @@ from .functions import DEFAULT_FUNCTION_REGISTRY, FunctionCall, FunctionRegistry
 from .plural import select_plural_category
 
 
+@dataclass(frozen=True)
+class FallbackFormatResult:
+    value: str
+    errors: list[MF2Error]
+
+
+@dataclass(frozen=True)
+class FallbackPartsResult:
+    parts: list[dict[str, Any]]
+    errors: list[MF2Error]
+
+
 def format_message(
     model: dict[str, Any],
     arguments: dict[str, Any] | None = None,
@@ -42,6 +54,45 @@ def format_message_to_parts(
     if message_type == "select":
         return context.format_select_to_parts(model.get("selectors", []), model.get("variants", []))
     raise MF2Error("unsupported-message-type", f"Unsupported message type: {message_type}")
+
+
+def format_message_with_fallback(
+    model: dict[str, Any],
+    arguments: dict[str, Any] | None = None,
+    locale: str = "en",
+    functions: FunctionRegistry | None = None,
+    bidi_isolation: str = "none",
+) -> FallbackFormatResult:
+    result = format_message_to_parts_with_fallback(model, arguments, locale, functions)
+    return FallbackFormatResult(
+        value=_parts_to_string(result.parts, bidi_isolation),
+        errors=result.errors,
+    )
+
+
+def format_message_to_parts_with_fallback(
+    model: dict[str, Any],
+    arguments: dict[str, Any] | None = None,
+    locale: str = "en",
+    functions: FunctionRegistry | None = None,
+) -> FallbackPartsResult:
+    _validate_model(model)
+    context = _FormatContext(
+        dict(arguments or {}),
+        locale,
+        functions or DEFAULT_FUNCTION_REGISTRY,
+        fallback=True,
+    )
+    context.apply_declarations(model.get("declarations", []))
+
+    message_type = model.get("type")
+    if message_type == "message":
+        parts = context.format_pattern_to_parts(model.get("pattern", []))
+    elif message_type == "select":
+        parts = context.format_select_to_parts(model.get("selectors", []), model.get("variants", []))
+    else:
+        raise MF2Error("unsupported-message-type", f"Unsupported message type: {message_type}")
+    return FallbackPartsResult(parts=parts, errors=context.errors)
 
 
 def _validate_model(model: dict[str, Any]) -> None:
@@ -191,17 +242,30 @@ def _signature_key(value: str, selector: "_SelectorValue") -> str:
 
 
 class _FormatContext:
-    def __init__(self, values: dict[str, Any], locale: str, functions: FunctionRegistry) -> None:
+    def __init__(
+        self,
+        values: dict[str, Any],
+        locale: str,
+        functions: FunctionRegistry,
+        fallback: bool = False,
+    ) -> None:
         self.values = values
         self.locale = locale
         self.functions = functions
         self.selector_annotations: dict[str, _SelectorAnnotation] = {}
+        self.failed_locals: set[str] = set()
+        self.errors: list[MF2Error] = []
+        self.fallback = fallback
 
     def apply_declarations(self, declarations: list[dict[str, Any]]) -> None:
         self.selector_annotations = _selector_annotations(declarations)
         for declaration in declarations:
             if declaration.get("type") == "local":
-                self.values[declaration["name"]] = self.format_expression(declaration["value"])
+                rendered = self._format_expression_output(declaration["value"])
+                if rendered.had_error:
+                    self.failed_locals.add(declaration["name"])
+                else:
+                    self.values[declaration["name"]] = rendered.value
 
     def format_select_to_parts(
         self,
@@ -211,7 +275,23 @@ class _FormatContext:
         selector_values = []
         for selector in selectors:
             name = selector["name"]
-            value = self._argument(name)
+            if name not in self.values:
+                if self.fallback:
+                    if name not in self.failed_locals:
+                        self.errors.append(_unresolved_variable(name))
+                    selector_values.append(
+                        _SelectorValue(
+                            rendered="",
+                            normalized_rendered=(
+                                _normalize_string_key("") if self._string_select(name) else None
+                            ),
+                            exact_match=False,
+                            selection_key=None,
+                        )
+                    )
+                    continue
+                raise MF2Error("missing-argument", f"Missing argument ${name}.")
+            value = self.values[name]
             rendered = _render_value(value)
             normalized_rendered = (
                 _normalize_string_key(rendered) if self._string_select(name) else None
@@ -266,10 +346,14 @@ class _FormatContext:
                 continue
             part_type = part.get("type")
             if part_type == "expression":
-                expression_part = {"type": "expression", "value": self.format_expression(part)}
-                if attributes := part.get("attributes"):
-                    expression_part["attributes"] = attributes
-                parts.append(expression_part)
+                rendered = self._format_expression_output(part)
+                if rendered.had_error:
+                    parts.append({"type": "fallback", "source": _fallback_source(part)})
+                else:
+                    expression_part = {"type": "expression", "value": rendered.value}
+                    if attributes := part.get("attributes"):
+                        expression_part["attributes"] = attributes
+                    parts.append(expression_part)
             elif part_type == "markup":
                 markup_part = {
                     "type": "markup",
@@ -286,27 +370,57 @@ class _FormatContext:
         return parts
 
     def format_expression(self, expression: dict[str, Any]) -> str:
+        return self._format_expression_output(expression).value
+
+    def _format_expression_output(self, expression: dict[str, Any]) -> "_ExpressionOutput":
+        had_error = False
         arg = expression.get("arg")
         if arg is None:
             value = ""
         elif arg.get("type") == "literal":
             value = arg.get("value", "")
         elif arg.get("type") == "variable":
-            value = _render_value(self._argument(arg["name"]))
+            name = arg["name"]
+            if name not in self.values:
+                if self.fallback:
+                    had_error = True
+                    if name not in self.failed_locals:
+                        self.errors.append(_unresolved_variable(name))
+                    if expression.get("function") is not None:
+                        self.errors.append(
+                            MF2Error("bad-operand", "Function operand is not available.")
+                        )
+                    value = _fallback_source(expression)
+                else:
+                    raise MF2Error("missing-argument", f"Missing argument ${name}.")
+            else:
+                value = _render_value(self.values[name])
         else:
             raise MF2Error("unsupported-expression-arg", f"Unsupported expression arg: {arg}")
 
+        if had_error:
+            return _ExpressionOutput(value=value, had_error=True)
+
         function = expression.get("function")
         if function is None:
-            return value
-        return self.functions.format(
-            FunctionCall(
-                value=value,
-                function=function,
-                locale=self.locale,
-                _option_resolver=lambda name, default: self._option_value(function, name, default),
+            return _ExpressionOutput(value=value, had_error=False)
+        try:
+            return _ExpressionOutput(
+                value=self.functions.format(
+                    FunctionCall(
+                        value=value,
+                        function=function,
+                        locale=self.locale,
+                        _option_resolver=lambda name, default: self._option_value(function, name, default),
+                    )
+                ),
+                had_error=False,
             )
-        )
+        except MF2Error as error:
+            if not self.fallback:
+                raise
+            self.errors.append(_fallback_error(error))
+            return _ExpressionOutput(value=_fallback_source(expression), had_error=True)
 
     def _option_value(
         self,
@@ -380,6 +494,12 @@ class _SelectorValue:
     selection_key: str | None
 
 
+@dataclass(frozen=True)
+class _ExpressionOutput:
+    value: str
+    had_error: bool
+
+
 def _variant_matches(keys: list[dict[str, Any]], selector_values: list[_SelectorValue]) -> bool:
     if len(keys) != len(selector_values):
         return False
@@ -401,6 +521,43 @@ def _normalize_string_key(value: str) -> str:
     return unicodedata.normalize("NFC", value)
 
 
+def _unresolved_variable(name: str) -> MF2Error:
+    return MF2Error("unresolved-variable", f"Variable ${name} could not be resolved.")
+
+
+def _fallback_error(error: MF2Error) -> MF2Error:
+    if error.code == "unsupported-function":
+        return MF2Error("unknown-function", error.message)
+    return error
+
+
+def _fallback_source(expression: dict[str, Any]) -> str:
+    arg = expression.get("arg")
+    if arg is not None:
+        return _expression_arg_source(arg)
+    function = expression.get("function")
+    if function is not None:
+        return _function_source(function)
+    return ""
+
+
+def _expression_arg_source(arg: dict[str, Any]) -> str:
+    if arg.get("type") == "variable":
+        return f"${arg.get('name', '')}"
+    return _quote_literal_source(str(arg.get("value", "")))
+
+
+def _function_source(function: dict[str, Any]) -> str:
+    source = f":{function.get('name', '')}"
+    for name, value in function.get("options", {}).items():
+        source += f" {name}={_expression_arg_source(value)}"
+    return source
+
+
+def _quote_literal_source(value: str) -> str:
+    return "|" + value.replace("\\", "\\\\").replace("|", "\\|") + "|"
+
+
 def _render_value(value: Any) -> str:
     if value is None:
         return ""
@@ -415,6 +572,8 @@ def _parts_to_string(parts: list[dict[str, Any]], bidi_isolation: str = "none") 
         part_type = part.get("type")
         if part_type == "text":
             output.append(part.get("value", ""))
+        elif part_type == "fallback":
+            output.append("{" + part.get("source", "") + "}")
         elif part_type == "expression":
             output.append(_isolate_expression(part.get("value", ""), bidi_isolation))
     return "".join(output)

@@ -6,8 +6,10 @@ Current target:
 
 - `MessageFormat2Runtime`: consumes the official MF2 Interchange Data Model and
   formats the supported fixture slice, including exact, cardinal, and ordinal
-  selector matching, text/expression/markup parts output with attributes, opt-in
-  `MF2BidiIsolation.default` string output, and structural model validation.
+  selector matching, text/expression/markup/fallback parts output with
+  attributes, spec-style fallback formatting with collected runtime errors,
+  opt-in `MF2BidiIsolation.default` string output, and structural model
+  validation.
 - `MessageFormat2Conformance`: executable correctness and benchmark runner.
 - `MessageFormat2TranslateDemo`: tiny `translate(id, locale, args)` catalog
   demo.

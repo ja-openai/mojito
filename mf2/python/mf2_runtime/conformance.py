@@ -6,7 +6,13 @@ from pathlib import Path
 from typing import Any
 
 from .locale_key import canonical_locale_key, locale_lookup_chain
-from .model import MF2Error, format_message, format_message_to_parts
+from .model import (
+    MF2Error,
+    format_message,
+    format_message_to_parts,
+    format_message_to_parts_with_fallback,
+    format_message_with_fallback,
+)
 
 
 class ConformanceFailure(Exception):
@@ -23,6 +29,8 @@ def main(argv: list[str] | None = None) -> int:
 
     checked_cases = 0
     checked_parts_cases = 0
+    checked_fallback_cases = 0
+    checked_fallback_parts_cases = 0
     for fixture_path in sorted(fixture_dir.glob("*.json")):
         fixture = _read_json(fixture_path)
         for format_case in fixture.get("formatCases", []):
@@ -54,6 +62,37 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return 1
             checked_parts_cases += 1
+        for fallback_case in fixture.get("fallbackCases", []):
+            actual = format_message_with_fallback(
+                fixture["expectedModel"],
+                fallback_case.get("arguments", {}),
+                fallback_case.get("locale", "en"),
+                bidi_isolation=fallback_case.get("bidiIsolation", "none"),
+            )
+            expected = fallback_case["expected"]
+            if actual.value != expected:
+                print(
+                    f"{fixture_path.name}: expected fallback {expected!r}, got {actual.value!r}",
+                    file=sys.stderr,
+                )
+                return 1
+            _assert_error_codes(fixture_path, "fallback errors", actual.errors, fallback_case)
+            checked_fallback_cases += 1
+        for parts_case in fixture.get("fallbackPartsCases", []):
+            actual = format_message_to_parts_with_fallback(
+                fixture["expectedModel"],
+                parts_case.get("arguments", {}),
+                parts_case.get("locale", "en"),
+            )
+            expected = parts_case["expected"]
+            if actual.parts != expected:
+                print(
+                    f"{fixture_path.name}: expected fallback parts {expected!r}, got {actual.parts!r}",
+                    file=sys.stderr,
+                )
+                return 1
+            _assert_error_codes(fixture_path, "fallback parts errors", actual.errors, parts_case)
+            checked_fallback_parts_cases += 1
 
     try:
         checked_error_cases = _check_format_error_fixtures(fixture_dir.parent)
@@ -64,6 +103,8 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "Python MF2 conformance runner passed "
         f"{checked_cases} format cases, {checked_parts_cases} parts cases, "
+        f"{checked_fallback_cases} fallback cases, "
+        f"{checked_fallback_parts_cases} fallback parts cases, "
         f"{checked_error_cases} format error cases, "
         f"and {checked_locale_key_cases} locale key cases."
     )
@@ -122,6 +163,20 @@ def _check_locale_key_fixtures(fixture_root: Path) -> int:
         checked_cases += 1
 
     return checked_cases
+
+
+def _assert_error_codes(
+    fixture_path: Path,
+    label: str,
+    actual_errors: list[MF2Error],
+    item: dict[str, Any],
+) -> None:
+    actual_codes = [error.code for error in actual_errors]
+    expected_codes = [error["code"] for error in item.get("expectedErrors", [])]
+    if actual_codes != expected_codes:
+        raise ConformanceFailure(
+            f"{fixture_path.name}: expected {label} {expected_codes!r}, got {actual_codes!r}"
+        )
 
 
 def _read_json(path: Path) -> dict[str, Any]:

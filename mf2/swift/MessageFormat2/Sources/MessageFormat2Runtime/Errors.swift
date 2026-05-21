@@ -2,8 +2,10 @@ import Foundation
 
 public enum MF2Error: Error, Equatable, CustomStringConvertible {
     case missingArgument(String)
+    case unresolvedVariable(String)
     case missingSelectVariant
     case unsupportedFunction(String)
+    case unknownFunction(String)
     case unsupportedExpression
     case duplicateDeclaration(String)
     case variantKeyCountMismatch
@@ -19,10 +21,14 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
         switch self {
         case .missingArgument:
             "missing-argument"
+        case .unresolvedVariable:
+            "unresolved-variable"
         case .missingSelectVariant:
             "missing-select-variant"
         case .unsupportedFunction:
             "unsupported-function"
+        case .unknownFunction:
+            "unknown-function"
         case .unsupportedExpression:
             "unsupported-expression"
         case .duplicateDeclaration:
@@ -50,10 +56,14 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
         switch self {
         case let .missingArgument(name):
             "Missing argument $\(name)."
+        case let .unresolvedVariable(name):
+            "Variable $\(name) could not be resolved."
         case .missingSelectVariant:
             "No select variant matched and no catch-all variant is present."
         case let .unsupportedFunction(name):
             "Function :\(name) is not supported by this runtime slice."
+        case let .unknownFunction(name):
+            "Function :\(name) is not known."
         case .unsupportedExpression:
             "Expression shape is not supported by this runtime slice."
         case let .duplicateDeclaration(name):

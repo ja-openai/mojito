@@ -1,0 +1,34 @@
+{
+  "name": "fallback-unresolved-variable",
+  "source": "User: {$name}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "User: ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "User: {$name}",
+      "expectedErrors": [{ "code": "unresolved-variable" }]
+    }
+  ],
+  "fallbackPartsCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": [
+        { "type": "text", "value": "User: " },
+        { "type": "fallback", "source": "$name" }
+      ],
+      "expectedErrors": [{ "code": "unresolved-variable" }]
+    }
+  ]
+}

@@ -7,9 +7,11 @@ use std::process;
 use std::time::Instant;
 
 use mf2_prototype::{
-    canonical_locale_key, format_model_to_parts_with_locale, format_model_with_locale,
-    format_model_with_locale_and_bidi, locale_lookup_chain, parse_to_model, BidiIsolation,
-    FormattedPart, MessageModel,
+    canonical_locale_key, format_model_to_parts_with_locale,
+    format_model_to_parts_with_locale_and_functions_and_fallback, format_model_with_locale,
+    format_model_with_locale_and_bidi,
+    format_model_with_locale_and_functions_and_bidi_and_fallback, locale_lookup_chain,
+    parse_to_model, BidiIsolation, FormattedPart, FunctionRegistry, MessageModel,
 };
 use serde::Deserialize;
 
@@ -33,6 +35,10 @@ struct SourceConformanceFixture {
     format_cases: Vec<ExpectedFormatCase>,
     #[serde(default)]
     parts_cases: Vec<PartsCase>,
+    #[serde(default)]
+    fallback_cases: Vec<FallbackCase>,
+    #[serde(default)]
+    fallback_parts_cases: Vec<FallbackPartsCase>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,6 +89,28 @@ struct PartsCase {
     locale: String,
     arguments: BTreeMap<String, serde_json::Value>,
     expected: Vec<FormattedPart>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FallbackCase {
+    #[serde(default = "default_locale")]
+    locale: String,
+    #[serde(default)]
+    bidi_isolation: Option<String>,
+    arguments: BTreeMap<String, serde_json::Value>,
+    expected: String,
+    expected_errors: Vec<ExpectedDiagnostic>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FallbackPartsCase {
+    #[serde(default = "default_locale")]
+    locale: String,
+    arguments: BTreeMap<String, serde_json::Value>,
+    expected: Vec<FormattedPart>,
+    expected_errors: Vec<ExpectedDiagnostic>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -209,6 +237,8 @@ fn conformance(fixture_dir: &Path) {
     let mut checked_models = 0usize;
     let mut checked_format_cases = 0usize;
     let mut checked_parts_cases = 0usize;
+    let mut checked_fallback_cases = 0usize;
+    let mut checked_fallback_parts_cases = 0usize;
 
     for fixture_path in json_fixture_paths(fixture_dir) {
         let fixture: SourceConformanceFixture = read_json_fixture(&fixture_path);
@@ -276,6 +306,69 @@ fn conformance(fixture_dir: &Path) {
             }
             checked_parts_cases += 1;
         }
+
+        for fallback_case in fixture.fallback_cases {
+            let actual = format_model_with_locale_and_functions_and_bidi_and_fallback(
+                model,
+                &fallback_case.arguments,
+                &fallback_case.locale,
+                &FunctionRegistry::default(),
+                BidiIsolation::from_name(fallback_case.bidi_isolation.as_deref()),
+            )
+            .unwrap_or_else(|diagnostic| {
+                fail(format!(
+                    "{}: fallback format failed with {}",
+                    fixture_path.display(),
+                    diagnostic.code
+                ));
+            });
+            if actual.value != fallback_case.expected {
+                fail(format!(
+                    "{}: expected fallback {:?}, got {:?}",
+                    fixture_path.display(),
+                    fallback_case.expected,
+                    actual.value
+                ));
+            }
+            assert_diagnostic_codes(
+                &fixture_path,
+                "fallback errors",
+                &actual.errors,
+                &fallback_case.expected_errors,
+            );
+            checked_fallback_cases += 1;
+        }
+
+        for parts_case in fixture.fallback_parts_cases {
+            let actual = format_model_to_parts_with_locale_and_functions_and_fallback(
+                model,
+                &parts_case.arguments,
+                &parts_case.locale,
+                &FunctionRegistry::default(),
+            )
+            .unwrap_or_else(|diagnostic| {
+                fail(format!(
+                    "{}: fallback parts failed with {}",
+                    fixture_path.display(),
+                    diagnostic.code
+                ));
+            });
+            if actual.parts != parts_case.expected {
+                fail(format!(
+                    "{}: expected fallback parts {:?}, got {:?}",
+                    fixture_path.display(),
+                    parts_case.expected,
+                    actual.parts
+                ));
+            }
+            assert_diagnostic_codes(
+                &fixture_path,
+                "fallback parts errors",
+                &actual.errors,
+                &parts_case.expected_errors,
+            );
+            checked_fallback_parts_cases += 1;
+        }
     }
 
     let fixture_root = fixture_dir.parent().unwrap_or_else(|| Path::new("."));
@@ -286,9 +379,34 @@ fn conformance(fixture_dir: &Path) {
     println!(
         "Rust MF2 conformance runner passed {checked_models} source models, \
          {checked_format_cases} format cases, {checked_parts_cases} parts cases, \
+         {checked_fallback_cases} fallback cases, {checked_fallback_parts_cases} fallback parts cases, \
          {checked_invalid_sources} invalid source cases, {checked_format_error_cases} format error cases, \
          and {checked_locale_key_cases} locale key cases."
     );
+}
+
+fn assert_diagnostic_codes(
+    fixture_path: &Path,
+    label: &str,
+    actual: &[mf2_prototype::Diagnostic],
+    expected: &[ExpectedDiagnostic],
+) {
+    let actual_codes: Vec<_> = actual
+        .iter()
+        .map(|diagnostic| diagnostic.code.as_str())
+        .collect();
+    let expected_codes: Vec<_> = expected
+        .iter()
+        .map(|diagnostic| diagnostic.code.as_str())
+        .collect();
+    if actual_codes != expected_codes {
+        fail(format!(
+            "{}: expected {label} {:?}, got {:?}",
+            fixture_path.display(),
+            expected_codes,
+            actual_codes
+        ));
+    }
 }
 
 fn check_invalid_source_fixtures(fixture_root: &Path) -> usize {

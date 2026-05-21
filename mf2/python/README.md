@@ -30,6 +30,9 @@ Current scope:
 - expose `format_message_to_parts` for text, expression, and markup boundary
   output in the supported runtime slice, preserving expression/markup attributes
   for UI renderers
+- expose `format_message_with_fallback` and
+  `format_message_to_parts_with_fallback` for spec-style fallback output plus
+  collected runtime errors without changing the strict `format_message` contract
 - support opt-in `bidi_isolation="default"` string output around expression
   values
 - reject invalid model structure for duplicate declarations, select variant key

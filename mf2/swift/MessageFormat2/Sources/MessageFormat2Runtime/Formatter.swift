@@ -1,5 +1,15 @@
 import Foundation
 
+public struct MF2FallbackFormatResult: Equatable {
+    public let value: String
+    public let errors: [MF2Error]
+}
+
+public struct MF2FallbackPartsResult: Equatable {
+    public let parts: [MF2FormattedPart]
+    public let errors: [MF2Error]
+}
+
 public extension MF2Message {
     func format(
         arguments: [String: MF2Value] = [:],
@@ -34,6 +44,48 @@ public extension MF2Message {
         case let .select(_, selectors, variants):
             return try context.formatToParts(selectors: selectors, variants: variants)
         }
+    }
+
+    func formatWithFallback(
+        arguments: [String: MF2Value] = [:],
+        locale: String = "en",
+        functions: MF2FunctionRegistry = .defaults,
+        bidiIsolation: MF2BidiIsolation = .none
+    ) throws -> MF2FallbackFormatResult {
+        let result = try formatToPartsWithFallback(
+            arguments: arguments,
+            locale: locale,
+            functions: functions
+        )
+        return MF2FallbackFormatResult(
+            value: result.parts.stringValue(bidiIsolation: bidiIsolation),
+            errors: result.errors
+        )
+    }
+
+    func formatToPartsWithFallback(
+        arguments: [String: MF2Value] = [:],
+        locale: String = "en",
+        functions: MF2FunctionRegistry = .defaults
+    ) throws -> MF2FallbackPartsResult {
+        try validate()
+        var context = MF2FormatContext(
+            values: Dictionary(
+                uniqueKeysWithValues: arguments.map { (MF2NameKey($0.key), $0.value) }
+            ),
+            locale: locale,
+            functions: functions,
+            fallback: true
+        )
+        try context.apply(declarations: declarations)
+        let parts: [MF2FormattedPart]
+        switch self {
+        case let .message(_, pattern):
+            parts = try context.formatToParts(pattern: pattern)
+        case let .select(_, selectors, variants):
+            parts = try context.formatToParts(selectors: selectors, variants: variants)
+        }
+        return MF2FallbackPartsResult(parts: parts, errors: context.errors)
     }
 
     private var declarations: [MF2Declaration] {
@@ -126,8 +178,11 @@ public extension MF2Message {
 private struct MF2FormatContext {
     var values: [MF2NameKey: MF2Value]
     var selectorAnnotations: [MF2NameKey: MF2SelectorAnnotation] = [:]
+    var failedLocals: Set<MF2NameKey> = []
+    var errors: [MF2Error] = []
     var locale: String
     var functions: MF2FunctionRegistry
+    var fallback = false
 
     mutating func apply(declarations: [MF2Declaration]) throws {
         selectorAnnotations = collectSelectorAnnotations(for: declarations)
@@ -136,14 +191,32 @@ private struct MF2FormatContext {
             case .input:
                 continue
             case let .local(name, value):
-                values[MF2NameKey(name)] = .string(try format(expression: value))
+                let rendered = try formatExpressionOutput(value)
+                if rendered.hadError {
+                    failedLocals.insert(MF2NameKey(name))
+                } else {
+                    values[MF2NameKey(name)] = .string(rendered.value)
+                }
             }
         }
     }
 
-    func formatToParts(selectors: [MF2VariableRef], variants: [MF2Variant]) throws -> [MF2FormattedPart] {
+    mutating func formatToParts(selectors: [MF2VariableRef], variants: [MF2Variant]) throws -> [MF2FormattedPart] {
         let selectorValues = try selectors.map { selector in
             guard let value = values[MF2NameKey(selector.name)] else {
+                if fallback {
+                    let key = MF2NameKey(selector.name)
+                    if !failedLocals.contains(key) {
+                        errors.append(.unresolvedVariable(selector.name))
+                    }
+                    let annotation = selectorAnnotations[key]
+                    return MF2SelectorValue(
+                        rendered: "",
+                        normalizedRendered: annotation?.isString == true ? normalizeStringKey("") : nil,
+                        exactMatch: false,
+                        selectionKey: nil
+                    )
+                }
                 throw MF2Error.missingArgument(selector.name)
             }
             let annotation = selectorAnnotations[MF2NameKey(selector.name)]
@@ -157,7 +230,7 @@ private struct MF2FormatContext {
         }
 
         var signatures: Set<[MF2VariantKeySignature]> = []
-        var fallback: MF2Variant?
+        var fallbackVariant: MF2Variant?
         var selected: MF2Variant?
         for variant in variants {
             guard variant.keys.count == selectorValues.count else {
@@ -166,37 +239,42 @@ private struct MF2FormatContext {
             guard signatures.insert(variant.signature(selectorValues: selectorValues)).inserted else {
                 throw MF2Error.duplicateVariant
             }
-            if fallback == nil, variant.isFallback {
-                fallback = variant
+            if fallbackVariant == nil, variant.isFallback {
+                fallbackVariant = variant
             }
             if selected == nil, variant.matches(selectorValues: selectorValues) {
                 selected = variant
             }
         }
 
-        guard let fallback else {
+        guard let fallbackVariant else {
             throw MF2Error.missingFallbackVariant
         }
 
-        let selectedVariant = selected ?? fallback
+        let selectedVariant = selected ?? fallbackVariant
         return try formatToParts(pattern: selectedVariant.value)
     }
 
-    func format(pattern: [MF2PatternPart]) throws -> String {
+    mutating func format(pattern: [MF2PatternPart]) throws -> String {
         try formatToParts(pattern: pattern).stringValue()
     }
 
-    func formatToParts(pattern: [MF2PatternPart]) throws -> [MF2FormattedPart] {
+    mutating func formatToParts(pattern: [MF2PatternPart]) throws -> [MF2FormattedPart] {
         var output: [MF2FormattedPart] = []
         for part in pattern {
             switch part {
             case let .text(text):
                 output.append(.text(text))
             case let .expression(expression):
-                output.append(.expression(
-                    try format(expression: expression),
-                    attributes: expression.attributes
-                ))
+                let rendered = try formatExpressionOutput(expression)
+                if rendered.hadError {
+                    output.append(.fallback(source: fallbackSource(expression)))
+                } else {
+                    output.append(.expression(
+                        rendered.value,
+                        attributes: expression.attributes
+                    ))
+                }
             case let .markup(markup):
                 output.append(.markup(
                     kind: markup.kind,
@@ -209,39 +287,81 @@ private struct MF2FormatContext {
         return output
     }
 
-    func format(expression: MF2Expression) throws -> String {
+    mutating func format(expression: MF2Expression) throws -> String {
+        try formatExpressionOutput(expression).value
+    }
+
+    mutating func formatExpressionOutput(_ expression: MF2Expression) throws -> MF2ExpressionOutput {
         let value: String
+        var hadError = false
         switch expression.arg {
         case let .literal(literal):
             value = literal
         case let .variable(name):
-            guard let argument = values[MF2NameKey(name)] else {
+            if let argument = values[MF2NameKey(name)] {
+                value = argument.rendered
+            } else if fallback {
+                hadError = true
+                let key = MF2NameKey(name)
+                if !failedLocals.contains(key) {
+                    errors.append(.unresolvedVariable(name))
+                }
+                if expression.function != nil {
+                    errors.append(.badOperand("Function operand is not available."))
+                }
+                value = fallbackSource(expression)
+            } else {
                 throw MF2Error.missingArgument(name)
             }
-            value = argument.rendered
         case .none:
             value = ""
         }
 
+        if hadError {
+            return MF2ExpressionOutput(value: value, hadError: true)
+        }
+
         switch expression.function?.name {
         case .none:
-            return value
+            return MF2ExpressionOutput(value: value, hadError: false)
         case .some(_):
             guard let function = expression.function else {
-                return value
+                return MF2ExpressionOutput(value: value, hadError: false)
             }
-            return try functions.format(MF2FunctionCall(
-                value: value,
-                function: function,
-                locale: locale,
-                optionResolver: { optionName, defaultValue in
-                    try optionValue(function: function, name: optionName, default: defaultValue)
+            let optionValues = values
+            do {
+                return try MF2ExpressionOutput(
+                    value: functions.format(MF2FunctionCall(
+                        value: value,
+                        function: function,
+                        locale: locale,
+                        optionResolver: { optionName, defaultValue in
+                            try Self.optionValue(
+                                function: function,
+                                name: optionName,
+                                default: defaultValue,
+                                values: optionValues
+                            )
+                        }
+                    )),
+                    hadError: false
+                )
+            } catch let error as MF2Error {
+                guard fallback else {
+                    throw error
                 }
-            ))
+                errors.append(fallbackError(error))
+                return MF2ExpressionOutput(value: fallbackSource(expression), hadError: true)
+            }
         }
     }
 
-    private func optionValue(function: MF2Function, name: String, default defaultValue: String?) throws -> String? {
+    private static func optionValue(
+        function: MF2Function,
+        name: String,
+        default defaultValue: String?,
+        values: [MF2NameKey: MF2Value]
+    ) throws -> String? {
         guard let option = function.options[name] else {
             return defaultValue
         }
@@ -387,6 +507,11 @@ private struct MF2SelectorValue {
     let selectionKey: String?
 }
 
+private struct MF2ExpressionOutput {
+    let value: String
+    let hadError: Bool
+}
+
 private enum MF2VariantKeySignature: Hashable {
     case literal(String)
     case catchAll
@@ -401,6 +526,57 @@ private func literalKeyMatches(_ value: String, selector: MF2SelectorValue) -> B
 
 private func normalizeStringKey(_ value: String) -> String {
     value.precomposedStringWithCanonicalMapping
+}
+
+private func fallbackError(_ error: MF2Error) -> MF2Error {
+    switch error {
+    case let .unsupportedFunction(name):
+        .unknownFunction(name)
+    default:
+        error
+    }
+}
+
+private func fallbackSource(_ expression: MF2Expression) -> String {
+    if let arg = expression.arg {
+        return expressionArgumentSource(arg)
+    }
+    if let function = expression.function {
+        return functionSource(function)
+    }
+    return ""
+}
+
+private func expressionArgumentSource(_ argument: MF2ExpressionArgument) -> String {
+    switch argument {
+    case let .literal(value):
+        quoteLiteralSource(value)
+    case let .variable(name):
+        "$\(name)"
+    }
+}
+
+private func functionSource(_ function: MF2Function) -> String {
+    var source = ":\(function.name)"
+    for key in function.options.keys.sorted() {
+        guard let value = function.options[key] else {
+            continue
+        }
+        source += " \(key)=\(expressionArgumentSource(value))"
+    }
+    return source
+}
+
+private func quoteLiteralSource(_ value: String) -> String {
+    var source = "|"
+    for character in value {
+        if character == "\\" || character == "|" {
+            source.append("\\")
+        }
+        source.append(character)
+    }
+    source.append("|")
+    return source
 }
 
 private extension MF2Declaration {
@@ -459,6 +635,7 @@ private extension MF2Variant {
 
 public enum MF2FormattedPart: Equatable, Decodable {
     case text(String)
+    case fallback(source: String)
     case expression(String, attributes: [String: MF2AttributeValue])
     case markup(
         kind: String,
@@ -470,6 +647,7 @@ public enum MF2FormattedPart: Equatable, Decodable {
     private enum CodingKeys: String, CodingKey {
         case type
         case value
+        case source
         case kind
         case name
         case options
@@ -482,6 +660,8 @@ public enum MF2FormattedPart: Equatable, Decodable {
         switch type {
         case "text":
             self = .text(try container.decode(String.self, forKey: .value))
+        case "fallback":
+            self = .fallback(source: try container.decode(String.self, forKey: .source))
         case "expression":
             self = .expression(
                 try container.decode(String.self, forKey: .value),
@@ -524,6 +704,8 @@ private extension Array where Element == MF2FormattedPart {
             switch part {
             case let .text(value):
                 value
+            case let .fallback(source):
+                "{\(source)}"
             case let .expression(value, _):
                 isolateExpression(value, bidiIsolation: bidiIsolation)
             case .markup:

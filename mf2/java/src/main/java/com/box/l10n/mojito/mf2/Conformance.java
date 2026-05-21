@@ -20,6 +20,8 @@ public final class Conformance {
 
         int checkedCases = 0;
         int checkedPartsCases = 0;
+        int checkedFallbackCases = 0;
+        int checkedFallbackPartsCases = 0;
         int checkedModels = 0;
         for (Path fixturePath : jsonFiles(fixtureDir)) {
             Map<String, Object> fixture = object(JsonParser.parse(fixturePath));
@@ -71,6 +73,43 @@ public final class Conformance {
                 }
                 checkedPartsCases++;
             }
+            for (Object rawCase : arrayOrEmpty(fixture.get("fallbackCases"))) {
+                Map<String, Object> fallbackCase = object(rawCase);
+                Mf2Message.FallbackFormatResult actual = parseResult.model().formatWithFallback(
+                        objectOrEmpty(fallbackCase.get("arguments")),
+                        stringOrDefault(fallbackCase.get("locale"), "en"));
+                String expected = string(fallbackCase.get("expected"));
+                if (!actual.value().equals(expected)) {
+                    System.err.printf(
+                            "%s: expected fallback %s, got %s%n",
+                            fixturePath.getFileName(), expected, actual.value());
+                    return 1;
+                }
+                assertErrorCodes(fixturePath, "fallback errors", actual.errors(), fallbackCase);
+                checkedFallbackCases++;
+            }
+            for (Object rawCase : arrayOrEmpty(fixture.get("fallbackPartsCases"))) {
+                Map<String, Object> partsCase = object(rawCase);
+                Mf2Formatter.FallbackPartsResult result = Mf2Formatter.formatToPartsWithFallback(
+                        parseResult.model(),
+                        objectOrEmpty(partsCase.get("arguments")),
+                        stringOrDefault(partsCase.get("locale"), "en"),
+                        Mf2FunctionRegistry.defaults());
+                List<Map<String, Object>> actual = result.parts().stream()
+                        .map(Conformance::partToMap)
+                        .toList();
+                List<Map<String, Object>> expected = arrayOrEmpty(partsCase.get("expected")).stream()
+                        .map(Conformance::object)
+                        .toList();
+                if (!actual.equals(expected)) {
+                    System.err.printf(
+                            "%s: expected fallback parts %s, got %s%n",
+                            fixturePath.getFileName(), expected, actual);
+                    return 1;
+                }
+                assertErrorCodes(fixturePath, "fallback parts errors", result.errors(), partsCase);
+                checkedFallbackPartsCases++;
+            }
         }
 
         int checkedInvalidSources = checkInvalidSourceFixtures(fixtureDir.getParent());
@@ -78,10 +117,13 @@ public final class Conformance {
         int checkedLocaleKeyCases = checkLocaleKeyFixtures(fixtureDir.getParent());
         System.out.printf(
                 "Java MF2 conformance runner passed %d source models, %d format cases, %d parts cases, "
+                        + "%d fallback cases, %d fallback parts cases, "
                         + "%d invalid source cases, %d format error cases, and %d locale key cases.%n",
                 checkedModels,
                 checkedCases,
                 checkedPartsCases,
+                checkedFallbackCases,
+                checkedFallbackPartsCases,
                 checkedInvalidSources,
                 checkedErrorCases,
                 checkedLocaleKeyCases);
@@ -202,6 +244,10 @@ public final class Conformance {
                 map.put("type", "text");
                 map.put("value", text.value());
             }
+            case Mf2Message.FormattedFallback fallback -> {
+                map.put("type", "fallback");
+                map.put("source", fallback.source());
+            }
             case Mf2Message.FormattedExpression expression -> {
                 map.put("type", "expression");
                 map.put("value", expression.value());
@@ -275,6 +321,20 @@ public final class Conformance {
 
     private static String stringOrDefault(Object value, String fallback) {
         return value instanceof String text ? text : fallback;
+    }
+
+    private static void assertErrorCodes(
+            Path fixturePath, String label, List<Mf2Exception> actualErrors, Map<String, Object> item) {
+        List<String> actualCodes = actualErrors.stream().map(Mf2Exception::code).toList();
+        List<String> expectedCodes = arrayOrEmpty(item.get("expectedErrors")).stream()
+                .map(Conformance::object)
+                .map(error -> string(error.get("code")))
+                .toList();
+        if (!actualCodes.equals(expectedCodes)) {
+            throw new ConformanceFailure(String.format(
+                    "%s: expected %s %s, got %s",
+                    fixturePath.getFileName(), label, expectedCodes, actualCodes));
+        }
     }
 
     private static final class ConformanceFailure extends RuntimeException {

@@ -87,6 +87,8 @@ The current conformance slice covers:
 - `format_to_parts` / `formatToParts` output for text, expression output, and
   markup boundaries, preserving expression attributes plus markup options and
   attributes for UI renderers
+- fallback formatting APIs that return output plus collected runtime errors for
+  unresolved variables/selectors, including fallback parts with source metadata
 - opt-in `default` bidi isolation for string formatting, wrapping expression
   output in Unicode FSI/PDI while keeping parts output raw
 - exact-match `.match` selectors with catch-all fallback, including
@@ -122,6 +124,8 @@ The immediate milestone is placeholders plus CLDR plural selection:
 - expression and markup attributes preserved in parsed/decoded models
 - generated CLDR plural rules for every CLDR plural locale by default
 - Rust/Swift/Python/Java formatting from the Unicode MF2 model
+- fallback formatting from the Unicode MF2 model without changing the strict
+  `format()` error contract
 
 This is the smallest useful runtime that can already beat gettext for many
 product strings while staying small enough for embedded clients.
