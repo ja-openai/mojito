@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.service.assetExtraction;
 
+import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
+
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetExtraction;
 import com.box.l10n.mojito.entity.AssetTextUnit;
@@ -11,8 +13,8 @@ import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
 import com.box.l10n.mojito.service.leveraging.LeveragingService;
-import com.box.l10n.mojito.service.pollableTask.ParentTask;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.tm.TMRepository;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
@@ -64,6 +66,8 @@ public class AssetMappingService {
 
   @Autowired RetryTemplate retryTemplate;
 
+  @Autowired PollableTaskRunner pollableTaskRunner;
+
   /**
    * Maps the {@link AssetTextUnit}s extracted during the extraction process to the existing {@link
    * TMTextUnit}s. If no mapping is found, a new {@link TMTextUnit} is created and we store the
@@ -76,13 +80,34 @@ public class AssetMappingService {
    * @param parentTask the parent task to be updated
    */
   @Deprecated
-  @Pollable(message = "Mapping AssetTextUnit to TMTextUnit")
   public void mapAssetTextUnitAndCreateTMTextUnit(
       Long assetExtractionId,
       Long tmId,
       Long assetId,
       User createdByUser,
-      @ParentTask PollableTask parentTask) {
+      PollableTask parentTask) {
+    try {
+      pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "mapAssetTextUnitAndCreateTMTextUnit",
+              "Mapping AssetTextUnit to TMTextUnit",
+              0,
+              getTimeout(parentTask),
+              currentTask -> {
+                mapAssetTextUnitAndCreateTMTextUnitDirect(
+                    assetExtractionId, tmId, assetId, createdByUser);
+                return null;
+              }));
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error mapping asset text units", t);
+    }
+  }
+
+  private void mapAssetTextUnitAndCreateTMTextUnitDirect(
+      Long assetExtractionId, Long tmId, Long assetId, User createdByUser) {
 
     logger.debug("Map exact matches a first time to map to existing text units");
     long mapExactMatches = mapExactMatches(assetExtractionId, tmId, assetId);
@@ -109,6 +134,17 @@ public class AssetMappingService {
     leveragingService.performSourceLeveraging(newlyCreatedTMTextUnits);
 
     logger.debug("Asset text unit and tm text unit mapping complete");
+  }
+
+  private Long getParentTaskId(PollableTask parentTask) {
+    return parentTask == null ? null : parentTask.getId();
+  }
+
+  private Long getTimeout(PollableTask parentTask) {
+    if (parentTask != null && parentTask.getTimeout() != null) {
+      return parentTask.getTimeout();
+    }
+    return DEFAULT_TIMEOUT;
   }
 
   /**
