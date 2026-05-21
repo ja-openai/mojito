@@ -116,6 +116,8 @@ Removed during this workstream:
   retry path now opens and commits a new transaction explicitly for each attempt.
 - `UserDeletionService.hardDeleteUser` no longer uses `@Transactional(REQUIRES_NEW)`; hard-delete
   attempts now run inside an explicit independent transaction before soft-delete fallback.
+- `PollableTaskService` no longer uses `@Transactional(REQUIRES_NEW)`; pollable task reads,
+  creation, finishing, and progress updates now open explicit independent transactions.
 
 In progress:
 
