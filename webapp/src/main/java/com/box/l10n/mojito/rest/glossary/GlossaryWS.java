@@ -1121,8 +1121,7 @@ public class GlossaryWS {
                   request != null ? request.repositoryIds() : List.of(),
                   request != null ? request.limit() : null,
                   request != null ? request.minOccurrences() : null,
-                  request != null ? request.scanLimit() : null),
-              PollableTask.INJECT_CURRENT_TASK);
+                  request != null ? request.scanLimit() : null));
       return new StartGlossaryExtractionResponse(pollableFuture.getPollableTask());
     } catch (IllegalArgumentException ex) {
       HttpStatus status =

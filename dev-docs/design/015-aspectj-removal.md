@@ -81,6 +81,9 @@ In progress:
 - `TMTextUnitStatisticService.importStatistics` no longer uses `@Pollable`; it calls
   `PollableTaskRunner` directly and keeps the per-batch write boundary explicit with
   `TransactionTemplate`.
+- `GlossaryTermService.extractCandidatesAsync` no longer uses `@Pollable` or
+  `@InjectCurrentTask`; it calls `PollableTaskRunner` directly and receives the current task in the
+  runner operation.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

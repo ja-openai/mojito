@@ -88,7 +88,7 @@ public class SearchGlossaryTermsMcpToolTest {
     private FakeGlossaryTermService() {
       super(
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null);
+          null, null, null, null);
     }
 
     @Override
