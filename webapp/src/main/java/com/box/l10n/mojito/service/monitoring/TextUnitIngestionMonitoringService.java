@@ -20,7 +20,10 @@ import java.util.Locale;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class TextUnitIngestionMonitoringService {
@@ -30,20 +33,39 @@ public class TextUnitIngestionMonitoringService {
   private final JdbcTemplate jdbcTemplate;
   private final MonitoringTextUnitIngestionDailyRepository dailyRepository;
   private final MonitoringTextUnitIngestionStateRepository stateRepository;
+  private final PlatformTransactionManager transactionManager;
 
   @PersistenceContext EntityManager entityManager;
 
   public TextUnitIngestionMonitoringService(
       JdbcTemplate jdbcTemplate,
       MonitoringTextUnitIngestionDailyRepository dailyRepository,
-      MonitoringTextUnitIngestionStateRepository stateRepository) {
+      MonitoringTextUnitIngestionStateRepository stateRepository,
+      PlatformTransactionManager transactionManager) {
     this.jdbcTemplate = jdbcTemplate;
     this.dailyRepository = dailyRepository;
     this.stateRepository = stateRepository;
+    this.transactionManager = transactionManager;
   }
 
-  @Transactional
   public IngestionRecomputeResult recomputeMissingDays() {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      IngestionRecomputeResult result = recomputeMissingDaysNoTx();
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  IngestionRecomputeResult recomputeMissingDaysNoTx() {
     MonitoringTextUnitIngestionState stateEntity = getOrCreateState();
     LocalDate latestComputedDayBefore = stateEntity.getLatestComputedDay();
     Instant computedAt = Instant.now();
@@ -78,8 +100,27 @@ public class TextUnitIngestionMonitoringService {
         computedAt);
   }
 
-  @Transactional(readOnly = true)
   public IngestionSnapshot getSnapshot(
+      IngestionGroupBy groupBy, boolean groupByRepository, LocalDate fromDay, LocalDate toDay) {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      IngestionSnapshot result = getSnapshotNoTx(groupBy, groupByRepository, fromDay, toDay);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  IngestionSnapshot getSnapshotNoTx(
       IngestionGroupBy groupBy, boolean groupByRepository, LocalDate fromDay, LocalDate toDay) {
     MonitoringTextUnitIngestionState currentState = getOrCreateState();
     List<MonitoringTextUnitIngestionDaily> storedRows = dailyRepository.findAllOrdered();
