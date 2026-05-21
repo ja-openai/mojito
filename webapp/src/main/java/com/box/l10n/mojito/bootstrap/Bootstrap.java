@@ -19,7 +19,9 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author wyau
@@ -39,6 +41,8 @@ public class Bootstrap implements ApplicationListener<ContextRefreshedEvent> {
   @Autowired UserRepository userRepository;
 
   @Autowired UserDetailsService userDetailsService;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   @Override
   public void onApplicationEvent(ContextRefreshedEvent event) {
@@ -71,8 +75,23 @@ public class Bootstrap implements ApplicationListener<ContextRefreshedEvent> {
     }
   }
 
-  @Transactional
   public void createSystemUser() {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      createSystemUserInTransaction();
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void createSystemUserInTransaction() {
     logger.info("Creating system user with random password");
     String randomPassword = RandomStringUtils.secure().nextAlphanumeric(15);
 

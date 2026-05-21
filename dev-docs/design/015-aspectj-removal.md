@@ -118,6 +118,8 @@ Removed during this workstream:
   attempts now run inside an explicit independent transaction before soft-delete fallback.
 - `PollableTaskService` no longer uses `@Transactional(REQUIRES_NEW)`; pollable task reads,
   creation, finishing, and progress updates now open explicit independent transactions.
+- `Bootstrap.createSystemUser` no longer relies on self-invoked `@Transactional`; bootstrap opens
+  the system-user creation transaction explicitly.
 
 In progress:
 
