@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Objects;
 import org.quartz.CronExpression;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class AiTranslateAutomationConfigService {
@@ -16,11 +18,15 @@ public class AiTranslateAutomationConfigService {
 
   private final AiTranslateAutomationConfigRepository repository;
   private final ObjectMapper objectMapper;
+  private final PlatformTransactionManager transactionManager;
 
   public AiTranslateAutomationConfigService(
-      AiTranslateAutomationConfigRepository repository, ObjectMapper objectMapper) {
+      AiTranslateAutomationConfigRepository repository,
+      ObjectMapper objectMapper,
+      PlatformTransactionManager transactionManager) {
     this.repository = repository;
     this.objectMapper = objectMapper;
+    this.transactionManager = transactionManager;
   }
 
   public record Config(
@@ -42,8 +48,24 @@ public class AiTranslateAutomationConfigService {
         sanitizeStoredCronExpression(entity.getCronExpression()));
   }
 
-  @Transactional
   public Config updateConfig(Config config) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      Config updatedConfig = updateConfigNoTx(config);
+      transactionManager.commit(transaction);
+      return updatedConfig;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Config updateConfigNoTx(Config config) {
     AiTranslateAutomationConfigEntity entity = repository.findFirstByOrderByIdAsc();
     if (entity == null) {
       entity = new AiTranslateAutomationConfigEntity();
