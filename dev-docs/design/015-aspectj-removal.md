@@ -84,6 +84,8 @@ In progress:
 - `GlossaryTermService.extractCandidatesAsync` no longer uses `@Pollable` or
   `@InjectCurrentTask`; it calls `PollableTaskRunner` directly and receives the current task in the
   runner operation.
+- `TMService.exportAssetAsXLIFFAsync` no longer uses `@Pollable` or `@InjectCurrentTask`; it calls
+  `PollableTaskRunner` directly and stores the generated XLIFF against the runner task.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

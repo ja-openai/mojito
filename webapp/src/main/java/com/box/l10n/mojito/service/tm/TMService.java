@@ -49,10 +49,10 @@ import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckStep;
 import com.box.l10n.mojito.service.locale.LocaleService;
-import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.pullrun.PullRunAssetService;
 import com.box.l10n.mojito.service.pullrun.PullRunService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
@@ -146,6 +146,8 @@ public class TMService {
 
   @Autowired
   DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
+
+  @Autowired PollableTaskRunner pollableTaskRunner;
 
   @Value("${l10n.tmService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
@@ -1328,10 +1330,17 @@ public class TMService {
    * @param currentTask
    * @return {@link PollableFutureTaskResult} that contains an XLIFF as result
    */
-  @Pollable(async = true, message = "Export asset as xliff")
   public PollableFuture<String> exportAssetAsXLIFFAsync(
-      Long tmXliffId, Long assetId, String bcp47Tag, @InjectCurrentTask PollableTask currentTask) {
+      Long tmXliffId, Long assetId, String bcp47Tag) {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "exportAssetAsXLIFFAsync",
+            "Export asset as xliff",
+            currentTask -> exportAssetAsXLIFFForTask(tmXliffId, assetId, bcp47Tag, currentTask)));
+  }
 
+  PollableFuture<String> exportAssetAsXLIFFForTask(
+      Long tmXliffId, Long assetId, String bcp47Tag, PollableTask currentTask) {
     PollableFutureTaskResult<String> pollableFutureTaskResult = new PollableFutureTaskResult<>();
 
     String xliff = exportAssetAsXLIFF(assetId, bcp47Tag);
