@@ -71,7 +71,8 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.ibm.icu.text.MessageFormat;
-import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityManager;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -171,6 +172,8 @@ public class AssetExtractionService {
   @Autowired PushRunService pushRunService;
 
   @Autowired EntityManager entityManager;
+
+  @Autowired MeterRegistry meterRegistry;
 
   @Autowired LocalBranchToEntityBranchConverter localBranchToEntityBranchConverter;
 
@@ -439,23 +442,57 @@ public class AssetExtractionService {
    * @return state with tm text units ids updated (either from creation or reading existing text
    *     units)
    */
-  @Timed("AssetExtractionService.createTextUnitsForNewContent")
   @Pollable(message = "Create new text units")
   CreateTextUnitsForNewContentResult createTextUnitsForNewContent(
       AssetContent assetContent,
       MultiBranchState stateForNewContent,
       @ParentTask PollableTask currentTask) {
-    return createTextUnitsForNewContent(
-        assetContent, stateForNewContent, LeveragingType.LEGACY_SOURCE, currentTask);
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      return createTextUnitsForNewContent(
+          assetContent, stateForNewContent, LeveragingType.LEGACY_SOURCE, currentTask);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "AssetExtractionService.createTextUnitsForNewContent",
+          "createTextUnitsForNewContent",
+          sample,
+          exceptionClass);
+    }
   }
 
-  @Timed("AssetExtractionService.createTextUnitsForNewContent")
   @Pollable(message = "Create new text units")
   CreateTextUnitsForNewContentResult createTextUnitsForNewContent(
       AssetContent assetContent,
       MultiBranchState stateForNewContent,
       LeveragingType leveragingTypeForCurrentPush,
       @ParentTask PollableTask currentTask) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      return createTextUnitsForNewContentTimed(
+          assetContent, stateForNewContent, leveragingTypeForCurrentPush);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "AssetExtractionService.createTextUnitsForNewContent",
+          "createTextUnitsForNewContent",
+          sample,
+          exceptionClass);
+    }
+  }
+
+  private CreateTextUnitsForNewContentResult createTextUnitsForNewContentTimed(
+      AssetContent assetContent,
+      MultiBranchState stateForNewContent,
+      LeveragingType leveragingTypeForCurrentPush) {
     CreateTmTextUnitResult createTmTextUnitResult =
         retryTemplate.execute(
             context -> {
@@ -1664,4 +1701,17 @@ public class AssetExtractionService {
 
     return assetTextUnit;
   }
+
+  private void recordTimer(
+      String metricName, String methodName, Timer.Sample sample, String exceptionClass) {
+    sample.stop(
+        Timer.builder(metricName)
+            .tag(EXCEPTION_TAG, exceptionClass)
+            .tag("class", AssetExtractionService.class.getName())
+            .tag("method", methodName)
+            .register(meterRegistry));
+  }
+
+  static final String DEFAULT_EXCEPTION_TAG_VALUE = "none";
+  static final String EXCEPTION_TAG = "exception";
 }

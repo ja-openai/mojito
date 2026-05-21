@@ -71,6 +71,9 @@ In progress:
   recorded with explicit `Timer.Sample` and local `try/finally` blocks.
 - `MachineTranslationService` no longer uses `@Timed`; translation, single-translation, MT, and
   leverage metrics are recorded with explicit `Timer.Sample` and local `try/finally` blocks.
+- `AssetExtractionService` no longer uses `@Timed`; new-text-unit creation metrics are recorded
+  around the existing `@Pollable` entrypoints with explicit `Timer.Sample` and local `try/finally`
+  blocks.
 
 ## Migration Principles
 
