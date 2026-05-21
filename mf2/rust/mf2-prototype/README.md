@@ -61,6 +61,8 @@ Supported now:
   date/datetime operands; locale-sensitive presentation is still deferred
 - `:offset` for integer add/subtract formatting and exact selection, including
   inherited `signDisplay=always` preservation
+- `:integer` formatting that truncates numeric operands, reports invalid
+  selector options, and supports exact selection of the formatted value
 - cardinal and ordinal plural category matching for number inputs in every
   generated CLDR plural locale
 

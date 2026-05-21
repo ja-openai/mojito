@@ -84,6 +84,8 @@ The current conformance slice covers:
   simple ISO date/datetime operand shape without claiming locale formatting
 - Rust `:offset` built-in for integer add/subtract formatting and exact
   selection, including inherited `signDisplay=always` preservation
+- Rust `:integer` built-in formatting that truncates numeric operands, reports
+  invalid selector options, and supports exact selection of the formatted value
 - expression and markup attributes in the data model, including quoted attribute
   values containing spaces
 - `.input` and `.local` declarations, including multiple inputs and chained locals

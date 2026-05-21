@@ -164,9 +164,11 @@ impl FunctionRegistry {
 impl Default for FunctionRegistry {
     fn default() -> Self {
         let mut registry = Self::empty();
-        for name in ["string", "number", "integer"] {
+        for name in ["string", "number"] {
             registry.register(name, passthrough_function);
         }
+        registry.register("integer", integer_function);
+        registry.register_selector("integer", integer_selector);
         registry.register("datetime", datetime_function);
         registry.register("date", date_function);
         registry.register("time", time_function);
@@ -297,6 +299,27 @@ fn passthrough_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     Ok(call.value().to_string())
 }
 
+fn integer_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    let value = parse_decimal_number(call.value())
+        .map_err(|_| bad_operand("Integer function requires a numeric operand."))?;
+    Ok(format_integer_number(
+        value.trunc() as i64,
+        sign_display_always(call.function())?,
+    ))
+}
+
+fn integer_selector(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
+    if invalid_numeric_selector(call.function(), call.inherited_source())? {
+        return Err(bad_selector("Integer selector cannot match this operand."));
+    }
+    let value = parse_decimal_number(call.value())
+        .map_err(|_| bad_selector("Integer selector requires a numeric operand."))?;
+    let Ok(key) = parse_offset_number(call.key()) else {
+        return Ok(None);
+    };
+    Ok((value.trunc() as i64 == key).then_some(1))
+}
+
 fn offset_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     let value = parse_offset_number(call.value())
         .map_err(|_| bad_operand("Offset function requires a numeric operand."))?;
@@ -338,12 +361,24 @@ fn parse_offset_number(value: &str) -> Result<i64, std::num::ParseIntError> {
     value.parse::<i64>()
 }
 
+fn parse_decimal_number(value: &str) -> Result<f64, std::num::ParseFloatError> {
+    value.parse::<f64>()
+}
+
 fn format_offset_number(value: i64, sign_display_always: bool) -> String {
+    format_integer_number(value, sign_display_always)
+}
+
+fn format_integer_number(value: i64, sign_display_always: bool) -> String {
     if sign_display_always && value >= 0 {
         format!("+{value}")
     } else {
         value.to_string()
     }
+}
+
+fn sign_display_always(function: &FunctionRef) -> Result<bool, Diagnostic> {
+    Ok(function_option_literal(function, "signDisplay") == Some("always"))
 }
 
 fn inherited_sign_display_always(
@@ -356,6 +391,54 @@ fn inherited_sign_display_always(
         return Ok(source.option_value("signDisplay")?.as_deref() == Some("always"));
     }
     inherited_sign_display_always(source.inherited_source())
+}
+
+fn invalid_numeric_selector(
+    function: &FunctionRef,
+    source: Option<FunctionSourceRef<'_>>,
+) -> Result<bool, Diagnostic> {
+    Ok(numeric_select_uses_variable(function)
+        || (function_option_literal(function, "select") != Some("exact")
+            && inherited_exact_numeric_source(source)?))
+}
+
+fn numeric_select_uses_variable(function: &FunctionRef) -> bool {
+    matches!(
+        function
+            .options
+            .as_ref()
+            .and_then(|options| options.get("select")),
+        Some(ExpressionArg::Variable { .. })
+    )
+}
+
+fn inherited_exact_numeric_source(
+    source: Option<FunctionSourceRef<'_>>,
+) -> Result<bool, Diagnostic> {
+    let Some(source) = source else {
+        return Ok(false);
+    };
+    if is_numeric_function(source.function())
+        && source.option_value("select")?.as_deref() == Some("exact")
+    {
+        return Ok(true);
+    }
+    inherited_exact_numeric_source(source.inherited_source())
+}
+
+fn is_numeric_function(function: &FunctionRef) -> bool {
+    function.name == "number" || function.name == "integer"
+}
+
+fn function_option_literal<'a>(function: &'a FunctionRef, name: &str) -> Option<&'a str> {
+    let Some(ExpressionArg::Literal { value }) = function
+        .options
+        .as_ref()
+        .and_then(|options| options.get(name))
+    else {
+        return None;
+    };
+    Some(value)
 }
 
 fn datetime_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
@@ -1080,6 +1163,7 @@ impl<'a> FormatContext<'a> {
                 source,
             });
         };
+        self.record_function_resolution_errors(function, source.as_ref())?;
 
         let source_value = source
             .as_ref()
@@ -1110,6 +1194,32 @@ impl<'a> FormatContext<'a> {
                 })
             }
             Err(error) => Err(error),
+        }
+    }
+
+    fn record_function_resolution_errors(
+        &mut self,
+        function: &FunctionRef,
+        source: Option<&ResolvedFunctionSource>,
+    ) -> Result<(), Diagnostic> {
+        if !is_numeric_function(function) {
+            return Ok(());
+        }
+        if numeric_select_uses_variable(function)
+            || inherited_exact_numeric_source(source.map(|source| FunctionSourceRef {
+                source,
+                values: &self.values,
+            }))?
+        {
+            let error = bad_option("Numeric select option is not valid in this context.");
+            if self.fallback {
+                self.errors.push(error);
+                Ok(())
+            } else {
+                Err(error)
+            }
+        } else {
+            Ok(())
         }
     }
 
