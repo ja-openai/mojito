@@ -61,8 +61,8 @@ The current conformance slice covers:
 
 - literal text
 - escaped `\{`, `\}`, and `\\`
-- variable and literal placeholders such as `{$name}`, `{|ready|}`, and
-  unquoted literals like `{42}`
+- variable and literal placeholders such as `{$name}`, `{|ready|}`, escaped
+  quoted literals like `{|a\\\{\|\}|}`, and unquoted literals like `{42}`
 - Unicode text, argument values, literal placeholders, and preservation of
   canonically equivalent but byte-distinct names
 - Unicode MF2 names for variables, including combining marks, plus namespaced

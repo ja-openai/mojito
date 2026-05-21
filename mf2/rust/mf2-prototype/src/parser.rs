@@ -407,7 +407,32 @@ impl<'a> Parser<'a> {
         }
         self.advance_char();
         let content_start = self.index;
+        let mut in_quote = false;
         while let Some(ch) = self.peek_char() {
+            if in_quote {
+                if ch == '\\' {
+                    self.advance_char();
+                    if self.peek_char().is_some() {
+                        self.advance_char();
+                    }
+                    continue;
+                }
+                if ch == '}' {
+                    let content_end = self.index;
+                    self.advance_char();
+                    return Some(&self.source[content_start..content_end]);
+                }
+                if ch == '|' {
+                    in_quote = false;
+                }
+                self.advance_char();
+                continue;
+            }
+            if ch == '|' {
+                in_quote = true;
+                self.advance_char();
+                continue;
+            }
             if ch == '}' {
                 let content_end = self.index;
                 self.advance_char();
@@ -441,8 +466,8 @@ impl<'a> Parser<'a> {
                 Expression::variable(name),
                 self.rest_after_operand(rest, start, end)?,
             )
-        } else if let Some(rest) = content.strip_prefix('|') {
-            let Some(close) = rest.find('|') else {
+        } else if content.starts_with('|') {
+            let Some((literal, rest)) = parse_quoted_literal(content) else {
                 self.push_diagnostic(
                     "unclosed-quoted-literal",
                     "Quoted literal is missing closing '|'.",
@@ -452,8 +477,8 @@ impl<'a> Parser<'a> {
                 return None;
             };
             (
-                Expression::literal(&rest[..close]),
-                self.rest_after_operand(&rest[close + 1..], start, end)?,
+                Expression::literal(literal),
+                self.rest_after_operand(rest, start, end)?,
             )
         } else if content.starts_with(':') {
             (Expression::function_only(), content)
@@ -568,19 +593,31 @@ impl<'a> Parser<'a> {
         let mut token_start = None;
         let mut in_quote = false;
 
-        for (index, ch) in rest.char_indices() {
+        let mut index = 0;
+        while let Some(ch) = rest[index..].chars().next() {
+            if in_quote && ch == '\\' {
+                token_start.get_or_insert(index);
+                index += ch.len_utf8();
+                if let Some(next) = rest[index..].chars().next() {
+                    index += next.len_utf8();
+                }
+                continue;
+            }
             if ch == '|' {
                 in_quote = !in_quote;
                 token_start.get_or_insert(index);
+                index += ch.len_utf8();
                 continue;
             }
             if ch.is_whitespace() && !in_quote {
                 if let Some(start) = token_start.take() {
                     tokens.push(&rest[start..index]);
                 }
+                index += ch.len_utf8();
                 continue;
             }
             token_start.get_or_insert(index);
+            index += ch.len_utf8();
         }
 
         if in_quote {
@@ -880,8 +917,26 @@ impl<'a> Parser<'a> {
         end: usize,
     ) -> Option<AttributeValue> {
         if raw_value.starts_with('|') && raw_value.ends_with('|') && raw_value.len() >= 2 {
+            let Some((literal, rest)) = parse_quoted_literal(raw_value) else {
+                self.push_diagnostic(
+                    "unclosed-quoted-literal",
+                    "Quoted literal is missing closing '|'.",
+                    start,
+                    end,
+                );
+                return None;
+            };
+            if !rest.is_empty() {
+                self.push_diagnostic(
+                    "invalid-attribute",
+                    "Attribute value must be a single literal.",
+                    start,
+                    end,
+                );
+                return None;
+            }
             return Some(AttributeValue::Literal(ExpressionArg::Literal {
-                value: raw_value[1..raw_value.len() - 1].to_string(),
+                value: literal,
             }));
         }
         let Some((literal, rest)) = split_unquoted_literal(raw_value) else {
@@ -1102,15 +1157,48 @@ fn parse_literal_or_variable(raw_value: &str) -> ExpressionArg {
         ExpressionArg::Variable {
             name: name.to_string(),
         }
-    } else if raw_value.starts_with('|') && raw_value.ends_with('|') && raw_value.len() >= 2 {
-        ExpressionArg::Literal {
-            value: raw_value[1..raw_value.len() - 1].to_string(),
+    } else if let Some((literal, rest)) = parse_quoted_literal(raw_value) {
+        if rest.is_empty() {
+            ExpressionArg::Literal { value: literal }
+        } else {
+            ExpressionArg::Literal {
+                value: raw_value.to_string(),
+            }
         }
     } else {
         ExpressionArg::Literal {
             value: raw_value.to_string(),
         }
     }
+}
+
+fn parse_quoted_literal(input: &str) -> Option<(String, &str)> {
+    let mut output = String::new();
+    let mut index = 0;
+    if !input.starts_with('|') {
+        return None;
+    }
+    index += 1;
+    while let Some(ch) = input[index..].chars().next() {
+        index += ch.len_utf8();
+        match ch {
+            '|' => return Some((output, &input[index..])),
+            '\\' => {
+                let Some(escaped) = input[index..].chars().next() else {
+                    output.push('\\');
+                    break;
+                };
+                if matches!(escaped, '\\' | '{' | '|' | '}') {
+                    output.push(escaped);
+                    index += escaped.len_utf8();
+                } else {
+                    output.push('\\');
+                }
+            }
+            _ => output.push(ch),
+        }
+    }
+    None
 }
 
 fn split_unquoted_literal(input: &str) -> Option<(&str, &str)> {

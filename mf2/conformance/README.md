@@ -101,7 +101,8 @@ TypeScript can all consume it without bespoke tooling.
 The source-to-model fixtures currently cover:
 
 - simple text
-- variables, quoted literal placeholders, and unquoted literal placeholders
+- variables, quoted literal placeholders, escaped quoted literal placeholders,
+  and unquoted literal placeholders
 - Unicode text, argument values, literal placeholders, and preservation of
   canonically equivalent but byte-distinct names
 - Unicode variable names, bidi controls around names, and namespaced identifiers

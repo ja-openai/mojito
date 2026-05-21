@@ -352,8 +352,34 @@ final class Mf2Parser {
         }
         advanceChar();
         int contentStart = index;
+        boolean inQuote = false;
         while (!isDone()) {
-            if (peekChar() == '}') {
+            char ch = peekChar();
+            if (inQuote) {
+                if (ch == '\\') {
+                    advanceChar();
+                    if (!isDone()) {
+                        advanceChar();
+                    }
+                    continue;
+                }
+                if (ch == '}') {
+                    String content = source.substring(contentStart, index);
+                    advanceChar();
+                    return content;
+                }
+                if (ch == '|') {
+                    inQuote = false;
+                }
+                advanceChar();
+                continue;
+            }
+            if (ch == '|') {
+                inQuote = true;
+                advanceChar();
+                continue;
+            }
+            if (ch == '}') {
                 String content = source.substring(contentStart, index);
                 advanceChar();
                 return content;
@@ -389,8 +415,8 @@ final class Mf2Parser {
                 return null;
             }
         } else if (content.startsWith("|")) {
-            int close = content.indexOf('|', 1);
-            if (close < 0) {
+            LiteralSplit split = parseQuotedLiteral(content);
+            if (split == null) {
                 pushDiagnostic(
                         "unclosed-quoted-literal",
                         "Quoted literal is missing closing '|'.",
@@ -399,8 +425,8 @@ final class Mf2Parser {
                 return null;
             }
             expression = new Mf2Message.Expression(
-                    new Mf2Message.LiteralArgument(content.substring(1, close)), null, Map.of());
-            rest = restAfterOperand(content.substring(close + 1), start, end);
+                    new Mf2Message.LiteralArgument(split.value()), null, Map.of());
+            rest = restAfterOperand(split.rest(), start, end);
             if (rest == null) {
                 return null;
             }
@@ -508,6 +534,16 @@ final class Mf2Parser {
         for (int index = 0; index < rest.length(); ) {
             int codePoint = rest.codePointAt(index);
             int charCount = Character.charCount(codePoint);
+            if (inQuote && codePoint == '\\') {
+                if (tokenStart < 0) {
+                    tokenStart = index;
+                }
+                index += charCount;
+                if (index < rest.length()) {
+                    index += Character.charCount(rest.codePointAt(index));
+                }
+                continue;
+            }
             if (codePoint == '|') {
                 inQuote = !inQuote;
                 if (tokenStart < 0) {
@@ -762,8 +798,24 @@ final class Mf2Parser {
 
     private Mf2Message.AttributeValue parseAttributeValue(String rawValue, int start, int end) {
         if (rawValue.startsWith("|") && rawValue.endsWith("|") && rawValue.length() >= 2) {
-            return new Mf2Message.LiteralAttribute(
-                    new Mf2Message.LiteralArgument(rawValue.substring(1, rawValue.length() - 1)));
+            LiteralSplit split = parseQuotedLiteral(rawValue);
+            if (split == null) {
+                pushDiagnostic(
+                        "unclosed-quoted-literal",
+                        "Quoted literal is missing closing '|'.",
+                        start,
+                        end);
+                return null;
+            }
+            if (!split.rest().isEmpty()) {
+                pushDiagnostic(
+                        "invalid-attribute",
+                        "Attribute value must be a single literal.",
+                        start,
+                        end);
+                return null;
+            }
+            return new Mf2Message.LiteralAttribute(new Mf2Message.LiteralArgument(split.value()));
         }
         LiteralSplit split = splitUnquotedLiteral(rawValue);
         if (split == null || !split.rest().isEmpty()) {
@@ -958,10 +1010,43 @@ final class Mf2Parser {
             }
             return new Mf2Message.VariableArgument(rawValue.substring(1));
         }
-        if (rawValue.startsWith("|") && rawValue.endsWith("|") && rawValue.length() >= 2) {
-            return new Mf2Message.LiteralArgument(rawValue.substring(1, rawValue.length() - 1));
+        LiteralSplit quoted = parseQuotedLiteral(rawValue);
+        if (quoted != null && quoted.rest().isEmpty()) {
+            return new Mf2Message.LiteralArgument(quoted.value());
         }
         return new Mf2Message.LiteralArgument(rawValue);
+    }
+
+    private static LiteralSplit parseQuotedLiteral(String input) {
+        if (!input.startsWith("|")) {
+            return null;
+        }
+        StringBuilder output = new StringBuilder();
+        int index = 1;
+        while (index < input.length()) {
+            int codePoint = input.codePointAt(index);
+            index += Character.charCount(codePoint);
+            switch (codePoint) {
+                case '|' -> {
+                    return new LiteralSplit(output.toString(), input.substring(index));
+                }
+                case '\\' -> {
+                    if (index >= input.length()) {
+                        output.append('\\');
+                        break;
+                    }
+                    int escaped = input.codePointAt(index);
+                    if (escaped == '\\' || escaped == '{' || escaped == '|' || escaped == '}') {
+                        output.appendCodePoint(escaped);
+                        index += Character.charCount(escaped);
+                    } else {
+                        output.append('\\');
+                    }
+                }
+                default -> output.appendCodePoint(codePoint);
+            }
+        }
+        return null;
     }
 
     private static LiteralSplit splitUnquotedLiteral(String input) {
