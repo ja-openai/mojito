@@ -18,9 +18,8 @@ easy to inspect, debug, and mechanically modify.
 Build wiring:
 
 - Parent `pom.xml` declares `aspectj-maven-plugin.version` and a provided `aspectjrt` dependency.
-- `common/pom.xml`, `webapp/pom.xml`, and `cli/pom.xml` run `aspectj-maven-plugin` for `compile`
-  and `test-compile`.
-- Aspect libraries still include `spring-aspects` in `common`, `webapp`, and `cli`.
+- `webapp/pom.xml` runs `aspectj-maven-plugin` for `compile` and `test-compile`.
+- Aspect libraries still include `spring-aspects` in `webapp`.
 
 Framework modes:
 
@@ -110,15 +109,17 @@ Removed during this workstream:
   `@Configurable` types remain.
 - Unused AspectJ method-security mode was removed; there were no method-level security annotations
   to enforce, so the `spring-security-aspects` dependency and aspect library entry were removed.
+- `common` and `cli` no longer run `aspectj-maven-plugin` or depend on `spring-aspects`; neither
+  module has source annotations or framework modes that need compile-time weaving.
 
 In progress:
 
 - Transaction migration remains. `@Transactional` usage is broad, so the next code changes should
   target self-invoked, checked-exception, retry, or `REQUIRES_NEW` boundaries before switching
   `@EnableTransactionManagement` away from AspectJ mode.
-- Build cleanup remains blocked on the transaction migration. Keep `spring-aspects`, `aspectjrt`,
-  and `aspectj-maven-plugin` until no remaining behavior depends on Spring's woven transaction
-  aspect.
+- Final `webapp` build cleanup remains blocked on the transaction migration. Keep `webapp`
+  `spring-aspects`, `aspectjrt`, and `aspectj-maven-plugin` until no remaining behavior depends on
+  Spring's woven transaction aspect.
 
 ## Migration Principles
 
@@ -248,7 +249,7 @@ should not depend on method weaving.
 
 After all usages are gone:
 
-- Remove `aspectj-maven-plugin` from `common`, `webapp`, and `cli`.
+- Remove `aspectj-maven-plugin` from `webapp`.
 - Remove `aspectj-maven-plugin.version`, `aspectjrt`, `aspectjtools`, `spring-aspects`, and
   `spring-security-aspects` where no longer needed.
 - Remove obsolete aspect classes and `Aspects.aspectOf(...)` configuration.
