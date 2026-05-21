@@ -38,7 +38,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author wyau
@@ -65,6 +67,8 @@ public class UserService {
   @Autowired TeamUserRepository teamUserRepository;
 
   @Autowired UserDeletionService userDeletionService;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   /**
    * Allow PMs and ADMINs to create / edit users. However, a PM user can not create / edit ADMIN
@@ -227,8 +231,43 @@ public class UserService {
    * @param partiallyCreated
    * @return
    */
-  @Transactional
   public User saveUserWithRole(
+      User user,
+      String password,
+      Role role,
+      String givenName,
+      String surname,
+      String commonName,
+      Set<String> translatableLocales,
+      boolean canTranslateAllLocales,
+      boolean partiallyCreated) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      User result =
+          saveUserWithRoleNoTx(
+              user,
+              password,
+              role,
+              givenName,
+              surname,
+              commonName,
+              translatableLocales,
+              canTranslateAllLocales,
+              partiallyCreated);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  User saveUserWithRoleNoTx(
       User user,
       String password,
       Role role,
@@ -300,7 +339,7 @@ public class UserService {
     user.setPartiallyCreated(partiallyCreated);
 
     userRepository.save(user);
-    user = saveAuthorities(user, role);
+    user = saveAuthoritiesNoTx(user, role);
 
     return user;
   }
@@ -312,8 +351,7 @@ public class UserService {
    * @param role
    * @return
    */
-  @Transactional
-  private User saveAuthorities(User user, Role role) {
+  User saveAuthoritiesNoTx(User user, Role role) {
     if (role != null) {
       Authority authority = authorityRepository.findByUser(user);
       if (authority == null) {
@@ -327,8 +365,24 @@ public class UserService {
     return user;
   }
 
-  @Transactional
   public User updatePassword(String currentPassword, String newPassword) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      User result = updatePasswordNoTx(currentPassword, newPassword);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  User updatePasswordNoTx(String currentPassword, String newPassword) {
     Objects.requireNonNull(currentPassword);
     Objects.requireNonNull(newPassword);
 
@@ -379,8 +433,24 @@ public class UserService {
     return userRepository.findByUsername(SYSTEM_USERNAME);
   }
 
-  @Transactional
   public User findOrCreateLeverageUser() {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      User result = findOrCreateLeverageUserNoTx();
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  User findOrCreateLeverageUserNoTx() {
     return findOrCreateBasicUser(LEVERAGE_USERNAME, null, null, "Leverage", true, false);
   }
 
@@ -391,8 +461,23 @@ public class UserService {
    *
    * @param userToUpdate The {@link User} to set {@link User#createdByUser} for
    */
-  @Transactional
   public void updateCreatedByUserToSystemUser(User userToUpdate) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      updateCreatedByUserToSystemUserNoTx(userToUpdate);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void updateCreatedByUserToSystemUserNoTx(User userToUpdate) {
     logger.debug("Updating CreatedByUser to System User");
     User systemUser = findSystemUser();
 
@@ -412,8 +497,23 @@ public class UserService {
    *
    * @param user
    */
-  @Transactional
   public void deleteUser(User user) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteUserNoTx(user);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteUserNoTx(User user) {
     // Only PMs and ADMINs can delete users and PMs can not delete ADMIN users
     Role userRole = createRoleFromAuthority(user.getAuthorities().iterator().next().getAuthority());
     checkPermissionsForRole(userRole);
