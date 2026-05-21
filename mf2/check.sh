@@ -17,6 +17,7 @@ cd "$(dirname "$0")"
 (cd python && python3 -m mf2_runtime.conformance ../conformance/fixtures/source-to-model)
 (cd python && python3 examples/translate_demo.py)
 (cd java && sh run.sh conformance)
+(cd java && sh run.sh unicode-tests)
 (cd java && sh run.sh demo)
 (cd java && sh run.sh inline-demo)
 (cd java && sh run.sh datetime-demo)

@@ -30,6 +30,9 @@ case "$command" in
   bench-parse)
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.ParseBenchmark "${2:-../conformance/fixtures/source-to-model}" "${3:-100000}" "${4:-10000}"
     ;;
+  unicode-tests)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.UnicodeOfficialTests "${2:-../third_party/message-format-wg/test}" "${3:-../conformance/unicode-official-baseline.json}"
+    ;;
   demo)
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.TranslateDemo
     ;;

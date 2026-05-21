@@ -25,6 +25,9 @@ final class FormattedPartJson {
             case Mf2Message.FormattedExpression expression -> {
                 map.put("type", "expression");
                 map.put("value", expression.value());
+                if (expression.direction() != null) {
+                    map.put("dir", expression.direction());
+                }
                 putAttributes(map, expression.attributes());
             }
             case Mf2Message.FormattedMarkup markup -> {

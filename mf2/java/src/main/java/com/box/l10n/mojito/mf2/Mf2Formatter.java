@@ -231,7 +231,7 @@ final class Mf2Formatter {
 
     private static final class FormatContext {
         private final ArgumentValues arguments;
-        private Map<String, Object> locals;
+        private Map<String, ResolvedValue> locals;
         private Set<String> failedLocals;
         private final List<Mf2Exception> errors;
         private String selectorAnnotationName;
@@ -263,16 +263,54 @@ final class Mf2Formatter {
             }
             for (Mf2Message.Declaration declaration : declarations) {
                 switch (declaration) {
-                    case Mf2Message.InputDeclaration ignored -> {}
+                    case Mf2Message.InputDeclaration input -> applyInputDeclaration(input);
                     case Mf2Message.LocalDeclaration local -> {
                         ExpressionOutput output = formatExpressionOutput(local.value());
                         if (output.hadError()) {
                             addFailedLocal(local.name());
                         } else {
-                            putLocal(local.name(), output.value());
+                            putLocal(local.name(), ResolvedValue.string(output.value(), output.source()));
                         }
                     }
                 }
+            }
+        }
+
+        private void applyInputDeclaration(Mf2Message.InputDeclaration input) throws Mf2Exception {
+            Mf2Message.FunctionRef function = input.value().function();
+            if (function == null || !functions.hasSelector(function) || !functions.hasFormatter(function)) {
+                return;
+            }
+            if (!hasValue(input.name())) {
+                if (fallback) {
+                    addFailedLocal(input.name());
+                    errors.add(Mf2Exception.unresolvedVariable(input.name()));
+                    errors.add(Mf2Exception.badOperand("Function operand is not available."));
+                    return;
+                }
+                throw Mf2Exception.missingArgument(input.name());
+            }
+            ResolvedValue inputValue = value(input.name());
+            String rendered = inputValue.rendered();
+            recordFunctionResolutionErrors(function, inputValue.source());
+            try {
+                String formatted = functions.format(new Mf2FunctionRegistry.FunctionCall(
+                        rendered,
+                        inputValue.rawValue(),
+                        function,
+                        locale,
+                        (optionName, defaultValue) -> optionValue(function, optionName, defaultValue),
+                        sourceRef(inputValue.source())));
+                String sourceValue = inputValue.source() == null ? rendered : inputValue.source().value();
+                putLocal(input.name(), ResolvedValue.string(
+                        formatted,
+                        new ResolvedFunctionSource(sourceValue, function, inputValue.source())));
+            } catch (Mf2Exception error) {
+                if (!fallback) {
+                    throw error;
+                }
+                errors.add(fallbackError(error));
+                addFailedLocal(input.name());
             }
         }
 
@@ -287,13 +325,16 @@ final class Mf2Formatter {
             Set<List<String>> signatures = new HashSet<>();
             Mf2Message.Variant fallback = null;
             Mf2Message.Variant selected = null;
+            List<Integer> selectedRank = null;
             for (Mf2Message.Variant variant : variants) {
                 validateVariant(variant, selectorValues, signatures);
                 if (fallback == null && isFallbackVariant(variant)) {
                     fallback = variant;
                 }
-                if (selected == null && variantMatches(variant, selectorValues)) {
+                List<Integer> rank = variantMatchRank(variant, selectorValues);
+                if (rank != null && (selectedRank == null || compareRank(rank, selectedRank) > 0)) {
                     selected = variant;
+                    selectedRank = rank;
                 }
             }
             if (fallback == null) {
@@ -309,22 +350,33 @@ final class Mf2Formatter {
                         errors.add(Mf2Exception.unresolvedVariable(selector.name()));
                     }
                     SelectorAnnotation annotation = selectorAnnotation(selector.name());
+                    if (annotation != null && functions.hasSelector(annotation.function())) {
+                        if (!isFailedLocal(selector.name())) {
+                            errors.add(Mf2Exception.badOperand("Selector operand is not available."));
+                        }
+                        errors.add(new Mf2Exception("bad-selector", "Selector operand is not available."));
+                    }
                     return new SelectorValue(
                             "",
                             annotation != null && annotation.isString() ? normalizeStringKey("") : null,
                             false,
+                            null,
+                            annotation == null ? null : annotation.function(),
                             null);
                 }
                 throw Mf2Exception.missingArgument(selector.name());
             }
-            Object value = value(selector.name());
-            String rendered = valueToString(value);
+            ResolvedValue value = value(selector.name());
+            String rendered = value.rendered();
             SelectorAnnotation annotation = selectorAnnotation(selector.name());
+            recordSelectorResolutionErrors(annotation);
             return new SelectorValue(
                     rendered,
                     annotation != null && annotation.isString() ? normalizeStringKey(rendered) : null,
                     annotation == null || annotation.exactMatch(),
-                    selectionKey(annotation, value));
+                    selectionKey(annotation, value),
+                    annotation == null ? null : annotation.function(),
+                    value.source());
         }
 
         String formatPattern(List<Mf2Message.PatternPart> pattern) throws Mf2Exception {
@@ -345,14 +397,18 @@ final class Mf2Formatter {
                         } else {
                             output.add(new Mf2Message.FormattedExpression(
                                     rendered.value(),
-                                    expression.expression().attributes()));
+                                    expression.expression().attributes(),
+                                    rendered.directionName()));
                         }
                     }
-                    case Mf2Message.MarkupPart markup -> output.add(new Mf2Message.FormattedMarkup(
-                            markup.markup().kind(),
-                            markup.markup().name(),
-                            markup.markup().options(),
-                            markup.markup().attributes()));
+                    case Mf2Message.MarkupPart markup -> {
+                        recordMarkupResolutionErrors(markup.markup());
+                        output.add(new Mf2Message.FormattedMarkup(
+                                markup.markup().kind(),
+                                markup.markup().name(),
+                                markup.markup().options(),
+                                markup.markup().attributes()));
+                    }
                 }
             }
             return output;
@@ -367,6 +423,7 @@ final class Mf2Formatter {
             boolean hadError = false;
             String value;
             Object rawValue;
+            ResolvedFunctionSource source = null;
             switch (expression.arg()) {
                 case null -> {
                     value = "";
@@ -393,34 +450,42 @@ final class Mf2Formatter {
                         }
                         throw Mf2Exception.missingArgument(variable.name());
                     }
-                    rawValue = value(variable.name());
-                    value = valueToString(rawValue);
+                    ResolvedValue resolved = value(variable.name());
+                    rawValue = resolved.rawValue();
+                    value = resolved.rendered();
+                    source = resolved.source();
                 }
             }
 
             if (hadError) {
-                return new ExpressionOutput(value, true);
+                return new ExpressionOutput(value, true, null, null);
             }
 
             Mf2Message.FunctionRef function = expression.function();
             if (function == null) {
-                return new ExpressionOutput(value, false);
+                return new ExpressionOutput(value, false, source, bidiDirectionFromSource(source));
             }
+            recordFunctionResolutionErrors(function, source);
+            BidiDirection direction = bidiDirectionForFunction(function, source);
             try {
+                String sourceValue = source == null ? value : source.value();
                 return new ExpressionOutput(
                         functions.format(new Mf2FunctionRegistry.FunctionCall(
                                 value,
                                 rawValue,
                                 function,
                                 locale,
-                                (optionName, defaultValue) -> optionValue(function, optionName, defaultValue))),
-                        false);
+                                (optionName, defaultValue) -> optionValue(function, optionName, defaultValue),
+                                sourceRef(source))),
+                        false,
+                        new ResolvedFunctionSource(sourceValue, function, source),
+                        direction);
             } catch (Mf2Exception error) {
                 if (!fallback) {
                     throw error;
                 }
                 errors.add(fallbackError(error));
-                return new ExpressionOutput(fallbackSource(expression), true);
+                return new ExpressionOutput(fallbackSource(expression), true, null, null);
             }
         }
 
@@ -437,7 +502,7 @@ final class Mf2Formatter {
                     if (!hasValue(variable.name())) {
                         throw Mf2Exception.missingArgument(variable.name());
                     }
-                    yield valueToString(value(variable.name()));
+                    yield value(variable.name()).rendered();
                 }
             };
         }
@@ -447,22 +512,29 @@ final class Mf2Formatter {
             return annotation == null || annotation.exactMatch();
         }
 
-        private String selectionKey(SelectorAnnotation annotation, Object value) {
+        private String selectionKey(SelectorAnnotation annotation, ResolvedValue value) {
             if (annotation == null || !annotation.isNumeric()) {
                 return null;
             }
-            return PluralRules.selectPluralCategory(locale, value, annotation.numberSelect());
+            String operand = annotation.operandForSelection(value);
+            return operand == null ? null : PluralRules.selectPluralCategory(locale, operand, annotation.numberSelect());
         }
 
         private boolean hasValue(String name) {
+            if (isFailedLocal(name)) {
+                return false;
+            }
             return (locals != null && locals.containsKey(name)) || arguments.contains(name);
         }
 
-        private Object value(String name) {
-            return locals != null && locals.containsKey(name) ? locals.get(name) : arguments.get(name);
+        private ResolvedValue value(String name) {
+            if (locals != null && locals.containsKey(name)) {
+                return locals.get(name);
+            }
+            return ResolvedValue.raw(arguments.get(name));
         }
 
-        private void putLocal(String name, Object value) {
+        private void putLocal(String name, ResolvedValue value) {
             if (locals == null) {
                 locals = new HashMap<>();
             }
@@ -474,6 +546,9 @@ final class Mf2Formatter {
                 failedLocals = new HashSet<>();
             }
             failedLocals.add(name);
+            if (locals != null) {
+                locals.remove(name);
+            }
         }
 
         private boolean isFailedLocal(String name) {
@@ -499,12 +574,149 @@ final class Mf2Formatter {
             }
             return name.equals(selectorAnnotationName) ? selectorAnnotation : null;
         }
+
+        private List<Integer> variantMatchRank(
+                Mf2Message.Variant variant, List<SelectorValue> selectorValues)
+                throws Mf2Exception {
+            if (variant.keys().size() != selectorValues.size()) {
+                return null;
+            }
+            List<Integer> ranks = new ArrayList<>(variant.keys().size());
+            for (int index = 0; index < variant.keys().size(); index++) {
+                Integer rank = keyMatchRank(variant.keys().get(index), selectorValues.get(index));
+                if (rank == null) {
+                    return null;
+                }
+                ranks.add(rank);
+            }
+            return ranks;
+        }
+
+        private Integer keyMatchRank(Mf2Message.VariantKey key, SelectorValue selector)
+                throws Mf2Exception {
+            return switch (key) {
+                case Mf2Message.CatchAllVariantKey ignored -> 0;
+                case Mf2Message.LiteralVariantKey literal -> {
+                    if ((selector.exactMatch() && literalKeyMatches(literal.value(), selector))
+                            || literal.value().equals(selector.selectionKey())) {
+                        yield 1;
+                    }
+                    if (selector.function() == null) {
+                        yield null;
+                    }
+                    try {
+                        yield functions.select(new Mf2FunctionRegistry.FunctionMatch(
+                                selector.rendered(),
+                                selector.rendered(),
+                                selector.function(),
+                                literal.value(),
+                                locale,
+                                (optionName, defaultValue) -> optionValue(selector.function(), optionName, defaultValue),
+                                sourceRef(selector.source())));
+                    } catch (Mf2Exception error) {
+                        if (!fallback) {
+                            throw error;
+                        }
+                        errors.add(fallbackError(error));
+                        errors.add(new Mf2Exception("bad-selector", "Selector failed to match."));
+                        yield null;
+                    }
+                }
+            };
+        }
+
+        private static int compareRank(List<Integer> left, List<Integer> right) {
+            for (int index = 0; index < Math.min(left.size(), right.size()); index++) {
+                int comparison = Integer.compare(left.get(index), right.get(index));
+                if (comparison != 0) {
+                    return comparison;
+                }
+            }
+            return Integer.compare(left.size(), right.size());
+        }
+
+        private void recordFunctionResolutionErrors(
+                Mf2Message.FunctionRef function, ResolvedFunctionSource source)
+                throws Mf2Exception {
+            if (!isNumericFunction(function)) {
+                return;
+            }
+            if (numericSelectUsesVariable(function) || inheritedExactNumericSource(sourceRef(source))) {
+                Mf2Exception error = new Mf2Exception(
+                        "bad-option",
+                        "Numeric select option is not valid in this context.");
+                if (fallback) {
+                    errors.add(error);
+                    return;
+                }
+                throw error;
+            }
+        }
+
+        private void recordSelectorResolutionErrors(SelectorAnnotation annotation)
+                throws Mf2Exception {
+            if (annotation == null || !annotation.function().name().equals("currency")) {
+                return;
+            }
+            Mf2Exception error = new Mf2Exception("bad-selector", "Currency selector is not supported.");
+            if (fallback) {
+                errors.add(error);
+                return;
+            }
+            throw error;
+        }
+
+        private void recordMarkupResolutionErrors(Mf2Message.Markup markup)
+                throws Mf2Exception {
+            if (!markup.options().containsKey("u:dir")) {
+                return;
+            }
+            Mf2Exception error = new Mf2Exception("bad-option", "u:dir is not valid on markup.");
+            if (fallback) {
+                errors.add(error);
+                return;
+            }
+            throw error;
+        }
+
+        private Mf2FunctionRegistry.FunctionSourceRef sourceRef(ResolvedFunctionSource source) {
+            if (source == null) {
+                return null;
+            }
+            return new Mf2FunctionRegistry.FunctionSourceRef(
+                    source.value(),
+                    source.function(),
+                    (optionName, defaultValue) -> optionValue(source.function(), optionName, defaultValue),
+                    sourceRef(source.inherited()));
+        }
     }
 
     record FallbackPartsResult(
             List<Mf2Message.FormattedPart> parts, List<Mf2Exception> errors) {}
 
-    private record ExpressionOutput(String value, boolean hadError) {}
+    private record ExpressionOutput(
+            String value, boolean hadError, ResolvedFunctionSource source, BidiDirection direction) {
+        String directionName() {
+            return direction == null ? null : direction.name;
+        }
+    }
+
+    private record ResolvedValue(Object rawValue, ResolvedFunctionSource source) {
+        static ResolvedValue raw(Object value) {
+            return new ResolvedValue(value, null);
+        }
+
+        static ResolvedValue string(String value, ResolvedFunctionSource source) {
+            return new ResolvedValue(value, source);
+        }
+
+        String rendered() {
+            return valueToString(rawValue);
+        }
+    }
+
+    private record ResolvedFunctionSource(
+            String value, Mf2Message.FunctionRef function, ResolvedFunctionSource inherited) {}
 
     private static ArgumentValues snapshotArguments(Map<String, ?> arguments) {
         // Keep format() isolated from caller map mutation without penalizing the common one-arg path.
@@ -665,7 +877,8 @@ final class Mf2Formatter {
                 case Mf2Message.FormattedText text -> output.append(text.value());
                 case Mf2Message.FormattedFallback fallback -> output.append('{').append(fallback.source()).append('}');
                 case Mf2Message.FormattedExpression expression ->
-                        output.append(isolateExpression(expression.value(), bidiIsolation));
+                        output.append(isolateExpression(
+                                expression.value(), bidiIsolation, expression.direction()));
                 case Mf2Message.FormattedMarkup ignored -> {
                 }
             }
@@ -673,14 +886,92 @@ final class Mf2Formatter {
         return output.toString();
     }
 
-    private static String isolateExpression(String value, Mf2BidiIsolation bidiIsolation) {
+    private static String isolateExpression(
+            String value, Mf2BidiIsolation bidiIsolation, String direction) {
         if (bidiIsolation == Mf2BidiIsolation.DEFAULT) {
-            return "\u2068" + value + "\u2069";
+            return bidiMarker(direction) + value + "\u2069";
         }
         return value;
     }
 
-    private record SelectorAnnotation(String function, NumberSelect numberSelect) {
+    private static char bidiMarker(String direction) {
+        return switch (direction == null ? "auto" : direction) {
+            case "ltr" -> '\u2066';
+            case "rtl" -> '\u2067';
+            default -> '\u2068';
+        };
+    }
+
+    private static boolean isNumericFunction(Mf2Message.FunctionRef function) {
+        return function.name().equals("number")
+                || function.name().equals("integer")
+                || function.name().equals("percent");
+    }
+
+    private static boolean numericSelectUsesVariable(Mf2Message.FunctionRef function) {
+        return function.options().get("select") instanceof Mf2Message.VariableArgument;
+    }
+
+    private static boolean inheritedExactNumericSource(Mf2FunctionRegistry.FunctionSourceRef source)
+            throws Mf2Exception {
+        if (source == null) {
+            return false;
+        }
+        if (isNumericFunction(source.function()) && "exact".equals(source.optionValue("select", null))) {
+            return true;
+        }
+        return inheritedExactNumericSource(source.inheritedSource());
+    }
+
+    private static BidiDirection bidiDirectionForFunction(
+            Mf2Message.FunctionRef function, ResolvedFunctionSource source) throws Mf2Exception {
+        String value = functionOptionLiteral(function, "u:dir", null);
+        if (value != null) {
+            return parseBidiDirection(value);
+        }
+        return bidiDirectionFromSource(source);
+    }
+
+    private static BidiDirection bidiDirectionFromSource(ResolvedFunctionSource source)
+            throws Mf2Exception {
+        if (source == null) {
+            return null;
+        }
+        String value = functionOptionLiteral(source.function(), "u:dir", null);
+        if (value != null) {
+            return parseBidiDirection(value);
+        }
+        return bidiDirectionFromSource(source.inherited());
+    }
+
+    private static BidiDirection parseBidiDirection(String value) throws Mf2Exception {
+        return switch (value) {
+            case "auto" -> BidiDirection.AUTO;
+            case "ltr" -> BidiDirection.LTR;
+            case "rtl" -> BidiDirection.RTL;
+            default -> throw new Mf2Exception("bad-option", "u:dir option must be auto, ltr, or rtl.");
+        };
+    }
+
+    private static String functionOptionLiteral(
+            Mf2Message.FunctionRef function, String optionName, String fallback) {
+        Mf2Message.ExpressionArgument option = function.options().get(optionName);
+        return option instanceof Mf2Message.LiteralArgument literal ? literal.value() : fallback;
+    }
+
+    private enum BidiDirection {
+        AUTO("auto"),
+        LTR("ltr"),
+        RTL("rtl");
+
+        private final String name;
+
+        BidiDirection(String name) {
+            this.name = name;
+        }
+    }
+
+    private record SelectorAnnotation(Mf2Message.FunctionRef function, NumberSelect numberSelect) {
         static SelectorAnnotation from(Mf2Message.FunctionRef function) {
             Mf2Message.ExpressionArgument option = function.options().get("select");
             String select = option instanceof Mf2Message.LiteralArgument literal
@@ -691,24 +982,45 @@ final class Mf2Formatter {
                 case "exact" -> NumberSelect.EXACT;
                 default -> NumberSelect.PLURAL;
             };
-            return new SelectorAnnotation(function.name(), numberSelect);
+            return new SelectorAnnotation(function, numberSelect);
         }
 
         boolean exactMatch() {
-            return function.equals("string") || (isNumeric() && numberSelect == NumberSelect.EXACT);
+            return function.name().equals("string") || (isNumeric() && numberSelect == NumberSelect.EXACT);
         }
 
         boolean isString() {
-            return function.equals("string");
+            return function.name().equals("string");
         }
 
         boolean isNumeric() {
-            return function.equals("number") || function.equals("integer");
+            return isNumericFunction(function);
+        }
+
+        String operandForSelection(ResolvedValue value) {
+            String rendered = value.rendered();
+            if (function.name().equals("percent")) {
+                if (rendered.endsWith("%")) {
+                    return rendered.substring(0, rendered.length() - 1);
+                }
+                String sourceValue = value.source() == null ? rendered : value.source().value();
+                try {
+                    return Double.toString(Double.parseDouble(sourceValue) * 100.0);
+                } catch (NumberFormatException ignored) {
+                    return null;
+                }
+            }
+            return rendered;
         }
     }
 
     private record SelectorValue(
-            String rendered, String normalizedRendered, boolean exactMatch, String selectionKey) {}
+            String rendered,
+            String normalizedRendered,
+            boolean exactMatch,
+            String selectionKey,
+            Mf2Message.FunctionRef function,
+            ResolvedFunctionSource source) {}
 
     private interface ArgumentValues {
         boolean contains(String name);

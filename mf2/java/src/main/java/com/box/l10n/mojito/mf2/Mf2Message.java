@@ -169,8 +169,12 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
 
     record FormattedFallback(String source) implements FormattedPart {}
 
-    record FormattedExpression(String value, Map<String, AttributeValue> attributes)
+    record FormattedExpression(String value, Map<String, AttributeValue> attributes, String direction)
             implements FormattedPart {
+        public FormattedExpression(String value, Map<String, AttributeValue> attributes) {
+            this(value, attributes, null);
+        }
+
         public FormattedExpression {
             attributes = Map.copyOf(attributes);
         }

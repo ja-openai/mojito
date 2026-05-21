@@ -55,6 +55,7 @@ Run:
 mvn compile
 mvn test-compile
 sh run.sh conformance
+sh run.sh unicode-tests
 sh run.sh demo
 sh run.sh inline-demo
 sh run.sh datetime-demo
