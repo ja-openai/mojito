@@ -7,7 +7,7 @@ The official Unicode MessageFormat WG test suite is vendored separately under
 `../third_party/message-format-wg/test`. The Rust parser runner reads the
 upstream test shape directly via `cargo run -- unicode-tests`, currently wiring
 syntax success/error, bidi syntax, data-model error, `:string` function,
-fallback, and most pattern-selection checks. Its checked-in baseline lives in
+fallback, and pattern-selection checks. Its checked-in baseline lives in
 `unicode-official-baseline.json`; update it in the same commit when official
 pass/skip/not-wired counts intentionally change. Remaining function suites,
 parts, and draft `u:` option official tests are counted as not wired until the

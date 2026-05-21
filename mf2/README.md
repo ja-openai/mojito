@@ -97,7 +97,8 @@ The current conformance slice covers:
   keys such as `|*|` that remain distinct from catch-all `*`
 - Rust selector function hooks for custom `.match` functions; the official
   Unicode pattern-selection runner uses test-only selector functions and
-  best-match ranking without changing default production functions
+  best-match ranking plus resolved-value metadata propagation through inputs
+  and locals without changing default production functions
 - `:string` selector comparison and duplicate-variant validation use NFC
   internally while preserving model literals and formatted strings byte-for-byte
 - direct and simple indirect selector annotation validation for `.match`

@@ -55,15 +55,14 @@ Supported now:
 - basic `.match` selectors with exact literal keys and `*` fallback, including
   `:number select=exact`
 - function registry selector hooks for custom `.match` functions, including
-  ranked best-match selection used by the Unicode official test harness
+  ranked best-match selection and resolved-value metadata propagation through
+  inputs/locals used by the Unicode official test harness
 - cardinal and ordinal plural category matching for number inputs in every
   generated CLDR plural locale
 
 Unsupported for this first slice:
 
 - locale-sensitive number/date/time formatting
-- resolved-value metadata propagation through inputs/locals for nested
-  selectable function semantics
 - full MF2 Unicode `name` grammar for variables, functions, markup, and options
 
 Run:

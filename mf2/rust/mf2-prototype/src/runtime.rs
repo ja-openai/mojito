@@ -106,12 +106,17 @@ impl FunctionRegistry {
         self.selectors.contains_key(&function.name)
     }
 
+    fn has_formatter(&self, function: &FunctionRef) -> bool {
+        self.formatters.contains_key(&function.name)
+    }
+
     fn format(
         &self,
         value: &str,
         function: &FunctionRef,
         locale: &str,
-        values: &BTreeMap<String, serde_json::Value>,
+        values: &BTreeMap<String, ResolvedValue>,
+        source: Option<&ResolvedFunctionSource>,
     ) -> Result<String, Diagnostic> {
         let Some(formatter) = self.formatters.get(&function.name) else {
             return Err(Diagnostic::new(
@@ -129,6 +134,7 @@ impl FunctionRegistry {
             function,
             locale,
             values,
+            source: source.map(|source| FunctionSourceRef { source, values }),
         })
     }
 
@@ -138,7 +144,8 @@ impl FunctionRegistry {
         function: &FunctionRef,
         key: &str,
         locale: &str,
-        values: &BTreeMap<String, serde_json::Value>,
+        values: &BTreeMap<String, ResolvedValue>,
+        source: Option<&ResolvedFunctionSource>,
     ) -> Result<Option<i32>, Diagnostic> {
         let Some(selector) = self.selectors.get(&function.name) else {
             return Ok(None);
@@ -149,6 +156,7 @@ impl FunctionRegistry {
             key,
             locale,
             values,
+            source: source.map(|source| FunctionSourceRef { source, values }),
         })
     }
 }
@@ -167,7 +175,8 @@ pub struct FunctionCall<'a> {
     value: &'a str,
     function: &'a FunctionRef,
     locale: &'a str,
-    values: &'a BTreeMap<String, serde_json::Value>,
+    values: &'a BTreeMap<String, ResolvedValue>,
+    source: Option<FunctionSourceRef<'a>>,
 }
 
 pub struct FunctionMatch<'a> {
@@ -175,7 +184,14 @@ pub struct FunctionMatch<'a> {
     function: &'a FunctionRef,
     key: &'a str,
     locale: &'a str,
-    values: &'a BTreeMap<String, serde_json::Value>,
+    values: &'a BTreeMap<String, ResolvedValue>,
+    source: Option<FunctionSourceRef<'a>>,
+}
+
+#[derive(Clone, Copy)]
+pub struct FunctionSourceRef<'a> {
+    source: &'a ResolvedFunctionSource,
+    values: &'a BTreeMap<String, ResolvedValue>,
 }
 
 impl<'a> FunctionCall<'a> {
@@ -193,6 +209,10 @@ impl<'a> FunctionCall<'a> {
 
     pub fn option_value(&self, name: &str) -> Result<Option<String>, Diagnostic> {
         option_value(self.function, self.values, name)
+    }
+
+    pub fn inherited_source(&self) -> Option<FunctionSourceRef<'a>> {
+        self.source
     }
 }
 
@@ -216,11 +236,39 @@ impl<'a> FunctionMatch<'a> {
     pub fn option_value(&self, name: &str) -> Result<Option<String>, Diagnostic> {
         option_value(self.function, self.values, name)
     }
+
+    pub fn inherited_source(&self) -> Option<FunctionSourceRef<'a>> {
+        self.source
+    }
+}
+
+impl<'a> FunctionSourceRef<'a> {
+    pub fn value(&self) -> &'a str {
+        &self.source.value
+    }
+
+    pub fn function(&self) -> &'a FunctionRef {
+        &self.source.function
+    }
+
+    pub fn option_value(&self, name: &str) -> Result<Option<String>, Diagnostic> {
+        option_value(&self.source.function, self.values, name)
+    }
+
+    pub fn inherited_source(&self) -> Option<FunctionSourceRef<'a>> {
+        self.source
+            .inherited
+            .as_deref()
+            .map(|source| FunctionSourceRef {
+                source,
+                values: self.values,
+            })
+    }
 }
 
 fn option_value(
     function: &FunctionRef,
-    values: &BTreeMap<String, serde_json::Value>,
+    values: &BTreeMap<String, ResolvedValue>,
     name: &str,
 ) -> Result<Option<String>, Diagnostic> {
     let Some(option) = function
@@ -234,7 +282,7 @@ fn option_value(
         ExpressionArg::Literal { value } => Ok(Some(value.clone())),
         ExpressionArg::Variable { name } => values
             .get(name)
-            .map(value_to_string)
+            .map(ResolvedValue::rendered)
             .map(Some)
             .ok_or_else(|| missing_argument(name)),
     }
@@ -570,9 +618,9 @@ fn declaration_name_value(declaration: &Declaration) -> (&str, &Expression) {
 }
 
 struct FormatContext<'a> {
-    values: BTreeMap<String, serde_json::Value>,
+    values: BTreeMap<String, ResolvedValue>,
     selector_annotations: BTreeMap<String, SelectorAnnotation>,
-    failed_locals: BTreeSet<String>,
+    failed_values: BTreeSet<String>,
     errors: Vec<Diagnostic>,
     locale: String,
     functions: &'a FunctionRegistry,
@@ -586,9 +634,12 @@ impl<'a> FormatContext<'a> {
         functions: &'a FunctionRegistry,
     ) -> Self {
         Self {
-            values: arguments.clone(),
+            values: arguments
+                .iter()
+                .map(|(name, value)| (name.clone(), ResolvedValue::from_json(value.clone())))
+                .collect(),
             selector_annotations: BTreeMap::new(),
-            failed_locals: BTreeSet::new(),
+            failed_values: BTreeSet::new(),
             errors: Vec::new(),
             locale: locale.to_string(),
             functions,
@@ -605,19 +656,73 @@ impl<'a> FormatContext<'a> {
         self.selector_annotations = selector_annotations(declarations);
         for declaration in declarations {
             match declaration {
-                Declaration::Input { .. } => {}
+                Declaration::Input { name, value } => {
+                    self.apply_input_declaration(name, value)?;
+                }
                 Declaration::Local { name, value } => {
                     let rendered = self.format_expression_output(value)?;
                     if rendered.had_error {
-                        self.failed_locals.insert(name.clone());
+                        self.failed_values.insert(name.clone());
+                        self.values.remove(name);
                     } else {
-                        self.values
-                            .insert(name.clone(), serde_json::Value::String(rendered.value));
+                        self.values.insert(
+                            name.clone(),
+                            ResolvedValue::string(rendered.value, rendered.source),
+                        );
                     }
                 }
             }
         }
         Ok(())
+    }
+
+    fn apply_input_declaration(
+        &mut self,
+        name: &str,
+        expression: &Expression,
+    ) -> Result<(), Diagnostic> {
+        let Some(function) = expression.function.as_ref() else {
+            return Ok(());
+        };
+        if !self.functions.has_selector(function) || !self.functions.has_formatter(function) {
+            return Ok(());
+        }
+        let Some(input) = self.values.get(name).cloned() else {
+            if self.fallback {
+                self.failed_values.insert(name.to_string());
+                self.errors.push(unresolved_variable(name));
+                self.errors
+                    .push(bad_operand("Function operand is not available."));
+                return Ok(());
+            }
+            return Err(missing_argument(name));
+        };
+        let value = input.rendered();
+        match self.functions.format(
+            &value,
+            function,
+            &self.locale,
+            &self.values,
+            input.source.as_ref(),
+        ) {
+            Ok(_) => {
+                if let Some(slot) = self.values.get_mut(name) {
+                    slot.source = Some(ResolvedFunctionSource::new(
+                        input.source_value(&value),
+                        function.clone(),
+                        input.source,
+                    ));
+                }
+                Ok(())
+            }
+            Err(error) if self.fallback => {
+                self.errors.push(fallback_error(error));
+                self.failed_values.insert(name.to_string());
+                self.values.remove(name);
+                Ok(())
+            }
+            Err(error) => Err(error),
+        }
     }
 
     fn format_select_to_parts(
@@ -631,14 +736,14 @@ impl<'a> FormatContext<'a> {
                 let annotation = self.selector_annotations.get(&selector.name).cloned();
                 let Some(value) = self.values.get(&selector.name) else {
                     if self.fallback {
-                        let failed_local = self.failed_locals.contains(&selector.name);
-                        if !failed_local {
+                        let failed_value = self.failed_values.contains(&selector.name);
+                        if !failed_value {
                             self.errors.push(unresolved_variable(&selector.name));
                         }
                         if annotation.as_ref().is_some_and(|annotation| {
                             self.functions.has_selector(&annotation.function)
                         }) {
-                            if !failed_local {
+                            if !failed_value {
                                 self.errors
                                     .push(bad_operand("Selector operand is not available."));
                             }
@@ -654,24 +759,27 @@ impl<'a> FormatContext<'a> {
                             exact_match: false,
                             selection_key: None,
                             function: annotation.map(|annotation| annotation.function),
+                            source: None,
                         });
                     }
                     return Err(missing_argument(&selector.name));
                 };
-                let rendered = value_to_string(value);
+                let rendered = value.rendered();
                 let string_select = annotation
                     .as_ref()
                     .is_some_and(|annotation| annotation.is_string());
                 let exact_match = annotation
                     .as_ref()
                     .is_none_or(|annotation| annotation.exact_match());
-                let selection_key = self.selection_key_for_selector(annotation.as_ref(), value);
+                let selection_key =
+                    self.selection_key_for_selector(annotation.as_ref(), value.value());
                 Ok(SelectorValue {
                     normalized_rendered: string_select.then(|| normalize_string_key(&rendered)),
                     rendered,
                     exact_match,
                     selection_key,
                     function: annotation.map(|annotation| annotation.function),
+                    source: value.source.clone(),
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -758,6 +866,7 @@ impl<'a> FormatContext<'a> {
                     value,
                     &self.locale,
                     &self.values,
+                    selector.source.as_ref(),
                 ) {
                     Ok(rank) => Ok(rank),
                     Err(error) if self.fallback => {
@@ -805,54 +914,70 @@ impl<'a> FormatContext<'a> {
         expression: &Expression,
     ) -> Result<ExpressionOutput, Diagnostic> {
         let mut had_error = false;
-        let value = match &expression.arg {
-            Some(ExpressionArg::Variable { name }) => self
-                .values
-                .get(name)
-                .map(value_to_string)
-                .or_else(|| {
-                    if !self.fallback {
-                        return None;
-                    }
+        let (value, source) = match &expression.arg {
+            Some(ExpressionArg::Variable { name }) => {
+                if let Some(value) = self.values.get(name) {
+                    (value.rendered(), value.source.clone())
+                } else if self.fallback {
                     had_error = true;
-                    if !self.failed_locals.contains(name) {
+                    if !self.failed_values.contains(name) {
                         self.errors.push(unresolved_variable(name));
                     }
                     if expression.function.is_some() {
                         self.errors
                             .push(bad_operand("Function operand is not available."));
                     }
-                    Some(fallback_source(expression))
-                })
-                .ok_or_else(|| missing_argument(name))?,
-            Some(ExpressionArg::Literal { value }) => value.clone(),
-            None => String::new(),
+                    (fallback_source(expression), None)
+                } else {
+                    return Err(missing_argument(name));
+                }
+            }
+            Some(ExpressionArg::Literal { value }) => (value.clone(), None),
+            None => (String::new(), None),
         };
 
         if had_error {
             return Ok(ExpressionOutput {
                 value,
                 had_error: true,
+                source: None,
             });
         }
 
         let Some(function) = expression.function.as_ref() else {
-            return Ok(ExpressionOutput { value, had_error });
+            return Ok(ExpressionOutput {
+                value,
+                had_error,
+                source,
+            });
         };
 
-        match self
-            .functions
-            .format(&value, function, &self.locale, &self.values)
-        {
-            Ok(value) => Ok(ExpressionOutput {
-                value,
+        let source_value = source
+            .as_ref()
+            .map(|source| source.value.clone())
+            .unwrap_or_else(|| value.clone());
+        match self.functions.format(
+            &value,
+            function,
+            &self.locale,
+            &self.values,
+            source.as_ref(),
+        ) {
+            Ok(formatted) => Ok(ExpressionOutput {
+                value: formatted,
                 had_error: false,
+                source: Some(ResolvedFunctionSource::new(
+                    source_value,
+                    function.clone(),
+                    source,
+                )),
             }),
             Err(error) if self.fallback => {
                 self.errors.push(fallback_error(error));
                 Ok(ExpressionOutput {
                     value: fallback_source(expression),
                     had_error: true,
+                    source: None,
                 })
             }
             Err(error) => Err(error),
@@ -874,9 +999,68 @@ impl<'a> FormatContext<'a> {
 }
 
 #[derive(Debug, Clone)]
+struct ResolvedValue {
+    value: serde_json::Value,
+    source: Option<ResolvedFunctionSource>,
+}
+
+impl ResolvedValue {
+    fn from_json(value: serde_json::Value) -> Self {
+        Self {
+            value,
+            source: None,
+        }
+    }
+
+    fn string(value: String, source: Option<ResolvedFunctionSource>) -> Self {
+        Self {
+            value: serde_json::Value::String(value),
+            source,
+        }
+    }
+
+    fn rendered(&self) -> String {
+        value_to_string(&self.value)
+    }
+
+    fn value(&self) -> &serde_json::Value {
+        &self.value
+    }
+
+    fn source_value(&self, fallback: &str) -> String {
+        self.source
+            .as_ref()
+            .map(|source| source.value.clone())
+            .unwrap_or_else(|| fallback.to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ResolvedFunctionSource {
+    value: String,
+    function: FunctionRef,
+    inherited: Option<Box<ResolvedFunctionSource>>,
+}
+
+impl ResolvedFunctionSource {
+    fn new(
+        value: String,
+        function: FunctionRef,
+        inherited: Option<ResolvedFunctionSource>,
+    ) -> Self {
+        Self {
+            value,
+            function,
+            inherited: inherited.map(Box::new),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 struct ExpressionOutput {
     value: String,
     had_error: bool,
+    source: Option<ResolvedFunctionSource>,
 }
 
 #[derive(Debug, Clone)]
@@ -886,6 +1070,7 @@ struct SelectorValue {
     exact_match: bool,
     selection_key: Option<String>,
     function: Option<FunctionRef>,
+    source: Option<ResolvedFunctionSource>,
 }
 
 #[derive(Debug, Clone)]

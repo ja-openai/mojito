@@ -20,5 +20,5 @@ pub use runtime::{
     format_model_with_locale_and_functions, format_model_with_locale_and_functions_and_bidi,
     format_model_with_locale_and_functions_and_bidi_and_fallback, BidiIsolation,
     FallbackFormatResult, FallbackPartsResult, FormattedPart, FunctionCall, FunctionMatch,
-    FunctionRegistry,
+    FunctionRegistry, FunctionSourceRef,
 };

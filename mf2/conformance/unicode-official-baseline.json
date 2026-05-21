@@ -1,6 +1,6 @@
 {
-  "passed": 334,
-  "skipped": 2,
+  "passed": 336,
+  "skipped": 0,
   "notWired": 125,
   "total": 461,
   "files": {
@@ -29,8 +29,8 @@
       "skipped": 0
     },
     "tests/pattern-selection.json": {
-      "passed": 20,
-      "skipped": 2
+      "passed": 22,
+      "skipped": 0
     }
   }
 }

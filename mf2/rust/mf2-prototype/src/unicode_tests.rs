@@ -6,7 +6,8 @@ use std::path::{Path, PathBuf};
 use mf2_prototype::{
     format_model_with_locale_and_bidi,
     format_model_with_locale_and_functions_and_bidi_and_fallback, parse_to_model, BidiIsolation,
-    Declaration, FunctionCall, FunctionMatch, FunctionRegistry, MessageModel, ParseResult,
+    Declaration, FunctionCall, FunctionMatch, FunctionRegistry, FunctionSourceRef, MessageModel,
+    ParseResult,
 };
 use serde::Deserialize;
 
@@ -434,18 +435,49 @@ impl OfficialTestState {
 fn official_test_state_from_call(
     call: &FunctionCall<'_>,
 ) -> Result<OfficialTestState, mf2_prototype::Diagnostic> {
-    official_test_state(call.value(), |name| call.option_value(name))
+    official_test_state(call.value(), call.inherited_source(), |name| {
+        call.option_value(name)
+    })
 }
 
 fn official_test_state_from_match(
     call: &FunctionMatch<'_>,
 ) -> Result<OfficialTestState, mf2_prototype::Diagnostic> {
-    official_test_state(call.value(), |name| call.option_value(name))
+    official_test_state(call.value(), call.inherited_source(), |name| {
+        call.option_value(name)
+    })
 }
 
 fn official_test_state(
     value: &str,
+    inherited: Option<FunctionSourceRef<'_>>,
     option_value: impl Fn(&str) -> Result<Option<String>, mf2_prototype::Diagnostic>,
+) -> Result<OfficialTestState, mf2_prototype::Diagnostic> {
+    let mut state = if let Some(source) = inherited {
+        official_test_state_from_source(source)?
+    } else {
+        official_test_state_from_value(value)?
+    };
+    apply_official_test_options(&mut state, option_value)?;
+    Ok(state)
+}
+
+fn official_test_state_from_source(
+    source: FunctionSourceRef<'_>,
+) -> Result<OfficialTestState, mf2_prototype::Diagnostic> {
+    let mut state = if let Some(inherited) = source.inherited_source() {
+        official_test_state_from_source(inherited)?
+    } else {
+        official_test_state_from_value(source.value())?
+    };
+    if is_official_test_function(&source.function().name) {
+        apply_official_test_options(&mut state, |name| source.option_value(name))?;
+    }
+    Ok(state)
+}
+
+fn official_test_state_from_value(
+    value: &str,
 ) -> Result<OfficialTestState, mf2_prototype::Diagnostic> {
     let input = value.parse::<f64>().map_err(|_| {
         mf2_prototype::Diagnostic::new(
@@ -455,9 +487,22 @@ fn official_test_state(
             0,
         )
     })?;
+    Ok(OfficialTestState {
+        input,
+        decimal_places: 0,
+        fails_format: false,
+        fails_select: false,
+    })
+}
+
+fn apply_official_test_options(
+    state: &mut OfficialTestState,
+    option_value: impl Fn(&str) -> Result<Option<String>, mf2_prototype::Diagnostic>,
+) -> Result<(), mf2_prototype::Diagnostic> {
     let decimal_places = match option_value("decimalPlaces")?.as_deref() {
-        None | Some("0") => 0,
-        Some("1") => 1,
+        None => None,
+        Some("0") => Some(0),
+        Some("1") => Some(1),
         Some(_) => {
             return Err(mf2_prototype::Diagnostic::new(
                 "bad-option",
@@ -467,18 +512,27 @@ fn official_test_state(
             ));
         }
     };
-    let (fails_format, fails_select) = match option_value("fails")?.as_deref() {
-        Some("always") => (true, true),
-        Some("format") => (true, false),
-        Some("select") => (false, true),
-        _ => (false, false),
-    };
-    Ok(OfficialTestState {
-        input,
-        decimal_places,
-        fails_format,
-        fails_select,
-    })
+    if let Some(decimal_places) = decimal_places {
+        state.decimal_places = decimal_places;
+    }
+    match option_value("fails")?.as_deref() {
+        Some("always") => {
+            state.fails_format = true;
+            state.fails_select = true;
+        }
+        Some("format") => {
+            state.fails_format = true;
+        }
+        Some("select") => {
+            state.fails_select = true;
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn is_official_test_function(name: &str) -> bool {
+    matches!(name, "test:function" | "test:select" | "test:format")
 }
 
 fn safe_parse(source: &str) -> Option<ParseResult> {
