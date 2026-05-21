@@ -210,6 +210,9 @@ Removed during this workstream:
 - `GlossaryTermService` no longer uses `@Transactional`; glossary term search/detail/summary,
   term writes, extraction, and translation proposal operations now open and commit their
   transaction boundaries explicitly.
+- `AssetExtractionService` no longer uses `@Transactional`; asset-extraction state updates, branch
+  extraction creation/deletion, TM text-unit creation, and asset text-unit creation now open and
+  commit their transaction boundaries explicitly.
 
 In progress:
 
