@@ -18,7 +18,6 @@ import com.box.l10n.mojito.service.drop.importer.DropImporter;
 import com.box.l10n.mojito.service.drop.importer.DropImporterException;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.MsgArg;
 import com.box.l10n.mojito.service.pollableTask.ParentTask;
 import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
@@ -179,16 +178,43 @@ public class DropService {
    * @param parentTask
    * @throws DropExporterException
    */
-  @Pollable(message = "Generate and export translation kit for locale: {bcp47Tag}")
   private void generateAndExportTranslationKit(
-      @MsgArg(name = "bcp47Tag") String bcp47Tag,
+      String bcp47Tag,
       TranslationKit.Type type,
       Boolean useInheritance,
       Drop drop,
       DropExporter dropExporter,
-      @ParentTask PollableTask parentTask)
+      PollableTask parentTask)
       throws DropExporterException {
+    try {
+      pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "generateAndExportTranslationKit",
+              "Generate and export translation kit for locale: " + bcp47Tag,
+              0,
+              getTimeout(parentTask),
+              currentTask -> {
+                generateAndExportTranslationKitDirect(
+                    bcp47Tag, type, useInheritance, drop, dropExporter);
+                return null;
+              }));
+    } catch (DropExporterException e) {
+      throw e;
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error exporting translation kit", t);
+    }
+  }
 
+  private void generateAndExportTranslationKitDirect(
+      String bcp47Tag,
+      TranslationKit.Type type,
+      Boolean useInheritance,
+      Drop drop,
+      DropExporter dropExporter)
+      throws DropExporterException {
     logger.trace("Generate and export translation kits for locale: {}", bcp47Tag);
 
     TranslationKitAsXliff translationKitAsXLIFF =
