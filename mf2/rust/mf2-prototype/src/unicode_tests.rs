@@ -33,6 +33,8 @@ struct TestProperties {
 struct OfficialTest {
     src: String,
     #[serde(default)]
+    exp: Option<String>,
+    #[serde(default)]
     description: Option<String>,
     #[serde(default)]
     locale: Option<String>,
@@ -224,13 +226,25 @@ fn check_parse_test(defaults: &TestProperties, test: &OfficialTest) -> bool {
 
 fn check_data_model_error_test(defaults: &TestProperties, test: &OfficialTest) -> bool {
     let expected_codes = expected_local_codes(defaults, test);
-    if expected_codes.is_empty() {
-        return false;
-    }
 
     let Some(result) = safe_parse(&test.src) else {
         return false;
     };
+    if expected_codes.is_empty() {
+        return test.exp.as_ref().is_some_and(|expected| {
+            let Some(model) = result.model.as_ref() else {
+                return false;
+            };
+            let args = arguments_for(test, model);
+            format_model_with_locale_and_bidi(
+                model,
+                &args,
+                &locale(defaults, test),
+                BidiIsolation::from_name(bidi_isolation(defaults, test).as_deref()),
+            )
+            .is_ok_and(|actual| &actual == expected)
+        });
+    }
     let actual_codes: Vec<String> = if result.diagnostics.is_empty() {
         let Some(model) = result.model.as_ref() else {
             return false;

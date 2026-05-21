@@ -123,7 +123,7 @@ The source-to-model fixtures currently cover:
 - exact-match `.match` selectors and catch-all fallback, including multi-selector
   matching,
   `:number select=exact`, `:integer select=exact`, and primitive `:string`
-  selector values
+  selector values, plus quoted literal variant keys distinct from catch-all `*`
 - direct and simple indirect selector annotations for `.match`
 - cardinal plural category selection for English, French, Russian, Arabic, and
   Japanese fixtures, including `:integer` selection for English
@@ -141,7 +141,7 @@ The invalid-source fixtures currently cover:
 - unsupported placeholders
 - unclosed placeholders
 - unclosed quoted patterns
-- unclosed quoted values in expression tails
+- unclosed quoted values in expression tails and variant keys
 - missing match selectors
 - missing match variants and variant quoted patterns
 - invalid `.match` selector and variant-key adjacency

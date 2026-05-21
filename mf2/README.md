@@ -91,7 +91,8 @@ The current conformance slice covers:
   output in Unicode FSI/PDI while keeping parts output raw
 - exact-match `.match` selectors with catch-all fallback, including
   multi-selector matching,
-  `:number select=exact` and `:integer select=exact`
+  `:number select=exact`, `:integer select=exact`, and quoted literal variant
+  keys such as `|*|` that remain distinct from catch-all `*`
 - direct and simple indirect selector annotation validation for `.match`
 - cardinal and ordinal plural category selection for `:number` and `:integer`
   selectors across the generated all-CLDR locale set

@@ -307,6 +307,21 @@ impl<'a> Parser<'a> {
                 keys.push(VariantKey::CatchAll);
                 continue;
             }
+            if self.peek_char() == Some('|') {
+                let input = &self.source[self.index..];
+                let Some((value, rest)) = parse_quoted_literal(input) else {
+                    self.push_diagnostic(
+                        "unclosed-quoted-literal",
+                        "Quoted variant key is missing closing '|'.",
+                        self.index,
+                        self.source.len(),
+                    );
+                    return None;
+                };
+                self.index += input.len() - rest.len();
+                keys.push(VariantKey::Literal { value });
+                continue;
+            }
             let key = self.take_while(|ch| !is_syntax_whitespace(ch) && ch != '{');
             if !key.is_empty() {
                 keys.push(VariantKey::Literal { value: key });

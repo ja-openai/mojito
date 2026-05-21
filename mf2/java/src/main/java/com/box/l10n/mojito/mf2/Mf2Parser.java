@@ -250,6 +250,21 @@ final class Mf2Parser {
                 keys.add(new Mf2Message.CatchAllVariantKey());
                 continue;
             }
+            if (peekChar() == '|') {
+                String rest = source.substring(index);
+                LiteralSplit split = parseQuotedLiteral(rest);
+                if (split == null) {
+                    pushDiagnostic(
+                            "unclosed-quoted-literal",
+                            "Quoted variant key is missing closing '|'.",
+                            index,
+                            source.length());
+                    return null;
+                }
+                index += rest.length() - split.rest().length();
+                keys.add(new Mf2Message.LiteralVariantKey(split.value()));
+                continue;
+            }
             String key = takeWhile(ch -> !isSyntaxWhitespace(ch) && ch != '{');
             if (!key.isEmpty()) {
                 keys.add(new Mf2Message.LiteralVariantKey(key));
