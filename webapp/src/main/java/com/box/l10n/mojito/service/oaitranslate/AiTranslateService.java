@@ -35,12 +35,11 @@ import com.box.l10n.mojito.service.oaitranslate.AiTranslateType.CompletionInput.
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateType.CompletionMultiTextUnitInput;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateType.CompletionMultiTextUnitInput.TextUnit;
 import com.box.l10n.mojito.service.oaitranslate.GlossaryService.GlossaryTrie;
-import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.MsgArg;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.repository.RepositoryNameNotFoundException;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
@@ -155,6 +154,8 @@ public class AiTranslateService {
 
   PollableTaskBlobStorage pollableTaskBlobStorage;
 
+  PollableTaskRunner pollableTaskRunner;
+
   TextUnitDTOsCacheService textUnitDTOsCacheService;
 
   TMTextUnitVariantRepository tmTextUnitVariantRepository;
@@ -174,6 +175,7 @@ public class AiTranslateService {
       @Qualifier("AiTranslate") RetryBackoffSpec retryBackoffSpec,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
       PollableTaskBlobStorage pollableTaskBlobStorage,
+      PollableTaskRunner pollableTaskRunner,
       PollableTaskService pollableTaskService,
       TextUnitDTOsCacheService textUnitDTOsCacheService,
       AssetTextUnitRepository assetTextUnitRepository,
@@ -197,6 +199,7 @@ public class AiTranslateService {
     this.retryBackoffSpec = retryBackoffSpec;
     this.quartzPollableTaskScheduler = quartzPollableTaskScheduler;
     this.pollableTaskBlobStorage = pollableTaskBlobStorage;
+    this.pollableTaskRunner = pollableTaskRunner;
     this.pollableTaskService = pollableTaskService;
     this.textUnitDTOsCacheService = textUnitDTOsCacheService;
     this.assetTextUnitRepository = assetTextUnitRepository;
@@ -1392,11 +1395,16 @@ public class AiTranslateService {
         lineageRequestGroupId);
   }
 
-  @Pollable(message = "AiTranslateService Retry import for job id: {id}")
-  public PollableFuture<Void> retryImport(
-      @MsgArg(name = "id") long childPollableTaskId,
-      boolean resume,
-      @InjectCurrentTask PollableTask currentTask) {
+  public PollableFuture<Void> retryImport(long childPollableTaskId, boolean resume) {
+    return pollableTaskRunner.runSyncFuture(
+        PollableTaskInvocation.ofFuture(
+            "retryImport",
+            "AiTranslateService Retry import for job id: " + childPollableTaskId,
+            currentTask -> retryImportForTask(childPollableTaskId, resume, currentTask)));
+  }
+
+  PollableFuture<Void> retryImportForTask(
+      long childPollableTaskId, boolean resume, PollableTask currentTask) {
     PollableTask childPollableTask = pollableTaskService.getPollableTask(childPollableTaskId);
 
     AiTranslateBatchesImportInput aiTranslateBatchesImportInput =

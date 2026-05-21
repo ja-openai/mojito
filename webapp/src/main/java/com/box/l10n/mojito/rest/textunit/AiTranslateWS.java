@@ -171,8 +171,7 @@ public class AiTranslateWS {
     PollableFuture<Void> pollableFuture =
         aiTranslateService.retryImport(
             protoAiTranslateRetryImportRequest.childPollableTaskId(),
-            protoAiTranslateRetryImportRequest.resume(),
-            PollableTask.INJECT_CURRENT_TASK);
+            protoAiTranslateRetryImportRequest.resume());
     return new ProtoAiTranslateRetryImportResponse(pollableFuture.getPollableTask().getId());
   }
 
