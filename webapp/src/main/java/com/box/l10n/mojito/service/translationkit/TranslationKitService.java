@@ -9,7 +9,9 @@ import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TranslationKit;
 import com.box.l10n.mojito.entity.TranslationKitTextUnit;
+import com.box.l10n.mojito.okapi.ImportExportTextUnitUtils;
 import com.box.l10n.mojito.okapi.RawDocument;
+import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.okapi.XLIFFWriter;
 import com.box.l10n.mojito.service.drop.DropRepository;
 import com.box.l10n.mojito.service.languagedetection.LanguageDetectionResult;
@@ -74,6 +76,10 @@ public class TranslationKitService {
 
   @Autowired RepositoryLocaleRepository repositoryLocaleRepository;
 
+  @Autowired ImportExportTextUnitUtils importExportTextUnitUtils;
+
+  @Autowired TextUnitUtils textUnitUtils;
+
   /**
    * Generates and gets a translation kit in XLIFF format for a given {@link TM} and {@link Locale}
    *
@@ -106,7 +112,14 @@ public class TranslationKitService {
     IPipelineDriver driver = new PipelineDriver();
     driver.addStep(
         new RawDocumentToFilterEventsStep(
-            new TranslationKitFilter(translationKit.getId(), type, useInheritance)));
+            new TranslationKitFilter(
+                translationKit.getId(),
+                type,
+                useInheritance,
+                this,
+                localeService,
+                importExportTextUnitUtils,
+                textUnitUtils)));
     driver.addStep(tksStep);
     driver.addStep(filterEventsWriterStep);
 
