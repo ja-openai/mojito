@@ -65,8 +65,9 @@ Removed during this workstream:
 In progress:
 
 - `@Pollable` still annotates service entrypoints, but runtime execution is now centralized in the
-  Spring-managed `PollableTaskRunner`. `PollableAspect` is only an adapter, and
-  `PollableAspectParameters` plus `PollableCallable` no longer rely on `@Configurable` injection.
+  Spring-managed `PollableTaskRunner`. `PollableAspect` is only an adapter, and services can now
+  call `PollableTaskRunner` directly with a `PollableTaskInvocation`. `PollableAspectParameters`
+  plus `PollableCallable` no longer rely on `@Configurable` injection.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

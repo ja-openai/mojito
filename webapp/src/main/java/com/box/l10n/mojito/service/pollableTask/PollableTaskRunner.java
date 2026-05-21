@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.pollableTask;
 
 import com.box.l10n.mojito.aspect.util.AspectJUtils;
 import com.box.l10n.mojito.entity.PollableTask;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -56,7 +57,9 @@ public class PollableTaskRunner {
 
     logger.debug(
         "Create the PollableFutureTask that will hold the method result and Pollable instance");
-    PollableFutureTask<Object> pollableFuture = createPollableFuture(pollableTask, pjp);
+    PollableFutureTask<Object> pollableFuture =
+        createPollableFuture(
+            pollableTask, currentTask -> pjp.proceed(getInjectedArgs(pjp, currentTask)));
 
     if (pollableAspectParameters.isAsync()) {
       return asyncExecute(pollableFuture, getFunctionReturnType(pjp));
@@ -65,13 +68,43 @@ public class PollableTaskRunner {
     }
   }
 
-  PollableFutureTask<Object> createPollableFuture(
-      final PollableTask pollableTask, final ProceedingJoinPoint pjp) {
+  public <T> PollableFuture<T> runAsync(PollableTaskInvocation<T> invocation) {
+    PollableFutureTask<T> pollableFuture =
+        createPollableFuture(createPollableTask(invocation), invocation.operation());
+    pollableTaskExecutor.submit(pollableFuture);
+    return pollableFuture;
+  }
+
+  public <T> T runSync(PollableTaskInvocation<T> invocation) throws Throwable {
+    PollableFutureTask<T> pollableFuture =
+        createPollableFuture(createPollableTask(invocation), invocation.operation());
+    pollableFuture.run();
+    try {
+      return pollableFuture.get();
+    } catch (ExecutionException ee) {
+      throw ee.getCause();
+    }
+  }
+
+  private PollableTask createPollableTask(PollableTaskInvocation<?> invocation) {
+    logger.debug(
+        "Create the PollableTask to keep track of method: {} execution", invocation.name());
+    return pollableTaskService.createPollableTask(
+        invocation.parentId(),
+        invocation.name(),
+        invocation.message(),
+        invocation.expectedSubTaskNumber(),
+        invocation.timeout());
+  }
+
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  <T> PollableFutureTask<T> createPollableFuture(
+      final PollableTask pollableTask, final PollableTaskOperation<?> operation) {
     PollableCallable pollableCallable =
         new PollableCallable(
-            pollableTask, pjp, pollableTaskService, aspectJUtils, pollableTaskExceptionUtils);
-    PollableFutureTask<Object> pollableFutureTask =
-        new PollableFutureTask<>(pollableCallable, pollableTask);
+            pollableTask, operation, pollableTaskService, pollableTaskExceptionUtils);
+    PollableFutureTask<T> pollableFutureTask =
+        new PollableFutureTask(pollableCallable, pollableTask);
     pollableCallable.setPollableFutureTask(pollableFutureTask);
     return pollableFutureTask;
   }
@@ -158,5 +191,24 @@ public class PollableTaskRunner {
     logger.debug("Get the return type of the instrumented method");
     MethodSignature methodSignature = (MethodSignature) pjp.getSignature();
     return methodSignature.getReturnType();
+  }
+
+  /**
+   * Gets the injected method arguments.
+   *
+   * <p>Any argument annotated with {@link InjectCurrentTask} will be substituted by an instance of
+   * the provided {@link PollableTask}.
+   */
+  private Object[] getInjectedArgs(ProceedingJoinPoint pjp, PollableTask pollableTask) {
+    Object[] args = pjp.getArgs();
+
+    List<AnnotatedMethodParam<InjectCurrentTask>> findAnnotatedMethodParams =
+        aspectJUtils.findAnnotatedMethodParams(pjp, InjectCurrentTask.class);
+
+    for (AnnotatedMethodParam<InjectCurrentTask> annotatedMethodParam : findAnnotatedMethodParams) {
+      args[annotatedMethodParam.getIndex()] = pollableTask;
+    }
+
+    return args;
   }
 }

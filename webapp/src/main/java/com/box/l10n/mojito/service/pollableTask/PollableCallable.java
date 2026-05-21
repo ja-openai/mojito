@@ -1,10 +1,7 @@
 package com.box.l10n.mojito.service.pollableTask;
 
-import com.box.l10n.mojito.aspect.util.AspectJUtils;
 import com.box.l10n.mojito.entity.PollableTask;
-import java.util.List;
 import java.util.concurrent.Callable;
-import org.aspectj.lang.ProceedingJoinPoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,25 +20,21 @@ public class PollableCallable implements Callable {
 
   final PollableTaskService pollableTaskService;
 
-  final AspectJUtils aspectJUtils;
-
   final PollableTaskExceptionUtils pollableTaskExceptionUtils;
 
   PollableTask pollableTask;
-  ProceedingJoinPoint pjp;
+  PollableTaskOperation<?> operation;
 
   PollableFutureTask pollableFutureTask;
 
   public PollableCallable(
       PollableTask pollableTask,
-      ProceedingJoinPoint pjp,
+      PollableTaskOperation<?> operation,
       PollableTaskService pollableTaskService,
-      AspectJUtils aspectJUtils,
       PollableTaskExceptionUtils pollableTaskExceptionUtils) {
     this.pollableTask = pollableTask;
-    this.pjp = pjp;
+    this.operation = operation;
     this.pollableTaskService = pollableTaskService;
-    this.aspectJUtils = aspectJUtils;
     this.pollableTaskExceptionUtils = pollableTaskExceptionUtils;
   }
 
@@ -52,7 +45,7 @@ public class PollableCallable implements Callable {
     PollableFuture pollableFuture = new PollableFutureTaskResult();
 
     try {
-      Object proceed = pjp.proceed(getInjectedArgs(pjp, pollableTask));
+      Object proceed = operation.call(pollableTask);
 
       if (proceed instanceof PollableFuture) {
         pollableFuture = (PollableFuture) proceed;
@@ -113,30 +106,6 @@ public class PollableCallable implements Callable {
     }
 
     return expectedSubTaskNumberOverride;
-  }
-
-  /**
-   * Gets the injected method arguments.
-   *
-   * <p>Any argument annotated with {@link InjectCurrentTask} will be substituted by an instance of
-   * the provided {@link PollableTask}
-   *
-   * @param pjp contains the args to be processed
-   * @param pollableTask task to be injected
-   * @return the inject method arguments
-   */
-  private Object[] getInjectedArgs(ProceedingJoinPoint pjp, PollableTask pollableTask) {
-
-    Object[] args = pjp.getArgs();
-
-    List<AnnotatedMethodParam<InjectCurrentTask>> findAnnotatedMethodParams =
-        aspectJUtils.findAnnotatedMethodParams(pjp, InjectCurrentTask.class);
-
-    for (AnnotatedMethodParam<InjectCurrentTask> annotatedMethodParam : findAnnotatedMethodParams) {
-      args[annotatedMethodParam.getIndex()] = pollableTask;
-    }
-
-    return args;
   }
 
   void setPollableFutureTask(PollableFutureTask pollableFutureTask) {
