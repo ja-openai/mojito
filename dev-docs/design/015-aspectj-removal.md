@@ -134,6 +134,8 @@ Removed during this workstream:
   status updates, and recent-run reads now open their transaction boundaries explicitly.
 - `AssetIntegrityCheckerService.addToRepository` no longer uses `@Transactional`; integrity
   checker creation now opens and commits its transaction explicitly.
+- `AiTranslateAutomationConfigService.updateConfig` no longer uses `@Transactional`; automation
+  config writes now open and commit their transaction explicitly.
 
 In progress:
 
