@@ -14,7 +14,6 @@ import net.sf.okapi.common.filters.FilterConfiguration;
 import net.sf.okapi.common.resource.RawDocument;
 import net.sf.okapi.common.resource.TextUnit;
 import net.sf.okapi.filters.regex.RegexFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Overrides {@link RegexFilter} to handle escape/unescape special characters
@@ -26,7 +25,8 @@ public class MacStringsFilter extends RegexEscapeDoubleQuoteFilter {
   public static final String FILTER_CONFIG_ID = "okf_regex@mojito";
   private static final String REMOVE_COMMENTS = "removeComment";
 
-  @Autowired ExtractUsagesFromTextUnitComments extractUsagesFromTextUnitComments;
+  ExtractUsagesFromTextUnitComments extractUsagesFromTextUnitComments =
+      new ExtractUsagesFromTextUnitComments();
 
   boolean removeComment = false;
 

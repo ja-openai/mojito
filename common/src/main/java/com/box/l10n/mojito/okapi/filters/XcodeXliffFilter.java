@@ -6,12 +6,10 @@ import net.sf.okapi.common.filters.FilterConfiguration;
 import net.sf.okapi.common.skeleton.ISkeletonWriter;
 import net.sf.okapi.filters.xliff.XLIFFFilter;
 import net.sf.okapi.filters.xliff.XLIFFSkeletonWriter;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author jyi
  */
-@Configurable
 public class XcodeXliffFilter extends XLIFFFilter {
 
   public static final String FILTER_CONFIG_ID = "okf_xliff@mojito-xcode";

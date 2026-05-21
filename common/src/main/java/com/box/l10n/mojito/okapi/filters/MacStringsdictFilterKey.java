@@ -13,13 +13,10 @@ import net.sf.okapi.common.skeleton.GenericSkeleton;
 import net.sf.okapi.common.skeleton.GenericSkeletonPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author emagalindan
  */
-@Configurable
 public class MacStringsdictFilterKey extends XMLFilter {
 
   /** logger */
@@ -36,15 +33,28 @@ public class MacStringsdictFilterKey extends XMLFilter {
 
   List<Event> eventQueue = new ArrayList<>();
 
-  @Autowired TextUnitUtils textUnitUtils;
+  TextUnitUtils textUnitUtils;
 
-  @Autowired ExtractUsagesFromTextUnitComments extractUsagesFromTextUnitComments;
+  ExtractUsagesFromTextUnitComments extractUsagesFromTextUnitComments;
 
-  @Autowired UnescapeUtils unescapeUtils;
+  UnescapeUtils unescapeUtils;
 
   boolean hasAnnotation;
 
   String comment;
+
+  public MacStringsdictFilterKey() {
+    this(new TextUnitUtils(), new ExtractUsagesFromTextUnitComments(), new UnescapeUtils());
+  }
+
+  public MacStringsdictFilterKey(
+      TextUnitUtils textUnitUtils,
+      ExtractUsagesFromTextUnitComments extractUsagesFromTextUnitComments,
+      UnescapeUtils unescapeUtils) {
+    this.textUnitUtils = textUnitUtils;
+    this.extractUsagesFromTextUnitComments = extractUsagesFromTextUnitComments;
+    this.unescapeUtils = unescapeUtils;
+  }
 
   @Override
   public String getName() {
