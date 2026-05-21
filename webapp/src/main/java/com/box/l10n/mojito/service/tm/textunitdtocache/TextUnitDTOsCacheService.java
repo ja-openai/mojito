@@ -17,7 +17,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
-import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -61,6 +62,8 @@ public class TextUnitDTOsCacheService {
 
   @Autowired AssetRepository assetRepository;
 
+  @Autowired MeterRegistry meterRegistry;
+
   public ImmutableMap<String, TextUnitDTO> getTextUnitDTOsForAssetAndLocaleByMD5(
       Long assetId,
       Long localeId,
@@ -92,22 +95,34 @@ public class TextUnitDTOsCacheService {
         .collect(ImmutableMap.toImmutableMap(funGetTextUnitDTOMd5(), Function.identity()));
   }
 
-  @Timed("TextUnitDTOsCacheService.getTextUnitDTOsForAssetAndLocale")
   public ImmutableList<TextUnitDTO> getTextUnitDTOsForAssetAndLocale(
       Long assetId, Long localeId, boolean isRootLocale, UpdateType updateType) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
 
-    Optional<ImmutableList<TextUnitDTO>> optionalTextUnitDTOs =
-        textUnitDTOsCacheBlobStorage.getTextUnitDTOs(assetId, localeId);
+    try {
+      Optional<ImmutableList<TextUnitDTO>> optionalTextUnitDTOs =
+          textUnitDTOsCacheBlobStorage.getTextUnitDTOs(assetId, localeId);
 
-    ImmutableList<TextUnitDTO> textUnitDTOs = optionalTextUnitDTOs.orElse(ImmutableList.of());
+      ImmutableList<TextUnitDTO> textUnitDTOs = optionalTextUnitDTOs.orElse(ImmutableList.of());
 
-    if (UpdateType.ALWAYS.equals(updateType)
-        || (UpdateType.IF_MISSING.equals(updateType) && !optionalTextUnitDTOs.isPresent())) {
-      textUnitDTOs =
-          updateTextUnitDTOsWithDeltaFromDatabase(textUnitDTOs, assetId, localeId, isRootLocale);
+      if (UpdateType.ALWAYS.equals(updateType)
+          || (UpdateType.IF_MISSING.equals(updateType) && !optionalTextUnitDTOs.isPresent())) {
+        textUnitDTOs =
+            updateTextUnitDTOsWithDeltaFromDatabase(textUnitDTOs, assetId, localeId, isRootLocale);
+      }
+
+      return textUnitDTOs;
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "TextUnitDTOsCacheService.getTextUnitDTOsForAssetAndLocale",
+          "getTextUnitDTOsForAssetAndLocale",
+          sample,
+          exceptionClass);
     }
-
-    return textUnitDTOs;
   }
 
   /**
@@ -120,52 +135,65 @@ public class TextUnitDTOsCacheService {
    * @param isRootLocale
    * @return
    */
-  @Timed("TextUnitDTOsCacheService.updateTextUnitDTOsWithDeltaFromDatabase")
   ImmutableList<TextUnitDTO> updateTextUnitDTOsWithDeltaFromDatabase(
       ImmutableList<TextUnitDTO> toUpdate, Long assetId, Long localeId, boolean isRootLocale) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
 
-    Asset asset = getAssetById(assetId);
+    try {
+      Asset asset = getAssetById(assetId);
 
-    ImmutableList<TMTextUnitCurrentVariantDTO> currentTranslations =
-        getCurrentTranslationsOfAllTextUnits(assetId, localeId);
-    ImmutableList<Long> idsOfAllTextUnits = getIdsOfAllTextUnits(assetId);
-    ImmutableSet<Long> idsOfUsedTextUnits = getIdsOfUsedTextUnits(asset);
-    ImmutableSet<Long> tmTextUnitIdsOfDoNotTranslateTextUnits =
-        getTmTextUnitIdsOfDoNotTranslateUnits(asset);
+      ImmutableList<TMTextUnitCurrentVariantDTO> currentTranslations =
+          getCurrentTranslationsOfAllTextUnits(assetId, localeId);
+      ImmutableList<Long> idsOfAllTextUnits = getIdsOfAllTextUnits(assetId);
+      ImmutableSet<Long> idsOfUsedTextUnits = getIdsOfUsedTextUnits(asset);
+      ImmutableSet<Long> tmTextUnitIdsOfDoNotTranslateTextUnits =
+          getTmTextUnitIdsOfDoNotTranslateUnits(asset);
 
-    ImmutableMap<Long, TextUnitDTO> toUpdateByTmTextUnitIds =
-        toUpdate.stream()
-            .collect(
-                ImmutableMap.toImmutableMap(TextUnitDTO::getTmTextUnitId, Function.identity()));
+      ImmutableMap<Long, TextUnitDTO> toUpdateByTmTextUnitIds =
+          toUpdate.stream()
+              .collect(
+                  ImmutableMap.toImmutableMap(TextUnitDTO::getTmTextUnitId, Function.identity()));
 
-    ImmutableSet<Long> textUnitIdsToFetch =
-        Streams.concat(
-                getTmTextUnitIdsForNewTranslations(currentTranslations, toUpdateByTmTextUnitIds),
-                getTmTextUnitIdsOfMissingTextUnits(idsOfAllTextUnits, toUpdateByTmTextUnitIds),
-                getTmTextUnitIdsForChangedUsedStatus(idsOfUsedTextUnits, toUpdate),
-                getTmTextUnitIdsForChangedTranslateStatus(
-                    tmTextUnitIdsOfDoNotTranslateTextUnits, toUpdate))
-            .collect(ImmutableSet.toImmutableSet());
+      ImmutableSet<Long> textUnitIdsToFetch =
+          Streams.concat(
+                  getTmTextUnitIdsForNewTranslations(currentTranslations, toUpdateByTmTextUnitIds),
+                  getTmTextUnitIdsOfMissingTextUnits(idsOfAllTextUnits, toUpdateByTmTextUnitIds),
+                  getTmTextUnitIdsForChangedUsedStatus(idsOfUsedTextUnits, toUpdate),
+                  getTmTextUnitIdsForChangedTranslateStatus(
+                      tmTextUnitIdsOfDoNotTranslateTextUnits, toUpdate))
+              .collect(ImmutableSet.toImmutableSet());
 
-    logger.debug(
-        "Number of text units to fetch: {} (of total: {})",
-        textUnitIdsToFetch.size(),
-        idsOfAllTextUnits.size());
+      logger.debug(
+          "Number of text units to fetch: {} (of total: {})",
+          textUnitIdsToFetch.size(),
+          idsOfAllTextUnits.size());
 
-    ImmutableMap<Long, TextUnitDTO> fetchedByTmTextUnitId =
-        fetchTextUnitDTOForTmTextUnitIds(assetId, localeId, isRootLocale, textUnitIdsToFetch);
+      ImmutableMap<Long, TextUnitDTO> fetchedByTmTextUnitId =
+          fetchTextUnitDTOForTmTextUnitIds(assetId, localeId, isRootLocale, textUnitIdsToFetch);
 
-    ImmutableList<TextUnitDTO> textUnitDTOsForAllTextUnits =
-        getTextUnitDTOsForAllTextUnits(
-            asset, idsOfAllTextUnits, toUpdateByTmTextUnitIds, fetchedByTmTextUnitId);
+      ImmutableList<TextUnitDTO> textUnitDTOsForAllTextUnits =
+          getTextUnitDTOsForAllTextUnits(
+              asset, idsOfAllTextUnits, toUpdateByTmTextUnitIds, fetchedByTmTextUnitId);
 
-    if (!toUpdate.equals(textUnitDTOsForAllTextUnits)) {
-      textUnitDTOsCacheBlobStorage.putTextUnitDTOs(assetId, localeId, textUnitDTOsForAllTextUnits);
-    } else {
-      logger.debug("No change in text units, don't write blob");
+      if (!toUpdate.equals(textUnitDTOsForAllTextUnits)) {
+        textUnitDTOsCacheBlobStorage.putTextUnitDTOs(
+            assetId, localeId, textUnitDTOsForAllTextUnits);
+      } else {
+        logger.debug("No change in text units, don't write blob");
+      }
+
+      return textUnitDTOsForAllTextUnits;
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "TextUnitDTOsCacheService.updateTextUnitDTOsWithDeltaFromDatabase",
+          "updateTextUnitDTOsWithDeltaFromDatabase",
+          sample,
+          exceptionClass);
     }
-
-    return textUnitDTOsForAllTextUnits;
   }
 
   /**
@@ -308,9 +336,22 @@ public class TextUnitDTOsCacheService {
    * @param assetId
    * @return
    */
-  @Timed("TextUnitDTOsCacheService.getIdsOfAllTextUnits")
   ImmutableList<Long> getIdsOfAllTextUnits(Long assetId) {
-    return ImmutableList.copyOf(tmTextUnitRepository.getTextUnitIdsByAssetId(assetId));
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      return ImmutableList.copyOf(tmTextUnitRepository.getTextUnitIdsByAssetId(assetId));
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "TextUnitDTOsCacheService.getIdsOfAllTextUnits",
+          "getIdsOfAllTextUnits",
+          sample,
+          exceptionClass);
+    }
   }
 
   /**
@@ -325,11 +366,24 @@ public class TextUnitDTOsCacheService {
    * @param localeId
    * @return
    */
-  @Timed("TextUnitDTOsCacheService.getCurrentTranslationsOfAllTextUnits")
   ImmutableList<TMTextUnitCurrentVariantDTO> getCurrentTranslationsOfAllTextUnits(
       Long assetId, Long localeId) {
-    return ImmutableList.copyOf(
-        tmTextUnitCurrentVariantRepository.findByAsset_idAndLocale_Id(assetId, localeId));
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      return ImmutableList.copyOf(
+          tmTextUnitCurrentVariantRepository.findByAsset_idAndLocale_Id(assetId, localeId));
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "TextUnitDTOsCacheService.getCurrentTranslationsOfAllTextUnits",
+          "getCurrentTranslationsOfAllTextUnits",
+          sample,
+          exceptionClass);
+    }
   }
 
   /**
@@ -393,4 +447,17 @@ public class TextUnitDTOsCacheService {
         textUnitUtils.computeTextUnitMD5(
             textUnitDTO.getName(), textUnitDTO.getSource(), textUnitDTO.getComment());
   }
+
+  private void recordTimer(
+      String metricName, String methodName, Timer.Sample sample, String exceptionClass) {
+    sample.stop(
+        Timer.builder(metricName)
+            .tag(EXCEPTION_TAG, exceptionClass)
+            .tag("class", TextUnitDTOsCacheService.class.getName())
+            .tag("method", methodName)
+            .register(meterRegistry));
+  }
+
+  static final String DEFAULT_EXCEPTION_TAG_VALUE = "none";
+  static final String EXCEPTION_TAG = "exception";
 }
