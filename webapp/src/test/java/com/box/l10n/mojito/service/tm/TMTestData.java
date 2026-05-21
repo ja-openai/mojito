@@ -5,7 +5,6 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetExtraction;
 import com.box.l10n.mojito.entity.AssetTextUnit;
 import com.box.l10n.mojito.entity.Locale;
-import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.entity.TM;
@@ -163,7 +162,7 @@ public class TMTestData {
             assetExtraction, "TEST2", "Content2", "Comment2");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction.getId(), tm.getId(), assetId, null, PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction.getId(), tm.getId(), assetId, null, null);
     assetExtractionService.markAssetExtractionAsLastSuccessful(asset, assetExtraction);
 
     addCurrentTMTextUnitVariant1KoKR =

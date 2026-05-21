@@ -7,7 +7,6 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetExtraction;
 import com.box.l10n.mojito.entity.AssetTextUnit;
 import com.box.l10n.mojito.entity.AssetTextUnitToTMTextUnit;
-import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.entity.TMTextUnit;
@@ -395,7 +394,7 @@ public class AssetMappingServiceTest extends ServiceTestBase {
         tmTextUnitRepository.findByTm_id(tm.getId()).size());
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction.getId(), tm.getId(), asset.getId(), null, PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction.getId(), tm.getId(), asset.getId(), null, null);
 
     assertEquals(
         "All AssetTextUnit must be mapped",
@@ -425,11 +424,7 @@ public class AssetMappingServiceTest extends ServiceTestBase {
         assetExtraction2, "TEST2C", "Content2C", "Comment2C");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction2.getId(),
-        tm.getId(),
-        asset.getId(),
-        null,
-        PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction2.getId(), tm.getId(), asset.getId(), null, null);
     assertEquals(
         "All AssetTextUnit must be mapped",
         0,
@@ -454,11 +449,7 @@ public class AssetMappingServiceTest extends ServiceTestBase {
         assetExtraction3, "TEST3C", "Content3C", "Comment3C");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction3.getId(),
-        tm.getId(),
-        asset.getId(),
-        null,
-        PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction3.getId(), tm.getId(), asset.getId(), null, null);
     assertEquals(
         "All AssetTextUnit must be mapped",
         0,
@@ -511,7 +502,7 @@ public class AssetMappingServiceTest extends ServiceTestBase {
     assetExtractionService.createAssetTextUnit(assetExtraction, "TEST2A", "Content2A", "Comment2A");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction.getId(), tm.getId(), asset.getId(), null, PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction.getId(), tm.getId(), asset.getId(), null, null);
     assetExtractionService.markAssetExtractionAsLastSuccessful(asset, assetExtraction);
 
     logger.debug(
@@ -544,11 +535,7 @@ public class AssetMappingServiceTest extends ServiceTestBase {
         assetExtraction2, "TEST2A", "Content2A", "Comment2A");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction2.getId(),
-        tm.getId(),
-        asset.getId(),
-        null,
-        PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction2.getId(), tm.getId(), asset.getId(), null, null);
     assetExtractionService.markAssetExtractionAsLastSuccessful(asset, assetExtraction2);
 
     TMTextUnit tmTextUnitForLeveraging2 =
@@ -617,11 +604,7 @@ public class AssetMappingServiceTest extends ServiceTestBase {
         assetExtraction3, "TEST2A", "Content2A", "Comment2A");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction3.getId(),
-        tm.getId(),
-        asset.getId(),
-        null,
-        PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction3.getId(), tm.getId(), asset.getId(), null, null);
     assetExtractionService.markAssetExtractionAsLastSuccessful(asset, assetExtraction3);
 
     TMTextUnit tmTextUnitForLeveraging3 =
@@ -696,11 +679,7 @@ public class AssetMappingServiceTest extends ServiceTestBase {
         assetExtraction4, "TEST2A", "Content2A", "Comment2A");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction4.getId(),
-        tm.getId(),
-        asset.getId(),
-        null,
-        PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction4.getId(), tm.getId(), asset.getId(), null, null);
     assetExtractionService.markAssetExtractionAsLastSuccessful(asset, assetExtraction4);
 
     TMTextUnit tmTextUnitForLeveraging4 =
@@ -780,11 +759,7 @@ public class AssetMappingServiceTest extends ServiceTestBase {
             assetExtraction5, "TEST2A", "Content1B", "Comment2A");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction5.getId(),
-        tm.getId(),
-        asset.getId(),
-        null,
-        PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction5.getId(), tm.getId(), asset.getId(), null, null);
     assetExtractionService.markAssetExtractionAsLastSuccessful(asset, assetExtraction5);
 
     TMTextUnit tmTextUnitForLeveraging5 =
@@ -967,11 +942,7 @@ public class AssetMappingServiceTest extends ServiceTestBase {
             assetExtraction6, "TEST6A", "Content1B", "Comment6A");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction6.getId(),
-        tm.getId(),
-        asset.getId(),
-        null,
-        PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction6.getId(), tm.getId(), asset.getId(), null, null);
     assetExtractionService.markAssetExtractionAsLastSuccessful(asset, assetExtraction6);
 
     TMTextUnit tmTextUnitForLeveraging6 =

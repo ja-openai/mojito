@@ -48,9 +48,6 @@ import org.springframework.data.annotation.CreatedBy;
     })
 public class PollableTask extends AuditableEntity {
 
-  /** Legacy null marker used by deprecated test-facing APIs that still accept a parent task. */
-  public static final PollableTask INJECT_CURRENT_TASK = null;
-
   @Basic(optional = false)
   @Column(name = "name")
   private String name;

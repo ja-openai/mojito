@@ -10,7 +10,6 @@ import com.box.l10n.mojito.entity.AssetExtraction;
 import com.box.l10n.mojito.entity.AssetIntegrityChecker;
 import com.box.l10n.mojito.entity.AssetTextUnit;
 import com.box.l10n.mojito.entity.Locale;
-import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.service.asset.VirtualAsset;
@@ -179,11 +178,7 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
             assetExtraction, "TEST4", "Content4b", "comment4");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction.getId(),
-        tmTestData.tm.getId(),
-        tmTestData.asset.getId(),
-        null,
-        PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction.getId(), tmTestData.tm.getId(), tmTestData.asset.getId(), null, null);
     assetExtractionService.markAssetExtractionAsLastSuccessful(tmTestData.asset, assetExtraction);
 
     TextUnitSearcherParameters textUnitSearcherParameters =
@@ -231,11 +226,7 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
             assetExtraction, "TEST4", "Content4", "comment4");
 
     assetMappingService.mapAssetTextUnitAndCreateTMTextUnit(
-        assetExtraction.getId(),
-        tmTestData.tm.getId(),
-        tmTestData.asset.getId(),
-        null,
-        PollableTask.INJECT_CURRENT_TASK);
+        assetExtraction.getId(), tmTestData.tm.getId(), tmTestData.asset.getId(), null, null);
     assetExtractionService.markAssetExtractionAsLastSuccessful(tmTestData.asset, assetExtraction);
 
     TextUnitSearcherParameters textUnitSearcherParameters =
