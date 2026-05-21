@@ -68,6 +68,8 @@ In progress:
   Spring-managed `PollableTaskRunner`. `PollableAspect` is only an adapter, and services can now
   call `PollableTaskRunner` directly with a `PollableTaskInvocation`. `PollableAspectParameters`
   plus `PollableCallable` no longer rely on `@Configurable` injection.
+- `TemporaryBulkTranslationAcceptService` no longer uses `@Pollable`; its dry-run and execute async
+  entrypoints call `PollableTaskRunner` directly.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
