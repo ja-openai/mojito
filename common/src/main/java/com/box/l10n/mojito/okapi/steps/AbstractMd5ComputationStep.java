@@ -14,15 +14,12 @@ import net.sf.okapi.common.resource.RawDocument;
 import net.sf.okapi.common.resource.TextUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * Step to compute md5 from the {@link TextUnit}.
  *
  * @author jyi
  */
-@Configurable
 public abstract class AbstractMd5ComputationStep extends BasePipelineStep {
 
   /** Logger */
@@ -34,7 +31,7 @@ public abstract class AbstractMd5ComputationStep extends BasePipelineStep {
    */
   private static final String COMMENT_TO_IGNORE = "No comment provided by engineer";
 
-  @Autowired protected TextUnitUtils textUnitUtils;
+  protected TextUnitUtils textUnitUtils;
 
   protected String name;
   protected String source;
@@ -54,6 +51,14 @@ public abstract class AbstractMd5ComputationStep extends BasePipelineStep {
 
   protected boolean shouldConvertToHtmlCodes = false;
   protected RawDocument rawDocument;
+
+  protected AbstractMd5ComputationStep() {
+    this(new TextUnitUtils());
+  }
+
+  protected AbstractMd5ComputationStep(TextUnitUtils textUnitUtils) {
+    this.textUnitUtils = textUnitUtils;
+  }
 
   @StepParameterMapping(parameterType = StepParameterType.INPUT_RAWDOC)
   public void setInput(RawDocument rawDocument) {

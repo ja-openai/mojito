@@ -89,6 +89,8 @@ Removed during this workstream:
   initialize their helper collaborators directly.
 - Common Okapi Android and PO filters no longer use `@Configurable`; Okapi-created filter and
   encoder instances now initialize text-unit and unescape helpers directly.
+- Common Okapi MD5 and do-not-translate steps no longer use `@Configurable`; direct pipeline
+  instances initialize `TextUnitUtils` through constructors.
 
 In progress:
 
