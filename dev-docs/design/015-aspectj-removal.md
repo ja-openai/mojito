@@ -65,6 +65,8 @@ In progress:
   `Timer.Sample` and local `try/finally` blocks.
 - `TextUnitDTOsCacheBlobStorage` no longer uses `@Timed`; cache read/write metrics are recorded
   with explicit `Timer.Sample` and local `try/finally` blocks.
+- `TextUnitDTOsCacheService` no longer uses `@Timed`; its four cache refresh/read metrics are
+  recorded with explicit `Timer.Sample` and local `try/finally` blocks.
 
 ## Migration Principles
 
