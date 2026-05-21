@@ -13,7 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author jaurambault
@@ -27,6 +29,8 @@ public class TMTextUnitVariantCommentService {
   @Autowired TMTextUnitVariantCommentRepository tmTextUnitVariantCommentRepository;
 
   @Autowired TMTextUnitVariantRepository tmTextUnitVariantRepository;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   public void copyComments(Long sourceTmTextUnitVariantId, Long targetTMTextUnitVariantId) {
 
@@ -47,8 +51,23 @@ public class TMTextUnitVariantCommentService {
     }
   }
 
-  @Transactional
   public void copyCommentsBatch(Map<Long, TMTextUnitVariant> targetVariantsBySourceVariantId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      copyCommentsBatchNoTx(targetVariantsBySourceVariantId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void copyCommentsBatchNoTx(Map<Long, TMTextUnitVariant> targetVariantsBySourceVariantId) {
     if (targetVariantsBySourceVariantId == null || targetVariantsBySourceVariantId.isEmpty()) {
       return;
     }
@@ -78,13 +97,33 @@ public class TMTextUnitVariantCommentService {
     }
   }
 
-  @Transactional
   public TMTextUnitVariantComment addComment(
       Long tmTextUnitVariantId,
       TMTextUnitVariantComment.Type type,
       TMTextUnitVariantComment.Severity severity,
       String content) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      TMTextUnitVariantComment comment =
+          addCommentNoTx(tmTextUnitVariantId, type, severity, content);
+      transactionManager.commit(transaction);
+      return comment;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TMTextUnitVariantComment addCommentNoTx(
+      Long tmTextUnitVariantId,
+      TMTextUnitVariantComment.Type type,
+      TMTextUnitVariantComment.Severity severity,
+      String content) {
     logger.debug(
         "Add comment for tmTextUnitVariantId: {}, type: {}, severity: {}, status: {}, content: {}",
         tmTextUnitVariantId,
@@ -106,18 +145,27 @@ public class TMTextUnitVariantCommentService {
     return tmTextUnitVariantComment;
   }
 
-  @Transactional
   public TMTextUnitVariantComment addComment(
       TMTextUnitVariant tmTextUnitVariant,
       TMTextUnitVariantComment.Type type,
       TMTextUnitVariantComment.Severity severity,
       String content) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
-    TMTextUnitVariantComment addComment =
-        addComment(tmTextUnitVariant.getId(), type, severity, content);
-    tmTextUnitVariant.getTmTextUnitVariantComments().add(addComment);
-
-    return addComment;
+    try {
+      TMTextUnitVariantComment addComment =
+          addCommentNoTx(tmTextUnitVariant.getId(), type, severity, content);
+      tmTextUnitVariant.getTmTextUnitVariantComments().add(addComment);
+      transactionManager.commit(transaction);
+      return addComment;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
   }
 
   /**
