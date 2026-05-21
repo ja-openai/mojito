@@ -6,7 +6,9 @@ import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.Integr
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author wyau
@@ -16,8 +18,26 @@ public class AssetIntegrityCheckerService {
 
   @Autowired AssetIntegrityCheckerRepository assetIntegrityCheckerRepository;
 
-  @Transactional
+  @Autowired PlatformTransactionManager transactionManager;
+
   public void addToRepository(
+      Repository repository, String assetPath, IntegrityCheckerType integrityCheckerType) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      addToRepositoryNoTx(repository, assetPath, integrityCheckerType);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void addToRepositoryNoTx(
       Repository repository, String assetPath, IntegrityCheckerType integrityCheckerType) {
     AssetIntegrityChecker assetIntegrityChecker = new AssetIntegrityChecker();
     assetIntegrityChecker.setRepository(repository);

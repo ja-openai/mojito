@@ -132,6 +132,8 @@ Removed during this workstream:
   updates, and recent-run reads now open their transaction boundaries explicitly.
 - `ReviewAutomationRunService` no longer uses `@Transactional`; review automation run creation,
   status updates, and recent-run reads now open their transaction boundaries explicitly.
+- `AssetIntegrityCheckerService.addToRepository` no longer uses `@Transactional`; integrity
+  checker creation now opens and commits its transaction explicitly.
 
 In progress:
 
