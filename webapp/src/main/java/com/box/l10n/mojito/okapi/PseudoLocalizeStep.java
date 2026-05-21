@@ -4,7 +4,6 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.pseudoloc.PseudoLocalization;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TextUnitIntegrityChecker;
-import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import java.util.HashSet;
 import java.util.Set;
 import net.sf.okapi.common.Event;
@@ -16,13 +15,10 @@ import net.sf.okapi.common.resource.ITextUnit;
 import net.sf.okapi.common.resource.TextContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author srizvi
  */
-@Configurable
 public class PseudoLocalizeStep extends BasePipelineStep {
 
   /** Logger */
@@ -32,17 +28,22 @@ public class PseudoLocalizeStep extends BasePipelineStep {
   private LocaleId targetLocale;
   private Set<TextUnitIntegrityChecker> textUnitIntegrityCheckers = new HashSet<>();
 
-  public PseudoLocalizeStep(Asset asset) {
+  IntegrityCheckerFactory integrityCheckerFactory;
+
+  PseudoLocalization pseudoLocalization;
+
+  TextUnitUtils textUnitUtils;
+
+  public PseudoLocalizeStep(
+      Asset asset,
+      IntegrityCheckerFactory integrityCheckerFactory,
+      PseudoLocalization pseudoLocalization,
+      TextUnitUtils textUnitUtils) {
     this.asset = asset;
+    this.integrityCheckerFactory = integrityCheckerFactory;
+    this.pseudoLocalization = pseudoLocalization;
+    this.textUnitUtils = textUnitUtils;
   }
-
-  @Autowired IntegrityCheckerFactory integrityCheckerFactory;
-
-  @Autowired TMTextUnitRepository tmTextUnitRepository;
-
-  @Autowired PseudoLocalization pseudoLocalization;
-
-  @Autowired TextUnitUtils textUnitUtils;
 
   @SuppressWarnings("deprecation")
   @StepParameterMapping(parameterType = StepParameterType.TARGET_LOCALE)

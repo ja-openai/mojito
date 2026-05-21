@@ -41,6 +41,7 @@ import com.box.l10n.mojito.okapi.qualitycheck.Parameters;
 import com.box.l10n.mojito.okapi.qualitycheck.QualityCheckStep;
 import com.box.l10n.mojito.okapi.steps.CheckForDoNotTranslateStep;
 import com.box.l10n.mojito.okapi.steps.FilterEventsToInMemoryRawDocumentStep;
+import com.box.l10n.mojito.pseudoloc.PseudoLocalization;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.retry.DataIntegrityViolationExceptionRetryTemplate;
@@ -48,6 +49,7 @@ import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckStep;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
@@ -133,6 +135,10 @@ public class TMService {
   @Autowired RepositoryLocaleRepository repositoryLocaleRepository;
 
   @Autowired TextUnitUtils textUnitUtils;
+
+  @Autowired IntegrityCheckerFactory integrityCheckerFactory;
+
+  @Autowired PseudoLocalization pseudoLocalization;
 
   @Autowired IFilterConfigurationMapper filterConfigurationMapper;
 
@@ -1138,7 +1144,8 @@ public class TMService {
 
     String bcp47tag = "en-x-psaccent";
 
-    BasePipelineStep pseudoLocalizedStep = (BasePipelineStep) new PseudoLocalizeStep(asset);
+    BasePipelineStep pseudoLocalizedStep =
+        new PseudoLocalizeStep(asset, integrityCheckerFactory, pseudoLocalization, textUnitUtils);
     return generateLocalizedBase(
         asset, content, filterConfigIdOverride, null, pseudoLocalizedStep, bcp47tag);
   }

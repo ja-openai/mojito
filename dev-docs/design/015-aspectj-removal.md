@@ -91,6 +91,8 @@ Removed during this workstream:
   encoder instances now initialize text-unit and unescape helpers directly.
 - Common Okapi MD5 and do-not-translate steps no longer use `@Configurable`; direct pipeline
   instances initialize `TextUnitUtils` through constructors.
+- `PseudoLocalizeStep` no longer uses `@Configurable`; `TMService` passes integrity checker,
+  pseudo-localization, and text-unit helpers directly.
 
 In progress:
 
