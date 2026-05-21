@@ -67,8 +67,9 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_message_model(&mut self) -> Option<MessageModel> {
+        let message_start = self.index;
         let declarations = self.parse_declarations();
-        self.skip_horizontal_whitespace();
+        self.skip_syntax_whitespace();
 
         if self.starts_with(".match") {
             return self.parse_match(declarations);
@@ -76,7 +77,7 @@ impl<'a> Parser<'a> {
 
         if self.starts_with("{{") {
             let pattern = self.parse_quoted_pattern()?;
-            self.skip_whitespace();
+            self.skip_syntax_whitespace();
             if !self.is_done() {
                 self.push_diagnostic(
                     "trailing-content",
@@ -111,6 +112,7 @@ impl<'a> Parser<'a> {
             return None;
         }
 
+        self.index = message_start;
         let pattern = self.parse_pattern_until_end();
         Some(MessageModel::Message {
             declarations,
@@ -121,7 +123,8 @@ impl<'a> Parser<'a> {
     fn parse_declarations(&mut self) -> Vec<Declaration> {
         let mut declarations = Vec::new();
         loop {
-            self.skip_whitespace();
+            let before_padding = self.index;
+            self.skip_syntax_whitespace();
             if self.starts_with(".input") {
                 if let Some(declaration) = self.parse_input_declaration() {
                     declarations.push(declaration);
@@ -134,6 +137,7 @@ impl<'a> Parser<'a> {
                 }
                 continue;
             }
+            self.index = before_padding;
             break;
         }
         declarations
@@ -141,7 +145,7 @@ impl<'a> Parser<'a> {
 
     fn parse_input_declaration(&mut self) -> Option<Declaration> {
         self.consume_str(".input");
-        self.skip_horizontal_whitespace();
+        self.skip_syntax_whitespace();
         let start = self.index;
         let expression = self.parse_expression_placeholder()?;
         let name = match &expression.arg {
@@ -164,10 +168,10 @@ impl<'a> Parser<'a> {
 
     fn parse_local_declaration(&mut self) -> Option<Declaration> {
         self.consume_str(".local");
-        self.skip_horizontal_whitespace();
+        self.skip_syntax_whitespace();
         let start = self.index;
         let name = self.parse_variable_name()?;
-        self.skip_horizontal_whitespace();
+        self.skip_syntax_whitespace();
         if self.peek_char() != Some('=') {
             self.push_diagnostic(
                 "missing-local-equals",
@@ -178,7 +182,7 @@ impl<'a> Parser<'a> {
             return None;
         }
         self.advance_char();
-        self.skip_horizontal_whitespace();
+        self.skip_syntax_whitespace();
         let value = self.parse_expression_placeholder()?;
         Some(Declaration::Local { name, value })
     }
@@ -196,7 +200,7 @@ impl<'a> Parser<'a> {
             return None;
         }
         loop {
-            let skipped_space = self.skip_horizontal_whitespace();
+            let skipped_space = self.skip_syntax_gap();
             if self.peek_char() == Some('$') {
                 if !skipped_space && !selectors.is_empty() {
                     self.push_diagnostic(
@@ -236,13 +240,13 @@ impl<'a> Parser<'a> {
 
         let mut variants = Vec::new();
         loop {
-            self.skip_whitespace();
+            self.skip_syntax_whitespace();
             if self.is_done() {
                 break;
             }
             let variant_start = self.index;
             let keys = self.parse_variant_keys(variant_start)?;
-            self.skip_horizontal_whitespace();
+            self.skip_syntax_whitespace();
             if !self.starts_with("{{") {
                 self.push_diagnostic(
                     "missing-variant-pattern",
@@ -285,7 +289,7 @@ impl<'a> Parser<'a> {
     fn parse_variant_keys(&mut self, start: usize) -> Option<Vec<VariantKey>> {
         let mut keys = Vec::new();
         while !self.is_done() && !self.starts_with("{{") && self.peek_char() != Some('\n') {
-            let skipped_space = self.skip_horizontal_whitespace();
+            let skipped_space = self.skip_syntax_gap();
             if self.starts_with("{{") || self.peek_char() == Some('\n') || self.is_done() {
                 break;
             }
@@ -303,7 +307,7 @@ impl<'a> Parser<'a> {
                 keys.push(VariantKey::CatchAll);
                 continue;
             }
-            let key = self.take_while(|ch| !ch.is_whitespace() && ch != '{');
+            let key = self.take_while(|ch| !is_syntax_whitespace(ch) && ch != '{');
             if !key.is_empty() {
                 keys.push(VariantKey::Literal { value: key });
             }
@@ -424,7 +428,7 @@ impl<'a> Parser<'a> {
     fn parse_braced_pattern_part(&mut self) -> Option<PatternPart> {
         let start = self.index;
         let content = self.consume_braced_content()?;
-        let trimmed = content.trim();
+        let trimmed = trim_syntax_whitespace(content);
         if trimmed.starts_with('#') || trimmed.starts_with('/') {
             return self
                 .parse_markup_content(trimmed, start, start + content.len() + 2)
@@ -437,7 +441,11 @@ impl<'a> Parser<'a> {
     fn parse_expression_placeholder(&mut self) -> Option<Expression> {
         let start = self.index;
         let content = self.consume_braced_content()?;
-        self.parse_expression_content(content.trim(), start, start + content.len() + 2)
+        self.parse_expression_content(
+            trim_syntax_whitespace(content),
+            start,
+            start + content.len() + 2,
+        )
     }
 
     fn consume_braced_content(&mut self) -> Option<&'a str> {
@@ -575,7 +583,7 @@ impl<'a> Parser<'a> {
             );
             return None;
         }
-        Some(rest.trim_start())
+        Some(trim_syntax_start(rest))
     }
 
     fn parse_tail(&mut self, rest: &str, start: usize, end: usize) -> Option<Tail> {
@@ -655,7 +663,7 @@ impl<'a> Parser<'a> {
                 index += ch.len_utf8();
                 continue;
             }
-            if ch.is_whitespace() && !in_quote {
+            if is_syntax_whitespace(ch) && !in_quote {
                 if let Some(start) = token_start.take() {
                     tokens.push(&rest[start..index]);
                 }
@@ -757,7 +765,7 @@ impl<'a> Parser<'a> {
         }
         Some(ParsedOption {
             name,
-            value: parse_literal_or_variable(raw_value),
+            value: parse_literal_or_variable(trim_syntax_whitespace(raw_value)),
             next_index,
         })
     }
@@ -985,6 +993,7 @@ impl<'a> Parser<'a> {
                 value: literal,
             }));
         }
+        let raw_value = trim_syntax_whitespace(raw_value);
         let Some((literal, rest)) = split_unquoted_literal(raw_value) else {
             self.push_diagnostic(
                 "invalid-attribute",
@@ -1010,19 +1019,19 @@ impl<'a> Parser<'a> {
 
     fn parse_markup_content(&mut self, content: &str, start: usize, end: usize) -> Option<Markup> {
         let (kind, rest) = if let Some(rest) = content.strip_prefix('#') {
-            let trimmed = rest.trim_end();
+            let trimmed = trim_syntax_end(rest);
             if let Some(rest) = trimmed.strip_suffix('/') {
-                ("standalone", rest.trim_end())
+                ("standalone", trim_syntax_end(rest))
             } else {
                 ("open", trimmed)
             }
         } else if let Some(rest) = content.strip_prefix('/') {
-            ("close", rest.trim())
+            ("close", trim_syntax_whitespace(rest))
         } else {
             unreachable!("caller checked markup prefix")
         };
 
-        let (name, rest) = split_identifier(rest.trim_start());
+        let (name, rest) = split_identifier(trim_syntax_start(rest));
         if name.is_empty() {
             self.push_diagnostic(
                 "missing-markup-name",
@@ -1032,7 +1041,7 @@ impl<'a> Parser<'a> {
             );
             return None;
         }
-        if rest.trim().is_empty() {
+        if trim_syntax_whitespace(rest).is_empty() {
             return Some(Markup::new(kind, name));
         }
 
@@ -1130,18 +1139,29 @@ impl<'a> Parser<'a> {
         Some(name.to_string())
     }
 
-    fn skip_whitespace(&mut self) {
-        while matches!(self.peek_char(), Some(ch) if ch.is_whitespace()) {
-            self.advance_char();
-        }
-    }
-
-    fn skip_horizontal_whitespace(&mut self) -> bool {
+    fn skip_syntax_whitespace(&mut self) -> bool {
         let start = self.index;
-        while matches!(self.peek_char(), Some(' ' | '\t')) {
+        while matches!(self.peek_char(), Some(ch) if is_syntax_whitespace(ch)) {
             self.advance_char();
         }
         self.index != start
+    }
+
+    fn skip_syntax_gap(&mut self) -> bool {
+        let mut saw_whitespace = false;
+        while let Some(ch) = self.peek_char() {
+            if ch.is_whitespace() {
+                saw_whitespace = true;
+                self.advance_char();
+                continue;
+            }
+            if is_bidi_marker(ch) {
+                self.advance_char();
+                continue;
+            }
+            break;
+        }
+        saw_whitespace
     }
 
     fn take_while(&mut self, predicate: impl Fn(char) -> bool) -> String {
@@ -1253,7 +1273,7 @@ fn split_unquoted_literal(input: &str) -> Option<(&str, &str)> {
     let mut scan = 0;
     let mut saw_char = false;
     while let Some(ch) = input[scan..].chars().next() {
-        if ch.is_whitespace() || ch == ':' || ch == '@' {
+        if is_syntax_whitespace(ch) || ch == ':' || ch == '@' {
             break;
         }
         if !is_unquoted_literal_char(ch) {
@@ -1417,6 +1437,22 @@ fn is_bidi_marker(ch: char) -> bool {
         ch,
         '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{2066}'..='\u{2069}'
     )
+}
+
+fn is_syntax_whitespace(ch: char) -> bool {
+    ch.is_whitespace() || is_bidi_marker(ch)
+}
+
+fn trim_syntax_whitespace(input: &str) -> &str {
+    trim_syntax_end(trim_syntax_start(input))
+}
+
+fn trim_syntax_start(input: &str) -> &str {
+    input.trim_start_matches(is_syntax_whitespace)
+}
+
+fn trim_syntax_end(input: &str) -> &str {
+    input.trim_end_matches(is_syntax_whitespace)
 }
 
 fn is_combining_mark(ch: char) -> bool {

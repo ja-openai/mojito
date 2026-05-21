@@ -106,6 +106,8 @@ The source-to-model fixtures currently cover:
 - Unicode text, argument values, literal placeholders, and preservation of
   canonically equivalent but byte-distinct names
 - Unicode variable names, bidi controls around names, and namespaced identifiers
+- bidi controls as syntax padding around complex-message declarations, bodies,
+  expression operands, markup placeholders, and option/attribute assignments
 - escaped braces and backslash
 - function annotations and options, including `:number`, `:integer`, `:string`,
   quoted option values containing spaces, variable-valued options, and optional

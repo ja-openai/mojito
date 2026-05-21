@@ -1,0 +1,32 @@
+{
+  "name": "bidi-syntax-padding",
+  "source": "\u200e .local \u2067 $x \u2068 = \u2069 {1} \u200f {{ {\u200e $x \u200f} }}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "x",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1" }
+        }
+      }
+    ],
+    "pattern": [
+      " ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "x" }
+      },
+      " "
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": " 1 "
+    }
+  ]
+}

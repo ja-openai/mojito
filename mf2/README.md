@@ -68,6 +68,9 @@ The current conformance slice covers:
 - Unicode MF2 names for variables, including combining marks, plus namespaced
   identifiers for functions, options, attributes, and markup in the Rust/Java
   source parsers
+- bidi controls as syntax padding around complex-message declarations, bodies,
+  expression operands, markup placeholders, and option/attribute assignments
+  in the Rust/Java source parsers
 - basic invalid-source diagnostics for malformed variable, function, option,
   and attribute identifiers, malformed match variants, plus duplicate function
   option and attribute names

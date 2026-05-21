@@ -23,8 +23,9 @@ final class Mf2Parser {
     }
 
     private Mf2Message parseMessageModel() {
+        int messageStart = index;
         List<Mf2Message.Declaration> declarations = parseDeclarations();
-        skipHorizontalWhitespace();
+        skipSyntaxWhitespace();
 
         if (startsWith(".match")) {
             return parseMatch(declarations);
@@ -35,7 +36,7 @@ final class Mf2Parser {
             if (pattern == null) {
                 return null;
             }
-            skipWhitespace();
+            skipSyntaxWhitespace();
             if (!isDone()) {
                 pushDiagnostic(
                         "trailing-content",
@@ -64,13 +65,15 @@ final class Mf2Parser {
             return null;
         }
 
+        index = messageStart;
         return new Mf2Message.Message(declarations, parsePatternUntilEnd());
     }
 
     private List<Mf2Message.Declaration> parseDeclarations() {
         List<Mf2Message.Declaration> declarations = new ArrayList<>();
         while (true) {
-            skipWhitespace();
+            int beforePadding = index;
+            skipSyntaxWhitespace();
             if (startsWith(".input")) {
                 Mf2Message.Declaration declaration = parseInputDeclaration();
                 if (declaration != null) {
@@ -85,13 +88,14 @@ final class Mf2Parser {
                 }
                 continue;
             }
+            index = beforePadding;
             return declarations;
         }
     }
 
     private Mf2Message.Declaration parseInputDeclaration() {
         consumeString(".input");
-        skipHorizontalWhitespace();
+        skipSyntaxWhitespace();
         int start = index;
         Mf2Message.Expression expression = parseExpressionPlaceholder();
         if (expression == null) {
@@ -110,13 +114,13 @@ final class Mf2Parser {
 
     private Mf2Message.Declaration parseLocalDeclaration() {
         consumeString(".local");
-        skipHorizontalWhitespace();
+        skipSyntaxWhitespace();
         int start = index;
         String name = parseVariableName();
         if (name == null) {
             return null;
         }
-        skipHorizontalWhitespace();
+        skipSyntaxWhitespace();
         if (peekChar() != '=') {
             pushDiagnostic(
                     "missing-local-equals",
@@ -126,7 +130,7 @@ final class Mf2Parser {
             return null;
         }
         advanceChar();
-        skipHorizontalWhitespace();
+        skipSyntaxWhitespace();
         Mf2Message.Expression value = parseExpressionPlaceholder();
         return value == null ? null : new Mf2Message.LocalDeclaration(name, value);
     }
@@ -143,7 +147,7 @@ final class Mf2Parser {
             return null;
         }
         while (true) {
-            boolean skippedSpace = skipHorizontalWhitespace();
+            boolean skippedSpace = skipSyntaxGap();
             if (!isDone() && peekChar() == '$') {
                 if (!skippedSpace && !selectors.isEmpty()) {
                     pushDiagnostic(
@@ -181,7 +185,7 @@ final class Mf2Parser {
 
         List<Mf2Message.Variant> variants = new ArrayList<>();
         while (true) {
-            skipWhitespace();
+            skipSyntaxWhitespace();
             if (isDone()) {
                 break;
             }
@@ -190,7 +194,7 @@ final class Mf2Parser {
             if (keys == null) {
                 return null;
             }
-            skipHorizontalWhitespace();
+            skipSyntaxWhitespace();
             if (!startsWith("{{")) {
                 pushDiagnostic(
                         "missing-variant-pattern",
@@ -229,7 +233,7 @@ final class Mf2Parser {
     private List<Mf2Message.VariantKey> parseVariantKeys(int start) {
         List<Mf2Message.VariantKey> keys = new ArrayList<>();
         while (!isDone() && !startsWith("{{") && peekChar() != '\n') {
-            boolean skippedSpace = skipHorizontalWhitespace();
+            boolean skippedSpace = skipSyntaxGap();
             if (startsWith("{{") || peekChar() == '\n' || isDone()) {
                 break;
             }
@@ -246,7 +250,7 @@ final class Mf2Parser {
                 keys.add(new Mf2Message.CatchAllVariantKey());
                 continue;
             }
-            String key = takeWhile(ch -> !Character.isWhitespace(ch) && ch != '{');
+            String key = takeWhile(ch -> !isSyntaxWhitespace(ch) && ch != '{');
             if (!key.isEmpty()) {
                 keys.add(new Mf2Message.LiteralVariantKey(key));
             }
@@ -369,7 +373,7 @@ final class Mf2Parser {
         if (content == null) {
             return null;
         }
-        String trimmed = content.trim();
+        String trimmed = stripSyntaxWhitespace(content);
         if (trimmed.startsWith("#") || trimmed.startsWith("/")) {
             Mf2Message.Markup markup = parseMarkupContent(trimmed, start, start + content.length() + 2);
             return markup == null ? null : new Mf2Message.MarkupPart(markup);
@@ -381,7 +385,9 @@ final class Mf2Parser {
     private Mf2Message.Expression parseExpressionPlaceholder() {
         int start = index;
         String content = consumeBracedContent();
-        return content == null ? null : parseExpressionContent(content.trim(), start, start + content.length() + 2);
+        return content == null
+                ? null
+                : parseExpressionContent(stripSyntaxWhitespace(content), start, start + content.length() + 2);
     }
 
     private String consumeBracedContent() {
@@ -518,7 +524,7 @@ final class Mf2Parser {
                     end);
             return null;
         }
-        return rest.stripLeading();
+        return stripLeadingSyntaxWhitespace(rest);
     }
 
     private Tail parseTail(String rest, int start, int end) {
@@ -596,7 +602,7 @@ final class Mf2Parser {
                 index += charCount;
                 continue;
             }
-            if (Character.isWhitespace(codePoint) && !inQuote) {
+            if (isSyntaxWhitespace(codePoint) && !inQuote) {
                 if (tokenStart >= 0) {
                     tokens.add(rest.substring(tokenStart, index));
                     tokenStart = -1;
@@ -682,7 +688,7 @@ final class Mf2Parser {
         }
         return new OptionParseResult(
                 keySplit.name(),
-                parseLiteralOrVariable(assignment.rawValue()),
+                parseLiteralOrVariable(stripSyntaxWhitespace(assignment.rawValue())),
                 assignment.nextIndex());
     }
 
@@ -841,6 +847,7 @@ final class Mf2Parser {
     }
 
     private Mf2Message.AttributeValue parseAttributeValue(String rawValue, int start, int end) {
+        rawValue = stripSyntaxWhitespace(rawValue);
         if (rawValue.startsWith("|") && rawValue.endsWith("|") && rawValue.length() >= 2) {
             LiteralSplit split = parseQuotedLiteral(rawValue);
             if (split == null) {
@@ -877,20 +884,20 @@ final class Mf2Parser {
         String kind;
         String rest;
         if (content.startsWith("#")) {
-            String trimmed = stripTrailingWhitespace(content.substring(1));
+            String trimmed = stripTrailingSyntaxWhitespace(content.substring(1));
             if (trimmed.endsWith("/")) {
                 kind = "standalone";
-                rest = stripTrailingWhitespace(trimmed.substring(0, trimmed.length() - 1));
+                rest = stripTrailingSyntaxWhitespace(trimmed.substring(0, trimmed.length() - 1));
             } else {
                 kind = "open";
                 rest = trimmed;
             }
         } else {
             kind = "close";
-            rest = content.substring(1).trim();
+            rest = stripSyntaxWhitespace(content.substring(1));
         }
 
-        NameSplit split = splitIdentifier(rest.stripLeading());
+        NameSplit split = splitIdentifier(stripLeadingSyntaxWhitespace(rest));
         if (split.name().isEmpty()) {
             pushDiagnostic(
                     "missing-markup-name",
@@ -899,7 +906,7 @@ final class Mf2Parser {
                     end);
             return null;
         }
-        if (split.rest().isBlank()) {
+        if (stripSyntaxWhitespace(split.rest()).isEmpty()) {
             return new Mf2Message.Markup(kind, split.name(), Map.of(), Map.of());
         }
         MarkupTail tail = parseMarkupTail(split.rest(), start, end);
@@ -996,18 +1003,34 @@ final class Mf2Parser {
         return scan.name();
     }
 
-    private void skipWhitespace() {
-        while (!isDone() && Character.isWhitespace(peekChar())) {
-            advanceChar();
-        }
-    }
-
-    private boolean skipHorizontalWhitespace() {
+    private boolean skipSyntaxWhitespace() {
         int start = index;
-        while (!isDone() && (peekChar() == ' ' || peekChar() == '\t')) {
-            advanceChar();
+        while (!isDone()) {
+            int codePoint = source.codePointAt(index);
+            if (!isSyntaxWhitespace(codePoint)) {
+                break;
+            }
+            index += Character.charCount(codePoint);
         }
         return index != start;
+    }
+
+    private boolean skipSyntaxGap() {
+        boolean sawWhitespace = false;
+        while (!isDone()) {
+            int codePoint = source.codePointAt(index);
+            if (Character.isWhitespace(codePoint)) {
+                sawWhitespace = true;
+                index += Character.charCount(codePoint);
+                continue;
+            }
+            if (isBidiMarker(codePoint)) {
+                index += Character.charCount(codePoint);
+                continue;
+            }
+            break;
+        }
+        return sawWhitespace;
     }
 
     private String takeWhile(CharPredicate predicate) {
@@ -1100,7 +1123,7 @@ final class Mf2Parser {
         boolean sawChar = false;
         while (scan < input.length()) {
             int codePoint = input.codePointAt(scan);
-            if (Character.isWhitespace(codePoint) || codePoint == ':' || codePoint == '@') {
+            if (isSyntaxWhitespace(codePoint) || codePoint == ':' || codePoint == '@') {
                 break;
             }
             if (!isUnquotedLiteralChar(codePoint)) {
@@ -1113,7 +1136,7 @@ final class Mf2Parser {
     }
 
     private static boolean isUnquotedLiteralChar(int codePoint) {
-        if (Character.isISOControl(codePoint) || Character.isWhitespace(codePoint) || isNoncharacter(codePoint)) {
+        if (Character.isISOControl(codePoint) || isSyntaxWhitespace(codePoint) || isNoncharacter(codePoint)) {
             return false;
         }
         return switch (codePoint) {
@@ -1238,7 +1261,7 @@ final class Mf2Parser {
                 && !isBidiMarker(codePoint)
                 && type != Character.CONTROL
                 && type != Character.SURROGATE
-                && !Character.isWhitespace(codePoint)
+                && !isSyntaxWhitespace(codePoint)
                 && !Character.isSpaceChar(codePoint)
                 && !isNoncharacter(codePoint);
     }
@@ -1279,15 +1302,39 @@ final class Mf2Parser {
                 || (codePoint >= 0x2066 && codePoint <= 0x2069);
     }
 
+    private static boolean isSyntaxWhitespace(int codePoint) {
+        return Character.isWhitespace(codePoint) || isBidiMarker(codePoint);
+    }
+
     private static boolean isNoncharacter(int codePoint) {
         return (codePoint >= 0xFDD0 && codePoint <= 0xFDEF)
                 || ((codePoint & 0xFFFE) == 0xFFFE);
     }
 
-    private static String stripTrailingWhitespace(String value) {
+    private static String stripSyntaxWhitespace(String value) {
+        return stripTrailingSyntaxWhitespace(stripLeadingSyntaxWhitespace(value));
+    }
+
+    private static String stripLeadingSyntaxWhitespace(String value) {
+        int start = 0;
+        while (start < value.length()) {
+            int codePoint = value.codePointAt(start);
+            if (!isSyntaxWhitespace(codePoint)) {
+                break;
+            }
+            start += Character.charCount(codePoint);
+        }
+        return value.substring(start);
+    }
+
+    private static String stripTrailingSyntaxWhitespace(String value) {
         int end = value.length();
-        while (end > 0 && Character.isWhitespace(value.charAt(end - 1))) {
-            end--;
+        while (end > 0) {
+            int codePoint = value.codePointBefore(end);
+            if (!isSyntaxWhitespace(codePoint)) {
+                break;
+            }
+            end -= Character.charCount(codePoint);
         }
         return value.substring(0, end);
     }
