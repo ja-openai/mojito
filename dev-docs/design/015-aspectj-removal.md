@@ -101,6 +101,8 @@ Removed during this workstream:
   unit and integrity-checker collaborators.
 - The unused `UnescapeStep` pipeline step was removed; no source or resource referenced it outside
   its own class.
+- `ImportExportedXliffStep` no longer uses `@Configurable`; `TMImportService` now passes its import
+  collaborators explicitly and unused woven fields were removed.
 
 In progress:
 
