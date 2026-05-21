@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Configuration to trigger the export drop process, see {@link
- * DropService#startDropExportProcess(ExportDropConfig, PollableTask)}
+ * DropService#startDropExportProcess(ExportDropConfig)}
  *
  * @author jaurambault
  */

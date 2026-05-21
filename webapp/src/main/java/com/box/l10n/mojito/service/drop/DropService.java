@@ -94,15 +94,23 @@ public class DropService {
    * kick off the actual export process as an async task.
    *
    * @param exportDropConfig contains the configuration to create the drop
-   * @param currentTask
    * @return A {@link PollableFuture} for tracking
    * @throws DropExporterException
    */
-  @Pollable(expectedSubTaskNumber = 1, message = "Start the Drop export process")
-  public PollableFuture<Drop> startDropExportProcess(
-      ExportDropConfig exportDropConfig, @InjectCurrentTask PollableTask currentTask)
+  public PollableFuture<Drop> startDropExportProcess(ExportDropConfig exportDropConfig)
       throws DropExporterException {
+    return pollableTaskRunner.runSyncFuture(
+        new PollableTaskInvocation<>(
+            null,
+            "startDropExportProcess",
+            "Start the Drop export process",
+            1,
+            DEFAULT_TIMEOUT,
+            currentTask -> startDropExportProcessDirect(exportDropConfig, currentTask)));
+  }
 
+  PollableFuture<Drop> startDropExportProcessDirect(
+      ExportDropConfig exportDropConfig, PollableTask currentTask) throws DropExporterException {
     Repository repository =
         repositoryRepository.findById(exportDropConfig.getRepositoryId()).orElse(null);
     Drop drop = createDrop(repository);

@@ -123,8 +123,7 @@ public class DropServiceTest extends ServiceTestBase {
     checkNumberOfUntranslatedTextUnit(repository, bcp47Tags, 4);
 
     logger.debug("Create an initial drop for the repository");
-    PollableFuture<Drop> startExportProcess =
-        dropService.startDropExportProcess(exportDropConfig, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> startExportProcess = dropService.startDropExportProcess(exportDropConfig);
 
     PollableTask pollableTask = startExportProcess.getPollableTask();
 
@@ -192,8 +191,7 @@ public class DropServiceTest extends ServiceTestBase {
     checkNumberOfUntranslatedTextUnit(repository, bcp47Tags, 4);
 
     logger.debug("Create an initial drop for the repository");
-    PollableFuture<Drop> startExportProcess =
-        dropService.startDropExportProcess(exportDropConfig, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> startExportProcess = dropService.startDropExportProcess(exportDropConfig);
 
     PollableTask pollableTask = startExportProcess.getPollableTask();
 
@@ -252,8 +250,7 @@ public class DropServiceTest extends ServiceTestBase {
     checkNumberOfUntranslatedTextUnit(repository, bcp47Tags, 4);
 
     logger.debug("Create an initial drop for the repository");
-    PollableFuture<Drop> startExportProcess =
-        dropService.startDropExportProcess(exportDropConfig, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> startExportProcess = dropService.startDropExportProcess(exportDropConfig);
 
     PollableTask pollableTask = startExportProcess.getPollableTask();
 
@@ -325,8 +322,7 @@ public class DropServiceTest extends ServiceTestBase {
     checkNumberOfNeedsReviewTextUnit(repository, bcp47Tags, 1);
 
     logger.debug("Create an initial drop for the repository");
-    PollableFuture<Drop> startExportProcess =
-        dropService.startDropExportProcess(exportDropConfig, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> startExportProcess = dropService.startDropExportProcess(exportDropConfig);
 
     PollableTask pollableTask = startExportProcess.getPollableTask();
 
@@ -380,8 +376,7 @@ public class DropServiceTest extends ServiceTestBase {
     exportDropConfig.setBcp47Tags(bcp47Tags);
 
     logger.debug("Create an initial drop for the repository");
-    PollableFuture<Drop> startExportProcess =
-        dropService.startDropExportProcess(exportDropConfig, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> startExportProcess = dropService.startDropExportProcess(exportDropConfig);
 
     PollableTask pollableTask = startExportProcess.getPollableTask();
 
@@ -435,8 +430,7 @@ public class DropServiceTest extends ServiceTestBase {
     checkNumberOfUntranslatedTextUnit(repository, bcp47Tags, 2);
 
     logger.debug("Create an initial drop for the repository");
-    PollableFuture<Drop> startExportProcess =
-        dropService.startDropExportProcess(exportDropConfig, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> startExportProcess = dropService.startDropExportProcess(exportDropConfig);
 
     PollableTask pollableTask = startExportProcess.getPollableTask();
 
@@ -878,8 +872,7 @@ public class DropServiceTest extends ServiceTestBase {
     checkNumberOfUntranslatedTextUnit(repository, bcp47Tags, 1);
 
     logger.debug("Create an initial drop for the repository");
-    PollableFuture<Drop> startExportProcess =
-        dropService.startDropExportProcess(exportDropConfig, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> startExportProcess = dropService.startDropExportProcess(exportDropConfig);
 
     PollableTask pollableTask = startExportProcess.getPollableTask();
 
@@ -924,7 +917,7 @@ public class DropServiceTest extends ServiceTestBase {
 
     logger.debug("Create an initial drop for the repository");
     PollableFuture<Drop> startExportProcess =
-        dropServiceSpy.startDropExportProcess(exportDropConfig, PollableTask.INJECT_CURRENT_TASK);
+        dropServiceSpy.startDropExportProcess(exportDropConfig);
 
     Drop drop = startExportProcess.get();
 
