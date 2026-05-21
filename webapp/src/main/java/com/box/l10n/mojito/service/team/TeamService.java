@@ -50,7 +50,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
@@ -1000,10 +999,24 @@ public class TeamService {
         saved.getSlackChannelId());
   }
 
-  @Transactional(readOnly = true)
   public SlackConversationMembers getSlackConversationMembers(
       Long teamId, boolean includeProfiles) {
-    Team team = getTeam(teamId);
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      SlackConversationMembers result = getSlackConversationMembersNoTx(teamId, includeProfiles);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SlackConversationMembers getSlackConversationMembersNoTx(Long teamId, boolean includeProfiles) {
+    Team team = getTeamNoTx(teamId);
     SlackClient slackClient = getSlackClientForTeam(team);
     String channelId = requireConfiguredSlackChannelId(team);
     String slackClientId = normalizeOptionalSlackValue(team.getSlackClientId(), 255);
@@ -1250,14 +1263,28 @@ public class TeamService {
     return replaceTeamUsersByRoleNoTx(teamId, role, mergedUserIds);
   }
 
-  @Transactional(readOnly = true)
   public SlackChannelImportPreview previewSlackChannelImport(Long teamId) {
-    SlackConversationMembers conversationMembers = getSlackConversationMembers(teamId, true);
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      SlackChannelImportPreview result = previewSlackChannelImportNoTx(teamId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SlackChannelImportPreview previewSlackChannelImportNoTx(Long teamId) {
+    SlackConversationMembers conversationMembers = getSlackConversationMembersNoTx(teamId, true);
     String channelId = conversationMembers.slackChannelId();
     List<SlackConversationMember> members = conversationMembers.entries();
 
     Map<Long, TeamSlackUserMappingEntry> existingMappingsByMojitoUserId =
-        getTeamSlackUserMappings(teamId).stream()
+        getTeamSlackUserMappingsNoTx(teamId).stream()
             .collect(
                 Collectors.toMap(
                     TeamSlackUserMappingEntry::mojitoUserId,
@@ -1274,9 +1301,9 @@ public class TeamService {
                     (a, b) -> a,
                     LinkedHashMap::new));
 
-    Set<Long> pmIds = new LinkedHashSet<>(getTeamUserIdsByRole(teamId, TeamUserRole.PM));
+    Set<Long> pmIds = new LinkedHashSet<>(getTeamUserIdsByRoleNoTx(teamId, TeamUserRole.PM));
     Set<Long> translatorIds =
-        new LinkedHashSet<>(getTeamUserIdsByRole(teamId, TeamUserRole.TRANSLATOR));
+        new LinkedHashSet<>(getTeamUserIdsByRoleNoTx(teamId, TeamUserRole.TRANSLATOR));
 
     List<UserAdminSummaryProjection> users = userRepository.findAdminSummaries();
     Map<String, List<UserAdminSummaryProjection>> usersByUsernameLower = new HashMap<>();
@@ -1346,14 +1373,31 @@ public class TeamService {
     return new SlackChannelImportPreview(channelId, conversationMembers.slackChannelName(), rows);
   }
 
-  @Transactional
   public SlackChannelImportApplyResult applySlackChannelImport(
+      Long teamId, TeamUserRole role, List<String> slackUserIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      SlackChannelImportApplyResult result =
+          applySlackChannelImportNoTx(teamId, role, slackUserIds);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SlackChannelImportApplyResult applySlackChannelImportNoTx(
       Long teamId, TeamUserRole role, List<String> slackUserIds) {
     if (role == null) {
       throw new IllegalArgumentException("Role is required");
     }
 
-    SlackChannelImportPreview preview = previewSlackChannelImport(teamId);
+    SlackChannelImportPreview preview = previewSlackChannelImportNoTx(teamId);
     Set<String> selectedSlackUserIds =
         (slackUserIds == null ? List.<String>of() : slackUserIds)
             .stream()
@@ -1380,7 +1424,7 @@ public class TeamService {
             .map(SlackChannelImportPreviewRow::matchedMojitoUserId)
             .distinct()
             .toList();
-    addTeamUsersByRole(teamId, role, userIdsToAdd);
+    addTeamUsersByRoleNoTx(teamId, role, userIdsToAdd);
 
     List<UpsertTeamSlackUserMappingEntry> mappings =
         matchedRows.stream()
@@ -1392,7 +1436,7 @@ public class TeamService {
                         row.slackUsername(),
                         "slack_channel_import"))
             .toList();
-    upsertTeamSlackUserMappings(teamId, mappings);
+    upsertTeamSlackUserMappingsNoTx(teamId, mappings);
 
     return new SlackChannelImportApplyResult(
         preview.rows().size(),
