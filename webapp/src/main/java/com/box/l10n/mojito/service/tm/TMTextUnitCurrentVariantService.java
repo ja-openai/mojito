@@ -8,7 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Component
 public class TMTextUnitCurrentVariantService {
@@ -19,6 +21,8 @@ public class TMTextUnitCurrentVariantService {
   @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
 
   @Autowired TMService tmService;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   /**
    * Removes a {@link TMTextUnitVariant} from being the current variant. In other words, removes the
@@ -50,8 +54,24 @@ public class TMTextUnitCurrentVariantService {
     }
   }
 
-  @Transactional
   public int removeCurrentVariants(List<Long> tmTextUnitCurrentVariantIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      int removedCount = removeCurrentVariantsNoTx(tmTextUnitCurrentVariantIds);
+      transactionManager.commit(transaction);
+      return removedCount;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  int removeCurrentVariantsNoTx(List<Long> tmTextUnitCurrentVariantIds) {
     if (tmTextUnitCurrentVariantIds == null || tmTextUnitCurrentVariantIds.isEmpty()) {
       return 0;
     }
@@ -66,8 +86,29 @@ public class TMTextUnitCurrentVariantService {
     return removedCount;
   }
 
-  @Transactional
   public int updateCurrentVariantStatuses(
+      List<Long> tmTextUnitCurrentVariantIds,
+      TMTextUnitVariant.Status status,
+      boolean includedInLocalizedFile) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      int updatedCount =
+          updateCurrentVariantStatusesNoTx(
+              tmTextUnitCurrentVariantIds, status, includedInLocalizedFile);
+      transactionManager.commit(transaction);
+      return updatedCount;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  int updateCurrentVariantStatusesNoTx(
       List<Long> tmTextUnitCurrentVariantIds,
       TMTextUnitVariant.Status status,
       boolean includedInLocalizedFile) {
