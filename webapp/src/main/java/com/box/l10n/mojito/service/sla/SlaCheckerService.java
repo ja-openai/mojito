@@ -13,7 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author jeanaurambault
@@ -32,6 +34,8 @@ public class SlaCheckerService {
   @Autowired SlaCheckerEmailService slaCheckerEmailService;
 
   @Autowired DateTimeUtils dateTimeUtils;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   void checkForIncidents() {
     logger.debug("Checking for SLA incident");
@@ -91,8 +95,23 @@ public class SlaCheckerService {
    * There should be only 1 open incident but since this is not enforced with a DB constraint we
    * close potential extra records.
    */
-  @Transactional
   void closeIncidents() {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      closeIncidentsNoTx();
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void closeIncidentsNoTx() {
     logger.debug("Close incidents (there should be only one)");
     ZonedDateTime closedDate = dateTimeUtils.now();
     List<SlaIncident> findByIsNullClosedDate = slaIncidentRepository.findByClosedDateIsNull();
