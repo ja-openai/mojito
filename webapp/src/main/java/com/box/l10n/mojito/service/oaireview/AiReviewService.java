@@ -61,7 +61,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -106,6 +108,8 @@ public class AiReviewService {
 
   MeterRegistry meterRegistry;
 
+  PlatformTransactionManager transactionManager;
+
   /**
    * openAIClient and openAIClientPool are nullable. The public API will check for the client if
    * they are not configured will throw an exception (keeping code minimal for now, could split into
@@ -127,7 +131,8 @@ public class AiReviewService {
       PollableTaskBlobStorage pollableTaskBlobStorage,
       PollableTaskRunner pollableTaskRunner,
       PollableTaskService pollableTaskService,
-      MeterRegistry meterRegistry) {
+      MeterRegistry meterRegistry,
+      PlatformTransactionManager transactionManager) {
     this.textUnitSearcher = Objects.requireNonNull(textUnitSearcher);
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.textUnitVariantRepository = Objects.requireNonNull(textUnitVariantRepository);
@@ -143,6 +148,7 @@ public class AiReviewService {
     this.pollableTaskRunner = Objects.requireNonNull(pollableTaskRunner);
     this.pollableTaskService = pollableTaskService;
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
+    this.transactionManager = Objects.requireNonNull(transactionManager);
   }
 
   public record AiReviewInput(
@@ -467,8 +473,23 @@ public class AiReviewService {
     }
   }
 
-  @Transactional
   public void saveAiReviewProtosInTx(List<AiReviewProto> aiReviewProtos) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      saveAiReviewProtos(aiReviewProtos);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void saveAiReviewProtos(List<AiReviewProto> aiReviewProtos) {
     aiReviewProtoRepository.saveAll(aiReviewProtos);
   }
 
