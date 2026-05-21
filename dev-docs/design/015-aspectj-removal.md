@@ -63,6 +63,8 @@ In progress:
 
 - `MultiBranchStateService` no longer uses `@Timed`; its three metrics are recorded with explicit
   `Timer.Sample` and local `try/finally` blocks.
+- `TextUnitDTOsCacheBlobStorage` no longer uses `@Timed`; cache read/write metrics are recorded
+  with explicit `Timer.Sample` and local `try/finally` blocks.
 
 ## Migration Principles
 
