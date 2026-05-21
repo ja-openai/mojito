@@ -25,7 +25,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -58,6 +60,8 @@ public class PushRunService {
 
   final PushRunAssetTmTextUnitRepository pushRunAssetTmTextUnitRepository;
 
+  final PlatformTransactionManager transactionManager;
+
   public PushRunService(
       EntityManager entityManager,
       JdbcTemplate jdbcTemplate,
@@ -65,7 +69,8 @@ public class PushRunService {
       CommitToPushRunRepository commitToPushRunRepository,
       PushRunRepository pushRunRepository,
       PushRunAssetRepository pushRunAssetRepository,
-      PushRunAssetTmTextUnitRepository pushRunAssetTmTextUnitRepository) {
+      PushRunAssetTmTextUnitRepository pushRunAssetTmTextUnitRepository,
+      PlatformTransactionManager transactionManager) {
     this.entityManager = entityManager;
     this.jdbcTemplate = jdbcTemplate;
     this.transactionTemplate = transactionTemplate;
@@ -73,6 +78,7 @@ public class PushRunService {
     this.pushRunRepository = pushRunRepository;
     this.pushRunAssetRepository = pushRunAssetRepository;
     this.pushRunAssetTmTextUnitRepository = pushRunAssetTmTextUnitRepository;
+    this.transactionManager = transactionManager;
   }
 
   /** Creates a new PushRun entry with a new UUID as the logical name. */
@@ -98,16 +104,46 @@ public class PushRunService {
   }
 
   /** Removes the linked PushRunAssets and pushRunAssetTmTextUnits from the PushRun. */
-  @Transactional
   public void clearPushRunLinkedData(PushRun pushRun) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      clearPushRunLinkedDataNoTx(pushRun);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void clearPushRunLinkedDataNoTx(PushRun pushRun) {
     List<PushRunAsset> existingPushRunAssets = pushRunAssetRepository.findByPushRun(pushRun);
     existingPushRunAssets.forEach(pushRunAssetTmTextUnitRepository::deleteByPushRunAsset);
     pushRunAssetRepository.deleteByPushRun(pushRun);
   }
 
   /** Associates a set of TextUnits to a PushRunAsset and a PushRun. */
-  @Transactional
   public void associatePushRunToTextUnitIds(PushRun pushRun, Asset asset, List<Long> textUnitIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      associatePushRunToTextUnitIdsNoTx(pushRun, asset, textUnitIds);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void associatePushRunToTextUnitIdsNoTx(PushRun pushRun, Asset asset, List<Long> textUnitIds) {
     PushRunAsset pushRunAsset =
         pushRunAssetRepository.findByPushRunAndAsset(pushRun, asset).orElse(null);
 
