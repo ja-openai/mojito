@@ -106,6 +106,9 @@ In progress:
   timing around the text-unit creation body.
 - `AssetExtractionService.performLeveraging` no longer uses `@Pollable` or `@ParentTask`; it
   creates its pollable subtask explicitly before running leveraging.
+- `AssetExtractionService.convertAssetContentToMultiBranchState` no longer uses `@Pollable` or
+  `@ParentTask`; it creates the extraction subtask explicitly and preserves the checked
+  `UnsupportedAssetFilterTypeException`.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
