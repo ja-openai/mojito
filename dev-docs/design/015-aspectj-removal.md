@@ -213,9 +213,10 @@ Removed during this workstream:
 - `AssetExtractionService` no longer uses `@Transactional`; asset-extraction state updates, branch
   extraction creation/deletion, TM text-unit creation, and asset text-unit creation now open and
   commit their transaction boundaries explicitly.
-- `GlossaryTermIndexCurationService` suggestion search, accept, ignore, and candidate-review paths
-  no longer use `@Transactional`; those suggestion/review operations now open and commit their
-  transaction boundaries explicitly.
+- `GlossaryTermIndexCurationService` no longer uses `@Transactional`; suggestion/review,
+  candidate seeding/import/export/generation, and glossary-linking operations now open and commit
+  their transaction boundaries explicitly while preserving the existing independent transactions
+  for long-running batch progress and writes.
 
 In progress:
 

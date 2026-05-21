@@ -46,7 +46,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -403,15 +402,45 @@ public class GlossaryTermIndexCurationService {
     return transactionDefinition;
   }
 
-  @Transactional
   public SeedResult seedTerms(SeedCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      SeedResult result = seedTermsNoTx(command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SeedResult seedTermsNoTx(SeedCommand command) {
     requireTermManager();
     SeedCommand normalized = normalize(command);
     return seedTermsInternal(normalized);
   }
 
-  @Transactional
   public SeedResult seedTermsForGlossary(Long glossaryId, SeedCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      SeedResult result = seedTermsForGlossaryNoTx(glossaryId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SeedResult seedTermsForGlossaryNoTx(Long glossaryId, SeedCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
     SeedCommand normalized = normalize(command);
@@ -419,11 +448,27 @@ public class GlossaryTermIndexCurationService {
         new SeedCommand(scopeCandidatesToGlossary(glossary.getId(), normalized.terms())));
   }
 
-  @Transactional
   public GenerateCandidatesResult generateCandidatesForGlossary(
       Long glossaryId, GenerateCandidatesCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GenerateCandidatesResult result = generateCandidatesForGlossaryNoTx(glossaryId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GenerateCandidatesResult generateCandidatesForGlossaryNoTx(
+      Long glossaryId, GenerateCandidatesCommand command) {
     requireTermManager();
-    return generateCandidatesForGlossaryInternal(glossaryId, command);
+    return generateCandidatesForGlossaryInternalNoTx(glossaryId, command);
   }
 
   public PollableFuture<GenerateCandidatesResult> scheduleGenerateCandidatesForGlossary(
@@ -436,8 +481,25 @@ public class GlossaryTermIndexCurationService {
         "Generate glossary term index candidates");
   }
 
-  @Transactional
   GenerateCandidatesResult generateCandidatesForGlossaryInternal(
+      Long glossaryId, GenerateCandidatesCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GenerateCandidatesResult result =
+          generateCandidatesForGlossaryInternalNoTx(glossaryId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GenerateCandidatesResult generateCandidatesForGlossaryInternalNoTx(
       Long glossaryId, GenerateCandidatesCommand command) {
     Glossary glossary = getGlossary(glossaryId);
     GenerateCandidatesCommand normalized = normalize(command);
@@ -530,7 +592,7 @@ public class GlossaryTermIndexCurationService {
       return Objects.requireNonNull(
           requiresNewTransactionTemplate.execute(
               status ->
-                  generateCandidatesForGlossaryInternal(
+                  generateCandidatesForGlossaryInternalNoTx(
                       command.glossaryId(), command.generateCandidatesCommand())));
     }
     return generateCandidatesFromExtractedTermsInternal(
@@ -985,8 +1047,23 @@ public class GlossaryTermIndexCurationService {
         resultEntries);
   }
 
-  @Transactional
   public SeedResult importCandidatesForGlossary(Long glossaryId, CandidateImportCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      SeedResult result = importCandidatesForGlossaryNoTx(glossaryId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SeedResult importCandidatesForGlossaryNoTx(Long glossaryId, CandidateImportCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
     CandidateImportCommand normalized = normalize(command);
@@ -995,8 +1072,23 @@ public class GlossaryTermIndexCurationService {
         normalize(new SeedCommand(scopeCandidatesToGlossary(glossary.getId(), candidates))));
   }
 
-  @Transactional(readOnly = true)
   public CandidateExportResult exportCandidatesForGlossary(
+      Long glossaryId, CandidateExportCommand command) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      CandidateExportResult result = exportCandidatesForGlossaryNoTx(glossaryId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  CandidateExportResult exportCandidatesForGlossaryNoTx(
       Long glossaryId, CandidateExportCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
@@ -1030,8 +1122,25 @@ public class GlossaryTermIndexCurationService {
         candidates.size());
   }
 
-  @Transactional
   public LinkGlossaryTermsToCandidatesResult linkGlossaryTermsToCandidates(
+      Long glossaryId, LinkGlossaryTermsToCandidatesCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      LinkGlossaryTermsToCandidatesResult result =
+          linkGlossaryTermsToCandidatesNoTx(glossaryId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  LinkGlossaryTermsToCandidatesResult linkGlossaryTermsToCandidatesNoTx(
       Long glossaryId, LinkGlossaryTermsToCandidatesCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);

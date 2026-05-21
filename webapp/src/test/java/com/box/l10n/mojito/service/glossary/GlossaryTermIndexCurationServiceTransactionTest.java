@@ -80,6 +80,38 @@ public class GlossaryTermIndexCurationServiceTransactionTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void seedTermsCommitsTransaction() {
+    curationService.seedTerms(null);
+
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void exportCandidatesCommitsReadOnlyTransaction() {
+    curationService.exportCandidatesForGlossary(1L, null);
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertThat(transactionDefinitionCaptor.getValue().isReadOnly()).isTrue();
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void linkGlossaryTermsRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("link failed");
+    curationService.failure = failure;
+
+    assertThatThrownBy(() -> curationService.linkGlossaryTermsToCandidates(1L, null))
+        .isSameAs(failure);
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private static class TestGlossaryTermIndexCurationService
       extends GlossaryTermIndexCurationService {
 
@@ -131,6 +163,53 @@ public class GlossaryTermIndexCurationServiceTransactionTest {
         Long termIndexCandidateId, CandidateReviewCommand command) {
       throwIfConfigured();
       return null;
+    }
+
+    @Override
+    SeedResult seedTermsNoTx(SeedCommand command) {
+      throwIfConfigured();
+      return new SeedResult(0, 0, 0, List.of());
+    }
+
+    @Override
+    SeedResult seedTermsForGlossaryNoTx(Long glossaryId, SeedCommand command) {
+      throwIfConfigured();
+      return new SeedResult(0, 0, 0, List.of());
+    }
+
+    @Override
+    GenerateCandidatesResult generateCandidatesForGlossaryNoTx(
+        Long glossaryId, GenerateCandidatesCommand command) {
+      throwIfConfigured();
+      return new GenerateCandidatesResult(0, 0, 0, 0, List.of());
+    }
+
+    @Override
+    GenerateCandidatesResult generateCandidatesForGlossaryInternalNoTx(
+        Long glossaryId, GenerateCandidatesCommand command) {
+      throwIfConfigured();
+      return new GenerateCandidatesResult(0, 0, 0, 0, List.of());
+    }
+
+    @Override
+    SeedResult importCandidatesForGlossaryNoTx(Long glossaryId, CandidateImportCommand command) {
+      throwIfConfigured();
+      return new SeedResult(0, 0, 0, List.of());
+    }
+
+    @Override
+    CandidateExportResult exportCandidatesForGlossaryNoTx(
+        Long glossaryId, CandidateExportCommand command) {
+      throwIfConfigured();
+      return new CandidateExportResult("json", "candidates.json", "{}", 0);
+    }
+
+    @Override
+    LinkGlossaryTermsToCandidatesResult linkGlossaryTermsToCandidatesNoTx(
+        Long glossaryId, LinkGlossaryTermsToCandidatesCommand command) {
+      throwIfConfigured();
+      return new LinkGlossaryTermsToCandidatesResult(
+          glossaryId, null, false, null, 0, 0, 0, 0, 0, 0, 0, List.of());
     }
 
     private void throwIfConfigured() {
