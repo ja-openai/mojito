@@ -150,6 +150,8 @@ Removed during this workstream:
   self-invocation; current-variant rollback now opens and commits its transaction explicitly.
 - `TextUnitIngestionMonitoringService` no longer uses `@Transactional`; recompute and snapshot
   reads now open and commit their read-write or read-only transactions explicitly.
+- `AbstractLeverager` no longer relies on AspectJ for a private transactional helper; leveraged
+  translation copies now open and commit their transaction boundary explicitly.
 
 In progress:
 

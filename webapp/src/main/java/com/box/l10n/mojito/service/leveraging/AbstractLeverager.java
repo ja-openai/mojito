@@ -18,7 +18,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Abstract class that performs leveraging. See {@link
@@ -42,6 +44,8 @@ public abstract class AbstractLeverager {
 
   @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
+  @Autowired PlatformTransactionManager transactionManager;
+
   protected AbstractLeverager() {}
 
   protected AbstractLeverager(
@@ -49,12 +53,14 @@ public abstract class AbstractLeverager {
       TMService tmService,
       UserService userService,
       TMTextUnitVariantLeveragingService tmTextUnitVariantLeveragingService,
-      TMTextUnitVariantCommentService tmTextUnitVariantCommentService) {
+      TMTextUnitVariantCommentService tmTextUnitVariantCommentService,
+      PlatformTransactionManager transactionManager) {
     this.textUnitSearcher = textUnitSearcher;
     this.tmService = tmService;
     this.userService = userService;
     this.tmTextUnitVariantLeveragingService = tmTextUnitVariantLeveragingService;
     this.tmTextUnitVariantCommentService = tmTextUnitVariantCommentService;
+    this.transactionManager = transactionManager;
   }
 
   /**
@@ -151,13 +157,32 @@ public abstract class AbstractLeverager {
    *     getting the translations. if {@code false} it could indicate that wrong translations were
    *     picked up as it chooses arbitrarily the one to use for leveraging.
    */
-  @Transactional
   private void addLeveragedTranslations(
       TMTextUnit tmTextUnit,
       List<TextUnitDTO> translations,
       boolean translationNeeded,
       boolean uniqueTMTextUnitMatched) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      addLeveragedTranslationsNoTx(
+          tmTextUnit, translations, translationNeeded, uniqueTMTextUnitMatched);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void addLeveragedTranslationsNoTx(
+      TMTextUnit tmTextUnit,
+      List<TextUnitDTO> translations,
+      boolean translationNeeded,
+      boolean uniqueTMTextUnitMatched) {
     logger.debug("Add leveraged translations in tmTextUnit, id: {}", tmTextUnit.getId());
     User leverageUser = userService.findOrCreateLeverageUser();
 

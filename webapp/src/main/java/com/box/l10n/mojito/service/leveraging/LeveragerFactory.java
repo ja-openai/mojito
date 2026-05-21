@@ -6,6 +6,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentService;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import java.util.List;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Component
 public class LeveragerFactory {
@@ -15,18 +16,21 @@ public class LeveragerFactory {
   final UserService userService;
   final TMTextUnitVariantLeveragingService tmTextUnitVariantLeveragingService;
   final TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
+  final PlatformTransactionManager transactionManager;
 
   public LeveragerFactory(
       TextUnitSearcher textUnitSearcher,
       TMService tmService,
       UserService userService,
       TMTextUnitVariantLeveragingService tmTextUnitVariantLeveragingService,
-      TMTextUnitVariantCommentService tmTextUnitVariantCommentService) {
+      TMTextUnitVariantCommentService tmTextUnitVariantCommentService,
+      PlatformTransactionManager transactionManager) {
     this.textUnitSearcher = textUnitSearcher;
     this.tmService = tmService;
     this.userService = userService;
     this.tmTextUnitVariantLeveragingService = tmTextUnitVariantLeveragingService;
     this.tmTextUnitVariantCommentService = tmTextUnitVariantCommentService;
+    this.transactionManager = transactionManager;
   }
 
   public LeveragerByContentAndRepository byContentAndRepository(
@@ -38,7 +42,8 @@ public class LeveragerFactory {
         tmService,
         userService,
         tmTextUnitVariantLeveragingService,
-        tmTextUnitVariantCommentService);
+        tmTextUnitVariantCommentService,
+        transactionManager);
   }
 
   public LeveragerByTmTextUnit byTmTextUnit(
@@ -50,6 +55,7 @@ public class LeveragerFactory {
         tmService,
         userService,
         tmTextUnitVariantLeveragingService,
-        tmTextUnitVariantCommentService);
+        tmTextUnitVariantCommentService,
+        transactionManager);
   }
 }
