@@ -98,6 +98,9 @@ In progress:
 - `AssetMappingService.mapAssetTextUnitAndCreateTMTextUnit` no longer uses `@Pollable` or
   `@ParentTask`; it keeps the deprecated public test-facing API but creates its pollable task via
   `PollableTaskRunner`.
+- `AssetExtractionService` update subtasks for merged asset text units, branch asset text units,
+  and push runs no longer use `@Pollable` or `@ParentTask`; they call `PollableTaskRunner`
+  directly from explicit wrapper methods.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

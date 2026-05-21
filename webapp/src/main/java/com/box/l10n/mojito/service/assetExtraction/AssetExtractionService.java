@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.assetExtraction;
 
 import static com.box.l10n.mojito.quartz.QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
 import static com.box.l10n.mojito.service.assetExtraction.LocalBranchToEntityBranchConverter.NULL_BRANCH_TEXT_PLACEHOLDER;
+import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
 import static java.util.function.Function.identity;
 
 import com.box.l10n.mojito.JSR310Migration;
@@ -44,6 +45,8 @@ import com.box.l10n.mojito.service.pollableTask.ParentTask;
 import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.pushrun.PushRunService;
 import com.box.l10n.mojito.service.repository.statistics.RepositoryStatisticsJobScheduler;
@@ -169,6 +172,8 @@ public class AssetExtractionService {
 
   @Autowired PollableTaskService pollableTaskService;
 
+  @Autowired PollableTaskRunner pollableTaskRunner;
+
   @Autowired PushRunService pushRunService;
 
   @Autowired EntityManager entityManager;
@@ -251,9 +256,28 @@ public class AssetExtractionService {
     return new PollableFutureTaskResult<>(asset);
   }
 
-  @Pollable(message = "Updating merged asset text units")
   void updateLastSuccessfulAssetExtraction(
-      Asset asset, MultiBranchState currentState, @ParentTask PollableTask currentTask) {
+      Asset asset, MultiBranchState currentState, PollableTask currentTask) {
+    try {
+      pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(currentTask),
+              "updateLastSuccessfulAssetExtraction",
+              "Updating merged asset text units",
+              0,
+              getTimeout(currentTask),
+              task -> {
+                updateLastSuccessfulAssetExtractionDirect(asset, currentState);
+                return null;
+              }));
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error updating merged asset text units", t);
+    }
+  }
+
+  void updateLastSuccessfulAssetExtractionDirect(Asset asset, MultiBranchState currentState) {
     logger.trace(
         "Make sure we have a last successful extraction in the Asset (legacy support edge case)");
     AssetExtraction lastSuccessfulAssetExtraction = getOrCreateLastSuccessfulAssetExtraction(asset);
@@ -262,12 +286,32 @@ public class AssetExtractionService {
             lastSuccessfulAssetExtraction.getId(), currentState, new AssetContentMd5s(null, null));
   }
 
-  @Pollable(message = "Updating branch asset text units")
   void updateBranchAssetExtraction(
       AssetContent assetContent,
       MultiBranchState currentState,
       List<String> filterOptions,
-      @ParentTask PollableTask currentTask) {
+      PollableTask currentTask) {
+    try {
+      pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(currentTask),
+              "updateBranchAssetExtraction",
+              "Updating branch asset text units",
+              0,
+              getTimeout(currentTask),
+              task -> {
+                updateBranchAssetExtractionDirect(assetContent, currentState, filterOptions);
+                return null;
+              }));
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error updating branch asset text units", t);
+    }
+  }
+
+  void updateBranchAssetExtractionDirect(
+      AssetContent assetContent, MultiBranchState currentState, List<String> filterOptions) {
     AssetExtractionByBranch assetExtractionByBranch =
         getUndeletedOrCreateAssetExtractionByBranch(assetContent);
     AssetContentMd5s assetContentMd5s =
@@ -277,12 +321,28 @@ public class AssetExtractionService {
         assetExtractionByBranch.getAssetExtraction().getId(), currentState, assetContentMd5s);
   }
 
-  @Pollable(message = "Updating push run")
   void updatePushRun(
-      Asset asset,
-      MultiBranchState multiBranchState,
-      Long pushRunId,
-      @ParentTask PollableTask parentTask) {
+      Asset asset, MultiBranchState multiBranchState, Long pushRunId, PollableTask parentTask) {
+    try {
+      pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "updatePushRun",
+              "Updating push run",
+              0,
+              getTimeout(parentTask),
+              task -> {
+                updatePushRunDirect(asset, multiBranchState, pushRunId);
+                return null;
+              }));
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error updating push run", t);
+    }
+  }
+
+  void updatePushRunDirect(Asset asset, MultiBranchState multiBranchState, Long pushRunId) {
 
     if (pushRunId == null || pushRunId == 0) {
       logger.debug("Skipping associating text units to PushRun as no PushRun was provided!");
@@ -297,6 +357,17 @@ public class AssetExtractionService {
             .collect(Collectors.toList());
 
     pushRunService.associatePushRunToTextUnitIds(pushRun, asset, textUnitIds);
+  }
+
+  private Long getParentTaskId(PollableTask parentTask) {
+    return parentTask == null ? null : parentTask.getId();
+  }
+
+  private Long getTimeout(PollableTask parentTask) {
+    if (parentTask != null && parentTask.getTimeout() != null) {
+      return parentTask.getTimeout();
+    }
+    return DEFAULT_TIMEOUT;
   }
 
   MultiBranchState updateAssetExtractionWithState(
