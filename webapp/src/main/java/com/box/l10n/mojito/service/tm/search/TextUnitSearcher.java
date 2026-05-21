@@ -40,7 +40,10 @@ import org.hibernate.query.criteria.JpaRoot;
 import org.hibernate.query.criteria.JpaSetJoin;
 import org.hibernate.query.sqm.tree.SqmJoinType;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Text unit searcher implemented with Hibernate's Criteria extension API.
@@ -84,9 +87,12 @@ public class TextUnitSearcher {
   private static final long SEARCH_RETRY_INITIAL_BACKOFF_MILLIS = 500L;
 
   private final EntityManager entityManager;
+  private final PlatformTransactionManager transactionManager;
 
-  public TextUnitSearcher(EntityManager entityManager) {
+  public TextUnitSearcher(
+      EntityManager entityManager, PlatformTransactionManager transactionManager) {
     this.entityManager = entityManager;
+    this.transactionManager = transactionManager;
   }
 
   public List<TextUnitDTO> search(TextUnitSearcherParameters searchParameters) {
@@ -106,8 +112,24 @@ public class TextUnitSearcher {
     }
   }
 
-  @Transactional(readOnly = true)
   public List<TextUnitDTO> searchWithTransaction(TextUnitSearcherParameters searchParameters) {
+    DefaultTransactionDefinition transactionDefinition = readOnlyTransaction();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      List<TextUnitDTO> textUnitDTOs = searchInTransaction(searchParameters);
+      transactionManager.commit(transaction);
+      return textUnitDTOs;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<TextUnitDTO> searchInTransaction(TextUnitSearcherParameters searchParameters) {
     HibernateCriteriaBuilder cb = criteriaBuilder();
     JpaCriteriaQuery<Tuple> query = cb.createTupleQuery();
     SearchContext context = buildSearchContext(cb, query, searchParameters);
@@ -147,8 +169,26 @@ public class TextUnitSearcher {
     }
   }
 
-  @Transactional(readOnly = true)
   public TextUnitAndWordCount countTextUnitAndWordCountWithTransaction(
+      TextUnitSearcherParameters searchParameters) {
+    DefaultTransactionDefinition transactionDefinition = readOnlyTransaction();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      TextUnitAndWordCount textUnitAndWordCount =
+          countTextUnitAndWordCountInTransaction(searchParameters);
+      transactionManager.commit(transaction);
+      return textUnitAndWordCount;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TextUnitAndWordCount countTextUnitAndWordCountInTransaction(
       TextUnitSearcherParameters searchParameters) {
     HibernateCriteriaBuilder cb = criteriaBuilder();
     JpaCriteriaQuery<Tuple> query = cb.createTupleQuery();
@@ -165,6 +205,13 @@ public class TextUnitSearcher {
     return new TextUnitAndWordCount(
         textUnitCount == null ? 0 : textUnitCount,
         textUnitWordCount == null ? 0 : textUnitWordCount);
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    transactionDefinition.setReadOnly(true);
+    return transactionDefinition;
   }
 
   protected void sleepBeforeRetry(long backoffMillis) {

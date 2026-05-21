@@ -120,6 +120,8 @@ Removed during this workstream:
   creation, finishing, and progress updates now open explicit independent transactions.
 - `Bootstrap.createSystemUser` no longer relies on self-invoked `@Transactional`; bootstrap opens
   the system-user creation transaction explicitly.
+- `TextUnitSearcher` no longer uses self-invoked read-only `@Transactional` methods inside retry
+  loops; each retry attempt opens a read-only transaction explicitly.
 
 In progress:
 
