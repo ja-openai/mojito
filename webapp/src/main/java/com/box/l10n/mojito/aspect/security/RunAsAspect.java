@@ -1,6 +1,5 @@
 package com.box.l10n.mojito.aspect.security;
 
-import com.box.l10n.mojito.aspect.JsonRawString;
 import com.box.l10n.mojito.security.UserDetailsImpl;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -20,7 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
 /**
- * Aspect that implements behavior describe in {@link JsonRawString}.
+ * Aspect that implements behavior described in {@link RunAs}.
  *
  * @author wyau
  */
