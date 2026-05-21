@@ -513,35 +513,53 @@ public class AssetExtractionService {
    * @return state with tm text units ids updated (either from creation or reading existing text
    *     units)
    */
-  @Pollable(message = "Create new text units")
   CreateTextUnitsForNewContentResult createTextUnitsForNewContent(
-      AssetContent assetContent,
-      MultiBranchState stateForNewContent,
-      @ParentTask PollableTask currentTask) {
-    Timer.Sample sample = Timer.start(meterRegistry);
-    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
-
+      AssetContent assetContent, MultiBranchState stateForNewContent, PollableTask currentTask) {
     try {
-      return createTextUnitsForNewContent(
-          assetContent, stateForNewContent, LeveragingType.LEGACY_SOURCE, currentTask);
-    } catch (RuntimeException e) {
-      exceptionClass = e.getClass().getSimpleName();
+      return pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(currentTask),
+              "createTextUnitsForNewContent",
+              "Create new text units",
+              0,
+              getTimeout(currentTask),
+              task ->
+                  createTextUnitsForNewContent(
+                      assetContent, stateForNewContent, LeveragingType.LEGACY_SOURCE, task)));
+    } catch (RuntimeException | Error e) {
       throw e;
-    } finally {
-      recordTimer(
-          "AssetExtractionService.createTextUnitsForNewContent",
-          "createTextUnitsForNewContent",
-          sample,
-          exceptionClass);
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error creating text units", t);
     }
   }
 
-  @Pollable(message = "Create new text units")
   CreateTextUnitsForNewContentResult createTextUnitsForNewContent(
       AssetContent assetContent,
       MultiBranchState stateForNewContent,
       LeveragingType leveragingTypeForCurrentPush,
-      @ParentTask PollableTask currentTask) {
+      PollableTask currentTask) {
+    try {
+      return pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(currentTask),
+              "createTextUnitsForNewContent",
+              "Create new text units",
+              0,
+              getTimeout(currentTask),
+              task ->
+                  createTextUnitsForNewContentWithMetrics(
+                      assetContent, stateForNewContent, leveragingTypeForCurrentPush)));
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error creating text units", t);
+    }
+  }
+
+  private CreateTextUnitsForNewContentResult createTextUnitsForNewContentWithMetrics(
+      AssetContent assetContent,
+      MultiBranchState stateForNewContent,
+      LeveragingType leveragingTypeForCurrentPush) {
     Timer.Sample sample = Timer.start(meterRegistry);
     String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
 
