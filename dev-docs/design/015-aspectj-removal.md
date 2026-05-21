@@ -92,6 +92,9 @@ In progress:
   `@InjectCurrentTask`; it calls `PollableTaskRunner` directly and keeps resume handling explicit.
 - `DropExporterService.createDropExporterAndUpdateDrop` no longer uses `@Pollable` or
   `@ParentTask`; it calls `PollableTaskRunner` directly with the parent task id and timeout.
+- `AssetService.addOrUpdateAssetAndProcessIfNeeded` and its asset-creation subtask no longer use
+  `@Pollable`, `@InjectCurrentTask`, `@MsgArg`, or `@ParentTask`; they call `PollableTaskRunner`
+  directly and keep the asset creation transaction explicit with `TransactionTemplate`.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

@@ -6,6 +6,7 @@ import static com.box.l10n.mojito.rest.asset.AssetSpecification.deletedEquals;
 import static com.box.l10n.mojito.rest.asset.AssetSpecification.pathEquals;
 import static com.box.l10n.mojito.rest.asset.AssetSpecification.repositoryIdEquals;
 import static com.box.l10n.mojito.rest.asset.AssetSpecification.virtualEquals;
+import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import com.box.l10n.mojito.entity.Asset;
@@ -29,13 +30,10 @@ import com.box.l10n.mojito.service.assetExtraction.LeveragingType;
 import com.box.l10n.mojito.service.assetcontent.AssetContentService;
 import com.box.l10n.mojito.service.branch.BranchRepository;
 import com.box.l10n.mojito.service.branch.BranchService;
-import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.MsgArg;
-import com.box.l10n.mojito.service.pollableTask.ParentTask;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
-import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.google.common.base.Joiner;
@@ -52,6 +50,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Service to manage assets. It takes care of adding new assets as well as starting the extraction
@@ -81,7 +80,9 @@ public class AssetService {
 
   @Autowired RepositoryRepository repositoryRepository;
 
-  @Autowired PollableTaskService pollableTaskService;
+  @Autowired PollableTaskRunner pollableTaskRunner;
+
+  @Autowired TransactionTemplate transactionTemplate;
 
   @Autowired UserService userService;
 
@@ -151,19 +152,27 @@ public class AssetService {
       List<String> filterOptions,
       LeveragingType leveragingType)
       throws ExecutionException, InterruptedException, UnsupportedAssetFilterTypeException {
-    return addOrUpdateAssetAndProcessIfNeeded(
-        repositoryId,
-        assetPath,
-        assetContent,
-        extractedContent,
-        branch,
-        branchCreatedByUsername,
-        branchNotifierIds,
-        pushRunId,
-        filterConfigIdOverride,
-        filterOptions,
-        leveragingType,
-        PollableTask.INJECT_CURRENT_TASK);
+    return pollableTaskRunner.runSyncFuture(
+        new PollableTaskInvocation<>(
+            null,
+            "addOrUpdateAssetAndProcessIfNeeded",
+            null,
+            2,
+            DEFAULT_TIMEOUT,
+            currentTask ->
+                addOrUpdateAssetAndProcessIfNeededDirect(
+                    repositoryId,
+                    assetPath,
+                    assetContent,
+                    extractedContent,
+                    branch,
+                    branchCreatedByUsername,
+                    branchNotifierIds,
+                    pushRunId,
+                    filterConfigIdOverride,
+                    filterOptions,
+                    leveragingType,
+                    currentTask)));
   }
 
   /**
@@ -179,8 +188,7 @@ public class AssetService {
    * @throws ExecutionException
    * @throws InterruptedException
    */
-  @Pollable(expectedSubTaskNumber = 2)
-  private PollableFuture<Asset> addOrUpdateAssetAndProcessIfNeeded(
+  private PollableFuture<Asset> addOrUpdateAssetAndProcessIfNeededDirect(
       Long repositoryId,
       String assetPath,
       String assetContent,
@@ -192,7 +200,7 @@ public class AssetService {
       FilterConfigIdOverride filterConfigIdOverride,
       List<String> filterOptions,
       LeveragingType leveragingType,
-      @InjectCurrentTask PollableTask currentTask)
+      PollableTask currentTask)
       throws InterruptedException, ExecutionException, UnsupportedAssetFilterTypeException {
 
     PollableFutureTaskResult<Asset> pollableFutureTaskResult = new PollableFutureTaskResult<>();
@@ -308,14 +316,35 @@ public class AssetService {
    * @param parentTask The parent task to be updated
    * @return The created asset
    */
-  @Pollable(message = "Creating asset: {assetPath}")
-  @Transactional
   private Asset createAssetWithPollable(
-      Long repositoryId,
-      @MsgArg(name = "assetPath") String assetPath,
-      @ParentTask PollableTask parentTask) {
+      Long repositoryId, String assetPath, PollableTask parentTask) {
+    try {
+      return pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "createAssetWithPollable",
+              "Creating asset: " + assetPath,
+              0,
+              getTimeout(parentTask),
+              currentTask ->
+                  transactionTemplate.execute(
+                      status -> createAsset(repositoryId, assetPath, Boolean.FALSE))));
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error creating asset", t);
+    }
+  }
 
-    return createAsset(repositoryId, assetPath, Boolean.FALSE);
+  private Long getParentTaskId(PollableTask parentTask) {
+    return parentTask == null ? null : parentTask.getId();
+  }
+
+  private Long getTimeout(PollableTask parentTask) {
+    if (parentTask != null && parentTask.getTimeout() != null) {
+      return parentTask.getTimeout();
+    }
+    return DEFAULT_TIMEOUT;
   }
 
   /**
