@@ -41,8 +41,6 @@ import com.box.l10n.mojito.service.branch.BranchRepository;
 import com.box.l10n.mojito.service.leveraging.LeveragerByTmTextUnit;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pluralform.PluralFormService;
-import com.box.l10n.mojito.service.pollableTask.ParentTask;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
@@ -1533,14 +1531,37 @@ public class AssetExtractionService {
     return assetExtractorTextUnits;
   }
 
-  @Pollable(message = "Extracting text units from asset")
   public MultiBranchState convertAssetContentToMultiBranchState(
       AssetContent assetContent,
       FilterConfigIdOverride filterConfigIdOverride,
       List<String> filterOptions,
-      @ParentTask PollableTask parentTask)
+      PollableTask parentTask)
       throws UnsupportedAssetFilterTypeException {
+    try {
+      return pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "convertAssetContentToMultiBranchState",
+              "Extracting text units from asset",
+              0,
+              getTimeout(parentTask),
+              task ->
+                  convertAssetContentToMultiBranchStateDirect(
+                      assetContent, filterConfigIdOverride, filterOptions)));
+    } catch (UnsupportedAssetFilterTypeException e) {
+      throw e;
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error extracting text units from asset", t);
+    }
+  }
 
+  MultiBranchState convertAssetContentToMultiBranchStateDirect(
+      AssetContent assetContent,
+      FilterConfigIdOverride filterConfigIdOverride,
+      List<String> filterOptions)
+      throws UnsupportedAssetFilterTypeException {
     List<AssetExtractorTextUnit> assetExtractorTextUnits =
         getExtractorTextUnitsForAssetContent(assetContent, filterOptions, filterConfigIdOverride);
     com.box.l10n.mojito.localtm.merger.Branch branch = convertBranchToLocalTmBranch(assetContent);
