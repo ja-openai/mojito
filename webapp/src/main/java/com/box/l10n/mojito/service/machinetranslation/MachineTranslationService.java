@@ -7,7 +7,8 @@ import com.box.l10n.mojito.service.leveraging.LeveragerByContentAndRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.Comparator;
@@ -37,15 +38,48 @@ public class MachineTranslationService {
 
   final TranslationMerger translationMerger;
 
+  final MeterRegistry meterRegistry;
+
   public MachineTranslationService(
-      MachineTranslationEngine machineTranslationEngine, TranslationMerger translationMerger) {
+      MachineTranslationEngine machineTranslationEngine,
+      TranslationMerger translationMerger,
+      MeterRegistry meterRegistry) {
     this.machineTranslationEngine = machineTranslationEngine;
     this.translationMerger = translationMerger;
+    this.meterRegistry = meterRegistry;
   }
 
-  @Timed("MachineTranslationService.getTranslations")
   @Cacheable(MACHINE_TRANSLATION)
   public TranslationsResponseDTO getTranslations(
+      List<String> textSources,
+      String sourceBcp47Tag,
+      List<String> targetBcp47Tags,
+      boolean skipFunctionalProtection,
+      boolean skipLeveraging,
+      List<Long> repositoryIds,
+      List<String> repositoryNames) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      return getTranslationsTimed(
+          textSources,
+          sourceBcp47Tag,
+          targetBcp47Tags,
+          skipFunctionalProtection,
+          skipLeveraging,
+          repositoryIds,
+          repositoryNames);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "MachineTranslationService.getTranslations", "getTranslations", sample, exceptionClass);
+    }
+  }
+
+  private TranslationsResponseDTO getTranslationsTimed(
       List<String> textSources,
       String sourceBcp47Tag,
       List<String> targetBcp47Tags,
@@ -96,7 +130,6 @@ public class MachineTranslationService {
     return getSortedTranslationsResponse(textSources, targetBcp47Tags, translationsBySourceText);
   }
 
-  @Timed("MachineTranslationService.getSingleTranslation")
   public TranslationDTO getSingleTranslation(
       String textSource,
       String sourceBcp47Tag,
@@ -105,29 +138,65 @@ public class MachineTranslationService {
       boolean skipLeveraging,
       List<Long> repositoryIds,
       List<String> repositoryNames) {
-    return getTranslations(
-            Collections.singletonList(textSource),
-            sourceBcp47Tag,
-            Collections.singletonList(targetBcp47Tags),
-            skipFunctionalProtection,
-            skipLeveraging,
-            repositoryIds,
-            repositoryNames)
-        .getTextUnitTranslations()
-        .get(0)
-        .getTranslations()
-        .get(0);
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      return getTranslations(
+              Collections.singletonList(textSource),
+              sourceBcp47Tag,
+              Collections.singletonList(targetBcp47Tags),
+              skipFunctionalProtection,
+              skipLeveraging,
+              repositoryIds,
+              repositoryNames)
+          .getTextUnitTranslations()
+          .get(0)
+          .getTranslations()
+          .get(0);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "MachineTranslationService.getSingleTranslation",
+          "getSingleTranslation",
+          sample,
+          exceptionClass);
+    }
   }
 
   @SuppressWarnings("SpringCacheableComponentsInspection")
-  @Timed("MachineTranslationService.getMachineTranslatedResponse")
   @Cacheable(MACHINE_TRANSLATION)
   ImmutableMap<String, ImmutableList<TranslationDTO>> getMachineTranslationBySourceText(
       String sourceBcp47Tag,
       List<String> targetBcp47Tags,
       List<String> textSources,
       Boolean skipFunctionalProtection) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
 
+    try {
+      return getMachineTranslationBySourceTextTimed(
+          sourceBcp47Tag, targetBcp47Tags, textSources, skipFunctionalProtection);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "MachineTranslationService.getMachineTranslatedResponse",
+          "getMachineTranslationBySourceText",
+          sample,
+          exceptionClass);
+    }
+  }
+
+  private ImmutableMap<String, ImmutableList<TranslationDTO>>
+      getMachineTranslationBySourceTextTimed(
+          String sourceBcp47Tag,
+          List<String> targetBcp47Tags,
+          List<String> textSources,
+          Boolean skipFunctionalProtection) {
     boolean isFunctionalProtectionEnabled = true;
 
     if (skipFunctionalProtection != null && skipFunctionalProtection) {
@@ -162,14 +231,36 @@ public class MachineTranslationService {
    * exact match.
    */
   @SuppressWarnings("SpringCacheableComponentsInspection")
-  @Timed("MachineTranslationService.getLeveragedTranslationResponse")
   @Cacheable(MACHINE_TRANSLATION)
   ImmutableMap<String, ImmutableList<TranslationDTO>> getLeveragedTranslationsBySourceText(
       List<String> textSources,
       List<String> targetBcp47Tags,
       List<Long> repositoryIds,
       List<String> repositoryNames) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
 
+    try {
+      return getLeveragedTranslationsBySourceTextTimed(
+          textSources, targetBcp47Tags, repositoryIds, repositoryNames);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "MachineTranslationService.getLeveragedTranslationResponse",
+          "getLeveragedTranslationsBySourceText",
+          sample,
+          exceptionClass);
+    }
+  }
+
+  private ImmutableMap<String, ImmutableList<TranslationDTO>>
+      getLeveragedTranslationsBySourceTextTimed(
+          List<String> textSources,
+          List<String> targetBcp47Tags,
+          List<Long> repositoryIds,
+          List<String> repositoryNames) {
     return textSources.stream()
         .map(
             (sourceText) -> {
@@ -309,4 +400,17 @@ public class MachineTranslationService {
         translationsBySourceText.get(sourceText).stream()
             .collect(Collectors.toMap(TranslationDTO::getBcp47Tag, Function.identity())));
   }
+
+  private void recordTimer(
+      String metricName, String methodName, Timer.Sample sample, String exceptionClass) {
+    sample.stop(
+        Timer.builder(metricName)
+            .tag(EXCEPTION_TAG, exceptionClass)
+            .tag("class", MachineTranslationService.class.getName())
+            .tag("method", methodName)
+            .register(meterRegistry));
+  }
+
+  static final String DEFAULT_EXCEPTION_TAG_VALUE = "none";
+  static final String EXCEPTION_TAG = "exception";
 }

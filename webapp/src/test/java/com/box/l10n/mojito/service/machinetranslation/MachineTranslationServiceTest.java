@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import com.box.l10n.mojito.service.leveraging.LeveragerByContentAndRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,9 @@ class MachineTranslationServiceTest {
 
   MachineTranslationServiceTest() {
     machineTranslationService =
-        spy(new MachineTranslationService(machineTranslationEngine, new TranslationMerger()));
+        spy(
+            new MachineTranslationService(
+                machineTranslationEngine, new TranslationMerger(), new SimpleMeterRegistry()));
 
     leveragerByContentAndRepositoryMock = mock(LeveragerByContentAndRepository.class);
     when(machineTranslationService.getLeveragerByContentAndRepository(null, null))
