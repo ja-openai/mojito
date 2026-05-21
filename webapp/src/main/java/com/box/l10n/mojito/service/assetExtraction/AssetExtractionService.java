@@ -979,9 +979,28 @@ public class AssetExtractionService {
                     "there must be at least one branch because of previous filtering"));
   }
 
-  @Pollable(message = "Perform leveraging")
   void performLeveraging(
-      ImmutableList<TextUnitDTOMatch> leveragingMatches, @ParentTask PollableTask currentTask) {
+      ImmutableList<TextUnitDTOMatch> leveragingMatches, PollableTask currentTask) {
+    try {
+      pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(currentTask),
+              "performLeveraging",
+              "Perform leveraging",
+              0,
+              getTimeout(currentTask),
+              task -> {
+                performLeveragingDirect(leveragingMatches);
+                return null;
+              }));
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error performing leveraging", t);
+    }
+  }
+
+  void performLeveragingDirect(ImmutableList<TextUnitDTOMatch> leveragingMatches) {
     leveragingMatches.stream()
         .forEach(
             match -> {
