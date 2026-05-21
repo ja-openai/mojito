@@ -30,6 +30,7 @@ const EXAMPLE_INPUT = `Payments daily | enabled | 0 0 0 * * ? | America/Los_Ange
 Vendor catch-up | disabled | 0 30 6 * * ? | UTC | Vendor Team | no-translator | 2 | 1500 | Billing; Checkout`;
 
 type PrefillSource = 'existing-automations' | 'review-feature-roster';
+type BatchApplyMode = 'MERGE' | 'REPLACE_DISABLE_OMITTED';
 
 export function AdminReviewAutomationBatchPage() {
   const user = useUser();
@@ -37,9 +38,11 @@ export function AdminReviewAutomationBatchPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [input, setInput] = useState('');
-  const [prefillMode, setPrefillMode] = useState<'merge' | 'replace'>('merge');
+  const [applyMode, setApplyMode] = useState<BatchApplyMode>('MERGE');
+  const [isApplyModeMenuOpen, setIsApplyModeMenuOpen] = useState(false);
   const [isPrefillModalOpen, setIsPrefillModalOpen] = useState(false);
   const [prefillSource, setPrefillSource] = useState<PrefillSource>('existing-automations');
+  const [replaceEditorOnPrefill, setReplaceEditorOnPrefill] = useState(false);
   const [includeDisabledPrefillRows, setIncludeDisabledPrefillRows] = useState(false);
   const [statusNotice, setStatusNotice] = useState<{
     kind: 'success' | 'error';
@@ -77,7 +80,7 @@ export function AdminReviewAutomationBatchPage() {
       await queryClient.invalidateQueries({ queryKey: ['review-automations'] });
       setStatusNotice({
         kind: 'success',
-        message: `Batch applied: ${result.createdCount} created, ${result.updatedCount} updated.`,
+        message: `Batch applied: ${result.createdCount} created, ${result.updatedCount} updated, ${result.disabledCount ?? 0} disabled.`,
       });
     },
     onError: (error: Error) => {
@@ -166,6 +169,28 @@ export function AdminReviewAutomationBatchPage() {
     () => new Set(parsedRows.map((row) => row.name.toLowerCase()).filter(Boolean)),
     [parsedRows],
   );
+  const validRowExistingIds = useMemo(
+    () => new Set(validRows.map((row) => row.id).filter((id): id is number => id != null)),
+    [validRows],
+  );
+  const validRowNames = useMemo(
+    () => new Set(validRows.map((row) => row.name.toLowerCase()).filter(Boolean)),
+    [validRows],
+  );
+  const omittedEnabledAutomationCount = useMemo(() => {
+    if (applyMode !== 'REPLACE_DISABLE_OMITTED') {
+      return 0;
+    }
+    return (reviewAutomationsQuery.data ?? []).filter(
+      (automation) =>
+        automation.enabled &&
+        !validRowExistingIds.has(automation.id) &&
+        !validRowNames.has(automation.name.toLowerCase()),
+    ).length;
+  }, [applyMode, reviewAutomationsQuery.data, validRowExistingIds, validRowNames]);
+  const applyModeLabel =
+    applyMode === 'REPLACE_DISABLE_OMITTED' ? 'Replace enabled set' : 'Apply updates';
+  const isApplyDisabled = batchMutation.isPending || parsedRows.length === 0 || isSourceLoading;
 
   if (!isAdmin) {
     return <Navigate to="/repositories" replace />;
@@ -181,6 +206,7 @@ export function AdminReviewAutomationBatchPage() {
       return;
     }
     batchMutation.mutate({
+      mode: applyMode,
       rows: validRows.map((row) => ({
         id: row.id ?? null,
         name: row.name,
@@ -217,10 +243,9 @@ export function AdminReviewAutomationBatchPage() {
       return false;
     }
 
-    const rowsToLoad =
-      prefillMode === 'merge'
-        ? rows.filter((row) => !existingInputNames.has(row.name.toLowerCase()))
-        : rows;
+    const rowsToLoad = !replaceEditorOnPrefill
+      ? rows.filter((row) => !existingInputNames.has(row.name.toLowerCase()))
+      : rows;
 
     if (rowsToLoad.length === 0) {
       setStatusNotice({
@@ -232,17 +257,16 @@ export function AdminReviewAutomationBatchPage() {
 
     const nextText = rowsToLoad.map((row) => formatReviewAutomationBatchRow(row)).join('\n');
     setInput((previous) => {
-      if (prefillMode === 'replace' || !previous.trim()) {
+      if (replaceEditorOnPrefill || !previous.trim()) {
         return nextText;
       }
       return `${previous.trimEnd()}\n${nextText}`;
     });
     setStatusNotice({
       kind: 'success',
-      message:
-        prefillMode === 'replace'
-          ? `Replaced with ${rowsToLoad.length} ${options?.sourceLabel ?? 'prefill'} row${rowsToLoad.length === 1 ? '' : 's'}.`
-          : `Merged ${rowsToLoad.length} ${options?.sourceLabel ?? 'prefill'} row${rowsToLoad.length === 1 ? '' : 's'}.`,
+      message: replaceEditorOnPrefill
+        ? `Replaced with ${rowsToLoad.length} ${options?.sourceLabel ?? 'prefill'} row${rowsToLoad.length === 1 ? '' : 's'}.`
+        : `Merged ${rowsToLoad.length} ${options?.sourceLabel ?? 'prefill'} row${rowsToLoad.length === 1 ? '' : 's'}.`,
     });
     return true;
   };
@@ -324,36 +348,6 @@ export function AdminReviewAutomationBatchPage() {
               </div>
             ) : null}
             <div className="review-automation-batch-page__batch-controls">
-              <div
-                className="review-automation-batch-page__mode-toggle"
-                role="group"
-                aria-label="Batch prefill mode"
-              >
-                <button
-                  type="button"
-                  className={`review-automation-batch-page__mode-option${
-                    prefillMode === 'merge' ? ' is-active' : ''
-                  }`}
-                  onClick={() => {
-                    setPrefillMode('merge');
-                    setStatusNotice(null);
-                  }}
-                >
-                  Merge
-                </button>
-                <button
-                  type="button"
-                  className={`review-automation-batch-page__mode-option${
-                    prefillMode === 'replace' ? ' is-active' : ''
-                  }`}
-                  onClick={() => {
-                    setPrefillMode('replace');
-                    setStatusNotice(null);
-                  }}
-                >
-                  Replace
-                </button>
-              </div>
               <button
                 type="button"
                 className="settings-button settings-button--ghost review-automation-batch-page__prefill-button"
@@ -402,7 +396,11 @@ export function AdminReviewAutomationBatchPage() {
                 Use semicolons between review feature names. Comma-separated lists still work for
                 feature names without commas.
               </li>
-              <li>Merge skips automation names already present in the editor.</li>
+              <li>Prefill merges into the editor by default; the modal can replace editor text.</li>
+              <li>
+                Apply updates listed rows only, unless the apply menu is set to disable omitted
+                automations.
+              </li>
             </ul>
           </aside>
         </section>
@@ -480,15 +478,82 @@ export function AdminReviewAutomationBatchPage() {
           >
             Back
           </button>
-          <button
-            type="button"
-            className="settings-button settings-button--primary user-batch-page__create"
-            onClick={handleApply}
-            disabled={batchMutation.isPending || parsedRows.length === 0 || isSourceLoading}
+          <div
+            className="review-automation-batch-page__apply-control"
+            onBlur={(event) => {
+              const nextFocusedElement = event.relatedTarget;
+              if (
+                !(nextFocusedElement instanceof Node) ||
+                !event.currentTarget.contains(nextFocusedElement)
+              ) {
+                setIsApplyModeMenuOpen(false);
+              }
+            }}
           >
-            Apply batch
-          </button>
+            <button
+              type="button"
+              className="settings-button settings-button--primary review-automation-batch-page__apply-button"
+              onClick={handleApply}
+              disabled={isApplyDisabled}
+            >
+              {applyModeLabel}
+            </button>
+            <button
+              type="button"
+              className="settings-button settings-button--primary review-automation-batch-page__apply-menu-button"
+              aria-label="Choose batch apply mode"
+              aria-haspopup="menu"
+              aria-expanded={isApplyModeMenuOpen}
+              onClick={() => setIsApplyModeMenuOpen((isOpen) => !isOpen)}
+              disabled={isApplyDisabled}
+            >
+              <span className="review-automation-batch-page__apply-caret" aria-hidden="true" />
+            </button>
+            {isApplyModeMenuOpen ? (
+              <div className="review-automation-batch-page__apply-menu" role="menu">
+                <button
+                  type="button"
+                  className="review-automation-batch-page__apply-menu-item"
+                  role="menuitemradio"
+                  aria-checked={applyMode === 'MERGE'}
+                  onClick={() => {
+                    setApplyMode('MERGE');
+                    setIsApplyModeMenuOpen(false);
+                    setStatusNotice(null);
+                  }}
+                >
+                  <span>Apply updates</span>
+                  <span className="review-automation-batch-page__apply-menu-hint">
+                    Create/update listed rows only.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="review-automation-batch-page__apply-menu-item"
+                  role="menuitemradio"
+                  aria-checked={applyMode === 'REPLACE_DISABLE_OMITTED'}
+                  onClick={() => {
+                    setApplyMode('REPLACE_DISABLE_OMITTED');
+                    setIsApplyModeMenuOpen(false);
+                    setStatusNotice(null);
+                  }}
+                >
+                  <span>Replace enabled set</span>
+                  <span className="review-automation-batch-page__apply-menu-hint">
+                    Disable enabled automations omitted from the batch.
+                  </span>
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
+        {applyMode === 'REPLACE_DISABLE_OMITTED' ? (
+          <div className="review-automation-batch-page__apply-hint" aria-live="polite">
+            Replace enabled set will create/update listed rows and disable{' '}
+            {omittedEnabledAutomationCount} enabled automation
+            {omittedEnabledAutomationCount === 1 ? '' : 's'} not listed.
+          </div>
+        ) : null}
       </div>
 
       <Modal
@@ -566,6 +631,21 @@ export function AdminReviewAutomationBatchPage() {
               </label>
             </div>
           </div>
+          <label className="review-automation-batch-page__prefill-source-option review-automation-batch-page__prefill-editor-option">
+            <input
+              type="checkbox"
+              checked={replaceEditorOnPrefill}
+              onChange={(event) => setReplaceEditorOnPrefill(event.target.checked)}
+            />
+            <span className="review-automation-batch-page__prefill-source-copy">
+              <span className="review-automation-batch-page__prefill-source-title">
+                Replace editor contents
+              </span>
+              <span className="review-automation-batch-page__prefill-source-hint">
+                Leave unchecked to merge rows that are not already in the editor.
+              </span>
+            </span>
+          </label>
         </div>
         <div className="modal__actions">
           <button

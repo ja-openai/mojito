@@ -102,4 +102,43 @@ public class ReviewAutomationServiceTest {
     org.junit.Assert.assertEquals("Daily review", savedAutomation.getName());
     org.junit.Assert.assertEquals(1, savedAutomation.getFeatures().size());
   }
+
+  @Test
+  public void batchUpsertReplaceModeDisablesEnabledAutomationsNotInBatch() {
+    Team team = new Team();
+    team.setId(2L);
+    ReviewAutomation keptAutomation = new ReviewAutomation();
+    keptAutomation.setId(7L);
+    keptAutomation.setName("Kept");
+    keptAutomation.setEnabled(true);
+    keptAutomation.setAssignTranslator(true);
+    ReviewAutomation omittedAutomation = new ReviewAutomation();
+    omittedAutomation.setId(8L);
+    omittedAutomation.setName("Omitted");
+    omittedAutomation.setEnabled(true);
+
+    when(reviewAutomationRepository.findByIdWithFeatures(7L))
+        .thenReturn(Optional.of(keptAutomation));
+    when(reviewAutomationRepository.findByNameIgnoreCase("Kept"))
+        .thenReturn(Optional.of(keptAutomation));
+    when(teamRepository.findById(2L)).thenReturn(Optional.of(team));
+    when(reviewAutomationRepository.findAllEnabledWithTeam())
+        .thenReturn(List.of(keptAutomation, omittedAutomation));
+    when(reviewAutomationRepository.save(Mockito.any(ReviewAutomation.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    ReviewAutomationService.BatchUpsertResult result =
+        reviewAutomationService.batchUpsert(
+            List.of(
+                new ReviewAutomationService.BatchUpsertRow(
+                    7L, "Kept", true, "0 0 9 ? * MON-FRI", "UTC", 2L, 1, 2000, true, List.of())),
+            ReviewAutomationService.BatchUpsertMode.REPLACE_DISABLE_OMITTED);
+
+    org.junit.Assert.assertEquals(0, result.createdCount());
+    org.junit.Assert.assertEquals(1, result.updatedCount());
+    org.junit.Assert.assertEquals(1, result.disabledCount());
+    org.junit.Assert.assertTrue(keptAutomation.getEnabled());
+    org.junit.Assert.assertFalse(omittedAutomation.getEnabled());
+    verify(reviewAutomationRepository).save(omittedAutomation);
+  }
 }

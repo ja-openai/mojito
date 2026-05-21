@@ -271,14 +271,20 @@ public class ReviewAutomationService {
   }
 
   @Transactional
-  public BatchUpsertResult batchUpsert(List<BatchUpsertRow> rows) {
+  public BatchUpsertResult batchUpsert(List<BatchUpsertRow> rows, BatchUpsertMode mode) {
     requireAdmin();
+    BatchUpsertMode resolvedMode = mode == null ? BatchUpsertMode.MERGE : mode;
     if (rows == null || rows.isEmpty()) {
-      return new BatchUpsertResult(0, 0);
+      int disabledCount = disableOmittedEnabledAutomations(Set.of(), resolvedMode);
+      if (disabledCount > 0) {
+        syncSchedulerAfterCommit();
+      }
+      return new BatchUpsertResult(0, 0, disabledCount);
     }
 
     Set<String> seenNames = new LinkedHashSet<>();
     Set<Long> seenIds = new LinkedHashSet<>();
+    Set<Long> retainedIds = new LinkedHashSet<>();
     int createdCount = 0;
     int updatedCount = 0;
 
@@ -332,11 +338,30 @@ public class ReviewAutomationService {
           normalizeAssignTranslator(
               row.assignTranslator(), reviewAutomation.getAssignTranslator()));
       reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
-      reviewAutomationRepository.save(reviewAutomation);
+      ReviewAutomation saved = reviewAutomationRepository.save(reviewAutomation);
+      retainedIds.add(saved.getId());
     }
 
+    int disabledCount = disableOmittedEnabledAutomations(retainedIds, resolvedMode);
     syncSchedulerAfterCommit();
-    return new BatchUpsertResult(createdCount, updatedCount);
+    return new BatchUpsertResult(createdCount, updatedCount, disabledCount);
+  }
+
+  private int disableOmittedEnabledAutomations(Set<Long> retainedIds, BatchUpsertMode mode) {
+    if (mode != BatchUpsertMode.REPLACE_DISABLE_OMITTED) {
+      return 0;
+    }
+
+    int disabledCount = 0;
+    for (ReviewAutomation reviewAutomation : reviewAutomationRepository.findAllEnabledWithTeam()) {
+      if (retainedIds.contains(reviewAutomation.getId())) {
+        continue;
+      }
+      reviewAutomation.setEnabled(false);
+      reviewAutomationRepository.save(reviewAutomation);
+      disabledCount++;
+    }
+    return disabledCount;
   }
 
   @Transactional(readOnly = true)
@@ -685,5 +710,10 @@ public class ReviewAutomationService {
       Boolean assignTranslator,
       List<Long> featureIds) {}
 
-  public record BatchUpsertResult(int createdCount, int updatedCount) {}
+  public enum BatchUpsertMode {
+    MERGE,
+    REPLACE_DISABLE_OMITTED
+  }
+
+  public record BatchUpsertResult(int createdCount, int updatedCount, int disabledCount) {}
 }

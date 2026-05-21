@@ -101,7 +101,8 @@ public class ReviewAutomationWS {
       Boolean assignTranslator,
       List<Long> featureIds) {}
 
-  public record BatchUpsertReviewAutomationsRequest(List<BatchRow> rows) {
+  public record BatchUpsertReviewAutomationsRequest(
+      ReviewAutomationService.BatchUpsertMode mode, List<BatchRow> rows) {
     public record BatchRow(
         Long id,
         String name,
@@ -164,7 +165,8 @@ public class ReviewAutomationWS {
   public record RepairReviewAutomationTriggerResponse(
       Long automationId, TriggerStatusRef trigger) {}
 
-  public record BatchUpsertReviewAutomationsResponse(int createdCount, int updatedCount) {}
+  public record BatchUpsertReviewAutomationsResponse(
+      int createdCount, int updatedCount, int disabledCount) {}
 
   @GetMapping
   public SearchReviewAutomationsResponse searchReviewAutomations(
@@ -396,8 +398,10 @@ public class ReviewAutomationWS {
                                   row.maxWordCountPerProject(),
                                   row.assignTranslator(),
                                   row.featureIds()))
-                      .toList());
-      return new BatchUpsertReviewAutomationsResponse(result.createdCount(), result.updatedCount());
+                      .toList(),
+              request == null ? null : request.mode());
+      return new BatchUpsertReviewAutomationsResponse(
+          result.createdCount(), result.updatedCount(), result.disabledCount());
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
     }

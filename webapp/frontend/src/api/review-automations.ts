@@ -125,6 +125,7 @@ type UpsertReviewAutomationPayload = {
 };
 
 type BatchUpsertPayload = {
+  mode?: 'MERGE' | 'REPLACE_DISABLE_OMITTED';
   rows: Array<{
     id?: number | null;
     name: string;
@@ -142,6 +143,7 @@ type BatchUpsertPayload = {
 export type ApiBatchUpsertReviewAutomationsResponse = {
   createdCount: number;
   updatedCount: number;
+  disabledCount: number;
 };
 
 const jsonHeaders = {
