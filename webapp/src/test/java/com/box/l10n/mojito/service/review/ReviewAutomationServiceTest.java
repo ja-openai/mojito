@@ -12,6 +12,8 @@ import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 public class ReviewAutomationServiceTest {
 
@@ -23,6 +25,9 @@ public class ReviewAutomationServiceTest {
       Mockito.mock(ReviewAutomationRunRepository.class);
   private final TeamRepository teamRepository = Mockito.mock(TeamRepository.class);
   private final UserService userService = Mockito.mock(UserService.class);
+  private final PlatformTransactionManager transactionManager =
+      Mockito.mock(PlatformTransactionManager.class);
+  private final TransactionStatus transactionStatus = Mockito.mock(TransactionStatus.class);
 
   @SuppressWarnings("unchecked")
   private final ObjectProvider<ReviewAutomationCronSchedulerService>
@@ -39,8 +44,10 @@ public class ReviewAutomationServiceTest {
             reviewAutomationRunRepository,
             teamRepository,
             userService,
-            reviewAutomationCronSchedulerServiceProvider);
+            reviewAutomationCronSchedulerServiceProvider,
+            transactionManager);
     when(userService.isCurrentUserAdmin()).thenReturn(true);
+    when(transactionManager.getTransaction(Mockito.any())).thenReturn(transactionStatus);
   }
 
   @Test

@@ -191,6 +191,9 @@ Removed during this workstream:
 - `ReviewFeatureService` no longer uses `@Transactional`; review-feature reads and writes now open
   and commit their transaction boundaries explicitly, with create/update detail reads kept inside
   the same write transaction.
+- `ReviewAutomationService` no longer uses `@Transactional`; review-automation reads, writes,
+  schedule preview, and trigger repair now open and commit their transaction boundaries explicitly
+  while preserving scheduler sync registration before commit.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and
