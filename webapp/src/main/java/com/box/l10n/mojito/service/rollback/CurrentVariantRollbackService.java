@@ -25,7 +25,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author aloison
@@ -39,6 +41,8 @@ public class CurrentVariantRollbackService {
   @Autowired EntityManager entityManager;
 
   @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   /**
    * Rollbacks the current variants of the given TM to the state at the given date.
@@ -63,10 +67,25 @@ public class CurrentVariantRollbackService {
    *     to
    * @param extraParameters Extra parameters to filter what to rollback (should not be null)
    */
-  @Transactional
   public void rollbackCurrentVariantsFromTMToDate(
       ZonedDateTime rollbackDateTime, Long tmId, CurrentVariantRollbackParameters extraParameters) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      rollbackCurrentVariantsFromTMToDateNoTx(rollbackDateTime, tmId, extraParameters);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void rollbackCurrentVariantsFromTMToDateNoTx(
+      ZonedDateTime rollbackDateTime, Long tmId, CurrentVariantRollbackParameters extraParameters) {
     Preconditions.checkNotNull(extraParameters, "Extra parameters should not be null");
 
     deleteExistingCurrentVariants(tmId, extraParameters);
