@@ -86,6 +86,8 @@ In progress:
   runner operation.
 - `TMService.exportAssetAsXLIFFAsync` no longer uses `@Pollable` or `@InjectCurrentTask`; it calls
   `PollableTaskRunner` directly and stores the generated XLIFF against the runner task.
+- `AiReviewService.retryImport` no longer uses `@Pollable`, `@MsgArg`, or `@InjectCurrentTask`; it
+  calls `PollableTaskRunner` directly and uses the runner task for the child retry.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

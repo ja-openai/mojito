@@ -238,9 +238,7 @@ public class AiReviewWS {
   public ProtoAiReviewRetryImportResponse aiReviewRetryImport(
       @RequestBody ProtoAiReviewRetryImportRequest protoAiReviewRetryImportRequest) {
     PollableFuture<Void> pollableFuture =
-        aiReviewService.retryImport(
-            protoAiReviewRetryImportRequest.childPollableTaskId(),
-            PollableTask.INJECT_CURRENT_TASK);
+        aiReviewService.retryImport(protoAiReviewRetryImportRequest.childPollableTaskId());
     return new ProtoAiReviewRetryImportResponse(pollableFuture.getPollableTask().getId());
   }
 }

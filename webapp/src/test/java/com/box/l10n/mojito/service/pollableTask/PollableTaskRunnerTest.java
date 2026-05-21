@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.aspect.util.AspectJUtils;
@@ -61,5 +62,43 @@ class PollableTaskRunnerTest {
     verify(pollableTaskService).createPollableTask(null, "testTask", "starting", 0, -1L);
     verify(pollableTaskService)
         .finishTask(eq(1L), eq("done"), any(ExceptionHolder.class), isNull());
+  }
+
+  @Test
+  void runSyncFutureCreatesExecutesAndFinishesTaskWithoutExecutor() throws Exception {
+    PollableTaskService pollableTaskService = mock(PollableTaskService.class);
+    PollableTask pollableTask = new PollableTask();
+    pollableTask.setId(2L);
+    PollableTask finishedTask = new PollableTask();
+    finishedTask.setId(2L);
+
+    when(pollableTaskService.createPollableTask(null, "syncTask", "starting", 0, -1L))
+        .thenReturn(pollableTask);
+    when(pollableTaskService.finishTask(eq(2L), isNull(), any(ExceptionHolder.class), isNull()))
+        .thenReturn(finishedTask);
+    AsyncTaskExecutor pollableTaskExecutor = mock(AsyncTaskExecutor.class);
+
+    PollableTaskRunner pollableTaskRunner =
+        new PollableTaskRunner(
+            pollableTaskService,
+            pollableTaskExecutor,
+            mock(AspectJUtils.class),
+            new PollableTaskExceptionUtils());
+
+    PollableFuture<String> future =
+        pollableTaskRunner.runSyncFuture(
+            PollableTaskInvocation.ofFuture(
+                "syncTask",
+                "starting",
+                currentTask -> {
+                  assertThat(currentTask).isSameAs(pollableTask);
+                  return new PollableFutureTaskResult<>("ok");
+                }));
+
+    assertThat(future.get()).isEqualTo("ok");
+    assertThat(future.getPollableTask()).isSameAs(finishedTask);
+    verify(pollableTaskService).createPollableTask(null, "syncTask", "starting", 0, -1L);
+    verify(pollableTaskService).finishTask(eq(2L), isNull(), any(ExceptionHolder.class), isNull());
+    verifyNoInteractions(pollableTaskExecutor);
   }
 }

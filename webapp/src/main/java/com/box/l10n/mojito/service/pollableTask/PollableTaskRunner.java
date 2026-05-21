@@ -75,6 +75,13 @@ public class PollableTaskRunner {
     return pollableFuture;
   }
 
+  public <T> PollableFuture<T> runSyncFuture(PollableTaskInvocation<T> invocation) {
+    PollableFutureTask<T> pollableFuture =
+        createPollableFuture(createPollableTask(invocation), invocation.operation());
+    pollableFuture.run();
+    return pollableFuture;
+  }
+
   public <T> T runSync(PollableTaskInvocation<T> invocation) throws Throwable {
     PollableFutureTask<T> pollableFuture =
         createPollableFuture(createPollableTask(invocation), invocation.operation());
