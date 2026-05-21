@@ -146,6 +146,8 @@ Removed during this workstream:
   open and commit their transactions explicitly.
 - `PullRunAssetService` no longer uses `@Transactional`; delete and insert retry steps now open and
   commit their transaction boundaries explicitly.
+- `CurrentVariantRollbackService` no longer relies on AspectJ for a rollback method reachable by
+  self-invocation; current-variant rollback now opens and commits its transaction explicitly.
 
 In progress:
 
