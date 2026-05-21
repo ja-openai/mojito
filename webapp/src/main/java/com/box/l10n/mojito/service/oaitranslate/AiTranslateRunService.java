@@ -10,7 +10,9 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class AiTranslateRunService {
@@ -40,15 +42,52 @@ public class AiTranslateRunService {
 
   private final AiTranslateRunRepository aiTranslateRunRepository;
   private final UserRepository userRepository;
+  private final PlatformTransactionManager transactionManager;
 
   public AiTranslateRunService(
-      AiTranslateRunRepository aiTranslateRunRepository, UserRepository userRepository) {
+      AiTranslateRunRepository aiTranslateRunRepository,
+      UserRepository userRepository,
+      PlatformTransactionManager transactionManager) {
     this.aiTranslateRunRepository = aiTranslateRunRepository;
     this.userRepository = userRepository;
+    this.transactionManager = transactionManager;
   }
 
-  @Transactional
   public AiTranslateRun createScheduledRun(
+      AiTranslateRun.TriggerSource triggerSource,
+      Repository repository,
+      Long requestedByUserId,
+      PollableTask pollableTask,
+      String model,
+      String translateType,
+      String relatedStringsType,
+      int sourceTextMaxCountPerLocale) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      AiTranslateRun run =
+          createScheduledRunNoTx(
+              triggerSource,
+              repository,
+              requestedByUserId,
+              pollableTask,
+              model,
+              translateType,
+              relatedStringsType,
+              sourceTextMaxCountPerLocale);
+      transactionManager.commit(transaction);
+      return run;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  AiTranslateRun createScheduledRunNoTx(
       AiTranslateRun.TriggerSource triggerSource,
       Repository repository,
       Long requestedByUserId,
@@ -70,8 +109,23 @@ public class AiTranslateRunService {
     return aiTranslateRunRepository.save(run);
   }
 
-  @Transactional
   public void markRunning(Long pollableTaskId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      markRunningNoTx(pollableTaskId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void markRunningNoTx(Long pollableTaskId) {
     aiTranslateRunRepository
         .findByPollableTask_Id(pollableTaskId)
         .ifPresent(
@@ -83,8 +137,23 @@ public class AiTranslateRunService {
             });
   }
 
-  @Transactional
   public void markCompleted(Long pollableTaskId, AiTranslateService.AiTranslateRunTotals totals) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      markCompletedNoTx(pollableTaskId, totals);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void markCompletedNoTx(Long pollableTaskId, AiTranslateService.AiTranslateRunTotals totals) {
     aiTranslateRunRepository
         .findByPollableTask_Id(pollableTaskId)
         .ifPresent(
@@ -102,8 +171,23 @@ public class AiTranslateRunService {
             });
   }
 
-  @Transactional
   public void markFailed(Long pollableTaskId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      markFailedNoTx(pollableTaskId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void markFailedNoTx(Long pollableTaskId) {
     aiTranslateRunRepository
         .findByPollableTask_Id(pollableTaskId)
         .ifPresent(
@@ -116,8 +200,25 @@ public class AiTranslateRunService {
             });
   }
 
-  @Transactional(readOnly = true)
   public List<RunSummary> getRecentRuns(List<Long> repositoryIds, int limit) {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      List<RunSummary> runs = getRecentRunsNoTx(repositoryIds, limit);
+      transactionManager.commit(transaction);
+      return runs;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<RunSummary> getRecentRunsNoTx(List<Long> repositoryIds, int limit) {
     List<AiTranslateRunSummaryRow> rows =
         repositoryIds == null || repositoryIds.isEmpty()
             ? aiTranslateRunRepository.findRecentRunRows(PageRequest.of(0, limit))
