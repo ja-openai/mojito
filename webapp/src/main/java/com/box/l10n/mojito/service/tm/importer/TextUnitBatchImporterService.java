@@ -58,7 +58,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author jaurambault
@@ -98,6 +100,8 @@ public class TextUnitBatchImporterService {
   @Autowired MeterRegistry meterRegistry;
 
   @Autowired PluralIntegrityCheckerRelaxer pluralIntegrityCheckerRelaxer;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   @Value("${l10n.textUnitBatchImporterService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
@@ -308,8 +312,29 @@ public class TextUnitBatchImporterService {
         stopwatch);
   }
 
-  @Transactional
   List<ImportResult> importTextUnitsOfLocaleAndAsset(
+      Locale locale,
+      Asset asset,
+      List<TextUnitForBatchMatcherImport> textUnitsToImport,
+      ImportMode importMode) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      List<ImportResult> result =
+          importTextUnitsOfLocaleAndAssetNoTx(locale, asset, textUnitsToImport, importMode);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<ImportResult> importTextUnitsOfLocaleAndAssetNoTx(
       Locale locale,
       Asset asset,
       List<TextUnitForBatchMatcherImport> textUnitsToImport,
