@@ -93,6 +93,8 @@ Removed during this workstream:
   instances initialize `TextUnitUtils` through constructors.
 - `PseudoLocalizeStep` no longer uses `@Configurable`; `TMService` passes integrity checker,
   pseudo-localization, and text-unit helpers directly.
+- `TranslatorWithInheritance` no longer uses `@Configurable`; callers pass the text-unit DTO cache
+  service explicitly and unused woven collaborators were removed.
 
 In progress:
 

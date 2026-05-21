@@ -9,6 +9,7 @@ import com.box.l10n.mojito.okapi.steps.OutputDocumentPostProcessingAnnotation;
 import com.box.l10n.mojito.service.tm.TranslatorWithInheritance;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
+import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import java.util.ArrayList;
 import java.util.List;
 import net.sf.okapi.common.Event;
@@ -67,7 +68,8 @@ public class TranslateStep extends AbstractMd5ComputationStep {
       RepositoryLocale repositoryLocale,
       InheritanceMode inheritanceMode,
       Status status,
-      boolean saveUsedTmTextUnitVariantIds) {
+      boolean saveUsedTmTextUnitVariantIds,
+      TextUnitDTOsCacheService textUnitDTOsCacheService) {
     this.asset = asset;
     this.inheritanceMode = inheritanceMode;
     this.repositoryLocale = repositoryLocale;
@@ -76,7 +78,8 @@ public class TranslateStep extends AbstractMd5ComputationStep {
     StatusFilter statusFilter = getStatusFilter(status);
 
     this.translatorWithInheritance =
-        new TranslatorWithInheritance(asset, repositoryLocale, inheritanceMode, statusFilter);
+        new TranslatorWithInheritance(
+            asset, repositoryLocale, inheritanceMode, statusFilter, textUnitDTOsCacheService);
   }
 
   private StatusFilter getStatusFilter(Status status) {
