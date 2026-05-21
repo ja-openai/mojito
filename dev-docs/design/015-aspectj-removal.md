@@ -161,6 +161,8 @@ Removed during this workstream:
   update, and delete operations now open and commit their transaction boundaries explicitly.
 - `TermIndexExplorerService` no longer uses `@Transactional`; term-index explorer search, status,
   and review update operations now open and commit their transaction boundaries explicitly.
+- `TMImportService.importXLIFF` no longer relies on AspectJ for a private transactional helper;
+  XLIFF import now opens and commits its transaction boundary explicitly.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and

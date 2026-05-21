@@ -18,7 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author jaurambault
@@ -46,6 +48,8 @@ public class TMImportService {
   @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
   @Autowired PluralFormService pluralFormService;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   /**
    * Import the exported XLIFF using Okapi driver into repository.
@@ -101,8 +105,23 @@ public class TMImportService {
     importXLIFF(importExportedXliffStep, xliffContent);
   }
 
-  @Transactional
-  private void importXLIFF(ImportExportedXliffStep importExportedXliffStep, String xliffContent) {
+  void importXLIFF(ImportExportedXliffStep importExportedXliffStep, String xliffContent) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      importXLIFFNoTx(importExportedXliffStep, xliffContent);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void importXLIFFNoTx(ImportExportedXliffStep importExportedXliffStep, String xliffContent) {
 
     IPipelineDriver driver = new PipelineDriver();
     XLIFFFilter xliffFilter = new XLIFFFilter();
