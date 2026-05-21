@@ -154,6 +154,8 @@ Removed during this workstream:
   translation copies now open and commit their transaction boundary explicitly.
 - `GlossaryImportExportService` no longer uses `@Transactional`; glossary import and export now
   open and commit their transaction boundaries explicitly.
+- `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
+  statistic writes now open and commit their transaction boundary explicitly.
 
 In progress:
 
