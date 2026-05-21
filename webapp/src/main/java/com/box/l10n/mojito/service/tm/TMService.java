@@ -940,7 +940,8 @@ public class TMService {
     driver.addStep(new RawDocumentToFilterEventsStep(new XLIFFFilter()));
 
     driver.addStep(getConfiguredQualityStep());
-    IntegrityCheckStep integrityCheckStep = new IntegrityCheckStep();
+    IntegrityCheckStep integrityCheckStep =
+        new IntegrityCheckStep(tmTextUnitRepository, integrityCheckerFactory);
     driver.addStep(integrityCheckStep);
 
     abstractImportTranslationsStep.setImportWithStatus(importStatus);
