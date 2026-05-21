@@ -13,6 +13,7 @@ OptionResolver = Callable[[str, str | None], str | None]
 @dataclass(frozen=True)
 class FunctionCall:
     value: str
+    raw_value: Any
     function: dict[str, Any]
     locale: str
     _option_resolver: OptionResolver

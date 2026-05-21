@@ -4,12 +4,29 @@ from mf2_runtime import FunctionCall, FunctionRegistry, MF2Error
 
 
 def demo_function_registry() -> FunctionRegistry:
-    return FunctionRegistry.defaults().with_function("currency", _format_currency)
+    return (
+        FunctionRegistry.defaults()
+        .with_function("currency", _format_currency)
+        .with_function("rawType", _format_raw_type)
+    )
 
 
 def _format_currency(call: FunctionCall) -> str:
     currency = call.option_value("currency", "USD")
     return _format_currency_value(call.value, currency or "USD", call.locale)
+
+
+def _format_raw_type(call: FunctionCall) -> str:
+    value = call.raw_value
+    if isinstance(value, bool):
+        kind = "bool"
+    elif isinstance(value, int | float):
+        kind = "number"
+    elif value is None:
+        kind = "null"
+    else:
+        kind = "string"
+    return f"{kind}={call.value}"
 
 
 def _format_currency_value(value: str, currency: str, locale: str) -> str:

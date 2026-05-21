@@ -200,6 +200,20 @@
         ]
       }
     },
+    "debug.raw": {
+      "en": {
+        "type": "message",
+        "declarations": [],
+        "pattern": [
+          "Raw: ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "value" },
+            "function": { "type": "function", "name": "rawType" }
+          }
+        ]
+      }
+    },
     "welcome": {
       "en": {
         "type": "message",

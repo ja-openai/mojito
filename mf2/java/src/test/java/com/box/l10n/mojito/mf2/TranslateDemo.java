@@ -14,6 +14,8 @@ public final class TranslateDemo {
                 + catalog.translate("checkout.total", "en", Map.of("amount", 1234.5)) + "\"");
         System.out.println("checkout.total[fr] -> \""
                 + catalog.translate("checkout.total", "fr", Map.of("amount", 1234.5)) + "\"");
+        System.out.println(
+                "debug.raw[en] -> \"" + catalog.translate("debug.raw", "en", Map.of("value", 1234.5)) + "\"");
         String fileSaved = catalog.translate(
                 "file.saved",
                 "en",

@@ -35,6 +35,7 @@ final class DemoFunctions {
                 .withFunction("date", DemoFunctions::formatDate)
                 .withFunction("datetime", DemoFunctions::formatDateTime)
                 .withFunction("time", DemoFunctions::formatTime)
+                .withFunction("rawType", DemoFunctions::formatRawType)
                 .withFunction("relativeTime", DemoFunctions::formatRelativeTime);
     }
 
@@ -42,6 +43,21 @@ final class DemoFunctions {
             throws Mf2Exception {
         String currency = call.optionValue("currency", "USD");
         return formatCurrencyValue(call.value(), currency, call.locale());
+    }
+
+    private static String formatRawType(Mf2FunctionRegistry.FunctionCall call) {
+        Object value = call.rawValue();
+        String type;
+        if (value instanceof Number) {
+            type = "number";
+        } else if (value instanceof Boolean) {
+            type = "bool";
+        } else if (value == null) {
+            type = "null";
+        } else {
+            type = "string";
+        }
+        return type + "=" + call.value();
     }
 
     private static String formatCurrencyValue(String value, String currency, String locale)

@@ -58,6 +58,9 @@ Supported now:
 - function registry selector hooks for custom `.match` functions, including
   ranked best-match selection and resolved-value metadata propagation through
   inputs/locals used by the Unicode official test harness
+- function callbacks receive both the rendered string value and the raw
+  `serde_json::Value` operand so app functions can distinguish numbers, booleans,
+  nulls, and strings without reparsing display text
 - validation-only `:date`, `:time`, and `:datetime` built-ins for simple ISO
   date/datetime operands; locale-sensitive presentation is still deferred
 - `:number` formatting for strict decimal operands, `minimumFractionDigits`,

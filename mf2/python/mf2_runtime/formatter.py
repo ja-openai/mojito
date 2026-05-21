@@ -377,8 +377,10 @@ class _FormatContext:
         arg = expression.get("arg")
         if arg is None:
             value = ""
+            raw_value = ""
         elif arg.get("type") == "literal":
             value = arg.get("value", "")
+            raw_value = value
         elif arg.get("type") == "variable":
             name = arg["name"]
             if name not in self.values:
@@ -391,10 +393,12 @@ class _FormatContext:
                             MF2Error("bad-operand", "Function operand is not available.")
                         )
                     value = _fallback_source(expression)
+                    raw_value = value
                 else:
                     raise MF2Error("missing-argument", f"Missing argument ${name}.")
             else:
-                value = _render_value(self.values[name])
+                raw_value = self.values[name]
+                value = _render_value(raw_value)
         else:
             raise MF2Error("unsupported-expression-arg", f"Unsupported expression arg: {arg}")
 
@@ -409,6 +413,7 @@ class _FormatContext:
                 value=self.functions.format(
                     FunctionCall(
                         value=value,
+                        raw_value=raw_value,
                         function=function,
                         locale=self.locale,
                         _option_resolver=lambda name, default: self._option_value(function, name, default),

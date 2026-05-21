@@ -140,6 +140,7 @@ impl FunctionRegistry {
     fn format(
         &self,
         value: &str,
+        raw_value: &serde_json::Value,
         function: &FunctionRef,
         locale: &str,
         values: &BTreeMap<String, ResolvedValue>,
@@ -158,6 +159,7 @@ impl FunctionRegistry {
         };
         formatter(FunctionCall {
             value,
+            raw_value,
             function,
             locale,
             values,
@@ -168,6 +170,7 @@ impl FunctionRegistry {
     fn select(
         &self,
         value: &str,
+        raw_value: &serde_json::Value,
         function: &FunctionRef,
         key: &str,
         locale: &str,
@@ -179,6 +182,7 @@ impl FunctionRegistry {
         };
         selector(FunctionMatch {
             value,
+            raw_value,
             function,
             key,
             locale,
@@ -211,6 +215,7 @@ impl Default for FunctionRegistry {
 
 pub struct FunctionCall<'a> {
     value: &'a str,
+    raw_value: &'a serde_json::Value,
     function: &'a FunctionRef,
     locale: &'a str,
     values: &'a BTreeMap<String, ResolvedValue>,
@@ -219,6 +224,7 @@ pub struct FunctionCall<'a> {
 
 pub struct FunctionMatch<'a> {
     value: &'a str,
+    raw_value: &'a serde_json::Value,
     function: &'a FunctionRef,
     key: &'a str,
     locale: &'a str,
@@ -235,6 +241,10 @@ pub struct FunctionSourceRef<'a> {
 impl<'a> FunctionCall<'a> {
     pub fn value(&self) -> &'a str {
         self.value
+    }
+
+    pub fn raw_value(&self) -> &'a serde_json::Value {
+        self.raw_value
     }
 
     pub fn function(&self) -> &'a FunctionRef {
@@ -257,6 +267,10 @@ impl<'a> FunctionCall<'a> {
 impl<'a> FunctionMatch<'a> {
     pub fn value(&self) -> &'a str {
         self.value
+    }
+
+    pub fn raw_value(&self) -> &'a serde_json::Value {
+        self.raw_value
     }
 
     pub fn function(&self) -> &'a FunctionRef {
@@ -1250,6 +1264,7 @@ impl<'a> FormatContext<'a> {
         self.record_function_resolution_errors(function, input.source.as_ref())?;
         match self.functions.format(
             &value,
+            &input.value,
             function,
             &self.locale,
             &self.values,
@@ -1307,6 +1322,7 @@ impl<'a> FormatContext<'a> {
                         return Ok(SelectorValue {
                             normalized_rendered: string_select.then(|| normalize_string_key("")),
                             rendered: String::new(),
+                            raw_value: serde_json::Value::String(String::new()),
                             exact_match: false,
                             selection_key: None,
                             function: annotation.map(|annotation| annotation.function),
@@ -1323,11 +1339,13 @@ impl<'a> FormatContext<'a> {
                     .as_ref()
                     .is_none_or(|annotation| annotation.exact_match());
                 let selection_key = self.selection_key_for_selector(annotation.as_ref(), value);
+                let raw_value = value.value.clone();
                 let source = value.source.clone();
                 self.record_selector_resolution_errors(annotation.as_ref())?;
                 Ok(SelectorValue {
                     normalized_rendered: string_select.then(|| normalize_string_key(&rendered)),
                     rendered,
+                    raw_value,
                     exact_match,
                     selection_key,
                     function: annotation.map(|annotation| annotation.function),
@@ -1414,6 +1432,7 @@ impl<'a> FormatContext<'a> {
                 };
                 match self.functions.select(
                     &selector.rendered,
+                    &selector.raw_value,
                     function,
                     value,
                     &self.locale,
@@ -1470,10 +1489,10 @@ impl<'a> FormatContext<'a> {
         expression: &Expression,
     ) -> Result<ExpressionOutput, Diagnostic> {
         let mut had_error = false;
-        let (value, source) = match &expression.arg {
+        let (value, raw_value, source) = match &expression.arg {
             Some(ExpressionArg::Variable { name }) => {
                 if let Some(value) = self.values.get(name) {
-                    (value.rendered(), value.source.clone())
+                    (value.rendered(), value.value.clone(), value.source.clone())
                 } else if self.fallback {
                     had_error = true;
                     if !self.failed_values.contains(name) {
@@ -1483,13 +1502,18 @@ impl<'a> FormatContext<'a> {
                         self.errors
                             .push(bad_operand("Function operand is not available."));
                     }
-                    (fallback_source(expression), None)
+                    let fallback = fallback_source(expression);
+                    (fallback.clone(), serde_json::Value::String(fallback), None)
                 } else {
                     return Err(missing_argument(name));
                 }
             }
-            Some(ExpressionArg::Literal { value }) => (value.clone(), None),
-            None => (String::new(), None),
+            Some(ExpressionArg::Literal { value }) => (
+                value.clone(),
+                serde_json::Value::String(value.clone()),
+                None,
+            ),
+            None => (String::new(), serde_json::Value::String(String::new()), None),
         };
 
         if had_error {
@@ -1519,6 +1543,7 @@ impl<'a> FormatContext<'a> {
             .unwrap_or_else(|| value.clone());
         match self.functions.format(
             &value,
+            &raw_value,
             function,
             &self.locale,
             &self.values,
@@ -1681,6 +1706,7 @@ struct ExpressionOutput {
 #[derive(Debug, Clone)]
 struct SelectorValue {
     rendered: String,
+    raw_value: serde_json::Value,
     normalized_rendered: Option<String>,
     exact_match: bool,
     selection_key: Option<String>,

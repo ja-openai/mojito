@@ -293,13 +293,16 @@ private struct MF2FormatContext {
 
     mutating func formatExpressionOutput(_ expression: MF2Expression) throws -> MF2ExpressionOutput {
         let value: String
+        let rawValue: MF2Value
         var hadError = false
         switch expression.arg {
         case let .literal(literal):
             value = literal
+            rawValue = .string(literal)
         case let .variable(name):
             if let argument = values[MF2NameKey(name)] {
                 value = argument.rendered
+                rawValue = argument
             } else if fallback {
                 hadError = true
                 let key = MF2NameKey(name)
@@ -310,11 +313,13 @@ private struct MF2FormatContext {
                     errors.append(.badOperand("Function operand is not available."))
                 }
                 value = fallbackSource(expression)
+                rawValue = .string(value)
             } else {
                 throw MF2Error.missingArgument(name)
             }
         case .none:
             value = ""
+            rawValue = .string("")
         }
 
         if hadError {
@@ -333,6 +338,7 @@ private struct MF2FormatContext {
                 return try MF2ExpressionOutput(
                     value: functions.format(MF2FunctionCall(
                         value: value,
+                        rawValue: rawValue,
                         function: function,
                         locale: locale,
                         optionResolver: { optionName, defaultValue in

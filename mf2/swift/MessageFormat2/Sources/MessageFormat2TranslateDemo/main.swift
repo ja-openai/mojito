@@ -13,6 +13,7 @@ private let examples: [(String, String, [String: MF2Value], MF2BidiIsolation, St
     ("welcome", "fr-CA", ["name": .string("Mojito")], .none, "Bienvenue, Mojito !"),
     ("checkout.total", "en", ["amount": .number("1234.5")], .none, "Total: $1,234.50"),
     ("checkout.total", "fr", ["amount": .number("1234.5")], .none, "Total : 1\u{202f}234,50 €"),
+    ("debug.raw", "en", ["value": .number("1234.5")], .none, "Raw: number=1234.5"),
     ("file.saved", "en", ["fileName": .string("שלום.txt")], .default, "File \u{2068}שלום.txt\u{2069} saved."),
     ("cart.items", "en", ["count": .number("1")], .none, "1 item"),
     ("cart.items", "en", ["count": .number("5")], .none, "5 items"),
@@ -75,12 +76,29 @@ private struct Catalog: Decodable {
 }
 
 private func demoFunctionRegistry() -> MF2FunctionRegistry {
-    MF2FunctionRegistry.defaults.withFunction("currency", formatter: formatCurrency)
+    MF2FunctionRegistry.defaults
+        .withFunction("currency", formatter: formatCurrency)
+        .withFunction("rawType", formatter: formatRawType)
 }
 
 private func formatCurrency(_ call: MF2FunctionCall) throws -> String {
     let currency = try call.optionValue("currency", default: "USD") ?? "USD"
     return try formatCurrencyValue(value: call.value, currency: currency, locale: call.locale)
+}
+
+private func formatRawType(_ call: MF2FunctionCall) throws -> String {
+    let kind: String
+    switch call.rawValue {
+    case .number:
+        kind = "number"
+    case .bool:
+        kind = "bool"
+    case .null:
+        kind = "null"
+    case .string:
+        kind = "string"
+    }
+    return "\(kind)=\(call.value)"
 }
 
 private func formatCurrencyValue(value: String, currency: String, locale: String) throws -> String {

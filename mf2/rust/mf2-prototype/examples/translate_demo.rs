@@ -86,6 +86,13 @@ fn main() {
             "Total : 1\u{202f}234,50 €",
         ),
         (
+            "debug.raw",
+            "en",
+            args([("value", serde_json::Value::from(1234.5))]),
+            BidiIsolation::None,
+            "Raw: number=1234.5",
+        ),
+        (
             "file.saved",
             "en",
             args([(

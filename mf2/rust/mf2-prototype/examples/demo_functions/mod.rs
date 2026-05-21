@@ -12,6 +12,7 @@ use serde::Deserialize;
 pub fn demo_function_registry() -> FunctionRegistry {
     FunctionRegistry::default()
         .with_function("currency", format_currency)
+        .with_function("rawType", format_raw_type)
         .with_function("relativeTime", format_relative_time)
 }
 
@@ -20,6 +21,16 @@ fn format_currency(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
         .option_value("currency")?
         .unwrap_or_else(|| "USD".to_string());
     format_currency_value(call.value(), &currency, call.locale())
+}
+
+fn format_raw_type(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    let kind = match call.raw_value() {
+        serde_json::Value::Number(_) => "number",
+        serde_json::Value::Bool(_) => "bool",
+        serde_json::Value::Null => "null",
+        _ => "string",
+    };
+    Ok(format!("{kind}={}", call.value()))
 }
 
 fn format_currency_value(value: &str, currency: &str, locale: &str) -> Result<String, Diagnostic> {

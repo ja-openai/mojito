@@ -34,17 +34,20 @@ public struct MF2FunctionRegistry: @unchecked Sendable {
 
 public struct MF2FunctionCall {
     public let value: String
+    public let rawValue: MF2Value
     public let function: MF2Function
     public let locale: String
     private let optionResolver: (String, String?) throws -> String?
 
     init(
         value: String,
+        rawValue: MF2Value,
         function: MF2Function,
         locale: String,
         optionResolver: @escaping (String, String?) throws -> String?
     ) {
         self.value = value
+        self.rawValue = rawValue
         self.function = function
         self.locale = locale
         self.optionResolver = optionResolver

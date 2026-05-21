@@ -58,6 +58,7 @@ def main() -> int:
         ("welcome", "fr-CA", {"name": "Mojito"}, "none", "Bienvenue, Mojito !"),
         ("checkout.total", "en", {"amount": 1234.5}, "none", "Total: $1,234.50"),
         ("checkout.total", "fr", {"amount": 1234.5}, "none", "Total : 1\u202f234,50 €"),
+        ("debug.raw", "en", {"value": 1234.5}, "none", "Raw: number=1234.5"),
         (
             "file.saved",
             "en",

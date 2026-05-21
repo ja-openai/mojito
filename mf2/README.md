@@ -81,8 +81,10 @@ The current conformance slice covers:
 - function annotations and literal/variable options in the data model, including
   quoted option values containing spaces, variable-valued options, and optional
   whitespace around `=`
-- formatter function registries in Rust/Swift/Python/Java; demos can still
-  register app-specific functions outside the core formatter
+- formatter function registries in Rust/Swift/Python/Java; callbacks receive a
+  rendered string plus the raw runtime value (`serde_json::Value`, `MF2Value`,
+  Python object, or Java `Object`) so demos and app-specific functions can avoid
+  reparsing display text
 - Rust validation-only `:date`, `:time`, and `:datetime` built-ins that enforce
   simple ISO date/datetime operand shape without claiming locale formatting
 - Rust `:number` built-in formatting for strict decimal operands, fallback
