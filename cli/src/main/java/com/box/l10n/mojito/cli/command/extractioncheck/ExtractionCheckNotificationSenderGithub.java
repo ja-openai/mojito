@@ -7,13 +7,10 @@ import com.google.common.base.Strings;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.kohsuke.github.GHCommitState;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
-@Configurable
 public class ExtractionCheckNotificationSenderGithub extends ExtractionCheckNotificationSender {
 
-  @Autowired GithubClients githubClients;
+  final GithubClients githubClients;
 
   private final String githubRepo;
 
@@ -28,6 +25,7 @@ public class ExtractionCheckNotificationSenderGithub extends ExtractionCheckNoti
   private final String commitStatusTargetUrl;
 
   public ExtractionCheckNotificationSenderGithub(
+      GithubClients githubClients,
       String messageTemplate,
       String hardFailureMessage,
       String checksSkippedMessage,
@@ -38,6 +36,7 @@ public class ExtractionCheckNotificationSenderGithub extends ExtractionCheckNoti
       String commitSha,
       String commitStatusTargetUrl) {
     super(messageTemplate, hardFailureMessage, checksSkippedMessage);
+    this.githubClients = githubClients;
     if (Strings.isNullOrEmpty(githubRepo)) {
       throw new ExtractionCheckNotificationSenderException(
           "Github repository owner must be provided if using Github notifications.");

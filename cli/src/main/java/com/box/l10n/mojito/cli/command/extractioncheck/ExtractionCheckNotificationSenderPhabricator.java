@@ -6,23 +6,22 @@ import com.box.l10n.mojito.thirdpartynotification.phabricator.PhabricatorIcon;
 import com.google.common.base.Strings;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
-@Configurable
 public class ExtractionCheckNotificationSenderPhabricator
     extends ExtractionCheckNotificationSender {
 
-  @Autowired DifferentialRevision differentialRevision;
+  final DifferentialRevision differentialRevision;
 
   String objectId;
 
   public ExtractionCheckNotificationSenderPhabricator(
+      DifferentialRevision differentialRevision,
       String objectId,
       String messageTemplate,
       String hardFailureMessage,
       String checksSkippedMessage) {
     super(messageTemplate, hardFailureMessage, checksSkippedMessage);
+    this.differentialRevision = differentialRevision;
     if (Strings.isNullOrEmpty(objectId)) {
       throw new ExtractionCheckNotificationSenderException(
           "Phabricator object id must be provided if using Phabricator notifications");

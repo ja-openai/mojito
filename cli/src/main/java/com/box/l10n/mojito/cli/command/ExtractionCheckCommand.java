@@ -27,8 +27,11 @@ import com.box.l10n.mojito.cli.console.ConsoleWriter;
 import com.box.l10n.mojito.github.GithubClients;
 import com.box.l10n.mojito.github.GithubException;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractorTextUnit;
+import com.box.l10n.mojito.phabricator.DifferentialRevision;
 import com.box.l10n.mojito.regex.PlaceholderRegularExpressions;
 import com.box.l10n.mojito.rest.resttemplate.AuthenticatedRestTemplate;
+import com.box.l10n.mojito.slack.SlackClient;
+import com.box.l10n.mojito.thirdpartynotification.slack.SlackChannels;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -60,6 +63,12 @@ public class ExtractionCheckCommand extends Command {
   @Autowired ExtractionDiffService extractionDiffService;
 
   @Autowired GithubClients githubClients;
+
+  @Autowired DifferentialRevision differentialRevision;
+
+  @Autowired SlackClient slackClient;
+
+  @Autowired SlackChannels slackChannels;
 
   @Autowired ConsoleWriter consoleWriter;
 
@@ -404,11 +413,17 @@ public class ExtractionCheckCommand extends Command {
       case PHABRICATOR:
         extractionCheckNotificationSender =
             new ExtractionCheckNotificationSenderPhabricator(
-                phabObjectId, phabMessageTemplate, hardFailureMessage, checksSkippedMessage);
+                differentialRevision,
+                phabObjectId,
+                phabMessageTemplate,
+                hardFailureMessage,
+                checksSkippedMessage);
         break;
       case SLACK:
         extractionCheckNotificationSender =
             new ExtractionCheckNotificationSenderSlack(
+                slackClient,
+                slackChannels,
                 username,
                 slackEmailPattern,
                 slackMessageTemplate,
@@ -419,6 +434,7 @@ public class ExtractionCheckCommand extends Command {
       case GITHUB:
         extractionCheckNotificationSender =
             new ExtractionCheckNotificationSenderGithub(
+                githubClients,
                 githubMessageTemplate,
                 hardFailureMessage,
                 checksSkippedMessage,

@@ -63,14 +63,14 @@ public class ExtractionCheckNotificationSenderSlackTest {
   public void setup() {
     extractionCheckNotificationSenderSlack =
         new ExtractionCheckNotificationSenderSlack(
+            slackClientMock,
+            slackChannelsMock,
             "user",
             "{0}@somewhere.com",
             "{baseMessage}",
             "This is a hard failure message.",
             "This is a checks skipped message.",
             false);
-    extractionCheckNotificationSenderSlack.slackClient = slackClientMock;
-    extractionCheckNotificationSenderSlack.slackChannels = slackChannelsMock;
     Mockito.reset(slackChannelsMock);
     Mockito.reset(slackClientMock);
   }
@@ -176,7 +176,14 @@ public class ExtractionCheckNotificationSenderSlackTest {
   @Test(expected = ExtractionCheckNotificationSenderException.class)
   public void testExceptionThrownIfUsernameIsEmpty() {
     new ExtractionCheckNotificationSenderSlack(
-        "", "emailPattern", "messageTemplate", "hardFail", "checksSkipped", false);
+        slackClientMock,
+        slackChannelsMock,
+        "",
+        "emailPattern",
+        "messageTemplate",
+        "hardFail",
+        "checksSkipped",
+        false);
   }
 
   @Test

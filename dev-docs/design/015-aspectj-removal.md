@@ -78,6 +78,8 @@ Removed during this workstream:
   manually created leveragers now come from `LeveragerFactory`.
 - `FileSystemDropExporter` and `FileSystemDropImporter` no longer use `@Configurable`;
   `DropExporterService` constructs file-system exporters with explicit dependencies.
+- CLI extraction-check notification senders no longer use `@Configurable`;
+  `ExtractionCheckCommand` passes GitHub, Slack, and Phabricator collaborators explicitly.
 
 In progress:
 
