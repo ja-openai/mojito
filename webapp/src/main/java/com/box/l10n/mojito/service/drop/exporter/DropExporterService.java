@@ -1,6 +1,6 @@
 package com.box.l10n.mojito.service.drop.exporter;
 
-import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
+import static com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation.DEFAULT_TIMEOUT;
 
 import com.box.l10n.mojito.entity.Drop;
 import com.box.l10n.mojito.entity.PollableTask;

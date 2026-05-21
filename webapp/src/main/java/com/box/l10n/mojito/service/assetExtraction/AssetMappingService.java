@@ -1,6 +1,6 @@
 package com.box.l10n.mojito.service.assetExtraction;
 
-import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
+import static com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation.DEFAULT_TIMEOUT;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetExtraction;

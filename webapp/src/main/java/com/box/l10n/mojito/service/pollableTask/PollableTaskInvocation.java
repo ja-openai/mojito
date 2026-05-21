@@ -1,7 +1,5 @@
 package com.box.l10n.mojito.service.pollableTask;
 
-import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
-
 import java.util.Objects;
 
 public record PollableTaskInvocation<T>(
@@ -11,6 +9,8 @@ public record PollableTaskInvocation<T>(
     int expectedSubTaskNumber,
     Long timeout,
     PollableTaskOperation<?> operation) {
+
+  public static final Long DEFAULT_TIMEOUT = -1L;
 
   public PollableTaskInvocation {
     Objects.requireNonNull(name);

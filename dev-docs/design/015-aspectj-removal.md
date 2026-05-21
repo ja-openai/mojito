@@ -40,7 +40,7 @@ Annotation usage from the initial scan:
 - `9` `@StopWatch`, `@RunAs`, and `@JsonRawString` usages combined.
 - `@Retryable` remains in `AssetExtractionService` and `TextUnitSearcher`.
 
-Custom AspectJ entry points:
+Custom AspectJ entry points from the initial scan:
 
 - `PollableAspect` plus `PollableAspectConfig` and `@DeclareError` validations.
 - `RunAsAspect` plus `RunAsAspectConfig`.
@@ -61,13 +61,12 @@ Removed during this workstream:
   `MultiBranchStateService`, `TextUnitDTOsCacheBlobStorage`, `TextUnitDTOsCacheService`,
   `OpenAIMTEngine`, `MicrosoftMTEngine`, `MachineTranslationService`, and
   `AssetExtractionService` with local `Timer.Sample` and `try/finally` blocks.
+- `@Pollable`, `PollableAspect`, `PollableAspectConfig`, and the AspectJ annotation parsing helper
+  classes. Pollable task creation now goes through the Spring-managed `PollableTaskRunner`
+  directly.
 
 In progress:
 
-- `@Pollable` still annotates service entrypoints, but runtime execution is now centralized in the
-  Spring-managed `PollableTaskRunner`. `PollableAspect` is only an adapter, and services can now
-  call `PollableTaskRunner` directly with a `PollableTaskInvocation`. `PollableAspectParameters`
-  plus `PollableCallable` no longer rely on `@Configurable` injection.
 - `TemporaryBulkTranslationAcceptService` no longer uses `@Pollable`; its dry-run and execute async
   entrypoints call `PollableTaskRunner` directly.
 - `GitBlameService.saveGitBlameWithUsages` no longer uses `@Pollable`; it calls
@@ -213,7 +212,8 @@ try {
 }
 ```
 
-Runtime validation and focused tests should replace the current `@DeclareError` checks.
+Focused `PollableTaskRunner` and `PollableTaskService` tests cover the explicit task lifecycle
+helper behavior that replaced the old `@DeclareError` checks.
 
 ### Configurable Objects
 

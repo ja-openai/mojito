@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.box.l10n.mojito.aspect.util.AspectJUtils;
 import com.box.l10n.mojito.entity.PollableTask;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
@@ -40,10 +39,7 @@ class PollableTaskRunnerTest {
 
     PollableTaskRunner pollableTaskRunner =
         new PollableTaskRunner(
-            pollableTaskService,
-            pollableTaskExecutor,
-            mock(AspectJUtils.class),
-            new PollableTaskExceptionUtils());
+            pollableTaskService, pollableTaskExecutor, new PollableTaskExceptionUtils());
 
     PollableFuture<String> future =
         pollableTaskRunner.runAsync(
@@ -80,10 +76,7 @@ class PollableTaskRunnerTest {
 
     PollableTaskRunner pollableTaskRunner =
         new PollableTaskRunner(
-            pollableTaskService,
-            pollableTaskExecutor,
-            mock(AspectJUtils.class),
-            new PollableTaskExceptionUtils());
+            pollableTaskService, pollableTaskExecutor, new PollableTaskExceptionUtils());
 
     PollableFuture<String> future =
         pollableTaskRunner.runSyncFuture(
