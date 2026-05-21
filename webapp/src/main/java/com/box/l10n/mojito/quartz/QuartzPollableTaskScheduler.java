@@ -173,7 +173,8 @@ public class QuartzPollableTaskScheduler {
       throw new RuntimeException(msg, se);
     }
 
-    return new QuartzPollableFutureTask<O>(pollableTask, jobOutputType);
+    return new QuartzPollableFutureTask<O>(
+        pollableTask, jobOutputType, pollableTaskService, pollableTaskBlobStorage);
   }
 
   private void skipPendingPollablesWithMatchingId(
