@@ -217,6 +217,9 @@ Removed during this workstream:
   candidate seeding/import/export/generation, and glossary-linking operations now open and commit
   their transaction boundaries explicitly while preserving the existing independent transactions
   for long-running batch progress and writes.
+- The core `TeamService` team CRUD and roster-assignment methods no longer use `@Transactional`;
+  team listing, create/update/delete/disable, roster reads/replacement, and single-user assignment
+  now open and commit their transaction boundaries explicitly.
 
 In progress:
 

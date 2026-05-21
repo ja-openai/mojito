@@ -47,7 +47,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class TeamService {
@@ -70,6 +74,7 @@ public class TeamService {
   private final SlackClients slackClients;
   private final PollableTaskBlobStorage pollableTaskBlobStorage;
   private final PollableTaskRunner pollableTaskRunner;
+  private final PlatformTransactionManager transactionManager;
 
   public TeamService(
       TeamRepository teamRepository,
@@ -85,7 +90,8 @@ public class TeamService {
       AuditorAwareImpl auditorAwareImpl,
       SlackClients slackClients,
       PollableTaskBlobStorage pollableTaskBlobStorage,
-      PollableTaskRunner pollableTaskRunner) {
+      PollableTaskRunner pollableTaskRunner,
+      PlatformTransactionManager transactionManager) {
     this.teamRepository = teamRepository;
     this.teamUserRepository = teamUserRepository;
     this.teamLocalePoolRepository = teamLocalePoolRepository;
@@ -100,6 +106,7 @@ public class TeamService {
     this.slackClients = slackClients;
     this.pollableTaskBlobStorage = pollableTaskBlobStorage;
     this.pollableTaskRunner = pollableTaskRunner;
+    this.transactionManager = transactionManager;
   }
 
   public record LocalePoolEntry(String localeTag, List<Long> translatorUserIds) {}
@@ -233,20 +240,62 @@ public class TeamService {
         .orElse(false);
   }
 
-  @Transactional(readOnly = true)
   public List<Team> findAll() {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<Team> result = findAllNoTx();
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<Team> findAllNoTx() {
     return teamRepository.findAllOrderedEnabled();
   }
 
-  @Transactional(readOnly = true)
   public List<Team> findAll(boolean includeDisabled) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<Team> result = findAllNoTx(includeDisabled);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<Team> findAllNoTx(boolean includeDisabled) {
     return includeDisabled
         ? teamRepository.findAllOrdered()
         : teamRepository.findAllOrderedEnabled();
   }
 
-  @Transactional(readOnly = true)
   public List<Team> findCurrentUserTeams() {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<Team> result = findCurrentUserTeamsNoTx();
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<Team> findCurrentUserTeamsNoTx() {
     Long userId = getCurrentUserIdOrThrow();
     return teamUserRepository.findByUserIdAndRole(userId, TeamUserRole.PM).stream()
         .map(TeamUser::getTeam)
@@ -254,15 +303,44 @@ public class TeamService {
         .collect(Collectors.toList());
   }
 
-  @Transactional(readOnly = true)
   public Team getTeam(Long teamId) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      Team result = getTeamNoTx(teamId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Team getTeamNoTx(Long teamId) {
     return teamRepository
         .findByIdAndEnabledTrue(teamId)
         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + teamId));
   }
 
-  @Transactional
   public Team createTeam(String rawName) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      Team result = createTeamNoTx(rawName);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Team createTeamNoTx(String rawName) {
     String name = normalizeTeamName(rawName);
     if (name.isEmpty()) {
       throw new IllegalArgumentException("Team name is required");
@@ -276,9 +354,24 @@ public class TeamService {
     return teamRepository.save(team);
   }
 
-  @Transactional
   public Team updateTeam(Long teamId, String rawName) {
-    Team team = getTeam(teamId);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      Team result = updateTeamNoTx(teamId, rawName);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Team updateTeamNoTx(Long teamId, String rawName) {
+    Team team = getTeamNoTx(teamId);
     String name = normalizeTeamName(rawName);
     if (name.isEmpty()) {
       throw new IllegalArgumentException("Team name is required");
@@ -296,19 +389,47 @@ public class TeamService {
     return teamRepository.save(team);
   }
 
-  @Transactional
   public void deleteTeam(Long teamId) {
-    Team team = getTeam(teamId);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      deleteTeamNoTx(teamId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteTeamNoTx(Long teamId) {
+    Team team = getTeamNoTx(teamId);
     hardDeleteTeamIfUnused(team);
   }
 
-  @Transactional
   public void updateTeamEnabled(Long teamId, boolean enabled) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      updateTeamEnabledNoTx(teamId, enabled);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void updateTeamEnabledNoTx(Long teamId, boolean enabled) {
     if (enabled) {
       throw new IllegalArgumentException("Re-enabling teams is not supported");
     }
 
-    Team team = getTeam(teamId);
+    Team team = getTeamNoTx(teamId);
     // Disable the team row for auditability/name reuse while preserving team roster/pool/mapping
     // rows so the team can be analyzed or restored later if needed.
     String name = "disabled__" + System.currentTimeMillis() + "__" + team.getName();
@@ -333,28 +454,72 @@ public class TeamService {
     teamRepository.delete(team);
   }
 
-  @Transactional(readOnly = true)
   public List<Long> getTeamUserIdsByRole(Long teamId, TeamUserRole role) {
-    getTeam(teamId);
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<Long> result = getTeamUserIdsByRoleNoTx(teamId, role);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<Long> getTeamUserIdsByRoleNoTx(Long teamId, TeamUserRole role) {
+    getTeamNoTx(teamId);
     return teamUserRepository.findByTeamIdAndRole(teamId, role).stream()
         .map(TeamUser::getUser)
         .map(User::getId)
         .toList();
   }
 
-  @Transactional(readOnly = true)
   public List<TeamUserSummary> getTeamUsersByRole(Long teamId, TeamUserRole role) {
-    getTeam(teamId);
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<TeamUserSummary> result = getTeamUsersByRoleNoTx(teamId, role);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<TeamUserSummary> getTeamUsersByRoleNoTx(Long teamId, TeamUserRole role) {
+    getTeamNoTx(teamId);
     return teamUserRepository.findByTeamIdAndRole(teamId, role).stream()
         .map(TeamUser::getUser)
         .map(user -> new TeamUserSummary(user.getId(), user.getUsername(), user.getCommonName()))
         .toList();
   }
 
-  @Transactional
   public ReplaceTeamUsersResult replaceTeamUsersByRole(
       Long teamId, TeamUserRole role, List<Long> userIds) {
-    Team team = getTeam(teamId);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      ReplaceTeamUsersResult result = replaceTeamUsersByRoleNoTx(teamId, role, userIds);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReplaceTeamUsersResult replaceTeamUsersByRoleNoTx(
+      Long teamId, TeamUserRole role, List<Long> userIds) {
+    Team team = getTeamNoTx(teamId);
 
     List<Long> normalizedIds =
         (userIds == null ? List.<Long>of() : userIds)
@@ -422,8 +587,22 @@ public class TeamService {
     return new ReplaceTeamUsersResult(removedUserIds.size(), removedLocalePoolRows);
   }
 
-  @Transactional
   public void setUserTeamAssignments(Long userId, Long pmTeamId, Long translatorTeamId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      setUserTeamAssignmentsNoTx(userId, pmTeamId, translatorTeamId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void setUserTeamAssignmentsNoTx(Long userId, Long pmTeamId, Long translatorTeamId) {
     User user =
         userRepository
             .findById(userId)
@@ -481,7 +660,7 @@ public class TeamService {
     teamUserRepository.deleteByUserIdAndRole(userId, TeamUserRole.TRANSLATOR);
 
     if (pmTeamId != null) {
-      Team pmTeam = getTeam(pmTeamId);
+      Team pmTeam = getTeamNoTx(pmTeamId);
       TeamUser pmMapping = new TeamUser();
       pmMapping.setTeam(pmTeam);
       pmMapping.setUser(user);
@@ -490,7 +669,7 @@ public class TeamService {
     }
 
     if (translatorTeamId != null) {
-      Team translatorTeam = getTeam(translatorTeamId);
+      Team translatorTeam = getTeamNoTx(translatorTeamId);
       TeamUser translatorMapping = new TeamUser();
       translatorMapping.setTeam(translatorTeam);
       translatorMapping.setUser(user);
@@ -1269,5 +1448,12 @@ public class TeamService {
 
     String localeTag = locale.getBcp47Tag();
     return localeTag != null && allowedLocaleTagsLowercase.contains(localeTag.toLowerCase());
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    transactionDefinition.setReadOnly(true);
+    return transactionDefinition;
   }
 }
