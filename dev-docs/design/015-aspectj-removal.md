@@ -172,6 +172,9 @@ Removed during this workstream:
 - `AssetMappingService` no longer relies on AspectJ for protected transactional helpers; legacy
   exact-match mapping and unmapped text-unit creation now open and commit their transaction
   boundaries explicitly.
+- `AssetService` no longer uses `@Transactional`; asset creation and deletion now open and commit
+  their transaction boundaries explicitly, and bulk deletion keeps per-asset deletion inside the
+  same transaction.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and

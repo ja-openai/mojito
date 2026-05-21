@@ -49,8 +49,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to manage assets. It takes care of adding new assets as well as starting the extraction
@@ -82,7 +83,7 @@ public class AssetService {
 
   @Autowired PollableTaskRunner pollableTaskRunner;
 
-  @Autowired TransactionTemplate transactionTemplate;
+  @Autowired PlatformTransactionManager transactionManager;
 
   @Autowired UserService userService;
 
@@ -268,8 +269,24 @@ public class AssetService {
    * @param virtualContent
    * @return
    */
-  @Transactional
   public Asset createAsset(Long repositoryId, String assetPath, boolean virtualContent) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      Asset result = createAssetNoTx(repositoryId, assetPath, virtualContent);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Asset createAssetNoTx(Long repositoryId, String assetPath, boolean virtualContent) {
     logger.debug("Create assest for repository id: {}, path: {}", repositoryId, assetPath);
 
     Asset asset = new Asset();
@@ -326,9 +343,7 @@ public class AssetService {
               "Creating asset: " + assetPath,
               0,
               getTimeout(parentTask),
-              currentTask ->
-                  transactionTemplate.execute(
-                      status -> createAsset(repositoryId, assetPath, Boolean.FALSE))));
+              currentTask -> createAsset(repositoryId, assetPath, Boolean.FALSE)));
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {
@@ -399,8 +414,23 @@ public class AssetService {
    *
    * @param asset
    */
-  @Transactional
   public void deleteAsset(Asset asset) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteAssetNoTx(asset);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteAssetNoTx(Asset asset) {
     logger.debug("Delete an asset with path: {}", asset.getPath());
 
     asset.setDeleted(true);
@@ -422,15 +452,30 @@ public class AssetService {
    *
    * @param assetIds
    */
-  @Transactional
   public void deleteAssets(Set<Long> assetIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteAssetsNoTx(assetIds);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteAssetsNoTx(Set<Long> assetIds) {
 
     logger.debug("Delete assets {}", assetIds.toString());
 
     for (Long assetId : assetIds) {
       Asset asset = assetRepository.findById(assetId).orElse(null);
       if (asset != null) {
-        deleteAsset(asset);
+        deleteAssetNoTx(asset);
       }
     }
 
