@@ -47,7 +47,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to generate {@link TranslationKit}s
@@ -86,6 +88,8 @@ public class TranslationKitService {
 
   @Autowired TextUnitDTOAnnotations textUnitDTOAnnotations;
 
+  @Autowired PlatformTransactionManager transactionManager;
+
   /**
    * Generates and gets a translation kit in XLIFF format for a given {@link TM} and {@link Locale}
    *
@@ -96,12 +100,29 @@ public class TranslationKitService {
    * @param useInheritance
    * @return the XLIFF content
    */
-  @Transactional
   public TranslationKitAsXliff generateTranslationKitAsXLIFF(
       Long dropId, Long tmId, Long localeId, TranslationKit.Type type, Boolean useInheritance) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      TranslationKitAsXliff result =
+          generateTranslationKitAsXLIFFNoTx(dropId, tmId, localeId, type, useInheritance);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TranslationKitAsXliff generateTranslationKitAsXLIFFNoTx(
+      Long dropId, Long tmId, Long localeId, TranslationKit.Type type, Boolean useInheritance) {
     logger.debug("Get translation kit for in tmId: {} and locale: {}", tmId, localeId);
-    TranslationKit translationKit = addTranslationKit(dropId, localeId, type);
+    TranslationKit translationKit = addTranslationKitNoTx(dropId, localeId, type);
 
     logger.trace("Create XLIFFWriter");
     XLIFFWriter xliffWriter = new XLIFFWriter();
@@ -189,9 +210,24 @@ public class TranslationKitService {
    * @param type
    * @return the {@link TranslationKit} that was added
    */
-  @Transactional
   public TranslationKit addTranslationKit(Long dropId, Long localeId, TranslationKit.Type type) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      TranslationKit result = addTranslationKitNoTx(dropId, localeId, type);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TranslationKit addTranslationKitNoTx(Long dropId, Long localeId, TranslationKit.Type type) {
     logger.debug("Add translation kit entities for dropId: {} and localeId: {}", dropId, localeId);
 
     Drop drop = dropRepository.getReferenceById(dropId);
@@ -217,10 +253,25 @@ public class TranslationKitService {
    * @param translationKitTextUnits List of {@link TranslationKitTextUnit#id}s
    * @param wordCount
    */
-  @Transactional
   public void updateTranslationKitWithTmTextUnits(
       Long translationKitId, List<TranslationKitTextUnit> translationKitTextUnits, Long wordCount) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      updateTranslationKitWithTmTextUnitsNoTx(translationKitId, translationKitTextUnits, wordCount);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void updateTranslationKitWithTmTextUnitsNoTx(
+      Long translationKitId, List<TranslationKitTextUnit> translationKitTextUnits, Long wordCount) {
     logger.debug("Update translation kit: {} with list of tmTextUnitIds", translationKitId);
 
     TranslationKit translationKit =
@@ -300,9 +351,23 @@ public class TranslationKitService {
    * @param translationKitId {@link TranslationKit#id}
    * @param notFoundTextUnitIds a list of text unit ids that was in the XLIFF but not in the TM
    */
-  @Transactional
   public void updateStatistics(Long translationKitId, Set<String> notFoundTextUnitIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      updateStatisticsNoTx(translationKitId, notFoundTextUnitIds);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void updateStatisticsNoTx(Long translationKitId, Set<String> notFoundTextUnitIds) {
     TranslationKit translationKit =
         translationKitRepository.findById(translationKitId).orElse(null);
 
@@ -323,11 +388,26 @@ public class TranslationKitService {
     }
 
     translationKitRepository.save(translationKit);
-    checkForPartiallyImported(translationKit.getDrop().getId());
+    checkForPartiallyImportedNoTx(translationKit.getDrop().getId());
   }
 
-  @Transactional
   public void checkForPartiallyImported(Long dropId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      checkForPartiallyImportedNoTx(dropId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void checkForPartiallyImportedNoTx(Long dropId) {
     Drop drop = dropRepository.findById(dropId).orElse(null);
     List<TranslationKit> translationKits = translationKitRepository.findByDropId(drop.getId());
     boolean partiallyImported = false;
