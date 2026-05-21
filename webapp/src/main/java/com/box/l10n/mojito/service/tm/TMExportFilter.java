@@ -4,18 +4,14 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.entity.TranslationKit;
-import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.okapi.ImportExportTextUnitUtils;
 import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
-import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
-import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
-import com.box.l10n.mojito.service.translationkit.TranslationKitService;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -35,15 +31,12 @@ import net.sf.okapi.common.resource.TextUnit;
 import net.sf.okapi.common.skeleton.ISkeletonWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * An {@link IFilter} to export all {@link TextUnit}s of a {@link TM}
  *
  * @author jaurambault
  */
-@Configurable
 public class TMExportFilter implements IFilter {
 
   static Logger logger = LoggerFactory.getLogger(TMExportFilter.class);
@@ -52,25 +45,17 @@ public class TMExportFilter implements IFilter {
 
   private static final String DISPLAY_NAME = "TM Export Filter";
 
-  @Autowired TranslationKitService translationKitService;
+  LocaleService localeService;
 
-  @Autowired RepositoryRepository repositoryRepository;
+  AssetRepository assetRepository;
 
-  @Autowired LocaleService localeService;
+  TextUnitSearcher textUnitSearcher;
 
-  @Autowired RepositoryLocaleRepository repositoryLocaleRepository;
+  TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
-  @Autowired AssetRepository assetRepository;
+  ImportExportTextUnitUtils importExportTextUnitUtils;
 
-  @Autowired TextUnitSearcher textUnitSearcher;
-
-  @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
-
-  @Autowired ObjectMapper objectMapper;
-
-  @Autowired ImportExportTextUnitUtils importExportTextUnitUtils;
-
-  @Autowired TextUnitUtils textUnitUtils;
+  TextUnitUtils textUnitUtils;
 
   /** {@link TM#id} to be exported */
   Long assetId;
@@ -88,8 +73,21 @@ public class TMExportFilter implements IFilter {
 
   Locale locale;
 
-  public TMExportFilter(Long tmId) {
-    this.assetId = tmId;
+  public TMExportFilter(
+      Long assetId,
+      LocaleService localeService,
+      AssetRepository assetRepository,
+      TextUnitSearcher textUnitSearcher,
+      TMTextUnitVariantCommentService tmTextUnitVariantCommentService,
+      ImportExportTextUnitUtils importExportTextUnitUtils,
+      TextUnitUtils textUnitUtils) {
+    this.assetId = assetId;
+    this.localeService = localeService;
+    this.assetRepository = assetRepository;
+    this.textUnitSearcher = textUnitSearcher;
+    this.tmTextUnitVariantCommentService = tmTextUnitVariantCommentService;
+    this.importExportTextUnitUtils = importExportTextUnitUtils;
+    this.textUnitUtils = textUnitUtils;
   }
 
   @Override

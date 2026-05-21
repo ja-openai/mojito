@@ -103,6 +103,8 @@ Removed during this workstream:
   its own class.
 - `ImportExportedXliffStep` no longer uses `@Configurable`; `TMImportService` now passes its import
   collaborators explicitly and unused woven fields were removed.
+- `TMExportFilter` no longer uses `@Configurable`; `TMService` now constructs it with explicit
+  export collaborators and unused woven fields were removed.
 
 In progress:
 
