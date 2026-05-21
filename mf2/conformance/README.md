@@ -107,13 +107,14 @@ The source-to-model fixtures currently cover:
 - Unicode variable names, bidi controls around names, and namespaced identifiers
 - escaped braces and backslash
 - function annotations and options, including `:number`, `:integer`, `:string`,
-  quoted option values containing spaces, and variable-valued options
+  quoted option values containing spaces, variable-valued options, and optional
+  whitespace around `=`
 - `:currency` parsing as a custom function annotation, with unregistered custom
   functions rejected by default formatters
 - `.input`, including multiple declarations before a quoted pattern
 - `.local`, including chained locals
 - markup open/close/standalone placeholders
-- parts output for expression and markup attributes
+- parts output for expression attributes and markup options/attributes
 - opt-in `bidiIsolation: "default"` string formatting around expression output,
   with parts output preserving raw values for UI renderers
 - exact-match `.match` selectors and catch-all fallback, including multi-selector

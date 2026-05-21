@@ -184,6 +184,7 @@ private struct MF2FormatContext {
                 output.append(.markup(
                     kind: markup.kind,
                     name: markup.name,
+                    options: markup.options,
                     attributes: markup.attributes
                 ))
             }
@@ -378,13 +379,19 @@ private extension MF2Variant {
 public enum MF2FormattedPart: Equatable, Decodable {
     case text(String)
     case expression(String, attributes: [String: MF2AttributeValue])
-    case markup(kind: String, name: String, attributes: [String: MF2AttributeValue])
+    case markup(
+        kind: String,
+        name: String,
+        options: [String: MF2ExpressionArgument],
+        attributes: [String: MF2AttributeValue]
+    )
 
     private enum CodingKeys: String, CodingKey {
         case type
         case value
         case kind
         case name
+        case options
         case attributes
     }
 
@@ -406,6 +413,10 @@ public enum MF2FormattedPart: Equatable, Decodable {
             self = .markup(
                 kind: try container.decode(String.self, forKey: .kind),
                 name: try container.decode(String.self, forKey: .name),
+                options: try container.decodeIfPresent(
+                    [String: MF2ExpressionArgument].self,
+                    forKey: .options
+                ) ?? [:],
                 attributes: try container.decodeIfPresent(
                     [String: MF2AttributeValue].self,
                     forKey: .attributes

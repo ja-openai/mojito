@@ -481,10 +481,11 @@ final class Mf2Parser {
                         end);
                 return null;
             }
-            AttributeParseResult attribute = parseAttribute(token, start, end);
+            AttributeParseResult attribute = parseAttributeTokens(tokens, index - 1, start, end);
             if (attribute == null) {
                 return null;
             }
+            index = attribute.nextIndex();
             if (attributes.containsKey(attribute.name())) {
                 pushDiagnostic(
                         "duplicate-attribute-name",
@@ -566,49 +567,110 @@ final class Mf2Parser {
         Map<String, Mf2Message.ExpressionArgument> options = new LinkedHashMap<>();
         index++;
         while (index < tokens.size() && !tokens.get(index).startsWith("@")) {
-            String token = tokens.get(index++);
-            int equals = token.indexOf('=');
-            if (equals <= 0 || equals == token.length() - 1) {
-                pushDiagnostic(
-                        "invalid-function-option",
-                        "Function options must use key=value syntax.",
-                        start,
-                        end);
+            OptionParseResult option = parseOptionTokens(tokens, index, start, end);
+            if (option == null) {
                 return null;
             }
-            String key = token.substring(0, equals);
-            String rawValue = token.substring(equals + 1);
-            NameSplit keySplit = splitIdentifier(key);
-            if (keySplit.name().isEmpty() || !keySplit.rest().isEmpty()) {
-                pushDiagnostic(
-                        "invalid-function-option",
-                        "Function option key must be a valid identifier.",
-                        start,
-                        end);
-                return null;
-            }
-            if (options.containsKey(keySplit.name())) {
+            index = option.nextIndex();
+            if (options.containsKey(option.name())) {
                 pushDiagnostic(
                         "duplicate-option-name",
-                        "Function option names must be unique within an expression.",
+                        "Option names must be unique within a function or markup placeholder.",
                         start,
                         end);
                 return null;
             }
-            options.put(keySplit.name(), parseLiteralOrVariable(rawValue));
+            options.put(option.name(), option.value());
         }
 
         return new FunctionParseResult(new Mf2Message.FunctionRef(split.name(), options), index);
     }
 
-    private AttributeParseResult parseAttribute(String token, int start, int end) {
+    private OptionParseResult parseOptionTokens(List<String> tokens, int index, int start, int end) {
+        Assignment assignment = parseRequiredAssignment(tokens, index, start, end);
+        if (assignment == null) {
+            return null;
+        }
+        NameSplit keySplit = splitIdentifier(assignment.key());
+        if (keySplit.name().isEmpty() || !keySplit.rest().isEmpty()) {
+            pushDiagnostic(
+                    "invalid-function-option",
+                    "Option key must be a valid identifier.",
+                    start,
+                    end);
+            return null;
+        }
+        return new OptionParseResult(
+                keySplit.name(),
+                parseLiteralOrVariable(assignment.rawValue()),
+                assignment.nextIndex());
+    }
+
+    private Assignment parseRequiredAssignment(List<String> tokens, int index, int start, int end) {
+        String token = tokens.get(index);
+        int equals = token.indexOf('=');
+        if (equals >= 0) {
+            return finishAssignment(
+                    token.substring(0, equals),
+                    token.substring(equals + 1),
+                    tokens,
+                    index + 1,
+                    start,
+                    end);
+        }
+        if (index + 1 >= tokens.size()) {
+            pushDiagnostic(
+                    "invalid-function-option",
+                    "Options must use key=value syntax.",
+                    start,
+                    end);
+            return null;
+        }
+        String next = tokens.get(index + 1);
+        if (!next.startsWith("=")) {
+            pushDiagnostic(
+                    "invalid-function-option",
+                    "Options must use key=value syntax.",
+                    start,
+                    end);
+            return null;
+        }
+        return finishAssignment(token, next.substring(1), tokens, index + 2, start, end);
+    }
+
+    private Assignment finishAssignment(
+            String key, String rawValue, List<String> tokens, int nextIndex, int start, int end) {
+        if (key.isEmpty()) {
+            pushDiagnostic(
+                    "invalid-function-option",
+                    "Option key and value must be non-empty.",
+                    start,
+                    end);
+            return null;
+        }
+        if (!rawValue.isEmpty()) {
+            return new Assignment(key, rawValue, nextIndex);
+        }
+        if (nextIndex >= tokens.size()) {
+            pushDiagnostic(
+                    "invalid-function-option",
+                    "Option key and value must be non-empty.",
+                    start,
+                    end);
+            return null;
+        }
+        return new Assignment(key, tokens.get(nextIndex), nextIndex + 1);
+    }
+
+    private AttributeParseResult parseAttributeTokens(List<String> tokens, int index, int start, int end) {
+        String token = tokens.get(index);
         String content = token.substring(1);
         if (content.isEmpty()) {
             pushDiagnostic("missing-attribute-name", "Attribute is missing a name.", start, end);
             return null;
         }
-        int equals = content.indexOf('=');
-        if (equals < 0) {
+
+        if (!hasAttributeAssignment(content, tokens, index)) {
             NameSplit split = splitIdentifier(content);
             if (split.name().isEmpty() || !split.rest().isEmpty()) {
                 pushDiagnostic(
@@ -618,17 +680,29 @@ final class Mf2Parser {
                         end);
                 return null;
             }
-            return new AttributeParseResult(split.name(), new Mf2Message.PresentAttribute(true));
+            return new AttributeParseResult(split.name(), new Mf2Message.PresentAttribute(true), index + 1);
         }
-        if (equals == 0 || equals == content.length() - 1) {
-            pushDiagnostic(
-                    "invalid-attribute",
-                    "Attribute key and value must be non-empty.",
-                    start,
-                    end);
+
+        AttributeAssignment assignment = parseAttributeAssignment(content, tokens, index, start, end);
+        if (assignment == null) {
             return null;
         }
-        NameSplit split = splitIdentifier(content.substring(0, equals));
+        Mf2Message.AttributeValue value = parseAttributeValue(assignment.rawValue(), start, end);
+        return value == null ? null : new AttributeParseResult(assignment.name(), value, assignment.nextIndex());
+    }
+
+    private boolean hasAttributeAssignment(String content, List<String> tokens, int index) {
+        return content.indexOf('=') >= 0
+                || (index + 1 < tokens.size() && tokens.get(index + 1).startsWith("="));
+    }
+
+    private AttributeAssignment parseAttributeAssignment(
+            String content, List<String> tokens, int index, int start, int end) {
+        Assignment assignment = attributeAssignmentParts(content, tokens, index, start, end);
+        if (assignment == null) {
+            return null;
+        }
+        NameSplit split = splitIdentifier(assignment.key());
         if (split.name().isEmpty() || !split.rest().isEmpty()) {
             pushDiagnostic(
                     "invalid-attribute",
@@ -637,8 +711,53 @@ final class Mf2Parser {
                     end);
             return null;
         }
-        Mf2Message.AttributeValue value = parseAttributeValue(content.substring(equals + 1), start, end);
-        return value == null ? null : new AttributeParseResult(split.name(), value);
+        return new AttributeAssignment(split.name(), assignment.rawValue(), assignment.nextIndex());
+    }
+
+    private Assignment attributeAssignmentParts(
+            String content, List<String> tokens, int index, int start, int end) {
+        int equals = content.indexOf('=');
+        if (equals >= 0) {
+            return finishAttributeAssignment(
+                    content.substring(0, equals),
+                    content.substring(equals + 1),
+                    tokens,
+                    index + 1,
+                    start,
+                    end);
+        }
+        if (index + 1 >= tokens.size()) {
+            return null;
+        }
+        String next = tokens.get(index + 1);
+        if (!next.startsWith("=")) {
+            return null;
+        }
+        return finishAttributeAssignment(content, next.substring(1), tokens, index + 2, start, end);
+    }
+
+    private Assignment finishAttributeAssignment(
+            String key, String rawValue, List<String> tokens, int nextIndex, int start, int end) {
+        if (key.isEmpty()) {
+            pushDiagnostic(
+                    "invalid-attribute",
+                    "Attribute key and value must be non-empty.",
+                    start,
+                    end);
+            return null;
+        }
+        if (!rawValue.isEmpty()) {
+            return new Assignment(key, rawValue, nextIndex);
+        }
+        if (nextIndex >= tokens.size()) {
+            pushDiagnostic(
+                    "invalid-attribute",
+                    "Attribute key and value must be non-empty.",
+                    start,
+                    end);
+            return null;
+        }
+        return new Assignment(key, tokens.get(nextIndex), nextIndex + 1);
     }
 
     private Mf2Message.AttributeValue parseAttributeValue(String rawValue, int start, int end) {
@@ -685,21 +804,76 @@ final class Mf2Parser {
             return null;
         }
         if (split.rest().isBlank()) {
-            return new Mf2Message.Markup(kind, split.name(), Map.of());
+            return new Mf2Message.Markup(kind, split.name(), Map.of(), Map.of());
         }
-        Tail tail = parseTail(split.rest(), start, end);
+        MarkupTail tail = parseMarkupTail(split.rest(), start, end);
         if (tail == null) {
             return null;
         }
-        if (tail.function() != null) {
-            pushDiagnostic(
-                    "unsupported-markup",
-                    "Markup placeholders do not support function annotations.",
-                    start,
-                    end);
+        return new Mf2Message.Markup(kind, split.name(), tail.options(), tail.attributes());
+    }
+
+    private MarkupTail parseMarkupTail(String rest, int start, int end) {
+        List<String> tokens = splitTailTokens(rest, start, end);
+        if (tokens == null) {
             return null;
         }
-        return new Mf2Message.Markup(kind, split.name(), tail.attributes());
+        Map<String, Mf2Message.ExpressionArgument> options = new LinkedHashMap<>();
+        Map<String, Mf2Message.AttributeValue> attributes = new LinkedHashMap<>();
+        boolean seenAttribute = false;
+        int index = 0;
+        while (index < tokens.size()) {
+            String token = tokens.get(index);
+            if (token.startsWith("@")) {
+                seenAttribute = true;
+                AttributeParseResult attribute = parseAttributeTokens(tokens, index, start, end);
+                if (attribute == null) {
+                    return null;
+                }
+                index = attribute.nextIndex();
+                if (attributes.containsKey(attribute.name())) {
+                    pushDiagnostic(
+                            "duplicate-attribute-name",
+                            "Attribute names must be unique within an expression or markup placeholder.",
+                            start,
+                            end);
+                    return null;
+                }
+                attributes.put(attribute.name(), attribute.value());
+                continue;
+            }
+            if (seenAttribute) {
+                pushDiagnostic(
+                        "unsupported-markup",
+                        "Markup options must come before attributes.",
+                        start,
+                        end);
+                return null;
+            }
+            if (token.startsWith(":")) {
+                pushDiagnostic(
+                        "unsupported-markup",
+                        "Markup placeholders do not support function annotations.",
+                        start,
+                        end);
+                return null;
+            }
+            OptionParseResult option = parseOptionTokens(tokens, index, start, end);
+            if (option == null) {
+                return null;
+            }
+            index = option.nextIndex();
+            if (options.containsKey(option.name())) {
+                pushDiagnostic(
+                        "duplicate-option-name",
+                        "Option names must be unique within a function or markup placeholder.",
+                        start,
+                        end);
+                return null;
+            }
+            options.put(option.name(), option.value());
+        }
+        return new MarkupTail(options, attributes);
     }
 
     private String parseVariableName() {
@@ -995,9 +1169,20 @@ final class Mf2Parser {
 
     private record Tail(Mf2Message.FunctionRef function, Map<String, Mf2Message.AttributeValue> attributes) {}
 
+    private record MarkupTail(
+            Map<String, Mf2Message.ExpressionArgument> options,
+            Map<String, Mf2Message.AttributeValue> attributes) {}
+
     private record FunctionParseResult(Mf2Message.FunctionRef function, int nextIndex) {}
 
-    private record AttributeParseResult(String name, Mf2Message.AttributeValue value) {}
+    private record OptionParseResult(
+            String name, Mf2Message.ExpressionArgument value, int nextIndex) {}
+
+    private record AttributeParseResult(String name, Mf2Message.AttributeValue value, int nextIndex) {}
+
+    private record AttributeAssignment(String name, String rawValue, int nextIndex) {}
+
+    private record Assignment(String key, String rawValue, int nextIndex) {}
 
     @FunctionalInterface
     private interface CharPredicate {

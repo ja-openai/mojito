@@ -1,12 +1,12 @@
 {
-  "passed": 254,
-  "skipped": 43,
+  "passed": 264,
+  "skipped": 33,
   "notWired": 164,
   "total": 461,
   "files": {
     "tests/syntax.json": {
-      "passed": 103,
-      "skipped": 11
+      "passed": 113,
+      "skipped": 1
     },
     "tests/syntax-errors.json": {
       "passed": 125,

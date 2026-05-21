@@ -182,12 +182,14 @@ public struct MF2Function: Equatable, Decodable {
 public struct MF2Markup: Equatable, Decodable {
     public let kind: String
     public let name: String
+    public let options: [String: MF2ExpressionArgument]
     public let attributes: [String: MF2AttributeValue]
 
     private enum CodingKeys: String, CodingKey {
         case type
         case kind
         case name
+        case options
         case attributes
     }
 
@@ -196,6 +198,7 @@ public struct MF2Markup: Equatable, Decodable {
         _ = try container.decode(String.self, forKey: .type)
         kind = try container.decode(String.self, forKey: .kind)
         name = try container.decode(String.self, forKey: .name)
+        options = try container.decodeIfPresent([String: MF2ExpressionArgument].self, forKey: .options) ?? [:]
         attributes = try container.decodeIfPresent([String: MF2AttributeValue].self, forKey: .attributes) ?? [:]
     }
 }

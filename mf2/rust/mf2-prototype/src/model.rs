@@ -192,6 +192,15 @@ impl Markup {
         }
     }
 
+    pub(crate) fn with_options(mut self, options: BTreeMap<String, ExpressionArg>) -> Self {
+        self.options = if options.is_empty() {
+            None
+        } else {
+            Some(options)
+        };
+        self
+    }
+
     pub(crate) fn with_attributes(mut self, attributes: BTreeMap<String, AttributeValue>) -> Self {
         self.attributes = if attributes.is_empty() {
             None

@@ -27,6 +27,8 @@ pub enum FormattedPart {
         kind: String,
         name: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        options: Option<BTreeMap<String, ExpressionArg>>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         attributes: Option<BTreeMap<String, AttributeValue>>,
     },
 }
@@ -690,6 +692,7 @@ fn markup_to_part(markup: &Markup) -> FormattedPart {
     FormattedPart::Markup {
         kind: markup.kind.clone(),
         name: markup.name.clone(),
+        options: markup.options.clone(),
         attributes: markup.attributes.clone(),
     }
 }

@@ -243,6 +243,7 @@ final class Mf2Formatter {
                     case Mf2Message.MarkupPart markup -> output.add(new Mf2Message.FormattedMarkup(
                             markup.markup().kind(),
                             markup.markup().name(),
+                            markup.markup().options(),
                             markup.markup().attributes()));
                 }
             }

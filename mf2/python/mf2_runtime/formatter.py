@@ -234,6 +234,8 @@ class _FormatContext:
                     "kind": part.get("kind", ""),
                     "name": part.get("name", ""),
                 }
+                if options := part.get("options"):
+                    markup_part["options"] = options
                 if attributes := part.get("attributes"):
                     markup_part["attributes"] = attributes
                 parts.append(markup_part)

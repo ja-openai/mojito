@@ -72,7 +72,8 @@ The current conformance slice covers:
   and attribute identifiers, malformed match variants, plus duplicate function
   option and attribute names
 - function annotations and literal/variable options in the data model, including
-  quoted option values containing spaces and variable-valued options
+  quoted option values containing spaces, variable-valued options, and optional
+  whitespace around `=`
 - formatter function registries in Rust/Swift/Python/Java; default runtimes
   pass through the current standard-function slice, while demos register a
   narrow dependency-free `:currency` function outside the core formatter
@@ -81,7 +82,8 @@ The current conformance slice covers:
 - `.input` and `.local` declarations, including multiple inputs and chained locals
 - markup placeholders, stripped from string output for now
 - `format_to_parts` / `formatToParts` output for text, expression output, and
-  markup boundaries, preserving expression and markup attributes for UI renderers
+  markup boundaries, preserving expression attributes plus markup options and
+  attributes for UI renderers
 - opt-in `default` bidi isolation for string formatting, wrapping expression
   output in Unicode FSI/PDI while keeping parts output raw
 - exact-match `.match` selectors with catch-all fallback, including

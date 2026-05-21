@@ -27,8 +27,25 @@ struct Tail {
     attributes: BTreeMap<String, AttributeValue>,
 }
 
+struct MarkupTail {
+    options: BTreeMap<String, ExpressionArg>,
+    attributes: BTreeMap<String, AttributeValue>,
+}
+
 struct FunctionParseResult {
     function: FunctionRef,
+    next_index: usize,
+}
+
+struct ParsedOption {
+    name: String,
+    value: ExpressionArg,
+    next_index: usize,
+}
+
+struct ParsedAttribute {
+    name: String,
+    value: AttributeValue,
     next_index: usize,
 }
 
@@ -511,7 +528,6 @@ impl<'a> Parser<'a> {
         let mut attributes = BTreeMap::new();
         while index < tokens.len() {
             let token = tokens[index];
-            index += 1;
             if !token.starts_with('@') {
                 self.push_diagnostic(
                     "unsupported-expression",
@@ -521,7 +537,9 @@ impl<'a> Parser<'a> {
                 );
                 return None;
             }
-            let (name, value) = self.parse_attribute(token, start, end)?;
+            let parsed = self.parse_attribute_tokens(&tokens, index, start, end)?;
+            index = parsed.next_index;
+            let name = parsed.name;
             if attributes.contains_key(&name) {
                 self.push_diagnostic(
                     "duplicate-attribute-name",
@@ -531,7 +549,7 @@ impl<'a> Parser<'a> {
                 );
                 return None;
             }
-            attributes.insert(name, value);
+            attributes.insert(name, parsed.value);
         }
 
         Some(Tail {
@@ -614,46 +632,19 @@ impl<'a> Parser<'a> {
         let mut options = BTreeMap::new();
         index += 1;
         while index < tokens.len() && !tokens[index].starts_with('@') {
-            let token = tokens[index];
-            index += 1;
-            let Some((key, raw_value)) = token.split_once('=') else {
-                self.push_diagnostic(
-                    "invalid-function-option",
-                    "Function options must use key=value syntax.",
-                    start,
-                    end,
-                );
-                return None;
-            };
-            if key.is_empty() || raw_value.is_empty() {
-                self.push_diagnostic(
-                    "invalid-function-option",
-                    "Function option key and value must be non-empty.",
-                    start,
-                    end,
-                );
-                return None;
-            }
-            let (key, key_rest) = split_identifier(key);
-            if key.is_empty() || !key_rest.is_empty() || raw_value.is_empty() {
-                self.push_diagnostic(
-                    "invalid-function-option",
-                    "Function option key and value must be non-empty.",
-                    start,
-                    end,
-                );
-                return None;
-            }
+            let parsed = self.parse_option_tokens(&tokens, index, start, end)?;
+            index = parsed.next_index;
+            let key = parsed.name;
             if options.contains_key(&key) {
                 self.push_diagnostic(
                     "duplicate-option-name",
-                    "Function option names must be unique within an expression.",
+                    "Option names must be unique within a function or markup placeholder.",
                     start,
                     end,
                 );
                 return None;
             }
-            options.insert(key, parse_literal_or_variable(raw_value));
+            options.insert(key, parsed.value);
         }
 
         Some(FunctionParseResult {
@@ -662,12 +653,105 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_attribute(
+    fn parse_option_tokens(
         &mut self,
-        token: &str,
+        tokens: &[&str],
+        index: usize,
         start: usize,
         end: usize,
-    ) -> Option<(String, AttributeValue)> {
+    ) -> Option<ParsedOption> {
+        let (key, raw_value, next_index) =
+            self.parse_required_assignment(tokens, index, start, end)?;
+        let (name, rest) = split_identifier(key);
+        if name.is_empty() || !rest.is_empty() {
+            self.push_diagnostic(
+                "invalid-function-option",
+                "Option key must be a valid identifier.",
+                start,
+                end,
+            );
+            return None;
+        }
+        Some(ParsedOption {
+            name,
+            value: parse_literal_or_variable(raw_value),
+            next_index,
+        })
+    }
+
+    fn parse_required_assignment<'b>(
+        &mut self,
+        tokens: &[&'b str],
+        index: usize,
+        start: usize,
+        end: usize,
+    ) -> Option<(&'b str, &'b str, usize)> {
+        let token = tokens[index];
+        if let Some((key, raw_value)) = token.split_once('=') {
+            return self.finish_assignment(key, raw_value, tokens, index + 1, start, end);
+        }
+        let Some(next) = tokens.get(index + 1) else {
+            self.push_diagnostic(
+                "invalid-function-option",
+                "Options must use key=value syntax.",
+                start,
+                end,
+            );
+            return None;
+        };
+        let Some(raw_value) = next.strip_prefix('=') else {
+            self.push_diagnostic(
+                "invalid-function-option",
+                "Options must use key=value syntax.",
+                start,
+                end,
+            );
+            return None;
+        };
+        self.finish_assignment(token, raw_value, tokens, index + 2, start, end)
+    }
+
+    fn finish_assignment<'b>(
+        &mut self,
+        key: &'b str,
+        raw_value: &'b str,
+        tokens: &[&'b str],
+        next_index: usize,
+        start: usize,
+        end: usize,
+    ) -> Option<(&'b str, &'b str, usize)> {
+        if key.is_empty() {
+            self.push_diagnostic(
+                "invalid-function-option",
+                "Option key and value must be non-empty.",
+                start,
+                end,
+            );
+            return None;
+        }
+        if !raw_value.is_empty() {
+            return Some((key, raw_value, next_index));
+        }
+        let Some(next_value) = tokens.get(next_index) else {
+            self.push_diagnostic(
+                "invalid-function-option",
+                "Option key and value must be non-empty.",
+                start,
+                end,
+            );
+            return None;
+        };
+        Some((key, *next_value, next_index + 1))
+    }
+
+    fn parse_attribute_tokens(
+        &mut self,
+        tokens: &[&str],
+        index: usize,
+        start: usize,
+        end: usize,
+    ) -> Option<ParsedAttribute> {
+        let token = tokens[index];
         let content = token.strip_prefix('@').expect("attribute starts with @");
         if content.is_empty() {
             self.push_diagnostic(
@@ -678,20 +762,94 @@ impl<'a> Parser<'a> {
             );
             return None;
         }
-        let Some((name, raw_value)) = content.split_once('=') else {
-            let (name, rest) = split_identifier(content);
-            if name.is_empty() || !rest.is_empty() {
-                self.push_diagnostic(
-                    "invalid-attribute",
-                    "Attribute name must be a valid identifier.",
-                    start,
-                    end,
-                );
-                return None;
-            }
-            return Some((name, AttributeValue::Present(true)));
+
+        if let Some((name, raw_value, next_index)) =
+            self.parse_optional_attribute_assignment(content, tokens, index, start, end)?
+        {
+            let value = self.parse_attribute_value(raw_value, start, end)?;
+            return Some(ParsedAttribute {
+                name,
+                value,
+                next_index,
+            });
+        }
+
+        let (name, rest) = split_identifier(content);
+        if name.is_empty() || !rest.is_empty() {
+            self.push_diagnostic(
+                "invalid-attribute",
+                "Attribute name must be a valid identifier.",
+                start,
+                end,
+            );
+            return None;
+        }
+        Some(ParsedAttribute {
+            name,
+            value: AttributeValue::Present(true),
+            next_index: index + 1,
+        })
+    }
+
+    fn parse_optional_attribute_assignment<'b>(
+        &mut self,
+        content: &'b str,
+        tokens: &[&'b str],
+        index: usize,
+        start: usize,
+        end: usize,
+    ) -> Option<Option<(String, &'b str, usize)>> {
+        let Some((name_raw, raw_value, next_index)) =
+            self.attribute_assignment_parts(content, tokens, index, start, end)?
+        else {
+            return Some(None);
         };
-        if name.is_empty() || raw_value.is_empty() {
+        let (name, rest) = split_identifier(name_raw);
+        if name.is_empty() || !rest.is_empty() {
+            self.push_diagnostic(
+                "invalid-attribute",
+                "Attribute name must be a valid identifier.",
+                start,
+                end,
+            );
+            return None;
+        }
+        Some(Some((name, raw_value, next_index)))
+    }
+
+    fn attribute_assignment_parts<'b>(
+        &mut self,
+        content: &'b str,
+        tokens: &[&'b str],
+        index: usize,
+        start: usize,
+        end: usize,
+    ) -> Option<Option<(&'b str, &'b str, usize)>> {
+        if let Some((name, raw_value)) = content.split_once('=') {
+            return self
+                .finish_attribute_assignment(name, raw_value, tokens, index + 1, start, end)
+                .map(Some);
+        }
+        let Some(next) = tokens.get(index + 1) else {
+            return Some(None);
+        };
+        let Some(raw_value) = next.strip_prefix('=') else {
+            return Some(None);
+        };
+        self.finish_attribute_assignment(content, raw_value, tokens, index + 2, start, end)
+            .map(Some)
+    }
+
+    fn finish_attribute_assignment<'b>(
+        &mut self,
+        name: &'b str,
+        raw_value: &'b str,
+        tokens: &[&'b str],
+        next_index: usize,
+        start: usize,
+        end: usize,
+    ) -> Option<(&'b str, &'b str, usize)> {
+        if name.is_empty() {
             self.push_diagnostic(
                 "invalid-attribute",
                 "Attribute key and value must be non-empty.",
@@ -700,22 +858,19 @@ impl<'a> Parser<'a> {
             );
             return None;
         }
-        Some((
-            {
-                let (name, rest) = split_identifier(name);
-                if name.is_empty() || !rest.is_empty() {
-                    self.push_diagnostic(
-                        "invalid-attribute",
-                        "Attribute name must be a valid identifier.",
-                        start,
-                        end,
-                    );
-                    return None;
-                }
-                name
-            },
-            self.parse_attribute_value(raw_value, start, end)?,
-        ))
+        if !raw_value.is_empty() {
+            return Some((name, raw_value, next_index));
+        }
+        let Some(next_value) = tokens.get(next_index) else {
+            self.push_diagnostic(
+                "invalid-attribute",
+                "Attribute key and value must be non-empty.",
+                start,
+                end,
+            );
+            return None;
+        };
+        Some((name, *next_value, next_index + 1))
     }
 
     fn parse_attribute_value(
@@ -780,18 +935,74 @@ impl<'a> Parser<'a> {
             return Some(Markup::new(kind, name));
         }
 
-        let tail = self.parse_tail(rest, start, end)?;
-        if tail.function.is_some() {
-            self.push_diagnostic(
-                "unsupported-markup",
-                "Markup placeholders do not support function annotations.",
-                start,
-                end,
-            );
-            return None;
+        let tail = self.parse_markup_tail(rest, start, end)?;
+        Some(
+            Markup::new(kind, name)
+                .with_options(tail.options)
+                .with_attributes(tail.attributes),
+        )
+    }
+
+    fn parse_markup_tail(&mut self, rest: &str, start: usize, end: usize) -> Option<MarkupTail> {
+        let tokens = self.split_tail_tokens(rest, start, end)?;
+        let mut index = 0;
+        let mut options = BTreeMap::new();
+        let mut attributes = BTreeMap::new();
+        let mut seen_attribute = false;
+
+        while index < tokens.len() {
+            if tokens[index].starts_with('@') {
+                seen_attribute = true;
+                let parsed = self.parse_attribute_tokens(&tokens, index, start, end)?;
+                index = parsed.next_index;
+                if attributes.contains_key(&parsed.name) {
+                    self.push_diagnostic(
+                        "duplicate-attribute-name",
+                        "Attribute names must be unique within an expression or markup placeholder.",
+                        start,
+                        end,
+                    );
+                    return None;
+                }
+                attributes.insert(parsed.name, parsed.value);
+                continue;
+            }
+            if seen_attribute {
+                self.push_diagnostic(
+                    "unsupported-markup",
+                    "Markup options must come before attributes.",
+                    start,
+                    end,
+                );
+                return None;
+            }
+            if tokens[index].starts_with(':') {
+                self.push_diagnostic(
+                    "unsupported-markup",
+                    "Markup placeholders do not support function annotations.",
+                    start,
+                    end,
+                );
+                return None;
+            }
+            let parsed = self.parse_option_tokens(&tokens, index, start, end)?;
+            index = parsed.next_index;
+            if options.contains_key(&parsed.name) {
+                self.push_diagnostic(
+                    "duplicate-option-name",
+                    "Option names must be unique within a function or markup placeholder.",
+                    start,
+                    end,
+                );
+                return None;
+            }
+            options.insert(parsed.name, parsed.value);
         }
 
-        Some(Markup::new(kind, name).with_attributes(tail.attributes))
+        Some(MarkupTail {
+            options,
+            attributes,
+        })
     }
 
     fn parse_variable_name(&mut self) -> Option<String> {

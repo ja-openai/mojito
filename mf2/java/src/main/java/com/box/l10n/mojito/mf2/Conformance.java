@@ -211,10 +211,23 @@ public final class Conformance {
                 map.put("type", "markup");
                 map.put("kind", markup.kind());
                 map.put("name", markup.name());
+                putOptions(map, markup.options());
                 putAttributes(map, markup.attributes());
             }
         }
         return map;
+    }
+
+    private static void putOptions(
+            Map<String, Object> output, Map<String, Mf2Message.ExpressionArgument> options) {
+        if (options.isEmpty()) {
+            return;
+        }
+        Map<String, Object> rawOptions = new java.util.LinkedHashMap<>();
+        for (Map.Entry<String, Mf2Message.ExpressionArgument> entry : options.entrySet()) {
+            rawOptions.put(entry.getKey(), expressionArgumentToMap(entry.getValue()));
+        }
+        output.put("options", rawOptions);
     }
 
     private static void putAttributes(

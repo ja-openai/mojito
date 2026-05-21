@@ -125,8 +125,13 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
 
     record PresentAttribute(boolean value) implements AttributeValue {}
 
-    record Markup(String kind, String name, Map<String, AttributeValue> attributes) {
+    record Markup(
+            String kind,
+            String name,
+            Map<String, ExpressionArgument> options,
+            Map<String, AttributeValue> attributes) {
         public Markup {
+            options = Map.copyOf(options);
             attributes = Map.copyOf(attributes);
         }
     }
@@ -157,9 +162,14 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
         }
     }
 
-    record FormattedMarkup(String kind, String name, Map<String, AttributeValue> attributes)
+    record FormattedMarkup(
+            String kind,
+            String name,
+            Map<String, ExpressionArgument> options,
+            Map<String, AttributeValue> attributes)
             implements FormattedPart {
         public FormattedMarkup {
+            options = Map.copyOf(options);
             attributes = Map.copyOf(attributes);
         }
     }
@@ -220,14 +230,7 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
 
     private static FunctionRef parseFunction(Object value) {
         Map<String, Object> map = object(value, "function");
-        Map<String, ExpressionArgument> options = new LinkedHashMap<>();
-        Object rawOptions = map.get("options");
-        if (rawOptions != null) {
-            for (Map.Entry<String, Object> entry : object(rawOptions, "function.options").entrySet()) {
-                options.put(entry.getKey(), parseExpressionArgument(entry.getValue()));
-            }
-        }
-        return new FunctionRef(string(map.get("name"), "function.name"), options);
+        return new FunctionRef(string(map.get("name"), "function.name"), parseOptions(map.get("options")));
     }
 
     private static Markup parseMarkup(Object value) {
@@ -235,7 +238,19 @@ public sealed interface Mf2Message permits Mf2Message.Message, Mf2Message.Select
         return new Markup(
                 string(map.get("kind"), "markup.kind"),
                 string(map.get("name"), "markup.name"),
+                parseOptions(map.get("options")),
                 parseAttributes(map.get("attributes")));
+    }
+
+    private static Map<String, ExpressionArgument> parseOptions(Object value) {
+        if (value == null) {
+            return Map.of();
+        }
+        Map<String, ExpressionArgument> options = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : object(value, "options").entrySet()) {
+            options.put(entry.getKey(), parseExpressionArgument(entry.getValue()));
+        }
+        return options;
     }
 
     private static Map<String, AttributeValue> parseAttributes(Object value) {
