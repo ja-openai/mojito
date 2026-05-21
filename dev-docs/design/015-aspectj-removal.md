@@ -186,6 +186,8 @@ Removed during this workstream:
 - `TranslationKitService` no longer uses `@Transactional`; kit generation, kit unit updates,
   import statistics, and partial-import checks now open and commit their transaction boundaries
   explicitly.
+- `TMService` no longer uses `@Transactional`; XLIFF export and localized import batch processing
+  now open and commit their transaction boundaries explicitly.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and

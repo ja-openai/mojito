@@ -93,7 +93,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to manage {@link TM}s (translation memories).
@@ -174,6 +176,8 @@ public class TMService {
   @Autowired TranslationKitService translationKitService;
 
   @Autowired TranslationKitRepository translationKitRepository;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   @Value("${l10n.tmService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
@@ -1071,9 +1075,24 @@ public class TMService {
    * @param bcp47Tag bcp47tag of the locale that needs to be exported
    * @return an XLIFF that contains {@link Asset}'s translation for that locale
    */
-  @Transactional
   public String exportAssetAsXLIFF(Long assetId, String bcp47Tag) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      String result = exportAssetAsXLIFFNoTx(assetId, bcp47Tag);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  String exportAssetAsXLIFFNoTx(Long assetId, String bcp47Tag) {
     logger.debug("Export data for asset id: {} and locale: {}", assetId, bcp47Tag);
 
     logger.trace("Create XLIFFWriter");
@@ -1399,8 +1418,23 @@ public class TMService {
     processBatchInTransaction(driver);
   }
 
-  @Transactional
   void processBatchInTransaction(IPipelineDriver driver) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      processBatchNoTx(driver);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void processBatchNoTx(IPipelineDriver driver) {
     driver.processBatch();
   }
 
