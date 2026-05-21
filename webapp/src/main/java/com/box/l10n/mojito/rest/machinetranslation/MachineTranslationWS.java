@@ -6,6 +6,8 @@ import static com.box.l10n.mojito.quartz.QuartzSchedulerManager.DEFAULT_SCHEDULE
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
+import com.box.l10n.mojito.service.cache.CacheKey;
+import com.box.l10n.mojito.service.cache.CacheService;
 import com.box.l10n.mojito.service.machinetranslation.BatchMachineTranslationJob;
 import com.box.l10n.mojito.service.machinetranslation.MachineTranslationService;
 import com.box.l10n.mojito.service.machinetranslation.RepositoryMachineTranslationService;
@@ -16,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,13 +43,21 @@ public class MachineTranslationWS {
 
   @Autowired RepositoryMachineTranslationService repositoryMachineTranslationService;
 
+  @Autowired CacheService cacheService;
+
   @Value("${l10n.machineTranslation.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
 
   @RequestMapping(method = RequestMethod.POST, value = "/api/machine-translation-batch")
   @ResponseStatus(HttpStatus.OK)
-  @Cacheable(MACHINE_TRANSLATION)
   public PollableTask getTranslations(@RequestBody BatchTranslationRequestDTO translationRequest) {
+    return cacheService.get(
+        MACHINE_TRANSLATION,
+        CacheKey.of(MachineTranslationWS.class, "getTranslations", translationRequest),
+        () -> getTranslationsUncached(translationRequest));
+  }
+
+  private PollableTask getTranslationsUncached(BatchTranslationRequestDTO translationRequest) {
     QuartzJobInfo<BatchTranslationRequestDTO, TranslationsResponseDTO> quartzJobInfo =
         QuartzJobInfo.newBuilder(BatchMachineTranslationJob.class)
             .withInlineInput(false)
@@ -62,9 +71,15 @@ public class MachineTranslationWS {
 
   @RequestMapping(method = RequestMethod.POST, value = "/api/machine-translation")
   @ResponseStatus(HttpStatus.OK)
-  @Cacheable(MACHINE_TRANSLATION)
   public TranslationDTO getSingleTranslation(
       @RequestBody TranslationRequestDTO translationRequest) {
+    return cacheService.get(
+        MACHINE_TRANSLATION,
+        CacheKey.of(MachineTranslationWS.class, "getSingleTranslation", translationRequest),
+        () -> getSingleTranslationUncached(translationRequest));
+  }
+
+  private TranslationDTO getSingleTranslationUncached(TranslationRequestDTO translationRequest) {
     return machineTranslationService.getSingleTranslation(
         translationRequest.getTextSource(),
         translationRequest.getSourceBcp47Tag(),

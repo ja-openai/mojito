@@ -1,8 +1,10 @@
 package com.box.l10n.mojito.service.machinetranslation;
 
+import static com.box.l10n.mojito.CacheType.Names.MACHINE_TRANSLATION;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.box.l10n.mojito.service.cache.CacheService;
 import com.box.l10n.mojito.service.leveraging.LeveragerByContentAndRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
 @RunWith(MockitoJUnitRunner.class)
 class MachineTranslationServiceTest {
@@ -26,7 +29,10 @@ class MachineTranslationServiceTest {
     machineTranslationService =
         spy(
             new MachineTranslationService(
-                machineTranslationEngine, new TranslationMerger(), new SimpleMeterRegistry()));
+                machineTranslationEngine,
+                new TranslationMerger(),
+                new SimpleMeterRegistry(),
+                new CacheService(new ConcurrentMapCacheManager(MACHINE_TRANSLATION))));
 
     leveragerByContentAndRepositoryMock = mock(LeveragerByContentAndRepository.class);
     when(machineTranslationService.getLeveragerByContentAndRepository(null, null))

@@ -1,11 +1,14 @@
 package com.box.l10n.mojito.service.locale;
 
+import static com.box.l10n.mojito.CacheType.Names.LOCALES;
+
 import com.box.l10n.mojito.entity.Locale;
+import com.box.l10n.mojito.service.cache.CacheKey;
+import com.box.l10n.mojito.service.cache.CacheService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -18,12 +21,19 @@ public class LocaleService {
 
   @Autowired LocaleRepository localeRepository;
 
+  @Autowired CacheService cacheService;
+
   /**
    * @return Map BCP47 => Locale. The map will be cached.
    */
-  @Cacheable("locales")
   private Map<String, Locale> getLocalesBcp47TagMap() {
+    return cacheService.get(
+        LOCALES,
+        CacheKey.of(LocaleService.class, "getLocalesBcp47TagMap"),
+        this::getLocalesBcp47TagMapUncached);
+  }
 
+  private Map<String, Locale> getLocalesBcp47TagMapUncached() {
     Map<String, Locale> localesMap = new HashMap<>();
     List<Locale> allLocales = localeRepository.findAll();
 
@@ -39,9 +49,14 @@ public class LocaleService {
   /**
    * @return Map ID => Locale. The map will be cached.
    */
-  @Cacheable("locales")
   private Map<Long, Locale> getLocalesIdMap() {
+    return cacheService.get(
+        LOCALES,
+        CacheKey.of(LocaleService.class, "getLocalesIdMap"),
+        this::getLocalesIdMapUncached);
+  }
 
+  private Map<Long, Locale> getLocalesIdMapUncached() {
     Map<Long, Locale> localesMap = new HashMap<>();
     List<Locale> allLocales = localeRepository.findAll();
 

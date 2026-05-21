@@ -9,13 +9,9 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.CachingConfigurer;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
-import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.cache.support.SimpleCacheManager;
-import org.springframework.context.annotation.AdviceMode;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,8 +19,7 @@ import org.springframework.context.annotation.Configuration;
  * @author jaurambault
  */
 @Configuration
-@EnableCaching(mode = AdviceMode.ASPECTJ)
-public class CachingConfig implements CachingConfigurer {
+public class CachingConfig {
 
   final MTServiceCacheConfiguration mtServiceCacheConfiguration;
 
@@ -33,7 +28,6 @@ public class CachingConfig implements CachingConfigurer {
   }
 
   @Bean
-  @Override
   public CacheManager cacheManager() {
     Cache defaultCache = new ConcurrentMapCache(CacheType.Names.DEFAULT);
     Cache localesCache = new ConcurrentMapCache(CacheType.Names.LOCALES);
@@ -76,11 +70,5 @@ public class CachingConfig implements CachingConfigurer {
         CacheType.Names.MACHINE_TRANSLATION,
         machineTranslationMemoryCache,
         machineTranslationDatabaseCache);
-  }
-
-  @Bean
-  @Override
-  public KeyGenerator keyGenerator() {
-    return new CustomKeyGenerator();
   }
 }

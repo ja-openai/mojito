@@ -1,11 +1,14 @@
 package com.box.l10n.mojito.service.pluralform;
 
+import static com.box.l10n.mojito.CacheType.Names.PLURAL_FORMS;
+
 import com.box.l10n.mojito.entity.PluralForm;
+import com.box.l10n.mojito.service.cache.CacheKey;
+import com.box.l10n.mojito.service.cache.CacheService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -16,11 +19,19 @@ public class PluralFormService {
 
   @Autowired PluralFormRepository pluralFormRepository;
 
+  @Autowired CacheService cacheService;
+
   /**
    * @return Map "plural_form" => PluralForm. The map will be cached.
    */
-  @Cacheable("pluralForms")
   private Map<String, PluralForm> getPluralFormMap() {
+    return cacheService.get(
+        PLURAL_FORMS,
+        CacheKey.of(PluralFormService.class, "getPluralFormMap"),
+        this::getPluralFormMapUncached);
+  }
+
+  private Map<String, PluralForm> getPluralFormMapUncached() {
     Map<String, PluralForm> pluralFormsMap = new HashMap<>();
     List<PluralForm> pluralForms = pluralFormRepository.findAll();
 
@@ -34,8 +45,14 @@ public class PluralFormService {
   /**
    * @return Map ID => PluralForm. The map will be cached.
    */
-  @Cacheable("pluralForms")
   private Map<Long, PluralForm> getPluralFormIdMap() {
+    return cacheService.get(
+        PLURAL_FORMS,
+        CacheKey.of(PluralFormService.class, "getPluralFormIdMap"),
+        this::getPluralFormIdMapUncached);
+  }
+
+  private Map<Long, PluralForm> getPluralFormIdMapUncached() {
     Map<Long, PluralForm> pluralFormsMap = new HashMap<>();
     List<PluralForm> pluralForms = pluralFormRepository.findAll();
 
