@@ -87,6 +87,8 @@ Removed during this workstream:
 - Common Okapi filters for regex double-quote escaping, JS skeleton writing, JS parsing,
   Xcode XLIFF, and Mac Stringsdict no longer use `@Configurable`; Okapi-created instances now
   initialize their helper collaborators directly.
+- Common Okapi Android and PO filters no longer use `@Configurable`; Okapi-created filter and
+  encoder instances now initialize text-unit and unescape helpers directly.
 
 In progress:
 

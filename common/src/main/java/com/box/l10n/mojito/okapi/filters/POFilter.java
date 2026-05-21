@@ -28,8 +28,6 @@ import net.sf.okapi.common.skeleton.GenericSkeleton;
 import net.sf.okapi.common.skeleton.GenericSkeletonPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.util.ReflectionUtils;
 
 /**
@@ -40,7 +38,6 @@ import org.springframework.util.ReflectionUtils;
  *
  * @author jaurambualt
  */
-@Configurable
 public class POFilter extends net.sf.okapi.filters.po.POFilter {
 
   /** logger */
@@ -57,9 +54,9 @@ public class POFilter extends net.sf.okapi.filters.po.POFilter {
   // Consider cleanup but that not that simple as it would require migrating data...
   static final String PLURAL_SEPARATOR = " _";
 
-  @Autowired TextUnitUtils textUnitUtils;
+  TextUnitUtils textUnitUtils;
 
-  @Autowired UnescapeUtils unescapeUtils;
+  UnescapeUtils unescapeUtils;
 
   List<Event> eventQueue = new ArrayList<>();
 
@@ -76,6 +73,15 @@ public class POFilter extends net.sf.okapi.filters.po.POFilter {
   Integer poPluralForm;
 
   EncoderManager encoderManager;
+
+  public POFilter() {
+    this(new TextUnitUtils(), new UnescapeUtils());
+  }
+
+  public POFilter(TextUnitUtils textUnitUtils, UnescapeUtils unescapeUtils) {
+    this.textUnitUtils = textUnitUtils;
+    this.unescapeUtils = unescapeUtils;
+  }
 
   @Override
   public String getName() {

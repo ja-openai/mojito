@@ -6,8 +6,6 @@ import net.sf.okapi.common.encoder.EncoderContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * This overrides the {@link net.sf.okapi.common.encoder.XMLEncoder} for Android strings.
@@ -22,7 +20,6 @@ import org.springframework.beans.factory.annotation.Configurable;
  *
  * @author jyi
  */
-@Configurable
 public class AndroidXMLEncoder extends net.sf.okapi.common.encoder.XMLEncoder {
 
   /** logger */
@@ -40,10 +37,15 @@ public class AndroidXMLEncoder extends net.sf.okapi.common.encoder.XMLEncoder {
   /** To enable old escaping */
   boolean oldEscaping = false;
 
-  @Autowired UnescapeUtils unescapeUtils;
+  UnescapeUtils unescapeUtils;
 
   public AndroidXMLEncoder(boolean oldEscaping) {
+    this(oldEscaping, new UnescapeUtils());
+  }
+
+  public AndroidXMLEncoder(boolean oldEscaping, UnescapeUtils unescapeUtils) {
     this.oldEscaping = oldEscaping;
+    this.unescapeUtils = unescapeUtils;
   }
 
   @Override
