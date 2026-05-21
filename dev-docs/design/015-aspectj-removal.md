@@ -76,6 +76,8 @@ In progress:
 - `TeamService.refreshSlackConversationMembersAsync` no longer uses `@Pollable`; it calls
   `PollableTaskRunner` directly and stores the Slack refresh input/output in the created task.
 - `LeveragingService.copyTm` no longer uses `@Pollable`; it calls `PollableTaskRunner` directly.
+- `RepositoryMachineTranslationService.translateRepository` no longer uses `@Pollable`; it calls
+  `PollableTaskRunner` directly.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

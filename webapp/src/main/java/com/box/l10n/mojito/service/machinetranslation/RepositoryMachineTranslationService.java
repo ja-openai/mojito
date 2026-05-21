@@ -3,9 +3,10 @@ package com.box.l10n.mojito.service.machinetranslation;
 import static com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.IntegrityChecksType.fromLegacy;
 
 import com.box.l10n.mojito.entity.Repository;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
@@ -37,6 +38,8 @@ public class RepositoryMachineTranslationService {
 
   @Autowired TextUnitBatchImporterService textUnitBatchImporterService;
 
+  @Autowired PollableTaskRunner pollableTaskRunner;
+
   /**
    * Machine translate untranslated strings in a repository.
    *
@@ -48,10 +51,21 @@ public class RepositoryMachineTranslationService {
    * @param sourceTextMaxCountPerLocale
    * @return
    */
-  @Pollable(async = true, message = "Start machine translating repository")
   public PollableFuture<Void> translateRepository(
       String repositoryName, List<String> targetBcp47Tags, int sourceTextMaxCountPerLocale) {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "translateRepository",
+            "Start machine translating repository",
+            currentTask -> {
+              translateRepositoryDirect(
+                  repositoryName, targetBcp47Tags, sourceTextMaxCountPerLocale);
+              return new PollableFutureTaskResult<>();
+            }));
+  }
 
+  void translateRepositoryDirect(
+      String repositoryName, List<String> targetBcp47Tags, int sourceTextMaxCountPerLocale) {
     logger.info(
         "Start Machine Translating repository: {} and target locales: {}",
         repositoryName,
@@ -134,7 +148,5 @@ public class RepositoryMachineTranslationService {
                     TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
               });
     }
-
-    return new PollableFutureTaskResult<>();
   }
 }
