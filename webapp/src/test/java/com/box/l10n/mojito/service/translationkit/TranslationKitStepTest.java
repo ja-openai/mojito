@@ -31,6 +31,16 @@ public class TranslationKitStepTest {
   /** logger */
   static Logger logger = LoggerFactory.getLogger(TranslationKitStepTest.class);
 
+  TranslationKitStep newTranslationKitStep(Long translationKitId) {
+    return new TranslationKitStep(
+        translationKitId,
+        mock(TranslationKitService.class),
+        mock(TMTextUnitRepository.class),
+        mock(TMTextUnitVariantRepository.class),
+        mock(TranslationKitRepository.class),
+        new TextUnitDTOAnnotations());
+  }
+
   @Test
   public void testHandleStartDocument() {
 
@@ -38,7 +48,7 @@ public class TranslationKitStepTest {
     Long translationKitId = 987654321L;
 
     logger.debug("Create instance to be tested, inject mocks and state");
-    TranslationKitStep translationKitStep = new TranslationKitStep(translationKitId);
+    TranslationKitStep translationKitStep = newTranslationKitStep(translationKitId);
     translationKitStep.translationKitTextUnits = null;
 
     logger.debug("Build test input");
@@ -78,8 +88,7 @@ public class TranslationKitStepTest {
     when(mockTmTextUnitRepository.getReferenceById(tmTextUnitId)).thenReturn(tmTextUnit);
 
     logger.debug("Create instance to be tested, inject mocks and state");
-    TranslationKitStep translationKitStep = new TranslationKitStep(translationKitId);
-    translationKitStep.textUnitDTOAnnotations = new TextUnitDTOAnnotations();
+    TranslationKitStep translationKitStep = newTranslationKitStep(translationKitId);
     translationKitStep.translationKitRepository = mockTranslationKitRepository;
     translationKitStep.tmTextUnitRepository = mockTmTextUnitRepository;
     translationKitStep.tmTextUnitVariantRepository = mockTmTextUnitVariantRepository;
@@ -128,7 +137,7 @@ public class TranslationKitStepTest {
     TranslationKitService mockTranslationKitService = mock(TranslationKitService.class);
 
     logger.debug("Create instance to be tested, inject mocks and state");
-    TranslationKitStep translationKitStep = new TranslationKitStep(translationKitId);
+    TranslationKitStep translationKitStep = newTranslationKitStep(translationKitId);
     translationKitStep.translationKitService = mockTranslationKitService;
     translationKitStep.translationKitTextUnits = translationKitTextUnits;
 
@@ -155,8 +164,7 @@ public class TranslationKitStepTest {
             TMTextUnitVariantRepository.class, TMTextUnitVariant.class, tmTextUnitVariantId);
 
     logger.debug("Create instance to be tested, inject mocks and state");
-    TranslationKitStep translationKitStep = new TranslationKitStep(987654321L);
-    translationKitStep.textUnitDTOAnnotations = new TextUnitDTOAnnotations();
+    TranslationKitStep translationKitStep = newTranslationKitStep(987654321L);
     translationKitStep.tmTextUnitVariantRepository = mockTmTextUnitVariantRepository;
 
     logger.debug("Build test input");
