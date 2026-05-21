@@ -12,8 +12,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Services to manage pollable tasks.
@@ -40,8 +42,27 @@ public class PollableTaskService {
 
   @Autowired PollableTaskRepository pollableTaskRepository;
 
-  @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+  @Autowired PlatformTransactionManager transactionManager;
+
   public PollableTask getPollableTask(long id) {
+    DefaultTransactionDefinition transactionDefinition = requiresNewTransaction();
+    transactionDefinition.setReadOnly(true);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      PollableTask pollableTask = getPollableTaskInTransaction(id);
+      transactionManager.commit(transaction);
+      return pollableTask;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  PollableTask getPollableTaskInTransaction(long id) {
     final PollableTask pollableTask = pollableTaskRepository.findById(id).orElse(null);
     // Access all subtasks within the transaction to fetch all entities from the database since
     // we don't use EAGER fetch on the entity anymore.
@@ -54,10 +75,27 @@ public class PollableTaskService {
     return createPollableTask(parentId, name, message, expectedSubTaskNumber, NO_TIMEOUT);
   }
 
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public PollableTask createPollableTask(
       Long parentId, String name, String message, int expectedSubTaskNumber, long timeout) {
+    DefaultTransactionDefinition transactionDefinition = requiresNewTransaction();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
 
+    try {
+      PollableTask pollableTask =
+          createPollableTaskInTransaction(parentId, name, message, expectedSubTaskNumber, timeout);
+      transactionManager.commit(transaction);
+      return pollableTask;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  PollableTask createPollableTaskInTransaction(
+      Long parentId, String name, String message, int expectedSubTaskNumber, long timeout) {
     PollableTask pollableTask = new PollableTask();
 
     if (parentId != null) {
@@ -85,14 +123,35 @@ public class PollableTaskService {
    * @param expectedSubTaskNumberOverride the new expected sub task number if not {@code null}
    * @return the updated task
    */
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public PollableTask finishTask(
       long id,
       String messageOverride,
       ExceptionHolder exceptionHolder,
       Integer expectedSubTaskNumberOverride) {
+    DefaultTransactionDefinition transactionDefinition = requiresNewTransaction();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
 
-    PollableTask pollableTask = getPollableTask(id);
+    try {
+      PollableTask pollableTask =
+          finishTaskInTransaction(
+              id, messageOverride, exceptionHolder, expectedSubTaskNumberOverride);
+      transactionManager.commit(transaction);
+      return pollableTask;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  PollableTask finishTaskInTransaction(
+      long id,
+      String messageOverride,
+      ExceptionHolder exceptionHolder,
+      Integer expectedSubTaskNumberOverride) {
+    PollableTask pollableTask = getPollableTaskInTransaction(id);
     pollableTask.setFinishedDate(ZonedDateTime.now());
 
     if (exceptionHolder != null && exceptionHolder.getException() != null) {
@@ -113,22 +172,59 @@ public class PollableTaskService {
     return save;
   }
 
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public PollableTask updateExpectedSubTaskNumber(long id, int expectedSubTaskNumber) {
+    DefaultTransactionDefinition transactionDefinition = requiresNewTransaction();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
 
-    PollableTask pollableTask = getPollableTask(id);
+    try {
+      PollableTask pollableTask =
+          updateExpectedSubTaskNumberInTransaction(id, expectedSubTaskNumber);
+      transactionManager.commit(transaction);
+      return pollableTask;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  PollableTask updateExpectedSubTaskNumberInTransaction(long id, int expectedSubTaskNumber) {
+    PollableTask pollableTask = getPollableTaskInTransaction(id);
     pollableTask.setExpectedSubTaskNumber(expectedSubTaskNumber);
 
     return pollableTaskRepository.save(pollableTask);
   }
 
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public PollableTask updateMessage(long id, String message) {
+    DefaultTransactionDefinition transactionDefinition = requiresNewTransaction();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
 
-    PollableTask pollableTask = getPollableTask(id);
+    try {
+      PollableTask pollableTask = updateMessageInTransaction(id, message);
+      transactionManager.commit(transaction);
+      return pollableTask;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  PollableTask updateMessageInTransaction(long id, String message) {
+    PollableTask pollableTask = getPollableTaskInTransaction(id);
     pollableTask.setMessage(message);
 
     return pollableTaskRepository.save(pollableTask);
+  }
+
+  private DefaultTransactionDefinition requiresNewTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    return transactionDefinition;
   }
 
   /**
