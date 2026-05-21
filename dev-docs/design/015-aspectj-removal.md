@@ -99,6 +99,8 @@ Removed during this workstream:
   service collaborator it needs, while inherited text-unit helpers initialize locally.
 - `IntegrityCheckStep` no longer uses `@Configurable`; XLIFF import creates it with explicit TM text
   unit and integrity-checker collaborators.
+- The unused `UnescapeStep` pipeline step was removed; no source or resource referenced it outside
+  its own class.
 
 In progress:
 
