@@ -112,6 +112,9 @@ In progress:
 - `DropService` import leaf subtasks for downloading drop-file content, updating the TM, and
   exporting the imported file no longer use `@Pollable`, `@MsgArg`, or `@ParentTask`; they create
   explicit pollable tasks and preserve their checked exceptions.
+- `DropService.importFile` no longer uses `@Pollable`, `@MsgArg`, `@ParentTask`, or
+  `@InjectCurrentTask`; it creates the three-subtask pollable task explicitly and passes the
+  current task into its direct body.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
