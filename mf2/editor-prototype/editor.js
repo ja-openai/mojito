@@ -820,7 +820,9 @@ function initialize() {
     if (!skipStructure) {
       renderStructure();
     }
-    renderArguments();
+    if (!options.skipArguments) {
+      renderArguments();
+    }
     const output = state.output ?? formatMessage(state.model, state.args, locale.value);
     rendered.value = output;
     sourceReference.textContent = sourceParsed.output ?? formatMessage(state.sourceModel, state.args, locale.value);
@@ -968,7 +970,7 @@ function initialize() {
       label.innerHTML = `<span>$${escapeHtml(name)}</span><input value="${escapeHtml(String(state.args[name]))}" />`;
       label.querySelector("input").addEventListener("input", (event) => {
         state.args[name] = event.target.value;
-        void refresh({ skipStructure: true });
+        void refresh({ skipStructure: true, skipArguments: true });
       });
       argsContainer.append(label);
     }

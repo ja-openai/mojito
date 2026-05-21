@@ -35249,7 +35249,9 @@ function clampOffset(value, docLength) {
 async function refreshFromSource(source, options = {}) {
   const response = await parseWithRust(source);
   state.editorModel = editorModelFromRust(response.model, source);
-  renderArguments();
+  if (!options.skipArguments) {
+    renderArguments();
+  }
   renderPreview(response);
   renderDiagnostics(response);
   elements.model.textContent = JSON.stringify(response.model ?? null, null, 2);
@@ -35308,7 +35310,7 @@ function renderArguments() {
     label.querySelector("input").addEventListener("input", (event) => {
       state.args[name2] = event.target.value;
       forceLinting(cmView);
-      void refreshFromSource(cmView.state.doc.toString(), { keepVariantEditor: true });
+      void refreshFromSource(cmView.state.doc.toString(), { keepVariantEditor: true, skipArguments: true });
     });
     elements.arguments.append(label);
   }
