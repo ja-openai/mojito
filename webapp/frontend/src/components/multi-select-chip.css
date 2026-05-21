@@ -16,7 +16,7 @@
 }
 
 .multi-select-chip__panel--with-strip {
-  min-width: 19rem;
+  min-width: min(28rem, calc(100vw - 2rem)) !important;
 }
 
 .multi-select-chip__actions {
