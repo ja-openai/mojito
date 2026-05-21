@@ -11,6 +11,7 @@ import { useWorkbenchEdits } from './useWorkbenchEdits';
 import { useWorkbenchSearch } from './useWorkbenchSearch';
 import { clampWorksetSize, serializeSearchRequest } from './workbench-helpers';
 import {
+  hasLegacyWorkbenchSearchParams,
   legacyWorkbenchLinkErrorTitle,
   resolveLegacyWorkbenchLink,
 } from './workbench-legacy-links';
@@ -55,7 +56,11 @@ export function WorkbenchPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const shareId = searchParams.get('shareId');
-  const wsId = searchParams.get(WORKBENCH_SESSION_QUERY_KEY);
+  const hasLegacyWorkbenchLink = useMemo(
+    () => hasLegacyWorkbenchSearchParams(searchParams),
+    [searchParams],
+  );
+  const wsId = hasLegacyWorkbenchLink ? null : searchParams.get(WORKBENCH_SESSION_QUERY_KEY);
   const deepLinkTmId = searchParams.get('tmTextUnitId');
   const deepLinkLocaleTags = useMemo(
     () => searchParams.getAll('locale').filter(Boolean),
@@ -141,7 +146,7 @@ export function WorkbenchPage() {
   }, [wsId]);
 
   useEffect(() => {
-    if (shareId || deepLinkTmId || stateSearchRequest || !wsId) {
+    if (shareId || deepLinkTmId || stateSearchRequest || hasLegacyWorkbenchLink || !wsId) {
       return;
     }
     pendingWsHydrationIdRef.current = wsId;
@@ -157,7 +162,7 @@ export function WorkbenchPage() {
     setShareIdToHydrate(null);
     setHydrationModal(null);
     setHydratedSearchRequest(savedSearch);
-  }, [deepLinkTmId, shareId, stateSearchRequest, wsId]);
+  }, [deepLinkTmId, hasLegacyWorkbenchLink, shareId, stateSearchRequest, wsId]);
 
   // Support direct link via query params (works with cmd/shift click).
   useEffect(() => {
@@ -312,10 +317,8 @@ export function WorkbenchPage() {
     () => new Map(search.repositories.map((repo) => [repo.name, repo.id])),
     [search.repositories],
   );
-  const legacySearchHydrationSignatureRef = useRef<string | null>(null);
-
   useEffect(() => {
-    if (shareId || deepLinkTmId || stateSearchRequest) {
+    if (shareId || deepLinkTmId || stateSearchRequest || !hasLegacyWorkbenchLink) {
       return;
     }
 
@@ -336,18 +339,16 @@ export function WorkbenchPage() {
       return;
     }
 
-    const signature = serializeSearchRequest(legacyLink.request);
-    if (legacySearchHydrationSignatureRef.current === signature) {
-      return;
-    }
-
-    legacySearchHydrationSignatureRef.current = signature;
+    const nextParams = legacyLink.nextSearchParams;
+    const nextWsId = saveWorkbenchSessionSearch(legacyLink.request);
+    nextParams.set(WORKBENCH_SESSION_QUERY_KEY, nextWsId);
+    pendingWsHydrationIdRef.current = null;
     setShareIdToHydrate(null);
     setHydrationModal(null);
-    setHydratedSearchRequest(legacyLink.request);
-    setSearchParams(legacyLink.nextSearchParams, { replace: true });
+    setSearchParams(nextParams, { replace: true });
   }, [
     deepLinkTmId,
+    hasLegacyWorkbenchLink,
     repositoryIdByName,
     search.repositories.length,
     searchParams,

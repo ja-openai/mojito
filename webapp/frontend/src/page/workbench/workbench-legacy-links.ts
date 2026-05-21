@@ -1,4 +1,5 @@
 import type { SearchAttribute, SearchType, TextUnitSearchRequest } from '../../api/text-units';
+import { WORKBENCH_SESSION_QUERY_KEY } from './workbench-session-state';
 
 export const legacyWorkbenchLinkErrorTitle = 'Cannot open workbench link';
 
@@ -66,7 +67,12 @@ function parseRepositoryIds(searchParams: URLSearchParams): number[] {
 function clearLegacyWorkbenchSearchParams(searchParams: URLSearchParams): URLSearchParams {
   const nextParams = new URLSearchParams(searchParams);
   legacyWorkbenchSearchParams.forEach((param) => nextParams.delete(param));
+  nextParams.delete(WORKBENCH_SESSION_QUERY_KEY);
   return nextParams;
+}
+
+export function hasLegacyWorkbenchSearchParams(searchParams: URLSearchParams): boolean {
+  return legacyWorkbenchSearchParams.some((param) => searchParams.has(param));
 }
 
 export function resolveLegacyWorkbenchLink(
@@ -88,10 +94,6 @@ export function resolveLegacyWorkbenchLink(
         .filter(Boolean),
     ]),
   );
-  if (!localeTags.length) {
-    return { status: 'none' };
-  }
-
   const repositoryNames = Array.from(
     new Set([
       ...getSearchParamValues(searchParams, 'repoNames'),
