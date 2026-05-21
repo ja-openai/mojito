@@ -166,6 +166,9 @@ Removed during this workstream:
 - `VirtualTextUnitBatchUpdaterService.updateTextUnits` no longer uses `@Transactional`; virtual
   text-unit updates now open and commit their transaction boundary explicitly while preserving the
   checked `VirtualAssetRequiredException`.
+- `TextUnitBatchImporterService.importTextUnitsOfLocaleAndAsset` no longer relies on AspectJ for a
+  self-invoked package-private transactional helper; per-locale/asset imports now open and commit
+  their transaction boundary explicitly.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and
