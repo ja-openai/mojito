@@ -95,6 +95,9 @@ In progress:
 - `AssetService.addOrUpdateAssetAndProcessIfNeeded` and its asset-creation subtask no longer use
   `@Pollable`, `@InjectCurrentTask`, `@MsgArg`, or `@ParentTask`; they call `PollableTaskRunner`
   directly and keep the asset creation transaction explicit with `TransactionTemplate`.
+- `AssetMappingService.mapAssetTextUnitAndCreateTMTextUnit` no longer uses `@Pollable` or
+  `@ParentTask`; it keeps the deprecated public test-facing API but creates its pollable task via
+  `PollableTaskRunner`.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
