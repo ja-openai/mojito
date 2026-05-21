@@ -115,6 +115,9 @@ In progress:
 - `DropService.importFile` no longer uses `@Pollable`, `@MsgArg`, `@ParentTask`, or
   `@InjectCurrentTask`; it creates the three-subtask pollable task explicitly and passes the
   current task into its direct body.
+- `DropService.generateAndExportTranslationKit` no longer uses `@Pollable`, `@MsgArg`, or
+  `@ParentTask`; it creates the locale export subtask explicitly and preserves
+  `DropExporterException`.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
