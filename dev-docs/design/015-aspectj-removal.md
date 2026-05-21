@@ -120,6 +120,9 @@ In progress:
   `DropExporterException`.
 - `DropService.cancelDrop` no longer uses `@Pollable` or `@InjectCurrentTask`; callers no longer
   pass the fake injection marker and the service creates the async pollable task directly.
+- `DropService.startDropExportProcess` no longer uses `@Pollable` or `@InjectCurrentTask`; callers
+  no longer pass the fake injection marker and the service creates the synchronous pollable task
+  directly before launching the export subtask.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

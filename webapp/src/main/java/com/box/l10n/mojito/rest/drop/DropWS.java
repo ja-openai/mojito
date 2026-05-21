@@ -98,8 +98,7 @@ public class DropWS {
       throws DropExporterException {
 
     // TODO(P1) Check here that the repo exists (and the user has access to it)?
-    PollableFuture<Drop> exportDropFuture =
-        dropService.startDropExportProcess(exportDropConfig, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> exportDropFuture = dropService.startDropExportProcess(exportDropConfig);
 
     exportDropConfig.setPollableTask(exportDropFuture.getPollableTask());
 
