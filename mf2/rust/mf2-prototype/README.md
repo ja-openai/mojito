@@ -59,6 +59,8 @@ Supported now:
   inputs/locals used by the Unicode official test harness
 - validation-only `:date`, `:time`, and `:datetime` built-ins for simple ISO
   date/datetime operands; locale-sensitive presentation is still deferred
+- `:number` formatting for strict decimal operands, `minimumFractionDigits`,
+  malformed-operand fallback, and exact selection semantics
 - `:offset` for integer add/subtract formatting and exact selection, including
   inherited `signDisplay=always` preservation
 - `:integer` formatting that truncates numeric operands, reports invalid

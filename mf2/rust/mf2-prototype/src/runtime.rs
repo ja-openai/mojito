@@ -164,9 +164,9 @@ impl FunctionRegistry {
 impl Default for FunctionRegistry {
     fn default() -> Self {
         let mut registry = Self::empty();
-        for name in ["string", "number"] {
-            registry.register(name, passthrough_function);
-        }
+        registry.register("string", passthrough_function);
+        registry.register("number", number_function);
+        registry.register_selector("number", number_selector);
         registry.register("integer", integer_function);
         registry.register_selector("integer", integer_selector);
         registry.register("datetime", datetime_function);
@@ -299,6 +299,28 @@ fn passthrough_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     Ok(call.value().to_string())
 }
 
+fn number_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    let value = parse_decimal_number(call.value())
+        .map_err(|_| bad_operand("Number function requires a numeric operand."))?;
+    Ok(format_decimal_number(
+        value,
+        sign_display_always(call.function())?,
+        minimum_fraction_digits(&call)?,
+    ))
+}
+
+fn number_selector(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
+    if invalid_numeric_selector(call.function(), call.inherited_source())? {
+        return Err(bad_selector("Number selector cannot match this operand."));
+    }
+    let value = parse_decimal_number(call.value())
+        .map_err(|_| bad_selector("Number selector requires a numeric operand."))?;
+    let Ok(key) = parse_decimal_number(call.key()) else {
+        return Ok(None);
+    };
+    Ok((value == key).then_some(1))
+}
+
 fn integer_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     let value = parse_decimal_number(call.value())
         .map_err(|_| bad_operand("Integer function requires a numeric operand."))?;
@@ -361,8 +383,62 @@ fn parse_offset_number(value: &str) -> Result<i64, std::num::ParseIntError> {
     value.parse::<i64>()
 }
 
-fn parse_decimal_number(value: &str) -> Result<f64, std::num::ParseFloatError> {
-    value.parse::<f64>()
+fn parse_decimal_number(value: &str) -> Result<f64, ()> {
+    if !is_well_formed_decimal_literal(value) {
+        return Err(());
+    }
+    let parsed = value.parse::<f64>().map_err(|_| ())?;
+    if parsed.is_finite() {
+        Ok(parsed)
+    } else {
+        Err(())
+    }
+}
+
+fn is_well_formed_decimal_literal(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    let mut index = 0usize;
+    if bytes.get(index) == Some(&b'-') {
+        index += 1;
+    }
+
+    match bytes.get(index) {
+        Some(b'0') => index += 1,
+        Some(b'1'..=b'9') => {
+            index += 1;
+            while matches!(bytes.get(index), Some(b'0'..=b'9')) {
+                index += 1;
+            }
+        }
+        _ => return false,
+    }
+
+    if bytes.get(index) == Some(&b'.') {
+        index += 1;
+        let fraction_start = index;
+        while matches!(bytes.get(index), Some(b'0'..=b'9')) {
+            index += 1;
+        }
+        if index == fraction_start {
+            return false;
+        }
+    }
+
+    if matches!(bytes.get(index), Some(b'e' | b'E')) {
+        index += 1;
+        if matches!(bytes.get(index), Some(b'+' | b'-')) {
+            index += 1;
+        }
+        let exponent_start = index;
+        while matches!(bytes.get(index), Some(b'0'..=b'9')) {
+            index += 1;
+        }
+        if index == exponent_start {
+            return false;
+        }
+    }
+
+    index == bytes.len()
 }
 
 fn format_offset_number(value: i64, sign_display_always: bool) -> String {
@@ -375,6 +451,49 @@ fn format_integer_number(value: i64, sign_display_always: bool) -> String {
     } else {
         value.to_string()
     }
+}
+
+fn format_decimal_number(
+    value: f64,
+    sign_display_always: bool,
+    minimum_fraction_digits: usize,
+) -> String {
+    let mut formatted = value.to_string();
+    if sign_display_always && value >= 0.0 {
+        formatted.insert(0, '+');
+    }
+    append_minimum_fraction_digits(&mut formatted, minimum_fraction_digits);
+    formatted
+}
+
+fn append_minimum_fraction_digits(formatted: &mut String, minimum_fraction_digits: usize) {
+    if minimum_fraction_digits == 0 {
+        return;
+    }
+    let fraction_digits = formatted
+        .split_once('.')
+        .map(|(_, fraction)| fraction.len())
+        .unwrap_or(0);
+    if fraction_digits == 0 {
+        formatted.push('.');
+    }
+    for _ in fraction_digits..minimum_fraction_digits {
+        formatted.push('0');
+    }
+}
+
+fn minimum_fraction_digits(call: &FunctionCall<'_>) -> Result<usize, Diagnostic> {
+    let Some(value) = call.option_value("minimumFractionDigits")? else {
+        return Ok(0);
+    };
+    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(bad_option(
+            "minimumFractionDigits option must be a non-negative integer.",
+        ));
+    }
+    value.parse::<usize>().map_err(|_| {
+        bad_option("minimumFractionDigits option is outside the supported integer range.")
+    })
 }
 
 fn sign_display_always(function: &FunctionRef) -> Result<bool, Diagnostic> {
@@ -910,6 +1029,7 @@ impl<'a> FormatContext<'a> {
             return Err(missing_argument(name));
         };
         let value = input.rendered();
+        self.record_function_resolution_errors(function, input.source.as_ref())?;
         match self.functions.format(
             &value,
             function,
@@ -917,8 +1037,9 @@ impl<'a> FormatContext<'a> {
             &self.values,
             input.source.as_ref(),
         ) {
-            Ok(_) => {
+            Ok(formatted) => {
                 if let Some(slot) = self.values.get_mut(name) {
+                    slot.value = serde_json::Value::String(formatted);
                     slot.source = Some(ResolvedFunctionSource::new(
                         input.source_value(&value),
                         function.clone(),

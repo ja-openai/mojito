@@ -82,6 +82,9 @@ The current conformance slice covers:
   narrow dependency-free `:currency` function outside the core formatter
 - Rust validation-only `:date`, `:time`, and `:datetime` built-ins that enforce
   simple ISO date/datetime operand shape without claiming locale formatting
+- Rust `:number` built-in formatting for strict decimal operands, fallback
+  errors for malformed operands, `minimumFractionDigits`, and exact numeric
+  selection semantics used by the official tests
 - Rust `:offset` built-in for integer add/subtract formatting and exact
   selection, including inherited `signDisplay=always` preservation
 - Rust `:integer` built-in formatting that truncates numeric operands, reports
