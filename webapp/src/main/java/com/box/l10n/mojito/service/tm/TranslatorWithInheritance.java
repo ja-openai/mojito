@@ -4,42 +4,23 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.okapi.InheritanceMode;
-import com.box.l10n.mojito.okapi.TextUnitUtils;
-import com.box.l10n.mojito.service.locale.LocaleService;
-import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
-import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
 import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author jeanaurambault
  */
-@Configurable
 public class TranslatorWithInheritance {
 
   static Logger logger = LoggerFactory.getLogger(TranslatorWithInheritance.class);
 
-  @Autowired TMTextUnitRepository tmTextUnitRepository;
-
-  @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
-
-  @Autowired LocaleService localeService;
-
-  @Autowired RepositoryLocaleRepository repositoryLocaleRepository;
-
-  @Autowired TextUnitSearcher textUnitSearcher;
-
-  @Autowired TextUnitUtils textUnitUtils;
-
-  @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
+  TextUnitDTOsCacheService textUnitDTOsCacheService;
 
   Asset asset;
 
@@ -53,19 +34,29 @@ public class TranslatorWithInheritance {
   private StatusFilter statusFilter;
 
   public TranslatorWithInheritance(
-      Asset asset, RepositoryLocale repositoryLocale, InheritanceMode inheritanceMode) {
-    this(asset, repositoryLocale, inheritanceMode, StatusFilter.TRANSLATED_AND_NOT_REJECTED);
+      Asset asset,
+      RepositoryLocale repositoryLocale,
+      InheritanceMode inheritanceMode,
+      TextUnitDTOsCacheService textUnitDTOsCacheService) {
+    this(
+        asset,
+        repositoryLocale,
+        inheritanceMode,
+        StatusFilter.TRANSLATED_AND_NOT_REJECTED,
+        textUnitDTOsCacheService);
   }
 
   public TranslatorWithInheritance(
       Asset asset,
       RepositoryLocale repositoryLocale,
       InheritanceMode inheritanceMode,
-      StatusFilter statusFilter) {
+      StatusFilter statusFilter,
+      TextUnitDTOsCacheService textUnitDTOsCacheService) {
     this.asset = asset;
     this.inheritanceMode = inheritanceMode;
     this.repositoryLocale = repositoryLocale;
     this.statusFilter = statusFilter;
+    this.textUnitDTOsCacheService = textUnitDTOsCacheService;
   }
 
   public String getTranslation(String source, String md5) {

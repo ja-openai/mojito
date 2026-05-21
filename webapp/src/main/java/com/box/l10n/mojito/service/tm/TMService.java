@@ -59,6 +59,7 @@ import com.box.l10n.mojito.service.pullrun.PullRunAssetService;
 import com.box.l10n.mojito.service.pullrun.PullRunService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.xliff.XliffUtils;
 import com.google.common.base.Preconditions;
 import com.ibm.icu.text.MessageFormat;
@@ -154,6 +155,8 @@ public class TMService {
   DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
 
   @Autowired PollableTaskRunner pollableTaskRunner;
+
+  @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
 
   @Value("${l10n.tmService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
@@ -1091,7 +1094,12 @@ public class TMService {
     boolean replaceUsedTmTextUnitVariantIds = pullRunName != null;
     TranslateStep translateStep =
         new TranslateStep(
-            asset, repositoryLocale, inheritanceMode, status, replaceUsedTmTextUnitVariantIds);
+            asset,
+            repositoryLocale,
+            inheritanceMode,
+            status,
+            replaceUsedTmTextUnitVariantIds,
+            textUnitDTOsCacheService);
     String generateLocalizedBase =
         generateLocalizedBase(
             asset, content, filterConfigIdOverride, filterOptions, translateStep, bcp47Tag);

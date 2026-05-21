@@ -16,6 +16,7 @@ import com.box.l10n.mojito.service.tm.TranslatorWithInheritance;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
+import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import java.time.ZonedDateTime;
@@ -43,6 +44,8 @@ public class ImportTranslationsFromLocalizedAssetStep extends AbstractImportTran
   @Autowired TextUnitSearcher textUnitSearcher;
 
   @Autowired IntegrityCheckerFactory integrityCheckerFactory;
+
+  @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
 
   Asset asset;
   RepositoryLocale repositoryLocale;
@@ -78,7 +81,8 @@ public class ImportTranslationsFromLocalizedAssetStep extends AbstractImportTran
 
     initTmTextUnitsMapsForAsset();
     translatorWithInheritance =
-        new TranslatorWithInheritance(asset, repositoryLocale, InheritanceMode.USE_PARENT);
+        new TranslatorWithInheritance(
+            asset, repositoryLocale, InheritanceMode.USE_PARENT, textUnitDTOsCacheService);
     hasTranslationWithoutInheritance = translatorWithInheritance.hasTranslationWithoutInheritance();
 
     textUnitIntegrityCheckers = integrityCheckerFactory.getTextUnitCheckers(asset);

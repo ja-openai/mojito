@@ -39,6 +39,7 @@ import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
+import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.google.common.base.Strings;
 import com.ibm.icu.text.MessageFormat;
 import jakarta.persistence.EntityManager;
@@ -104,6 +105,8 @@ public class VirtualAssetService {
   @Autowired EntityManager em;
 
   @Autowired PluralFormService pluralFormService;
+
+  @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
 
   @Value("${l10n.virtualAssetService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
@@ -266,7 +269,8 @@ public class VirtualAssetService {
         findByAssetExtractionIdAndDoNotTranslateFilter(lastSuccessfulAssetExtractionId, null);
 
     TranslatorWithInheritance translatorWithInheritance =
-        new TranslatorWithInheritance(asset, repositoryLocale, inheritanceMode);
+        new TranslatorWithInheritance(
+            asset, repositoryLocale, inheritanceMode, textUnitDTOsCacheService);
 
     for (AssetTextUnitDTO assetTextUnit : findByAssetExtractionAssetId) {
 
