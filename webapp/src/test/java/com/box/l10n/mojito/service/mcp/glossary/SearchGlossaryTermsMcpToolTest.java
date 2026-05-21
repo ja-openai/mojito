@@ -41,7 +41,7 @@ public class SearchGlossaryTermsMcpToolTest {
 
   private static final class FakeGlossaryManagementService extends GlossaryManagementService {
     private FakeGlossaryManagementService() {
-      super(null, null, null, null, null, null, null);
+      super(null, null, null, null, null, null, null, null);
     }
 
     @Override

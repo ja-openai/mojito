@@ -14,7 +14,9 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class GlossaryManagementService {
@@ -29,6 +31,7 @@ public class GlossaryManagementService {
   private final GlossaryTermTranslationProposalRepository glossaryTermTranslationProposalRepository;
   private final GlossaryStorageService glossaryStorageService;
   private final UserService userService;
+  private final PlatformTransactionManager transactionManager;
 
   public GlossaryManagementService(
       GlossaryRepository glossaryRepository,
@@ -37,7 +40,8 @@ public class GlossaryManagementService {
       GlossaryTermEvidenceRepository glossaryTermEvidenceRepository,
       GlossaryTermTranslationProposalRepository glossaryTermTranslationProposalRepository,
       GlossaryStorageService glossaryStorageService,
-      UserService userService) {
+      UserService userService,
+      PlatformTransactionManager transactionManager) {
     this.glossaryRepository = glossaryRepository;
     this.repositoryRepository = repositoryRepository;
     this.glossaryTermMetadataRepository = glossaryTermMetadataRepository;
@@ -45,10 +49,26 @@ public class GlossaryManagementService {
     this.glossaryTermTranslationProposalRepository = glossaryTermTranslationProposalRepository;
     this.glossaryStorageService = glossaryStorageService;
     this.userService = userService;
+    this.transactionManager = transactionManager;
   }
 
-  @Transactional(readOnly = true)
   public SearchGlossariesView searchGlossaries(String searchQuery, Boolean enabled, Integer limit) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+
+    try {
+      SearchGlossariesView result = searchGlossariesNoTx(searchQuery, enabled, limit);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SearchGlossariesView searchGlossariesNoTx(String searchQuery, Boolean enabled, Integer limit) {
     requireGlossaryReader();
     boolean canManageDisabled = userService.isCurrentUserAdminOrPm();
 
@@ -77,8 +97,23 @@ public class GlossaryManagementService {
     return new SearchGlossariesView(glossaries, filteredGlossaries.size());
   }
 
-  @Transactional(readOnly = true)
   public GlossaryDetail getGlossary(Long glossaryId) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+
+    try {
+      GlossaryDetail result = getGlossaryNoTx(glossaryId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GlossaryDetail getGlossaryNoTx(Long glossaryId) {
     requireGlossaryReader();
     Glossary glossary =
         glossaryRepository
@@ -90,8 +125,41 @@ public class GlossaryManagementService {
     return toDetail(glossary);
   }
 
-  @Transactional
   public GlossaryDetail createGlossary(
+      String name,
+      String description,
+      Boolean enabled,
+      Integer priority,
+      String scopeMode,
+      List<String> localeTags,
+      List<Long> repositoryIds,
+      List<Long> excludedRepositoryIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      GlossaryDetail result =
+          createGlossaryNoTx(
+              name,
+              description,
+              enabled,
+              priority,
+              scopeMode,
+              localeTags,
+              repositoryIds,
+              excludedRepositoryIds);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GlossaryDetail createGlossaryNoTx(
       String name,
       String description,
       Boolean enabled,
@@ -128,10 +196,9 @@ public class GlossaryManagementService {
     glossaryStorageService.ensureCanonicalAsset(savedGlossary);
     glossaryStorageService.replaceLocales(savedGlossary, localeTags);
 
-    return getGlossary(savedGlossary.getId());
+    return getGlossaryNoTx(savedGlossary.getId());
   }
 
-  @Transactional
   public GlossaryDetail updateGlossary(
       Long glossaryId,
       String name,
@@ -155,8 +222,45 @@ public class GlossaryManagementService {
         null);
   }
 
-  @Transactional
   public GlossaryDetail updateGlossary(
+      Long glossaryId,
+      String name,
+      String description,
+      Boolean enabled,
+      Integer priority,
+      String scopeMode,
+      List<String> localeTags,
+      List<Long> repositoryIds,
+      List<Long> excludedRepositoryIds,
+      String backingRepositoryName) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      GlossaryDetail result =
+          updateGlossaryNoTx(
+              glossaryId,
+              name,
+              description,
+              enabled,
+              priority,
+              scopeMode,
+              localeTags,
+              repositoryIds,
+              excludedRepositoryIds,
+              backingRepositoryName);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GlossaryDetail updateGlossaryNoTx(
       Long glossaryId,
       String name,
       String description,
@@ -200,11 +304,26 @@ public class GlossaryManagementService {
     if (backingRepositoryName != null) {
       glossaryStorageService.renameManagedBackingRepository(glossary, backingRepositoryName);
     }
-    return getGlossary(glossary.getId());
+    return getGlossaryNoTx(glossary.getId());
   }
 
-  @Transactional
   public void deleteGlossary(Long glossaryId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteGlossaryNoTx(glossaryId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteGlossaryNoTx(Long glossaryId) {
     requireAdmin();
     Glossary glossary =
         glossaryRepository
@@ -217,6 +336,12 @@ public class GlossaryManagementService {
     glossary.getExcludedRepositories().clear();
     glossaryStorageService.deleteManagedBackingRepository(glossary);
     glossaryRepository.delete(glossary);
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    return transactionDefinition;
   }
 
   private GlossarySummary toSummary(Glossary glossary) {
