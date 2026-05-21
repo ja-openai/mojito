@@ -109,6 +109,9 @@ In progress:
 - `AssetExtractionService.convertAssetContentToMultiBranchState` no longer uses `@Pollable` or
   `@ParentTask`; it creates the extraction subtask explicitly and preserves the checked
   `UnsupportedAssetFilterTypeException`.
+- `DropService` import leaf subtasks for downloading drop-file content, updating the TM, and
+  exporting the imported file no longer use `@Pollable`, `@MsgArg`, or `@ParentTask`; they create
+  explicit pollable tasks and preserve their checked exceptions.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
