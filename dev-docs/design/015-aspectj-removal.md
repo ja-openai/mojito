@@ -144,6 +144,8 @@ Removed during this workstream:
   and partial-import completion now open and commit their transactions explicitly.
 - `PushRunService` no longer uses `@Transactional`; push-run cleanup and text-unit association now
   open and commit their transactions explicitly.
+- `PullRunAssetService` no longer uses `@Transactional`; delete and insert retry steps now open and
+  commit their transaction boundaries explicitly.
 
 In progress:
 

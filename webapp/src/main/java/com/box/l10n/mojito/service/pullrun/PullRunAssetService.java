@@ -21,7 +21,9 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to manage PullRunAsset entities.
@@ -44,6 +46,8 @@ public class PullRunAssetService {
   @Autowired MeterRegistry meterRegistry;
 
   @Autowired DeadLockLoserExceptionRetryTemplate deadLockLoserExceptionRetryTemplate;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   public PullRunAsset createPullRunAsset(PullRun pullRun, Asset asset) {
     PullRunAsset pullRunAsset = new PullRunAsset();
@@ -86,8 +90,23 @@ public class PullRunAssetService {
     }
   }
 
-  @Transactional
   void deleteExistingVariants(PullRunAsset pullRunAsset, Long localeId, String outputBcp47Tag) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteExistingVariantsNoTx(pullRunAsset, localeId, outputBcp47Tag);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteExistingVariantsNoTx(PullRunAsset pullRunAsset, Long localeId, String outputBcp47Tag) {
     // Delete and insert steps split into two transactions to avoid deadlocks occurring
 
     List<PullRunTextUnitVariant> pullRunTextUnitVariants =
@@ -100,10 +119,7 @@ public class PullRunAssetService {
                   .map(PullRunTextUnitVariant::getId)
                   .collect(Collectors.toList()),
               BATCH_SIZE)
-          .forEach(
-              idsBatch -> {
-                deletePullRunTextUnitVariantsByIds(idsBatch);
-              });
+          .forEach(this::deletePullRunTextUnitVariantsByIds);
     }
   }
 
@@ -116,8 +132,28 @@ public class PullRunAssetService {
     return entityManager.createQuery(delete).executeUpdate();
   }
 
-  @Transactional
   void saveTextUnitVariantsMultiRowBatch(
+      PullRunAsset pullRunAsset,
+      Long localeId,
+      List<Long> uniqueTmTextUnitVariantIds,
+      String outputBcp47Tag) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      saveTextUnitVariantsMultiRowBatchNoTx(
+          pullRunAsset, localeId, uniqueTmTextUnitVariantIds, outputBcp47Tag);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void saveTextUnitVariantsMultiRowBatchNoTx(
       PullRunAsset pullRunAsset,
       Long localeId,
       List<Long> uniqueTmTextUnitVariantIds,
