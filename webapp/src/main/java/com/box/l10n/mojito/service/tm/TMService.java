@@ -19,6 +19,7 @@ import com.box.l10n.mojito.entity.TMXliff;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.okapi.AbstractImportTranslationsStep;
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
+import com.box.l10n.mojito.okapi.ImportExportTextUnitUtils;
 import com.box.l10n.mojito.okapi.ImportTranslationsByIdStep;
 import com.box.l10n.mojito.okapi.ImportTranslationsByMd5Step;
 import com.box.l10n.mojito.okapi.ImportTranslationsFromLocalizedAssetStep;
@@ -59,6 +60,7 @@ import com.box.l10n.mojito.service.pullrun.PullRunAssetService;
 import com.box.l10n.mojito.service.pullrun.PullRunService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.xliff.XliffUtils;
 import com.google.common.base.Preconditions;
@@ -157,6 +159,12 @@ public class TMService {
   @Autowired PollableTaskRunner pollableTaskRunner;
 
   @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
+
+  @Autowired TextUnitSearcher textUnitSearcher;
+
+  @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
+
+  @Autowired ImportExportTextUnitUtils importExportTextUnitUtils;
 
   @Value("${l10n.tmService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
@@ -1029,7 +1037,16 @@ public class TMService {
 
     logger.trace("Prepare the Okapi pipeline");
     IPipelineDriver driver = new PipelineDriver();
-    driver.addStep(new RawDocumentToFilterEventsStep(new TMExportFilter(assetId)));
+    driver.addStep(
+        new RawDocumentToFilterEventsStep(
+            new TMExportFilter(
+                assetId,
+                localeService,
+                assetRepository,
+                textUnitSearcher,
+                tmTextUnitVariantCommentService,
+                importExportTextUnitUtils,
+                textUnitUtils)));
     driver.addStep(filterEventsWriterStep);
 
     logger.trace("Add single document with fake output URI to be processed with an outputStream");
