@@ -60,8 +60,11 @@ import com.box.l10n.mojito.service.pullrun.PullRunAssetService;
 import com.box.l10n.mojito.service.pullrun.PullRunService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
+import com.box.l10n.mojito.service.translationkit.TranslationKitRepository;
+import com.box.l10n.mojito.service.translationkit.TranslationKitService;
 import com.box.l10n.mojito.xliff.XliffUtils;
 import com.google.common.base.Preconditions;
 import com.ibm.icu.text.MessageFormat;
@@ -165,6 +168,12 @@ public class TMService {
   @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
   @Autowired ImportExportTextUnitUtils importExportTextUnitUtils;
+
+  @Autowired UserRepository userRepository;
+
+  @Autowired TranslationKitService translationKitService;
+
+  @Autowired TranslationKitRepository translationKitRepository;
 
   @Value("${l10n.tmService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
@@ -891,7 +900,7 @@ public class TMService {
       throws OkapiBadFilterInputException {
 
     ImportTranslationsWithTranslationKitStep importTranslationsWithTranslationKitStep =
-        new ImportTranslationsWithTranslationKitStep();
+        newImportTranslationsWithTranslationKitStep();
     importTranslationsWithTranslationKitStep.setDropImporterUsernameOverride(
         dropImporterUsernameOverride);
 
@@ -902,7 +911,7 @@ public class TMService {
       String xliffContent, TMTextUnitVariant.Status importStatus)
       throws OkapiBadFilterInputException {
 
-    return updateTMWithXliff(xliffContent, importStatus, new ImportTranslationsByIdStep());
+    return updateTMWithXliff(xliffContent, importStatus, newImportTranslationsByIdStep());
   }
 
   /**
@@ -923,7 +932,49 @@ public class TMService {
       throws OkapiBadFilterInputException {
 
     return updateTMWithXliff(
-        xliffContent, importStatus, new ImportTranslationsByMd5Step(repository));
+        xliffContent, importStatus, newImportTranslationsByMd5Step(repository));
+  }
+
+  ImportTranslationsWithTranslationKitStep newImportTranslationsWithTranslationKitStep() {
+    return new ImportTranslationsWithTranslationKitStep(
+        textUnitUtils,
+        tmTextUnitRepository,
+        tmTextUnitCurrentVariantRepository,
+        localeService,
+        tmTextUnitVariantRepository,
+        tmTextUnitVariantCommentService,
+        userRepository,
+        auditorAwareImpl,
+        this,
+        translationKitService,
+        translationKitRepository);
+  }
+
+  ImportTranslationsByIdStep newImportTranslationsByIdStep() {
+    return new ImportTranslationsByIdStep(
+        textUnitUtils,
+        tmTextUnitRepository,
+        tmTextUnitCurrentVariantRepository,
+        localeService,
+        tmTextUnitVariantRepository,
+        tmTextUnitVariantCommentService,
+        userRepository,
+        auditorAwareImpl,
+        this);
+  }
+
+  ImportTranslationsByMd5Step newImportTranslationsByMd5Step(Repository repository) {
+    return new ImportTranslationsByMd5Step(
+        repository,
+        textUnitUtils,
+        tmTextUnitRepository,
+        tmTextUnitCurrentVariantRepository,
+        localeService,
+        tmTextUnitVariantRepository,
+        tmTextUnitVariantCommentService,
+        userRepository,
+        auditorAwareImpl,
+        this);
   }
 
   /**
@@ -1317,8 +1368,7 @@ public class TMService {
     driver.addStep(new RawDocumentToFilterEventsStep());
     driver.addStep(new CheckForDoNotTranslateStep());
     driver.addStep(
-        new ImportTranslationsFromLocalizedAssetStep(
-            asset, repositoryLocale, statusForEqualtarget));
+        newImportTranslationsFromLocalizedAssetStep(asset, repositoryLocale, statusForEqualtarget));
 
     logger.debug("Adding all supported filters to the pipeline driver");
     driver.setFilterConfigurationMapper(filterConfigurationMapper);
@@ -1352,6 +1402,26 @@ public class TMService {
   @Transactional
   void processBatchInTransaction(IPipelineDriver driver) {
     driver.processBatch();
+  }
+
+  ImportTranslationsFromLocalizedAssetStep newImportTranslationsFromLocalizedAssetStep(
+      Asset asset, RepositoryLocale repositoryLocale, StatusForEqualTarget statusForEqualTarget) {
+    return new ImportTranslationsFromLocalizedAssetStep(
+        asset,
+        repositoryLocale,
+        statusForEqualTarget,
+        textUnitUtils,
+        tmTextUnitRepository,
+        tmTextUnitCurrentVariantRepository,
+        localeService,
+        tmTextUnitVariantRepository,
+        tmTextUnitVariantCommentService,
+        userRepository,
+        auditorAwareImpl,
+        this,
+        textUnitSearcher,
+        integrityCheckerFactory,
+        textUnitDTOsCacheService);
   }
 
   /**

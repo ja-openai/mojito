@@ -2,9 +2,16 @@ package com.box.l10n.mojito.okapi;
 
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.security.AuditorAwareImpl;
+import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.security.user.UserRepository;
+import com.box.l10n.mojito.service.tm.TMService;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentService;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * Extends the regular import translation step that is used to import XLIFF coming from a
@@ -15,7 +22,6 @@ import org.springframework.beans.factory.annotation.Configurable;
  *
  * @author jaurambault
  */
-@Configurable
 public class ImportTranslationsByMd5Step extends AbstractImportTranslationsStep {
 
   /** Logger */
@@ -23,7 +29,27 @@ public class ImportTranslationsByMd5Step extends AbstractImportTranslationsStep 
 
   Repository repository;
 
-  public ImportTranslationsByMd5Step(Repository repository) {
+  public ImportTranslationsByMd5Step(
+      Repository repository,
+      TextUnitUtils textUnitUtils,
+      TMTextUnitRepository tmTextUnitRepository,
+      TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository,
+      LocaleService localeService,
+      TMTextUnitVariantRepository tmTextUnitVariantRepository,
+      TMTextUnitVariantCommentService tmMTextUnitVariantCommentService,
+      UserRepository userRepository,
+      AuditorAwareImpl auditorAwareImpl,
+      TMService tmService) {
+    super(
+        textUnitUtils,
+        tmTextUnitRepository,
+        tmTextUnitCurrentVariantRepository,
+        localeService,
+        tmTextUnitVariantRepository,
+        tmMTextUnitVariantCommentService,
+        userRepository,
+        auditorAwareImpl,
+        tmService);
     this.repository = repository;
   }
 

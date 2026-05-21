@@ -109,6 +109,8 @@ Removed during this workstream:
   filter collaborators explicitly when generating XLIFF kits.
 - `TranslationKitStep` no longer uses `@Configurable`; `TranslationKitService` now passes the step
   persistence collaborators explicitly and focused step tests construct it directly.
+- XLIFF import translation steps no longer use `@Configurable`; `TMService` constructs the import
+  step family with explicit base and subclass collaborators.
 
 In progress:
 

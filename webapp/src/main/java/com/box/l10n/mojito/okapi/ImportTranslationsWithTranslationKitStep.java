@@ -3,6 +3,14 @@ package com.box.l10n.mojito.okapi;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TranslationKit;
+import com.box.l10n.mojito.security.AuditorAwareImpl;
+import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.security.user.UserRepository;
+import com.box.l10n.mojito.service.tm.TMService;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentService;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import com.box.l10n.mojito.service.translationkit.TranslationKitExportedImportedAndCurrentTUV;
 import com.box.l10n.mojito.service.translationkit.TranslationKitRepository;
 import com.box.l10n.mojito.service.translationkit.TranslationKitService;
@@ -14,26 +22,49 @@ import net.sf.okapi.common.resource.StartSubDocument;
 import net.sf.okapi.common.resource.TextContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author jaurambault
  */
-@Configurable
 public class ImportTranslationsWithTranslationKitStep extends ImportTranslationsByIdStep {
 
   /** Logger */
   static Logger logger = LoggerFactory.getLogger(ImportTranslationsWithTranslationKitStep.class);
 
-  @Autowired TranslationKitService translationKitService;
+  TranslationKitService translationKitService;
 
-  @Autowired TranslationKitRepository translationKitRepository;
+  TranslationKitRepository translationKitRepository;
 
   TranslationKit translationKit;
 
   Map<Long, TranslationKitExportedImportedAndCurrentTUV> translationKitExportedAndCurrentTUVs;
+
+  public ImportTranslationsWithTranslationKitStep(
+      TextUnitUtils textUnitUtils,
+      TMTextUnitRepository tmTextUnitRepository,
+      TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository,
+      LocaleService localeService,
+      TMTextUnitVariantRepository tmTextUnitVariantRepository,
+      TMTextUnitVariantCommentService tmMTextUnitVariantCommentService,
+      UserRepository userRepository,
+      AuditorAwareImpl auditorAwareImpl,
+      TMService tmService,
+      TranslationKitService translationKitService,
+      TranslationKitRepository translationKitRepository) {
+    super(
+        textUnitUtils,
+        tmTextUnitRepository,
+        tmTextUnitCurrentVariantRepository,
+        localeService,
+        tmTextUnitVariantRepository,
+        tmMTextUnitVariantCommentService,
+        userRepository,
+        auditorAwareImpl,
+        tmService);
+    this.translationKitService = translationKitService;
+    this.translationKitRepository = translationKitRepository;
+  }
 
   @Override
   public String getName() {

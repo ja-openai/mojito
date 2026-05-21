@@ -32,8 +32,6 @@ import net.sf.okapi.common.resource.StartDocument;
 import net.sf.okapi.common.resource.TextContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -44,27 +42,26 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * @author aloison
  */
-@Configurable
 public abstract class AbstractImportTranslationsStep extends AbstractMd5ComputationStep {
 
   /** Logger */
   static Logger logger = LoggerFactory.getLogger(AbstractImportTranslationsStep.class);
 
-  @Autowired TMTextUnitRepository tmTextUnitRepository;
+  TMTextUnitRepository tmTextUnitRepository;
 
-  @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
+  TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
 
-  @Autowired LocaleService localeService;
+  LocaleService localeService;
 
-  @Autowired TMTextUnitVariantRepository tmTextUnitVariantRepository;
+  TMTextUnitVariantRepository tmTextUnitVariantRepository;
 
-  @Autowired TMTextUnitVariantCommentService tmMTextUnitVariantCommentService;
+  TMTextUnitVariantCommentService tmMTextUnitVariantCommentService;
 
-  @Autowired UserRepository userRepository;
+  UserRepository userRepository;
 
-  @Autowired AuditorAwareImpl auditorAwareImpl;
+  AuditorAwareImpl auditorAwareImpl;
 
-  @Autowired TMService tmService;
+  TMService tmService;
 
   net.sf.okapi.common.resource.RawDocument rawDocument;
 
@@ -102,6 +99,28 @@ public abstract class AbstractImportTranslationsStep extends AbstractMd5Computat
   User createdBy = null;
 
   String dropImporterUsernameOverride = null;
+
+  protected AbstractImportTranslationsStep(
+      TextUnitUtils textUnitUtils,
+      TMTextUnitRepository tmTextUnitRepository,
+      TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository,
+      LocaleService localeService,
+      TMTextUnitVariantRepository tmTextUnitVariantRepository,
+      TMTextUnitVariantCommentService tmMTextUnitVariantCommentService,
+      UserRepository userRepository,
+      AuditorAwareImpl auditorAwareImpl,
+      TMService tmService) {
+    super();
+    this.textUnitUtils = textUnitUtils;
+    this.tmTextUnitRepository = tmTextUnitRepository;
+    this.tmTextUnitCurrentVariantRepository = tmTextUnitCurrentVariantRepository;
+    this.localeService = localeService;
+    this.tmTextUnitVariantRepository = tmTextUnitVariantRepository;
+    this.tmMTextUnitVariantCommentService = tmMTextUnitVariantCommentService;
+    this.userRepository = userRepository;
+    this.auditorAwareImpl = auditorAwareImpl;
+    this.tmService = tmService;
+  }
 
   public void setDropImporterUsernameOverride(String dropImporterUsernameOverride) {
     this.dropImporterUsernameOverride = dropImporterUsernameOverride;

@@ -6,12 +6,20 @@ import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
+import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TMTextUnitVariantCommentAnnotation;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TMTextUnitVariantCommentAnnotations;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TextUnitIntegrityChecker;
+import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.security.user.UserRepository;
+import com.box.l10n.mojito.service.tm.TMService;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentService;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import com.box.l10n.mojito.service.tm.TranslatorWithInheritance;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
@@ -29,23 +37,20 @@ import net.sf.okapi.common.Event;
 import net.sf.okapi.common.resource.TextContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author jaurambault
  */
-@Configurable
 public class ImportTranslationsFromLocalizedAssetStep extends AbstractImportTranslationsStep {
 
   /** Logger */
   static Logger logger = LoggerFactory.getLogger(ImportTranslationsFromLocalizedAssetStep.class);
 
-  @Autowired TextUnitSearcher textUnitSearcher;
+  TextUnitSearcher textUnitSearcher;
 
-  @Autowired IntegrityCheckerFactory integrityCheckerFactory;
+  IntegrityCheckerFactory integrityCheckerFactory;
 
-  @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
+  TextUnitDTOsCacheService textUnitDTOsCacheService;
 
   Asset asset;
   RepositoryLocale repositoryLocale;
@@ -69,10 +74,37 @@ public class ImportTranslationsFromLocalizedAssetStep extends AbstractImportTran
   };
 
   public ImportTranslationsFromLocalizedAssetStep(
-      Asset asset, RepositoryLocale repositoryLocale, StatusForEqualTarget statusForEqualTarget) {
+      Asset asset,
+      RepositoryLocale repositoryLocale,
+      StatusForEqualTarget statusForEqualTarget,
+      TextUnitUtils textUnitUtils,
+      TMTextUnitRepository tmTextUnitRepository,
+      TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository,
+      LocaleService localeService,
+      TMTextUnitVariantRepository tmTextUnitVariantRepository,
+      TMTextUnitVariantCommentService tmMTextUnitVariantCommentService,
+      UserRepository userRepository,
+      AuditorAwareImpl auditorAwareImpl,
+      TMService tmService,
+      TextUnitSearcher textUnitSearcher,
+      IntegrityCheckerFactory integrityCheckerFactory,
+      TextUnitDTOsCacheService textUnitDTOsCacheService) {
+    super(
+        textUnitUtils,
+        tmTextUnitRepository,
+        tmTextUnitCurrentVariantRepository,
+        localeService,
+        tmTextUnitVariantRepository,
+        tmMTextUnitVariantCommentService,
+        userRepository,
+        auditorAwareImpl,
+        tmService);
     this.asset = asset;
     this.repositoryLocale = repositoryLocale;
     this.statusForEqualTarget = statusForEqualTarget;
+    this.textUnitSearcher = textUnitSearcher;
+    this.integrityCheckerFactory = integrityCheckerFactory;
+    this.textUnitDTOsCacheService = textUnitDTOsCacheService;
   }
 
   @Override
