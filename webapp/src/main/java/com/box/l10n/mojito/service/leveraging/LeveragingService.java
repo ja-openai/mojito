@@ -10,9 +10,10 @@ import com.box.l10n.mojito.rest.leveraging.CopyTmConfig;
 import com.box.l10n.mojito.rest.repository.RepositoryWithIdNotFoundException;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.assetExtraction.AssetTextUnitToTMTextUnitRepository;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
@@ -74,6 +75,8 @@ public class LeveragingService {
 
   @Autowired AssetTextUnitToTMTextUnitRepository assetTextUnitToTMTextUnitRepository;
 
+  @Autowired PollableTaskRunner pollableTaskRunner;
+
   /**
    * Performs "source" leveraging for a list of {@link TMTextUnit}s.
    *
@@ -125,17 +128,25 @@ public class LeveragingService {
    * @param copyTmConfig
    * @return
    */
-  @Pollable(async = true, message = "Start copying translations between repository")
   public PollableFuture<Void> copyTm(CopyTmConfig copyTmConfig)
       throws AssetWithIdNotFoundException, RepositoryWithIdNotFoundException {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "copyTm",
+            "Start copying translations between repository",
+            currentTask -> {
+              copyTmDirect(copyTmConfig);
+              return new PollableFutureTaskResult<>();
+            }));
+  }
 
+  void copyTmDirect(CopyTmConfig copyTmConfig)
+      throws AssetWithIdNotFoundException, RepositoryWithIdNotFoundException {
     if (CopyTmConfig.Mode.TUIDS.equals(copyTmConfig.getMode())) {
       copyTranslationBetweenTextUnits(copyTmConfig.getSourceToTargetTmTextUnitIds());
     } else {
       copyTmBetweenRepositories(copyTmConfig);
     }
-
-    return new PollableFutureTaskResult<>();
   }
 
   void copyTmBetweenRepositories(CopyTmConfig copyTmConfig)
