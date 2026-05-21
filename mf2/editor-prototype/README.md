@@ -15,7 +15,7 @@ Current prototype:
 - structured variant editing for `.input` + `.match` messages
 - mechanical plural template insertion
 - locale/argument preview
-- advanced raw MF2 source only when needed
+- advanced raw target MF2 source only when needed
 
 Run:
 
