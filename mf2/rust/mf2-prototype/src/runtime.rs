@@ -287,7 +287,50 @@ fn validate_declarations(declarations: &[Declaration]) -> Result<(), Diagnostic>
             ));
         }
     }
+    validate_local_references(declarations)?;
     Ok(())
+}
+
+fn validate_local_references(declarations: &[Declaration]) -> Result<(), Diagnostic> {
+    let mut forbidden = BTreeSet::new();
+    for declaration in declarations.iter().rev() {
+        let Declaration::Local { name, value } = declaration else {
+            continue;
+        };
+        forbidden.insert(name.as_str());
+        if expression_references_any(value, &forbidden) {
+            return Err(model_error(
+                "duplicate-declaration",
+                format!(
+                    "Local declaration ${name} must not reference itself or later local declarations."
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn expression_references_any(expression: &Expression, names: &BTreeSet<&str>) -> bool {
+    expression
+        .arg
+        .as_ref()
+        .is_some_and(|arg| expression_arg_references_any(arg, names))
+        || expression
+            .function
+            .as_ref()
+            .is_some_and(|function| function_references_any(function, names))
+}
+
+fn function_references_any(function: &FunctionRef, names: &BTreeSet<&str>) -> bool {
+    function.options.as_ref().is_some_and(|options| {
+        options
+            .values()
+            .any(|arg| expression_arg_references_any(arg, names))
+    })
+}
+
+fn expression_arg_references_any(arg: &ExpressionArg, names: &BTreeSet<&str>) -> bool {
+    matches!(arg, ExpressionArg::Variable { name } if names.contains(name.as_str()))
 }
 
 fn validate_input_declaration(name: &str, value: &Expression) -> Result<(), Diagnostic> {

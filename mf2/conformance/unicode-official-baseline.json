@@ -1,6 +1,6 @@
 {
-  "passed": 291,
-  "skipped": 6,
+  "passed": 297,
+  "skipped": 0,
   "notWired": 164,
   "total": 461,
   "files": {
@@ -17,8 +17,8 @@
       "skipped": 0
     },
     "tests/data-model-errors.json": {
-      "passed": 17,
-      "skipped": 6
+      "passed": 23,
+      "skipped": 0
     }
   }
 }

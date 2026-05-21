@@ -67,6 +67,20 @@ public extension MF2Message {
                 throw MF2Error.duplicateDeclaration(name)
             }
         }
+        try validateLocalReferences(declarations: declarations)
+    }
+
+    private func validateLocalReferences(declarations: [MF2Declaration]) throws {
+        var forbidden: Set<MF2NameKey> = []
+        for declaration in declarations.reversed() {
+            guard case let .local(name, value) = declaration else {
+                continue
+            }
+            forbidden.insert(MF2NameKey(name))
+            if value.referencesAny(forbidden) {
+                throw MF2Error.duplicateDeclaration(name)
+            }
+        }
     }
 
     private func validateInputDeclaration(name: String, value: MF2Expression) throws {
@@ -367,6 +381,38 @@ private extension MF2Declaration {
         case let .input(_, value), let .local(_, value):
             value
         }
+    }
+}
+
+private extension MF2Expression {
+    func referencesAny(_ names: Set<MF2NameKey>) -> Bool {
+        arg.referencesAny(names) || function?.referencesAny(names) == true
+    }
+}
+
+private extension Optional where Wrapped == MF2ExpressionArgument {
+    func referencesAny(_ names: Set<MF2NameKey>) -> Bool {
+        guard case let .variable(name)? = self else {
+            return false
+        }
+        return names.contains(MF2NameKey(name))
+    }
+}
+
+private extension MF2Function {
+    func referencesAny(_ names: Set<MF2NameKey>) -> Bool {
+        options.values.contains { option in
+            option.referencesAny(names)
+        }
+    }
+}
+
+private extension MF2ExpressionArgument {
+    func referencesAny(_ names: Set<MF2NameKey>) -> Bool {
+        guard case let .variable(name) = self else {
+            return false
+        }
+        return names.contains(MF2NameKey(name))
     }
 }
 

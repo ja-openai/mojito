@@ -68,6 +68,32 @@ def _validate_declarations(declarations: list[dict[str, Any]]) -> None:
                 f"Declaration ${name} is defined more than once.",
             )
         names.add(name)
+    _validate_local_references(declarations)
+
+
+def _validate_local_references(declarations: list[dict[str, Any]]) -> None:
+    forbidden: set[str] = set()
+    for declaration in reversed(declarations):
+        if declaration.get("type") != "local":
+            continue
+        name = declaration.get("name", "")
+        forbidden.add(name)
+        if _expression_references_any(declaration.get("value", {}), forbidden):
+            raise MF2Error(
+                "duplicate-declaration",
+                f"Local declaration ${name} must not reference itself or later local declarations.",
+            )
+
+
+def _expression_references_any(expression: dict[str, Any], names: set[str]) -> bool:
+    return _arg_references_any(expression.get("arg", {}), names) or any(
+        _arg_references_any(option, names)
+        for option in expression.get("function", {}).get("options", {}).values()
+    )
+
+
+def _arg_references_any(arg: dict[str, Any], names: set[str]) -> bool:
+    return arg.get("type") == "variable" and arg.get("name") in names
 
 
 def _validate_input_declaration(declaration: dict[str, Any]) -> None:

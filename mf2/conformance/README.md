@@ -162,4 +162,6 @@ The format-error fixtures currently cover:
 - invalid markup kind
 - duplicate select variants
 - duplicate declarations
+- invalid local declaration dependency order, including self references and
+  later-local references through function options
 - missing runtime arguments in expressions, locals, and selectors

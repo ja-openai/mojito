@@ -90,6 +90,47 @@ final class Mf2Formatter {
                 throw Mf2Exception.duplicateDeclaration(declaration.name());
             }
         }
+        validateLocalReferences(declarations);
+    }
+
+    private static void validateLocalReferences(List<Mf2Message.Declaration> declarations)
+            throws Mf2Exception {
+        Set<String> forbidden = new HashSet<>();
+        for (int index = declarations.size() - 1; index >= 0; index--) {
+            Mf2Message.Declaration declaration = declarations.get(index);
+            if (!(declaration instanceof Mf2Message.LocalDeclaration local)) {
+                continue;
+            }
+            forbidden.add(local.name());
+            if (expressionReferencesAny(local.value(), forbidden)) {
+                throw Mf2Exception.duplicateDeclaration(local.name());
+            }
+        }
+    }
+
+    private static boolean expressionReferencesAny(
+            Mf2Message.Expression expression, Set<String> names) {
+        return expressionArgumentReferencesAny(expression.arg(), names)
+                || functionReferencesAny(expression.function(), names);
+    }
+
+    private static boolean functionReferencesAny(
+            Mf2Message.FunctionRef function, Set<String> names) {
+        if (function == null) {
+            return false;
+        }
+        for (Mf2Message.ExpressionArgument option : function.options().values()) {
+            if (expressionArgumentReferencesAny(option, names)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean expressionArgumentReferencesAny(
+            Mf2Message.ExpressionArgument arg, Set<String> names) {
+        return arg instanceof Mf2Message.VariableArgument variable
+                && names.contains(variable.name());
     }
 
     private static void validateInputDeclaration(Mf2Message.InputDeclaration input)
