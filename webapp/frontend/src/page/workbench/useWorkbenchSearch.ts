@@ -127,7 +127,7 @@ const workbenchRowSortCollator = new Intl.Collator(undefined, {
   numeric: true,
   sensitivity: 'base',
 });
-const DEFAULT_GLOSSARY_STATUS_FILTER: GlossaryStatusFilterValue = 'APPROVED';
+const DEFAULT_GLOSSARY_STATUS_FILTER: GlossaryStatusFilterValue = 'ALL';
 
 function getWorkbenchRowSortValue(
   row: WorkbenchRow,
