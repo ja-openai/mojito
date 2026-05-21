@@ -59,6 +59,8 @@ Supported now:
   inputs/locals used by the Unicode official test harness
 - validation-only `:date`, `:time`, and `:datetime` built-ins for simple ISO
   date/datetime operands; locale-sensitive presentation is still deferred
+- `:offset` for integer add/subtract formatting and exact selection, including
+  inherited `signDisplay=always` preservation
 - cardinal and ordinal plural category matching for number inputs in every
   generated CLDR plural locale
 

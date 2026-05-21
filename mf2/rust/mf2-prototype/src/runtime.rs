@@ -170,6 +170,8 @@ impl Default for FunctionRegistry {
         registry.register("datetime", datetime_function);
         registry.register("date", date_function);
         registry.register("time", time_function);
+        registry.register("offset", offset_function);
+        registry.register_selector("offset", offset_selector);
         registry
     }
 }
@@ -293,6 +295,67 @@ fn option_value(
 
 fn passthrough_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     Ok(call.value().to_string())
+}
+
+fn offset_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    let value = parse_offset_number(call.value())
+        .map_err(|_| bad_operand("Offset function requires a numeric operand."))?;
+    let offset = offset_delta(&call)?;
+    let result = value
+        .checked_add(offset)
+        .ok_or_else(|| bad_operand("Offset result is outside the supported integer range."))?;
+    Ok(format_offset_number(
+        result,
+        inherited_sign_display_always(call.inherited_source())?,
+    ))
+}
+
+fn offset_selector(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
+    let value = parse_offset_number(call.value())
+        .map_err(|_| bad_selector("Offset selector requires a numeric operand."))?;
+    let Ok(key) = parse_offset_number(call.key()) else {
+        return Ok(None);
+    };
+    Ok((value == key).then_some(1))
+}
+
+fn offset_delta(call: &FunctionCall<'_>) -> Result<i64, Diagnostic> {
+    let add = call.option_value("add")?;
+    let subtract = call.option_value("subtract")?;
+    match (add, subtract) {
+        (Some(_), Some(_)) | (None, None) => Err(bad_option(
+            "Offset function requires exactly one of add or subtract.",
+        )),
+        (Some(value), None) => parse_offset_number(&value)
+            .map_err(|_| bad_option("Offset add option must be an integer.")),
+        (None, Some(value)) => parse_offset_number(&value)
+            .map(|value| -value)
+            .map_err(|_| bad_option("Offset subtract option must be an integer.")),
+    }
+}
+
+fn parse_offset_number(value: &str) -> Result<i64, std::num::ParseIntError> {
+    value.parse::<i64>()
+}
+
+fn format_offset_number(value: i64, sign_display_always: bool) -> String {
+    if sign_display_always && value >= 0 {
+        format!("+{value}")
+    } else {
+        value.to_string()
+    }
+}
+
+fn inherited_sign_display_always(
+    source: Option<FunctionSourceRef<'_>>,
+) -> Result<bool, Diagnostic> {
+    let Some(source) = source else {
+        return Ok(false);
+    };
+    if source.function().name == "number" || source.function().name == "integer" {
+        return Ok(source.option_value("signDisplay")?.as_deref() == Some("always"));
+    }
+    inherited_sign_display_always(source.inherited_source())
 }
 
 fn datetime_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
@@ -1293,6 +1356,10 @@ fn bad_operand(message: impl Into<String>) -> Diagnostic {
 
 fn bad_selector(message: impl Into<String>) -> Diagnostic {
     Diagnostic::new("bad-selector", message, 0, 0)
+}
+
+fn bad_option(message: impl Into<String>) -> Diagnostic {
+    Diagnostic::new("bad-option", message, 0, 0)
 }
 
 fn fallback_error(error: Diagnostic) -> Diagnostic {

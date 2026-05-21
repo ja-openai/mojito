@@ -82,6 +82,8 @@ The current conformance slice covers:
   narrow dependency-free `:currency` function outside the core formatter
 - Rust validation-only `:date`, `:time`, and `:datetime` built-ins that enforce
   simple ISO date/datetime operand shape without claiming locale formatting
+- Rust `:offset` built-in for integer add/subtract formatting and exact
+  selection, including inherited `signDisplay=always` preservation
 - expression and markup attributes in the data model, including quoted attribute
   values containing spaces
 - `.input` and `.local` declarations, including multiple inputs and chained locals

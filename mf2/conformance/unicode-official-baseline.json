@@ -1,7 +1,7 @@
 {
-  "passed": 356,
+  "passed": 372,
   "skipped": 0,
-  "notWired": 105,
+  "notWired": 89,
   "total": 461,
   "files": {
     "tests/syntax.json": {
@@ -34,6 +34,10 @@
     },
     "tests/functions/time.json": {
       "passed": 6,
+      "skipped": 0
+    },
+    "tests/functions/offset.json": {
+      "passed": 16,
       "skipped": 0
     },
     "tests/fallback.json": {
