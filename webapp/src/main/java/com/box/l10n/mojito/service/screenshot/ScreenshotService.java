@@ -18,7 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.util.comparator.NullSafeComparator;
 
 /**
@@ -44,6 +47,8 @@ public class ScreenshotService {
 
   @Autowired EntityManager em;
 
+  @Autowired PlatformTransactionManager transactionManager;
+
   /**
    * Creates or add to a screenshot run including the creation of related screenshots. If the
    * screenshot run already exists then new screenshots get added to it
@@ -54,10 +59,27 @@ public class ScreenshotService {
    * @return the screenshot run object that was created. Note that the list of screenshots is set to
    *     null (the limitation is related to the update/create case)
    */
-  @Transactional
   public ScreenshotRun createOrAddToScreenshotRun(
       ScreenshotRun screenshotRun, boolean setLastSuccessfulScreenshotRun) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      ScreenshotRun result =
+          createOrAddToScreenshotRunNoTx(screenshotRun, setLastSuccessfulScreenshotRun);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ScreenshotRun createOrAddToScreenshotRunNoTx(
+      ScreenshotRun screenshotRun, boolean setLastSuccessfulScreenshotRun) {
     ScreenshotRun currentScreenshotRun;
 
     if (screenshotRun.getId() != null) {
@@ -223,7 +245,6 @@ public class ScreenshotService {
    * @param limit number max of results to be returned
    * @return the screenshots that matche the search parameters
    */
-  @Transactional
   public List<Screenshot> searchScreenshots(
       List<Long> repositoryIds,
       List<String> bcp47Tags,
@@ -236,7 +257,48 @@ public class ScreenshotService {
       ScreenshotRunType screenshotRunType,
       int offset,
       int limit) {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
 
+    try {
+      List<Screenshot> result =
+          searchScreenshotsNoTx(
+              repositoryIds,
+              bcp47Tags,
+              screenshotName,
+              status,
+              name,
+              source,
+              target,
+              searchType,
+              screenshotRunType,
+              offset,
+              limit);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<Screenshot> searchScreenshotsNoTx(
+      List<Long> repositoryIds,
+      List<String> bcp47Tags,
+      String screenshotName,
+      Screenshot.Status status,
+      String name,
+      String source,
+      String target,
+      SearchType searchType,
+      ScreenshotRunType screenshotRunType,
+      int offset,
+      int limit) {
     CriteriaBuilder builder = em.getCriteriaBuilder();
     CriteriaQuery<Screenshot> query = builder.createQuery(Screenshot.class);
     Root<Screenshot> screenshot = query.from(Screenshot.class);
@@ -384,8 +446,23 @@ public class ScreenshotService {
    *
    * @param id screenshotId
    */
-  @Transactional
   public void deleteScreenshot(Long id) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteScreenshotNoTx(id);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteScreenshotNoTx(Long id) {
     screenshotTextUnitRepository.deleteAllByScreenshot_Id(id);
     screenshotRepository.deleteById(id);
   }

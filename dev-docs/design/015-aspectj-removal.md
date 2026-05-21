@@ -175,6 +175,8 @@ Removed during this workstream:
 - `AssetService` no longer uses `@Transactional`; asset creation and deletion now open and commit
   their transaction boundaries explicitly, and bulk deletion keeps per-asset deletion inside the
   same transaction.
+- `ScreenshotService` no longer uses `@Transactional`; screenshot-run creation, screenshot search,
+  and screenshot deletion now open and commit their transaction boundaries explicitly.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and
