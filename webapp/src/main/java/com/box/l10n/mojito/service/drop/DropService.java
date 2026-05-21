@@ -534,14 +534,18 @@ public class DropService {
    * Cancels a {@link Drop}. A {@link Drop} can only be canceled if it's not in the middle of being
    * exported.
    *
-   * @param dropId {@link Drop#id} of the drop to be imported
-   * @param currentTask Current task
+   * @param dropId {@link Drop#id} of the drop to be canceled
    * @return {@link PollableFuture}
    */
-  @Pollable(async = true, message = "Start canceling drop")
-  public PollableFuture<Drop> cancelDrop(Long dropId, @InjectCurrentTask PollableTask currentTask)
+  public PollableFuture<Drop> cancelDrop(Long dropId)
       throws DropExporterException, CancelDropException {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "cancelDrop", "Start canceling drop", currentTask -> cancelDropDirect(dropId)));
+  }
 
+  PollableFuture<Drop> cancelDropDirect(Long dropId)
+      throws DropExporterException, CancelDropException {
     logger.debug("Canceling Drop: {}", dropId);
     Drop drop = getDropInTX(dropId);
 
