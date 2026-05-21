@@ -25,12 +25,10 @@ import net.sf.okapi.common.resource.TextFragment;
 import net.sf.okapi.common.skeleton.GenericSkeleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author aloison
  */
-@Configurable
 public class TranslateStep extends AbstractMd5ComputationStep {
 
   static Logger logger = LoggerFactory.getLogger(TranslateStep.class);
