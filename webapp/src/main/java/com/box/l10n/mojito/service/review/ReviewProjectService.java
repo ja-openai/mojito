@@ -67,6 +67,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
@@ -896,8 +897,22 @@ public class ReviewProjectService {
       Set<Long> editableLocaleIds,
       boolean canTranslateAllLocales) {}
 
-  @Transactional(readOnly = true)
   public SearchReviewProjectsView searchReviewProjects(SearchReviewProjectsCriteria request) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      SearchReviewProjectsView result = searchReviewProjectsNoTx(request);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SearchReviewProjectsView searchReviewProjectsNoTx(SearchReviewProjectsCriteria request) {
     if (request == null) {
       throw new IllegalArgumentException("request must not be null");
     }
@@ -922,8 +937,23 @@ public class ReviewProjectService {
     return new SearchReviewProjectsView(reviewProjects);
   }
 
-  @Transactional(readOnly = true)
   public SearchReviewProjectRequestsView searchReviewProjectRequests(
+      SearchReviewProjectsCriteria request) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      SearchReviewProjectRequestsView result = searchReviewProjectRequestsNoTx(request);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SearchReviewProjectRequestsView searchReviewProjectRequestsNoTx(
       SearchReviewProjectsCriteria request) {
     if (request == null) {
       throw new IllegalArgumentException("request must not be null");
@@ -4256,6 +4286,13 @@ public class ReviewProjectService {
     }
     history.setNote(normalizedNote == null || normalizedNote.isEmpty() ? null : normalizedNote);
     reviewProjectAssignmentHistoryRepository.save(history);
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    transactionDefinition.setReadOnly(true);
+    return transactionDefinition;
   }
 
   public record UpdateTerminologyMetadataCommand(
