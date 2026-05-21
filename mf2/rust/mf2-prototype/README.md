@@ -61,6 +61,8 @@ Supported now:
   date/datetime operands; locale-sensitive presentation is still deferred
 - `:number` formatting for strict decimal operands, `minimumFractionDigits`,
   malformed-operand fallback, and exact selection semantics
+- `:percent` formatting for strict decimal operands, basic fraction-digit
+  options, malformed-operand fallback, and plural selection on percent values
 - `:offset` for integer add/subtract formatting and exact selection, including
   inherited `signDisplay=always` preservation
 - `:integer` formatting that truncates numeric operands, reports invalid

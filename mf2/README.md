@@ -85,6 +85,9 @@ The current conformance slice covers:
 - Rust `:number` built-in formatting for strict decimal operands, fallback
   errors for malformed operands, `minimumFractionDigits`, and exact numeric
   selection semantics used by the official tests
+- Rust `:percent` built-in formatting for strict decimal operands, basic
+  fraction-digit options, malformed-operand fallback, and percent plural
+  selection semantics used by the official tests
 - Rust `:offset` built-in for integer add/subtract formatting and exact
   selection, including inherited `signDisplay=always` preservation
 - Rust `:integer` built-in formatting that truncates numeric operands, reports

@@ -167,6 +167,8 @@ impl Default for FunctionRegistry {
         registry.register("string", passthrough_function);
         registry.register("number", number_function);
         registry.register_selector("number", number_selector);
+        registry.register("percent", percent_function);
+        registry.register_selector("percent", percent_selector);
         registry.register("integer", integer_function);
         registry.register_selector("integer", integer_selector);
         registry.register("datetime", datetime_function);
@@ -300,7 +302,7 @@ fn passthrough_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
 }
 
 fn number_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
-    let value = parse_decimal_number(call.value())
+    let value = parse_call_decimal(&call)
         .map_err(|_| bad_operand("Number function requires a numeric operand."))?;
     Ok(format_decimal_number(
         value,
@@ -313,7 +315,7 @@ fn number_selector(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
     if invalid_numeric_selector(call.function(), call.inherited_source())? {
         return Err(bad_selector("Number selector cannot match this operand."));
     }
-    let value = parse_decimal_number(call.value())
+    let value = parse_match_decimal(&call)
         .map_err(|_| bad_selector("Number selector requires a numeric operand."))?;
     let Ok(key) = parse_decimal_number(call.key()) else {
         return Ok(None);
@@ -321,8 +323,32 @@ fn number_selector(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
     Ok((value == key).then_some(1))
 }
 
+fn percent_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    let value = parse_call_decimal(&call)
+        .map_err(|_| bad_operand("Percent function requires a numeric operand."))?;
+    Ok(format_percent_number(
+        value,
+        sign_display_always(call.function())?,
+        minimum_fraction_digits(&call)?,
+        maximum_fraction_digits(&call)?,
+    ))
+}
+
+fn percent_selector(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
+    if invalid_numeric_selector(call.function(), call.inherited_source())? {
+        return Err(bad_selector("Percent selector cannot match this operand."));
+    }
+    let value = parse_match_decimal(&call)
+        .map_err(|_| bad_selector("Percent selector requires a numeric operand."))?
+        * 100.0;
+    let Ok(key) = parse_decimal_number(call.key()) else {
+        return Ok(None);
+    };
+    Ok((value == key).then_some(1))
+}
+
 fn integer_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
-    let value = parse_decimal_number(call.value())
+    let value = parse_call_decimal(&call)
         .map_err(|_| bad_operand("Integer function requires a numeric operand."))?;
     Ok(format_integer_number(
         value.trunc() as i64,
@@ -334,7 +360,7 @@ fn integer_selector(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> 
     if invalid_numeric_selector(call.function(), call.inherited_source())? {
         return Err(bad_selector("Integer selector cannot match this operand."));
     }
-    let value = parse_decimal_number(call.value())
+    let value = parse_match_decimal(&call)
         .map_err(|_| bad_selector("Integer selector requires a numeric operand."))?;
     let Ok(key) = parse_offset_number(call.key()) else {
         return Ok(None);
@@ -381,6 +407,25 @@ fn offset_delta(call: &FunctionCall<'_>) -> Result<i64, Diagnostic> {
 
 fn parse_offset_number(value: &str) -> Result<i64, std::num::ParseIntError> {
     value.parse::<i64>()
+}
+
+fn parse_call_decimal(call: &FunctionCall<'_>) -> Result<f64, ()> {
+    parse_decimal_number(call.value()).or_else(|_| parse_source_decimal(call.inherited_source()))
+}
+
+fn parse_match_decimal(call: &FunctionMatch<'_>) -> Result<f64, ()> {
+    parse_decimal_number(call.value()).or_else(|_| parse_source_decimal(call.inherited_source()))
+}
+
+fn parse_source_decimal(source: Option<FunctionSourceRef<'_>>) -> Result<f64, ()> {
+    let Some(source) = source else {
+        return Err(());
+    };
+    if is_numeric_function(source.function()) {
+        parse_decimal_number(source.value())
+    } else {
+        parse_source_decimal(source.inherited_source())
+    }
 }
 
 fn parse_decimal_number(value: &str) -> Result<f64, ()> {
@@ -466,6 +511,38 @@ fn format_decimal_number(
     formatted
 }
 
+fn format_percent_number(
+    value: f64,
+    sign_display_always: bool,
+    minimum_fraction_digits: usize,
+    maximum_fraction_digits: Option<usize>,
+) -> String {
+    let mut formatted =
+        format_decimal_with_maximum_fraction_digits(value * 100.0, maximum_fraction_digits);
+    if sign_display_always && value >= 0.0 {
+        formatted.insert(0, '+');
+    }
+    append_minimum_fraction_digits(&mut formatted, minimum_fraction_digits);
+    formatted.push('%');
+    formatted
+}
+
+fn format_decimal_with_maximum_fraction_digits(value: f64, digits: Option<usize>) -> String {
+    let Some(digits) = digits else {
+        return value.to_string();
+    };
+    let mut formatted = format!("{:.*}", digits, value);
+    if formatted.contains('.') {
+        while formatted.ends_with('0') {
+            formatted.pop();
+        }
+        if formatted.ends_with('.') {
+            formatted.pop();
+        }
+    }
+    formatted
+}
+
 fn append_minimum_fraction_digits(formatted: &mut String, minimum_fraction_digits: usize) {
     if minimum_fraction_digits == 0 {
         return;
@@ -493,6 +570,20 @@ fn minimum_fraction_digits(call: &FunctionCall<'_>) -> Result<usize, Diagnostic>
     }
     value.parse::<usize>().map_err(|_| {
         bad_option("minimumFractionDigits option is outside the supported integer range.")
+    })
+}
+
+fn maximum_fraction_digits(call: &FunctionCall<'_>) -> Result<Option<usize>, Diagnostic> {
+    let Some(value) = call.option_value("maximumFractionDigits")? else {
+        return Ok(None);
+    };
+    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(bad_option(
+            "maximumFractionDigits option must be a non-negative integer.",
+        ));
+    }
+    value.parse::<usize>().map(Some).map_err(|_| {
+        bad_option("maximumFractionDigits option is outside the supported integer range.")
     })
 }
 
@@ -546,7 +637,7 @@ fn inherited_exact_numeric_source(
 }
 
 fn is_numeric_function(function: &FunctionRef) -> bool {
-    function.name == "number" || function.name == "integer"
+    function.name == "number" || function.name == "integer" || function.name == "percent"
 }
 
 fn function_option_literal<'a>(function: &'a FunctionRef, name: &str) -> Option<&'a str> {
@@ -1104,8 +1195,7 @@ impl<'a> FormatContext<'a> {
                 let exact_match = annotation
                     .as_ref()
                     .is_none_or(|annotation| annotation.exact_match());
-                let selection_key =
-                    self.selection_key_for_selector(annotation.as_ref(), value.value());
+                let selection_key = self.selection_key_for_selector(annotation.as_ref(), value);
                 Ok(SelectorValue {
                     normalized_rendered: string_select.then(|| normalize_string_key(&rendered)),
                     rendered,
@@ -1347,14 +1437,10 @@ impl<'a> FormatContext<'a> {
     fn selection_key_for_selector(
         &self,
         annotation: Option<&SelectorAnnotation>,
-        value: &serde_json::Value,
+        value: &ResolvedValue,
     ) -> Option<String> {
         let annotation = annotation?;
-        if !annotation.is_numeric() {
-            return None;
-        }
-        let operands = NumberOperands::from_json(value)?;
-        annotation.selection_key(&self.locale, operands)
+        annotation.selection_key(&self.locale, value)
     }
 }
 
@@ -1381,10 +1467,6 @@ impl ResolvedValue {
 
     fn rendered(&self) -> String {
         value_to_string(&self.value)
-    }
-
-    fn value(&self) -> &serde_json::Value {
-        &self.value
     }
 
     fn source_value(&self, fallback: &str) -> String {
@@ -1456,10 +1538,11 @@ impl SelectorAnnotation {
         self.function.name == "string"
     }
 
-    fn selection_key(&self, locale: &str, operands: NumberOperands) -> Option<String> {
+    fn selection_key(&self, locale: &str, value: &ResolvedValue) -> Option<String> {
         if !self.is_numeric() {
             return None;
         }
+        let operands = NumberOperands::from_str(&self.operand_for_selection(value)?)?;
         match self.number_select {
             NumberSelect::Plural => {
                 Some(select_cardinal_plural_category(locale, operands).to_string())
@@ -1472,7 +1555,19 @@ impl SelectorAnnotation {
     }
 
     fn is_numeric(&self) -> bool {
-        self.function.name == "number" || self.function.name == "integer"
+        is_numeric_function(&self.function)
+    }
+
+    fn operand_for_selection(&self, value: &ResolvedValue) -> Option<String> {
+        let rendered = value.rendered();
+        if self.function.name == "percent" {
+            if let Some(percent) = rendered.strip_suffix('%') {
+                return Some(percent.to_string());
+            }
+            let value = parse_decimal_number(value.source_value(&rendered).as_str()).ok()?;
+            return Some((value * 100.0).to_string());
+        }
+        Some(rendered)
     }
 }
 
