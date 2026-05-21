@@ -99,6 +99,15 @@ runtime error code:
 The fixture schema is intentionally simple so Swift, Python, Rust, Java, and
 TypeScript can all consume it without bespoke tooling.
 
+Function proposal fixtures live under `fixtures/functions`. They are
+machine-readable contracts for registry functions that are not part of the MF2
+core grammar. `relative-time-duration-v0.json` is currently a draft fixture for
+the experimental `:relativeTime` function described in
+`../spec/functions/relative-time.md`; `validate_relative_time_fixture.py`
+executes the draft unit-selection and CLDR-pattern substitution algorithm
+against the generated CLDR data, but the normal runtime conformance runners do
+not consume it until the function is implemented.
+
 ## Current Coverage
 
 The source-to-model fixtures currently cover:

@@ -6,6 +6,7 @@ cd "$(dirname "$0")"
 (cd cldr && sh validate_plural_rules.sh)
 (cd cldr && sh validate_number_data.sh)
 (cd cldr && sh validate_relative_time_data.sh)
+(cd conformance && python3 validate_relative_time_fixture.py)
 (cd rust/mf2-prototype && cargo test)
 (cd rust/mf2-prototype && cargo run -- conformance ../../conformance/fixtures/source-to-model)
 (cd rust/mf2-prototype && cargo run -- unicode-tests)

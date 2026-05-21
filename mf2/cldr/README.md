@@ -153,6 +153,10 @@ Validate the checked-in relative-time artifact:
 sh validate_relative_time_data.sh
 ```
 
+The validator reads known CLDR samples from
+`fixtures/relative-time-patterns.json` so future generator changes keep the data
+contract visible instead of burying sample expectations in Python code.
+
 Current size smoke results from CLDR `main` on 2026-05-21:
 
 - all locales, long/short/narrow, numeric patterns plus natural relative terms:

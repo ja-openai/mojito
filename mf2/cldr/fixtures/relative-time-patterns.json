@@ -1,0 +1,77 @@
+{
+  "name": "relative-time-patterns",
+  "description": "Known CLDR relative-time data samples used to validate the generated relative_time.json artifact.",
+  "patternCases": [
+    {
+      "locale": "en",
+      "style": "narrow",
+      "unit": "minute",
+      "direction": "past",
+      "category": "other",
+      "expected": "{0}m ago"
+    },
+    {
+      "locale": "en",
+      "style": "narrow",
+      "unit": "minute",
+      "direction": "future",
+      "category": "other",
+      "expected": "in {0}m"
+    },
+    {
+      "locale": "fr",
+      "style": "narrow",
+      "unit": "minute",
+      "direction": "past",
+      "category": "other",
+      "expected": "-{0} min"
+    },
+    {
+      "locale": "ja",
+      "style": "narrow",
+      "unit": "minute",
+      "direction": "future",
+      "category": "other",
+      "expected": "{0}分後"
+    },
+    {
+      "locale": "ar",
+      "style": "narrow",
+      "unit": "minute",
+      "direction": "past",
+      "category": "one",
+      "expected": "قبل دقيقة واحدة"
+    },
+    {
+      "locale": "ar",
+      "style": "narrow",
+      "unit": "minute",
+      "direction": "past",
+      "category": "few",
+      "expected": "قبل {0} دقائق"
+    }
+  ],
+  "relativeCases": [
+    {
+      "locale": "en",
+      "style": "long",
+      "unit": "day",
+      "offset": "-1",
+      "expected": "yesterday"
+    },
+    {
+      "locale": "en",
+      "style": "long",
+      "unit": "day",
+      "offset": "0",
+      "expected": "today"
+    },
+    {
+      "locale": "en",
+      "style": "long",
+      "unit": "day",
+      "offset": "1",
+      "expected": "tomorrow"
+    }
+  ]
+}

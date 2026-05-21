@@ -19,11 +19,17 @@ def main() -> int:
         default="generated/relative-time/all/relative_time.json",
         help="Generated relative_time.json path.",
     )
+    parser.add_argument(
+        "--fixtures",
+        default="fixtures/relative-time-patterns.json",
+        help="Known CLDR relative-time sample fixture path.",
+    )
     args = parser.parse_args()
 
     data = json.loads(Path(args.path).read_text(encoding="utf-8"))
+    fixtures = json.loads(Path(args.fixtures).read_text(encoding="utf-8"))
     validate_shape(data)
-    validate_known_samples(data)
+    validate_fixture_samples(data, fixtures)
     print(
         "Validated CLDR relative-time data "
         f"locales={len(data['locales'])} "
@@ -78,14 +84,29 @@ def validate_shape(data: dict[str, Any]) -> None:
                         raise AssertionError(f"{set_id}/{style}/{unit}/{direction} missing other pattern.")
 
 
-def validate_known_samples(data: dict[str, Any]) -> None:
-    assert lookup(data, "en", "narrow", "minute", "past", "other") == "{0}m ago"
-    assert lookup(data, "en", "narrow", "minute", "future", "other") == "in {0}m"
-    assert relative(data, "en", "long", "day", "-1") == "yesterday"
-    assert relative(data, "en", "long", "day", "0") == "today"
-    assert relative(data, "en", "long", "day", "1") == "tomorrow"
-    assert lookup(data, "ja", "narrow", "minute", "future", "other") == "{0}分後"
-    assert lookup(data, "ar", "narrow", "minute", "past", "one") == "قبل دقيقة واحدة"
+def validate_fixture_samples(data: dict[str, Any], fixtures: dict[str, Any]) -> None:
+    for item in fixtures.get("patternCases", []):
+        actual = lookup(
+            data,
+            item["locale"],
+            item["style"],
+            item["unit"],
+            item["direction"],
+            item["category"],
+        )
+        if actual != item["expected"]:
+            raise AssertionError(
+                f"{item['locale']}/{item['style']}/{item['unit']}/"
+                f"{item['direction']}/{item['category']}: expected "
+                f"{item['expected']!r}, got {actual!r}."
+            )
+    for item in fixtures.get("relativeCases", []):
+        actual = relative(data, item["locale"], item["style"], item["unit"], item["offset"])
+        if actual != item["expected"]:
+            raise AssertionError(
+                f"{item['locale']}/{item['style']}/{item['unit']}/"
+                f"relative {item['offset']}: expected {item['expected']!r}, got {actual!r}."
+            )
 
 
 def lookup(

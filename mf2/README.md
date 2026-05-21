@@ -13,6 +13,8 @@ It is intentionally split into conformance data and implementation prototypes:
 - `cldr/`: generated CLDR plural-rule data, experimental number data, and
   relative-time data generators
 - `examples/`: shared parser-free catalog demo used by all starter runtimes
+- `spec/`: project-level drafts for registry functions that are not part of
+  the MF2 core grammar
 - `third_party/message-format-wg/test/`: vendored Unicode MessageFormat WG
   official tests, consumed directly by the Rust `unicode-tests` scoreboard
   runner
@@ -195,6 +197,7 @@ Validate generated CLDR relative-time data for a future optional
 
 ```sh
 (cd cldr && sh validate_relative_time_data.sh)
+(cd conformance && python3 validate_relative_time_fixture.py)
 ```
 
 Run ICU reference comparison:
