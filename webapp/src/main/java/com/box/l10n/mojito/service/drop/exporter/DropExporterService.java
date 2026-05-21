@@ -1,11 +1,13 @@
 package com.box.l10n.mojito.service.drop.exporter;
 
+import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
+
 import com.box.l10n.mojito.entity.Drop;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.service.drop.DropRepository;
-import com.box.l10n.mojito.service.pollableTask.ParentTask;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,8 @@ public class DropExporterService {
 
   @Autowired DropRepository dropRepository;
 
+  @Autowired PollableTaskRunner pollableTaskRunner;
+
   /**
    * Creates and initializes a {@link DropExporter} for a {@link Drop}. Gets the {@link
    * DropExporterType} from {@link Repository} and update the {@link Drop} entity with the
@@ -32,11 +36,28 @@ public class DropExporterService {
    * @param parentTask
    * @return
    */
-  @Pollable(message = "Create and prepare the Drop exporter")
-  public DropExporter createDropExporterAndUpdateDrop(
-      Drop drop, @ParentTask PollableTask parentTask)
+  public DropExporter createDropExporterAndUpdateDrop(Drop drop, PollableTask parentTask)
       throws DropExporterException, DropExporterInstantiationException {
+    try {
+      return pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "createDropExporterAndUpdateDrop",
+              "Create and prepare the Drop exporter",
+              0,
+              getTimeout(parentTask),
+              currentTask -> createDropExporterAndUpdateDropDirect(drop)));
+    } catch (DropExporterException | DropExporterInstantiationException e) {
+      throw e;
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error creating drop exporter", t);
+    }
+  }
 
+  DropExporter createDropExporterAndUpdateDropDirect(Drop drop)
+      throws DropExporterException, DropExporterInstantiationException {
     Repository repository = drop.getRepository();
 
     logger.debug("Get the drop exporter based for repository id: {}", repository.getId());
@@ -50,6 +71,17 @@ public class DropExporterService {
     dropRepository.save(drop);
 
     return dropExporter;
+  }
+
+  private Long getParentTaskId(PollableTask parentTask) {
+    return parentTask == null ? null : parentTask.getId();
+  }
+
+  private Long getTimeout(PollableTask parentTask) {
+    if (parentTask != null && parentTask.getTimeout() != null) {
+      return parentTask.getTimeout();
+    }
+    return DEFAULT_TIMEOUT;
   }
 
   /**
