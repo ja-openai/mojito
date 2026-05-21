@@ -1,4 +1,12 @@
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 
 import { resultSizePresets, WORKSET_SIZE_MIN } from '../../page/workbench/workbench-constants';
@@ -152,6 +160,13 @@ export function MultiSectionFilterChip({
     }
   }, [commitSizeSections, disabled, isOpen]);
 
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    updatePanelPosition();
+  }, [isOpen, updatePanelPosition]);
+
   useEffect(() => {
     if (!isOpen) return;
     const handlePointerDown = (event: PointerEvent) => {
@@ -163,7 +178,6 @@ export function MultiSectionFilterChip({
     };
     const handleReposition = () => updatePanelPosition();
 
-    updatePanelPosition();
     window.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('resize', handleReposition);
     window.addEventListener('scroll', handleReposition, true);
@@ -222,6 +236,11 @@ export function MultiSectionFilterChip({
         aria-label={ariaLabel}
         disabled={disabled}
         ref={buttonRef}
+        onPointerDown={() => {
+          if (!isOpen) {
+            updatePanelPosition();
+          }
+        }}
       >
         <span className="chip-dropdown__summary">{computedSummary}</span>
         <span className="chip-dropdown__chevron" aria-hidden="true" />

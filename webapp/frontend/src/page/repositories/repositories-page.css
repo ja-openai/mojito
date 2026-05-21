@@ -250,15 +250,16 @@
 
 .repositories-page__repo-id {
   color: var(--color-text-subtle);
-  display: none;
+  display: inline;
   font-size: var(--font-size-xs);
+  visibility: hidden;
   white-space: nowrap;
 }
 
 .repositories-page__repo-scroll-row:hover .repositories-page__repo-id,
 .repositories-page__repo-scroll-row:focus-within .repositories-page__repo-id,
 .repositories-page__repo-scroll-row--selected .repositories-page__repo-id {
-  display: inline;
+  visibility: visible;
 }
 
 .repositories-page__repo-badge {
@@ -349,19 +350,21 @@
 }
 
 .repositories-page__row-action {
-  display: none;
+  display: inline-flex;
   border: 0;
   background: transparent;
   color: var(--color-accent);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
+  visibility: hidden;
+  white-space: nowrap;
 }
 
 .repositories-page__repo-scroll-row:hover .repositories-page__row-action,
 .repositories-page__repo-scroll-row:focus-within .repositories-page__row-action,
 .repositories-page__repo-scroll-row--selected .repositories-page__row-action {
-  display: inline-flex;
+  visibility: visible;
 }
 
 .repositories-page__cell--number {

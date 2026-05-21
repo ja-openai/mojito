@@ -1,7 +1,14 @@
 import './chip-dropdown.css';
 import './multi-select-chip.css';
 
-import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 
 import { getAnchoredDropdownPanelStyle } from './dropdownPosition';
@@ -96,6 +103,13 @@ export function MultiSelectChip<T extends string | number>({
     );
   }, [align]);
 
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    updatePanelPosition();
+  }, [isOpen, updatePanelPosition]);
+
   useEffect(() => {
     if (disabled && isOpen) {
       setIsOpen(false);
@@ -114,7 +128,6 @@ export function MultiSelectChip<T extends string | number>({
     };
     const handleReposition = () => updatePanelPosition();
 
-    updatePanelPosition();
     window.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('resize', handleReposition);
     window.addEventListener('scroll', handleReposition, true);
@@ -241,6 +254,11 @@ export function MultiSelectChip<T extends string | number>({
         aria-expanded={isOpen}
         aria-label={resolvedButtonAriaLabel}
         ref={buttonRef}
+        onPointerDown={() => {
+          if (!isOpen) {
+            updatePanelPosition();
+          }
+        }}
       >
         <span className={`chip-dropdown__summary${isPlaceholder ? ' is-placeholder' : ''}`}>
           {summary}
