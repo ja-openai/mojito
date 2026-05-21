@@ -1,7 +1,6 @@
 package com.box.l10n.mojito.service.team;
 
 import com.box.l10n.mojito.entity.Locale;
-import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamLocalePool;
 import com.box.l10n.mojito.entity.TeamPmPool;
@@ -12,11 +11,11 @@ import com.box.l10n.mojito.entity.security.user.Authority;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.locale.LocaleService;
-import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.review.ReviewProjectAssignmentHistoryRepository;
 import com.box.l10n.mojito.service.review.ReviewProjectRepository;
 import com.box.l10n.mojito.service.security.user.UserAdminSummaryProjection;
@@ -70,6 +69,7 @@ public class TeamService {
   private final AuditorAwareImpl auditorAwareImpl;
   private final SlackClients slackClients;
   private final PollableTaskBlobStorage pollableTaskBlobStorage;
+  private final PollableTaskRunner pollableTaskRunner;
 
   public TeamService(
       TeamRepository teamRepository,
@@ -84,7 +84,8 @@ public class TeamService {
       ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
       AuditorAwareImpl auditorAwareImpl,
       SlackClients slackClients,
-      PollableTaskBlobStorage pollableTaskBlobStorage) {
+      PollableTaskBlobStorage pollableTaskBlobStorage,
+      PollableTaskRunner pollableTaskRunner) {
     this.teamRepository = teamRepository;
     this.teamUserRepository = teamUserRepository;
     this.teamLocalePoolRepository = teamLocalePoolRepository;
@@ -98,6 +99,7 @@ public class TeamService {
     this.auditorAwareImpl = auditorAwareImpl;
     this.slackClients = slackClients;
     this.pollableTaskBlobStorage = pollableTaskBlobStorage;
+    this.pollableTaskRunner = pollableTaskRunner;
   }
 
   public record LocalePoolEntry(String localeTag, List<Long> translatorUserIds) {}
@@ -788,19 +790,22 @@ public class TeamService {
         slackClientId, channelId, channel != null ? channel.getName() : null, entries);
   }
 
-  @Pollable(async = true, message = "Load Slack channel members")
   public PollableFuture<Void> refreshSlackConversationMembersAsync(
-      Long teamId, boolean includeProfiles, @InjectCurrentTask PollableTask currentTask) {
-    if (currentTask == null || currentTask.getId() == null) {
-      throw new IllegalStateException("Current pollable task is missing");
-    }
-
-    Long pollableTaskId = currentTask.getId();
-    pollableTaskBlobStorage.saveInput(
-        pollableTaskId, new SlackConversationMembersRefreshInput(teamId, includeProfiles));
-    SlackConversationMembers members = getSlackConversationMembers(teamId, includeProfiles);
-    pollableTaskBlobStorage.saveOutput(pollableTaskId, members);
-    return new PollableFutureTaskResult<>();
+      Long teamId, boolean includeProfiles) {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "refreshSlackConversationMembersAsync",
+            "Load Slack channel members",
+            currentTask -> {
+              Long pollableTaskId = currentTask.getId();
+              pollableTaskBlobStorage.saveInput(
+                  pollableTaskId,
+                  new SlackConversationMembersRefreshInput(teamId, includeProfiles));
+              SlackConversationMembers members =
+                  getSlackConversationMembers(teamId, includeProfiles);
+              pollableTaskBlobStorage.saveOutput(pollableTaskId, members);
+              return new PollableFutureTaskResult<>();
+            }));
   }
 
   @Transactional(readOnly = true)

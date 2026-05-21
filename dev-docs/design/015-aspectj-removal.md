@@ -73,6 +73,8 @@ In progress:
 - `GitBlameService.saveGitBlameWithUsages` no longer uses `@Pollable`; it calls
   `PollableTaskRunner` directly and keeps the previous write boundary explicit with
   `TransactionTemplate`.
+- `TeamService.refreshSlackConversationMembersAsync` no longer uses `@Pollable`; it calls
+  `PollableTaskRunner` directly and stores the Slack refresh input/output in the created task.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
