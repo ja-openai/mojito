@@ -57,7 +57,9 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to manage virtual assets.
@@ -108,13 +110,34 @@ public class VirtualAssetService {
 
   @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
 
+  @Autowired PlatformTransactionManager transactionManager;
+
   @Value("${l10n.virtualAssetService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
 
-  @Transactional
   public VirtualAsset createOrUpdateVirtualAsset(VirtualAsset virtualAsset)
       throws VirtualAssetBadRequestException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      VirtualAsset result = createOrUpdateVirtualAssetNoTx(virtualAsset);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (VirtualAssetBadRequestException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  VirtualAsset createOrUpdateVirtualAssetNoTx(VirtualAsset virtualAsset)
+      throws VirtualAssetBadRequestException {
     if (virtualAsset.getRepositoryId() == null) {
       throw new VirtualAssetBadRequestException("A repository id must be provided");
     }
@@ -181,10 +204,28 @@ public class VirtualAssetService {
     return virtualAssetTextUnits;
   }
 
-  @Transactional
   List<AssetTextUnitDTO> findByAssetExtractionIdAndDoNotTranslateFilter(
       Long assetExtractionId, Boolean doNotTranslateFilter) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      List<AssetTextUnitDTO> result =
+          findByAssetExtractionIdAndDoNotTranslateFilterNoTx(
+              assetExtractionId, doNotTranslateFilter);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<AssetTextUnitDTO> findByAssetExtractionIdAndDoNotTranslateFilterNoTx(
+      Long assetExtractionId, Boolean doNotTranslateFilter) {
     CriteriaBuilder criteriaBuilder = em.getCriteriaBuilder();
     CriteriaQuery<AssetTextUnitDTO> query = criteriaBuilder.createQuery(AssetTextUnitDTO.class);
 
@@ -234,11 +275,32 @@ public class VirtualAssetService {
     return resultList;
   }
 
-  @Transactional
   public List<VirtualAssetTextUnit> getLocalizedTextUnits(
       long assetId, long localeId, InheritanceMode inheritanceMode)
       throws VirtualAssetRequiredException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      List<VirtualAssetTextUnit> result =
+          getLocalizedTextUnitsNoTx(assetId, localeId, inheritanceMode);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (VirtualAssetRequiredException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<VirtualAssetTextUnit> getLocalizedTextUnitsNoTx(
+      long assetId, long localeId, InheritanceMode inheritanceMode)
+      throws VirtualAssetRequiredException {
     logger.debug("Get localized virtual asset: {} for locale: {}", assetId, localeId);
     List<VirtualAssetTextUnit> virtualAssetTextUnits;
 
@@ -266,7 +328,7 @@ public class VirtualAssetService {
     Long lastSuccessfulAssetExtractionId = asset.getLastSuccessfulAssetExtraction().getId();
 
     List<AssetTextUnitDTO> findByAssetExtractionAssetId =
-        findByAssetExtractionIdAndDoNotTranslateFilter(lastSuccessfulAssetExtractionId, null);
+        findByAssetExtractionIdAndDoNotTranslateFilterNoTx(lastSuccessfulAssetExtractionId, null);
 
     TranslatorWithInheritance translatorWithInheritance =
         new TranslatorWithInheritance(
@@ -350,8 +412,23 @@ public class VirtualAssetService {
         textUnitDTOs, fromLegacy(false, false));
   }
 
-  @Transactional
   public void deleteTextUnit(Long assetId, String name) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteTextUnitNoTx(assetId, name);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteTextUnitNoTx(Long assetId, String name) {
     Asset asset = assetRepository.findById(assetId).orElse(null);
     deleteTextUnits(asset, Arrays.asList(name));
   }
@@ -377,7 +454,6 @@ public class VirtualAssetService {
     }
   }
 
-  @Transactional
   void addTextUnit(
       long assetId,
       String name,
@@ -387,7 +463,33 @@ public class VirtualAssetService {
       String pluralFormOther,
       boolean doNotTranslate)
       throws VirtualAssetRequiredException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
 
+    try {
+      addTextUnitNoTx(assetId, name, content, comment, pluralForm, pluralFormOther, doNotTranslate);
+      transactionManager.commit(transaction);
+    } catch (VirtualAssetRequiredException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void addTextUnitNoTx(
+      long assetId,
+      String name,
+      String content,
+      String comment,
+      String pluralForm,
+      String pluralFormOther,
+      boolean doNotTranslate)
+      throws VirtualAssetRequiredException {
     Asset asset = getVirtualAsset(assetId);
     addTextUnit(asset, name, content, comment, pluralForm, pluralFormOther, doNotTranslate);
   }

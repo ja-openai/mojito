@@ -175,6 +175,9 @@ Removed during this workstream:
 - `AssetService` no longer uses `@Transactional`; asset creation and deletion now open and commit
   their transaction boundaries explicitly, and bulk deletion keeps per-asset deletion inside the
   same transaction.
+- `VirtualAssetService` no longer uses `@Transactional`; virtual asset writes, localized reads, and
+  text-unit add/delete helpers now open and commit their transaction boundaries explicitly while
+  preserving checked virtual-asset exceptions.
 - `ScreenshotService` no longer uses `@Transactional`; screenshot-run creation, screenshot search,
   and screenshot deletion now open and commit their transaction boundaries explicitly.
 - `CommitService` no longer uses `@Transactional`; commit creation and push/pull-run association
