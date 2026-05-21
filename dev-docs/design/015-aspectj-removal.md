@@ -237,6 +237,9 @@ Removed during this workstream:
 - `ReviewProjectService.createAutomatedReviewProjectRequest` no longer uses `@Transactional`;
   automated review project request creation now opens and commits its transaction boundary
   explicitly.
+- `ReviewProjectService` review-project search and review-project-request search no longer use
+  `@Transactional`; both read paths now open and commit read-only transaction boundaries
+  explicitly.
 
 In progress:
 

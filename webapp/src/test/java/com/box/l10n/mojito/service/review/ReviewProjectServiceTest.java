@@ -306,6 +306,43 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void searchReviewProjectsCommitsReadOnlyTransaction() {
+    SearchReviewProjectsCriteria request = searchReviewProjectsCriteria();
+    SearchReviewProjectsView result = new SearchReviewProjectsView(List.of());
+    doReturn(result).when(reviewProjectService).searchReviewProjectsNoTx(request);
+
+    assertEquals(result, reviewProjectService.searchReviewProjects(request));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(true, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void searchReviewProjectRequestsRollsBackReadOnlyTransactionOnRuntimeException() {
+    SearchReviewProjectsCriteria request = searchReviewProjectsCriteria();
+    RuntimeException failure = new RuntimeException("search failed");
+    doThrow(failure).when(reviewProjectService).searchReviewProjectRequestsNoTx(request);
+
+    try {
+      reviewProjectService.searchReviewProjectRequests(request);
+      fail("Expected searchReviewProjectRequests to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(true, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(
@@ -344,6 +381,12 @@ public class ReviewProjectServiceTest {
   private CreateAutomatedReviewProjectRequestCommand createAutomatedReviewProjectRequestCommand() {
     return new CreateAutomatedReviewProjectRequestCommand(
         53L, "name", null, ZonedDateTime.parse("2026-03-30T12:00:00Z"), 7L, null, true, 99L);
+  }
+
+  private SearchReviewProjectsCriteria searchReviewProjectsCriteria() {
+    return new SearchReviewProjectsCriteria(
+        List.of(), List.of(), List.of(), List.of(), null, null, null, null, null, 10, null, null,
+        null);
   }
 
   @Test
