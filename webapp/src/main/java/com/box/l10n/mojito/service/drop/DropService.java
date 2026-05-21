@@ -250,13 +250,7 @@ public class DropService {
 
       for (DropFile file : files) {
         try {
-          importFile(
-              dropImporter,
-              dropExporter,
-              file,
-              importStatus,
-              currentTask,
-              PollableTask.INJECT_CURRENT_TASK);
+          importFile(dropImporter, dropExporter, file, importStatus, currentTask);
         } catch (Throwable t) {
           logger.debug("Error when importing file, keep importing other files", t);
           ++numberOfFailedImport;
@@ -294,16 +288,45 @@ public class DropService {
    * @param currentTask
    * @throws Exception
    */
-  @Pollable(expectedSubTaskNumber = 3, message = "Importing file: {fileName}")
   private void importFile(
       DropImporter dropImporter,
       DropExporter dropExporter,
-      @MsgArg(name = "fileName", accessor = "getName") DropFile dropFile,
+      DropFile dropFile,
       TMTextUnitVariant.Status importStatus,
-      @ParentTask PollableTask parentTask,
-      @InjectCurrentTask PollableTask currentTask)
+      PollableTask parentTask)
       throws DropImporterException, DropExporterException, ImportDropException {
+    try {
+      pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "importFile",
+              "Importing file: " + dropFile.getName(),
+              3,
+              getTimeout(parentTask),
+              currentTask -> {
+                importFileDirect(dropImporter, dropExporter, dropFile, importStatus, currentTask);
+                return null;
+              }));
+    } catch (DropImporterException e) {
+      throw e;
+    } catch (DropExporterException e) {
+      throw e;
+    } catch (ImportDropException e) {
+      throw e;
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error importing drop file", t);
+    }
+  }
 
+  private void importFileDirect(
+      DropImporter dropImporter,
+      DropExporter dropExporter,
+      DropFile dropFile,
+      TMTextUnitVariant.Status importStatus,
+      PollableTask currentTask)
+      throws DropImporterException, DropExporterException, ImportDropException {
     logger.debug("Import file: {}", dropFile.getName());
     downloadDropFileContent(dropImporter, dropFile, currentTask);
     UpdateTMWithXLIFFResult updateReport =
