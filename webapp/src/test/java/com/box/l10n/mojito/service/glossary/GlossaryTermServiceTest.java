@@ -22,6 +22,7 @@ import com.box.l10n.mojito.service.asset.VirtualAssetService;
 import com.box.l10n.mojito.service.asset.VirtualTextUnitBatchUpdaterService;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
@@ -49,6 +50,7 @@ public class GlossaryTermServiceTest {
   @Mock TermIndexCandidateRepository termIndexCandidateRepository;
   @Mock GlossaryAiExtractionService glossaryAiExtractionService;
   @Mock PollableTaskBlobStorage pollableTaskBlobStorage;
+  @Mock PollableTaskRunner pollableTaskRunner;
   @Mock TextUnitSearcher textUnitSearcher;
   @Mock VirtualAssetService virtualAssetService;
   @Mock VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService;
@@ -74,6 +76,7 @@ public class GlossaryTermServiceTest {
             termIndexCandidateRepository,
             glossaryAiExtractionService,
             pollableTaskBlobStorage,
+            pollableTaskRunner,
             textUnitSearcher,
             virtualAssetService,
             virtualTextUnitBatchUpdaterService,

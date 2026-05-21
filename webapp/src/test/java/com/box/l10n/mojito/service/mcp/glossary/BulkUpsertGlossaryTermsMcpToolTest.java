@@ -168,7 +168,7 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
     private FakeGlossaryTermService() {
       super(
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null);
+          null, null, null, null);
     }
 
     @Override

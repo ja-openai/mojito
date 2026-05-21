@@ -184,7 +184,7 @@ public class SeedTermIndexCandidatesFromGlossaryMcpToolTest {
     private FakeGlossaryTermService() {
       super(
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null);
+          null, null, null, null);
     }
 
     @Override

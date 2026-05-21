@@ -4,6 +4,7 @@ import static com.box.l10n.mojito.entity.TMTextUnitVariant.Status.APPROVED;
 import static com.box.l10n.mojito.entity.TMTextUnitVariant.Status.REVIEW_NEEDED;
 
 import com.box.l10n.mojito.entity.Asset;
+import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
@@ -19,11 +20,11 @@ import com.box.l10n.mojito.service.asset.VirtualAssetService;
 import com.box.l10n.mojito.service.asset.VirtualAssetTextUnit;
 import com.box.l10n.mojito.service.asset.VirtualTextUnitBatchUpdaterService;
 import com.box.l10n.mojito.service.locale.LocaleService;
-import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
@@ -139,6 +140,7 @@ public class GlossaryTermService {
   private final TermIndexCandidateRepository termIndexCandidateRepository;
   private final GlossaryAiExtractionService glossaryAiExtractionService;
   private final PollableTaskBlobStorage pollableTaskBlobStorage;
+  private final PollableTaskRunner pollableTaskRunner;
   private final TextUnitSearcher textUnitSearcher;
   private final VirtualAssetService virtualAssetService;
   private final VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService;
@@ -159,6 +161,7 @@ public class GlossaryTermService {
       TermIndexCandidateRepository termIndexCandidateRepository,
       GlossaryAiExtractionService glossaryAiExtractionService,
       PollableTaskBlobStorage pollableTaskBlobStorage,
+      PollableTaskRunner pollableTaskRunner,
       TextUnitSearcher textUnitSearcher,
       VirtualAssetService virtualAssetService,
       VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService,
@@ -177,6 +180,7 @@ public class GlossaryTermService {
     this.termIndexCandidateRepository = termIndexCandidateRepository;
     this.glossaryAiExtractionService = glossaryAiExtractionService;
     this.pollableTaskBlobStorage = pollableTaskBlobStorage;
+    this.pollableTaskRunner = pollableTaskRunner;
     this.textUnitSearcher = textUnitSearcher;
     this.virtualAssetService = virtualAssetService;
     this.virtualTextUnitBatchUpdaterService = virtualTextUnitBatchUpdaterService;
@@ -779,11 +783,16 @@ public class GlossaryTermService {
     return new ExtractionView(candidates);
   }
 
-  @Pollable(async = true, message = "Extract glossary candidates")
-  public PollableFuture<Void> extractCandidatesAsync(
-      Long glossaryId,
-      ExtractionCommand command,
-      @InjectCurrentTask com.box.l10n.mojito.entity.PollableTask currentTask) {
+  public PollableFuture<Void> extractCandidatesAsync(Long glossaryId, ExtractionCommand command) {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "extractCandidatesAsync",
+            "Extract glossary candidates",
+            currentTask -> extractCandidatesForTask(glossaryId, command, currentTask)));
+  }
+
+  PollableFuture<Void> extractCandidatesForTask(
+      Long glossaryId, ExtractionCommand command, PollableTask currentTask) {
     if (currentTask == null || currentTask.getId() == null) {
       throw new IllegalStateException("Current pollable task is missing");
     }
