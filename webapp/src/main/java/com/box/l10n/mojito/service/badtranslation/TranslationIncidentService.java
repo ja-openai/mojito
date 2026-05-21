@@ -26,7 +26,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -172,6 +175,7 @@ public class TranslationIncidentService {
   private final AuditorAwareImpl auditorAwareImpl;
   private final ServerConfig serverConfig;
   private final ObjectMapper objectMapper;
+  private final PlatformTransactionManager transactionManager;
 
   public TranslationIncidentService(
       TranslationIncidentRepository translationIncidentRepository,
@@ -184,7 +188,8 @@ public class TranslationIncidentService {
       UserService userService,
       AuditorAwareImpl auditorAwareImpl,
       ServerConfig serverConfig,
-      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper) {
+      @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
+      PlatformTransactionManager transactionManager) {
     this.translationIncidentRepository = Objects.requireNonNull(translationIncidentRepository);
     this.badTranslationLookupService = Objects.requireNonNull(badTranslationLookupService);
     this.badTranslationReviewProjectService =
@@ -198,10 +203,32 @@ public class TranslationIncidentService {
     this.auditorAwareImpl = Objects.requireNonNull(auditorAwareImpl);
     this.serverConfig = Objects.requireNonNull(serverConfig);
     this.objectMapper = Objects.requireNonNull(objectMapper);
+    this.transactionManager = Objects.requireNonNull(transactionManager);
   }
 
-  @Transactional(readOnly = true)
   public IncidentPage getIncidents(
+      TranslationIncidentStatus status,
+      String query,
+      LocalDate createdAfter,
+      LocalDate createdBefore,
+      int page,
+      int size) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      IncidentPage result =
+          getIncidentsNoTx(status, query, createdAfter, createdBefore, page, size);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  IncidentPage getIncidentsNoTx(
       TranslationIncidentStatus status,
       String query,
       LocalDate createdAfter,
@@ -226,14 +253,43 @@ public class TranslationIncidentService {
         result.hasPrevious());
   }
 
-  @Transactional(readOnly = true)
   public IncidentDetail getIncident(Long incidentId) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      IncidentDetail result = getIncidentNoTx(incidentId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  IncidentDetail getIncidentNoTx(Long incidentId) {
     assertCurrentUserCanManageIncidents();
     return toDetail(getIncidentEntity(incidentId));
   }
 
-  @Transactional
   public IncidentDetail createIncident(CreateIncidentRequest request) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      IncidentDetail result = createIncidentNoTx(request);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  IncidentDetail createIncidentNoTx(CreateIncidentRequest request) {
     assertCurrentUserCanManageIncidents();
     CreateIncidentRequest validatedRequest = validateCreateRequest(request);
     BadTranslationLookupService.FindTranslationResult lookupResult =
@@ -278,8 +334,23 @@ public class TranslationIncidentService {
     return toDetail(incident);
   }
 
-  @Transactional
   public IncidentDetail rejectIncident(Long incidentId, RejectIncidentRequest request) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      IncidentDetail result = rejectIncidentNoTx(incidentId, request);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  IncidentDetail rejectIncidentNoTx(Long incidentId, RejectIncidentRequest request) {
     assertCurrentUserCanManageIncidents();
     TranslationIncident incident = getIncidentEntity(incidentId);
     if (incident.getStatus() == TranslationIncidentStatus.CLOSED) {
@@ -350,8 +421,23 @@ public class TranslationIncidentService {
     return toDetail(incident);
   }
 
-  @Transactional
   public IncidentDetail sendSlackDraft(Long incidentId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      IncidentDetail result = sendSlackDraftNoTx(incidentId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  IncidentDetail sendSlackDraftNoTx(Long incidentId) {
     assertCurrentUserCanManageIncidents();
     TranslationIncident incident = getIncidentEntity(incidentId);
     String slackDraft = buildSlackDraftFromIncident(incident);
@@ -381,8 +467,23 @@ public class TranslationIncidentService {
     return toDetail(incident);
   }
 
-  @Transactional
   public IncidentDetail updateStatus(Long incidentId, UpdateStatusRequest request) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      IncidentDetail result = updateStatusNoTx(incidentId, request);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  IncidentDetail updateStatusNoTx(Long incidentId, UpdateStatusRequest request) {
     assertCurrentUserCanManageIncidents();
     TranslationIncident incident = getIncidentEntity(incidentId);
     TranslationIncidentStatus targetStatus = request == null ? null : request.status();
@@ -402,6 +503,13 @@ public class TranslationIncidentService {
     }
     translationIncidentRepository.save(incident);
     return toDetail(incident);
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    transactionDefinition.setReadOnly(true);
+    return transactionDefinition;
   }
 
   private void populateSelectedCandidate(
