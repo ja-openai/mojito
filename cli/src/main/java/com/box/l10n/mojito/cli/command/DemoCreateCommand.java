@@ -20,6 +20,7 @@ import java.util.Set;
 import org.fusesource.jansi.Ansi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -52,6 +53,8 @@ public class DemoCreateCommand extends RepoCommand {
   String outputDirectoryParam;
 
   @Autowired CommandHelper commandHelper;
+
+  @Autowired ObjectProvider<L10nJCommander> l10nJCommanderProvider;
 
   CommandDirectories commandDirectories;
 
@@ -208,7 +211,8 @@ public class DemoCreateCommand extends RepoCommand {
   }
 
   void push() {
-    new L10nJCommander()
+    l10nJCommanderProvider
+        .getObject()
         .run("push", "-r", repository.getName(), "-s", outputDirectoryPath.toString());
   }
 

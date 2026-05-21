@@ -31,6 +31,7 @@ import org.junit.Rule;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.OutputCaptureRule;
@@ -70,6 +71,8 @@ public class CLITestBase extends IOTestBase {
 
   @Autowired TextUnitSearcher textUnitSearcher;
 
+  @Autowired ObjectProvider<L10nJCommander> l10nJCommanderProvider;
+
   @Rule public OutputCaptureRule outputCapture = new OutputCaptureRule();
 
   @LocalServerPort int port;
@@ -91,7 +94,7 @@ public class CLITestBase extends IOTestBase {
   }
 
   public L10nJCommander getL10nJCommander() {
-    L10nJCommander l10nJCommander = new L10nJCommander();
+    L10nJCommander l10nJCommander = l10nJCommanderProvider.getObject();
     l10nJCommander.setSystemExitEnabled(false);
     return l10nJCommander;
   }

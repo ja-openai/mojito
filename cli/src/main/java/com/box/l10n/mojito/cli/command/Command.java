@@ -24,6 +24,8 @@ public abstract class Command {
       description = HELP_DESCRIPTION)
   private boolean help;
 
+  protected L10nJCommander l10nJCommander;
+
   /**
    * Method to be overridden to implement the business logic of this command
    *
@@ -61,7 +63,7 @@ public abstract class Command {
 
   /** Shows the command usage. */
   void showUsage() {
-    new L10nJCommander().usage(getName());
+    l10nJCommander.usage(getName());
   }
 
   /**
@@ -113,5 +115,9 @@ public abstract class Command {
 
   public void setOriginalArgs(List<String> originalArgs) {
     this.originalArgs = originalArgs;
+  }
+
+  void setL10nJCommander(L10nJCommander l10nJCommander) {
+    this.l10nJCommander = l10nJCommander;
   }
 }

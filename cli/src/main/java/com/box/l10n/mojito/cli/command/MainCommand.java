@@ -41,7 +41,7 @@ public class MainCommand extends Command {
 
   @Override
   void showUsage() {
-    new L10nJCommander().usage();
+    l10nJCommander().usage();
   }
 
   @Override
@@ -80,5 +80,9 @@ public class MainCommand extends Command {
       fullVersion += " (git commit id: " + gitInfo.getCommit().getId() + ")";
     }
     return fullVersion;
+  }
+
+  private L10nJCommander l10nJCommander() {
+    return java.util.Objects.requireNonNull(l10nJCommander, "l10nJCommander");
   }
 }
