@@ -16,10 +16,16 @@ Current prototype:
 - mechanical plural template insertion
 - locale/argument preview
 - advanced raw target MF2 source only when needed
+- library comparison lab at `/lib-lab.html`:
+  - CodeMirror 6 raw MF2 editor
+  - ProseMirror WYSIWYG variant editor with atomic placeholder chips
+  - shared Rust parser/runtime preview endpoint
 
 Run:
 
 ```sh
+npm install --cache /private/tmp/mojito-mf2-npm-cache
+npm run build
 node mf2/editor-prototype/server.mjs
 ```
 
@@ -27,6 +33,12 @@ Open:
 
 ```text
 http://127.0.0.1:8788/
+```
+
+Open the editor library comparison:
+
+```text
+http://127.0.0.1:8788/lib-lab.html
 ```
 
 Static hosting still loads the UI, but it falls back to a small JS parser and is

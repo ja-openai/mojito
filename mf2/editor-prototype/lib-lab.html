@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MF2 Editor Library Lab</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./lib-lab.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>MF2 Editor Library Lab</h1>
+        <p>Compare raw-code and WYSIWYG editor directions against the same Rust MF2 parser/runtime.</p>
+      </div>
+      <div class="button-row">
+        <a class="nav-button" href="./">Workbench</a>
+        <div class="status" id="status">Starting</div>
+      </div>
+    </header>
+
+    <main class="lab-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>CodeMirror Raw MF2</h2>
+          <div class="button-row">
+            <button type="button" data-sample="plural">Plural</button>
+            <button type="button" data-sample="gender">Gender + plural</button>
+            <button type="button" data-sample="markup">Markup</button>
+          </div>
+        </div>
+        <div id="codemirror" class="codemirror-host"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>ProseMirror WYSIWYG Variant</h2>
+          <button type="button" id="insertPlaceholder">Insert placeholder</button>
+        </div>
+        <div class="variant-tabs" id="variantTabs"></div>
+        <div id="prosemirror" class="rich-host"></div>
+        <p class="hint">Text edits update the selected MF2 variant. Placeholder chips stay atomic.</p>
+      </section>
+
+      <section class="panel side-panel">
+        <div class="panel-header">
+          <h2>Rust Preview</h2>
+          <label class="locale-field">
+            Locale
+            <select id="locale">
+              <option value="en">en</option>
+              <option value="fr">fr</option>
+              <option value="ru">ru</option>
+              <option value="ar">ar</option>
+              <option value="ja">ja</option>
+            </select>
+          </label>
+        </div>
+        <div class="subpanel">
+          <h3>Preview Values</h3>
+          <div id="arguments" class="arguments"></div>
+        </div>
+        <div class="subpanel">
+          <h3>Rendered</h3>
+          <output id="rendered"></output>
+        </div>
+        <div class="subpanel">
+          <h3>Quality</h3>
+          <ul id="diagnostics" class="diagnostics"></ul>
+        </div>
+        <details class="advanced">
+          <summary>Rust model</summary>
+          <pre id="model"></pre>
+        </details>
+      </section>
+    </main>
+
+    <script type="module" src="./lib-lab.bundle.js"></script>
+  </body>
+</html>

@@ -119,6 +119,18 @@ button:hover {
   border-color: var(--accent);
 }
 
+.nav-button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 9px;
+  text-decoration: none;
+}
+
+.nav-button:hover {
+  border-color: var(--accent);
+}
+
 button.primary,
 #addPlural {
   background: var(--accent);

@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild lib-lab-source.js --bundle --format=esm --outfile=lib-lab.bundle.js",
+    "check": "node smoke-test.mjs && npm run build"
+  },
+  "dependencies": {
+    "@codemirror/lint": "^6.8.5",
+    "codemirror": "^6.0.2",
+    "prosemirror-commands": "^1.7.1",
+    "prosemirror-history": "^1.4.1",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-model": "^1.25.4",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.41.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  }
+}

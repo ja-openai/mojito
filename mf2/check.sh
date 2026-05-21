@@ -7,7 +7,11 @@ cd "$(dirname "$0")"
 (cd cldr && sh validate_number_data.sh)
 (cd cldr && sh validate_relative_time_data.sh)
 (cd conformance && python3 validate_relative_time_fixture.py)
-(node editor-prototype/smoke-test.mjs)
+if [ -d editor-prototype/node_modules ]; then
+  (cd editor-prototype && npm run check)
+else
+  (node editor-prototype/smoke-test.mjs)
+fi
 (cd rust/mf2-prototype && cargo test)
 (cd rust/mf2-prototype && cargo run -- conformance ../../conformance/fixtures/source-to-model)
 (cd rust/mf2-prototype && cargo run -- unicode-tests)

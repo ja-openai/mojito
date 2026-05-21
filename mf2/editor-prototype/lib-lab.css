@@ -1,0 +1,78 @@
+.lab-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr) minmax(300px, 360px);
+  min-height: calc(100vh - 70px);
+  padding: 12px;
+}
+
+.codemirror-host,
+.rich-host {
+  min-height: 520px;
+}
+
+.codemirror-host .cm-editor {
+  height: 100%;
+  min-height: 520px;
+}
+
+.codemirror-host .cm-scroller {
+  font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.rich-host {
+  padding: 14px;
+}
+
+.ProseMirror {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1.5;
+  min-height: 180px;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
+.ProseMirror:focus {
+  outline: 2px solid rgba(20, 108, 112, 0.2);
+  outline-offset: 1px;
+}
+
+.placeholder-chip {
+  background: var(--code);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.86em;
+  padding: 1px 7px;
+  vertical-align: 1px;
+}
+
+.variant-tabs {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.variant-tabs button[aria-selected="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.hint {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  padding: 10px 12px;
+}
+
+@media (max-width: 940px) {
+  .lab-grid {
+    grid-template-columns: 1fr;
+  }
+}
