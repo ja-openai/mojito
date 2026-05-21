@@ -225,6 +225,9 @@ Removed during this workstream:
 - The `TeamService` Slack settings and mapping methods no longer use `@Transactional`; settings
   reads/writes, Slack user mapping reads/replacements/upserts, and additive roster updates now open
   and commit their transaction boundaries explicitly.
+- `TeamService` no longer uses `@Transactional`; Slack conversation loading and Slack channel
+  import preview/apply operations now open and commit their transaction boundaries explicitly while
+  preserving the previous transaction scope around Slack lookups.
 
 In progress:
 

@@ -99,8 +99,44 @@ public class TeamServiceTransactionTest {
   }
 
   @Test
+  public void getSlackConversationMembersCommitsReadOnlyTransaction() {
+    teamService.getSlackConversationMembers(1L, true);
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertThat(transactionDefinitionCaptor.getValue().isReadOnly()).isTrue();
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void previewSlackChannelImportCommitsReadOnlyTransaction() {
+    teamService.previewSlackChannelImport(1L);
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertThat(transactionDefinitionCaptor.getValue().isReadOnly()).isTrue();
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
   public void updateTeamSlackSettingsCommitsTransaction() {
     teamService.updateTeamSlackSettings(1L, true, "client", "channel");
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertThat(transactionDefinitionCaptor.getValue().isReadOnly()).isFalse();
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void applySlackChannelImportCommitsTransaction() {
+    teamService.applySlackChannelImport(1L, TeamUserRole.PM, List.of("U1"));
 
     ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
         ArgumentCaptor.forClass(TransactionDefinition.class);
@@ -163,6 +199,17 @@ public class TeamServiceTransactionTest {
 
     assertThatThrownBy(() -> teamService.addTeamUsersByRole(1L, TeamUserRole.PM, List.of(2L)))
         .isSameAs(failure);
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
+  @Test
+  public void previewSlackChannelImportRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("preview failed");
+    teamService.failure = failure;
+
+    assertThatThrownBy(() -> teamService.previewSlackChannelImport(1L)).isSameAs(failure);
 
     verify(transactionManager).rollback(transactionStatus);
     verify(transactionManager, never()).commit(transactionStatus);
@@ -245,6 +292,18 @@ public class TeamServiceTransactionTest {
     }
 
     @Override
+    SlackConversationMembers getSlackConversationMembersNoTx(Long teamId, boolean includeProfiles) {
+      throwIfConfigured();
+      return new SlackConversationMembers("client", "channel", "general", List.of());
+    }
+
+    @Override
+    SlackChannelImportPreview previewSlackChannelImportNoTx(Long teamId) {
+      throwIfConfigured();
+      return new SlackChannelImportPreview("channel", "general", List.of());
+    }
+
+    @Override
     void replaceTeamSlackUserMappingsNoTx(
         Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
       throwIfConfigured();
@@ -255,6 +314,13 @@ public class TeamServiceTransactionTest {
         Long teamId, TeamUserRole role, List<Long> userIds) {
       throwIfConfigured();
       return new ReplaceTeamUsersResult(0, 0);
+    }
+
+    @Override
+    SlackChannelImportApplyResult applySlackChannelImportNoTx(
+        Long teamId, TeamUserRole role, List<String> slackUserIds) {
+      throwIfConfigured();
+      return new SlackChannelImportApplyResult(0, 0, 0, 0, 0);
     }
 
     private void throwIfConfigured() {
