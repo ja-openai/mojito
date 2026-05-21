@@ -13,8 +13,6 @@ import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.asset.AssetService;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pluralform.PluralFormService;
-import com.box.l10n.mojito.service.translationkit.TranslationKitRepository;
-import com.box.l10n.mojito.service.translationkit.TranslationKitService;
 import com.google.common.base.Strings;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,40 +26,33 @@ import net.sf.okapi.common.resource.StartSubDocument;
 import net.sf.okapi.filters.xliff.XLIFFFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.util.StopWatch;
 
 /**
  * @author wyau
  */
-@Configurable
 public class ImportExportedXliffStep extends BasePipelineStep {
 
   /** Logger */
   static Logger logger = LoggerFactory.getLogger(ImportExportedXliffStep.class);
 
-  @Autowired TMService tmService;
+  TMService tmService;
 
-  @Autowired TMTextUnitRepository tmTextUnitRepository;
+  TMTextUnitRepository tmTextUnitRepository;
 
-  @Autowired LocaleService localeService;
+  LocaleService localeService;
 
-  @Autowired TranslationKitService translationKitService;
+  AssetRepository assetRepository;
 
-  @Autowired TranslationKitRepository translationKitRepository;
+  AssetService assetService;
 
-  @Autowired AssetRepository assetRepository;
+  TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
-  @Autowired AssetService assetService;
+  ImportExportTextUnitUtils importExportTextUnitUtils;
 
-  @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
+  TextUnitUtils textUnitUtils;
 
-  @Autowired ImportExportTextUnitUtils importExportTextUnitUtils;
-
-  @Autowired TextUnitUtils textUnitUtils;
-
-  @Autowired PluralFormService pluralFormService;
+  PluralFormService pluralFormService;
 
   private LocaleId targetLocaleId;
   private LocaleId sourceLocaleId;
@@ -86,17 +77,82 @@ public class ImportExportedXliffStep extends BasePipelineStep {
   StopWatch textUnitStopWatch = new StopWatch();
   int numOfTextUnitProcess = 0;
 
-  public ImportExportedXliffStep(Repository repository, String xliffContent, boolean updateTM) {
+  public ImportExportedXliffStep(
+      Repository repository,
+      String xliffContent,
+      boolean updateTM,
+      TMService tmService,
+      TMTextUnitRepository tmTextUnitRepository,
+      LocaleService localeService,
+      AssetRepository assetRepository,
+      AssetService assetService,
+      TMTextUnitVariantCommentService tmTextUnitVariantCommentService,
+      ImportExportTextUnitUtils importExportTextUnitUtils,
+      TextUnitUtils textUnitUtils,
+      PluralFormService pluralFormService) {
     this.repository = repository;
     this.xliffContent = xliffContent;
     this.updateTM = updateTM;
+    initDependencies(
+        tmService,
+        tmTextUnitRepository,
+        localeService,
+        assetRepository,
+        assetService,
+        tmTextUnitVariantCommentService,
+        importExportTextUnitUtils,
+        textUnitUtils,
+        pluralFormService);
   }
 
-  public ImportExportedXliffStep(Asset asset, String xliffContent, boolean updateTM) {
+  public ImportExportedXliffStep(
+      Asset asset,
+      String xliffContent,
+      boolean updateTM,
+      TMService tmService,
+      TMTextUnitRepository tmTextUnitRepository,
+      LocaleService localeService,
+      AssetRepository assetRepository,
+      AssetService assetService,
+      TMTextUnitVariantCommentService tmTextUnitVariantCommentService,
+      ImportExportTextUnitUtils importExportTextUnitUtils,
+      TextUnitUtils textUnitUtils,
+      PluralFormService pluralFormService) {
     this.asset = asset;
     this.repository = asset.getRepository();
     this.xliffContent = xliffContent;
     this.updateTM = updateTM;
+    initDependencies(
+        tmService,
+        tmTextUnitRepository,
+        localeService,
+        assetRepository,
+        assetService,
+        tmTextUnitVariantCommentService,
+        importExportTextUnitUtils,
+        textUnitUtils,
+        pluralFormService);
+  }
+
+  private void initDependencies(
+      TMService tmService,
+      TMTextUnitRepository tmTextUnitRepository,
+      LocaleService localeService,
+      AssetRepository assetRepository,
+      AssetService assetService,
+      TMTextUnitVariantCommentService tmTextUnitVariantCommentService,
+      ImportExportTextUnitUtils importExportTextUnitUtils,
+      TextUnitUtils textUnitUtils,
+      PluralFormService pluralFormService) {
+    this.tmService = tmService;
+    this.tmTextUnitRepository = tmTextUnitRepository;
+    this.localeService = localeService;
+    this.assetRepository = assetRepository;
+    this.assetService = assetService;
+    this.tmTextUnitVariantCommentService = tmTextUnitVariantCommentService;
+    this.importExportTextUnitUtils = importExportTextUnitUtils;
+    this.textUnitUtils = textUnitUtils;
+    this.pluralFormService = pluralFormService;
   }
 
   @Override

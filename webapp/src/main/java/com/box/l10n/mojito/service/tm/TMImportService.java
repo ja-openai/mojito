@@ -2,12 +2,13 @@ package com.box.l10n.mojito.service.tm;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Repository;
-import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.okapi.ImportExportTextUnitUtils;
 import com.box.l10n.mojito.okapi.RawDocument;
+import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.asset.AssetService;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.pluralform.PluralFormService;
 import net.sf.okapi.common.LocaleId;
 import net.sf.okapi.common.pipelinedriver.IPipelineDriver;
 import net.sf.okapi.common.pipelinedriver.PipelineDriver;
@@ -38,9 +39,13 @@ public class TMImportService {
 
   @Autowired TMTextUnitRepository tmTextUnitRepository;
 
-  @Autowired ObjectMapper objectMapper;
-
   @Autowired ImportExportTextUnitUtils importExportTextUnitUtils;
+
+  @Autowired TextUnitUtils textUnitUtils;
+
+  @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
+
+  @Autowired PluralFormService pluralFormService;
 
   /**
    * Import the exported XLIFF using Okapi driver into repository.
@@ -53,7 +58,19 @@ public class TMImportService {
   public void importXLIFF(Repository repository, String xliffContent, boolean updateTM) {
 
     ImportExportedXliffStep importExportedXliffStep =
-        new ImportExportedXliffStep(repository, xliffContent, updateTM);
+        new ImportExportedXliffStep(
+            repository,
+            xliffContent,
+            updateTM,
+            tmService,
+            tmTextUnitRepository,
+            localeService,
+            assetRepository,
+            assetService,
+            tmTextUnitVariantCommentService,
+            importExportTextUnitUtils,
+            textUnitUtils,
+            pluralFormService);
     importXLIFF(importExportedXliffStep, xliffContent);
   }
 
@@ -68,7 +85,19 @@ public class TMImportService {
 
     Asset asset = assetRepository.findById(assetId).orElse(null);
     ImportExportedXliffStep importExportedXliffStep =
-        new ImportExportedXliffStep(asset, xliffContent, updateTM);
+        new ImportExportedXliffStep(
+            asset,
+            xliffContent,
+            updateTM,
+            tmService,
+            tmTextUnitRepository,
+            localeService,
+            assetRepository,
+            assetService,
+            tmTextUnitVariantCommentService,
+            importExportTextUnitUtils,
+            textUnitUtils,
+            pluralFormService);
     importXLIFF(importExportedXliffStep, xliffContent);
   }
 
