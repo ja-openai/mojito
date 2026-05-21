@@ -22,6 +22,33 @@ const defaultArgs = {
   url: "/people/mojito",
 };
 
+export function createSourceHistory(initialValue = "") {
+  return {
+    entries: [initialValue],
+    index: 0,
+    push(value) {
+      if (this.entries[this.index] === value) return;
+      this.entries = this.entries.slice(0, this.index + 1);
+      this.entries.push(value);
+      if (this.entries.length > 100) {
+        this.entries.shift();
+      } else {
+        this.index++;
+      }
+    },
+    undo() {
+      if (this.index === 0) return this.entries[this.index];
+      this.index--;
+      return this.entries[this.index];
+    },
+    redo() {
+      if (this.index >= this.entries.length - 1) return this.entries[this.index];
+      this.index++;
+      return this.entries[this.index];
+    },
+  };
+}
+
 export function parseSource(source) {
   const diagnostics = basicDiagnostics(source);
   const trimmed = source.trim();
@@ -329,15 +356,24 @@ function initialize() {
   const diagnostics = document.querySelector("#diagnostics");
   const parts = document.querySelector("#parts");
   const status = document.querySelector("#status");
-  const state = { args: { ...defaultArgs }, model: parseSource(samples.plural) };
+  const state = {
+    args: { ...defaultArgs },
+    history: createSourceHistory(samples.plural),
+    model: parseSource(samples.plural),
+    suppressSourceInput: false,
+  };
 
   source.value = samples.plural;
 
-  function refresh(fromStructure = false) {
+  function refresh(options = {}) {
+    const fromStructure = options.fromStructure === true;
+    const skipStructure = options.skipStructure === true;
     if (!fromStructure) {
       state.model = parseSource(source.value);
     }
-    renderStructure();
+    if (!skipStructure) {
+      renderStructure();
+    }
     renderArguments();
     const output = formatMessage(state.model, state.args, locale.value);
     rendered.value = output;
@@ -347,6 +383,48 @@ function initialize() {
     parts.textContent = JSON.stringify(partsForPattern(previewPattern, state.args), null, 2);
     renderDiagnostics();
     status.textContent = state.model.diagnostics.length ? `${state.model.diagnostics.length} diagnostic(s)` : "Ready";
+  }
+
+  function setSourceText(value, options = {}) {
+    if (options.record !== false) {
+      state.history.push(value);
+    }
+    state.suppressSourceInput = true;
+    source.value = value;
+    state.suppressSourceInput = false;
+  }
+
+  function setSourceAndRefresh(value, options = {}) {
+    setSourceText(value, options);
+    refresh({ fromStructure: false });
+  }
+
+  function syncSourceFromModel(options = {}) {
+    const nextSource = printModel(state.model);
+    setSourceText(nextSource, { record: options.record !== false });
+    const parsed = parseSource(nextSource);
+    state.model.diagnostics = parsed.diagnostics;
+    state.model.variables = parsed.variables;
+    refresh({
+      fromStructure: true,
+      skipStructure: options.rebuildStructure !== true,
+    });
+  }
+
+  function restoreSource(value) {
+    setSourceText(value, { record: false });
+    refresh({ fromStructure: false });
+  }
+
+  function handleHistoryShortcut(event) {
+    const key = event.key.toLowerCase();
+    const modifier = event.metaKey || event.ctrlKey;
+    const undo = modifier && key === "z" && !event.altKey && !event.shiftKey;
+    const redo = modifier && ((key === "z" && event.shiftKey) || key === "y") && !event.altKey;
+    if (!undo && !redo) return;
+    if (!event.target?.closest?.(".workspace")) return;
+    event.preventDefault();
+    restoreSource(undo ? state.history.undo() : state.history.redo());
   }
 
   function renderStructure() {
@@ -367,7 +445,7 @@ function initialize() {
     fields.querySelector("[data-role='selectors']").addEventListener("input", (event) => {
       state.model.selectors = event.target.value.trim().split(/\s+/u).filter(Boolean);
       normalizeDeclarations();
-      writeSourceFromModel();
+      syncSourceFromModel({ rebuildStructure: true });
     });
 
     const list = document.createElement("div");
@@ -396,16 +474,16 @@ function initialize() {
       row.querySelectorAll("[data-key]").forEach((input) => {
         input.addEventListener("input", () => {
           variant.keys[Number(input.dataset.key)] = input.value || "*";
-          writeSourceFromModel();
+          syncSourceFromModel();
         });
       });
       row.querySelector("[data-value]").addEventListener("input", (event) => {
         variant.value = event.target.value;
-        writeSourceFromModel();
+        syncSourceFromModel();
       });
       row.querySelector("[data-remove]").addEventListener("click", () => {
         state.model.variants.splice(variantIndex, 1);
-        writeSourceFromModel();
+        syncSourceFromModel({ rebuildStructure: true });
       });
       row.querySelectorAll("[data-insert]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -415,7 +493,9 @@ function initialize() {
           const end = textarea.selectionEnd;
           textarea.value = textarea.value.slice(0, start) + token + textarea.value.slice(end);
           variant.value = textarea.value;
-          writeSourceFromModel();
+          syncSourceFromModel();
+          textarea.focus();
+          textarea.setSelectionRange(start + token.length, start + token.length);
         });
       });
       list.append(row);
@@ -433,7 +513,7 @@ function initialize() {
       label.innerHTML = `<span>$${escapeHtml(name)}</span><input value="${escapeHtml(String(state.args[name]))}" />`;
       label.querySelector("input").addEventListener("input", (event) => {
         state.args[name] = event.target.value;
-        refresh(true);
+        refresh({ fromStructure: true });
       });
       argsContainer.append(label);
     }
@@ -461,37 +541,34 @@ function initialize() {
     }
   }
 
-  function writeSourceFromModel() {
-    source.value = printModel(state.model);
-    refresh();
-  }
-
   document.querySelectorAll("[data-sample]").forEach((button) => {
     button.addEventListener("click", () => {
-      source.value = samples[button.dataset.sample];
-      refresh();
+      setSourceAndRefresh(samples[button.dataset.sample]);
     });
   });
   document.querySelector("#addPlural").addEventListener("click", () => {
-    source.value = addPluralTemplate(source.value);
-    refresh();
+    setSourceAndRefresh(addPluralTemplate(source.value));
   });
   document.querySelector("#formatSource").addEventListener("click", () => {
     state.model = parseSource(source.value);
-    source.value = printModel(state.model);
-    refresh();
+    setSourceAndRefresh(printModel(state.model));
   });
   document.querySelector("#addVariant").addEventListener("click", () => {
     if (state.model.type !== "select") {
-      source.value = addPluralTemplate(source.value);
-      refresh();
+      setSourceAndRefresh(addPluralTemplate(source.value));
       return;
     }
     state.model.variants.push({ keys: state.model.selectors.map(() => "*"), value: "" });
-    writeSourceFromModel();
+    syncSourceFromModel({ rebuildStructure: true });
   });
-  source.addEventListener("input", () => refresh());
-  locale.addEventListener("change", () => refresh(true));
+  source.addEventListener("input", () => {
+    if (!state.suppressSourceInput) {
+      state.history.push(source.value);
+    }
+    refresh({ fromStructure: false });
+  });
+  document.addEventListener("keydown", handleHistoryShortcut);
+  locale.addEventListener("change", () => refresh({ fromStructure: true }));
   refresh();
 }
 
