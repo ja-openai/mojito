@@ -7,8 +7,6 @@ import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * See {@link PollableAspect}.
@@ -18,26 +16,33 @@ import org.springframework.beans.factory.annotation.Configurable;
  *
  * @author jaurambault
  */
-@Configurable
 public class PollableCallable implements Callable {
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(PollableCallable.class);
 
-  @Autowired PollableTaskService pollableTaskService;
+  final PollableTaskService pollableTaskService;
 
-  @Autowired AspectJUtils aspectJUtils;
+  final AspectJUtils aspectJUtils;
 
-  @Autowired PollableTaskExceptionUtils pollableTaskExceptionUtils;
+  final PollableTaskExceptionUtils pollableTaskExceptionUtils;
 
   PollableTask pollableTask;
   ProceedingJoinPoint pjp;
 
   PollableFutureTask pollableFutureTask;
 
-  public PollableCallable(PollableTask pollableTask, ProceedingJoinPoint pjp) {
+  public PollableCallable(
+      PollableTask pollableTask,
+      ProceedingJoinPoint pjp,
+      PollableTaskService pollableTaskService,
+      AspectJUtils aspectJUtils,
+      PollableTaskExceptionUtils pollableTaskExceptionUtils) {
     this.pollableTask = pollableTask;
     this.pjp = pjp;
+    this.pollableTaskService = pollableTaskService;
+    this.aspectJUtils = aspectJUtils;
+    this.pollableTaskExceptionUtils = pollableTaskExceptionUtils;
   }
 
   @Override
