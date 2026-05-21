@@ -4660,8 +4660,7 @@ public class TMServiceTest extends ServiceTestBase {
 
     TMXliff tmXliff = tmService.createTMXliff(assetId, "en", null, null);
     PollableFuture<String> exportResult =
-        tmService.exportAssetAsXLIFFAsync(
-            tmXliff.getId(), assetId, "en", PollableTask.INJECT_CURRENT_TASK);
+        tmService.exportAssetAsXLIFFAsync(tmXliff.getId(), assetId, "en");
 
     try {
       pollableTaskService.waitForPollableTask(exportResult.getPollableTask().getId());

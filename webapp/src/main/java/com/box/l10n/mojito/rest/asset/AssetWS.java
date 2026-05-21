@@ -383,8 +383,7 @@ public class AssetWS {
       @RequestBody XliffExportBody xliffExportBody) {
     TMXliff tmXliff = tmService.createTMXliff(assetId, bcp47tag, null, null);
     PollableFuture<String> pollableFuture =
-        tmService.exportAssetAsXLIFFAsync(
-            tmXliff.getId(), assetId, bcp47tag, PollableTask.INJECT_CURRENT_TASK);
+        tmService.exportAssetAsXLIFFAsync(tmXliff.getId(), assetId, bcp47tag);
     xliffExportBody.setTmXliffId(tmXliff.getId());
     xliffExportBody.setPollableTask(pollableFuture.getPollableTask());
     return xliffExportBody;
