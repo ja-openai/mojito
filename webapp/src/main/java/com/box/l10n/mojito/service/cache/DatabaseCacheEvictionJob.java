@@ -10,14 +10,15 @@ import org.quartz.SimpleTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.quartz.JobDetailFactoryBean;
 import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Deletes entries from the DatabaseCache for which their expiry date has already occurred.
@@ -25,13 +26,16 @@ import org.springframework.transaction.annotation.Transactional;
  * @author garion
  */
 @Profile("!disablescheduling")
-@Configurable
+@Configuration
+@Component
 @DisallowConcurrentExecution
 public class DatabaseCacheEvictionJob implements Job {
 
   static Logger logger = LoggerFactory.getLogger(DatabaseCacheEvictionJob.class);
 
   @Autowired ApplicationCacheRepository applicationCacheRepository;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   @Override
   public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
@@ -64,9 +68,9 @@ public class DatabaseCacheEvictionJob implements Job {
     return trigger;
   }
 
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   private void clearAllExpired() {
     logger.info("Evicting expired entries from the database cache.");
-    applicationCacheRepository.clearAllExpired();
+    new TransactionTemplate(transactionManager)
+        .executeWithoutResult(status -> applicationCacheRepository.clearAllExpired());
   }
 }

@@ -69,6 +69,9 @@ Removed during this workstream:
   now use explicit `CacheService` lookups and writes.
 - `DatabaseCache` no longer uses `@Configurable`; `CachingConfig` passes its collaborators
   explicitly and `DatabaseCache` uses `TransactionTemplate` for its write boundaries.
+- `DatabaseCacheEvictionJob` no longer uses `@Configurable` or `@Transactional`; Quartz-created
+  instances are autowired by the existing Quartz job factory and the eviction write uses
+  `TransactionTemplate`.
 
 In progress:
 
