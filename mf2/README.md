@@ -50,10 +50,11 @@ separate published packages. Rust has `parser`, `model`, `runtime`, `cldr`, and
 Python has `formatter`, `plural`, generated plural rules, `locale_key`, `errors`,
 and a compatibility `model` facade. Swift has `Model`, `Formatter`, generated
 plural rules, `PluralRules`, `Locale`, and `Errors` files inside the runtime
-target. Java has a typed model facade, formatter, generated plural rules, and
-dependency-free JSON conformance/demo tooling. The locale-key helpers are
-string-only; generated plural rules keep string APIs and do not depend on a rich
-locale object.
+target. Java keeps the production artifact under `src/main/java`; conformance
+runners, demos, benchmarks, fixture JSON loading, and demo-only functions live
+under `src/test/java` so they do not ship in the library jar. The locale-key
+helpers are string-only; generated plural rules keep string APIs and do not
+depend on a rich locale object.
 
 ## Current Slice
 

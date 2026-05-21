@@ -26,6 +26,11 @@ Current target:
 - keep locale-key canonicalization/fallback string-only
 - keep ICU4J as a reference comparison target, not a runtime dependency
 
+`src/main/java` is the library artifact. Local conformance runners, demos,
+benchmarks, fixture JSON loading, and demo-only functions live under
+`src/test/java` so they can use Maven's standard tool/test classpath without
+shipping in the production jar.
+
 `pom.xml` runs the shared CLDR plural generator during Maven's
 `generate-sources` phase and compiles the generated Java source from
 `target/generated-sources/java`. The checked-in
@@ -45,6 +50,7 @@ Run:
 
 ```sh
 mvn compile
+mvn test-compile
 sh run.sh conformance
 sh run.sh demo
 sh run.sh inline-demo
