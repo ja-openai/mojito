@@ -938,19 +938,50 @@ public class TeamService {
     }
   }
 
-  @Transactional(readOnly = true)
   public TeamSlackSettings getTeamSlackSettings(Long teamId) {
-    Team team = getTeam(teamId);
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      TeamSlackSettings result = getTeamSlackSettingsNoTx(teamId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TeamSlackSettings getTeamSlackSettingsNoTx(Long teamId) {
+    Team team = getTeamNoTx(teamId);
     return new TeamSlackSettings(
         Boolean.TRUE.equals(team.getSlackNotificationsEnabled()),
         team.getSlackClientId(),
         team.getSlackChannelId());
   }
 
-  @Transactional
   public TeamSlackSettings updateTeamSlackSettings(
       Long teamId, Boolean enabled, String slackClientId, String slackChannelId) {
-    Team team = getTeam(teamId);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      TeamSlackSettings result =
+          updateTeamSlackSettingsNoTx(teamId, enabled, slackClientId, slackChannelId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TeamSlackSettings updateTeamSlackSettingsNoTx(
+      Long teamId, Boolean enabled, String slackClientId, String slackChannelId) {
+    Team team = getTeamNoTx(teamId);
 
     String normalizedSlackClientId = normalizeOptionalSlackValue(slackClientId, 255);
     String normalizedChannelId = normalizeOptionalSlackValue(slackChannelId, 64);
@@ -1044,9 +1075,23 @@ public class TeamService {
             }));
   }
 
-  @Transactional(readOnly = true)
   public List<TeamSlackUserMappingEntry> getTeamSlackUserMappings(Long teamId) {
-    getTeam(teamId);
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<TeamSlackUserMappingEntry> result = getTeamSlackUserMappingsNoTx(teamId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<TeamSlackUserMappingEntry> getTeamSlackUserMappingsNoTx(Long teamId) {
+    getTeamNoTx(teamId);
     return teamSlackUserMappingRepository.findByTeamId(teamId).stream()
         .map(
             mapping ->
@@ -1060,10 +1105,25 @@ public class TeamService {
         .toList();
   }
 
-  @Transactional
   public void replaceTeamSlackUserMappings(
       Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
-    Team team = getTeam(teamId);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      replaceTeamSlackUserMappingsNoTx(teamId, entries);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void replaceTeamSlackUserMappingsNoTx(
+      Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
+    Team team = getTeamNoTx(teamId);
 
     List<UpsertTeamSlackUserMappingEntry> normalizedEntries =
         (entries == null ? List.<UpsertTeamSlackUserMappingEntry>of() : entries)
@@ -1131,9 +1191,23 @@ public class TeamService {
     teamSlackUserMappingRepository.saveAll(mappings);
   }
 
-  @Transactional
   public void upsertTeamSlackUserMappings(
       Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      upsertTeamSlackUserMappingsNoTx(teamId, entries);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void upsertTeamSlackUserMappingsNoTx(Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
     List<UpsertTeamSlackUserMappingEntry> incoming =
         entries == null ? List.of() : entries.stream().filter(entry -> entry != null).toList();
     if (incoming.isEmpty()) {
@@ -1141,7 +1215,7 @@ public class TeamService {
     }
 
     Map<Long, UpsertTeamSlackUserMappingEntry> mergedByUserId = new LinkedHashMap<>();
-    getTeamSlackUserMappings(teamId)
+    getTeamSlackUserMappingsNoTx(teamId)
         .forEach(
             existing ->
                 mergedByUserId.put(
@@ -1152,20 +1226,36 @@ public class TeamService {
                         existing.slackUsername(),
                         existing.matchSource())));
     incoming.forEach(entry -> mergedByUserId.put(entry.mojitoUserId(), entry));
-    replaceTeamSlackUserMappings(teamId, new ArrayList<>(mergedByUserId.values()));
+    replaceTeamSlackUserMappingsNoTx(teamId, new ArrayList<>(mergedByUserId.values()));
   }
 
-  @Transactional
   public ReplaceTeamUsersResult addTeamUsersByRole(
       Long teamId, TeamUserRole role, List<Long> userIds) {
-    List<Long> existingUserIds = getTeamUserIdsByRole(teamId, role);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      ReplaceTeamUsersResult result = addTeamUsersByRoleNoTx(teamId, role, userIds);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReplaceTeamUsersResult addTeamUsersByRoleNoTx(
+      Long teamId, TeamUserRole role, List<Long> userIds) {
+    List<Long> existingUserIds = getTeamUserIdsByRoleNoTx(teamId, role);
     List<Long> mergedUserIds =
         java.util.stream.Stream.concat(
                 existingUserIds.stream(), (userIds == null ? List.<Long>of() : userIds).stream())
             .filter(id -> id != null && id > 0)
             .distinct()
             .toList();
-    return replaceTeamUsersByRole(teamId, role, mergedUserIds);
+    return replaceTeamUsersByRoleNoTx(teamId, role, mergedUserIds);
   }
 
   @Transactional(readOnly = true)
