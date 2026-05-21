@@ -122,6 +122,8 @@ Removed during this workstream:
   the system-user creation transaction explicitly.
 - `TextUnitSearcher` no longer uses self-invoked read-only `@Transactional` methods inside retry
   loops; each retry attempt opens a read-only transaction explicitly.
+- `AiReviewService.saveAiReviewProtosInTx` no longer relies on self-invoked `@Transactional`;
+  review proto persistence now opens its transaction explicitly.
 
 In progress:
 
