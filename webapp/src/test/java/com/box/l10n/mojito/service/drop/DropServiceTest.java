@@ -889,8 +889,7 @@ public class DropServiceTest extends ServiceTestBase {
     logger.debug("Drop export finished, localize files in Box");
     Drop drop = startExportProcess.get();
 
-    PollableFuture<Drop> dropPollableFuture =
-        dropService.cancelDrop(drop.getId(), PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> dropPollableFuture = dropService.cancelDrop(drop.getId());
     PollableTask cancelDropPollableTask = dropPollableFuture.getPollableTask();
     pollableTaskService.getPollableTask(cancelDropPollableTask.getId());
 
@@ -929,8 +928,7 @@ public class DropServiceTest extends ServiceTestBase {
 
     Drop drop = startExportProcess.get();
 
-    PollableFuture<Drop> dropPollableFuture =
-        dropServiceSpy.cancelDrop(drop.getId(), PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> dropPollableFuture = dropServiceSpy.cancelDrop(drop.getId());
     PollableTask cancelDropPollableTask = dropPollableFuture.getPollableTask();
 
     logger.debug("Wait for cancellation to finish");

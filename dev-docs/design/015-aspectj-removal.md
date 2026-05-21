@@ -118,6 +118,8 @@ In progress:
 - `DropService.generateAndExportTranslationKit` no longer uses `@Pollable`, `@MsgArg`, or
   `@ParentTask`; it creates the locale export subtask explicitly and preserves
   `DropExporterException`.
+- `DropService.cancelDrop` no longer uses `@Pollable` or `@InjectCurrentTask`; callers no longer
+  pass the fake injection marker and the service creates the async pollable task directly.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

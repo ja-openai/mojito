@@ -149,8 +149,7 @@ public class DropWS {
       throws Exception {
 
     // TODO(P1) Check here that the repo exists (and the user has access to it)?
-    PollableFuture<Drop> cancelDropFuture =
-        dropService.cancelDrop(cancelDropConfig.getDropId(), PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Drop> cancelDropFuture = dropService.cancelDrop(cancelDropConfig.getDropId());
 
     cancelDropConfig.setPollableTask(cancelDropFuture.getPollableTask());
 
