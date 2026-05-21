@@ -11,6 +11,7 @@ import com.box.l10n.mojito.entity.TranslationKit;
 import com.box.l10n.mojito.entity.TranslationKitTextUnit;
 import com.box.l10n.mojito.okapi.ImportExportTextUnitUtils;
 import com.box.l10n.mojito.okapi.RawDocument;
+import com.box.l10n.mojito.okapi.TextUnitDTOAnnotations;
 import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.okapi.XLIFFWriter;
 import com.box.l10n.mojito.service.drop.DropRepository;
@@ -19,6 +20,7 @@ import com.box.l10n.mojito.service.languagedetection.LanguageDetectionService;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
@@ -64,6 +66,8 @@ public class TranslationKitService {
 
   @Autowired TMTextUnitRepository tmTextUnitRepository;
 
+  @Autowired TMTextUnitVariantRepository tmTextUnitVariantRepository;
+
   @Autowired DropRepository dropRepository;
 
   @Autowired TranslationKitRepository translationKitRepository;
@@ -79,6 +83,8 @@ public class TranslationKitService {
   @Autowired ImportExportTextUnitUtils importExportTextUnitUtils;
 
   @Autowired TextUnitUtils textUnitUtils;
+
+  @Autowired TextUnitDTOAnnotations textUnitDTOAnnotations;
 
   /**
    * Generates and gets a translation kit in XLIFF format for a given {@link TM} and {@link Locale}
@@ -107,7 +113,14 @@ public class TranslationKitService {
     filterEventsWriterStep.setOutputStream(byteArrayOutputStream);
     filterEventsWriterStep.setOutputEncoding(StandardCharsets.UTF_8.toString());
 
-    TranslationKitStep tksStep = new TranslationKitStep(translationKit.getId());
+    TranslationKitStep tksStep =
+        new TranslationKitStep(
+            translationKit.getId(),
+            this,
+            tmTextUnitRepository,
+            tmTextUnitVariantRepository,
+            translationKitRepository,
+            textUnitDTOAnnotations);
     logger.trace("Prepare the Okapi pipeline");
     IPipelineDriver driver = new PipelineDriver();
     driver.addStep(

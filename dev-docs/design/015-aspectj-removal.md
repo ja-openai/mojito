@@ -107,6 +107,8 @@ Removed during this workstream:
   export collaborators and unused woven fields were removed.
 - `TranslationKitFilter` no longer uses `@Configurable`; `TranslationKitService` now passes the
   filter collaborators explicitly when generating XLIFF kits.
+- `TranslationKitStep` no longer uses `@Configurable`; `TranslationKitService` now passes the step
+  persistence collaborators explicitly and focused step tests construct it directly.
 
 In progress:
 

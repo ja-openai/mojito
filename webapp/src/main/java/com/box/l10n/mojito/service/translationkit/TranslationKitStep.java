@@ -15,28 +15,25 @@ import net.sf.okapi.common.pipeline.BasePipelineStep;
 import net.sf.okapi.common.resource.ITextUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * This steps persist information related to {@link TranslationKit}.
  *
  * @author jaurambault
  */
-@Configurable
 public class TranslationKitStep extends BasePipelineStep {
 
   static Logger logger = LoggerFactory.getLogger(TranslationKitStep.class);
 
-  @Autowired TranslationKitService translationKitService;
+  TranslationKitService translationKitService;
 
-  @Autowired TMTextUnitRepository tmTextUnitRepository;
+  TMTextUnitRepository tmTextUnitRepository;
 
-  @Autowired TMTextUnitVariantRepository tmTextUnitVariantRepository;
+  TMTextUnitVariantRepository tmTextUnitVariantRepository;
 
-  @Autowired TranslationKitRepository translationKitRepository;
+  TranslationKitRepository translationKitRepository;
 
-  @Autowired TextUnitDTOAnnotations textUnitDTOAnnotations;
+  TextUnitDTOAnnotations textUnitDTOAnnotations;
 
   /** The {@link TranslationKit#id} */
   Long translationKitId;
@@ -46,8 +43,19 @@ public class TranslationKitStep extends BasePipelineStep {
   /** Keeps track of {@link TranslationKitTextUnit}s to be included in the {@link TranslationKit} */
   List<TranslationKitTextUnit> translationKitTextUnits;
 
-  public TranslationKitStep(Long translationKitId) {
+  public TranslationKitStep(
+      Long translationKitId,
+      TranslationKitService translationKitService,
+      TMTextUnitRepository tmTextUnitRepository,
+      TMTextUnitVariantRepository tmTextUnitVariantRepository,
+      TranslationKitRepository translationKitRepository,
+      TextUnitDTOAnnotations textUnitDTOAnnotations) {
     this.translationKitId = translationKitId;
+    this.translationKitService = translationKitService;
+    this.tmTextUnitRepository = tmTextUnitRepository;
+    this.tmTextUnitVariantRepository = tmTextUnitVariantRepository;
+    this.translationKitRepository = translationKitRepository;
+    this.textUnitDTOAnnotations = textUnitDTOAnnotations;
   }
 
   @Override
