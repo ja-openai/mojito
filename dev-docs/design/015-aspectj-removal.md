@@ -220,6 +220,8 @@ Removed during this workstream:
 - The core `TeamService` team CRUD and roster-assignment methods no longer use `@Transactional`;
   team listing, create/update/delete/disable, roster reads/replacement, and single-user assignment
   now open and commit their transaction boundaries explicitly.
+- The `TeamService` locale and PM pool methods no longer use `@Transactional`; pool reads and
+  replacement writes now open and commit their transaction boundaries explicitly.
 
 In progress:
 

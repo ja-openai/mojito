@@ -686,9 +686,23 @@ public class TeamService {
         .stream().filter(id -> id != null && id > 0).distinct().toList();
   }
 
-  @Transactional(readOnly = true)
   public List<LocalePoolEntry> getLocalePools(Long teamId) {
-    getTeam(teamId);
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<LocalePoolEntry> result = getLocalePoolsNoTx(teamId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<LocalePoolEntry> getLocalePoolsNoTx(Long teamId) {
+    getTeamNoTx(teamId);
     boolean isAdmin = isCurrentUserAdmin();
     Set<Long> visibleTranslatorIds =
         isAdmin
@@ -720,17 +734,45 @@ public class TeamService {
         .toList();
   }
 
-  @Transactional(readOnly = true)
   public List<Long> getPmPool(Long teamId) {
-    getTeam(teamId);
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<Long> result = getPmPoolNoTx(teamId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<Long> getPmPoolNoTx(Long teamId) {
+    getTeamNoTx(teamId);
     return teamPmPoolRepository.findByTeamId(teamId).stream()
         .map(TeamPmPoolRowProjection::pmUserId)
         .toList();
   }
 
-  @Transactional
   public void replacePmPool(Long teamId, List<Long> userIds) {
-    Team team = getTeam(teamId);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      replacePmPoolNoTx(teamId, userIds);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void replacePmPoolNoTx(Long teamId, List<Long> userIds) {
+    Team team = getTeamNoTx(teamId);
     List<Long> normalizedIds =
         (userIds == null ? List.<Long>of() : userIds)
             .stream().filter(id -> id != null && id > 0).distinct().toList();
@@ -777,9 +819,23 @@ public class TeamService {
     }
   }
 
-  @Transactional
   public void replaceLocalePools(Long teamId, List<LocalePoolEntry> entries) {
-    Team team = getTeam(teamId);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      replaceLocalePoolsNoTx(teamId, entries);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void replaceLocalePoolsNoTx(Long teamId, List<LocalePoolEntry> entries) {
+    Team team = getTeamNoTx(teamId);
     List<LocalePoolEntry> normalizedEntries = entries == null ? List.of() : entries;
 
     Set<Long> translatorIds = new LinkedHashSet<>();
