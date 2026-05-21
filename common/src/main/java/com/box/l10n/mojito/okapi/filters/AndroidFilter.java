@@ -31,8 +31,6 @@ import net.sf.okapi.common.skeleton.GenericSkeletonPart;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -44,7 +42,6 @@ import org.xml.sax.SAXException;
 /**
  * @author jaurambault
  */
-@Configurable
 public class AndroidFilter extends XMLFilter {
 
   /** logger */
@@ -79,9 +76,9 @@ public class AndroidFilter extends XMLFilter {
 
   private static final String XML_COMMENT_GROUP_NAME = "comment";
 
-  @Autowired TextUnitUtils textUnitUtils;
+  TextUnitUtils textUnitUtils;
 
-  @Autowired UnescapeUtils unescapeUtils;
+  UnescapeUtils unescapeUtils;
 
   @Override
   public String getName() {
@@ -128,6 +125,15 @@ public class AndroidFilter extends XMLFilter {
    * avoid output change.
    */
   boolean shouldApplyPostProcessingRemoveUntranslatedExcluded = false;
+
+  public AndroidFilter() {
+    this(new TextUnitUtils(), new UnescapeUtils());
+  }
+
+  public AndroidFilter(TextUnitUtils textUnitUtils, UnescapeUtils unescapeUtils) {
+    this.textUnitUtils = textUnitUtils;
+    this.unescapeUtils = unescapeUtils;
+  }
 
   @Override
   public void open(RawDocument input) {
@@ -327,7 +333,7 @@ public class AndroidFilter extends XMLFilter {
 
   @Override
   public AndroidXMLEncoder getXMLEncoder() {
-    androidXMLEncoder = new AndroidXMLEncoder(oldEscaping);
+    androidXMLEncoder = new AndroidXMLEncoder(oldEscaping, unescapeUtils);
     return androidXMLEncoder;
   }
 
