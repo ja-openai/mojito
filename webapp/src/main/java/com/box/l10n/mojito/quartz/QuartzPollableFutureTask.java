@@ -8,23 +8,26 @@ import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
-@Configurable
 public class QuartzPollableFutureTask<T> implements PollableFuture<T> {
 
-  @Autowired PollableTaskService pollableTaskService;
+  final PollableTaskService pollableTaskService;
 
-  @Autowired PollableTaskBlobStorage pollableTaskBlobStorage;
+  final PollableTaskBlobStorage pollableTaskBlobStorage;
 
-  PollableTask pollableTask;
+  final PollableTask pollableTask;
 
-  Class<? extends T> outputClass;
+  final Class<? extends T> outputClass;
 
-  public QuartzPollableFutureTask(PollableTask pollableTask, Class<? extends T> outputClass) {
+  public QuartzPollableFutureTask(
+      PollableTask pollableTask,
+      Class<? extends T> outputClass,
+      PollableTaskService pollableTaskService,
+      PollableTaskBlobStorage pollableTaskBlobStorage) {
     this.pollableTask = pollableTask;
     this.outputClass = outputClass;
+    this.pollableTaskService = pollableTaskService;
+    this.pollableTaskBlobStorage = pollableTaskBlobStorage;
   }
 
   @Override

@@ -72,6 +72,8 @@ Removed during this workstream:
 - `DatabaseCacheEvictionJob` no longer uses `@Configurable` or `@Transactional`; Quartz-created
   instances are autowired by the existing Quartz job factory and the eviction write uses
   `TransactionTemplate`.
+- `QuartzPollableFutureTask` no longer uses `@Configurable`; `QuartzPollableTaskScheduler` passes
+  its task service and blob storage dependencies directly.
 
 In progress:
 
