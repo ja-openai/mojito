@@ -1597,8 +1597,22 @@ public class ReviewProjectService {
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
   }
 
-  @Transactional(readOnly = true)
   public GetProjectDetailView getProjectDetail(Long projectId) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      GetProjectDetailView result = getProjectDetailNoTx(projectId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GetProjectDetailView getProjectDetailNoTx(Long projectId) {
     ReviewProject reviewProject =
         reviewProjectRepository
             .findById(projectId)
