@@ -1,6 +1,5 @@
 package com.box.l10n.mojito.rest.team;
 
-import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamUserRole;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
@@ -421,8 +420,7 @@ public class TeamWS {
     assertCurrentUserIsAdmin();
     try {
       PollableFuture<Void> pollableFuture =
-          teamService.refreshSlackConversationMembersAsync(
-              teamId, includeProfiles, PollableTask.INJECT_CURRENT_TASK);
+          teamService.refreshSlackConversationMembersAsync(teamId, includeProfiles);
       return new StartSlackChannelMembersRefreshResponse(pollableFuture.getPollableTask().getId());
     } catch (IllegalArgumentException ex) {
       throw toStatusException(ex);
