@@ -100,7 +100,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.retry.RetryContext;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to manage asset extraction. It processes assets to extract {@link AssetTextUnit}s.
@@ -181,6 +183,8 @@ public class AssetExtractionService {
   @Autowired MeterRegistry meterRegistry;
 
   @Autowired LocalBranchToEntityBranchConverter localBranchToEntityBranchConverter;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   private RepositoryStatisticsJobScheduler repositoryStatisticsJobScheduler;
 
@@ -423,7 +427,7 @@ public class AssetExtractionService {
 
           Modifications modifications = getModifications(baseState, newState);
           MultiBranchState updatedMergedState =
-              updateAssetExtractionWithStateInTx(
+              updateAssetExtractionWithStateNoTx(
                   assetExtraction, newState, modifications, assetContentMd5s);
 
           // This is done outside the transaction because the delete can't be rollbacked when using
@@ -447,8 +451,30 @@ public class AssetExtractionService {
    * @throws DataIntegrityViolationException potential concurrent modification and optimistic
    *     locking may happen
    */
-  @Transactional
   MultiBranchState updateAssetExtractionWithStateInTx(
+      AssetExtraction assetExtraction,
+      MultiBranchState currentState,
+      Modifications modifications,
+      AssetContentMd5s assetContentMd5s)
+      throws DataIntegrityViolationException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      MultiBranchState result =
+          updateAssetExtractionWithStateNoTx(
+              assetExtraction, currentState, modifications, assetContentMd5s);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  MultiBranchState updateAssetExtractionWithStateNoTx(
       AssetExtraction assetExtraction,
       MultiBranchState currentState,
       Modifications modifications,
@@ -715,8 +741,23 @@ public class AssetExtractionService {
     return assetExtraction;
   }
 
-  @Transactional
   AssetExtraction createLastSuccessfulAssetExtractionInAsset(Asset asset) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      AssetExtraction assetExtraction = createLastSuccessfulAssetExtractionInAssetNoTx(asset);
+      transactionManager.commit(transaction);
+      return assetExtraction;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  AssetExtraction createLastSuccessfulAssetExtractionInAssetNoTx(Asset asset) {
     asset = assetRepository.findById(asset.getId()).get();
     AssetExtraction assetExtraction = new AssetExtraction();
     assetExtraction.setAsset(asset);
@@ -1463,8 +1504,25 @@ public class AssetExtractionService {
         .collect(ImmutableList.toImmutableList());
   }
 
-  @Transactional
   protected ImmutableList<BranchStateTextUnit> createTmTextUnitsInTx(
+      Asset asset, ImmutableList<BranchStateTextUnit> textUnits, User createdByUser) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      ImmutableList<BranchStateTextUnit> result =
+          createTmTextUnitsNoTx(asset, textUnits, createdByUser);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ImmutableList<BranchStateTextUnit> createTmTextUnitsNoTx(
       Asset asset, ImmutableList<BranchStateTextUnit> textUnits, User createdByUser) {
     logger.debug(
         "Create TMTextUnits, tmId: {}, assetId: {}",
@@ -1599,8 +1657,23 @@ public class AssetExtractionService {
         });
   }
 
-  @Transactional
   AssetExtractionByBranch createAssetExtractionForBranch(AssetContent assetContent) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      AssetExtractionByBranch result = createAssetExtractionForBranchNoTx(assetContent);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  AssetExtractionByBranch createAssetExtractionForBranchNoTx(AssetContent assetContent) {
     Asset asset = assetContent.getAsset();
     Branch branch = assetContent.getBranch();
 
@@ -1660,14 +1733,32 @@ public class AssetExtractionService {
         });
   }
 
-  @Transactional
   void deleteAssetBranchInTx(
       Asset asset,
       Modifications modifications,
       MultiBranchState withBranchRemoved,
       AssetExtractionByBranch assetExtractionByBranch,
       RetryContext context) {
-    updateAssetExtractionWithStateInTx(
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      deleteAssetBranchNoTx(asset, modifications, withBranchRemoved, assetExtractionByBranch);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteAssetBranchNoTx(
+      Asset asset,
+      Modifications modifications,
+      MultiBranchState withBranchRemoved,
+      AssetExtractionByBranch assetExtractionByBranch) {
+    updateAssetExtractionWithStateNoTx(
         asset.getLastSuccessfulAssetExtraction(),
         withBranchRemoved,
         modifications,
@@ -1764,8 +1855,23 @@ public class AssetExtractionService {
     assetRepository.save(asset);
   }
 
-  @Transactional
   public AssetExtraction createAssetExtraction(Asset asset, PollableTask pollableTask) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      AssetExtraction result = createAssetExtractionNoTx(asset, pollableTask);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  AssetExtraction createAssetExtractionNoTx(Asset asset, PollableTask pollableTask) {
     AssetExtraction assetExtraction = new AssetExtraction();
     assetExtraction.setAsset(asset);
     assetExtraction.setPollableTask(pollableTask);
@@ -1807,8 +1913,42 @@ public class AssetExtractionService {
    * @param branch
    * @return The created AssetTextUnit
    */
-  @Transactional
   public AssetTextUnit createAssetTextUnit(
+      Long assetExtractionId,
+      String name,
+      String content,
+      String comment,
+      PluralForm pluralForm,
+      String pluralFormOther,
+      boolean doNotTranslate,
+      Set<String> usages,
+      Branch branch) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      AssetTextUnit result =
+          createAssetTextUnitNoTx(
+              assetExtractionId,
+              name,
+              content,
+              comment,
+              pluralForm,
+              pluralFormOther,
+              doNotTranslate,
+              usages,
+              branch);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  AssetTextUnit createAssetTextUnitNoTx(
       Long assetExtractionId,
       String name,
       String content,
