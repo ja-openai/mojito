@@ -222,6 +222,9 @@ Removed during this workstream:
   now open and commit their transaction boundaries explicitly.
 - The `TeamService` locale and PM pool methods no longer use `@Transactional`; pool reads and
   replacement writes now open and commit their transaction boundaries explicitly.
+- The `TeamService` Slack settings and mapping methods no longer use `@Transactional`; settings
+  reads/writes, Slack user mapping reads/replacements/upserts, and additive roster updates now open
+  and commit their transaction boundaries explicitly.
 
 In progress:
 

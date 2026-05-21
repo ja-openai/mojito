@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.Team;
+import com.box.l10n.mojito.entity.TeamUserRole;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
@@ -86,6 +87,30 @@ public class TeamServiceTransactionTest {
   }
 
   @Test
+  public void getTeamSlackSettingsCommitsReadOnlyTransaction() {
+    teamService.getTeamSlackSettings(1L);
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertThat(transactionDefinitionCaptor.getValue().isReadOnly()).isTrue();
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void updateTeamSlackSettingsCommitsTransaction() {
+    teamService.updateTeamSlackSettings(1L, true, "client", "channel");
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertThat(transactionDefinitionCaptor.getValue().isReadOnly()).isFalse();
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
   public void deleteTeamRollsBackTransactionOnRuntimeException() {
     RuntimeException failure = new RuntimeException("delete failed");
     teamService.failure = failure;
@@ -113,6 +138,30 @@ public class TeamServiceTransactionTest {
     teamService.failure = failure;
 
     assertThatThrownBy(() -> teamService.replaceLocalePools(1L, List.of())).isSameAs(failure);
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
+  @Test
+  public void replaceTeamSlackUserMappingsRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("slack mapping failed");
+    teamService.failure = failure;
+
+    assertThatThrownBy(() -> teamService.replaceTeamSlackUserMappings(1L, List.of()))
+        .isSameAs(failure);
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
+  @Test
+  public void addTeamUsersByRoleRollsBackTransactionOnError() {
+    AssertionError failure = new AssertionError("add users failed");
+    teamService.error = failure;
+
+    assertThatThrownBy(() -> teamService.addTeamUsersByRole(1L, TeamUserRole.PM, List.of(2L)))
+        .isSameAs(failure);
 
     verify(transactionManager).rollback(transactionStatus);
     verify(transactionManager, never()).commit(transactionStatus);
@@ -178,6 +227,32 @@ public class TeamServiceTransactionTest {
     @Override
     void replaceLocalePoolsNoTx(Long teamId, List<LocalePoolEntry> entries) {
       throwIfConfigured();
+    }
+
+    @Override
+    TeamSlackSettings getTeamSlackSettingsNoTx(Long teamId) {
+      throwIfConfigured();
+      return new TeamSlackSettings(false, null, null);
+    }
+
+    @Override
+    TeamSlackSettings updateTeamSlackSettingsNoTx(
+        Long teamId, Boolean enabled, String slackClientId, String slackChannelId) {
+      throwIfConfigured();
+      return new TeamSlackSettings(Boolean.TRUE.equals(enabled), slackClientId, slackChannelId);
+    }
+
+    @Override
+    void replaceTeamSlackUserMappingsNoTx(
+        Long teamId, List<UpsertTeamSlackUserMappingEntry> entries) {
+      throwIfConfigured();
+    }
+
+    @Override
+    ReplaceTeamUsersResult addTeamUsersByRoleNoTx(
+        Long teamId, TeamUserRole role, List<Long> userIds) {
+      throwIfConfigured();
+      return new ReplaceTeamUsersResult(0, 0);
     }
 
     private void throwIfConfigured() {
