@@ -174,6 +174,10 @@ fn run_with_suppressed_parser_panics(root: &Path, baseline_path: &Path) {
             mode: CheckMode::Runtime,
         },
         FileCheck {
+            path: "tests/u-options.json",
+            mode: CheckMode::Runtime,
+        },
+        FileCheck {
             path: "tests/fallback.json",
             mode: CheckMode::Runtime,
         },

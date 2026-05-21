@@ -104,7 +104,8 @@ The current conformance slice covers:
 - fallback formatting APIs that return output plus collected runtime errors for
   unresolved variables/selectors, including fallback parts with source metadata
 - opt-in `default` bidi isolation for string formatting, wrapping expression
-  output in Unicode FSI/PDI while keeping parts output raw
+  output in Unicode FSI/PDI, with `u:dir` selecting LRI/RLI/FSI when present
+  while keeping parts output raw
 - exact-match `.match` selectors with catch-all fallback, including
   multi-selector matching,
   `:number select=exact`, `:integer select=exact`, and quoted literal variant

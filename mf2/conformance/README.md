@@ -8,11 +8,10 @@ The official Unicode MessageFormat WG test suite is vendored separately under
 upstream test shape directly via `cargo run -- unicode-tests`, currently wiring
 syntax success/error, bidi syntax, data-model error, `:string` function,
 `:number`, `:percent`, `:currency`, date/time/datetime validation, `:offset`,
-`:integer`, fallback, and pattern-selection checks. Its checked-in baseline lives in
+`:integer`, `u:` options, fallback, and pattern-selection checks. Its checked-in baseline lives in
 `unicode-official-baseline.json`; update it in the same commit when official
-pass/skip/not-wired counts intentionally change. Remaining draft `u:` option
-official tests are counted as not wired until the corresponding runtime
-semantics are implemented.
+pass/skip/not-wired counts intentionally change. All currently vendored
+official tests are wired by the Rust runner.
 
 ## Contract
 
@@ -122,7 +121,8 @@ The source-to-model fixtures currently cover:
 - markup open/close/standalone placeholders
 - parts output for expression attributes and markup options/attributes
 - opt-in `bidiIsolation: "default"` string formatting around expression output,
-  with parts output preserving raw values for UI renderers
+  with `u:dir` overriding isolation direction and parts output preserving raw
+  values for UI renderers
 - exact-match `.match` selectors and catch-all fallback, including multi-selector
   matching,
   `:number select=exact`, `:integer select=exact`, and primitive `:string`

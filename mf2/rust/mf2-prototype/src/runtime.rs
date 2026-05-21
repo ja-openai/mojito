@@ -23,6 +23,8 @@ pub enum FormattedPart {
     Expression {
         value: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        dir: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         attributes: Option<BTreeMap<String, AttributeValue>>,
     },
     #[serde(rename = "markup")]
@@ -59,6 +61,31 @@ impl BidiIsolation {
         match value {
             Some("default") => Self::Default,
             _ => Self::None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BidiDirection {
+    Auto,
+    Ltr,
+    Rtl,
+}
+
+impl BidiDirection {
+    fn marker(self) -> char {
+        match self {
+            Self::Auto => '\u{2068}',
+            Self::Ltr => '\u{2066}',
+            Self::Rtl => '\u{2067}',
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Ltr => "ltr",
+            Self::Rtl => "rtl",
         }
     }
 }
@@ -718,6 +745,37 @@ fn function_option_literal<'a>(function: &'a FunctionRef, name: &str) -> Option<
         return None;
     };
     Some(value)
+}
+
+fn bidi_direction_for_function(
+    function: &FunctionRef,
+    source: Option<&ResolvedFunctionSource>,
+) -> Result<Option<BidiDirection>, Diagnostic> {
+    if let Some(value) = function_option_literal(function, "u:dir") {
+        return parse_bidi_direction(value).map(Some);
+    }
+    bidi_direction_from_source(source)
+}
+
+fn bidi_direction_from_source(
+    source: Option<&ResolvedFunctionSource>,
+) -> Result<Option<BidiDirection>, Diagnostic> {
+    let Some(source) = source else {
+        return Ok(None);
+    };
+    if let Some(value) = function_option_literal(&source.function, "u:dir") {
+        return parse_bidi_direction(value).map(Some);
+    }
+    bidi_direction_from_source(source.inherited.as_deref())
+}
+
+fn parse_bidi_direction(value: &str) -> Result<BidiDirection, Diagnostic> {
+    match value {
+        "auto" => Ok(BidiDirection::Auto),
+        "ltr" => Ok(BidiDirection::Ltr),
+        "rtl" => Ok(BidiDirection::Rtl),
+        _ => Err(bad_option("u:dir option must be auto, ltr, or rtl.")),
+    }
 }
 
 fn datetime_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
@@ -1394,10 +1452,14 @@ impl<'a> FormatContext<'a> {
                     }
                     output.push(FormattedPart::Expression {
                         value: rendered.value,
+                        dir: rendered.bidi_direction.map(|dir| dir.name().to_string()),
                         attributes: expression.attributes.clone(),
                     });
                 }
-                PatternPart::Markup(markup) => output.push(markup_to_part(markup)),
+                PatternPart::Markup(markup) => {
+                    self.record_markup_resolution_errors(markup)?;
+                    output.push(markup_to_part(markup));
+                }
             }
         }
         Ok(output)
@@ -1435,17 +1497,21 @@ impl<'a> FormatContext<'a> {
                 value,
                 had_error: true,
                 source: None,
+                bidi_direction: None,
             });
         }
 
         let Some(function) = expression.function.as_ref() else {
+            let bidi_direction = bidi_direction_from_source(source.as_ref())?;
             return Ok(ExpressionOutput {
                 value,
                 had_error,
                 source,
+                bidi_direction,
             });
         };
         self.record_function_resolution_errors(function, source.as_ref())?;
+        let bidi_direction = bidi_direction_for_function(function, source.as_ref())?;
 
         let source_value = source
             .as_ref()
@@ -1466,6 +1532,7 @@ impl<'a> FormatContext<'a> {
                     function.clone(),
                     source,
                 )),
+                bidi_direction,
             }),
             Err(error) if self.fallback => {
                 self.errors.push(fallback_error(error));
@@ -1473,6 +1540,7 @@ impl<'a> FormatContext<'a> {
                     value: fallback_source(expression),
                     had_error: true,
                     source: None,
+                    bidi_direction: None,
                 })
             }
             Err(error) => Err(error),
@@ -1513,6 +1581,23 @@ impl<'a> FormatContext<'a> {
             return Ok(());
         }
         let error = bad_selector("Currency selector is not supported.");
+        if self.fallback {
+            self.errors.push(error);
+            Ok(())
+        } else {
+            Err(error)
+        }
+    }
+
+    fn record_markup_resolution_errors(&mut self, markup: &Markup) -> Result<(), Diagnostic> {
+        if !markup
+            .options
+            .as_ref()
+            .is_some_and(|options| options.contains_key("u:dir"))
+        {
+            return Ok(());
+        }
+        let error = bad_option("u:dir is not valid on markup.");
         if self.fallback {
             self.errors.push(error);
             Ok(())
@@ -1590,6 +1675,7 @@ struct ExpressionOutput {
     value: String,
     had_error: bool,
     source: Option<ResolvedFunctionSource>,
+    bidi_direction: Option<BidiDirection>,
 }
 
 #[derive(Debug, Clone)]
@@ -1856,8 +1942,13 @@ fn parts_to_string(parts: &[FormattedPart], bidi_isolation: BidiIsolation) -> St
                 output.push_str(source);
                 output.push('}');
             }
-            FormattedPart::Expression { value, .. } => {
-                push_expression(&mut output, value, bidi_isolation);
+            FormattedPart::Expression { value, dir, .. } => {
+                push_expression(
+                    &mut output,
+                    value,
+                    bidi_isolation,
+                    dir.as_deref().and_then(bidi_direction_from_name),
+                );
             }
             FormattedPart::Markup { .. } => {}
         }
@@ -1865,13 +1956,27 @@ fn parts_to_string(parts: &[FormattedPart], bidi_isolation: BidiIsolation) -> St
     output
 }
 
-fn push_expression(output: &mut String, value: &str, bidi_isolation: BidiIsolation) {
+fn push_expression(
+    output: &mut String,
+    value: &str,
+    bidi_isolation: BidiIsolation,
+    direction: Option<BidiDirection>,
+) {
     match bidi_isolation {
         BidiIsolation::None => output.push_str(value),
         BidiIsolation::Default => {
-            output.push('\u{2068}');
+            output.push(direction.unwrap_or(BidiDirection::Auto).marker());
             output.push_str(value);
             output.push('\u{2069}');
         }
+    }
+}
+
+fn bidi_direction_from_name(value: &str) -> Option<BidiDirection> {
+    match value {
+        "auto" => Some(BidiDirection::Auto),
+        "ltr" => Some(BidiDirection::Ltr),
+        "rtl" => Some(BidiDirection::Rtl),
+        _ => None,
     }
 }

@@ -49,7 +49,8 @@ Supported now:
   output, preserving expression/markup attributes for UI renderers
 - fallback formatting APIs for spec-style output plus collected runtime errors,
   including fallback parts with source metadata
-- opt-in `BidiIsolation::Default` string output around expression values
+- opt-in `BidiIsolation::Default` string output around expression values, with
+  `u:dir` selecting LRI/RLI/FSI when present
 - structural model validation for duplicate declarations, select variant key
   arity, duplicate variants, and missing fallback variants
 - basic `.match` selectors with exact literal keys and `*` fallback, including
