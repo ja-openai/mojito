@@ -46,7 +46,6 @@ Custom AspectJ entry points:
 - `RunAsAspect` plus `RunAsAspectConfig`.
 - `JsonRawStringAspect` plus `JsonRawStringAspectConfig`.
 - `StopWatchAspect`.
-- `TimedAspect`.
 
 Removed during this workstream:
 
@@ -58,22 +57,15 @@ Removed during this workstream:
   now validates and quotes raw JSON strings directly in its serialized getters.
 - `@RunAs`, `RunAsAspect`, and `RunAsAspectConfig`. Bootstrap default-user creation now swaps to
   the system user explicitly with a local `try/finally`.
+- `@Timed` and `TimedAspect`. The previous metrics are now recorded explicitly in
+  `MultiBranchStateService`, `TextUnitDTOsCacheBlobStorage`, `TextUnitDTOsCacheService`,
+  `OpenAIMTEngine`, `MicrosoftMTEngine`, `MachineTranslationService`, and
+  `AssetExtractionService` with local `Timer.Sample` and `try/finally` blocks.
 
 In progress:
 
-- `MultiBranchStateService` no longer uses `@Timed`; its three metrics are recorded with explicit
-  `Timer.Sample` and local `try/finally` blocks.
-- `TextUnitDTOsCacheBlobStorage` no longer uses `@Timed`; cache read/write metrics are recorded
-  with explicit `Timer.Sample` and local `try/finally` blocks.
-- `TextUnitDTOsCacheService` no longer uses `@Timed`; its four cache refresh/read metrics are
-  recorded with explicit `Timer.Sample` and local `try/finally` blocks.
-- `OpenAIMTEngine` and `MicrosoftMTEngine` no longer use `@Timed`; MT engine translate metrics are
-  recorded with explicit `Timer.Sample` and local `try/finally` blocks.
-- `MachineTranslationService` no longer uses `@Timed`; translation, single-translation, MT, and
-  leverage metrics are recorded with explicit `Timer.Sample` and local `try/finally` blocks.
-- `AssetExtractionService` no longer uses `@Timed`; new-text-unit creation metrics are recorded
-  around the existing `@Pollable` entrypoints with explicit `Timer.Sample` and local `try/finally`
-  blocks.
+- `@Pollable`, `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build
+  path remain to be migrated.
 
 ## Migration Principles
 
