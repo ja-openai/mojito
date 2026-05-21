@@ -207,6 +207,9 @@ Removed during this workstream:
 - `RepositoryService` no longer uses `@Transactional`; repository creation, locale updates,
   integrity-checker updates, deletion, rename, and repository updates now open and commit their
   transaction boundaries explicitly while preserving default checked-exception commit behavior.
+- `GlossaryTermService` no longer uses `@Transactional`; glossary term search/detail/summary,
+  term writes, extraction, and translation proposal operations now open and commit their
+  transaction boundaries explicitly.
 
 In progress:
 

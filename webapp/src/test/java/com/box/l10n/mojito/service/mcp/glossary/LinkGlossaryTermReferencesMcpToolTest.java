@@ -94,7 +94,7 @@ public class LinkGlossaryTermReferencesMcpToolTest {
     private FakeGlossaryTermService() {
       super(
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null, null);
+          null, null, null, null, null);
     }
 
     @Override

@@ -36,6 +36,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GlossaryTermServiceTest {
@@ -59,6 +61,8 @@ public class GlossaryTermServiceTest {
   @Mock com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository;
   @Mock LocaleService localeService;
   @Mock UserService userService;
+  @Mock PlatformTransactionManager transactionManager;
+  @Mock TransactionStatus transactionStatus;
 
   GlossaryTermService glossaryTermService;
 
@@ -84,7 +88,9 @@ public class GlossaryTermServiceTest {
             tmTextUnitRepository,
             repositoryRepository,
             localeService,
-            userService);
+            userService,
+            transactionManager);
+    when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
   }
 
   @Test
