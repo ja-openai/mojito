@@ -123,6 +123,9 @@ In progress:
 - `DropService.startDropExportProcess` no longer uses `@Pollable` or `@InjectCurrentTask`; callers
   no longer pass the fake injection marker and the service creates the synchronous pollable task
   directly before launching the export subtask.
+- `DropService.createDropExporterAndExportTranslationKits` no longer uses `@Pollable`,
+  `@ParentTask`, or `@InjectCurrentTask`; the export worker task is now created explicitly from the
+  parent export task and still overrides the expected subtask count after inspecting locales.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
