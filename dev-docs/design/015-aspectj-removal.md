@@ -140,6 +140,8 @@ Removed during this workstream:
   incident closure now opens and commits its transaction explicitly.
 - `TMTextUnitCurrentVariantService` no longer uses `@Transactional`; current-variant removal and
   status batch updates now open and commit their transactions explicitly.
+- `DropService` no longer uses `@Transactional` for drop loading or completion; cancel-drop loading
+  and partial-import completion now open and commit their transactions explicitly.
 
 In progress:
 
