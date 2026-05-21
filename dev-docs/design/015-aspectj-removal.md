@@ -230,6 +230,8 @@ Removed during this workstream:
   preserving the previous transaction scope around Slack lookups.
 - `TextUnitWS.addTextUnit` no longer uses `@Transactional`; text-unit creation now opens and
   commits its transaction boundary explicitly in the controller.
+- `ReviewProjectService.createGlossaryTermCandidateReviewProject` no longer uses `@Transactional`;
+  term-candidate review project creation now opens and commits its transaction boundary explicitly.
 
 In progress:
 

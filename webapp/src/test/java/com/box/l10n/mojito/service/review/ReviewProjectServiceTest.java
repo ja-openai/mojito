@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -74,6 +75,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 
 public class ReviewProjectServiceTest {
 
@@ -129,6 +133,9 @@ public class ReviewProjectServiceTest {
   private final ReviewFeatureRepository reviewFeatureRepository =
       Mockito.mock(ReviewFeatureRepository.class);
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+  private final PlatformTransactionManager transactionManager =
+      Mockito.mock(PlatformTransactionManager.class);
+  private final TransactionStatus transactionStatus = Mockito.mock(TransactionStatus.class);
   private final EntityManager entityManager = Mockito.mock(EntityManager.class);
 
   private ReviewProjectService reviewProjectService;
@@ -169,9 +176,11 @@ public class ReviewProjectServiceTest {
                 teamSlackNotificationService,
                 quartzPollableTaskScheduler,
                 reviewFeatureRepository,
-                meterRegistry));
+                meterRegistry,
+                transactionManager));
     ReflectionTestUtils.setField(reviewProjectService, "entityManager", entityManager);
     doReturn(null).when(reviewProjectService).getProjectDetail(anyLong());
+    when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
 
     currentUser = user(99L, "admin");
     currentUser.setCanTranslateAllLocales(true);
@@ -182,6 +191,64 @@ public class ReviewProjectServiceTest {
     when(userService.isCurrentUserPm()).thenReturn(false);
     when(userService.isCurrentUserTranslator()).thenReturn(false);
     when(userRepository.findById(99L)).thenReturn(Optional.of(currentUser));
+  }
+
+  @Test
+  public void createGlossaryTermCandidateReviewProjectCommitsTransaction() {
+    CreateGlossaryTermCandidateReviewProjectJobInput request =
+        createGlossaryTermCandidateReviewProjectJobInput();
+    CreateReviewProjectRequestResult result =
+        new CreateReviewProjectRequestResult(
+            1L, "name", List.of("en"), ZonedDateTime.now(), List.of(), 1, 1, 0, 0, List.of());
+    doReturn(result)
+        .when(reviewProjectService)
+        .createGlossaryTermCandidateReviewProjectNoTx(request);
+
+    assertEquals(result, reviewProjectService.createGlossaryTermCandidateReviewProject(request));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void createGlossaryTermCandidateReviewProjectRollsBackTransactionOnRuntimeException() {
+    CreateGlossaryTermCandidateReviewProjectJobInput request =
+        createGlossaryTermCandidateReviewProjectJobInput();
+    RuntimeException failure = new RuntimeException("create failed");
+    doThrow(failure)
+        .when(reviewProjectService)
+        .createGlossaryTermCandidateReviewProjectNoTx(request);
+
+    try {
+      reviewProjectService.createGlossaryTermCandidateReviewProject(request);
+      fail("Expected createGlossaryTermCandidateReviewProject to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
+  private CreateGlossaryTermCandidateReviewProjectJobInput
+      createGlossaryTermCandidateReviewProjectJobInput() {
+    return new CreateGlossaryTermCandidateReviewProjectJobInput(
+        1L,
+        "name",
+        null,
+        ZonedDateTime.now(),
+        null,
+        false,
+        List.of(2L),
+        List.of(),
+        null,
+        null,
+        null,
+        99L);
   }
 
   @Test
