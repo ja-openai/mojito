@@ -3,7 +3,6 @@ package com.box.l10n.mojito.service.pollableTask;
 import com.box.l10n.mojito.aspect.util.AspectJUtils;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.ibm.icu.text.MessageFormat;
-import jakarta.annotation.PostConstruct;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -13,8 +12,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * Contains parameters associated with {@link PollableAspect}. Parameters come from the {@link
@@ -22,7 +19,6 @@ import org.springframework.beans.factory.annotation.Configurable;
  *
  * @author jaurambault
  */
-@Configurable
 public class PollableAspectParameters {
 
   /** logger */
@@ -30,7 +26,7 @@ public class PollableAspectParameters {
 
   public static final Long DEFAULT_TIMEOUT = -1L;
 
-  @Autowired AspectJUtils aspectJUtils;
+  final AspectJUtils aspectJUtils;
 
   Pollable annotation = null;
   String name = null;
@@ -43,12 +39,13 @@ public class PollableAspectParameters {
 
   ProceedingJoinPoint pjp;
 
-  public PollableAspectParameters(ProceedingJoinPoint pjp) {
+  public PollableAspectParameters(ProceedingJoinPoint pjp, AspectJUtils aspectJUtils) {
     this.pjp = pjp;
+    this.aspectJUtils = aspectJUtils;
+    init();
   }
 
-  @PostConstruct
-  public void postContruct() {
+  private void init() {
     initFromAnnotation();
     setParentIdFromParameter();
     setTimeoutFromParentTask();
