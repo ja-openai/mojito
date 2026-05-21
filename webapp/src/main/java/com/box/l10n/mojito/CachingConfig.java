@@ -1,5 +1,8 @@
 package com.box.l10n.mojito;
 
+import com.box.l10n.mojito.service.cache.ApplicationCacheRepository;
+import com.box.l10n.mojito.service.cache.ApplicationCacheTypeRepository;
+import com.box.l10n.mojito.service.cache.ApplicationCacheUpdaterService;
 import com.box.l10n.mojito.service.cache.DatabaseCache;
 import com.box.l10n.mojito.service.cache.DatabaseCacheConfiguration;
 import com.box.l10n.mojito.service.cache.TieredCache;
@@ -14,6 +17,7 @@ import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * @author jaurambault
@@ -23,8 +27,25 @@ public class CachingConfig {
 
   final MTServiceCacheConfiguration mtServiceCacheConfiguration;
 
-  public CachingConfig(MTServiceCacheConfiguration mtServiceCacheConfiguration) {
+  final ApplicationCacheUpdaterService applicationCacheUpdaterService;
+
+  final ApplicationCacheTypeRepository applicationCacheTypeRepository;
+
+  final ApplicationCacheRepository applicationCacheRepository;
+
+  final PlatformTransactionManager transactionManager;
+
+  public CachingConfig(
+      MTServiceCacheConfiguration mtServiceCacheConfiguration,
+      ApplicationCacheUpdaterService applicationCacheUpdaterService,
+      ApplicationCacheTypeRepository applicationCacheTypeRepository,
+      ApplicationCacheRepository applicationCacheRepository,
+      PlatformTransactionManager transactionManager) {
     this.mtServiceCacheConfiguration = mtServiceCacheConfiguration;
+    this.applicationCacheUpdaterService = applicationCacheUpdaterService;
+    this.applicationCacheTypeRepository = applicationCacheTypeRepository;
+    this.applicationCacheRepository = applicationCacheRepository;
+    this.transactionManager = transactionManager;
   }
 
   @Bean
@@ -63,7 +84,13 @@ public class CachingConfig {
           mtServiceCacheConfiguration.getDatabase().isEvictEntryOnDeserializationFailure());
 
       machineTranslationDatabaseCache =
-          new DatabaseCache("machineTranslationInDb", mtDbCacheConfiguration);
+          new DatabaseCache(
+              "machineTranslationInDb",
+              mtDbCacheConfiguration,
+              applicationCacheUpdaterService,
+              applicationCacheTypeRepository,
+              applicationCacheRepository,
+              transactionManager);
     }
 
     return new TieredCache(

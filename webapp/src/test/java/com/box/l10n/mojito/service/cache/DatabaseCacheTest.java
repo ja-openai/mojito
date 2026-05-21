@@ -17,6 +17,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -34,6 +35,14 @@ public class DatabaseCacheTest extends ServiceTestBase {
 
   @Autowired DBUtils dbUtils;
 
+  @Autowired ApplicationCacheUpdaterService applicationCacheUpdaterService;
+
+  @Autowired ApplicationCacheTypeRepository applicationCacheTypeRepository;
+
+  @Autowired ApplicationCacheRepository applicationCacheRepository;
+
+  @Autowired PlatformTransactionManager transactionManager;
+
   DatabaseCache databaseCache;
 
   @Transactional
@@ -42,7 +51,7 @@ public class DatabaseCacheTest extends ServiceTestBase {
     if (databaseCache == null) {
       databaseCacheConfiguration.setKeySerializationPair(new DefaultSerializationPair());
       databaseCacheConfiguration.setValueSerializationPair(new DefaultSerializationPair());
-      databaseCache = new DatabaseCache(TEST_CACHE_NAME, databaseCacheConfiguration);
+      databaseCache = newDatabaseCache(TEST_CACHE_NAME, databaseCacheConfiguration);
       databaseCache.clear();
     }
   }
@@ -131,7 +140,7 @@ public class DatabaseCacheTest extends ServiceTestBase {
     databaseCacheConfiguration.setValueSerializationPair(mockSerializationPair);
 
     DatabaseCache databaseCacheWithMockedDeserializer =
-        new DatabaseCache("databaseCacheWithMockedDeserializer", databaseCacheConfiguration);
+        newDatabaseCache("databaseCacheWithMockedDeserializer", databaseCacheConfiguration);
     databaseCacheWithMockedDeserializer.put(KEY, VALUE);
     Assertions.assertNull(databaseCacheWithMockedDeserializer.lookup(KEY));
   }
@@ -142,7 +151,7 @@ public class DatabaseCacheTest extends ServiceTestBase {
     Duration ttl = Duration.ofSeconds(2);
     databaseCacheConfiguration.setTtl(ttl);
     DatabaseCache databaseCacheWith1SecondTTL =
-        new DatabaseCache("databaseCacheWith1SecondTTL", databaseCacheConfiguration);
+        newDatabaseCache("databaseCacheWith1SecondTTL", databaseCacheConfiguration);
 
     databaseCacheWith1SecondTTL.put(KEY, VALUE);
     Assertions.assertEquals(VALUE, databaseCacheWith1SecondTTL.lookup(KEY));
@@ -157,7 +166,7 @@ public class DatabaseCacheTest extends ServiceTestBase {
     Duration ttl = Duration.ofMillis(1);
     databaseCacheConfiguration.setTtl(ttl);
     DatabaseCache databaseCacheWithAggressiveEviction =
-        new DatabaseCache("databaseCacheWithAggressiveEviction", databaseCacheConfiguration);
+        newDatabaseCache("databaseCacheWithAggressiveEviction", databaseCacheConfiguration);
 
     // This test is only supported on MySql
     Assume.assumeTrue(dbUtils.isMysql());
@@ -172,6 +181,17 @@ public class DatabaseCacheTest extends ServiceTestBase {
       DatabaseCache databaseCacheWithAggressiveEviction, String key, String value) {
 
     databaseCacheWithAggressiveEviction.put(key, value);
+  }
+
+  private DatabaseCache newDatabaseCache(
+      String cacheName, DatabaseCacheConfiguration databaseCacheConfiguration) {
+    return new DatabaseCache(
+        cacheName,
+        databaseCacheConfiguration,
+        applicationCacheUpdaterService,
+        applicationCacheTypeRepository,
+        applicationCacheRepository,
+        transactionManager);
   }
 
   static class TestKey implements Serializable {
