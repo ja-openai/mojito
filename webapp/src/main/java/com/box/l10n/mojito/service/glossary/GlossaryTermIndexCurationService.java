@@ -49,7 +49,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
@@ -111,6 +113,7 @@ public class GlossaryTermIndexCurationService {
   private final ObjectMapper objectMapper;
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
   private final PollableTaskService pollableTaskService;
+  private final PlatformTransactionManager transactionManager;
   private final TransactionTemplate requiresNewTransactionTemplate;
   private final TermIndexJobObservability termIndexJobObservability;
 
@@ -152,15 +155,29 @@ public class GlossaryTermIndexCurationService {
     this.objectMapper = Objects.requireNonNull(objectMapper);
     this.quartzPollableTaskScheduler = Objects.requireNonNull(quartzPollableTaskScheduler);
     this.pollableTaskService = Objects.requireNonNull(pollableTaskService);
-    this.requiresNewTransactionTemplate =
-        new TransactionTemplate(Objects.requireNonNull(transactionManager));
+    this.transactionManager = Objects.requireNonNull(transactionManager);
+    this.requiresNewTransactionTemplate = new TransactionTemplate(this.transactionManager);
     this.requiresNewTransactionTemplate.setPropagationBehavior(
         TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     this.termIndexJobObservability = Objects.requireNonNull(termIndexJobObservability);
   }
 
-  @Transactional(readOnly = true)
   public SuggestionSearchView searchSuggestions(Long glossaryId, SuggestionSearchCommand command) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      SuggestionSearchView result = searchSuggestionsNoTx(glossaryId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SuggestionSearchView searchSuggestionsNoTx(Long glossaryId, SuggestionSearchCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
     SuggestionSearchCommand normalized = normalize(command);
@@ -247,8 +264,25 @@ public class GlossaryTermIndexCurationService {
     return new SuggestionSearchView(suggestions, heuristicCandidates.size());
   }
 
-  @Transactional
   public GlossaryTermService.TermView acceptSuggestion(
+      Long glossaryId, Long termIndexCandidateId, AcceptSuggestionCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GlossaryTermService.TermView result =
+          acceptSuggestionNoTx(glossaryId, termIndexCandidateId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GlossaryTermService.TermView acceptSuggestionNoTx(
       Long glossaryId, Long termIndexCandidateId, AcceptSuggestionCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
@@ -294,8 +328,23 @@ public class GlossaryTermIndexCurationService {
     return term;
   }
 
-  @Transactional
   public void ignoreSuggestion(
+      Long glossaryId, Long termIndexCandidateId, IgnoreSuggestionCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      ignoreSuggestionNoTx(glossaryId, termIndexCandidateId, command);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void ignoreSuggestionNoTx(
       Long glossaryId, Long termIndexCandidateId, IgnoreSuggestionCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
@@ -316,8 +365,24 @@ public class GlossaryTermIndexCurationService {
     glossaryTermIndexDecisionRepository.save(decision);
   }
 
-  @Transactional
   public CandidateReviewView updateCandidateReview(
+      Long termIndexCandidateId, CandidateReviewCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      CandidateReviewView result = updateCandidateReviewNoTx(termIndexCandidateId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  CandidateReviewView updateCandidateReviewNoTx(
       Long termIndexCandidateId, CandidateReviewCommand command) {
     requireTermManager();
     TermIndexCandidate candidate = getCandidate(termIndexCandidateId);
@@ -339,6 +404,13 @@ public class GlossaryTermIndexCurationService {
         saved.getReviewChangedByUser() == null
             ? null
             : saved.getReviewChangedByUser().getCommonName());
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    transactionDefinition.setReadOnly(true);
+    return transactionDefinition;
   }
 
   @Transactional
