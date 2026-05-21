@@ -150,6 +150,9 @@ export function AdminReviewAutomationBatchPage() {
 
   const validRows = parsedRows.filter((row) => row.errors.length === 0);
   const invalidRows = parsedRows.filter((row) => row.errors.length > 0);
+  const visibleStatusNotice = batchMutation.isPending
+    ? ({ kind: 'success', message: 'Saving updates...' } as const)
+    : statusNotice;
   const isSourceLoading =
     reviewAutomationsQuery.isLoading || reviewFeaturesQuery.isLoading || teamsQuery.isLoading;
   const sourceError =
@@ -409,13 +412,14 @@ export function AdminReviewAutomationBatchPage() {
             {parsedRows.length} row{parsedRows.length === 1 ? '' : 's'} parsed, {validRows.length}{' '}
             valid, {invalidRows.length} invalid.
           </div>
-          {statusNotice ? (
+          {visibleStatusNotice ? (
             <div
               className={`user-batch-page__summary${
-                statusNotice.kind === 'error' ? ' user-batch-page__summary--error' : ''
+                visibleStatusNotice.kind === 'error' ? ' user-batch-page__summary--error' : ''
               }`}
+              aria-live="polite"
             >
-              {statusNotice.message}
+              {visibleStatusNotice.message}
             </div>
           ) : null}
           <div className="user-batch-page__preview">
