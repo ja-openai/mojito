@@ -7,27 +7,28 @@ import com.google.common.base.Strings;
 import org.fusesource.jansi.Ansi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * Listener that displays the status of {@link PollableTask}.
  *
  * @author jaurambault
  */
-@Configurable
 public class CommandWaitForPollableTaskListener implements WaitForPollableTaskListener {
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(CommandWaitForPollableTaskListener.class);
 
-  @Autowired ConsoleWriter consoleWriter;
+  final ConsoleWriter consoleWriter;
 
   /**
    * Keeps track of the number of callback to {@link
    * #afterPoll(com.box.l10n.mojito.rest.entity.PollableTask) }
    */
   int numberAfterPollCallback = 0;
+
+  public CommandWaitForPollableTaskListener(ConsoleWriter consoleWriter) {
+    this.consoleWriter = consoleWriter;
+  }
 
   @Override
   public void afterPoll(PollableTask pollableTask) {
