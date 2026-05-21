@@ -20,7 +20,7 @@ public class ExtractUsagesFromTextUnitComments {
   /** logger */
   static Logger logger = LoggerFactory.getLogger(ExtractUsagesFromTextUnitComments.class);
 
-  @Autowired TextUnitUtils textUnitUtils;
+  @Autowired TextUnitUtils textUnitUtils = new TextUnitUtils();
 
   public static final String USAGES_PATTERN =
       "\\s*?<locations>\n?(?<usages>(.*?\\s)*?)</locations>";

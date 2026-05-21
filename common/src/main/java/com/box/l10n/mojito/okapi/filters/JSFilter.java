@@ -31,13 +31,10 @@ import net.sf.okapi.common.resource.TextUnit;
 import net.sf.okapi.common.skeleton.GenericSkeleton;
 import net.sf.okapi.common.skeleton.ISkeletonWriter;
 import net.sf.okapi.filters.properties.Parameters;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author jyi
  */
-@Configurable
 public class JSFilter extends AbstractFilter {
 
   public static final String FILTER_CONFIG_ID = "okf_regex@mojito";
@@ -62,7 +59,7 @@ public class JSFilter extends AbstractFilter {
   private GenericSkeleton skel;
   private String textLine;
 
-  @Autowired UnescapeUtils unescapeUtils;
+  UnescapeUtils unescapeUtils;
 
   @Override
   public String getName() {
@@ -89,8 +86,12 @@ public class JSFilter extends AbstractFilter {
   }
 
   public JSFilter() {
+    this(new UnescapeUtils());
+  }
+
+  public JSFilter(UnescapeUtils unescapeUtils) {
     params = new Parameters();
-    ;
+    this.unescapeUtils = unescapeUtils;
   }
 
   @Override
@@ -124,7 +125,7 @@ public class JSFilter extends AbstractFilter {
 
   @Override
   public ISkeletonWriter createSkeletonWriter() {
-    return new JSSkeletonWriter();
+    return new JSSkeletonWriter(unescapeUtils);
   }
 
   @Override

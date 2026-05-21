@@ -6,18 +6,24 @@ import net.sf.okapi.common.EventType;
 import net.sf.okapi.common.encoder.EncoderManager;
 import net.sf.okapi.common.resource.TextUnit;
 import net.sf.okapi.filters.regex.RegexFilter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author jyi
  */
-@Configurable
 public class RegexEscapeDoubleQuoteFilter extends RegexFilter {
 
-  @Autowired UnescapeUtils unescapeUtils;
+  UnescapeUtils unescapeUtils;
 
-  @Autowired TextUnitUtils textUnitUtils;
+  TextUnitUtils textUnitUtils;
+
+  public RegexEscapeDoubleQuoteFilter() {
+    this(new UnescapeUtils(), new TextUnitUtils());
+  }
+
+  public RegexEscapeDoubleQuoteFilter(UnescapeUtils unescapeUtils, TextUnitUtils textUnitUtils) {
+    this.unescapeUtils = unescapeUtils;
+    this.textUnitUtils = textUnitUtils;
+  }
 
   @Override
   public Event next() {

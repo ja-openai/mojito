@@ -84,6 +84,9 @@ Removed during this workstream:
   console writer directly when waiting on pollable tasks.
 - `L10nJCommander` no longer uses `@Configurable`; CLI entrypoints and tests request prototype
   commanders from Spring and commands render usage through their active commander.
+- Common Okapi filters for regex double-quote escaping, JS skeleton writing, JS parsing,
+  Xcode XLIFF, and Mac Stringsdict no longer use `@Configurable`; Okapi-created instances now
+  initialize their helper collaborators directly.
 
 In progress:
 

@@ -3,16 +3,21 @@ package com.box.l10n.mojito.okapi.filters;
 import net.sf.okapi.common.resource.ITextUnit;
 import net.sf.okapi.common.resource.Property;
 import net.sf.okapi.common.skeleton.GenericSkeletonWriter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * @author jyi
  */
-@Configurable
 public class JSSkeletonWriter extends GenericSkeletonWriter {
 
-  @Autowired UnescapeUtils unescapeUtils;
+  UnescapeUtils unescapeUtils;
+
+  public JSSkeletonWriter() {
+    this(new UnescapeUtils());
+  }
+
+  public JSSkeletonWriter(UnescapeUtils unescapeUtils) {
+    this.unescapeUtils = unescapeUtils;
+  }
 
   @Override
   public String processTextUnit(ITextUnit resource) {
