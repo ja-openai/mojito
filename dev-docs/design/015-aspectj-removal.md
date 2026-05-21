@@ -59,6 +59,11 @@ Removed during this workstream:
 - `@RunAs`, `RunAsAspect`, and `RunAsAspectConfig`. Bootstrap default-user creation now swaps to
   the system user explicitly with a local `try/finally`.
 
+In progress:
+
+- `MultiBranchStateService` no longer uses `@Timed`; its three metrics are recorded with explicit
+  `Timer.Sample` and local `try/finally` blocks.
+
 ## Migration Principles
 
 - Prefer plain `try/catch/finally` where the behavior changes business outcome.

@@ -11,7 +11,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,12 +34,15 @@ public class MultiBranchStateService {
 
   LocalBranchToEntityBranchConverter localBranchToEntityBranchConverter;
 
+  MeterRegistry meterRegistry;
+
   public MultiBranchStateService(
       MultiBranchStateBlobStorage multiBranchStateBlobStorage,
       AssetTextUnitRepository assetTextUnitRepository,
       AssetTextUnitToTMTextUnitRepository assetTextUnitToTMTextUnitRepository,
       TextUnitUtils textUnitUtils,
-      LocalBranchToEntityBranchConverter localBranchToEntityBranchConverter) {
+      LocalBranchToEntityBranchConverter localBranchToEntityBranchConverter,
+      MeterRegistry meterRegistry) {
     this.multiBranchStateBlobStorage = Preconditions.checkNotNull(multiBranchStateBlobStorage);
     this.assetTextUnitRepository = Preconditions.checkNotNull(assetTextUnitRepository);
     this.assetTextUnitToTMTextUnitRepository =
@@ -46,18 +50,32 @@ public class MultiBranchStateService {
     this.textUnitUtils = Preconditions.checkNotNull(textUnitUtils);
     this.localBranchToEntityBranchConverter =
         Preconditions.checkNotNull(localBranchToEntityBranchConverter);
+    this.meterRegistry = Preconditions.checkNotNull(meterRegistry);
   }
 
-  @Timed("MultiBranchStateService.getMultiBranchStateForAssetExtractionId")
   public MultiBranchState getMultiBranchStateForAssetExtractionId(
       long assetExtractionId, long version) {
-    return multiBranchStateBlobStorage
-        .getMultiBranchStateForAssetExtractionId(assetExtractionId, version)
-        .orElseGet(
-            () -> {
-              logger.debug("No MultiBranchState for asset extraction id: {}", assetExtractionId);
-              return getAndSaveInitialMultiBranchStateFromDatabase(assetExtractionId, version);
-            });
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      return multiBranchStateBlobStorage
+          .getMultiBranchStateForAssetExtractionId(assetExtractionId, version)
+          .orElseGet(
+              () -> {
+                logger.debug("No MultiBranchState for asset extraction id: {}", assetExtractionId);
+                return getAndSaveInitialMultiBranchStateFromDatabase(assetExtractionId, version);
+              });
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "MultiBranchStateService.getMultiBranchStateForAssetExtractionId",
+          "getMultiBranchStateForAssetExtractionId",
+          sample,
+          exceptionClass);
+    }
   }
 
   public void deleteMultiBranchStateForAssetExtractionId(long assetExtractionId, long version) {
@@ -65,11 +83,24 @@ public class MultiBranchStateService {
         assetExtractionId, version);
   }
 
-  @Timed("MultiBranchStateService.putMultiBranchStateForAssetExtractionId")
   public void putMultiBranchStateForAssetExtractionId(
       MultiBranchState multiBranchState, long assetExtractionId, long version) {
-    multiBranchStateBlobStorage.putMultiBranchStateForAssetExtractionId(
-        multiBranchState, assetExtractionId, version);
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      multiBranchStateBlobStorage.putMultiBranchStateForAssetExtractionId(
+          multiBranchState, assetExtractionId, version);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "MultiBranchStateService.putMultiBranchStateForAssetExtractionId",
+          "putMultiBranchStateForAssetExtractionId",
+          sample,
+          exceptionClass);
+    }
   }
 
   MultiBranchState getAndSaveInitialMultiBranchStateFromDatabase(
@@ -95,9 +126,26 @@ public class MultiBranchStateService {
    * @param version
    * @return
    */
-  @Timed("MultiBranchStateService.getInitialMultiBranchStateFromDatabase")
   MultiBranchState getInitialMultiBranchStateFromDatabase(long assetExtractionId, long version) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
 
+    try {
+      return getInitialMultiBranchStateFromDatabaseTimed(assetExtractionId, version);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "MultiBranchStateService.getInitialMultiBranchStateFromDatabase",
+          "getInitialMultiBranchStateFromDatabase",
+          sample,
+          exceptionClass);
+    }
+  }
+
+  private MultiBranchState getInitialMultiBranchStateFromDatabaseTimed(
+      long assetExtractionId, long version) {
     logger.debug("Get initial MultiBranchState for asset extraction id: {}", assetExtractionId);
     List<AssetTextUnit> assetTextUnits =
         assetTextUnitRepository.findByAssetExtractionId(assetExtractionId);
@@ -160,4 +208,17 @@ public class MultiBranchStateService {
         .withBranchStateTextUnits(branchStateTextUnits)
         .withBranches(branches);
   }
+
+  private void recordTimer(
+      String metricName, String methodName, Timer.Sample sample, String exceptionClass) {
+    sample.stop(
+        Timer.builder(metricName)
+            .tag(EXCEPTION_TAG, exceptionClass)
+            .tag("class", MultiBranchStateService.class.getName())
+            .tag("method", methodName)
+            .register(meterRegistry));
+  }
+
+  static final String DEFAULT_EXCEPTION_TAG_VALUE = "none";
+  static final String EXCEPTION_TAG = "exception";
 }
