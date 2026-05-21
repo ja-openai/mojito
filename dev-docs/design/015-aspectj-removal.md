@@ -112,6 +112,8 @@ Removed during this workstream:
   to enforce, so the `spring-security-aspects` dependency and aspect library entry were removed.
 - `common` and `cli` no longer run `aspectj-maven-plugin` or depend on `spring-aspects`; neither
   module has source annotations or framework modes that need compile-time weaving.
+- `DatabaseBlobStorage.putBase` no longer uses self-invoked `@Transactional(REQUIRES_NEW)`; the
+  retry path now opens and commits a new transaction explicitly for each attempt.
 
 In progress:
 

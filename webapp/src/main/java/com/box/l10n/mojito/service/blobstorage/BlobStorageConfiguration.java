@@ -31,6 +31,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.scheduling.quartz.JobDetailFactoryBean;
 import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * Configuration for {@link BlobStorage}
@@ -100,13 +101,16 @@ public class BlobStorageConfiguration {
     @Autowired
     DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
 
+    @Autowired PlatformTransactionManager transactionManager;
+
     @Bean
     public DatabaseBlobStorage databaseBlobStorage() {
       logger.info("Configure DatabaseBlobStorage");
       return new DatabaseBlobStorage(
           databaseBlobStorageConfigurationProperties,
           mBlobRepository,
-          dataIntegrityViolationExceptionRetryTemplate);
+          dataIntegrityViolationExceptionRetryTemplate,
+          transactionManager);
     }
 
     @Bean(name = "jobDetailDatabaseBlobStorageCleanupJob")
