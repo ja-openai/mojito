@@ -18,7 +18,6 @@ import com.box.l10n.mojito.service.drop.importer.DropImporter;
 import com.box.l10n.mojito.service.drop.importer.DropImporterException;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.ParentTask;
 import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
@@ -121,8 +120,7 @@ public class DropService {
         exportDropConfig.getBcp47Tags(),
         exportDropConfig.getType(),
         exportDropConfig.getUseInheritance(),
-        currentTask,
-        PollableTask.INJECT_CURRENT_TASK);
+        currentTask);
 
     return new PollableFutureTaskResult<>(drop);
   }
@@ -136,16 +134,32 @@ public class DropService {
    * @param type type of the {@link TranslationKit}s
    * @param useInheritance use inherited translations from parent locales when creating {@link
    *     TranslationKit}
-   * @param parentTask
    */
-  @Pollable(async = true)
   private PollableFuture<DropExporter> createDropExporterAndExportTranslationKits(
       Drop drop,
       List<String> bcp47Tags,
       TranslationKit.Type type,
       Boolean useInheritance,
-      @ParentTask PollableTask parentTask,
-      @InjectCurrentTask PollableTask currentTask)
+      PollableTask parentTask)
+      throws DropExporterException {
+    return pollableTaskRunner.runAsync(
+        new PollableTaskInvocation<>(
+            getParentTaskId(parentTask),
+            "createDropExporterAndExportTranslationKits",
+            null,
+            0,
+            getTimeout(parentTask),
+            currentTask ->
+                createDropExporterAndExportTranslationKitsDirect(
+                    drop, bcp47Tags, type, useInheritance, currentTask)));
+  }
+
+  PollableFuture<DropExporter> createDropExporterAndExportTranslationKitsDirect(
+      Drop drop,
+      List<String> bcp47Tags,
+      TranslationKit.Type type,
+      Boolean useInheritance,
+      PollableTask currentTask)
       throws DropExporterException {
 
     PollableFutureTaskResult<DropExporter> pollableFutureTaskResult =
