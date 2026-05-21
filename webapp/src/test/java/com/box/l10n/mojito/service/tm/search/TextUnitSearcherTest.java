@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetTextUnit;
+import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
@@ -20,6 +21,7 @@ import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.repository.RepositoryService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTestData;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
@@ -66,6 +68,8 @@ public class TextUnitSearcherTest extends ServiceTestBase {
   @Autowired AssetService assetService;
 
   @Autowired AssetTextUnitRepository assetTextUnitRepository;
+
+  @Autowired RepositoryService repositoryService;
 
   @Autowired GlossaryRepository glossaryRepository;
 
@@ -245,6 +249,66 @@ public class TextUnitSearcherTest extends ServiceTestBase {
             tmTestData.addTMTextUnit1.getId(),
             tmTestData.addTMTextUnit2.getId(),
             tmTestData.addTMTextUnit3.getId());
+  }
+
+  @Transactional
+  @Test
+  public void testGlossaryStatusFilterDoesNotFilterRegularRepositories() throws Exception {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+    Repository glossaryRepositoryEntity =
+        repositoryService.createRepository(testIdWatcher.getEntityName("glossary-repository"));
+    repositoryService.addRepositoryLocale(glossaryRepositoryEntity, "fr-FR");
+    Asset glossaryAsset =
+        assetService.createAssetWithContent(
+            glossaryRepositoryEntity.getId(), "glossary", "glossary terms");
+    TMTextUnit approvedGlossaryTerm =
+        tmService.addTMTextUnit(
+            glossaryRepositoryEntity.getTm().getId(),
+            glossaryAsset.getId(),
+            "approved_term",
+            "Approved term",
+            null);
+    TMTextUnit rejectedGlossaryTerm =
+        tmService.addTMTextUnit(
+            glossaryRepositoryEntity.getTm().getId(),
+            glossaryAsset.getId(),
+            "rejected_term",
+            "Rejected term",
+            null);
+
+    Glossary glossary = new Glossary();
+    glossary.setName(testIdWatcher.getEntityName("glossary"));
+    glossary.setBackingRepository(glossaryRepositoryEntity);
+    glossary = glossaryRepository.save(glossary);
+
+    GlossaryTermMetadata approved = new GlossaryTermMetadata();
+    approved.setGlossary(glossary);
+    approved.setTmTextUnit(approvedGlossaryTerm);
+    approved.setStatus(GlossaryTermMetadata.STATUS_APPROVED);
+    glossaryTermMetadataRepository.save(approved);
+
+    GlossaryTermMetadata rejected = new GlossaryTermMetadata();
+    rejected.setGlossary(glossary);
+    rejected.setTmTextUnit(rejectedGlossaryTerm);
+    rejected.setStatus(GlossaryTermMetadata.STATUS_REJECTED);
+    glossaryTermMetadataRepository.save(rejected);
+
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParametersForTesting();
+    parameters.setRepositoryIds(
+        List.of(tmTestData.repository.getId(), glossaryRepositoryEntity.getId()));
+    parameters.setLocaleTags(List.of("fr-FR"));
+    parameters.setGlossaryStatusFilter(GlossaryStatusFilter.APPROVED);
+
+    List<TextUnitDTO> textUnits = textUnitSearcher.search(parameters);
+
+    assertThat(textUnits)
+        .extracting(TextUnitDTO::getTmTextUnitId)
+        .contains(
+            tmTestData.addTMTextUnit1.getId(),
+            tmTestData.addTMTextUnit2.getId(),
+            tmTestData.addTMTextUnit3.getId(),
+            approvedGlossaryTerm.getId())
+        .doesNotContain(rejectedGlossaryTerm.getId());
   }
 
   @Transactional

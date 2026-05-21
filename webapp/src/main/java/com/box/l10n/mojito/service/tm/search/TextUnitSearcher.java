@@ -178,7 +178,7 @@ public class TextUnitSearcher {
 
     if (usesGlossaryTermMetadata(searchParameters)) {
       context.glossaryTermMetadata =
-          context.textUnit.join(GlossaryTermMetadata.class, SqmJoinType.INNER);
+          context.textUnit.join(GlossaryTermMetadata.class, SqmJoinType.LEFT);
       context.glossaryTermMetadata.on(
           cb.equal(context.glossaryTermMetadata.get("tmTextUnit"), context.textUnit));
     }
@@ -590,7 +590,9 @@ public class TextUnitSearcher {
     }
 
     predicates.add(
-        cb.equal(context.glossaryTermMetadata.get("status"), glossaryStatusFilter.name()));
+        cb.or(
+            cb.isNull(context.glossaryTermMetadata.get("id")),
+            cb.equal(context.glossaryTermMetadata.get("status"), glossaryStatusFilter.name())));
   }
 
   private void addOrdering(
