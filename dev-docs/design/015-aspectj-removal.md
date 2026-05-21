@@ -142,6 +142,8 @@ Removed during this workstream:
   status batch updates now open and commit their transactions explicitly.
 - `DropService` no longer uses `@Transactional` for drop loading or completion; cancel-drop loading
   and partial-import completion now open and commit their transactions explicitly.
+- `PushRunService` no longer uses `@Transactional`; push-run cleanup and text-unit association now
+  open and commit their transactions explicitly.
 
 In progress:
 
