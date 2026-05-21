@@ -15,9 +15,10 @@ import org.fusesource.jansi.Ansi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Scope;
 import org.springframework.security.web.authentication.session.SessionAuthenticationException;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -31,7 +32,8 @@ import org.springframework.web.client.ResourceAccessException;
  *
  * @author jaurambault
  */
-@Configurable
+@Component
+@Scope("prototype")
 public class L10nJCommander {
 
   /** logger */
@@ -232,6 +234,7 @@ public class L10nJCommander {
         }
       }
 
+      command.setL10nJCommander(this);
       for (String name : command.getNames()) {
         commands.put(name, command);
       }

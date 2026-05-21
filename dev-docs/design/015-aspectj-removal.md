@@ -82,6 +82,8 @@ Removed during this workstream:
   `ExtractionCheckCommand` passes GitHub, Slack, and Phabricator collaborators explicitly.
 - `CommandWaitForPollableTaskListener` no longer uses `@Configurable`; `CommandHelper` passes its
   console writer directly when waiting on pollable tasks.
+- `L10nJCommander` no longer uses `@Configurable`; CLI entrypoints and tests request prototype
+  commanders from Spring and commands render usage through their active commander.
 
 In progress:
 
