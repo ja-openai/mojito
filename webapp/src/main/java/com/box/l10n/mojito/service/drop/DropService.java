@@ -37,7 +37,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to generate {@link Drop}s.
@@ -67,6 +69,8 @@ public class DropService {
   @Autowired PollableTaskRunner pollableTaskRunner;
 
   @Autowired DropServiceConfig dropServiceConfig;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   /**
    * Creates a new {@link Drop} for a {@link Repository}.
@@ -596,8 +600,24 @@ public class DropService {
     return pollableFutureTaskResult;
   }
 
-  @Transactional
   Drop getDropInTX(Long dropId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      Drop drop = getDropNoTx(dropId);
+      transactionManager.commit(transaction);
+      return drop;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Drop getDropNoTx(Long dropId) {
     final Drop drop = dropRepository.findById(dropId).orElse(null);
     if (drop.getExportPollableTask() != null) {
       pollableTaskService.fetchSubTasks(drop.getExportPollableTask());
@@ -635,8 +655,23 @@ public class DropService {
    *
    * @param drop
    */
-  @Transactional
   public void completeDrop(Drop drop) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      completeDropNoTx(drop);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void completeDropNoTx(Drop drop) {
     drop.setPartiallyImported(Boolean.FALSE);
     dropRepository.save(drop);
   }
