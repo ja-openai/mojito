@@ -32,7 +32,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to manage {@link Repository}
@@ -62,6 +64,8 @@ public class RepositoryService {
   @Autowired DropExporterConfig dropExporterConfiguration;
 
   @Autowired ScreenshotRunRepository screenshotRunRepository;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   /**
    * Default root locale.
@@ -110,22 +114,50 @@ public class RepositoryService {
    * @param checkSLA if SLA will be checked for this repository
    * @return the created {@link Repository}
    */
-  @Transactional
   public Repository createRepository(
       String name, String description, Locale sourceLocale, Boolean checkSLA)
       throws RepositoryNameAlreadyUsedException {
-    return createRepository(name, description, sourceLocale, checkSLA, false);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      Repository repository =
+          createRepositoryNoTx(name, description, sourceLocale, checkSLA, false);
+      transactionManager.commit(transaction);
+      return repository;
+    } catch (RepositoryNameAlreadyUsedException e) {
+      transactionManager.commit(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
   }
 
-  @Transactional
   public Repository createHiddenRepository(
       String name, String description, Locale sourceLocale, Boolean checkSLA)
       throws RepositoryNameAlreadyUsedException {
-    return createRepository(name, description, sourceLocale, checkSLA, true);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      Repository repository = createRepositoryNoTx(name, description, sourceLocale, checkSLA, true);
+      transactionManager.commit(transaction);
+      return repository;
+    } catch (RepositoryNameAlreadyUsedException e) {
+      transactionManager.commit(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
   }
 
-  @Transactional
-  protected Repository createRepository(
+  Repository createRepositoryNoTx(
       String name, String description, Locale sourceLocale, Boolean checkSLA, boolean hidden)
       throws RepositoryNameAlreadyUsedException {
 
@@ -168,7 +200,7 @@ public class RepositoryService {
 
     logger.debug("Create repository id: {} (name: {})", repository.getId(), name);
 
-    addRootLocale(repository, sourceLocale);
+    addRootLocaleNoTx(repository, sourceLocale);
 
     repository = addManualScreenshotRun(repository);
 
@@ -217,7 +249,6 @@ public class RepositoryService {
    *     RepositoryService#updateRepositoryLocales} to see requirements
    * @return The created {@link Repository}
    */
-  @Transactional
   public Repository createRepository(
       String name,
       String description,
@@ -226,19 +257,61 @@ public class RepositoryService {
       Set<AssetIntegrityChecker> assetIntegrityCheckers,
       Set<RepositoryLocale> repositoryLocales)
       throws RepositoryLocaleCreationException, RepositoryNameAlreadyUsedException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      Repository repository =
+          createRepositoryNoTx(
+              name, description, sourceLocale, checkSLA, assetIntegrityCheckers, repositoryLocales);
+      transactionManager.commit(transaction);
+      return repository;
+    } catch (RepositoryLocaleCreationException | RepositoryNameAlreadyUsedException e) {
+      transactionManager.commit(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
 
-    Repository createdRepo = createRepository(name, description, sourceLocale, checkSLA);
+  Repository createRepositoryNoTx(
+      String name,
+      String description,
+      Locale sourceLocale,
+      Boolean checkSLA,
+      Set<AssetIntegrityChecker> assetIntegrityCheckers,
+      Set<RepositoryLocale> repositoryLocales)
+      throws RepositoryLocaleCreationException, RepositoryNameAlreadyUsedException {
 
-    updateRepositoryLocales(createdRepo, repositoryLocales);
+    Repository createdRepo = createRepositoryNoTx(name, description, sourceLocale, checkSLA, false);
+
+    updateRepositoryLocalesNoTx(createdRepo, repositoryLocales);
     addIntegrityCheckersToRepository(createdRepo, assetIntegrityCheckers);
 
     return createdRepo;
   }
 
-  @Transactional
   public void updateAssetIntegrityCheckers(
       Repository repository, Set<AssetIntegrityChecker> assetIntegrityCheckers) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      updateAssetIntegrityCheckersNoTx(repository, assetIntegrityCheckers);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
 
+  void updateAssetIntegrityCheckersNoTx(
+      Repository repository, Set<AssetIntegrityChecker> assetIntegrityCheckers) {
     Set<AssetIntegrityChecker> existingAssetIntegrityCheckers =
         assetIntegrityCheckerRepository.findByRepository(repository);
     Map<String, Map<String, AssetIntegrityChecker>> existingAssetIntegrityCheckersToDelete =
@@ -352,15 +425,46 @@ public class RepositoryService {
    * }</pre>
    *     <p>TODO(P1) move RepositoryLocale related into RepositoryLocale service
    */
-  @Transactional
   public void updateRepositoryLocales(Set<RepositoryLocale> repositoryLocales)
       throws RepositoryLocaleCreationException {
-    updateRepositoryLocales(null, repositoryLocales);
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      updateRepositoryLocalesNoTx(null, repositoryLocales);
+      transactionManager.commit(transaction);
+    } catch (RepositoryLocaleCreationException e) {
+      transactionManager.commit(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
   }
 
-  @Transactional
   public void updateRepositoryLocales(
       Repository repository, Set<RepositoryLocale> repositoryLocales)
+      throws RepositoryLocaleCreationException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      updateRepositoryLocalesNoTx(repository, repositoryLocales);
+      transactionManager.commit(transaction);
+    } catch (RepositoryLocaleCreationException e) {
+      transactionManager.commit(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void updateRepositoryLocalesNoTx(Repository repository, Set<RepositoryLocale> repositoryLocales)
       throws RepositoryLocaleCreationException {
     if (repository != null) {
       logger.debug("Updating Repository id with the newly created repository");
@@ -442,7 +546,7 @@ public class RepositoryService {
 
     String bcp47Tag = repositoryLocale.getLocale().getBcp47Tag();
     if (!addedBcp47Tags.contains(bcp47Tag)) {
-      addRepositoryLocale(
+      addRepositoryLocaleNoTx(
           repositoryLocale.getRepository(),
           bcp47Tag,
           repositoryLocale.getParentLocale() != null
@@ -596,9 +700,23 @@ public class RepositoryService {
    * @return the created {@link RepositoryLocale} that holds the root locale @NOTE Must be called
    *     only once per repository.}
    */
-  @Transactional
   protected RepositoryLocale addRootLocale(Repository repository, Locale sourceLocale) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      RepositoryLocale repositoryLocale = addRootLocaleNoTx(repository, sourceLocale);
+      transactionManager.commit(transaction);
+      return repositoryLocale;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
 
+  RepositoryLocale addRootLocaleNoTx(Repository repository, Locale sourceLocale) {
     logger.debug(
         "Adding the root locale [{}] into repo [{}]",
         sourceLocale.getBcp47Tag(),
@@ -651,14 +769,37 @@ public class RepositoryService {
    * @return the added {@link RepositoryLocale} @NOTE Adding a {@link RepositoryLocale} here doesn't
    *     check the hierarchy for cycles or conflict.}
    */
-  @Transactional
   public RepositoryLocale addRepositoryLocale(
       Repository repository,
       String bcp47Tag,
       String parentLocaleBcp47Tag,
       boolean toBeFullyTranslated)
       throws RepositoryLocaleCreationException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      RepositoryLocale repositoryLocale =
+          addRepositoryLocaleNoTx(repository, bcp47Tag, parentLocaleBcp47Tag, toBeFullyTranslated);
+      transactionManager.commit(transaction);
+      return repositoryLocale;
+    } catch (RepositoryLocaleCreationException e) {
+      transactionManager.commit(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
 
+  RepositoryLocale addRepositoryLocaleNoTx(
+      Repository repository,
+      String bcp47Tag,
+      String parentLocaleBcp47Tag,
+      boolean toBeFullyTranslated)
+      throws RepositoryLocaleCreationException {
     logger.debug(
         "Adding repo locale [{}] with parent locale [{}] to repo [{}]",
         bcp47Tag,
@@ -736,9 +877,22 @@ public class RepositoryService {
    *
    * @param repository
    */
-  @Transactional
   public void deleteRepository(Repository repository) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      deleteRepositoryNoTx(repository);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
 
+  void deleteRepositoryNoTx(Repository repository) {
     logger.debug("Delete a repository with name: {}", repository.getName());
 
     // rename the deleted repository so that the name can be reused to create new repository
@@ -750,8 +904,26 @@ public class RepositoryService {
     logger.debug("Deleted repository with name: {}", repository.getName());
   }
 
-  @Transactional
   public void renameRepository(Repository repository, String newName)
+      throws RepositoryNameAlreadyUsedException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      renameRepositoryNoTx(repository, newName);
+      transactionManager.commit(transaction);
+    } catch (RepositoryNameAlreadyUsedException e) {
+      transactionManager.commit(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void renameRepositoryNoTx(Repository repository, String newName)
       throws RepositoryNameAlreadyUsedException {
     logger.debug("Rename repository [{}] to [{}]", repository.getName(), newName);
 
@@ -775,7 +947,6 @@ public class RepositoryService {
    * @throws RepositoryLocaleCreationException
    * @throws com.box.l10n.mojito.service.repository.RepositoryNameAlreadyUsedException
    */
-  @Transactional
   public void updateRepository(
       Repository repository,
       String newName,
@@ -784,7 +955,32 @@ public class RepositoryService {
       Set<RepositoryLocale> repositoryLocales,
       Set<AssetIntegrityChecker> assetIntegrityCheckers)
       throws RepositoryLocaleCreationException, RepositoryNameAlreadyUsedException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      updateRepositoryNoTx(
+          repository, newName, description, checkSLA, repositoryLocales, assetIntegrityCheckers);
+      transactionManager.commit(transaction);
+    } catch (RepositoryLocaleCreationException | RepositoryNameAlreadyUsedException e) {
+      transactionManager.commit(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
 
+  void updateRepositoryNoTx(
+      Repository repository,
+      String newName,
+      String description,
+      Boolean checkSLA,
+      Set<RepositoryLocale> repositoryLocales,
+      Set<AssetIntegrityChecker> assetIntegrityCheckers)
+      throws RepositoryLocaleCreationException, RepositoryNameAlreadyUsedException {
     logger.debug("Update a repository with name: {}", repository.getName());
 
     if (newName != null) {
@@ -808,10 +1004,10 @@ public class RepositoryService {
     }
 
     if (!repositoryLocales.isEmpty()) {
-      updateRepositoryLocales(repository, repositoryLocales);
+      updateRepositoryLocalesNoTx(repository, repositoryLocales);
     }
 
-    updateAssetIntegrityCheckers(repository, assetIntegrityCheckers);
+    updateAssetIntegrityCheckersNoTx(repository, assetIntegrityCheckers);
 
     logger.debug("Updated repository with name: {}", repository.getName());
   }

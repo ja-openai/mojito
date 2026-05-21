@@ -204,6 +204,9 @@ Removed during this workstream:
 - `TranslationIncidentService` no longer uses `@Transactional`; incident reads, creation,
   rejection, Slack dispatch state, and status updates now open and commit their transaction
   boundaries explicitly.
+- `RepositoryService` no longer uses `@Transactional`; repository creation, locale updates,
+  integrity-checker updates, deletion, rename, and repository updates now open and commit their
+  transaction boundaries explicitly while preserving default checked-exception commit behavior.
 
 In progress:
 
