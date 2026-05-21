@@ -126,6 +126,8 @@ Removed during this workstream:
   review proto persistence now opens its transaction explicitly.
 - `TMTextUnitVariantCommentService` no longer relies on AspectJ for self-invoked comment writes;
   add/copy comment paths now open their transaction boundaries explicitly.
+- `AiTranslateLocalePromptSuffixService` no longer uses `@Transactional`; locale prompt suffix
+  reads and writes now open read-only or read-write transactions explicitly.
 
 In progress:
 

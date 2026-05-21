@@ -6,30 +6,67 @@ import com.box.l10n.mojito.service.locale.LocaleService;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class AiTranslateLocalePromptSuffixService {
 
   private final AiTranslateLocalePromptSuffixRepository repository;
   private final LocaleService localeService;
+  private final PlatformTransactionManager transactionManager;
 
   public AiTranslateLocalePromptSuffixService(
-      AiTranslateLocalePromptSuffixRepository repository, LocaleService localeService) {
+      AiTranslateLocalePromptSuffixRepository repository,
+      LocaleService localeService,
+      PlatformTransactionManager transactionManager) {
     this.repository = repository;
     this.localeService = localeService;
+    this.transactionManager = transactionManager;
   }
 
   public record LocalePromptSuffix(
       String localeTag, String promptSuffix, ZonedDateTime createdAt, ZonedDateTime updatedAt) {}
 
-  @Transactional(readOnly = true)
   public List<LocalePromptSuffix> getAll() {
-    return repository.findAllByOrderByLocaleBcp47TagAsc().stream().map(this::toRecord).toList();
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      List<LocalePromptSuffix> promptSuffixes =
+          repository.findAllByOrderByLocaleBcp47TagAsc().stream().map(this::toRecord).toList();
+      transactionManager.commit(transaction);
+      return promptSuffixes;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
   }
 
-  @Transactional(readOnly = true)
   public String getEffectivePromptSuffix(String localeTag, String requestPromptSuffix) {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      String promptSuffix = getEffectivePromptSuffixNoTx(localeTag, requestPromptSuffix);
+      transactionManager.commit(transaction);
+      return promptSuffix;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  String getEffectivePromptSuffixNoTx(String localeTag, String requestPromptSuffix) {
     String normalizedLocaleTag = requireLocaleTag(localeTag);
     String savedPromptSuffix = null;
 
@@ -42,8 +79,24 @@ public class AiTranslateLocalePromptSuffixService {
     return combinePromptSuffixes(savedPromptSuffix, requestPromptSuffix);
   }
 
-  @Transactional
   public LocalePromptSuffix upsert(String localeTag, String promptSuffix) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      LocalePromptSuffix localePromptSuffix = upsertNoTx(localeTag, promptSuffix);
+      transactionManager.commit(transaction);
+      return localePromptSuffix;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  LocalePromptSuffix upsertNoTx(String localeTag, String promptSuffix) {
     String normalizedLocaleTag = requireLocaleTag(localeTag);
     String normalizedPromptSuffix = requirePromptSuffix(promptSuffix);
 
@@ -64,8 +117,23 @@ public class AiTranslateLocalePromptSuffixService {
     return toRecord(entity);
   }
 
-  @Transactional
   public void delete(String localeTag) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteNoTx(localeTag);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteNoTx(String localeTag) {
     String normalizedLocaleTag = requireLocaleTag(localeTag);
     AiTranslateLocalePromptSuffixEntity entity =
         repository.findByLocaleBcp47TagIgnoreCase(normalizedLocaleTag);
