@@ -101,6 +101,9 @@ In progress:
 - `AssetExtractionService` update subtasks for merged asset text units, branch asset text units,
   and push runs no longer use `@Pollable` or `@ParentTask`; they call `PollableTaskRunner`
   directly from explicit wrapper methods.
+- `AssetExtractionService.createTextUnitsForNewContent` overloads no longer use `@Pollable` or
+  `@ParentTask`; the explicit wrappers create pollable tasks and keep the existing Micrometer
+  timing around the text-unit creation body.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
