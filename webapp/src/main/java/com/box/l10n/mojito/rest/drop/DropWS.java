@@ -7,7 +7,6 @@ import static com.box.l10n.mojito.specification.Specifications.ifParamNotNull;
 import static com.box.l10n.mojito.specification.Specifications.where;
 
 import com.box.l10n.mojito.entity.Drop;
-import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.rest.PageView;
 import com.box.l10n.mojito.rest.View;
@@ -126,10 +125,7 @@ public class DropWS {
 
     // TODO(P1) Check here that the repo exists (and the user has access to it)?
     PollableFuture<Void> importDropFuture =
-        dropService.importDrop(
-            importDropConfig.getDropId(),
-            importDropConfig.getStatus(),
-            PollableTask.INJECT_CURRENT_TASK);
+        dropService.importDrop(importDropConfig.getDropId(), importDropConfig.getStatus());
 
     importDropConfig.setPollableTask(importDropFuture.getPollableTask());
 

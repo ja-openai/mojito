@@ -126,6 +126,8 @@ In progress:
 - `DropService.createDropExporterAndExportTranslationKits` no longer uses `@Pollable`,
   `@ParentTask`, or `@InjectCurrentTask`; the export worker task is now created explicitly from the
   parent export task and still overrides the expected subtask count after inspecting locales.
+- `DropService.importDrop` no longer uses `@Pollable` or `@InjectCurrentTask`; REST and tests no
+  longer pass the fake injection marker, and the service creates the async import task explicitly.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

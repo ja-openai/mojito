@@ -135,8 +135,7 @@ public class DropServiceTest extends ServiceTestBase {
     localizeDropFiles(drop, 1, "new", false);
 
     logger.debug("Import drop");
-    PollableFuture<Void> startImportDrop =
-        dropService.importDrop(drop.getId(), null, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Void> startImportDrop = dropService.importDrop(drop.getId(), null);
 
     logger.debug("Wait for import to finish");
     pollableTaskService.waitForPollableTask(startImportDrop.getPollableTask().getId(), 60000L);
@@ -203,8 +202,7 @@ public class DropServiceTest extends ServiceTestBase {
     localizeDropFiles(drop, 1);
 
     logger.debug("Import drop");
-    PollableFuture<Void> startImportDrop =
-        dropService.importDrop(drop.getId(), null, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Void> startImportDrop = dropService.importDrop(drop.getId(), null);
 
     logger.debug("Wait for import to finish");
     pollableTaskService.waitForPollableTask(startImportDrop.getPollableTask().getId(), 60000L);
@@ -217,8 +215,7 @@ public class DropServiceTest extends ServiceTestBase {
     logger.debug(
         "Perform a third import drop with changes (must be able to re-import as many time as wanted)");
     localizeDropFiles(drop, 2);
-    PollableFuture<Void> startImportDrop3 =
-        dropService.importDrop(drop.getId(), null, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Void> startImportDrop3 = dropService.importDrop(drop.getId(), null);
 
     logger.debug("Wait for import to finish");
     pollableTaskService.waitForPollableTask(startImportDrop3.getPollableTask().getId(), 60000L);
@@ -270,8 +267,7 @@ public class DropServiceTest extends ServiceTestBase {
             "string added while the drop is translated");
 
     logger.debug("Import drop");
-    PollableFuture<Void> startImportDrop =
-        dropService.importDrop(drop.getId(), null, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Void> startImportDrop = dropService.importDrop(drop.getId(), null);
 
     logger.debug("Wait for import to finish");
     pollableTaskService.waitForPollableTask(startImportDrop.getPollableTask().getId(), 60000L);
@@ -284,8 +280,7 @@ public class DropServiceTest extends ServiceTestBase {
     checkTranslationKitStatistics(drop);
 
     logger.debug("Perform a second import drop (must be able to re-import as many time as wanted)");
-    PollableFuture<Void> startImportDrop2 =
-        dropService.importDrop(drop.getId(), null, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Void> startImportDrop2 = dropService.importDrop(drop.getId(), null);
 
     logger.debug("Wait for import to finish");
     pollableTaskService.waitForPollableTask(startImportDrop2.getPollableTask().getId(), 60000L);
@@ -335,8 +330,7 @@ public class DropServiceTest extends ServiceTestBase {
     reviewDropFiles(drop);
 
     logger.debug("Import drop");
-    PollableFuture<Void> startImportDrop =
-        dropService.importDrop(drop.getId(), null, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Void> startImportDrop = dropService.importDrop(drop.getId(), null);
 
     logger.debug("Wait for import to finish");
     pollableTaskService.waitForPollableTask(startImportDrop.getPollableTask().getId(), 60000L);
@@ -388,8 +382,7 @@ public class DropServiceTest extends ServiceTestBase {
     localizeDropFiles(drop, 1, "translated", true); // introduce syntax error!
 
     logger.debug("Import drop");
-    PollableFuture<Void> startImportDrop =
-        dropService.importDrop(drop.getId(), null, PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Void> startImportDrop = dropService.importDrop(drop.getId(), null);
 
     logger.debug("Wait for import to finish");
     try {
