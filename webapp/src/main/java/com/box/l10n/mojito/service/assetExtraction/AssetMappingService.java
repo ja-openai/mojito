@@ -30,7 +30,9 @@ import org.springframework.retry.RetryCallback;
 import org.springframework.retry.RetryContext;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to map {@link AssetTextUnit} to {@link TMTextUnit}.
@@ -67,6 +69,8 @@ public class AssetMappingService {
   @Autowired RetryTemplate retryTemplate;
 
   @Autowired PollableTaskRunner pollableTaskRunner;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   /**
    * Maps the {@link AssetTextUnit}s extracted during the extraction process to the existing {@link
@@ -176,8 +180,27 @@ public class AssetMappingService {
         });
   }
 
-  @Transactional
   protected List<TMTextUnit> createTMTextUnitForUnmappedAssetTextUnits(
+      User createdByUser, Long assetExtractionId, Long tmId, Long assetId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      List<TMTextUnit> result =
+          createTMTextUnitForUnmappedAssetTextUnitsNoTx(
+              createdByUser, assetExtractionId, tmId, assetId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  protected List<TMTextUnit> createTMTextUnitForUnmappedAssetTextUnitsNoTx(
       User createdByUser, Long assetExtractionId, Long tmId, Long assetId) {
 
     logger.debug(
@@ -242,8 +265,25 @@ public class AssetMappingService {
    * @param assetId
    * @return
    */
-  @Transactional
   protected List<AssetMappingDTO> getExactMatches(Long assetExtractionId, Long tmId, Long assetId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      List<AssetMappingDTO> result = getExactMatchesNoTx(assetExtractionId, tmId, assetId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  protected List<AssetMappingDTO> getExactMatchesNoTx(
+      Long assetExtractionId, Long tmId, Long assetId) {
     TypedQuery<AssetMappingDTO> createNativeQuery =
         entityManager.createNamedQuery(
             "AssetTextUnitToTMTextUnit.getExactMatches", AssetMappingDTO.class);
@@ -259,8 +299,24 @@ public class AssetMappingService {
    * @param exactMatches to be saved
    * @return
    */
-  @Transactional
   protected int saveExactMatches(List<AssetMappingDTO> exactMatches) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      int result = saveExactMatchesNoTx(exactMatches);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  protected int saveExactMatchesNoTx(List<AssetMappingDTO> exactMatches) {
     List<AssetTextUnitToTMTextUnit> assetTextUnitToTMTextUnits = new ArrayList<>();
     for (AssetMappingDTO exactMatch : exactMatches) {
       AssetTextUnitToTMTextUnit assetTextUnitToTMTextUnit = new AssetTextUnitToTMTextUnit();
