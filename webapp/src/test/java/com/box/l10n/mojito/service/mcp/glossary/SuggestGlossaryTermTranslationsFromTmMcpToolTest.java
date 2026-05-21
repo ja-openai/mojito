@@ -118,7 +118,7 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
     private Integer lastLimit;
 
     private FakeTextUnitSearcher() {
-      super(null);
+      super(null, null);
     }
 
     @Override
