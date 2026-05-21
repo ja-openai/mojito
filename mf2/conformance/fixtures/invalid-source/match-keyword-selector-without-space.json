@@ -1,0 +1,7 @@
+{
+  "name": "match-keyword-selector-without-space",
+  "source": ".input {$x :x} .match$x * {{foo}}",
+  "expectedDiagnostics": [
+    { "code": "missing-match-space" }
+  ]
+}

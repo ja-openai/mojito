@@ -176,11 +176,38 @@ impl<'a> Parser<'a> {
     fn parse_match(&mut self, declarations: Vec<Declaration>) -> Option<MessageModel> {
         self.consume_str(".match");
         let mut selectors = Vec::new();
+        if self.peek_char() == Some('$') {
+            self.push_diagnostic(
+                "missing-match-space",
+                ".match selectors must be separated by whitespace.",
+                self.index,
+                self.index,
+            );
+            return None;
+        }
         loop {
-            self.skip_horizontal_whitespace();
+            let skipped_space = self.skip_horizontal_whitespace();
             if self.peek_char() == Some('$') {
+                if !skipped_space && !selectors.is_empty() {
+                    self.push_diagnostic(
+                        "missing-match-space",
+                        ".match selectors must be separated by whitespace.",
+                        self.index,
+                        self.index,
+                    );
+                    return None;
+                }
                 if let Some(name) = self.parse_variable_name() {
                     selectors.push(VariableRef::new(name));
+                }
+                if matches!(self.peek_char(), Some(ch) if !ch.is_whitespace()) {
+                    self.push_diagnostic(
+                        "missing-match-space",
+                        ".match selectors must be separated from variants by whitespace.",
+                        self.index,
+                        self.index,
+                    );
+                    return None;
                 }
                 continue;
             }
@@ -204,7 +231,7 @@ impl<'a> Parser<'a> {
                 break;
             }
             let variant_start = self.index;
-            let keys = self.parse_variant_keys();
+            let keys = self.parse_variant_keys(variant_start)?;
             self.skip_horizontal_whitespace();
             if !self.starts_with("{{") {
                 self.push_diagnostic(
@@ -245,12 +272,21 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_variant_keys(&mut self) -> Vec<VariantKey> {
+    fn parse_variant_keys(&mut self, start: usize) -> Option<Vec<VariantKey>> {
         let mut keys = Vec::new();
         while !self.is_done() && !self.starts_with("{{") && self.peek_char() != Some('\n') {
-            self.skip_horizontal_whitespace();
+            let skipped_space = self.skip_horizontal_whitespace();
             if self.starts_with("{{") || self.peek_char() == Some('\n') || self.is_done() {
                 break;
+            }
+            if !keys.is_empty() && !skipped_space {
+                self.push_diagnostic(
+                    "missing-variant-key-space",
+                    "Variant keys must be separated by whitespace.",
+                    start,
+                    self.index,
+                );
+                return None;
             }
             if self.peek_char() == Some('*') {
                 self.advance_char();
@@ -262,7 +298,7 @@ impl<'a> Parser<'a> {
                 keys.push(VariantKey::Literal { value: key });
             }
         }
-        keys
+        Some(keys)
     }
 
     fn parse_quoted_pattern(&mut self) -> Option<Pattern> {
@@ -1090,10 +1126,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn skip_horizontal_whitespace(&mut self) {
+    fn skip_horizontal_whitespace(&mut self) -> bool {
+        let start = self.index;
         while matches!(self.peek_char(), Some(' ' | '\t')) {
             self.advance_char();
         }
+        self.index != start
     }
 
     fn take_while(&mut self, predicate: impl Fn(char) -> bool) -> String {

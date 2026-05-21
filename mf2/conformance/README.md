@@ -142,6 +142,7 @@ The invalid-source fixtures currently cover:
 - unclosed quoted values in expression tails
 - missing match selectors
 - missing match variants and variant quoted patterns
+- invalid `.match` selector and variant-key adjacency
 - source-level variant key count mismatches
 - invalid variable, function, option, and attribute names
 - duplicate function option names

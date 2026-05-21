@@ -125,12 +125,36 @@ final class Mf2Parser {
     private Mf2Message parseMatch(List<Mf2Message.Declaration> declarations) {
         consumeString(".match");
         List<Mf2Message.VariableRef> selectors = new ArrayList<>();
+        if (!isDone() && peekChar() == '$') {
+            pushDiagnostic(
+                    "missing-match-space",
+                    ".match selectors must be separated by whitespace.",
+                    index,
+                    index);
+            return null;
+        }
         while (true) {
-            skipHorizontalWhitespace();
+            boolean skippedSpace = skipHorizontalWhitespace();
             if (!isDone() && peekChar() == '$') {
+                if (!skippedSpace && !selectors.isEmpty()) {
+                    pushDiagnostic(
+                            "missing-match-space",
+                            ".match selectors must be separated by whitespace.",
+                            index,
+                            index);
+                    return null;
+                }
                 String name = parseVariableName();
                 if (name != null) {
                     selectors.add(new Mf2Message.VariableRef(name));
+                }
+                if (!isDone() && !Character.isWhitespace(peekChar())) {
+                    pushDiagnostic(
+                            "missing-match-space",
+                            ".match selectors must be separated from variants by whitespace.",
+                            index,
+                            index);
+                    return null;
                 }
                 continue;
             }
@@ -153,7 +177,10 @@ final class Mf2Parser {
                 break;
             }
             int variantStart = index;
-            List<Mf2Message.VariantKey> keys = parseVariantKeys();
+            List<Mf2Message.VariantKey> keys = parseVariantKeys(variantStart);
+            if (keys == null) {
+                return null;
+            }
             skipHorizontalWhitespace();
             if (!startsWith("{{")) {
                 pushDiagnostic(
@@ -190,12 +217,20 @@ final class Mf2Parser {
         return new Mf2Message.Select(declarations, selectors, variants);
     }
 
-    private List<Mf2Message.VariantKey> parseVariantKeys() {
+    private List<Mf2Message.VariantKey> parseVariantKeys(int start) {
         List<Mf2Message.VariantKey> keys = new ArrayList<>();
         while (!isDone() && !startsWith("{{") && peekChar() != '\n') {
-            skipHorizontalWhitespace();
+            boolean skippedSpace = skipHorizontalWhitespace();
             if (startsWith("{{") || peekChar() == '\n' || isDone()) {
                 break;
+            }
+            if (!keys.isEmpty() && !skippedSpace) {
+                pushDiagnostic(
+                        "missing-variant-key-space",
+                        "Variant keys must be separated by whitespace.",
+                        start,
+                        index);
+                return null;
             }
             if (peekChar() == '*') {
                 advanceChar();
@@ -958,10 +993,12 @@ final class Mf2Parser {
         }
     }
 
-    private void skipHorizontalWhitespace() {
+    private boolean skipHorizontalWhitespace() {
+        int start = index;
         while (!isDone() && (peekChar() == ' ' || peekChar() == '\t')) {
             advanceChar();
         }
+        return index != start;
     }
 
     private String takeWhile(CharPredicate predicate) {

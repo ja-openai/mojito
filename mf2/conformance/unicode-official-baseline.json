@@ -1,6 +1,6 @@
 {
-  "passed": 265,
-  "skipped": 32,
+  "passed": 271,
+  "skipped": 26,
   "notWired": 164,
   "total": 461,
   "files": {
@@ -9,12 +9,12 @@
       "skipped": 0
     },
     "tests/syntax-errors.json": {
-      "passed": 125,
-      "skipped": 8
+      "passed": 130,
+      "skipped": 3
     },
     "tests/bidi.json": {
-      "passed": 11,
-      "skipped": 16
+      "passed": 12,
+      "skipped": 15
     },
     "tests/data-model-errors.json": {
       "passed": 15,
