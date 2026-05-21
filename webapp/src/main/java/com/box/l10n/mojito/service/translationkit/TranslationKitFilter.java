@@ -34,15 +34,12 @@ import net.sf.okapi.common.resource.TextUnit;
 import net.sf.okapi.common.skeleton.ISkeletonWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * An {@link IFilter} that extracts {@link TextUnit} to build a translation kit.
  *
  * @author jaurambault
  */
-@Configurable
 public class TranslationKitFilter implements IFilter {
 
   static Logger logger = LoggerFactory.getLogger(TranslationKitFilter.class);
@@ -51,13 +48,13 @@ public class TranslationKitFilter implements IFilter {
 
   private static final String DISPLAY_NAME = "Translation Kit Filter";
 
-  @Autowired TranslationKitService translationKitService;
+  TranslationKitService translationKitService;
 
-  @Autowired LocaleService localeService;
+  LocaleService localeService;
 
-  @Autowired ImportExportTextUnitUtils importExportTextUnitUtils;
+  ImportExportTextUnitUtils importExportTextUnitUtils;
 
-  @Autowired TextUnitUtils textUnitUtils;
+  TextUnitUtils textUnitUtils;
 
   /** {@link TranslationKit#id} */
   Long translationKitId;
@@ -80,10 +77,20 @@ public class TranslationKitFilter implements IFilter {
   Locale locale;
 
   public TranslationKitFilter(
-      Long translationKitId, TranslationKit.Type type, Boolean useInheritance) {
+      Long translationKitId,
+      TranslationKit.Type type,
+      Boolean useInheritance,
+      TranslationKitService translationKitService,
+      LocaleService localeService,
+      ImportExportTextUnitUtils importExportTextUnitUtils,
+      TextUnitUtils textUnitUtils) {
     this.translationKitId = Preconditions.checkNotNull(translationKitId);
     this.type = Preconditions.checkNotNull(type);
     this.useInheritance = useInheritance;
+    this.translationKitService = translationKitService;
+    this.localeService = localeService;
+    this.importExportTextUnitUtils = importExportTextUnitUtils;
+    this.textUnitUtils = textUnitUtils;
   }
 
   @Override

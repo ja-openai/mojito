@@ -105,6 +105,8 @@ Removed during this workstream:
   collaborators explicitly and unused woven fields were removed.
 - `TMExportFilter` no longer uses `@Configurable`; `TMService` now constructs it with explicit
   export collaborators and unused woven fields were removed.
+- `TranslationKitFilter` no longer uses `@Configurable`; `TranslationKitService` now passes the
+  filter collaborators explicitly when generating XLIFF kits.
 
 In progress:
 
