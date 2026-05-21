@@ -234,6 +234,41 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void createReviewProjectRequestCommitsTransaction() {
+    CreateReviewProjectRequestCommand request = createReviewProjectRequestCommand();
+    CreateReviewProjectRequestResult result =
+        new CreateReviewProjectRequestResult(
+            1L, "name", List.of("fr"), ZonedDateTime.now(), List.of(), 1, 1, 0, 0, List.of());
+    doReturn(result).when(reviewProjectService).createReviewProjectRequestNoTx(request);
+
+    assertEquals(result, reviewProjectService.createReviewProjectRequest(request));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void createReviewProjectRequestRollsBackTransactionOnRuntimeException() {
+    CreateReviewProjectRequestCommand request = createReviewProjectRequestCommand();
+    RuntimeException failure = new RuntimeException("create request failed");
+    doThrow(failure).when(reviewProjectService).createReviewProjectRequestNoTx(request);
+
+    try {
+      reviewProjectService.createReviewProjectRequest(request);
+      fail("Expected createReviewProjectRequest to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(
@@ -249,6 +284,24 @@ public class ReviewProjectServiceTest {
         null,
         null,
         99L);
+  }
+
+  private CreateReviewProjectRequestCommand createReviewProjectRequestCommand() {
+    return new CreateReviewProjectRequestCommand(
+        List.of("fr"),
+        null,
+        List.of(1001L),
+        null,
+        StatusFilter.ALL,
+        false,
+        ReviewProjectType.NORMAL,
+        ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+        List.of(),
+        "name",
+        null,
+        false,
+        99L,
+        null);
   }
 
   @Test

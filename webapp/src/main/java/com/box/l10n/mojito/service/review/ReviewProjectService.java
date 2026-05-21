@@ -549,8 +549,24 @@ public class ReviewProjectService {
         && !GlossaryTermMetadata.STATUS_DEPRECATED.equals(status);
   }
 
-  @Transactional
   public CreateReviewProjectRequestResult createReviewProjectRequest(
+      CreateReviewProjectRequestCommand request) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      CreateReviewProjectRequestResult result = createReviewProjectRequestNoTx(request);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  CreateReviewProjectRequestResult createReviewProjectRequestNoTx(
       CreateReviewProjectRequestCommand request) {
     if (CollectionUtils.isEmpty(request.localeTags())) {
       throw new IllegalArgumentException("At least one locale must be provided");
