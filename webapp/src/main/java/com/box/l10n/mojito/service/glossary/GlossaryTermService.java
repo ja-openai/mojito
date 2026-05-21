@@ -49,7 +49,10 @@ import java.util.regex.Pattern;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class GlossaryTermService {
@@ -149,6 +152,7 @@ public class GlossaryTermService {
   private final com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository;
   private final LocaleService localeService;
   private final UserService userService;
+  private final PlatformTransactionManager transactionManager;
 
   public GlossaryTermService(
       GlossaryRepository glossaryRepository,
@@ -169,7 +173,8 @@ public class GlossaryTermService {
       TMTextUnitRepository tmTextUnitRepository,
       com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository,
       LocaleService localeService,
-      UserService userService) {
+      UserService userService,
+      PlatformTransactionManager transactionManager) {
     this.glossaryRepository = glossaryRepository;
     this.glossaryStorageService = glossaryStorageService;
     this.glossaryTermMetadataRepository = glossaryTermMetadataRepository;
@@ -189,16 +194,36 @@ public class GlossaryTermService {
     this.repositoryRepository = repositoryRepository;
     this.localeService = localeService;
     this.userService = userService;
+    this.transactionManager = transactionManager;
   }
 
-  @Transactional(readOnly = true)
   public SearchTermsView searchTerms(
       Long glossaryId, String searchQuery, List<String> localeTags, Integer limit) {
     return searchTerms(glossaryId, searchQuery, SearchField.ALL, localeTags, limit);
   }
 
-  @Transactional(readOnly = true)
   public SearchTermsView searchTerms(
+      Long glossaryId,
+      String searchQuery,
+      SearchField searchField,
+      List<String> localeTags,
+      Integer limit) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      SearchTermsView result =
+          searchTermsNoTx(glossaryId, searchQuery, searchField, localeTags, limit);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SearchTermsView searchTermsNoTx(
       Long glossaryId,
       String searchQuery,
       SearchField searchField,
@@ -251,8 +276,22 @@ public class GlossaryTermService {
         termViews.stream().limit(resolvedLimit).toList(), termViews.size(), resolvedLocaleTags);
   }
 
-  @Transactional(readOnly = true)
   public TermView getTerm(Long glossaryId, Long tmTextUnitId, List<String> localeTags) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      TermView result = getTermNoTx(glossaryId, tmTextUnitId, localeTags);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TermView getTermNoTx(Long glossaryId, Long tmTextUnitId, List<String> localeTags) {
     requireGlossaryReader();
 
     Glossary glossary = getGlossary(glossaryId);
@@ -282,8 +321,22 @@ public class GlossaryTermService {
         extractedTermsByNormalizedKey);
   }
 
-  @Transactional(readOnly = true)
   public WorkspaceSummaryView getWorkspaceSummary(Long glossaryId) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      WorkspaceSummaryView result = getWorkspaceSummaryNoTx(glossaryId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  WorkspaceSummaryView getWorkspaceSummaryNoTx(Long glossaryId) {
     requireGlossaryReader();
 
     Glossary glossary = getGlossary(glossaryId);
@@ -392,8 +445,23 @@ public class GlossaryTermService {
         truncated);
   }
 
-  @Transactional
   public TermView upsertTerm(Long glossaryId, Long tmTextUnitId, TermUpsertCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      TermView result = upsertTermNoTx(glossaryId, tmTextUnitId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TermView upsertTermNoTx(Long glossaryId, Long tmTextUnitId, TermUpsertCommand command) {
     boolean canManageTerms = userService.isCurrentUserAdminOrPm();
     if (canManageTerms) {
       requireTermManager();
@@ -492,8 +560,24 @@ public class GlossaryTermService {
         Map.of());
   }
 
-  @Transactional
   public TermView appendTermEvidence(
+      Long glossaryId, Long tmTextUnitId, List<EvidenceInput> evidenceInputs) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      TermView result = appendTermEvidenceNoTx(glossaryId, tmTextUnitId, evidenceInputs);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TermView appendTermEvidenceNoTx(
       Long glossaryId, Long tmTextUnitId, List<EvidenceInput> evidenceInputs) {
     requireTermManager();
     if (evidenceInputs == null || evidenceInputs.isEmpty()) {
@@ -541,8 +625,22 @@ public class GlossaryTermService {
         Map.of());
   }
 
-  @Transactional
   public void deleteTerm(Long glossaryId, Long tmTextUnitId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      deleteTermNoTx(glossaryId, tmTextUnitId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteTermNoTx(Long glossaryId, Long tmTextUnitId) {
     requireTermManager();
 
     Glossary glossary = getGlossary(glossaryId);
@@ -639,8 +737,23 @@ public class GlossaryTermService {
     return allowedTranslations;
   }
 
-  @Transactional
   public BatchUpdateResult batchUpdateTerms(Long glossaryId, BatchUpdateCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      BatchUpdateResult result = batchUpdateTermsNoTx(glossaryId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  BatchUpdateResult batchUpdateTermsNoTx(Long glossaryId, BatchUpdateCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
     Asset asset = glossaryStorageService.ensureCanonicalAsset(glossary);
@@ -705,8 +818,22 @@ public class GlossaryTermService {
     return new BatchUpdateResult(toSave.size());
   }
 
-  @Transactional(readOnly = true)
   public ExtractionView extractCandidates(Long glossaryId, ExtractionCommand command) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      ExtractionView result = extractCandidatesNoTx(glossaryId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ExtractionView extractCandidatesNoTx(Long glossaryId, ExtractionCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
     Set<String> existingTerms =
@@ -804,8 +931,25 @@ public class GlossaryTermService {
     return new PollableFutureTaskResult<>();
   }
 
-  @Transactional
   public TranslationProposalView submitTranslationProposal(
+      Long glossaryId, Long tmTextUnitId, TranslationProposalCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      TranslationProposalView result =
+          submitTranslationProposalNoTx(glossaryId, tmTextUnitId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TranslationProposalView submitTranslationProposalNoTx(
       Long glossaryId, Long tmTextUnitId, TranslationProposalCommand command) {
     requireGlossaryReader();
     Glossary glossary = getGlossary(glossaryId);
@@ -833,9 +977,23 @@ public class GlossaryTermService {
     return toTranslationProposalView(proposal, sourceTextUnit.getSource());
   }
 
-  @Transactional(readOnly = true)
   public ProposalSearchView searchTranslationProposals(
       Long glossaryId, String status, Integer limit) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      ProposalSearchView result = searchTranslationProposalsNoTx(glossaryId, status, limit);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ProposalSearchView searchTranslationProposalsNoTx(Long glossaryId, String status, Integer limit) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
     Asset asset = glossaryStorageService.ensureCanonicalAsset(glossary);
@@ -871,8 +1029,25 @@ public class GlossaryTermService {
     return new ProposalSearchView(views, proposals.size());
   }
 
-  @Transactional
   public TranslationProposalView decideTranslationProposal(
+      Long glossaryId, Long proposalId, TranslationProposalDecisionCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      TranslationProposalView result =
+          decideTranslationProposalNoTx(glossaryId, proposalId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TranslationProposalView decideTranslationProposalNoTx(
       Long glossaryId, Long proposalId, TranslationProposalDecisionCommand command) {
     requireTermManager();
     Glossary glossary = getGlossary(glossaryId);
@@ -922,6 +1097,13 @@ public class GlossaryTermService {
                 proposal.getTmTextUnit().getId())
             .getSource();
     return toTranslationProposalView(proposal, source);
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    transactionDefinition.setReadOnly(true);
+    return transactionDefinition;
   }
 
   private List<ExtractedCandidateView> refineCandidatesWithAi(

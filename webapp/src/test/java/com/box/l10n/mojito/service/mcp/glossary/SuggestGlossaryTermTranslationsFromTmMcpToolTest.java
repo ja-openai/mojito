@@ -77,7 +77,7 @@ public class SuggestGlossaryTermTranslationsFromTmMcpToolTest {
     private FakeGlossaryTermService() {
       super(
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null, null);
+          null, null, null, null, null);
     }
 
     @Override
