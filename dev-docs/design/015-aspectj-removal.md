@@ -28,9 +28,8 @@ Framework modes:
 Remaining annotation usage:
 
 - `299` `@Transactional` usages remain across production and test sources.
-- `3` `@Retryable` usages remain in `AssetExtractionService` and `TextUnitSearcher`.
 - No `@Configurable`, `@Pollable`, `@Timed`, `@StopWatch`, `@RunAs`, `@JsonRawString`, AspectJ
-  method-security, AspectJ async, or AspectJ caching annotations remain in source.
+  method-security, AspectJ async, AspectJ caching, or annotation retry usage remains in source.
 
 Custom AspectJ entry points:
 
@@ -40,7 +39,9 @@ Custom AspectJ entry points:
 Removed during this workstream:
 
 - The unused custom `@Retry`, `RetryAspect`, and `RetryAspectConfig` path. Existing retry behavior
-  uses explicit `RetryTemplate` calls or Spring's `@Retryable`, not the custom annotation.
+  used explicit `RetryTemplate` calls or Spring's `@Retryable`, not the custom annotation.
+- Spring `@Retryable` and `@EnableRetry` were removed. The remaining retry behavior uses explicit
+  loops or explicit `RetryTemplate` calls.
 - `@StopWatch` and `StopWatchAspect`. The four annotated methods now use explicit local
   `Stopwatch` logging.
 - `@JsonRawString`, `JsonRawStringAspect`, and the aspect-specific test fixtures. `PollableTask`

@@ -39,8 +39,6 @@ import org.hibernate.query.criteria.JpaJoin;
 import org.hibernate.query.criteria.JpaRoot;
 import org.hibernate.query.criteria.JpaSetJoin;
 import org.hibernate.query.sqm.tree.SqmJoinType;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,6 +80,8 @@ public class TextUnitSearcher {
   private static final String USAGES = "usages";
   private static final String TEXT_UNIT_COUNT = "textUnitCount";
   private static final String TEXT_UNIT_WORD_COUNT = "textUnitWordCount";
+  private static final int MAX_SEARCH_ATTEMPTS = 3;
+  private static final long SEARCH_RETRY_INITIAL_BACKOFF_MILLIS = 500L;
 
   private final EntityManager entityManager;
 
@@ -89,9 +89,25 @@ public class TextUnitSearcher {
     this.entityManager = entityManager;
   }
 
-  @Retryable(backoff = @Backoff(delay = 500, multiplier = 2))
-  @Transactional(readOnly = true)
   public List<TextUnitDTO> search(TextUnitSearcherParameters searchParameters) {
+    int attempt = 0;
+    long backoffMillis = SEARCH_RETRY_INITIAL_BACKOFF_MILLIS;
+    while (true) {
+      attempt++;
+      try {
+        return searchWithTransaction(searchParameters);
+      } catch (RuntimeException e) {
+        if (attempt >= MAX_SEARCH_ATTEMPTS) {
+          throw e;
+        }
+        sleepBeforeRetry(backoffMillis);
+        backoffMillis *= 2;
+      }
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public List<TextUnitDTO> searchWithTransaction(TextUnitSearcherParameters searchParameters) {
     HibernateCriteriaBuilder cb = criteriaBuilder();
     JpaCriteriaQuery<Tuple> query = cb.createTupleQuery();
     SearchContext context = buildSearchContext(cb, query, searchParameters);
@@ -113,9 +129,26 @@ public class TextUnitSearcher {
         .collect(Collectors.toList());
   }
 
-  @Retryable(backoff = @Backoff(delay = 500, multiplier = 2))
-  @Transactional(readOnly = true)
   public TextUnitAndWordCount countTextUnitAndWordCount(
+      TextUnitSearcherParameters searchParameters) {
+    int attempt = 0;
+    long backoffMillis = SEARCH_RETRY_INITIAL_BACKOFF_MILLIS;
+    while (true) {
+      attempt++;
+      try {
+        return countTextUnitAndWordCountWithTransaction(searchParameters);
+      } catch (RuntimeException e) {
+        if (attempt >= MAX_SEARCH_ATTEMPTS) {
+          throw e;
+        }
+        sleepBeforeRetry(backoffMillis);
+        backoffMillis *= 2;
+      }
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public TextUnitAndWordCount countTextUnitAndWordCountWithTransaction(
       TextUnitSearcherParameters searchParameters) {
     HibernateCriteriaBuilder cb = criteriaBuilder();
     JpaCriteriaQuery<Tuple> query = cb.createTupleQuery();
@@ -132,6 +165,15 @@ public class TextUnitSearcher {
     return new TextUnitAndWordCount(
         textUnitCount == null ? 0 : textUnitCount,
         textUnitWordCount == null ? 0 : textUnitWordCount);
+  }
+
+  protected void sleepBeforeRetry(long backoffMillis) {
+    try {
+      Thread.sleep(backoffMillis);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Interrupted while retrying text unit search", e);
+    }
   }
 
   private HibernateCriteriaBuilder criteriaBuilder() {

@@ -23,7 +23,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.converter.json.Jackson2ObjectMapperFactoryBean;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.backoff.ExponentialRandomBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
@@ -40,7 +39,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableJpaRepositories
 @EnableScheduling
 @EnableTransactionManagement(mode = AdviceMode.ASPECTJ)
-@EnableRetry
 @EntityScan(basePackageClasses = BaseEntity.class)
 @ConfigurationPropertiesScan
 public class Application {

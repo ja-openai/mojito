@@ -98,7 +98,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.retry.RetryContext;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -1732,18 +1731,31 @@ public class AssetExtractionService {
   /**
    * Mark the asset extraction as last successful.
    *
-   * <p>Make the function {@link Retryable} since this can have concurrent access issue when
-   * multiple thread trying to update update the asset at the same time. It is not important which
-   * one wins last since in real usage that should not really happen, it is an edge case and the
-   * code just need to be safe.
+   * <p>Retry the update since this can have concurrent access issue when multiple thread trying to
+   * update update the asset at the same time. It is not important which one wins last since in real
+   * usage that should not really happen, it is an edge case and the code just need to be safe.
    *
    * <p>This is now only used by tests. Eventually it could be replaced.
    *
    * @param asset The asset to update
    * @param assetExtraction The asset extraction to mark as last successful
    */
-  @Retryable
   public void markAssetExtractionAsLastSuccessful(Asset asset, AssetExtraction assetExtraction) {
+    int attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        markAssetExtractionAsLastSuccessfulOnce(asset, assetExtraction);
+        return;
+      } catch (RuntimeException e) {
+        if (attempt >= 3) {
+          throw e;
+        }
+      }
+    }
+  }
+
+  void markAssetExtractionAsLastSuccessfulOnce(Asset asset, AssetExtraction assetExtraction) {
     logger.debug(
         "Marking asset extraction as last successful, assetExtractionId: {}",
         assetExtraction.getId());
