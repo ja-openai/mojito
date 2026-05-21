@@ -18,6 +18,7 @@ import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.asset.VirtualAssetService;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
+import com.box.l10n.mojito.service.repository.RepositoryNameAlreadyUsedException;
 import com.box.l10n.mojito.service.repository.RepositoryService;
 import java.util.List;
 import java.util.Set;
@@ -27,6 +28,8 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GlossaryStorageServiceTest {
@@ -36,6 +39,8 @@ public class GlossaryStorageServiceTest {
   @Mock VirtualAssetService virtualAssetService;
   @Mock LocaleService localeService;
   @Mock RepositoryLocaleRepository repositoryLocaleRepository;
+  @Mock PlatformTransactionManager transactionManager;
+  @Mock TransactionStatus transaction;
 
   GlossaryStorageService glossaryStorageService;
 
@@ -49,10 +54,12 @@ public class GlossaryStorageServiceTest {
             assetRepository,
             virtualAssetService,
             localeService,
-            repositoryLocaleRepository);
+            repositoryLocaleRepository,
+            transactionManager);
     defaultLocale = new com.box.l10n.mojito.entity.Locale();
     defaultLocale.setBcp47Tag("en-US");
     when(localeService.getDefaultLocale()).thenReturn(defaultLocale);
+    when(transactionManager.getTransaction(any())).thenReturn(transaction);
   }
 
   @Test
@@ -79,6 +86,25 @@ public class GlossaryStorageServiceTest {
 
     assertTrue(nameCaptor.getValue().startsWith("glossary-"));
     assertFalse(nameCaptor.getValue().startsWith("__glossary__"));
+    verify(transactionManager).commit(transaction);
+    verify(transactionManager, never()).rollback(transaction);
+  }
+
+  @Test
+  public void createManagedBackingRepositoryRollsBackTransaction() throws Exception {
+    when(repositoryService.createRepository(anyString(), anyString(), any(), eq(false)))
+        .thenThrow(new RepositoryNameAlreadyUsedException("already used"));
+
+    try {
+      glossaryStorageService.createManagedBackingRepository("Core Glossary");
+    } catch (IllegalStateException e) {
+      assertEquals("Failed to create managed glossary backing repository", e.getMessage());
+      verify(transactionManager).rollback(transaction);
+      verify(transactionManager, never()).commit(transaction);
+      return;
+    }
+
+    throw new AssertionError("Expected createManagedBackingRepository to rethrow the failure");
   }
 
   @Test
@@ -125,6 +151,8 @@ public class GlossaryStorageServiceTest {
                 repositoryLocale ->
                     repositoryLocale.getRepository() == repository
                         && repositoryLocale.getParentLocale() == null));
+    verify(transactionManager).commit(transaction);
+    verify(transactionManager, never()).rollback(transaction);
   }
 
   @Test
@@ -153,6 +181,8 @@ public class GlossaryStorageServiceTest {
     verify(repositoryService, never()).updateRepositoryLocales(eq(repository), any());
     assertEquals(1, repository.getRepositoryLocales().size());
     assertTrue(repository.getRepositoryLocales().contains(rootLocale));
+    verify(transactionManager).commit(transaction);
+    verify(transactionManager, never()).rollback(transaction);
   }
 
   @Test
@@ -167,5 +197,24 @@ public class GlossaryStorageServiceTest {
     glossaryStorageService.renameManagedBackingRepository(glossary, " glossary-new ");
 
     verify(repositoryService).renameRepository(repository, "glossary-new");
+    verify(transactionManager).commit(transaction);
+    verify(transactionManager, never()).rollback(transaction);
+  }
+
+  @Test
+  public void renameManagedBackingRepositoryRollsBackTransaction() {
+    Glossary glossary = new Glossary();
+    glossary.setName("Core Glossary");
+
+    try {
+      glossaryStorageService.renameManagedBackingRepository(glossary, "glossary-new");
+    } catch (IllegalStateException e) {
+      assertEquals("Backing repository is missing for glossary Core Glossary", e.getMessage());
+      verify(transactionManager).rollback(transaction);
+      verify(transactionManager, never()).commit(transaction);
+      return;
+    }
+
+    throw new AssertionError("Expected renameManagedBackingRepository to rethrow the failure");
   }
 }
