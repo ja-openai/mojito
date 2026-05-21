@@ -148,6 +148,8 @@ Removed during this workstream:
   commit their transaction boundaries explicitly.
 - `CurrentVariantRollbackService` no longer relies on AspectJ for a rollback method reachable by
   self-invocation; current-variant rollback now opens and commits its transaction explicitly.
+- `TextUnitIngestionMonitoringService` no longer uses `@Transactional`; recompute and snapshot
+  reads now open and commit their read-write or read-only transactions explicitly.
 
 In progress:
 
