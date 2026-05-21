@@ -169,6 +169,8 @@ impl Default for FunctionRegistry {
         registry.register_selector("number", number_selector);
         registry.register("percent", percent_function);
         registry.register_selector("percent", percent_selector);
+        registry.register("currency", currency_function);
+        registry.register_selector("currency", currency_selector);
         registry.register("integer", integer_function);
         registry.register_selector("integer", integer_selector);
         registry.register("datetime", datetime_function);
@@ -347,6 +349,22 @@ fn percent_selector(call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> 
     Ok((value == key).then_some(1))
 }
 
+fn currency_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    let value = parse_call_decimal(&call)
+        .map_err(|_| bad_operand("Currency function requires a numeric operand."))?;
+    let currency = currency_code(&call)?
+        .ok_or_else(|| bad_operand("Currency function requires a currency option."))?;
+    Ok(format_currency_number(
+        value,
+        &currency,
+        currency_fraction_digits(&call)?,
+    ))
+}
+
+fn currency_selector(_call: FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
+    Err(bad_selector("Currency selector is not supported."))
+}
+
 fn integer_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     let value = parse_call_decimal(&call)
         .map_err(|_| bad_operand("Integer function requires a numeric operand."))?;
@@ -421,7 +439,7 @@ fn parse_source_decimal(source: Option<FunctionSourceRef<'_>>) -> Result<f64, ()
     let Some(source) = source else {
         return Err(());
     };
-    if is_numeric_function(source.function()) {
+    if is_decimal_source_function(source.function()) {
         parse_decimal_number(source.value())
     } else {
         parse_source_decimal(source.inherited_source())
@@ -543,6 +561,14 @@ fn format_decimal_with_maximum_fraction_digits(value: f64, digits: Option<usize>
     formatted
 }
 
+fn format_currency_number(value: f64, currency: &str, fraction_digits: Option<usize>) -> String {
+    let number = match fraction_digits {
+        Some(digits) => format!("{:.*}", digits, value),
+        None => value.to_string(),
+    };
+    format!("{currency} {number}")
+}
+
 fn append_minimum_fraction_digits(formatted: &mut String, minimum_fraction_digits: usize) {
     if minimum_fraction_digits == 0 {
         return;
@@ -585,6 +611,45 @@ fn maximum_fraction_digits(call: &FunctionCall<'_>) -> Result<Option<usize>, Dia
     value.parse::<usize>().map(Some).map_err(|_| {
         bad_option("maximumFractionDigits option is outside the supported integer range.")
     })
+}
+
+fn currency_code(call: &FunctionCall<'_>) -> Result<Option<String>, Diagnostic> {
+    if let Some(value) = call.option_value("currency")? {
+        return Ok(Some(value));
+    }
+    inherited_currency_code(call.inherited_source())
+}
+
+fn inherited_currency_code(
+    source: Option<FunctionSourceRef<'_>>,
+) -> Result<Option<String>, Diagnostic> {
+    let Some(source) = source else {
+        return Ok(None);
+    };
+    if source.function().name == "currency" {
+        if let Some(value) = source.option_value("currency")? {
+            return Ok(Some(value));
+        }
+    }
+    inherited_currency_code(source.inherited_source())
+}
+
+fn currency_fraction_digits(call: &FunctionCall<'_>) -> Result<Option<usize>, Diagnostic> {
+    let Some(value) = call.option_value("fractionDigits")? else {
+        return Ok(None);
+    };
+    if value == "auto" {
+        return Ok(None);
+    }
+    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(bad_option(
+            "fractionDigits option must be auto or a non-negative integer.",
+        ));
+    }
+    value
+        .parse::<usize>()
+        .map(Some)
+        .map_err(|_| bad_option("fractionDigits option is outside the supported integer range."))
 }
 
 fn sign_display_always(function: &FunctionRef) -> Result<bool, Diagnostic> {
@@ -638,6 +703,10 @@ fn inherited_exact_numeric_source(
 
 fn is_numeric_function(function: &FunctionRef) -> bool {
     function.name == "number" || function.name == "integer" || function.name == "percent"
+}
+
+fn is_decimal_source_function(function: &FunctionRef) -> bool {
+    is_numeric_function(function) || function.name == "currency"
 }
 
 fn function_option_literal<'a>(function: &'a FunctionRef, name: &str) -> Option<&'a str> {
@@ -1196,13 +1265,15 @@ impl<'a> FormatContext<'a> {
                     .as_ref()
                     .is_none_or(|annotation| annotation.exact_match());
                 let selection_key = self.selection_key_for_selector(annotation.as_ref(), value);
+                let source = value.source.clone();
+                self.record_selector_resolution_errors(annotation.as_ref())?;
                 Ok(SelectorValue {
                     normalized_rendered: string_select.then(|| normalize_string_key(&rendered)),
                     rendered,
                     exact_match,
                     selection_key,
                     function: annotation.map(|annotation| annotation.function),
-                    source: value.source.clone(),
+                    source,
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -1431,6 +1502,22 @@ impl<'a> FormatContext<'a> {
             }
         } else {
             Ok(())
+        }
+    }
+
+    fn record_selector_resolution_errors(
+        &mut self,
+        annotation: Option<&SelectorAnnotation>,
+    ) -> Result<(), Diagnostic> {
+        if !annotation.is_some_and(|annotation| annotation.function.name == "currency") {
+            return Ok(());
+        }
+        let error = bad_selector("Currency selector is not supported.");
+        if self.fallback {
+            self.errors.push(error);
+            Ok(())
+        } else {
+            Err(error)
         }
     }
 

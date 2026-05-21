@@ -63,6 +63,8 @@ Supported now:
   malformed-operand fallback, and exact selection semantics
 - `:percent` formatting for strict decimal operands, basic fraction-digit
   options, malformed-operand fallback, and plural selection on percent values
+- validation-backed `:currency` formatting for numeric operands with a required
+  or inherited currency option, plus non-selector errors
 - `:offset` for integer add/subtract formatting and exact selection, including
   inherited `signDisplay=always` preservation
 - `:integer` formatting that truncates numeric operands, reports invalid

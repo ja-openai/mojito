@@ -1,7 +1,7 @@
 {
-  "passed": 439,
+  "passed": 451,
   "skipped": 0,
-  "notWired": 22,
+  "notWired": 10,
   "total": 461,
   "files": {
     "tests/syntax.json": {
@@ -30,6 +30,10 @@
     },
     "tests/functions/percent.json": {
       "passed": 13,
+      "skipped": 0
+    },
+    "tests/functions/currency.json": {
+      "passed": 12,
       "skipped": 0
     },
     "tests/functions/date.json": {

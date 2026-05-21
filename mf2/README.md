@@ -77,9 +77,8 @@ The current conformance slice covers:
 - function annotations and literal/variable options in the data model, including
   quoted option values containing spaces, variable-valued options, and optional
   whitespace around `=`
-- formatter function registries in Rust/Swift/Python/Java; default runtimes
-  pass through the current standard-function slice, while demos register a
-  narrow dependency-free `:currency` function outside the core formatter
+- formatter function registries in Rust/Swift/Python/Java; demos can still
+  register app-specific functions outside the core formatter
 - Rust validation-only `:date`, `:time`, and `:datetime` built-ins that enforce
   simple ISO date/datetime operand shape without claiming locale formatting
 - Rust `:number` built-in formatting for strict decimal operands, fallback
@@ -88,6 +87,9 @@ The current conformance slice covers:
 - Rust `:percent` built-in formatting for strict decimal operands, basic
   fraction-digit options, malformed-operand fallback, and percent plural
   selection semantics used by the official tests
+- Rust validation-backed `:currency` built-in formatting for numeric operands
+  with a required or inherited currency option, plus non-selector errors used
+  by the official tests
 - Rust `:offset` built-in for integer add/subtract formatting and exact
   selection, including inherited `signDisplay=always` preservation
 - Rust `:integer` built-in formatting that truncates numeric operands, reports

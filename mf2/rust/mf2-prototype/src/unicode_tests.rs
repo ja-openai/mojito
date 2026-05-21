@@ -150,6 +150,10 @@ fn run_with_suppressed_parser_panics(root: &Path, baseline_path: &Path) {
             mode: CheckMode::Runtime,
         },
         FileCheck {
+            path: "tests/functions/currency.json",
+            mode: CheckMode::Runtime,
+        },
+        FileCheck {
             path: "tests/functions/date.json",
             mode: CheckMode::Runtime,
         },

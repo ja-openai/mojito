@@ -9,7 +9,7 @@
         "arg": { "type": "variable", "name": "amount" },
         "function": {
           "type": "function",
-          "name": "currency",
+          "name": "custom",
           "options": {
             "currency": { "type": "literal", "value": "USD" }
           }

@@ -7,12 +7,12 @@ The official Unicode MessageFormat WG test suite is vendored separately under
 `../third_party/message-format-wg/test`. The Rust parser runner reads the
 upstream test shape directly via `cargo run -- unicode-tests`, currently wiring
 syntax success/error, bidi syntax, data-model error, `:string` function,
-`:number`, `:percent`, date/time/datetime validation, `:offset`, `:integer`,
-fallback, and pattern-selection checks. Its checked-in baseline lives in
+`:number`, `:percent`, `:currency`, date/time/datetime validation, `:offset`,
+`:integer`, fallback, and pattern-selection checks. Its checked-in baseline lives in
 `unicode-official-baseline.json`; update it in the same commit when official
-pass/skip/not-wired counts intentionally change. Remaining currency function
-suite, parts, and draft `u:` option official tests are counted as not wired
-until the corresponding runtime semantics are implemented.
+pass/skip/not-wired counts intentionally change. Remaining draft `u:` option
+official tests are counted as not wired until the corresponding runtime
+semantics are implemented.
 
 ## Contract
 
@@ -114,10 +114,9 @@ The source-to-model fixtures currently cover:
   expression operands, markup placeholders, and option/attribute assignments
 - escaped braces and backslash
 - function annotations and options, including `:number`, `:integer`, `:string`,
-  quoted option values containing spaces, variable-valued options, and optional
-  whitespace around `=`
-- `:currency` parsing as a custom function annotation, with unregistered custom
-  functions rejected by default formatters
+  and `:currency`, quoted option values containing spaces, variable-valued
+  options, and optional whitespace around `=`
+- unregistered custom functions rejected by default formatters
 - `.input`, including multiple declarations before a quoted pattern
 - `.local`, including chained locals
 - markup open/close/standalone placeholders
