@@ -22,7 +22,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -44,6 +47,7 @@ public class ReviewAutomationService {
   private final UserService userService;
   private final ObjectProvider<ReviewAutomationCronSchedulerService>
       reviewAutomationCronSchedulerServiceProvider;
+  private final PlatformTransactionManager transactionManager;
 
   public ReviewAutomationService(
       ReviewAutomationRepository reviewAutomationRepository,
@@ -52,7 +56,8 @@ public class ReviewAutomationService {
       TeamRepository teamRepository,
       UserService userService,
       ObjectProvider<ReviewAutomationCronSchedulerService>
-          reviewAutomationCronSchedulerServiceProvider) {
+          reviewAutomationCronSchedulerServiceProvider,
+      PlatformTransactionManager transactionManager) {
     this.reviewAutomationRepository = reviewAutomationRepository;
     this.reviewFeatureRepository = reviewFeatureRepository;
     this.reviewAutomationRunRepository = reviewAutomationRunRepository;
@@ -60,10 +65,26 @@ public class ReviewAutomationService {
     this.userService = userService;
     this.reviewAutomationCronSchedulerServiceProvider =
         reviewAutomationCronSchedulerServiceProvider;
+    this.transactionManager = transactionManager;
   }
 
-  @Transactional(readOnly = true)
   public SearchReviewAutomationsView searchReviewAutomations(
+      String searchQuery, Boolean enabled, Integer limit) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      SearchReviewAutomationsView result = searchReviewAutomationsNoTx(searchQuery, enabled, limit);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SearchReviewAutomationsView searchReviewAutomationsNoTx(
       String searchQuery, Boolean enabled, Integer limit) {
     requireAdmin();
     int resolvedLimit = normalizeLimit(limit);
@@ -80,8 +101,22 @@ public class ReviewAutomationService {
         page.getTotalElements());
   }
 
-  @Transactional(readOnly = true)
   public List<ReviewAutomationOption> getReviewAutomationOptions() {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<ReviewAutomationOption> result = getReviewAutomationOptionsNoTx();
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<ReviewAutomationOption> getReviewAutomationOptionsNoTx() {
     requireAdmin();
     return reviewAutomationRepository.findAllOptionRows().stream()
         .map(
@@ -91,8 +126,22 @@ public class ReviewAutomationService {
         .toList();
   }
 
-  @Transactional(readOnly = true)
   public List<ReviewAutomationBatchExportRow> getReviewAutomationBatchExportRows() {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<ReviewAutomationBatchExportRow> result = getReviewAutomationBatchExportRowsNoTx();
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<ReviewAutomationBatchExportRow> getReviewAutomationBatchExportRowsNoTx() {
     requireAdmin();
     List<ReviewAutomationOptionRow> optionRows = reviewAutomationRepository.findAllOptionRows();
     if (optionRows.isEmpty()) {
@@ -140,8 +189,22 @@ public class ReviewAutomationService {
         .toList();
   }
 
-  @Transactional(readOnly = true)
   public ReviewAutomationDetail getReviewAutomation(Long automationId) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      ReviewAutomationDetail result = getReviewAutomationNoTx(automationId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReviewAutomationDetail getReviewAutomationNoTx(Long automationId) {
     requireAdmin();
     ReviewAutomation reviewAutomation =
         reviewAutomationRepository
@@ -175,8 +238,22 @@ public class ReviewAutomationService {
         features);
   }
 
-  @Transactional(readOnly = true)
   public ReviewAutomationCronSchedulerService.TriggerHealth repairTrigger(Long automationId) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      ReviewAutomationCronSchedulerService.TriggerHealth result = repairTriggerNoTx(automationId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReviewAutomationCronSchedulerService.TriggerHealth repairTriggerNoTx(Long automationId) {
     requireAdmin();
     ReviewAutomationCronSchedulerService cronSchedulerService =
         reviewAutomationCronSchedulerServiceProvider.getIfAvailable();
@@ -186,8 +263,42 @@ public class ReviewAutomationService {
     return cronSchedulerService.repairTrigger(automationId);
   }
 
-  @Transactional
   public ReviewAutomationDetail createReviewAutomation(
+      String name,
+      Boolean enabled,
+      String cronExpression,
+      String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
+      Integer maxWordCountPerProject,
+      Boolean assignTranslator,
+      List<Long> featureIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      ReviewAutomationDetail result =
+          createReviewAutomationNoTx(
+              name,
+              enabled,
+              cronExpression,
+              timeZone,
+              teamId,
+              dueDateOffsetDays,
+              maxWordCountPerProject,
+              assignTranslator,
+              featureIds);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReviewAutomationDetail createReviewAutomationNoTx(
       String name,
       Boolean enabled,
       String cronExpression,
@@ -215,11 +326,47 @@ public class ReviewAutomationService {
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
     ReviewAutomation saved = reviewAutomationRepository.save(reviewAutomation);
     syncSchedulerAfterCommit();
-    return getReviewAutomation(saved.getId());
+    return getReviewAutomationNoTx(saved.getId());
   }
 
-  @Transactional
   public ReviewAutomationDetail updateReviewAutomation(
+      Long automationId,
+      String name,
+      Boolean enabled,
+      String cronExpression,
+      String timeZone,
+      Long teamId,
+      Integer dueDateOffsetDays,
+      Integer maxWordCountPerProject,
+      Boolean assignTranslator,
+      List<Long> featureIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      ReviewAutomationDetail result =
+          updateReviewAutomationNoTx(
+              automationId,
+              name,
+              enabled,
+              cronExpression,
+              timeZone,
+              teamId,
+              dueDateOffsetDays,
+              maxWordCountPerProject,
+              assignTranslator,
+              featureIds);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReviewAutomationDetail updateReviewAutomationNoTx(
       Long automationId,
       String name,
       Boolean enabled,
@@ -254,11 +401,25 @@ public class ReviewAutomationService {
     reviewAutomation.setFeatures(resolveFeatures(normalizedFeatureIds));
     reviewAutomationRepository.save(reviewAutomation);
     syncSchedulerAfterCommit();
-    return getReviewAutomation(reviewAutomation.getId());
+    return getReviewAutomationNoTx(reviewAutomation.getId());
   }
 
-  @Transactional
   public void deleteReviewAutomation(Long automationId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      deleteReviewAutomationNoTx(automationId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteReviewAutomationNoTx(Long automationId) {
     requireAdmin();
     ReviewAutomation reviewAutomation =
         reviewAutomationRepository
@@ -270,8 +431,27 @@ public class ReviewAutomationService {
     syncSchedulerAfterCommit();
   }
 
-  @Transactional
   public BatchUpsertResult batchUpsert(List<BatchUpsertRow> rows, BatchUpsertMode mode) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      BatchUpsertResult result = batchUpsertNoTx(rows, mode);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  public BatchUpsertResult batchUpsert(List<BatchUpsertRow> rows) {
+    return batchUpsert(rows, BatchUpsertMode.MERGE);
+  }
+
+  BatchUpsertResult batchUpsertNoTx(List<BatchUpsertRow> rows, BatchUpsertMode mode) {
     requireAdmin();
     BatchUpsertMode resolvedMode = mode == null ? BatchUpsertMode.MERGE : mode;
     if (rows == null || rows.isEmpty()) {
@@ -364,8 +544,23 @@ public class ReviewAutomationService {
     return disabledCount;
   }
 
-  @Transactional(readOnly = true)
   public List<ZonedDateTime> previewSchedule(
+      String cronExpression, String timeZone, Integer previewCount) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<ZonedDateTime> result = previewScheduleNoTx(cronExpression, timeZone, previewCount);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<ZonedDateTime> previewScheduleNoTx(
       String cronExpression, String timeZone, Integer previewCount) {
     requireAdmin();
     String normalizedCronExpression = normalizeCronExpression(cronExpression);
@@ -414,6 +609,13 @@ public class ReviewAutomationService {
             syncRunnable.run();
           }
         });
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    return transactionDefinition;
   }
 
   private Map<Long, List<SearchReviewAutomationsView.FeatureSummary>> loadFeaturesByAutomationId(
