@@ -1,16 +1,23 @@
 package com.box.l10n.mojito.bootstrap;
 
-import com.box.l10n.mojito.aspect.security.RunAs;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.security.Role;
+import com.box.l10n.mojito.security.UserDetailsImpl;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
+import java.util.ArrayList;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +37,8 @@ public class Bootstrap implements ApplicationListener<ContextRefreshedEvent> {
   @Autowired UserService userService;
 
   @Autowired UserRepository userRepository;
+
+  @Autowired UserDetailsService userDetailsService;
 
   @Override
   public void onApplicationEvent(ContextRefreshedEvent event) {
@@ -79,11 +88,26 @@ public class Bootstrap implements ApplicationListener<ContextRefreshedEvent> {
     userService.updateCreatedByUserToSystemUser(systemUser);
   }
 
-  @RunAs(username = UserService.SYSTEM_USERNAME)
   public void createDefaultUser() {
-    userService.createUserWithRole(
-        bootstrapConfig.getDefaultUser().getUsername(),
-        bootstrapConfig.getDefaultUser().getPassword(),
-        Role.ROLE_ADMIN);
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+    try {
+      setAuthenticationToSystemUser();
+      userService.createUserWithRole(
+          bootstrapConfig.getDefaultUser().getUsername(),
+          bootstrapConfig.getDefaultUser().getPassword(),
+          Role.ROLE_ADMIN);
+    } finally {
+      SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+  }
+
+  private void setAuthenticationToSystemUser() {
+    logger.debug("Setting authentication as user: {}", UserService.SYSTEM_USERNAME);
+    UserDetailsImpl user =
+        (UserDetailsImpl) userDetailsService.loadUserByUsername(UserService.SYSTEM_USERNAME);
+    SecurityContext securityContext = SecurityContextHolder.getContext();
+    securityContext.setAuthentication(
+        new UsernamePasswordAuthenticationToken(user, "", new ArrayList<GrantedAuthority>()));
   }
 }

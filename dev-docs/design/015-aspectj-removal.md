@@ -56,6 +56,8 @@ Removed during this workstream:
   `Stopwatch` logging.
 - `@JsonRawString`, `JsonRawStringAspect`, and the aspect-specific test fixtures. `PollableTask`
   now validates and quotes raw JSON strings directly in its serialized getters.
+- `@RunAs`, `RunAsAspect`, and `RunAsAspectConfig`. Bootstrap default-user creation now swaps to
+  the system user explicitly with a local `try/finally`.
 
 ## Migration Principles
 
