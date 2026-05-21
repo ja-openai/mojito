@@ -40,8 +40,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 
 /**
@@ -88,6 +89,10 @@ public class RepositoryStatisticService {
   @Autowired LocaleService localeService;
 
   @Autowired MeterRegistry meterRegistry;
+
+  @Autowired
+  @Qualifier("statisticsTaskExecutor")
+  TaskExecutor statisticsTaskExecutor;
 
   @Value("${l10n.repositoryStatistics.computeOutOfSla:false}")
   boolean computeOutOfSla;
@@ -146,7 +151,11 @@ public class RepositoryStatisticService {
       Repository repository, RepositoryStatistic repositoryStatistic) {
     waitForAllFutures(
         repositoryService.getRepositoryLocalesWithoutRootLocale(repository).stream()
-            .map(repositoryLocale -> updateLocaleStatistics(repositoryLocale, repositoryStatistic))
+            .map(
+                repositoryLocale ->
+                    CompletableFuture.runAsync(
+                        () -> updateLocaleStatistics(repositoryLocale, repositoryStatistic),
+                        statisticsTaskExecutor::execute))
             .collect(Collectors.toList()));
   }
 
@@ -169,8 +178,7 @@ public class RepositoryStatisticService {
    * @param repositoryLocale the repository locale
    * @param repositoryStatistic the parent entity that old the repository statistics
    */
-  @Async("statisticsTaskExecutor")
-  CompletableFuture<Void> updateLocaleStatistics(
+  void updateLocaleStatistics(
       RepositoryLocale repositoryLocale, RepositoryStatistic repositoryStatistic) {
 
     try (var timer =
@@ -221,8 +229,6 @@ public class RepositoryStatisticService {
 
       repositoryLocaleStatisticRepository.save(repositoryLocaleStatistic);
     }
-
-    return CompletableFuture.completedFuture(null);
   }
 
   /**

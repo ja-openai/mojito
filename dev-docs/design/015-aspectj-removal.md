@@ -27,7 +27,6 @@ Framework modes:
 
 - `Application` uses `@EnableSpringConfigured` and
   `@EnableTransactionManagement(mode = AdviceMode.ASPECTJ)`.
-- `AsyncConfig` uses `@EnableAsync(mode = AdviceMode.ASPECTJ)`.
 - `CachingConfig` uses `@EnableCaching(mode = AdviceMode.ASPECTJ)`.
 - `WebSecurityConfig` uses `@EnableGlobalMethodSecurity(..., mode = AdviceMode.ASPECTJ)`.
 - `cli.App` uses `@EnableSpringConfigured`.
@@ -64,6 +63,9 @@ Removed during this workstream:
 - `@Pollable`, `PollableAspect`, `PollableAspectConfig`, and the AspectJ annotation parsing helper
   classes. Pollable task creation now goes through the Spring-managed `PollableTaskRunner`
   directly.
+- `@Async` and `@EnableAsync(mode = AdviceMode.ASPECTJ)`. Async work now submits directly to the
+  existing `asyncExecutor` and `statisticsTaskExecutor` beans, which preserves self-invoked async
+  behavior without weaving.
 
 In progress:
 

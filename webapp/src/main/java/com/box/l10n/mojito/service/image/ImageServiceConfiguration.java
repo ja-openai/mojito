@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.task.AsyncTaskExecutor;
 
 /**
  * Configuration for {@link ImageService}
@@ -43,8 +44,10 @@ public class ImageServiceConfiguration {
     }
 
     @Bean
-    public S3UploadImageAsyncTask s3UploadImageAsyncTask(S3ImageService s3ImageService) {
-      return new S3UploadImageAsyncTask(s3ImageService);
+    public S3UploadImageAsyncTask s3UploadImageAsyncTask(
+        S3ImageService s3ImageService,
+        @Qualifier("asyncExecutor") AsyncTaskExecutor asyncExecutor) {
+      return new S3UploadImageAsyncTask(s3ImageService, asyncExecutor);
     }
 
     @Bean

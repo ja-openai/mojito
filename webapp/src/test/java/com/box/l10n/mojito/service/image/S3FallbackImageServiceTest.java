@@ -24,6 +24,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -65,8 +67,14 @@ public class S3FallbackImageServiceTest {
     }
 
     @Bean
-    public S3UploadImageAsyncTask s3UploadImageAsyncTask(S3ImageService s3ImageService) {
-      return Mockito.spy(new S3UploadImageAsyncTask(s3ImageService));
+    public AsyncTaskExecutor asyncExecutor() {
+      return new SimpleAsyncTaskExecutor();
+    }
+
+    @Bean
+    public S3UploadImageAsyncTask s3UploadImageAsyncTask(
+        S3ImageService s3ImageService, AsyncTaskExecutor asyncExecutor) {
+      return Mockito.spy(new S3UploadImageAsyncTask(s3ImageService, asyncExecutor));
     }
 
     @Bean

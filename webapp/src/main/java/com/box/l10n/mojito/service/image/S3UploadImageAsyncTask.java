@@ -3,7 +3,7 @@ package com.box.l10n.mojito.service.image;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import org.slf4j.Logger;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.core.task.AsyncTaskExecutor;
 
 /**
  * Async task to upload an image to S3.
@@ -17,13 +17,18 @@ public class S3UploadImageAsyncTask {
 
   S3ImageService s3ImageService;
 
-  public S3UploadImageAsyncTask(S3ImageService s3ImageService) {
+  AsyncTaskExecutor asyncExecutor;
+
+  public S3UploadImageAsyncTask(S3ImageService s3ImageService, AsyncTaskExecutor asyncExecutor) {
     this.s3ImageService = s3ImageService;
+    this.asyncExecutor = asyncExecutor;
   }
 
-  @Async
   public void uploadImageToS3(String name, byte[] content) {
-    logger.debug("Uploading image {} to S3", name);
-    s3ImageService.uploadImage(name, content);
+    asyncExecutor.execute(
+        () -> {
+          logger.debug("Uploading image {} to S3", name);
+          s3ImageService.uploadImage(name, content);
+        });
   }
 }
