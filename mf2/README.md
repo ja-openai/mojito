@@ -13,8 +13,8 @@ It is intentionally split into conformance data and implementation prototypes:
 - `cldr/`: generated CLDR plural-rule data, experimental number data, and
   relative-time data generators
 - `examples/`: shared parser-free catalog demo used by all starter runtimes
-- `editor-prototype/`: dependency-free HTML prototype for raw/structured MF2
-  editing before the Mojito React/LSP surface is built
+- `editor-prototype/`: dependency-free HTML translator workbench prototype backed
+  by the Rust parser/runtime before the Mojito React/LSP surface is built
 - `spec/`: project-level drafts for registry functions that are not part of
   the MF2 core grammar
 - `third_party/message-format-wg/test/`: vendored Unicode MessageFormat WG
@@ -166,10 +166,10 @@ sh check.sh
 Run the first MF2 editor prototype:
 
 ```sh
-python3 -m http.server 8787 --directory editor-prototype
+node editor-prototype/server.mjs
 ```
 
-Open `http://127.0.0.1:8787/`.
+Open `http://127.0.0.1:8788/`.
 
 Run the tiny app-facing catalog demos directly:
 

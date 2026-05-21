@@ -3,22 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MF2 Editor Prototype</title>
+    <title>MF2 Translation Workbench</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <header class="topbar">
       <div>
-        <h1>MF2 Editor Prototype</h1>
-        <p>Raw source, structured variants, diagnostics, and live preview.</p>
+        <h1>MF2 Translation Workbench</h1>
+        <p>Translate in context. Keep MF2 structure valid underneath.</p>
       </div>
       <div class="status" id="status">Ready</div>
     </header>
 
     <main class="workspace">
-      <section class="panel source-panel">
+      <section class="panel workbench-panel">
         <div class="panel-header">
-          <h2>Raw Source</h2>
+          <h2>Translation</h2>
           <div class="button-row">
             <button type="button" data-sample="simple">Simple</button>
             <button type="button" data-sample="plural">Plural</button>
@@ -26,24 +26,37 @@
             <button type="button" data-sample="markup">Markup</button>
           </div>
         </div>
-        <textarea id="source" spellcheck="false"></textarea>
-        <div class="button-row source-actions">
-          <button type="button" id="addPlural">Add plural</button>
-          <button type="button" id="formatSource">Format</button>
+
+        <div class="context-strip">
+          <div>
+            <span class="eyebrow">Source</span>
+            <p id="sourceReference">You have {count} files</p>
+          </div>
+          <div>
+            <span class="eyebrow">Context</span>
+            <p>Cart badge in checkout header. Keep it short.</p>
+          </div>
         </div>
+
+        <section class="hero-preview" aria-label="Rendered translation preview">
+          <span class="eyebrow">Live preview</span>
+          <output id="rendered"></output>
+        </section>
+
+        <div class="editor-toolbar">
+          <div class="button-row">
+            <button type="button" id="addPlural" class="primary">Add plural</button>
+            <button type="button" id="addVariant">Add variant</button>
+          </div>
+          <button type="button" id="formatSource">Normalize MF2</button>
+        </div>
+
+        <div id="structure" class="wysiwyg-editor"></div>
       </section>
 
-      <section class="panel structure-panel">
+      <section class="panel side-panel">
         <div class="panel-header">
-          <h2>Structured Edit</h2>
-          <button type="button" id="addVariant">Add variant</button>
-        </div>
-        <div id="structure"></div>
-      </section>
-
-      <section class="panel preview-panel">
-        <div class="panel-header">
-          <h2>Preview</h2>
+          <h2>Checks</h2>
           <label class="locale-field">
             Locale
             <select id="locale">
@@ -57,28 +70,27 @@
         </div>
 
         <div class="subpanel">
-          <h3>Arguments</h3>
+          <h3>Preview Values</h3>
           <div id="arguments" class="arguments"></div>
         </div>
 
         <div class="subpanel">
-          <h3>Rendered</h3>
-          <output id="rendered"></output>
-        </div>
-
-        <div class="subpanel">
-          <h3>Diagnostics</h3>
+          <h3>Quality</h3>
           <ul id="diagnostics" class="diagnostics"></ul>
         </div>
 
-        <div class="subpanel">
-          <h3>Parts</h3>
+        <details class="advanced">
+          <summary>Advanced MF2 source</summary>
+          <textarea id="source" spellcheck="false"></textarea>
+        </details>
+
+        <details class="advanced">
+          <summary>Formatted parts</summary>
           <pre id="parts"></pre>
-        </div>
+        </details>
       </section>
     </main>
 
     <script type="module" src="./editor.js"></script>
   </body>
 </html>
-

@@ -15,6 +15,13 @@ female * {{She reviewed {$count} files}}
   markup: "Tap {#link href=$url @title=|Profile|}profile{/link}. {$name :string @kind=person}",
 };
 
+const sampleReferences = {
+  simple: "Welcome, {name}!",
+  plural: "You have {count} files",
+  gender: "{assignee} reviewed {count} files",
+  markup: "Tap profile. {name}",
+};
+
 const defaultArgs = {
   count: "2",
   gender: "unknown",
@@ -130,6 +137,184 @@ export function addPluralTemplate(source, variableName = "count") {
 .match $${variableName}
 one {{${one}}}
 * {{${simple}}}`;
+}
+
+async function parseForWorkbench(source, args, locale) {
+  try {
+    const response = await fetch("/api/format", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source,
+        locale,
+        arguments: coerceArguments(args),
+        bidiIsolation: "default",
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`Rust parser returned ${response.status}`);
+    }
+    const payload = await response.json();
+    const diagnostics = [
+      ...(payload.diagnostics ?? []).map(rustDiagnostic),
+      ...(payload.formatErrors ?? []).map(rustDiagnostic),
+    ];
+    return {
+      backend: "Rust parser/runtime",
+      model: editorModelFromRust(payload.model, source, diagnostics),
+      output: payload.output ?? null,
+      parts: payload.parts ?? null,
+    };
+  } catch (error) {
+    const model = parseSource(source);
+    model.diagnostics.unshift({
+      severity: "warning",
+      code: "rust-parser-unavailable",
+      message: `Run node mf2/editor-prototype/server.mjs for the real Rust parser. Fallback is only for UI smoke testing. ${error.message}`,
+    });
+    return {
+      backend: "UI fallback parser",
+      model,
+      output: null,
+      parts: null,
+    };
+  }
+}
+
+function coerceArguments(args) {
+  const result = {};
+  for (const [name, value] of Object.entries(args)) {
+    const text = String(value);
+    if (text.trim() !== "" && /^-?\d+(?:\.\d+)?$/u.test(text.trim())) {
+      result[name] = Number(text);
+    } else if (text === "true" || text === "false") {
+      result[name] = text === "true";
+    } else {
+      result[name] = text;
+    }
+  }
+  return result;
+}
+
+function rustDiagnostic(diagnostic) {
+  return {
+    severity: "error",
+    code: diagnostic.code,
+    message: diagnostic.message,
+    start: diagnostic.start,
+    end: diagnostic.end,
+  };
+}
+
+function editorModelFromRust(rustModel, source, diagnostics) {
+  if (!rustModel) {
+    return { ...emptySelect(source, diagnostics), diagnostics };
+  }
+  if (rustModel.type === "select") {
+    const declarations = (rustModel.declarations ?? []).map(declarationFromRust);
+    const variants = (rustModel.variants ?? []).map((variant) => ({
+      keys: (variant.keys ?? []).map(keyFromRust),
+      value: patternToSource(variant.value ?? []),
+    }));
+    const variables = variablesFromRustModel(rustModel);
+    return {
+      type: "select",
+      source,
+      declarations,
+      selectors: (rustModel.selectors ?? []).map((selector) => selector.name),
+      variants,
+      variables,
+      diagnostics,
+      rustModel,
+    };
+  }
+  const pattern = patternToSource(rustModel.pattern ?? []);
+  return {
+    type: "message",
+    source,
+    declarations: (rustModel.declarations ?? []).map(declarationFromRust),
+    pattern,
+    variables: variablesFromRustModel(rustModel),
+    diagnostics,
+    rustModel,
+  };
+}
+
+function declarationFromRust(declaration) {
+  const expression = declaration.value ?? {};
+  const functionRef = expression.function ?? {};
+  return {
+    type: declaration.type,
+    name: declaration.name,
+    function: functionRef.name ?? "",
+    optionText: optionsToSource(functionRef.options),
+  };
+}
+
+function keyFromRust(key) {
+  return key.type === "*" ? "*" : key.value;
+}
+
+function patternToSource(pattern) {
+  return pattern.map(partToSource).join("");
+}
+
+function partToSource(part) {
+  if (typeof part === "string") return part;
+  if (part.type === "markup") {
+    const prefix = part.kind === "close" ? "/" : "#";
+    const suffix = part.kind === "standalone" ? "/" : "";
+    return `{${prefix}${part.name}${suffix}}`;
+  }
+  if (part.type === "expression") {
+    const arg = argToSource(part.arg);
+    const optionsText = optionsToSource(part.function?.options);
+    const functionText = part.function?.name ? ` :${part.function.name}${optionsText ? ` ${optionsText}` : ""}` : "";
+    return `{${arg}${functionText}}`;
+  }
+  return "";
+}
+
+function argToSource(arg) {
+  if (!arg) return "";
+  if (arg.type === "variable") return `$${arg.name}`;
+  return `|${arg.value ?? ""}|`;
+}
+
+function optionsToSource(options) {
+  if (!options) return "";
+  const entries = Object.entries(options);
+  if (!entries.length) return "";
+  return entries.map(([name, value]) => `${name}=${argToSource(value)}`).join(" ");
+}
+
+function variablesFromRustModel(model) {
+  const variables = new Set();
+  for (const declaration of model.declarations ?? []) {
+    variables.add(declaration.name);
+    collectVariablesFromExpression(declaration.value, variables);
+  }
+  if (model.type === "select") {
+    for (const selector of model.selectors ?? []) variables.add(selector.name);
+    for (const variant of model.variants ?? []) collectVariablesFromPattern(variant.value ?? [], variables);
+  } else {
+    collectVariablesFromPattern(model.pattern ?? [], variables);
+  }
+  return Array.from(variables);
+}
+
+function collectVariablesFromPattern(pattern, variables) {
+  for (const part of pattern) {
+    if (typeof part !== "string") collectVariablesFromExpression(part, variables);
+  }
+}
+
+function collectVariablesFromExpression(expression, variables) {
+  if (!expression) return;
+  if (expression.arg?.type === "variable") variables.add(expression.arg.name);
+  for (const option of Object.values(expression.function?.options ?? {})) {
+    if (option.type === "variable") variables.add(option.name);
+  }
 }
 
 export function formatMessage(model, args, locale = "en") {
@@ -347,6 +532,15 @@ function error(code, message) {
   return { severity: "error", code, message };
 }
 
+function variantLabel(selectors, keys) {
+  if (!selectors.length) return "Fallback";
+  const parts = selectors.map((selector, index) => {
+    const key = keys[index] ?? "*";
+    return key === "*" ? `${selector}: any` : `${selector}: ${key}`;
+  });
+  return `When ${parts.join(", ")}`;
+}
+
 function initialize() {
   const source = document.querySelector("#source");
   const locale = document.querySelector("#locale");
@@ -356,33 +550,43 @@ function initialize() {
   const diagnostics = document.querySelector("#diagnostics");
   const parts = document.querySelector("#parts");
   const status = document.querySelector("#status");
+  const sourceReference = document.querySelector("#sourceReference");
   const state = {
     args: { ...defaultArgs },
+    backend: "Starting",
     history: createSourceHistory(samples.plural),
     model: parseSource(samples.plural),
+    output: null,
+    parts: null,
+    refreshId: 0,
     suppressSourceInput: false,
   };
 
   source.value = samples.plural;
 
-  function refresh(options = {}) {
-    const fromStructure = options.fromStructure === true;
+  async function refresh(options = {}) {
+    const refreshId = ++state.refreshId;
     const skipStructure = options.skipStructure === true;
-    if (!fromStructure) {
-      state.model = parseSource(source.value);
-    }
+    const parsed = await parseForWorkbench(source.value, state.args, locale.value);
+    if (refreshId !== state.refreshId) return;
+    state.backend = parsed.backend;
+    state.model = parsed.model;
+    state.output = parsed.output;
+    state.parts = parsed.parts;
     if (!skipStructure) {
       renderStructure();
     }
     renderArguments();
-    const output = formatMessage(state.model, state.args, locale.value);
+    const output = state.output ?? formatMessage(state.model, state.args, locale.value);
     rendered.value = output;
     const previewPattern = state.model.type === "select"
       ? (selectedVariant(state.model, state.args, locale.value)?.value ?? "")
       : state.model.pattern;
-    parts.textContent = JSON.stringify(partsForPattern(previewPattern, state.args), null, 2);
+    parts.textContent = JSON.stringify(state.parts ?? partsForPattern(previewPattern, state.args), null, 2);
     renderDiagnostics();
-    status.textContent = state.model.diagnostics.length ? `${state.model.diagnostics.length} diagnostic(s)` : "Ready";
+    status.textContent = state.model.diagnostics.length
+      ? `${state.model.diagnostics.length} diagnostic(s) - ${state.backend}`
+      : `Valid - ${state.backend}`;
   }
 
   function setSourceText(value, options = {}) {
@@ -396,24 +600,20 @@ function initialize() {
 
   function setSourceAndRefresh(value, options = {}) {
     setSourceText(value, options);
-    refresh({ fromStructure: false });
+    void refresh();
   }
 
   function syncSourceFromModel(options = {}) {
     const nextSource = printModel(state.model);
     setSourceText(nextSource, { record: options.record !== false });
-    const parsed = parseSource(nextSource);
-    state.model.diagnostics = parsed.diagnostics;
-    state.model.variables = parsed.variables;
-    refresh({
-      fromStructure: true,
+    void refresh({
       skipStructure: options.rebuildStructure !== true,
     });
   }
 
   function restoreSource(value) {
     setSourceText(value, { record: false });
-    refresh({ fromStructure: false });
+    void refresh();
   }
 
   function handleHistoryShortcut(event) {
@@ -429,7 +629,17 @@ function initialize() {
 
   function renderStructure() {
     if (state.model.type !== "select") {
-      structure.innerHTML = `<div class="empty-state">This is a simple message. Use "Add plural" to create structured variants.</div>`;
+      structure.innerHTML = `
+        <label class="field">
+          <span>Target message</span>
+          <textarea data-simple>${escapeHtml(state.model.pattern ?? state.model.source ?? "")}</textarea>
+        </label>
+        <div class="empty-state">Use Add plural when the translation needs number-sensitive wording.</div>
+      `;
+      structure.querySelector("[data-simple]").addEventListener("input", (event) => {
+        setSourceText(event.target.value);
+        void refresh({ skipStructure: true });
+      });
       return;
     }
     structure.innerHTML = "";
@@ -437,7 +647,7 @@ function initialize() {
     fields.className = "field-grid";
     fields.innerHTML = `
       <label class="field">
-        <span>Selectors</span>
+        <span>Message selects on</span>
         <input data-role="selectors" value="${escapeHtml(state.model.selectors.join(" "))}" />
       </label>
     `;
@@ -455,7 +665,7 @@ function initialize() {
       row.className = "variant";
       row.innerHTML = `
         <div class="variant-header">
-          <strong>Variant ${variantIndex + 1}</strong>
+          <strong>${variantLabel(state.model.selectors, variant.keys)}</strong>
           <button type="button" data-remove="${variantIndex}">Remove</button>
         </div>
         <div class="key-list">
@@ -513,7 +723,7 @@ function initialize() {
       label.innerHTML = `<span>$${escapeHtml(name)}</span><input value="${escapeHtml(String(state.args[name]))}" />`;
       label.querySelector("input").addEventListener("input", (event) => {
         state.args[name] = event.target.value;
-        refresh({ fromStructure: true });
+        void refresh({ skipStructure: true });
       });
       argsContainer.append(label);
     }
@@ -522,7 +732,7 @@ function initialize() {
   function renderDiagnostics() {
     diagnostics.innerHTML = "";
     if (!state.model.diagnostics.length) {
-      diagnostics.innerHTML = "<li>No diagnostics.</li>";
+      diagnostics.innerHTML = "<li class=\"ok\">No parser or runtime issues.</li>";
       return;
     }
     for (const diagnostic of state.model.diagnostics) {
@@ -543,6 +753,7 @@ function initialize() {
 
   document.querySelectorAll("[data-sample]").forEach((button) => {
     button.addEventListener("click", () => {
+      sourceReference.textContent = sampleReferences[button.dataset.sample] ?? "";
       setSourceAndRefresh(samples[button.dataset.sample]);
     });
   });
@@ -565,11 +776,11 @@ function initialize() {
     if (!state.suppressSourceInput) {
       state.history.push(source.value);
     }
-    refresh({ fromStructure: false });
+    void refresh();
   });
   document.addEventListener("keydown", handleHistoryShortcut);
-  locale.addEventListener("change", () => refresh({ fromStructure: true }));
-  refresh();
+  locale.addEventListener("change", () => void refresh({ skipStructure: true }));
+  void refresh();
 }
 
 function selectedVariant(model, args, locale) {

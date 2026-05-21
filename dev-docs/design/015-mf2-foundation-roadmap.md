@@ -159,11 +159,12 @@ text-unit detail.
 The first prototype is deliberately simpler than the target Mojito UI:
 
 - static HTML/CSS/JavaScript, no build step
-- raw MF2 textarea plus structured variant cards for `.input` + `.match`
-  messages
+- Rust-backed dev server for real parser diagnostics, preview, and parts output
+- translator workbench layout with raw MF2 hidden behind an advanced disclosure
+- structured variant cards for `.input` + `.match` messages
 - mechanical plural template insertion
-- locale/argument preview and simple format-to-parts output
-- local diagnostics for the supported prototype slice
+- locale/argument preview and format-to-parts output
+- local diagnostics for the supported Rust prototype slice
 
 This lets us validate translator and PM workflows before choosing CodeMirror,
 Monaco, React component boundaries, or `mf2lsp` Wasm integration.

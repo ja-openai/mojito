@@ -11,9 +11,9 @@ use mf2_prototype::{
     format_model_to_parts_with_locale_and_functions_and_fallback, format_model_with_locale,
     format_model_with_locale_and_bidi,
     format_model_with_locale_and_functions_and_bidi_and_fallback, locale_lookup_chain,
-    parse_to_model, BidiIsolation, FormattedPart, FunctionRegistry, MessageModel,
+    parse_to_model, BidiIsolation, Diagnostic, FormattedPart, FunctionRegistry, MessageModel,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 mod unicode_tests;
 
@@ -138,6 +138,28 @@ struct SourceOnlyFixture {
     source: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EditorRequest {
+    source: String,
+    #[serde(default = "default_locale")]
+    locale: String,
+    #[serde(default)]
+    bidi_isolation: Option<String>,
+    #[serde(default)]
+    arguments: BTreeMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EditorResponse {
+    model: Option<MessageModel>,
+    diagnostics: Vec<Diagnostic>,
+    output: Option<String>,
+    parts: Vec<FormattedPart>,
+    format_errors: Vec<Diagnostic>,
+}
+
 fn main() {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
@@ -152,6 +174,10 @@ fn main() {
         "format-first-case" => {
             let path = next_required_arg(&mut args);
             format_first_case(&read_to_string(&path));
+        }
+        "editor-json" => {
+            let path = next_required_arg(&mut args);
+            editor_json(&read_to_string(&path));
         }
         "conformance" => {
             let path = args
@@ -231,6 +257,73 @@ fn format_first_case(source: &str) {
         process::exit(1);
     });
     println!("{output}");
+}
+
+fn editor_json(source: &str) {
+    let request = serde_json::from_str::<EditorRequest>(source).unwrap_or_else(|error| {
+        eprintln!("editor-json expects an editor request JSON file: {error}");
+        process::exit(2);
+    });
+    let parsed = parse_to_model(&request.source);
+    let mut response = EditorResponse {
+        model: parsed.model.clone(),
+        diagnostics: parsed.diagnostics,
+        output: None,
+        parts: Vec::new(),
+        format_errors: Vec::new(),
+    };
+
+    if response.diagnostics.is_empty() {
+        if let Some(model) = response.model.as_ref() {
+            let functions = FunctionRegistry::default();
+            match format_model_to_parts_with_locale_and_functions_and_fallback(
+                model,
+                &request.arguments,
+                &request.locale,
+                &functions,
+            ) {
+                Ok(parts_result) => {
+                    response.parts = parts_result.parts;
+                    for diagnostic in parts_result.errors {
+                        push_unique_diagnostic(&mut response.format_errors, diagnostic);
+                    }
+                }
+                Err(diagnostic) => push_unique_diagnostic(&mut response.format_errors, diagnostic),
+            }
+            match format_model_with_locale_and_functions_and_bidi_and_fallback(
+                model,
+                &request.arguments,
+                &request.locale,
+                &functions,
+                BidiIsolation::from_name(request.bidi_isolation.as_deref()),
+            ) {
+                Ok(format_result) => {
+                    response.output = Some(format_result.value);
+                    for diagnostic in format_result.errors {
+                        push_unique_diagnostic(&mut response.format_errors, diagnostic);
+                    }
+                }
+                Err(diagnostic) => push_unique_diagnostic(&mut response.format_errors, diagnostic),
+            }
+        }
+    }
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&response).expect("editor response serializes")
+    );
+}
+
+fn push_unique_diagnostic(diagnostics: &mut Vec<Diagnostic>, diagnostic: Diagnostic) {
+    if diagnostics.iter().any(|existing| {
+        existing.code == diagnostic.code
+            && existing.message == diagnostic.message
+            && existing.start == diagnostic.start
+            && existing.end == diagnostic.end
+    }) {
+        return;
+    }
+    diagnostics.push(diagnostic);
 }
 
 fn conformance(fixture_dir: &Path) {
@@ -659,7 +752,7 @@ fn fail(message: impl std::fmt::Display) -> ! {
 
 fn usage_and_exit() -> ! {
     eprintln!(
-        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype conformance [source-fixture-dir]\n  mf2-prototype unicode-tests [unicode-test-dir] [baseline-json]\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]\n  mf2-prototype bench-parse <fixture-dir> [iterations] [warmup-iterations]"
+        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype editor-json <request.json>\n  mf2-prototype conformance [source-fixture-dir]\n  mf2-prototype unicode-tests [unicode-test-dir] [baseline-json]\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]\n  mf2-prototype bench-parse <fixture-dir> [iterations] [warmup-iterations]"
     );
     process::exit(2);
 }
