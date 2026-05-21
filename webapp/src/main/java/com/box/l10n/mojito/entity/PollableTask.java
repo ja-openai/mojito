@@ -1,6 +1,5 @@
 package com.box.l10n.mojito.entity;
 
-import com.box.l10n.mojito.aspect.JsonRawString;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.rest.View;
 import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
@@ -10,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
 import jakarta.persistence.Basic;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,6 +26,7 @@ import jakarta.persistence.Table;
 import java.time.ZonedDateTime;
 import java.util.Set;
 import org.hibernate.annotations.BatchSize;
+import org.json.simple.parser.JSONParser;
 import org.springframework.data.annotation.CreatedBy;
 
 /**
@@ -181,16 +182,35 @@ public class PollableTask extends AuditableEntity {
 
   @JsonProperty(value = "message")
   @JsonRawValue
-  @JsonRawString
   public String getMessageAsJson() {
-    return message;
+    return rawJsonOrQuotedString(message);
   }
 
   @JsonProperty(value = "errorMessage")
   @JsonRawValue
-  @JsonRawString
   public String getErrorMessageAsJson() {
-    return errorMessage;
+    return rawJsonOrQuotedString(errorMessage);
+  }
+
+  private static String rawJsonOrQuotedString(String value) {
+    if (isValidJsonString(value)) {
+      return value;
+    }
+
+    return "\"" + new String(JsonStringEncoder.getInstance().quoteAsString(value)) + "\"";
+  }
+
+  private static boolean isValidJsonString(String value) {
+    if (value == null) {
+      return true;
+    }
+
+    try {
+      new JSONParser().parse(value);
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   /**

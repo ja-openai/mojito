@@ -54,6 +54,8 @@ Removed during this workstream:
   uses explicit `RetryTemplate` calls or Spring's `@Retryable`, not the custom annotation.
 - `@StopWatch` and `StopWatchAspect`. The four annotated methods now use explicit local
   `Stopwatch` logging.
+- `@JsonRawString`, `JsonRawStringAspect`, and the aspect-specific test fixtures. `PollableTask`
+  now validates and quotes raw JSON strings directly in its serialized getters.
 
 ## Migration Principles
 
