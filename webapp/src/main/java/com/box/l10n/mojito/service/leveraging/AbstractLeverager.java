@@ -42,6 +42,21 @@ public abstract class AbstractLeverager {
 
   @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
+  protected AbstractLeverager() {}
+
+  protected AbstractLeverager(
+      TextUnitSearcher textUnitSearcher,
+      TMService tmService,
+      UserService userService,
+      TMTextUnitVariantLeveragingService tmTextUnitVariantLeveragingService,
+      TMTextUnitVariantCommentService tmTextUnitVariantCommentService) {
+    this.textUnitSearcher = textUnitSearcher;
+    this.tmService = tmService;
+    this.userService = userService;
+    this.tmTextUnitVariantLeveragingService = tmTextUnitVariantLeveragingService;
+    this.tmTextUnitVariantCommentService = tmTextUnitVariantCommentService;
+  }
+
   /**
    * Gets {@link TextUnitDTO}s that matches the {@link TMTextUnit} based on different criteria
    * defined by the implementing class.

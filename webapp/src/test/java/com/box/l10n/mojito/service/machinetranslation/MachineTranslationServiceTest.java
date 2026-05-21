@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.box.l10n.mojito.service.cache.CacheService;
 import com.box.l10n.mojito.service.leveraging.LeveragerByContentAndRepository;
+import com.box.l10n.mojito.service.leveraging.LeveragerFactory;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -32,7 +33,8 @@ class MachineTranslationServiceTest {
                 machineTranslationEngine,
                 new TranslationMerger(),
                 new SimpleMeterRegistry(),
-                new CacheService(new ConcurrentMapCacheManager(MACHINE_TRANSLATION))));
+                new CacheService(new ConcurrentMapCacheManager(MACHINE_TRANSLATION)),
+                mock(LeveragerFactory.class)));
 
     leveragerByContentAndRepositoryMock = mock(LeveragerByContentAndRepository.class);
     when(machineTranslationService.getLeveragerByContentAndRepository(null, null))

@@ -1,20 +1,22 @@
 package com.box.l10n.mojito.service.leveraging;
 
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.service.security.user.UserService;
+import com.box.l10n.mojito.service.tm.TMService;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentService;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
+import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Configurable;
 
 /**
  * Performs leveraging based using the provided TmTextUnit id
  *
  * @author jaurambault
  */
-@Configurable
 public class LeveragerByTmTextUnit extends AbstractLeverager {
 
   /** logger */
@@ -23,11 +25,20 @@ public class LeveragerByTmTextUnit extends AbstractLeverager {
   Long tmTextUnitId;
   boolean translationNeededIfUniqueMatch;
 
-  public LeveragerByTmTextUnit(Long tmTextUnitId) {
-    this(tmTextUnitId, true);
-  }
-
-  public LeveragerByTmTextUnit(Long tmTextUnitId, boolean translationNeededIfUniqueMatch) {
+  public LeveragerByTmTextUnit(
+      Long tmTextUnitId,
+      boolean translationNeededIfUniqueMatch,
+      TextUnitSearcher textUnitSearcher,
+      TMService tmService,
+      UserService userService,
+      TMTextUnitVariantLeveragingService tmTextUnitVariantLeveragingService,
+      TMTextUnitVariantCommentService tmTextUnitVariantCommentService) {
+    super(
+        textUnitSearcher,
+        tmService,
+        userService,
+        tmTextUnitVariantLeveragingService,
+        tmTextUnitVariantCommentService);
     this.tmTextUnitId = tmTextUnitId;
     this.translationNeededIfUniqueMatch = translationNeededIfUniqueMatch;
   }

@@ -39,6 +39,7 @@ import com.box.l10n.mojito.service.assetcontent.AssetContentService;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.branch.BranchRepository;
 import com.box.l10n.mojito.service.leveraging.LeveragerByTmTextUnit;
+import com.box.l10n.mojito.service.leveraging.LeveragerFactory;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pluralform.PluralFormService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
@@ -157,6 +158,8 @@ public class AssetExtractionService {
   @Autowired TMTextUnitRepository tmTextUnitRepository;
 
   @Autowired TextUnitSearcher textUnitSearcher;
+
+  @Autowired LeveragerFactory leveragerFactory;
 
   @Autowired AssetTextUnitToTMTextUnitRepository assetTextUnitToTMTextUnitRepository;
 
@@ -1003,7 +1006,7 @@ public class AssetExtractionService {
         .forEach(
             match -> {
               LeveragerByTmTextUnit leveragerByTmTextUnit =
-                  new LeveragerByTmTextUnit(
+                  leveragerFactory.byTmTextUnit(
                       match.match().getTmTextUnitId(), match.translationNeededIfUniqueMatch());
               if (match.source().getTmTextUnitId() == null) {
                 throw new RuntimeException(
