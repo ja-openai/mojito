@@ -1872,8 +1872,30 @@ public class ReviewProjectService {
     return getProjectDetailNoTx(projectId);
   }
 
-  @Transactional
   public GetProjectDetailView updateProjectAssignment(
+      Long projectId,
+      Long teamId,
+      Long assignedPmUserId,
+      Long assignedTranslatorUserId,
+      String note) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GetProjectDetailView result =
+          updateProjectAssignmentNoTx(
+              projectId, teamId, assignedPmUserId, assignedTranslatorUserId, note);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GetProjectDetailView updateProjectAssignmentNoTx(
       Long projectId,
       Long teamId,
       Long assignedPmUserId,
@@ -1929,7 +1951,7 @@ public class ReviewProjectService {
                 getEntityId(previousAssignedTranslator), getEntityId(nextAssignedTranslator));
 
     if (!changed) {
-      return getProjectDetail(projectId);
+      return getProjectDetailNoTx(projectId);
     }
 
     reviewProject.setTeam(nextTeam);
@@ -1963,7 +1985,7 @@ public class ReviewProjectService {
       teamSlackNotificationService.sendReviewProjectAssignmentNotification(
           reviewProject, eventType, note);
     }
-    return getProjectDetail(projectId);
+    return getProjectDetailNoTx(projectId);
   }
 
   @Transactional

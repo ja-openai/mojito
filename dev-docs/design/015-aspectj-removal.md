@@ -247,6 +247,9 @@ Removed during this workstream:
   transaction.
 - `ReviewProjectService.updateProjectRequest` no longer uses `@Transactional`; request metadata,
   screenshot, and team-assignment updates now open and commit their transaction boundary explicitly.
+- `ReviewProjectService.updateProjectAssignment` no longer uses `@Transactional`; assignment
+  changes now open and commit their write transaction boundary explicitly before loading detail in
+  the same transaction.
 
 In progress:
 
