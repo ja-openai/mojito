@@ -1888,8 +1888,24 @@ public class ReviewProjectService {
         reviewProjectTextUnits);
   }
 
-  @Transactional
   public GetProjectDetailView updateProjectStatus(
+      Long projectId, ReviewProjectStatus status, String closeReason) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GetProjectDetailView result = updateProjectStatusNoTx(projectId, status, closeReason);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GetProjectDetailView updateProjectStatusNoTx(
       Long projectId, ReviewProjectStatus status, String closeReason) {
     if (status == null) {
       throw new IllegalArgumentException("status must be provided");
@@ -1934,7 +1950,7 @@ public class ReviewProjectService {
       reviewProjectAssignmentWindowService.syncTranslatorAssignmentWindow(
           reviewProject, null, reviewProject.getAssignedTranslatorUser());
     }
-    return getProjectDetail(projectId);
+    return getProjectDetailNoTx(projectId);
   }
 
   private boolean isProjectIncomplete(ReviewProject reviewProject) {
