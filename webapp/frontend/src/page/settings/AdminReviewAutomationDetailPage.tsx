@@ -8,6 +8,7 @@ import {
   type ApiReviewAutomationRun,
   fetchReviewAutomation,
   fetchReviewAutomationRuns,
+  fetchReviewAutomations,
   repairReviewAutomationTrigger,
   runReviewAutomationNow,
   updateReviewAutomation,
@@ -22,6 +23,11 @@ import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSel
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getReviewAutomationTimeZoneOptions } from '../../utils/reviewAutomationSchedule';
 import { formatDateTime } from './reviewAutomationRunFormatting';
+import { ReviewAutomationSharedFeatureWarning } from './ReviewAutomationSharedFeatureWarning';
+import {
+  getSharedFeatureScheduleWarnings,
+  SHARED_FEATURE_AUTOMATION_WARNING_LIMIT,
+} from './reviewAutomationSharedFeatureWarnings';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const normalizeAutomationName = (value: string) => value.trim().replace(/\s+/g, ' ');
@@ -110,6 +116,16 @@ export function AdminReviewAutomationDetailPage() {
       }),
     enabled: isAdmin && parsedAutomationId != null,
     staleTime: 10_000,
+  });
+  const enabledAutomationsQuery = useQuery({
+    queryKey: ['review-automations', 'enabled', 'shared-feature-warnings'],
+    queryFn: () =>
+      fetchReviewAutomations({
+        enabled: true,
+        limit: SHARED_FEATURE_AUTOMATION_WARNING_LIMIT,
+      }),
+    enabled: isAdmin && parsedAutomationId != null,
+    staleTime: 30_000,
   });
 
   const updateMutation = useMutation({
@@ -211,6 +227,15 @@ export function AdminReviewAutomationDetailPage() {
   const timeZoneOptions = useMemo(
     () => getReviewAutomationTimeZoneOptions(timeZoneDraft),
     [timeZoneDraft],
+  );
+  const sharedFeatureWarnings = useMemo(
+    () =>
+      getSharedFeatureScheduleWarnings({
+        selectedFeatureIds: featureIdsDraft,
+        automations: enabledAutomationsQuery.data?.reviewAutomations ?? [],
+        currentAutomationId: parsedAutomationId,
+      }),
+    [enabledAutomationsQuery.data?.reviewAutomations, featureIdsDraft, parsedAutomationId],
   );
 
   const isDirty = useMemo(() => {
@@ -540,8 +565,16 @@ export function AdminReviewAutomationDetailPage() {
                   enabledOnlyByDefault
                 />
                 <p className="settings-hint">
-                  Automations can span multiple repositories indirectly through review features.
+                  Automations can share review features and span multiple repositories indirectly
+                  through those features.
                 </p>
+                <ReviewAutomationSharedFeatureWarning
+                  warnings={sharedFeatureWarnings}
+                  checkedAutomationCount={
+                    enabledAutomationsQuery.data?.reviewAutomations.length ?? 0
+                  }
+                  totalAutomationCount={enabledAutomationsQuery.data?.totalCount ?? 0}
+                />
               </div>
               {statusNotice ? (
                 <p className={`settings-hint${statusNotice.kind === 'error' ? ' is-error' : ''}`}>

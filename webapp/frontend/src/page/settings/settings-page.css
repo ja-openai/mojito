@@ -331,6 +331,10 @@
   color: var(--color-danger);
 }
 
+.settings-hint.is-warning {
+  color: var(--color-warning);
+}
+
 .settings-note {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);

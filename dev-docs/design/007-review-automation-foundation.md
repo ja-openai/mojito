@@ -19,7 +19,7 @@ Scope
 - New backend entity + migration for `review_automation` and its feature join table.
 - Admin-only REST endpoints for list, detail, create, update, delete, and batch upsert/export.
 - Admin-only frontend pages for review automation list, detail edit, and batch update/create.
-- Validation that the same review feature cannot belong to multiple enabled automations at once.
+- Warning when selected review features are already used by another enabled automation.
 - Quartz-backed scheduling with one trigger per automation.
 - Manual `Run now` support for a saved automation.
 - Review-project creation that resolves feature repositories/locales, excludes text units already covered by open review projects, and chunks locale work by `maxWordCountPerProject`.
@@ -60,7 +60,7 @@ Backend Notes
 
 - List API uses Spring Data projections to avoid hydrating full automation entities for the table.
 - Batch tooling uses lightweight options/export queries so the editor is not tied to the paged list limit.
-- Enabled automations enforce exclusive feature ownership to reduce duplicate project generation risk in MVP.
+- Enabled automations may share review features. Sequential runs skip text units already covered by open review projects; overlapping shared-feature runs can still send the same text units more than once, so admins should stagger schedules when sharing features.
 - Review-feature deletion is blocked if the feature is referenced by an automation.
 - Scheduler synchronization happens after automation CRUD commits, so Quartz stays aligned with saved config.
 - Cron execution runs as the system user and reuses the same feature-based review-project creation path as manual creation.

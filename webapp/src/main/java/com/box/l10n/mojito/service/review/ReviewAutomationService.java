@@ -201,8 +201,6 @@ public class ReviewAutomationService {
     String normalizedName = normalizeName(name);
     ensureNameAvailable(normalizedName, null);
     List<Long> normalizedFeatureIds = normalizeFeatureIds(featureIds);
-    ensureFeaturesAvailableToEnabledAutomation(
-        enabled == null ? Boolean.TRUE : enabled, normalizedFeatureIds, null);
 
     ReviewAutomation reviewAutomation = new ReviewAutomation();
     reviewAutomation.setName(normalizedName);
@@ -242,8 +240,6 @@ public class ReviewAutomationService {
     String normalizedName = normalizeName(name);
     ensureNameAvailable(normalizedName, reviewAutomation.getId());
     List<Long> normalizedFeatureIds = normalizeFeatureIds(featureIds);
-    ensureFeaturesAvailableToEnabledAutomation(
-        enabled == null ? Boolean.TRUE : enabled, normalizedFeatureIds, reviewAutomation.getId());
 
     reviewAutomation.setName(normalizedName);
     reviewAutomation.setEnabled(enabled == null ? Boolean.TRUE : enabled);
@@ -323,8 +319,6 @@ public class ReviewAutomationService {
 
       List<Long> normalizedFeatureIds = normalizeFeatureIds(row.featureIds());
       boolean normalizedEnabled = row.enabled() == null ? Boolean.TRUE : row.enabled();
-      ensureFeaturesAvailableToEnabledAutomation(
-          normalizedEnabled, normalizedFeatureIds, reviewAutomation.getId());
 
       reviewAutomation.setName(normalizedName);
       reviewAutomation.setEnabled(normalizedEnabled);
@@ -525,29 +519,6 @@ public class ReviewAutomationService {
   private List<Long> normalizeFeatureIds(List<Long> featureIds) {
     return (featureIds == null ? List.<Long>of() : featureIds)
         .stream().filter(id -> id != null && id > 0).distinct().toList();
-  }
-
-  private void ensureFeaturesAvailableToEnabledAutomation(
-      boolean enabled, List<Long> featureIds, Long currentAutomationId) {
-    if (!enabled || featureIds == null || featureIds.isEmpty()) {
-      return;
-    }
-
-    List<ReviewAutomationFeatureAssignmentRow> assignments =
-        reviewAutomationRepository.findEnabledFeatureAssignments(featureIds, currentAutomationId);
-    if (assignments.isEmpty()) {
-      return;
-    }
-
-    String conflicts =
-        assignments.stream()
-            .map(
-                assignment ->
-                    assignment.reviewFeatureName() + " -> " + assignment.reviewAutomationName())
-            .distinct()
-            .collect(java.util.stream.Collectors.joining("; "));
-    throw new IllegalArgumentException(
-        "Review features already belong to another enabled automation: " + conflicts);
   }
 
   private void ensureNameAvailable(String normalizedName, Long currentId) {

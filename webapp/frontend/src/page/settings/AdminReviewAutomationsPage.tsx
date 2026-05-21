@@ -28,6 +28,11 @@ import {
   getDefaultReviewAutomationTimeZone,
   getReviewAutomationTimeZoneOptions,
 } from '../../utils/reviewAutomationSchedule';
+import { ReviewAutomationSharedFeatureWarning } from './ReviewAutomationSharedFeatureWarning';
+import {
+  getSharedFeatureScheduleWarnings,
+  SHARED_FEATURE_AUTOMATION_WARNING_LIMIT,
+} from './reviewAutomationSharedFeatureWarnings';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {
@@ -120,6 +125,16 @@ export function AdminReviewAutomationsPage() {
     enabled: isAdmin,
     staleTime: 30_000,
   });
+  const enabledAutomationsQuery = useQuery({
+    queryKey: ['review-automations', 'enabled', 'shared-feature-warnings'],
+    queryFn: () =>
+      fetchReviewAutomations({
+        enabled: true,
+        limit: SHARED_FEATURE_AUTOMATION_WARNING_LIMIT,
+      }),
+    enabled: isAdmin && isCreateModalOpen,
+    staleTime: 30_000,
+  });
 
   const createAutomationMutation = useMutation({
     mutationFn: createReviewAutomation,
@@ -168,6 +183,14 @@ export function AdminReviewAutomationsPage() {
   const dueDateOffsetDaysDraft = useMemo(
     () => parseNonNegativeIntegerDraft(newDueDateOffsetDaysDraft),
     [newDueDateOffsetDaysDraft],
+  );
+  const sharedFeatureWarnings = useMemo(
+    () =>
+      getSharedFeatureScheduleWarnings({
+        selectedFeatureIds: newFeatureIdsDraft,
+        automations: enabledAutomationsQuery.data?.reviewAutomations ?? [],
+      }),
+    [enabledAutomationsQuery.data?.reviewAutomations, newFeatureIdsDraft],
   );
 
   const visibleCountLabel = useMemo(() => {
@@ -534,9 +557,14 @@ export function AdminReviewAutomationsPage() {
                 enabledOnlyByDefault
               />
               <p className="settings-hint">
-                Features stay exclusive across enabled automations to avoid duplicate project
-                creation.
+                Automations can share review features; stagger shared-feature schedules to avoid
+                duplicate sends from overlapping runs.
               </p>
+              <ReviewAutomationSharedFeatureWarning
+                warnings={sharedFeatureWarnings}
+                checkedAutomationCount={enabledAutomationsQuery.data?.reviewAutomations.length ?? 0}
+                totalAutomationCount={enabledAutomationsQuery.data?.totalCount ?? 0}
+              />
               {createModalError ? (
                 <p className="settings-hint is-error">{createModalError}</p>
               ) : null}

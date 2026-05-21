@@ -107,25 +107,6 @@ public interface ReviewAutomationRepository extends JpaRepository<ReviewAutomati
 
   @Query(
       """
-      select new com.box.l10n.mojito.service.review.ReviewAutomationFeatureAssignmentRow(
-        ra.id,
-        ra.name,
-        rf.id,
-        rf.name
-      )
-      from ReviewAutomation ra
-      join ra.features rf
-      where ra.enabled = true
-        and rf.id in :featureIds
-        and (:excludedAutomationId is null or ra.id <> :excludedAutomationId)
-      order by lower(ra.name) asc, ra.id asc, lower(rf.name) asc, rf.id asc
-      """)
-  List<ReviewAutomationFeatureAssignmentRow> findEnabledFeatureAssignments(
-      @Param("featureIds") List<Long> featureIds,
-      @Param("excludedAutomationId") Long excludedAutomationId);
-
-  @Query(
-      """
       select new com.box.l10n.mojito.service.review.ReviewAutomationOptionRow(
         ra.id,
         ra.name,
