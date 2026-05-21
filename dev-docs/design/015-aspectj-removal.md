@@ -228,6 +228,8 @@ Removed during this workstream:
 - `TeamService` no longer uses `@Transactional`; Slack conversation loading and Slack channel
   import preview/apply operations now open and commit their transaction boundaries explicitly while
   preserving the previous transaction scope around Slack lookups.
+- `TextUnitWS.addTextUnit` no longer uses `@Transactional`; text-unit creation now opens and
+  commits its transaction boundary explicitly in the controller.
 
 In progress:
 
