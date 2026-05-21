@@ -17,7 +17,9 @@ import java.util.Objects;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class TermIndexExplorerService {
@@ -38,6 +40,7 @@ public class TermIndexExplorerService {
   private final TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository;
   private final TermIndexRefreshRunRepository termIndexRefreshRunRepository;
   private final TermIndexAutomationRunRepository termIndexAutomationRunRepository;
+  private final PlatformTransactionManager transactionManager;
 
   public TermIndexExplorerService(
       UserService userService,
@@ -46,7 +49,8 @@ public class TermIndexExplorerService {
       TermIndexOccurrenceRepository termIndexOccurrenceRepository,
       TermIndexRepositoryCursorRepository termIndexRepositoryCursorRepository,
       TermIndexRefreshRunRepository termIndexRefreshRunRepository,
-      TermIndexAutomationRunRepository termIndexAutomationRunRepository) {
+      TermIndexAutomationRunRepository termIndexAutomationRunRepository,
+      PlatformTransactionManager transactionManager) {
     this.userService = Objects.requireNonNull(userService);
     this.termIndexExtractedTermRepository =
         Objects.requireNonNull(termIndexExtractedTermRepository);
@@ -57,10 +61,26 @@ public class TermIndexExplorerService {
     this.termIndexRefreshRunRepository = Objects.requireNonNull(termIndexRefreshRunRepository);
     this.termIndexAutomationRunRepository =
         Objects.requireNonNull(termIndexAutomationRunRepository);
+    this.transactionManager = Objects.requireNonNull(transactionManager);
   }
 
-  @Transactional(readOnly = true)
   public EntrySearchView searchEntries(EntrySearchCommand command) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+
+    try {
+      EntrySearchView result = searchEntriesNoTx(command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  EntrySearchView searchEntriesNoTx(EntrySearchCommand command) {
     requireAdmin();
     EntrySearchCommand normalized = normalize(command);
     List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
@@ -91,8 +111,25 @@ public class TermIndexExplorerService {
     return new EntrySearchView(entries);
   }
 
-  @Transactional
   public EntrySummaryView updateEntryReview(
+      Long termIndexExtractedTermId, ReviewUpdateCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      EntrySummaryView result = updateEntryReviewNoTx(termIndexExtractedTermId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  EntrySummaryView updateEntryReviewNoTx(
       Long termIndexExtractedTermId, ReviewUpdateCommand command) {
     requireAdmin();
     TermIndexExtractedTerm entry =
@@ -114,8 +151,23 @@ public class TermIndexExplorerService {
     return toEntrySummaryView(saved, findCandidateByExtractedTermId(saved.getId()));
   }
 
-  @Transactional(readOnly = true)
   public CandidateSearchView searchCandidates(CandidateSearchCommand command) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+
+    try {
+      CandidateSearchView result = searchCandidatesNoTx(command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  CandidateSearchView searchCandidatesNoTx(CandidateSearchCommand command) {
     requireAdmin();
     CandidateSearchCommand normalized = normalize(command);
     List<Long> repositoryIds = repositoryIdsOrSentinel(normalized.repositoryIds());
@@ -139,8 +191,25 @@ public class TermIndexExplorerService {
     return new CandidateSearchView(candidates);
   }
 
-  @Transactional
   public CandidateSummaryView updateCandidate(
+      Long termIndexCandidateId, CandidateUpdateCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      CandidateSummaryView result = updateCandidateNoTx(termIndexCandidateId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  CandidateSummaryView updateCandidateNoTx(
       Long termIndexCandidateId, CandidateUpdateCommand command) {
     requireAdmin();
     TermIndexCandidate candidate =
@@ -174,8 +243,24 @@ public class TermIndexExplorerService {
     return toCandidateSummaryView(saved);
   }
 
-  @Transactional
   public BatchReviewUpdateView updateEntryReviews(BatchReviewUpdateCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      BatchReviewUpdateView result = updateEntryReviewsNoTx(command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  BatchReviewUpdateView updateEntryReviewsNoTx(BatchReviewUpdateCommand command) {
     requireAdmin();
     BatchReviewUpdateCommand normalized = normalize(command);
     List<Long> termIndexExtractedTermIds =
@@ -209,8 +294,25 @@ public class TermIndexExplorerService {
     return new BatchReviewUpdateView(entries.size());
   }
 
-  @Transactional
   public CandidateBatchReviewUpdateView updateCandidateReviews(
+      CandidateBatchReviewUpdateCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      CandidateBatchReviewUpdateView result = updateCandidateReviewsNoTx(command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  CandidateBatchReviewUpdateView updateCandidateReviewsNoTx(
       CandidateBatchReviewUpdateCommand command) {
     requireAdmin();
     CandidateBatchReviewUpdateCommand normalized = normalize(command);
@@ -236,8 +338,24 @@ public class TermIndexExplorerService {
     return new CandidateBatchReviewUpdateView(candidates.size());
   }
 
-  @Transactional(readOnly = true)
   public OccurrenceSearchView searchOccurrences(
+      Long termIndexExtractedTermId, OccurrenceSearchCommand command) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+
+    try {
+      OccurrenceSearchView result = searchOccurrencesNoTx(termIndexExtractedTermId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  OccurrenceSearchView searchOccurrencesNoTx(
       Long termIndexExtractedTermId, OccurrenceSearchCommand command) {
     requireAdmin();
     OccurrenceSearchCommand normalized = normalize(command);
@@ -258,8 +376,23 @@ public class TermIndexExplorerService {
     return new OccurrenceSearchView(occurrences);
   }
 
-  @Transactional(readOnly = true)
   public StatusView getStatus(List<Long> repositoryIds, Integer recentRunLimit) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+
+    try {
+      StatusView result = getStatusNoTx(repositoryIds, recentRunLimit);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  StatusView getStatusNoTx(List<Long> repositoryIds, Integer recentRunLimit) {
     requireAdmin();
     List<Long> normalizedRepositoryIds = normalizeRepositoryIds(repositoryIds);
     List<Long> repositoryIdsFilter = repositoryIdsOrSentinel(normalizedRepositoryIds);
@@ -286,6 +419,12 @@ public class TermIndexExplorerService {
             .toList();
     List<String> extractionMethods = termIndexOccurrenceRepository.findDistinctExtractionMethods();
     return new StatusView(cursors, recentRuns, recentJobs, extractionMethods);
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    return transactionDefinition;
   }
 
   private EntrySummaryView toEntrySummaryView(
