@@ -136,6 +136,8 @@ Removed during this workstream:
   checker creation now opens and commits its transaction explicitly.
 - `AiTranslateAutomationConfigService.updateConfig` no longer uses `@Transactional`; automation
   config writes now open and commit their transaction explicitly.
+- `SlaCheckerService.closeIncidents` no longer relies on self-invoked `@Transactional`; SLA
+  incident closure now opens and commits its transaction explicitly.
 
 In progress:
 
