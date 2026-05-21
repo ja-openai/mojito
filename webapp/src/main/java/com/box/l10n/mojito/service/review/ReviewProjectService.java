@@ -66,7 +66,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.util.CollectionUtils;
 
 @Service
@@ -118,6 +121,7 @@ public class ReviewProjectService {
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
   private final ReviewFeatureRepository reviewFeatureRepository;
   private final MeterRegistry meterRegistry;
+  private final PlatformTransactionManager transactionManager;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -155,7 +159,8 @@ public class ReviewProjectService {
       TeamSlackNotificationService teamSlackNotificationService,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
       ReviewFeatureRepository reviewFeatureRepository,
-      MeterRegistry meterRegistry) {
+      MeterRegistry meterRegistry,
+      PlatformTransactionManager transactionManager) {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
@@ -190,6 +195,7 @@ public class ReviewProjectService {
     this.quartzPollableTaskScheduler = quartzPollableTaskScheduler;
     this.reviewFeatureRepository = reviewFeatureRepository;
     this.meterRegistry = meterRegistry;
+    this.transactionManager = transactionManager;
   }
 
   public PollableFuture<CreateReviewProjectRequestResult> createReviewProjectRequestAsync(
@@ -329,8 +335,25 @@ public class ReviewProjectService {
     return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
   }
 
-  @Transactional
   public CreateReviewProjectRequestResult createGlossaryTermCandidateReviewProject(
+      CreateGlossaryTermCandidateReviewProjectJobInput request) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      CreateReviewProjectRequestResult result =
+          createGlossaryTermCandidateReviewProjectNoTx(request);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  CreateReviewProjectRequestResult createGlossaryTermCandidateReviewProjectNoTx(
       CreateGlossaryTermCandidateReviewProjectJobInput request) {
     if (request == null) {
       throw new IllegalArgumentException("request must be provided");
