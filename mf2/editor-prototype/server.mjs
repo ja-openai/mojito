@@ -17,8 +17,13 @@ buildRustBinary();
 
 const server = createServer(async (request, response) => {
   try {
-    if (request.method === "POST" && request.url === "/api/format") {
+    const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    if (request.method === "POST" && url.pathname === "/api/format") {
       await handleFormat(request, response);
+      return;
+    }
+    if (request.method === "GET" && url.pathname === "/api/plurals") {
+      await handlePluralMetadata(url, response);
       return;
     }
     await serveStatic(request, response);
@@ -60,6 +65,16 @@ async function handleFormat(request, response) {
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
+}
+
+async function handlePluralMetadata(url, response) {
+  const locale = url.searchParams.get("locale") || "en";
+  const result = await runRust(["plural-json", locale]);
+  response.writeHead(result.status === 0 ? 200 : 422, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+  });
+  response.end(result.stdout || JSON.stringify({ error: result.stderr || "Rust plural metadata failed" }));
 }
 
 function runRust(args) {

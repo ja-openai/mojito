@@ -46,12 +46,23 @@
           <output id="rendered"></output>
         </section>
 
+        <section class="raw-workbench" aria-label="Raw MF2 source and target">
+          <label class="field">
+            <span>Raw source MF2</span>
+            <textarea id="sourceMf2" spellcheck="false"></textarea>
+          </label>
+          <label class="field">
+            <span>Raw target MF2</span>
+            <textarea id="targetMf2" spellcheck="false"></textarea>
+          </label>
+        </section>
+
         <div class="editor-toolbar">
           <div class="button-row">
             <button type="button" id="addPlural" class="primary">Add plural</button>
             <button type="button" id="addVariant">Add variant</button>
           </div>
-          <button type="button" id="formatSource">Normalize MF2</button>
+          <button type="button" id="formatSource">Normalize target MF2</button>
         </div>
 
         <div id="structure" class="wysiwyg-editor"></div>
@@ -81,11 +92,6 @@
           <h3>Quality</h3>
           <ul id="diagnostics" class="diagnostics"></ul>
         </div>
-
-        <details class="advanced">
-          <summary>Raw target MF2</summary>
-          <textarea id="source" spellcheck="false"></textarea>
-        </details>
 
         <details class="advanced">
           <summary>Formatted parts</summary>

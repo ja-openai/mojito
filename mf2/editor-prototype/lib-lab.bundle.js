@@ -21933,6 +21933,11 @@ function hideTooltip(tr, tooltip) {
 function maybeEnableLint(state2, effects) {
   return state2.field(lintState, false) ? effects : effects.concat(StateEffect.appendConfig.of(lintExtensions));
 }
+function setDiagnostics(state2, diagnostics) {
+  return {
+    effects: maybeEnableLint(state2, [setDiagnosticsEffect.of(diagnostics)])
+  };
+}
 var setDiagnosticsEffect = /* @__PURE__ */ StateEffect.define();
 var togglePanel2 = /* @__PURE__ */ StateEffect.define();
 var movePanelSelection = /* @__PURE__ */ StateEffect.define();
@@ -22034,6 +22039,65 @@ var lintKeymap = [
   { key: "Mod-Shift-m", run: openLintPanel, preventDefault: true },
   { key: "F8", run: nextDiagnostic }
 ];
+var lintPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
+  constructor(view) {
+    this.view = view;
+    this.timeout = -1;
+    this.set = true;
+    let { delay } = view.state.facet(lintConfig);
+    this.lintTime = Date.now() + delay;
+    this.run = this.run.bind(this);
+    this.timeout = setTimeout(this.run, delay);
+  }
+  run() {
+    clearTimeout(this.timeout);
+    let now = Date.now();
+    if (now < this.lintTime - 10) {
+      this.timeout = setTimeout(this.run, this.lintTime - now);
+    } else {
+      this.set = false;
+      let { state: state2 } = this.view, { sources } = state2.facet(lintConfig);
+      if (sources.length)
+        batchResults(sources.map((s) => Promise.resolve(s(this.view))), (annotations) => {
+          if (this.view.state.doc == state2.doc)
+            this.view.dispatch(setDiagnostics(this.view.state, annotations.reduce((a, b) => a.concat(b))));
+        }, (error) => {
+          logException(this.view.state, error);
+        });
+    }
+  }
+  update(update) {
+    let config2 = update.state.facet(lintConfig);
+    if (update.docChanged || config2 != update.startState.facet(lintConfig) || config2.needsRefresh && config2.needsRefresh(update)) {
+      this.lintTime = Date.now() + config2.delay;
+      if (!this.set) {
+        this.set = true;
+        this.timeout = setTimeout(this.run, config2.delay);
+      }
+    }
+  }
+  force() {
+    if (this.set) {
+      this.lintTime = Date.now();
+      this.run();
+    }
+  }
+  destroy() {
+    clearTimeout(this.timeout);
+  }
+});
+function batchResults(promises, sink, error) {
+  let collected = [], timeout = -1;
+  for (let p of promises)
+    p.then((value) => {
+      collected.push(value);
+      clearTimeout(timeout);
+      if (collected.length == promises.length)
+        sink(collected);
+      else
+        timeout = setTimeout(() => sink(collected), 200);
+    }, error);
+}
 var lintConfig = /* @__PURE__ */ Facet.define({
   combine(input) {
     return {
@@ -22057,6 +22121,18 @@ var lintConfig = /* @__PURE__ */ Facet.define({
 });
 function combineFilter(a, b) {
   return !a ? b : !b ? a : (d, s) => b(a(d, s), s);
+}
+function linter(source, config2 = {}) {
+  return [
+    lintConfig.of({ source, config: config2 }),
+    lintPlugin,
+    lintExtensions
+  ];
+}
+function forceLinting(view) {
+  let plugin = view.plugin(lintPlugin);
+  if (plugin)
+    plugin.force();
 }
 function assignKeys(actions) {
   let assigned = [];
@@ -22408,6 +22484,145 @@ function maxSeverity(diagnostics) {
   }
   return sev;
 }
+var LintGutterMarker = class extends GutterMarker {
+  constructor(diagnostics) {
+    super();
+    this.diagnostics = diagnostics;
+    this.severity = maxSeverity(diagnostics);
+  }
+  toDOM(view) {
+    let elt = document.createElement("div");
+    elt.className = "cm-lint-marker cm-lint-marker-" + this.severity;
+    let diagnostics = this.diagnostics;
+    let diagnosticsFilter = view.state.facet(lintGutterConfig).tooltipFilter;
+    if (diagnosticsFilter)
+      diagnostics = diagnosticsFilter(diagnostics, view.state);
+    if (diagnostics.length)
+      elt.onmouseover = () => gutterMarkerMouseOver(view, elt, diagnostics);
+    return elt;
+  }
+};
+function trackHoverOn(view, marker) {
+  let mousemove = (event) => {
+    let rect = marker.getBoundingClientRect();
+    if (event.clientX > rect.left - 10 && event.clientX < rect.right + 10 && event.clientY > rect.top - 10 && event.clientY < rect.bottom + 10)
+      return;
+    for (let target = event.target; target; target = target.parentNode) {
+      if (target.nodeType == 1 && target.classList.contains("cm-tooltip-lint"))
+        return;
+    }
+    window.removeEventListener("mousemove", mousemove);
+    if (view.state.field(lintGutterTooltip))
+      view.dispatch({ effects: setLintGutterTooltip.of(null) });
+  };
+  window.addEventListener("mousemove", mousemove);
+}
+function gutterMarkerMouseOver(view, marker, diagnostics) {
+  function hovered() {
+    let line = view.elementAtHeight(marker.getBoundingClientRect().top + 5 - view.documentTop);
+    const linePos = view.coordsAtPos(line.from);
+    if (linePos) {
+      view.dispatch({ effects: setLintGutterTooltip.of({
+        pos: line.from,
+        above: false,
+        clip: false,
+        create() {
+          return {
+            dom: diagnosticsTooltip(view, diagnostics),
+            getCoords: () => marker.getBoundingClientRect()
+          };
+        }
+      }) });
+    }
+    marker.onmouseout = marker.onmousemove = null;
+    trackHoverOn(view, marker);
+  }
+  let { hoverTime } = view.state.facet(lintGutterConfig);
+  let hoverTimeout = setTimeout(hovered, hoverTime);
+  marker.onmouseout = () => {
+    clearTimeout(hoverTimeout);
+    marker.onmouseout = marker.onmousemove = null;
+  };
+  marker.onmousemove = () => {
+    clearTimeout(hoverTimeout);
+    hoverTimeout = setTimeout(hovered, hoverTime);
+  };
+}
+function markersForDiagnostics(doc4, diagnostics) {
+  let byLine = /* @__PURE__ */ Object.create(null);
+  for (let diagnostic of diagnostics) {
+    let line = doc4.lineAt(diagnostic.from);
+    (byLine[line.from] || (byLine[line.from] = [])).push(diagnostic);
+  }
+  let markers = [];
+  for (let line in byLine) {
+    markers.push(new LintGutterMarker(byLine[line]).range(+line));
+  }
+  return RangeSet.of(markers, true);
+}
+var lintGutterExtension = /* @__PURE__ */ gutter({
+  class: "cm-gutter-lint",
+  markers: (view) => view.state.field(lintGutterMarkers),
+  widgetMarker: (view, widget, block) => {
+    let diagnostics = [];
+    view.state.field(lintGutterMarkers).between(block.from, block.to, (from2, to, value) => {
+      if (from2 > block.from && from2 < block.to)
+        diagnostics.push(...value.diagnostics);
+    });
+    return diagnostics.length ? new LintGutterMarker(diagnostics) : null;
+  }
+});
+var lintGutterMarkers = /* @__PURE__ */ StateField.define({
+  create() {
+    return RangeSet.empty;
+  },
+  update(markers, tr) {
+    markers = markers.map(tr.changes);
+    let diagnosticFilter = tr.state.facet(lintGutterConfig).markerFilter;
+    for (let effect of tr.effects) {
+      if (effect.is(setDiagnosticsEffect)) {
+        let diagnostics = effect.value;
+        if (diagnosticFilter)
+          diagnostics = diagnosticFilter(diagnostics || [], tr.state);
+        markers = markersForDiagnostics(tr.state.doc, diagnostics.slice(0));
+      }
+    }
+    return markers;
+  }
+});
+var setLintGutterTooltip = /* @__PURE__ */ StateEffect.define();
+var lintGutterTooltip = /* @__PURE__ */ StateField.define({
+  create() {
+    return null;
+  },
+  update(tooltip, tr) {
+    if (tooltip && tr.docChanged)
+      tooltip = hideTooltip(tr, tooltip) ? null : { ...tooltip, pos: tr.changes.mapPos(tooltip.pos) };
+    return tr.effects.reduce((t2, e) => e.is(setLintGutterTooltip) ? e.value : t2, tooltip);
+  },
+  provide: (field) => showTooltip.from(field)
+});
+var lintGutterTheme = /* @__PURE__ */ EditorView.baseTheme({
+  ".cm-gutter-lint": {
+    width: "1.4em",
+    "& .cm-gutterElement": {
+      padding: ".2em"
+    }
+  },
+  ".cm-lint-marker": {
+    width: "1em",
+    height: "1em"
+  },
+  ".cm-lint-marker-info": {
+    content: /* @__PURE__ */ svg(`<path fill="#aaf" stroke="#77e" stroke-width="6" stroke-linejoin="round" d="M5 5L35 5L35 35L5 35Z"/>`)
+  },
+  ".cm-lint-marker-warning": {
+    content: /* @__PURE__ */ svg(`<path fill="#fe8" stroke="#fd7" stroke-width="6" stroke-linejoin="round" d="M20 6L37 35L3 35Z"/>`)
+  },
+  ".cm-lint-marker-error": {
+    content: /* @__PURE__ */ svg(`<circle cx="20" cy="20" r="15" fill="#f87" stroke="#f43" stroke-width="6"/>`)
+  }
+});
 var lintHover = /* @__PURE__ */ hoverTooltip(lintTooltip, { hideOn: hideTooltip });
 var lintExtensions = [
   lintState,
@@ -22420,6 +22635,18 @@ var lintExtensions = [
   lintHover,
   baseTheme5
 ];
+var lintGutterConfig = /* @__PURE__ */ Facet.define({
+  combine(configs) {
+    return combineConfig(configs, {
+      hoverTime: 300,
+      markerFilter: null,
+      tooltipFilter: null
+    });
+  }
+});
+function lintGutter(config2 = {}) {
+  return [lintGutterConfig.of(config2), lintGutterMarkers, lintGutterExtension, lintGutterTheme, lintGutterTooltip];
+}
 
 // node_modules/codemirror/dist/index.js
 var basicSetup = /* @__PURE__ */ (() => [
@@ -34886,6 +35113,8 @@ var state = {
   args: { ...defaultArgs },
   editorModel: null,
   activeVariant: 0,
+  pluralMetadata: null,
+  sourceContract: null,
   updatingFromCode: false
 };
 var elements = {
@@ -34895,21 +35124,42 @@ var elements = {
   insertPlaceholder: document.querySelector("#insertPlaceholder"),
   locale: document.querySelector("#locale"),
   model: document.querySelector("#model"),
+  pluralTools: document.querySelector("#pluralTools"),
   prosemirror: document.querySelector("#prosemirror"),
   rendered: document.querySelector("#rendered"),
+  sourceCodemirror: document.querySelector("#sourceCodemirror"),
   status: document.querySelector("#status"),
   variantTabs: document.querySelector("#variantTabs")
 };
 var cmView;
 var pmView;
+var sourceCmView;
 initialize();
 function initialize() {
+  sourceCmView = new EditorView({
+    parent: elements.sourceCodemirror,
+    state: EditorState.create({
+      doc: samples.plural,
+      extensions: [
+        basicSetup,
+        lintGutter(),
+        sourceMf2Linter(),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            void refreshSourceContract(sourceCmView.state.doc.toString());
+          }
+        })
+      ]
+    })
+  });
   cmView = new EditorView({
     parent: elements.codemirror,
     state: EditorState.create({
       doc: samples.plural,
       extensions: [
         basicSetup,
+        lintGutter(),
+        rustMf2Linter(),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !state.updatingFromCode) {
             void refreshFromSource(cmView.state.doc.toString());
@@ -34920,14 +35170,81 @@ function initialize() {
   });
   document.querySelectorAll("[data-sample]").forEach((button) => {
     button.addEventListener("click", () => {
+      replaceSourceCode(samples[button.dataset.sample]);
       replaceCode(samples[button.dataset.sample]);
       state.activeVariant = 0;
+      void refreshSourceContract(samples[button.dataset.sample]);
       void refreshFromSource(samples[button.dataset.sample]);
     });
   });
-  elements.locale.addEventListener("change", () => void refreshFromSource(cmView.state.doc.toString(), { keepVariantEditor: true }));
+  elements.locale.addEventListener("change", () => {
+    void refreshPluralMetadata();
+    forceLinting(cmView);
+    void refreshFromSource(cmView.state.doc.toString(), { keepVariantEditor: true });
+  });
   elements.insertPlaceholder.addEventListener("click", insertFirstPlaceholder);
+  void refreshSourceContract(samples.plural);
+  void refreshPluralMetadata();
   void refreshFromSource(samples.plural);
+  globalThis.mf2Lab = {
+    setSource: async (source) => {
+      replaceSourceCode(source);
+      await refreshSourceContract(source);
+    },
+    setTarget: async (source) => {
+      replaceCode(source);
+      await refreshFromSource(source);
+    }
+  };
+}
+function rustMf2Linter() {
+  return linter(
+    async (view) => {
+      const response = await parseWithRust(view.state.doc.toString());
+      return codeMirrorDiagnostics(response, view.state.doc.toString());
+    },
+    { delay: 250 }
+  );
+}
+function sourceMf2Linter() {
+  return linter(
+    async (view) => {
+      const response = await parseWithRust(view.state.doc.toString());
+      return [...response.diagnostics ?? [], ...response.formatErrors ?? []].map((diagnostic) => {
+        const docLength = view.state.doc.length;
+        const from2 = clampOffset(diagnostic.start, docLength);
+        const fallbackEnd = docLength > from2 ? from2 + 1 : from2;
+        const to = clampOffset(diagnostic.end ?? fallbackEnd, docLength);
+        return {
+          from: from2,
+          to: Math.max(from2, to),
+          severity: diagnostic.severity === "warning" ? "warning" : "error",
+          source: "Rust MF2 source",
+          message: `${diagnostic.code}: ${diagnostic.message}`
+        };
+      });
+    },
+    { delay: 250 }
+  );
+}
+function codeMirrorDiagnostics(response, source) {
+  return validationDiagnostics(response, source).map((diagnostic) => {
+    const docLength = source.length;
+    const from2 = clampOffset(diagnostic.start, docLength);
+    const fallbackEnd = docLength > from2 ? from2 + 1 : from2;
+    const to = clampOffset(diagnostic.end ?? fallbackEnd, docLength);
+    return {
+      from: from2,
+      to: Math.max(from2, to),
+      severity: diagnostic.severity === "warning" ? "warning" : "error",
+      source: "Rust MF2",
+      message: `${diagnostic.code}: ${diagnostic.message}`
+    };
+  });
+}
+function clampOffset(value, docLength) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(docLength, Number(value)));
 }
 async function refreshFromSource(source, options = {}) {
   const response = await parseWithRust(source);
@@ -34940,6 +35257,18 @@ async function refreshFromSource(source, options = {}) {
     renderVariantTabs();
     renderProseMirrorVariant();
   }
+  renderPluralTools();
+}
+async function refreshSourceContract(source) {
+  const response = await parseWithRust(source);
+  state.sourceContract = {
+    source,
+    model: response.model,
+    placeholders: placeholderCountsFromRustModel(response.model),
+    requirements: placeholderRequirementsFromRustModel(response.model)
+  };
+  forceLinting(cmView);
+  void refreshFromSource(cmView.state.doc.toString(), { keepVariantEditor: true });
 }
 async function parseWithRust(source) {
   const response = await fetch("/api/format", {
@@ -34963,6 +35292,11 @@ async function parseWithRust(source) {
   }
   return response.json();
 }
+async function refreshPluralMetadata() {
+  const response = await fetch(`/api/plurals?locale=${encodeURIComponent(elements.locale.value)}`);
+  state.pluralMetadata = response.ok ? await response.json() : null;
+  renderPluralTools();
+}
 function renderArguments() {
   const names = state.editorModel?.variables?.length ? state.editorModel.variables : Object.keys(state.args);
   elements.arguments.innerHTML = "";
@@ -34973,6 +35307,7 @@ function renderArguments() {
     label.innerHTML = `<span>$${escapeHtml(name2)}</span><input value="${escapeHtml(String(state.args[name2]))}" />`;
     label.querySelector("input").addEventListener("input", (event) => {
       state.args[name2] = event.target.value;
+      forceLinting(cmView);
       void refreshFromSource(cmView.state.doc.toString(), { keepVariantEditor: true });
     });
     elements.arguments.append(label);
@@ -34980,11 +35315,11 @@ function renderArguments() {
 }
 function renderPreview(response) {
   elements.rendered.value = response.output ?? "";
-  const errors = [...response.diagnostics ?? [], ...response.formatErrors ?? []];
+  const errors = validationDiagnostics(response, cmView.state.doc.toString());
   elements.status.textContent = errors.length ? `${errors.length} issue(s)` : "Valid - Rust parser/runtime";
 }
 function renderDiagnostics(response) {
-  const diagnostics = [...response.diagnostics ?? [], ...response.formatErrors ?? []];
+  const diagnostics = validationDiagnostics(response, cmView.state.doc.toString());
   elements.diagnostics.innerHTML = "";
   if (!diagnostics.length) {
     elements.diagnostics.innerHTML = '<li class="ok">No parser or runtime issues.</li>';
@@ -34996,6 +35331,62 @@ function renderDiagnostics(response) {
     item.textContent = `${diagnostic.code}: ${diagnostic.message}`;
     elements.diagnostics.append(item);
   }
+}
+function validationDiagnostics(response, source) {
+  return [
+    ...response.diagnostics ?? [],
+    ...response.formatErrors ?? [],
+    ...placeholderDiagnostics(response.model, source)
+  ];
+}
+function placeholderDiagnostics(rustModel, source) {
+  if (!rustModel || !state.sourceContract) return [];
+  return [
+    ...extraPlaceholderDiagnostics(rustModel, source),
+    ...missingPlaceholderDiagnostics(rustModel, source)
+  ];
+}
+function extraPlaceholderDiagnostics(rustModel, source) {
+  const allowed = state.sourceContract.placeholders;
+  const current = placeholderCountsFromRustModel(rustModel);
+  const diagnostics = [];
+  for (const name2 of current.keys()) {
+    if (allowed.has(name2)) continue;
+    diagnostics.push({
+      severity: "error",
+      code: "new-placeholder",
+      message: `Target uses {$${name2}}, but that placeholder does not exist in the source message.`,
+      start: placeholderOffset(source, name2),
+      end: placeholderOffset(source, name2) + name2.length + 3
+    });
+  }
+  return diagnostics;
+}
+function missingPlaceholderDiagnostics(rustModel, source) {
+  if (!state.sourceContract.requirements.length) return [];
+  const current = placeholderRequirementsFromRustModel(rustModel);
+  const currentBySignature = new Map(current.map((item) => [item.signature, item.requirements]));
+  const diagnostics = [];
+  for (const baseline of state.sourceContract.requirements) {
+    const currentRequirements = currentBySignature.get(baseline.signature);
+    if (!currentRequirements) continue;
+    const currentCounts = new Map(currentRequirements.map((item) => [item.name, item.count]));
+    const missing = missingRequiredPlaceholders(baseline.requirements, currentCounts);
+    for (const item of missing) {
+      diagnostics.push({
+        severity: "error",
+        code: "missing-placeholder",
+        message: `Variant ${baseline.label} is missing required placeholder {$${item.name}}.`,
+        start: 0,
+        end: Math.min(source.length, 1)
+      });
+    }
+  }
+  return diagnostics;
+}
+function placeholderOffset(source, name2) {
+  const offset = source.indexOf(`{$${name2}`);
+  return offset >= 0 ? offset : 0;
 }
 function renderVariantTabs() {
   elements.variantTabs.innerHTML = "";
@@ -35016,6 +35407,135 @@ function renderVariantTabs() {
     elements.variantTabs.append(button);
   });
 }
+function renderPluralTools() {
+  if (!elements.pluralTools) return;
+  const selector = primaryPluralSelector();
+  if (!selector || state.editorModel?.type !== "select" || !state.pluralMetadata?.categories?.length) {
+    elements.pluralTools.innerHTML = "";
+    return;
+  }
+  const selectorIndex = state.editorModel.selectors.indexOf(selector);
+  const existingGenericKeys = new Set(
+    state.editorModel.variants.filter((variant) => variant.keys.every((key, index) => index === selectorIndex || key === "*")).map((variant) => variant.keys[selectorIndex])
+  );
+  const categories = state.pluralMetadata.categories;
+  const plan = pluralCombinationPlan(selector);
+  elements.pluralTools.innerHTML = `
+    <header>
+      <h3>CLDR plural forms for $${escapeHtml(selector)} (${escapeHtml(state.pluralMetadata.locale)})</h3>
+      <span class="eyebrow">CLDR categories; * is the MF2 fallback</span>
+    </header>
+    ${plan.missing.length ? `
+      <div class="plural-bulk">
+        <div>
+          <strong>${escapeHtml(plan.label)}</strong>
+          <span>${plan.missing.length} missing row(s); ${plan.total} possible combination(s)</span>
+        </div>
+        <button type="button" data-generate-combinations>Generate missing combinations</button>
+      </div>
+    ` : ""}
+    <div class="plural-category-list">
+      ${categories.map((category) => `
+        <div class="plural-category">
+          <strong>${escapeHtml(category.category)}</strong>
+          <span>${escapeHtml((category.examples ?? []).join(", "))}</span>
+          <button type="button" data-add-plural="${escapeHtml(category.category)}"${existingGenericKeys.has(category.category) ? " disabled" : ""}>
+            ${existingGenericKeys.has(category.category) ? "Added" : "Add row"}
+          </button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+  elements.pluralTools.querySelector("[data-generate-combinations]")?.addEventListener("click", () => generatePluralCombinations(selector));
+  elements.pluralTools.querySelectorAll("[data-add-plural]").forEach((button) => {
+    button.addEventListener("click", () => addPluralVariant(selector, button.dataset.addPlural));
+  });
+}
+function primaryPluralSelector() {
+  if (state.editorModel?.type !== "select") return null;
+  for (const selector of state.editorModel.selectors) {
+    const declaration = state.editorModel.declarations.find((item) => item.name === selector);
+    if (declaration?.function === "number" || declaration?.function === "integer") {
+      return selector;
+    }
+  }
+  return null;
+}
+function addPluralVariant(selector, category) {
+  if (state.editorModel?.type !== "select") return;
+  const selectorIndex = state.editorModel.selectors.indexOf(selector);
+  const fallback = state.editorModel.variants.find((variant) => variant.keys.every((key) => key === "*"));
+  const keys3 = state.editorModel.selectors.map((_name, index) => index === selectorIndex ? category : "*");
+  if (variantExists(keys3)) return;
+  const value = fallbackValue(fallback, selector);
+  const insertIndex = fallbackIndex();
+  state.editorModel.variants.splice(insertIndex, 0, { keys: keys3, value });
+  state.activeVariant = insertIndex;
+  const source = printModel(state.editorModel);
+  replaceCode(source);
+  void refreshFromSource(source);
+}
+function generatePluralCombinations(selector) {
+  if (state.editorModel?.type !== "select") return;
+  const plan = pluralCombinationPlan(selector);
+  if (!plan.missing.length) return;
+  const fallback = state.editorModel.variants.find((variant) => variant.keys.every((key) => key === "*"));
+  const value = fallbackValue(fallback, selector);
+  let insertIndex = fallbackIndex();
+  for (const keys3 of plan.missing) {
+    state.editorModel.variants.splice(insertIndex, 0, { keys: keys3, value });
+    insertIndex++;
+  }
+  state.activeVariant = Math.max(0, insertIndex - plan.missing.length);
+  const source = printModel(state.editorModel);
+  replaceCode(source);
+  void refreshFromSource(source);
+}
+function pluralCombinationPlan(selector) {
+  if (state.editorModel?.type !== "select" || !state.pluralMetadata?.categories?.length) {
+    return { label: "No plural selector", total: 0, missing: [] };
+  }
+  const pluralIndex = state.editorModel.selectors.indexOf(selector);
+  const dimensions = state.editorModel.selectors.map((name2, index) => {
+    if (index === pluralIndex) {
+      return state.pluralMetadata.categories.map((category) => category.category);
+    }
+    const values = selectorValues(index);
+    return values.length ? values : ["*"];
+  });
+  const combinations = cartesian(dimensions);
+  const missing = combinations.filter((keys3) => !variantExists(keys3));
+  const nonPluralLabels = state.editorModel.selectors.filter((name2, index) => index !== pluralIndex && selectorValues(index).length).join(" x ");
+  return {
+    label: nonPluralLabels ? `Generate ${nonPluralLabels} x ${selector} rows` : `Generate ${selector} plural rows`,
+    total: combinations.length,
+    missing
+  };
+}
+function selectorValues(selectorIndex) {
+  const values = [];
+  for (const variant of state.editorModel?.variants ?? []) {
+    const key = variant.keys[selectorIndex];
+    if (key && key !== "*" && !values.includes(key)) values.push(key);
+  }
+  return values;
+}
+function cartesian(dimensions) {
+  return dimensions.reduce(
+    (rows, values) => rows.flatMap((row) => values.map((value) => [...row, value])),
+    [[]]
+  );
+}
+function variantExists(keys3) {
+  return (state.editorModel?.variants ?? []).some((variant) => variantSignature(variant.keys) === variantSignature(keys3));
+}
+function fallbackIndex() {
+  const index = (state.editorModel?.variants ?? []).findIndex((variant) => variant.keys.every((key) => key === "*"));
+  return index >= 0 ? index : state.editorModel.variants.length;
+}
+function fallbackValue(fallback, selector) {
+  return fallback?.value ?? `{$${selector}}`;
+}
 function renderProseMirrorVariant() {
   const pattern = selectedPattern();
   const pmState = EditorState2.create({
@@ -35029,6 +35549,7 @@ function renderProseMirrorVariant() {
         "Mod-b": toggleMark(schema.marks.strong)
       }),
       keymap2(baseKeymap),
+      protectedPlaceholderPlugin(requiredPlaceholdersForSelectedVariant(pattern)),
       new Plugin({
         view: () => ({
           update: (view, previousState) => {
@@ -35044,6 +35565,34 @@ function renderProseMirrorVariant() {
   } else {
     pmView = new EditorView2(elements.prosemirror, { state: pmState });
   }
+}
+function protectedPlaceholderPlugin(requiredPlaceholders) {
+  return new Plugin({
+    filterTransaction(transaction) {
+      if (!transaction.docChanged || !requiredPlaceholders.length) return true;
+      const nextPattern = patternFromDoc(transaction.doc);
+      const nextCounts = placeholderCountsFromSource(nextPattern);
+      const missing = missingRequiredPlaceholders(requiredPlaceholders, nextCounts);
+      if (!missing.length) return true;
+      showProtectedPlaceholderNotice(missing);
+      return false;
+    }
+  });
+}
+function requiredPlaceholdersForSelectedVariant(fallbackPattern) {
+  const signature = selectedVariantSignature();
+  const baseline = state.sourceContract?.requirements.find((item) => item.signature === signature);
+  return baseline?.requirements ?? countsToRequirements(placeholderCountsFromSource(fallbackPattern));
+}
+function selectedVariantSignature() {
+  if (state.editorModel?.type === "select") {
+    const variant = state.editorModel.variants[state.activeVariant];
+    return variantSignature(variant?.keys ?? []);
+  }
+  return "message";
+}
+function showProtectedPlaceholderNotice(missing) {
+  elements.status.textContent = `Protected placeholder: ${missing.map((item) => `{$${item.name}}`).join(", ")}`;
 }
 function selectedPattern() {
   if (state.editorModel?.type === "select") {
@@ -35080,6 +35629,11 @@ function replaceCode(source) {
   });
   state.updatingFromCode = false;
 }
+function replaceSourceCode(source) {
+  sourceCmView.dispatch({
+    changes: { from: 0, to: sourceCmView.state.doc.length, insert: source }
+  });
+}
 function editorModelFromRust(rustModel, source) {
   if (!rustModel) return null;
   if (rustModel.type === "select") {
@@ -35102,6 +35656,74 @@ function editorModelFromRust(rustModel, source) {
     pattern: patternToSource(rustModel.pattern ?? []),
     variables: variablesFromRustModel(rustModel)
   };
+}
+function placeholderRequirementsFromRustModel(rustModel) {
+  if (!rustModel) return [];
+  if (rustModel.type === "select") {
+    return (rustModel.variants ?? []).map((variant) => {
+      const keys3 = (variant.keys ?? []).map((key) => key.type === "*" ? "*" : key.value);
+      return {
+        signature: variantSignature(keys3),
+        label: keys3.join(" "),
+        requirements: countsToRequirements(placeholderCountsFromRustPattern(variant.value ?? []))
+      };
+    });
+  }
+  return [
+    {
+      signature: "message",
+      label: "message",
+      requirements: countsToRequirements(placeholderCountsFromRustPattern(rustModel.pattern ?? []))
+    }
+  ];
+}
+function placeholderCountsFromRustModel(rustModel) {
+  const counts = /* @__PURE__ */ new Map();
+  if (!rustModel) return counts;
+  const patterns = [];
+  if (rustModel.type === "select") {
+    for (const variant of rustModel.variants ?? []) patterns.push(variant.value ?? []);
+  } else {
+    patterns.push(rustModel.pattern ?? []);
+  }
+  for (const pattern of patterns) {
+    mergeCounts(counts, placeholderCountsFromRustPattern(pattern));
+  }
+  return counts;
+}
+function placeholderCountsFromRustPattern(pattern) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const part of pattern ?? []) {
+    collectVariablesFromRustPart(part, counts);
+  }
+  return counts;
+}
+function collectVariablesFromRustPart(part, counts) {
+  if (!part || typeof part === "string") return;
+  if (part.type === "expression") {
+    collectVariableFromRustArg(part.arg, counts);
+    collectVariablesFromRustOptions(part.function?.options, counts);
+    collectVariablesFromRustAttributes(part.attributes, counts);
+    return;
+  }
+  if (part.type === "markup") {
+    collectVariablesFromRustOptions(part.options, counts);
+    collectVariablesFromRustAttributes(part.attributes, counts);
+  }
+}
+function collectVariablesFromRustOptions(options, counts) {
+  for (const value of Object.values(options ?? {})) {
+    collectVariableFromRustArg(value, counts);
+  }
+}
+function collectVariablesFromRustAttributes(attributes, counts) {
+  for (const value of Object.values(attributes ?? {})) {
+    collectVariableFromRustArg(value, counts);
+  }
+}
+function collectVariableFromRustArg(arg, counts) {
+  if (arg?.type !== "variable") return;
+  counts.set(arg.name, (counts.get(arg.name) ?? 0) + 1);
 }
 function declarationFromRust(declaration) {
   const expression = declaration.value ?? {};
@@ -35143,6 +35765,25 @@ function patternFromDoc(doc4) {
     if (node.type.name === "placeholder") chunks.push(`{$${node.attrs.name}}`);
   });
   return chunks.join("");
+}
+function placeholderCountsFromSource(pattern) {
+  const counts = /* @__PURE__ */ new Map();
+  const expressionPattern = /\{\s*\$([^\s{}:]+)(?:\s|[:}])/gu;
+  for (const match of pattern.matchAll(expressionPattern)) {
+    counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
+  }
+  return counts;
+}
+function countsToRequirements(counts) {
+  return Array.from(counts, ([name2, count]) => ({ name: name2, count }));
+}
+function mergeCounts(target, source) {
+  for (const [name2, count] of source.entries()) {
+    target.set(name2, (target.get(name2) ?? 0) + count);
+  }
+}
+function missingRequiredPlaceholders(required, currentCounts) {
+  return required.filter((item) => (currentCounts.get(item.name) ?? 0) < item.count);
 }
 function splitPlaceholders(pattern) {
   const parts = [];
@@ -35205,7 +35846,10 @@ function collectVariablesFromPattern(pattern, variables) {
 }
 function variantLabel(selectors, keys3) {
   if (!selectors.length) return "Message";
-  return selectors.map((selector, index) => `${selector}: ${keys3[index] === "*" ? "any" : keys3[index]}`).join(", ");
+  return selectors.map((selector, index) => `${selector}: ${keys3[index] === "*" ? "fallback" : keys3[index]}`).join(", ");
+}
+function variantSignature(keys3) {
+  return keys3.join("");
 }
 function coerceArguments(args) {
   const result = {};

@@ -203,6 +203,22 @@ output {
   white-space: pre-wrap;
 }
 
+.raw-workbench {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  padding: 12px;
+}
+
+.raw-workbench textarea {
+  font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  min-height: 170px;
+  padding: 10px;
+  resize: vertical;
+  width: 100%;
+}
+
 .editor-toolbar {
   align-items: center;
   border-bottom: 1px solid var(--line);
@@ -334,15 +350,6 @@ summary {
   font-weight: 700;
 }
 
-#source {
-  font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  margin-top: 10px;
-  min-height: 220px;
-  padding: 10px;
-  resize: vertical;
-  width: 100%;
-}
-
 pre {
   background: var(--code);
   border-radius: 6px;
@@ -356,7 +363,8 @@ pre {
 
 @media (max-width: 980px) {
   .workspace,
-  .context-strip {
+  .context-strip,
+  .raw-workbench {
     grid-template-columns: 1fr;
   }
 

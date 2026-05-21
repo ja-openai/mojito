@@ -19,59 +19,70 @@
       </div>
     </header>
 
-    <main class="lab-grid">
-      <section class="panel">
+    <main class="lab-shell">
+      <section class="panel source-contract-panel">
         <div class="panel-header">
-          <h2>CodeMirror Raw MF2</h2>
-          <div class="button-row">
-            <button type="button" data-sample="plural">Plural</button>
-            <button type="button" data-sample="gender">Gender + plural</button>
-            <button type="button" data-sample="markup">Markup</button>
+          <h2>CodeMirror Raw Source MF2</h2>
+          <span class="eyebrow">Source defines the target placeholder contract</span>
+        </div>
+        <div id="sourceCodemirror" class="source-codemirror-host"></div>
+      </section>
+
+      <section class="lab-grid">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>CodeMirror Target MF2</h2>
+            <div class="button-row">
+              <button type="button" data-sample="plural">Plural</button>
+              <button type="button" data-sample="gender">Gender + plural</button>
+              <button type="button" data-sample="markup">Markup</button>
+            </div>
           </div>
-        </div>
-        <div id="codemirror" class="codemirror-host"></div>
-      </section>
+          <div id="codemirror" class="codemirror-host"></div>
+        </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>ProseMirror WYSIWYG Variant</h2>
-          <button type="button" id="insertPlaceholder">Insert placeholder</button>
-        </div>
-        <div class="variant-tabs" id="variantTabs"></div>
-        <div id="prosemirror" class="rich-host"></div>
-        <p class="hint">Text edits update the selected MF2 variant. Placeholder chips stay atomic.</p>
-      </section>
+        <section class="panel">
+          <div class="panel-header">
+            <h2>ProseMirror WYSIWYG Variant</h2>
+            <button type="button" id="insertPlaceholder">Insert placeholder</button>
+          </div>
+          <div class="variant-tabs" id="variantTabs"></div>
+          <div id="pluralTools" class="plural-tools"></div>
+          <div id="prosemirror" class="rich-host"></div>
+          <p class="hint">Text edits update the selected MF2 variant. Placeholder chips stay atomic.</p>
+        </section>
 
-      <section class="panel side-panel">
-        <div class="panel-header">
-          <h2>Rust Preview</h2>
-          <label class="locale-field">
-            Locale
-            <select id="locale">
-              <option value="en">en</option>
-              <option value="fr">fr</option>
-              <option value="ru">ru</option>
-              <option value="ar">ar</option>
-              <option value="ja">ja</option>
-            </select>
-          </label>
-        </div>
-        <div class="subpanel">
-          <h3>Preview Values</h3>
-          <div id="arguments" class="arguments"></div>
-        </div>
-        <div class="subpanel">
-          <h3>Rendered</h3>
-          <output id="rendered"></output>
-        </div>
-        <div class="subpanel">
-          <h3>Quality</h3>
-          <ul id="diagnostics" class="diagnostics"></ul>
-        </div>
-        <details class="advanced">
-          <summary>Rust model</summary>
-          <pre id="model"></pre>
-        </details>
+        <section class="panel side-panel">
+          <div class="panel-header">
+            <h2>Rust Preview</h2>
+            <label class="locale-field">
+              Locale
+              <select id="locale">
+                <option value="en">en</option>
+                <option value="fr">fr</option>
+                <option value="ru">ru</option>
+                <option value="ar">ar</option>
+                <option value="ja">ja</option>
+              </select>
+            </label>
+          </div>
+          <div class="subpanel">
+            <h3>Preview Values</h3>
+            <div id="arguments" class="arguments"></div>
+          </div>
+          <div class="subpanel">
+            <h3>Rendered</h3>
+            <output id="rendered"></output>
+          </div>
+          <div class="subpanel">
+            <h3>Quality</h3>
+            <ul id="diagnostics" class="diagnostics"></ul>
+          </div>
+          <details class="advanced">
+            <summary>Rust model</summary>
+            <pre id="model"></pre>
+          </details>
+        </section>
       </section>
     </main>
 

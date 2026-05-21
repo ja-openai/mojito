@@ -11,7 +11,8 @@ use mf2_prototype::{
     format_model_to_parts_with_locale_and_functions_and_fallback, format_model_with_locale,
     format_model_with_locale_and_bidi,
     format_model_with_locale_and_functions_and_bidi_and_fallback, locale_lookup_chain,
-    parse_to_model, BidiIsolation, Diagnostic, FormattedPart, FunctionRegistry, MessageModel,
+    parse_to_model, select_cardinal_plural_category, BidiIsolation, Diagnostic, FormattedPart,
+    FunctionRegistry, MessageModel, NumberOperands,
 };
 use serde::{Deserialize, Serialize};
 
@@ -160,6 +161,21 @@ struct EditorResponse {
     format_errors: Vec<Diagnostic>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PluralMetadataResponse {
+    locale: String,
+    select: String,
+    categories: Vec<PluralCategoryMetadata>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PluralCategoryMetadata {
+    category: String,
+    examples: Vec<String>,
+}
+
 fn main() {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
@@ -178,6 +194,10 @@ fn main() {
         "editor-json" => {
             let path = next_required_arg(&mut args);
             editor_json(&read_to_string(&path));
+        }
+        "plural-json" => {
+            let locale = next_required_arg(&mut args);
+            plural_json(&locale);
         }
         "conformance" => {
             let path = args
@@ -324,6 +344,51 @@ fn push_unique_diagnostic(diagnostics: &mut Vec<Diagnostic>, diagnostic: Diagnos
         return;
     }
     diagnostics.push(diagnostic);
+}
+
+fn plural_json(locale: &str) {
+    let response = PluralMetadataResponse {
+        locale: locale.to_string(),
+        select: "cardinal".to_string(),
+        categories: cardinal_plural_metadata(locale),
+    };
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&response).expect("plural metadata serializes")
+    );
+}
+
+fn cardinal_plural_metadata(locale: &str) -> Vec<PluralCategoryMetadata> {
+    const CATEGORY_ORDER: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
+    const SAMPLE_VALUES: [&str; 33] = [
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
+        "17", "18", "19", "20", "21", "22", "23", "24", "25", "31", "100", "101", "102", "1.0",
+        "1.5", "2.5",
+    ];
+
+    let mut examples_by_category: BTreeMap<&'static str, Vec<String>> = BTreeMap::new();
+    for sample in SAMPLE_VALUES {
+        let Some(operands) = NumberOperands::from_str(sample) else {
+            continue;
+        };
+        let category = select_cardinal_plural_category(locale, operands);
+        examples_by_category
+            .entry(category)
+            .or_default()
+            .push(sample.to_string());
+    }
+
+    CATEGORY_ORDER
+        .iter()
+        .filter_map(|category| {
+            examples_by_category
+                .remove(category)
+                .map(|examples| PluralCategoryMetadata {
+                    category: (*category).to_string(),
+                    examples: examples.into_iter().take(4).collect(),
+                })
+        })
+        .collect()
 }
 
 fn conformance(fixture_dir: &Path) {
@@ -752,7 +817,7 @@ fn fail(message: impl std::fmt::Display) -> ! {
 
 fn usage_and_exit() -> ! {
     eprintln!(
-        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype editor-json <request.json>\n  mf2-prototype conformance [source-fixture-dir]\n  mf2-prototype unicode-tests [unicode-test-dir] [baseline-json]\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]\n  mf2-prototype bench-parse <fixture-dir> [iterations] [warmup-iterations]"
+        "Usage:\n  mf2-prototype compile <source-or-fixture.json>\n  mf2-prototype format-first-case <fixture.json>\n  mf2-prototype editor-json <request.json>\n  mf2-prototype plural-json <locale>\n  mf2-prototype conformance [source-fixture-dir]\n  mf2-prototype unicode-tests [unicode-test-dir] [baseline-json]\n  mf2-prototype bench <fixture-dir> [iterations] [warmup-iterations]\n  mf2-prototype bench-parse <fixture-dir> [iterations] [warmup-iterations]"
     );
     process::exit(2);
 }

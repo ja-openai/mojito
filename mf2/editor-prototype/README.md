@@ -15,10 +15,13 @@ Current prototype:
 - structured variant editing for `.input` + `.match` messages
 - mechanical plural template insertion
 - locale/argument preview
-- advanced raw target MF2 source only when needed
+- visible raw source MF2 and raw target MF2 buffers
+- target placeholder checks against the raw source contract
 - library comparison lab at `/lib-lab.html`:
-  - CodeMirror 6 raw MF2 editor
-  - ProseMirror WYSIWYG variant editor with atomic placeholder chips
+  - CodeMirror 6 raw source and raw target MF2 editors
+  - CodeMirror lint diagnostics from the Rust parser/runtime
+  - ProseMirror WYSIWYG variant editor with protected placeholder chips
+  - CLDR plural category buttons with example numbers for the current locale
   - shared Rust parser/runtime preview endpoint
 
 Run:

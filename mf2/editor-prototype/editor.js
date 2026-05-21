@@ -264,7 +264,8 @@ function partToSource(part) {
   if (part.type === "markup") {
     const prefix = part.kind === "close" ? "/" : "#";
     const suffix = part.kind === "standalone" ? "/" : "";
-    return `{${prefix}${part.name}${suffix}}`;
+    const tail = markupTailToSource(part);
+    return `{${prefix}${part.name}${tail ? ` ${tail}` : ""}${suffix}}`;
   }
   if (part.type === "expression") {
     const arg = argToSource(part.arg);
@@ -273,6 +274,10 @@ function partToSource(part) {
     return `{${arg}${functionText}}`;
   }
   return "";
+}
+
+function markupTailToSource(part) {
+  return [optionsToSource(part.options), attributesToSource(part.attributes)].filter(Boolean).join(" ");
 }
 
 function argToSource(arg) {
@@ -286,6 +291,12 @@ function optionsToSource(options) {
   const entries = Object.entries(options);
   if (!entries.length) return "";
   return entries.map(([name, value]) => `${name}=${argToSource(value)}`).join(" ");
+}
+
+function attributesToSource(attributes) {
+  const entries = Object.entries(attributes ?? {});
+  if (!entries.length) return "";
+  return entries.map(([name, value]) => (value === true ? `@${name}` : `@${name}=${argToSource(value)}`)).join(" ");
 }
 
 function variablesFromRustModel(model) {
@@ -311,10 +322,26 @@ function collectVariablesFromPattern(pattern, variables) {
 
 function collectVariablesFromExpression(expression, variables) {
   if (!expression) return;
-  if (expression.arg?.type === "variable") variables.add(expression.arg.name);
-  for (const option of Object.values(expression.function?.options ?? {})) {
-    if (option.type === "variable") variables.add(option.name);
+  collectVariableFromArg(expression.arg, variables);
+  collectVariablesFromOptions(expression.function?.options, variables);
+  collectVariablesFromOptions(expression.options, variables);
+  collectVariablesFromAttributes(expression.attributes, variables);
+}
+
+function collectVariablesFromOptions(options, variables) {
+  for (const value of Object.values(options ?? {})) {
+    collectVariableFromArg(value, variables);
   }
+}
+
+function collectVariablesFromAttributes(attributes, variables) {
+  for (const value of Object.values(attributes ?? {})) {
+    collectVariableFromArg(value, variables);
+  }
+}
+
+function collectVariableFromArg(arg, variables) {
+  if (arg?.type === "variable") variables.add(arg.name);
 }
 
 export function formatMessage(model, args, locale = "en") {
@@ -536,13 +563,224 @@ function variantLabel(selectors, keys) {
   if (!selectors.length) return "Fallback";
   const parts = selectors.map((selector, index) => {
     const key = keys[index] ?? "*";
-    return key === "*" ? `${selector}: any` : `${selector}: ${key}`;
+    return key === "*" ? `${selector}: fallback` : `${selector}: ${key}`;
   });
   return `When ${parts.join(", ")}`;
 }
 
+export function withSourceContractDiagnostics(targetModel, sourceModel) {
+  return {
+    ...targetModel,
+    diagnostics: [
+      ...(targetModel.diagnostics ?? []),
+      ...sourceDiagnostics(sourceModel),
+      ...placeholderContractDiagnostics(targetModel, sourceModel),
+    ],
+  };
+}
+
+function sourceDiagnostics(sourceModel) {
+  return (sourceModel.diagnostics ?? []).map((diagnostic) => ({
+    ...diagnostic,
+    code: `source-${diagnostic.code}`,
+    message: `Source MF2: ${diagnostic.message}`,
+  }));
+}
+
+function placeholderContractDiagnostics(targetModel, sourceModel) {
+  if (!targetModel || !sourceModel || sourceHasBlockingDiagnostics(sourceModel)) return [];
+  const sourceCounts = placeholderCountsFromModel(sourceModel);
+  const targetCounts = placeholderCountsFromModel(targetModel);
+  const diagnostics = [];
+
+  for (const name of targetCounts.keys()) {
+    if (sourceCounts.has(name)) continue;
+    diagnostics.push({
+      severity: "error",
+      code: "new-placeholder",
+      message: `Target uses {$${name}}, but that placeholder does not exist in the source MF2.`,
+    });
+  }
+
+  for (const name of sourceCounts.keys()) {
+    if (targetCounts.has(name)) continue;
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-source-placeholder",
+      message: `Target no longer uses source placeholder {$${name}}.`,
+    });
+  }
+
+  const targetRequirementsBySignature = new Map(
+    placeholderRequirementsFromModel(targetModel).map((item) => [item.signature, item.requirements]),
+  );
+  for (const sourceRequirement of placeholderRequirementsFromModel(sourceModel)) {
+    const targetRequirements = targetRequirementsBySignature.get(sourceRequirement.signature);
+    if (!targetRequirements) continue;
+    const targetRequirementCounts = new Map(targetRequirements.map((item) => [item.name, item.count]));
+    for (const missing of missingRequiredPlaceholders(sourceRequirement.requirements, targetRequirementCounts)) {
+      diagnostics.push({
+        severity: "error",
+        code: "variant-missing-placeholder",
+        message: `Target variant ${sourceRequirement.label} is missing source placeholder {$${missing.name}}.`,
+      });
+    }
+  }
+
+  return diagnostics;
+}
+
+function sourceHasBlockingDiagnostics(sourceModel) {
+  return (sourceModel.diagnostics ?? []).some((diagnostic) => diagnostic.severity === "error");
+}
+
+function placeholderCountsFromModel(model) {
+  if (model?.rustModel) {
+    return placeholderCountsFromRustModel(model.rustModel);
+  }
+  const counts = new Map();
+  for (const pattern of modelPatterns(model)) {
+    mergeCounts(counts, placeholderCountsFromPattern(pattern));
+  }
+  return counts;
+}
+
+function placeholderCountsFromRustModel(rustModel) {
+  const counts = new Map();
+  const patterns = rustModel.type === "select"
+    ? (rustModel.variants ?? []).map((variant) => variant.value ?? [])
+    : [rustModel.pattern ?? []];
+  for (const pattern of patterns) {
+    mergeCounts(counts, placeholderCountsFromRustPattern(pattern));
+  }
+  return counts;
+}
+
+function placeholderCountsFromRustPattern(pattern) {
+  const counts = new Map();
+  for (const part of pattern ?? []) {
+    collectVariablesFromRustPart(part, counts);
+  }
+  return counts;
+}
+
+function collectVariablesFromRustPart(part, counts) {
+  if (!part || typeof part === "string") return;
+  if (part.type === "expression") {
+    collectVariableFromRustArg(part.arg, counts);
+    collectVariablesFromRustOptions(part.function?.options, counts);
+    collectVariablesFromRustAttributes(part.attributes, counts);
+    return;
+  }
+  if (part.type === "markup") {
+    collectVariablesFromRustOptions(part.options, counts);
+    collectVariablesFromRustAttributes(part.attributes, counts);
+  }
+}
+
+function collectVariablesFromRustOptions(options, counts) {
+  for (const value of Object.values(options ?? {})) {
+    collectVariableFromRustArg(value, counts);
+  }
+}
+
+function collectVariablesFromRustAttributes(attributes, counts) {
+  for (const value of Object.values(attributes ?? {})) {
+    collectVariableFromRustArg(value, counts);
+  }
+}
+
+function collectVariableFromRustArg(arg, counts) {
+  if (arg?.type !== "variable") return;
+  counts.set(arg.name, (counts.get(arg.name) ?? 0) + 1);
+}
+
+function placeholderRequirementsFromModel(model) {
+  if (model?.rustModel) {
+    return placeholderRequirementsFromRustModel(model.rustModel);
+  }
+  if (model?.type === "select") {
+    return (model.variants ?? []).map((variant) => ({
+      signature: variantSignature(variant.keys),
+      label: variant.keys.join(" "),
+      requirements: countsToRequirements(placeholderCountsFromPattern(variant.value ?? "")),
+    }));
+  }
+  return [
+    {
+      signature: "message",
+      label: "message",
+      requirements: countsToRequirements(placeholderCountsFromPattern(model?.pattern ?? model?.source ?? "")),
+    },
+  ];
+}
+
+function placeholderRequirementsFromRustModel(rustModel) {
+  if (rustModel.type === "select") {
+    return (rustModel.variants ?? []).map((variant) => {
+      const keys = (variant.keys ?? []).map((key) => (key.type === "*" ? "*" : key.value));
+      return {
+        signature: variantSignature(keys),
+        label: keys.join(" "),
+        requirements: countsToRequirements(placeholderCountsFromRustPattern(variant.value ?? [])),
+      };
+    });
+  }
+  return [
+    {
+      signature: "message",
+      label: "message",
+      requirements: countsToRequirements(placeholderCountsFromRustPattern(rustModel.pattern ?? [])),
+    },
+  ];
+}
+
+function modelPatterns(model) {
+  if (!model) return [];
+  if (model.type === "select") {
+    return (model.variants ?? []).map((variant) => variant.value ?? "");
+  }
+  return [model.pattern ?? model.source ?? ""];
+}
+
+function placeholderCountsFromPattern(pattern) {
+  const counts = new Map();
+  for (const match of String(pattern).matchAll(/\{\s*\$([^\s{}:]+)(?:\s|[:}])/gu)) {
+    counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function mergeCounts(target, source) {
+  for (const [name, count] of source.entries()) {
+    target.set(name, (target.get(name) ?? 0) + count);
+  }
+}
+
+function countsToRequirements(counts) {
+  return Array.from(counts, ([name, count]) => ({ name, count }));
+}
+
+function missingRequiredPlaceholders(required, currentCounts) {
+  return required.filter((item) => (currentCounts.get(item.name) ?? 0) < item.count);
+}
+
+function variantSignature(keys) {
+  return (keys ?? []).join("\u001f");
+}
+
+function variablesFromModels(...models) {
+  const variables = new Set();
+  for (const model of models) {
+    for (const name of model?.variables ?? []) variables.add(name);
+    for (const name of placeholderCountsFromModel(model).keys()) variables.add(name);
+  }
+  return Array.from(variables);
+}
+
 function initialize() {
-  const source = document.querySelector("#source");
+  const sourceMf2 = document.querySelector("#sourceMf2");
+  const targetMf2 = document.querySelector("#targetMf2");
   const locale = document.querySelector("#locale");
   const structure = document.querySelector("#structure");
   const argsContainer = document.querySelector("#arguments");
@@ -556,29 +794,36 @@ function initialize() {
     backend: "Starting",
     history: createSourceHistory(samples.plural),
     model: parseSource(samples.plural),
+    sourceModel: parseSource(samples.plural),
     output: null,
     parts: null,
     refreshId: 0,
-    suppressSourceInput: false,
+    suppressTargetInput: false,
   };
 
-  source.value = samples.plural;
+  sourceMf2.value = samples.plural;
+  targetMf2.value = samples.plural;
 
   async function refresh(options = {}) {
     const refreshId = ++state.refreshId;
     const skipStructure = options.skipStructure === true;
-    const parsed = await parseForWorkbench(source.value, state.args, locale.value);
+    const [sourceParsed, targetParsed] = await Promise.all([
+      parseForWorkbench(sourceMf2.value, state.args, locale.value),
+      parseForWorkbench(targetMf2.value, state.args, locale.value),
+    ]);
     if (refreshId !== state.refreshId) return;
-    state.backend = parsed.backend;
-    state.model = parsed.model;
-    state.output = parsed.output;
-    state.parts = parsed.parts;
+    state.backend = targetParsed.backend;
+    state.sourceModel = sourceParsed.model;
+    state.model = withSourceContractDiagnostics(targetParsed.model, sourceParsed.model);
+    state.output = targetParsed.output;
+    state.parts = targetParsed.parts;
     if (!skipStructure) {
       renderStructure();
     }
     renderArguments();
     const output = state.output ?? formatMessage(state.model, state.args, locale.value);
     rendered.value = output;
+    sourceReference.textContent = sourceParsed.output ?? formatMessage(state.sourceModel, state.args, locale.value);
     const previewPattern = state.model.type === "select"
       ? (selectedVariant(state.model, state.args, locale.value)?.value ?? "")
       : state.model.pattern;
@@ -589,30 +834,30 @@ function initialize() {
       : `Valid - ${state.backend}`;
   }
 
-  function setSourceText(value, options = {}) {
+  function setTargetText(value, options = {}) {
     if (options.record !== false) {
       state.history.push(value);
     }
-    state.suppressSourceInput = true;
-    source.value = value;
-    state.suppressSourceInput = false;
+    state.suppressTargetInput = true;
+    targetMf2.value = value;
+    state.suppressTargetInput = false;
   }
 
-  function setSourceAndRefresh(value, options = {}) {
-    setSourceText(value, options);
+  function setTargetAndRefresh(value, options = {}) {
+    setTargetText(value, options);
     void refresh();
   }
 
-  function syncSourceFromModel(options = {}) {
-    const nextSource = printModel(state.model);
-    setSourceText(nextSource, { record: options.record !== false });
+  function syncTargetFromModel(options = {}) {
+    const nextTarget = printModel(state.model);
+    setTargetText(nextTarget, { record: options.record !== false });
     void refresh({
       skipStructure: options.rebuildStructure !== true,
     });
   }
 
-  function restoreSource(value) {
-    setSourceText(value, { record: false });
+  function restoreTarget(value) {
+    setTargetText(value, { record: false });
     void refresh();
   }
 
@@ -624,7 +869,7 @@ function initialize() {
     if (!undo && !redo) return;
     if (!event.target?.closest?.(".workspace")) return;
     event.preventDefault();
-    restoreSource(undo ? state.history.undo() : state.history.redo());
+    restoreTarget(undo ? state.history.undo() : state.history.redo());
   }
 
   function renderStructure() {
@@ -637,7 +882,7 @@ function initialize() {
         <div class="empty-state">Use Add plural when the translation needs number-sensitive wording.</div>
       `;
       structure.querySelector("[data-simple]").addEventListener("input", (event) => {
-        setSourceText(event.target.value);
+        setTargetText(event.target.value);
         void refresh({ skipStructure: true });
       });
       return;
@@ -655,7 +900,7 @@ function initialize() {
     fields.querySelector("[data-role='selectors']").addEventListener("input", (event) => {
       state.model.selectors = event.target.value.trim().split(/\s+/u).filter(Boolean);
       normalizeDeclarations();
-      syncSourceFromModel({ rebuildStructure: true });
+      syncTargetFromModel({ rebuildStructure: true });
     });
 
     const list = document.createElement("div");
@@ -684,16 +929,16 @@ function initialize() {
       row.querySelectorAll("[data-key]").forEach((input) => {
         input.addEventListener("input", () => {
           variant.keys[Number(input.dataset.key)] = input.value || "*";
-          syncSourceFromModel();
+          syncTargetFromModel();
         });
       });
       row.querySelector("[data-value]").addEventListener("input", (event) => {
         variant.value = event.target.value;
-        syncSourceFromModel();
+        syncTargetFromModel();
       });
       row.querySelector("[data-remove]").addEventListener("click", () => {
         state.model.variants.splice(variantIndex, 1);
-        syncSourceFromModel({ rebuildStructure: true });
+        syncTargetFromModel({ rebuildStructure: true });
       });
       row.querySelectorAll("[data-insert]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -703,7 +948,7 @@ function initialize() {
           const end = textarea.selectionEnd;
           textarea.value = textarea.value.slice(0, start) + token + textarea.value.slice(end);
           variant.value = textarea.value;
-          syncSourceFromModel();
+          syncTargetFromModel();
           textarea.focus();
           textarea.setSelectionRange(start + token.length, start + token.length);
         });
@@ -714,7 +959,7 @@ function initialize() {
   }
 
   function renderArguments() {
-    const variables = state.model.variables.length ? state.model.variables : variablesInPattern(source.value);
+    const variables = variablesFromModels(state.sourceModel, state.model);
     argsContainer.innerHTML = "";
     for (const name of variables) {
       if (!(name in state.args)) state.args[name] = defaultArgs[name] ?? "";
@@ -754,32 +999,45 @@ function initialize() {
   document.querySelectorAll("[data-sample]").forEach((button) => {
     button.addEventListener("click", () => {
       sourceReference.textContent = sampleReferences[button.dataset.sample] ?? "";
-      setSourceAndRefresh(samples[button.dataset.sample]);
+      sourceMf2.value = samples[button.dataset.sample];
+      setTargetAndRefresh(samples[button.dataset.sample]);
     });
   });
   document.querySelector("#addPlural").addEventListener("click", () => {
-    setSourceAndRefresh(addPluralTemplate(source.value));
+    setTargetAndRefresh(addPluralTemplate(targetMf2.value));
   });
   document.querySelector("#formatSource").addEventListener("click", () => {
-    state.model = parseSource(source.value);
-    setSourceAndRefresh(printModel(state.model));
+    state.model = parseSource(targetMf2.value);
+    setTargetAndRefresh(printModel(state.model));
   });
   document.querySelector("#addVariant").addEventListener("click", () => {
     if (state.model.type !== "select") {
-      setSourceAndRefresh(addPluralTemplate(source.value));
+      setTargetAndRefresh(addPluralTemplate(targetMf2.value));
       return;
     }
     state.model.variants.push({ keys: state.model.selectors.map(() => "*"), value: "" });
-    syncSourceFromModel({ rebuildStructure: true });
+    syncTargetFromModel({ rebuildStructure: true });
   });
-  source.addEventListener("input", () => {
-    if (!state.suppressSourceInput) {
-      state.history.push(source.value);
+  sourceMf2.addEventListener("input", () => void refresh({ skipStructure: true }));
+  targetMf2.addEventListener("input", () => {
+    if (!state.suppressTargetInput) {
+      state.history.push(targetMf2.value);
     }
     void refresh();
   });
   document.addEventListener("keydown", handleHistoryShortcut);
   locale.addEventListener("change", () => void refresh({ skipStructure: true }));
+  globalThis.mf2Workbench = {
+    setSource: async (value) => {
+      sourceMf2.value = value;
+      await refresh({ skipStructure: true });
+    },
+    setTarget: async (value) => {
+      setTargetText(value);
+      await refresh();
+    },
+    diagnostics: () => state.model.diagnostics.map((diagnostic) => ({ ...diagnostic })),
+  };
   void refresh();
 }
 

@@ -8,6 +8,7 @@ import {
   partsForPattern,
   printModel,
   samples,
+  withSourceContractDiagnostics,
 } from "./editor.js";
 
 const plural = parseSource(samples.plural);
@@ -23,6 +24,42 @@ assert.equal(formatMessage(gender, { gender: "unknown", count: 5 }, "en"), "They
 const generated = parseSource(addPluralTemplate("Files: {$count}"));
 assert.equal(generated.diagnostics.length, 0);
 assert.equal(printModel(generated).includes(".match $count"), true);
+
+const sourcePlural = parseSource(samples.plural);
+const targetWithNewPlaceholder = parseSource(`.input {$count :number}
+.match $count
+one {{You have {$count} file from {$name}}}
+* {{You have {$count} files from {$name}}}`);
+const validatedTarget = withSourceContractDiagnostics(targetWithNewPlaceholder, sourcePlural);
+assert.equal(validatedTarget.diagnostics.some((diagnostic) => diagnostic.code === "new-placeholder"), true);
+
+const targetMissingPlaceholder = parseSource(`.input {$count :number}
+.match $count
+one {{One file}}
+* {{Many files}}`);
+const missingValidatedTarget = withSourceContractDiagnostics(targetMissingPlaceholder, sourcePlural);
+assert.equal(missingValidatedTarget.diagnostics.some((diagnostic) => diagnostic.code === "missing-source-placeholder"), true);
+assert.equal(missingValidatedTarget.diagnostics.some((diagnostic) => diagnostic.code === "variant-missing-placeholder"), true);
+
+const sourceMarkupOptionModel = {
+  type: "message",
+  diagnostics: [],
+  rustModel: {
+    type: "message",
+    pattern: [{ type: "markup", kind: "open", name: "link", options: { href: { type: "variable", name: "url" } } }, "profile"],
+  },
+};
+const targetMarkupOptionModel = {
+  type: "message",
+  diagnostics: [],
+  rustModel: {
+    type: "message",
+    pattern: [{ type: "markup", kind: "open", name: "link", options: { href: { type: "variable", name: "trackingUrl" } } }, "profile"],
+  },
+};
+const markupOptionValidatedTarget = withSourceContractDiagnostics(targetMarkupOptionModel, sourceMarkupOptionModel);
+assert.equal(markupOptionValidatedTarget.diagnostics.some((diagnostic) => diagnostic.code === "new-placeholder"), true);
+assert.equal(markupOptionValidatedTarget.diagnostics.some((diagnostic) => diagnostic.code === "missing-source-placeholder"), true);
 
 const parts = partsForPattern("Tap {#link href=$url}profile{/link}. {$name}", {
   name: "Jean",
