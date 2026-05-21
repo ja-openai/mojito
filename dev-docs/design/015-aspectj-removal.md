@@ -70,6 +70,9 @@ In progress:
   plus `PollableCallable` no longer rely on `@Configurable` injection.
 - `TemporaryBulkTranslationAcceptService` no longer uses `@Pollable`; its dry-run and execute async
   entrypoints call `PollableTaskRunner` directly.
+- `GitBlameService.saveGitBlameWithUsages` no longer uses `@Pollable`; it calls
+  `PollableTaskRunner` directly and keeps the previous write boundary explicit with
+  `TransactionTemplate`.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

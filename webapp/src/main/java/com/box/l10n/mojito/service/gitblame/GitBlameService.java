@@ -6,9 +6,10 @@ import com.box.l10n.mojito.entity.Screenshot;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.screenshot.ScreenshotService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
@@ -26,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * @author jaurambault
@@ -50,6 +51,10 @@ public class GitBlameService {
   @Autowired ScreenshotService screenshotService;
 
   @Autowired QuartzPollableTaskScheduler quartzPollableTaskScheduler;
+
+  @Autowired PollableTaskRunner pollableTaskRunner;
+
+  @Autowired TransactionTemplate transactionTemplate;
 
   /**
    * Gets the {@link GitBlameWithUsage} information that matches the search parameters.
@@ -192,10 +197,23 @@ public class GitBlameService {
    * @param gitBlameWithUsages
    * @return
    */
-  @Transactional
-  @Pollable(async = true, message = "Save git blame information")
   public PollableFuture<Void> saveGitBlameWithUsages(List<GitBlameWithUsage> gitBlameWithUsages) {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "saveGitBlameWithUsages",
+            "Save git blame information",
+            currentTask -> {
+              saveGitBlameWithUsagesInTransaction(gitBlameWithUsages);
+              return new PollableFutureTaskResult<>();
+            }));
+  }
 
+  void saveGitBlameWithUsagesInTransaction(List<GitBlameWithUsage> gitBlameWithUsages) {
+    transactionTemplate.executeWithoutResult(
+        transactionStatus -> saveGitBlameWithUsagesInCurrentTransaction(gitBlameWithUsages));
+  }
+
+  void saveGitBlameWithUsagesInCurrentTransaction(List<GitBlameWithUsage> gitBlameWithUsages) {
     HashMap<Long, GitBlameWithUsage> gitBlameWithUsagesByTmTextUnitId =
         getGitBlameWithUsagesByTmTextUnitId(gitBlameWithUsages);
 
@@ -228,8 +246,6 @@ public class GitBlameService {
 
       gitBlameRepository.save(gitBlame);
     }
-
-    return new PollableFutureTaskResult<>();
   }
 
   Map<Long, GitBlame> getCurrentGitBlameForTmTextUnitIds(Set<Long> tmTextUnitIds) {
