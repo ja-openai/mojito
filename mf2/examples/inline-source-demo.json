@@ -86,6 +86,34 @@
       "expected": "Exactly one left"
     },
     {
+      "label": "activity.age",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": -90 },
+      "expected": "2m ago"
+    },
+    {
+      "label": "activity.age",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "ja",
+      "arguments": { "delta": 180 },
+      "expected": "3分後"
+    },
+    {
+      "label": "activity.age",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "ar",
+      "arguments": { "delta": -60 },
+      "expected": "قبل دقيقة واحدة"
+    },
+    {
+      "label": "activity.chat",
+      "source": "{$delta :relativeTime style=narrow numeric=auto policy=chat}",
+      "locale": "en",
+      "arguments": { "delta": -44 },
+      "expected": "now"
+    },
+    {
       "label": "assignee.files",
       "source": ".input {$gender :string}\n.input {$count :number}\n.match $gender $count\nmale one {{He reviewed {$count} file}}\nfemale one {{She reviewed {$count} file}}\nmale * {{He reviewed {$count} files}}\nfemale * {{She reviewed {$count} files}}\n* * {{They reviewed {$count} files}}",
       "locale": "en",

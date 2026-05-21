@@ -5,6 +5,7 @@ mod model;
 mod parser;
 mod runtime;
 
+pub use cldr::{select_cardinal_plural_category, select_ordinal_plural_category, NumberOperands};
 pub use diagnostic::Diagnostic;
 pub use locale_key::{canonical_locale_key, locale_lookup_chain, lookup_locale};
 pub use model::{
