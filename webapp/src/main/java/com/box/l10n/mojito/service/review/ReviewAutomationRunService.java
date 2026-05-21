@@ -8,7 +8,9 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class ReviewAutomationRunService {
@@ -18,15 +20,42 @@ public class ReviewAutomationRunService {
 
   private final ReviewAutomationRunRepository reviewAutomationRunRepository;
   private final UserRepository userRepository;
+  private final PlatformTransactionManager transactionManager;
 
   public ReviewAutomationRunService(
-      ReviewAutomationRunRepository reviewAutomationRunRepository, UserRepository userRepository) {
+      ReviewAutomationRunRepository reviewAutomationRunRepository,
+      UserRepository userRepository,
+      PlatformTransactionManager transactionManager) {
     this.reviewAutomationRunRepository = reviewAutomationRunRepository;
     this.userRepository = userRepository;
+    this.transactionManager = transactionManager;
   }
 
-  @Transactional
   public ReviewAutomationRun createRunningRun(
+      ReviewAutomation automation,
+      ReviewAutomationRun.TriggerSource triggerSource,
+      Long requestedByUserId,
+      int featureCount,
+      ZonedDateTime startedAt) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      ReviewAutomationRun run =
+          createRunningRunNoTx(
+              automation, triggerSource, requestedByUserId, featureCount, startedAt);
+      transactionManager.commit(transaction);
+      return run;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReviewAutomationRun createRunningRunNoTx(
       ReviewAutomation automation,
       ReviewAutomationRun.TriggerSource triggerSource,
       Long requestedByUserId,
@@ -47,8 +76,35 @@ public class ReviewAutomationRunService {
     return reviewAutomationRunRepository.save(run);
   }
 
-  @Transactional
   public void markCompleted(
+      Long runId,
+      int createdProjectRequestCount,
+      int createdProjectCount,
+      int createdLocaleCount,
+      int skippedLocaleCount,
+      int erroredLocaleCount) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      markCompletedNoTx(
+          runId,
+          createdProjectRequestCount,
+          createdProjectCount,
+          createdLocaleCount,
+          skippedLocaleCount,
+          erroredLocaleCount);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void markCompletedNoTx(
       Long runId,
       int createdProjectRequestCount,
       int createdProjectCount,
@@ -76,8 +132,37 @@ public class ReviewAutomationRunService {
             });
   }
 
-  @Transactional
   public void markFailed(
+      Long runId,
+      int createdProjectRequestCount,
+      int createdProjectCount,
+      int createdLocaleCount,
+      int skippedLocaleCount,
+      int erroredLocaleCount,
+      String errorMessage) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      markFailedNoTx(
+          runId,
+          createdProjectRequestCount,
+          createdProjectCount,
+          createdLocaleCount,
+          skippedLocaleCount,
+          erroredLocaleCount,
+          errorMessage);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void markFailedNoTx(
       Long runId,
       int createdProjectRequestCount,
       int createdProjectCount,
@@ -103,8 +188,25 @@ public class ReviewAutomationRunService {
             });
   }
 
-  @Transactional(readOnly = true)
   public List<RunSummary> getRecentRuns(List<Long> automationIds, int limit) {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      List<RunSummary> summaries = getRecentRunsNoTx(automationIds, limit);
+      transactionManager.commit(transaction);
+      return summaries;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<RunSummary> getRecentRunsNoTx(List<Long> automationIds, int limit) {
     int resolvedLimit = Math.max(1, Math.min(MAX_RECENT_RUN_LIMIT, limit));
     List<ReviewAutomationRunSummaryRow> rows =
         automationIds == null || automationIds.isEmpty()
