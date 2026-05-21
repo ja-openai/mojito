@@ -31,7 +31,9 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author aurambaj
@@ -67,8 +69,27 @@ public class VirtualTextUnitBatchUpdaterService {
 
   @Autowired LocaleService localeService;
 
-  @Transactional
+  @Autowired PlatformTransactionManager transactionManager;
+
   public void updateTextUnits(
+      Asset asset, List<VirtualAssetTextUnit> virtualAssetTextUnits, boolean replace)
+      throws VirtualAssetRequiredException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      updateTextUnitsNoTx(asset, virtualAssetTextUnits, replace);
+      transactionManager.commit(transaction);
+    } catch (VirtualAssetRequiredException | RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void updateTextUnitsNoTx(
       Asset asset, List<VirtualAssetTextUnit> virtualAssetTextUnits, boolean replace)
       throws VirtualAssetRequiredException {
 

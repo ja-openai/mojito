@@ -163,6 +163,9 @@ Removed during this workstream:
   and review update operations now open and commit their transaction boundaries explicitly.
 - `TMImportService.importXLIFF` no longer relies on AspectJ for a private transactional helper;
   XLIFF import now opens and commits its transaction boundary explicitly.
+- `VirtualTextUnitBatchUpdaterService.updateTextUnits` no longer uses `@Transactional`; virtual
+  text-unit updates now open and commit their transaction boundary explicitly while preserving the
+  checked `VirtualAssetRequiredException`.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and
