@@ -80,6 +80,8 @@ Removed during this workstream:
   `DropExporterService` constructs file-system exporters with explicit dependencies.
 - CLI extraction-check notification senders no longer use `@Configurable`;
   `ExtractionCheckCommand` passes GitHub, Slack, and Phabricator collaborators explicitly.
+- `CommandWaitForPollableTaskListener` no longer uses `@Configurable`; `CommandHelper` passes its
+  console writer directly when waiting on pollable tasks.
 
 In progress:
 

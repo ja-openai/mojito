@@ -305,7 +305,9 @@ public class CommandHelper {
 
     try {
       pollableTaskClient.waitForPollableTask(
-          pollableId, PollableTaskClient.NO_TIMEOUT, new CommandWaitForPollableTaskListener());
+          pollableId,
+          PollableTaskClient.NO_TIMEOUT,
+          new CommandWaitForPollableTaskListener(consoleWriter));
     } catch (PollableTaskException e) {
       throw new CommandException(e.getMessage(), e.getCause());
     }
