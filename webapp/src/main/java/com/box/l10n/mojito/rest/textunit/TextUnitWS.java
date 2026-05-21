@@ -58,7 +58,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -116,6 +118,8 @@ public class TextUnitWS {
   @Autowired
   @Qualifier("searchTextUnitsHybridExecutor")
   ThreadPoolTaskExecutor searchTextUnitsHybridExecutor;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   /**
    * Gets the TextUnits that matches the search parameters.
@@ -451,9 +455,24 @@ public class TextUnitWS {
    *     TextUnitDTO#getTarget()} are the only 3 fields that are used for the update.
    * @return the created TextUnit (contains the new translation with its id)
    */
-  @Transactional
   @RequestMapping(method = RequestMethod.POST, value = "/api/textunits")
   public TextUnitDTO addTextUnit(@RequestBody TextUnitDTO textUnitDTO) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      TextUnitDTO result = addTextUnitNoTx(textUnitDTO);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TextUnitDTO addTextUnitNoTx(TextUnitDTO textUnitDTO) {
     userService.checkUserCanEditLocale(textUnitDTO.getLocaleId());
 
     logger.debug("Add TextUnit");
