@@ -20,30 +20,23 @@ Build wiring:
 - Parent `pom.xml` declares `aspectj-maven-plugin.version` and a provided `aspectjrt` dependency.
 - `common/pom.xml`, `webapp/pom.xml`, and `cli/pom.xml` run `aspectj-maven-plugin` for `compile`
   and `test-compile`.
-- Aspect libraries include `spring-aspects` in `common`, `webapp`, and `cli`, plus
-  `spring-security-aspects` in `webapp`.
+- Aspect libraries still include `spring-aspects` in `common`, `webapp`, and `cli`.
 
 Framework modes:
 
-- `Application` uses `@EnableSpringConfigured` and
-  `@EnableTransactionManagement(mode = AdviceMode.ASPECTJ)`.
-- `WebSecurityConfig` uses `@EnableGlobalMethodSecurity(..., mode = AdviceMode.ASPECTJ)`.
-- `cli.App` uses `@EnableSpringConfigured`.
+- `Application` still uses `@EnableTransactionManagement(mode = AdviceMode.ASPECTJ)`.
 
-Annotation usage from the initial scan:
+Remaining annotation usage:
 
-- `39` `@Configurable` usages across common, webapp, and cli.
-- `39` `@Pollable` usages in webapp services.
-- `17` `@Timed` usages.
-- `9` `@StopWatch`, `@RunAs`, and `@JsonRawString` usages combined.
-- `@Retryable` remains in `AssetExtractionService` and `TextUnitSearcher`.
+- `299` `@Transactional` usages remain across production and test sources.
+- `3` `@Retryable` usages remain in `AssetExtractionService` and `TextUnitSearcher`.
+- No `@Configurable`, `@Pollable`, `@Timed`, `@StopWatch`, `@RunAs`, `@JsonRawString`, AspectJ
+  method-security, AspectJ async, or AspectJ caching annotations remain in source.
 
-Custom AspectJ entry points from the initial scan:
+Custom AspectJ entry points:
 
-- `PollableAspect` plus `PollableAspectConfig` and `@DeclareError` validations.
-- `RunAsAspect` plus `RunAsAspectConfig`.
-- `JsonRawStringAspect` plus `JsonRawStringAspectConfig`.
-- `StopWatchAspect`.
+- No custom aspect classes remain in source. The remaining weaving path exists for Spring's
+  transaction aspect until transaction boundaries are migrated or proven safe without weaving.
 
 Removed during this workstream:
 
@@ -120,68 +113,12 @@ Removed during this workstream:
 
 In progress:
 
-- `TemporaryBulkTranslationAcceptService` no longer uses `@Pollable`; its dry-run and execute async
-  entrypoints call `PollableTaskRunner` directly.
-- `GitBlameService.saveGitBlameWithUsages` no longer uses `@Pollable`; it calls
-  `PollableTaskRunner` directly and keeps the previous write boundary explicit with
-  `TransactionTemplate`.
-- `TeamService.refreshSlackConversationMembersAsync` no longer uses `@Pollable`; it calls
-  `PollableTaskRunner` directly and stores the Slack refresh input/output in the created task.
-- `LeveragingService.copyTm` no longer uses `@Pollable`; it calls `PollableTaskRunner` directly.
-- `RepositoryMachineTranslationService.translateRepository` no longer uses `@Pollable`; it calls
-  `PollableTaskRunner` directly.
-- `TMTextUnitStatisticService.importStatistics` no longer uses `@Pollable`; it calls
-  `PollableTaskRunner` directly and keeps the per-batch write boundary explicit with
-  `TransactionTemplate`.
-- `GlossaryTermService.extractCandidatesAsync` no longer uses `@Pollable` or
-  `@InjectCurrentTask`; it calls `PollableTaskRunner` directly and receives the current task in the
-  runner operation.
-- `TMService.exportAssetAsXLIFFAsync` no longer uses `@Pollable` or `@InjectCurrentTask`; it calls
-  `PollableTaskRunner` directly and stores the generated XLIFF against the runner task.
-- `AiReviewService.retryImport` no longer uses `@Pollable`, `@MsgArg`, or `@InjectCurrentTask`; it
-  calls `PollableTaskRunner` directly and uses the runner task for the child retry.
-- `AiTranslateService.retryImport` no longer uses `@Pollable`, `@MsgArg`, or
-  `@InjectCurrentTask`; it calls `PollableTaskRunner` directly and keeps resume handling explicit.
-- `DropExporterService.createDropExporterAndUpdateDrop` no longer uses `@Pollable` or
-  `@ParentTask`; it calls `PollableTaskRunner` directly with the parent task id and timeout.
-- `AssetService.addOrUpdateAssetAndProcessIfNeeded` and its asset-creation subtask no longer use
-  `@Pollable`, `@InjectCurrentTask`, `@MsgArg`, or `@ParentTask`; they call `PollableTaskRunner`
-  directly and keep the asset creation transaction explicit with `TransactionTemplate`.
-- `AssetMappingService.mapAssetTextUnitAndCreateTMTextUnit` no longer uses `@Pollable` or
-  `@ParentTask`; it keeps the deprecated public test-facing API but creates its pollable task via
-  `PollableTaskRunner`.
-- `AssetExtractionService` update subtasks for merged asset text units, branch asset text units,
-  and push runs no longer use `@Pollable` or `@ParentTask`; they call `PollableTaskRunner`
-  directly from explicit wrapper methods.
-- `AssetExtractionService.createTextUnitsForNewContent` overloads no longer use `@Pollable` or
-  `@ParentTask`; the explicit wrappers create pollable tasks and keep the existing Micrometer
-  timing around the text-unit creation body.
-- `AssetExtractionService.performLeveraging` no longer uses `@Pollable` or `@ParentTask`; it
-  creates its pollable subtask explicitly before running leveraging.
-- `AssetExtractionService.convertAssetContentToMultiBranchState` no longer uses `@Pollable` or
-  `@ParentTask`; it creates the extraction subtask explicitly and preserves the checked
-  `UnsupportedAssetFilterTypeException`.
-- `DropService` import leaf subtasks for downloading drop-file content, updating the TM, and
-  exporting the imported file no longer use `@Pollable`, `@MsgArg`, or `@ParentTask`; they create
-  explicit pollable tasks and preserve their checked exceptions.
-- `DropService.importFile` no longer uses `@Pollable`, `@MsgArg`, `@ParentTask`, or
-  `@InjectCurrentTask`; it creates the three-subtask pollable task explicitly and passes the
-  current task into its direct body.
-- `DropService.generateAndExportTranslationKit` no longer uses `@Pollable`, `@MsgArg`, or
-  `@ParentTask`; it creates the locale export subtask explicitly and preserves
-  `DropExporterException`.
-- `DropService.cancelDrop` no longer uses `@Pollable` or `@InjectCurrentTask`; callers no longer
-  pass the fake injection marker and the service creates the async pollable task directly.
-- `DropService.startDropExportProcess` no longer uses `@Pollable` or `@InjectCurrentTask`; callers
-  no longer pass the fake injection marker and the service creates the synchronous pollable task
-  directly before launching the export subtask.
-- `DropService.createDropExporterAndExportTranslationKits` no longer uses `@Pollable`,
-  `@ParentTask`, or `@InjectCurrentTask`; the export worker task is now created explicitly from the
-  parent export task and still overrides the expected subtask count after inspecting locales.
-- `DropService.importDrop` no longer uses `@Pollable` or `@InjectCurrentTask`; REST and tests no
-  longer pass the fake injection marker, and the service creates the async import task explicitly.
-- `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
-  be migrated.
+- Transaction migration remains. `@Transactional` usage is broad, so the next code changes should
+  target self-invoked, checked-exception, retry, or `REQUIRES_NEW` boundaries before switching
+  `@EnableTransactionManagement` away from AspectJ mode.
+- Build cleanup remains blocked on the transaction migration. Keep `spring-aspects`, `aspectjrt`,
+  and `aspectj-maven-plugin` until no remaining behavior depends on Spring's woven transaction
+  aspect.
 
 ## Migration Principles
 
