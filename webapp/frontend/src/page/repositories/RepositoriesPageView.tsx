@@ -847,6 +847,7 @@ export function RepositoriesPageView({
               onChange={onChangeLocaleSelection}
               className="repositories-page__locale-filter"
               myLocaleTags={myLocaleSelections}
+              showSelectionPresets
             />
             <StatusFilterDropdown value={statusFilter} onChange={onStatusFilterChange} />
             {showReviewCoverageFilter && onReviewCoverageFilterChange ? (

@@ -19,6 +19,7 @@ type Props = {
   myLocalesLabel?: string;
   myLocalesAriaLabel?: string;
   customActions?: MultiSelectCustomAction[];
+  showSelectionPresets?: boolean;
 };
 
 export function LocaleMultiSelect({
@@ -34,24 +35,34 @@ export function LocaleMultiSelect({
   myLocalesLabel = 'My locales',
   myLocalesAriaLabel = 'Select your locales',
   customActions,
+  showSelectionPresets = false,
 }: Props) {
   const multiOptions: Array<MultiSelectOption<string>> = options.map((option) => ({
     value: option.tag,
     label: option.label,
   }));
+  const allLocaleTags = options.map((option) => option.tag);
+
+  const hasSameTags = (left: string[], right: string[]) => {
+    if (left.length !== right.length) {
+      return false;
+    }
+    const rightSet = new Set(right.map((tag) => tag.toLowerCase()));
+    return left.every((tag) => rightSet.has(tag.toLowerCase()));
+  };
 
   const availableLocaleSet = new Set(options.map((option) => option.tag.toLowerCase()));
   const myLocaleSelections =
     myLocaleTags?.filter((tag) => availableLocaleSet.has(tag.toLowerCase())) ?? [];
+  const isAllLocaleSelectionActive =
+    allLocaleTags.length > 0 && hasSameTags(selectedTags, allLocaleTags);
   const isMyLocaleSelectionActive =
+    !isAllLocaleSelectionActive &&
     myLocaleSelections.length > 0 &&
-    myLocaleSelections.length === selectedTags.length &&
-    myLocaleSelections.every((tag) =>
-      selectedTags.map((value) => value.toLowerCase()).includes(tag.toLowerCase()),
-    );
+    hasSameTags(selectedTags, myLocaleSelections);
 
   const localeCustomActions: MultiSelectCustomAction[] =
-    myLocaleSelections.length > 0
+    myLocaleSelections.length > 0 && !showSelectionPresets
       ? [
           {
             label: myLocalesLabel,
@@ -63,6 +74,33 @@ export function LocaleMultiSelect({
       : [];
 
   const mergedCustomActions = [...localeCustomActions, ...(customActions ?? [])];
+  const quickActions: MultiSelectCustomAction[] | undefined = showSelectionPresets
+    ? [
+        {
+          label: 'All',
+          onClick: () => onChange(allLocaleTags),
+          disabled: allLocaleTags.length === 0,
+          active: isAllLocaleSelectionActive,
+          ariaLabel: 'Select all locales',
+        },
+        ...(myLocaleSelections.length > 0
+          ? [
+              {
+                label: myLocalesLabel,
+                onClick: () => onChange(myLocaleSelections),
+                active: isMyLocaleSelectionActive,
+                ariaLabel: myLocalesAriaLabel,
+              },
+            ]
+          : []),
+        {
+          label: 'None',
+          onClick: () => onChange([]),
+          active: selectedTags.length === 0,
+          ariaLabel: 'Clear locale selection',
+        },
+      ]
+    : undefined;
 
   return (
     <MultiSelectChip
@@ -77,11 +115,15 @@ export function LocaleMultiSelect({
       disabled={disabled}
       buttonAriaLabel={buttonAriaLabel ?? label}
       customActions={mergedCustomActions.length > 0 ? mergedCustomActions : undefined}
+      quickActions={quickActions}
       summaryFormatter={({ options: opts, selectedValues }) => {
         if (!opts.length) {
           return label ?? 'Locales';
         }
         if (!selectedValues.length) {
+          if (showSelectionPresets) {
+            return 'No locales';
+          }
           return label ?? 'Locales';
         }
         if (isMyLocaleSelectionActive) {

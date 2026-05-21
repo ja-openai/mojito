@@ -449,6 +449,7 @@ export function WorkbenchHeader({
           myLocalesAriaLabel={
             isLimitedTranslator ? 'Select your assigned locales' : 'Select your preferred locales'
           }
+          showSelectionPresets
         />
       </div>
 
