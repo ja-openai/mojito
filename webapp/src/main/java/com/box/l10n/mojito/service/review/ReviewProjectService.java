@@ -691,8 +691,24 @@ public class ReviewProjectService {
         persistedReviewProjectRequest, request.localeTags(), localePlans);
   }
 
-  @Transactional
   public CreateReviewProjectRequestResult createAutomatedReviewProjectRequest(
+      CreateAutomatedReviewProjectRequestCommand request) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      CreateReviewProjectRequestResult result = createAutomatedReviewProjectRequestNoTx(request);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  CreateReviewProjectRequestResult createAutomatedReviewProjectRequestNoTx(
       CreateAutomatedReviewProjectRequestCommand request) {
     if (request == null) {
       throw new IllegalArgumentException("request must be provided");

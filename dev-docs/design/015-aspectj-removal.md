@@ -234,6 +234,9 @@ Removed during this workstream:
   term-candidate review project creation now opens and commits its transaction boundary explicitly.
 - `ReviewProjectService.createReviewProjectRequest` no longer uses `@Transactional`; manual review
   project request creation now opens and commits its transaction boundary explicitly.
+- `ReviewProjectService.createAutomatedReviewProjectRequest` no longer uses `@Transactional`;
+  automated review project request creation now opens and commits its transaction boundary
+  explicitly.
 
 In progress:
 

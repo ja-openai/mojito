@@ -269,6 +269,43 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void createAutomatedReviewProjectRequestCommitsTransaction() {
+    CreateAutomatedReviewProjectRequestCommand request =
+        createAutomatedReviewProjectRequestCommand();
+    CreateReviewProjectRequestResult result =
+        new CreateReviewProjectRequestResult(
+            1L, "name", List.of("fr"), ZonedDateTime.now(), List.of(), 1, 1, 0, 0, List.of());
+    doReturn(result).when(reviewProjectService).createAutomatedReviewProjectRequestNoTx(request);
+
+    assertEquals(result, reviewProjectService.createAutomatedReviewProjectRequest(request));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void createAutomatedReviewProjectRequestRollsBackTransactionOnRuntimeException() {
+    CreateAutomatedReviewProjectRequestCommand request =
+        createAutomatedReviewProjectRequestCommand();
+    RuntimeException failure = new RuntimeException("create automated request failed");
+    doThrow(failure).when(reviewProjectService).createAutomatedReviewProjectRequestNoTx(request);
+
+    try {
+      reviewProjectService.createAutomatedReviewProjectRequest(request);
+      fail("Expected createAutomatedReviewProjectRequest to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(
@@ -302,6 +339,11 @@ public class ReviewProjectServiceTest {
         false,
         99L,
         null);
+  }
+
+  private CreateAutomatedReviewProjectRequestCommand createAutomatedReviewProjectRequestCommand() {
+    return new CreateAutomatedReviewProjectRequestCommand(
+        53L, "name", null, ZonedDateTime.parse("2026-03-30T12:00:00Z"), 7L, null, true, 99L);
   }
 
   @Test
