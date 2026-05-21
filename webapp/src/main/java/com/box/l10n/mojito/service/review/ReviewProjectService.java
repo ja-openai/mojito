@@ -1959,8 +1959,33 @@ public class ReviewProjectService {
     return decidedCount < textUnitCount;
   }
 
-  @Transactional
   public GetProjectDetailView updateProjectRequest(
+      Long projectId,
+      String name,
+      String notes,
+      ReviewProjectType type,
+      ZonedDateTime dueDate,
+      List<String> screenshotImageIds,
+      Long teamId,
+      Boolean updateTeam) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GetProjectDetailView result =
+          updateProjectRequestNoTx(
+              projectId, name, notes, type, dueDate, screenshotImageIds, teamId, updateTeam);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GetProjectDetailView updateProjectRequestNoTx(
       Long projectId,
       String name,
       String notes,
@@ -2069,7 +2094,7 @@ public class ReviewProjectService {
       }
     }
 
-    return getProjectDetail(projectId);
+    return getProjectDetailNoTx(projectId);
   }
 
   @Transactional
