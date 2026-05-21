@@ -232,6 +232,8 @@ Removed during this workstream:
   commits its transaction boundary explicitly in the controller.
 - `ReviewProjectService.createGlossaryTermCandidateReviewProject` no longer uses `@Transactional`;
   term-candidate review project creation now opens and commits its transaction boundary explicitly.
+- `ReviewProjectService.createReviewProjectRequest` no longer uses `@Transactional`; manual review
+  project request creation now opens and commits its transaction boundary explicitly.
 
 In progress:
 
