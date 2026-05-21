@@ -31,7 +31,9 @@ import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class GlossaryImportExportService {
@@ -46,6 +48,7 @@ public class GlossaryImportExportService {
   private final VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService;
   private final TextUnitBatchImporterService textUnitBatchImporterService;
   private final TMTextUnitRepository tmTextUnitRepository;
+  private final PlatformTransactionManager transactionManager;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   public GlossaryImportExportService(
@@ -55,7 +58,8 @@ public class GlossaryImportExportService {
       GlossaryTermMetadataRepository glossaryTermMetadataRepository,
       VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService,
       TextUnitBatchImporterService textUnitBatchImporterService,
-      TMTextUnitRepository tmTextUnitRepository) {
+      TMTextUnitRepository tmTextUnitRepository,
+      PlatformTransactionManager transactionManager) {
     this.glossaryRepository = glossaryRepository;
     this.glossaryStorageService = glossaryStorageService;
     this.textUnitSearcher = textUnitSearcher;
@@ -63,10 +67,27 @@ public class GlossaryImportExportService {
     this.virtualTextUnitBatchUpdaterService = virtualTextUnitBatchUpdaterService;
     this.textUnitBatchImporterService = textUnitBatchImporterService;
     this.tmTextUnitRepository = tmTextUnitRepository;
+    this.transactionManager = transactionManager;
   }
 
-  @Transactional
   public ExportPayload exportGlossary(Long glossaryId, String format) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      ExportPayload result = exportGlossaryNoTx(glossaryId, format);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ExportPayload exportGlossaryNoTx(Long glossaryId, String format) {
     Glossary glossary = getGlossary(glossaryId);
     Asset asset = glossaryStorageService.ensureCanonicalAsset(glossary);
     String normalizedFormat = normalizeFormat(format);
@@ -86,8 +107,24 @@ public class GlossaryImportExportService {
                 buildExportTerms(glossary, asset))));
   }
 
-  @Transactional
   public ImportResult importGlossary(Long glossaryId, String format, String content) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      ImportResult result = importGlossaryNoTx(glossaryId, format, content);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ImportResult importGlossaryNoTx(Long glossaryId, String format, String content) {
     Glossary glossary = getGlossary(glossaryId);
     Asset asset = glossaryStorageService.ensureCanonicalAsset(glossary);
     List<GlossaryExportRow> rows = parseRows(format, content);

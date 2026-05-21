@@ -152,6 +152,8 @@ Removed during this workstream:
   reads now open and commit their read-write or read-only transactions explicitly.
 - `AbstractLeverager` no longer relies on AspectJ for a private transactional helper; leveraged
   translation copies now open and commit their transaction boundary explicitly.
+- `GlossaryImportExportService` no longer uses `@Transactional`; glossary import and export now
+  open and commit their transaction boundaries explicitly.
 
 In progress:
 
