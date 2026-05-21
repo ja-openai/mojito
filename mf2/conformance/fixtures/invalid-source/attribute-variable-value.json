@@ -1,0 +1,7 @@
+{
+  "name": "attribute-variable-value",
+  "source": "bad {:placeholder @attribute=$foo}",
+  "expectedDiagnostics": [
+    { "code": "invalid-attribute" }
+  ]
+}

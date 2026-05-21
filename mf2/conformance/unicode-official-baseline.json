@@ -1,6 +1,6 @@
 {
-  "passed": 271,
-  "skipped": 26,
+  "passed": 274,
+  "skipped": 23,
   "notWired": 164,
   "total": 461,
   "files": {
@@ -9,8 +9,8 @@
       "skipped": 0
     },
     "tests/syntax-errors.json": {
-      "passed": 130,
-      "skipped": 3
+      "passed": 133,
+      "skipped": 0
     },
     "tests/bidi.json": {
       "passed": 12,

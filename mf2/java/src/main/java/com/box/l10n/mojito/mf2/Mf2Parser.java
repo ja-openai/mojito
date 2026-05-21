@@ -55,6 +55,15 @@ final class Mf2Parser {
             return null;
         }
 
+        if (startsWith(".")) {
+            pushDiagnostic(
+                    "invalid-simple-start",
+                    "Simple messages cannot start with '.'.",
+                    index,
+                    index + 1);
+            return null;
+        }
+
         return new Mf2Message.Message(declarations, parsePatternUntilEnd());
     }
 
@@ -1108,7 +1117,7 @@ final class Mf2Parser {
             return false;
         }
         return switch (codePoint) {
-            case '^', '!', '%', '*', '<', '>', '?', '~', '&' -> false;
+            case '^', '!', '%', '*', '<', '>', '?', '~', '&', '\\', '$' -> false;
             default -> true;
         };
     }

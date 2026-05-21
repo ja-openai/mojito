@@ -101,6 +101,16 @@ impl<'a> Parser<'a> {
             return None;
         }
 
+        if self.starts_with(".") {
+            self.push_diagnostic(
+                "invalid-simple-start",
+                "Simple messages cannot start with '.'.",
+                self.index,
+                self.index + 1,
+            );
+            return None;
+        }
+
         let pattern = self.parse_pattern_until_end();
         Some(MessageModel::Message {
             declarations,
@@ -1263,7 +1273,10 @@ fn is_unquoted_literal_char(ch: char) -> bool {
     if is_noncharacter(code) {
         return false;
     }
-    !matches!(ch, '^' | '!' | '%' | '*' | '<' | '>' | '?' | '~' | '&')
+    !matches!(
+        ch,
+        '^' | '!' | '%' | '*' | '<' | '>' | '?' | '~' | '&' | '\\' | '$'
+    )
 }
 
 fn variable_name_diagnostic_code(input: &str) -> &'static str {
