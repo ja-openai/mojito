@@ -10,6 +10,7 @@ use crate::model::{
     PatternPart, VariableRef, Variant, VariantKey,
 };
 use serde::{Deserialize, Serialize};
+use unicode_normalization::UnicodeNormalization;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -478,8 +479,11 @@ impl<'a> FormatContext<'a> {
                     .values
                     .get(&selector.name)
                     .ok_or_else(|| missing_argument(&selector.name))?;
+                let rendered = value_to_string(value);
+                let string_select = self.string_select_for_selector(&selector.name);
                 Ok(SelectorValue {
-                    rendered: value_to_string(value),
+                    normalized_rendered: string_select.then(|| normalize_string_key(&rendered)),
+                    rendered,
                     exact_match: self.exact_match_for_selector(&selector.name),
                     selection_key: self.selection_key_for_selector(&selector.name, value),
                 })
@@ -490,7 +494,7 @@ impl<'a> FormatContext<'a> {
         let mut fallback = None;
         let mut selected = None;
         for variant in variants {
-            validate_variant(variant, selector_values.len(), &mut signatures)?;
+            validate_variant(variant, &selector_values, &mut signatures)?;
             if fallback.is_none() && is_fallback_variant(variant) {
                 fallback = Some(variant);
             }
@@ -564,6 +568,12 @@ impl<'a> FormatContext<'a> {
             .unwrap_or(true)
     }
 
+    fn string_select_for_selector(&self, selector_name: &str) -> bool {
+        self.selector_annotations
+            .get(selector_name)
+            .is_some_and(|annotation| annotation.is_string())
+    }
+
     fn selection_key_for_selector(
         &self,
         selector_name: &str,
@@ -581,6 +591,7 @@ impl<'a> FormatContext<'a> {
 #[derive(Debug, Clone)]
 struct SelectorValue {
     rendered: String,
+    normalized_rendered: Option<String>,
     exact_match: bool,
     selection_key: Option<String>,
 }
@@ -602,6 +613,10 @@ impl SelectorAnnotation {
     fn exact_match(&self) -> bool {
         self.function == "string"
             || (self.is_numeric() && self.number_select == NumberSelect::Exact)
+    }
+
+    fn is_string(&self) -> bool {
+        self.function == "string"
     }
 
     fn selection_key(&self, locale: &str, operands: NumberOperands) -> Option<String> {
@@ -657,7 +672,7 @@ fn variant_matches(variant: &Variant, selector_values: &[SelectorValue]) -> bool
         .all(|(key, selector)| match key {
             VariantKey::CatchAll => true,
             VariantKey::Literal { value } => {
-                (selector.exact_match && value == &selector.rendered)
+                (selector.exact_match && literal_key_matches(value, selector))
                     || selector
                         .selection_key
                         .as_ref()
@@ -668,16 +683,16 @@ fn variant_matches(variant: &Variant, selector_values: &[SelectorValue]) -> bool
 
 fn validate_variant<'a>(
     variant: &'a Variant,
-    selector_count: usize,
-    signatures: &mut BTreeSet<Vec<VariantKeySignature<'a>>>,
+    selector_values: &[SelectorValue],
+    signatures: &mut BTreeSet<Vec<VariantKeySignature>>,
 ) -> Result<(), Diagnostic> {
-    if variant.keys.len() != selector_count {
+    if variant.keys.len() != selector_values.len() {
         return Err(model_error(
             "variant-key-count-mismatch",
             "Variant key count must match selector count.",
         ));
     }
-    if !signatures.insert(variant_key_signature(&variant.keys)) {
+    if !signatures.insert(variant_key_signature(&variant.keys, selector_values)) {
         return Err(model_error(
             "duplicate-variant",
             "Select variants must have unique key tuples.",
@@ -686,19 +701,42 @@ fn validate_variant<'a>(
     Ok(())
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum VariantKeySignature<'a> {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum VariantKeySignature {
     CatchAll,
-    Literal(&'a str),
+    Literal(String),
 }
 
-fn variant_key_signature(keys: &[VariantKey]) -> Vec<VariantKeySignature<'_>> {
+fn variant_key_signature(
+    keys: &[VariantKey],
+    selector_values: &[SelectorValue],
+) -> Vec<VariantKeySignature> {
     keys.iter()
-        .map(|key| match key {
+        .zip(selector_values)
+        .map(|(key, selector)| match key {
             VariantKey::CatchAll => VariantKeySignature::CatchAll,
-            VariantKey::Literal { value } => VariantKeySignature::Literal(value),
+            VariantKey::Literal { value } => {
+                let value = if selector.normalized_rendered.is_some() {
+                    normalize_string_key(value)
+                } else {
+                    value.clone()
+                };
+                VariantKeySignature::Literal(value)
+            }
         })
         .collect()
+}
+
+fn literal_key_matches(value: &str, selector: &SelectorValue) -> bool {
+    if let Some(normalized_rendered) = &selector.normalized_rendered {
+        normalize_string_key(value) == *normalized_rendered
+    } else {
+        value == selector.rendered
+    }
+}
+
+fn normalize_string_key(value: &str) -> String {
+    value.nfc().collect()
 }
 
 fn is_fallback_variant(variant: &Variant) -> bool {

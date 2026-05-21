@@ -146,21 +146,24 @@ private struct MF2FormatContext {
             guard let value = values[MF2NameKey(selector.name)] else {
                 throw MF2Error.missingArgument(selector.name)
             }
+            let annotation = selectorAnnotations[MF2NameKey(selector.name)]
+            let rendered = value.rendered
             return MF2SelectorValue(
-                rendered: value.rendered,
-                exactMatch: exactMatch(selectorName: selector.name),
+                rendered: rendered,
+                normalizedRendered: annotation?.isString == true ? normalizeStringKey(rendered) : nil,
+                exactMatch: annotation?.exactMatch ?? true,
                 selectionKey: selectionKey(selectorName: selector.name, value: value)
             )
         }
 
-        var signatures: Set<[MF2VariantKey]> = []
+        var signatures: Set<[MF2VariantKeySignature]> = []
         var fallback: MF2Variant?
         var selected: MF2Variant?
         for variant in variants {
             guard variant.keys.count == selectorValues.count else {
                 throw MF2Error.variantKeyCountMismatch
             }
-            guard signatures.insert(variant.keys).inserted else {
+            guard signatures.insert(variant.signature(selectorValues: selectorValues)).inserted else {
                 throw MF2Error.duplicateVariant
             }
             if fallback == nil, variant.isFallback {
@@ -327,6 +330,10 @@ private struct MF2SelectorAnnotation {
         function == "string" || (isNumeric && numberSelect == .exact)
     }
 
+    var isString: Bool {
+        function == "string"
+    }
+
     var isNumeric: Bool {
         function == "number" || function == "integer"
     }
@@ -356,7 +363,18 @@ private extension MF2Variant {
             case .catchAll:
                 true
             case let .literal(value):
-                (selector.exactMatch && value == selector.rendered) || value == selector.selectionKey
+                (selector.exactMatch && literalKeyMatches(value, selector: selector)) || value == selector.selectionKey
+            }
+        }
+    }
+
+    func signature(selectorValues: [MF2SelectorValue]) -> [MF2VariantKeySignature] {
+        zip(keys, selectorValues).map { key, selector in
+            switch key {
+            case .catchAll:
+                .catchAll
+            case let .literal(value):
+                .literal(selector.normalizedRendered == nil ? value : normalizeStringKey(value))
             }
         }
     }
@@ -364,8 +382,25 @@ private extension MF2Variant {
 
 private struct MF2SelectorValue {
     let rendered: String
+    let normalizedRendered: String?
     let exactMatch: Bool
     let selectionKey: String?
+}
+
+private enum MF2VariantKeySignature: Hashable {
+    case literal(String)
+    case catchAll
+}
+
+private func literalKeyMatches(_ value: String, selector: MF2SelectorValue) -> Bool {
+    guard let normalizedRendered = selector.normalizedRendered else {
+        return value == selector.rendered
+    }
+    return normalizeStringKey(value) == normalizedRendered
+}
+
+private func normalizeStringKey(_ value: String) -> String {
+    value.precomposedStringWithCanonicalMapping
 }
 
 private extension MF2Declaration {

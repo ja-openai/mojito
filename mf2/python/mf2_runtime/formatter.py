@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import unicodedata
 from typing import Any
 
 from .errors import MF2Error
@@ -172,11 +173,21 @@ def _validate_selector_annotations(
             )
 
 
-def _variant_key_signature(keys: list[dict[str, Any]]) -> tuple[tuple[str, str], ...]:
+def _variant_key_signature(
+    keys: list[dict[str, Any]], selector_values: list["_SelectorValue"]
+) -> tuple[tuple[str, str], ...]:
     return tuple(
-        ("*", "") if key.get("type") == "*" else ("=", key.get("value", ""))
-        for key in keys
+        ("*", "")
+        if key.get("type") == "*"
+        else ("=", _signature_key(key.get("value", ""), selector))
+        for key, selector in zip(keys, selector_values)
     )
+
+
+def _signature_key(value: str, selector: "_SelectorValue") -> str:
+    if selector.normalized_rendered is None:
+        return value
+    return _normalize_string_key(value)
 
 
 class _FormatContext:
@@ -201,9 +212,14 @@ class _FormatContext:
         for selector in selectors:
             name = selector["name"]
             value = self._argument(name)
+            rendered = _render_value(value)
+            normalized_rendered = (
+                _normalize_string_key(rendered) if self._string_select(name) else None
+            )
             selector_values.append(
                 _SelectorValue(
-                    rendered=_render_value(value),
+                    rendered=rendered,
+                    normalized_rendered=normalized_rendered,
                     exact_match=self._exact_match(name),
                     selection_key=self._selection_key(name, value),
                 )
@@ -219,7 +235,7 @@ class _FormatContext:
                     "variant-key-count-mismatch",
                     "Variant key count must match selector count.",
                 )
-            signature = _variant_key_signature(keys)
+            signature = _variant_key_signature(keys, selector_values)
             if signature in signatures:
                 raise MF2Error(
                     "duplicate-variant",
@@ -322,6 +338,10 @@ class _FormatContext:
             return None
         return select_plural_category(self.locale, value, annotation.number_select)
 
+    def _string_select(self, selector_name: str) -> bool:
+        annotation = self.selector_annotations.get(selector_name)
+        return annotation is not None and annotation.is_string
+
 
 @dataclass(frozen=True)
 class _SelectorAnnotation:
@@ -347,10 +367,15 @@ class _SelectorAnnotation:
     def is_numeric(self) -> bool:
         return self.function in {"number", "integer"}
 
+    @property
+    def is_string(self) -> bool:
+        return self.function == "string"
+
 
 @dataclass(frozen=True)
 class _SelectorValue:
     rendered: str
+    normalized_rendered: str | None
     exact_match: bool
     selection_key: str | None
 
@@ -360,10 +385,20 @@ def _variant_matches(keys: list[dict[str, Any]], selector_values: list[_Selector
         return False
     return all(
         key.get("type") == "*"
-        or (selector.exact_match and key.get("value") == selector.rendered)
+        or (selector.exact_match and _literal_key_matches(key.get("value", ""), selector))
         or key.get("value") == selector.selection_key
         for key, selector in zip(keys, selector_values)
     )
+
+
+def _literal_key_matches(value: str, selector: _SelectorValue) -> bool:
+    if selector.normalized_rendered is None:
+        return value == selector.rendered
+    return _normalize_string_key(value) == selector.normalized_rendered
+
+
+def _normalize_string_key(value: str) -> str:
+    return unicodedata.normalize("NFC", value)
 
 
 def _render_value(value: Any) -> str:

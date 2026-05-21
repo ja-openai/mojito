@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.mf2;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -238,11 +239,11 @@ final class Mf2Formatter {
                 selectorValues.add(selectorValue(selector));
             }
 
-            Set<List<Mf2Message.VariantKey>> signatures = new HashSet<>();
+            Set<List<String>> signatures = new HashSet<>();
             Mf2Message.Variant fallback = null;
             Mf2Message.Variant selected = null;
             for (Mf2Message.Variant variant : variants) {
-                validateVariant(variant, selectorValues.size(), signatures);
+                validateVariant(variant, selectorValues, signatures);
                 if (fallback == null && isFallbackVariant(variant)) {
                     fallback = variant;
                 }
@@ -261,10 +262,13 @@ final class Mf2Formatter {
                 throw Mf2Exception.missingArgument(selector.name());
             }
             Object value = value(selector.name());
+            String rendered = valueToString(value);
+            SelectorAnnotation annotation = selectorAnnotation(selector.name());
             return new SelectorValue(
-                    valueToString(value),
-                    exactMatch(selector.name()),
-                    selectionKey(selector.name(), value));
+                    rendered,
+                    annotation != null && annotation.isString() ? normalizeStringKey(rendered) : null,
+                    annotation == null || annotation.exactMatch(),
+                    selectionKey(annotation, value));
         }
 
         String formatPattern(List<Mf2Message.PatternPart> pattern) throws Mf2Exception {
@@ -337,8 +341,7 @@ final class Mf2Formatter {
             return annotation == null || annotation.exactMatch();
         }
 
-        private String selectionKey(String selectorName, Object value) {
-            SelectorAnnotation annotation = selectorAnnotation(selectorName);
+        private String selectionKey(SelectorAnnotation annotation, Object value) {
             if (annotation == null || !annotation.isNumeric()) {
                 return null;
             }
@@ -409,12 +412,12 @@ final class Mf2Formatter {
     }
 
     private static void validateVariant(
-            Mf2Message.Variant variant, int selectorCount, Set<List<Mf2Message.VariantKey>> signatures)
+            Mf2Message.Variant variant, List<SelectorValue> selectorValues, Set<List<String>> signatures)
             throws Mf2Exception {
-        if (variant.keys().size() != selectorCount) {
+        if (variant.keys().size() != selectorValues.size()) {
             throw Mf2Exception.variantKeyCountMismatch();
         }
-        if (!signatures.add(variant.keys())) {
+        if (!signatures.add(variantKeySignature(variant.keys(), selectorValues))) {
             throw Mf2Exception.duplicateVariant();
         }
     }
@@ -423,9 +426,36 @@ final class Mf2Formatter {
         return switch (key) {
             case Mf2Message.CatchAllVariantKey ignored -> true;
             case Mf2Message.LiteralVariantKey literal ->
-                    (selector.exactMatch() && literal.value().equals(selector.rendered()))
+                    (selector.exactMatch() && literalKeyMatches(literal.value(), selector))
                             || literal.value().equals(selector.selectionKey());
         };
+    }
+
+    private static List<String> variantKeySignature(
+            List<Mf2Message.VariantKey> keys, List<SelectorValue> selectorValues) {
+        List<String> signature = new ArrayList<>(keys.size());
+        for (int index = 0; index < keys.size(); index++) {
+            Mf2Message.VariantKey key = keys.get(index);
+            SelectorValue selector = selectorValues.get(index);
+            signature.add(switch (key) {
+                case Mf2Message.CatchAllVariantKey ignored -> "*";
+                case Mf2Message.LiteralVariantKey literal -> "="
+                        + (selector.normalizedRendered() == null
+                                ? literal.value()
+                                : normalizeStringKey(literal.value()));
+            });
+        }
+        return signature;
+    }
+
+    private static boolean literalKeyMatches(String value, SelectorValue selector) {
+        return selector.normalizedRendered() == null
+                ? value.equals(selector.rendered())
+                : normalizeStringKey(value).equals(selector.normalizedRendered());
+    }
+
+    private static String normalizeStringKey(String value) {
+        return Normalizer.normalize(value, Normalizer.Form.NFC);
     }
 
     private static boolean isFallbackVariant(Mf2Message.Variant variant) {
@@ -497,12 +527,17 @@ final class Mf2Formatter {
             return function.equals("string") || (isNumeric() && numberSelect == NumberSelect.EXACT);
         }
 
+        boolean isString() {
+            return function.equals("string");
+        }
+
         boolean isNumeric() {
             return function.equals("number") || function.equals("integer");
         }
     }
 
-    private record SelectorValue(String rendered, boolean exactMatch, String selectionKey) {}
+    private record SelectorValue(
+            String rendered, String normalizedRendered, boolean exactMatch, String selectionKey) {}
 
     private interface ArgumentValues {
         boolean contains(String name);

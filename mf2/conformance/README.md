@@ -6,11 +6,12 @@ libraries.
 The official Unicode MessageFormat WG test suite is vendored separately under
 `../third_party/message-format-wg/test`. The Rust parser runner reads the
 upstream test shape directly via `cargo run -- unicode-tests`, currently wiring
-syntax success/error, bidi syntax, and data-model error checks. Its checked-in
-baseline lives in `unicode-official-baseline.json`; update it in the same commit
-when official pass/skip/not-wired counts intentionally change. Function,
-fallback, pattern-selection, parts, and draft `u:` option official tests are
-counted as not wired until the corresponding runtime semantics are implemented.
+syntax success/error, bidi syntax, data-model error, and `:string` function
+checks. Its checked-in baseline lives in `unicode-official-baseline.json`;
+update it in the same commit when official pass/skip/not-wired counts
+intentionally change. Fallback, pattern-selection, remaining function suites,
+parts, and draft `u:` option official tests are counted as not wired until the
+corresponding runtime semantics are implemented.
 
 ## Contract
 
@@ -123,7 +124,9 @@ The source-to-model fixtures currently cover:
 - exact-match `.match` selectors and catch-all fallback, including multi-selector
   matching,
   `:number select=exact`, `:integer select=exact`, and primitive `:string`
-  selector values, plus quoted literal variant keys distinct from catch-all `*`
+  selector values, plus quoted literal variant keys distinct from catch-all `*`;
+  `:string` selection normalizes comparison keys to NFC internally without
+  mutating the parsed model or formatted output
 - direct and simple indirect selector annotations for `.match`
 - cardinal plural category selection for English, French, Russian, Arabic, and
   Japanese fixtures, including `:integer` selection for English

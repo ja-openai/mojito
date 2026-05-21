@@ -93,6 +93,8 @@ The current conformance slice covers:
   multi-selector matching,
   `:number select=exact`, `:integer select=exact`, and quoted literal variant
   keys such as `|*|` that remain distinct from catch-all `*`
+- `:string` selector comparison and duplicate-variant validation use NFC
+  internally while preserving model literals and formatted strings byte-for-byte
 - direct and simple indirect selector annotation validation for `.match`
 - cardinal and ordinal plural category selection for `:number` and `:integer`
   selectors across the generated all-CLDR locale set

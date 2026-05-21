@@ -67,6 +67,7 @@ struct FileCheck {
 enum CheckMode {
     Parse,
     DataModelErrors,
+    Runtime,
 }
 
 #[derive(Default)]
@@ -134,6 +135,10 @@ fn run_with_suppressed_parser_panics(root: &Path, baseline_path: &Path) {
             path: "tests/data-model-errors.json",
             mode: CheckMode::DataModelErrors,
         },
+        FileCheck {
+            path: "tests/functions/string.json",
+            mode: CheckMode::Runtime,
+        },
     ];
     let wired_paths: BTreeSet<_> = checks.iter().map(|check| check.path).collect();
     let mut summary = Summary::default();
@@ -198,6 +203,14 @@ fn run_file(root: &Path, check: &FileCheck, summary: &mut Summary) {
                     record_skip(summary, check.path, index, test, "data-model error differs");
                 }
             }
+            CheckMode::Runtime => {
+                if check_data_model_error_test(&suite.default_test_properties, test) {
+                    file_passed += 1;
+                } else {
+                    file_skipped += 1;
+                    record_skip(summary, check.path, index, test, "runtime behavior differs");
+                }
+            }
         }
     }
 
@@ -208,6 +221,7 @@ fn run_file(root: &Path, check: &FileCheck, summary: &mut Summary) {
         mode: match check.mode {
             CheckMode::Parse => "parse",
             CheckMode::DataModelErrors => "data-model",
+            CheckMode::Runtime => "runtime",
         },
         passed: file_passed,
         skipped: file_skipped,
