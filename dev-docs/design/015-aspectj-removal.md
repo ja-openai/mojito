@@ -138,6 +138,8 @@ Removed during this workstream:
   config writes now open and commit their transaction explicitly.
 - `SlaCheckerService.closeIncidents` no longer relies on self-invoked `@Transactional`; SLA
   incident closure now opens and commits its transaction explicitly.
+- `TMTextUnitCurrentVariantService` no longer uses `@Transactional`; current-variant removal and
+  status batch updates now open and commit their transactions explicitly.
 
 In progress:
 
