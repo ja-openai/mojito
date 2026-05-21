@@ -17,8 +17,6 @@ import com.box.l10n.mojito.service.drop.importer.DropFile;
 import com.box.l10n.mojito.service.drop.importer.DropImporter;
 import com.box.l10n.mojito.service.drop.importer.DropImporterException;
 import com.box.l10n.mojito.service.locale.LocaleService;
-import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
@@ -261,19 +259,26 @@ public class DropService {
    *
    * @param dropId {@link Drop#id} of the drop to be imported
    * @param importStatus specific status to use when importing translation
-   * @param currentTask
    * @return
    * @throws DropImporterException
    * @throws DropExporterException
    * @throws ImportDropException
    */
-  @Pollable(async = true, message = "Start importing drop", expectedSubTaskNumber = 1)
-  public PollableFuture<Void> importDrop(
-      Long dropId,
-      TMTextUnitVariant.Status importStatus,
-      @InjectCurrentTask PollableTask currentTask)
+  public PollableFuture<Void> importDrop(Long dropId, TMTextUnitVariant.Status importStatus)
       throws DropImporterException, DropExporterException, ImportDropException {
+    return pollableTaskRunner.runAsync(
+        new PollableTaskInvocation<>(
+            null,
+            "importDrop",
+            "Start importing drop",
+            1,
+            DEFAULT_TIMEOUT,
+            currentTask -> importDropDirect(dropId, importStatus, currentTask)));
+  }
 
+  PollableFuture<Void> importDropDirect(
+      Long dropId, TMTextUnitVariant.Status importStatus, PollableTask currentTask)
+      throws DropImporterException, DropExporterException, ImportDropException {
     PollableFutureTaskResult<Void> pollableFutureTaskResult = new PollableFutureTaskResult<>();
 
     logger.debug("Start importing drop");
