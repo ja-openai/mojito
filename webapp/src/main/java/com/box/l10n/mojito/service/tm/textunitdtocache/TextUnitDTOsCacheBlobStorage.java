@@ -7,7 +7,8 @@ import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
-import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,8 @@ class TextUnitDTOsCacheBlobStorage {
   @Qualifier("fail_on_unknown_properties_false")
   ObjectMapper objectMapper;
 
+  @Autowired MeterRegistry meterRegistry;
+
   /**
    * For a given an asset and a locale, read the list of TextUnitDTOs. If there are no reccord for
    * that asset and locale, it returns an empty list. If the content in the StructuredBlobStorage
@@ -40,25 +43,51 @@ class TextUnitDTOsCacheBlobStorage {
    * @param localeId
    * @return
    */
-  @Timed("TextUnitDTOsCacheBlobStorage.getTextUnitDTOs")
   public Optional<ImmutableList<TextUnitDTO>> getTextUnitDTOs(Long assetId, Long localeId) {
-    logger.debug(
-        "Get TextUnitDTOs from Blob Storage for assetId: {}, localeId: {}", assetId, localeId);
-    return getTextUnitsFromCache(assetId, localeId);
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      logger.debug(
+          "Get TextUnitDTOs from Blob Storage for assetId: {}, localeId: {}", assetId, localeId);
+      return getTextUnitsFromCache(assetId, localeId);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "TextUnitDTOsCacheBlobStorage.getTextUnitDTOs",
+          "getTextUnitDTOs",
+          sample,
+          exceptionClass);
+    }
   }
 
-  @Timed("TextUnitDTOsCacheBlobStorage.putTextUnitDTOs")
   public void putTextUnitDTOs(
       Long assetId, Long localeId, ImmutableList<TextUnitDTO> textUnitDTOs) {
-    logger.debug(
-        "Put TextUnitDTOs to Blob Storage for assetId: {}, localeId: {}, count: {}",
-        assetId,
-        localeId,
-        textUnitDTOs.size());
-    TextUnitDTOsCacheBlobStorageJson textUnitDTOsCacheBlobStorageJson =
-        new TextUnitDTOsCacheBlobStorageJson();
-    textUnitDTOsCacheBlobStorageJson.setTextUnitDTOs(textUnitDTOs);
-    writeTextUnitDTOsToCache(assetId, localeId, textUnitDTOsCacheBlobStorageJson);
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      logger.debug(
+          "Put TextUnitDTOs to Blob Storage for assetId: {}, localeId: {}, count: {}",
+          assetId,
+          localeId,
+          textUnitDTOs.size());
+      TextUnitDTOsCacheBlobStorageJson textUnitDTOsCacheBlobStorageJson =
+          new TextUnitDTOsCacheBlobStorageJson();
+      textUnitDTOsCacheBlobStorageJson.setTextUnitDTOs(textUnitDTOs);
+      writeTextUnitDTOsToCache(assetId, localeId, textUnitDTOsCacheBlobStorageJson);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "TextUnitDTOsCacheBlobStorage.putTextUnitDTOs",
+          "putTextUnitDTOs",
+          sample,
+          exceptionClass);
+    }
   }
 
   String getName(Long assetId, Long localeId) {
@@ -94,4 +123,17 @@ class TextUnitDTOsCacheBlobStorage {
     structuredBlobStorage.put(
         TEXT_UNIT_DTOS_CACHE, getName(assetId, localeId), asString, Retention.PERMANENT);
   }
+
+  private void recordTimer(
+      String metricName, String methodName, Timer.Sample sample, String exceptionClass) {
+    sample.stop(
+        Timer.builder(metricName)
+            .tag(EXCEPTION_TAG, exceptionClass)
+            .tag("class", TextUnitDTOsCacheBlobStorage.class.getName())
+            .tag("method", methodName)
+            .register(meterRegistry));
+  }
+
+  static final String DEFAULT_EXCEPTION_TAG_VALUE = "none";
+  static final String EXCEPTION_TAG = "exception";
 }
