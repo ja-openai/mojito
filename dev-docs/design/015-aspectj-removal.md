@@ -48,6 +48,11 @@ Custom AspectJ entry points:
 - `StopWatchAspect`.
 - `TimedAspect`.
 
+Removed during this workstream:
+
+- The unused custom `@Retry`, `RetryAspect`, and `RetryAspectConfig` path. Existing retry behavior
+  uses explicit `RetryTemplate` calls or Spring's `@Retryable`, not the custom annotation.
+
 ## Migration Principles
 
 - Prefer plain `try/catch/finally` where the behavior changes business outcome.
