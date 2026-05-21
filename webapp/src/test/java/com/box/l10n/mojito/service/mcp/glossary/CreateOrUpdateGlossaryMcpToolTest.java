@@ -84,7 +84,7 @@ public class CreateOrUpdateGlossaryMcpToolTest {
     private List<Long> lastRepositoryIds;
 
     private FakeGlossaryManagementService() {
-      super(null, null, null, null, null, null, null);
+      super(null, null, null, null, null, null, null, null);
     }
 
     @Override

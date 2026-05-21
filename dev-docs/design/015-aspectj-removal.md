@@ -157,6 +157,8 @@ Removed during this workstream:
 - `GlossaryStorageService` no longer uses `@Transactional`; managed backing repository, canonical
   asset, locale, delete, and rename operations now open and commit their transaction boundaries
   explicitly.
+- `GlossaryManagementService` no longer uses `@Transactional`; glossary search, detail, create,
+  update, and delete operations now open and commit their transaction boundaries explicitly.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and

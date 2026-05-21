@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.service.glossary;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,6 +16,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GlossaryManagementServiceTest {
@@ -25,6 +29,8 @@ public class GlossaryManagementServiceTest {
   @Mock GlossaryTermTranslationProposalRepository glossaryTermTranslationProposalRepository;
   @Mock GlossaryStorageService glossaryStorageService;
   @Mock UserService userService;
+  @Mock PlatformTransactionManager transactionManager;
+  @Mock TransactionStatus transaction;
 
   GlossaryManagementService glossaryManagementService;
 
@@ -38,7 +44,9 @@ public class GlossaryManagementServiceTest {
             glossaryTermEvidenceRepository,
             glossaryTermTranslationProposalRepository,
             glossaryStorageService,
-            userService);
+            userService,
+            transactionManager);
+    when(transactionManager.getTransaction(any())).thenReturn(transaction);
   }
 
   @Test
@@ -60,6 +68,26 @@ public class GlossaryManagementServiceTest {
     verify(glossaryTermMetadataRepository).deleteByGlossaryId(1L);
     verify(glossaryStorageService).deleteManagedBackingRepository(glossary);
     verify(glossaryRepository).delete(glossary);
+    verify(transactionManager).commit(transaction);
+    verify(transactionManager, never()).rollback(transaction);
+  }
+
+  @Test
+  public void deleteGlossaryRollsBackTransaction() {
+    when(userService.isCurrentUserAdmin()).thenReturn(true);
+    when(glossaryRepository.findByIdWithBindings(1L))
+        .thenThrow(new IllegalStateException("failed"));
+
+    try {
+      glossaryManagementService.deleteGlossary(1L);
+    } catch (IllegalStateException e) {
+      assertEquals("failed", e.getMessage());
+      verify(transactionManager).rollback(transaction);
+      verify(transactionManager, never()).commit(transaction);
+      return;
+    }
+
+    throw new AssertionError("Expected deleteGlossary to rethrow the repository failure");
   }
 
   @Test
@@ -91,5 +119,7 @@ public class GlossaryManagementServiceTest {
 
     verify(glossaryStorageService).renameManagedBackingRepository(glossary, "glossary-new");
     verify(glossaryStorageService, never()).replaceLocales(glossary, List.of());
+    verify(transactionManager).commit(transaction);
+    verify(transactionManager, never()).rollback(transaction);
   }
 }
