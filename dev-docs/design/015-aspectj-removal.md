@@ -67,6 +67,8 @@ Removed during this workstream:
   behavior without weaving.
 - `@Cacheable`, `@CacheEvict`, and `@EnableCaching(mode = AdviceMode.ASPECTJ)`. Cached operations
   now use explicit `CacheService` lookups and writes.
+- `DatabaseCache` no longer uses `@Configurable`; `CachingConfig` passes its collaborators
+  explicitly and `DatabaseCache` uses `TransactionTemplate` for its write boundaries.
 
 In progress:
 

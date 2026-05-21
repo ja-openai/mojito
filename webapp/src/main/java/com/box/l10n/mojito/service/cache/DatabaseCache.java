@@ -11,12 +11,11 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.cache.support.NullValue;
 import org.springframework.core.serializer.support.SerializingConverter;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -28,7 +27,6 @@ import org.springframework.util.ObjectUtils;
  *
  * @author garion
  */
-@Configurable
 public class DatabaseCache extends AbstractValueAdaptingCache {
   /** logger */
   static Logger logger = getLogger(DatabaseCache.class);
@@ -36,25 +34,41 @@ public class DatabaseCache extends AbstractValueAdaptingCache {
   private static final byte[] BINARY_NULL_VALUE =
       (new SerializingConverter()).convert(NullValue.INSTANCE);
 
-  @Autowired ApplicationCacheUpdaterService applicationCacheUpdaterService;
+  private final ApplicationCacheUpdaterService applicationCacheUpdaterService;
 
-  @Autowired ApplicationCacheTypeRepository applicationCacheTypeRepository;
+  private final ApplicationCacheTypeRepository applicationCacheTypeRepository;
 
-  @Autowired ApplicationCacheRepository applicationCacheRepository;
+  private final ApplicationCacheRepository applicationCacheRepository;
+
+  private final TransactionTemplate transactionTemplate;
 
   private final String cacheName;
   private final DatabaseCacheConfiguration cacheConfig;
 
   private ApplicationCacheType cacheType;
 
-  public DatabaseCache(String cacheName, DatabaseCacheConfiguration cacheConfig) {
+  public DatabaseCache(
+      String cacheName,
+      DatabaseCacheConfiguration cacheConfig,
+      ApplicationCacheUpdaterService applicationCacheUpdaterService,
+      ApplicationCacheTypeRepository applicationCacheTypeRepository,
+      ApplicationCacheRepository applicationCacheRepository,
+      PlatformTransactionManager transactionManager) {
     super(true);
 
     Preconditions.checkNotNull(cacheName);
     Preconditions.checkNotNull(cacheConfig);
+    Preconditions.checkNotNull(applicationCacheUpdaterService);
+    Preconditions.checkNotNull(applicationCacheTypeRepository);
+    Preconditions.checkNotNull(applicationCacheRepository);
+    Preconditions.checkNotNull(transactionManager);
 
     this.cacheName = cacheName;
     this.cacheConfig = cacheConfig;
+    this.applicationCacheUpdaterService = applicationCacheUpdaterService;
+    this.applicationCacheTypeRepository = applicationCacheTypeRepository;
+    this.applicationCacheRepository = applicationCacheRepository;
+    this.transactionTemplate = new TransactionTemplate(transactionManager);
 
     logger.debug(
         "DatabaseCache with name: {} and TTL: {} created.", cacheName, cacheConfig.getTtl());
@@ -125,39 +139,46 @@ public class DatabaseCache extends AbstractValueAdaptingCache {
     return cacheEntry;
   }
 
-  @Transactional
   @Override
   public void put(Object key, Object value) {
-    checkCacheTypeConfigured();
+    transactionTemplate.executeWithoutResult(
+        status -> {
+          checkCacheTypeConfigured();
 
-    long ttlInSeconds = cacheConfig.getTtl().get(ChronoUnit.SECONDS);
-    if (ttlInSeconds <= 0) {
-      applicationCacheUpdaterService.upsertNoExpiryDate(
-          cacheType.getId(), getCacheKeyMD5(key), serializeCacheValue(value));
-    } else {
-      applicationCacheUpdaterService.upsertWithTTL(
-          cacheType.getId(), getCacheKeyMD5(key), serializeCacheValue(value), ttlInSeconds);
-    }
+          long ttlInSeconds = cacheConfig.getTtl().get(ChronoUnit.SECONDS);
+          if (ttlInSeconds <= 0) {
+            applicationCacheUpdaterService.upsertNoExpiryDate(
+                cacheType.getId(), getCacheKeyMD5(key), serializeCacheValue(value));
+          } else {
+            applicationCacheUpdaterService.upsertWithTTL(
+                cacheType.getId(), getCacheKeyMD5(key), serializeCacheValue(value), ttlInSeconds);
+          }
+        });
   }
 
-  @Transactional
   @Override
   public void evict(Object key) {
-    checkCacheTypeConfigured();
-    applicationCacheRepository.deleteByApplicationCacheTypeAndKeyMD5(
-        cacheType, getCacheKeyMD5(key));
+    transactionTemplate.executeWithoutResult(
+        status -> {
+          checkCacheTypeConfigured();
+          applicationCacheRepository.deleteByApplicationCacheTypeAndKeyMD5(
+              cacheType, getCacheKeyMD5(key));
+        });
   }
 
-  @Transactional
   @Override
   public void clear() {
-    checkCacheTypeConfigured();
-    applicationCacheRepository.clearCache(cacheType.getId());
+    transactionTemplate.executeWithoutResult(
+        status -> {
+          checkCacheTypeConfigured();
+          applicationCacheRepository.clearCache(cacheType.getId());
+        });
   }
 
   private void checkCacheTypeConfigured() {
     if (this.cacheType == null) {
-      this.cacheType = getOrRegisterApplicationCacheType(getName());
+      this.cacheType =
+          transactionTemplate.execute(status -> getOrRegisterApplicationCacheType(getName()));
     }
   }
 
@@ -187,7 +208,6 @@ public class DatabaseCache extends AbstractValueAdaptingCache {
   }
 
   /** Auto-register the cache in the DB if it doesn't already exist. */
-  @Transactional
   private ApplicationCacheType getOrRegisterApplicationCacheType(String name) {
     ApplicationCacheType dbCacheType;
     dbCacheType = applicationCacheTypeRepository.findByName(name);
