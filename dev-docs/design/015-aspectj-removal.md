@@ -78,6 +78,9 @@ In progress:
 - `LeveragingService.copyTm` no longer uses `@Pollable`; it calls `PollableTaskRunner` directly.
 - `RepositoryMachineTranslationService.translateRepository` no longer uses `@Pollable`; it calls
   `PollableTaskRunner` directly.
+- `TMTextUnitStatisticService.importStatistics` no longer uses `@Pollable`; it calls
+  `PollableTaskRunner` directly and keeps the per-batch write boundary explicit with
+  `TransactionTemplate`.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 

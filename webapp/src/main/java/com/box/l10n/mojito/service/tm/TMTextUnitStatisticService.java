@@ -8,9 +8,10 @@ import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitStatistic;
 import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.rest.textunit.ImportTextUnitStatisticsBody;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
@@ -32,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * @author garion
@@ -54,6 +55,10 @@ public class TMTextUnitStatisticService {
 
   @Autowired TextUnitUtils textUnitUtils;
 
+  @Autowired PollableTaskRunner pollableTaskRunner;
+
+  @Autowired TransactionTemplate transactionTemplate;
+
   int batchSize = 1000;
 
   /**
@@ -65,8 +70,19 @@ public class TMTextUnitStatisticService {
    * @param textUnitStatistics the statistics of the text unit
    * @return a PollableFuture
    */
-  @Pollable(async = true, message = "Start importing text unit statistics.")
   public PollableFuture<Void> importStatistics(
+      Locale locale, Asset asset, List<ImportTextUnitStatisticsBody> textUnitStatistics) {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "importStatistics",
+            "Start importing text unit statistics.",
+            currentTask -> {
+              importStatisticsDirect(locale, asset, textUnitStatistics);
+              return new PollableFutureTaskResult<>();
+            }));
+  }
+
+  void importStatisticsDirect(
       Locale locale, Asset asset, List<ImportTextUnitStatisticsBody> textUnitStatistics) {
     logger.info(
         "Import {} statistics for the text units for locale: {} and asset: {}",
@@ -116,13 +132,11 @@ public class TMTextUnitStatisticService {
                       .distinct()
                       .collect(ImmutableList.toImmutableList());
 
-              updateStatistics(statisticToTextUnitDTOBatchMap, textUnitIds);
+              transactionTemplate.executeWithoutResult(
+                  status -> updateStatistics(statisticToTextUnitDTOBatchMap, textUnitIds));
             });
-
-    return new PollableFutureTaskResult<Void>();
   }
 
-  @Transactional
   private void updateStatistics(
       ImmutableMap<ImportTextUnitStatisticsBody, ImmutableList<TextUnitDTO>>
           statisticToTextUnitDTOMap,
