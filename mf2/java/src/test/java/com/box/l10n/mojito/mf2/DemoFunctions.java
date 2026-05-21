@@ -2,6 +2,16 @@ package com.box.l10n.mojito.mf2;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.FormatStyle;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +32,9 @@ final class DemoFunctions {
     static Mf2FunctionRegistry registry() {
         return Mf2FunctionRegistry.defaults()
                 .withFunction("currency", DemoFunctions::formatCurrency)
+                .withFunction("date", DemoFunctions::formatDate)
+                .withFunction("datetime", DemoFunctions::formatDateTime)
+                .withFunction("time", DemoFunctions::formatTime)
                 .withFunction("relativeTime", DemoFunctions::formatRelativeTime);
     }
 
@@ -112,6 +125,243 @@ final class DemoFunctions {
             output.append(separator).append(digits, index, index + 3);
         }
         return output.toString();
+    }
+
+    private static String formatDate(Mf2FunctionRegistry.FunctionCall call) throws Mf2Exception {
+        LocalDate date = dateFrom(call.rawValue(), call.value());
+        FormatStyle style = localizedStyle(call);
+        if (style == null) {
+            return date.format(DateTimeFormatter.ISO_LOCAL_DATE);
+        }
+        return DateTimeFormatter.ofLocalizedDate(style)
+                .withLocale(javaLocale(call.locale()))
+                .format(date);
+    }
+
+    private static String formatTime(Mf2FunctionRegistry.FunctionCall call) throws Mf2Exception {
+        LocalTime time = timeFrom(call.rawValue(), call.value());
+        FormatStyle style = localizedStyle(call);
+        if (style == null) {
+            return time.format(DateTimeFormatter.ISO_LOCAL_TIME);
+        }
+        return DateTimeFormatter.ofLocalizedTime(style)
+                .withLocale(javaLocale(call.locale()))
+                .format(time);
+    }
+
+    private static String formatDateTime(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        FormatStyle style = localizedStyle(call);
+        if (style == null) {
+            return dateTimeFrom(call.rawValue(), call.value());
+        }
+        return DateTimeFormatter.ofLocalizedDateTime(style)
+                .withLocale(javaLocale(call.locale()))
+                .format(zonedDateTimeFrom(call.rawValue(), call.value()));
+    }
+
+    private static FormatStyle localizedStyle(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        String style = call.optionValue("style", "iso");
+        return switch (style) {
+            case "iso" -> null;
+            case "short" -> FormatStyle.SHORT;
+            case "medium" -> FormatStyle.MEDIUM;
+            case "long" -> FormatStyle.LONG;
+            case "full" -> FormatStyle.FULL;
+            default -> throw new Mf2Exception(
+                    "bad-option",
+                    "Unsupported :" + call.function().name() + " style=" + style + ".");
+        };
+    }
+
+    private static java.util.Locale javaLocale(String locale) {
+        if (locale == null || locale.isBlank()) {
+            return java.util.Locale.ROOT;
+        }
+        return java.util.Locale.forLanguageTag(locale.replace('_', '-'));
+    }
+
+    private static LocalDate dateFrom(Object rawValue, String renderedValue) throws Mf2Exception {
+        if (rawValue instanceof LocalDate value) {
+            return value;
+        }
+        if (rawValue instanceof LocalDateTime value) {
+            return value.toLocalDate();
+        }
+        if (rawValue instanceof OffsetDateTime value) {
+            return value.toLocalDate();
+        }
+        if (rawValue instanceof ZonedDateTime value) {
+            return value.toLocalDate();
+        }
+        if (rawValue instanceof Instant value) {
+            return value.atZone(ZoneOffset.UTC).toLocalDate();
+        }
+        if (rawValue instanceof java.util.Date value) {
+            return value.toInstant().atZone(ZoneOffset.UTC).toLocalDate();
+        }
+        return parseDate(renderedValue);
+    }
+
+    private static LocalTime timeFrom(Object rawValue, String renderedValue) throws Mf2Exception {
+        if (rawValue instanceof LocalTime value) {
+            return value;
+        }
+        if (rawValue instanceof LocalDateTime value) {
+            return value.toLocalTime();
+        }
+        if (rawValue instanceof OffsetDateTime value) {
+            return value.toLocalTime();
+        }
+        if (rawValue instanceof ZonedDateTime value) {
+            return value.toLocalTime();
+        }
+        if (rawValue instanceof Instant value) {
+            return value.atZone(ZoneOffset.UTC).toLocalTime();
+        }
+        if (rawValue instanceof java.util.Date value) {
+            return value.toInstant().atZone(ZoneOffset.UTC).toLocalTime();
+        }
+        return parseTime(renderedValue);
+    }
+
+    private static ZonedDateTime zonedDateTimeFrom(Object rawValue, String renderedValue)
+            throws Mf2Exception {
+        if (rawValue instanceof ZonedDateTime value) {
+            return value;
+        }
+        if (rawValue instanceof OffsetDateTime value) {
+            return value.toZonedDateTime();
+        }
+        if (rawValue instanceof Instant value) {
+            return value.atZone(ZoneOffset.UTC);
+        }
+        if (rawValue instanceof java.util.Date value) {
+            return value.toInstant().atZone(ZoneOffset.UTC);
+        }
+        if (rawValue instanceof LocalDateTime value) {
+            return value.atZone(ZoneOffset.UTC);
+        }
+        if (rawValue instanceof LocalDate value) {
+            return value.atStartOfDay(ZoneOffset.UTC);
+        }
+        return parseZonedDateTime(renderedValue);
+    }
+
+    private static String dateTimeFrom(Object rawValue, String renderedValue) throws Mf2Exception {
+        if (rawValue instanceof Instant value) {
+            return DateTimeFormatter.ISO_INSTANT.format(value);
+        }
+        if (rawValue instanceof java.util.Date value) {
+            return DateTimeFormatter.ISO_INSTANT.format(value.toInstant());
+        }
+        if (rawValue instanceof OffsetDateTime value) {
+            return value.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        }
+        if (rawValue instanceof ZonedDateTime value) {
+            return value.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        }
+        if (rawValue instanceof LocalDateTime value) {
+            return value.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        }
+        if (rawValue instanceof LocalDate value) {
+            return value.format(DateTimeFormatter.ISO_LOCAL_DATE);
+        }
+        if (rawValue instanceof LocalTime value) {
+            return value.format(DateTimeFormatter.ISO_LOCAL_TIME);
+        }
+        return parseDateTime(renderedValue);
+    }
+
+    private static LocalDate parseDate(String value) throws Mf2Exception {
+        try {
+            return LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME).toLocalDate();
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toLocalDate();
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return Instant.parse(value).atZone(ZoneOffset.UTC).toLocalDate();
+        } catch (DateTimeParseException ignored) {
+        }
+        throw Mf2Exception.badOperand("Date function requires an ISO date, datetime, or date-like operand.");
+    }
+
+    private static LocalTime parseTime(String value) throws Mf2Exception {
+        try {
+            return LocalTime.parse(value, DateTimeFormatter.ISO_LOCAL_TIME);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME).toLocalTime();
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toLocalTime();
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return Instant.parse(value).atZone(ZoneOffset.UTC).toLocalTime();
+        } catch (DateTimeParseException ignored) {
+        }
+        throw Mf2Exception.badOperand("Time function requires an ISO time, datetime, or time-like operand.");
+    }
+
+    private static String parseDateTime(String value) throws Mf2Exception {
+        try {
+            return LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return DateTimeFormatter.ISO_INSTANT.format(Instant.parse(value));
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE)
+                    .format(DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (DateTimeParseException ignored) {
+        }
+        throw Mf2Exception.badOperand("Datetime function requires an ISO date or datetime operand.");
+    }
+
+    private static ZonedDateTime parseZonedDateTime(String value) throws Mf2Exception {
+        try {
+            return ZonedDateTime.parse(value);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                    .toZonedDateTime();
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return Instant.parse(value).atZone(ZoneOffset.UTC);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    .atZone(ZoneOffset.UTC);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE)
+                    .atStartOfDay(ZoneOffset.UTC);
+        } catch (DateTimeParseException ignored) {
+        }
+        throw Mf2Exception.badOperand("Datetime function requires an ISO date or datetime operand.");
     }
 
     private static String formatRelativeTime(Mf2FunctionRegistry.FunctionCall call)

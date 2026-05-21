@@ -46,6 +46,7 @@ public final class Mf2FunctionRegistry {
 
     public record FunctionCall(
             String value,
+            Object rawValue,
             Mf2Message.FunctionRef function,
             String locale,
             OptionResolver options) {

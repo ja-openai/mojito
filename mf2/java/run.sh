@@ -36,12 +36,18 @@ case "$command" in
   inline-demo)
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.InlineTranslateDemo
     ;;
+  datetime-demo)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.DateTimeBoundaryDemo
+    ;;
   showcase)
     echo "== catalog demo: precompiled model/resource bundle =="
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.TranslateDemo
     echo
     echo "== inline source demo: parser + runtime + parts/fallback =="
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.InlineTranslateDemo
+    echo
+    echo "== date/time boundary demo: typed host values =="
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.DateTimeBoundaryDemo
     ;;
   *)
     echo "unknown command: $command" >&2

@@ -20,6 +20,9 @@ Current target:
   runtime errors without changing the strict `format()` contract
 - support opt-in `Mf2BidiIsolation.DEFAULT` string output around expression
   values
+- pass raw host values through the Java function boundary so demo functions can
+  distinguish typed values such as `LocalDate`, `Instant`, and legacy `Date`
+  from their `toString()` output
 - reject invalid model structure for duplicate declarations, select variant key
   arity, duplicate variants, and missing fallback variants
 - use generated CLDR cardinal and ordinal plural rules
@@ -54,5 +57,6 @@ mvn test-compile
 sh run.sh conformance
 sh run.sh demo
 sh run.sh inline-demo
+sh run.sh datetime-demo
 sh run.sh bench ../conformance/fixtures/source-to-model 100000 10000
 ```

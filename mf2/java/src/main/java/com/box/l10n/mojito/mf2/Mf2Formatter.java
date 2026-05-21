@@ -365,9 +365,17 @@ final class Mf2Formatter {
         ExpressionOutput formatExpressionOutput(Mf2Message.Expression expression)
                 throws Mf2Exception {
             boolean hadError = false;
-            String value = switch (expression.arg()) {
-                case null -> "";
-                case Mf2Message.LiteralArgument literal -> literal.value();
+            String value;
+            Object rawValue;
+            switch (expression.arg()) {
+                case null -> {
+                    value = "";
+                    rawValue = "";
+                }
+                case Mf2Message.LiteralArgument literal -> {
+                    value = literal.value();
+                    rawValue = literal.value();
+                }
                 case Mf2Message.VariableArgument variable -> {
                     if (!hasValue(variable.name())) {
                         if (fallback) {
@@ -378,13 +386,17 @@ final class Mf2Formatter {
                             if (expression.function() != null) {
                                 errors.add(Mf2Exception.badOperand("Function operand is not available."));
                             }
-                            yield fallbackSource(expression);
+                            String fallbackValue = fallbackSource(expression);
+                            value = fallbackValue;
+                            rawValue = fallbackValue;
+                            break;
                         }
                         throw Mf2Exception.missingArgument(variable.name());
                     }
-                    yield valueToString(value(variable.name()));
+                    rawValue = value(variable.name());
+                    value = valueToString(rawValue);
                 }
-            };
+            }
 
             if (hadError) {
                 return new ExpressionOutput(value, true);
@@ -398,6 +410,7 @@ final class Mf2Formatter {
                 return new ExpressionOutput(
                         functions.format(new Mf2FunctionRegistry.FunctionCall(
                                 value,
+                                rawValue,
                                 function,
                                 locale,
                                 (optionName, defaultValue) -> optionValue(function, optionName, defaultValue))),
