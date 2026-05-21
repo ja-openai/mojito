@@ -114,6 +114,8 @@ Removed during this workstream:
   module has source annotations or framework modes that need compile-time weaving.
 - `DatabaseBlobStorage.putBase` no longer uses self-invoked `@Transactional(REQUIRES_NEW)`; the
   retry path now opens and commits a new transaction explicitly for each attempt.
+- `UserDeletionService.hardDeleteUser` no longer uses `@Transactional(REQUIRES_NEW)`; hard-delete
+  attempts now run inside an explicit independent transaction before soft-delete fallback.
 
 In progress:
 
