@@ -11,8 +11,10 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Implementation that use the database to store the blobs.
@@ -32,19 +34,24 @@ public class DatabaseBlobStorage implements BlobStorage {
 
   DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
 
+  PlatformTransactionManager transactionManager;
+
   public DatabaseBlobStorage(
       DatabaseBlobStorageConfigurationProperties databaseBlobStorageConfigurationProperties,
       MBlobRepository mBlobRepository,
-      DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate) {
+      DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate,
+      PlatformTransactionManager transactionManager) {
 
     Preconditions.checkNotNull(mBlobRepository);
     Preconditions.checkNotNull(databaseBlobStorageConfigurationProperties);
     Preconditions.checkNotNull(dataIntegrityViolationExceptionRetryTemplate);
+    Preconditions.checkNotNull(transactionManager);
 
     this.mBlobRepository = mBlobRepository;
     this.databaseBlobStorageConfigurationProperties = databaseBlobStorageConfigurationProperties;
     this.dataIntegrityViolationExceptionRetryTemplate =
         dataIntegrityViolationExceptionRetryTemplate;
+    this.transactionManager = transactionManager;
   }
 
   @Override
@@ -62,8 +69,24 @@ public class DatabaseBlobStorage implements BlobStorage {
         });
   }
 
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   void putBase(String name, byte[] content, Retention retention) {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      putBaseInTransaction(name, content, retention);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void putBaseInTransaction(String name, byte[] content, Retention retention) {
     MBlob mBlob =
         mBlobRepository
             .findByName(name)
