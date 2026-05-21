@@ -47,6 +47,7 @@ public class ExtractionCheckNotificationSenderGithubTest {
     when(githubClientsMock.isClientAvailable(isA(String.class))).thenReturn(true);
     extractionCheckNotificationSenderGithub =
         new ExtractionCheckNotificationSenderGithub(
+            githubClientsMock,
             "{baseMessage}",
             "This is a hard failure message",
             "This is a checks skipped message",
@@ -56,7 +57,6 @@ public class ExtractionCheckNotificationSenderGithubTest {
             true,
             "123456789",
             "https://somewebaddress.com/");
-    extractionCheckNotificationSenderGithub.githubClients = githubClientsMock;
   }
 
   @Test
@@ -89,6 +89,7 @@ public class ExtractionCheckNotificationSenderGithubTest {
 
     extractionCheckNotificationSenderGithub =
         new ExtractionCheckNotificationSenderGithub(
+            githubClientsMock,
             "{baseMessage}",
             "This is a hard failure message",
             "This is a checks skipped message",
@@ -98,7 +99,6 @@ public class ExtractionCheckNotificationSenderGithubTest {
             false,
             "123456789",
             "https://somewebaddress.com/");
-    extractionCheckNotificationSenderGithub.githubClients = githubClientsMock;
     List<CliCheckResult> results = new ArrayList<>();
     CliCheckResult result = new CliCheckResult(false, false, "Test Check");
     result.setNotificationText("Some notification text");
@@ -239,19 +239,19 @@ public class ExtractionCheckNotificationSenderGithubTest {
   @Test(expected = ExtractionCheckNotificationSenderException.class)
   public void testExceptionThrownIfNoOwnerSpecified() {
     new ExtractionCheckNotificationSenderGithub(
-        "", "some template", "", "", "testRepo", 100, true, "", "");
+        githubClientsMock, "", "some template", "", "", "testRepo", 100, true, "", "");
   }
 
   @Test(expected = ExtractionCheckNotificationSenderException.class)
   public void testExceptionThrownIfNoRepositorySpecified() {
     new ExtractionCheckNotificationSenderGithub(
-        "", "some template", "", "testOwner", "", 100, true, "", "");
+        githubClientsMock, "", "some template", "", "testOwner", "", 100, true, "", "");
   }
 
   @Test(expected = ExtractionCheckNotificationSenderException.class)
   public void testExceptionThrownIfNoPRNumberProvided() {
     new ExtractionCheckNotificationSenderGithub(
-        "", "some template", "", "testOwner", "testRepo", null, true, "", "");
+        githubClientsMock, "", "some template", "", "testOwner", "testRepo", null, true, "", "");
   }
 
   @Test

@@ -53,11 +53,11 @@ public class ExtractionCheckNotificationSenderPhabricatorTest {
   public void setup() {
     extractionCheckNotificationSenderPhabricator =
         new ExtractionCheckNotificationSenderPhabricator(
+            differentialRevisionMock,
             "D12345",
             "{baseMessage}",
             "This is a hard failure message",
             "This is a checks skipped message");
-    extractionCheckNotificationSenderPhabricator.differentialRevision = differentialRevisionMock;
     Mockito.reset(differentialRevisionMock);
   }
 
@@ -147,7 +147,8 @@ public class ExtractionCheckNotificationSenderPhabricatorTest {
 
   @Test(expected = ExtractionCheckNotificationSenderException.class)
   public void testExceptionThrownIfNoObjectIdProvided() {
-    new ExtractionCheckNotificationSenderPhabricator("", "some template", "", "");
+    new ExtractionCheckNotificationSenderPhabricator(
+        differentialRevisionMock, "", "some template", "", "");
   }
 
   @Test

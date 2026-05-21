@@ -12,21 +12,20 @@ import com.box.l10n.mojito.thirdpartynotification.slack.SlackChannels;
 import com.google.common.base.Strings;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
-@Configurable
 public class ExtractionCheckNotificationSenderSlack extends ExtractionCheckNotificationSender {
 
-  @Autowired SlackClient slackClient;
+  final SlackClient slackClient;
 
-  @Autowired SlackChannels slackChannels;
+  final SlackChannels slackChannels;
 
   private final String username;
   private final String userEmailPattern;
   private final boolean useDirectMessage;
 
   public ExtractionCheckNotificationSenderSlack(
+      SlackClient slackClient,
+      SlackChannels slackChannels,
       String username,
       String userEmailPattern,
       String messageTemplate,
@@ -34,6 +33,8 @@ public class ExtractionCheckNotificationSenderSlack extends ExtractionCheckNotif
       String checksSkippedMessage,
       boolean useDirectMessage) {
     super(messageTemplate, hardFailureMessage, checksSkippedMessage);
+    this.slackClient = slackClient;
+    this.slackChannels = slackChannels;
     if (Strings.isNullOrEmpty(username)) {
       throw new ExtractionCheckNotificationSenderException(
           "Username must be provided when using Slack notifications.");
