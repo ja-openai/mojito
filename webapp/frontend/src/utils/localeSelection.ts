@@ -38,8 +38,16 @@ export function buildLocaleOptionsFromRepositories(
     getNonRootRepositoryLocaleTags(repo).forEach((tag) => tags.add(tag));
   });
   return Array.from(tags)
-    .sort((first, second) => first.localeCompare(second, undefined, { sensitivity: 'base' }))
-    .map((tag) => ({ tag, label: resolveLocaleName(tag) }));
+    .map((tag) => ({ tag, label: resolveLocaleName(tag) }))
+    .sort((first, second) => {
+      const labelCompare = first.label.localeCompare(second.label, undefined, {
+        sensitivity: 'base',
+      });
+      if (labelCompare !== 0) {
+        return labelCompare;
+      }
+      return first.tag.localeCompare(second.tag, undefined, { sensitivity: 'base' });
+    });
 }
 
 export function useLocaleOptionsWithDisplayNames(

@@ -9,6 +9,8 @@ import { getAnchoredDropdownPanelStyle } from './dropdownPosition';
 export type MultiSelectOption<T extends string | number> = {
   value: T;
   label: string;
+  secondaryLabel?: string;
+  searchText?: string;
 };
 
 export type MultiSelectCustomAction = {
@@ -183,7 +185,9 @@ export function MultiSelectChip<T extends string | number>({
 
   const visibleOptions = filterQuery
     ? options.filter((option) =>
-        option.label.toLowerCase().includes(filterQuery.trim().toLowerCase()),
+        (option.searchText ?? option.label)
+          .toLowerCase()
+          .includes(filterQuery.trim().toLowerCase()),
       )
     : options;
 
@@ -328,7 +332,16 @@ export function MultiSelectChip<T extends string | number>({
                               checked={checked}
                               onChange={() => toggleValue(option.value)}
                             />
-                            <span>{option.label}</span>
+                            <span className="multi-select-chip__option-label">
+                              <span className="multi-select-chip__option-primary">
+                                {option.label}
+                              </span>
+                              {option.secondaryLabel ? (
+                                <span className="multi-select-chip__option-secondary">
+                                  {option.secondaryLabel}
+                                </span>
+                              ) : null}
+                            </span>
                             <button
                               type="button"
                               className="multi-select-chip__only"

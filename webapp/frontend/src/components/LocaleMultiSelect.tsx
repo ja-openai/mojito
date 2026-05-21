@@ -40,6 +40,8 @@ export function LocaleMultiSelect({
   const multiOptions: Array<MultiSelectOption<string>> = options.map((option) => ({
     value: option.tag,
     label: option.label,
+    secondaryLabel: option.tag,
+    searchText: `${option.label} ${option.tag}`,
   }));
   const allLocaleTags = options.map((option) => option.tag);
 
