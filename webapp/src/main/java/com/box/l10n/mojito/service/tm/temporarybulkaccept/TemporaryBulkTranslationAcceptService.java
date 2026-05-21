@@ -5,11 +5,11 @@ import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
-import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -62,6 +62,7 @@ public class TemporaryBulkTranslationAcceptService {
   private final UserService userService;
   private final AuditorAwareImpl auditorAwareImpl;
   private final PollableTaskBlobStorage pollableTaskBlobStorage;
+  private final PollableTaskRunner pollableTaskRunner;
 
   public TemporaryBulkTranslationAcceptService(
       TemporaryBulkTranslationAcceptRepository repository,
@@ -70,7 +71,8 @@ public class TemporaryBulkTranslationAcceptService {
       TransactionTemplate transactionTemplate,
       UserService userService,
       AuditorAwareImpl auditorAwareImpl,
-      PollableTaskBlobStorage pollableTaskBlobStorage) {
+      PollableTaskBlobStorage pollableTaskBlobStorage,
+      PollableTaskRunner pollableTaskRunner) {
     this.repository = Objects.requireNonNull(repository);
     this.tmService = Objects.requireNonNull(tmService);
     this.tmTextUnitVariantCommentService = Objects.requireNonNull(tmTextUnitVariantCommentService);
@@ -78,6 +80,7 @@ public class TemporaryBulkTranslationAcceptService {
     this.userService = Objects.requireNonNull(userService);
     this.auditorAwareImpl = Objects.requireNonNull(auditorAwareImpl);
     this.pollableTaskBlobStorage = Objects.requireNonNull(pollableTaskBlobStorage);
+    this.pollableTaskRunner = Objects.requireNonNull(pollableTaskRunner);
   }
 
   public DryRunResult dryRun(Request request) {
@@ -87,12 +90,17 @@ public class TemporaryBulkTranslationAcceptService {
     return new DryRunResult(totalMatchedCount, counts);
   }
 
-  @Pollable(async = true, message = "Run temporary bulk translation accept dry run")
-  public PollableFuture<Void> dryRunAsync(
-      Request request, @InjectCurrentTask PollableTask currentTask) {
-    savePollableInput(currentTask, request);
-    pollableTaskBlobStorage.saveOutput(currentTask.getId(), toTaskResponse(dryRun(request)));
-    return new PollableFutureTaskResult<>();
+  public PollableFuture<Void> dryRunAsync(Request request) {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "dryRunAsync",
+            "Run temporary bulk translation accept dry run",
+            currentTask -> {
+              savePollableInput(currentTask, request);
+              pollableTaskBlobStorage.saveOutput(
+                  currentTask.getId(), toTaskResponse(dryRun(request)));
+              return new PollableFutureTaskResult<>();
+            }));
   }
 
   public ExecuteResult execute(Request request) {
@@ -125,12 +133,17 @@ public class TemporaryBulkTranslationAcceptService {
     return new ExecuteResult(processedCount, repositoryCounts);
   }
 
-  @Pollable(async = true, message = "Execute temporary bulk translation accept")
-  public PollableFuture<Void> executeAsync(
-      Request request, @InjectCurrentTask PollableTask currentTask) {
-    savePollableInput(currentTask, request);
-    pollableTaskBlobStorage.saveOutput(currentTask.getId(), toTaskResponse(execute(request)));
-    return new PollableFutureTaskResult<>();
+  public PollableFuture<Void> executeAsync(Request request) {
+    return pollableTaskRunner.runAsync(
+        PollableTaskInvocation.ofFuture(
+            "executeAsync",
+            "Execute temporary bulk translation accept",
+            currentTask -> {
+              savePollableInput(currentTask, request);
+              pollableTaskBlobStorage.saveOutput(
+                  currentTask.getId(), toTaskResponse(execute(request)));
+              return new PollableFutureTaskResult<>();
+            }));
   }
 
   private void processChunk(

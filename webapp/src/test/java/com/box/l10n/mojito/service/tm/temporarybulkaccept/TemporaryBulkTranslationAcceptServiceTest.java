@@ -128,8 +128,7 @@ public class TemporaryBulkTranslationAcceptServiceTest extends ServiceTestBase {
             List.of(repository.getId()),
             null);
 
-    PollableFuture<Void> pollableFuture =
-        service.dryRunAsync(request, com.box.l10n.mojito.entity.PollableTask.INJECT_CURRENT_TASK);
+    PollableFuture<Void> pollableFuture = service.dryRunAsync(request);
 
     Assert.assertNotNull(pollableFuture.getPollableTask());
     pollableFuture.get();
