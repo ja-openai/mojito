@@ -62,6 +62,30 @@ public class TeamServiceTransactionTest {
   }
 
   @Test
+  public void getLocalePoolsCommitsReadOnlyTransaction() {
+    teamService.getLocalePools(1L);
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertThat(transactionDefinitionCaptor.getValue().isReadOnly()).isTrue();
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void replacePmPoolCommitsTransaction() {
+    teamService.replacePmPool(1L, List.of(2L));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertThat(transactionDefinitionCaptor.getValue().isReadOnly()).isFalse();
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
   public void deleteTeamRollsBackTransactionOnRuntimeException() {
     RuntimeException failure = new RuntimeException("delete failed");
     teamService.failure = failure;
@@ -78,6 +102,17 @@ public class TeamServiceTransactionTest {
     teamService.error = failure;
 
     assertThatThrownBy(() -> teamService.setUserTeamAssignments(1L, 2L, 3L)).isSameAs(failure);
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
+  @Test
+  public void replaceLocalePoolsRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("locale pool failed");
+    teamService.failure = failure;
+
+    assertThatThrownBy(() -> teamService.replaceLocalePools(1L, List.of())).isSameAs(failure);
 
     verify(transactionManager).rollback(transactionStatus);
     verify(transactionManager, never()).commit(transactionStatus);
@@ -126,6 +161,22 @@ public class TeamServiceTransactionTest {
 
     @Override
     void setUserTeamAssignmentsNoTx(Long userId, Long pmTeamId, Long translatorTeamId) {
+      throwIfConfigured();
+    }
+
+    @Override
+    List<LocalePoolEntry> getLocalePoolsNoTx(Long teamId) {
+      throwIfConfigured();
+      return List.of();
+    }
+
+    @Override
+    void replacePmPoolNoTx(Long teamId, List<Long> userIds) {
+      throwIfConfigured();
+    }
+
+    @Override
+    void replaceLocalePoolsNoTx(Long teamId, List<LocalePoolEntry> entries) {
       throwIfConfigured();
     }
 
