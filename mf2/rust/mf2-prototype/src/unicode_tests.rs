@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use mf2_prototype::{
     format_model_with_locale_and_bidi,
     format_model_with_locale_and_functions_and_bidi_and_fallback, parse_to_model, BidiIsolation,
-    Declaration, FunctionCall, FunctionRegistry, MessageModel, ParseResult,
+    Declaration, FunctionCall, FunctionMatch, FunctionRegistry, MessageModel, ParseResult,
 };
 use serde::Deserialize;
 
@@ -142,6 +142,10 @@ fn run_with_suppressed_parser_panics(root: &Path, baseline_path: &Path) {
         },
         FileCheck {
             path: "tests/fallback.json",
+            mode: CheckMode::Runtime,
+        },
+        FileCheck {
+            path: "tests/pattern-selection.json",
             mode: CheckMode::Runtime,
         },
     ];
@@ -338,19 +342,18 @@ fn check_runtime_test(defaults: &TestProperties, test: &OfficialTest) -> bool {
 }
 
 fn official_function_registry() -> FunctionRegistry {
-    FunctionRegistry::default().with_function("test:function", official_test_function)
+    FunctionRegistry::default()
+        .with_function("test:function", official_test_function)
+        .with_function("test:select", official_test_select_resolver)
+        .with_function("test:format", official_test_format_resolver)
+        .with_selector("test:function", official_test_selector)
+        .with_selector("test:select", official_test_selector)
+        .with_selector("test:format", official_test_format_selector)
 }
 
 fn official_test_function(call: FunctionCall<'_>) -> Result<String, mf2_prototype::Diagnostic> {
-    let input = call.value().parse::<f64>().map_err(|_| {
-        mf2_prototype::Diagnostic::new(
-            "bad-operand",
-            ":test:function requires a numeric operand.",
-            0,
-            0,
-        )
-    })?;
-    if call.option_value("fails")?.as_deref() == Some("format") {
+    let state = official_test_state_from_call(&call)?;
+    if state.fails_format {
         return Err(mf2_prototype::Diagnostic::new(
             "bad-option",
             ":test:function fails=format requested a format failure.",
@@ -358,7 +361,124 @@ fn official_test_function(call: FunctionCall<'_>) -> Result<String, mf2_prototyp
             0,
         ));
     }
-    Ok(input.trunc().to_string())
+    Ok(state.format_value())
+}
+
+fn official_test_select_resolver(
+    call: FunctionCall<'_>,
+) -> Result<String, mf2_prototype::Diagnostic> {
+    Ok(official_test_state_from_call(&call)?.format_value())
+}
+
+fn official_test_format_resolver(
+    call: FunctionCall<'_>,
+) -> Result<String, mf2_prototype::Diagnostic> {
+    Ok(official_test_state_from_call(&call)?.format_value())
+}
+
+fn official_test_selector(
+    call: FunctionMatch<'_>,
+) -> Result<Option<i32>, mf2_prototype::Diagnostic> {
+    let state = official_test_state_from_match(&call)?;
+    if state.fails_select {
+        return Err(mf2_prototype::Diagnostic::new(
+            "bad-selector",
+            ":test function fails selection.",
+            0,
+            0,
+        ));
+    }
+    if state.input.trunc() as i64 != 1 {
+        return Ok(None);
+    }
+    match (state.decimal_places, call.key()) {
+        (1, "1.0") => Ok(Some(2)),
+        (1, "1") | (0, "1") => Ok(Some(1)),
+        _ => Ok(None),
+    }
+}
+
+fn official_test_format_selector(
+    _call: FunctionMatch<'_>,
+) -> Result<Option<i32>, mf2_prototype::Diagnostic> {
+    Err(mf2_prototype::Diagnostic::new(
+        "bad-selector",
+        ":test:format cannot be used for selection.",
+        0,
+        0,
+    ))
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OfficialTestState {
+    input: f64,
+    decimal_places: i32,
+    fails_format: bool,
+    fails_select: bool,
+}
+
+impl OfficialTestState {
+    fn format_value(self) -> String {
+        let sign = if self.input < 0.0 { "-" } else { "" };
+        let absolute = self.input.abs();
+        let integer = absolute.floor();
+        if self.decimal_places == 1 {
+            let digit = ((absolute - integer) * 10.0).floor() as i64;
+            format!("{sign}{}.{digit}", integer as i64)
+        } else {
+            format!("{sign}{}", integer as i64)
+        }
+    }
+}
+
+fn official_test_state_from_call(
+    call: &FunctionCall<'_>,
+) -> Result<OfficialTestState, mf2_prototype::Diagnostic> {
+    official_test_state(call.value(), |name| call.option_value(name))
+}
+
+fn official_test_state_from_match(
+    call: &FunctionMatch<'_>,
+) -> Result<OfficialTestState, mf2_prototype::Diagnostic> {
+    official_test_state(call.value(), |name| call.option_value(name))
+}
+
+fn official_test_state(
+    value: &str,
+    option_value: impl Fn(&str) -> Result<Option<String>, mf2_prototype::Diagnostic>,
+) -> Result<OfficialTestState, mf2_prototype::Diagnostic> {
+    let input = value.parse::<f64>().map_err(|_| {
+        mf2_prototype::Diagnostic::new(
+            "bad-operand",
+            "Unicode test function requires a numeric operand.",
+            0,
+            0,
+        )
+    })?;
+    let decimal_places = match option_value("decimalPlaces")?.as_deref() {
+        None | Some("0") => 0,
+        Some("1") => 1,
+        Some(_) => {
+            return Err(mf2_prototype::Diagnostic::new(
+                "bad-option",
+                ":test function decimalPlaces must be 0 or 1.",
+                0,
+                0,
+            ));
+        }
+    };
+    let (fails_format, fails_select) = match option_value("fails")?.as_deref() {
+        Some("always") => (true, true),
+        Some("format") => (true, false),
+        Some("select") => (false, true),
+        _ => (false, false),
+    };
+    Ok(OfficialTestState {
+        input,
+        decimal_places,
+        fails_format,
+        fails_select,
+    })
 }
 
 fn safe_parse(source: &str) -> Option<ParseResult> {

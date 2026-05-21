@@ -64,10 +64,12 @@ impl BidiIsolation {
 }
 
 pub type FunctionFormatter = for<'a> fn(FunctionCall<'a>) -> Result<String, Diagnostic>;
+pub type FunctionSelector = for<'a> fn(FunctionMatch<'a>) -> Result<Option<i32>, Diagnostic>;
 
 #[derive(Clone)]
 pub struct FunctionRegistry {
     formatters: BTreeMap<String, FunctionFormatter>,
+    selectors: BTreeMap<String, FunctionSelector>,
 }
 
 impl FunctionRegistry {
@@ -78,6 +80,7 @@ impl FunctionRegistry {
     pub fn empty() -> Self {
         Self {
             formatters: BTreeMap::new(),
+            selectors: BTreeMap::new(),
         }
     }
 
@@ -86,8 +89,21 @@ impl FunctionRegistry {
         self
     }
 
+    pub fn with_selector(mut self, name: impl Into<String>, selector: FunctionSelector) -> Self {
+        self.selectors.insert(name.into(), selector);
+        self
+    }
+
     pub fn register(&mut self, name: impl Into<String>, formatter: FunctionFormatter) {
         self.formatters.insert(name.into(), formatter);
+    }
+
+    pub fn register_selector(&mut self, name: impl Into<String>, selector: FunctionSelector) {
+        self.selectors.insert(name.into(), selector);
+    }
+
+    fn has_selector(&self, function: &FunctionRef) -> bool {
+        self.selectors.contains_key(&function.name)
     }
 
     fn format(
@@ -115,6 +131,26 @@ impl FunctionRegistry {
             values,
         })
     }
+
+    fn select(
+        &self,
+        value: &str,
+        function: &FunctionRef,
+        key: &str,
+        locale: &str,
+        values: &BTreeMap<String, serde_json::Value>,
+    ) -> Result<Option<i32>, Diagnostic> {
+        let Some(selector) = self.selectors.get(&function.name) else {
+            return Ok(None);
+        };
+        selector(FunctionMatch {
+            value,
+            function,
+            key,
+            locale,
+            values,
+        })
+    }
 }
 
 impl Default for FunctionRegistry {
@@ -134,6 +170,14 @@ pub struct FunctionCall<'a> {
     values: &'a BTreeMap<String, serde_json::Value>,
 }
 
+pub struct FunctionMatch<'a> {
+    value: &'a str,
+    function: &'a FunctionRef,
+    key: &'a str,
+    locale: &'a str,
+    values: &'a BTreeMap<String, serde_json::Value>,
+}
+
 impl<'a> FunctionCall<'a> {
     pub fn value(&self) -> &'a str {
         self.value
@@ -148,23 +192,51 @@ impl<'a> FunctionCall<'a> {
     }
 
     pub fn option_value(&self, name: &str) -> Result<Option<String>, Diagnostic> {
-        let Some(option) = self
-            .function
-            .options
-            .as_ref()
-            .and_then(|options| options.get(name))
-        else {
-            return Ok(None);
-        };
-        match option {
-            ExpressionArg::Literal { value } => Ok(Some(value.clone())),
-            ExpressionArg::Variable { name } => self
-                .values
-                .get(name)
-                .map(value_to_string)
-                .map(Some)
-                .ok_or_else(|| missing_argument(name)),
-        }
+        option_value(self.function, self.values, name)
+    }
+}
+
+impl<'a> FunctionMatch<'a> {
+    pub fn value(&self) -> &'a str {
+        self.value
+    }
+
+    pub fn function(&self) -> &'a FunctionRef {
+        self.function
+    }
+
+    pub fn key(&self) -> &'a str {
+        self.key
+    }
+
+    pub fn locale(&self) -> &'a str {
+        self.locale
+    }
+
+    pub fn option_value(&self, name: &str) -> Result<Option<String>, Diagnostic> {
+        option_value(self.function, self.values, name)
+    }
+}
+
+fn option_value(
+    function: &FunctionRef,
+    values: &BTreeMap<String, serde_json::Value>,
+    name: &str,
+) -> Result<Option<String>, Diagnostic> {
+    let Some(option) = function
+        .options
+        .as_ref()
+        .and_then(|options| options.get(name))
+    else {
+        return Ok(None);
+    };
+    match option {
+        ExpressionArg::Literal { value } => Ok(Some(value.clone())),
+        ExpressionArg::Variable { name } => values
+            .get(name)
+            .map(value_to_string)
+            .map(Some)
+            .ok_or_else(|| missing_argument(name)),
     }
 }
 
@@ -556,28 +628,50 @@ impl<'a> FormatContext<'a> {
         let selector_values = selectors
             .iter()
             .map(|selector| {
+                let annotation = self.selector_annotations.get(&selector.name).cloned();
                 let Some(value) = self.values.get(&selector.name) else {
                     if self.fallback {
-                        if !self.failed_locals.contains(&selector.name) {
+                        let failed_local = self.failed_locals.contains(&selector.name);
+                        if !failed_local {
                             self.errors.push(unresolved_variable(&selector.name));
                         }
-                        let string_select = self.string_select_for_selector(&selector.name);
+                        if annotation.as_ref().is_some_and(|annotation| {
+                            self.functions.has_selector(&annotation.function)
+                        }) {
+                            if !failed_local {
+                                self.errors
+                                    .push(bad_operand("Selector operand is not available."));
+                            }
+                            self.errors
+                                .push(bad_selector("Selector operand is not available."));
+                        }
+                        let string_select = annotation
+                            .as_ref()
+                            .is_some_and(|annotation| annotation.is_string());
                         return Ok(SelectorValue {
                             normalized_rendered: string_select.then(|| normalize_string_key("")),
                             rendered: String::new(),
                             exact_match: false,
                             selection_key: None,
+                            function: annotation.map(|annotation| annotation.function),
                         });
                     }
                     return Err(missing_argument(&selector.name));
                 };
                 let rendered = value_to_string(value);
-                let string_select = self.string_select_for_selector(&selector.name);
+                let string_select = annotation
+                    .as_ref()
+                    .is_some_and(|annotation| annotation.is_string());
+                let exact_match = annotation
+                    .as_ref()
+                    .is_none_or(|annotation| annotation.exact_match());
+                let selection_key = self.selection_key_for_selector(annotation.as_ref(), value);
                 Ok(SelectorValue {
                     normalized_rendered: string_select.then(|| normalize_string_key(&rendered)),
                     rendered,
-                    exact_match: self.exact_match_for_selector(&selector.name),
-                    selection_key: self.selection_key_for_selector(&selector.name, value),
+                    exact_match,
+                    selection_key,
+                    function: annotation.map(|annotation| annotation.function),
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -590,8 +684,14 @@ impl<'a> FormatContext<'a> {
             if fallback.is_none() && is_fallback_variant(variant) {
                 fallback = Some(variant);
             }
-            if selected.is_none() && variant_matches(variant, &selector_values) {
-                selected = Some(variant);
+            let Some(rank) = self.variant_match_rank(variant, &selector_values)? else {
+                continue;
+            };
+            if selected
+                .as_ref()
+                .is_none_or(|(_, selected_rank): &(&Variant, Vec<i32>)| rank > *selected_rank)
+            {
+                selected = Some((variant, rank));
             }
         }
         let fallback = fallback.ok_or_else(|| {
@@ -600,16 +700,75 @@ impl<'a> FormatContext<'a> {
                 "Select messages must include a catch-all fallback variant.",
             )
         })?;
-        let selected = selected.or(Some(fallback)).ok_or_else(|| {
-            Diagnostic::new(
-                "missing-select-variant",
-                "No select variant matched and no catch-all variant is present.",
-                0,
-                0,
-            )
-        })?;
+        let selected = selected
+            .map(|(variant, _)| variant)
+            .or(Some(fallback))
+            .ok_or_else(|| {
+                Diagnostic::new(
+                    "missing-select-variant",
+                    "No select variant matched and no catch-all variant is present.",
+                    0,
+                    0,
+                )
+            })?;
 
         self.format_pattern_to_parts(&selected.value)
+    }
+
+    fn variant_match_rank(
+        &mut self,
+        variant: &Variant,
+        selector_values: &[SelectorValue],
+    ) -> Result<Option<Vec<i32>>, Diagnostic> {
+        if variant.keys.len() != selector_values.len() {
+            return Ok(None);
+        }
+        let mut ranks = Vec::with_capacity(variant.keys.len());
+        for (key, selector) in variant.keys.iter().zip(selector_values) {
+            let Some(rank) = self.key_match_rank(key, selector)? else {
+                return Ok(None);
+            };
+            ranks.push(rank);
+        }
+        Ok(Some(ranks))
+    }
+
+    fn key_match_rank(
+        &mut self,
+        key: &VariantKey,
+        selector: &SelectorValue,
+    ) -> Result<Option<i32>, Diagnostic> {
+        match key {
+            VariantKey::CatchAll => Ok(Some(0)),
+            VariantKey::Literal { value } => {
+                if (selector.exact_match && literal_key_matches(value, selector))
+                    || selector
+                        .selection_key
+                        .as_ref()
+                        .is_some_and(|category| category == value)
+                {
+                    return Ok(Some(1));
+                }
+                let Some(function) = selector.function.as_ref() else {
+                    return Ok(None);
+                };
+                match self.functions.select(
+                    &selector.rendered,
+                    function,
+                    value,
+                    &self.locale,
+                    &self.values,
+                ) {
+                    Ok(rank) => Ok(rank),
+                    Err(error) if self.fallback => {
+                        self.errors.push(fallback_error(error));
+                        self.errors.push(bad_selector("Selector failed to match."));
+                        Ok(None)
+                    }
+                    Err(error) => Err(error),
+                }
+            }
+        }
     }
 
     fn format_pattern_to_parts(
@@ -700,25 +859,12 @@ impl<'a> FormatContext<'a> {
         }
     }
 
-    fn exact_match_for_selector(&self, selector_name: &str) -> bool {
-        self.selector_annotations
-            .get(selector_name)
-            .map(|annotation| annotation.exact_match())
-            .unwrap_or(true)
-    }
-
-    fn string_select_for_selector(&self, selector_name: &str) -> bool {
-        self.selector_annotations
-            .get(selector_name)
-            .is_some_and(|annotation| annotation.is_string())
-    }
-
     fn selection_key_for_selector(
         &self,
-        selector_name: &str,
+        annotation: Option<&SelectorAnnotation>,
         value: &serde_json::Value,
     ) -> Option<String> {
-        let annotation = self.selector_annotations.get(selector_name)?;
+        let annotation = annotation?;
         if !annotation.is_numeric() {
             return None;
         }
@@ -739,29 +885,30 @@ struct SelectorValue {
     normalized_rendered: Option<String>,
     exact_match: bool,
     selection_key: Option<String>,
+    function: Option<FunctionRef>,
 }
 
 #[derive(Debug, Clone)]
 struct SelectorAnnotation {
-    function: String,
+    function: FunctionRef,
     number_select: NumberSelect,
 }
 
 impl SelectorAnnotation {
     fn from_function(function: &crate::model::FunctionRef) -> Self {
         Self {
-            function: function.name.clone(),
+            function: function.clone(),
             number_select: NumberSelect::from_options(function.options.as_ref()),
         }
     }
 
     fn exact_match(&self) -> bool {
-        self.function == "string"
+        self.function.name == "string"
             || (self.is_numeric() && self.number_select == NumberSelect::Exact)
     }
 
     fn is_string(&self) -> bool {
-        self.function == "string"
+        self.function.name == "string"
     }
 
     fn selection_key(&self, locale: &str, operands: NumberOperands) -> Option<String> {
@@ -780,7 +927,7 @@ impl SelectorAnnotation {
     }
 
     fn is_numeric(&self) -> bool {
-        self.function == "number" || self.function == "integer"
+        self.function.name == "number" || self.function.name == "integer"
     }
 }
 
@@ -804,26 +951,6 @@ impl NumberSelect {
             _ => Self::Plural,
         }
     }
-}
-
-fn variant_matches(variant: &Variant, selector_values: &[SelectorValue]) -> bool {
-    if variant.keys.len() != selector_values.len() {
-        return false;
-    }
-    variant
-        .keys
-        .iter()
-        .zip(selector_values)
-        .all(|(key, selector)| match key {
-            VariantKey::CatchAll => true,
-            VariantKey::Literal { value } => {
-                (selector.exact_match && literal_key_matches(value, selector))
-                    || selector
-                        .selection_key
-                        .as_ref()
-                        .is_some_and(|category| category == value)
-            }
-        })
 }
 
 fn validate_variant<'a>(
@@ -911,6 +1038,10 @@ fn unresolved_variable(name: &str) -> Diagnostic {
 
 fn bad_operand(message: impl Into<String>) -> Diagnostic {
     Diagnostic::new("bad-operand", message, 0, 0)
+}
+
+fn bad_selector(message: impl Into<String>) -> Diagnostic {
+    Diagnostic::new("bad-selector", message, 0, 0)
 }
 
 fn fallback_error(error: Diagnostic) -> Diagnostic {

@@ -95,6 +95,9 @@ The current conformance slice covers:
   multi-selector matching,
   `:number select=exact`, `:integer select=exact`, and quoted literal variant
   keys such as `|*|` that remain distinct from catch-all `*`
+- Rust selector function hooks for custom `.match` functions; the official
+  Unicode pattern-selection runner uses test-only selector functions and
+  best-match ranking without changing default production functions
 - `:string` selector comparison and duplicate-variant validation use NFC
   internally while preserving model literals and formatted strings byte-for-byte
 - direct and simple indirect selector annotation validation for `.match`
