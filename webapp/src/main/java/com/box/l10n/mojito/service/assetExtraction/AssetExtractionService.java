@@ -2,7 +2,7 @@ package com.box.l10n.mojito.service.assetExtraction;
 
 import static com.box.l10n.mojito.quartz.QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
 import static com.box.l10n.mojito.service.assetExtraction.LocalBranchToEntityBranchConverter.NULL_BRANCH_TEXT_PLACEHOLDER;
-import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
+import static com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation.DEFAULT_TIMEOUT;
 import static java.util.function.Function.identity;
 
 import com.box.l10n.mojito.JSR310Migration;

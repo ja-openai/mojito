@@ -6,7 +6,7 @@ import static com.box.l10n.mojito.rest.asset.AssetSpecification.deletedEquals;
 import static com.box.l10n.mojito.rest.asset.AssetSpecification.pathEquals;
 import static com.box.l10n.mojito.rest.asset.AssetSpecification.repositoryIdEquals;
 import static com.box.l10n.mojito.rest.asset.AssetSpecification.virtualEquals;
-import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
+import static com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation.DEFAULT_TIMEOUT;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import com.box.l10n.mojito.entity.Asset;

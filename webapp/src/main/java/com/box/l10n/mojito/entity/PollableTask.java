@@ -2,7 +2,6 @@ package com.box.l10n.mojito.entity;
 
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.rest.View;
-import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -49,10 +48,7 @@ import org.springframework.data.annotation.CreatedBy;
     })
 public class PollableTask extends AuditableEntity {
 
-  /**
-   * Constant that can be passed to functions that use {@link InjectCurrentTask} for readability
-   * purpose.
-   */
+  /** Legacy null marker used by deprecated test-facing APIs that still accept a parent task. */
   public static final PollableTask INJECT_CURRENT_TASK = null;
 
   @Basic(optional = false)

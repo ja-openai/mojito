@@ -6,9 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * See {@link PollableAspect}.
- *
- * <p>Contains the logic to call the instrumented function and record its state when finished.
+ * Contains the logic to call the pollable operation and record its state when finished.
  * Implementing {@link Callable} to potentially execute the function asynchronously.
  *
  * @author jaurambault
