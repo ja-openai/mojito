@@ -15,6 +15,7 @@ export type MultiSelectCustomAction = {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  active?: boolean;
   ariaLabel?: string;
 };
 
@@ -42,6 +43,7 @@ export type MultiSelectChipProps<T extends string | number> = {
   onlyLabel?: string;
   summaryFormatter?: SummaryFormatter<T>;
   customActions?: MultiSelectCustomAction[];
+  quickActions?: MultiSelectCustomAction[];
 };
 
 export function MultiSelectChip<T extends string | number>({
@@ -62,6 +64,7 @@ export function MultiSelectChip<T extends string | number>({
   onlyLabel,
   summaryFormatter,
   customActions,
+  quickActions,
 }: MultiSelectChipProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -78,7 +81,7 @@ export function MultiSelectChip<T extends string | number>({
     const rect = buttonRef.current.getBoundingClientRect();
     const viewportPadding = 16;
     const gap = 8;
-    const maxWidth = Math.min(448, window.innerWidth - viewportPadding * 2);
+    const maxWidth = Math.min(512, window.innerWidth - viewportPadding * 2);
 
     setPanelStyle(
       getAnchoredDropdownPanelStyle({
@@ -215,7 +218,10 @@ export function MultiSelectChip<T extends string | number>({
   const clearAllText = clearAllLabel ?? 'Clear';
   const onlyText = onlyLabel ?? 'Only';
   const resolvedCustomActions = customActions ?? [];
-  const canOpen = !disabled && (options.length > 0 || resolvedCustomActions.length > 0);
+  const resolvedQuickActions = quickActions ?? [];
+  const canOpen =
+    !disabled &&
+    (options.length > 0 || resolvedCustomActions.length > 0 || resolvedQuickActions.length > 0);
 
   return (
     <div
@@ -239,7 +245,14 @@ export function MultiSelectChip<T extends string | number>({
       </button>
       {isOpen
         ? createPortal(
-            <div className="chip-dropdown__panel" role="menu" ref={panelRef} style={panelStyle}>
+            <div
+              className={`chip-dropdown__panel${
+                resolvedQuickActions.length ? ' multi-select-chip__panel--with-strip' : ''
+              }`}
+              role="menu"
+              ref={panelRef}
+              style={panelStyle}
+            >
               {options.length ? (
                 <>
                   <input
@@ -250,24 +263,44 @@ export function MultiSelectChip<T extends string | number>({
                     placeholder={filterInputPlaceholder}
                     className="multi-select-chip__search"
                   />
-                  <div className="multi-select-chip__actions">
-                    <button
-                      type="button"
-                      className="multi-select-chip__action-button"
-                      onClick={selectAll}
-                      disabled={allVisibleSelected}
-                    >
-                      {selectAllText}
-                    </button>
-                    <button
-                      type="button"
-                      className="multi-select-chip__action-button"
-                      onClick={clearAll}
-                      disabled={selectedValues.length === 0}
-                    >
-                      {clearAllText}
-                    </button>
-                  </div>
+                  {resolvedQuickActions.length ? (
+                    <div className="multi-select-chip__actions multi-select-chip__actions--strip">
+                      {resolvedQuickActions.map((action) => (
+                        <button
+                          type="button"
+                          key={action.label}
+                          className={`multi-select-chip__action-button multi-select-chip__action-button--strip${
+                            action.active ? ' is-active' : ''
+                          }`}
+                          onClick={action.onClick}
+                          disabled={Boolean(action.disabled)}
+                          aria-label={action.ariaLabel ?? action.label}
+                          aria-pressed={Boolean(action.active)}
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="multi-select-chip__actions">
+                      <button
+                        type="button"
+                        className="multi-select-chip__action-button"
+                        onClick={selectAll}
+                        disabled={allVisibleSelected}
+                      >
+                        {selectAllText}
+                      </button>
+                      <button
+                        type="button"
+                        className="multi-select-chip__action-button"
+                        onClick={clearAll}
+                        disabled={selectedValues.length === 0}
+                      >
+                        {clearAllText}
+                      </button>
+                    </div>
+                  )}
                   {resolvedCustomActions.length ? (
                     <div className="multi-select-chip__actions multi-select-chip__actions--secondary">
                       {resolvedCustomActions.map((action) => (

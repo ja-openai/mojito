@@ -87,8 +87,6 @@ const hasSameIds = (left: number[], right: number[]) => {
   return left.every((id) => rightSet.has(id));
 };
 
-type RepositorySelectionMode = 'repositories' | 'glossaries' | 'other';
-
 const buildRepositoryRow = (
   repository: ApiRepository,
   selectedRepositoryId: number | null,
@@ -634,50 +632,6 @@ export function RepositoriesPage() {
     [onChangeLocaleSelection],
   );
 
-  const repositorySelectionMode: RepositorySelectionMode = (() => {
-    if (
-      productRepositoryIds.length > 0 &&
-      hasSameIds(selectedRepositoryIds, productRepositoryIds)
-    ) {
-      return 'repositories';
-    }
-    if (
-      glossaryRepositoryIds.length > 0 &&
-      hasSameIds(selectedRepositoryIds, glossaryRepositoryIds)
-    ) {
-      return 'glossaries';
-    }
-    return 'other';
-  })();
-
-  const repositorySelectionActions = useMemo(
-    () =>
-      [
-        repositorySelectionMode === 'repositories'
-          ? null
-          : {
-              label: 'Repositories',
-              onClick: () => onChangeRepositorySelection(productRepositoryIds),
-              disabled: productRepositoryIds.length === 0,
-              ariaLabel: 'Show repositories excluding glossaries',
-            },
-        repositorySelectionMode === 'glossaries'
-          ? null
-          : {
-              label: 'Glossaries',
-              onClick: () => onChangeRepositorySelection(glossaryRepositoryIds),
-              disabled: glossaryRepositoryIds.length === 0,
-              ariaLabel: 'Show glossary backing repositories only',
-            },
-      ].filter((action): action is NonNullable<typeof action> => action != null),
-    [
-      glossaryRepositoryIds,
-      onChangeRepositorySelection,
-      productRepositoryIds,
-      repositorySelectionMode,
-    ],
-  );
-
   const formatRepositorySelectionSummary = useCallback(
     ({ selectedIds, defaultSummary }: { selectedIds: number[]; defaultSummary: string }) => {
       if (hasSameIds(selectedIds, allRepositoryIds)) {
@@ -768,7 +722,6 @@ export function RepositoriesPage() {
       repositoryOptions={repositoryOptions}
       selectedRepositoryIds={selectedRepositoryIds}
       onChangeRepositorySelection={onChangeRepositorySelection}
-      repositorySelectionActions={repositorySelectionActions}
       formatRepositorySelectionSummary={formatRepositorySelectionSummary}
       onOpenAiTranslate={handleOpenAiTranslate}
       localeOptions={localeOptions}

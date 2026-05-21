@@ -15,9 +15,17 @@
   box-shadow: 0 0 0 0.125rem var(--color-focus-outline);
 }
 
+.multi-select-chip__panel--with-strip {
+  min-width: 19rem;
+}
+
 .multi-select-chip__actions {
   display: flex;
   gap: var(--space-2);
+}
+
+.multi-select-chip__actions--strip {
+  gap: 0;
 }
 
 .multi-select-chip__actions--secondary {
@@ -50,6 +58,36 @@
   height: auto;
   font-size: var(--font-size-xs);
   text-decoration: underline;
+}
+
+.multi-select-chip__action-button--strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  border-radius: 0;
+  border-right-width: 0;
+  height: 1.5rem;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.multi-select-chip__action-button--strip:first-child {
+  border-radius: var(--radius-pill) 0 0 var(--radius-pill);
+}
+
+.multi-select-chip__action-button--strip:last-child {
+  border-right-width: var(--border-width);
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+}
+
+.multi-select-chip__action-button--strip.is-active {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface-muted));
+  box-shadow: none;
+  color: var(--color-accent);
+  font-weight: 600;
 }
 
 .multi-select-chip__action-button--link:disabled {

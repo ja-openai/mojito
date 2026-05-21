@@ -437,6 +437,7 @@ export function WorkbenchHeader({
           onChange={onChangeRepositorySelection}
           disabled={searchControlsDisabled}
           buttonAriaLabel="Select repositories"
+          showSelectionPresets
         />
         <LocaleMultiSelect
           className="workbench-chip-dropdown workbench-chip-dropdown--locale"
