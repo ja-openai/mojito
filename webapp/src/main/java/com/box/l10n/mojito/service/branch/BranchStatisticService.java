@@ -55,7 +55,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Component
 public class BranchStatisticService {
@@ -72,6 +74,8 @@ public class BranchStatisticService {
   @Autowired BranchStatisticRepository branchStatisticRepository;
 
   @Autowired BranchTextUnitStatisticRepository branchTextUnitStatisticRepository;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   @Autowired QuartzPollableTaskScheduler quartzPollableTaskScheduler;
 
@@ -265,8 +269,25 @@ public class BranchStatisticService {
     }
   }
 
-  @Transactional
   void updateBranchStatisticInTx(
+      Branch branch,
+      ImmutableMap<Long, ForTranslationCountForTmTextUnitId> tmTextUnitIdToForTranslationCount) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      updateBranchStatisticNoTx(branch, tmTextUnitIdToForTranslationCount);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void updateBranchStatisticNoTx(
       Branch branch,
       ImmutableMap<Long, ForTranslationCountForTmTextUnitId> tmTextUnitIdToForTranslationCount) {
     Preconditions.checkNotNull(tmTextUnitIdToForTranslationCount);
