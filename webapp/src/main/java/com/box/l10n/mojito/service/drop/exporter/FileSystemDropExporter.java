@@ -20,8 +20,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.util.FileSystemUtils;
 
 /**
@@ -29,22 +27,28 @@ import org.springframework.util.FileSystemUtils;
  *
  * @author jaurambault
  */
-@Configurable
 public class FileSystemDropExporter implements DropExporter {
 
   static Logger logger = LoggerFactory.getLogger(FileSystemDropExporter.class);
 
   final String DROP_FOLDER_COMMENTS_NAME = "Comments";
 
-  @Autowired ObjectMapper objectMapper;
+  final ObjectMapper objectMapper;
 
-  @Autowired FileSystemDropExporterConfigFromProperties fileSystemDropExporterConfigFromProperties;
+  final FileSystemDropExporterConfigFromProperties fileSystemDropExporterConfigFromProperties;
 
   /**
    * Contains the exporter configuration and is also used to keep track of the state of exporter:
    * initialized or not.
    */
   FileSystemDropExporterConfig fileSystemDropExporterConfig;
+
+  public FileSystemDropExporter(
+      ObjectMapper objectMapper,
+      FileSystemDropExporterConfigFromProperties fileSystemDropExporterConfigFromProperties) {
+    this.objectMapper = objectMapper;
+    this.fileSystemDropExporterConfigFromProperties = fileSystemDropExporterConfigFromProperties;
+  }
 
   @Override
   public DropExporterType getDropExporterType() {

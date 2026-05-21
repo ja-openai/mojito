@@ -76,6 +76,8 @@ Removed during this workstream:
   its task service and blob storage dependencies directly.
 - `LeveragerByContentAndRepository` and `LeveragerByTmTextUnit` no longer use `@Configurable`;
   manually created leveragers now come from `LeveragerFactory`.
+- `FileSystemDropExporter` and `FileSystemDropImporter` no longer use `@Configurable`;
+  `DropExporterService` constructs file-system exporters with explicit dependencies.
 
 In progress:
 

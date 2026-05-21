@@ -9,15 +9,5 @@ package com.box.l10n.mojito.service.drop.exporter;
  * @author jaurambault
  */
 public enum DropExporterType {
-  FILE_SYSTEM(FileSystemDropExporter.class.getName());
-
-  String className;
-
-  DropExporterType(String className) {
-    this.className = className;
-  }
-
-  public String getClassName() {
-    return className;
-  }
+  FILE_SYSTEM
 }
