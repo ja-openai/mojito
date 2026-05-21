@@ -3,14 +3,14 @@ package com.box.l10n.mojito.rest.rotation;
 import jakarta.annotation.PostConstruct;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.AsyncResult;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,6 +25,10 @@ public class HealthRotation implements HealthIndicator {
   Boolean inRotation = true;
 
   String host;
+
+  @Autowired
+  @Qualifier("asyncExecutor")
+  AsyncTaskExecutor asyncExecutor;
 
   @PostConstruct
   public void init() {
@@ -50,16 +54,14 @@ public class HealthRotation implements HealthIndicator {
   String getHost() {
     String host;
     try {
-      host = getHostAsync().get(1, TimeUnit.SECONDS);
+      host = asyncExecutor.submit(this::getHostAsync).get(1, TimeUnit.SECONDS);
     } catch (Exception e) {
       host = "Can't get host";
     }
     return host;
   }
 
-  @Async
-  Future<String> getHostAsync() throws UnknownHostException {
-    String host = InetAddress.getLocalHost().getHostName();
-    return new AsyncResult<>(host);
+  String getHostAsync() throws UnknownHostException {
+    return InetAddress.getLocalHost().getHostName();
   }
 }

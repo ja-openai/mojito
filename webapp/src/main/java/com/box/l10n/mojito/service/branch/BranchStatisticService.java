@@ -51,8 +51,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,6 +94,10 @@ public class BranchStatisticService {
   @Autowired RepositoryRepository repositoryRepository;
 
   @Autowired AsyncBranchStatisticUpdater asyncBranchStatisticUpdater;
+
+  @Autowired
+  @Qualifier("statisticsTaskExecutor")
+  TaskExecutor statisticsTaskExecutor;
 
   @Value("${l10n.branchStatistic.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
@@ -438,19 +443,21 @@ public class BranchStatisticService {
                     t1.branch())));
   }
 
-  @Async("statisticsTaskExecutor")
   CompletableFuture<PollableFuture<Void>> scheduleBranchNotification(Branch branch) {
-    BranchNotificationJobInput branchNotificationJobInput = new BranchNotificationJobInput();
-    branchNotificationJobInput.setBranchId(branch.getId());
+    return CompletableFuture.supplyAsync(
+        () -> {
+          BranchNotificationJobInput branchNotificationJobInput = new BranchNotificationJobInput();
+          branchNotificationJobInput.setBranchId(branch.getId());
 
-    QuartzJobInfo<BranchNotificationJobInput, Void> quartzJobInfo =
-        QuartzJobInfo.newBuilder(BranchNotificationJob.class)
-            .withUniqueId(String.valueOf(branch.getId()))
-            .withInput(branchNotificationJobInput)
-            .withScheduler(schedulerName)
-            .build();
-    return CompletableFuture.completedFuture(
-        quartzPollableTaskScheduler.scheduleJob(quartzJobInfo));
+          QuartzJobInfo<BranchNotificationJobInput, Void> quartzJobInfo =
+              QuartzJobInfo.newBuilder(BranchNotificationJob.class)
+                  .withUniqueId(String.valueOf(branch.getId()))
+                  .withInput(branchNotificationJobInput)
+                  .withScheduler(schedulerName)
+                  .build();
+          return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+        },
+        statisticsTaskExecutor::execute);
   }
 
   /**

@@ -2,27 +2,35 @@ package com.box.l10n.mojito;
 
 import static org.junit.Assert.*;
 
-import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.junit.Test;
-import org.springframework.scheduling.annotation.Async;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 /**
  * @author jaurambault
  */
-public class AsyncConfigTest extends ServiceTestBase {
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = AsyncConfig.class)
+public class AsyncConfigTest {
+
+  @Autowired
+  @Qualifier("asyncExecutor")
+  AsyncTaskExecutor asyncExecutor;
 
   @Test
   public void testAsync() throws InterruptedException, ExecutionException {
     String threadName = Thread.currentThread().getName();
-    Future<String> doAsync = doAsync();
+    Future<String> doAsync = asyncExecutor.submit(this::getThreadName);
     assertNotEquals(threadName, doAsync.get());
   }
 
-  @Async
-  public Future<String> doAsync() {
-    return CompletableFuture.completedFuture(Thread.currentThread().getName());
+  public String getThreadName() {
+    return Thread.currentThread().getName();
   }
 }
