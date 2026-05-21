@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MF2 Editor Prototype</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>MF2 Editor Prototype</h1>
+        <p>Raw source, structured variants, diagnostics, and live preview.</p>
+      </div>
+      <div class="status" id="status">Ready</div>
+    </header>
+
+    <main class="workspace">
+      <section class="panel source-panel">
+        <div class="panel-header">
+          <h2>Raw Source</h2>
+          <div class="button-row">
+            <button type="button" data-sample="simple">Simple</button>
+            <button type="button" data-sample="plural">Plural</button>
+            <button type="button" data-sample="gender">Gender + plural</button>
+            <button type="button" data-sample="markup">Markup</button>
+          </div>
+        </div>
+        <textarea id="source" spellcheck="false"></textarea>
+        <div class="button-row source-actions">
+          <button type="button" id="addPlural">Add plural</button>
+          <button type="button" id="formatSource">Format</button>
+        </div>
+      </section>
+
+      <section class="panel structure-panel">
+        <div class="panel-header">
+          <h2>Structured Edit</h2>
+          <button type="button" id="addVariant">Add variant</button>
+        </div>
+        <div id="structure"></div>
+      </section>
+
+      <section class="panel preview-panel">
+        <div class="panel-header">
+          <h2>Preview</h2>
+          <label class="locale-field">
+            Locale
+            <select id="locale">
+              <option value="en">en</option>
+              <option value="fr">fr</option>
+              <option value="ru">ru</option>
+              <option value="ar">ar</option>
+              <option value="ja">ja</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="subpanel">
+          <h3>Arguments</h3>
+          <div id="arguments" class="arguments"></div>
+        </div>
+
+        <div class="subpanel">
+          <h3>Rendered</h3>
+          <output id="rendered"></output>
+        </div>
+
+        <div class="subpanel">
+          <h3>Diagnostics</h3>
+          <ul id="diagnostics" class="diagnostics"></ul>
+        </div>
+
+        <div class="subpanel">
+          <h3>Parts</h3>
+          <pre id="parts"></pre>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./editor.js"></script>
+  </body>
+</html>
+

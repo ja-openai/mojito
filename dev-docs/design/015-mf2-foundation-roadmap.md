@@ -156,6 +156,18 @@ Add MF2-aware editor surfaces:
 Start in a dedicated MF2 preview/editor tool, then wire into Workbench and
 text-unit detail.
 
+The first prototype is deliberately simpler than the target Mojito UI:
+
+- static HTML/CSS/JavaScript, no build step
+- raw MF2 textarea plus structured variant cards for `.input` + `.match`
+  messages
+- mechanical plural template insertion
+- locale/argument preview and simple format-to-parts output
+- local diagnostics for the supported prototype slice
+
+This lets us validate translator and PM workflows before choosing CodeMirror,
+Monaco, React component boundaries, or `mf2lsp` Wasm integration.
+
 ## Phase 4: Native Swift
 
 Create a zero-runtime-dependency Swift package:
