@@ -10,7 +10,8 @@ It is intentionally split into conformance data and implementation prototypes:
 - `python/`: zero-dependency Python runtime starter
 - `java/`: zero-dependency Java runtime starter for JVM/Kotlin interop
 - `reference/`: ICU reference comparison harnesses
-- `cldr/`: generated CLDR plural-rule data and generators
+- `cldr/`: generated CLDR plural-rule data, experimental number data, and
+  relative-time data generators
 - `examples/`: shared parser-free catalog demo used by all starter runtimes
 - `third_party/message-format-wg/test/`: vendored Unicode MessageFormat WG
   official tests, consumed directly by the Rust `unicode-tests` scoreboard
@@ -187,6 +188,13 @@ Run isolated all-locale plural-rule validation against ICU4J:
 
 ```sh
 (cd cldr && sh validate_plural_rules.sh)
+```
+
+Validate generated CLDR relative-time data for a future optional
+`:relativeTime` registry function:
+
+```sh
+(cd cldr && sh validate_relative_time_data.sh)
 ```
 
 Run ICU reference comparison:

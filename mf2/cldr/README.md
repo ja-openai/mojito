@@ -117,3 +117,49 @@ The generator currently sets compact decimal operands `c`/`e` to zero. That is
 correct for ordinary numeric arguments but not enough for compact-decimal
 selection semantics; wire runtime number formatting into operands before relying
 on compact exponent rules.
+
+## Relative-Time Data
+
+`generated/relative-time/all/relative_time.json` is a generated CLDR
+relative-time data artifact for a future optional `:relativeTime` function
+package. It is not part of the tiny MF2 core runtime yet. The data comes from
+CLDR `cldr-dates-full` `dateFields` and keeps localized numeric patterns such
+as `{0}m ago`, `in {0} days`, and locale-specific forms that deliberately omit
+`{0}` for categories like Arabic `one`/`two`.
+
+Regenerate all-locale relative-time data:
+
+```sh
+python3 generator/generate_relative_time_data.py \
+  --out generated/relative-time/all \
+  --clean
+```
+
+Generate an embedded/client-side subset:
+
+```sh
+python3 generator/generate_relative_time_data.py \
+  --locales en,fr,ja \
+  --styles narrow,short \
+  --units second,minute,hour,day \
+  --numeric-only \
+  --out /tmp/mf2-relative-time-custom \
+  --clean
+```
+
+Validate the checked-in relative-time artifact:
+
+```sh
+sh validate_relative_time_data.sh
+```
+
+Current size smoke results from CLDR `main` on 2026-05-21:
+
+- all locales, long/short/narrow, numeric patterns plus natural relative terms:
+  JSON ~2.9 MB, deduplicated to 269 pattern sets for 766 locales
+- all locales, long/short/narrow, numeric-only: JSON ~1.5 MB
+- all locales, narrow-only, numeric-only: JSON ~518 KB
+
+MF2 does not currently standardize a `:relativeTime` function. Treat this data
+as the generated-locale-data foundation for a Mojito/UMF registry function, not
+as a core MessageFormat 2 grammar feature.
