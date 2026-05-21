@@ -20,12 +20,11 @@ import com.box.l10n.mojito.rest.textunit.AiReviewType;
 import com.box.l10n.mojito.rest.textunit.AiReviewType.AiReviewTextUnitVariantOutput;
 import com.box.l10n.mojito.service.oaireview.AiReviewBatchesImportJob.AiReviewBatchesImportInput;
 import com.box.l10n.mojito.service.oaireview.AiReviewBatchesImportJob.AiReviewBatchesImportOutput;
-import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
-import com.box.l10n.mojito.service.pollableTask.MsgArg;
-import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.repository.RepositoryNameNotFoundException;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
@@ -103,6 +102,8 @@ public class AiReviewService {
 
   PollableTaskBlobStorage pollableTaskBlobStorage;
 
+  PollableTaskRunner pollableTaskRunner;
+
   MeterRegistry meterRegistry;
 
   /**
@@ -124,6 +125,7 @@ public class AiReviewService {
       @Qualifier("retryBackoffSpecReview") RetryBackoffSpec retryBackoffSpec,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
       PollableTaskBlobStorage pollableTaskBlobStorage,
+      PollableTaskRunner pollableTaskRunner,
       PollableTaskService pollableTaskService,
       MeterRegistry meterRegistry) {
     this.textUnitSearcher = Objects.requireNonNull(textUnitSearcher);
@@ -138,6 +140,7 @@ public class AiReviewService {
     this.retryBackoffSpec = Objects.requireNonNull(retryBackoffSpec);
     this.quartzPollableTaskScheduler = Objects.requireNonNull(quartzPollableTaskScheduler);
     this.pollableTaskBlobStorage = pollableTaskBlobStorage;
+    this.pollableTaskRunner = Objects.requireNonNull(pollableTaskRunner);
     this.pollableTaskService = pollableTaskService;
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
   }
@@ -669,10 +672,15 @@ public class AiReviewService {
     trySaveAiReviewProtosInTx(forSave);
   }
 
-  @Pollable(message = "AiReviewService Retry import for job id: {id}")
-  public PollableFuture<Void> retryImport(
-      @MsgArg(name = "id") long childPollableTaskId, @InjectCurrentTask PollableTask currentTask) {
+  public PollableFuture<Void> retryImport(long childPollableTaskId) {
+    return pollableTaskRunner.runSyncFuture(
+        PollableTaskInvocation.ofFuture(
+            "retryImport",
+            "AiReviewService Retry import for job id: " + childPollableTaskId,
+            currentTask -> retryImportForTask(childPollableTaskId, currentTask)));
+  }
 
+  PollableFuture<Void> retryImportForTask(long childPollableTaskId, PollableTask currentTask) {
     PollableTask childPollableTask = pollableTaskService.getPollableTask(childPollableTaskId);
 
     AiReviewBatchesImportInput aiReviewBatchesImportInput =
