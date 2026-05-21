@@ -188,6 +188,9 @@ Removed during this workstream:
   explicitly.
 - `TMService` no longer uses `@Transactional`; XLIFF export and localized import batch processing
   now open and commit their transaction boundaries explicitly.
+- `ReviewFeatureService` no longer uses `@Transactional`; review-feature reads and writes now open
+  and commit their transaction boundaries explicitly, with create/update detail reads kept inside
+  the same write transaction.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and

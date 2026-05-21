@@ -17,7 +17,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class ReviewFeatureService {
@@ -29,20 +32,38 @@ public class ReviewFeatureService {
   private final ReviewAutomationRepository reviewAutomationRepository;
   private final RepositoryRepository repositoryRepository;
   private final UserService userService;
+  private final PlatformTransactionManager transactionManager;
 
   public ReviewFeatureService(
       ReviewFeatureRepository reviewFeatureRepository,
       ReviewAutomationRepository reviewAutomationRepository,
       RepositoryRepository repositoryRepository,
-      UserService userService) {
+      UserService userService,
+      PlatformTransactionManager transactionManager) {
     this.reviewFeatureRepository = reviewFeatureRepository;
     this.reviewAutomationRepository = reviewAutomationRepository;
     this.repositoryRepository = repositoryRepository;
     this.userService = userService;
+    this.transactionManager = transactionManager;
   }
 
-  @Transactional(readOnly = true)
   public SearchReviewFeaturesView searchReviewFeatures(
+      String searchQuery, Boolean enabled, Integer limit) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      SearchReviewFeaturesView result = searchReviewFeaturesNoTx(searchQuery, enabled, limit);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SearchReviewFeaturesView searchReviewFeaturesNoTx(
       String searchQuery, Boolean enabled, Integer limit) {
     requireAdmin();
     int resolvedLimit = normalizeLimit(limit);
@@ -54,8 +75,22 @@ public class ReviewFeatureService {
     return new SearchReviewFeaturesView(summaries, page.getTotalElements());
   }
 
-  @Transactional(readOnly = true)
   public List<ReviewFeatureOption> getReviewFeatureOptions() {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<ReviewFeatureOption> result = getReviewFeatureOptionsNoTx();
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<ReviewFeatureOption> getReviewFeatureOptionsNoTx() {
     requireAdmin();
     return reviewFeatureRepository.findAllOptionRows().stream()
         .map(
@@ -64,8 +99,22 @@ public class ReviewFeatureService {
         .toList();
   }
 
-  @Transactional(readOnly = true)
   public List<ReviewFeatureBatchExportRow> getReviewFeatureBatchExportRows() {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<ReviewFeatureBatchExportRow> result = getReviewFeatureBatchExportRowsNoTx();
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<ReviewFeatureBatchExportRow> getReviewFeatureBatchExportRowsNoTx() {
     requireAdmin();
     List<ReviewFeatureOptionRow> optionRows = reviewFeatureRepository.findAllOptionRows();
     if (optionRows.isEmpty()) {
@@ -92,8 +141,22 @@ public class ReviewFeatureService {
         .toList();
   }
 
-  @Transactional(readOnly = true)
   public List<RepositoryCoverage> getRepositoryCoverage() {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<RepositoryCoverage> result = getRepositoryCoverageNoTx();
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<RepositoryCoverage> getRepositoryCoverageNoTx() {
     requireAdmin();
     List<Repository> repositories =
         repositoryRepository.findByDeletedFalseAndHiddenFalseOrderByNameAsc();
@@ -146,8 +209,22 @@ public class ReviewFeatureService {
         .toList();
   }
 
-  @Transactional(readOnly = true)
   public ReviewFeatureDetail getReviewFeature(Long featureId) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      ReviewFeatureDetail result = getReviewFeatureNoTx(featureId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReviewFeatureDetail getReviewFeatureNoTx(Long featureId) {
     requireAdmin();
     ReviewFeature reviewFeature =
         reviewFeatureRepository
@@ -173,8 +250,24 @@ public class ReviewFeatureService {
         repositories);
   }
 
-  @Transactional
   public ReviewFeatureDetail createReviewFeature(
+      String name, Boolean enabled, List<Long> repositoryIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      ReviewFeatureDetail result = createReviewFeatureNoTx(name, enabled, repositoryIds);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReviewFeatureDetail createReviewFeatureNoTx(
       String name, Boolean enabled, List<Long> repositoryIds) {
     requireAdmin();
     String normalizedName = normalizeName(name);
@@ -185,11 +278,27 @@ public class ReviewFeatureService {
     reviewFeature.setEnabled(enabled == null ? Boolean.TRUE : enabled);
     reviewFeature.setRepositories(resolveRepositories(repositoryIds));
     ReviewFeature saved = reviewFeatureRepository.save(reviewFeature);
-    return getReviewFeature(saved.getId());
+    return getReviewFeatureNoTx(saved.getId());
   }
 
-  @Transactional
   public ReviewFeatureDetail updateReviewFeature(
+      Long featureId, String name, Boolean enabled, List<Long> repositoryIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      ReviewFeatureDetail result = updateReviewFeatureNoTx(featureId, name, enabled, repositoryIds);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  ReviewFeatureDetail updateReviewFeatureNoTx(
       Long featureId, String name, Boolean enabled, List<Long> repositoryIds) {
     requireAdmin();
     ReviewFeature reviewFeature =
@@ -205,11 +314,25 @@ public class ReviewFeatureService {
     reviewFeature.setEnabled(enabled == null ? Boolean.TRUE : enabled);
     reviewFeature.setRepositories(resolveRepositories(repositoryIds));
     reviewFeatureRepository.save(reviewFeature);
-    return getReviewFeature(reviewFeature.getId());
+    return getReviewFeatureNoTx(reviewFeature.getId());
   }
 
-  @Transactional
   public void deleteReviewFeature(Long featureId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      deleteReviewFeatureNoTx(featureId);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteReviewFeatureNoTx(Long featureId) {
     requireAdmin();
     ReviewFeature reviewFeature =
         reviewFeatureRepository
@@ -220,8 +343,23 @@ public class ReviewFeatureService {
     reviewFeatureRepository.delete(reviewFeature);
   }
 
-  @Transactional
   public BatchUpsertResult batchUpsert(List<BatchUpsertRow> rows) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      BatchUpsertResult result = batchUpsertNoTx(rows);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  BatchUpsertResult batchUpsertNoTx(List<BatchUpsertRow> rows) {
     requireAdmin();
     if (rows == null || rows.isEmpty()) {
       return new BatchUpsertResult(0, 0);
@@ -273,6 +411,13 @@ public class ReviewFeatureService {
     }
 
     return new BatchUpsertResult(createdCount, updatedCount);
+  }
+
+  private DefaultTransactionDefinition readOnlyTransaction() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    return transactionDefinition;
   }
 
   private Map<Long, List<SearchReviewFeaturesView.RepositorySummary>> loadRepositoriesByFeatureId(
