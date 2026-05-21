@@ -4,7 +4,7 @@ import static com.box.l10n.mojito.service.drop.exporter.DropExporterDirectories.
 import static com.box.l10n.mojito.service.drop.exporter.DropExporterDirectories.DROP_FOLDER_SOURCE_FILES_NAME;
 import static org.junit.Assert.*;
 
-import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
+import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.drop.importer.DropImporterException;
 import com.box.l10n.mojito.service.drop.importer.FileSystemDropImporter;
 import com.box.l10n.mojito.test.TestIdWatcher;
@@ -21,24 +21,29 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jaurambault
  */
-public class FileSystemDropExporterTest extends ServiceTestBase {
+public class FileSystemDropExporterTest {
 
   static Logger logger = LoggerFactory.getLogger(FileSystemDropExporterTest.class);
 
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
 
+  ObjectMapper objectMapper = new ObjectMapper();
+
+  FileSystemDropExporterConfigFromProperties fileSystemDropExporterConfigFromProperties =
+      new FileSystemDropExporterConfigFromProperties();
+
   @Test
   public void all() throws DropExporterException, DropImporterException {
 
     logger.debug("Test initial creation");
-    FileSystemDropExporter fileSystemDropExporter = new FileSystemDropExporter();
+    FileSystemDropExporter fileSystemDropExporter = newFileSystemDropExporter();
     String groupName = testIdWatcher.getEntityName("groupName");
     String dropName =
         groupName + new SimpleDateFormat(" (EEEE) - dd MMMM YYYY - HH.mm.ss").format(new Date());
     fileSystemDropExporter.init(groupName, dropName);
 
     logger.debug("Test re-creation from config");
-    FileSystemDropExporter recreate = new FileSystemDropExporter();
+    FileSystemDropExporter recreate = newFileSystemDropExporter();
     recreate.setConfig(fileSystemDropExporter.getConfig());
     recreate.init(groupName, dropName);
 
@@ -92,8 +97,12 @@ public class FileSystemDropExporterTest extends ServiceTestBase {
     Calendar cal = Calendar.getInstance();
     cal.set(2013, 0, 1, 0, 0, 0);
 
-    FileSystemDropExporter fileSystemDropExporter = new FileSystemDropExporter();
+    FileSystemDropExporter fileSystemDropExporter = newFileSystemDropExporter();
     String res = fileSystemDropExporter.getSourceFileName(cal.getTime(), "fre");
     assertEquals("fre_01-01-13.xliff", res);
+  }
+
+  private FileSystemDropExporter newFileSystemDropExporter() {
+    return new FileSystemDropExporter(objectMapper, fileSystemDropExporterConfigFromProperties);
   }
 }

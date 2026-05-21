@@ -5,6 +5,7 @@ import static com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation.DE
 import com.box.l10n.mojito.entity.Drop;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.drop.DropRepository;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
@@ -26,6 +27,10 @@ public class DropExporterService {
   @Autowired DropRepository dropRepository;
 
   @Autowired PollableTaskRunner pollableTaskRunner;
+
+  @Autowired ObjectMapper objectMapper;
+
+  @Autowired FileSystemDropExporterConfigFromProperties fileSystemDropExporterConfigFromProperties;
 
   /**
    * Creates and initializes a {@link DropExporter} for a {@link Drop}. Gets the {@link
@@ -61,8 +66,7 @@ public class DropExporterService {
     Repository repository = drop.getRepository();
 
     logger.debug("Get the drop exporter based for repository id: {}", repository.getId());
-    DropExporter dropExporter =
-        createDropExporterInstance(repository.getDropExporterType().getClassName());
+    DropExporter dropExporter = createDropExporterInstance(repository.getDropExporterType());
     dropExporter.init(repository.getName(), drop.getName());
 
     logger.debug("Update the drop entity with dropExporter configuration");
@@ -93,8 +97,7 @@ public class DropExporterService {
   public DropExporter recreateDropExporter(Drop drop) throws DropExporterException {
 
     logger.debug("Get the drop exporter based for an existing drop id: {}", drop.getId());
-    DropExporter dropExporter =
-        createDropExporterInstance(drop.getDropExporterType().getClassName());
+    DropExporter dropExporter = createDropExporterInstance(drop.getDropExporterType());
 
     logger.debug("Set the config coming from the Drop and initialize the dropExporter");
     dropExporter.setConfig(drop.getDropExporterConfig());
@@ -104,25 +107,19 @@ public class DropExporterService {
   }
 
   /**
-   * Creates a {@link DropExporter} instance using reflection for a given class name.
+   * Creates a {@link DropExporter} instance for a given type.
    *
-   * @param className class name used to create the {@link DropExporter} via reflexion
+   * @param dropExporterType type used to create the {@link DropExporter}
    * @return an instance of
    * @throws DropExporterInstantiationException if the {@link DropExporter} couldn't be created
    */
-  private DropExporter createDropExporterInstance(String className)
+  private DropExporter createDropExporterInstance(DropExporterType dropExporterType)
       throws DropExporterInstantiationException {
-
-    DropExporter dropExporter;
-
-    try {
-      Class<?> clazz = Class.forName(className);
-      dropExporter = (DropExporter) clazz.newInstance();
-    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      throw new DropExporterInstantiationException(
-          "Cannot create an instance of DropExporter using reflexion", e);
+    if (dropExporterType == DropExporterType.FILE_SYSTEM) {
+      return new FileSystemDropExporter(objectMapper, fileSystemDropExporterConfigFromProperties);
     }
 
-    return dropExporter;
+    throw new DropExporterInstantiationException(
+        "Unsupported DropExporterType: " + dropExporterType, null);
   }
 }

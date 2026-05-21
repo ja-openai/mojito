@@ -1,7 +1,7 @@
 package com.box.l10n.mojito.service.drop.exporter;
 
 /**
- * Thrown if it is not possible to create an instance of a {@link DropExporter} via reflection.
+ * Thrown if it is not possible to create an instance of a {@link DropExporter}.
  *
  * @author jaurambault
  */
