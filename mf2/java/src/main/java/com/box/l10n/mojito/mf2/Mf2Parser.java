@@ -342,7 +342,15 @@ final class Mf2Parser {
 
     private String consumeBracedContent() {
         int start = index;
-        expectChar('{');
+        if (peekChar() != '{') {
+            pushDiagnostic(
+                    "missing-placeholder",
+                    "Expected a placeholder starting with '{'.",
+                    start,
+                    start);
+            return null;
+        }
+        advanceChar();
         int contentStart = index;
         while (!isDone()) {
             if (peekChar() == '}') {
@@ -376,7 +384,10 @@ final class Mf2Parser {
             }
             expression = new Mf2Message.Expression(
                     new Mf2Message.VariableArgument(split.name()), null, Map.of());
-            rest = split.rest().stripLeading();
+            rest = restAfterOperand(split.rest(), start, end);
+            if (rest == null) {
+                return null;
+            }
         } else if (content.startsWith("|")) {
             int close = content.indexOf('|', 1);
             if (close < 0) {
@@ -389,17 +400,29 @@ final class Mf2Parser {
             }
             expression = new Mf2Message.Expression(
                     new Mf2Message.LiteralArgument(content.substring(1, close)), null, Map.of());
-            rest = content.substring(close + 1).stripLeading();
+            rest = restAfterOperand(content.substring(close + 1), start, end);
+            if (rest == null) {
+                return null;
+            }
         } else if (content.startsWith(":")) {
             expression = new Mf2Message.Expression(null, null, Map.of());
             rest = content;
         } else {
-            pushDiagnostic(
-                    "unsupported-expression",
-                    "Only variables, quoted literals, and function annotations are supported.",
-                    start,
-                    end);
-            return null;
+            LiteralSplit split = splitUnquotedLiteral(content);
+            if (split == null) {
+                pushDiagnostic(
+                        content.isEmpty() ? "missing-expression" : "invalid-literal",
+                        "Placeholder literal is invalid.",
+                        start,
+                        end);
+                return null;
+            }
+            expression = new Mf2Message.Expression(
+                    new Mf2Message.LiteralArgument(split.value()), null, Map.of());
+            rest = restAfterOperand(split.rest(), start, end);
+            if (rest == null) {
+                return null;
+            }
         }
 
         if (rest.isEmpty()) {
@@ -411,6 +434,21 @@ final class Mf2Parser {
             return null;
         }
         return new Mf2Message.Expression(expression.arg(), tail.function(), tail.attributes());
+    }
+
+    private String restAfterOperand(String rest, int start, int end) {
+        if (rest.isEmpty()) {
+            return rest;
+        }
+        if (!Character.isWhitespace(rest.codePointAt(0))) {
+            pushDiagnostic(
+                    "missing-expression-space",
+                    "Expression arguments must be separated from functions or attributes by whitespace.",
+                    start,
+                    end);
+            return null;
+        }
+        return rest.stripLeading();
     }
 
     private Tail parseTail(String rest, int start, int end) {
@@ -599,9 +637,25 @@ final class Mf2Parser {
                     end);
             return null;
         }
-        return new AttributeParseResult(
-                split.name(),
-                new Mf2Message.LiteralAttribute(parseLiteralOrVariable(content.substring(equals + 1))));
+        Mf2Message.AttributeValue value = parseAttributeValue(content.substring(equals + 1), start, end);
+        return value == null ? null : new AttributeParseResult(split.name(), value);
+    }
+
+    private Mf2Message.AttributeValue parseAttributeValue(String rawValue, int start, int end) {
+        if (rawValue.startsWith("|") && rawValue.endsWith("|") && rawValue.length() >= 2) {
+            return new Mf2Message.LiteralAttribute(
+                    new Mf2Message.LiteralArgument(rawValue.substring(1, rawValue.length() - 1)));
+        }
+        LiteralSplit split = splitUnquotedLiteral(rawValue);
+        if (split == null || !split.rest().isEmpty()) {
+            pushDiagnostic(
+                    "invalid-attribute",
+                    "Attribute value must be a single literal.",
+                    start,
+                    end);
+            return null;
+        }
+        return new Mf2Message.LiteralAttribute(new Mf2Message.LiteralArgument(split.value()));
     }
 
     private Mf2Message.Markup parseMarkupContent(String content, int start, int end) {
@@ -718,11 +772,6 @@ final class Mf2Parser {
         return ch;
     }
 
-    private void expectChar(char expected) {
-        char actual = advanceChar();
-        assert actual == expected;
-    }
-
     private void pushDiagnostic(String code, String message, int start, int end) {
         diagnostics.add(new Diagnostic(code, message, baseOffset + start, baseOffset + end));
     }
@@ -739,6 +788,33 @@ final class Mf2Parser {
             return new Mf2Message.LiteralArgument(rawValue.substring(1, rawValue.length() - 1));
         }
         return new Mf2Message.LiteralArgument(rawValue);
+    }
+
+    private static LiteralSplit splitUnquotedLiteral(String input) {
+        int scan = 0;
+        boolean sawChar = false;
+        while (scan < input.length()) {
+            int codePoint = input.codePointAt(scan);
+            if (Character.isWhitespace(codePoint) || codePoint == ':' || codePoint == '@') {
+                break;
+            }
+            if (!isUnquotedLiteralChar(codePoint)) {
+                return null;
+            }
+            sawChar = true;
+            scan += Character.charCount(codePoint);
+        }
+        return sawChar ? new LiteralSplit(input.substring(0, scan), input.substring(scan)) : null;
+    }
+
+    private static boolean isUnquotedLiteralChar(int codePoint) {
+        if (Character.isISOControl(codePoint) || Character.isWhitespace(codePoint) || isNoncharacter(codePoint)) {
+            return false;
+        }
+        return switch (codePoint) {
+            case '^', '!', '%', '*', '<', '>', '?', '~', '&' -> false;
+            default -> true;
+        };
     }
 
     private static String variableNameDiagnosticCode(String input) {
@@ -914,6 +990,8 @@ final class Mf2Parser {
     private record NameSplit(String name, String rest, int consumedLength) {}
 
     private record NameScan(String name, int endIndex) {}
+
+    private record LiteralSplit(String value, String rest) {}
 
     private record Tail(Mf2Message.FunctionRef function, Map<String, Mf2Message.AttributeValue> attributes) {}
 

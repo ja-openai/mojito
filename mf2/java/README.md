@@ -8,6 +8,7 @@ Current target:
   JSON by test/demo tooling
 - parse MF2 source into the official MF2 Interchange Data Model for the current
   supported fixture slice
+- parse quoted and unquoted literal placeholders such as `{|ready|}` and `{42}`
 - support Unicode MF2 variable names, edge bidi controls around names, and
   namespaced identifiers in the source parser
 - preserve expression and markup attributes in parsed/decoded models, including

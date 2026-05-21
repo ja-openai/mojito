@@ -33,13 +33,13 @@ Supported now:
 - literal text
 - escaped `\{`, `\}`, and `\\`
 - variable placeholders of the form `{$name}`
-- Unicode text, argument values, and quoted literals
+- quoted and unquoted literal placeholders such as `{|Mojito|}` and `{42}`
+- Unicode text, argument values, and literal placeholders
 - Unicode MF2 variable names, edge bidi controls around names, and namespaced
   identifiers
 - quoted pattern bodies for complex messages
 - `.input` declarations
 - `.local` declarations
-- quoted literal expressions such as `{|Mojito|}`
 - function annotations such as `{$count :number}`
 - literal/variable function options in the data model, including quoted values
   containing spaces

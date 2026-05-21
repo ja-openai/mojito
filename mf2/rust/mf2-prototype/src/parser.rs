@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use crate::diagnostic::Diagnostic;
 use crate::model::{
-    AttributeValue, Declaration, Expression, ExpressionArg, FunctionRef, Markup, MessageModel, Pattern,
-    PatternPart, VariableRef, Variant, VariantKey,
+    AttributeValue, Declaration, Expression, ExpressionArg, FunctionRef, Markup, MessageModel,
+    Pattern, PatternPart, VariableRef, Variant, VariantKey,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -379,7 +379,16 @@ impl<'a> Parser<'a> {
 
     fn consume_braced_content(&mut self) -> Option<&'a str> {
         let start = self.index;
-        self.expect_char('{');
+        if self.peek_char() != Some('{') {
+            self.push_diagnostic(
+                "missing-placeholder",
+                "Expected a placeholder starting with '{'.",
+                start,
+                start,
+            );
+            return None;
+        }
+        self.advance_char();
         let content_start = self.index;
         while let Some(ch) = self.peek_char() {
             if ch == '}' {
@@ -408,15 +417,13 @@ impl<'a> Parser<'a> {
             let (name, rest) = split_name(rest);
             if name.is_empty() {
                 let code = variable_name_diagnostic_code(rest);
-                self.push_diagnostic(
-                    code,
-                    "Variable placeholder is missing a name.",
-                    start,
-                    end,
-                );
+                self.push_diagnostic(code, "Variable placeholder is missing a name.", start, end);
                 return None;
             }
-            (Expression::variable(name), rest.trim_start())
+            (
+                Expression::variable(name),
+                self.rest_after_operand(rest, start, end)?,
+            )
         } else if let Some(rest) = content.strip_prefix('|') {
             let Some(close) = rest.find('|') else {
                 self.push_diagnostic(
@@ -429,18 +436,24 @@ impl<'a> Parser<'a> {
             };
             (
                 Expression::literal(&rest[..close]),
-                rest[close + 1..].trim_start(),
+                self.rest_after_operand(&rest[close + 1..], start, end)?,
             )
         } else if content.starts_with(':') {
             (Expression::function_only(), content)
         } else {
-            self.push_diagnostic(
-                "unsupported-expression",
-                "Only variables, quoted literals, and function annotations are supported.",
-                start,
-                end,
-            );
-            return None;
+            let Some((literal, rest)) = split_unquoted_literal(content) else {
+                let code = if content.is_empty() {
+                    "missing-expression"
+                } else {
+                    "invalid-literal"
+                };
+                self.push_diagnostic(code, "Placeholder literal is invalid.", start, end);
+                return None;
+            };
+            (
+                Expression::literal(literal),
+                self.rest_after_operand(rest, start, end)?,
+            )
         };
 
         if rest.is_empty() {
@@ -454,6 +467,27 @@ impl<'a> Parser<'a> {
         expression = expression.with_attributes(tail.attributes);
 
         Some(expression)
+    }
+
+    fn rest_after_operand<'b>(
+        &mut self,
+        rest: &'b str,
+        start: usize,
+        end: usize,
+    ) -> Option<&'b str> {
+        if rest.is_empty() {
+            return Some(rest);
+        }
+        if !rest.chars().next().is_some_and(|ch| ch.is_whitespace()) {
+            self.push_diagnostic(
+                "missing-expression-space",
+                "Expression arguments must be separated from functions or attributes by whitespace.",
+                start,
+                end,
+            );
+            return None;
+        }
+        Some(rest.trim_start())
     }
 
     fn parse_tail(&mut self, rest: &str, start: usize, end: usize) -> Option<Tail> {
@@ -564,12 +598,7 @@ impl<'a> Parser<'a> {
             } else {
                 "invalid-function-name"
             };
-            self.push_diagnostic(
-                code,
-                "Function annotation is missing a name.",
-                start,
-                end,
-            );
+            self.push_diagnostic(code, "Function annotation is missing a name.", start, end);
             return None;
         }
         if !rest.is_empty() {
@@ -685,8 +714,42 @@ impl<'a> Parser<'a> {
                 }
                 name
             },
-            AttributeValue::Literal(parse_literal_or_variable(raw_value)),
+            self.parse_attribute_value(raw_value, start, end)?,
         ))
+    }
+
+    fn parse_attribute_value(
+        &mut self,
+        raw_value: &str,
+        start: usize,
+        end: usize,
+    ) -> Option<AttributeValue> {
+        if raw_value.starts_with('|') && raw_value.ends_with('|') && raw_value.len() >= 2 {
+            return Some(AttributeValue::Literal(ExpressionArg::Literal {
+                value: raw_value[1..raw_value.len() - 1].to_string(),
+            }));
+        }
+        let Some((literal, rest)) = split_unquoted_literal(raw_value) else {
+            self.push_diagnostic(
+                "invalid-attribute",
+                "Attribute value must be a literal.",
+                start,
+                end,
+            );
+            return None;
+        };
+        if !rest.is_empty() {
+            self.push_diagnostic(
+                "invalid-attribute",
+                "Attribute value must be a single literal.",
+                start,
+                end,
+            );
+            return None;
+        }
+        Some(AttributeValue::Literal(ExpressionArg::Literal {
+            value: literal.to_string(),
+        }))
     }
 
     fn parse_markup_content(&mut self, content: &str, start: usize, end: usize) -> Option<Markup> {
@@ -748,12 +811,7 @@ impl<'a> Parser<'a> {
         let (name, rest) = split_name(raw_name);
         if name.is_empty() {
             let code = variable_name_diagnostic_code(raw_name);
-            self.push_diagnostic(
-                code,
-                "Variable is missing a name.",
-                start,
-                self.index,
-            );
+            self.push_diagnostic(code, "Variable is missing a name.", start, self.index);
             return None;
         }
         self.index = self.source.len() - rest.len();
@@ -806,11 +864,6 @@ impl<'a> Parser<'a> {
         Some(ch)
     }
 
-    fn expect_char(&mut self, expected: char) {
-        let actual = self.advance_char();
-        debug_assert_eq!(actual, Some(expected));
-    }
-
     fn push_diagnostic(
         &mut self,
         code: impl Into<String>,
@@ -849,6 +902,33 @@ fn parse_literal_or_variable(raw_value: &str) -> ExpressionArg {
     }
 }
 
+fn split_unquoted_literal(input: &str) -> Option<(&str, &str)> {
+    let mut scan = 0;
+    let mut saw_char = false;
+    while let Some(ch) = input[scan..].chars().next() {
+        if ch.is_whitespace() || ch == ':' || ch == '@' {
+            break;
+        }
+        if !is_unquoted_literal_char(ch) {
+            return None;
+        }
+        saw_char = true;
+        scan += ch.len_utf8();
+    }
+    saw_char.then_some((&input[..scan], &input[scan..]))
+}
+
+fn is_unquoted_literal_char(ch: char) -> bool {
+    if ch.is_control() || ch.is_whitespace() {
+        return false;
+    }
+    let code = ch as u32;
+    if is_noncharacter(code) {
+        return false;
+    }
+    !matches!(ch, '^' | '!' | '%' | '*' | '<' | '>' | '?' | '~' | '&')
+}
+
 fn variable_name_diagnostic_code(input: &str) -> &'static str {
     match input.chars().next() {
         None | Some('}' | ' ' | '\t' | '\n' | '\r') => "missing-variable-name",
@@ -857,11 +937,7 @@ fn variable_name_diagnostic_code(input: &str) -> &'static str {
 }
 
 fn split_name(input: &str) -> (&str, &str) {
-    if input
-        .as_bytes()
-        .first()
-        .is_some_and(|byte| byte.is_ascii())
-    {
+    if input.as_bytes().first().is_some_and(|byte| byte.is_ascii()) {
         if let Some(split) = split_ascii_name(input, 0) {
             return split;
         }
