@@ -90,6 +90,8 @@ In progress:
   calls `PollableTaskRunner` directly and uses the runner task for the child retry.
 - `AiTranslateService.retryImport` no longer uses `@Pollable`, `@MsgArg`, or
   `@InjectCurrentTask`; it calls `PollableTaskRunner` directly and keeps resume handling explicit.
+- `DropExporterService.createDropExporterAndUpdateDrop` no longer uses `@Pollable` or
+  `@ParentTask`; it calls `PollableTaskRunner` directly with the parent task id and timeout.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
