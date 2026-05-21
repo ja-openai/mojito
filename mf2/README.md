@@ -80,6 +80,8 @@ The current conformance slice covers:
 - formatter function registries in Rust/Swift/Python/Java; default runtimes
   pass through the current standard-function slice, while demos register a
   narrow dependency-free `:currency` function outside the core formatter
+- Rust validation-only `:date`, `:time`, and `:datetime` built-ins that enforce
+  simple ISO date/datetime operand shape without claiming locale formatting
 - expression and markup attributes in the data model, including quoted attribute
   values containing spaces
 - `.input` and `.local` declarations, including multiple inputs and chained locals

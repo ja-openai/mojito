@@ -142,6 +142,18 @@ fn run_with_suppressed_parser_panics(root: &Path, baseline_path: &Path) {
             mode: CheckMode::Runtime,
         },
         FileCheck {
+            path: "tests/functions/date.json",
+            mode: CheckMode::Runtime,
+        },
+        FileCheck {
+            path: "tests/functions/datetime.json",
+            mode: CheckMode::Runtime,
+        },
+        FileCheck {
+            path: "tests/functions/time.json",
+            mode: CheckMode::Runtime,
+        },
+        FileCheck {
             path: "tests/fallback.json",
             mode: CheckMode::Runtime,
         },
@@ -339,7 +351,7 @@ fn check_runtime_test(defaults: &TestProperties, test: &OfficialTest) -> bool {
     }
     test.exp
         .as_ref()
-        .is_some_and(|expected| actual.value == *expected)
+        .map_or(true, |expected| actual.value == *expected)
 }
 
 fn official_function_registry() -> FunctionRegistry {

@@ -57,6 +57,8 @@ Supported now:
 - function registry selector hooks for custom `.match` functions, including
   ranked best-match selection and resolved-value metadata propagation through
   inputs/locals used by the Unicode official test harness
+- validation-only `:date`, `:time`, and `:datetime` built-ins for simple ISO
+  date/datetime operands; locale-sensitive presentation is still deferred
 - cardinal and ordinal plural category matching for number inputs in every
   generated CLDR plural locale
 

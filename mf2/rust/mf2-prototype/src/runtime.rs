@@ -164,9 +164,12 @@ impl FunctionRegistry {
 impl Default for FunctionRegistry {
     fn default() -> Self {
         let mut registry = Self::empty();
-        for name in ["string", "number", "integer", "datetime", "date", "time"] {
+        for name in ["string", "number", "integer"] {
             registry.register(name, passthrough_function);
         }
+        registry.register("datetime", datetime_function);
+        registry.register("date", date_function);
+        registry.register("time", time_function);
         registry
     }
 }
@@ -290,6 +293,69 @@ fn option_value(
 
 fn passthrough_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     Ok(call.value().to_string())
+}
+
+fn datetime_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    let value = call.value();
+    if is_iso_date(value) || is_iso_datetime(value) {
+        return Ok(value.to_string());
+    }
+    Err(bad_operand(
+        "Datetime function requires a date or datetime operand.",
+    ))
+}
+
+fn time_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    require_datetime_operand(call.value())?;
+    Ok(call.value().to_string())
+}
+
+fn date_function(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
+    let value = call.value();
+    if is_iso_date(value) || is_iso_datetime(value) {
+        Ok(value.to_string())
+    } else {
+        Err(bad_operand(
+            "Date function requires a date or datetime operand.",
+        ))
+    }
+}
+
+fn require_datetime_operand(value: &str) -> Result<(), Diagnostic> {
+    if is_iso_datetime(value) {
+        Ok(())
+    } else {
+        Err(bad_operand(
+            "Datetime and time functions require a datetime operand.",
+        ))
+    }
+}
+
+fn is_iso_datetime(value: &str) -> bool {
+    let Some((date, time)) = value.split_once('T') else {
+        return false;
+    };
+    is_iso_date(date) && is_iso_time(time)
+}
+
+fn is_iso_date(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() == 10
+        && bytes[4] == b'-'
+        && bytes[7] == b'-'
+        && bytes[..4].iter().all(u8::is_ascii_digit)
+        && bytes[5..7].iter().all(u8::is_ascii_digit)
+        && bytes[8..].iter().all(u8::is_ascii_digit)
+}
+
+fn is_iso_time(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() == 8
+        && bytes[2] == b':'
+        && bytes[5] == b':'
+        && bytes[..2].iter().all(u8::is_ascii_digit)
+        && bytes[3..5].iter().all(u8::is_ascii_digit)
+        && bytes[6..].iter().all(u8::is_ascii_digit)
 }
 
 fn default_function_registry() -> &'static FunctionRegistry {
