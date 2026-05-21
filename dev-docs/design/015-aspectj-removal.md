@@ -104,6 +104,8 @@ In progress:
 - `AssetExtractionService.createTextUnitsForNewContent` overloads no longer use `@Pollable` or
   `@ParentTask`; the explicit wrappers create pollable tasks and keep the existing Micrometer
   timing around the text-unit creation body.
+- `AssetExtractionService.performLeveraging` no longer uses `@Pollable` or `@ParentTask`; it
+  creates its pollable subtask explicitly before running leveraging.
 - `@Configurable`, Spring Security AspectJ mode, and the compile-time weaving build path remain to
   be migrated.
 
