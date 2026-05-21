@@ -177,6 +177,9 @@ Removed during this workstream:
   same transaction.
 - `ScreenshotService` no longer uses `@Transactional`; screenshot-run creation, screenshot search,
   and screenshot deletion now open and commit their transaction boundaries explicitly.
+- `CommitService` no longer uses `@Transactional`; commit creation and push/pull-run association
+  writes now open and commit their transaction boundaries explicitly while preserving checked
+  exceptions.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
 - `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and

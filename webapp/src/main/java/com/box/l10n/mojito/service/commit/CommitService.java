@@ -29,7 +29,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Service to manage commits.
@@ -49,6 +51,7 @@ public class CommitService {
   final PullRunRepository pullRunRepository;
 
   final RepositoryRepository repositoryRepository;
+  final PlatformTransactionManager transactionManager;
 
   public CommitService(
       CommitRepository commitRepository,
@@ -56,13 +59,15 @@ public class CommitService {
       CommitToPullRunRepository commitToPullRunRepository,
       PushRunRepository pushRunRepository,
       PullRunRepository pullRunRepository,
-      RepositoryRepository repositoryRepository) {
+      RepositoryRepository repositoryRepository,
+      PlatformTransactionManager transactionManager) {
     this.commitRepository = commitRepository;
     this.commitToPushRunRepository = commitToPushRunRepository;
     this.commitToPullRunRepository = commitToPullRunRepository;
     this.pushRunRepository = pushRunRepository;
     this.pullRunRepository = pullRunRepository;
     this.repositoryRepository = repositoryRepository;
+    this.transactionManager = transactionManager;
   }
 
   /**
@@ -103,8 +108,35 @@ public class CommitService {
    *
    * @return The newly created {@link View.Commit}.
    */
-  @Transactional
   public Commit getOrCreateCommit(
+      Repository repository,
+      String commitName,
+      String authorEmail,
+      String authorName,
+      ZonedDateTime sourceCreationDate)
+      throws SaveCommitMismatchedExistingDataException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      Commit result =
+          getOrCreateCommitNoTx(
+              repository, commitName, authorEmail, authorName, sourceCreationDate);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (SaveCommitMismatchedExistingDataException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Commit getOrCreateCommitNoTx(
       Repository repository,
       String commitName,
       String authorEmail,
@@ -213,8 +245,31 @@ public class CommitService {
   }
 
   /** See {@link CommitService#associateCommitToPushRun(Commit, PushRun)}. */
-  @Transactional
   public void associateCommitToPushRun(Long repositoryId, String commitName, String pushRunName)
+      throws CommitWithNameNotFoundException,
+          RepositoryWithIdNotFoundException,
+          PushRunWithNameNotFoundException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      associateCommitToPushRunNoTx(repositoryId, commitName, pushRunName);
+      transactionManager.commit(transaction);
+    } catch (CommitWithNameNotFoundException
+        | RepositoryWithIdNotFoundException
+        | PushRunWithNameNotFoundException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void associateCommitToPushRunNoTx(Long repositoryId, String commitName, String pushRunName)
       throws CommitWithNameNotFoundException,
           RepositoryWithIdNotFoundException,
           PushRunWithNameNotFoundException {
@@ -233,7 +288,7 @@ public class CommitService {
             .findByNameAndRepository(pushRunName, repository)
             .orElseThrow(() -> new PushRunWithNameNotFoundException(pushRunName));
 
-    associateCommitToPushRun(commit, pushRun);
+    associateCommitToPushRunNoTx(commit, pushRun);
   }
 
   /**
@@ -241,8 +296,23 @@ public class CommitService {
    * same commitID will get overwritten. This API should only be called by the push command after
    * all assets were processed successfully.
    */
-  @Transactional
   public void associateCommitToPushRun(Commit commit, PushRun pushRun) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      associateCommitToPushRunNoTx(commit, pushRun);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void associateCommitToPushRunNoTx(Commit commit, PushRun pushRun) {
     CommitToPushRun commitToPushRun =
         commitToPushRunRepository.findByCommitId(commit.getId()).orElse(new CommitToPushRun());
 
@@ -253,8 +323,27 @@ public class CommitService {
   }
 
   /** See {@link CommitService#associateCommitToPullRun(Commit, PullRun)}. */
-  @Transactional
   public void associateCommitToPullRun(Long repositoryId, String commitName, String pullRunName)
+      throws CommitWithNameNotFoundException, PullRunWithNameNotFoundException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      associateCommitToPullRunNoTx(repositoryId, commitName, pullRunName);
+      transactionManager.commit(transaction);
+    } catch (CommitWithNameNotFoundException | PullRunWithNameNotFoundException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void associateCommitToPullRunNoTx(Long repositoryId, String commitName, String pullRunName)
       throws CommitWithNameNotFoundException, PullRunWithNameNotFoundException {
     Commit commit =
         commitRepository
@@ -266,7 +355,7 @@ public class CommitService {
             .findByName(pullRunName)
             .orElseThrow(() -> new PullRunWithNameNotFoundException(pullRunName));
 
-    associateCommitToPullRun(commit, PullRun);
+    associateCommitToPullRunNoTx(commit, PullRun);
   }
 
   /**
@@ -274,8 +363,23 @@ public class CommitService {
    * same commitID will get overwritten. This API should only be called once the localized files
    * generated by the pull command are fully checked-in to the target repo.
    */
-  @Transactional
   public void associateCommitToPullRun(Commit commit, PullRun pullRun) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      associateCommitToPullRunNoTx(commit, pullRun);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void associateCommitToPullRunNoTx(Commit commit, PullRun pullRun) {
     CommitToPullRun commitToPullRun =
         commitToPullRunRepository.findByCommitId(commit.getId()).orElse(new CommitToPullRun());
 
