@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.service.drop;
 
+import static com.box.l10n.mojito.service.pollableTask.PollableAspectParameters.DEFAULT_TIMEOUT;
+
 import com.box.l10n.mojito.JSR310Migration;
 import com.box.l10n.mojito.entity.Drop;
 import com.box.l10n.mojito.entity.Locale;
@@ -21,6 +23,8 @@ import com.box.l10n.mojito.service.pollableTask.ParentTask;
 import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskInvocation;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskRunner;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -63,6 +67,8 @@ public class DropService {
   @Autowired TMService tmService;
 
   @Autowired PollableTaskService pollableTaskService;
+
+  @Autowired PollableTaskRunner pollableTaskRunner;
 
   @Autowired DropServiceConfig dropServiceConfig;
 
@@ -318,13 +324,29 @@ public class DropService {
    * @param importStatus specific status to use when importing translation
    * @param parentTask
    */
-  @Pollable(message = "Update TM with file: {fileName}")
   private UpdateTMWithXLIFFResult updateTMWithLocalizedXLIFF(
-      @MsgArg(name = "fileName", accessor = "getName") DropFile dropFile,
-      TMTextUnitVariant.Status importStatus,
-      @ParentTask PollableTask parentTask)
+      DropFile dropFile, TMTextUnitVariant.Status importStatus, PollableTask parentTask)
       throws ImportDropException {
+    try {
+      return pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "updateTMWithLocalizedXLIFF",
+              "Update TM with file: " + dropFile.getName(),
+              0,
+              getTimeout(parentTask),
+              currentTask -> updateTMWithLocalizedXLIFFDirect(dropFile, importStatus)));
+    } catch (ImportDropException e) {
+      throw e;
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error updating TM with localized XLIFF", t);
+    }
+  }
 
+  private UpdateTMWithXLIFFResult updateTMWithLocalizedXLIFFDirect(
+      DropFile dropFile, TMTextUnitVariant.Status importStatus) throws ImportDropException {
     try {
       return tmService.updateTMWithTranslationKitXLIFF(
           dropFile.getContent(), importStatus, dropServiceConfig.getDropImporterUsername());
@@ -333,17 +355,42 @@ public class DropService {
     }
   }
 
-  @Pollable(
-      message =
-          "Export the \"imported\" file with meta information related to import process: {fileName}")
   private void exportImportedFile(
       DropExporter dropExporter,
-      @MsgArg(name = "fileName", accessor = "getName") DropFile dropFile,
+      DropFile dropFile,
       String importedFileContent,
       String importedFileComment,
-      @ParentTask PollableTask parentTask)
+      PollableTask parentTask)
       throws DropExporterException {
+    try {
+      pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "exportImportedFile",
+              "Export the \"imported\" file with meta information related to import process: "
+                  + dropFile.getName(),
+              0,
+              getTimeout(parentTask),
+              currentTask -> {
+                exportImportedFileDirect(
+                    dropExporter, dropFile, importedFileContent, importedFileComment);
+                return null;
+              }));
+    } catch (DropExporterException e) {
+      throw e;
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error exporting imported file", t);
+    }
+  }
 
+  private void exportImportedFileDirect(
+      DropExporter dropExporter,
+      DropFile dropFile,
+      String importedFileContent,
+      String importedFileComment)
+      throws DropExporterException {
     dropExporter.exportImportedFile(dropFile.getName(), importedFileContent, importedFileComment);
   }
 
@@ -355,14 +402,44 @@ public class DropService {
    * @param parentTask
    * @throws DropImporterException
    */
-  @Pollable(message = "Fetch DropFile content (filename: {fileName})")
   private void downloadDropFileContent(
-      DropImporter dropImporter,
-      @MsgArg(name = "fileName", accessor = "getName") DropFile dropFile,
-      @ParentTask PollableTask parentTask)
+      DropImporter dropImporter, DropFile dropFile, PollableTask parentTask)
       throws DropImporterException {
+    try {
+      pollableTaskRunner.runSync(
+          new PollableTaskInvocation<>(
+              getParentTaskId(parentTask),
+              "downloadDropFileContent",
+              "Fetch DropFile content (filename: " + dropFile.getName() + ")",
+              0,
+              getTimeout(parentTask),
+              currentTask -> {
+                downloadDropFileContentDirect(dropImporter, dropFile);
+                return null;
+              }));
+    } catch (DropImporterException e) {
+      throw e;
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unexpected error fetching drop file content", t);
+    }
+  }
 
+  private void downloadDropFileContentDirect(DropImporter dropImporter, DropFile dropFile)
+      throws DropImporterException {
     dropImporter.downloadFileContent(dropFile);
+  }
+
+  private Long getParentTaskId(PollableTask parentTask) {
+    return parentTask == null ? null : parentTask.getId();
+  }
+
+  private Long getTimeout(PollableTask parentTask) {
+    if (parentTask != null && parentTask.getTimeout() != null) {
+      return parentTask.getTimeout();
+    }
+    return DEFAULT_TIMEOUT;
   }
 
   /**
