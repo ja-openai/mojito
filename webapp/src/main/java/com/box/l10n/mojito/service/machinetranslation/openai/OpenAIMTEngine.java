@@ -11,7 +11,8 @@ import com.box.l10n.mojito.service.oaitranslate.AiTranslateConfigurationProperti
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,14 +39,17 @@ public class OpenAIMTEngine implements MachineTranslationEngine {
   final AiTranslateConfigurationProperties aiTranslateConfigurationProperties;
   final PlaceholderEncoder placeholderEncoder;
   final ObjectMapper objectMapper;
+  final MeterRegistry meterRegistry;
 
   public OpenAIMTEngine(
       OpenAIClient openAIClient,
       AiTranslateConfigurationProperties aiTranslateConfigurationProperties,
-      PlaceholderEncoder placeholderEncoder) {
+      PlaceholderEncoder placeholderEncoder,
+      MeterRegistry meterRegistry) {
     this.openAIClient = openAIClient;
     this.aiTranslateConfigurationProperties = aiTranslateConfigurationProperties;
     this.placeholderEncoder = placeholderEncoder;
+    this.meterRegistry = meterRegistry;
     this.objectMapper = new ObjectMapper();
     AiTranslateService.configureObjectMapper(this.objectMapper);
   }
@@ -56,8 +60,34 @@ public class OpenAIMTEngine implements MachineTranslationEngine {
   }
 
   @Override
-  @Timed("OpenAIMTEngine.translate")
   public ImmutableMap<String, ImmutableList<TranslationDTO>> getTranslationsBySourceText(
+      List<String> textSources,
+      String sourceBcp47Tag,
+      List<String> targetBcp47Tags,
+      TextType sourceTextType,
+      String customModel,
+      boolean isFunctionalProtectionEnabled) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      return getTranslationsBySourceTextTimed(
+          textSources,
+          sourceBcp47Tag,
+          targetBcp47Tags,
+          sourceTextType,
+          customModel,
+          isFunctionalProtectionEnabled);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "OpenAIMTEngine.translate", "getTranslationsBySourceText", sample, exceptionClass);
+    }
+  }
+
+  private ImmutableMap<String, ImmutableList<TranslationDTO>> getTranslationsBySourceTextTimed(
       List<String> textSources,
       String sourceBcp47Tag,
       List<String> targetBcp47Tags,
@@ -137,4 +167,17 @@ public class OpenAIMTEngine implements MachineTranslationEngine {
   public record OpenAITranslationResponse(List<TranslationResponseItem> translations) {}
 
   public record TranslationResponseItem(int id, String targetLocale, String text) {}
+
+  private void recordTimer(
+      String metricName, String methodName, Timer.Sample sample, String exceptionClass) {
+    sample.stop(
+        Timer.builder(metricName)
+            .tag(EXCEPTION_TAG, exceptionClass)
+            .tag("class", OpenAIMTEngine.class.getName())
+            .tag("method", methodName)
+            .register(meterRegistry));
+  }
+
+  static final String DEFAULT_EXCEPTION_TAG_VALUE = "none";
+  static final String EXCEPTION_TAG = "exception";
 }

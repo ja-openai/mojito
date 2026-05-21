@@ -9,7 +9,8 @@ import com.box.l10n.mojito.service.machinetranslation.microsoft.response.Microso
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
-import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,13 +50,18 @@ public class MicrosoftMTEngine implements MachineTranslationEngine {
 
   private final PlaceholderEncoder placeholderEncoder;
 
+  private final MeterRegistry meterRegistry;
+
   static final String API_TRANSLATE = "translate";
   static final String API_VERSION = "3.0";
 
   public MicrosoftMTEngine(
-      MicrosoftMTEngineConfiguration mtEngineConfiguration, PlaceholderEncoder placeholderEncoder) {
+      MicrosoftMTEngineConfiguration mtEngineConfiguration,
+      PlaceholderEncoder placeholderEncoder,
+      MeterRegistry meterRegistry) {
     this.mtEngineConfiguration = mtEngineConfiguration;
     this.placeholderEncoder = placeholderEncoder;
+    this.meterRegistry = meterRegistry;
   }
 
   public RestTemplate restTemplate() {
@@ -87,8 +93,34 @@ public class MicrosoftMTEngine implements MachineTranslationEngine {
    * @return
    */
   @Override
-  @Timed("MicrosoftMTEngine.translate")
   public ImmutableMap<String, ImmutableList<TranslationDTO>> getTranslationsBySourceText(
+      List<String> textSources,
+      String sourceBcp47Tag,
+      List<String> targetBcp47Tags,
+      TextType sourceTextType,
+      String customModel,
+      boolean isFunctionalProtectionEnabled) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String exceptionClass = DEFAULT_EXCEPTION_TAG_VALUE;
+
+    try {
+      return getTranslationsBySourceTextTimed(
+          textSources,
+          sourceBcp47Tag,
+          targetBcp47Tags,
+          sourceTextType,
+          customModel,
+          isFunctionalProtectionEnabled);
+    } catch (RuntimeException e) {
+      exceptionClass = e.getClass().getSimpleName();
+      throw e;
+    } finally {
+      recordTimer(
+          "MicrosoftMTEngine.translate", "getTranslationsBySourceText", sample, exceptionClass);
+    }
+  }
+
+  private ImmutableMap<String, ImmutableList<TranslationDTO>> getTranslationsBySourceTextTimed(
       List<String> textSources,
       String sourceBcp47Tag,
       List<String> targetBcp47Tags,
@@ -249,4 +281,17 @@ public class MicrosoftMTEngine implements MachineTranslationEngine {
   private String getUrl(String subpath) {
     return mtEngineConfiguration.getBaseApiUrl() + subpath;
   }
+
+  private void recordTimer(
+      String metricName, String methodName, Timer.Sample sample, String exceptionClass) {
+    sample.stop(
+        Timer.builder(metricName)
+            .tag(EXCEPTION_TAG, exceptionClass)
+            .tag("class", MicrosoftMTEngine.class.getName())
+            .tag("method", methodName)
+            .register(meterRegistry));
+  }
+
+  static final String DEFAULT_EXCEPTION_TAG_VALUE = "none";
+  static final String EXCEPTION_TAG = "exception";
 }
