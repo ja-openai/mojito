@@ -115,6 +115,8 @@ Removed during this workstream:
   the Spring test context exposed by `WSTestBase`.
 - `@EnableSpringConfigured` was removed from application and test configuration now that no
   `@Configurable` types remain.
+- Unused AspectJ method-security mode was removed; there were no method-level security annotations
+  to enforce, so the `spring-security-aspects` dependency and aspect library entry were removed.
 
 In progress:
 
