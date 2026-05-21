@@ -19,6 +19,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 public class TranslationIncidentServiceTest {
 
@@ -39,6 +41,9 @@ public class TranslationIncidentServiceTest {
   private final UserService userService = Mockito.mock(UserService.class);
   private final AuditorAwareImpl auditorAwareImpl = Mockito.mock(AuditorAwareImpl.class);
   private final ServerConfig serverConfig = Mockito.mock(ServerConfig.class);
+  private final PlatformTransactionManager transactionManager =
+      Mockito.mock(PlatformTransactionManager.class);
+  private final TransactionStatus transactionStatus = Mockito.mock(TransactionStatus.class);
 
   private final TranslationIncidentService translationIncidentService =
       new TranslationIncidentService(
@@ -52,10 +57,12 @@ public class TranslationIncidentServiceTest {
           userService,
           auditorAwareImpl,
           serverConfig,
-          ObjectMapper.withNoFailOnUnknownProperties());
+          ObjectMapper.withNoFailOnUnknownProperties(),
+          transactionManager);
 
   @Before
   public void setUp() {
+    when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
     when(userService.isCurrentUserAdmin()).thenReturn(true);
     when(serverConfig.getUrl()).thenReturn("https://mojito.example/");
     User currentUser = new User();
