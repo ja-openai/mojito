@@ -74,6 +74,8 @@ Removed during this workstream:
   `TransactionTemplate`.
 - `QuartzPollableFutureTask` no longer uses `@Configurable`; `QuartzPollableTaskScheduler` passes
   its task service and blob storage dependencies directly.
+- `LeveragerByContentAndRepository` and `LeveragerByTmTextUnit` no longer use `@Configurable`;
+  manually created leveragers now come from `LeveragerFactory`.
 
 In progress:
 
