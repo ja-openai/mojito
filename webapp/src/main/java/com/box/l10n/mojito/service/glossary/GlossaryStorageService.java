@@ -20,7 +20,9 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class GlossaryStorageService {
@@ -34,22 +36,41 @@ public class GlossaryStorageService {
   private final VirtualAssetService virtualAssetService;
   private final LocaleService localeService;
   private final RepositoryLocaleRepository repositoryLocaleRepository;
+  private final PlatformTransactionManager transactionManager;
 
   public GlossaryStorageService(
       RepositoryService repositoryService,
       AssetRepository assetRepository,
       VirtualAssetService virtualAssetService,
       LocaleService localeService,
-      RepositoryLocaleRepository repositoryLocaleRepository) {
+      RepositoryLocaleRepository repositoryLocaleRepository,
+      PlatformTransactionManager transactionManager) {
     this.repositoryService = repositoryService;
     this.assetRepository = assetRepository;
     this.virtualAssetService = virtualAssetService;
     this.localeService = localeService;
     this.repositoryLocaleRepository = repositoryLocaleRepository;
+    this.transactionManager = transactionManager;
   }
 
-  @Transactional
   public Repository createManagedBackingRepository(String glossaryName) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      Repository result = createManagedBackingRepositoryNoTx(glossaryName);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Repository createManagedBackingRepositoryNoTx(String glossaryName) {
     String baseName = buildBackingRepositoryName(glossaryName);
     RepositoryNameAlreadyUsedException lastException = null;
 
@@ -70,8 +91,24 @@ public class GlossaryStorageService {
         "Failed to create managed glossary backing repository", lastException);
   }
 
-  @Transactional
   public Asset ensureCanonicalAsset(Glossary glossary) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      Asset result = ensureCanonicalAssetNoTx(glossary);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Asset ensureCanonicalAssetNoTx(Glossary glossary) {
     String assetPath = normalizeAssetPath(glossary.getAssetPath());
     glossary.setAssetPath(assetPath);
 
@@ -95,8 +132,24 @@ public class GlossaryStorageService {
     }
   }
 
-  @Transactional
   public RepositoryLocale ensureLocale(Glossary glossary, String bcp47Tag) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      RepositoryLocale result = ensureLocaleNoTx(glossary, bcp47Tag);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  RepositoryLocale ensureLocaleNoTx(Glossary glossary, String bcp47Tag) {
     Repository backingRepository = glossary.getBackingRepository();
     RepositoryLocale repositoryLocale =
         repositoryLocaleRepository.findByRepositoryAndLocale_Bcp47Tag(backingRepository, bcp47Tag);
@@ -112,8 +165,23 @@ public class GlossaryStorageService {
     }
   }
 
-  @Transactional
   public void replaceLocales(Glossary glossary, List<String> localeTags) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      replaceLocalesNoTx(glossary, localeTags);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void replaceLocalesNoTx(Glossary glossary, List<String> localeTags) {
     Repository backingRepository = glossary.getBackingRepository();
     RepositoryLocale rootLocale =
         repositoryLocaleRepository.findByRepositoryAndParentLocaleIsNull(backingRepository);
@@ -164,8 +232,23 @@ public class GlossaryStorageService {
     }
   }
 
-  @Transactional
   public void deleteManagedBackingRepository(Glossary glossary) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteManagedBackingRepositoryNoTx(glossary);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteManagedBackingRepositoryNoTx(Glossary glossary) {
     Repository backingRepository = glossary.getBackingRepository();
     if (backingRepository == null || Boolean.TRUE.equals(backingRepository.getDeleted())) {
       return;
@@ -173,8 +256,23 @@ public class GlossaryStorageService {
     repositoryService.deleteRepository(backingRepository);
   }
 
-  @Transactional
   public void renameManagedBackingRepository(Glossary glossary, String repositoryName) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      renameManagedBackingRepositoryNoTx(glossary, repositoryName);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void renameManagedBackingRepositoryNoTx(Glossary glossary, String repositoryName) {
     Repository backingRepository = glossary.getBackingRepository();
     if (backingRepository == null || Boolean.TRUE.equals(backingRepository.getDeleted())) {
       throw new IllegalStateException(
