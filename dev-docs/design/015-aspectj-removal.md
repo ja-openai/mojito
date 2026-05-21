@@ -95,6 +95,8 @@ Removed during this workstream:
   pseudo-localization, and text-unit helpers directly.
 - `TranslatorWithInheritance` no longer uses `@Configurable`; callers pass the text-unit DTO cache
   service explicitly and unused woven collaborators were removed.
+- `TranslateStep` no longer uses `@Configurable`; its explicit constructor now provides the only
+  service collaborator it needs, while inherited text-unit helpers initialize locally.
 
 In progress:
 
