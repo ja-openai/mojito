@@ -14,9 +14,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.aspectj.EnableSpringConfigured;
 
-@EnableSpringConfigured
 @ComponentScan(basePackages = "com.box.l10n.mojito")
 @SpringBootApplication
 public class App implements CommandLineRunner {
