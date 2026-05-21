@@ -156,6 +156,8 @@ Removed during this workstream:
   open and commit their transaction boundaries explicitly.
 - `BranchStatisticService.updateBranchStatisticInTx` no longer uses `@Transactional`; branch
   statistic writes now open and commit their transaction boundary explicitly.
+- `AiTranslateTextUnitAttemptService` no longer uses `@Transactional`; attempt lineage reads and
+  no-batch attempt writes now open and commit their transaction boundaries explicitly.
 
 In progress:
 

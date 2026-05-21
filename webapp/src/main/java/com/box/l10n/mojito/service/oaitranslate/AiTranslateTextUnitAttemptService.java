@@ -34,7 +34,10 @@ import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class AiTranslateTextUnitAttemptService {
@@ -45,6 +48,7 @@ public class AiTranslateTextUnitAttemptService {
   private final AiTranslateRunRepository aiTranslateRunRepository;
   private final StructuredBlobStorage structuredBlobStorage;
   private final ObjectMapper objectMapper;
+  private final PlatformTransactionManager transactionManager;
 
   public static final int DEFAULT_RECENT_LINEAGE_LIMIT = 50;
 
@@ -54,11 +58,13 @@ public class AiTranslateTextUnitAttemptService {
       AiTranslateTextUnitAttemptRepository aiTranslateTextUnitAttemptRepository,
       AiTranslateRunRepository aiTranslateRunRepository,
       StructuredBlobStorage structuredBlobStorage,
-      @Qualifier("AiTranslate") ObjectMapper objectMapper) {
+      @Qualifier("AiTranslate") ObjectMapper objectMapper,
+      PlatformTransactionManager transactionManager) {
     this.aiTranslateTextUnitAttemptRepository = aiTranslateTextUnitAttemptRepository;
     this.aiTranslateRunRepository = aiTranslateRunRepository;
     this.structuredBlobStorage = structuredBlobStorage;
     this.objectMapper = objectMapper;
+    this.transactionManager = transactionManager;
   }
 
   public record NoBatchAttemptRequest(
@@ -118,8 +124,24 @@ public class AiTranslateTextUnitAttemptService {
     return blobName;
   }
 
-  @Transactional(readOnly = true)
   public List<TextUnitAttemptSummary> getTextUnitAttempts(Long tmTextUnitId, Long localeId) {
+    DefaultTransactionDefinition transactionDefinition = readOnlyTransactionDefinition();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      List<TextUnitAttemptSummary> result = getTextUnitAttemptsNoTx(tmTextUnitId, localeId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<TextUnitAttemptSummary> getTextUnitAttemptsNoTx(Long tmTextUnitId, Long localeId) {
     return aiTranslateTextUnitAttemptRepository
         .findByTmTextUnit_IdAndLocale_IdOrderByCreatedDateDesc(tmTextUnitId, localeId)
         .stream()
@@ -127,36 +149,119 @@ public class AiTranslateTextUnitAttemptService {
         .toList();
   }
 
-  @Transactional(readOnly = true)
   public Optional<TextUnitAttemptSummary> getTextUnitAttempt(
+      Long tmTextUnitId, Long localeId, Long attemptId) {
+    DefaultTransactionDefinition transactionDefinition = readOnlyTransactionDefinition();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      Optional<TextUnitAttemptSummary> result =
+          getTextUnitAttemptNoTx(tmTextUnitId, localeId, attemptId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Optional<TextUnitAttemptSummary> getTextUnitAttemptNoTx(
       Long tmTextUnitId, Long localeId, Long attemptId) {
     return aiTranslateTextUnitAttemptRepository
         .findByIdAndTmTextUnit_IdAndLocale_Id(attemptId, tmTextUnitId, localeId)
         .map(this::toTextUnitAttemptSummary);
   }
 
-  @Transactional(readOnly = true)
   public List<TextUnitAttemptLineageSummary> getRecentLineage(
+      List<Long> repositoryIds, List<Long> pollableTaskIds, int limit) {
+    DefaultTransactionDefinition transactionDefinition = readOnlyTransactionDefinition();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      List<TextUnitAttemptLineageSummary> result =
+          getRecentLineageNoTx(repositoryIds, pollableTaskIds, limit);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<TextUnitAttemptLineageSummary> getRecentLineageNoTx(
       List<Long> repositoryIds, List<Long> pollableTaskIds, int limit) {
     return getRecentLineageRows(repositoryIds, pollableTaskIds, limit).stream()
         .map(this::toTextUnitAttemptLineageSummary)
         .toList();
   }
 
-  @Transactional(readOnly = true)
   public Optional<String> getRequestPayload(Long tmTextUnitId, Long localeId, Long attemptId) {
+    DefaultTransactionDefinition transactionDefinition = readOnlyTransactionDefinition();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      Optional<String> result = getRequestPayloadNoTx(tmTextUnitId, localeId, attemptId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Optional<String> getRequestPayloadNoTx(Long tmTextUnitId, Long localeId, Long attemptId) {
     return getPayload(
         tmTextUnitId, localeId, attemptId, AiTranslateTextUnitAttempt::getRequestPayloadBlobName);
   }
 
-  @Transactional(readOnly = true)
   public Optional<String> getResponsePayload(Long tmTextUnitId, Long localeId, Long attemptId) {
+    DefaultTransactionDefinition transactionDefinition = readOnlyTransactionDefinition();
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      Optional<String> result = getResponsePayloadNoTx(tmTextUnitId, localeId, attemptId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  Optional<String> getResponsePayloadNoTx(Long tmTextUnitId, Long localeId, Long attemptId) {
     return getPayload(
         tmTextUnitId, localeId, attemptId, AiTranslateTextUnitAttempt::getResponsePayloadBlobName);
   }
 
-  @Transactional
   public void createNoBatchAttempts(Long pollableTaskId, List<NoBatchAttemptRequest> requests) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      createNoBatchAttemptsNoTx(pollableTaskId, requests);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void createNoBatchAttemptsNoTx(Long pollableTaskId, List<NoBatchAttemptRequest> requests) {
     if (requests == null || requests.isEmpty()) {
       return;
     }
@@ -171,8 +276,28 @@ public class AiTranslateTextUnitAttemptService {
             .toList());
   }
 
-  @Transactional
   public void markNoBatchResponded(
+      Long pollableTaskId,
+      String requestGroupId,
+      String completionId,
+      String responsePayloadBlobName) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      markNoBatchRespondedNoTx(
+          pollableTaskId, requestGroupId, completionId, responsePayloadBlobName);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void markNoBatchRespondedNoTx(
       Long pollableTaskId,
       String requestGroupId,
       String completionId,
@@ -188,8 +313,29 @@ public class AiTranslateTextUnitAttemptService {
         });
   }
 
-  @Transactional
   public void markNoBatchFailed(
+      Long pollableTaskId,
+      String requestGroupId,
+      String completionId,
+      String responsePayloadBlobName,
+      String errorMessage) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      markNoBatchFailedNoTx(
+          pollableTaskId, requestGroupId, completionId, responsePayloadBlobName, errorMessage);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void markNoBatchFailedNoTx(
       Long pollableTaskId,
       String requestGroupId,
       String completionId,
@@ -206,9 +352,24 @@ public class AiTranslateTextUnitAttemptService {
         });
   }
 
-  @Transactional
   public void markNoBatchImported(
       Long pollableTaskId, List<NoBatchImportedVariant> importedVariants) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      markNoBatchImportedNoTx(pollableTaskId, importedVariants);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void markNoBatchImportedNoTx(Long pollableTaskId, List<NoBatchImportedVariant> importedVariants) {
     if (importedVariants == null || importedVariants.isEmpty()) {
       return;
     }
@@ -260,6 +421,13 @@ public class AiTranslateTextUnitAttemptService {
                       TMTextUnitVariant.class, importedVariant.tmTextUnitVariantId()));
               attempt.setStatus(STATUS_IMPORTED);
             });
+  }
+
+  private DefaultTransactionDefinition readOnlyTransactionDefinition() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    transactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+    return transactionDefinition;
   }
 
   private AiTranslateTextUnitAttempt createNoBatchAttempt(

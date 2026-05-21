@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +19,10 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 
 public class AiTranslateTextUnitAttemptServiceTest {
 
@@ -62,7 +67,8 @@ public class AiTranslateTextUnitAttemptServiceTest {
             mock(AiTranslateTextUnitAttemptRepository.class),
             mock(AiTranslateRunRepository.class),
             structuredBlobStorage,
-            new ObjectMapper());
+            new ObjectMapper(),
+            mock(PlatformTransactionManager.class));
 
     String blobName =
         service.putPayloadBlob(
@@ -107,7 +113,8 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             mock(StructuredBlobStorage.class),
-            new ObjectMapper());
+            new ObjectMapper(),
+            mock(PlatformTransactionManager.class));
 
     List<AiTranslateTextUnitAttemptService.TextUnitAttemptSummary> summaries =
         service.getTextUnitAttempts(1L, 2L);
@@ -152,7 +159,8 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             mock(StructuredBlobStorage.class),
-            new ObjectMapper());
+            new ObjectMapper(),
+            mock(PlatformTransactionManager.class));
 
     Optional<AiTranslateTextUnitAttemptService.TextUnitAttemptSummary> summary =
         service.getTextUnitAttempt(1L, 2L, 7L);
@@ -205,7 +213,8 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             mock(StructuredBlobStorage.class),
-            new ObjectMapper());
+            new ObjectMapper(),
+            mock(PlatformTransactionManager.class));
 
     List<AiTranslateTextUnitAttemptService.TextUnitAttemptLineageSummary> summaries =
         service.getRecentLineage(List.of(3L), List.of(), 20);
@@ -267,7 +276,8 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             mock(StructuredBlobStorage.class),
-            new ObjectMapper());
+            new ObjectMapper(),
+            mock(PlatformTransactionManager.class));
 
     List<AiTranslateTextUnitAttemptService.TextUnitAttemptLineageSummary> summaries =
         service.getRecentLineage(List.of(3L), List.of(42L), 20);
@@ -297,8 +307,65 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             structuredBlobStorage,
-            new ObjectMapper());
+            new ObjectMapper(),
+            mock(PlatformTransactionManager.class));
 
     assertEquals(Optional.of("{\"ok\":true}"), service.getRequestPayload(1L, 2L, 7L));
+  }
+
+  @Test
+  public void getTextUnitAttemptsCommitsReadOnlyTransaction() {
+    AiTranslateTextUnitAttemptRepository repository =
+        mock(AiTranslateTextUnitAttemptRepository.class);
+    PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+    TransactionStatus transaction = mock(TransactionStatus.class);
+    when(transactionManager.getTransaction(any())).thenReturn(transaction);
+    when(repository.findByTmTextUnit_IdAndLocale_IdOrderByCreatedDateDesc(1L, 2L))
+        .thenReturn(List.of());
+    AiTranslateTextUnitAttemptService service =
+        new AiTranslateTextUnitAttemptService(
+            repository,
+            mock(AiTranslateRunRepository.class),
+            mock(StructuredBlobStorage.class),
+            new ObjectMapper(),
+            transactionManager);
+
+    service.getTextUnitAttempts(1L, 2L);
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertTrue(transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transaction);
+    verify(transactionManager, never()).rollback(transaction);
+  }
+
+  @Test
+  public void markNoBatchRespondedRollsBackTransaction() {
+    AiTranslateTextUnitAttemptRepository repository =
+        mock(AiTranslateTextUnitAttemptRepository.class);
+    PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+    TransactionStatus transaction = mock(TransactionStatus.class);
+    when(transactionManager.getTransaction(any())).thenReturn(transaction);
+    when(repository.findByPollableTask_IdAndRequestGroupId(42L, "group"))
+        .thenThrow(new IllegalStateException("failed"));
+    AiTranslateTextUnitAttemptService service =
+        new AiTranslateTextUnitAttemptService(
+            repository,
+            mock(AiTranslateRunRepository.class),
+            mock(StructuredBlobStorage.class),
+            new ObjectMapper(),
+            transactionManager);
+
+    try {
+      service.markNoBatchResponded(42L, "group", "completion", "response.json");
+    } catch (IllegalStateException e) {
+      assertEquals("failed", e.getMessage());
+      verify(transactionManager).rollback(transaction);
+      verify(transactionManager, never()).commit(transaction);
+      return;
+    }
+
+    throw new AssertionError("Expected markNoBatchResponded to rethrow the repository failure");
   }
 }
