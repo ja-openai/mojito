@@ -111,6 +111,8 @@ Removed during this workstream:
   persistence collaborators explicitly and focused step tests construct it directly.
 - XLIFF import translation steps no longer use `@Configurable`; `TMService` constructs the import
   step family with explicit base and subclass collaborators.
+- Test data helpers no longer use `@Configurable`; they autowire and initialize themselves through
+  the Spring test context exposed by `WSTestBase`.
 
 In progress:
 

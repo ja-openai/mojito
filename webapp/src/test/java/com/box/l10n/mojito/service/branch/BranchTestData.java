@@ -8,6 +8,7 @@ import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.okapi.asset.UnsupportedAssetFilterTypeException;
+import com.box.l10n.mojito.rest.WSTestBase;
 import com.box.l10n.mojito.service.asset.AssetService;
 import com.box.l10n.mojito.service.assetExtraction.AssetExtractionService;
 import com.box.l10n.mojito.service.assetcontent.AssetContentService;
@@ -21,9 +22,7 @@ import com.google.common.collect.Sets;
 import jakarta.annotation.PostConstruct;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 
-@Configurable
 public class BranchTestData {
 
   @Autowired RepositoryService repositoryService;
@@ -106,6 +105,7 @@ public class BranchTestData {
     if (!legacy) {
       branchNotifierIds = Sets.newHashSet("noop-1");
     }
+    WSTestBase.autowireAndInitializeTestInstance(this);
   }
 
   @PostConstruct

@@ -19,8 +19,10 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.junit4.SpringRunner;
 
 /**
@@ -39,6 +41,8 @@ public class WSTestBase {
   /** logger */
   static Logger logger = LoggerFactory.getLogger(WSTestBase.class);
 
+  private static AutowireCapableBeanFactory testBeanFactory;
+
   @Autowired protected AuthenticatedRestTemplate authenticatedRestTemplate;
 
   @Autowired protected XliffDataFactory xliffDataFactory;
@@ -48,6 +52,19 @@ public class WSTestBase {
   @Autowired ResttemplateConfig resttemplateConfig;
 
   @LocalServerPort int port;
+
+  @Autowired
+  void setApplicationContext(ApplicationContext applicationContext) {
+    testBeanFactory = applicationContext.getAutowireCapableBeanFactory();
+  }
+
+  public static void autowireAndInitializeTestInstance(Object testInstance) {
+    if (testBeanFactory == null) {
+      throw new IllegalStateException("Spring test bean factory is not initialized");
+    }
+    testBeanFactory.autowireBean(testInstance);
+    testBeanFactory.initializeBean(testInstance, testInstance.getClass().getName());
+  }
 
   @PostConstruct
   public void setPort() {

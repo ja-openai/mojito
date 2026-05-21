@@ -10,6 +10,7 @@ import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.rest.WSTestBase;
 import com.box.l10n.mojito.service.asset.AssetService;
 import com.box.l10n.mojito.service.assetExtraction.AssetExtractionRepository;
 import com.box.l10n.mojito.service.assetExtraction.AssetExtractionService;
@@ -27,13 +28,11 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author jaurambault
  */
-@Configurable
 public class TMTestData {
 
   /** logger */
@@ -85,6 +84,7 @@ public class TMTestData {
 
   public TMTestData(TestIdWatcher testIdWatcher) {
     this.testIdWatcher = testIdWatcher;
+    WSTestBase.autowireAndInitializeTestInstance(this);
   }
 
   @PostConstruct
