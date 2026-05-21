@@ -18,7 +18,6 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.AdviceMode;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.aspectj.EnableSpringConfigured;
 import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -37,7 +36,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
     exclude = {
       QuartzAutoConfiguration.class, // We integrated with Quartz before spring supported it
     })
-@EnableSpringConfigured
 @EnableJpaAuditing(dateTimeProviderRef = "zonedDateTimeProvider")
 @EnableJpaRepositories
 @EnableScheduling

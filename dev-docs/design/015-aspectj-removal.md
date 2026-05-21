@@ -113,6 +113,8 @@ Removed during this workstream:
   step family with explicit base and subclass collaborators.
 - Test data helpers no longer use `@Configurable`; they autowire and initialize themselves through
   the Spring test context exposed by `WSTestBase`.
+- `@EnableSpringConfigured` was removed from application and test configuration now that no
+  `@Configurable` types remain.
 
 In progress:
 
