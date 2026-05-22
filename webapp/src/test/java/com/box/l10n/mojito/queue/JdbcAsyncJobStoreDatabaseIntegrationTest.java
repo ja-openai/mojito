@@ -6,14 +6,24 @@ import static org.junit.Assume.assumeTrue;
 import java.sql.Connection;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.junit.Test;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.support.EncodedResource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -54,8 +64,9 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     container.start();
     DataSource dataSource = dataSource(container);
     runMigration(dataSource, migrationPath);
-    JdbcAsyncJobStore store =
-        new JdbcAsyncJobStore(new NamedParameterJdbcTemplate(dataSource), dialect);
+    AsyncJobStore store =
+        transactionalStore(
+            dataSource, new JdbcAsyncJobStore(new NamedParameterJdbcTemplate(dataSource), dialect));
 
     AsyncJobId id =
         store.enqueue("assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
@@ -113,6 +124,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     assertThat(done.workerId()).isNull();
     assertThat(done.leaseToken()).isNull();
     assertThat(done.leaseUntil()).isNull();
+
+    runConcurrentClaimContract(store);
   }
 
   private DataSource dataSource(JdbcDatabaseContainer<?> container) {
@@ -124,8 +137,89 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     return dataSource;
   }
 
+  private AsyncJobStore transactionalStore(DataSource dataSource, AsyncJobStore delegate) {
+    // The production Spring bean applies @Transactional through a proxy. This test constructs the
+    // store directly, so wrap each store call to keep SELECT ... FOR UPDATE and its update fenced.
+    return new TransactionalAsyncJobStore(
+        delegate, new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
+  }
+
+  private void runConcurrentClaimContract(AsyncJobStore store) throws Exception {
+    String queueName = "concurrent";
+    int jobCount = 120;
+    int workerCount = 8;
+    int batchSize = 3;
+    for (int i = 0; i < jobCount; i++) {
+      store.enqueue(queueName, "{\"id\":" + i + "}", Instant.now().minusSeconds(1));
+    }
+
+    Set<AsyncJobId> claimedIds = ConcurrentHashMap.newKeySet();
+    CountDownLatch start = new CountDownLatch(1);
+    ExecutorService executorService = Executors.newFixedThreadPool(workerCount);
+    List<Future<Integer>> futures = new ArrayList<>();
+    try {
+      for (int workerIndex = 0; workerIndex < workerCount; workerIndex++) {
+        String workerId = "worker-" + workerIndex;
+        futures.add(
+            executorService.submit(
+                () -> {
+                  start.await();
+                  int processed = 0;
+                  while (statusCount(store, queueName, AsyncJobStatus.DONE) < jobCount) {
+                    List<AsyncJobRecord> claimed =
+                        store.claimNextJobs(queueName, batchSize, workerId, Duration.ofSeconds(30));
+                    if (claimed.isEmpty()) {
+                      Thread.sleep(10);
+                      continue;
+                    }
+
+                    for (AsyncJobRecord job : claimed) {
+                      assertThat(claimedIds.add(job.id()))
+                          .as("job should only be claimed once: %s", job.id())
+                          .isTrue();
+                      assertThat(
+                              store.markDone(
+                                  queueName,
+                                  job.id(),
+                                  workerId,
+                                  job.leaseToken(),
+                                  "{\"done\":" + job.id().value() + "}"))
+                          .isTrue();
+                      processed++;
+                    }
+                  }
+                  return processed;
+                }));
+      }
+
+      start.countDown();
+      int processed = 0;
+      for (Future<Integer> future : futures) {
+        processed += future.get(30, TimeUnit.SECONDS);
+      }
+
+      assertThat(processed).isEqualTo(jobCount);
+      assertThat(claimedIds).hasSize(jobCount);
+      assertThat(statusCount(store, queueName, AsyncJobStatus.DONE)).isEqualTo(jobCount);
+      assertThat(statusCount(store, queueName, AsyncJobStatus.QUEUED)).isZero();
+      assertThat(statusCount(store, queueName, AsyncJobStatus.RUNNING)).isZero();
+      assertThat(statusCount(store, queueName, AsyncJobStatus.FAILED)).isZero();
+    } finally {
+      executorService.shutdownNow();
+      assertThat(executorService.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+    }
+  }
+
+  private long statusCount(AsyncJobStore store, String queueName, AsyncJobStatus status) {
+    return store.countByStatus(queueName).stream()
+        .filter(count -> count.status() == status)
+        .mapToLong(AsyncJobStatusCount::count)
+        .findFirst()
+        .orElse(0);
+  }
+
   private AsyncJobRecord claimEventually(
-      JdbcAsyncJobStore store,
+      AsyncJobStore store,
       String queueName,
       String workerId,
       Duration leaseDuration,
@@ -149,6 +243,104 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     try (Connection connection = dataSource.getConnection()) {
       ScriptUtils.executeSqlScript(
           connection, new EncodedResource(new ClassPathResource(migrationPath)));
+    }
+  }
+
+  private static class TransactionalAsyncJobStore implements AsyncJobStore {
+
+    private final AsyncJobStore delegate;
+    private final TransactionTemplate transactionTemplate;
+
+    TransactionalAsyncJobStore(AsyncJobStore delegate, TransactionTemplate transactionTemplate) {
+      this.delegate = delegate;
+      this.transactionTemplate = transactionTemplate;
+    }
+
+    @Override
+    public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
+      return transactionTemplate.execute(
+          status -> delegate.enqueue(queueName, jobData, availableAt));
+    }
+
+    @Override
+    public List<AsyncJobRecord> claimNextJobs(
+        String queueName, int limit, String workerId, Duration leaseDuration) {
+      return transactionTemplate.execute(
+          status -> delegate.claimNextJobs(queueName, limit, workerId, leaseDuration));
+    }
+
+    @Override
+    public boolean heartbeat(
+        String queueName,
+        AsyncJobId id,
+        String workerId,
+        String leaseToken,
+        Duration leaseDuration) {
+      return Boolean.TRUE.equals(
+          transactionTemplate.execute(
+              status -> delegate.heartbeat(queueName, id, workerId, leaseToken, leaseDuration)));
+    }
+
+    @Override
+    public boolean markDone(
+        String queueName, AsyncJobId id, String workerId, String leaseToken, String jobData) {
+      return Boolean.TRUE.equals(
+          transactionTemplate.execute(
+              status -> delegate.markDone(queueName, id, workerId, leaseToken, jobData)));
+    }
+
+    @Override
+    public boolean requeue(
+        String queueName,
+        AsyncJobId id,
+        String workerId,
+        String leaseToken,
+        Instant availableAt,
+        String jobData,
+        String lastError) {
+      return Boolean.TRUE.equals(
+          transactionTemplate.execute(
+              status ->
+                  delegate.requeue(
+                      queueName, id, workerId, leaseToken, availableAt, jobData, lastError)));
+    }
+
+    @Override
+    public boolean markFailed(
+        String queueName,
+        AsyncJobId id,
+        String workerId,
+        String leaseToken,
+        String jobData,
+        String lastError) {
+      return Boolean.TRUE.equals(
+          transactionTemplate.execute(
+              status ->
+                  delegate.markFailed(queueName, id, workerId, leaseToken, jobData, lastError)));
+    }
+
+    @Override
+    public List<AsyncJobStatusCount> countByStatus(String queueName) {
+      return transactionTemplate.execute(status -> delegate.countByStatus(queueName));
+    }
+
+    @Override
+    public List<AsyncJobRecord> findByStatus(String queueName, AsyncJobStatus status, int limit) {
+      return transactionTemplate.execute(
+          transactionStatus -> delegate.findByStatus(queueName, status, limit));
+    }
+
+    @Override
+    public boolean requeueFailed(
+        String queueName, AsyncJobId id, Instant availableAt, String jobData) {
+      return Boolean.TRUE.equals(
+          transactionTemplate.execute(
+              status -> delegate.requeueFailed(queueName, id, availableAt, jobData)));
+    }
+
+    @Override
+    public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
+      return transactionTemplate.execute(status -> delegate.getByIds(ids));
     }
   }
 }

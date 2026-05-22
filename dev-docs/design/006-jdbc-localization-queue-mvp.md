@@ -191,6 +191,8 @@ Test Coverage
   PostgreSQL:
   - `mvn -pl webapp -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest -Dmojito.asyncJobQueue.testcontainers=true test`
   - default unit test runs compile this class but skip container startup unless explicitly enabled
+  - the real-database contract drains 120 queued jobs with 8 concurrent workers per database to
+    validate transactional `FOR UPDATE SKIP LOCKED` claiming without duplicate execution
 - Load/perf smoke coverage processes hundreds of jobs through the runtime and asserts bounded
   completion with no duplicate execution. This is a CI guardrail, not a replacement for a
   database-backed benchmark against MySQL/PostgreSQL.
