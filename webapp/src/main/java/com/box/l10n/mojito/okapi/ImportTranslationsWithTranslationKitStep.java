@@ -22,7 +22,9 @@ import net.sf.okapi.common.resource.StartSubDocument;
 import net.sf.okapi.common.resource.TextContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author jaurambault
@@ -50,6 +52,7 @@ public class ImportTranslationsWithTranslationKitStep extends ImportTranslations
       UserRepository userRepository,
       AuditorAwareImpl auditorAwareImpl,
       TMService tmService,
+      PlatformTransactionManager transactionManager,
       TranslationKitService translationKitService,
       TranslationKitRepository translationKitRepository) {
     super(
@@ -61,7 +64,8 @@ public class ImportTranslationsWithTranslationKitStep extends ImportTranslations
         tmMTextUnitVariantCommentService,
         userRepository,
         auditorAwareImpl,
-        tmService);
+        tmService,
+        transactionManager);
     this.translationKitService = translationKitService;
     this.translationKitRepository = translationKitRepository;
   }
@@ -144,16 +148,26 @@ public class ImportTranslationsWithTranslationKitStep extends ImportTranslations
    * translation as a variant, that can be later access looking at history.
    */
   @Override
-  @Transactional
   TMTextUnitVariant importTextUnit(
       TMTextUnit tmTextUnit,
       TextContainer target,
       TMTextUnitVariant.Status status,
       ZonedDateTime createdDate) {
-    TMTextUnitVariant importTextUnit =
-        super.importTextUnit(tmTextUnit, target, status, createdDate);
-    translationKitService.markTranslationKitTextUnitAsImported(translationKit, importTextUnit);
-    return importTextUnit;
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      TMTextUnitVariant importTextUnit =
+          super.importTextUnitNoTx(tmTextUnit, target, status, createdDate);
+      translationKitService.markTranslationKitTextUnitAsImported(translationKit, importTextUnit);
+      transactionManager.commit(transaction);
+      return importTextUnit;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
   }
 
   /**

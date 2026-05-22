@@ -950,6 +950,7 @@ public class TMService {
         userRepository,
         auditorAwareImpl,
         this,
+        transactionManager,
         translationKitService,
         translationKitRepository);
   }
@@ -964,7 +965,8 @@ public class TMService {
         tmTextUnitVariantCommentService,
         userRepository,
         auditorAwareImpl,
-        this);
+        this,
+        transactionManager);
   }
 
   ImportTranslationsByMd5Step newImportTranslationsByMd5Step(Repository repository) {
@@ -978,7 +980,8 @@ public class TMService {
         tmTextUnitVariantCommentService,
         userRepository,
         auditorAwareImpl,
-        this);
+        this,
+        transactionManager);
   }
 
   /**
@@ -1453,6 +1456,7 @@ public class TMService {
         userRepository,
         auditorAwareImpl,
         this,
+        transactionManager,
         textUnitSearcher,
         integrityCheckerFactory,
         textUnitDTOsCacheService);

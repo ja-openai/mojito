@@ -37,6 +37,7 @@ import net.sf.okapi.common.Event;
 import net.sf.okapi.common.resource.TextContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * @author jaurambault
@@ -86,6 +87,7 @@ public class ImportTranslationsFromLocalizedAssetStep extends AbstractImportTran
       UserRepository userRepository,
       AuditorAwareImpl auditorAwareImpl,
       TMService tmService,
+      PlatformTransactionManager transactionManager,
       TextUnitSearcher textUnitSearcher,
       IntegrityCheckerFactory integrityCheckerFactory,
       TextUnitDTOsCacheService textUnitDTOsCacheService) {
@@ -98,7 +100,8 @@ public class ImportTranslationsFromLocalizedAssetStep extends AbstractImportTran
         tmMTextUnitVariantCommentService,
         userRepository,
         auditorAwareImpl,
-        tmService);
+        tmService,
+        transactionManager);
     this.asset = asset;
     this.repositoryLocale = repositoryLocale;
     this.statusForEqualTarget = statusForEqualTarget;
