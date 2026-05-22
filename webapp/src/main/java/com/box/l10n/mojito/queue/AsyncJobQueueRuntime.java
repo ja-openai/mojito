@@ -130,7 +130,12 @@ class AsyncJobQueueRuntime {
       if (nextPollFuture != null) {
         nextPollFuture.cancel(false);
       }
-      scheduleNextPoll(0);
+      try {
+        scheduleNextPoll(0);
+      } catch (RuntimeException e) {
+        logger.warn("Failed to trigger immediate poll for queue {}", queueName, e);
+        meterRegistry.counter("asyncJobQueue.trigger.failed", "queueName", queueName).increment();
+      }
     }
   }
 

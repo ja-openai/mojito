@@ -767,6 +767,93 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void triggerPollNowRecordsFailureWhenImmediateScheduleFails() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(invocation -> new DummyScheduledFuture())
+        .thenThrow(new IllegalStateException("scheduler unavailable"));
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            mock(AsyncJobStore.class),
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor);
+
+    asyncJobQueueRuntime.start();
+    asyncJobQueueRuntime.triggerPollNow();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.trigger.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void processingCompletionTriggerRecordsFailureWhenImmediateScheduleFails()
+      throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch started = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    CountDownLatch completed = new CountDownLatch(1);
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    Runnable[] scheduledPoll = new Runnable[1];
+    AtomicInteger scheduleInvocations = new AtomicInteger();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(
+            invocation -> {
+              int invocationCount = scheduleInvocations.incrementAndGet();
+              if (invocationCount == 1) {
+                scheduledPoll[0] = invocation.getArgument(0);
+                return new DummyScheduledFuture();
+              }
+              if (invocationCount == 2) {
+                return new DummyScheduledFuture();
+              }
+              throw new IllegalStateException("scheduler unavailable");
+            });
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenAnswer(
+            invocation -> {
+              completed.countDown();
+              return true;
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(
+                asyncJobRecord -> {
+                  started.countDown();
+                  release.await(5, TimeUnit.SECONDS);
+                  return AsyncJobHandlerResult.done();
+                }),
+            taskScheduler,
+            executor);
+
+    asyncJobQueueRuntime.start();
+    assertThat(scheduledPoll[0]).isNotNull();
+    scheduledPoll[0].run();
+    assertThat(started.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(scheduleInvocations.get()).isEqualTo(2);
+
+    release.countDown();
+
+    assertThat(completed.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTriggerFailure(1);
+  }
+
+  @Test
   public void wakeupDuringActivePollSchedulesImmediateFollowUpPoll() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
@@ -1108,6 +1195,22 @@ public class AsyncJobQueueRuntimeTest {
     }
     throw new AssertionError(
         "Timed out waiting for transition failure " + transition + " count " + expectedCount);
+  }
+
+  private void waitForTriggerFailure(double expectedCount) throws InterruptedException {
+    long timeoutAt = System.currentTimeMillis() + 3_000;
+    while (System.currentTimeMillis() < timeoutAt) {
+      io.micrometer.core.instrument.Counter counter =
+          meterRegistry
+              .find("asyncJobQueue.trigger.failed")
+              .tag("queueName", "assetlocalize")
+              .counter();
+      if (counter != null && counter.count() == expectedCount) {
+        return;
+      }
+      Thread.sleep(20);
+    }
+    throw new AssertionError("Timed out waiting for trigger failure count " + expectedCount);
   }
 
   private void waitForAtomicValue(AtomicInteger atomicInteger, int expectedValue)
