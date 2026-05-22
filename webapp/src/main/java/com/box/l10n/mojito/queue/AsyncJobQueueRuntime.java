@@ -351,13 +351,14 @@ class AsyncJobQueueRuntime {
     }
 
     logger.error(
-        "Async job handler failed for queue {}, job {}; requeueing attempt {}/{} with base delay",
+        "Async job handler failed for queue {}, job {}; requeueing attempt {}/{}",
         queueName,
         asyncJobRecord.id(),
         asyncJobRecord.attemptCount(),
         queueSettings.getMaxAttempts(),
         e);
-    if (requeueWithDelay(asyncJobRecord, basePollDelayMs(), null, errorMessage)) {
+    if (requeueWithDelay(
+        asyncJobRecord, retryDelayMs(asyncJobRecord.attemptCount()), null, errorMessage)) {
       meterRegistry.counter("asyncJobQueue.retried", "queueName", queueName).increment();
     }
   }
@@ -381,6 +382,31 @@ class AsyncJobQueueRuntime {
       recordTransitionFailure("retry");
     }
     return requeued;
+  }
+
+  long retryDelayMs(int attemptCount) {
+    long delayMs = basePollDelayMs();
+    long maxRetryDelayMs = Math.max(delayMs, queueSettings.getMaxRetryDelayMs());
+    int boundedAttemptCount = Math.max(1, attemptCount);
+    for (int i = 1; i < boundedAttemptCount && delayMs < maxRetryDelayMs; i++) {
+      if (delayMs > Long.MAX_VALUE / 2) {
+        delayMs = maxRetryDelayMs;
+      } else {
+        delayMs = Math.min(maxRetryDelayMs, delayMs * 2);
+      }
+    }
+    return applyRetryDelayJitter(delayMs);
+  }
+
+  private long applyRetryDelayJitter(long delayMs) {
+    int jitterPercent = queueSettings.getRetryJitterPercent();
+    if (jitterPercent <= 0) {
+      return delayMs;
+    }
+
+    long jitterRangeMs = Math.max(1, delayMs * jitterPercent / 100);
+    long jitter = ThreadLocalRandom.current().nextLong(-jitterRangeMs, jitterRangeMs + 1);
+    return Math.max(0, delayMs + jitter);
   }
 
   private void recordTransitionFailure(String transition) {
@@ -486,6 +512,12 @@ class AsyncJobQueueRuntime {
     }
     if (queueSettings.getPollJitterPercent() < 0 || queueSettings.getPollJitterPercent() > 100) {
       throw new IllegalArgumentException("pollJitterPercent must be between 0 and 100");
+    }
+    if (queueSettings.getMaxRetryDelayMs() <= 0) {
+      throw new IllegalArgumentException("maxRetryDelayMs must be > 0");
+    }
+    if (queueSettings.getRetryJitterPercent() < 0 || queueSettings.getRetryJitterPercent() > 100) {
+      throw new IllegalArgumentException("retryJitterPercent must be between 0 and 100");
     }
   }
 

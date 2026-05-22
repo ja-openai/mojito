@@ -17,6 +17,8 @@ import org.springframework.context.annotation.Configuration;
  * l10n.org.async-job-queue.status-metrics-interval-ms=10000
  * l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=250
  * l10n.org.async-job-queue.queues.assetlocalize.poll-jitter-percent=10
+ * l10n.org.async-job-queue.queues.assetlocalize.max-retry-delay-ms=60000
+ * l10n.org.async-job-queue.queues.assetlocalize.retry-jitter-percent=20
  * l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=20
  * </pre>
  */
@@ -71,6 +73,8 @@ public class AsyncJobQueueProperties {
     private long heartbeatIntervalMs = 20_000;
     private int maxAttempts = 5;
     private int pollJitterPercent = 10;
+    private long maxRetryDelayMs = 60_000;
+    private int retryJitterPercent = 20;
 
     public long getPollIntervalMs() {
       return pollIntervalMs;
@@ -134,6 +138,22 @@ public class AsyncJobQueueProperties {
 
     public void setPollJitterPercent(int pollJitterPercent) {
       this.pollJitterPercent = pollJitterPercent;
+    }
+
+    public long getMaxRetryDelayMs() {
+      return maxRetryDelayMs;
+    }
+
+    public void setMaxRetryDelayMs(long maxRetryDelayMs) {
+      this.maxRetryDelayMs = maxRetryDelayMs;
+    }
+
+    public int getRetryJitterPercent() {
+      return retryJitterPercent;
+    }
+
+    public void setRetryJitterPercent(int retryJitterPercent) {
+      this.retryJitterPercent = retryJitterPercent;
     }
   }
 }

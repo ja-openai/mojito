@@ -528,6 +528,59 @@ public class AsyncJobQueueRuntimeTest {
                 executor));
   }
 
+  @Test
+  public void retryDelayUsesExponentialBackoffUntilMaxRetryDelay() {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setRetryJitterPercent(0);
+    queueSettings.setMaxRetryDelayMs(500);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            new InMemoryAsyncJobStore(),
+            queueSettings,
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            executor);
+
+    assertThat(asyncJobQueueRuntime.retryDelayMs(0)).isEqualTo(100);
+    assertThat(asyncJobQueueRuntime.retryDelayMs(1)).isEqualTo(100);
+    assertThat(asyncJobQueueRuntime.retryDelayMs(2)).isEqualTo(200);
+    assertThat(asyncJobQueueRuntime.retryDelayMs(3)).isEqualTo(400);
+    assertThat(asyncJobQueueRuntime.retryDelayMs(4)).isEqualTo(500);
+    assertThat(asyncJobQueueRuntime.retryDelayMs(20)).isEqualTo(500);
+  }
+
+  @Test
+  public void retrySettingsMustBePositiveAndBounded() {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setMaxRetryDelayMs(0);
+
+    org.junit.Assert.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            runtime(
+                new InMemoryAsyncJobStore(),
+                queueSettings,
+                handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+                mock(TaskScheduler.class),
+                executor));
+
+    queueSettings.setMaxRetryDelayMs(1);
+    queueSettings.setRetryJitterPercent(101);
+
+    org.junit.Assert.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            runtime(
+                new InMemoryAsyncJobStore(),
+                queueSettings,
+                handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+                mock(TaskScheduler.class),
+                executor));
+  }
+
   private AsyncJobQueueRuntime runtime(
       AsyncJobStore asyncJobStore,
       AsyncJobQueueProperties.QueueSettings queueSettings,

@@ -107,6 +107,8 @@ Queue Runtime Config (example)
 - `l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=20`
 - `l10n.org.async-job-queue.queues.assetlocalize.max-concurrency=10`
 - `l10n.org.async-job-queue.queues.assetlocalize.max-attempts=5`
+- `l10n.org.async-job-queue.queues.assetlocalize.max-retry-delay-ms=60000`
+- `l10n.org.async-job-queue.queues.assetlocalize.retry-jitter-percent=20`
 - `l10n.org.async-job-queue.queues.assetlocalize.lease-duration-ms=120000`
 - `l10n.org.async-job-queue.queues.assetlocalize.heartbeat-interval-ms=20000`
 
@@ -125,6 +127,9 @@ Adaptive Polling (per queue)
   - on successful claim, reset to base interval
 - Scheduled non-immediate polls apply small bounded jitter (`poll-jitter-percent`, default 10%) so
   pods do not synchronize into the same empty-poll or wakeup cadence.
+- Unexpected handler exceptions retry with exponential backoff from the base poll interval, capped by
+  `max-retry-delay-ms`, plus retry-specific jitter (`retry-jitter-percent`, default 20%). Handler
+  requested requeues can still provide an explicit `available_at`.
 
 Optional Wakeup Signals
 - Wakeups are an optimization only. The durable queue table remains the source of truth and the
@@ -165,7 +170,7 @@ PostgreSQL Portability
 
 Test Coverage
 - Unit tests cover in-memory store semantics, runtime adaptive polling, bounded retries, heartbeats,
-  scheduling, runtime latency timers, and Spring configuration.
+  retry backoff, scheduling, runtime latency timers, and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
   handler-only queues, and non-fatal reporting failures.
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, and status
@@ -204,7 +209,6 @@ Rollout Plan
 Open Questions
 - Which keys should be mandatory in `job_data`, and which should remain queue-specific?
 - Should we keep one queue table now and expand by `queue_name`, or create table-per-queue later only if operationally required?
-- Backoff policy defaults: fixed vs exponential with jitter.
 
 Recommendation
 - Build one-table multi-queue-ready design now (`queue_name` + per-queue poller/executor config).
