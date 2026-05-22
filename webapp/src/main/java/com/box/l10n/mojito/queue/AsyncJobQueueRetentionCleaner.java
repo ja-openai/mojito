@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,6 +32,7 @@ public class AsyncJobQueueRetentionCleaner {
   private final MeterRegistry meterRegistry;
   private final Supplier<Instant> nowSupplier;
 
+  @Autowired
   public AsyncJobQueueRetentionCleaner(
       AsyncJobStore asyncJobStore,
       AsyncJobQueueProperties asyncJobQueueProperties,
