@@ -128,6 +128,57 @@ public class InMemoryAsyncJobStoreTest {
   }
 
   @Test
+  public void reclaimedLeaseFencesStaleOwnerTransitions() throws Exception {
+    AsyncJobId id =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"v\":1}", Instant.now().minusSeconds(1));
+    AsyncJobRecord firstClaim =
+        inMemoryAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofMillis(50))
+            .get(0);
+
+    Thread.sleep(80);
+
+    AsyncJobRecord reclaimed =
+        inMemoryAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-b", Duration.ofSeconds(5))
+            .get(0);
+
+    assertThat(
+            inMemoryAsyncJobStore.markDone(
+                "assetlocalize", id, "worker-a", firstClaim.leaseToken(), "{\"v\":\"stale\"}"))
+        .isFalse();
+    assertThat(
+            inMemoryAsyncJobStore.requeue(
+                "assetlocalize",
+                id,
+                "worker-a",
+                firstClaim.leaseToken(),
+                Instant.now().plusSeconds(1),
+                "{\"v\":\"stale\"}",
+                "stale requeue"))
+        .isFalse();
+    assertThat(
+            inMemoryAsyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", firstClaim.leaseToken(), null, "stale failure"))
+        .isFalse();
+
+    AsyncJobRecord running = inMemoryAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(running.status()).isEqualTo(AsyncJobStatus.RUNNING);
+    assertThat(running.workerId()).isEqualTo("worker-b");
+    assertThat(running.leaseToken()).isEqualTo(reclaimed.leaseToken());
+    assertThat(running.attemptCount()).isEqualTo(2);
+
+    assertThat(
+            inMemoryAsyncJobStore.markDone(
+                "assetlocalize", id, "worker-b", reclaimed.leaseToken(), "{\"v\":\"done\"}"))
+        .isTrue();
+    AsyncJobRecord done = inMemoryAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(done.status()).isEqualTo(AsyncJobStatus.DONE);
+    assertThat(done.jobData()).isEqualTo("{\"v\":\"done\"}");
+    assertThat(done.lastError()).isNull();
+  }
+
+  @Test
   public void requeueAndMarkDoneCanUpdateJobData() throws Exception {
     AsyncJobId id =
         inMemoryAsyncJobStore.enqueue(

@@ -164,6 +164,57 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void reclaimedLeaseFencesStaleOwnerTransitions() throws Exception {
+    AsyncJobId id =
+        jdbcAsyncJobStore.enqueue("assetlocalize", "{\"v\":1}", Instant.now().minusSeconds(1));
+    AsyncJobRecord firstClaim =
+        jdbcAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofMillis(50))
+            .get(0);
+
+    Thread.sleep(80);
+
+    AsyncJobRecord reclaimed =
+        jdbcAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-b", Duration.ofSeconds(5))
+            .get(0);
+
+    assertThat(
+            jdbcAsyncJobStore.markDone(
+                "assetlocalize", id, "worker-a", firstClaim.leaseToken(), "{\"v\":\"stale\"}"))
+        .isFalse();
+    assertThat(
+            jdbcAsyncJobStore.requeue(
+                "assetlocalize",
+                id,
+                "worker-a",
+                firstClaim.leaseToken(),
+                Instant.now().plusSeconds(1),
+                "{\"v\":\"stale\"}",
+                "stale requeue"))
+        .isFalse();
+    assertThat(
+            jdbcAsyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", firstClaim.leaseToken(), null, "stale failure"))
+        .isFalse();
+
+    AsyncJobRecord running = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(running.status()).isEqualTo(AsyncJobStatus.RUNNING);
+    assertThat(running.workerId()).isEqualTo("worker-b");
+    assertThat(running.leaseToken()).isEqualTo(reclaimed.leaseToken());
+    assertThat(running.attemptCount()).isEqualTo(2);
+
+    assertThat(
+            jdbcAsyncJobStore.markDone(
+                "assetlocalize", id, "worker-b", reclaimed.leaseToken(), "{\"v\":\"done\"}"))
+        .isTrue();
+    AsyncJobRecord done = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(done.status()).isEqualTo(AsyncJobStatus.DONE);
+    assertThat(done.jobData()).isEqualTo("{\"v\":\"done\"}");
+    assertThat(done.lastError()).isNull();
+  }
+
+  @Test
   public void claimUpdateRechecksClaimableStateAfterCandidateSelection() {
     AsyncJobId id =
         jdbcAsyncJobStore.enqueue("assetlocalize", "{\"v\":1}", Instant.now().minusSeconds(1));
