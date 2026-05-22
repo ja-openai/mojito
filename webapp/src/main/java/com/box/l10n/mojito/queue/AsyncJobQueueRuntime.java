@@ -259,15 +259,26 @@ class AsyncJobQueueRuntime {
       boundedDelayMs = Math.max(0, pollDelayJitter.applyAsLong(boundedDelayMs));
     }
     long pollSequence = scheduledPollSequence + 1;
-    ScheduledFuture<?> scheduledFuture =
-        taskScheduler.schedule(
-            () -> runScheduledPoll(pollSequence),
-            Date.from(Instant.now().plusMillis(boundedDelayMs)));
-    if (scheduledFuture == null) {
-      throw new IllegalStateException("TaskScheduler returned null ScheduledFuture");
-    }
+    long previousPollSequence = scheduledPollSequence;
     scheduledPollSequence = pollSequence;
-    nextPollFuture = scheduledFuture;
+    ScheduledFuture<?> scheduledFuture;
+    try {
+      scheduledFuture =
+          taskScheduler.schedule(
+              () -> runScheduledPoll(pollSequence),
+              Date.from(Instant.now().plusMillis(boundedDelayMs)));
+      if (scheduledFuture == null) {
+        throw new IllegalStateException("TaskScheduler returned null ScheduledFuture");
+      }
+    } catch (RuntimeException e) {
+      if (scheduledPollSequence == pollSequence) {
+        scheduledPollSequence = previousPollSequence;
+      }
+      throw e;
+    }
+    if (scheduledPollSequence == pollSequence) {
+      nextPollFuture = scheduledFuture;
+    }
   }
 
   private void recordPollScheduleFailure() {

@@ -1313,6 +1313,31 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void immediateScheduledPollCanRunBeforeScheduleReturns() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of());
+    InlineImmediateTaskScheduler taskScheduler = new InlineImmediateTaskScheduler();
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setPollJitterPercent(0);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor);
+
+    asyncJobQueueRuntime.start();
+
+    assertThat(taskScheduler.scheduleInvocations()).isEqualTo(2);
+    verify(asyncJobStore, times(1))
+        .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
+  }
+
+  @Test
   public void triggerPollNowRecordsFailureWhenImmediateScheduleFails() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
@@ -2024,6 +2049,81 @@ public class AsyncJobQueueRuntimeTest {
   @FunctionalInterface
   private interface ThrowingProcessor {
     AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) throws Exception;
+  }
+
+  private static class InlineImmediateTaskScheduler implements TaskScheduler {
+
+    private final AtomicInteger scheduleInvocations = new AtomicInteger();
+
+    int scheduleInvocations() {
+      return scheduleInvocations.get();
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(Runnable task, Date startTime) {
+      scheduleInvocations.incrementAndGet();
+      if (startTime.getTime() <= System.currentTimeMillis() + 10) {
+        task.run();
+      }
+      return new DummyScheduledFuture();
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(Runnable task, Instant startTime) {
+      scheduleInvocations.incrementAndGet();
+      if (!startTime.isAfter(Instant.now().plusMillis(10))) {
+        task.run();
+      }
+      return new DummyScheduledFuture();
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(
+        Runnable task, org.springframework.scheduling.Trigger trigger) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable task, Date startTime, long period) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable task, long period) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(
+        Runnable task, Instant startTime, Duration period) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable task, Duration period) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable task, Date startTime, long delay) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable task, long delay) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(
+        Runnable task, Instant startTime, Duration delay) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable task, Duration delay) {
+      throw new UnsupportedOperationException();
+    }
   }
 
   private static class DummyScheduledFuture implements ScheduledFuture<Object> {
