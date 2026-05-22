@@ -257,6 +257,8 @@ Removed during this workstream:
   transaction.
 - `ReviewProjectService.updateRequestAssignedPm` no longer uses `@Transactional`; request-wide PM
   reassignment now opens and commits its write transaction boundary explicitly.
+- `ReviewProjectService.getProjectAssignmentHistory` no longer uses `@Transactional`; assignment
+  history reads now open and commit their read-only transaction boundary explicitly.
 
 In progress:
 
