@@ -438,6 +438,10 @@ class AsyncJobQueueRuntime {
     long processingStartNanos = System.nanoTime();
     ScheduledFuture<?> heartbeatFuture = null;
     try {
+      if (asyncJobRecord.attemptCount() > queueSettings.getMaxAttempts()) {
+        handleClaimedAttemptBudgetExhausted(asyncJobRecord);
+        return;
+      }
       try {
         heartbeatFuture = scheduleHeartbeat(asyncJobRecord);
       } catch (RuntimeException e) {
@@ -460,6 +464,49 @@ class AsyncJobQueueRuntime {
           .timer("asyncJobQueue.processing.latency", "queueName", queueName)
           .record(System.nanoTime() - processingStartNanos, TimeUnit.NANOSECONDS);
       triggerPollNow();
+    }
+  }
+
+  private void handleClaimedAttemptBudgetExhausted(AsyncJobRecord asyncJobRecord) {
+    String errorMessage =
+        "Attempt budget exhausted before handler invocation: attempt "
+            + asyncJobRecord.attemptCount()
+            + " exceeded maxAttempts "
+            + queueSettings.getMaxAttempts();
+    logger.error(
+        "Async job attempt budget exhausted for queue {}, job {}; marking failed after {} attempts",
+        queueName,
+        asyncJobRecord.id(),
+        asyncJobRecord.attemptCount());
+    meterRegistry.counter("asyncJobQueue.attempt.exhausted", "queueName", queueName).increment();
+
+    boolean markedFailed;
+    try {
+      markedFailed =
+          asyncJobStore.markFailed(
+              queueName,
+              asyncJobRecord.id(),
+              asyncJobRecord.workerId(),
+              asyncJobRecord.leaseToken(),
+              null,
+              errorMessage);
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to mark attempt-budget-exhausted job {} failed for queue {}",
+          asyncJobRecord.id(),
+          queueName,
+          e);
+      recordTransitionFailure("attemptBudgetExhausted");
+      return;
+    }
+    if (!markedFailed) {
+      logger.warn(
+          "Failed to mark attempt-budget-exhausted job {} failed for queue {}",
+          asyncJobRecord.id(),
+          queueName);
+      recordTransitionFailure("attemptBudgetExhausted");
+    } else {
+      meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
     }
   }
 

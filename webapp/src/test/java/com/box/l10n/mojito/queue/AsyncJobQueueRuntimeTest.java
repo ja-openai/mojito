@@ -385,6 +385,69 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void expiredLeaseReclaimsStopBeforeHandlerAfterMaxAttempts() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AtomicInteger handlerInvocations = new AtomicInteger();
+    CountDownLatch firstAttemptStarted = new CountDownLatch(1);
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 25, 0);
+    queueSettings.setMaxAttempts(1);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  handlerInvocations.incrementAndGet();
+                  firstAttemptStarted.countDown();
+                  Thread.sleep(100);
+                  return AsyncJobHandlerResult.done("{\"stale\":true}");
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(firstAttemptStarted.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTransitionFailure("done", 1);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.FAILED, 1);
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(handlerInvocations.get()).isEqualTo(1);
+    assertThat(failedJob.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failedJob.attemptCount()).isEqualTo(2);
+    assertThat(failedJob.lastError()).contains("Attempt budget exhausted");
+    assertThat(failedJob.workerId()).isNull();
+    assertThat(failedJob.leaseToken()).isNull();
+    assertThat(failedJob.leaseUntil()).isNull();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.attempt.exhausted")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.leaseExpiredReclaimed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void transitionFailureCounterRecordsFailedDoneTransition() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);

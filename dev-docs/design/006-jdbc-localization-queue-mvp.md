@@ -98,6 +98,8 @@ Failure + Restart Semantics
   - when `attempt_count` reaches `max-attempts`, set `status=failed`, clear lease owner fields, and keep `last_error`
   - handler-requested requeues also consume attempts and fail terminally at `max-attempts`; otherwise
     a handler that always returns `REQUEUE` can bypass the poison-job budget
+  - lease-expired reclaims also consume attempts; if reclaiming a row pushes `attempt_count` past
+    `max-attempts`, the runtime marks it `failed` before invoking the handler again
   - operator replay can move a `failed` row back to `queued`, reset `attempt_count=0`, preserve
     `last_error` for inspection, and optionally replace `job_data`
   - on terminal completion, set `status=done` and finalize pollable metadata separately
@@ -251,6 +253,8 @@ Monitoring (MVP Required)
   - terminal-row retention deletions and cleanup failures by queue/status
   - `asyncJobQueue.leaseExpiredReclaimed` is emitted from claim results marked by the store when a
     previously running row is recovered after lease expiry
+  - `asyncJobQueue.attempt.exhausted` is emitted when a lease-expired reclaim exceeds the attempt
+    budget and is failed before handler invocation
 - Timers:
   - queue wait latency (`claimed_at - available_at`)
   - processing latency (`finished_at - claimed_at`)
