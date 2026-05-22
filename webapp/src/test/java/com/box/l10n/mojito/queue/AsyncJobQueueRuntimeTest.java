@@ -708,6 +708,122 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void heartbeatScheduleFailureRequeuesWithoutProcessing() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch requeued = new CountDownLatch(1);
+    Duration[] observedDelay = new Duration[1];
+    AtomicInteger handlerInvocations = new AtomicInteger();
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
+        .thenThrow(new IllegalStateException("scheduler unavailable"));
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            anyString()))
+        .thenAnswer(
+            invocation -> {
+              observedDelay[0] = invocation.getArgument(4);
+              requeued.countDown();
+              return true;
+            });
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(100, 1_000, 1, 1, 200, 25);
+    queueSettings.setRetryJitterPercent(0);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  handlerInvocations.incrementAndGet();
+                  return AsyncJobHandlerResult.done();
+                }),
+            taskScheduler,
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(observedDelay[0]).isEqualTo(Duration.ofMillis(100));
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(handlerInvocations.get()).isZero();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.heartbeat.schedule.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.retried")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void heartbeatScheduleFailuresStopRetryingAfterMaxAttempts() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AtomicInteger handlerInvocations = new AtomicInteger();
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 200, 25);
+    queueSettings.setMaxAttempts(1);
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
+        .thenThrow(new IllegalStateException("scheduler unavailable"));
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  handlerInvocations.incrementAndGet();
+                  return AsyncJobHandlerResult.done();
+                }),
+            taskScheduler,
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.FAILED, 1);
+
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(failedJob.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failedJob.attemptCount()).isEqualTo(1);
+    assertThat(failedJob.lastError()).contains("scheduler unavailable");
+    assertThat(failedJob.workerId()).isNull();
+    assertThat(failedJob.leaseToken()).isNull();
+    assertThat(failedJob.leaseUntil()).isNull();
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(handlerInvocations.get()).isZero();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.heartbeat.schedule.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void handlerFailuresStopRetryingAfterMaxAttempts() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =
@@ -1272,6 +1388,19 @@ public class AsyncJobQueueRuntimeTest {
       Thread.sleep(20);
     }
     throw new AssertionError("Timed out waiting for value " + expectedValue);
+  }
+
+  private void waitForInFlightCount(
+      AsyncJobQueueRuntime asyncJobQueueRuntime, int expectedInFlightCount)
+      throws InterruptedException {
+    long timeoutAt = System.currentTimeMillis() + 3_000;
+    while (System.currentTimeMillis() < timeoutAt) {
+      if (asyncJobQueueRuntime.inFlightCount() == expectedInFlightCount) {
+        return;
+      }
+      Thread.sleep(20);
+    }
+    throw new AssertionError("Timed out waiting for in-flight count " + expectedInFlightCount);
   }
 
   @FunctionalInterface

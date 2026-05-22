@@ -319,8 +319,14 @@ class AsyncJobQueueRuntime {
 
   private void processClaimedJob(AsyncJobRecord asyncJobRecord) {
     long processingStartNanos = System.nanoTime();
-    ScheduledFuture<?> heartbeatFuture = scheduleHeartbeat(asyncJobRecord);
+    ScheduledFuture<?> heartbeatFuture = null;
     try {
+      try {
+        heartbeatFuture = scheduleHeartbeat(asyncJobRecord);
+      } catch (RuntimeException e) {
+        handleHeartbeatScheduleFailure(asyncJobRecord, e);
+        return;
+      }
       AsyncJobHandlerResult asyncJobHandlerResult = asyncJobHandler.process(asyncJobRecord);
       if (asyncJobHandlerResult == null) {
         asyncJobHandlerResult = AsyncJobHandlerResult.done();
@@ -337,6 +343,67 @@ class AsyncJobQueueRuntime {
           .timer("asyncJobQueue.processing.latency", "queueName", queueName)
           .record(System.nanoTime() - processingStartNanos, TimeUnit.NANOSECONDS);
       triggerPollNow();
+    }
+  }
+
+  private void handleHeartbeatScheduleFailure(AsyncJobRecord asyncJobRecord, RuntimeException e) {
+    meterRegistry
+        .counter("asyncJobQueue.heartbeat.schedule.failed", "queueName", queueName)
+        .increment();
+    String errorMessage = errorMessage(e);
+
+    if (asyncJobRecord.attemptCount() >= queueSettings.getMaxAttempts()) {
+      logger.error(
+          "Failed to schedule heartbeat for queue {}, job {}; marking failed after {} attempts",
+          queueName,
+          asyncJobRecord.id(),
+          asyncJobRecord.attemptCount(),
+          e);
+      boolean markedFailed;
+      try {
+        markedFailed =
+            asyncJobStore.markFailed(
+                queueName,
+                asyncJobRecord.id(),
+                asyncJobRecord.workerId(),
+                asyncJobRecord.leaseToken(),
+                null,
+                errorMessage);
+      } catch (RuntimeException transitionException) {
+        logger.warn(
+            "Failed to mark heartbeat-schedule-failed job {} failed for queue {}",
+            asyncJobRecord.id(),
+            queueName,
+            transitionException);
+        recordTransitionFailure("heartbeatScheduleFailed");
+        return;
+      }
+      if (!markedFailed) {
+        logger.warn(
+            "Failed to mark heartbeat-schedule-failed job {} failed for queue {}",
+            asyncJobRecord.id(),
+            queueName);
+        recordTransitionFailure("heartbeatScheduleFailed");
+      } else {
+        meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
+      }
+      return;
+    }
+
+    logger.warn(
+        "Failed to schedule heartbeat for queue {}, job {}; requeueing attempt {}/{}",
+        queueName,
+        asyncJobRecord.id(),
+        asyncJobRecord.attemptCount(),
+        queueSettings.getMaxAttempts(),
+        e);
+    if (requeueWithDelay(
+        asyncJobRecord,
+        retryDelayMs(asyncJobRecord.attemptCount()),
+        null,
+        errorMessage,
+        "heartbeatScheduleRequeue")) {
+      meterRegistry.counter("asyncJobQueue.retried", "queueName", queueName).increment();
     }
   }
 
@@ -463,6 +530,15 @@ class AsyncJobQueueRuntime {
 
   private boolean requeueWithDelay(
       AsyncJobRecord asyncJobRecord, long delayMs, String jobData, String lastError) {
+    return requeueWithDelay(asyncJobRecord, delayMs, jobData, lastError, "retry");
+  }
+
+  private boolean requeueWithDelay(
+      AsyncJobRecord asyncJobRecord,
+      long delayMs,
+      String jobData,
+      String lastError,
+      String transitionFailureName) {
     boolean requeued;
     try {
       requeued =
@@ -475,20 +551,13 @@ class AsyncJobQueueRuntime {
               jobData,
               lastError);
     } catch (RuntimeException e) {
-      logger.warn(
-          "Failed to requeue async job {} after handler failure for queue {}",
-          asyncJobRecord.id(),
-          queueName,
-          e);
-      recordTransitionFailure("retry");
+      logger.warn("Failed to requeue async job {} for queue {}", asyncJobRecord.id(), queueName, e);
+      recordTransitionFailure(transitionFailureName);
       return false;
     }
     if (!requeued) {
-      logger.warn(
-          "Failed to requeue async job {} after handler failure for queue {}",
-          asyncJobRecord.id(),
-          queueName);
-      recordTransitionFailure("retry");
+      logger.warn("Failed to requeue async job {} for queue {}", asyncJobRecord.id(), queueName);
+      recordTransitionFailure(transitionFailureName);
     }
     return requeued;
   }
