@@ -14,7 +14,8 @@ public interface AsyncJobHandler {
   /**
    * Process a claimed job and return the state transition the runtime should apply afterwards.
    *
-   * <p>Throwing signals unexpected failure; the runtime currently requeues with a small delay.
+   * <p>Throwing signals unexpected failure; the runtime retries with bounded backoff until the
+   * queue's attempt budget is exhausted.
    */
   AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) throws Exception;
 }

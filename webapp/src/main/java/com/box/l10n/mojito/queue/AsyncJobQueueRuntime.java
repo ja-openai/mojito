@@ -242,33 +242,78 @@ class AsyncJobQueueRuntime {
       executor.execute(() -> processClaimedJob(asyncJobRecord));
     } catch (RejectedExecutionException e) {
       inFlightCount.decrementAndGet();
-      logger.warn(
-          "Queue executor rejected claimed job {} for queue {}", asyncJobRecord.id(), queueName, e);
-      boolean requeued;
+      handleExecutorRejection(asyncJobRecord, e);
+    }
+  }
+
+  private void handleExecutorRejection(
+      AsyncJobRecord asyncJobRecord, RejectedExecutionException e) {
+    meterRegistry.counter("asyncJobQueue.executor.rejected", "queueName", queueName).increment();
+    String errorMessage = errorMessage(e);
+
+    if (asyncJobRecord.attemptCount() >= queueSettings.getMaxAttempts()) {
+      logger.error(
+          "Queue executor rejected claimed job {} for queue {}; marking failed after {} attempts",
+          asyncJobRecord.id(),
+          queueName,
+          asyncJobRecord.attemptCount(),
+          e);
+      boolean markedFailed;
       try {
-        requeued =
-            asyncJobStore.requeueAfter(
+        markedFailed =
+            asyncJobStore.markFailed(
                 queueName,
                 asyncJobRecord.id(),
                 asyncJobRecord.workerId(),
                 asyncJobRecord.leaseToken(),
-                Duration.ZERO,
                 null,
-                errorMessage(e));
+                errorMessage);
       } catch (RuntimeException transitionException) {
         logger.warn(
-            "Failed to requeue rejected job {} for queue {}",
+            "Failed to mark executor-rejected job {} failed for queue {}",
             asyncJobRecord.id(),
             queueName,
             transitionException);
-        recordTransitionFailure("executorRejectedRequeue");
+        recordTransitionFailure("executorRejectedFailed");
         return;
       }
-      if (!requeued) {
+      if (!markedFailed) {
         logger.warn(
-            "Failed to requeue rejected job {} for queue {}", asyncJobRecord.id(), queueName);
-        recordTransitionFailure("executorRejectedRequeue");
+            "Failed to mark executor-rejected job {} failed for queue {}",
+            asyncJobRecord.id(),
+            queueName);
+        recordTransitionFailure("executorRejectedFailed");
+      } else {
+        meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
       }
+      return;
+    }
+
+    logger.warn(
+        "Queue executor rejected claimed job {} for queue {}", asyncJobRecord.id(), queueName, e);
+    boolean requeued;
+    try {
+      requeued =
+          asyncJobStore.requeueAfter(
+              queueName,
+              asyncJobRecord.id(),
+              asyncJobRecord.workerId(),
+              asyncJobRecord.leaseToken(),
+              Duration.ofMillis(retryDelayMs(asyncJobRecord.attemptCount())),
+              null,
+              errorMessage);
+    } catch (RuntimeException transitionException) {
+      logger.warn(
+          "Failed to requeue rejected job {} for queue {}",
+          asyncJobRecord.id(),
+          queueName,
+          transitionException);
+      recordTransitionFailure("executorRejectedRequeue");
+      return;
+    }
+    if (!requeued) {
+      logger.warn("Failed to requeue rejected job {} for queue {}", asyncJobRecord.id(), queueName);
+      recordTransitionFailure("executorRejectedRequeue");
     }
   }
 

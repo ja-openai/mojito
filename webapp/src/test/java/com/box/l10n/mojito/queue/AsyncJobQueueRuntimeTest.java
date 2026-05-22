@@ -482,6 +482,55 @@ public class AsyncJobQueueRuntimeTest {
     asyncJobQueueRuntime.pollOnce();
 
     waitForTransitionFailure("executorRejectedRequeue", 1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.executor.rejected")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void executorRejectionsStopRetryingAfterMaxAttempts() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+    ThreadPoolTaskExecutor rejectingExecutor = newExecutor(1);
+    rejectingExecutor.shutdown();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            rejectingExecutor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(failedJob.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failedJob.attemptCount()).isEqualTo(1);
+    assertThat(failedJob.lastError()).contains("TaskRejectedException");
+    assertThat(failedJob.workerId()).isNull();
+    assertThat(failedJob.leaseToken()).isNull();
+    assertThat(failedJob.leaseUntil()).isNull();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.executor.rejected")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
   }
 
   @Test

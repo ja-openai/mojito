@@ -181,8 +181,9 @@ PostgreSQL Portability
 Test Coverage
 - Unit tests cover in-memory store semantics, runtime adaptive polling, bounded retries, heartbeats,
   heartbeat false-return and exception metrics, bounded persisted error summaries, retry backoff,
-  scheduling, notification wakeup coalescing, runtime poll failure recovery, runtime latency timers,
-  state-transition false-return and exception metrics, trigger scheduling failure metrics,
+  executor rejection containment, scheduling, notification wakeup coalescing, runtime poll failure
+  recovery, runtime latency timers, state-transition false-return and exception metrics,
+  trigger scheduling failure metrics,
   coordinator startup cleanup, synchronized trigger routing, null-safe queue configuration binding,
   and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
@@ -214,6 +215,7 @@ Monitoring (MVP Required)
   - executor active/queued by queue
 - Counters:
   - claimed, completed, retried, execution-failed, lease-expired-reclaimed, poll-skipped-saturated
+  - local executor rejections before queue state recovery
   - heartbeat renewal false-return and exception failures
   - `asyncJobQueue.leaseExpiredReclaimed` is emitted from claim results marked by the store when a
     previously running row is recovered after lease expiry
