@@ -91,6 +91,22 @@ public class AsyncJobQueueCoordinatorTest {
   }
 
   @Test
+  public void triggerPollNowRejectsInvalidQueueName() {
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            new AsyncJobQueueProperties(),
+            List.of(handler("assetlocalize")),
+            mock(TaskScheduler.class),
+            meterRegistry);
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> coordinator.triggerPollNow(" "));
+
+    assertThat(exception).hasMessageContaining("queueName must not be blank");
+  }
+
+  @Test
   public void startHandlesNullConfiguredQueues() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     List<TestScheduledFuture> scheduledPolls = new ArrayList<>();
@@ -157,6 +173,30 @@ public class AsyncJobQueueCoordinatorTest {
         assertThrows(IllegalArgumentException.class, coordinator::start);
 
     assertThat(exception).hasMessageContaining("queueName must be at most 64 characters");
+    assertThat(coordinator.isRunning()).isFalse();
+    verify(taskScheduler, never()).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
+  public void startRejectsInvalidConfiguredQueueSettingsBeforeCreatingExecutor() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setMaxConcurrency(0);
+    asyncJobQueueProperties.getQueues().put("assetlocalize", queueSettings);
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            asyncJobQueueProperties,
+            List.of(handler("assetlocalize")),
+            taskScheduler,
+            meterRegistry);
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, coordinator::start);
+
+    assertThat(exception).hasMessageContaining("maxConcurrency must be > 0");
     assertThat(coordinator.isRunning()).isFalse();
     verify(taskScheduler, never()).schedule(any(Runnable.class), any(Date.class));
   }

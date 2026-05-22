@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -87,6 +88,21 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     reporter.reportStatusCounts();
 
     assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 0);
+  }
+
+  @Test
+  public void rejectsInvalidHandlerQueueNameBeforeReportingMetrics() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                new AsyncJobQueueStatusMetricsReporter(
+                    new InMemoryAsyncJobStore(),
+                    new AsyncJobQueueProperties(),
+                    List.of(handler(" ")),
+                    meterRegistry));
+
+    assertThat(exception).hasMessageContaining("queueName must not be blank");
   }
 
   private AsyncJobQueueProperties queueProperties(String queueName) {

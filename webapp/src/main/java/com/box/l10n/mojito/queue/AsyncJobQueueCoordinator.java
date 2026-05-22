@@ -138,8 +138,9 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
   }
 
   public void triggerPollNow(String queueName) {
+    String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
     synchronized (lifecycleLock) {
-      AsyncJobQueueRuntime runtime = runtimesByQueueName.get(queueName);
+      AsyncJobQueueRuntime runtime = runtimesByQueueName.get(validatedQueueName);
       if (runtime != null) {
         runtime.triggerPollNow();
       }
@@ -149,7 +150,8 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
   private AsyncJobQueueProperties.QueueSettings queueSettings(String queueName) {
     AsyncJobQueueProperties.QueueSettings queueSettings =
         asyncJobQueueProperties.getQueues().get(queueName);
-    return queueSettings != null ? queueSettings : new AsyncJobQueueProperties.QueueSettings();
+    return AsyncJobQueueValidation.validateQueueSettings(
+        queueSettings != null ? queueSettings : new AsyncJobQueueProperties.QueueSettings());
   }
 
   private ThreadPoolTaskExecutor queueExecutor(

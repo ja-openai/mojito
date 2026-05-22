@@ -37,10 +37,12 @@ public class AsyncJobQueueStatusMetricsReporter {
       List<AsyncJobHandler> asyncJobHandlers,
       MeterRegistry meterRegistry) {
     this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
-    this.asyncJobQueueProperties = Objects.requireNonNull(asyncJobQueueProperties);
-    AsyncJobQueueValidation.validateStatusMetricsIntervalMs(
-        asyncJobQueueProperties.getStatusMetricsIntervalMs());
+    this.asyncJobQueueProperties =
+        AsyncJobQueueValidation.validateProperties(Objects.requireNonNull(asyncJobQueueProperties));
     this.asyncJobHandlers = Objects.requireNonNull(asyncJobHandlers);
+    this.asyncJobHandlers.stream()
+        .map(AsyncJobHandler::queueName)
+        .forEach(AsyncJobQueueValidation::validateQueueName);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
   }
 
@@ -71,7 +73,10 @@ public class AsyncJobQueueStatusMetricsReporter {
 
   private Set<String> queueNames() {
     Set<String> queueNames = new LinkedHashSet<>(asyncJobQueueProperties.getQueues().keySet());
-    asyncJobHandlers.stream().map(AsyncJobHandler::queueName).forEach(queueNames::add);
+    asyncJobHandlers.stream()
+        .map(AsyncJobHandler::queueName)
+        .map(AsyncJobQueueValidation::validateQueueName)
+        .forEach(queueNames::add);
     return queueNames;
   }
 
