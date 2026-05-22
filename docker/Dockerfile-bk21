@@ -28,7 +28,7 @@ RUN sh -c 'touch ${MOJITO_BIN}/mojito-webapp.jar'
 RUN sh -c 'touch ${MOJITO_BIN}/mojito-cli.jar'
 
 RUN apt-get update && apt-get install -y \
-    mysql-client \
+    postgresql-client \
     socat
 
 # Create the shell wrapper for the jar

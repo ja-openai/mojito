@@ -102,7 +102,7 @@ public class PushPullRunCleanupServiceTest extends ServiceTestBase {
   @Transactional
   @Test
   public void testCleanOldPushPullData() throws Exception {
-    Assume.assumeTrue(dbUtils.isMysql());
+    Assume.assumeTrue(dbUtils.isMysql() || dbUtils.isPostgres());
     Repository repository =
         repositoryService.createRepository(
             testIdWatcher.getEntityName("repository") + "testCleanOldPushPullData");

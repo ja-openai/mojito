@@ -3,8 +3,9 @@ package com.box.l10n.mojito.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Simple storage for images.
@@ -21,7 +22,7 @@ public class Image extends AuditableEntity {
   private String name;
 
   @Column(name = "content", length = Integer.MAX_VALUE)
-  @Lob
+  @JdbcTypeCode(SqlTypes.LONGVARBINARY)
   private byte[] content;
 
   public String getName() {

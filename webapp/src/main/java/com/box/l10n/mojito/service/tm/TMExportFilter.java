@@ -265,6 +265,7 @@ public class TMExportFilter implements IFilter {
     textUnitSearcherParameters.setRootLocaleExcluded(false);
     textUnitSearcherParameters.setLocaleId(locale.getId());
     textUnitSearcherParameters.setStatusFilter(StatusFilter.TRANSLATED);
+    textUnitSearcherParameters.setOrderByTextUnitID(true);
 
     return textUnitSearcher.search(textUnitSearcherParameters);
   }

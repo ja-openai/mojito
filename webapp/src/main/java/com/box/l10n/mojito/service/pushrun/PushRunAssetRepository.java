@@ -31,10 +31,15 @@ public interface PushRunAssetRepository extends JpaRepository<PushRunAsset, Long
       nativeQuery = true,
       value =
           """
-          delete pra
-          from push_run pr
-          join push_run_asset pra on pra.push_run_id = pr.id
-          where pr.created_date < :beforeDate
+          delete from push_run_asset
+          where id in (
+            select id from (
+              select pra.id as id
+              from push_run pr
+              join push_run_asset pra on pra.push_run_id = pr.id
+              where pr.created_date < :beforeDate
+            ) todelete
+          )
           """)
   void deleteAllByPushRunWithCreatedDateBefore(@Param("beforeDate") ZonedDateTime beforeDate);
 }

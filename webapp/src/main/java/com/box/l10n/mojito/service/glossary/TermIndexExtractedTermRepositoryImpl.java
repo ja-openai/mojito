@@ -5,6 +5,7 @@ import com.box.l10n.mojito.entity.glossary.termindex.TermIndexExtractedTerm;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexOccurrence;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexReview;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.service.DBUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import jakarta.persistence.TypedQuery;
@@ -24,6 +25,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 public class TermIndexExtractedTermRepositoryImpl
     implements TermIndexExtractedTermRepositoryCustom {
@@ -33,9 +36,86 @@ public class TermIndexExtractedTermRepositoryImpl
   private static final String SORT_REVIEW_CONFIDENCE_ASC = "REVIEW_CONFIDENCE_ASC";
 
   private final EntityManager entityManager;
+  private final DBUtils dbUtils;
+  private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-  public TermIndexExtractedTermRepositoryImpl(EntityManager entityManager) {
+  public TermIndexExtractedTermRepositoryImpl(
+      EntityManager entityManager,
+      DBUtils dbUtils,
+      NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
     this.entityManager = entityManager;
+    this.dbUtils = dbUtils;
+    this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+  }
+
+  @Override
+  public int insertIfAbsent(String sourceLocaleTag, String normalizedKey, String displayTerm) {
+    if (dbUtils.isPostgres()) {
+      return namedParameterJdbcTemplate.update(
+          """
+          insert into term_index_extracted_term
+            (created_date, last_modified_date, source_locale_tag, normalized_key, display_term,
+             occurrence_count, repository_count, first_seen_at, last_seen_at, review_status,
+             review_authority)
+          values
+            (current_timestamp, current_timestamp, :sourceLocaleTag, :normalizedKey, :displayTerm,
+             0, 0, current_timestamp, current_timestamp, :reviewStatus, :reviewAuthority)
+          on conflict (source_locale_tag, normalized_key) do nothing
+          """,
+          insertIfAbsentParameters(sourceLocaleTag, normalizedKey, displayTerm));
+    }
+
+    if (dbUtils.isMysql()) {
+      return namedParameterJdbcTemplate.update(
+          """
+          insert ignore into term_index_extracted_term
+            (created_date, last_modified_date, source_locale_tag, normalized_key, display_term,
+             occurrence_count, repository_count, first_seen_at, last_seen_at, review_status,
+             review_authority)
+          values
+            (now(), now(), :sourceLocaleTag, :normalizedKey, :displayTerm, 0, 0, now(), now(),
+             :reviewStatus, :reviewAuthority)
+          """,
+          insertIfAbsentParameters(sourceLocaleTag, normalizedKey, displayTerm));
+    }
+
+    Long existingCount =
+        entityManager
+            .createQuery(
+                """
+                select count(entry.id)
+                from TermIndexExtractedTerm entry
+                where entry.sourceLocaleTag = :sourceLocaleTag
+                  and entry.normalizedKey = :normalizedKey
+                """,
+                Long.class)
+            .setParameter("sourceLocaleTag", sourceLocaleTag)
+            .setParameter("normalizedKey", normalizedKey)
+            .getSingleResult();
+    if (existingCount > 0) {
+      return 0;
+    }
+
+    ZonedDateTime now = ZonedDateTime.now();
+    TermIndexExtractedTerm entry = new TermIndexExtractedTerm();
+    entry.setSourceLocaleTag(sourceLocaleTag);
+    entry.setNormalizedKey(normalizedKey);
+    entry.setDisplayTerm(displayTerm);
+    entry.setFirstSeenAt(now);
+    entry.setLastSeenAt(now);
+    entityManager.persist(entry);
+    entityManager.flush();
+    return 1;
+  }
+
+  private MapSqlParameterSource insertIfAbsentParameters(
+      String sourceLocaleTag, String normalizedKey, String displayTerm) {
+    return new MapSqlParameterSource()
+        .addValue("sourceLocaleTag", sourceLocaleTag)
+        .addValue("normalizedKey", normalizedKey)
+        .addValue("displayTerm", displayTerm)
+        .addValue("reviewStatus", TermIndexReview.STATUS_TO_REVIEW)
+        .addValue("reviewAuthority", TermIndexReview.AUTHORITY_NONE);
   }
 
   @Override

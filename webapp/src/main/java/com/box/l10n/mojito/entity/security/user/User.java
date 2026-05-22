@@ -29,7 +29,7 @@ import org.springframework.data.annotation.CreatedBy;
 
 @Entity
 @Table(
-    name = "user",
+    name = "`user`",
     indexes = {@Index(name = "I__USERS__USERNAME", columnList = "username", unique = true)})
 @BatchSize(size = 1000)
 @NamedEntityGraph(

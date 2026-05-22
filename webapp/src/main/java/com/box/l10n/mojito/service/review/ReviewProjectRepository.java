@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.transaction.annotation.Transactional;
 
 @RepositoryRestResource(exported = false)
 public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Long> {
@@ -75,32 +76,31 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
   List<ReviewProject> findByRequestIdWithAssignment(@Param("requestId") Long requestId);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
   @Query(
       value =
           """
           update review_project rp
-          left join (
-            select rptu.review_project_id, count(distinct rptu.id) decided_count
+          set decided_count = (
+            select count(distinct rptu.id)
             from review_project_text_unit rptu
-            join review_project rp_inner
-              on rp_inner.id = rptu.review_project_id
             left join review_project_text_unit_decision rptud
               on rptud.review_project_text_unit_id = rptu.id
             left join review_project_text_unit_feedback rptuf
               on rptuf.review_project_text_unit_id = rptu.id
-            where (
-              rp_inner.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
-              and rp_inner.terminology_phase = 'SPECIALIST_INPUT'
-              and rptuf.id is not null
-            ) or (
-              not (rp_inner.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
-                and coalesce(rp_inner.terminology_phase, '') = 'SPECIALIST_INPUT')
-              and rptud.decision_state = 'DECIDED'
+            where rptu.review_project_id = rp.id
+              and (
+                (
+                  rp.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
+                  and rp.terminology_phase = 'SPECIALIST_INPUT'
+                  and rptuf.id is not null
+                ) or (
+                  not (rp.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
+                    and coalesce(rp.terminology_phase, '') = 'SPECIALIST_INPUT')
+                  and rptud.decision_state = 'DECIDED'
+                )
+              )
             )
-            group by rptu.review_project_id
-          ) decided_counts
-            on decided_counts.review_project_id = rp.id
-          set rp.decided_count = coalesce(decided_counts.decided_count, 0)
           where rp.review_project_request_id = :requestId
           """,
       nativeQuery = true)
