@@ -27,3 +27,6 @@ CREATE INDEX I__ASYNC_JOB_QUEUE__QNAME_STATUS_AVAILABLE_ID
 
 CREATE INDEX I__ASYNC_JOB_QUEUE__QNAME_STATUS_LEASE_ID
   ON async_job_queue (queue_name, status, lease_until, id);
+
+CREATE INDEX I__ASYNC_JOB_QUEUE__QNAME_STATUS_UPDATED_ID
+  ON async_job_queue (queue_name, status, updated_date, id);

@@ -415,7 +415,9 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("I__ASYNC_JOB_QUEUE__QNAME_STATUS_AVAILABLE_ID")
         .contains("ON async_job_queue (queue_name, status, available_at, id)")
         .contains("I__ASYNC_JOB_QUEUE__QNAME_STATUS_LEASE_ID")
-        .contains("ON async_job_queue (queue_name, status, lease_until, id)");
+        .contains("ON async_job_queue (queue_name, status, lease_until, id)")
+        .contains("I__ASYNC_JOB_QUEUE__QNAME_STATUS_UPDATED_ID")
+        .contains("ON async_job_queue (queue_name, status, updated_date, id)");
   }
 
   private String resourceText(String path) throws Exception {
