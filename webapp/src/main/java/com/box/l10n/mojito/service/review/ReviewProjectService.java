@@ -2215,8 +2215,23 @@ public class ReviewProjectService {
     return getProjectDetailNoTx(projectId);
   }
 
-  @Transactional
   public GetProjectDetailView claimProjectTranslatorAssignment(Long projectId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GetProjectDetailView result = claimProjectTranslatorAssignmentNoTx(projectId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GetProjectDetailView claimProjectTranslatorAssignmentNoTx(Long projectId) {
     if (!userService.isCurrentUserTranslator()) {
       throw new AccessDeniedException("Translator role required to claim assignment");
     }
@@ -2233,7 +2248,7 @@ public class ReviewProjectService {
         reviewProject.getAssignedPmUser() != null
             ? reviewProject.getAssignedPmUser().getId()
             : null;
-    return updateProjectAssignment(
+    return updateProjectAssignmentNoTx(
         projectId, teamId, assignedPmUserId, teamService.getCurrentUserIdOrThrow(), null);
   }
 
