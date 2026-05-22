@@ -174,6 +174,10 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
           updated_date = :updatedDate
         WHERE id = :id
           AND queue_name = :queueName
+          AND (
+            (status = :queuedStatus AND available_at <= :now)
+            OR (status = :runningStatus AND lease_until <= :now)
+          )
         """;
 
     Map<AsyncJobId, String> leaseTokenById = new LinkedHashMap<>();
@@ -185,10 +189,12 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       MapSqlParameterSource claimParams =
           new MapSqlParameterSource()
               .addValue("runningStatus", AsyncJobStatus.RUNNING.getDatabaseValue())
+              .addValue("queuedStatus", AsyncJobStatus.QUEUED.getDatabaseValue())
               .addValue("workerId", workerId)
               .addValue("leaseToken", leaseToken)
               .addValue("leaseUntil", Timestamp.from(leaseUntil))
               .addValue("updatedDate", Timestamp.from(now))
+              .addValue("now", Timestamp.from(now))
               .addValue("id", claimCandidate.id())
               .addValue("queueName", queueName);
 

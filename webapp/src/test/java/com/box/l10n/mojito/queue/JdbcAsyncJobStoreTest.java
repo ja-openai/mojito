@@ -8,12 +8,16 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import javax.sql.DataSource;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 public class JdbcAsyncJobStoreTest {
@@ -149,6 +153,27 @@ public class JdbcAsyncJobStoreTest {
     assertThat(reclaimed.leaseToken()).isNotEqualTo(claimed.leaseToken());
     assertThat(reclaimed.attemptCount()).isEqualTo(2);
     assertThat(reclaimed.leaseReclaimed()).isTrue();
+  }
+
+  @Test
+  public void claimUpdateRechecksClaimableStateAfterCandidateSelection() {
+    AsyncJobId id =
+        jdbcAsyncJobStore.enqueue("assetlocalize", "{\"v\":1}", Instant.now().minusSeconds(1));
+    JdbcAsyncJobStore racingStore =
+        new JdbcAsyncJobStore(
+            new ClaimRaceNamedParameterJdbcTemplate(jdbcTemplate.getDataSource(), id),
+            AsyncJobQueueJdbcDialect.HSQL);
+
+    List<AsyncJobRecord> claimed =
+        racingStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5));
+
+    assertThat(claimed).isEmpty();
+    AsyncJobRecord changedJob = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(changedJob.status()).isEqualTo(AsyncJobStatus.DONE);
+    assertThat(changedJob.attemptCount()).isZero();
+    assertThat(changedJob.workerId()).isNull();
+    assertThat(changedJob.leaseToken()).isNull();
+    assertThat(changedJob.leaseUntil()).isNull();
   }
 
   @Test
@@ -648,5 +673,35 @@ public class JdbcAsyncJobStoreTest {
 
   private void assertSchemaViolation(String sql) {
     assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.execute(sql));
+  }
+
+  private static class ClaimRaceNamedParameterJdbcTemplate extends NamedParameterJdbcTemplate {
+
+    private final JdbcTemplate jdbcTemplate;
+    private final AsyncJobId id;
+    private final AtomicBoolean raceInjected = new AtomicBoolean();
+
+    ClaimRaceNamedParameterJdbcTemplate(DataSource dataSource, AsyncJobId id) {
+      super(dataSource);
+      this.jdbcTemplate = new JdbcTemplate(dataSource);
+      this.id = id;
+    }
+
+    @Override
+    public <T> List<T> query(String sql, SqlParameterSource paramSource, RowMapper<T> rowMapper) {
+      List<T> rows = super.query(sql, paramSource, rowMapper);
+      if (!rows.isEmpty()
+          && sql.equals(AsyncJobQueueJdbcDialect.HSQL.claimNextJobsSql())
+          && raceInjected.compareAndSet(false, true)) {
+        jdbcTemplate.update(
+            """
+            UPDATE async_job_queue
+            SET status = 'done', updated_date = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            Long.parseLong(id.value()));
+      }
+      return rows;
+    }
   }
 }
