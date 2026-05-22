@@ -164,11 +164,13 @@ PostgreSQL Portability
   right shape for both.
 - The JDBC store has an explicit dialect seam (`mysql`, `postgresql`, and `hsql` for embedded
   tests) so native SQL differences stay small and testable instead of leaking into runtime logic.
+- MySQL/PostgreSQL database-time reads use `CURRENT_TIMESTAMP(6)` to match the queue table's
+  microsecond columns and avoid second-precision lease/backoff drift.
 - Do not put the hot claim/finalize path behind generic Hibernate entity updates. Hibernate is fine
   for operator search/admin views, but not for the queue state machine where row locks, fencing
   predicates, and short transaction boundaries must remain explicit.
-- To support PostgreSQL cleanly, add database-specific Flyway locations or migrations for the queue
-  table:
+- PostgreSQL queue DDL lives under `db/migration/postgresql/`; production rollout still needs Flyway
+  location wiring for that database family.
   - MySQL: `BIGINT AUTO_INCREMENT`, `DATETIME(6)`, optional `ON UPDATE CURRENT_TIMESTAMP(6)`.
   - PostgreSQL: `BIGSERIAL` or identity column, `TIMESTAMP(6)`/`TIMESTAMPTZ`, no MySQL `ON UPDATE`
     clause.
@@ -183,8 +185,12 @@ Test Coverage
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
   replay, lease-reclaim markers, and status counts against an embedded datasource using the `hsql`
   dialect.
-- Dialect tests cover MySQL/PostgreSQL `FOR UPDATE SKIP LOCKED` claim SQL and the HSQL embedded
-  fallback.
+- Dialect tests cover MySQL/PostgreSQL `FOR UPDATE SKIP LOCKED` claim SQL, fractional database
+  time, and the HSQL embedded fallback.
+- Opt-in Docker-backed integration tests run the same queue store contract against real MySQL and
+  PostgreSQL:
+  - `mvn -pl webapp -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest -Dmojito.asyncJobQueue.testcontainers=true test`
+  - default unit test runs compile this class but skip container startup unless explicitly enabled
 - Load/perf smoke coverage processes hundreds of jobs through the runtime and asserts bounded
   completion with no duplicate execution. This is a CI guardrail, not a replacement for a
   database-backed benchmark against MySQL/PostgreSQL.

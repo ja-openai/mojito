@@ -17,7 +17,7 @@ enum AsyncJobQueueJdbcDialect {
       LIMIT :limit
       FOR UPDATE SKIP LOCKED
       """,
-      "SELECT CURRENT_TIMESTAMP"),
+      "SELECT CURRENT_TIMESTAMP(6)"),
 
   POSTGRESQL(
       """
@@ -32,7 +32,7 @@ enum AsyncJobQueueJdbcDialect {
       LIMIT :limit
       FOR UPDATE SKIP LOCKED
       """,
-      "SELECT CURRENT_TIMESTAMP"),
+      "SELECT CURRENT_TIMESTAMP(6)"),
 
   HSQL(
       """

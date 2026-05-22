@@ -38,6 +38,14 @@ public class AsyncJobQueueJdbcDialectTest {
   }
 
   @Test
+  public void mysqlAndPostgresqlUseFractionalDatabaseTime() {
+    assertThat(AsyncJobQueueJdbcDialect.MYSQL.currentTimestampSql())
+        .isEqualTo("SELECT CURRENT_TIMESTAMP(6)");
+    assertThat(AsyncJobQueueJdbcDialect.POSTGRESQL.currentTimestampSql())
+        .isEqualTo("SELECT CURRENT_TIMESTAMP(6)");
+  }
+
+  @Test
   public void hsqlDialectDropsSkipLockedForEmbeddedTests() {
     assertThat(AsyncJobQueueJdbcDialect.HSQL.claimNextJobsSql())
         .contains("SELECT id, status")

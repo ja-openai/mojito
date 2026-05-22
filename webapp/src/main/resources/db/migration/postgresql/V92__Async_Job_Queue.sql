@@ -1,0 +1,20 @@
+CREATE TABLE async_job_queue (
+  id BIGSERIAL PRIMARY KEY,
+  queue_name VARCHAR(64) NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  available_at TIMESTAMP(6) NOT NULL,
+  lease_until TIMESTAMP(6) NULL,
+  worker_id VARCHAR(128) NULL,
+  lease_token VARCHAR(64) NULL,
+  job_data TEXT NOT NULL,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT NULL,
+  created_date TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_date TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX I__ASYNC_JOB_QUEUE__QNAME_STATUS_AVAILABLE_ID
+  ON async_job_queue (queue_name, status, available_at, id);
+
+CREATE INDEX I__ASYNC_JOB_QUEUE__QNAME_STATUS_LEASE_ID
+  ON async_job_queue (queue_name, status, lease_until, id);
