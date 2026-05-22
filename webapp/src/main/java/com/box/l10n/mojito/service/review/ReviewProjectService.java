@@ -2427,8 +2427,24 @@ public class ReviewProjectService {
     return reviewProjectAssignmentHistoryRepository.findByProjectId(projectId);
   }
 
-  @Transactional
   public int adminBatchUpdateStatus(
+      List<Long> projectIds, ReviewProjectStatus status, String closeReason) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      int result = adminBatchUpdateStatusNoTx(projectIds, status, closeReason);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  int adminBatchUpdateStatusNoTx(
       List<Long> projectIds, ReviewProjectStatus status, String closeReason) {
     requireAdmin();
     if (CollectionUtils.isEmpty(projectIds)) {
