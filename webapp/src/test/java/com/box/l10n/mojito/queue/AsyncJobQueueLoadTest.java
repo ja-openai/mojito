@@ -139,6 +139,16 @@ public class AsyncJobQueueLoadTest {
     assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.QUEUED)).isZero();
     assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.RUNNING)).isZero();
     assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.FAILED)).isZero();
+    assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.DONE, jobCount))
+        .hasSize(jobCount)
+        .allSatisfy(
+            job -> {
+              assertThat(job.attemptCount()).isEqualTo(2);
+              assertThat(job.lastError()).isNull();
+              assertThat(job.workerId()).isNull();
+              assertThat(job.leaseToken()).isNull();
+              assertThat(job.leaseUntil()).isNull();
+            });
     assertThat(attemptsById).hasSize(jobCount);
     assertThat(attemptsById.values())
         .allSatisfy(attempts -> assertThat(attempts.get()).isEqualTo(2));
@@ -197,6 +207,16 @@ public class AsyncJobQueueLoadTest {
     assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.QUEUED)).isZero();
     assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.RUNNING)).isZero();
     assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.DONE)).isZero();
+    assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, jobCount))
+        .hasSize(jobCount)
+        .allSatisfy(
+            job -> {
+              assertThat(job.attemptCount()).isEqualTo(2);
+              assertThat(job.lastError()).contains("poison");
+              assertThat(job.workerId()).isNull();
+              assertThat(job.leaseToken()).isNull();
+              assertThat(job.leaseUntil()).isNull();
+            });
     assertThat(attemptsById).hasSize(jobCount);
     assertThat(attemptsById.values())
         .allSatisfy(attempts -> assertThat(attempts.get()).isEqualTo(2));
