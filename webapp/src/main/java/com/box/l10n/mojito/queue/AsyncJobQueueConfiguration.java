@@ -21,7 +21,11 @@ public class AsyncJobQueueConfiguration {
 
   @Bean
   @ConditionalOnProperty(name = "l10n.org.async-job-queue.store", havingValue = "jdbc")
-  AsyncJobStore jdbcAsyncJobStore(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-    return new JdbcAsyncJobStore(namedParameterJdbcTemplate);
+  AsyncJobStore jdbcAsyncJobStore(
+      NamedParameterJdbcTemplate namedParameterJdbcTemplate,
+      AsyncJobQueueProperties asyncJobQueueProperties) {
+    return new JdbcAsyncJobStore(
+        namedParameterJdbcTemplate,
+        AsyncJobQueueJdbcDialect.fromConfig(asyncJobQueueProperties.getJdbcDialect()));
   }
 }

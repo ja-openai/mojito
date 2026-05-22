@@ -30,27 +30,26 @@ import org.springframework.transaction.annotation.Transactional;
 public class JdbcAsyncJobStore implements AsyncJobStore {
 
   static final String DEFAULT_CLAIM_NEXT_JOBS_SQL =
-      """
-      SELECT id
-      FROM async_job_queue
-      WHERE queue_name = :queueName
-        AND (
-          (status = :queuedStatus AND available_at <= :now)
-          OR (status = :runningStatus AND lease_until <= :now)
-        )
-      ORDER BY available_at, id
-      LIMIT :limit
-      FOR UPDATE SKIP LOCKED
-      """;
+      AsyncJobQueueJdbcDialect.MYSQL.claimNextJobsSql();
 
-  static final String DEFAULT_CURRENT_TIMESTAMP_SQL = "SELECT CURRENT_TIMESTAMP";
+  static final String DEFAULT_CURRENT_TIMESTAMP_SQL =
+      AsyncJobQueueJdbcDialect.MYSQL.currentTimestampSql();
 
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
   private final String claimNextJobsSql;
   private final String currentTimestampSql;
 
   public JdbcAsyncJobStore(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-    this(namedParameterJdbcTemplate, DEFAULT_CLAIM_NEXT_JOBS_SQL, DEFAULT_CURRENT_TIMESTAMP_SQL);
+    this(namedParameterJdbcTemplate, AsyncJobQueueJdbcDialect.MYSQL);
+  }
+
+  JdbcAsyncJobStore(
+      NamedParameterJdbcTemplate namedParameterJdbcTemplate,
+      AsyncJobQueueJdbcDialect asyncJobQueueJdbcDialect) {
+    this(
+        namedParameterJdbcTemplate,
+        asyncJobQueueJdbcDialect.claimNextJobsSql(),
+        asyncJobQueueJdbcDialect.currentTimestampSql());
   }
 
   JdbcAsyncJobStore(

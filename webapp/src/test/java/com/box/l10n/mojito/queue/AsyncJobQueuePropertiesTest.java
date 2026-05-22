@@ -16,6 +16,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
     properties = {
       "l10n.org.async-job-queue.enabled=true",
       "l10n.org.async-job-queue.store=jdbc",
+      "l10n.org.async-job-queue.jdbc-dialect=postgresql",
       "l10n.org.async-job-queue.status-metrics-interval-ms=12000",
       "l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=300",
       "l10n.org.async-job-queue.queues.assetlocalize.max-poll-interval-ms=4000",
@@ -38,6 +39,7 @@ public class AsyncJobQueuePropertiesTest {
   @Test
   public void testQueueConfigMapBinding() {
     assertThat(asyncJobQueueProperties.getStore()).isEqualTo("jdbc");
+    assertThat(asyncJobQueueProperties.getJdbcDialect()).isEqualTo("postgresql");
     assertThat(asyncJobQueueProperties.getStatusMetricsIntervalMs()).isEqualTo(12000);
 
     Map<String, AsyncJobQueueProperties.QueueSettings> queues = asyncJobQueueProperties.getQueues();

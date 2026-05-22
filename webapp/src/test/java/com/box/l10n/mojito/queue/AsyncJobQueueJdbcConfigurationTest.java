@@ -13,7 +13,11 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(
     classes = {AsyncJobQueueProperties.class, AsyncJobQueueConfiguration.class},
-    properties = {"l10n.org.async-job-queue.enabled=true", "l10n.org.async-job-queue.store=jdbc"})
+    properties = {
+      "l10n.org.async-job-queue.enabled=true",
+      "l10n.org.async-job-queue.store=jdbc",
+      "l10n.org.async-job-queue.jdbc-dialect=postgresql"
+    })
 public class AsyncJobQueueJdbcConfigurationTest {
 
   @MockBean NamedParameterJdbcTemplate namedParameterJdbcTemplate;

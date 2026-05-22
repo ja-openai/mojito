@@ -107,6 +107,7 @@ Polling / Multi-Queue Design
 Queue Runtime Config (example)
 - `l10n.org.async-job-queue.enabled=true`
 - `l10n.org.async-job-queue.store=jdbc`
+- `l10n.org.async-job-queue.jdbc-dialect=mysql` (`postgresql` supported for the hot-path SQL seam)
 - `l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=250`
 - `l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=20`
 - `l10n.org.async-job-queue.queues.assetlocalize.max-concurrency=10`
@@ -161,6 +162,8 @@ PostgreSQL Portability
   hot-path implementation.
 - MySQL 8 and PostgreSQL both support `FOR UPDATE SKIP LOCKED`; the current claim pattern is the
   right shape for both.
+- The JDBC store has an explicit dialect seam (`mysql`, `postgresql`, and `hsql` for embedded
+  tests) so native SQL differences stay small and testable instead of leaking into runtime logic.
 - Do not put the hot claim/finalize path behind generic Hibernate entity updates. Hibernate is fine
   for operator search/admin views, but not for the queue state machine where row locks, fencing
   predicates, and short transaction boundaries must remain explicit.
@@ -177,8 +180,10 @@ Test Coverage
   retry backoff, scheduling, runtime latency timers, and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
   handler-only queues, and non-fatal reporting failures.
-- JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, and status
-  counts against an embedded datasource using a test-compatible claim query.
+- JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
+  replay, and status counts against an embedded datasource using the `hsql` dialect.
+- Dialect tests cover MySQL/PostgreSQL `FOR UPDATE SKIP LOCKED` claim SQL and the HSQL embedded
+  fallback.
 - Load/perf smoke coverage processes hundreds of jobs through the runtime and asserts bounded
   completion with no duplicate execution. This is a CI guardrail, not a replacement for a
   database-backed benchmark against MySQL/PostgreSQL.

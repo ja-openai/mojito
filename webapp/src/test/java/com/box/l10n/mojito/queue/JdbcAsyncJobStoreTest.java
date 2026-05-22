@@ -17,20 +17,6 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 public class JdbcAsyncJobStoreTest {
 
-  private static final String HSQL_CLAIM_NEXT_JOBS_SQL =
-      """
-      SELECT id
-      FROM async_job_queue
-      WHERE queue_name = :queueName
-        AND (
-          (status = :queuedStatus AND available_at <= :now)
-          OR (status = :runningStatus AND lease_until <= :now)
-        )
-      ORDER BY available_at, id
-      LIMIT :limit
-      """;
-  private static final String HSQL_CURRENT_TIMESTAMP_SQL = "VALUES CURRENT_TIMESTAMP";
-
   private JdbcTemplate jdbcTemplate;
   private JdbcAsyncJobStore jdbcAsyncJobStore;
 
@@ -73,9 +59,7 @@ public class JdbcAsyncJobStoreTest {
         """);
     jdbcAsyncJobStore =
         new JdbcAsyncJobStore(
-            new NamedParameterJdbcTemplate(dataSource),
-            HSQL_CLAIM_NEXT_JOBS_SQL,
-            HSQL_CURRENT_TIMESTAMP_SQL);
+            new NamedParameterJdbcTemplate(dataSource), AsyncJobQueueJdbcDialect.HSQL);
   }
 
   @After
@@ -209,7 +193,7 @@ public class JdbcAsyncJobStoreTest {
     JdbcAsyncJobStore futureClockStore =
         new JdbcAsyncJobStore(
             new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource()),
-            HSQL_CLAIM_NEXT_JOBS_SQL,
+            AsyncJobQueueJdbcDialect.HSQL.claimNextJobsSql(),
             fixedDatabaseTimestampSql);
     Instant fixedDatabaseNow =
         jdbcTemplate.queryForObject(fixedDatabaseTimestampSql, Timestamp.class).toInstant();

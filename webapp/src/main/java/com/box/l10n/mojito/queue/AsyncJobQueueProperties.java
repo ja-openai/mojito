@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * <pre>
  * l10n.org.async-job-queue.enabled=true
  * l10n.org.async-job-queue.store=jdbc
+ * l10n.org.async-job-queue.jdbc-dialect=mysql
  * l10n.org.async-job-queue.status-metrics-interval-ms=10000
  * l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=250
  * l10n.org.async-job-queue.queues.assetlocalize.poll-jitter-percent=10
@@ -35,6 +36,8 @@ public class AsyncJobQueueProperties {
    */
   private String store = "in-memory";
 
+  private String jdbcDialect = "mysql";
+
   private long statusMetricsIntervalMs = 10_000;
 
   private Map<String, QueueSettings> queues = new HashMap<>();
@@ -45,6 +48,14 @@ public class AsyncJobQueueProperties {
 
   public void setStore(String store) {
     this.store = store;
+  }
+
+  public String getJdbcDialect() {
+    return jdbcDialect;
+  }
+
+  public void setJdbcDialect(String jdbcDialect) {
+    this.jdbcDialect = jdbcDialect;
   }
 
   public long getStatusMetricsIntervalMs() {
