@@ -645,10 +645,15 @@ class AsyncJobQueueRuntime {
       return null;
     }
 
-    return taskScheduler.scheduleAtFixedRate(
-        () -> heartbeat(asyncJobRecord),
-        Date.from(Instant.now().plusMillis(queueSettings.getHeartbeatIntervalMs())),
-        queueSettings.getHeartbeatIntervalMs());
+    ScheduledFuture<?> scheduledFuture =
+        taskScheduler.scheduleAtFixedRate(
+            () -> heartbeat(asyncJobRecord),
+            Date.from(Instant.now().plusMillis(queueSettings.getHeartbeatIntervalMs())),
+            queueSettings.getHeartbeatIntervalMs());
+    if (scheduledFuture == null) {
+      throw new IllegalStateException("TaskScheduler returned null heartbeat ScheduledFuture");
+    }
+    return scheduledFuture;
   }
 
   private void heartbeat(AsyncJobRecord asyncJobRecord) {

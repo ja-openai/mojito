@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -803,6 +805,69 @@ public class AsyncJobQueueRuntimeTest {
                 .counter()
                 .count())
         .isEqualTo(1);
+  }
+
+  @Test
+  public void heartbeatScheduleNullFutureRequeuesWithoutProcessing() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch requeued = new CountDownLatch(1);
+    AtomicInteger handlerInvocations = new AtomicInteger();
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
+        .thenReturn(null);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            anyString()))
+        .thenAnswer(
+            invocation -> {
+              requeued.countDown();
+              return true;
+            });
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(100, 1_000, 1, 1, 200, 25);
+    queueSettings.setRetryJitterPercent(0);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  handlerInvocations.incrementAndGet();
+                  return AsyncJobHandlerResult.done();
+                }),
+            taskScheduler,
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(handlerInvocations.get()).isZero();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.heartbeat.schedule.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    verify(asyncJobStore)
+        .requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            eq(Duration.ofMillis(100)),
+            any(),
+            contains("null heartbeat ScheduledFuture"));
   }
 
   @Test
