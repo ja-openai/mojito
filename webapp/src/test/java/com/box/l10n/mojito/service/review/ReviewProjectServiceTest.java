@@ -801,6 +801,49 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void saveTerminologyFeedbackCommitsTransaction() {
+    GetProjectDetailView.ReviewProjectTextUnit result =
+        new GetProjectDetailView.ReviewProjectTextUnit(
+            55L, null, null, null, null, null, List.of(), List.of());
+    doReturn(result)
+        .when(reviewProjectService)
+        .saveTerminologyFeedbackNoTx(
+            55L, ReviewProjectTextUnitFeedback.Recommendation.APPROVE, 5, "notes");
+
+    assertEquals(
+        result,
+        reviewProjectService.saveTerminologyFeedback(
+            55L, ReviewProjectTextUnitFeedback.Recommendation.APPROVE, 5, "notes"));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void saveTerminologyFeedbackRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("feedback failed");
+    doThrow(failure)
+        .when(reviewProjectService)
+        .saveTerminologyFeedbackNoTx(
+            55L, ReviewProjectTextUnitFeedback.Recommendation.APPROVE, 5, "notes");
+
+    try {
+      reviewProjectService.saveTerminologyFeedback(
+          55L, ReviewProjectTextUnitFeedback.Recommendation.APPROVE, 5, "notes");
+      fail("Expected saveTerminologyFeedback to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(
