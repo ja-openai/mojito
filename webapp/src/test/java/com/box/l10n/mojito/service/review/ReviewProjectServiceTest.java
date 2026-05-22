@@ -728,6 +728,79 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void saveDecisionCommitsTransaction() {
+    ReviewProjectTextUnitDetail result = reviewProjectTextUnitDetail(55L);
+    doReturn(result)
+        .when(reviewProjectService)
+        .saveDecisionNoTx(
+            55L,
+            "Bonjour",
+            "comment",
+            "ACCEPTED",
+            true,
+            ReviewProjectTextUnitDecision.DecisionState.DECIDED,
+            66L,
+            false,
+            "notes");
+
+    assertEquals(
+        result,
+        reviewProjectService.saveDecision(
+            55L,
+            "Bonjour",
+            "comment",
+            "ACCEPTED",
+            true,
+            ReviewProjectTextUnitDecision.DecisionState.DECIDED,
+            66L,
+            false,
+            "notes"));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void saveDecisionRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("decision failed");
+    doThrow(failure)
+        .when(reviewProjectService)
+        .saveDecisionNoTx(
+            55L,
+            "Bonjour",
+            "comment",
+            "ACCEPTED",
+            true,
+            ReviewProjectTextUnitDecision.DecisionState.DECIDED,
+            66L,
+            false,
+            "notes");
+
+    try {
+      reviewProjectService.saveDecision(
+          55L,
+          "Bonjour",
+          "comment",
+          "ACCEPTED",
+          true,
+          ReviewProjectTextUnitDecision.DecisionState.DECIDED,
+          66L,
+          false,
+          "notes");
+      fail("Expected saveDecision to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(
