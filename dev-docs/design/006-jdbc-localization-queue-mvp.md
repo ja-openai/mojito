@@ -86,6 +86,8 @@ Failure + Restart Semantics
 - Claim writes a new random `lease_token`; stale workers that lost lease cannot update queue state.
 - JDBC state transitions read `CURRENT_TIMESTAMP` from the database for lease comparisons and
   transition timestamps, avoiding cross-pod JVM clock skew for claim/heartbeat/finalize fencing.
+- Runtime-owned delayed requeues (handler exceptions, executor rejection, default handler requeue
+  delay) use a store-level relative delay so JDBC derives `available_at` from database time too.
 - Retry policy:
   - runner decides retry vs completion outside the store
   - each claim increments `attempt_count`

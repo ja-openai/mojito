@@ -3,6 +3,7 @@ package com.box.l10n.mojito.queue;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Storage contract for async job state transitions within a named queue.
@@ -65,6 +66,30 @@ public interface AsyncJobStore {
       Instant availableAt,
       String jobData,
       String lastError);
+
+  /**
+   * Requeue a running job after a relative delay.
+   *
+   * <p>Durable implementations should anchor this delay on database time, not JVM time, so retry
+   * scheduling stays consistent with lease fencing under pod clock skew.
+   *
+   * @param jobData optional replacement payload; null keeps the existing value
+   * @param lastError optional latest processing error; null clears the previous error
+   * @return true if transition succeeded, false if the lease expired or caller no longer owns it
+   */
+  default boolean requeueAfter(
+      String queueName,
+      AsyncJobId id,
+      String workerId,
+      String leaseToken,
+      Duration delay,
+      String jobData,
+      String lastError) {
+    Objects.requireNonNull(delay);
+    Duration boundedDelay = delay.isNegative() ? Duration.ZERO : delay;
+    return requeue(
+        queueName, id, workerId, leaseToken, Instant.now().plus(boundedDelay), jobData, lastError);
+  }
 
   /**
    * Marks a running job as terminally failed.

@@ -2,6 +2,7 @@ package com.box.l10n.mojito.queue;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -238,12 +239,12 @@ class AsyncJobQueueRuntime {
       logger.warn(
           "Queue executor rejected claimed job {} for queue {}", asyncJobRecord.id(), queueName, e);
       boolean requeued =
-          asyncJobStore.requeue(
+          asyncJobStore.requeueAfter(
               queueName,
               asyncJobRecord.id(),
               asyncJobRecord.workerId(),
               asyncJobRecord.leaseToken(),
-              Instant.now(),
+              Duration.ZERO,
               null,
               errorMessage(e));
       if (!requeued) {
@@ -297,19 +298,28 @@ class AsyncJobQueueRuntime {
         }
       }
       case REQUEUE -> {
-        Instant availableAt =
-            asyncJobHandlerResult.availableAt() != null
-                ? asyncJobHandlerResult.availableAt()
-                : Instant.now().plusMillis(basePollDelayMs());
-        boolean requeued =
-            asyncJobStore.requeue(
-                queueName,
-                asyncJobRecord.id(),
-                asyncJobRecord.workerId(),
-                asyncJobRecord.leaseToken(),
-                availableAt,
-                asyncJobHandlerResult.jobData(),
-                null);
+        boolean requeued;
+        if (asyncJobHandlerResult.availableAt() == null) {
+          requeued =
+              asyncJobStore.requeueAfter(
+                  queueName,
+                  asyncJobRecord.id(),
+                  asyncJobRecord.workerId(),
+                  asyncJobRecord.leaseToken(),
+                  Duration.ofMillis(basePollDelayMs()),
+                  asyncJobHandlerResult.jobData(),
+                  null);
+        } else {
+          requeued =
+              asyncJobStore.requeue(
+                  queueName,
+                  asyncJobRecord.id(),
+                  asyncJobRecord.workerId(),
+                  asyncJobRecord.leaseToken(),
+                  asyncJobHandlerResult.availableAt(),
+                  asyncJobHandlerResult.jobData(),
+                  null);
+        }
         if (!requeued) {
           logger.warn(
               "Failed to requeue async job {} for queue {}", asyncJobRecord.id(), queueName);
@@ -366,12 +376,12 @@ class AsyncJobQueueRuntime {
   private boolean requeueWithDelay(
       AsyncJobRecord asyncJobRecord, long delayMs, String jobData, String lastError) {
     boolean requeued =
-        asyncJobStore.requeue(
+        asyncJobStore.requeueAfter(
             queueName,
             asyncJobRecord.id(),
             asyncJobRecord.workerId(),
             asyncJobRecord.leaseToken(),
-            Instant.now().plusMillis(Math.max(0, delayMs)),
+            Duration.ofMillis(Math.max(0, delayMs)),
             jobData,
             lastError);
     if (!requeued) {

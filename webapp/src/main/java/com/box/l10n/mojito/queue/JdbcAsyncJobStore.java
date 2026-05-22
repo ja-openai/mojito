@@ -303,12 +303,43 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       Instant availableAt,
       String jobData,
       String lastError) {
+    Objects.requireNonNull(availableAt);
+    return requeueAtDatabaseTime(
+        queueName, id, workerId, leaseToken, availableAt, jobData, lastError, databaseNow());
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Override
+  public boolean requeueAfter(
+      String queueName,
+      AsyncJobId id,
+      String workerId,
+      String leaseToken,
+      Duration delay,
+      String jobData,
+      String lastError) {
+    Objects.requireNonNull(delay);
+    Instant now = databaseNow();
+    Duration boundedDelay = delay.isNegative() ? Duration.ZERO : delay;
+    return requeueAtDatabaseTime(
+        queueName, id, workerId, leaseToken, now.plus(boundedDelay), jobData, lastError, now);
+  }
+
+  private boolean requeueAtDatabaseTime(
+      String queueName,
+      AsyncJobId id,
+      String workerId,
+      String leaseToken,
+      Instant availableAt,
+      String jobData,
+      String lastError,
+      Instant now) {
     Objects.requireNonNull(queueName);
     Objects.requireNonNull(workerId);
     Objects.requireNonNull(availableAt);
+    Objects.requireNonNull(now);
     validateLeaseToken(leaseToken);
     long parsedId = parseId(id);
-    Instant now = databaseNow();
 
     String sql =
         """

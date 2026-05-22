@@ -3,6 +3,7 @@ package com.box.l10n.mojito.queue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -200,6 +201,39 @@ public class JdbcAsyncJobStoreTest {
     assertThat(done.workerId()).isNull();
     assertThat(done.leaseToken()).isNull();
     assertThat(done.leaseUntil()).isNull();
+  }
+
+  @Test
+  public void requeueAfterUsesDatabaseCurrentTimestampForAvailableAt() {
+    String fixedDatabaseTimestampSql = "VALUES TIMESTAMP '2099-01-01 00:00:00'";
+    JdbcAsyncJobStore futureClockStore =
+        new JdbcAsyncJobStore(
+            new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource()),
+            HSQL_CLAIM_NEXT_JOBS_SQL,
+            fixedDatabaseTimestampSql);
+    Instant fixedDatabaseNow =
+        jdbcTemplate.queryForObject(fixedDatabaseTimestampSql, Timestamp.class).toInstant();
+    AsyncJobId id = futureClockStore.enqueue("assetlocalize", "{\"step\":\"new\"}", Instant.EPOCH);
+    AsyncJobRecord claimed =
+        futureClockStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(30))
+            .get(0);
+
+    assertThat(
+            futureClockStore.requeueAfter(
+                "assetlocalize",
+                id,
+                "worker-a",
+                claimed.leaseToken(),
+                Duration.ofSeconds(5),
+                null,
+                "retry later"))
+        .isTrue();
+
+    AsyncJobRecord requeued = futureClockStore.getByIds(List.of(id)).get(0);
+    assertThat(requeued.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(requeued.availableAt()).isEqualTo(fixedDatabaseNow.plusSeconds(5));
+    assertThat(requeued.lastError()).isEqualTo("retry later");
   }
 
   @Test

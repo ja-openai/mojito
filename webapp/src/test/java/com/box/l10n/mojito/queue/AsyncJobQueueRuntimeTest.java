@@ -226,6 +226,43 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void handlerRequestedRequeueWithoutTimestampUsesRelativeStoreDelay() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch requeued = new CountDownLatch(1);
+    Duration[] observedDelay = new Duration[1];
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            any()))
+        .thenAnswer(
+            invocation -> {
+              observedDelay[0] = invocation.getArgument(4);
+              requeued.countDown();
+              return true;
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(125, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.requeue(null)),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(observedDelay[0]).isEqualTo(Duration.ofMillis(125));
+  }
+
+  @Test
   public void transitionFailureCounterRecordsFailedTerminalFailureTransition() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
@@ -260,12 +297,12 @@ public class AsyncJobQueueRuntimeTest {
     AsyncJobRecord claimedJob = claimedJob(1);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
         .thenReturn(List.of(claimedJob));
-    when(asyncJobStore.requeue(
+    when(asyncJobStore.requeueAfter(
             anyString(),
             any(AsyncJobId.class),
             anyString(),
             anyString(),
-            any(Instant.class),
+            any(Duration.class),
             any(),
             anyString()))
         .thenReturn(false);
@@ -295,12 +332,12 @@ public class AsyncJobQueueRuntimeTest {
     AsyncJobRecord claimedJob = claimedJob(1);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
         .thenReturn(List.of(claimedJob));
-    when(asyncJobStore.requeue(
+    when(asyncJobStore.requeueAfter(
             anyString(),
             any(AsyncJobId.class),
             anyString(),
             anyString(),
-            any(Instant.class),
+            any(Duration.class),
             any(),
             anyString()))
         .thenReturn(false);
