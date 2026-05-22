@@ -263,6 +263,7 @@ Monitoring (MVP Required)
   - failed immediate trigger/wakeup scheduling
   - failed initial or follow-up scheduled-poll registration
   - active poll did not stop before the bounded executor shutdown wait elapsed
+  - active poll shutdown wait was interrupted before executor shutdown
   - status metrics reporting failures
 - Operator counters/logs:
   - `asyncJobQueue.inspection.find` by `queueName,status,result` for bounded list attempts;

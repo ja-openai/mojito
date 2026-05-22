@@ -1756,6 +1756,82 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void stopRecordsInterruptedWaitForStuckActivePoll() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    CountDownLatch claimStarted = new CountDownLatch(1);
+    CountDownLatch allowClaimReturn = new CountDownLatch(1);
+    AtomicInteger stopThreadInterrupted = new AtomicInteger();
+
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenAnswer(
+            invocation -> {
+              claimStarted.countDown();
+              assertThat(allowClaimReturn.await(2, TimeUnit.SECONDS)).isTrue();
+              return List.of();
+            });
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setShutdownAwaitTerminationMs(10_000);
+    ThreadPoolTaskExecutor interruptedStopExecutor = newExecutor(1);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            interruptedStopExecutor);
+
+    try {
+      asyncJobQueueRuntime.start();
+      Thread pollThread =
+          new Thread(taskScheduler.scheduledTasks().get(0), "async-queue-interrupted-poll-test");
+      pollThread.start();
+      assertThat(claimStarted.await(2, TimeUnit.SECONDS)).isTrue();
+
+      CountDownLatch stopStarted = new CountDownLatch(1);
+      Thread stopThread =
+          new Thread(
+              () -> {
+                stopStarted.countDown();
+                asyncJobQueueRuntime.stop();
+                stopThreadInterrupted.set(Thread.currentThread().isInterrupted() ? 1 : 0);
+              },
+              "async-queue-stop-interrupted-test");
+      stopThread.start();
+      assertThat(stopStarted.await(1, TimeUnit.SECONDS)).isTrue();
+
+      stopThread.interrupt();
+      stopThread.join(1_000);
+
+      assertThat(stopThread.isAlive()).isFalse();
+      assertThat(stopThreadInterrupted.get()).isEqualTo(1);
+      assertThat(pollThread.isAlive()).isTrue();
+      assertThat(
+              meterRegistry
+                  .get("asyncJobQueue.stop.pollInterrupted")
+                  .tag("queueName", "assetlocalize")
+                  .counter()
+                  .count())
+          .isEqualTo(1);
+      assertThat(
+              meterRegistry
+                  .find("asyncJobQueue.stop.pollTimeout")
+                  .tag("queueName", "assetlocalize")
+                  .counter())
+          .isNull();
+
+      allowClaimReturn.countDown();
+      pollThread.join(2_000);
+      assertThat(pollThread.isAlive()).isFalse();
+    } finally {
+      allowClaimReturn.countDown();
+      interruptedStopExecutor.shutdown();
+    }
+  }
+
+  @Test
   public void wakeupDuringActivePollSchedulesImmediateFollowUpPoll() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();

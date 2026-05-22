@@ -297,6 +297,9 @@ class AsyncJobQueueRuntime {
       logger.warn(
           "Interrupted while waiting for active async queue poll to stop before executor shutdown for {}",
           queueName);
+      meterRegistry
+          .counter("asyncJobQueue.stop.pollInterrupted", "queueName", queueName)
+          .increment();
     }
   }
 
