@@ -174,6 +174,153 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void transitionFailureCounterRecordsFailedDoneTransition() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenReturn(false);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForTransitionFailure("done", 1);
+  }
+
+  @Test
+  public void transitionFailureCounterRecordsFailedHandlerRequestedRequeue() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeue(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Instant.class),
+            any(),
+            any()))
+        .thenReturn(false);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.requeue(Instant.now())),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForTransitionFailure("requeue", 1);
+  }
+
+  @Test
+  public void transitionFailureCounterRecordsFailedTerminalFailureTransition() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markFailed(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any(), anyString()))
+        .thenReturn(false);
+
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  throw new IllegalStateException("poison");
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForTransitionFailure("failed", 1);
+  }
+
+  @Test
+  public void transitionFailureCounterRecordsFailedRetryRequeue() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeue(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Instant.class),
+            any(),
+            anyString()))
+        .thenReturn(false);
+
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(2);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  throw new IllegalStateException("temporary");
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForTransitionFailure("retry", 1);
+  }
+
+  @Test
+  public void transitionFailureCounterRecordsFailedExecutorRejectionRequeue() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeue(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Instant.class),
+            any(),
+            anyString()))
+        .thenReturn(false);
+
+    ThreadPoolTaskExecutor rejectingExecutor = newExecutor(1);
+    rejectingExecutor.shutdown();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            rejectingExecutor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForTransitionFailure("executorRejectedRequeue", 1);
+  }
+
+  @Test
   public void heartbeatRenewsLeaseWhileJobIsRunning() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =
@@ -452,6 +599,23 @@ public class AsyncJobQueueRuntimeTest {
     return threadPoolTaskExecutor;
   }
 
+  private AsyncJobRecord claimedJob(int attemptCount) {
+    Instant now = Instant.now();
+    return new AsyncJobRecord(
+        new AsyncJobId("1"),
+        "assetlocalize",
+        AsyncJobStatus.RUNNING,
+        now.minusSeconds(5),
+        now.plusSeconds(30),
+        "worker-a",
+        "lease-token",
+        "{}",
+        attemptCount,
+        null,
+        now.minusSeconds(10),
+        now);
+  }
+
   private void waitForStatusCount(
       InMemoryAsyncJobStore inMemoryAsyncJobStore,
       String queueName,
@@ -472,6 +636,25 @@ public class AsyncJobQueueRuntimeTest {
     }
     throw new AssertionError(
         "Timed out waiting for status " + asyncJobStatus + " count " + expectedCount);
+  }
+
+  private void waitForTransitionFailure(String transition, double expectedCount)
+      throws InterruptedException {
+    long timeoutAt = System.currentTimeMillis() + 3_000;
+    while (System.currentTimeMillis() < timeoutAt) {
+      io.micrometer.core.instrument.Counter counter =
+          meterRegistry
+              .find("asyncJobQueue.transition.failed")
+              .tag("queueName", "assetlocalize")
+              .tag("transition", transition)
+              .counter();
+      if (counter != null && counter.count() == expectedCount) {
+        return;
+      }
+      Thread.sleep(20);
+    }
+    throw new AssertionError(
+        "Timed out waiting for transition failure " + transition + " count " + expectedCount);
   }
 
   private void waitForAtomicValue(AtomicInteger atomicInteger, int expectedValue)

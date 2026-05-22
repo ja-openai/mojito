@@ -249,6 +249,7 @@ class AsyncJobQueueRuntime {
       if (!requeued) {
         logger.warn(
             "Failed to requeue rejected job {} for queue {}", asyncJobRecord.id(), queueName);
+        recordTransitionFailure("executorRejectedRequeue");
       }
     }
   }
@@ -290,6 +291,7 @@ class AsyncJobQueueRuntime {
         if (!markedDone) {
           logger.warn(
               "Failed to mark async job {} done for queue {}", asyncJobRecord.id(), queueName);
+          recordTransitionFailure("done");
         } else {
           meterRegistry.counter("asyncJobQueue.completed", "queueName", queueName).increment();
         }
@@ -311,6 +313,7 @@ class AsyncJobQueueRuntime {
         if (!requeued) {
           logger.warn(
               "Failed to requeue async job {} for queue {}", asyncJobRecord.id(), queueName);
+          recordTransitionFailure("requeue");
         } else {
           meterRegistry.counter("asyncJobQueue.requeued", "queueName", queueName).increment();
         }
@@ -340,6 +343,7 @@ class AsyncJobQueueRuntime {
       if (!markedFailed) {
         logger.warn(
             "Failed to mark async job {} failed for queue {}", asyncJobRecord.id(), queueName);
+        recordTransitionFailure("failed");
       } else {
         meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
       }
@@ -374,8 +378,16 @@ class AsyncJobQueueRuntime {
           "Failed to requeue async job {} after handler failure for queue {}",
           asyncJobRecord.id(),
           queueName);
+      recordTransitionFailure("retry");
     }
     return requeued;
+  }
+
+  private void recordTransitionFailure(String transition) {
+    meterRegistry
+        .counter(
+            "asyncJobQueue.transition.failed", "queueName", queueName, "transition", transition)
+        .increment();
   }
 
   private String errorMessage(Exception e) {

@@ -187,6 +187,7 @@ Monitoring (MVP Required)
   - claim SQL latency
 - Error counters:
   - deadlocks / lock timeouts / claim exceptions
+  - failed state transitions/fencing failures by transition
   - status metrics reporting failures
 
 Rollout Plan
