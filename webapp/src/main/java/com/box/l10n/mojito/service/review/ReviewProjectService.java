@@ -2569,8 +2569,30 @@ public class ReviewProjectService {
     return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
   }
 
-  @Transactional
   public GetProjectDetailView.ReviewProjectTextUnit saveTerminologyResolution(
+      Long reviewProjectTextUnitId,
+      Long glossaryId,
+      String status,
+      String notes,
+      Boolean promoteToGlossary) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GetProjectDetailView.ReviewProjectTextUnit result =
+          saveTerminologyResolutionNoTx(
+              reviewProjectTextUnitId, glossaryId, status, notes, promoteToGlossary);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GetProjectDetailView.ReviewProjectTextUnit saveTerminologyResolutionNoTx(
       Long reviewProjectTextUnitId,
       Long glossaryId,
       String status,

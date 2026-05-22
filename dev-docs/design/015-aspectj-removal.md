@@ -269,6 +269,8 @@ Removed during this workstream:
   now open and commit their write transaction boundary explicitly.
 - `ReviewProjectService.saveTerminologyFeedback` no longer uses `@Transactional`; terminology
   specialist feedback now opens and commits its write transaction boundary explicitly.
+- `ReviewProjectService.saveTerminologyResolution` no longer uses `@Transactional`; terminology
+  PM resolution now opens and commits its write transaction boundary explicitly.
 
 In progress:
 
