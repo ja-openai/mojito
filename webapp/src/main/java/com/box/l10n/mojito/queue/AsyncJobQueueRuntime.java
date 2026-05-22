@@ -490,6 +490,11 @@ class AsyncJobQueueRuntime {
         }
       }
       case REQUEUE -> {
+        if (asyncJobRecord.attemptCount() >= queueSettings.getMaxAttempts()) {
+          handleHandlerRequeueAttemptBudgetExhausted(asyncJobRecord, asyncJobHandlerResult);
+          return;
+        }
+
         boolean requeued;
         try {
           if (asyncJobHandlerResult.availableAt() == null) {
@@ -527,6 +532,46 @@ class AsyncJobQueueRuntime {
           meterRegistry.counter("asyncJobQueue.requeued", "queueName", queueName).increment();
         }
       }
+    }
+  }
+
+  private void handleHandlerRequeueAttemptBudgetExhausted(
+      AsyncJobRecord asyncJobRecord, AsyncJobHandlerResult asyncJobHandlerResult) {
+    meterRegistry.counter("asyncJobQueue.requeue.exhausted", "queueName", queueName).increment();
+    String errorMessage = "Handler requested requeue after attempt budget exhausted";
+
+    logger.error(
+        "Async job handler requested requeue for queue {}, job {}; marking failed after {} attempts",
+        queueName,
+        asyncJobRecord.id(),
+        asyncJobRecord.attemptCount());
+    boolean markedFailed;
+    try {
+      markedFailed =
+          asyncJobStore.markFailed(
+              queueName,
+              asyncJobRecord.id(),
+              asyncJobRecord.workerId(),
+              asyncJobRecord.leaseToken(),
+              asyncJobHandlerResult.jobData(),
+              errorMessage);
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to mark requeue-exhausted async job {} failed for queue {}",
+          asyncJobRecord.id(),
+          queueName,
+          e);
+      recordTransitionFailure("requeueExhausted");
+      return;
+    }
+    if (!markedFailed) {
+      logger.warn(
+          "Failed to mark requeue-exhausted async job {} failed for queue {}",
+          asyncJobRecord.id(),
+          queueName);
+      recordTransitionFailure("requeueExhausted");
+    } else {
+      meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
     }
   }
 

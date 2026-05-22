@@ -93,6 +93,8 @@ Failure + Restart Semantics
   - each claim increments `attempt_count`
   - on retry, set `status=queued`, `available_at=<nextAttemptAt>` and persist `last_error`
   - when `attempt_count` reaches `max-attempts`, set `status=failed`, clear lease owner fields, and keep `last_error`
+  - handler-requested requeues also consume attempts and fail terminally at `max-attempts`; otherwise
+    a handler that always returns `REQUEUE` can bypass the poison-job budget
   - operator replay can move a `failed` row back to `queued`, reset `attempt_count=0`, preserve
     `last_error` for inspection, and optionally replace `job_data`
   - on terminal completion, set `status=done` and finalize pollable metadata separately
@@ -181,7 +183,8 @@ PostgreSQL Portability
 Test Coverage
 - Unit tests cover in-memory store semantics, runtime adaptive polling, bounded retries, heartbeats,
   heartbeat false-return, exception, and scheduling-failure containment, bounded persisted error
-  summaries, retry backoff, executor rejection containment, scheduling, notification wakeup
+  summaries, retry backoff, executor rejection containment, explicit requeue budget exhaustion,
+  scheduling, notification wakeup
   coalescing, runtime poll failure recovery, runtime latency timers, state-transition false-return
   and exception metrics, trigger scheduling failure metrics,
   coordinator startup cleanup, synchronized trigger routing, null-safe queue configuration binding,
@@ -216,6 +219,7 @@ Monitoring (MVP Required)
 - Counters:
   - claimed, completed, retried, execution-failed, lease-expired-reclaimed, poll-skipped-saturated
   - local executor rejections before queue state recovery
+  - local executor submit failures and handler-requested requeue budget exhaustion
   - heartbeat renewal false-return, exception, and schedule failures
   - `asyncJobQueue.leaseExpiredReclaimed` is emitted from claim results marked by the store when a
     previously running row is recovered after lease expiry

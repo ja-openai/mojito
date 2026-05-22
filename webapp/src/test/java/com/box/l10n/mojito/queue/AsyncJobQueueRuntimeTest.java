@@ -1123,6 +1123,60 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void handlerRequestedRequeuesStopAfterMaxAttempts() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue(
+            "assetlocalize", "{\"step\":0}", Instant.now().minusSeconds(1));
+    AtomicInteger attempts = new AtomicInteger();
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(2);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord ->
+                    AsyncJobHandlerResult.requeue(
+                        null, "{\"step\":" + attempts.incrementAndGet() + "}")),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+    waitForAtomicValue(attempts, 1);
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.QUEUED, 1);
+
+    Thread.sleep(10);
+    asyncJobQueueRuntime.pollOnce();
+    waitForAtomicValue(attempts, 2);
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.FAILED, 1);
+
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(failedJob.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failedJob.attemptCount()).isEqualTo(2);
+    assertThat(failedJob.jobData()).isEqualTo("{\"step\":2}");
+    assertThat(failedJob.lastError()).contains("Handler requested requeue");
+    assertThat(failedJob.workerId()).isNull();
+    assertThat(failedJob.leaseToken()).isNull();
+    assertThat(failedJob.leaseUntil()).isNull();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.requeue.exhausted")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void handlerFailurePersistsBoundedErrorSummaryOnRetryAndTerminalFailure()
       throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
