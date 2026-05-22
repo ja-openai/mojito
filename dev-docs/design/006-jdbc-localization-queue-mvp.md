@@ -192,6 +192,8 @@ Test Coverage
   updating in one transaction.
 - Dialect tests cover MySQL/PostgreSQL `FOR UPDATE SKIP LOCKED` claim SQL, fractional database
   time, and the HSQL embedded fallback.
+- Migration tests keep the MySQL and PostgreSQL queue DDL structurally aligned for core columns
+  and claim indexes, while allowing database-specific id/timestamp syntax.
 - Opt-in Docker-backed integration tests run the same queue store contract against real MySQL and
   PostgreSQL:
   - `mvn -pl webapp -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest -Dmojito.asyncJobQueue.testcontainers=true test`

@@ -3,6 +3,8 @@ package com.box.l10n.mojito.queue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assume.assumeTrue;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -42,6 +44,30 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .isFalse();
     assertThat(new ClassPathResource("db/postgresql/migration/V92__Async_Job_Queue.sql").exists())
         .isTrue();
+  }
+
+  @Test
+  public void mysqlAndPostgresqlMigrationsStayStructurallyAligned() throws Exception {
+    String mysqlMigration = resourceText("db/migration/V92__Async_Job_Queue.sql");
+    String postgresqlMigration = resourceText("db/postgresql/migration/V92__Async_Job_Queue.sql");
+
+    assertCoreQueueMigrationShape(mysqlMigration);
+    assertCoreQueueMigrationShape(postgresqlMigration);
+
+    assertThat(mysqlMigration)
+        .contains("id BIGINT AUTO_INCREMENT PRIMARY KEY")
+        .contains("available_at DATETIME(6) NOT NULL")
+        .contains("lease_until DATETIME(6) NULL")
+        .contains("created_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)")
+        .contains(
+            "updated_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+    assertThat(postgresqlMigration)
+        .contains("id BIGSERIAL PRIMARY KEY")
+        .contains("available_at TIMESTAMP(6) NOT NULL")
+        .contains("lease_until TIMESTAMP(6) NULL")
+        .contains("created_date TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
+        .contains("updated_date TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
+        .doesNotContain("ON UPDATE");
   }
 
   @Test
@@ -353,6 +379,28 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     @Override
     public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
       return transactionTemplate.execute(status -> delegate.getByIds(ids));
+    }
+  }
+
+  private void assertCoreQueueMigrationShape(String migration) {
+    assertThat(migration)
+        .contains("CREATE TABLE async_job_queue")
+        .contains("queue_name VARCHAR(64) NOT NULL")
+        .contains("status VARCHAR(16) NOT NULL")
+        .contains("worker_id VARCHAR(128) NULL")
+        .contains("lease_token VARCHAR(64) NULL")
+        .contains("attempt_count")
+        .contains("NOT NULL DEFAULT 0")
+        .contains("last_error TEXT NULL")
+        .contains("I__ASYNC_JOB_QUEUE__QNAME_STATUS_AVAILABLE_ID")
+        .contains("ON async_job_queue (queue_name, status, available_at, id)")
+        .contains("I__ASYNC_JOB_QUEUE__QNAME_STATUS_LEASE_ID")
+        .contains("ON async_job_queue (queue_name, status, lease_until, id)");
+  }
+
+  private String resourceText(String path) throws Exception {
+    try (InputStream inputStream = new ClassPathResource(path).getInputStream()) {
+      return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
     }
   }
 }
