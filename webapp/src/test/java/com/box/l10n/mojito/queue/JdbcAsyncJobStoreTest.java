@@ -6,8 +6,16 @@ import static org.junit.Assert.assertThrows;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.sql.DataSource;
 import org.junit.After;
@@ -214,6 +222,81 @@ public class JdbcAsyncJobStoreTest {
     assertThat(changedJob.workerId()).isEqualTo("other-worker");
     assertThat(changedJob.leaseToken()).isEqualTo("other-token");
     assertThat(changedJob.leaseUntil()).isBefore(Instant.now());
+  }
+
+  @Test
+  public void concurrentClaimsCompleteEachJobOnce() throws Exception {
+    String queueName = "assetlocalize";
+    int jobCount = 80;
+    int workerCount = 6;
+    int batchSize = 3;
+    for (int i = 0; i < jobCount; i++) {
+      jdbcAsyncJobStore.enqueue(queueName, "{\"id\":" + i + "}", Instant.now().minusSeconds(1));
+    }
+
+    Set<AsyncJobId> claimedIds = ConcurrentHashMap.newKeySet();
+    AtomicBoolean stop = new AtomicBoolean();
+    CountDownLatch start = new CountDownLatch(1);
+    ExecutorService executorService = Executors.newFixedThreadPool(workerCount);
+    List<Future<Integer>> futures = new ArrayList<>();
+    try {
+      for (int workerIndex = 0; workerIndex < workerCount; workerIndex++) {
+        String workerId = "worker-" + workerIndex;
+        futures.add(
+            executorService.submit(
+                () -> {
+                  start.await();
+                  int processed = 0;
+                  try {
+                    while (!stop.get() && statusCount(queueName, AsyncJobStatus.DONE) < jobCount) {
+                      List<AsyncJobRecord> claimed =
+                          jdbcAsyncJobStore.claimNextJobs(
+                              queueName, batchSize, workerId, Duration.ofSeconds(30));
+                      if (claimed.isEmpty()) {
+                        Thread.sleep(5);
+                        continue;
+                      }
+
+                      for (AsyncJobRecord job : claimed) {
+                        assertThat(claimedIds.add(job.id()))
+                            .as("job should only be claimed once: %s", job.id())
+                            .isTrue();
+                        assertThat(
+                                jdbcAsyncJobStore.markDone(
+                                    queueName,
+                                    job.id(),
+                                    workerId,
+                                    job.leaseToken(),
+                                    "{\"done\":" + job.id().value() + "}"))
+                            .isTrue();
+                        processed++;
+                      }
+                    }
+                    return processed;
+                  } catch (Throwable throwable) {
+                    stop.set(true);
+                    throw throwable;
+                  }
+                }));
+      }
+
+      start.countDown();
+      int processed = 0;
+      for (Future<Integer> future : futures) {
+        processed += future.get(30, TimeUnit.SECONDS);
+      }
+
+      assertThat(processed).isEqualTo(jobCount);
+      assertThat(claimedIds).hasSize(jobCount);
+      assertThat(statusCount(queueName, AsyncJobStatus.DONE)).isEqualTo(jobCount);
+      assertThat(statusCount(queueName, AsyncJobStatus.QUEUED)).isZero();
+      assertThat(statusCount(queueName, AsyncJobStatus.RUNNING)).isZero();
+      assertThat(statusCount(queueName, AsyncJobStatus.FAILED)).isZero();
+    } finally {
+      stop.set(true);
+      executorService.shutdownNow();
+      assertThat(executorService.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+    }
   }
 
   @Test
@@ -713,6 +796,14 @@ public class JdbcAsyncJobStoreTest {
 
   private void assertSchemaViolation(String sql) {
     assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.execute(sql));
+  }
+
+  private long statusCount(String queueName, AsyncJobStatus status) {
+    return jdbcAsyncJobStore.countByStatus(queueName).stream()
+        .filter(statusCount -> statusCount.status() == status)
+        .mapToLong(AsyncJobStatusCount::count)
+        .findFirst()
+        .orElse(0);
   }
 
   private static class ClaimRaceNamedParameterJdbcTemplate extends NamedParameterJdbcTemplate {
