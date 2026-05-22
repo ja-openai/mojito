@@ -448,6 +448,47 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void attemptBudgetExhaustionRecordsTransitionFailureWhenMarkFailedIsFenced()
+      throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AtomicInteger handlerInvocations = new AtomicInteger();
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob(2, true)));
+    when(asyncJobStore.markFailed(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any(), anyString()))
+        .thenReturn(false);
+
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  handlerInvocations.incrementAndGet();
+                  return AsyncJobHandlerResult.done();
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForTransitionFailure("attemptBudgetExhausted", 1);
+    assertThat(handlerInvocations.get()).isZero();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.attempt.exhausted")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry.find("asyncJobQueue.failed").tag("queueName", "assetlocalize").counter())
+        .isNull();
+  }
+
+  @Test
   public void transitionFailureCounterRecordsFailedDoneTransition() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
