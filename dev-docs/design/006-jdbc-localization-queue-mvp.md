@@ -118,6 +118,11 @@ Queue Runtime Config (example)
 - `l10n.org.async-job-queue.queues.assetlocalize.retry-jitter-percent=20`
 - `l10n.org.async-job-queue.queues.assetlocalize.lease-duration-ms=120000`
 - `l10n.org.async-job-queue.queues.assetlocalize.heartbeat-interval-ms=20000`
+- `l10n.org.async-job-queue.retention.enabled=false`
+- `l10n.org.async-job-queue.retention.interval-ms=3600000`
+- `l10n.org.async-job-queue.retention.done-retention-ms=604800000`
+- `l10n.org.async-job-queue.retention.failed-retention-ms=2592000000`
+- `l10n.org.async-job-queue.retention.batch-size=100`
 
 Validation guardrails:
 - `claim-batch-size` is capped at 1000 to avoid accidental oversized claim transactions.
@@ -126,6 +131,8 @@ Validation guardrails:
   configuration.
 - Poll, heartbeat, retry, lease, and status-metric intervals have explicit upper bounds to catch
   pathological scheduler/SQL timestamp settings during startup validation.
+- Retention interval, retention ages, and cleanup batch size have explicit upper bounds; scheduled
+  retention is disabled by default.
 
 How Many "Cron" Loops?
 - Not one cron for the whole system and not one physical process per queue.
@@ -231,6 +238,7 @@ Monitoring (MVP Required)
   - local executor rejections before queue state recovery
   - local executor submit failures and handler-requested requeue budget exhaustion
   - heartbeat renewal false-return, exception, and schedule failures
+  - terminal-row retention deletions and cleanup failures by queue/status
   - `asyncJobQueue.leaseExpiredReclaimed` is emitted from claim results marked by the store when a
     previously running row is recovered after lease expiry
 - Timers:
@@ -253,6 +261,9 @@ Operator Controls
   until success or the next failure.
 - Store-level retention only deletes bounded batches of terminal `done` or `failed` rows older
   than an operator-provided `updated_date` cutoff. It rejects queued/running statuses.
+- Optional scheduled retention wraps the store primitive when
+  `l10n.org.async-job-queue.retention.enabled=true`, deleting at most `batch-size` done rows and
+  `batch-size` failed rows per queue per run.
 - A REST/admin surface can wrap these primitives later with authentication, audit logging, and
   payload redaction.
 

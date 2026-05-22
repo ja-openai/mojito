@@ -21,6 +21,9 @@ final class AsyncJobQueueValidation {
   static final long LEASE_DURATION_MS_MAX = Duration.ofDays(1).toMillis();
   static final long HEARTBEAT_INTERVAL_MS_MAX = Duration.ofHours(1).toMillis();
   static final long MAX_RETRY_DELAY_MS_MAX = Duration.ofHours(1).toMillis();
+  static final long RETENTION_INTERVAL_MS_MAX = Duration.ofDays(1).toMillis();
+  static final long RETENTION_AGE_MS_MAX = Duration.ofDays(365).toMillis();
+  static final int RETENTION_BATCH_SIZE_MAX = STORE_QUERY_LIMIT_MAX;
   // Conservative portable bounds for MySQL DATETIME after JDBC/default-timezone conversion.
   static final Instant DATABASE_TIMESTAMP_MIN = Instant.parse("1000-01-02T00:00:00Z");
   static final Instant DATABASE_TIMESTAMP_MAX = Instant.parse("9999-12-31T00:00:00Z");
@@ -34,6 +37,7 @@ final class AsyncJobQueueValidation {
     Objects.requireNonNull(asyncJobQueueProperties);
     String store = validateStore(asyncJobQueueProperties.getStore());
     validateStatusMetricsIntervalMs(asyncJobQueueProperties.getStatusMetricsIntervalMs());
+    validateRetentionSettings(asyncJobQueueProperties.getRetention());
     if (STORE_JDBC.equals(store)) {
       AsyncJobQueueJdbcDialect.fromConfig(asyncJobQueueProperties.getJdbcDialect());
     }
@@ -152,6 +156,36 @@ final class AsyncJobQueueValidation {
     return limit;
   }
 
+  static AsyncJobQueueProperties.RetentionSettings validateRetentionSettings(
+      AsyncJobQueueProperties.RetentionSettings retentionSettings) {
+    Objects.requireNonNull(retentionSettings);
+    validateRetentionDurationMs("retention.intervalMs", retentionSettings.getIntervalMs());
+    if (retentionSettings.getIntervalMs() > RETENTION_INTERVAL_MS_MAX) {
+      throw new IllegalArgumentException(
+          "retention.intervalMs must be <= " + RETENTION_INTERVAL_MS_MAX);
+    }
+    validateRetentionDurationMs(
+        "retention.doneRetentionMs", retentionSettings.getDoneRetentionMs());
+    validateRetentionDurationMs(
+        "retention.failedRetentionMs", retentionSettings.getFailedRetentionMs());
+    if (retentionSettings.getDoneRetentionMs() > RETENTION_AGE_MS_MAX) {
+      throw new IllegalArgumentException(
+          "retention.doneRetentionMs must be <= " + RETENTION_AGE_MS_MAX);
+    }
+    if (retentionSettings.getFailedRetentionMs() > RETENTION_AGE_MS_MAX) {
+      throw new IllegalArgumentException(
+          "retention.failedRetentionMs must be <= " + RETENTION_AGE_MS_MAX);
+    }
+    if (retentionSettings.getBatchSize() <= 0) {
+      throw new IllegalArgumentException("retention.batchSize must be > 0");
+    }
+    if (retentionSettings.getBatchSize() > RETENTION_BATCH_SIZE_MAX) {
+      throw new IllegalArgumentException(
+          "retention.batchSize must be <= " + RETENTION_BATCH_SIZE_MAX);
+    }
+    return retentionSettings;
+  }
+
   static AsyncJobQueueProperties.QueueSettings validateQueueSettings(
       AsyncJobQueueProperties.QueueSettings queueSettings) {
     Objects.requireNonNull(queueSettings);
@@ -219,5 +253,12 @@ final class AsyncJobQueueValidation {
       throw new IllegalArgumentException("retryJitterPercent must be between 0 and 100");
     }
     return queueSettings;
+  }
+
+  private static long validateRetentionDurationMs(String fieldName, long durationMs) {
+    if (durationMs <= 0) {
+      throw new IllegalArgumentException(fieldName + " must be > 0");
+    }
+    return durationMs;
   }
 }

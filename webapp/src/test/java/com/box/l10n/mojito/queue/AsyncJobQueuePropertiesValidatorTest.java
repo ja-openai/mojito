@@ -55,6 +55,18 @@ public class AsyncJobQueuePropertiesValidatorTest {
   }
 
   @Test
+  public void rejectsInvalidRetentionSettingsBeforeScheduledCleanupStarts() {
+    AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
+    properties.getRetention().setBatchSize(AsyncJobQueueValidation.RETENTION_BATCH_SIZE_MAX + 1);
+    AsyncJobQueuePropertiesValidator validator = new AsyncJobQueuePropertiesValidator(properties);
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, validator::afterPropertiesSet);
+
+    assertThat(exception).hasMessageContaining("retention.batchSize must be <=");
+  }
+
+  @Test
   public void rejectsInvalidJdbcDialectWhenJdbcStoreIsSelected() {
     AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
     properties.setStore("jdbc");

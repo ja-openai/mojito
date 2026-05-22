@@ -18,6 +18,11 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
       "l10n.org.async-job-queue.store=jdbc",
       "l10n.org.async-job-queue.jdbc-dialect=postgresql",
       "l10n.org.async-job-queue.status-metrics-interval-ms=12000",
+      "l10n.org.async-job-queue.retention.enabled=true",
+      "l10n.org.async-job-queue.retention.interval-ms=600000",
+      "l10n.org.async-job-queue.retention.done-retention-ms=86400000",
+      "l10n.org.async-job-queue.retention.failed-retention-ms=604800000",
+      "l10n.org.async-job-queue.retention.batch-size=50",
       "l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=300",
       "l10n.org.async-job-queue.queues.assetlocalize.max-poll-interval-ms=4000",
       "l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=32",
@@ -41,6 +46,11 @@ public class AsyncJobQueuePropertiesTest {
     assertThat(asyncJobQueueProperties.getStore()).isEqualTo("jdbc");
     assertThat(asyncJobQueueProperties.getJdbcDialect()).isEqualTo("postgresql");
     assertThat(asyncJobQueueProperties.getStatusMetricsIntervalMs()).isEqualTo(12000);
+    assertThat(asyncJobQueueProperties.getRetention().isEnabled()).isTrue();
+    assertThat(asyncJobQueueProperties.getRetention().getIntervalMs()).isEqualTo(600000);
+    assertThat(asyncJobQueueProperties.getRetention().getDoneRetentionMs()).isEqualTo(86400000);
+    assertThat(asyncJobQueueProperties.getRetention().getFailedRetentionMs()).isEqualTo(604800000);
+    assertThat(asyncJobQueueProperties.getRetention().getBatchSize()).isEqualTo(50);
 
     Map<String, AsyncJobQueueProperties.QueueSettings> queues = asyncJobQueueProperties.getQueues();
 
@@ -78,5 +88,15 @@ public class AsyncJobQueuePropertiesTest {
     properties.setQueues(null);
 
     assertThat(properties.getQueues()).isEmpty();
+  }
+
+  @Test
+  public void setRetentionHandlesNull() {
+    AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
+
+    properties.setRetention(null);
+
+    assertThat(properties.getRetention()).isNotNull();
+    assertThat(properties.getRetention().isEnabled()).isFalse();
   }
 }

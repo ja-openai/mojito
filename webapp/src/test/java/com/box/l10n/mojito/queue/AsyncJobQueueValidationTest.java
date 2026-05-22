@@ -143,6 +143,30 @@ public class AsyncJobQueueValidationTest {
         "maxRetryDelayMs must be <=");
   }
 
+  @Test
+  public void validateRetentionSettingsRejectsInvalidBounds() {
+    assertInvalidRetentionSetting(
+        settings -> settings.setIntervalMs(0), "retention.intervalMs must be > 0");
+    assertInvalidRetentionSetting(
+        settings -> settings.setIntervalMs(AsyncJobQueueValidation.RETENTION_INTERVAL_MS_MAX + 1),
+        "retention.intervalMs must be <=");
+    assertInvalidRetentionSetting(
+        settings -> settings.setDoneRetentionMs(0), "retention.doneRetentionMs must be > 0");
+    assertInvalidRetentionSetting(
+        settings -> settings.setDoneRetentionMs(AsyncJobQueueValidation.RETENTION_AGE_MS_MAX + 1),
+        "retention.doneRetentionMs must be <=");
+    assertInvalidRetentionSetting(
+        settings -> settings.setFailedRetentionMs(0), "retention.failedRetentionMs must be > 0");
+    assertInvalidRetentionSetting(
+        settings -> settings.setFailedRetentionMs(AsyncJobQueueValidation.RETENTION_AGE_MS_MAX + 1),
+        "retention.failedRetentionMs must be <=");
+    assertInvalidRetentionSetting(
+        settings -> settings.setBatchSize(0), "retention.batchSize must be > 0");
+    assertInvalidRetentionSetting(
+        settings -> settings.setBatchSize(AsyncJobQueueValidation.RETENTION_BATCH_SIZE_MAX + 1),
+        "retention.batchSize must be <=");
+  }
+
   private void assertInvalidQueueSetting(
       java.util.function.Consumer<AsyncJobQueueProperties.QueueSettings> mutator,
       String expectedMessage) {
@@ -154,6 +178,20 @@ public class AsyncJobQueueValidationTest {
             assertThrows(
                 IllegalArgumentException.class,
                 () -> AsyncJobQueueValidation.validateQueueSettings(queueSettings)))
+        .hasMessageContaining(expectedMessage);
+  }
+
+  private void assertInvalidRetentionSetting(
+      java.util.function.Consumer<AsyncJobQueueProperties.RetentionSettings> mutator,
+      String expectedMessage) {
+    AsyncJobQueueProperties.RetentionSettings retentionSettings =
+        new AsyncJobQueueProperties.RetentionSettings();
+    mutator.accept(retentionSettings);
+
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> AsyncJobQueueValidation.validateRetentionSettings(retentionSettings)))
         .hasMessageContaining(expectedMessage);
   }
 }

@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Configuration;
  * l10n.org.async-job-queue.queues.assetlocalize.max-retry-delay-ms=60000
  * l10n.org.async-job-queue.queues.assetlocalize.retry-jitter-percent=20
  * l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=20
+ * l10n.org.async-job-queue.retention.enabled=false
  * </pre>
  */
 @Configuration
@@ -39,6 +40,8 @@ public class AsyncJobQueueProperties {
   private String jdbcDialect = "mysql";
 
   private long statusMetricsIntervalMs = 10_000;
+
+  private RetentionSettings retention = new RetentionSettings();
 
   private Map<String, QueueSettings> queues = new HashMap<>();
 
@@ -64,6 +67,17 @@ public class AsyncJobQueueProperties {
 
   public void setStatusMetricsIntervalMs(long statusMetricsIntervalMs) {
     this.statusMetricsIntervalMs = statusMetricsIntervalMs;
+  }
+
+  public RetentionSettings getRetention() {
+    if (retention == null) {
+      retention = new RetentionSettings();
+    }
+    return retention;
+  }
+
+  public void setRetention(RetentionSettings retention) {
+    this.retention = retention == null ? new RetentionSettings() : retention;
   }
 
   public Map<String, QueueSettings> getQueues() {
@@ -168,6 +182,55 @@ public class AsyncJobQueueProperties {
 
     public void setRetryJitterPercent(int retryJitterPercent) {
       this.retryJitterPercent = retryJitterPercent;
+    }
+  }
+
+  /** Scheduled retention policy for terminal async jobs. */
+  public static class RetentionSettings {
+    private boolean enabled = false;
+    private long intervalMs = 3_600_000;
+    private long doneRetentionMs = 604_800_000;
+    private long failedRetentionMs = 2_592_000_000L;
+    private int batchSize = 100;
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
+
+    public long getIntervalMs() {
+      return intervalMs;
+    }
+
+    public void setIntervalMs(long intervalMs) {
+      this.intervalMs = intervalMs;
+    }
+
+    public long getDoneRetentionMs() {
+      return doneRetentionMs;
+    }
+
+    public void setDoneRetentionMs(long doneRetentionMs) {
+      this.doneRetentionMs = doneRetentionMs;
+    }
+
+    public long getFailedRetentionMs() {
+      return failedRetentionMs;
+    }
+
+    public void setFailedRetentionMs(long failedRetentionMs) {
+      this.failedRetentionMs = failedRetentionMs;
+    }
+
+    public int getBatchSize() {
+      return batchSize;
+    }
+
+    public void setBatchSize(int batchSize) {
+      this.batchSize = batchSize;
     }
   }
 }
