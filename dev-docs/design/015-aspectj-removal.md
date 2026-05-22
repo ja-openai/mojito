@@ -263,6 +263,8 @@ Removed during this workstream:
   status updates now open and commit their write transaction boundary explicitly.
 - `ReviewProjectService.adminRecomputeRequestDecidedCounts` no longer uses `@Transactional`; admin
   decided-count recomputation now opens and commits its write transaction boundary explicitly.
+- `ReviewProjectService.adminBatchDeleteProjects` no longer uses `@Transactional`; admin project
+  deletion and orphan request cleanup now open and commit their transaction boundary explicitly.
 
 In progress:
 
