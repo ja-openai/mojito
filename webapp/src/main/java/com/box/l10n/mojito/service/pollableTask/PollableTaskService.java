@@ -337,6 +337,9 @@ public class PollableTaskService {
    * @param pollableTask
    */
   public void fetchSubTasks(PollableTask pollableTask) {
+    if (pollableTask == null || pollableTask.getSubTasks() == null) {
+      return;
+    }
     Hibernate.initialize(pollableTask.getSubTasks());
     pollableTask.getSubTasks().forEach(this::fetchSubTasks);
   }
@@ -363,8 +366,10 @@ public class PollableTaskService {
   private void recursivelyGetAllPollableTaskWithError(
       PollableTask pollableTask, List<PollableTask> pollableTasksWithError) {
 
-    for (PollableTask subTask : pollableTask.getSubTasks()) {
-      recursivelyGetAllPollableTaskWithError(subTask, pollableTasksWithError);
+    if (pollableTask.getSubTasks() != null) {
+      for (PollableTask subTask : pollableTask.getSubTasks()) {
+        recursivelyGetAllPollableTaskWithError(subTask, pollableTasksWithError);
+      }
     }
 
     if (pollableTask.getErrorMessage() != null) {

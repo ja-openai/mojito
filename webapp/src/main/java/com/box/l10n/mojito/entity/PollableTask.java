@@ -23,6 +23,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.time.ZonedDateTime;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import org.hibernate.annotations.BatchSize;
 import org.json.simple.parser.JSONParser;
@@ -73,7 +74,7 @@ public class PollableTask extends AuditableEntity {
   @OneToMany(mappedBy = "parentTask", fetch = FetchType.LAZY)
   @OrderBy("id")
   @BatchSize(size = 1000)
-  private Set<PollableTask> subTasks;
+  private Set<PollableTask> subTasks = new LinkedHashSet<>();
 
   @JsonBackReference
   @ManyToOne(fetch = FetchType.LAZY)

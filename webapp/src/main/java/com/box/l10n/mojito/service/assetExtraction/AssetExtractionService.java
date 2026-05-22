@@ -256,6 +256,11 @@ public class AssetExtractionService {
     updatePushRun(asset, createdTextUnitsResult.updatedState(), pushRunId, currentTask);
     performLeveraging(createdTextUnitsResult.leveragingMatches(), currentTask);
 
+    Repository repository = asset.getRepository();
+    if (repository != null) {
+      repositoryStatisticsJobScheduler.schedule(repository.getId());
+    }
+
     logger.info("Done processing asset content id: {}", assetContentId);
     return new PollableFutureTaskResult<>(asset);
   }
@@ -427,7 +432,7 @@ public class AssetExtractionService {
 
           Modifications modifications = getModifications(baseState, newState);
           MultiBranchState updatedMergedState =
-              updateAssetExtractionWithStateNoTx(
+              updateAssetExtractionWithStateInTx(
                   assetExtraction, newState, modifications, assetContentMd5s);
 
           // This is done outside the transaction because the delete can't be rollbacked when using
@@ -645,12 +650,6 @@ public class AssetExtractionService {
 
               ImmutableList<BranchStateTextUnit> toCreateTmTextUnits =
                   getBranchStateTextUnitsWithoutId(stateForNewContentWithIds);
-
-              final Repository repository = assetContent.getBranch().getRepository();
-              // Required to ensure branches with duplicate strings are displayed in the GUI
-              if (toCreateTmTextUnits.isEmpty() && repository != null) {
-                this.repositoryStatisticsJobScheduler.schedule(repository.getId());
-              }
 
               ImmutableList<BranchStateTextUnit> createdTextUnits =
                   createTmTextUnitsInTx(

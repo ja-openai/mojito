@@ -287,8 +287,9 @@ Removed during this workstream:
 
 In progress:
 
-- Full test validation remains. The source and Maven build no longer require AspectJ, but the full
-  unit suite and MySQL-backed suite still need to run before declaring the migration complete.
+- Full test validation remains. The source and Maven build no longer require AspectJ, and the direct
+  CLI suite passes with the fixed integration-test auth isolation. The full unit suite and
+  MySQL-backed suite still need to run before declaring the migration complete.
 
 ## Migration Principles
 

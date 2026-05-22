@@ -47,7 +47,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 @RunWith(SpringRunner.class)
 @SpringBootTest(
     classes = {Application.class},
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = "l10n.resttemplate.authentication-mode=STATEFUL")
 public class CLITestBase extends IOTestBase {
 
   /** logger */
