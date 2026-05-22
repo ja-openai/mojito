@@ -63,6 +63,21 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void emptyPollBackoffCapsAtMaxPollIntervalWithoutOverflow() {
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            new InMemoryAsyncJobStore(),
+            queueSettings(Long.MAX_VALUE / 2 + 1, Long.MAX_VALUE, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            executor);
+
+    AsyncJobQueueRuntime.PollCycleResult pollCycleResult = asyncJobQueueRuntime.pollOnce();
+
+    assertThat(pollCycleResult.nextDelayMs()).isEqualTo(Long.MAX_VALUE);
+  }
+
+  @Test
   public void pollSkipsStoreWhenLocalExecutorIsSaturated() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
@@ -1621,6 +1636,36 @@ public class AsyncJobQueueRuntimeTest {
     queueSettings.setMaxConcurrency(1);
     queueSettings.setLeaseDurationMs(100);
     queueSettings.setHeartbeatIntervalMs(100);
+
+    org.junit.Assert.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            runtime(
+                new InMemoryAsyncJobStore(),
+                queueSettings,
+                handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+                mock(TaskScheduler.class),
+                executor));
+  }
+
+  @Test
+  public void pollIntervalsMustBePositive() {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setPollIntervalMs(0);
+
+    org.junit.Assert.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            runtime(
+                new InMemoryAsyncJobStore(),
+                queueSettings,
+                handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+                mock(TaskScheduler.class),
+                executor));
+
+    queueSettings.setPollIntervalMs(1);
+    queueSettings.setMaxPollIntervalMs(0);
 
     org.junit.Assert.assertThrows(
         IllegalArgumentException.class,

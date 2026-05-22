@@ -767,7 +767,10 @@ class AsyncJobQueueRuntime {
     long base = basePollDelayMs();
     long max = Math.max(base, queueSettings.getMaxPollIntervalMs());
     long current = Math.max(base, currentPollDelayMs);
-    return Math.min(max, current >= max ? max : current * 2);
+    if (current >= max || current > Long.MAX_VALUE / 2) {
+      return max;
+    }
+    return Math.min(max, current * 2);
   }
 
   private int freeCapacity() {
@@ -790,6 +793,12 @@ class AsyncJobQueueRuntime {
   }
 
   private void validateQueueSettings(AsyncJobQueueProperties.QueueSettings queueSettings) {
+    if (queueSettings.getPollIntervalMs() <= 0) {
+      throw new IllegalArgumentException("pollIntervalMs must be > 0");
+    }
+    if (queueSettings.getMaxPollIntervalMs() <= 0) {
+      throw new IllegalArgumentException("maxPollIntervalMs must be > 0");
+    }
     if (queueSettings.getClaimBatchSize() <= 0) {
       throw new IllegalArgumentException("claimBatchSize must be > 0");
     }
