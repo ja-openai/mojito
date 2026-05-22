@@ -2271,8 +2271,23 @@ public class ReviewProjectService {
     return reviewProjectRepository.recomputeDecidedCountsByRequestId(requestId);
   }
 
-  @Transactional
   public int adminBatchDeleteProjects(List<Long> projectIds) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      int result = adminBatchDeleteProjectsNoTx(projectIds);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  int adminBatchDeleteProjectsNoTx(List<Long> projectIds) {
     requireAdmin();
     if (CollectionUtils.isEmpty(projectIds)) {
       return 0;

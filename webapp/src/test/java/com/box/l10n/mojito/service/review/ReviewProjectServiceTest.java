@@ -698,6 +698,36 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void adminBatchDeleteProjectsCommitsTransaction() {
+    doReturn(2).when(reviewProjectService).adminBatchDeleteProjectsNoTx(List.of(11L, 12L));
+
+    assertEquals(2, reviewProjectService.adminBatchDeleteProjects(List.of(11L, 12L)));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void adminBatchDeleteProjectsRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("delete failed");
+    doThrow(failure).when(reviewProjectService).adminBatchDeleteProjectsNoTx(List.of(11L, 12L));
+
+    try {
+      reviewProjectService.adminBatchDeleteProjects(List.of(11L, 12L));
+      fail("Expected adminBatchDeleteProjects to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(
