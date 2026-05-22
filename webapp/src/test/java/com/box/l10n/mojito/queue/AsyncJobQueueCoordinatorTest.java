@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Delayed;
@@ -50,6 +51,42 @@ public class AsyncJobQueueCoordinatorTest {
     assertThat(coordinator.isRunning()).isFalse();
     assertThat(firstScheduledPoll.isCancelled()).isTrue();
     verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
+  public void triggerPollNowRespectsLifecycleAndQueueName() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    List<TestScheduledFuture> scheduledPolls = new ArrayList<>();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(
+            invocation -> {
+              TestScheduledFuture scheduledFuture = new TestScheduledFuture();
+              scheduledPolls.add(scheduledFuture);
+              return scheduledFuture;
+            });
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            new AsyncJobQueueProperties(),
+            List.of(handler("assetlocalize")),
+            taskScheduler,
+            meterRegistry);
+
+    coordinator.start();
+    assertThat(scheduledPolls).hasSize(1);
+
+    coordinator.triggerPollNow("unknown");
+    assertThat(scheduledPolls).hasSize(1);
+
+    coordinator.triggerPollNow("assetlocalize");
+    assertThat(scheduledPolls).hasSize(2);
+    assertThat(scheduledPolls.get(0).isCancelled()).isTrue();
+
+    coordinator.stop();
+    assertThat(scheduledPolls.get(1).isCancelled()).isTrue();
+
+    coordinator.triggerPollNow("assetlocalize");
+    assertThat(scheduledPolls).hasSize(2);
   }
 
   private AsyncJobHandler handler(String queueName) {

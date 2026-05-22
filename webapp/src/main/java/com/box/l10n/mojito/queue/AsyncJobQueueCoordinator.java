@@ -134,9 +134,11 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
   }
 
   public void triggerPollNow(String queueName) {
-    AsyncJobQueueRuntime runtime = runtimesByQueueName.get(queueName);
-    if (runtime != null) {
-      runtime.triggerPollNow();
+    synchronized (lifecycleLock) {
+      AsyncJobQueueRuntime runtime = runtimesByQueueName.get(queueName);
+      if (runtime != null) {
+        runtime.triggerPollNow();
+      }
     }
   }
 
