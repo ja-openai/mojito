@@ -28,6 +28,7 @@ public class JdbcAsyncJobStoreTest {
       ORDER BY available_at, id
       LIMIT :limit
       """;
+  private static final String HSQL_CURRENT_TIMESTAMP_SQL = "VALUES CURRENT_TIMESTAMP";
 
   private JdbcTemplate jdbcTemplate;
   private JdbcAsyncJobStore jdbcAsyncJobStore;
@@ -70,7 +71,10 @@ public class JdbcAsyncJobStoreTest {
           ON async_job_queue (queue_name, status, lease_until, id)
         """);
     jdbcAsyncJobStore =
-        new JdbcAsyncJobStore(new NamedParameterJdbcTemplate(dataSource), HSQL_CLAIM_NEXT_JOBS_SQL);
+        new JdbcAsyncJobStore(
+            new NamedParameterJdbcTemplate(dataSource),
+            HSQL_CLAIM_NEXT_JOBS_SQL,
+            HSQL_CURRENT_TIMESTAMP_SQL);
   }
 
   @After
@@ -98,6 +102,7 @@ public class JdbcAsyncJobStoreTest {
     assertThat(claimed).allMatch(job -> "worker-a".equals(job.workerId()));
     assertThat(claimed).allMatch(job -> job.attemptCount() == 1);
     assertThat(claimed).allMatch(job -> job.leaseToken() != null && !job.leaseToken().isBlank());
+    assertThat(claimed).allMatch(job -> job.leaseUntil().isAfter(job.updatedDate()));
 
     assertThat(jdbcAsyncJobStore.countByStatus("assetlocalize"))
         .containsExactlyInAnyOrder(

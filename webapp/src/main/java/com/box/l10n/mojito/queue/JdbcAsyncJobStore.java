@@ -43,17 +43,28 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       FOR UPDATE SKIP LOCKED
       """;
 
+  static final String DEFAULT_CURRENT_TIMESTAMP_SQL = "SELECT CURRENT_TIMESTAMP";
+
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
   private final String claimNextJobsSql;
+  private final String currentTimestampSql;
 
   public JdbcAsyncJobStore(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-    this(namedParameterJdbcTemplate, DEFAULT_CLAIM_NEXT_JOBS_SQL);
+    this(namedParameterJdbcTemplate, DEFAULT_CLAIM_NEXT_JOBS_SQL, DEFAULT_CURRENT_TIMESTAMP_SQL);
   }
 
   JdbcAsyncJobStore(
       NamedParameterJdbcTemplate namedParameterJdbcTemplate, String claimNextJobsSql) {
+    this(namedParameterJdbcTemplate, claimNextJobsSql, DEFAULT_CURRENT_TIMESTAMP_SQL);
+  }
+
+  JdbcAsyncJobStore(
+      NamedParameterJdbcTemplate namedParameterJdbcTemplate,
+      String claimNextJobsSql,
+      String currentTimestampSql) {
     this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     this.claimNextJobsSql = claimNextJobsSql;
+    this.currentTimestampSql = currentTimestampSql;
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -82,7 +93,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         )
         """;
 
-    Instant now = Instant.now();
+    Instant now = databaseNow();
     MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("queueName", queueName)
@@ -126,7 +137,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       throw new IllegalArgumentException("leaseDuration must be > 0");
     }
 
-    Instant now = Instant.now();
+    Instant now = databaseNow();
     Instant leaseUntil = now.plus(leaseDuration);
 
     MapSqlParameterSource selectParams =
@@ -210,7 +221,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     }
 
     long parsedId = parseId(id);
-    Instant now = Instant.now();
+    Instant now = databaseNow();
     Instant leaseUntil = now.plus(leaseDuration);
     String sql =
         """
@@ -247,7 +258,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     Objects.requireNonNull(workerId);
     validateLeaseToken(leaseToken);
     long parsedId = parseId(id);
-    Instant now = Instant.now();
+    Instant now = databaseNow();
 
     String sql =
         """
@@ -297,7 +308,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     Objects.requireNonNull(availableAt);
     validateLeaseToken(leaseToken);
     long parsedId = parseId(id);
-    Instant now = Instant.now();
+    Instant now = databaseNow();
 
     String sql =
         """
@@ -348,7 +359,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     Objects.requireNonNull(workerId);
     validateLeaseToken(leaseToken);
     long parsedId = parseId(id);
-    Instant now = Instant.now();
+    Instant now = databaseNow();
 
     String sql =
         """
@@ -457,6 +468,16 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   private Instant toInstant(ResultSet resultSet, String columnName) throws SQLException {
     Timestamp timestamp = resultSet.getTimestamp(columnName);
     return timestamp == null ? null : timestamp.toInstant();
+  }
+
+  private Instant databaseNow() {
+    Timestamp timestamp =
+        namedParameterJdbcTemplate.queryForObject(
+            currentTimestampSql, new MapSqlParameterSource(), Timestamp.class);
+    if (timestamp == null) {
+      throw new IllegalStateException("Database did not return CURRENT_TIMESTAMP");
+    }
+    return timestamp.toInstant();
   }
 
   private List<Long> parseIds(List<AsyncJobId> ids) {

@@ -84,6 +84,8 @@ Failure + Restart Semantics
 - Claim uses lease (`lease_until`), not ownership lock.
 - If worker pod crashes, lease expires; job becomes claimable again.
 - Claim writes a new random `lease_token`; stale workers that lost lease cannot update queue state.
+- JDBC state transitions read `CURRENT_TIMESTAMP` from the database for lease comparisons and
+  transition timestamps, avoiding cross-pod JVM clock skew for claim/heartbeat/finalize fencing.
 - Retry policy:
   - runner decides retry vs completion outside the store
   - each claim increments `attempt_count`
