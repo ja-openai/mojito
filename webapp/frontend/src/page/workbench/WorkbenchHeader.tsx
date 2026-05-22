@@ -733,6 +733,8 @@ function SearchFilter({
     sections.splice(1, 0, {
       kind: 'radio',
       label: 'Glossary status',
+      description:
+        'Applies only to glossary repositories. Regular repository results are not filtered by glossary status.',
       options: glossaryStatusFilterOptions,
       value: glossaryStatusFilter,
       onChange: (value) => onChangeGlossaryStatusFilter(value as GlossaryStatusFilterValue),

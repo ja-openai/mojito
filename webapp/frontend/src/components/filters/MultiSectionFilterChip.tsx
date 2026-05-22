@@ -17,6 +17,7 @@ export type FilterOption<T extends string | number> = { value: T; label: string;
 export type RadioSection<T extends string | number = string> = {
   kind: 'radio';
   label: string;
+  description?: string;
   options: Array<FilterOption<T>>;
   value: T;
   onChange: (value: T) => void;
@@ -252,7 +253,23 @@ export function MultiSectionFilterChip({
                 if (section.kind === 'radio') {
                   return (
                     <div className={mergedClassNames.section} key={`radio-${index}`}>
-                      <div className={mergedClassNames.label}>{section.label}</div>
+                      <div className={`${mergedClassNames.label} workbench-searchmode__label-row`}>
+                        <span>{section.label}</span>
+                        {section.description ? (
+                          <span
+                            className="workbench-searchmode__info"
+                            aria-label={section.description}
+                            tabIndex={0}
+                          >
+                            i
+                          </span>
+                        ) : null}
+                      </div>
+                      {section.description ? (
+                        <div className="workbench-searchmode__description">
+                          {section.description}
+                        </div>
+                      ) : null}
                       <div className={mergedClassNames.list}>
                         {section.options.map((option) => (
                           <button

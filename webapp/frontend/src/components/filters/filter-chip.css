@@ -13,6 +13,42 @@
   color: var(--color-text-subtle);
 }
 
+.workbench-searchmode__label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.workbench-searchmode__info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: var(--border-width) solid currentColor;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-subtle);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: default;
+}
+
+.workbench-searchmode__info:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 0.125rem var(--color-focus-outline);
+}
+
+.workbench-searchmode__description {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+  line-height: 1.35;
+  padding: var(--space-2);
+}
+
 .filter-chip__list,
 .workbench-searchmode__list {
   display: flex;
