@@ -126,6 +126,32 @@ public class AsyncJobQueueRetentionCleanerTest {
   }
 
   @Test
+  public void cleanupTerminalJobsHandlesNullConfiguredQueues() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.DONE), any(Instant.class), eq(100)))
+        .thenReturn(1);
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.FAILED), any(Instant.class), eq(100)))
+        .thenReturn(2);
+    AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
+    asyncJobQueueProperties.setQueues(null);
+
+    AsyncJobQueueRetentionCleaner retentionCleaner =
+        new AsyncJobQueueRetentionCleaner(
+            asyncJobStore,
+            asyncJobQueueProperties,
+            List.of(handler("assetlocalize")),
+            meterRegistry,
+            () -> CLEANUP_NOW);
+
+    retentionCleaner.cleanupTerminalJobs();
+
+    assertDeletedCounter("assetlocalize", AsyncJobStatus.DONE, 1);
+    assertDeletedCounter("assetlocalize", AsyncJobStatus.FAILED, 2);
+  }
+
+  @Test
   public void rejectsInvalidHandlerQueueNameBeforeCleanup() {
     IllegalArgumentException exception =
         assertThrows(
