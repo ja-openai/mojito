@@ -208,6 +208,44 @@ public class InMemoryAsyncJobStoreTest {
   }
 
   @Test
+  public void storeTransitionsTruncateLastError() {
+    AsyncJobId id =
+        inMemoryAsyncJobStore.enqueue(
+            "assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        inMemoryAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+    String longError = "x".repeat(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH + 1);
+
+    assertThat(
+            inMemoryAsyncJobStore.requeue(
+                "assetlocalize",
+                id,
+                "worker-a",
+                claimed.leaseToken(),
+                Instant.now().minusSeconds(1),
+                null,
+                longError))
+        .isTrue();
+
+    AsyncJobRecord requeued = inMemoryAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(requeued.lastError()).hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+
+    AsyncJobRecord reclaimed =
+        inMemoryAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+    assertThat(
+            inMemoryAsyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", reclaimed.leaseToken(), null, longError))
+        .isTrue();
+
+    AsyncJobRecord failed = inMemoryAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(failed.lastError()).hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+  }
+
+  @Test
   public void findByStatusAndRequeueFailedSupportOperatorReplay() {
     AsyncJobId id =
         inMemoryAsyncJobStore.enqueue(

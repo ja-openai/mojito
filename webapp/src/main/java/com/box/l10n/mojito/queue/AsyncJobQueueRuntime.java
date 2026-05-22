@@ -24,8 +24,6 @@ class AsyncJobQueueRuntime {
 
   static Logger logger = LoggerFactory.getLogger(AsyncJobQueueRuntime.class);
 
-  private static final int MAX_ERROR_LENGTH = 4_000;
-
   private final String queueName;
   private final AsyncJobStore asyncJobStore;
   private final AsyncJobQueueProperties.QueueSettings queueSettings;
@@ -703,7 +701,7 @@ class AsyncJobQueueRuntime {
     if (e.getMessage() != null && !e.getMessage().isBlank()) {
       message += ": " + e.getMessage();
     }
-    return message.length() > MAX_ERROR_LENGTH ? message.substring(0, MAX_ERROR_LENGTH) : message;
+    return AsyncJobQueueValidation.truncateLastError(message);
   }
 
   private ScheduledFuture<?> scheduleHeartbeat(AsyncJobRecord asyncJobRecord) {

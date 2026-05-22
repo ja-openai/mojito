@@ -182,7 +182,13 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           }
           Instant now = Instant.now();
           String nextJobData = jobData == null ? job.jobData() : jobData;
-          jobsById.put(job.id(), job.withRequeue(availableAt, nextJobData, lastError, now));
+          jobsById.put(
+              job.id(),
+              job.withRequeue(
+                  availableAt,
+                  nextJobData,
+                  AsyncJobQueueValidation.truncateLastError(lastError),
+                  now));
           return true;
         });
   }
@@ -208,7 +214,10 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           }
           Instant now = Instant.now();
           String nextJobData = jobData == null ? job.jobData() : jobData;
-          jobsById.put(job.id(), job.withFailure(nextJobData, lastError, now));
+          jobsById.put(
+              job.id(),
+              job.withFailure(
+                  nextJobData, AsyncJobQueueValidation.truncateLastError(lastError), now));
           return true;
         });
   }

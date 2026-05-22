@@ -257,6 +257,44 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void storeTransitionsTruncateLastErrorBeforeJdbcWrite() {
+    AsyncJobId id =
+        jdbcAsyncJobStore.enqueue(
+            "assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        jdbcAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+    String longError = "x".repeat(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH + 1);
+
+    assertThat(
+            jdbcAsyncJobStore.requeue(
+                "assetlocalize",
+                id,
+                "worker-a",
+                claimed.leaseToken(),
+                Instant.now().minusSeconds(1),
+                null,
+                longError))
+        .isTrue();
+
+    AsyncJobRecord requeued = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(requeued.lastError()).hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+
+    AsyncJobRecord reclaimed =
+        jdbcAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+    assertThat(
+            jdbcAsyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", reclaimed.leaseToken(), null, longError))
+        .isTrue();
+
+    AsyncJobRecord failed = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(failed.lastError()).hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+  }
+
+  @Test
   public void findByStatusAndRequeueFailedSupportOperatorReplay() {
     AsyncJobId id =
         jdbcAsyncJobStore.enqueue(

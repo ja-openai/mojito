@@ -53,4 +53,14 @@ public class AsyncJobQueueValidationTest {
 
     assertThat(exception).hasMessageContaining("availableAt must be between");
   }
+
+  @Test
+  public void truncateLastErrorBoundsPersistedErrorSummary() {
+    String longError = "x".repeat(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH + 1);
+
+    assertThat(AsyncJobQueueValidation.truncateLastError(null)).isNull();
+    assertThat(AsyncJobQueueValidation.truncateLastError("short")).isEqualTo("short");
+    assertThat(AsyncJobQueueValidation.truncateLastError(longError))
+        .hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+  }
 }

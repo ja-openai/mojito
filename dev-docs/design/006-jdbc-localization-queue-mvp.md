@@ -192,8 +192,8 @@ Test Coverage
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
   handler-only queues, and non-fatal reporting failures.
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
-  replay, lease-reclaim markers, timestamp-bound validation, and status counts against an embedded
-  datasource using the `hsql` dialect.
+  replay, lease-reclaim markers, timestamp-bound validation, bounded error summaries, and status
+  counts against an embedded datasource using the `hsql` dialect.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.

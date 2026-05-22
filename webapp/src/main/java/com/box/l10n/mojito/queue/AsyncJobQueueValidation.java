@@ -10,6 +10,7 @@ final class AsyncJobQueueValidation {
 
   static final int QUEUE_NAME_MAX_LENGTH = 64;
   static final int WORKER_ID_MAX_LENGTH = 128;
+  static final int LAST_ERROR_MAX_LENGTH = 4_000;
   // Conservative portable bounds for MySQL DATETIME after JDBC/default-timezone conversion.
   static final Instant DATABASE_TIMESTAMP_MIN = Instant.parse("1000-01-02T00:00:00Z");
   static final Instant DATABASE_TIMESTAMP_MAX = Instant.parse("9999-12-31T00:00:00Z");
@@ -109,6 +110,13 @@ final class AsyncJobQueueValidation {
               + " for async job queue JDBC storage");
     }
     return instant;
+  }
+
+  static String truncateLastError(String lastError) {
+    if (lastError == null || lastError.length() <= LAST_ERROR_MAX_LENGTH) {
+      return lastError;
+    }
+    return lastError.substring(0, LAST_ERROR_MAX_LENGTH);
   }
 
   static AsyncJobQueueProperties.QueueSettings validateQueueSettings(
