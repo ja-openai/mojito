@@ -85,6 +85,47 @@ public class AsyncJobQueueRetentionCleanerTest {
   }
 
   @Test
+  public void cleanupTerminalJobsContinuesAfterOneQueueFails() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("broken"), eq(AsyncJobStatus.DONE), any(Instant.class), eq(100)))
+        .thenThrow(new IllegalStateException("database unavailable"));
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.DONE), any(Instant.class), eq(100)))
+        .thenReturn(3);
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.FAILED), any(Instant.class), eq(100)))
+        .thenReturn(4);
+
+    AsyncJobQueueRetentionCleaner retentionCleaner =
+        new AsyncJobQueueRetentionCleaner(
+            asyncJobStore,
+            queueProperties("broken", "assetlocalize"),
+            List.of(),
+            meterRegistry,
+            () -> CLEANUP_NOW);
+
+    retentionCleaner.cleanupTerminalJobs();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.retention.failed")
+                .tag("queueName", "broken")
+                .tag("status", "done")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertDeletedCounter("assetlocalize", AsyncJobStatus.DONE, 3);
+    assertDeletedCounter("assetlocalize", AsyncJobStatus.FAILED, 4);
+    verify(asyncJobStore)
+        .deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.DONE), any(Instant.class), eq(100));
+    verify(asyncJobStore)
+        .deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.FAILED), any(Instant.class), eq(100));
+  }
+
+  @Test
   public void rejectsInvalidHandlerQueueNameBeforeCleanup() {
     IllegalArgumentException exception =
         assertThrows(
@@ -119,9 +160,13 @@ public class AsyncJobQueueRetentionCleanerTest {
         .isTrue();
   }
 
-  private AsyncJobQueueProperties queueProperties(String queueName) {
+  private AsyncJobQueueProperties queueProperties(String... queueNames) {
     AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
-    asyncJobQueueProperties.getQueues().put(queueName, new AsyncJobQueueProperties.QueueSettings());
+    for (String queueName : queueNames) {
+      asyncJobQueueProperties
+          .getQueues()
+          .put(queueName, new AsyncJobQueueProperties.QueueSettings());
+    }
     return asyncJobQueueProperties;
   }
 
