@@ -30,7 +30,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
 
   @Override
   public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
-    Objects.requireNonNull(queueName);
+    AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(jobData);
     Objects.requireNonNull(availableAt);
 
@@ -67,8 +67,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
       return Collections.emptyList();
     }
 
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     Objects.requireNonNull(leaseDuration);
     if (leaseDuration.isZero() || leaseDuration.isNegative()) {
       throw new IllegalArgumentException("leaseDuration must be > 0");
@@ -113,8 +113,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   @Override
   public boolean heartbeat(
       String queueName, AsyncJobId id, String workerId, String leaseToken, Duration leaseDuration) {
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     Objects.requireNonNull(leaseDuration);
     validateLeaseToken(leaseToken);
     if (leaseDuration.isZero() || leaseDuration.isNegative()) {
@@ -137,8 +137,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   @Override
   public boolean markDone(
       String queueName, AsyncJobId id, String workerId, String leaseToken, String jobData) {
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     validateLeaseToken(leaseToken);
 
     return withQueueLock(
@@ -164,8 +164,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
       Instant availableAt,
       String jobData,
       String lastError) {
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     Objects.requireNonNull(availableAt);
     validateLeaseToken(leaseToken);
 
@@ -191,8 +191,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
       String leaseToken,
       String jobData,
       String lastError) {
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     validateLeaseToken(leaseToken);
 
     return withQueueLock(
@@ -211,7 +211,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
 
   @Override
   public List<AsyncJobStatusCount> countByStatus(String queueName) {
-    Objects.requireNonNull(queueName);
+    AsyncJobQueueValidation.validateQueueName(queueName);
     return withQueueLock(
         queueName,
         () ->
@@ -231,7 +231,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
       return Collections.emptyList();
     }
 
-    Objects.requireNonNull(queueName);
+    AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(status);
     return withQueueLock(
         queueName,
@@ -250,7 +250,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   @Override
   public boolean requeueFailed(
       String queueName, AsyncJobId id, Instant availableAt, String jobData) {
-    Objects.requireNonNull(queueName);
+    AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(availableAt);
 
     return withQueueLock(

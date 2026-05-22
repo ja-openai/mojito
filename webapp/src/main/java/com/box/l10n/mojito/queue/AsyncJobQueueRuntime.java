@@ -77,14 +77,14 @@ class AsyncJobQueueRuntime {
       MeterRegistry meterRegistry,
       String workerId,
       LongUnaryOperator pollDelayJitter) {
-    this.queueName = Objects.requireNonNull(queueName);
+    this.queueName = AsyncJobQueueValidation.validateQueueName(queueName);
     this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
     this.queueSettings = Objects.requireNonNull(queueSettings);
     this.asyncJobHandler = Objects.requireNonNull(asyncJobHandler);
     this.taskScheduler = Objects.requireNonNull(taskScheduler);
     this.executor = Objects.requireNonNull(executor);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
-    this.workerId = Objects.requireNonNull(workerId);
+    this.workerId = AsyncJobQueueValidation.validateWorkerId(workerId);
     this.pollDelayJitter =
         pollDelayJitter != null ? pollDelayJitter : this::applyRandomPollDelayJitter;
     validateQueueSettings(queueSettings);

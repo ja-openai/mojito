@@ -320,4 +320,32 @@ public class JdbcAsyncJobStoreTest {
         IllegalArgumentException.class,
         () -> jdbcAsyncJobStore.getByIds(List.of(new AsyncJobId("abc"))));
   }
+
+  @Test
+  public void rejectsQueueNamesOutsideSchemaBounds() {
+    assertThrows(
+        IllegalArgumentException.class, () -> jdbcAsyncJobStore.enqueue(" ", "{}", Instant.now()));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            jdbcAsyncJobStore.enqueue(
+                "x".repeat(AsyncJobQueueValidation.QUEUE_NAME_MAX_LENGTH + 1),
+                "{}",
+                Instant.now()));
+  }
+
+  @Test
+  public void rejectsWorkerIdsOutsideSchemaBounds() {
+    jdbcAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            jdbcAsyncJobStore.claimNextJobs(
+                "assetlocalize",
+                1,
+                "x".repeat(AsyncJobQueueValidation.WORKER_ID_MAX_LENGTH + 1),
+                Duration.ofSeconds(1)));
+  }
 }

@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -282,5 +283,34 @@ public class InMemoryAsyncJobStoreTest {
 
     AsyncJobRecord queued = inMemoryAsyncJobStore.getByIds(List.of(queuedId)).get(0);
     assertThat(queued.status()).isEqualTo(AsyncJobStatus.QUEUED);
+  }
+
+  @Test
+  public void rejectsQueueNamesOutsideSchemaBounds() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> inMemoryAsyncJobStore.enqueue(" ", "{}", Instant.now()));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            inMemoryAsyncJobStore.enqueue(
+                "x".repeat(AsyncJobQueueValidation.QUEUE_NAME_MAX_LENGTH + 1),
+                "{}",
+                Instant.now()));
+  }
+
+  @Test
+  public void rejectsWorkerIdsOutsideSchemaBounds() {
+    inMemoryAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            inMemoryAsyncJobStore.claimNextJobs(
+                "assetlocalize",
+                1,
+                "x".repeat(AsyncJobQueueValidation.WORKER_ID_MAX_LENGTH + 1),
+                Duration.ofSeconds(1)));
   }
 }

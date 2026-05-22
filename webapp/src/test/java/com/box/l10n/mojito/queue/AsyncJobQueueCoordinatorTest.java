@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -116,6 +117,48 @@ public class AsyncJobQueueCoordinatorTest {
     assertThat(scheduledPolls).hasSize(1);
 
     coordinator.stop();
+  }
+
+  @Test
+  public void startRejectsInvalidHandlerQueueNameBeforeScheduling() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            new AsyncJobQueueProperties(),
+            List.of(handler(" ")),
+            taskScheduler,
+            meterRegistry);
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, coordinator::start);
+
+    assertThat(exception).hasMessageContaining("queueName must not be blank");
+    assertThat(coordinator.isRunning()).isFalse();
+    verify(taskScheduler, never()).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
+  public void startRejectsInvalidConfiguredQueueNameBeforeStartingHandlers() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
+    asyncJobQueueProperties
+        .getQueues()
+        .put("x".repeat(AsyncJobQueueValidation.QUEUE_NAME_MAX_LENGTH + 1), null);
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            asyncJobQueueProperties,
+            List.of(handler("assetlocalize")),
+            taskScheduler,
+            meterRegistry);
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, coordinator::start);
+
+    assertThat(exception).hasMessageContaining("queueName must be at most 64 characters");
+    assertThat(coordinator.isRunning()).isFalse();
+    verify(taskScheduler, never()).schedule(any(Runnable.class), any(Date.class));
   }
 
   private AsyncJobHandler handler(String queueName) {

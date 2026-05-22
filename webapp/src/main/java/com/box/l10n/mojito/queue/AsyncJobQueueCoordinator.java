@@ -60,14 +60,18 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
 
       Map<String, AsyncJobHandler> handlersByQueueName = new LinkedHashMap<>();
       for (AsyncJobHandler asyncJobHandler : asyncJobHandlers) {
-        AsyncJobHandler previous =
-            handlersByQueueName.put(asyncJobHandler.queueName(), asyncJobHandler);
+        String queueName = AsyncJobQueueValidation.validateQueueName(asyncJobHandler.queueName());
+        AsyncJobHandler previous = handlersByQueueName.put(queueName, asyncJobHandler);
         if (previous != null) {
           throw new IllegalStateException(
-              "Multiple AsyncJobHandler beans registered for queue: "
-                  + asyncJobHandler.queueName());
+              "Multiple AsyncJobHandler beans registered for queue: " + queueName);
         }
       }
+
+      asyncJobQueueProperties
+          .getQueues()
+          .keySet()
+          .forEach(AsyncJobQueueValidation::validateQueueName);
 
       for (Map.Entry<String, AsyncJobHandler> entry : handlersByQueueName.entrySet()) {
         String queueName = entry.getKey();

@@ -69,7 +69,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   @Override
   public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
-    Objects.requireNonNull(queueName);
+    AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(jobData);
     Objects.requireNonNull(availableAt);
 
@@ -129,8 +129,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       return Collections.emptyList();
     }
 
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     Objects.requireNonNull(leaseDuration);
     if (leaseDuration.isZero() || leaseDuration.isNegative()) {
       throw new IllegalArgumentException("leaseDuration must be > 0");
@@ -218,8 +218,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Override
   public boolean heartbeat(
       String queueName, AsyncJobId id, String workerId, String leaseToken, Duration leaseDuration) {
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     Objects.requireNonNull(leaseDuration);
     validateLeaseToken(leaseToken);
     if (leaseDuration.isZero() || leaseDuration.isNegative()) {
@@ -260,8 +260,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Override
   public boolean markDone(
       String queueName, AsyncJobId id, String workerId, String leaseToken, String jobData) {
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     validateLeaseToken(leaseToken);
     long parsedId = parseId(id);
     Instant now = databaseNow();
@@ -340,8 +340,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       String jobData,
       String lastError,
       Instant now) {
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     Objects.requireNonNull(availableAt);
     Objects.requireNonNull(now);
     validateLeaseToken(leaseToken);
@@ -392,8 +392,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       String leaseToken,
       String jobData,
       String lastError) {
-    Objects.requireNonNull(queueName);
-    Objects.requireNonNull(workerId);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
     validateLeaseToken(leaseToken);
     long parsedId = parseId(id);
     Instant now = databaseNow();
@@ -435,7 +435,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Transactional(readOnly = true)
   @Override
   public List<AsyncJobStatusCount> countByStatus(String queueName) {
-    Objects.requireNonNull(queueName);
+    AsyncJobQueueValidation.validateQueueName(queueName);
     String sql =
         """
         SELECT status, COUNT(*) AS count
@@ -458,7 +458,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       return Collections.emptyList();
     }
 
-    Objects.requireNonNull(queueName);
+    AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(status);
     String sql =
         """
@@ -494,7 +494,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Override
   public boolean requeueFailed(
       String queueName, AsyncJobId id, Instant availableAt, String jobData) {
-    Objects.requireNonNull(queueName);
+    AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(availableAt);
     long parsedId = parseId(id);
     Instant now = databaseNow();
