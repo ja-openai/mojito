@@ -67,9 +67,12 @@ public class ReviewAutomationService {
       String searchQuery, Boolean enabled, Integer limit) {
     requireAdmin();
     int resolvedLimit = normalizeLimit(limit);
+    String normalizedSearchQuery = normalizeSearchQuery(searchQuery);
     Page<ReviewAutomationSummaryRow> page =
-        reviewAutomationRepository.searchSummaryRows(
-            normalizeSearchQuery(searchQuery), enabled, PageRequest.of(0, resolvedLimit));
+        normalizedSearchQuery == null
+            ? reviewAutomationRepository.findSummaryRows(enabled, PageRequest.of(0, resolvedLimit))
+            : reviewAutomationRepository.searchSummaryRows(
+                normalizedSearchQuery, enabled, PageRequest.of(0, resolvedLimit));
     List<Long> automationIds =
         page.getContent().stream().map(ReviewAutomationSummaryRow::id).toList();
     return new SearchReviewAutomationsView(

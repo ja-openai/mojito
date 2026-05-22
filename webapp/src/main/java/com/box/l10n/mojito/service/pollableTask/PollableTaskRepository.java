@@ -26,8 +26,7 @@ public interface PollableTaskRepository extends JpaRepository<PollableTask, Long
    * Retrieves pollable tasks that have not finished yet and have exceeded the maximum execution
    * time.
    *
-   * <p>Must pass "now" as parameter due to HSQL persisting ZonedDateTime without TZ info. Comparing
-   * ZonedDateTime against unix_timestamp() then fails because of the TZ difference.
+   * <p>Must pass "now" as parameter due to HSQL persisting ZonedDateTime without TZ info.
    *
    * <p>This does not show if test are running in UTC like on CI
    */
@@ -35,7 +34,7 @@ public interface PollableTaskRepository extends JpaRepository<PollableTask, Long
       """
 	      select pt from #{#entityName} pt
 	      where pt.finishedDate is null
-	      and (cast(unix_timestamp(pt.createdDate) as long) + pt.timeout) < cast(unix_timestamp(:now) as long)
+	      and timestampadd(second, pt.timeout, pt.createdDate) < :now
 	      """)
   List<PollableTask> findZombiePollableTasks(@Param("now") ZonedDateTime now, Pageable pageable);
 }

@@ -23,10 +23,15 @@ public interface CommitToPushRunRepository extends JpaRepository<CommitToPushRun
       nativeQuery = true,
       value =
           """
-          delete ctpr
-          from push_run pr
-          join commit_to_push_run ctpr on ctpr.push_run_id = pr.id
-          where pr.created_date < :beforeDate
+          delete from commit_to_push_run
+          where id in (
+            select id from (
+              select ctpr.id as id
+              from push_run pr
+              join commit_to_push_run ctpr on ctpr.push_run_id = pr.id
+              where pr.created_date < :beforeDate
+            ) todelete
+          )
           """)
   void deleteAllByPushRunWithCreatedDateBefore(@Param("beforeDate") ZonedDateTime beforeDate);
 }

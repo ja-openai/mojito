@@ -159,8 +159,7 @@ public class DatabaseCacheTest extends ServiceTestBase {
     DatabaseCache databaseCacheWithAggressiveEviction =
         new DatabaseCache("databaseCacheWithAggressiveEviction", databaseCacheConfiguration);
 
-    // This test is only supported on MySql
-    Assume.assumeTrue(dbUtils.isMysql());
+    Assume.assumeTrue(dbUtils.isMysql() || dbUtils.isPostgres());
 
     putKeyValue(databaseCacheWithAggressiveEviction, KEY, VALUE);
 

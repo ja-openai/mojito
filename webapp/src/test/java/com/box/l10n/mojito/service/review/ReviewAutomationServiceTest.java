@@ -1,6 +1,8 @@
 package com.box.l10n.mojito.service.review;
 
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.review.ReviewAutomation;
@@ -12,6 +14,8 @@ import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 public class ReviewAutomationServiceTest {
 
@@ -54,5 +58,29 @@ public class ReviewAutomationServiceTest {
     InOrder inOrder = inOrder(reviewAutomationRunRepository, reviewAutomationRepository);
     inOrder.verify(reviewAutomationRunRepository).deleteByReviewAutomationId(7L);
     inOrder.verify(reviewAutomationRepository).delete(automation);
+  }
+
+  @Test
+  public void searchReviewAutomationsUsesNoSearchQueryWhenSearchIsBlank() {
+    PageRequest pageRequest = PageRequest.of(0, ReviewAutomationService.DEFAULT_LIMIT);
+    when(reviewAutomationRepository.findSummaryRows(null, pageRequest)).thenReturn(Page.empty());
+
+    reviewAutomationService.searchReviewAutomations("  ", null, null);
+
+    verify(reviewAutomationRepository).findSummaryRows(null, pageRequest);
+    verify(reviewAutomationRepository, never())
+        .searchSummaryRows(Mockito.any(), Mockito.any(), Mockito.any());
+  }
+
+  @Test
+  public void searchReviewAutomationsUsesSearchQueryWhenSearchIsNotBlank() {
+    PageRequest pageRequest = PageRequest.of(0, ReviewAutomationService.DEFAULT_LIMIT);
+    when(reviewAutomationRepository.searchSummaryRows("checkout", null, pageRequest))
+        .thenReturn(Page.empty());
+
+    reviewAutomationService.searchReviewAutomations(" checkout ", null, null);
+
+    verify(reviewAutomationRepository).searchSummaryRows("checkout", null, pageRequest);
+    verify(reviewAutomationRepository, never()).findSummaryRows(Mockito.any(), Mockito.any());
   }
 }

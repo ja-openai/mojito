@@ -39,9 +39,8 @@ public interface PullRunRepository extends JpaRepository<PullRun, Long> {
       nativeQuery = true,
       value =
           """
-          delete pr
-          from pull_run pr
-          where pr.created_date < :beforeDate
+          delete from pull_run
+          where created_date < :beforeDate
           """)
   void deleteAllByCreatedDateBefore(@Param("beforeDate") ZonedDateTime beforeDate);
 }

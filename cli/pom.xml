@@ -58,6 +58,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.beust</groupId>
             <artifactId>jcommander</artifactId>
             <version>1.48</version>
@@ -140,6 +146,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>${mojito.test.local-config.arg}
+                        ${mojito.test.database.arg}
                         ${mojito.test.mockito-agent.arg}
                         -Dspring.profiles.active=${user.name},test -Xmx1024m
                     </argLine>

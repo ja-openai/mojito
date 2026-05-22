@@ -1,16 +1,11 @@
-version: '2'
 services:
   db:
-    image: mysql:5.7
+    image: postgres:16
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ChangeMe
-      MYSQL_DATABASE: mojito
-      MYSQL_USER: mojito
-      MYSQL_PASSWORD: ChangeMe
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_bin
+      POSTGRES_DB: mojito
+      POSTGRES_USER: mojito
+      POSTGRES_PASSWORD: ChangeMe
   webapp:
     depends_on:
       - db
@@ -28,12 +23,8 @@ services:
     environment:
 #      JAVA_OPTS: '-Xms2g'
       SPRING_APPLICATION_JSON: '{
-      "spring.flyway.enabled": "true",
-      "l10n.flyway.clean" : "false",
-      "spring.jpa.database-platform" : "org.hibernate.dialect.MySQLDialect",
-      "spring.jpa.hibernate.ddl-auto" : "none",
-      "spring.datasource.url" : "jdbc:mysql://db:3306/mojito?characterEncoding=UTF-8&useUnicode=true",
+      "spring.profiles.active": "postgres",
+      "spring.datasource.url" : "jdbc:postgresql://db:5432/mojito",
       "spring.datasource.username" : "mojito",
-      "spring.datasource.password" : "ChangeMe",
-      "spring.datasource.driverClassName" : "com.mysql.cj.jdbc.Driver"
+      "spring.datasource.password" : "ChangeMe"
       }'

@@ -12,15 +12,15 @@ The following requirements are needed to develop on {{ site.mojito_green }}:
 1. [Git](https://git-scm.com/about)
 2. [JDK 21](https://adoptium.net/temurin/releases/?version=21) 
 3. [Maven](https://maven.apache.org/download.cgi), or use the project Maven wrapper `mvnw` (version `3.8`)
-4. Optional but highly recommended, [MySQL 8](https://dev.mysql.com/downloads/mysql/8.html) 
+4. Optional but highly recommended, [PostgreSQL](https://www.postgresql.org/download/)
 
 Next are instructions to setup the developer environment on Mac OS and Ubuntu. Both have instructions to install 
-`Mysql 8` that can be skipped but it is highly recommended to work with a production like environment and persistent
-data. Note that `8` is the only version tested at the moment.
+`PostgreSQL` that can be skipped but it is highly recommended to work with a production like environment and persistent
+data.
 
 Skip to the [build section](#build) if you already have everything setup!
 
-You can also get started by using a [docker image](#docker-image) that has the build dependencies but without `Mysql`. 
+You can also get started by using a [docker image](#docker-image) that has the build dependencies but without `PostgreSQL`.
 
 ### Install on Mac OS
 
@@ -42,10 +42,10 @@ Install `maven` (latest version should be fine):
 brew install maven
 ```
           
-Optionally, install `Mysql 8`
+Optionally, install `PostgreSQL`
 
 ```sh
-brew install mysql@8.0
+brew install postgresql@16
 ```
 
 Note, to install the exact same `maven` version as the wrapper: `brew install maven@3.8` (check the instructions since it is key-only) .
@@ -75,54 +75,37 @@ Install `git`
 sudo apt-get install git
 ```
     
-Optionally, install `Mysql 8`
+Optionally, install `PostgreSQL`
  
 ```sh
-sudo apt-get install mysql-server
+sudo apt-get install postgresql
 ```       
   
-## Create Mysql Databases & configuration files
+## Create PostgreSQL Databases & configuration files
 
-If you've decided to use `Mysql` the server needs to be configured for better Unicode support. This section also describes 
-how to create 2 databases along with spring configurations to setup 2 environments that will make development easier.
-
-Configure the server to use `utf-8` on `4 bytes` by default by appending these configurations to 
-`/usr/local/etc/my.cnf` or `/opt/homebrew/etc/my.cnf` (arm brew) file on Mac and to `/etc/mysql/my.cnf` file on Ubuntu:
-
-```properties
-[client]
-default-character-set = utf8mb4
-    
-[mysqld]
-character-set-server = utf8mb4
-    
-[mysqld]
-max_allowed_packet = 256M
-
-[mysqld]
-default-time-zone = '+00:00'
-```
+If you've decided to use `PostgreSQL`, this section describes how to create 2 databases along with spring
+configurations to setup 2 environments that will make development easier.
 
 The server needs to be started/restarted. 
 ```sh
 # On Mac
-mysql.server start
+brew services start postgresql@16
 
 # On Ubuntu
-sudo service mysql restart
+sudo service postgresql restart
 ```
 
-We're going to create two test databases, so connect to MySQL DB as root user 
+We're going to create two test databases, so connect to PostgreSQL as a superuser.
 ```sh
 # On Mac 
-mysql -u root
+psql postgres
 
-On Ubuntu 
-sudo mysql -u root
+# On Ubuntu
+sudo -u postgres psql
 ```
 
 The first database is to run the automation tests during developpment. Tests can also be run using `HSQL` in-memory
- DB but it is sometimes intersting to test with Mysql. This environment can also be used to work on the 
+ DB but it is sometimes intersting to test with PostgreSQL. This environment can also be used to work on the
  generation of DB update schema. 
 
 The second database is used to run a local instance of the application with data persisted to do frontend or CLI testing. 
@@ -132,12 +115,11 @@ Run the following commands to create the databases. Change the user name, databa
  so you'll have to update the configuration files accordingly later.
    
 ```sql
-CREATE USER 'mojito'@'localhost' IDENTIFIED BY 'mojito';
-CREATE DATABASE IF NOT EXISTS mojito CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
-CREATE DATABASE IF NOT EXISTS mojito_dev CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
-GRANT ALL PRIVILEGES ON mojito.* TO 'mojito'@'localhost';
-GRANT ALL PRIVILEGES ON mojito_dev.* TO 'mojito'@'localhost';
-FLUSH PRIVILEGES;
+CREATE USER mojito WITH PASSWORD 'mojito';
+CREATE DATABASE mojito OWNER mojito;
+CREATE DATABASE mojito_dev OWNER mojito;
+GRANT ALL PRIVILEGES ON DATABASE mojito TO mojito;
+GRANT ALL PRIVILEGES ON DATABASE mojito_dev TO mojito;
 ```
 
 Now will create 2 configuration files, one for each environment/database.
@@ -146,24 +128,25 @@ First create the directory where the files will be stored: `mkdir -p ~/.l10n/con
 Then create the first file: `.l10n/config/webapp/application.properties` with following content
 
 ```properties
+spring.profiles.active=postgres
 spring.flyway.enabled=true
 spring.jpa.defer-datasource-initialization=false
 l10n.flyway.clean=true
-spring.datasource.url=jdbc:mysql://localhost:3306/mojito?characterEncoding=UTF-8&useUnicode=true
+spring.datasource.url=jdbc:postgresql://localhost:5432/mojito
 spring.datasource.username=mojito
 spring.datasource.password=mojito
-spring.datasource.driverClassName=com.mysql.cj.jdbc.Driver
+spring.datasource.driverClassName=org.postgresql.Driver
 
 l10n.org.quartz.jobStore.useProperties=true
 l10n.org.quartz.scheduler.instanceId=AUTO
 l10n.org.quartz.jobStore.isClustered=true
 l10n.org.quartz.threadPool.threadCount=10
 l10n.org.quartz.jobStore.class=org.quartz.impl.jdbcjobstore.JobStoreTX
-l10n.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+l10n.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 l10n.org.quartz.jobStore.dataSource=myDS
 l10n.org.quartz.dataSource.myDS.provider=hikaricp
-l10n.org.quartz.dataSource.myDS.driver=com.mysql.cj.jdbc.Driver
-l10n.org.quartz.dataSource.myDS.URL=jdbc:mysql://localhost:3306/mojito?characterEncoding=UTF-8&useUnicode=true
+l10n.org.quartz.dataSource.myDS.driver=org.postgresql.Driver
+l10n.org.quartz.dataSource.myDS.URL=jdbc:postgresql://localhost:5432/mojito
 l10n.org.quartz.dataSource.myDS.user=mojito
 l10n.org.quartz.dataSource.myDS.password=mojito
 l10n.org.quartz.dataSource.myDS.maxConnections=12
@@ -174,8 +157,8 @@ In the second file: `.l10n/config/webapp/application-npm.properties`, override t
 keep data between server runs, and enable header auth for the Vite dev proxy:
 ```properties
 l10n.flyway.clean=false
-spring.datasource.url=jdbc:mysql://localhost:3306/mojito_dev?characterEncoding=UTF-8&useUnicode=true
-l10n.org.quartz.dataSource.myDS.URL=jdbc:mysql://localhost:3306/mojito_dev?characterEncoding=UTF-8&useUnicode=true
+spring.datasource.url=jdbc:postgresql://localhost:5432/mojito_dev
+l10n.org.quartz.dataSource.myDS.URL=jdbc:postgresql://localhost:5432/mojito_dev
 l10n.security.authenticationType=HEADER,DATABASE
 ```
     
@@ -226,8 +209,8 @@ npm --prefix webapp/frontend run dev
 
 The Vite app runs on [http://localhost:5173/](http://localhost:5173/) and proxies `/api/*` to the backend. The dev proxy sends `x-forwarded-user: admin`, so the backend dev profile should use header authentication.
 
-If you didn't [configure Mysql](#create-mysql-databases--configuration-files) previously, {{ site.mojito_green }} will be running 
-with in-memory `HSQL DB`. When you restart the server, all data will be lost. For persistent data you need to setup `Mysql`.
+If you didn't [configure PostgreSQL](#create-postgresql-databases--configuration-files) previously, {{ site.mojito_green }} will be running
+with in-memory `HSQL DB`. When you restart the server, all data will be lost. For persistent data you need to setup `PostgreSQL`.
 
 ## Add Demo Data in {{ site.mojito_green }}
 Make sure {{ site.mojito_green }} is up and running.

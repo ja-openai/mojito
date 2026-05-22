@@ -7,8 +7,6 @@ import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.entity.Commit;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.PushRun;
-import com.box.l10n.mojito.entity.PushRunAsset;
-import com.box.l10n.mojito.entity.PushRunAssetTmTextUnit;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.rest.client.AssetClient;
@@ -17,6 +15,7 @@ import com.box.l10n.mojito.rest.entity.Asset;
 import com.box.l10n.mojito.service.commit.CommitRepository;
 import com.box.l10n.mojito.service.commit.CommitService;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.pushrun.PushRunAssetTmTextUnitRepository;
 import com.box.l10n.mojito.service.pushrun.PushRunRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
@@ -26,7 +25,6 @@ import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import java.io.File;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -36,7 +34,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
 
 /**
  * @author wyau
@@ -59,6 +57,8 @@ public class PushCommandTest extends CLITestBase {
   @Autowired CommitService commitService;
 
   @Autowired PushRunRepository pushRunRepository;
+
+  @Autowired PushRunAssetTmTextUnitRepository pushRunAssetTmTextUnitRepository;
 
   @Test
   public void testCommandName() throws Exception {
@@ -484,20 +484,11 @@ public class PushCommandTest extends CLITestBase {
     assertEquals(5, textUnitsFromCommit.size());
   }
 
-  @Transactional
   private List<TMTextUnit> getTextUnits(Long commitId) {
     PushRun pushRun =
-        commitRepository
-            .findById(commitId)
-            .orElseThrow(RuntimeException::new)
-            .getCommitToPushRun()
-            .getPushRun();
+        commitService.getPushRunForCommitId(commitId).orElseThrow(RuntimeException::new);
 
-    return pushRun.getPushRunAssets().stream()
-        .map(PushRunAsset::getPushRunAssetTmTextUnits)
-        .flatMap(Collection::stream)
-        .map(PushRunAssetTmTextUnit::getTmTextUnit)
-        .collect(Collectors.toList());
+    return pushRunAssetTmTextUnitRepository.findByPushRun(pushRun, Pageable.unpaged());
   }
 
   private void checkNumberOfUsedUntranslatedTextUnit(

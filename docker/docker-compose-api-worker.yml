@@ -1,26 +1,19 @@
-version: '2.4'
 name: mojito
 services:
   db:
-    image: mysql:8.0.34
+    image: postgres:16
     restart: always
     healthcheck:
-      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      test: [ "CMD-SHELL", "pg_isready -U mojito -d mojito" ]
       interval: 5s
       timeout: 30s
       retries: 20
     environment:
-      MYSQL_ROOT_PASSWORD: ChangeMe
-      MYSQL_DATABASE: mojito
-      MYSQL_USER: mojito
-      MYSQL_PASSWORD: ChangeMe
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_bin
-      - --max-connections=1000
-      - --log_error_verbosity=2
+      POSTGRES_DB: mojito
+      POSTGRES_USER: mojito
+      POSTGRES_PASSWORD: ChangeMe
     volumes:
-        - mysql-data:/var/lib/mysql
+        - postgres-data:/var/lib/postgresql/data
 
   api:
     deploy:
@@ -51,14 +44,15 @@ services:
     environment:
       JAVA_OPTS: '-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005'
       SPRING_APPLICATION_JSON: '{
+      "spring.profiles.active": "postgres",
       "spring.flyway.enabled": "true",
       "l10n.flyway.clean" : "false",
-      "spring.jpa.database-platform" : "org.hibernate.dialect.MySQLDialect",
+      "spring.jpa.database-platform" : "org.hibernate.dialect.PostgreSQLDialect",
       "spring.jpa.hibernate.ddl-auto" : "none",
-      "spring.datasource.url" : "jdbc:mysql://db:3306/mojito?characterEncoding=UTF-8&useUnicode=true",
+      "spring.datasource.url" : "jdbc:postgresql://db:5432/mojito",
       "spring.datasource.username" : "mojito",
       "spring.datasource.password" : "ChangeMe",
-      "spring.datasource.driverClassName" : "com.mysql.cj.jdbc.Driver",
+      "spring.datasource.driverClassName" : "org.postgresql.Driver",
       "spring.jpa.defer-datasource-initialization" : "false",
       "l10n.org.quartz.scheduler.enabled" : "false",
       "l10n.org.multi-quartz.enabled" : "true",
@@ -67,11 +61,11 @@ services:
       "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.isClustered" : "true",
       "l10n.org.multi-quartz.schedulers.default.quartz.threadPool.threadCount" : 10,
       "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.class" : "org.quartz.impl.jdbcjobstore.JobStoreTX",
-      "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.driverDelegateClass" : "org.quartz.impl.jdbcjobstore.StdJDBCDelegate",
+      "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.driverDelegateClass" : "org.quartz.impl.jdbcjobstore.PostgreSQLDelegate",
       "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.dataSource" : "myDS",
       "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.provider" : "hikaricp",
-      "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.driver" : "com.mysql.cj.jdbc.Driver",
-      "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.URL" : "jdbc:mysql://db:3306/mojito?characterEncoding=UTF-8&useUnicode=true",
+      "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.driver" : "org.postgresql.Driver",
+      "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.URL" : "jdbc:postgresql://db:5432/mojito",
       "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.user" : "mojito",
       "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.password" : "ChangeMe",
       "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.maxConnections" : 12,
@@ -81,11 +75,11 @@ services:
       "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.isClustered" : "true",
       "l10n.org.multi-quartz.schedulers.lowPriority.quartz.threadPool.threadCount" : 5,
       "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.class" : "org.quartz.impl.jdbcjobstore.JobStoreTX",
-      "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.driverDelegateClass" : "org.quartz.impl.jdbcjobstore.StdJDBCDelegate",
+      "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.driverDelegateClass" : "org.quartz.impl.jdbcjobstore.PostgreSQLDelegate",
       "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.dataSource" : "myDS",
       "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.provider" : "hikaricp",
-      "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.driver" : "com.mysql.cj.jdbc.Driver",
-      "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.URL" : "jdbc:mysql://db:3306/mojito?characterEncoding=UTF-8&useUnicode=true",
+      "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.driver" : "org.postgresql.Driver",
+      "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.URL" : "jdbc:postgresql://db:5432/mojito",
       "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.user" : "mojito",
       "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.password" : "ChangeMe",
       "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.maxConnections" : 12,
@@ -119,14 +113,15 @@ services:
     environment:
       JAVA_OPTS: '-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005'
       SPRING_APPLICATION_JSON: '{
+        "spring.profiles.active": "postgres",
         "spring.flyway.enabled": "true",
         "l10n.flyway.clean" : "false",
-        "spring.jpa.database-platform" : "org.hibernate.dialect.MySQLDialect",
+        "spring.jpa.database-platform" : "org.hibernate.dialect.PostgreSQLDialect",
         "spring.jpa.hibernate.ddl-auto" : "none",
-        "spring.datasource.url" : "jdbc:mysql://db:3306/mojito?characterEncoding=UTF-8&useUnicode=true",
+        "spring.datasource.url" : "jdbc:postgresql://db:5432/mojito",
         "spring.datasource.username" : "mojito",
         "spring.datasource.password" : "ChangeMe",
-        "spring.datasource.driverClassName" : "com.mysql.cj.jdbc.Driver",
+        "spring.datasource.driverClassName" : "org.postgresql.Driver",
         "spring.jpa.defer-datasource-initialization" : "false",
         "l10n.org.quartz.scheduler.enabled" : "true",
         "l10n.org.multi-quartz.enabled" : "true",
@@ -135,11 +130,11 @@ services:
         "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.isClustered" : "true",
         "l10n.org.multi-quartz.schedulers.default.quartz.threadPool.threadCount" : 10,
         "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.class" : "org.quartz.impl.jdbcjobstore.JobStoreTX",
-        "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.driverDelegateClass" : "org.quartz.impl.jdbcjobstore.StdJDBCDelegate",
+        "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.driverDelegateClass" : "org.quartz.impl.jdbcjobstore.PostgreSQLDelegate",
         "l10n.org.multi-quartz.schedulers.default.quartz.jobStore.dataSource" : "myDS",
         "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.provider" : "hikaricp",
-        "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.driver" : "com.mysql.cj.jdbc.Driver",
-        "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.URL" : "jdbc:mysql://db:3306/mojito?characterEncoding=UTF-8&useUnicode=true",
+        "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.driver" : "org.postgresql.Driver",
+        "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.URL" : "jdbc:postgresql://db:5432/mojito",
         "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.user" : "mojito",
         "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.password" : "ChangeMe",
         "l10n.org.multi-quartz.schedulers.default.quartz.dataSource.myDS.maxConnections" : 12,
@@ -149,11 +144,11 @@ services:
         "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.isClustered" : "true",
         "l10n.org.multi-quartz.schedulers.lowPriority.quartz.threadPool.threadCount" : 5,
         "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.class" : "org.quartz.impl.jdbcjobstore.JobStoreTX",
-        "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.driverDelegateClass" : "org.quartz.impl.jdbcjobstore.StdJDBCDelegate",
+        "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.driverDelegateClass" : "org.quartz.impl.jdbcjobstore.PostgreSQLDelegate",
         "l10n.org.multi-quartz.schedulers.lowPriority.quartz.jobStore.dataSource" : "myDS",
         "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.provider" : "hikaricp",
-        "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.driver" : "com.mysql.cj.jdbc.Driver",
-        "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.URL" : "jdbc:mysql://db:3306/mojito?characterEncoding=UTF-8&useUnicode=true",
+        "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.driver" : "org.postgresql.Driver",
+        "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.URL" : "jdbc:postgresql://db:5432/mojito",
         "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.user" : "mojito",
         "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.password" : "ChangeMe",
         "l10n.org.multi-quartz.schedulers.lowPriority.quartz.dataSource.myDS.maxConnections" : 12,
@@ -164,4 +159,4 @@ services:
         }'
 
 volumes:
-  mysql-data:
+  postgres-data:

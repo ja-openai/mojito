@@ -5,6 +5,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 import com.box.l10n.mojito.entity.ApplicationCache;
 import com.box.l10n.mojito.entity.ApplicationCacheType;
 import com.google.common.base.Preconditions;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Optional;
@@ -65,7 +66,8 @@ public class DatabaseCache extends AbstractValueAdaptingCache {
     checkCacheTypeConfigured();
 
     Optional<ApplicationCache> maybeCacheResult =
-        applicationCacheRepository.findByIdAndNotExpired(this.cacheType, getCacheKeyMD5(key));
+        applicationCacheRepository.findByIdAndNotExpired(
+            this.cacheType, getCacheKeyMD5(key), ZonedDateTime.now());
 
     if (maybeCacheResult.isPresent()) {
       byte[] bytes = maybeCacheResult.get().getValue();

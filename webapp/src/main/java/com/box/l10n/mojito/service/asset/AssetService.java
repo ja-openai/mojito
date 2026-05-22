@@ -49,6 +49,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -511,7 +512,10 @@ public class AssetService {
       specifications.add(branchId(branchId, deleted));
     }
 
-    List<Asset> all = assetRepository.findAll(Specification.allOf(specifications));
+    List<Asset> all =
+        assetRepository.findAll(
+            Specification.allOf(specifications),
+            Sort.by(Sort.Order.asc("path"), Sort.Order.asc("id")));
     return all;
   }
 

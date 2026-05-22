@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.cache;
 
 import java.time.Duration;
+import java.time.ZonedDateTime;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobDetail;
@@ -67,6 +68,6 @@ public class DatabaseCacheEvictionJob implements Job {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   private void clearAllExpired() {
     logger.info("Evicting expired entries from the database cache.");
-    applicationCacheRepository.clearAllExpired();
+    applicationCacheRepository.clearAllExpired(ZonedDateTime.now());
   }
 }
