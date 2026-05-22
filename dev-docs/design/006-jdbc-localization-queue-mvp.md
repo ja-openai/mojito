@@ -228,6 +228,9 @@ Test Coverage
 - Opt-in Docker-backed integration tests run the same queue store contract against real MySQL and
   PostgreSQL:
   - `mvn -pl webapp -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest -Dmojito.asyncJobQueue.testcontainers=true test`
+  - GitHub Actions runs this contract on the scheduled/manual
+    `async-job-queue-real-db-contract` job so real-database locking stays covered without slowing
+    every PR
   - default unit test runs compile this class but skip container startup unless explicitly enabled
   - the real-database contract drains 120 queued jobs with 8 concurrent workers per database to
     validate transactional `FOR UPDATE SKIP LOCKED` claiming without duplicate execution
