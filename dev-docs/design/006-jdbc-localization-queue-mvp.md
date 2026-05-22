@@ -98,6 +98,8 @@ Failure + Restart Semantics
   - when `attempt_count` reaches `max-attempts`, set `status=failed`, clear lease owner fields, and keep `last_error`
   - handler-requested requeues also consume attempts and fail terminally at `max-attempts`; otherwise
     a handler that always returns `REQUEUE` can bypass the poison-job budget
+  - handler-requested requeues without an explicit `available_at` use the queue's configured
+    retry jitter around the base poll interval so batches do not reschedule in lockstep
   - lease-expired reclaims also consume attempts; if reclaiming a row pushes `attempt_count` past
     `max-attempts`, the runtime marks it `failed` before invoking the handler again
   - operator replay can move a `failed` row back to `queued`, reset `attempt_count=0`, preserve

@@ -611,7 +611,7 @@ public class AsyncJobQueueRuntimeTest {
     AsyncJobQueueRuntime asyncJobQueueRuntime =
         runtime(
             asyncJobStore,
-            queueSettings(125, 1_000, 1, 1, 10_000, 0),
+            queueSettingsWithoutRetryJitter(125, 1_000, 1, 1, 10_000, 0),
             handler(asyncJobRecord -> AsyncJobHandlerResult.requeue(null)),
             mock(TaskScheduler.class),
             executor);
@@ -620,6 +620,46 @@ public class AsyncJobQueueRuntimeTest {
 
     assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
     assertThat(observedDelay[0]).isEqualTo(Duration.ofMillis(125));
+  }
+
+  @Test
+  public void handlerRequestedRequeueWithoutTimestampAppliesRetryJitter() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch requeued = new CountDownLatch(1);
+    Duration[] observedDelay = new Duration[1];
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            any()))
+        .thenAnswer(
+            invocation -> {
+              observedDelay[0] = invocation.getArgument(4);
+              requeued.countDown();
+              return true;
+            });
+
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setRetryJitterPercent(50);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(asyncJobRecord -> AsyncJobHandlerResult.requeue(null)),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(observedDelay[0]).isBetween(Duration.ofMillis(50), Duration.ofMillis(150));
   }
 
   @Test
@@ -2421,6 +2461,25 @@ public class AsyncJobQueueRuntimeTest {
     queueSettings.setMaxConcurrency(maxConcurrency);
     queueSettings.setLeaseDurationMs(leaseDurationMs);
     queueSettings.setHeartbeatIntervalMs(heartbeatIntervalMs);
+    return queueSettings;
+  }
+
+  private AsyncJobQueueProperties.QueueSettings queueSettingsWithoutRetryJitter(
+      long pollIntervalMs,
+      long maxPollIntervalMs,
+      int claimBatchSize,
+      int maxConcurrency,
+      long leaseDurationMs,
+      long heartbeatIntervalMs) {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(
+            pollIntervalMs,
+            maxPollIntervalMs,
+            claimBatchSize,
+            maxConcurrency,
+            leaseDurationMs,
+            heartbeatIntervalMs);
+    queueSettings.setRetryJitterPercent(0);
     return queueSettings;
   }
 

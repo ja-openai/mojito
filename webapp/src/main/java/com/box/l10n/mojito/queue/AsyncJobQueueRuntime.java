@@ -613,7 +613,7 @@ class AsyncJobQueueRuntime {
                     asyncJobRecord.id(),
                     asyncJobRecord.workerId(),
                     asyncJobRecord.leaseToken(),
-                    Duration.ofMillis(basePollDelayMs()),
+                    Duration.ofMillis(defaultHandlerRequeueDelayMs()),
                     asyncJobHandlerResult.jobData(),
                     null);
           } else {
@@ -783,6 +783,10 @@ class AsyncJobQueueRuntime {
       }
     }
     return applyRetryDelayJitter(delayMs);
+  }
+
+  private long defaultHandlerRequeueDelayMs() {
+    return applyRetryDelayJitter(basePollDelayMs());
   }
 
   private long applyRetryDelayJitter(long delayMs) {
