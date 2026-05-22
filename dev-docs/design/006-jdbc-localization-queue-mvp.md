@@ -267,9 +267,10 @@ Monitoring (MVP Required)
 - Operator counters/logs:
   - `asyncJobQueue.inspection.find` by `queueName,status,result` for bounded list attempts;
     invalid caller status is tagged as `status=invalid`, not the caller-provided value
-  - `asyncJobQueue.inspection.get` by `queueName,result` for detail lookup attempts
+  - `asyncJobQueue.inspection.get` by `queueName,result` for detail lookup attempts;
+    invalid caller job ids are tagged as `result=invalidId`
   - `asyncJobQueue.inspection.requeue` by `queueName,result` for service-level replay attempts;
-    results are low-cardinality (`succeeded`, `notFound`, `notFailed`, `failed`)
+    results are low-cardinality (`succeeded`, `notFound`, `notFailed`, `invalidId`, `failed`)
   - replay logs include queue/job identifiers and whether replacement payload was supplied, never
     the payload itself
 

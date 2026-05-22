@@ -69,7 +69,13 @@ public class AsyncJobQueueInspectionService {
 
   public AsyncJobDetails getJob(String queueName, String jobId) {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
-    AsyncJobId asyncJobId = new AsyncJobId(jobId);
+    AsyncJobId asyncJobId;
+    try {
+      asyncJobId = new AsyncJobId(jobId);
+    } catch (RuntimeException exception) {
+      incrementGetCounter(validatedQueueName, "invalidId");
+      throw exception;
+    }
     try {
       AsyncJobDetails job =
           asyncJobStore.getByIds(List.of(asyncJobId)).stream()
@@ -100,7 +106,13 @@ public class AsyncJobQueueInspectionService {
 
   public AsyncJobDetails requeueFailedJob(String queueName, String jobId, String jobData) {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
-    AsyncJobId asyncJobId = new AsyncJobId(jobId);
+    AsyncJobId asyncJobId;
+    try {
+      asyncJobId = new AsyncJobId(jobId);
+    } catch (RuntimeException exception) {
+      incrementRequeueCounter(validatedQueueName, "invalidId");
+      throw exception;
+    }
 
     try {
       if (asyncJobStore.requeueFailedNow(validatedQueueName, asyncJobId, jobData)) {

@@ -110,6 +110,16 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void getJobRecordsInvalidIds() {
+    AsyncJobQueueInspectionService service = inspectionService(new InMemoryAsyncJobStore());
+
+    assertThatThrownBy(() -> service.getJob("assetlocalize", " "))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Async job id must not be blank");
+    assertGetCounter("invalidId", 1);
+  }
+
+  @Test
   public void requeueFailedJobResetsAttemptsAndPreservesLastError() {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     AsyncJobId id = failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
@@ -140,6 +150,16 @@ public class AsyncJobQueueInspectionServiceTest {
         .isInstanceOf(AsyncJobQueueInspectionService.AsyncJobNotFailedException.class);
     assertRequeueCounter("notFound", 1);
     assertRequeueCounter("notFailed", 1);
+  }
+
+  @Test
+  public void requeueFailedJobRecordsInvalidIds() {
+    AsyncJobQueueInspectionService service = inspectionService(new InMemoryAsyncJobStore());
+
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", " ", null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Async job id must not be blank");
+    assertRequeueCounter("invalidId", 1);
   }
 
   @Test
