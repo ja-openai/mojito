@@ -166,6 +166,8 @@ PostgreSQL Portability
 Test Coverage
 - Unit tests cover in-memory store semantics, runtime adaptive polling, bounded retries, heartbeats,
   scheduling, and Spring configuration.
+- Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
+  handler-only queues, and non-fatal reporting failures.
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, and status
   counts against an embedded datasource using a test-compatible claim query.
 - Load/perf smoke coverage processes hundreds of jobs through the runtime and asserts bounded
@@ -174,7 +176,8 @@ Test Coverage
 
 Monitoring (MVP Required)
 - Gauges:
-  - queue depth by `queue_name,status`
+  - queue depth by `queue_name,status` via sampled `asyncJobQueue.status` gauges, not scrape-time
+    database queries
   - executor active/queued by queue
 - Counters:
   - claimed, completed, retried, execution-failed, lease-expired-reclaimed, poll-skipped-saturated
@@ -184,6 +187,7 @@ Monitoring (MVP Required)
   - claim SQL latency
 - Error counters:
   - deadlocks / lock timeouts / claim exceptions
+  - status metrics reporting failures
 
 Rollout Plan
 1. Implement queue infra + assetlocalize-only integration behind feature flag.

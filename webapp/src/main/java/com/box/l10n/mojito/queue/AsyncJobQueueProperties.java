@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * <pre>
  * l10n.org.async-job-queue.enabled=true
  * l10n.org.async-job-queue.store=jdbc
+ * l10n.org.async-job-queue.status-metrics-interval-ms=10000
  * l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=250
  * l10n.org.async-job-queue.queues.assetlocalize.poll-jitter-percent=10
  * l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=20
@@ -32,6 +33,8 @@ public class AsyncJobQueueProperties {
    */
   private String store = "in-memory";
 
+  private long statusMetricsIntervalMs = 10_000;
+
   private Map<String, QueueSettings> queues = new HashMap<>();
 
   public String getStore() {
@@ -40,6 +43,14 @@ public class AsyncJobQueueProperties {
 
   public void setStore(String store) {
     this.store = store;
+  }
+
+  public long getStatusMetricsIntervalMs() {
+    return statusMetricsIntervalMs;
+  }
+
+  public void setStatusMetricsIntervalMs(long statusMetricsIntervalMs) {
+    this.statusMetricsIntervalMs = statusMetricsIntervalMs;
   }
 
   public Map<String, QueueSettings> getQueues() {
