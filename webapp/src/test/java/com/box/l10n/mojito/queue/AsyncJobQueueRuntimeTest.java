@@ -24,6 +24,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.LongUnaryOperator;
 import org.junit.After;
 import org.junit.Test;
 import org.springframework.scheduling.TaskScheduler;
@@ -249,6 +250,37 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void scheduledBackoffPollsApplyConfiguredJitter() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of());
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AtomicInteger jitterInputMs = new AtomicInteger();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> {
+              jitterInputMs.set((int) delayMs);
+              return delayMs + 37;
+            });
+
+    asyncJobQueueRuntime.start();
+    taskScheduler.scheduledTasks().get(0).run();
+
+    assertThat(jitterInputMs.get()).isEqualTo(200);
+    assertThat(taskScheduler.scheduledStartTimes()).hasSize(2);
+    long scheduledDelayMs =
+        taskScheduler.scheduledStartTimes().get(1).getTime()
+            - taskScheduler.scheduleInvocationTimes().get(1);
+    assertThat(scheduledDelayMs).isBetween(200L, 260L);
+  }
+
+  @Test
   public void heartbeatIntervalMustBeLessThanLeaseDuration() {
     AsyncJobQueueProperties.QueueSettings queueSettings =
         new AsyncJobQueueProperties.QueueSettings();
@@ -287,12 +319,40 @@ public class AsyncJobQueueRuntimeTest {
                 executor));
   }
 
+  @Test
+  public void pollJitterPercentMustBeBetweenZeroAndOneHundred() {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setPollJitterPercent(101);
+
+    org.junit.Assert.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            runtime(
+                new InMemoryAsyncJobStore(),
+                queueSettings,
+                handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+                mock(TaskScheduler.class),
+                executor));
+  }
+
   private AsyncJobQueueRuntime runtime(
       AsyncJobStore asyncJobStore,
       AsyncJobQueueProperties.QueueSettings queueSettings,
       AsyncJobHandler asyncJobHandler,
       TaskScheduler taskScheduler,
       ThreadPoolTaskExecutor threadPoolTaskExecutor) {
+    return runtime(
+        asyncJobStore, queueSettings, asyncJobHandler, taskScheduler, threadPoolTaskExecutor, null);
+  }
+
+  private AsyncJobQueueRuntime runtime(
+      AsyncJobStore asyncJobStore,
+      AsyncJobQueueProperties.QueueSettings queueSettings,
+      AsyncJobHandler asyncJobHandler,
+      TaskScheduler taskScheduler,
+      ThreadPoolTaskExecutor threadPoolTaskExecutor,
+      LongUnaryOperator pollDelayJitter) {
     return new AsyncJobQueueRuntime(
         "assetlocalize",
         asyncJobStore,
@@ -301,7 +361,8 @@ public class AsyncJobQueueRuntimeTest {
         taskScheduler,
         threadPoolTaskExecutor,
         meterRegistry,
-        "worker-a");
+        "worker-a",
+        pollDelayJitter);
   }
 
   private AsyncJobHandler handler(ThrowingProcessor processor) {
@@ -427,14 +488,26 @@ public class AsyncJobQueueRuntimeTest {
   private static class RecordingTaskScheduler implements TaskScheduler {
 
     private final List<Runnable> scheduledTasks = new ArrayList<>();
+    private final List<Date> scheduledStartTimes = new ArrayList<>();
+    private final List<Long> scheduleInvocationTimes = new ArrayList<>();
 
     List<Runnable> scheduledTasks() {
       return scheduledTasks;
     }
 
+    List<Date> scheduledStartTimes() {
+      return scheduledStartTimes;
+    }
+
+    List<Long> scheduleInvocationTimes() {
+      return scheduleInvocationTimes;
+    }
+
     @Override
     public ScheduledFuture<?> schedule(Runnable task, Date startTime) {
+      scheduleInvocationTimes.add(System.currentTimeMillis());
       scheduledTasks.add(task);
+      scheduledStartTimes.add(startTime);
       return new DummyScheduledFuture();
     }
 

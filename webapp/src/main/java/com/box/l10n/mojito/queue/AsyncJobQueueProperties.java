@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
  * l10n.org.async-job-queue.enabled=true
  * l10n.org.async-job-queue.store=jdbc
  * l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=250
+ * l10n.org.async-job-queue.queues.assetlocalize.poll-jitter-percent=10
  * l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=20
  * </pre>
  */
@@ -58,6 +59,7 @@ public class AsyncJobQueueProperties {
     private long leaseDurationMs = 120_000;
     private long heartbeatIntervalMs = 20_000;
     private int maxAttempts = 5;
+    private int pollJitterPercent = 10;
 
     public long getPollIntervalMs() {
       return pollIntervalMs;
@@ -113,6 +115,14 @@ public class AsyncJobQueueProperties {
 
     public void setMaxAttempts(int maxAttempts) {
       this.maxAttempts = maxAttempts;
+    }
+
+    public int getPollJitterPercent() {
+      return pollJitterPercent;
+    }
+
+    public void setPollJitterPercent(int pollJitterPercent) {
+      this.pollJitterPercent = pollJitterPercent;
     }
   }
 }

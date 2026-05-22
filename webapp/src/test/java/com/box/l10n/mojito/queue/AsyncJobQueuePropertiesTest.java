@@ -21,6 +21,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
       "l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=32",
       "l10n.org.async-job-queue.queues.assetlocalize.max-concurrency=12",
       "l10n.org.async-job-queue.queues.assetlocalize.max-attempts=9",
+      "l10n.org.async-job-queue.queues.assetlocalize.poll-jitter-percent=25",
       "l10n.org.async-job-queue.queues.assetlocalize.lease-duration-ms=180000",
       "l10n.org.async-job-queue.queues.assetlocalize.heartbeat-interval-ms=15000",
       "l10n.org.async-job-queue.queues.stats.poll-interval-ms=1000",
@@ -45,6 +46,7 @@ public class AsyncJobQueuePropertiesTest {
     assertThat(assetlocalize.getClaimBatchSize()).isEqualTo(32);
     assertThat(assetlocalize.getMaxConcurrency()).isEqualTo(12);
     assertThat(assetlocalize.getMaxAttempts()).isEqualTo(9);
+    assertThat(assetlocalize.getPollJitterPercent()).isEqualTo(25);
     assertThat(assetlocalize.getLeaseDurationMs()).isEqualTo(180000);
     assertThat(assetlocalize.getHeartbeatIntervalMs()).isEqualTo(15000);
 
@@ -53,6 +55,7 @@ public class AsyncJobQueuePropertiesTest {
     assertThat(stats.getMaxPollIntervalMs()).isEqualTo(5000);
     assertThat(stats.getMaxConcurrency()).isEqualTo(2);
     assertThat(stats.getMaxAttempts()).isEqualTo(5);
+    assertThat(stats.getPollJitterPercent()).isEqualTo(10);
     assertThat(stats.getClaimBatchSize()).isEqualTo(20);
     assertThat(stats.getLeaseDurationMs()).isEqualTo(120000);
     assertThat(stats.getHeartbeatIntervalMs()).isEqualTo(20000);

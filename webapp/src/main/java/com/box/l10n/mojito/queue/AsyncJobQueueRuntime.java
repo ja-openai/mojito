@@ -8,8 +8,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.LongUnaryOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.TaskScheduler;
@@ -30,6 +32,7 @@ class AsyncJobQueueRuntime {
   private final ThreadPoolTaskExecutor executor;
   private final MeterRegistry meterRegistry;
   private final String workerId;
+  private final LongUnaryOperator pollDelayJitter;
 
   private final Object scheduleLock = new Object();
   private final AtomicInteger inFlightCount = new AtomicInteger();
@@ -50,6 +53,28 @@ class AsyncJobQueueRuntime {
       ThreadPoolTaskExecutor executor,
       MeterRegistry meterRegistry,
       String workerId) {
+    this(
+        queueName,
+        asyncJobStore,
+        queueSettings,
+        asyncJobHandler,
+        taskScheduler,
+        executor,
+        meterRegistry,
+        workerId,
+        null);
+  }
+
+  AsyncJobQueueRuntime(
+      String queueName,
+      AsyncJobStore asyncJobStore,
+      AsyncJobQueueProperties.QueueSettings queueSettings,
+      AsyncJobHandler asyncJobHandler,
+      TaskScheduler taskScheduler,
+      ThreadPoolTaskExecutor executor,
+      MeterRegistry meterRegistry,
+      String workerId,
+      LongUnaryOperator pollDelayJitter) {
     this.queueName = Objects.requireNonNull(queueName);
     this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
     this.queueSettings = Objects.requireNonNull(queueSettings);
@@ -58,6 +83,8 @@ class AsyncJobQueueRuntime {
     this.executor = Objects.requireNonNull(executor);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
     this.workerId = Objects.requireNonNull(workerId);
+    this.pollDelayJitter =
+        pollDelayJitter != null ? pollDelayJitter : this::applyRandomPollDelayJitter;
     validateQueueSettings(queueSettings);
     this.currentPollDelayMs = basePollDelayMs();
     meterRegistry.gauge(
@@ -182,6 +209,9 @@ class AsyncJobQueueRuntime {
 
   private void scheduleNextPoll(long delayMs) {
     long boundedDelayMs = Math.max(0, delayMs);
+    if (boundedDelayMs > 0) {
+      boundedDelayMs = Math.max(0, pollDelayJitter.applyAsLong(boundedDelayMs));
+    }
     long pollSequence = ++scheduledPollSequence;
     nextPollFuture =
         taskScheduler.schedule(
@@ -382,6 +412,17 @@ class AsyncJobQueueRuntime {
     return Math.max(1, queueSettings.getPollIntervalMs());
   }
 
+  private long applyRandomPollDelayJitter(long delayMs) {
+    int jitterPercent = queueSettings.getPollJitterPercent();
+    if (jitterPercent <= 0) {
+      return delayMs;
+    }
+
+    long jitterRangeMs = Math.max(1, delayMs * jitterPercent / 100);
+    long jitter = ThreadLocalRandom.current().nextLong(-jitterRangeMs, jitterRangeMs + 1);
+    return Math.max(0, delayMs + jitter);
+  }
+
   private void validateQueueSettings(AsyncJobQueueProperties.QueueSettings queueSettings) {
     if (queueSettings.getClaimBatchSize() <= 0) {
       throw new IllegalArgumentException("claimBatchSize must be > 0");
@@ -401,6 +442,9 @@ class AsyncJobQueueRuntime {
     }
     if (queueSettings.getMaxAttempts() <= 0) {
       throw new IllegalArgumentException("maxAttempts must be > 0");
+    }
+    if (queueSettings.getPollJitterPercent() < 0 || queueSettings.getPollJitterPercent() > 100) {
+      throw new IllegalArgumentException("pollJitterPercent must be between 0 and 100");
     }
   }
 

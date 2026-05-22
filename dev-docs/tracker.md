@@ -44,3 +44,4 @@ Backlog
 - QUEUE-01 — Wire the JDBC async job queue into the `assetlocalize` child-job path behind a feature flag, including pollable-task finalization and canary metrics.
 - QUEUE-02 — Add database-backed queue verification against real MySQL and PostgreSQL, including `FOR UPDATE SKIP LOCKED` concurrency, migration DDL, timestamp precision, and generated-key behavior.
 - QUEUE-03 — Add operator visibility for failed async jobs: list/search recent failures, inspect `last_error`/payload metadata, and provide a safe replay or dead-letter handling path.
+- QUEUE-04 — Add optional wakeup providers: MySQL stays on jittered adaptive polling, PostgreSQL can use `LISTEN/NOTIFY` as a coalesced non-durable wakeup hint with polling fallback.

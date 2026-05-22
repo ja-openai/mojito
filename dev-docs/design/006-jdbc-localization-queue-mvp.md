@@ -123,6 +123,23 @@ Adaptive Polling (per queue)
 - Idle backoff:
   - if no job claimed for N cycles, increase sleep up to cap
   - on successful claim, reset to base interval
+- Scheduled non-immediate polls apply small bounded jitter (`poll-jitter-percent`, default 10%) so
+  pods do not synchronize into the same empty-poll or wakeup cadence.
+
+Optional Wakeup Signals
+- Wakeups are an optimization only. The durable queue table remains the source of truth and the
+  runtime must continue polling because notifications are not durable.
+- MySQL uses adaptive polling plus jitter only.
+- PostgreSQL can add an optional `LISTEN/NOTIFY` provider:
+  - enqueue commits the queue row, then sends a notification with only the logical `queue_name`
+  - listeners on every pod coalesce duplicate notifications per queue
+  - listener callbacks call `triggerPollNow()` with tiny random jitter to avoid waking every pod
+    into the same claim statement at the same millisecond
+  - failed listeners reconnect and rely on normal polling while disconnected
+- Do not put job payloads, job IDs, or correctness state in notifications. `FOR UPDATE SKIP LOCKED`
+  remains the only work arbitration mechanism.
+- Metrics should include notifications sent/received/coalesced, listener reconnects, and
+  wakeup-triggered claim attempts.
 
 Claim SQL Pattern
 - In TX B:
