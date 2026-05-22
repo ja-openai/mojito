@@ -263,6 +263,9 @@ Monitoring (MVP Required)
   - active poll did not stop before the bounded executor shutdown wait elapsed
   - status metrics reporting failures
 - Operator counters/logs:
+  - `asyncJobQueue.inspection.find` by `queueName,status,result` for bounded list attempts;
+    invalid caller status is tagged as `status=invalid`, not the caller-provided value
+  - `asyncJobQueue.inspection.get` by `queueName,result` for detail lookup attempts
   - `asyncJobQueue.inspection.requeue` by `queueName,result` for service-level replay attempts;
     results are low-cardinality (`succeeded`, `notFound`, `notFailed`, `failed`)
   - replay logs include queue/job identifiers and whether replacement payload was supplied, never

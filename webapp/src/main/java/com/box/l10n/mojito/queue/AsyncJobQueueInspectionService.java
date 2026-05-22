@@ -30,30 +30,72 @@ public class AsyncJobQueueInspectionService {
 
   public List<AsyncJobSummary> findJobs(String queueName, String status, Integer limit) {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
-    AsyncJobStatus parsedStatus = parseStatus(status == null ? "failed" : status);
-    int boundedLimit =
-        limit == null
-            ? DEFAULT_LIMIT
-            : AsyncJobQueueValidation.validateStoreQueryLimit("limit", limit);
-    return asyncJobStore.findByStatus(validatedQueueName, parsedStatus, boundedLimit).stream()
-        .map(this::toSummary)
-        .toList();
+    AsyncJobStatus parsedStatus;
+    try {
+      parsedStatus = parseStatus(status == null ? "failed" : status);
+    } catch (RuntimeException exception) {
+      incrementFindCounter(validatedQueueName, "invalid", "invalidStatus");
+      throw exception;
+    }
+
+    int boundedLimit;
+    try {
+      boundedLimit =
+          limit == null
+              ? DEFAULT_LIMIT
+              : AsyncJobQueueValidation.validateStoreQueryLimit("limit", limit);
+    } catch (RuntimeException exception) {
+      incrementFindCounter(validatedQueueName, parsedStatus.getDatabaseValue(), "invalidLimit");
+      throw exception;
+    }
+
+    try {
+      List<AsyncJobSummary> jobs =
+          asyncJobStore.findByStatus(validatedQueueName, parsedStatus, boundedLimit).stream()
+              .map(this::toSummary)
+              .toList();
+      incrementFindCounter(validatedQueueName, parsedStatus.getDatabaseValue(), "succeeded");
+      return jobs;
+    } catch (RuntimeException exception) {
+      incrementFindCounter(validatedQueueName, parsedStatus.getDatabaseValue(), "failed");
+      logger.warn(
+          "Failed to inspect async jobs for queue {}, status {}",
+          validatedQueueName,
+          parsedStatus.getDatabaseValue(),
+          exception);
+      throw exception;
+    }
   }
 
   public AsyncJobDetails getJob(String queueName, String jobId) {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobId asyncJobId = new AsyncJobId(jobId);
-    return asyncJobStore.getByIds(List.of(asyncJobId)).stream()
-        .filter(record -> validatedQueueName.equals(record.queueName()))
-        .findFirst()
-        .map(this::toDetails)
-        .orElseThrow(
-            () ->
-                new AsyncJobNotFoundException(
-                    "Async job not found for queue "
-                        + validatedQueueName
-                        + ": "
-                        + asyncJobId.value()));
+    try {
+      AsyncJobDetails job =
+          asyncJobStore.getByIds(List.of(asyncJobId)).stream()
+              .filter(record -> validatedQueueName.equals(record.queueName()))
+              .findFirst()
+              .map(this::toDetails)
+              .orElse(null);
+      if (job != null) {
+        incrementGetCounter(validatedQueueName, "succeeded");
+        return job;
+      }
+
+      incrementGetCounter(validatedQueueName, "notFound");
+      throw new AsyncJobNotFoundException(
+          "Async job not found for queue " + validatedQueueName + ": " + asyncJobId.value());
+    } catch (AsyncJobNotFoundException exception) {
+      throw exception;
+    } catch (RuntimeException exception) {
+      incrementGetCounter(validatedQueueName, "failed");
+      logger.warn(
+          "Failed to inspect async job for queue {}, job {}",
+          validatedQueueName,
+          asyncJobId.value(),
+          exception);
+      throw exception;
+    }
   }
 
   public AsyncJobDetails requeueFailedJob(String queueName, String jobId, String jobData) {
@@ -162,6 +204,25 @@ public class AsyncJobQueueInspectionService {
   private void incrementRequeueCounter(String queueName, String result) {
     meterRegistry
         .counter("asyncJobQueue.inspection.requeue", "queueName", queueName, "result", result)
+        .increment();
+  }
+
+  private void incrementFindCounter(String queueName, String status, String result) {
+    meterRegistry
+        .counter(
+            "asyncJobQueue.inspection.find",
+            "queueName",
+            queueName,
+            "status",
+            status,
+            "result",
+            result)
+        .increment();
+  }
+
+  private void incrementGetCounter(String queueName, String result) {
+    meterRegistry
+        .counter("asyncJobQueue.inspection.get", "queueName", queueName, "result", result)
         .increment();
   }
 
