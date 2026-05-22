@@ -70,4 +70,13 @@ public class AsyncJobQueuePropertiesTest {
     assertThat(stats.getLeaseDurationMs()).isEqualTo(120000);
     assertThat(stats.getHeartbeatIntervalMs()).isEqualTo(20000);
   }
+
+  @Test
+  public void setQueuesHandlesNull() {
+    AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
+
+    properties.setQueues(null);
+
+    assertThat(properties.getQueues()).isEmpty();
+  }
 }

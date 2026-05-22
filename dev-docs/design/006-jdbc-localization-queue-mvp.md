@@ -183,7 +183,8 @@ Test Coverage
   heartbeat false-return and exception metrics, bounded persisted error summaries, retry backoff,
   scheduling, notification wakeup coalescing, runtime poll failure recovery, runtime latency timers,
   state-transition false-return and exception metrics, trigger scheduling failure metrics,
-  coordinator startup cleanup, synchronized trigger routing, and Spring configuration.
+  coordinator startup cleanup, synchronized trigger routing, null-safe queue configuration binding,
+  and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
   handler-only queues, and non-fatal reporting failures.
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator

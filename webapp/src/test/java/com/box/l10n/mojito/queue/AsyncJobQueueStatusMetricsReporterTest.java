@@ -73,6 +73,22 @@ public class AsyncJobQueueStatusMetricsReporterTest {
         .isEqualTo(1);
   }
 
+  @Test
+  public void reportStatusCountsHandlesNullConfiguredQueues() {
+    AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
+    asyncJobQueueProperties.setQueues(null);
+    AsyncJobQueueStatusMetricsReporter reporter =
+        new AsyncJobQueueStatusMetricsReporter(
+            new InMemoryAsyncJobStore(),
+            asyncJobQueueProperties,
+            List.of(handler("assetlocalize")),
+            meterRegistry);
+
+    reporter.reportStatusCounts();
+
+    assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 0);
+  }
+
   private AsyncJobQueueProperties queueProperties(String queueName) {
     AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
     asyncJobQueueProperties.getQueues().put(queueName, new AsyncJobQueueProperties.QueueSettings());

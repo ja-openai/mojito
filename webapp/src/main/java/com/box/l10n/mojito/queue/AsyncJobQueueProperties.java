@@ -67,11 +67,14 @@ public class AsyncJobQueueProperties {
   }
 
   public Map<String, QueueSettings> getQueues() {
+    if (queues == null) {
+      queues = new HashMap<>();
+    }
     return queues;
   }
 
   public void setQueues(Map<String, QueueSettings> queues) {
-    this.queues = queues;
+    this.queues = queues == null ? new HashMap<>() : queues;
   }
 
   /** Runtime settings for one logical async job queue. */

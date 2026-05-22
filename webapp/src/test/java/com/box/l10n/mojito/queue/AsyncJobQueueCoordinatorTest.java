@@ -89,6 +89,35 @@ public class AsyncJobQueueCoordinatorTest {
     assertThat(scheduledPolls).hasSize(2);
   }
 
+  @Test
+  public void startHandlesNullConfiguredQueues() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    List<TestScheduledFuture> scheduledPolls = new ArrayList<>();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(
+            invocation -> {
+              TestScheduledFuture scheduledFuture = new TestScheduledFuture();
+              scheduledPolls.add(scheduledFuture);
+              return scheduledFuture;
+            });
+    AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
+    asyncJobQueueProperties.setQueues(null);
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            asyncJobQueueProperties,
+            List.of(handler("assetlocalize")),
+            taskScheduler,
+            meterRegistry);
+
+    coordinator.start();
+
+    assertThat(coordinator.isRunning()).isTrue();
+    assertThat(scheduledPolls).hasSize(1);
+
+    coordinator.stop();
+  }
+
   private AsyncJobHandler handler(String queueName) {
     return new AsyncJobHandler() {
       @Override
