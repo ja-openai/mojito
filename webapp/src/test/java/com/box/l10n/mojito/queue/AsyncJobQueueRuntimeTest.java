@@ -1093,6 +1093,36 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void startRecordsFailureAndClearsStartedWhenInitialScheduleReturnsNull() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class))).thenReturn(null);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            mock(AsyncJobStore.class),
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor);
+
+    IllegalStateException exception =
+        org.junit.Assert.assertThrows(IllegalStateException.class, asyncJobQueueRuntime::start);
+
+    assertThat(exception).hasMessageContaining("TaskScheduler returned null ScheduledFuture");
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.schedule.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+
+    asyncJobQueueRuntime.triggerPollNow();
+
+    verify(taskScheduler, times(1)).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
   public void processingCompletionTriggerRecordsFailureWhenImmediateScheduleFails()
       throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);

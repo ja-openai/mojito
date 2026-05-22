@@ -113,7 +113,14 @@ class AsyncJobQueueRuntime {
         return;
       }
       started = true;
-      scheduleNextPoll(0);
+      try {
+        scheduleNextPoll(0);
+      } catch (RuntimeException e) {
+        started = false;
+        logger.warn("Failed to schedule initial poll for queue {}", queueName, e);
+        recordPollScheduleFailure();
+        throw e;
+      }
     }
   }
 
@@ -239,9 +246,7 @@ class AsyncJobQueueRuntime {
           scheduleNextPoll(pollCycleResult.nextDelayMs());
         } catch (RuntimeException e) {
           logger.warn("Failed to schedule next poll for queue {}", queueName, e);
-          meterRegistry
-              .counter("asyncJobQueue.poll.schedule.failed", "queueName", queueName)
-              .increment();
+          recordPollScheduleFailure();
         }
       }
     }
@@ -253,10 +258,18 @@ class AsyncJobQueueRuntime {
       boundedDelayMs = Math.max(0, pollDelayJitter.applyAsLong(boundedDelayMs));
     }
     long pollSequence = ++scheduledPollSequence;
-    nextPollFuture =
+    ScheduledFuture<?> scheduledFuture =
         taskScheduler.schedule(
             () -> runScheduledPoll(pollSequence),
             Date.from(Instant.now().plusMillis(boundedDelayMs)));
+    if (scheduledFuture == null) {
+      throw new IllegalStateException("TaskScheduler returned null ScheduledFuture");
+    }
+    nextPollFuture = scheduledFuture;
+  }
+
+  private void recordPollScheduleFailure() {
+    meterRegistry.counter("asyncJobQueue.poll.schedule.failed", "queueName", queueName).increment();
   }
 
   private void submitClaimedJob(AsyncJobRecord asyncJobRecord) {
