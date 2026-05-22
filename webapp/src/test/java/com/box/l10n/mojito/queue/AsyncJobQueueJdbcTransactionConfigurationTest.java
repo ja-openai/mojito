@@ -103,7 +103,16 @@ public class AsyncJobQueueJdbcTransactionConfigurationTest {
             attempt_count INTEGER DEFAULT 0 NOT NULL,
             last_error LONGVARCHAR NULL,
             created_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL,
-            updated_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL
+            updated_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            CONSTRAINT C_ASYNC_JOB_QUEUE_STATUS
+              CHECK (status IN ('queued', 'running', 'done', 'failed')),
+            CONSTRAINT C_ASYNC_JOB_QUEUE_ATTEMPT_NONNEGATIVE
+              CHECK (attempt_count >= 0),
+            CONSTRAINT C_ASYNC_JOB_QUEUE_RUNNING_LEASE_OWNER
+              CHECK (
+                (status = 'running' AND lease_until IS NOT NULL AND worker_id IS NOT NULL AND lease_token IS NOT NULL)
+                OR (status <> 'running' AND lease_until IS NULL AND worker_id IS NULL AND lease_token IS NULL)
+              )
           )
           """);
       return new Object();

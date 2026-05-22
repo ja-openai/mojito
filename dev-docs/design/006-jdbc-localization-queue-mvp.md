@@ -53,6 +53,9 @@ Async Job Data Model
   - `(queue_name, status, available_at)`
   - `(queue_name, status, lease_until)`
   - optional idempotency/correlation key can be modeled in `job_data`
+- Database constraints reject unsupported statuses, negative attempt counts, and inconsistent lease
+  owner fields where a row is `running` without `(lease_until, worker_id, lease_token)` or a
+  non-running row still has lease ownership attached.
 
 Execution Flow (MVP)
 1. Parent `GenerateMultiLocalizedAssetJob` still creates child `pollable_task`s.
@@ -221,7 +224,7 @@ Test Coverage
 - Dialect tests cover MySQL/PostgreSQL `FOR UPDATE SKIP LOCKED` claim SQL, fractional database
   time, and the HSQL embedded fallback.
 - Migration tests keep the MySQL and PostgreSQL queue DDL structurally aligned for core columns
-  and claim indexes, while allowing database-specific id/timestamp syntax.
+  constraints, and claim indexes, while allowing database-specific id/timestamp syntax.
 - Opt-in Docker-backed integration tests run the same queue store contract against real MySQL and
   PostgreSQL:
   - `mvn -pl webapp -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest -Dmojito.asyncJobQueue.testcontainers=true test`

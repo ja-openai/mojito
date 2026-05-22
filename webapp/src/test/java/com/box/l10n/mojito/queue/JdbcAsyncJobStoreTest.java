@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -44,7 +45,16 @@ public class JdbcAsyncJobStoreTest {
           attempt_count INTEGER DEFAULT 0 NOT NULL,
           last_error LONGVARCHAR NULL,
           created_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL,
-          updated_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL
+          updated_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          CONSTRAINT C_ASYNC_JOB_QUEUE_STATUS
+            CHECK (status IN ('queued', 'running', 'done', 'failed')),
+          CONSTRAINT C_ASYNC_JOB_QUEUE_ATTEMPT_NONNEGATIVE
+            CHECK (attempt_count >= 0),
+          CONSTRAINT C_ASYNC_JOB_QUEUE_RUNNING_LEASE_OWNER
+            CHECK (
+              (status = 'running' AND lease_until IS NOT NULL AND worker_id IS NOT NULL AND lease_token IS NOT NULL)
+              OR (status <> 'running' AND lease_until IS NULL AND worker_id IS NULL AND lease_token IS NULL)
+            )
         )
         """);
     jdbcTemplate.execute(
@@ -254,6 +264,90 @@ public class JdbcAsyncJobStoreTest {
         .isEmpty();
     assertThat(jdbcAsyncJobStore.countByStatus("assetlocalize"))
         .containsExactly(new AsyncJobStatusCount(AsyncJobStatus.FAILED, 1));
+  }
+
+  @Test
+  public void schemaRejectsInvalidStatusAttemptAndLeaseOwnerShape() {
+    assertSchemaViolation(
+        """
+        INSERT INTO async_job_queue (
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          created_date,
+          updated_date
+        ) VALUES (
+          'assetlocalize',
+          'unknown',
+          CURRENT_TIMESTAMP,
+          '{}',
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+        """);
+    assertSchemaViolation(
+        """
+        INSERT INTO async_job_queue (
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          attempt_count,
+          created_date,
+          updated_date
+        ) VALUES (
+          'assetlocalize',
+          'queued',
+          CURRENT_TIMESTAMP,
+          '{}',
+          -1,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+        """);
+    assertSchemaViolation(
+        """
+        INSERT INTO async_job_queue (
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          created_date,
+          updated_date
+        ) VALUES (
+          'assetlocalize',
+          'running',
+          CURRENT_TIMESTAMP,
+          '{}',
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+        """);
+    assertSchemaViolation(
+        """
+        INSERT INTO async_job_queue (
+          queue_name,
+          status,
+          available_at,
+          lease_until,
+          worker_id,
+          lease_token,
+          job_data,
+          created_date,
+          updated_date
+        ) VALUES (
+          'assetlocalize',
+          'queued',
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP,
+          'worker-a',
+          'lease-token',
+          '{}',
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+        """);
   }
 
   @Test
@@ -514,5 +608,9 @@ public class JdbcAsyncJobStoreTest {
                 queueName, id, "worker-a", claimed.leaseToken(), null, "boom"))
         .isTrue();
     return id;
+  }
+
+  private void assertSchemaViolation(String sql) {
+    assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.execute(sql));
   }
 }

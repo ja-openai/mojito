@@ -10,7 +10,16 @@ CREATE TABLE async_job_queue (
   attempt_count INT NOT NULL DEFAULT 0,
   last_error TEXT NULL,
   created_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  updated_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+  updated_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  CONSTRAINT C__ASYNC_JOB_QUEUE__STATUS
+    CHECK (status IN ('queued', 'running', 'done', 'failed')),
+  CONSTRAINT C__ASYNC_JOB_QUEUE__ATTEMPT_NONNEGATIVE
+    CHECK (attempt_count >= 0),
+  CONSTRAINT C__ASYNC_JOB_QUEUE__RUNNING_LEASE_OWNER
+    CHECK (
+      (status = 'running' AND lease_until IS NOT NULL AND worker_id IS NOT NULL AND lease_token IS NOT NULL)
+      OR (status <> 'running' AND lease_until IS NULL AND worker_id IS NULL AND lease_token IS NULL)
+    )
 );
 
 CREATE INDEX I__ASYNC_JOB_QUEUE__QNAME_STATUS_AVAILABLE_ID
