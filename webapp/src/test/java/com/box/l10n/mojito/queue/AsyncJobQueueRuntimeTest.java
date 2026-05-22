@@ -513,6 +513,43 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void wakeupDuringActivePollSchedulesImmediateFollowUpPoll() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AtomicInteger claimInvocations = new AtomicInteger();
+    AsyncJobQueueRuntime[] runtime = new AsyncJobQueueRuntime[1];
+
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenAnswer(
+            invocation -> {
+              if (claimInvocations.incrementAndGet() == 1) {
+                runtime[0].triggerPollNow();
+              }
+              return List.of();
+            });
+
+    runtime[0] =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor);
+
+    runtime[0].start();
+    taskScheduler.scheduledTasks().get(0).run();
+
+    assertThat(taskScheduler.scheduledTasks()).hasSize(2);
+    long immediateDelayMs =
+        taskScheduler.scheduledStartTimes().get(1).getTime()
+            - taskScheduler.scheduleInvocationTimes().get(1);
+    assertThat(immediateDelayMs).isBetween(-50L, 50L);
+
+    taskScheduler.scheduledTasks().get(1).run();
+    assertThat(claimInvocations.get()).isEqualTo(2);
+  }
+
+  @Test
   public void scheduledBackoffPollsApplyConfiguredJitter() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
