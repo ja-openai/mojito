@@ -588,6 +588,44 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void executorRejectionRequeuesAndRecordsRetryMetric() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    ThreadPoolTaskExecutor rejectingExecutor = newExecutor(1);
+    rejectingExecutor.shutdown();
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            rejectingExecutor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    AsyncJobRecord requeuedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(requeuedJob.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(requeuedJob.attemptCount()).isEqualTo(1);
+    assertThat(requeuedJob.lastError()).contains("TaskRejectedException");
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.executor.rejected")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.retried")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void executorSubmitRuntimeExceptionRequeuesAndReleasesCapacity() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
