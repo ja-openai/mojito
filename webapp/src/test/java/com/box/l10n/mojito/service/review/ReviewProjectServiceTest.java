@@ -497,6 +497,39 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void claimProjectTranslatorAssignmentCommitsTransaction() {
+    GetProjectDetailView result =
+        new GetProjectDetailView(
+            1L, null, null, null, null, null, null, 0, 0, null, null, null, List.of());
+    doReturn(result).when(reviewProjectService).claimProjectTranslatorAssignmentNoTx(1L);
+
+    assertEquals(result, reviewProjectService.claimProjectTranslatorAssignment(1L));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void claimProjectTranslatorAssignmentRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("claim failed");
+    doThrow(failure).when(reviewProjectService).claimProjectTranslatorAssignmentNoTx(1L);
+
+    try {
+      reviewProjectService.claimProjectTranslatorAssignment(1L);
+      fail("Expected claimProjectTranslatorAssignment to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(

@@ -250,6 +250,8 @@ Removed during this workstream:
 - `ReviewProjectService.updateProjectAssignment` no longer uses `@Transactional`; assignment
   changes now open and commit their write transaction boundary explicitly before loading detail in
   the same transaction.
+- `ReviewProjectService.claimProjectTranslatorAssignment` no longer uses `@Transactional`;
+  translator-claim writes now open and commit their transaction boundary explicitly.
 
 In progress:
 
