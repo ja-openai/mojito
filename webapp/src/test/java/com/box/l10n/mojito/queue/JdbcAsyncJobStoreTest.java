@@ -402,6 +402,29 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void storeMethodsRejectExcessiveLimits() {
+    int excessiveLimit = AsyncJobQueueValidation.STORE_QUERY_LIMIT_MAX + 1;
+    completeJob("assetlocalize", "{\"name\":\"done\"}");
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            jdbcAsyncJobStore.claimNextJobs(
+                "assetlocalize", excessiveLimit, "worker-a", Duration.ofSeconds(5)));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> jdbcAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.DONE, excessiveLimit));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            jdbcAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize",
+                AsyncJobStatus.DONE,
+                Instant.now().plusSeconds(1),
+                excessiveLimit));
+  }
+
+  @Test
   public void invalidNumericIdsFailFast() {
     assertThrows(
         IllegalArgumentException.class,

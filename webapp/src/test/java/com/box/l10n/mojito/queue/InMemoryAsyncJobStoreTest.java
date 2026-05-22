@@ -374,6 +374,31 @@ public class InMemoryAsyncJobStoreTest {
   }
 
   @Test
+  public void storeMethodsRejectExcessiveLimits() {
+    int excessiveLimit = AsyncJobQueueValidation.STORE_QUERY_LIMIT_MAX + 1;
+    completeJob("assetlocalize", "{\"name\":\"done\"}");
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            inMemoryAsyncJobStore.claimNextJobs(
+                "assetlocalize", excessiveLimit, "worker-a", Duration.ofSeconds(5)));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            inMemoryAsyncJobStore.findByStatus(
+                "assetlocalize", AsyncJobStatus.DONE, excessiveLimit));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            inMemoryAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize",
+                AsyncJobStatus.DONE,
+                Instant.now().plusSeconds(1),
+                excessiveLimit));
+  }
+
+  @Test
   public void rejectsQueueNamesOutsideSchemaBounds() {
     assertThrows(
         IllegalArgumentException.class,

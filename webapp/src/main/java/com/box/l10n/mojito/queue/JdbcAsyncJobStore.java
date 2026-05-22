@@ -129,6 +129,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     if (limit <= 0) {
       return Collections.emptyList();
     }
+    int boundedLimit = AsyncJobQueueValidation.validateStoreQueryLimit("limit", limit);
 
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobQueueValidation.validateWorkerId(workerId);
@@ -148,7 +149,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
             .addValue("queuedStatus", AsyncJobStatus.QUEUED.getDatabaseValue())
             .addValue("runningStatus", AsyncJobStatus.RUNNING.getDatabaseValue())
             .addValue("now", Timestamp.from(now))
-            .addValue("limit", limit);
+            .addValue("limit", boundedLimit);
 
     List<ClaimCandidate> claimCandidates =
         namedParameterJdbcTemplate.query(
@@ -471,6 +472,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     if (limit <= 0) {
       return Collections.emptyList();
     }
+    int boundedLimit = AsyncJobQueueValidation.validateStoreQueryLimit("limit", limit);
 
     AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(status);
@@ -500,7 +502,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         new MapSqlParameterSource()
             .addValue("queueName", queueName)
             .addValue("status", status.getDatabaseValue())
-            .addValue("limit", limit),
+            .addValue("limit", boundedLimit),
         asyncJobRowMapper());
   }
 
@@ -549,6 +551,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     if (limit <= 0) {
       return 0;
     }
+    int boundedLimit = AsyncJobQueueValidation.validateStoreQueryLimit("limit", limit);
 
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobStatus terminalStatus = AsyncJobQueueValidation.validateTerminalStatus(status);
@@ -577,7 +580,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
             .addValue("queueName", queueName)
             .addValue("status", terminalStatus.getDatabaseValue())
             .addValue("updatedBefore", Timestamp.from(validatedUpdatedBefore))
-            .addValue("limit", limit);
+            .addValue("limit", boundedLimit);
     return namedParameterJdbcTemplate.update(sql, params);
   }
 

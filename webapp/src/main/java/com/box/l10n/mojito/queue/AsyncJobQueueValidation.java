@@ -11,6 +11,9 @@ final class AsyncJobQueueValidation {
   static final int QUEUE_NAME_MAX_LENGTH = 64;
   static final int WORKER_ID_MAX_LENGTH = 128;
   static final int LAST_ERROR_MAX_LENGTH = 4_000;
+  static final int CLAIM_BATCH_SIZE_MAX = 1_000;
+  static final int MAX_CONCURRENCY_MAX = 256;
+  static final int STORE_QUERY_LIMIT_MAX = 1_000;
   // Conservative portable bounds for MySQL DATETIME after JDBC/default-timezone conversion.
   static final Instant DATABASE_TIMESTAMP_MIN = Instant.parse("1000-01-02T00:00:00Z");
   static final Instant DATABASE_TIMESTAMP_MAX = Instant.parse("9999-12-31T00:00:00Z");
@@ -127,6 +130,17 @@ final class AsyncJobQueueValidation {
     return status;
   }
 
+  static int validateStoreQueryLimit(String fieldName, int limit) {
+    Objects.requireNonNull(fieldName);
+    if (limit <= 0) {
+      throw new IllegalArgumentException(fieldName + " must be > 0");
+    }
+    if (limit > STORE_QUERY_LIMIT_MAX) {
+      throw new IllegalArgumentException(fieldName + " must be <= " + STORE_QUERY_LIMIT_MAX);
+    }
+    return limit;
+  }
+
   static AsyncJobQueueProperties.QueueSettings validateQueueSettings(
       AsyncJobQueueProperties.QueueSettings queueSettings) {
     Objects.requireNonNull(queueSettings);
@@ -139,8 +153,14 @@ final class AsyncJobQueueValidation {
     if (queueSettings.getClaimBatchSize() <= 0) {
       throw new IllegalArgumentException("claimBatchSize must be > 0");
     }
+    if (queueSettings.getClaimBatchSize() > CLAIM_BATCH_SIZE_MAX) {
+      throw new IllegalArgumentException("claimBatchSize must be <= " + CLAIM_BATCH_SIZE_MAX);
+    }
     if (queueSettings.getMaxConcurrency() <= 0) {
       throw new IllegalArgumentException("maxConcurrency must be > 0");
+    }
+    if (queueSettings.getMaxConcurrency() > MAX_CONCURRENCY_MAX) {
+      throw new IllegalArgumentException("maxConcurrency must be <= " + MAX_CONCURRENCY_MAX);
     }
     if (queueSettings.getLeaseDurationMs() <= 0) {
       throw new IllegalArgumentException("leaseDurationMs must be > 0");

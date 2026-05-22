@@ -66,6 +66,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
     if (limit <= 0) {
       return Collections.emptyList();
     }
+    int boundedLimit = AsyncJobQueueValidation.validateStoreQueryLimit("limit", limit);
 
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobQueueValidation.validateWorkerId(workerId);
@@ -92,7 +93,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
                                       && job.leaseUntil() != null
                                       && !job.leaseUntil().isAfter(now))))
                   .sorted(CLAIM_ORDER)
-                  .limit(limit)
+                  .limit(boundedLimit)
                   .toList();
 
           if (claimable.isEmpty()) {
@@ -243,6 +244,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
     if (limit <= 0) {
       return Collections.emptyList();
     }
+    int boundedLimit = AsyncJobQueueValidation.validateStoreQueryLimit("limit", limit);
 
     AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(status);
@@ -255,7 +257,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
                     Comparator.comparing(StoredAsyncJob::updatedDate)
                         .thenComparingLong(StoredAsyncJob::idLong)
                         .reversed())
-                .limit(limit)
+                .limit(boundedLimit)
                 .map(this::toAsyncJob)
                 .toList());
   }
@@ -288,6 +290,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
     if (limit <= 0) {
       return 0;
     }
+    int boundedLimit = AsyncJobQueueValidation.validateStoreQueryLimit("limit", limit);
 
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobStatus terminalStatus = AsyncJobQueueValidation.validateTerminalStatus(status);
@@ -304,7 +307,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
                               && job.status() == terminalStatus
                               && job.updatedDate().isBefore(updatedBefore))
                   .sorted(Comparator.comparing(StoredAsyncJob::updatedDate))
-                  .limit(limit)
+                  .limit(boundedLimit)
                   .map(StoredAsyncJob::id)
                   .toList();
           idsToDelete.forEach(jobsById::remove);

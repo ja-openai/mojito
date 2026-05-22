@@ -119,6 +119,10 @@ Queue Runtime Config (example)
 - `l10n.org.async-job-queue.queues.assetlocalize.lease-duration-ms=120000`
 - `l10n.org.async-job-queue.queues.assetlocalize.heartbeat-interval-ms=20000`
 
+Validation guardrails:
+- `claim-batch-size` is capped at 1000 to avoid accidental oversized claim transactions.
+- `max-concurrency` is capped at 256 to avoid accidental oversized local executors.
+
 How Many "Cron" Loops?
 - Not one cron for the whole system and not one physical process per queue.
 - In one JVM, run one scheduled loop per configured queue (lightweight).
@@ -194,7 +198,8 @@ Test Coverage
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
   replay, lease-reclaim markers, timestamp-bound validation, bounded error summaries, and status
   counts against an embedded datasource using the `hsql` dialect. Store tests also cover bounded
-  terminal-row deletion so retention jobs cannot accidentally delete queued/running work.
+  inspection/cleanup limits and terminal-row deletion so retention jobs cannot accidentally delete
+  queued/running work.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.
@@ -237,6 +242,8 @@ Monitoring (MVP Required)
 
 Operator Controls
 - Store-level inspection supports listing recent jobs by `queue_name` and `status`.
+- Store-level inspection, claim, and cleanup methods reject excessive caller-provided limits so an
+  admin path cannot accidentally issue pathological queue-table queries.
 - Store-level replay only transitions `failed -> queued`; it does not touch running or completed
   jobs, resets the attempt budget for a fresh retry cycle, and keeps the previous `last_error`
   until success or the next failure.

@@ -80,4 +80,25 @@ public class AsyncJobQueuePropertiesValidatorTest {
 
     assertThat(exception).hasMessageContaining("maxConcurrency must be > 0");
   }
+
+  @Test
+  public void rejectsExcessiveQueueSettingsBeforeRuntimeStartup() {
+    AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setClaimBatchSize(AsyncJobQueueValidation.CLAIM_BATCH_SIZE_MAX + 1);
+    properties.getQueues().put("stats", queueSettings);
+    AsyncJobQueuePropertiesValidator validator = new AsyncJobQueuePropertiesValidator(properties);
+
+    IllegalArgumentException claimBatchException =
+        assertThrows(IllegalArgumentException.class, validator::afterPropertiesSet);
+    assertThat(claimBatchException).hasMessageContaining("claimBatchSize must be <=");
+
+    queueSettings.setClaimBatchSize(AsyncJobQueueValidation.CLAIM_BATCH_SIZE_MAX);
+    queueSettings.setMaxConcurrency(AsyncJobQueueValidation.MAX_CONCURRENCY_MAX + 1);
+
+    IllegalArgumentException maxConcurrencyException =
+        assertThrows(IllegalArgumentException.class, validator::afterPropertiesSet);
+    assertThat(maxConcurrencyException).hasMessageContaining("maxConcurrency must be <=");
+  }
 }
