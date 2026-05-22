@@ -38,6 +38,8 @@ public class AsyncJobQueueStatusMetricsReporter {
       MeterRegistry meterRegistry) {
     this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
     this.asyncJobQueueProperties = Objects.requireNonNull(asyncJobQueueProperties);
+    AsyncJobQueueValidation.validateStatusMetricsIntervalMs(
+        asyncJobQueueProperties.getStatusMetricsIntervalMs());
     this.asyncJobHandlers = Objects.requireNonNull(asyncJobHandlers);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
   }

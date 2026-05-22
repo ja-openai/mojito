@@ -87,7 +87,7 @@ class AsyncJobQueueRuntime {
     this.workerId = AsyncJobQueueValidation.validateWorkerId(workerId);
     this.pollDelayJitter =
         pollDelayJitter != null ? pollDelayJitter : this::applyRandomPollDelayJitter;
-    validateQueueSettings(queueSettings);
+    AsyncJobQueueValidation.validateQueueSettings(queueSettings);
     this.currentPollDelayMs = basePollDelayMs();
     meterRegistry.gauge(
         "asyncJobQueue.inflight",
@@ -829,46 +829,6 @@ class AsyncJobQueueRuntime {
       return new Date(Long.MAX_VALUE);
     }
     return new Date(nowMs + boundedDelayMs);
-  }
-
-  private void validateQueueSettings(AsyncJobQueueProperties.QueueSettings queueSettings) {
-    if (queueSettings.getPollIntervalMs() <= 0) {
-      throw new IllegalArgumentException("pollIntervalMs must be > 0");
-    }
-    if (queueSettings.getMaxPollIntervalMs() <= 0) {
-      throw new IllegalArgumentException("maxPollIntervalMs must be > 0");
-    }
-    if (queueSettings.getClaimBatchSize() <= 0) {
-      throw new IllegalArgumentException("claimBatchSize must be > 0");
-    }
-    if (queueSettings.getMaxConcurrency() <= 0) {
-      throw new IllegalArgumentException("maxConcurrency must be > 0");
-    }
-    if (queueSettings.getLeaseDurationMs() <= 0) {
-      throw new IllegalArgumentException("leaseDurationMs must be > 0");
-    }
-    if (queueSettings.getMaxPollIntervalMs() < queueSettings.getPollIntervalMs()) {
-      throw new IllegalArgumentException("maxPollIntervalMs must be >= pollIntervalMs");
-    }
-    if (queueSettings.getHeartbeatIntervalMs() < 0) {
-      throw new IllegalArgumentException("heartbeatIntervalMs must be >= 0");
-    }
-    if (queueSettings.getHeartbeatIntervalMs() >= queueSettings.getLeaseDurationMs()
-        && queueSettings.getHeartbeatIntervalMs() > 0) {
-      throw new IllegalArgumentException("heartbeatIntervalMs must be < leaseDurationMs");
-    }
-    if (queueSettings.getMaxAttempts() <= 0) {
-      throw new IllegalArgumentException("maxAttempts must be > 0");
-    }
-    if (queueSettings.getPollJitterPercent() < 0 || queueSettings.getPollJitterPercent() > 100) {
-      throw new IllegalArgumentException("pollJitterPercent must be between 0 and 100");
-    }
-    if (queueSettings.getMaxRetryDelayMs() <= 0) {
-      throw new IllegalArgumentException("maxRetryDelayMs must be > 0");
-    }
-    if (queueSettings.getRetryJitterPercent() < 0 || queueSettings.getRetryJitterPercent() > 100) {
-      throw new IllegalArgumentException("retryJitterPercent must be between 0 and 100");
-    }
   }
 
   record PollCycleResult(

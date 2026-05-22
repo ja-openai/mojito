@@ -1,13 +1,53 @@
 package com.box.l10n.mojito.queue;
 
+import java.util.Map;
 import java.util.Objects;
 
 final class AsyncJobQueueValidation {
 
   static final int QUEUE_NAME_MAX_LENGTH = 64;
   static final int WORKER_ID_MAX_LENGTH = 128;
+  static final String STORE_IN_MEMORY = "in-memory";
+  static final String STORE_JDBC = "jdbc";
 
   private AsyncJobQueueValidation() {}
+
+  static AsyncJobQueueProperties validateProperties(
+      AsyncJobQueueProperties asyncJobQueueProperties) {
+    Objects.requireNonNull(asyncJobQueueProperties);
+    String store = validateStore(asyncJobQueueProperties.getStore());
+    validateStatusMetricsIntervalMs(asyncJobQueueProperties.getStatusMetricsIntervalMs());
+    if (STORE_JDBC.equals(store)) {
+      AsyncJobQueueJdbcDialect.fromConfig(asyncJobQueueProperties.getJdbcDialect());
+    }
+    for (Map.Entry<String, AsyncJobQueueProperties.QueueSettings> queueEntry :
+        asyncJobQueueProperties.getQueues().entrySet()) {
+      validateQueueName(queueEntry.getKey());
+      if (queueEntry.getValue() != null) {
+        validateQueueSettings(queueEntry.getValue());
+      }
+    }
+    return asyncJobQueueProperties;
+  }
+
+  static String validateStore(String store) {
+    Objects.requireNonNull(store);
+    if (store.isBlank()) {
+      throw new IllegalArgumentException("store must not be blank");
+    }
+    if (!STORE_IN_MEMORY.equals(store) && !STORE_JDBC.equals(store)) {
+      throw new IllegalArgumentException(
+          "store must be one of: " + STORE_IN_MEMORY + ", " + STORE_JDBC);
+    }
+    return store;
+  }
+
+  static long validateStatusMetricsIntervalMs(long statusMetricsIntervalMs) {
+    if (statusMetricsIntervalMs <= 0) {
+      throw new IllegalArgumentException("statusMetricsIntervalMs must be > 0");
+    }
+    return statusMetricsIntervalMs;
+  }
 
   static String validateQueueName(String queueName) {
     Objects.requireNonNull(queueName);
@@ -31,5 +71,48 @@ final class AsyncJobQueueValidation {
           "workerId must be at most " + WORKER_ID_MAX_LENGTH + " characters");
     }
     return workerId;
+  }
+
+  static AsyncJobQueueProperties.QueueSettings validateQueueSettings(
+      AsyncJobQueueProperties.QueueSettings queueSettings) {
+    Objects.requireNonNull(queueSettings);
+    if (queueSettings.getPollIntervalMs() <= 0) {
+      throw new IllegalArgumentException("pollIntervalMs must be > 0");
+    }
+    if (queueSettings.getMaxPollIntervalMs() <= 0) {
+      throw new IllegalArgumentException("maxPollIntervalMs must be > 0");
+    }
+    if (queueSettings.getClaimBatchSize() <= 0) {
+      throw new IllegalArgumentException("claimBatchSize must be > 0");
+    }
+    if (queueSettings.getMaxConcurrency() <= 0) {
+      throw new IllegalArgumentException("maxConcurrency must be > 0");
+    }
+    if (queueSettings.getLeaseDurationMs() <= 0) {
+      throw new IllegalArgumentException("leaseDurationMs must be > 0");
+    }
+    if (queueSettings.getMaxPollIntervalMs() < queueSettings.getPollIntervalMs()) {
+      throw new IllegalArgumentException("maxPollIntervalMs must be >= pollIntervalMs");
+    }
+    if (queueSettings.getHeartbeatIntervalMs() < 0) {
+      throw new IllegalArgumentException("heartbeatIntervalMs must be >= 0");
+    }
+    if (queueSettings.getHeartbeatIntervalMs() >= queueSettings.getLeaseDurationMs()
+        && queueSettings.getHeartbeatIntervalMs() > 0) {
+      throw new IllegalArgumentException("heartbeatIntervalMs must be < leaseDurationMs");
+    }
+    if (queueSettings.getMaxAttempts() <= 0) {
+      throw new IllegalArgumentException("maxAttempts must be > 0");
+    }
+    if (queueSettings.getPollJitterPercent() < 0 || queueSettings.getPollJitterPercent() > 100) {
+      throw new IllegalArgumentException("pollJitterPercent must be between 0 and 100");
+    }
+    if (queueSettings.getMaxRetryDelayMs() <= 0) {
+      throw new IllegalArgumentException("maxRetryDelayMs must be > 0");
+    }
+    if (queueSettings.getRetryJitterPercent() < 0 || queueSettings.getRetryJitterPercent() > 100) {
+      throw new IllegalArgumentException("retryJitterPercent must be between 0 and 100");
+    }
+    return queueSettings;
   }
 }
