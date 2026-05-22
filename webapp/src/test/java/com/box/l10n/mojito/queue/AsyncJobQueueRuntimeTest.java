@@ -191,6 +191,51 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void queueWaitLatencyUsesAvailabilityNotCreationTime() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    Instant claimedAt = Instant.EPOCH.plusSeconds(60);
+    AsyncJobRecord claimedJob =
+        new AsyncJobRecord(
+            new AsyncJobId("1"),
+            "assetlocalize",
+            AsyncJobStatus.RUNNING,
+            claimedAt.minusMillis(200),
+            claimedAt.plusSeconds(30),
+            "worker-a",
+            "lease-token",
+            "{\"id\":1}",
+            1,
+            null,
+            Instant.EPOCH,
+            claimedAt,
+            false);
+    when(asyncJobStore.claimNextJobs(
+            anyString(), anyInt(), anyString(), any(java.time.Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenReturn(true);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.queueWait.latency")
+                .tag("queueName", "assetlocalize")
+                .timer()
+                .totalTime(TimeUnit.MILLISECONDS))
+        .isBetween(199.0, 201.0);
+  }
+
+  @Test
   public void runtimePublishesExecutorLoadGauges() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));

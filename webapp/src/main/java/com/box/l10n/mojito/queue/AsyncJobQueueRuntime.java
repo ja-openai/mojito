@@ -754,11 +754,11 @@ class AsyncJobQueueRuntime {
 
   private void recordQueueWaitLatency(List<AsyncJobRecord> claimedJobs) {
     for (AsyncJobRecord claimedJob : claimedJobs) {
-      if (claimedJob.createdDate() == null || claimedJob.updatedDate() == null) {
+      if (claimedJob.availableAt() == null || claimedJob.updatedDate() == null) {
         continue;
       }
       java.time.Duration queueWaitLatency =
-          java.time.Duration.between(claimedJob.createdDate(), claimedJob.updatedDate());
+          java.time.Duration.between(claimedJob.availableAt(), claimedJob.updatedDate());
       if (!queueWaitLatency.isNegative()) {
         meterRegistry
             .timer("asyncJobQueue.queueWait.latency", "queueName", queueName)
