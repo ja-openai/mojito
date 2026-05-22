@@ -32,7 +32,6 @@
         <hsqldb.version>2.7.4</hsqldb.version>
         <httpclient5.version>5.6.1</httpclient5.version>
         <httpcore5.version>5.4</httpcore5.version>
-        <aspectj-maven-plugin.version>1.16.0</aspectj-maven-plugin.version>
         <auto-value.version>1.7.4</auto-value.version>
         <plugin.version.google-java-format>1.22.0</plugin.version.google-java-format>
         <jjwt.version>0.13.0</jjwt.version>
@@ -54,14 +53,6 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>${guava.version}</version>
-        </dependency>
-
-        <!-- to fix warning in maven: can't find aspectrj in classpath -->
-        <dependency>
-            <groupId>org.aspectj</groupId>
-            <artifactId>aspectjrt</artifactId>
-            <version>${aspectj.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- TODO(spring2) remove -->

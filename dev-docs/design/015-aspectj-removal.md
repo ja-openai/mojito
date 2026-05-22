@@ -17,9 +17,10 @@ easy to inspect, debug, and mechanically modify.
 
 Build wiring:
 
-- Parent `pom.xml` declares `aspectj-maven-plugin.version` and a provided `aspectjrt` dependency.
-- `webapp/pom.xml` runs `aspectj-maven-plugin` for `compile` and `test-compile`.
-- Aspect libraries still include `spring-aspects` in `webapp`.
+- Parent `pom.xml` no longer declares the AspectJ Maven plugin version or a provided `aspectjrt`
+  dependency.
+- `webapp/pom.xml` no longer runs `aspectj-maven-plugin` for `compile` or `test-compile`.
+- `webapp` no longer depends on `spring-aspects`.
 
 Framework modes:
 
@@ -280,11 +281,13 @@ Removed during this workstream:
 - `Application` no longer enables AspectJ transaction mode. The remaining production transaction
   annotations are repository methods, which are reached through Spring Data proxies rather than
   self-invoked service methods.
+- The parent and webapp Maven build no longer include AspectJ runtime, `spring-aspects`,
+  `aspectjtools`, or the AspectJ compiler plugin.
 
 In progress:
 
-- Final `webapp` build cleanup remains. Remove `spring-aspects`, `aspectjrt`, and
-  `aspectj-maven-plugin`, then confirm Maven compile/test no longer invokes `ajc`.
+- Full test validation remains. The source and Maven build no longer require AspectJ, but the full
+  unit suite and MySQL-backed suite still need to run before declaring the migration complete.
 
 ## Migration Principles
 
