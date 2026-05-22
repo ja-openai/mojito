@@ -530,6 +530,41 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void updateProjectDueDateCommitsTransaction() {
+    ZonedDateTime dueDate = ZonedDateTime.parse("2026-05-12T09:00:00Z");
+    GetProjectDetailView result =
+        new GetProjectDetailView(
+            1L, null, null, null, null, null, null, 0, 0, null, null, null, List.of());
+    doReturn(result).when(reviewProjectService).updateProjectDueDateNoTx(1L, dueDate);
+
+    assertEquals(result, reviewProjectService.updateProjectDueDate(1L, dueDate));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void updateProjectDueDateRollsBackTransactionOnRuntimeException() {
+    ZonedDateTime dueDate = ZonedDateTime.parse("2026-05-12T09:00:00Z");
+    RuntimeException failure = new RuntimeException("due date failed");
+    doThrow(failure).when(reviewProjectService).updateProjectDueDateNoTx(1L, dueDate);
+
+    try {
+      reviewProjectService.updateProjectDueDate(1L, dueDate);
+      fail("Expected updateProjectDueDate to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(
