@@ -132,5 +132,14 @@ public class AsyncJobQueuePropertiesValidatorTest {
     IllegalArgumentException maxAttemptsException =
         assertThrows(IllegalArgumentException.class, validator::afterPropertiesSet);
     assertThat(maxAttemptsException).hasMessageContaining("maxAttempts must be <=");
+
+    queueSettings.setMaxAttempts(AsyncJobQueueValidation.MAX_ATTEMPTS_MAX);
+    queueSettings.setShutdownAwaitTerminationMs(
+        AsyncJobQueueValidation.SHUTDOWN_AWAIT_TERMINATION_MS_MAX + 1);
+
+    IllegalArgumentException shutdownAwaitException =
+        assertThrows(IllegalArgumentException.class, validator::afterPropertiesSet);
+    assertThat(shutdownAwaitException)
+        .hasMessageContaining("shutdownAwaitTerminationMs must be <=");
   }
 }

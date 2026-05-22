@@ -141,6 +141,14 @@ public class AsyncJobQueueValidationTest {
     assertInvalidQueueSetting(
         settings -> settings.setMaxRetryDelayMs(AsyncJobQueueValidation.MAX_RETRY_DELAY_MS_MAX + 1),
         "maxRetryDelayMs must be <=");
+    assertInvalidQueueSetting(
+        settings -> settings.setShutdownAwaitTerminationMs(-1),
+        "shutdownAwaitTerminationMs must be >=");
+    assertInvalidQueueSetting(
+        settings ->
+            settings.setShutdownAwaitTerminationMs(
+                AsyncJobQueueValidation.SHUTDOWN_AWAIT_TERMINATION_MS_MAX + 1),
+        "shutdownAwaitTerminationMs must be <=");
   }
 
   @Test

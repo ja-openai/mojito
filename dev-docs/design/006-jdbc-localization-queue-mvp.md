@@ -118,6 +118,7 @@ Queue Runtime Config (example)
 - `l10n.org.async-job-queue.queues.assetlocalize.retry-jitter-percent=20`
 - `l10n.org.async-job-queue.queues.assetlocalize.lease-duration-ms=120000`
 - `l10n.org.async-job-queue.queues.assetlocalize.heartbeat-interval-ms=20000`
+- `l10n.org.async-job-queue.queues.assetlocalize.shutdown-await-termination-ms=30000`
 - `l10n.org.async-job-queue.retention.enabled=false`
 - `l10n.org.async-job-queue.retention.interval-ms=3600000`
 - `l10n.org.async-job-queue.retention.done-retention-ms=604800000`
@@ -131,6 +132,8 @@ Validation guardrails:
   configuration.
 - Poll, heartbeat, retry, lease, and status-metric intervals have explicit upper bounds to catch
   pathological scheduler/SQL timestamp settings during startup validation.
+- Executor shutdown wait is bounded and defaults to 30 seconds so app shutdown gives in-flight
+  jobs a controlled chance to finish without allowing indefinite JVM termination delays.
 - Retention interval, retention ages, and cleanup batch size have explicit upper bounds; scheduled
   retention is disabled by default.
 
@@ -201,7 +204,7 @@ Test Coverage
   summaries, bounded runtime configuration, retry backoff, executor rejection containment,
   explicit requeue budget exhaustion, scheduling, notification wakeup coalescing, runtime poll
   failure recovery, runtime latency timers, state-transition false-return and exception metrics,
-  trigger scheduling failure metrics,
+  trigger scheduling failure metrics, bounded graceful executor shutdown,
   coordinator startup cleanup, synchronized trigger routing, null-safe queue configuration binding,
   and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,

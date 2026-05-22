@@ -154,12 +154,17 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
         queueSettings != null ? queueSettings : new AsyncJobQueueProperties.QueueSettings());
   }
 
-  private ThreadPoolTaskExecutor queueExecutor(
+  ThreadPoolTaskExecutor queueExecutor(
       String queueName, AsyncJobQueueProperties.QueueSettings queueSettings) {
     ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
     threadPoolTaskExecutor.setCorePoolSize(queueSettings.getMaxConcurrency());
     threadPoolTaskExecutor.setMaxPoolSize(queueSettings.getMaxConcurrency());
     threadPoolTaskExecutor.setQueueCapacity(0);
+    if (queueSettings.getShutdownAwaitTerminationMs() > 0) {
+      threadPoolTaskExecutor.setWaitForTasksToCompleteOnShutdown(true);
+      threadPoolTaskExecutor.setAwaitTerminationMillis(
+          queueSettings.getShutdownAwaitTerminationMs());
+    }
     threadPoolTaskExecutor.setThreadNamePrefix("async-job-" + queueName + "-");
     threadPoolTaskExecutor.initialize();
     return threadPoolTaskExecutor;

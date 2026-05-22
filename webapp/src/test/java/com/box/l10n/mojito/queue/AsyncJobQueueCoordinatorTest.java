@@ -13,14 +13,17 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
 import org.junit.Test;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 public class AsyncJobQueueCoordinatorTest {
 
@@ -199,6 +202,44 @@ public class AsyncJobQueueCoordinatorTest {
     assertThat(exception).hasMessageContaining("maxConcurrency must be > 0");
     assertThat(coordinator.isRunning()).isFalse();
     verify(taskScheduler, never()).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
+  public void queueExecutorGracefullyWaitsForInFlightWorkOnShutdown() throws Exception {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setMaxConcurrency(1);
+    queueSettings.setShutdownAwaitTerminationMs(1_000);
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            new AsyncJobQueueProperties(),
+            List.of(handler("assetlocalize")),
+            mock(TaskScheduler.class),
+            meterRegistry);
+    ThreadPoolTaskExecutor executor = coordinator.queueExecutor("assetlocalize", queueSettings);
+    CountDownLatch started = new CountDownLatch(1);
+    CountDownLatch finished = new CountDownLatch(1);
+    AtomicBoolean interrupted = new AtomicBoolean(false);
+
+    executor.execute(
+        () -> {
+          started.countDown();
+          try {
+            Thread.sleep(100);
+          } catch (InterruptedException e) {
+            interrupted.set(true);
+            Thread.currentThread().interrupt();
+          } finally {
+            finished.countDown();
+          }
+        });
+
+    assertThat(started.await(1, TimeUnit.SECONDS)).isTrue();
+    executor.shutdown();
+
+    assertThat(finished.getCount()).isEqualTo(0);
+    assertThat(interrupted.get()).isFalse();
   }
 
   private AsyncJobHandler handler(String queueName) {

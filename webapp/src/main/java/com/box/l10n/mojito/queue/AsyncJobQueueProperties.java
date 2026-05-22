@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Configuration;
  * l10n.org.async-job-queue.queues.assetlocalize.poll-jitter-percent=10
  * l10n.org.async-job-queue.queues.assetlocalize.max-retry-delay-ms=60000
  * l10n.org.async-job-queue.queues.assetlocalize.retry-jitter-percent=20
+ * l10n.org.async-job-queue.queues.assetlocalize.shutdown-await-termination-ms=30000
  * l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=20
  * l10n.org.async-job-queue.retention.enabled=false
  * </pre>
@@ -103,6 +104,7 @@ public class AsyncJobQueueProperties {
     private int pollJitterPercent = 10;
     private long maxRetryDelayMs = 60_000;
     private int retryJitterPercent = 20;
+    private long shutdownAwaitTerminationMs = 30_000;
 
     public long getPollIntervalMs() {
       return pollIntervalMs;
@@ -182,6 +184,14 @@ public class AsyncJobQueueProperties {
 
     public void setRetryJitterPercent(int retryJitterPercent) {
       this.retryJitterPercent = retryJitterPercent;
+    }
+
+    public long getShutdownAwaitTerminationMs() {
+      return shutdownAwaitTerminationMs;
+    }
+
+    public void setShutdownAwaitTerminationMs(long shutdownAwaitTerminationMs) {
+      this.shutdownAwaitTerminationMs = shutdownAwaitTerminationMs;
     }
   }
 

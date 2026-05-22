@@ -21,6 +21,7 @@ final class AsyncJobQueueValidation {
   static final long LEASE_DURATION_MS_MAX = Duration.ofDays(1).toMillis();
   static final long HEARTBEAT_INTERVAL_MS_MAX = Duration.ofHours(1).toMillis();
   static final long MAX_RETRY_DELAY_MS_MAX = Duration.ofHours(1).toMillis();
+  static final long SHUTDOWN_AWAIT_TERMINATION_MS_MAX = Duration.ofMinutes(5).toMillis();
   static final long RETENTION_INTERVAL_MS_MAX = Duration.ofDays(1).toMillis();
   static final long RETENTION_AGE_MS_MAX = Duration.ofDays(365).toMillis();
   static final int RETENTION_BATCH_SIZE_MAX = STORE_QUERY_LIMIT_MAX;
@@ -251,6 +252,13 @@ final class AsyncJobQueueValidation {
     }
     if (queueSettings.getRetryJitterPercent() < 0 || queueSettings.getRetryJitterPercent() > 100) {
       throw new IllegalArgumentException("retryJitterPercent must be between 0 and 100");
+    }
+    if (queueSettings.getShutdownAwaitTerminationMs() < 0) {
+      throw new IllegalArgumentException("shutdownAwaitTerminationMs must be >= 0");
+    }
+    if (queueSettings.getShutdownAwaitTerminationMs() > SHUTDOWN_AWAIT_TERMINATION_MS_MAX) {
+      throw new IllegalArgumentException(
+          "shutdownAwaitTerminationMs must be <= " + SHUTDOWN_AWAIT_TERMINATION_MS_MAX);
     }
     return queueSettings;
   }
