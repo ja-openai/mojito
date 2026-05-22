@@ -56,16 +56,20 @@ Product Recommendation
 
 Access Recommendation
 
-Initial recommendation:
+Current recommendation:
 
-- export: keep available to authenticated users who already have workbench access
+- export: restrict to PMs and admins
 - import: restrict to admins for v1
+- share: restrict to PMs and admins
+- delete loaded translations: restrict to PMs and admins
 
 Rationale:
 
-- export is read-only and low risk
+- export is read-only, but it can expose a large translation/search-result set outside Mojito
 - import performs bulk writes and is easier to misuse
-- the current backend broadly allows translators, PMs, and admins via `/api/textunits/**`, but the frontend does not need to inherit that exposure immediately
+- share creates a reusable workbench search/collection link and should follow export visibility
+- delete loaded translations performs bulk removal of current variants and should not be available to translators
+- the current backend broadly allows translators, PMs, and admins via `/api/textunits/**`, so sensitive subpaths need explicit backend guards in addition to frontend visibility rules
 - we can widen import access later once usage patterns and guardrails are validated
 
 If product prefers simpler consistency, both actions can be shown only to admins in v1. That is not required technically, but it is an acceptable product tradeoff.

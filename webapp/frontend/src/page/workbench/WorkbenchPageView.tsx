@@ -32,6 +32,7 @@ import { WorkbenchWorksetBar } from './WorkbenchWorksetBar';
 
 type Props = {
   isAdmin: boolean;
+  canManageTranslations: boolean;
   hasSearched: boolean;
   worksetSize: number;
   onChangeWorksetSize: (value: number) => void;
@@ -197,6 +198,7 @@ function HydrationModal({
 
 export function WorkbenchPageView({
   isAdmin,
+  canManageTranslations,
   hasSearched,
   worksetSize,
   onChangeWorksetSize,
@@ -389,6 +391,7 @@ export function WorkbenchPageView({
       <WorkbenchWorksetBar
         disabled={headerDisabled}
         isAdmin={isAdmin}
+        canManageTranslations={canManageTranslations}
         isSearchLoading={isSearchLoading}
         hasSearched={hasSearched}
         rowCount={rowCount}
@@ -521,20 +524,24 @@ export function WorkbenchPageView({
         onCancel={onDismissDiscardEditing}
       />
       <DiffModal data={diffModal} onClose={onCloseDiff} />
-      <WorkbenchShareModal
-        open={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        searchRequest={shareOverrides?.searchRequest ?? activeSearchRequest}
-        rows={rows}
-        availableLocales={selectedLocaleTags}
-        overrides={shareOverrides ?? undefined}
-      />
-      <WorkbenchExportModal
-        open={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        activeSearchRequest={activeSearchRequest}
-        repositories={repositories}
-      />
+      {canManageTranslations ? (
+        <WorkbenchShareModal
+          open={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          searchRequest={shareOverrides?.searchRequest ?? activeSearchRequest}
+          rows={rows}
+          availableLocales={selectedLocaleTags}
+          overrides={shareOverrides ?? undefined}
+        />
+      ) : null}
+      {canManageTranslations ? (
+        <WorkbenchExportModal
+          open={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          activeSearchRequest={activeSearchRequest}
+          repositories={repositories}
+        />
+      ) : null}
       <WorkbenchImportModal
         open={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}

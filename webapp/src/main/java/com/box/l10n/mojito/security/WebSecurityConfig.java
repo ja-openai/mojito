@@ -259,6 +259,10 @@ public class WebSecurityConfig {
                 .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/ai/review")
                 .authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/textunits/*")
+                .hasAnyRole("PM", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/textunits/current-variants/delete-batch")
+                .hasAnyRole("PM", "ADMIN")
                 // Review projects search should be available to translators
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/search")
                 .authenticated()

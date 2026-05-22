@@ -585,6 +585,7 @@ export function WorkbenchPage() {
     <>
       <WorkbenchPageView
         isAdmin={currentUser.role === 'ROLE_ADMIN'}
+        canManageTranslations={currentUser.role === 'ROLE_ADMIN' || currentUser.role === 'ROLE_PM'}
         hasSearched={hasSearched}
         worksetSize={search.worksetSize}
         onChangeWorksetSize={search.onChangeWorksetSize}

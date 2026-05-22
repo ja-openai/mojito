@@ -26,6 +26,7 @@ const resultSortDirectionOptions = [
 type WorkbenchWorksetBarProps = {
   disabled: boolean;
   isAdmin: boolean;
+  canManageTranslations: boolean;
   isSearchLoading: boolean;
   hasSearched: boolean;
   rowCount: number;
@@ -66,6 +67,7 @@ type WorkbenchWorksetBarProps = {
 export function WorkbenchWorksetBar({
   disabled,
   isAdmin,
+  canManageTranslations,
   isSearchLoading,
   hasSearched,
   rowCount,
@@ -109,7 +111,7 @@ export function WorkbenchWorksetBar({
       : `${rowCount} results`;
   const resultDropdownDisabled = disabled;
   const canRefresh = hasSearched && !disabled && !isSearchLoading;
-  const canShare = hasSearched && !disabled;
+  const canShare = hasSearched && canManageTranslations && !disabled;
 
   const parts: ReactNode[] = hasSearched
     ? [
@@ -170,6 +172,7 @@ export function WorkbenchWorksetBar({
         isSearchLoading={isSearchLoading}
         isApplyingBulkAction={isApplyingBulkAction}
         bulkActionRowCount={bulkActionRowCount}
+        canDeleteTranslations={canManageTranslations}
         onRequestDeleteAll={onRequestDeleteAll}
         onRequestBulkStatusChange={onRequestBulkStatusChange}
       />,
@@ -210,6 +213,7 @@ export function WorkbenchWorksetBar({
       onAddAllToCollection={onAddAllToCollection}
       onOpenCollectionSearch={onOpenCollectionSearch}
       onShareCollection={onShareCollection}
+      canShareCollections={canManageTranslations}
       onCreateReviewProject={onCreateReviewProject}
       onOpenAiTranslate={onOpenAiTranslate}
     />,
@@ -229,7 +233,7 @@ export function WorkbenchWorksetBar({
     );
   }
 
-  if (hasSearched) {
+  if (hasSearched && canManageTranslations) {
     parts.push(
       <button
         key="export"
@@ -243,7 +247,7 @@ export function WorkbenchWorksetBar({
     );
   }
 
-  if (hasSearched) {
+  if (hasSearched && canManageTranslations) {
     parts.push(<SearchShareButton key="share" onClick={onOpenShareModal} disabled={!canShare} />);
   }
 
@@ -270,6 +274,7 @@ function BulkActionsDropdown({
   isSearchLoading,
   isApplyingBulkAction,
   bulkActionRowCount,
+  canDeleteTranslations,
   onRequestDeleteAll,
   onRequestBulkStatusChange,
 }: {
@@ -277,6 +282,7 @@ function BulkActionsDropdown({
   isSearchLoading: boolean;
   isApplyingBulkAction: boolean;
   bulkActionRowCount: number;
+  canDeleteTranslations: boolean;
   onRequestDeleteAll: () => void;
   onRequestBulkStatusChange: (status: string) => void;
 }) {
@@ -365,16 +371,18 @@ function BulkActionsDropdown({
                 </button>
               </div>
             ) : null}
-            <button
-              type="button"
-              className="workbench-worksetbar__button"
-              onClick={() => {
-                setIsOpen(false);
-                onRequestDeleteAll();
-              }}
-            >
-              Delete loaded translations
-            </button>
+            {canDeleteTranslations ? (
+              <button
+                type="button"
+                className="workbench-worksetbar__button"
+                onClick={() => {
+                  setIsOpen(false);
+                  onRequestDeleteAll();
+                }}
+              >
+                Delete loaded translations
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -485,6 +493,7 @@ function CollectionDropdown({
   onAddAllToCollection,
   onOpenCollectionSearch,
   onShareCollection,
+  canShareCollections,
   onCreateReviewProject,
   onOpenAiTranslate,
 }: {
@@ -505,6 +514,7 @@ function CollectionDropdown({
   onAddAllToCollection: () => void;
   onOpenCollectionSearch: (id: string) => void;
   onShareCollection: (id: string) => boolean;
+  canShareCollections: boolean;
   onCreateReviewProject: (id: string) => void;
   onOpenAiTranslate: (id: string) => void;
 }) {
@@ -777,21 +787,23 @@ function CollectionDropdown({
                           >
                             AI Translate
                           </button>
-                          <button
-                            type="button"
-                            className="workbench-worksetbar__button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              const ok = onShareCollection(collection.id);
-                              if (ok) {
-                                setIsOpen(false);
-                              }
-                            }}
-                            disabled={disabled || !hasIds}
-                            title="Share this collection"
-                          >
-                            Share
-                          </button>
+                          {canShareCollections ? (
+                            <button
+                              type="button"
+                              className="workbench-worksetbar__button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                const ok = onShareCollection(collection.id);
+                                if (ok) {
+                                  setIsOpen(false);
+                                }
+                              }}
+                              disabled={disabled || !hasIds}
+                              title="Share this collection"
+                            >
+                              Share
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     );
