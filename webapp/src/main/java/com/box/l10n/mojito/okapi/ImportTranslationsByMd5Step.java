@@ -12,6 +12,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentService;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * Extends the regular import translation step that is used to import XLIFF coming from a
@@ -39,7 +40,8 @@ public class ImportTranslationsByMd5Step extends AbstractImportTranslationsStep 
       TMTextUnitVariantCommentService tmMTextUnitVariantCommentService,
       UserRepository userRepository,
       AuditorAwareImpl auditorAwareImpl,
-      TMService tmService) {
+      TMService tmService,
+      PlatformTransactionManager transactionManager) {
     super(
         textUnitUtils,
         tmTextUnitRepository,
@@ -49,7 +51,8 @@ public class ImportTranslationsByMd5Step extends AbstractImportTranslationsStep 
         tmMTextUnitVariantCommentService,
         userRepository,
         auditorAwareImpl,
-        tmService);
+        tmService,
+        transactionManager);
     this.repository = repository;
   }
 

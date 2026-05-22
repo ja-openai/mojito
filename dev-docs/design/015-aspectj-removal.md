@@ -273,6 +273,9 @@ Removed during this workstream:
   PM resolution now opens and commits its write transaction boundary explicitly.
 - `ReviewProjectService.updateTerminologyMetadata` no longer uses `@Transactional`; terminology
   metadata edits now open and commit their write transaction boundary explicitly.
+- XLIFF import steps no longer rely on woven `@Transactional` methods while processing imported
+  text units; Okapi import steps now receive the transaction manager explicitly and wrap each
+  imported variant write in visible commit/rollback code.
 
 In progress:
 

@@ -11,6 +11,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentService;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * @author jaurambault
@@ -29,7 +30,8 @@ public class ImportTranslationsByIdStep extends AbstractImportTranslationsStep {
       TMTextUnitVariantCommentService tmMTextUnitVariantCommentService,
       UserRepository userRepository,
       AuditorAwareImpl auditorAwareImpl,
-      TMService tmService) {
+      TMService tmService,
+      PlatformTransactionManager transactionManager) {
     super(
         textUnitUtils,
         tmTextUnitRepository,
@@ -39,7 +41,8 @@ public class ImportTranslationsByIdStep extends AbstractImportTranslationsStep {
         tmMTextUnitVariantCommentService,
         userRepository,
         auditorAwareImpl,
-        tmService);
+        tmService,
+        transactionManager);
   }
 
   @Override

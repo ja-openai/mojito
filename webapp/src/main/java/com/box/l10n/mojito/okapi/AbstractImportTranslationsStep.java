@@ -32,7 +32,9 @@ import net.sf.okapi.common.resource.StartDocument;
 import net.sf.okapi.common.resource.TextContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * Base class that contains the logic to import XLIFFs.
@@ -62,6 +64,8 @@ public abstract class AbstractImportTranslationsStep extends AbstractMd5Computat
   AuditorAwareImpl auditorAwareImpl;
 
   TMService tmService;
+
+  PlatformTransactionManager transactionManager;
 
   net.sf.okapi.common.resource.RawDocument rawDocument;
 
@@ -109,7 +113,8 @@ public abstract class AbstractImportTranslationsStep extends AbstractMd5Computat
       TMTextUnitVariantCommentService tmMTextUnitVariantCommentService,
       UserRepository userRepository,
       AuditorAwareImpl auditorAwareImpl,
-      TMService tmService) {
+      TMService tmService,
+      PlatformTransactionManager transactionManager) {
     super();
     this.textUnitUtils = textUnitUtils;
     this.tmTextUnitRepository = tmTextUnitRepository;
@@ -120,6 +125,7 @@ public abstract class AbstractImportTranslationsStep extends AbstractMd5Computat
     this.userRepository = userRepository;
     this.auditorAwareImpl = auditorAwareImpl;
     this.tmService = tmService;
+    this.transactionManager = transactionManager;
   }
 
   public void setDropImporterUsernameOverride(String dropImporterUsernameOverride) {
@@ -401,8 +407,27 @@ public abstract class AbstractImportTranslationsStep extends AbstractMd5Computat
     return localeService.findByBcp47Tag(bcp47TagLowerCase).getId();
   }
 
-  @Transactional
   TMTextUnitVariant importTextUnit(
+      TMTextUnit tmTextUnit,
+      TextContainer target,
+      TMTextUnitVariant.Status status,
+      ZonedDateTime createdDate) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      TMTextUnitVariant result = importTextUnitNoTx(tmTextUnit, target, status, createdDate);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  TMTextUnitVariant importTextUnitNoTx(
       TMTextUnit tmTextUnit,
       TextContainer target,
       TMTextUnitVariant.Status status,
