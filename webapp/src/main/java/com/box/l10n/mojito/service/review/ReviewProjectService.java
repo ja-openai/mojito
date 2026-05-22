@@ -2173,8 +2173,22 @@ public class ReviewProjectService {
     return changedCount;
   }
 
-  @Transactional(readOnly = true)
   public List<ReviewProjectAssignmentHistory> getProjectAssignmentHistory(Long projectId) {
+    TransactionStatus transaction = transactionManager.getTransaction(readOnlyTransaction());
+    try {
+      List<ReviewProjectAssignmentHistory> result = getProjectAssignmentHistoryNoTx(projectId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<ReviewProjectAssignmentHistory> getProjectAssignmentHistoryNoTx(Long projectId) {
     ReviewProject reviewProject =
         reviewProjectRepository
             .findById(projectId)
