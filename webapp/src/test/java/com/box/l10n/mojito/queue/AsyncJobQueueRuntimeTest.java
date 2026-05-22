@@ -622,6 +622,39 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void scheduledPollRecordsFailureAndContinuesAfterClaimException() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenThrow(new IllegalStateException("database unavailable"));
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    taskScheduler.scheduledTasks().get(0).run();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(taskScheduler.scheduledTasks()).hasSize(2);
+    long scheduledDelayMs =
+        taskScheduler.scheduledStartTimes().get(1).getTime()
+            - taskScheduler.scheduleInvocationTimes().get(1);
+    assertThat(scheduledDelayMs).isBetween(50L, 150L);
+  }
+
+  @Test
   public void heartbeatIntervalMustBeLessThanLeaseDuration() {
     AsyncJobQueueProperties.QueueSettings queueSettings =
         new AsyncJobQueueProperties.QueueSettings();

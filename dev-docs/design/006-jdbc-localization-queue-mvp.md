@@ -181,7 +181,7 @@ PostgreSQL Portability
 Test Coverage
 - Unit tests cover in-memory store semantics, runtime adaptive polling, bounded retries, heartbeats,
   bounded persisted error summaries, retry backoff, scheduling, notification wakeup coalescing,
-  runtime latency timers, and Spring configuration.
+  runtime poll failure recovery, runtime latency timers, and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
   handler-only queues, and non-fatal reporting failures.
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
