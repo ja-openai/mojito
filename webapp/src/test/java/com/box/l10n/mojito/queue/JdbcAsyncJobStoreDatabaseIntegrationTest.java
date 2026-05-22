@@ -127,6 +127,34 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     assertThat(reclaimed.leaseToken()).isNotEqualTo(firstClaim.leaseToken());
 
     assertThat(
+            store.markDone(
+                "assetlocalize",
+                id,
+                "worker-a",
+                firstClaim.leaseToken(),
+                "{\"step\":\"stale-done\"}"))
+        .isFalse();
+    assertThat(
+            store.requeue(
+                "assetlocalize",
+                id,
+                "worker-a",
+                firstClaim.leaseToken(),
+                Instant.now().minusSeconds(1),
+                "{\"step\":\"stale-requeue\"}",
+                "stale requeue"))
+        .isFalse();
+    assertThat(
+            store.markFailed(
+                "assetlocalize", id, "worker-a", firstClaim.leaseToken(), null, "stale failure"))
+        .isFalse();
+    AsyncJobRecord stillLeasedToReclaimer = store.getByIds(List.of(id)).get(0);
+    assertThat(stillLeasedToReclaimer.status()).isEqualTo(AsyncJobStatus.RUNNING);
+    assertThat(stillLeasedToReclaimer.workerId()).isEqualTo("worker-b");
+    assertThat(stillLeasedToReclaimer.leaseToken()).isEqualTo(reclaimed.leaseToken());
+    assertThat(stillLeasedToReclaimer.attemptCount()).isEqualTo(2);
+
+    assertThat(
             store.markFailed(
                 "assetlocalize",
                 id,
