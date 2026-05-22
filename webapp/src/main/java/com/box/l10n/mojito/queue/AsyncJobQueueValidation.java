@@ -13,7 +13,14 @@ final class AsyncJobQueueValidation {
   static final int LAST_ERROR_MAX_LENGTH = 4_000;
   static final int CLAIM_BATCH_SIZE_MAX = 1_000;
   static final int MAX_CONCURRENCY_MAX = 256;
+  static final int MAX_ATTEMPTS_MAX = 100;
   static final int STORE_QUERY_LIMIT_MAX = 1_000;
+  static final long STATUS_METRICS_INTERVAL_MS_MAX = Duration.ofHours(1).toMillis();
+  static final long POLL_INTERVAL_MS_MAX = Duration.ofHours(1).toMillis();
+  static final long MAX_POLL_INTERVAL_MS_MAX = Duration.ofHours(1).toMillis();
+  static final long LEASE_DURATION_MS_MAX = Duration.ofDays(1).toMillis();
+  static final long HEARTBEAT_INTERVAL_MS_MAX = Duration.ofHours(1).toMillis();
+  static final long MAX_RETRY_DELAY_MS_MAX = Duration.ofHours(1).toMillis();
   // Conservative portable bounds for MySQL DATETIME after JDBC/default-timezone conversion.
   static final Instant DATABASE_TIMESTAMP_MIN = Instant.parse("1000-01-02T00:00:00Z");
   static final Instant DATABASE_TIMESTAMP_MAX = Instant.parse("9999-12-31T00:00:00Z");
@@ -55,6 +62,10 @@ final class AsyncJobQueueValidation {
   static long validateStatusMetricsIntervalMs(long statusMetricsIntervalMs) {
     if (statusMetricsIntervalMs <= 0) {
       throw new IllegalArgumentException("statusMetricsIntervalMs must be > 0");
+    }
+    if (statusMetricsIntervalMs > STATUS_METRICS_INTERVAL_MS_MAX) {
+      throw new IllegalArgumentException(
+          "statusMetricsIntervalMs must be <= " + STATUS_METRICS_INTERVAL_MS_MAX);
     }
     return statusMetricsIntervalMs;
   }
@@ -147,8 +158,15 @@ final class AsyncJobQueueValidation {
     if (queueSettings.getPollIntervalMs() <= 0) {
       throw new IllegalArgumentException("pollIntervalMs must be > 0");
     }
+    if (queueSettings.getPollIntervalMs() > POLL_INTERVAL_MS_MAX) {
+      throw new IllegalArgumentException("pollIntervalMs must be <= " + POLL_INTERVAL_MS_MAX);
+    }
     if (queueSettings.getMaxPollIntervalMs() <= 0) {
       throw new IllegalArgumentException("maxPollIntervalMs must be > 0");
+    }
+    if (queueSettings.getMaxPollIntervalMs() > MAX_POLL_INTERVAL_MS_MAX) {
+      throw new IllegalArgumentException(
+          "maxPollIntervalMs must be <= " + MAX_POLL_INTERVAL_MS_MAX);
     }
     if (queueSettings.getClaimBatchSize() <= 0) {
       throw new IllegalArgumentException("claimBatchSize must be > 0");
@@ -165,11 +183,18 @@ final class AsyncJobQueueValidation {
     if (queueSettings.getLeaseDurationMs() <= 0) {
       throw new IllegalArgumentException("leaseDurationMs must be > 0");
     }
+    if (queueSettings.getLeaseDurationMs() > LEASE_DURATION_MS_MAX) {
+      throw new IllegalArgumentException("leaseDurationMs must be <= " + LEASE_DURATION_MS_MAX);
+    }
     if (queueSettings.getMaxPollIntervalMs() < queueSettings.getPollIntervalMs()) {
       throw new IllegalArgumentException("maxPollIntervalMs must be >= pollIntervalMs");
     }
     if (queueSettings.getHeartbeatIntervalMs() < 0) {
       throw new IllegalArgumentException("heartbeatIntervalMs must be >= 0");
+    }
+    if (queueSettings.getHeartbeatIntervalMs() > HEARTBEAT_INTERVAL_MS_MAX) {
+      throw new IllegalArgumentException(
+          "heartbeatIntervalMs must be <= " + HEARTBEAT_INTERVAL_MS_MAX);
     }
     if (queueSettings.getHeartbeatIntervalMs() >= queueSettings.getLeaseDurationMs()
         && queueSettings.getHeartbeatIntervalMs() > 0) {
@@ -178,11 +203,17 @@ final class AsyncJobQueueValidation {
     if (queueSettings.getMaxAttempts() <= 0) {
       throw new IllegalArgumentException("maxAttempts must be > 0");
     }
+    if (queueSettings.getMaxAttempts() > MAX_ATTEMPTS_MAX) {
+      throw new IllegalArgumentException("maxAttempts must be <= " + MAX_ATTEMPTS_MAX);
+    }
     if (queueSettings.getPollJitterPercent() < 0 || queueSettings.getPollJitterPercent() > 100) {
       throw new IllegalArgumentException("pollJitterPercent must be between 0 and 100");
     }
     if (queueSettings.getMaxRetryDelayMs() <= 0) {
       throw new IllegalArgumentException("maxRetryDelayMs must be > 0");
+    }
+    if (queueSettings.getMaxRetryDelayMs() > MAX_RETRY_DELAY_MS_MAX) {
+      throw new IllegalArgumentException("maxRetryDelayMs must be <= " + MAX_RETRY_DELAY_MS_MAX);
     }
     if (queueSettings.getRetryJitterPercent() < 0 || queueSettings.getRetryJitterPercent() > 100) {
       throw new IllegalArgumentException("retryJitterPercent must be between 0 and 100");

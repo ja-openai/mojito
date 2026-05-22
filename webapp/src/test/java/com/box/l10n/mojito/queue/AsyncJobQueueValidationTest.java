@@ -100,4 +100,60 @@ public class AsyncJobQueueValidationTest {
                         "limit", AsyncJobQueueValidation.STORE_QUERY_LIMIT_MAX + 1)))
         .hasMessageContaining("limit must be <=");
   }
+
+  @Test
+  public void validateStatusMetricsIntervalRejectsExcessiveInterval() {
+    assertThat(
+            AsyncJobQueueValidation.validateStatusMetricsIntervalMs(
+                AsyncJobQueueValidation.STATUS_METRICS_INTERVAL_MS_MAX))
+        .isEqualTo(AsyncJobQueueValidation.STATUS_METRICS_INTERVAL_MS_MAX);
+
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                    AsyncJobQueueValidation.validateStatusMetricsIntervalMs(
+                        AsyncJobQueueValidation.STATUS_METRICS_INTERVAL_MS_MAX + 1)))
+        .hasMessageContaining("statusMetricsIntervalMs must be <=");
+  }
+
+  @Test
+  public void validateQueueSettingsRejectsExcessiveRuntimeBounds() {
+    assertInvalidQueueSetting(
+        settings -> settings.setPollIntervalMs(AsyncJobQueueValidation.POLL_INTERVAL_MS_MAX + 1),
+        "pollIntervalMs must be <=");
+    assertInvalidQueueSetting(
+        settings ->
+            settings.setMaxPollIntervalMs(AsyncJobQueueValidation.MAX_POLL_INTERVAL_MS_MAX + 1),
+        "maxPollIntervalMs must be <=");
+    assertInvalidQueueSetting(
+        settings -> settings.setLeaseDurationMs(AsyncJobQueueValidation.LEASE_DURATION_MS_MAX + 1),
+        "leaseDurationMs must be <=");
+    assertInvalidQueueSetting(
+        settings -> {
+          settings.setLeaseDurationMs(AsyncJobQueueValidation.LEASE_DURATION_MS_MAX);
+          settings.setHeartbeatIntervalMs(AsyncJobQueueValidation.HEARTBEAT_INTERVAL_MS_MAX + 1);
+        },
+        "heartbeatIntervalMs must be <=");
+    assertInvalidQueueSetting(
+        settings -> settings.setMaxAttempts(AsyncJobQueueValidation.MAX_ATTEMPTS_MAX + 1),
+        "maxAttempts must be <=");
+    assertInvalidQueueSetting(
+        settings -> settings.setMaxRetryDelayMs(AsyncJobQueueValidation.MAX_RETRY_DELAY_MS_MAX + 1),
+        "maxRetryDelayMs must be <=");
+  }
+
+  private void assertInvalidQueueSetting(
+      java.util.function.Consumer<AsyncJobQueueProperties.QueueSettings> mutator,
+      String expectedMessage) {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    mutator.accept(queueSettings);
+
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> AsyncJobQueueValidation.validateQueueSettings(queueSettings)))
+        .hasMessageContaining(expectedMessage);
+  }
 }

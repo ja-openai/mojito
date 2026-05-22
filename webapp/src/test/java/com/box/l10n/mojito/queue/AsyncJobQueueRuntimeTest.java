@@ -63,18 +63,25 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
-  public void emptyPollBackoffCapsAtMaxPollIntervalWithoutOverflow() {
+  public void emptyPollBackoffCapsAtMaxPollInterval() {
     AsyncJobQueueRuntime asyncJobQueueRuntime =
         runtime(
             new InMemoryAsyncJobStore(),
-            queueSettings(Long.MAX_VALUE / 2 + 1, Long.MAX_VALUE, 1, 1, 10_000, 0),
+            queueSettings(
+                AsyncJobQueueValidation.MAX_POLL_INTERVAL_MS_MAX / 2 + 1,
+                AsyncJobQueueValidation.MAX_POLL_INTERVAL_MS_MAX,
+                1,
+                1,
+                10_000,
+                0),
             handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
             mock(TaskScheduler.class),
             executor);
 
     AsyncJobQueueRuntime.PollCycleResult pollCycleResult = asyncJobQueueRuntime.pollOnce();
 
-    assertThat(pollCycleResult.nextDelayMs()).isEqualTo(Long.MAX_VALUE);
+    assertThat(pollCycleResult.nextDelayMs())
+        .isEqualTo(AsyncJobQueueValidation.MAX_POLL_INTERVAL_MS_MAX);
   }
 
   @Test
@@ -1659,31 +1666,8 @@ public class AsyncJobQueueRuntimeTest {
 
   @Test
   public void scheduledBackoffSaturatesExtremeDelayDate() {
-    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
-    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
-        .thenReturn(List.of());
-
-    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
-    AsyncJobQueueRuntime asyncJobQueueRuntime =
-        runtime(
-            asyncJobStore,
-            queueSettings(Long.MAX_VALUE / 2 + 1, Long.MAX_VALUE, 1, 1, 10_000, 0),
-            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
-            taskScheduler,
-            executor,
-            delayMs -> delayMs);
-
-    asyncJobQueueRuntime.start();
-    taskScheduler.scheduledTasks().get(0).run();
-
-    assertThat(taskScheduler.scheduledStartTimes()).hasSize(2);
-    assertThat(taskScheduler.scheduledStartTimes().get(1).getTime()).isEqualTo(Long.MAX_VALUE);
-    assertThat(
-            meterRegistry
-                .find("asyncJobQueue.poll.schedule.failed")
-                .tag("queueName", "assetlocalize")
-                .counter())
-        .isNull();
+    assertThat(AsyncJobQueueRuntime.startDateAfterMillis(Long.MAX_VALUE).getTime())
+        .isEqualTo(Long.MAX_VALUE);
   }
 
   @Test

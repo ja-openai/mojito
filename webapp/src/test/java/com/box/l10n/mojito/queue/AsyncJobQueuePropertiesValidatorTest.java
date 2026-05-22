@@ -42,6 +42,19 @@ public class AsyncJobQueuePropertiesValidatorTest {
   }
 
   @Test
+  public void rejectsExcessiveStatusMetricsInterval() {
+    AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
+    properties.setStatusMetricsIntervalMs(
+        AsyncJobQueueValidation.STATUS_METRICS_INTERVAL_MS_MAX + 1);
+    AsyncJobQueuePropertiesValidator validator = new AsyncJobQueuePropertiesValidator(properties);
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, validator::afterPropertiesSet);
+
+    assertThat(exception).hasMessageContaining("statusMetricsIntervalMs must be <=");
+  }
+
+  @Test
   public void rejectsInvalidJdbcDialectWhenJdbcStoreIsSelected() {
     AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
     properties.setStore("jdbc");
@@ -100,5 +113,12 @@ public class AsyncJobQueuePropertiesValidatorTest {
     IllegalArgumentException maxConcurrencyException =
         assertThrows(IllegalArgumentException.class, validator::afterPropertiesSet);
     assertThat(maxConcurrencyException).hasMessageContaining("maxConcurrency must be <=");
+
+    queueSettings.setMaxConcurrency(AsyncJobQueueValidation.MAX_CONCURRENCY_MAX);
+    queueSettings.setMaxAttempts(AsyncJobQueueValidation.MAX_ATTEMPTS_MAX + 1);
+
+    IllegalArgumentException maxAttemptsException =
+        assertThrows(IllegalArgumentException.class, validator::afterPropertiesSet);
+    assertThat(maxAttemptsException).hasMessageContaining("maxAttempts must be <=");
   }
 }

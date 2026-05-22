@@ -122,6 +122,10 @@ Queue Runtime Config (example)
 Validation guardrails:
 - `claim-batch-size` is capped at 1000 to avoid accidental oversized claim transactions.
 - `max-concurrency` is capped at 256 to avoid accidental oversized local executors.
+- `max-attempts` is capped at 100 so poison jobs cannot be made effectively unbounded by
+  configuration.
+- Poll, heartbeat, retry, lease, and status-metric intervals have explicit upper bounds to catch
+  pathological scheduler/SQL timestamp settings during startup validation.
 
 How Many "Cron" Loops?
 - Not one cron for the whole system and not one physical process per queue.
@@ -187,10 +191,10 @@ PostgreSQL Portability
 Test Coverage
 - Unit tests cover in-memory store semantics, runtime adaptive polling, bounded retries, heartbeats,
   heartbeat false-return, exception, and scheduling-failure containment, bounded persisted error
-  summaries, retry backoff, executor rejection containment, explicit requeue budget exhaustion,
-  scheduling, notification wakeup
-  coalescing, runtime poll failure recovery, runtime latency timers, state-transition false-return
-  and exception metrics, trigger scheduling failure metrics,
+  summaries, bounded runtime configuration, retry backoff, executor rejection containment,
+  explicit requeue budget exhaustion, scheduling, notification wakeup coalescing, runtime poll
+  failure recovery, runtime latency timers, state-transition false-return and exception metrics,
+  trigger scheduling failure metrics,
   coordinator startup cleanup, synchronized trigger routing, null-safe queue configuration binding,
   and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
