@@ -252,6 +252,9 @@ Removed during this workstream:
   the same transaction.
 - `ReviewProjectService.claimProjectTranslatorAssignment` no longer uses `@Transactional`;
   translator-claim writes now open and commit their transaction boundary explicitly.
+- `ReviewProjectService.updateProjectDueDate` no longer uses `@Transactional`; due-date updates now
+  open and commit their write transaction boundary explicitly before loading detail in the same
+  transaction.
 
 In progress:
 

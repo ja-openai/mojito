@@ -2252,8 +2252,23 @@ public class ReviewProjectService {
         projectId, teamId, assignedPmUserId, teamService.getCurrentUserIdOrThrow(), null);
   }
 
-  @Transactional
   public GetProjectDetailView updateProjectDueDate(Long projectId, ZonedDateTime dueDate) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GetProjectDetailView result = updateProjectDueDateNoTx(projectId, dueDate);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GetProjectDetailView updateProjectDueDateNoTx(Long projectId, ZonedDateTime dueDate) {
     if (dueDate == null) {
       throw new IllegalArgumentException("dueDate must be provided");
     }
@@ -2273,7 +2288,7 @@ public class ReviewProjectService {
 
     reviewProject.setDueDate(dueDate);
     reviewProjectRepository.save(reviewProject);
-    return getProjectDetail(projectId);
+    return getProjectDetailNoTx(projectId);
   }
 
   @Transactional
