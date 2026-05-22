@@ -668,6 +668,36 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void adminRecomputeRequestDecidedCountsCommitsTransaction() {
+    doReturn(2).when(reviewProjectService).adminRecomputeRequestDecidedCountsNoTx(44L);
+
+    assertEquals(2, reviewProjectService.adminRecomputeRequestDecidedCounts(44L));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void adminRecomputeRequestDecidedCountsRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("recompute failed");
+    doThrow(failure).when(reviewProjectService).adminRecomputeRequestDecidedCountsNoTx(44L);
+
+    try {
+      reviewProjectService.adminRecomputeRequestDecidedCounts(44L);
+      fail("Expected adminRecomputeRequestDecidedCounts to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(

@@ -261,6 +261,8 @@ Removed during this workstream:
   history reads now open and commit their read-only transaction boundary explicitly.
 - `ReviewProjectService.adminBatchUpdateStatus` no longer uses `@Transactional`; admin batch
   status updates now open and commit their write transaction boundary explicitly.
+- `ReviewProjectService.adminRecomputeRequestDecidedCounts` no longer uses `@Transactional`; admin
+  decided-count recomputation now opens and commits its write transaction boundary explicitly.
 
 In progress:
 
