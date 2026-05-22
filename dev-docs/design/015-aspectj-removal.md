@@ -255,6 +255,8 @@ Removed during this workstream:
 - `ReviewProjectService.updateProjectDueDate` no longer uses `@Transactional`; due-date updates now
   open and commit their write transaction boundary explicitly before loading detail in the same
   transaction.
+- `ReviewProjectService.updateRequestAssignedPm` no longer uses `@Transactional`; request-wide PM
+  reassignment now opens and commits its write transaction boundary explicitly.
 
 In progress:
 

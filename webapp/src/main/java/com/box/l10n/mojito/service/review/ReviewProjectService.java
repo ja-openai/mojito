@@ -2291,8 +2291,23 @@ public class ReviewProjectService {
     return getProjectDetailNoTx(projectId);
   }
 
-  @Transactional
   public int updateRequestAssignedPm(Long requestId, Long assignedPmUserId, String note) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      int result = updateRequestAssignedPmNoTx(requestId, assignedPmUserId, note);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  int updateRequestAssignedPmNoTx(Long requestId, Long assignedPmUserId, String note) {
     if (requestId == null) {
       throw new IllegalArgumentException("requestId is required");
     }
