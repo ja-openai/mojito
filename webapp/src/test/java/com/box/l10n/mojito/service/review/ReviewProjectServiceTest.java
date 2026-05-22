@@ -903,6 +903,45 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void updateTerminologyMetadataCommitsTransaction() {
+    ReviewProjectService.UpdateTerminologyMetadataCommand command =
+        new ReviewProjectService.UpdateTerminologyMetadataCommand(
+            "definition", "rationale", "noun", GlossaryTermMetadata.TERM_TYPE_BRAND, null, false);
+    GetProjectDetailView.ReviewProjectTextUnit result =
+        new GetProjectDetailView.ReviewProjectTextUnit(
+            55L, null, null, null, null, null, List.of(), List.of());
+    doReturn(result).when(reviewProjectService).updateTerminologyMetadataNoTx(55L, command);
+
+    assertEquals(result, reviewProjectService.updateTerminologyMetadata(55L, command));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void updateTerminologyMetadataRollsBackTransactionOnRuntimeException() {
+    ReviewProjectService.UpdateTerminologyMetadataCommand command =
+        new ReviewProjectService.UpdateTerminologyMetadataCommand(
+            "definition", "rationale", "noun", GlossaryTermMetadata.TERM_TYPE_BRAND, null, false);
+    RuntimeException failure = new RuntimeException("metadata failed");
+    doThrow(failure).when(reviewProjectService).updateTerminologyMetadataNoTx(55L, command);
+
+    try {
+      reviewProjectService.updateTerminologyMetadata(55L, command);
+      fail("Expected updateTerminologyMetadata to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(

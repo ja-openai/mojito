@@ -69,7 +69,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.util.CollectionUtils;
 
@@ -3090,8 +3089,25 @@ public class ReviewProjectService {
     termIndexCandidateRepository.save(candidate);
   }
 
-  @Transactional
   public GetProjectDetailView.ReviewProjectTextUnit updateTerminologyMetadata(
+      Long reviewProjectTextUnitId, UpdateTerminologyMetadataCommand command) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      GetProjectDetailView.ReviewProjectTextUnit result =
+          updateTerminologyMetadataNoTx(reviewProjectTextUnitId, command);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  GetProjectDetailView.ReviewProjectTextUnit updateTerminologyMetadataNoTx(
       Long reviewProjectTextUnitId, UpdateTerminologyMetadataCommand command) {
     ReviewProjectTextUnit textUnit =
         reviewProjectTextUnitRepository
