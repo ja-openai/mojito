@@ -205,6 +205,53 @@ public class InMemoryAsyncJobStoreTest {
   }
 
   @Test
+  public void findByStatusAndRequeueFailedSupportOperatorReplay() {
+    AsyncJobId id =
+        inMemoryAsyncJobStore.enqueue(
+            "assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        inMemoryAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+    assertThat(
+            inMemoryAsyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", claimed.leaseToken(), null, "boom"))
+        .isTrue();
+
+    assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, 10))
+        .extracting(AsyncJobRecord::id)
+        .containsExactly(id);
+    assertThat(
+            inMemoryAsyncJobStore.requeueFailed(
+                "assetlocalize", id, Instant.now().plusMillis(50), "{\"step\":\"operator-fixed\"}"))
+        .isTrue();
+
+    AsyncJobRecord replayed = inMemoryAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(replayed.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(replayed.jobData()).isEqualTo("{\"step\":\"operator-fixed\"}");
+    assertThat(replayed.attemptCount()).isEqualTo(0);
+    assertThat(replayed.lastError()).isEqualTo("boom");
+    assertThat(replayed.workerId()).isNull();
+    assertThat(replayed.leaseToken()).isNull();
+    assertThat(replayed.leaseUntil()).isNull();
+    assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, 10))
+        .isEmpty();
+  }
+
+  @Test
+  public void requeueFailedIgnoresNonFailedJobs() {
+    AsyncJobId id =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
+
+    assertThat(inMemoryAsyncJobStore.requeueFailed("assetlocalize", id, Instant.now(), "{\"v\":2}"))
+        .isFalse();
+
+    AsyncJobRecord queued = inMemoryAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(queued.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(queued.jobData()).isEqualTo("{}");
+  }
+
+  @Test
   public void countByStatusReflectsQueueStateTransitions() {
     AsyncJobId queuedId =
         inMemoryAsyncJobStore.enqueue(

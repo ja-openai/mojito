@@ -271,6 +271,64 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void findByStatusAndRequeueFailedSupportOperatorReplay() {
+    AsyncJobId id =
+        jdbcAsyncJobStore.enqueue(
+            "assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        jdbcAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+    assertThat(
+            jdbcAsyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", claimed.leaseToken(), null, "boom"))
+        .isTrue();
+
+    assertThat(jdbcAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, 10))
+        .extracting(AsyncJobRecord::id)
+        .containsExactly(id);
+    assertThat(jdbcAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, 0)).isEmpty();
+
+    assertThat(
+            jdbcAsyncJobStore.requeueFailed(
+                "assetlocalize",
+                id,
+                Instant.now().minusSeconds(1),
+                "{\"step\":\"operator-fixed\"}"))
+        .isTrue();
+
+    AsyncJobRecord replayed = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(replayed.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(replayed.jobData()).isEqualTo("{\"step\":\"operator-fixed\"}");
+    assertThat(replayed.attemptCount()).isEqualTo(0);
+    assertThat(replayed.lastError()).isEqualTo("boom");
+    assertThat(replayed.workerId()).isNull();
+    assertThat(replayed.leaseToken()).isNull();
+    assertThat(replayed.leaseUntil()).isNull();
+    assertThat(jdbcAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, 10))
+        .isEmpty();
+
+    AsyncJobRecord replayClaim =
+        jdbcAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-b", Duration.ofSeconds(5))
+            .get(0);
+    assertThat(replayClaim.attemptCount()).isEqualTo(1);
+    assertThat(replayClaim.lastError()).isEqualTo("boom");
+  }
+
+  @Test
+  public void requeueFailedIgnoresNonFailedJobs() {
+    AsyncJobId id = jdbcAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
+
+    assertThat(jdbcAsyncJobStore.requeueFailed("assetlocalize", id, Instant.now(), "{\"v\":2}"))
+        .isFalse();
+
+    AsyncJobRecord queued = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(queued.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(queued.jobData()).isEqualTo("{}");
+  }
+
+  @Test
   public void invalidNumericIdsFailFast() {
     assertThrows(
         IllegalArgumentException.class,

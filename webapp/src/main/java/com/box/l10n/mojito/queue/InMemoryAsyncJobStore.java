@@ -226,6 +226,50 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   }
 
   @Override
+  public List<AsyncJobRecord> findByStatus(String queueName, AsyncJobStatus status, int limit) {
+    if (limit <= 0) {
+      return Collections.emptyList();
+    }
+
+    Objects.requireNonNull(queueName);
+    Objects.requireNonNull(status);
+    return withQueueLock(
+        queueName,
+        () ->
+            jobsById.values().stream()
+                .filter(job -> job.queueName().equals(queueName) && job.status() == status)
+                .sorted(
+                    Comparator.comparing(StoredAsyncJob::updatedDate)
+                        .thenComparingLong(StoredAsyncJob::idLong)
+                        .reversed())
+                .limit(limit)
+                .map(this::toAsyncJob)
+                .toList());
+  }
+
+  @Override
+  public boolean requeueFailed(
+      String queueName, AsyncJobId id, Instant availableAt, String jobData) {
+    Objects.requireNonNull(queueName);
+    Objects.requireNonNull(availableAt);
+
+    return withQueueLock(
+        queueName,
+        () -> {
+          StoredAsyncJob job = jobsById.get(id);
+          if (job == null
+              || !job.queueName().equals(queueName)
+              || job.status() != AsyncJobStatus.FAILED) {
+            return false;
+          }
+          Instant now = Instant.now();
+          String nextJobData = jobData == null ? job.jobData() : jobData;
+          jobsById.put(job.id(), job.withFailedReplay(availableAt, nextJobData, now));
+          return true;
+        });
+  }
+
+  @Override
   public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
     if (ids == null || ids.isEmpty()) {
       return Collections.emptyList();
@@ -387,6 +431,23 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           nextJobData,
           attemptCount,
           nextLastError,
+          createdDate,
+          now);
+    }
+
+    StoredAsyncJob withFailedReplay(Instant nextAvailableAt, String nextJobData, Instant now) {
+      return new StoredAsyncJob(
+          idLong,
+          id,
+          queueName,
+          AsyncJobStatus.QUEUED,
+          nextAvailableAt,
+          null,
+          null,
+          null,
+          nextJobData,
+          0,
+          lastError,
           createdDate,
           now);
     }

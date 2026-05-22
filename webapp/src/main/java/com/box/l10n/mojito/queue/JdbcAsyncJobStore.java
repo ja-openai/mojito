@@ -447,6 +447,82 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
 
   @Transactional(readOnly = true)
   @Override
+  public List<AsyncJobRecord> findByStatus(String queueName, AsyncJobStatus status, int limit) {
+    if (limit <= 0) {
+      return Collections.emptyList();
+    }
+
+    Objects.requireNonNull(queueName);
+    Objects.requireNonNull(status);
+    String sql =
+        """
+        SELECT
+          id,
+          queue_name,
+          status,
+          available_at,
+          lease_until,
+          worker_id,
+          lease_token,
+          job_data,
+          attempt_count,
+          last_error,
+          created_date,
+          updated_date
+        FROM async_job_queue
+        WHERE queue_name = :queueName
+          AND status = :status
+        ORDER BY updated_date DESC, id DESC
+        LIMIT :limit
+        """;
+    return namedParameterJdbcTemplate.query(
+        sql,
+        new MapSqlParameterSource()
+            .addValue("queueName", queueName)
+            .addValue("status", status.getDatabaseValue())
+            .addValue("limit", limit),
+        asyncJobRowMapper());
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Override
+  public boolean requeueFailed(
+      String queueName, AsyncJobId id, Instant availableAt, String jobData) {
+    Objects.requireNonNull(queueName);
+    Objects.requireNonNull(availableAt);
+    long parsedId = parseId(id);
+    Instant now = databaseNow();
+
+    String sql =
+        """
+        UPDATE async_job_queue
+        SET
+          status = :queuedStatus,
+          available_at = :availableAt,
+          lease_until = NULL,
+          worker_id = NULL,
+          lease_token = NULL,
+          job_data = COALESCE(:jobData, job_data),
+          attempt_count = 0,
+          updated_date = :updatedDate
+        WHERE id = :id
+          AND queue_name = :queueName
+          AND status = :failedStatus
+        """;
+    MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("queuedStatus", AsyncJobStatus.QUEUED.getDatabaseValue())
+            .addValue("availableAt", Timestamp.from(availableAt))
+            .addValue("jobData", jobData)
+            .addValue("updatedDate", Timestamp.from(now))
+            .addValue("id", parsedId)
+            .addValue("queueName", queueName)
+            .addValue("failedStatus", AsyncJobStatus.FAILED.getDatabaseValue());
+    return namedParameterJdbcTemplate.update(sql, params) == 1;
+  }
+
+  @Transactional(readOnly = true)
+  @Override
   public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
     if (ids == null || ids.isEmpty()) {
       return Collections.emptyList();

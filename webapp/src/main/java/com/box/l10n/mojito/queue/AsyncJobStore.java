@@ -109,6 +109,24 @@ public interface AsyncJobStore {
   /** Returns per-status counters for a queue at query time. */
   List<AsyncJobStatusCount> countByStatus(String queueName);
 
+  /**
+   * Lists recent jobs for a queue/status, primarily for operator inspection.
+   *
+   * <p>This is not used for claiming work; claim ordering remains backend-specific.
+   */
+  List<AsyncJobRecord> findByStatus(String queueName, AsyncJobStatus status, int limit);
+
+  /**
+   * Moves a terminal failed job back to queued state for operator-driven replay.
+   *
+   * <p>Replay resets the attempt budget and preserves the last error until the job succeeds or
+   * fails again, so operators can still see why it was replayed.
+   *
+   * @param jobData optional replacement payload; null keeps existing value
+   * @return true if a failed job was requeued, false if the job was not failed or did not exist
+   */
+  boolean requeueFailed(String queueName, AsyncJobId id, Instant availableAt, String jobData);
+
   /** Fetches jobs by id; missing ids are omitted from the returned list. */
   List<AsyncJobRecord> getByIds(List<AsyncJobId> ids);
 }

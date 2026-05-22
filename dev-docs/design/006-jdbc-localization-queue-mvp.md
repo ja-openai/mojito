@@ -93,6 +93,8 @@ Failure + Restart Semantics
   - each claim increments `attempt_count`
   - on retry, set `status=queued`, `available_at=<nextAttemptAt>` and persist `last_error`
   - when `attempt_count` reaches `max-attempts`, set `status=failed`, clear lease owner fields, and keep `last_error`
+  - operator replay can move a `failed` row back to `queued`, reset `attempt_count=0`, preserve
+    `last_error` for inspection, and optionally replace `job_data`
   - on terminal completion, set `status=done` and finalize pollable metadata separately
 
 Polling / Multi-Queue Design
@@ -196,6 +198,14 @@ Monitoring (MVP Required)
   - deadlocks / lock timeouts / claim exceptions
   - failed state transitions/fencing failures by transition
   - status metrics reporting failures
+
+Operator Controls
+- Store-level inspection supports listing recent jobs by `queue_name` and `status`.
+- Store-level replay only transitions `failed -> queued`; it does not touch running or completed
+  jobs, resets the attempt budget for a fresh retry cycle, and keeps the previous `last_error`
+  until success or the next failure.
+- A REST/admin surface can wrap these primitives later with authentication, audit logging, and
+  payload redaction.
 
 Rollout Plan
 1. Implement queue infra + assetlocalize-only integration behind feature flag.
