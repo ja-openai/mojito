@@ -63,10 +63,10 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
             "updated_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
     assertThat(postgresqlMigration)
         .contains("id BIGSERIAL PRIMARY KEY")
-        .contains("available_at TIMESTAMP(6) NOT NULL")
-        .contains("lease_until TIMESTAMP(6) NULL")
-        .contains("created_date TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
-        .contains("updated_date TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
+        .contains("available_at TIMESTAMPTZ(6) NOT NULL")
+        .contains("lease_until TIMESTAMPTZ(6) NULL")
+        .contains("created_date TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
+        .contains("updated_date TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
         .doesNotContain("ON UPDATE");
   }
 

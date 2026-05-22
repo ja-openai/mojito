@@ -170,11 +170,11 @@ PostgreSQL Portability
   for operator search/admin views, but not for the queue state machine where row locks, fencing
   predicates, and short transaction boundaries must remain explicit.
 - PostgreSQL queue DDL lives under `db/postgresql/migration/`, outside the default MySQL Flyway
-  location. Production rollout still needs Postgres Flyway plugin and location wiring for that
-  database family.
+  location. It uses `TIMESTAMPTZ(6)` for queue timing columns so leases and retry availability are
+  stored as absolute instants, independent of session timezone. Production rollout still needs
+  Postgres Flyway plugin and location wiring for that database family.
   - MySQL: `BIGINT AUTO_INCREMENT`, `DATETIME(6)`, optional `ON UPDATE CURRENT_TIMESTAMP(6)`.
-  - PostgreSQL: `BIGSERIAL` or identity column, `TIMESTAMP(6)`/`TIMESTAMPTZ`, no MySQL `ON UPDATE`
-    clause.
+  - PostgreSQL: `BIGSERIAL` or identity column, `TIMESTAMPTZ(6)`, no MySQL `ON UPDATE` clause.
 - Keep the production Java implementation as "standard core + a few native queries"; that is the
   smallest path that preserves correctness and gives us a Postgres migration seam.
 
