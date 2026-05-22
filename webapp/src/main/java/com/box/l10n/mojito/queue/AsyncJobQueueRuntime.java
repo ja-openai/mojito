@@ -690,14 +690,7 @@ class AsyncJobQueueRuntime {
   }
 
   private long applyRetryDelayJitter(long delayMs) {
-    int jitterPercent = queueSettings.getRetryJitterPercent();
-    if (jitterPercent <= 0) {
-      return delayMs;
-    }
-
-    long jitterRangeMs = Math.max(1, delayMs * jitterPercent / 100);
-    long jitter = ThreadLocalRandom.current().nextLong(-jitterRangeMs, jitterRangeMs + 1);
-    return Math.max(0, delayMs + jitter);
+    return applyRandomDelayJitter(delayMs, queueSettings.getRetryJitterPercent());
   }
 
   private void recordTransitionFailure(String transition) {
@@ -795,14 +788,40 @@ class AsyncJobQueueRuntime {
   }
 
   private long applyRandomPollDelayJitter(long delayMs) {
-    int jitterPercent = queueSettings.getPollJitterPercent();
-    if (jitterPercent <= 0) {
+    return applyRandomDelayJitter(delayMs, queueSettings.getPollJitterPercent());
+  }
+
+  private long applyRandomDelayJitter(long delayMs, int jitterPercent) {
+    if (jitterPercent <= 0 || delayMs <= 0) {
       return delayMs;
     }
 
-    long jitterRangeMs = Math.max(1, delayMs * jitterPercent / 100);
+    long jitterRangeMs = jitterRangeMs(delayMs, jitterPercent);
     long jitter = ThreadLocalRandom.current().nextLong(-jitterRangeMs, jitterRangeMs + 1);
-    return Math.max(0, delayMs + jitter);
+    return addJitter(delayMs, jitter);
+  }
+
+  static long jitterRangeMs(long delayMs, int jitterPercent) {
+    if (jitterPercent <= 0 || delayMs <= 0) {
+      return 0;
+    }
+    long wholeHundreds = delayMs / 100;
+    long remainingHundredths = delayMs % 100;
+    long jitterRangeMs = wholeHundreds * jitterPercent + remainingHundredths * jitterPercent / 100;
+    return Math.max(1, Math.min(Long.MAX_VALUE - 1, jitterRangeMs));
+  }
+
+  static long addJitter(long delayMs, long jitterMs) {
+    if (jitterMs > 0 && delayMs > Long.MAX_VALUE - jitterMs) {
+      return Long.MAX_VALUE;
+    }
+    if (jitterMs < 0) {
+      long reduction = jitterMs == Long.MIN_VALUE ? Long.MAX_VALUE : -jitterMs;
+      if (delayMs <= reduction) {
+        return 0;
+      }
+    }
+    return delayMs + jitterMs;
   }
 
   private void validateQueueSettings(AsyncJobQueueProperties.QueueSettings queueSettings) {

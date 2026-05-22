@@ -1876,6 +1876,22 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void delayJitterMathDoesNotOverflow() {
+    assertThat(AsyncJobQueueRuntime.jitterRangeMs(100, 20)).isEqualTo(20);
+    assertThat(AsyncJobQueueRuntime.jitterRangeMs(1, 100)).isEqualTo(1);
+    assertThat(AsyncJobQueueRuntime.jitterRangeMs(Long.MAX_VALUE, 100))
+        .isEqualTo(Long.MAX_VALUE - 1);
+    long largeDelayMs = Long.MAX_VALUE - 7;
+    assertThat(AsyncJobQueueRuntime.jitterRangeMs(largeDelayMs, 3))
+        .isEqualTo(largeDelayMs / 100 * 3 + largeDelayMs % 100 * 3 / 100);
+
+    assertThat(AsyncJobQueueRuntime.addJitter(Long.MAX_VALUE, 1)).isEqualTo(Long.MAX_VALUE);
+    assertThat(AsyncJobQueueRuntime.addJitter(Long.MAX_VALUE - 5, 10)).isEqualTo(Long.MAX_VALUE);
+    assertThat(AsyncJobQueueRuntime.addJitter(5, -10)).isZero();
+    assertThat(AsyncJobQueueRuntime.addJitter(100, -25)).isEqualTo(75);
+  }
+
+  @Test
   public void retrySettingsMustBePositiveAndBounded() {
     AsyncJobQueueProperties.QueueSettings queueSettings =
         new AsyncJobQueueProperties.QueueSettings();
