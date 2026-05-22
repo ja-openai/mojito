@@ -174,6 +174,40 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void pollRecordsLeaseExpiredReclaims() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    CountDownLatch processed = new CountDownLatch(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob(2, true)));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenAnswer(
+            invocation -> {
+              processed.countDown();
+              return true;
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(processed.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.leaseExpiredReclaimed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void transitionFailureCounterRecordsFailedDoneTransition() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
@@ -690,6 +724,10 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   private AsyncJobRecord claimedJob(int attemptCount) {
+    return claimedJob(attemptCount, false);
+  }
+
+  private AsyncJobRecord claimedJob(int attemptCount, boolean leaseReclaimed) {
     Instant now = Instant.now();
     return new AsyncJobRecord(
         new AsyncJobId("1"),
@@ -703,7 +741,8 @@ public class AsyncJobQueueRuntimeTest {
         attemptCount,
         null,
         now.minusSeconds(10),
-        now);
+        now,
+        leaseReclaimed);
   }
 
   private void waitForStatusCount(

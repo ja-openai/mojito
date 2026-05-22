@@ -88,6 +88,7 @@ public class JdbcAsyncJobStoreTest {
     assertThat(claimed).allMatch(job -> job.attemptCount() == 1);
     assertThat(claimed).allMatch(job -> job.leaseToken() != null && !job.leaseToken().isBlank());
     assertThat(claimed).allMatch(job -> job.leaseUntil().isAfter(job.updatedDate()));
+    assertThat(claimed).allMatch(job -> !job.leaseReclaimed());
 
     assertThat(jdbcAsyncJobStore.countByStatus("assetlocalize"))
         .containsExactlyInAnyOrder(
@@ -137,6 +138,7 @@ public class JdbcAsyncJobStoreTest {
     assertThat(reclaimed.workerId()).isEqualTo("worker-b");
     assertThat(reclaimed.leaseToken()).isNotEqualTo(claimed.leaseToken());
     assertThat(reclaimed.attemptCount()).isEqualTo(2);
+    assertThat(reclaimed.leaseReclaimed()).isTrue();
   }
 
   @Test

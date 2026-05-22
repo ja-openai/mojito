@@ -6,7 +6,7 @@ import java.util.Locale;
 enum AsyncJobQueueJdbcDialect {
   MYSQL(
       """
-      SELECT id
+      SELECT id, status
       FROM async_job_queue
       WHERE queue_name = :queueName
         AND (
@@ -21,7 +21,7 @@ enum AsyncJobQueueJdbcDialect {
 
   POSTGRESQL(
       """
-      SELECT id
+      SELECT id, status
       FROM async_job_queue
       WHERE queue_name = :queueName
         AND (
@@ -36,7 +36,7 @@ enum AsyncJobQueueJdbcDialect {
 
   HSQL(
       """
-      SELECT id
+      SELECT id, status
       FROM async_job_queue
       WHERE queue_name = :queueName
         AND (

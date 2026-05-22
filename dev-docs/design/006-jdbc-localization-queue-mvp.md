@@ -181,7 +181,8 @@ Test Coverage
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
   handler-only queues, and non-fatal reporting failures.
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
-  replay, and status counts against an embedded datasource using the `hsql` dialect.
+  replay, lease-reclaim markers, and status counts against an embedded datasource using the `hsql`
+  dialect.
 - Dialect tests cover MySQL/PostgreSQL `FOR UPDATE SKIP LOCKED` claim SQL and the HSQL embedded
   fallback.
 - Load/perf smoke coverage processes hundreds of jobs through the runtime and asserts bounded
@@ -195,6 +196,8 @@ Monitoring (MVP Required)
   - executor active/queued by queue
 - Counters:
   - claimed, completed, retried, execution-failed, lease-expired-reclaimed, poll-skipped-saturated
+  - `asyncJobQueue.leaseExpiredReclaimed` is emitted from claim results marked by the store when a
+    previously running row is recovered after lease expiry
 - Timers:
   - queue wait latency (`claimed_at - created_at`)
   - processing latency (`finished_at - claimed_at`)

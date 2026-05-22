@@ -14,4 +14,23 @@ public record AsyncJobRecord(
     int attemptCount,
     String lastError,
     Instant createdDate,
-    Instant updatedDate) {}
+    Instant updatedDate,
+    boolean leaseReclaimed) {
+
+  public AsyncJobRecord withLeaseReclaimed(boolean leaseReclaimed) {
+    return new AsyncJobRecord(
+        id,
+        queueName,
+        status,
+        availableAt,
+        leaseUntil,
+        workerId,
+        leaseToken,
+        jobData,
+        attemptCount,
+        lastError,
+        createdDate,
+        updatedDate,
+        leaseReclaimed);
+  }
+}

@@ -169,6 +169,7 @@ class AsyncJobQueueRuntime {
     meterRegistry
         .counter("asyncJobQueue.claimed", "queueName", queueName)
         .increment(claimedJobs.size());
+    recordLeaseExpiredReclaims(claimedJobs);
     recordQueueWaitLatency(claimedJobs);
 
     for (AsyncJobRecord claimedJob : claimedJobs) {
@@ -471,6 +472,15 @@ class AsyncJobQueueRuntime {
             .timer("asyncJobQueue.queueWait.latency", "queueName", queueName)
             .record(queueWaitLatency);
       }
+    }
+  }
+
+  private void recordLeaseExpiredReclaims(List<AsyncJobRecord> claimedJobs) {
+    long reclaimedCount = claimedJobs.stream().filter(AsyncJobRecord::leaseReclaimed).count();
+    if (reclaimedCount > 0) {
+      meterRegistry
+          .counter("asyncJobQueue.leaseExpiredReclaimed", "queueName", queueName)
+          .increment(reclaimedCount);
     }
   }
 

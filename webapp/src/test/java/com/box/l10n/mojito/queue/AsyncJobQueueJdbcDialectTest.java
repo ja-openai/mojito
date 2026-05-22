@@ -28,9 +28,11 @@ public class AsyncJobQueueJdbcDialectTest {
   @Test
   public void mysqlAndPostgresqlUseSkipLockedClaimSql() {
     assertThat(AsyncJobQueueJdbcDialect.MYSQL.claimNextJobsSql())
+        .contains("SELECT id, status")
         .contains("LIMIT :limit")
         .contains("FOR UPDATE SKIP LOCKED");
     assertThat(AsyncJobQueueJdbcDialect.POSTGRESQL.claimNextJobsSql())
+        .contains("SELECT id, status")
         .contains("LIMIT :limit")
         .contains("FOR UPDATE SKIP LOCKED");
   }
@@ -38,6 +40,7 @@ public class AsyncJobQueueJdbcDialectTest {
   @Test
   public void hsqlDialectDropsSkipLockedForEmbeddedTests() {
     assertThat(AsyncJobQueueJdbcDialect.HSQL.claimNextJobsSql())
+        .contains("SELECT id, status")
         .contains("LIMIT :limit")
         .doesNotContain("FOR UPDATE SKIP LOCKED");
     assertThat(AsyncJobQueueJdbcDialect.HSQL.currentTimestampSql())

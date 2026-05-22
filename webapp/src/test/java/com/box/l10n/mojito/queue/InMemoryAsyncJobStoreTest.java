@@ -30,6 +30,7 @@ public class InMemoryAsyncJobStoreTest {
     assertThat(claimed).allMatch(job -> job.status() == AsyncJobStatus.RUNNING);
     assertThat(claimed).allMatch(job -> "worker-a".equals(job.workerId()));
     assertThat(claimed).allMatch(job -> job.leaseToken() != null && !job.leaseToken().isBlank());
+    assertThat(claimed).allMatch(job -> !job.leaseReclaimed());
   }
 
   @Test
@@ -57,6 +58,7 @@ public class InMemoryAsyncJobStoreTest {
     assertThat(reclaimed.id()).isEqualTo(id);
     assertThat(reclaimed.workerId()).isEqualTo("worker-b");
     assertThat(reclaimed.leaseToken()).isNotEqualTo(firstClaim.leaseToken());
+    assertThat(reclaimed.leaseReclaimed()).isTrue();
   }
 
   @Test

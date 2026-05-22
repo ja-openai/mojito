@@ -147,10 +147,14 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
             .addValue("now", Timestamp.from(now))
             .addValue("limit", limit);
 
-    List<Long> ids =
+    List<ClaimCandidate> claimCandidates =
         namedParameterJdbcTemplate.query(
-            claimNextJobsSql, selectParams, (rs, rowNum) -> rs.getLong("id"));
-    if (ids.isEmpty()) {
+            claimNextJobsSql,
+            selectParams,
+            (rs, rowNum) ->
+                new ClaimCandidate(
+                    rs.getLong("id"), AsyncJobStatus.fromDatabaseValue(rs.getString("status"))));
+    if (claimCandidates.isEmpty()) {
       return Collections.emptyList();
     }
 
@@ -169,8 +173,9 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         """;
 
     Map<AsyncJobId, String> leaseTokenById = new LinkedHashMap<>();
-    for (Long id : ids) {
-      AsyncJobId asyncJobId = new AsyncJobId(String.valueOf(id));
+    Map<AsyncJobId, Boolean> leaseReclaimedById = new LinkedHashMap<>();
+    for (ClaimCandidate claimCandidate : claimCandidates) {
+      AsyncJobId asyncJobId = new AsyncJobId(String.valueOf(claimCandidate.id()));
       String leaseToken = UUID.randomUUID().toString();
 
       MapSqlParameterSource claimParams =
@@ -180,12 +185,13 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
               .addValue("leaseToken", leaseToken)
               .addValue("leaseUntil", Timestamp.from(leaseUntil))
               .addValue("updatedDate", Timestamp.from(now))
-              .addValue("id", id)
+              .addValue("id", claimCandidate.id())
               .addValue("queueName", queueName);
 
       int updated = namedParameterJdbcTemplate.update(claimSql, claimParams);
       if (updated == 1) {
         leaseTokenById.put(asyncJobId, leaseToken);
+        leaseReclaimedById.put(asyncJobId, claimCandidate.status() == AsyncJobStatus.RUNNING);
       }
     }
 
@@ -201,7 +207,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     for (Map.Entry<AsyncJobId, String> claimEntry : leaseTokenById.entrySet()) {
       AsyncJobRecord job = claimedJobsById.get(claimEntry.getKey());
       if (job != null) {
-        claimedJobs.add(job);
+        claimedJobs.add(
+            job.withLeaseReclaimed(Boolean.TRUE.equals(leaseReclaimedById.get(job.id()))));
       }
     }
     return claimedJobs;
@@ -568,7 +575,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
             resultSet.getInt("attempt_count"),
             resultSet.getString("last_error"),
             toInstant(resultSet, "created_date"),
-            toInstant(resultSet, "updated_date"));
+            toInstant(resultSet, "updated_date"),
+            false);
   }
 
   private Instant toInstant(ResultSet resultSet, String columnName) throws SQLException {
@@ -609,4 +617,6 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       throw new IllegalArgumentException("leaseToken must not be blank");
     }
   }
+
+  private record ClaimCandidate(long id, AsyncJobStatus status) {}
 }

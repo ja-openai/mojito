@@ -104,7 +104,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
             StoredAsyncJob updated =
                 job.withClaim(AsyncJobStatus.RUNNING, workerId, leaseToken, leaseUntil, now);
             jobsById.put(job.id(), updated);
-            claimedJobs.add(toAsyncJob(updated));
+            claimedJobs.add(toAsyncJob(updated, job.status() == AsyncJobStatus.RUNNING));
           }
           return claimedJobs;
         });
@@ -307,6 +307,10 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   }
 
   private AsyncJobRecord toAsyncJob(StoredAsyncJob job) {
+    return toAsyncJob(job, false);
+  }
+
+  private AsyncJobRecord toAsyncJob(StoredAsyncJob job, boolean leaseReclaimed) {
     return new AsyncJobRecord(
         job.id(),
         job.queueName(),
@@ -319,7 +323,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
         job.attemptCount(),
         job.lastError(),
         job.createdDate(),
-        job.updatedDate());
+        job.updatedDate(),
+        leaseReclaimed);
   }
 
   private void validateLeaseToken(String leaseToken) {
