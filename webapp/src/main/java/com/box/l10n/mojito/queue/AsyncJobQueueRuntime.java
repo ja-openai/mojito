@@ -448,10 +448,9 @@ class AsyncJobQueueRuntime {
         handleHeartbeatScheduleFailure(asyncJobRecord, e);
         return;
       }
-      AsyncJobHandlerResult asyncJobHandlerResult = asyncJobHandler.process(asyncJobRecord);
-      if (asyncJobHandlerResult == null) {
-        asyncJobHandlerResult = AsyncJobHandlerResult.done();
-      }
+      AsyncJobHandlerResult asyncJobHandlerResult =
+          Objects.requireNonNull(
+              asyncJobHandler.process(asyncJobRecord), "AsyncJobHandlerResult must not be null");
       applyHandlerResult(asyncJobRecord, asyncJobHandlerResult);
     } catch (Exception e) {
       handleProcessingFailure(asyncJobRecord, e);
