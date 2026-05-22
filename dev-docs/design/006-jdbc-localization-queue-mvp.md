@@ -169,8 +169,9 @@ PostgreSQL Portability
 - Do not put the hot claim/finalize path behind generic Hibernate entity updates. Hibernate is fine
   for operator search/admin views, but not for the queue state machine where row locks, fencing
   predicates, and short transaction boundaries must remain explicit.
-- PostgreSQL queue DDL lives under `db/migration/postgresql/`; production rollout still needs Flyway
-  location wiring for that database family.
+- PostgreSQL queue DDL lives under `db/postgresql/migration/`, outside the default MySQL Flyway
+  location. Production rollout still needs Postgres Flyway plugin and location wiring for that
+  database family.
   - MySQL: `BIGINT AUTO_INCREMENT`, `DATETIME(6)`, optional `ON UPDATE CURRENT_TIMESTAMP(6)`.
   - PostgreSQL: `BIGSERIAL` or identity column, `TIMESTAMP(6)`/`TIMESTAMPTZ`, no MySQL `ON UPDATE`
     clause.

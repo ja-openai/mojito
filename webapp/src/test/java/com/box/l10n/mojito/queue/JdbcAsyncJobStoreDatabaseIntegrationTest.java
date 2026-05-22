@@ -3,6 +3,8 @@ package com.box.l10n.mojito.queue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assume.assumeTrue;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.time.Duration;
 import java.time.Instant;
@@ -33,6 +35,16 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
   private static final String ENABLE_PROPERTY = "mojito.asyncJobQueue.testcontainers";
 
   @Test
+  public void postgresqlMigrationIsOutsideDefaultMysqlFlywayLocation() {
+    assertThat(
+            Files.exists(
+                Path.of("src/main/resources/db/migration/postgresql/V92__Async_Job_Queue.sql")))
+        .isFalse();
+    assertThat(new ClassPathResource("db/postgresql/migration/V92__Async_Job_Queue.sql").exists())
+        .isTrue();
+  }
+
+  @Test
   public void mysqlStoreContractRunsAgainstRealDatabase() throws Exception {
     assumeContainerTestsEnabled();
     try (MySQLContainer<?> container = new MySQLContainer<>("mysql:8.4")) {
@@ -48,7 +60,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
       runStoreContract(
           container,
           AsyncJobQueueJdbcDialect.POSTGRESQL,
-          "db/migration/postgresql/V92__Async_Job_Queue.sql");
+          "db/postgresql/migration/V92__Async_Job_Queue.sql");
     }
   }
 
