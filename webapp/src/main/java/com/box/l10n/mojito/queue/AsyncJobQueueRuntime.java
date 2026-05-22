@@ -811,6 +811,9 @@ class AsyncJobQueueRuntime {
     if (queueSettings.getMaxPollIntervalMs() < queueSettings.getPollIntervalMs()) {
       throw new IllegalArgumentException("maxPollIntervalMs must be >= pollIntervalMs");
     }
+    if (queueSettings.getHeartbeatIntervalMs() < 0) {
+      throw new IllegalArgumentException("heartbeatIntervalMs must be >= 0");
+    }
     if (queueSettings.getHeartbeatIntervalMs() >= queueSettings.getLeaseDurationMs()
         && queueSettings.getHeartbeatIntervalMs() > 0) {
       throw new IllegalArgumentException("heartbeatIntervalMs must be < leaseDurationMs");

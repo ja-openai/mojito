@@ -1649,6 +1649,31 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void coreRuntimeSettingsMustBePositiveAndConsistent() {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setClaimBatchSize(0);
+    assertInvalidQueueSettings(queueSettings);
+
+    queueSettings = new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setMaxConcurrency(0);
+    assertInvalidQueueSettings(queueSettings);
+
+    queueSettings = new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setLeaseDurationMs(0);
+    assertInvalidQueueSettings(queueSettings);
+
+    queueSettings = new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setPollIntervalMs(1_000);
+    queueSettings.setMaxPollIntervalMs(999);
+    assertInvalidQueueSettings(queueSettings);
+
+    queueSettings = new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setHeartbeatIntervalMs(-1);
+    assertInvalidQueueSettings(queueSettings);
+  }
+
+  @Test
   public void pollIntervalsMustBePositive() {
     AsyncJobQueueProperties.QueueSettings queueSettings =
         new AsyncJobQueueProperties.QueueSettings();
@@ -1850,6 +1875,18 @@ public class AsyncJobQueueRuntimeTest {
     threadPoolTaskExecutor.setQueueCapacity(0);
     threadPoolTaskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
     threadPoolTaskExecutor.initialize();
+  }
+
+  private void assertInvalidQueueSettings(AsyncJobQueueProperties.QueueSettings queueSettings) {
+    org.junit.Assert.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            runtime(
+                new InMemoryAsyncJobStore(),
+                queueSettings,
+                handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+                mock(TaskScheduler.class),
+                executor));
   }
 
   private AsyncJobRecord claimedJob(int attemptCount) {
