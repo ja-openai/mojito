@@ -161,7 +161,14 @@ public class JdbcAsyncJobStoreTest {
         jdbcAsyncJobStore.enqueue("assetlocalize", "{\"v\":1}", Instant.now().minusSeconds(1));
     JdbcAsyncJobStore racingStore =
         new JdbcAsyncJobStore(
-            new ClaimRaceNamedParameterJdbcTemplate(jdbcTemplate.getDataSource(), id),
+            new ClaimRaceNamedParameterJdbcTemplate(
+                jdbcTemplate.getDataSource(),
+                id,
+                """
+                UPDATE async_job_queue
+                SET status = 'done', updated_date = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """),
             AsyncJobQueueJdbcDialect.HSQL);
 
     List<AsyncJobRecord> claimed =
@@ -174,6 +181,39 @@ public class JdbcAsyncJobStoreTest {
     assertThat(changedJob.workerId()).isNull();
     assertThat(changedJob.leaseToken()).isNull();
     assertThat(changedJob.leaseUntil()).isNull();
+  }
+
+  @Test
+  public void claimUpdateRequiresSelectedStateAfterCandidateSelection() {
+    AsyncJobId id =
+        jdbcAsyncJobStore.enqueue("assetlocalize", "{\"v\":1}", Instant.now().minusSeconds(1));
+    JdbcAsyncJobStore racingStore =
+        new JdbcAsyncJobStore(
+            new ClaimRaceNamedParameterJdbcTemplate(
+                jdbcTemplate.getDataSource(),
+                id,
+                """
+                UPDATE async_job_queue
+                SET
+                  status = 'running',
+                  lease_until = TIMESTAMP '2000-01-01 00:00:00',
+                  worker_id = 'other-worker',
+                  lease_token = 'other-token',
+                  updated_date = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """),
+            AsyncJobQueueJdbcDialect.HSQL);
+
+    List<AsyncJobRecord> claimed =
+        racingStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5));
+
+    assertThat(claimed).isEmpty();
+    AsyncJobRecord changedJob = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(changedJob.status()).isEqualTo(AsyncJobStatus.RUNNING);
+    assertThat(changedJob.attemptCount()).isZero();
+    assertThat(changedJob.workerId()).isEqualTo("other-worker");
+    assertThat(changedJob.leaseToken()).isEqualTo("other-token");
+    assertThat(changedJob.leaseUntil()).isBefore(Instant.now());
   }
 
   @Test
@@ -679,12 +719,14 @@ public class JdbcAsyncJobStoreTest {
 
     private final JdbcTemplate jdbcTemplate;
     private final AsyncJobId id;
+    private final String raceSql;
     private final AtomicBoolean raceInjected = new AtomicBoolean();
 
-    ClaimRaceNamedParameterJdbcTemplate(DataSource dataSource, AsyncJobId id) {
+    ClaimRaceNamedParameterJdbcTemplate(DataSource dataSource, AsyncJobId id, String raceSql) {
       super(dataSource);
       this.jdbcTemplate = new JdbcTemplate(dataSource);
       this.id = id;
+      this.raceSql = raceSql;
     }
 
     @Override
@@ -693,13 +735,7 @@ public class JdbcAsyncJobStoreTest {
       if (!rows.isEmpty()
           && sql.equals(AsyncJobQueueJdbcDialect.HSQL.claimNextJobsSql())
           && raceInjected.compareAndSet(false, true)) {
-        jdbcTemplate.update(
-            """
-            UPDATE async_job_queue
-            SET status = 'done', updated_date = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            Long.parseLong(id.value()));
+        jdbcTemplate.update(raceSql, Long.parseLong(id.value()));
       }
       return rows;
     }
