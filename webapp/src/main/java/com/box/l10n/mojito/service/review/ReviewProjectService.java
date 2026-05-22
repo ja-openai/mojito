@@ -2474,8 +2474,23 @@ public class ReviewProjectService {
     return projects.size();
   }
 
-  @Transactional
   public int adminRecomputeRequestDecidedCounts(Long requestId) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      int result = adminRecomputeRequestDecidedCountsNoTx(requestId);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  int adminRecomputeRequestDecidedCountsNoTx(Long requestId) {
     requireAdmin();
     if (requestId == null) {
       throw new IllegalArgumentException("requestId is required");
