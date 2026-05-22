@@ -75,6 +75,33 @@ public class AsyncJobQueueStatusMetricsReporterTest {
   }
 
   @Test
+  public void reportStatusCountsContinuesAfterOneQueueFails() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.countByStatus("broken"))
+        .thenThrow(new IllegalStateException("database unavailable"));
+    when(asyncJobStore.countByStatus("assetlocalize"))
+        .thenReturn(List.of(new AsyncJobStatusCount(AsyncJobStatus.QUEUED, 7)));
+
+    AsyncJobQueueStatusMetricsReporter reporter =
+        new AsyncJobQueueStatusMetricsReporter(
+            asyncJobStore, queueProperties("broken", "assetlocalize"), List.of(), meterRegistry);
+
+    reporter.reportStatusCounts();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.statusMetrics.failed")
+                .tag("queueName", "broken")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 7);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.RUNNING, 0);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.DONE, 0);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.FAILED, 0);
+  }
+
+  @Test
   public void reportStatusCountsHandlesNullConfiguredQueues() {
     AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
     asyncJobQueueProperties.setQueues(null);
@@ -105,9 +132,13 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertThat(exception).hasMessageContaining("queueName must not be blank");
   }
 
-  private AsyncJobQueueProperties queueProperties(String queueName) {
+  private AsyncJobQueueProperties queueProperties(String... queueNames) {
     AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
-    asyncJobQueueProperties.getQueues().put(queueName, new AsyncJobQueueProperties.QueueSettings());
+    for (String queueName : queueNames) {
+      asyncJobQueueProperties
+          .getQueues()
+          .put(queueName, new AsyncJobQueueProperties.QueueSettings());
+    }
     return asyncJobQueueProperties;
   }
 
