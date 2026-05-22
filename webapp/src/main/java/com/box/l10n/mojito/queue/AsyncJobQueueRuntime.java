@@ -3,7 +3,6 @@ package com.box.l10n.mojito.queue;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -265,8 +264,7 @@ class AsyncJobQueueRuntime {
     try {
       scheduledFuture =
           taskScheduler.schedule(
-              () -> runScheduledPoll(pollSequence),
-              Date.from(Instant.now().plusMillis(boundedDelayMs)));
+              () -> runScheduledPoll(pollSequence), startDateAfterMillis(boundedDelayMs));
       if (scheduledFuture == null) {
         throw new IllegalStateException("TaskScheduler returned null ScheduledFuture");
       }
@@ -716,7 +714,7 @@ class AsyncJobQueueRuntime {
     ScheduledFuture<?> scheduledFuture =
         taskScheduler.scheduleAtFixedRate(
             () -> heartbeat(asyncJobRecord),
-            Date.from(Instant.now().plusMillis(queueSettings.getHeartbeatIntervalMs())),
+            startDateAfterMillis(queueSettings.getHeartbeatIntervalMs()),
             queueSettings.getHeartbeatIntervalMs());
     if (scheduledFuture == null) {
       throw new IllegalStateException("TaskScheduler returned null heartbeat ScheduledFuture");
@@ -822,6 +820,15 @@ class AsyncJobQueueRuntime {
       }
     }
     return delayMs + jitterMs;
+  }
+
+  static Date startDateAfterMillis(long delayMs) {
+    long boundedDelayMs = Math.max(0, delayMs);
+    long nowMs = System.currentTimeMillis();
+    if (boundedDelayMs > Long.MAX_VALUE - nowMs) {
+      return new Date(Long.MAX_VALUE);
+    }
+    return new Date(nowMs + boundedDelayMs);
   }
 
   private void validateQueueSettings(AsyncJobQueueProperties.QueueSettings queueSettings) {

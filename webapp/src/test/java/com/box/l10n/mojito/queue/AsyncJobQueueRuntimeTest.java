@@ -1658,6 +1658,35 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void scheduledBackoffSaturatesExtremeDelayDate() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of());
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(Long.MAX_VALUE / 2 + 1, Long.MAX_VALUE, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    taskScheduler.scheduledTasks().get(0).run();
+
+    assertThat(taskScheduler.scheduledStartTimes()).hasSize(2);
+    assertThat(taskScheduler.scheduledStartTimes().get(1).getTime()).isEqualTo(Long.MAX_VALUE);
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.poll.schedule.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+  }
+
+  @Test
   public void scheduledPollRecordsFailureAndContinuesAfterClaimException() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
