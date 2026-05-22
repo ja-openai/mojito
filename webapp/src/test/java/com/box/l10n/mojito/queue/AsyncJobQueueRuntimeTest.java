@@ -506,6 +506,66 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void heartbeatExceptionRecordsCounterWithoutInterruptingJob() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch started = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    CountDownLatch completed = new CountDownLatch(1);
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    Runnable[] heartbeatRunnable = new Runnable[1];
+    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
+        .thenAnswer(
+            invocation -> {
+              heartbeatRunnable[0] = invocation.getArgument(0);
+              return new DummyScheduledFuture();
+            });
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.heartbeat(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any(Duration.class)))
+        .thenThrow(new IllegalStateException("database unavailable"));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenAnswer(
+            invocation -> {
+              completed.countDown();
+              return true;
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 200, 25),
+            handler(
+                asyncJobRecord -> {
+                  started.countDown();
+                  release.await(5, TimeUnit.SECONDS);
+                  return AsyncJobHandlerResult.done();
+                }),
+            taskScheduler,
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+    assertThat(started.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(heartbeatRunnable[0]).isNotNull();
+
+    heartbeatRunnable[0].run();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.heartbeat.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+
+    release.countDown();
+    assertThat(completed.await(2, TimeUnit.SECONDS)).isTrue();
+  }
+
+  @Test
   public void handlerFailuresStopRetryingAfterMaxAttempts() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =

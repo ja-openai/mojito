@@ -447,15 +447,22 @@ class AsyncJobQueueRuntime {
   }
 
   private void heartbeat(AsyncJobRecord asyncJobRecord) {
-    boolean renewed =
-        asyncJobStore.heartbeat(
-            queueName,
-            asyncJobRecord.id(),
-            asyncJobRecord.workerId(),
-            asyncJobRecord.leaseToken(),
-            java.time.Duration.ofMillis(queueSettings.getLeaseDurationMs()));
-    if (!renewed) {
-      logger.warn("Failed to renew heartbeat for queue {}, job {}", queueName, asyncJobRecord.id());
+    try {
+      boolean renewed =
+          asyncJobStore.heartbeat(
+              queueName,
+              asyncJobRecord.id(),
+              asyncJobRecord.workerId(),
+              asyncJobRecord.leaseToken(),
+              java.time.Duration.ofMillis(queueSettings.getLeaseDurationMs()));
+      if (!renewed) {
+        logger.warn(
+            "Failed to renew heartbeat for queue {}, job {}", queueName, asyncJobRecord.id());
+        meterRegistry.counter("asyncJobQueue.heartbeat.failed", "queueName", queueName).increment();
+      }
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to renew heartbeat for queue {}, job {}", queueName, asyncJobRecord.id(), e);
       meterRegistry.counter("asyncJobQueue.heartbeat.failed", "queueName", queueName).increment();
     }
   }
