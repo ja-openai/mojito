@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongUnaryOperator;
@@ -142,12 +143,20 @@ class AsyncJobQueueRuntime {
     }
 
     int claimLimit = Math.min(queueSettings.getClaimBatchSize(), freeCapacity);
-    List<AsyncJobRecord> claimedJobs =
-        asyncJobStore.claimNextJobs(
-            queueName,
-            claimLimit,
-            workerId,
-            java.time.Duration.ofMillis(queueSettings.getLeaseDurationMs()));
+    long claimStartNanos = System.nanoTime();
+    List<AsyncJobRecord> claimedJobs;
+    try {
+      claimedJobs =
+          asyncJobStore.claimNextJobs(
+              queueName,
+              claimLimit,
+              workerId,
+              java.time.Duration.ofMillis(queueSettings.getLeaseDurationMs()));
+    } finally {
+      meterRegistry
+          .timer("asyncJobQueue.claim.latency", "queueName", queueName)
+          .record(System.nanoTime() - claimStartNanos, TimeUnit.NANOSECONDS);
+    }
 
     if (claimedJobs.isEmpty()) {
       currentPollDelayMs = nextEmptyPollDelayMs();
@@ -159,6 +168,7 @@ class AsyncJobQueueRuntime {
     meterRegistry
         .counter("asyncJobQueue.claimed", "queueName", queueName)
         .increment(claimedJobs.size());
+    recordQueueWaitLatency(claimedJobs);
 
     for (AsyncJobRecord claimedJob : claimedJobs) {
       submitClaimedJob(claimedJob);
@@ -244,6 +254,7 @@ class AsyncJobQueueRuntime {
   }
 
   private void processClaimedJob(AsyncJobRecord asyncJobRecord) {
+    long processingStartNanos = System.nanoTime();
     ScheduledFuture<?> heartbeatFuture = scheduleHeartbeat(asyncJobRecord);
     try {
       AsyncJobHandlerResult asyncJobHandlerResult = asyncJobHandler.process(asyncJobRecord);
@@ -258,6 +269,9 @@ class AsyncJobQueueRuntime {
         heartbeatFuture.cancel(false);
       }
       inFlightCount.decrementAndGet();
+      meterRegistry
+          .timer("asyncJobQueue.processing.latency", "queueName", queueName)
+          .record(System.nanoTime() - processingStartNanos, TimeUnit.NANOSECONDS);
       triggerPollNow();
     }
   }
@@ -394,6 +408,21 @@ class AsyncJobQueueRuntime {
     if (!renewed) {
       logger.warn("Failed to renew heartbeat for queue {}, job {}", queueName, asyncJobRecord.id());
       meterRegistry.counter("asyncJobQueue.heartbeat.failed", "queueName", queueName).increment();
+    }
+  }
+
+  private void recordQueueWaitLatency(List<AsyncJobRecord> claimedJobs) {
+    for (AsyncJobRecord claimedJob : claimedJobs) {
+      if (claimedJob.createdDate() == null || claimedJob.updatedDate() == null) {
+        continue;
+      }
+      java.time.Duration queueWaitLatency =
+          java.time.Duration.between(claimedJob.createdDate(), claimedJob.updatedDate());
+      if (!queueWaitLatency.isNegative()) {
+        meterRegistry
+            .timer("asyncJobQueue.queueWait.latency", "queueName", queueName)
+            .record(queueWaitLatency);
+      }
     }
   }
 

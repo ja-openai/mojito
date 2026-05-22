@@ -129,6 +129,51 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void pollRecordsClaimQueueWaitAndProcessingLatency() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    CountDownLatch processed = new CountDownLatch(1);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(
+                asyncJobRecord -> {
+                  processed.countDown();
+                  return AsyncJobHandlerResult.done();
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+    assertThat(processed.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.claim.latency")
+                .tag("queueName", "assetlocalize")
+                .timer()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.queueWait.latency")
+                .tag("queueName", "assetlocalize")
+                .timer()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.processing.latency")
+                .tag("queueName", "assetlocalize")
+                .timer()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void heartbeatRenewsLeaseWhileJobIsRunning() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =
