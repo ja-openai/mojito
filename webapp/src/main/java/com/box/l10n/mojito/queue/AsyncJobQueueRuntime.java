@@ -239,15 +239,26 @@ class AsyncJobQueueRuntime {
       inFlightCount.decrementAndGet();
       logger.warn(
           "Queue executor rejected claimed job {} for queue {}", asyncJobRecord.id(), queueName, e);
-      boolean requeued =
-          asyncJobStore.requeueAfter(
-              queueName,
-              asyncJobRecord.id(),
-              asyncJobRecord.workerId(),
-              asyncJobRecord.leaseToken(),
-              Duration.ZERO,
-              null,
-              errorMessage(e));
+      boolean requeued;
+      try {
+        requeued =
+            asyncJobStore.requeueAfter(
+                queueName,
+                asyncJobRecord.id(),
+                asyncJobRecord.workerId(),
+                asyncJobRecord.leaseToken(),
+                Duration.ZERO,
+                null,
+                errorMessage(e));
+      } catch (RuntimeException transitionException) {
+        logger.warn(
+            "Failed to requeue rejected job {} for queue {}",
+            asyncJobRecord.id(),
+            queueName,
+            transitionException);
+        recordTransitionFailure("executorRejectedRequeue");
+        return;
+      }
       if (!requeued) {
         logger.warn(
             "Failed to requeue rejected job {} for queue {}", asyncJobRecord.id(), queueName);
@@ -283,13 +294,21 @@ class AsyncJobQueueRuntime {
       AsyncJobRecord asyncJobRecord, AsyncJobHandlerResult asyncJobHandlerResult) {
     switch (asyncJobHandlerResult.action()) {
       case DONE -> {
-        boolean markedDone =
-            asyncJobStore.markDone(
-                queueName,
-                asyncJobRecord.id(),
-                asyncJobRecord.workerId(),
-                asyncJobRecord.leaseToken(),
-                asyncJobHandlerResult.jobData());
+        boolean markedDone;
+        try {
+          markedDone =
+              asyncJobStore.markDone(
+                  queueName,
+                  asyncJobRecord.id(),
+                  asyncJobRecord.workerId(),
+                  asyncJobRecord.leaseToken(),
+                  asyncJobHandlerResult.jobData());
+        } catch (RuntimeException e) {
+          logger.warn(
+              "Failed to mark async job {} done for queue {}", asyncJobRecord.id(), queueName, e);
+          recordTransitionFailure("done");
+          return;
+        }
         if (!markedDone) {
           logger.warn(
               "Failed to mark async job {} done for queue {}", asyncJobRecord.id(), queueName);
@@ -300,26 +319,33 @@ class AsyncJobQueueRuntime {
       }
       case REQUEUE -> {
         boolean requeued;
-        if (asyncJobHandlerResult.availableAt() == null) {
-          requeued =
-              asyncJobStore.requeueAfter(
-                  queueName,
-                  asyncJobRecord.id(),
-                  asyncJobRecord.workerId(),
-                  asyncJobRecord.leaseToken(),
-                  Duration.ofMillis(basePollDelayMs()),
-                  asyncJobHandlerResult.jobData(),
-                  null);
-        } else {
-          requeued =
-              asyncJobStore.requeue(
-                  queueName,
-                  asyncJobRecord.id(),
-                  asyncJobRecord.workerId(),
-                  asyncJobRecord.leaseToken(),
-                  asyncJobHandlerResult.availableAt(),
-                  asyncJobHandlerResult.jobData(),
-                  null);
+        try {
+          if (asyncJobHandlerResult.availableAt() == null) {
+            requeued =
+                asyncJobStore.requeueAfter(
+                    queueName,
+                    asyncJobRecord.id(),
+                    asyncJobRecord.workerId(),
+                    asyncJobRecord.leaseToken(),
+                    Duration.ofMillis(basePollDelayMs()),
+                    asyncJobHandlerResult.jobData(),
+                    null);
+          } else {
+            requeued =
+                asyncJobStore.requeue(
+                    queueName,
+                    asyncJobRecord.id(),
+                    asyncJobRecord.workerId(),
+                    asyncJobRecord.leaseToken(),
+                    asyncJobHandlerResult.availableAt(),
+                    asyncJobHandlerResult.jobData(),
+                    null);
+          }
+        } catch (RuntimeException e) {
+          logger.warn(
+              "Failed to requeue async job {} for queue {}", asyncJobRecord.id(), queueName, e);
+          recordTransitionFailure("requeue");
+          return;
         }
         if (!requeued) {
           logger.warn(
@@ -343,14 +369,25 @@ class AsyncJobQueueRuntime {
           asyncJobRecord.id(),
           asyncJobRecord.attemptCount(),
           e);
-      boolean markedFailed =
-          asyncJobStore.markFailed(
-              queueName,
-              asyncJobRecord.id(),
-              asyncJobRecord.workerId(),
-              asyncJobRecord.leaseToken(),
-              null,
-              errorMessage);
+      boolean markedFailed;
+      try {
+        markedFailed =
+            asyncJobStore.markFailed(
+                queueName,
+                asyncJobRecord.id(),
+                asyncJobRecord.workerId(),
+                asyncJobRecord.leaseToken(),
+                null,
+                errorMessage);
+      } catch (RuntimeException transitionException) {
+        logger.warn(
+            "Failed to mark async job {} failed for queue {}",
+            asyncJobRecord.id(),
+            queueName,
+            transitionException);
+        recordTransitionFailure("failed");
+        return;
+      }
       if (!markedFailed) {
         logger.warn(
             "Failed to mark async job {} failed for queue {}", asyncJobRecord.id(), queueName);
@@ -376,15 +413,26 @@ class AsyncJobQueueRuntime {
 
   private boolean requeueWithDelay(
       AsyncJobRecord asyncJobRecord, long delayMs, String jobData, String lastError) {
-    boolean requeued =
-        asyncJobStore.requeueAfter(
-            queueName,
-            asyncJobRecord.id(),
-            asyncJobRecord.workerId(),
-            asyncJobRecord.leaseToken(),
-            Duration.ofMillis(Math.max(0, delayMs)),
-            jobData,
-            lastError);
+    boolean requeued;
+    try {
+      requeued =
+          asyncJobStore.requeueAfter(
+              queueName,
+              asyncJobRecord.id(),
+              asyncJobRecord.workerId(),
+              asyncJobRecord.leaseToken(),
+              Duration.ofMillis(Math.max(0, delayMs)),
+              jobData,
+              lastError);
+    } catch (RuntimeException e) {
+      logger.warn(
+          "Failed to requeue async job {} after handler failure for queue {}",
+          asyncJobRecord.id(),
+          queueName,
+          e);
+      recordTransitionFailure("retry");
+      return false;
+    }
     if (!requeued) {
       logger.warn(
           "Failed to requeue async job {} after handler failure for queue {}",

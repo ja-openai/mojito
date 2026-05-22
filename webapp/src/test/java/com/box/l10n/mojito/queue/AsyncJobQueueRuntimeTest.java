@@ -231,6 +231,51 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void transitionFailureCounterRecordsThrownDoneTransitionWithoutHandlerFailure()
+      throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch doneAttempted = new CountDownLatch(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenAnswer(
+            invocation -> {
+              doneAttempted.countDown();
+              throw new IllegalStateException("database unavailable");
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(doneAttempted.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTransitionFailure("done", 1);
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.handler.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+    verify(asyncJobStore, times(0))
+        .requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            anyString());
+  }
+
+  @Test
   public void transitionFailureCounterRecordsFailedHandlerRequestedRequeue() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
@@ -358,6 +403,54 @@ public class AsyncJobQueueRuntimeTest {
     asyncJobQueueRuntime.pollOnce();
 
     waitForTransitionFailure("retry", 1);
+  }
+
+  @Test
+  public void transitionFailureCounterRecordsThrownRetryRequeue() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch requeueAttempted = new CountDownLatch(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            anyString()))
+        .thenAnswer(
+            invocation -> {
+              requeueAttempted.countDown();
+              throw new IllegalStateException("database unavailable");
+            });
+
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(2);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  throw new IllegalStateException("temporary");
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(requeueAttempted.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTransitionFailure("retry", 1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.handler.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
   }
 
   @Test
