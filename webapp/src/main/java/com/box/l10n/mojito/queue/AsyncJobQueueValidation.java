@@ -119,6 +119,14 @@ final class AsyncJobQueueValidation {
     return lastError.substring(0, LAST_ERROR_MAX_LENGTH);
   }
 
+  static AsyncJobStatus validateTerminalStatus(AsyncJobStatus status) {
+    Objects.requireNonNull(status);
+    if (status != AsyncJobStatus.DONE && status != AsyncJobStatus.FAILED) {
+      throw new IllegalArgumentException("status must be terminal: DONE or FAILED");
+    }
+    return status;
+  }
+
   static AsyncJobQueueProperties.QueueSettings validateQueueSettings(
       AsyncJobQueueProperties.QueueSettings queueSettings) {
     Objects.requireNonNull(queueSettings);

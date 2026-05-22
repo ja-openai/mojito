@@ -63,4 +63,19 @@ public class AsyncJobQueueValidationTest {
     assertThat(AsyncJobQueueValidation.truncateLastError(longError))
         .hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
   }
+
+  @Test
+  public void validateTerminalStatusRejectsNonTerminalStatuses() {
+    assertThat(AsyncJobQueueValidation.validateTerminalStatus(AsyncJobStatus.DONE))
+        .isEqualTo(AsyncJobStatus.DONE);
+    assertThat(AsyncJobQueueValidation.validateTerminalStatus(AsyncJobStatus.FAILED))
+        .isEqualTo(AsyncJobStatus.FAILED);
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AsyncJobQueueValidation.validateTerminalStatus(AsyncJobStatus.QUEUED));
+
+    assertThat(exception).hasMessageContaining("status must be terminal");
+  }
 }

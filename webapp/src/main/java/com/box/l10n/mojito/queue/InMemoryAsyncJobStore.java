@@ -283,6 +283,36 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   }
 
   @Override
+  public int deleteTerminalJobs(
+      String queueName, AsyncJobStatus status, Instant updatedBefore, int limit) {
+    if (limit <= 0) {
+      return 0;
+    }
+
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobStatus terminalStatus = AsyncJobQueueValidation.validateTerminalStatus(status);
+    Objects.requireNonNull(updatedBefore);
+
+    return withQueueLock(
+        queueName,
+        () -> {
+          List<AsyncJobId> idsToDelete =
+              jobsById.values().stream()
+                  .filter(
+                      job ->
+                          job.queueName().equals(queueName)
+                              && job.status() == terminalStatus
+                              && job.updatedDate().isBefore(updatedBefore))
+                  .sorted(Comparator.comparing(StoredAsyncJob::updatedDate))
+                  .limit(limit)
+                  .map(StoredAsyncJob::id)
+                  .toList();
+          idsToDelete.forEach(jobsById::remove);
+          return idsToDelete.size();
+        });
+  }
+
+  @Override
   public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
     if (ids == null || ids.isEmpty()) {
       return Collections.emptyList();

@@ -133,6 +133,16 @@ public interface AsyncJobStore {
    */
   boolean requeueFailed(String queueName, AsyncJobId id, Instant availableAt, String jobData);
 
+  /**
+   * Deletes a bounded batch of terminal jobs older than {@code updatedBefore}.
+   *
+   * <p>Only {@link AsyncJobStatus#DONE} and {@link AsyncJobStatus#FAILED} are accepted. Operators
+   * can use this as a retention primitive without risking queued/running work.
+   *
+   * @return number of rows deleted
+   */
+  int deleteTerminalJobs(String queueName, AsyncJobStatus status, Instant updatedBefore, int limit);
+
   /** Fetches jobs by id; missing ids are omitted from the returned list. */
   List<AsyncJobRecord> getByIds(List<AsyncJobId> ids);
 }

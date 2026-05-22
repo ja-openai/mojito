@@ -353,6 +353,55 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void deleteTerminalJobsDeletesOnlyBoundedMatchingTerminalRows() {
+    completeJob("assetlocalize", "{\"name\":\"done-1\"}");
+    completeJob("assetlocalize", "{\"name\":\"done-2\"}");
+    failJob("assetlocalize", "{\"name\":\"failed\"}");
+    jdbcAsyncJobStore.enqueue(
+        "assetlocalize", "{\"name\":\"queued\"}", Instant.now().plusSeconds(30));
+    completeJob("stats", "{\"name\":\"other-queue\"}");
+
+    Instant cutoffAfterCreatedRows = Instant.now().plusSeconds(1);
+
+    assertThat(
+            jdbcAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.DONE, cutoffAfterCreatedRows, 1))
+        .isEqualTo(1);
+
+    assertThat(jdbcAsyncJobStore.countByStatus("assetlocalize"))
+        .containsExactlyInAnyOrder(
+            new AsyncJobStatusCount(AsyncJobStatus.DONE, 1),
+            new AsyncJobStatusCount(AsyncJobStatus.FAILED, 1),
+            new AsyncJobStatusCount(AsyncJobStatus.QUEUED, 1));
+    assertThat(jdbcAsyncJobStore.countByStatus("stats"))
+        .containsExactly(new AsyncJobStatusCount(AsyncJobStatus.DONE, 1));
+
+    assertThat(
+            jdbcAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.FAILED, cutoffAfterCreatedRows, 10))
+        .isEqualTo(1);
+    assertThat(jdbcAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, 10))
+        .isEmpty();
+  }
+
+  @Test
+  public void deleteTerminalJobsRejectsNonTerminalStatusAndHonorsLimit() {
+    completeJob("assetlocalize", "{\"name\":\"done\"}");
+
+    assertThat(
+            jdbcAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.DONE, Instant.now().plusSeconds(1), 0))
+        .isZero();
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            jdbcAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.QUEUED, Instant.now().plusSeconds(1), 10));
+
+    assertThat(jdbcAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.DONE, 10)).hasSize(1);
+  }
+
+  @Test
   public void invalidNumericIdsFailFast() {
     assertThrows(
         IllegalArgumentException.class,
@@ -422,5 +471,25 @@ public class JdbcAsyncJobStoreTest {
                 1,
                 "x".repeat(AsyncJobQueueValidation.WORKER_ID_MAX_LENGTH + 1),
                 Duration.ofSeconds(1)));
+  }
+
+  private AsyncJobId completeJob(String queueName, String jobData) {
+    AsyncJobId id = jdbcAsyncJobStore.enqueue(queueName, jobData, Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        jdbcAsyncJobStore.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(5)).get(0);
+    assertThat(jdbcAsyncJobStore.markDone(queueName, id, "worker-a", claimed.leaseToken(), null))
+        .isTrue();
+    return id;
+  }
+
+  private AsyncJobId failJob(String queueName, String jobData) {
+    AsyncJobId id = jdbcAsyncJobStore.enqueue(queueName, jobData, Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        jdbcAsyncJobStore.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(5)).get(0);
+    assertThat(
+            jdbcAsyncJobStore.markFailed(
+                queueName, id, "worker-a", claimed.leaseToken(), null, "boom"))
+        .isTrue();
+    return id;
   }
 }

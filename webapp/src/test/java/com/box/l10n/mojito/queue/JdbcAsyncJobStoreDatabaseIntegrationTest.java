@@ -162,6 +162,11 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     assertThat(done.workerId()).isNull();
     assertThat(done.leaseToken()).isNull();
     assertThat(done.leaseUntil()).isNull();
+    assertThat(
+            store.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.DONE, Instant.now().plusSeconds(1), 10))
+        .isEqualTo(1);
+    assertThat(store.getByIds(List.of(id))).isEmpty();
 
     runConcurrentClaimContract(store);
   }
@@ -374,6 +379,16 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
       return Boolean.TRUE.equals(
           transactionTemplate.execute(
               status -> delegate.requeueFailed(queueName, id, availableAt, jobData)));
+    }
+
+    @Override
+    public int deleteTerminalJobs(
+        String queueName, AsyncJobStatus status, Instant updatedBefore, int limit) {
+      Integer deleted =
+          transactionTemplate.execute(
+              transactionStatus ->
+                  delegate.deleteTerminalJobs(queueName, status, updatedBefore, limit));
+      return deleted == null ? 0 : deleted;
     }
 
     @Override

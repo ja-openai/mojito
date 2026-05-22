@@ -193,7 +193,8 @@ Test Coverage
   handler-only queues, and non-fatal reporting failures.
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
   replay, lease-reclaim markers, timestamp-bound validation, bounded error summaries, and status
-  counts against an embedded datasource using the `hsql` dialect.
+  counts against an embedded datasource using the `hsql` dialect. Store tests also cover bounded
+  terminal-row deletion so retention jobs cannot accidentally delete queued/running work.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.
@@ -239,6 +240,8 @@ Operator Controls
 - Store-level replay only transitions `failed -> queued`; it does not touch running or completed
   jobs, resets the attempt budget for a fresh retry cycle, and keeps the previous `last_error`
   until success or the next failure.
+- Store-level retention only deletes bounded batches of terminal `done` or `failed` rows older
+  than an operator-provided `updated_date` cutoff. It rejects queued/running statuses.
 - A REST/admin surface can wrap these primitives later with authentication, audit logging, and
   payload redaction.
 

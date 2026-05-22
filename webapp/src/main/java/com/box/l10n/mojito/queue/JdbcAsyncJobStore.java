@@ -542,6 +542,45 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     return namedParameterJdbcTemplate.update(sql, params) == 1;
   }
 
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Override
+  public int deleteTerminalJobs(
+      String queueName, AsyncJobStatus status, Instant updatedBefore, int limit) {
+    if (limit <= 0) {
+      return 0;
+    }
+
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobStatus terminalStatus = AsyncJobQueueValidation.validateTerminalStatus(status);
+    Instant validatedUpdatedBefore =
+        AsyncJobQueueValidation.validateDatabaseTimestamp("updatedBefore", updatedBefore);
+
+    String sql =
+        """
+        DELETE FROM async_job_queue
+        WHERE id IN (
+          SELECT id
+          FROM (
+            SELECT id
+            FROM async_job_queue
+            WHERE queue_name = :queueName
+              AND status = :status
+              AND updated_date < :updatedBefore
+            ORDER BY updated_date ASC, id ASC
+            LIMIT :limit
+          ) purge_candidates
+        )
+        """;
+
+    MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("queueName", queueName)
+            .addValue("status", terminalStatus.getDatabaseValue())
+            .addValue("updatedBefore", Timestamp.from(validatedUpdatedBefore))
+            .addValue("limit", limit);
+    return namedParameterJdbcTemplate.update(sql, params);
+  }
+
   @Transactional(readOnly = true)
   @Override
   public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {

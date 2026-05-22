@@ -324,6 +324,56 @@ public class InMemoryAsyncJobStoreTest {
   }
 
   @Test
+  public void deleteTerminalJobsDeletesOnlyBoundedMatchingTerminalRows() {
+    completeJob("assetlocalize", "{\"name\":\"done-1\"}");
+    completeJob("assetlocalize", "{\"name\":\"done-2\"}");
+    failJob("assetlocalize", "{\"name\":\"failed\"}");
+    inMemoryAsyncJobStore.enqueue(
+        "assetlocalize", "{\"name\":\"queued\"}", Instant.now().plusSeconds(30));
+    completeJob("stats", "{\"name\":\"other-queue\"}");
+
+    Instant cutoffAfterCreatedRows = Instant.now().plusSeconds(1);
+
+    assertThat(
+            inMemoryAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.DONE, cutoffAfterCreatedRows, 1))
+        .isEqualTo(1);
+
+    assertThat(inMemoryAsyncJobStore.countByStatus("assetlocalize"))
+        .containsExactlyInAnyOrder(
+            new AsyncJobStatusCount(AsyncJobStatus.DONE, 1),
+            new AsyncJobStatusCount(AsyncJobStatus.FAILED, 1),
+            new AsyncJobStatusCount(AsyncJobStatus.QUEUED, 1));
+    assertThat(inMemoryAsyncJobStore.countByStatus("stats"))
+        .containsExactly(new AsyncJobStatusCount(AsyncJobStatus.DONE, 1));
+
+    assertThat(
+            inMemoryAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.FAILED, cutoffAfterCreatedRows, 10))
+        .isEqualTo(1);
+    assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, 10))
+        .isEmpty();
+  }
+
+  @Test
+  public void deleteTerminalJobsRejectsNonTerminalStatusAndHonorsLimit() {
+    completeJob("assetlocalize", "{\"name\":\"done\"}");
+
+    assertThat(
+            inMemoryAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.DONE, Instant.now().plusSeconds(1), 0))
+        .isZero();
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            inMemoryAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.QUEUED, Instant.now().plusSeconds(1), 10));
+
+    assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.DONE, 10))
+        .hasSize(1);
+  }
+
+  @Test
   public void rejectsQueueNamesOutsideSchemaBounds() {
     assertThrows(
         IllegalArgumentException.class,
@@ -364,5 +414,28 @@ public class InMemoryAsyncJobStoreTest {
                     "assetlocalize", 1, "worker-a", Duration.ofSeconds(Long.MAX_VALUE)));
 
     assertThat(exception).hasMessageContaining("leaseUntil");
+  }
+
+  private AsyncJobId completeJob(String queueName, String jobData) {
+    AsyncJobId id =
+        inMemoryAsyncJobStore.enqueue(queueName, jobData, Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        inMemoryAsyncJobStore.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(5)).get(0);
+    assertThat(
+            inMemoryAsyncJobStore.markDone(queueName, id, "worker-a", claimed.leaseToken(), null))
+        .isTrue();
+    return id;
+  }
+
+  private AsyncJobId failJob(String queueName, String jobData) {
+    AsyncJobId id =
+        inMemoryAsyncJobStore.enqueue(queueName, jobData, Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        inMemoryAsyncJobStore.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(5)).get(0);
+    assertThat(
+            inMemoryAsyncJobStore.markFailed(
+                queueName, id, "worker-a", claimed.leaseToken(), null, "boom"))
+        .isTrue();
+    return id;
   }
 }
