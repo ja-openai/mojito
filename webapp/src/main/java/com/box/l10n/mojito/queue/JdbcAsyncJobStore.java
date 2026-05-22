@@ -71,7 +71,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
     AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(jobData);
-    Objects.requireNonNull(availableAt);
+    Instant validatedAvailableAt =
+        AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
 
     String sql =
         """
@@ -97,7 +98,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         new MapSqlParameterSource()
             .addValue("queueName", queueName)
             .addValue("status", AsyncJobStatus.QUEUED.getDatabaseValue())
-            .addValue("availableAt", Timestamp.from(availableAt))
+            .addValue("availableAt", Timestamp.from(validatedAvailableAt))
             .addValue("jobData", jobData)
             .addValue("createdDate", Timestamp.from(now))
             .addValue("updatedDate", Timestamp.from(now));
@@ -137,7 +138,9 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     }
 
     Instant now = databaseNow();
-    Instant leaseUntil = now.plus(leaseDuration);
+    Instant leaseUntil =
+        AsyncJobQueueValidation.plusDurationWithinDatabaseTimestampRange(
+            "leaseUntil", now, leaseDuration);
 
     MapSqlParameterSource selectParams =
         new MapSqlParameterSource()
@@ -228,7 +231,9 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
 
     long parsedId = parseId(id);
     Instant now = databaseNow();
-    Instant leaseUntil = now.plus(leaseDuration);
+    Instant leaseUntil =
+        AsyncJobQueueValidation.plusDurationWithinDatabaseTimestampRange(
+            "leaseUntil", now, leaseDuration);
     String sql =
         """
         UPDATE async_job_queue
@@ -328,7 +333,15 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     Instant now = databaseNow();
     Duration boundedDelay = delay.isNegative() ? Duration.ZERO : delay;
     return requeueAtDatabaseTime(
-        queueName, id, workerId, leaseToken, now.plus(boundedDelay), jobData, lastError, now);
+        queueName,
+        id,
+        workerId,
+        leaseToken,
+        AsyncJobQueueValidation.plusDurationWithinDatabaseTimestampRange(
+            "availableAt", now, boundedDelay),
+        jobData,
+        lastError,
+        now);
   }
 
   private boolean requeueAtDatabaseTime(
@@ -342,7 +355,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       Instant now) {
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobQueueValidation.validateWorkerId(workerId);
-    Objects.requireNonNull(availableAt);
+    Instant validatedAvailableAt =
+        AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
     Objects.requireNonNull(now);
     validateLeaseToken(leaseToken);
     long parsedId = parseId(id);
@@ -370,7 +384,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("queuedStatus", AsyncJobStatus.QUEUED.getDatabaseValue())
-            .addValue("availableAt", Timestamp.from(availableAt))
+            .addValue("availableAt", Timestamp.from(validatedAvailableAt))
             .addValue("jobData", jobData)
             .addValue("lastError", lastError)
             .addValue("updatedDate", Timestamp.from(now))
@@ -495,7 +509,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   public boolean requeueFailed(
       String queueName, AsyncJobId id, Instant availableAt, String jobData) {
     AsyncJobQueueValidation.validateQueueName(queueName);
-    Objects.requireNonNull(availableAt);
+    Instant validatedAvailableAt =
+        AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
     long parsedId = parseId(id);
     Instant now = databaseNow();
 
@@ -518,7 +533,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("queuedStatus", AsyncJobStatus.QUEUED.getDatabaseValue())
-            .addValue("availableAt", Timestamp.from(availableAt))
+            .addValue("availableAt", Timestamp.from(validatedAvailableAt))
             .addValue("jobData", jobData)
             .addValue("updatedDate", Timestamp.from(now))
             .addValue("id", parsedId)

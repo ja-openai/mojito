@@ -313,4 +313,18 @@ public class InMemoryAsyncJobStoreTest {
                 "x".repeat(AsyncJobQueueValidation.WORKER_ID_MAX_LENGTH + 1),
                 Duration.ofSeconds(1)));
   }
+
+  @Test
+  public void rejectsLeaseDurationThatOverflowsInstantRange() {
+    inMemoryAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                inMemoryAsyncJobStore.claimNextJobs(
+                    "assetlocalize", 1, "worker-a", Duration.ofSeconds(Long.MAX_VALUE)));
+
+    assertThat(exception).hasMessageContaining("leaseUntil");
+  }
 }

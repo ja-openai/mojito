@@ -1,5 +1,8 @@
 package com.box.l10n.mojito.queue;
 
+import java.time.DateTimeException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 
@@ -7,6 +10,9 @@ final class AsyncJobQueueValidation {
 
   static final int QUEUE_NAME_MAX_LENGTH = 64;
   static final int WORKER_ID_MAX_LENGTH = 128;
+  // Conservative portable bounds for MySQL DATETIME after JDBC/default-timezone conversion.
+  static final Instant DATABASE_TIMESTAMP_MIN = Instant.parse("1000-01-02T00:00:00Z");
+  static final Instant DATABASE_TIMESTAMP_MAX = Instant.parse("9999-12-31T00:00:00Z");
   static final String STORE_IN_MEMORY = "in-memory";
   static final String STORE_JDBC = "jdbc";
 
@@ -71,6 +77,38 @@ final class AsyncJobQueueValidation {
           "workerId must be at most " + WORKER_ID_MAX_LENGTH + " characters");
     }
     return workerId;
+  }
+
+  static Instant plusDuration(String fieldName, Instant base, Duration duration) {
+    Objects.requireNonNull(fieldName);
+    Objects.requireNonNull(base);
+    Objects.requireNonNull(duration);
+    try {
+      return base.plus(duration);
+    } catch (DateTimeException | ArithmeticException e) {
+      throw new IllegalArgumentException(
+          fieldName + " is outside the supported timestamp range", e);
+    }
+  }
+
+  static Instant plusDurationWithinDatabaseTimestampRange(
+      String fieldName, Instant base, Duration duration) {
+    return validateDatabaseTimestamp(fieldName, plusDuration(fieldName, base, duration));
+  }
+
+  static Instant validateDatabaseTimestamp(String fieldName, Instant instant) {
+    Objects.requireNonNull(fieldName);
+    Objects.requireNonNull(instant);
+    if (instant.isBefore(DATABASE_TIMESTAMP_MIN) || instant.isAfter(DATABASE_TIMESTAMP_MAX)) {
+      throw new IllegalArgumentException(
+          fieldName
+              + " must be between "
+              + DATABASE_TIMESTAMP_MIN
+              + " and "
+              + DATABASE_TIMESTAMP_MAX
+              + " for async job queue JDBC storage");
+    }
+    return instant;
   }
 
   static AsyncJobQueueProperties.QueueSettings validateQueueSettings(

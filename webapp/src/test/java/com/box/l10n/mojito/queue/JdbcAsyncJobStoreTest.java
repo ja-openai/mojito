@@ -322,6 +322,43 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void rejectsAvailableAtOutsideDatabaseTimestampBoundsBeforeJdbcWrite() {
+    IllegalArgumentException tooEarly =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                jdbcAsyncJobStore.enqueue(
+                    "assetlocalize",
+                    "{}",
+                    AsyncJobQueueValidation.DATABASE_TIMESTAMP_MIN.minusNanos(1)));
+    IllegalArgumentException tooLate =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                jdbcAsyncJobStore.enqueue(
+                    "assetlocalize",
+                    "{}",
+                    AsyncJobQueueValidation.DATABASE_TIMESTAMP_MAX.plusNanos(1)));
+
+    assertThat(tooEarly).hasMessageContaining("availableAt must be between");
+    assertThat(tooLate).hasMessageContaining("availableAt must be between");
+  }
+
+  @Test
+  public void rejectsLeaseDurationOutsideDatabaseTimestampBoundsBeforeClaimWrite() {
+    jdbcAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                jdbcAsyncJobStore.claimNextJobs(
+                    "assetlocalize", 1, "worker-a", Duration.ofSeconds(Long.MAX_VALUE)));
+
+    assertThat(exception).hasMessageContaining("leaseUntil");
+  }
+
+  @Test
   public void rejectsQueueNamesOutsideSchemaBounds() {
     assertThrows(
         IllegalArgumentException.class, () -> jdbcAsyncJobStore.enqueue(" ", "{}", Instant.now()));

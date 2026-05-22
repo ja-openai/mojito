@@ -88,7 +88,13 @@ public interface AsyncJobStore {
     Objects.requireNonNull(delay);
     Duration boundedDelay = delay.isNegative() ? Duration.ZERO : delay;
     return requeue(
-        queueName, id, workerId, leaseToken, Instant.now().plus(boundedDelay), jobData, lastError);
+        queueName,
+        id,
+        workerId,
+        leaseToken,
+        AsyncJobQueueValidation.plusDuration("availableAt", Instant.now(), boundedDelay),
+        jobData,
+        lastError);
   }
 
   /**

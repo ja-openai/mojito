@@ -78,7 +78,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
         queueName,
         () -> {
           Instant now = Instant.now();
-          Instant leaseUntil = now.plus(leaseDuration);
+          Instant leaseUntil =
+              AsyncJobQueueValidation.plusDuration("leaseUntil", now, leaseDuration);
 
           List<StoredAsyncJob> claimable =
               jobsById.values().stream()
@@ -129,7 +130,10 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
             return false;
           }
           Instant now = Instant.now();
-          jobsById.put(job.id(), job.withLeaseUntil(now.plus(leaseDuration), now));
+          jobsById.put(
+              job.id(),
+              job.withLeaseUntil(
+                  AsyncJobQueueValidation.plusDuration("leaseUntil", now, leaseDuration), now));
           return true;
         });
   }
