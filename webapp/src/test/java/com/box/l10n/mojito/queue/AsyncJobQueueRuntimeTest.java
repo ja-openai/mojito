@@ -1093,6 +1093,58 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void triggerPollNowPreservesExistingPollWhenImmediateScheduleFails() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of());
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    Runnable[] firstScheduledPoll = new Runnable[1];
+    DummyScheduledFuture firstScheduledFuture = new DummyScheduledFuture();
+    AtomicInteger scheduleInvocations = new AtomicInteger();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(
+            invocation -> {
+              int invocationCount = scheduleInvocations.incrementAndGet();
+              if (invocationCount == 1) {
+                firstScheduledPoll[0] = invocation.getArgument(0);
+                return firstScheduledFuture;
+              }
+              if (invocationCount == 2) {
+                throw new IllegalStateException("scheduler unavailable");
+              }
+              return new DummyScheduledFuture();
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    asyncJobQueueRuntime.triggerPollNow();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.trigger.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(firstScheduledFuture.isCancelled()).isFalse();
+
+    firstScheduledPoll[0].run();
+
+    verify(asyncJobStore, times(1))
+        .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
+    assertThat(scheduleInvocations.get()).isEqualTo(3);
+  }
+
+  @Test
   public void startRecordsFailureAndClearsStartedWhenInitialScheduleReturnsNull() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     when(taskScheduler.schedule(any(Runnable.class), any(Date.class))).thenReturn(null);
@@ -1646,6 +1698,8 @@ public class AsyncJobQueueRuntimeTest {
 
   private static class DummyScheduledFuture implements ScheduledFuture<Object> {
 
+    private boolean cancelled;
+
     @Override
     public long getDelay(TimeUnit unit) {
       return 0;
@@ -1658,12 +1712,13 @@ public class AsyncJobQueueRuntimeTest {
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
+      cancelled = true;
       return true;
     }
 
     @Override
     public boolean isCancelled() {
-      return false;
+      return cancelled;
     }
 
     @Override

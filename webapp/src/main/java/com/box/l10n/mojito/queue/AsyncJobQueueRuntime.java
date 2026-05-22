@@ -145,11 +145,12 @@ class AsyncJobQueueRuntime {
         return;
       }
       wakeRequested.set(false);
-      if (nextPollFuture != null) {
-        nextPollFuture.cancel(false);
-      }
+      ScheduledFuture<?> previousPollFuture = nextPollFuture;
       try {
         scheduleNextPoll(0);
+        if (previousPollFuture != null) {
+          previousPollFuture.cancel(false);
+        }
       } catch (RuntimeException e) {
         logger.warn("Failed to trigger immediate poll for queue {}", queueName, e);
         meterRegistry.counter("asyncJobQueue.trigger.failed", "queueName", queueName).increment();
@@ -257,7 +258,7 @@ class AsyncJobQueueRuntime {
     if (boundedDelayMs > 0) {
       boundedDelayMs = Math.max(0, pollDelayJitter.applyAsLong(boundedDelayMs));
     }
-    long pollSequence = ++scheduledPollSequence;
+    long pollSequence = scheduledPollSequence + 1;
     ScheduledFuture<?> scheduledFuture =
         taskScheduler.schedule(
             () -> runScheduledPoll(pollSequence),
@@ -265,6 +266,7 @@ class AsyncJobQueueRuntime {
     if (scheduledFuture == null) {
       throw new IllegalStateException("TaskScheduler returned null ScheduledFuture");
     }
+    scheduledPollSequence = pollSequence;
     nextPollFuture = scheduledFuture;
   }
 
