@@ -186,9 +186,9 @@ Test Coverage
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
   replay, lease-reclaim markers, and status counts against an embedded datasource using the `hsql`
   dialect.
-- Spring configuration tests assert the JDBC store is transaction-proxied when transaction
-  management is enabled, because claim correctness depends on locking and updating in one
-  transaction.
+- Spring configuration tests assert the JDBC store starts and commits transactions under the
+  application's AspectJ transaction mode, because claim correctness depends on locking and
+  updating in one transaction.
 - Dialect tests cover MySQL/PostgreSQL `FOR UPDATE SKIP LOCKED` claim SQL, fractional database
   time, and the HSQL embedded fallback.
 - Opt-in Docker-backed integration tests run the same queue store contract against real MySQL and
