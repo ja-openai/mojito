@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.queue;
 
 import java.time.Instant;
+import java.util.Objects;
 
 public record AsyncJobRecord(
     AsyncJobId id,
@@ -17,6 +18,27 @@ public record AsyncJobRecord(
     Instant updatedDate,
     boolean leaseReclaimed) {
 
+  public AsyncJobRecord {
+    Objects.requireNonNull(id);
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    Objects.requireNonNull(status);
+    Objects.requireNonNull(availableAt);
+    Objects.requireNonNull(jobData);
+    if (attemptCount < 0) {
+      throw new IllegalArgumentException("attemptCount must be >= 0");
+    }
+    Objects.requireNonNull(createdDate);
+    Objects.requireNonNull(updatedDate);
+
+    if (status == AsyncJobStatus.RUNNING) {
+      Objects.requireNonNull(leaseUntil);
+      AsyncJobQueueValidation.validateWorkerId(workerId);
+      validateLeaseToken(leaseToken);
+    } else if (leaseUntil != null || workerId != null || leaseToken != null) {
+      throw new IllegalArgumentException("only running async jobs can have a lease owner");
+    }
+  }
+
   public AsyncJobRecord withLeaseReclaimed(boolean leaseReclaimed) {
     return new AsyncJobRecord(
         id,
@@ -32,5 +54,12 @@ public record AsyncJobRecord(
         createdDate,
         updatedDate,
         leaseReclaimed);
+  }
+
+  private static void validateLeaseToken(String leaseToken) {
+    Objects.requireNonNull(leaseToken);
+    if (leaseToken.isBlank()) {
+      throw new IllegalArgumentException("leaseToken must not be blank");
+    }
   }
 }
