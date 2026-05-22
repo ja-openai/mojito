@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.transaction.annotation.Transactional;
 
 @RepositoryRestResource(exported = false)
 public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Long> {
@@ -107,45 +108,64 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
       Pageable pageable);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
   @Query(
       value =
           """
           update review_project rp
-          left join (
-            select
-              decided_units.review_project_id,
-              count(*) decided_count,
-              coalesce(sum(coalesce(tu.word_count, 0)), 0) decided_word_count
-            from (
-              select distinct rptu.id, rptu.review_project_id, rptu.tm_text_unit_id
+          set
+            decided_count = (
+              select count(*)
               from review_project_text_unit rptu
-              join review_project rp_inner
-                on rp_inner.id = rptu.review_project_id
-              left join review_project_text_unit_decision rptud
-                on rptud.review_project_text_unit_id = rptu.id
-              left join review_project_text_unit_feedback rptuf
-                on rptuf.review_project_text_unit_id = rptu.id
-              where rp_inner.review_project_request_id = :requestId
+              where rptu.review_project_id = rp.id
                 and (
                   (
-                    rp_inner.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
-                    and rp_inner.terminology_phase = 'SPECIALIST_INPUT'
-                    and rptuf.id is not null
+                    rp.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
+                    and rp.terminology_phase = 'SPECIALIST_INPUT'
+                    and exists (
+                      select 1
+                      from review_project_text_unit_feedback rptuf
+                      where rptuf.review_project_text_unit_id = rptu.id
+                    )
                   ) or (
-                    not (rp_inner.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
-                      and coalesce(rp_inner.terminology_phase, '') = 'SPECIALIST_INPUT')
-                    and rptud.decision_state = 'DECIDED'
+                    not (rp.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
+                      and coalesce(rp.terminology_phase, '') = 'SPECIALIST_INPUT')
+                    and exists (
+                      select 1
+                      from review_project_text_unit_decision rptud
+                      where rptud.review_project_text_unit_id = rptu.id
+                        and rptud.decision_state = 'DECIDED'
+                    )
                   )
                 )
-            ) decided_units
-            join tm_text_unit tu
-              on tu.id = decided_units.tm_text_unit_id
-            group by decided_units.review_project_id
-          ) decided_counts
-            on decided_counts.review_project_id = rp.id
-          set
-            rp.decided_count = coalesce(decided_counts.decided_count, 0),
-            rp.decided_word_count = coalesce(decided_counts.decided_word_count, 0)
+            ),
+            decided_word_count = (
+              select coalesce(sum(coalesce(tu.word_count, 0)), 0)
+              from review_project_text_unit rptu
+              join tm_text_unit tu
+                on tu.id = rptu.tm_text_unit_id
+              where rptu.review_project_id = rp.id
+                and (
+                  (
+                    rp.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
+                    and rp.terminology_phase = 'SPECIALIST_INPUT'
+                    and exists (
+                      select 1
+                      from review_project_text_unit_feedback rptuf
+                      where rptuf.review_project_text_unit_id = rptu.id
+                    )
+                  ) or (
+                    not (rp.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
+                      and coalesce(rp.terminology_phase, '') = 'SPECIALIST_INPUT')
+                    and exists (
+                      select 1
+                      from review_project_text_unit_decision rptud
+                      where rptud.review_project_text_unit_id = rptu.id
+                        and rptud.decision_state = 'DECIDED'
+                    )
+                  )
+                )
+            )
           where rp.review_project_request_id = :requestId
           """,
       nativeQuery = true)

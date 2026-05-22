@@ -62,7 +62,7 @@ public interface ReviewAutomationRepository extends JpaRepository<ReviewAutomati
           left join ra.team team
           left join ra.features rf
           where (:enabled is null or ra.enabled = :enabled)
-            and (:searchQuery is null or trim(:searchQuery) = '' or lower(ra.name) like concat('%', lower(:searchQuery), '%'))
+            and lower(ra.name) like concat('%', lower(:searchQuery), '%')
           group by
             ra.id,
             ra.createdDate,
@@ -83,12 +83,58 @@ public interface ReviewAutomationRepository extends JpaRepository<ReviewAutomati
           select count(ra.id)
           from ReviewAutomation ra
           where (:enabled is null or ra.enabled = :enabled)
-            and (:searchQuery is null or trim(:searchQuery) = '' or lower(ra.name) like concat('%', lower(:searchQuery), '%'))
+            and lower(ra.name) like concat('%', lower(:searchQuery), '%')
           """)
   Page<ReviewAutomationSummaryRow> searchSummaryRows(
       @Param("searchQuery") String searchQuery,
       @Param("enabled") Boolean enabled,
       Pageable pageable);
+
+  @Query(
+      value =
+          """
+          select new com.box.l10n.mojito.service.review.ReviewAutomationSummaryRow(
+            ra.id,
+            ra.createdDate,
+            ra.lastModifiedDate,
+            ra.name,
+            ra.enabled,
+            ra.cronExpression,
+            ra.timeZone,
+            team.id,
+            team.name,
+            ra.dueDateOffsetDays,
+            ra.maxWordCountPerProject,
+            ra.assignTranslator,
+            count(distinct rf.id)
+          )
+          from ReviewAutomation ra
+          left join ra.team team
+          left join ra.features rf
+          where (:enabled is null or ra.enabled = :enabled)
+          group by
+            ra.id,
+            ra.createdDate,
+            ra.lastModifiedDate,
+            ra.name,
+            ra.enabled,
+            ra.cronExpression,
+            ra.timeZone,
+            team.id,
+            team.name,
+            ra.dueDateOffsetDays,
+            ra.maxWordCountPerProject,
+            ra.assignTranslator
+          order by lower(ra.name) asc, ra.id asc
+          """,
+      countQuery =
+          """
+          select count(ra.id)
+          from ReviewAutomation ra
+          where (:enabled is null or ra.enabled = :enabled)
+          """)
+  Page<ReviewAutomationSummaryRow> findSummaryRows(
+      @Param("enabled") Boolean enabled, Pageable pageable);
 
   @Query(
       """

@@ -41,6 +41,8 @@
         <docker.compose.detached.mode>true</docker.compose.detached.mode>
         <docker.compose.remove.volumes>true</docker.compose.remove.volumes>
         <mojito.test.local-config.arg>-Dspring.config.additional-location=optional:file://${user.home}/.l10n/config/${mojito.test.local-config.dir}/</mojito.test.local-config.arg>
+        <mojito.test.postgres>false</mojito.test.postgres>
+        <mojito.test.database.arg></mojito.test.database.arg>
         <mojito.test.mockito-agent.arg>-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</mojito.test.mockito-agent.arg>
     </properties>
 
@@ -172,6 +174,31 @@
             <id>no-local-config</id>
             <properties>
                 <mojito.test.local-config.arg></mojito.test.local-config.arg>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>postgres-tests</id>
+            <activation>
+                <property>
+                    <name>mojito.test.postgres</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <mojito.test.postgres>true</mojito.test.postgres>
+                <mojito.test.database.arg>
+                    -Dspring.datasource.url=jdbc:tc:postgresql:16-alpine:///mojito
+                    -Dspring.datasource.username=test
+                    -Dspring.datasource.password=test
+                    -Dspring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver
+                    -Dspring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+                    -Dspring.jpa.hibernate.ddl-auto=none
+                    -Dspring.jpa.defer-datasource-initialization=false
+                    -Dspring.sql.init.mode=never
+                    -Dspring.flyway.enabled=true
+                    -Dspring.flyway.locations=classpath:db/migration/postgresql
+                </mojito.test.database.arg>
             </properties>
         </profile>
 

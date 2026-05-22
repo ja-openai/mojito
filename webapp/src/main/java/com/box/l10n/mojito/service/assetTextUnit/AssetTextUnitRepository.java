@@ -19,9 +19,21 @@ public interface AssetTextUnitRepository
     extends JpaRepository<AssetTextUnit, Long>, JpaSpecificationExecutor<AssetTextUnit> {
 
   @EntityGraph(value = "AssetTextUnit.legacy", type = EntityGraphType.FETCH)
+  @Query(
+      """
+      select atu from AssetTextUnit atu
+      where atu.assetExtraction = ?1
+      order by atu.id
+      """)
   List<AssetTextUnit> findByAssetExtraction(AssetExtraction assetExtraction);
 
   @EntityGraph(value = "AssetTextUnit.legacy", type = EntityGraphType.FETCH)
+  @Query(
+      """
+      select atu from AssetTextUnit atu
+      where atu.assetExtraction.id = ?1
+      order by atu.id
+      """)
   List<AssetTextUnit> findByAssetExtractionId(long assetExtractionId);
 
   @Query(

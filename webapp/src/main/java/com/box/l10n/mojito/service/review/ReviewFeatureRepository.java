@@ -64,7 +64,7 @@ public interface ReviewFeatureRepository extends JpaRepository<ReviewFeature, Lo
           from ReviewFeature rf
           left join rf.repositories r
           where (:enabled is null or rf.enabled = :enabled)
-            and (:searchQuery is null or trim(:searchQuery) = '' or lower(rf.name) like concat('%', lower(:searchQuery), '%'))
+            and lower(rf.name) like concat('%', lower(:searchQuery), '%')
           group by rf.id, rf.createdDate, rf.lastModifiedDate, rf.name, rf.enabled
           order by lower(rf.name) asc, rf.id asc
           """,
@@ -73,12 +73,38 @@ public interface ReviewFeatureRepository extends JpaRepository<ReviewFeature, Lo
           select count(rf.id)
           from ReviewFeature rf
           where (:enabled is null or rf.enabled = :enabled)
-            and (:searchQuery is null or trim(:searchQuery) = '' or lower(rf.name) like concat('%', lower(:searchQuery), '%'))
+            and lower(rf.name) like concat('%', lower(:searchQuery), '%')
           """)
   Page<ReviewFeatureSummaryRow> searchSummaryRows(
       @Param("searchQuery") String searchQuery,
       @Param("enabled") Boolean enabled,
       Pageable pageable);
+
+  @Query(
+      value =
+          """
+          select new com.box.l10n.mojito.service.review.ReviewFeatureSummaryRow(
+            rf.id,
+            rf.createdDate,
+            rf.lastModifiedDate,
+            rf.name,
+            rf.enabled,
+            count(distinct r.id)
+          )
+          from ReviewFeature rf
+          left join rf.repositories r
+          where (:enabled is null or rf.enabled = :enabled)
+          group by rf.id, rf.createdDate, rf.lastModifiedDate, rf.name, rf.enabled
+          order by lower(rf.name) asc, rf.id asc
+          """,
+      countQuery =
+          """
+          select count(rf.id)
+          from ReviewFeature rf
+          where (:enabled is null or rf.enabled = :enabled)
+          """)
+  Page<ReviewFeatureSummaryRow> findSummaryRows(
+      @Param("enabled") Boolean enabled, Pageable pageable);
 
   @Query(
       """

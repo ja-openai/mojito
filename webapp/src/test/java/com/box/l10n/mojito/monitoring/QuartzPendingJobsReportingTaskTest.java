@@ -58,7 +58,7 @@ public class QuartzPendingJobsReportingTaskTest extends ServiceTestBase {
   @Before
   public void setUp() throws SchedulerException {
 
-    Assume.assumeTrue(dbUtils.isMysql() && monitoringEnabled);
+    Assume.assumeTrue((dbUtils.isMysql() || dbUtils.isPostgres()) && monitoringEnabled);
     task = new QuartzPendingJobsReportingTask(dataSource, meterRegistry);
     scheduler = schedulerManager.getScheduler(QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME);
 

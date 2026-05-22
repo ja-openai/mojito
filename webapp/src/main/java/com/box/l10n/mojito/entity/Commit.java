@@ -22,7 +22,7 @@ import org.hibernate.annotations.BatchSize;
  */
 @Entity
 @Table(
-    name = "commit",
+    name = "`commit`",
     indexes = {
       @Index(
           name = "UK__COMMIT__NAME_REPOSITORY_ID",

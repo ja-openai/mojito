@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.cache;
 
 import com.box.l10n.mojito.entity.ApplicationCache;
 import com.box.l10n.mojito.entity.ApplicationCacheType;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -20,11 +21,12 @@ public interface ApplicationCacheRepository extends JpaRepository<ApplicationCac
           """
           select ac from ApplicationCache ac
           where ac.applicationCacheType = :applicationCacheType and ac.keyMD5 = :keyMD5
-          and (ac.expiryDate is null or ac.expiryDate > CURRENT_TIMESTAMP)
+          and (ac.expiryDate is null or ac.expiryDate > :now)
           """)
   Optional<ApplicationCache> findByIdAndNotExpired(
       @Param("applicationCacheType") ApplicationCacheType applicationCacheType,
-      @Param("keyMD5") String keyMD5);
+      @Param("keyMD5") String keyMD5,
+      @Param("now") ZonedDateTime now);
 
   Optional<ApplicationCache> findByApplicationCacheTypeAndKeyMD5(
       @Param("applicationCacheType") ApplicationCacheType applicationCacheType,
@@ -44,6 +46,6 @@ public interface ApplicationCacheRepository extends JpaRepository<ApplicationCac
   void clearCache(@Param("cacheId") short cacheId);
 
   @Modifying
-  @Query("delete from ApplicationCache ac where ac.expiryDate <= CURRENT_TIMESTAMP")
-  void clearAllExpired();
+  @Query("delete from ApplicationCache ac where ac.expiryDate <= :now")
+  void clearAllExpired(@Param("now") ZonedDateTime now);
 }

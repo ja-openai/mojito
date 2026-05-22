@@ -6,11 +6,12 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.ZonedDateTime;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Entity that contains the cache entry details for a database-backed application cache. Each entity
@@ -42,7 +43,7 @@ public class ApplicationCache extends BaseEntity {
   private String keyMD5;
 
   @Column(name = "value", length = Integer.MAX_VALUE)
-  @Lob
+  @JdbcTypeCode(SqlTypes.LONGVARBINARY)
   private byte[] value;
 
   @Column(name = "created_date")

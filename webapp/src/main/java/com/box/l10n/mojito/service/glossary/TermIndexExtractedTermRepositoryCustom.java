@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 
 public interface TermIndexExtractedTermRepositoryCustom {
 
+  int insertIfAbsent(String sourceLocaleTag, String normalizedKey, String displayTerm);
+
   List<TermIndexExtractedTermRepository.SearchRow> searchEntries(
       boolean repositoryIdsEmpty,
       Collection<Long> repositoryIds,

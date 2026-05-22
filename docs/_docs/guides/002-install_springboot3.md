@@ -78,7 +78,7 @@ server.forward-headers-strategy=native
 ## Setup
 
 The default setup comes with `HSQL` in-memory database, database authentication and runs on port `8080`.
-For production, `MySQL` should be setup. Different types of [authentication](/docs/guides/authentication-springboot3/) are
+For production, `PostgreSQL` should be setup. Different types of [authentication](/docs/guides/authentication-springboot3/) are
 available too.
 
 On the first Webapp startup, a user: `admin/ChangeMe` is created. This can be customized with configuration, 
@@ -88,87 +88,58 @@ see [Manage Users]({{ site.url }}/docs/guides/manage-users/#bootstraping).
 
 The port can be changed with the `server.port` property.
 
-### MySQL
+### PostgreSQL
 
-[Install MySQL 8](https://dev.mysql.com/doc/mysql-installation-excerpt/8.0/en/) and then create a database for {{ site.mojito_green }} 
-(with Brew: `brew install mysql@8`). 
+[Install PostgreSQL](https://www.postgresql.org/download/) and then create a database for {{ site.mojito_green }}
+(with Brew: `brew install postgresql@16`).
 
-Connect to MySQL DB as root user
+Connect to PostgreSQL as a superuser
 
 ```sql
-mysql -u root
+psql postgres
 ```
 
 Create user `${DB_USERNAME}` with `${DB_PASSWORD}`
 
 ```sql
-mysql> CREATE USER '${DB_USERNAME}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
+CREATE USER ${DB_USERNAME} WITH PASSWORD '${DB_PASSWORD}';
 ```
 
 Create database `${DB_NAME}` and give `${DB_USERNAME}` full access to the database
 
 ```sql
-mysql> CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
-mysql> GRANT ALL ON ${DB_NAME}.* TO '${DB_USERNAME}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
-mysql> FLUSH PRIVILEGES;
+CREATE DATABASE ${DB_NAME} OWNER ${DB_USERNAME};
+GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USERNAME};
 ```
 
-Configure {{ site.mojito_green }} to use MySQL. When using MySQL, Flyway must be turned on and it is strongly 
+Configure {{ site.mojito_green }} to use PostgreSQL. When using PostgreSQL, Flyway must be turned on and it is strongly
 recommended to explicitly disable the "database clean" features ([more info](#database-protection)). 
 
 ```properties
+spring.profiles.active=postgres
 spring.flyway.enabled=true
 spring.jpa.defer-datasource-initialization=false
 spring.flyway.clean-disabled=true 
 l10n.flyway.clean=false
-spring.datasource.url=jdbc:mysql://localhost:3306/${DB_NAME}?characterEncoding=UTF-8&useUnicode=true
+spring.datasource.url=jdbc:postgresql://localhost:5432/${DB_NAME}
 spring.datasource.username=${DB_USERNAME}
 spring.datasource.password=${DB_PASSWORD}
-spring.datasource.driverClassName=com.mysql.cj.jdbc.Driver
+spring.datasource.driverClassName=org.postgresql.Driver
 
 l10n.org.quartz.jobStore.useProperties=true
 l10n.org.quartz.scheduler.instanceId=AUTO
 l10n.org.quartz.jobStore.isClustered=true
 l10n.org.quartz.threadPool.threadCount=10
 l10n.org.quartz.jobStore.class=org.quartz.impl.jdbcjobstore.JobStoreTX
-l10n.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+l10n.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 l10n.org.quartz.jobStore.dataSource=myDS
 l10n.org.quartz.dataSource.myDS.provider=hikaricp
-l10n.org.quartz.dataSource.myDS.driver=com.mysql.cj.jdbc.Driver
-l10n.org.quartz.dataSource.myDS.URL=jdbc:mysql://localhost:3306/${DB_NAME}?characterEncoding=UTF-8&useUnicode=true
+l10n.org.quartz.dataSource.myDS.driver=org.postgresql.Driver
+l10n.org.quartz.dataSource.myDS.URL=jdbc:postgresql://localhost:5432/${DB_NAME}
 l10n.org.quartz.dataSource.myDS.user=${DB_USERNAME}
 l10n.org.quartz.dataSource.myDS.password=${DB_PASSWORD}
 l10n.org.quartz.dataSource.myDS.maxConnections=12
 l10n.org.quartz.dataSource.myDS.validationQuery=select 1
-```
-
-Note that `utf8mb4` setup has been tested on MySQL `5.7`. The server will probably needs some configuration too, for
-example by editing `my.cnf` (if installed with brew: `/usr/local/etc/my.cnf`) with something like:
-
-```properties
-[client]
-default-character-set = utf8mb4
-
-[mysqld]
-character-set-server = utf8mb4
-```
-
-Depending on the file size that will be processed, it might be required to increase the max allowed package size
-    
-```properties
-[mysqld]
-max_allowed_packet = 256M
-```
-    
-If using a older version of MySQL, there is a [known issue](https://github.com/box/mojito/issues/120) when creating the schema. One workaround is to use `utf8`
-instead `utf8mb4` but it has its limitation in term of character support.
-
-We recommand to run both MySQL and the Java service using `UTC` timezone (or a least make sure they both the same timezone). To set
-`UTC` as default use the following:
-
-```properties
-[mysqld]
-default-time-zone = '+00:00'
 ```
 
 ### CLI

@@ -10,18 +10,19 @@ import org.springframework.data.jpa.repository.Query;
 public class ReviewProjectRepositoryTest {
 
   @Test
-  public void recomputeDecidedCountsScopesAggregateToRequest() throws Exception {
+  public void recomputeDecidedCountsScopesToRequestAndProjectRows() throws Exception {
     String sql = queryValue("recomputeDecidedCountsByRequestId", Long.class);
-    int aggregateStart = sql.indexOf("from ( select distinct rptu.id");
-    int requestFilter = sql.indexOf("rp_inner.review_project_request_id = :requestId");
-    int aggregateEnd = sql.indexOf(") decided_units", aggregateStart);
 
-    assertTrue(
-        "Expected request filter inside decided_units aggregate",
-        aggregateStart >= 0 && requestFilter > aggregateStart && requestFilter < aggregateEnd);
     assertTrue(
         "Expected outer update to stay scoped to request",
         sql.contains("where rp.review_project_request_id = :requestId"));
+    assertTrue(
+        "Expected decided-count subquery to stay scoped to the current project row",
+        sql.contains("where rptu.review_project_id = rp.id"));
+    assertTrue(
+        "Expected decided-word-count subquery to stay scoped to the current project row",
+        sql.indexOf("where rptu.review_project_id = rp.id")
+            != sql.lastIndexOf("where rptu.review_project_id = rp.id"));
   }
 
   @Test

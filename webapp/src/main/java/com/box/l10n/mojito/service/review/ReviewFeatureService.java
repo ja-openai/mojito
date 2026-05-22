@@ -46,9 +46,12 @@ public class ReviewFeatureService {
       String searchQuery, Boolean enabled, Integer limit) {
     requireAdmin();
     int resolvedLimit = normalizeLimit(limit);
+    String normalizedSearchQuery = normalizeSearchQuery(searchQuery);
     Page<ReviewFeatureSummaryRow> page =
-        reviewFeatureRepository.searchSummaryRows(
-            normalizeSearchQuery(searchQuery), enabled, PageRequest.of(0, resolvedLimit));
+        normalizedSearchQuery == null
+            ? reviewFeatureRepository.findSummaryRows(enabled, PageRequest.of(0, resolvedLimit))
+            : reviewFeatureRepository.searchSummaryRows(
+                normalizedSearchQuery, enabled, PageRequest.of(0, resolvedLimit));
     List<SearchReviewFeaturesView.ReviewFeatureSummary> summaries =
         toSummaryViews(page.getContent(), loadRepositoriesByFeatureId(page.getContent()));
     return new SearchReviewFeaturesView(summaries, page.getTotalElements());

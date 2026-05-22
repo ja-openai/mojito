@@ -48,32 +48,48 @@ public class PluralFormUpdaterJob implements Job {
   @Override
   public void execute(JobExecutionContext context) throws JobExecutionException {
 
-    if (dbUtils.isMysql()) {
+    if (dbUtils.isMysql() || dbUtils.isPostgres()) {
       logger.debug(
-          "For Mysql only, update old text unit with plural form that are now avaible with new plural support");
+          "Update old text unit with plural form that are now avaible with new plural support");
 
       try {
-        int updateCount =
-            jdbcTemplate.update(
-                ""
-                    + "update tm_text_unit tu, (\n"
-                    + "    select tu.id as tu_id, atu.plural_form_id as plural_form_id, atu.plural_form_other as plural_form_other \n"
-                    + "    from tm_text_unit tu\n"
-                    + "    inner join asset_text_unit_to_tm_text_unit map on map.tm_text_unit_id = tu.id\n"
-                    + "    inner join asset_text_unit atu on map.asset_text_unit_id = atu.id\n"
-                    + "    where \n"
-                    + "        tu.plural_form_id is null and atu.plural_form_id is not null\n"
-                    + "    ) d\n"
-                    + "set tu.plural_form_id = d.plural_form_id, tu.plural_form_other =  d.plural_form_other "
-                    + "where tu.id = d.tu_id");
+        int updateCount = jdbcTemplate.update(getUpdatePluralFormsSql());
 
         logger.debug("TmTextUnit update count: {}", updateCount);
       } catch (Exception e) {
         logger.error("Couldn't update plural forms, ignore", e);
       }
     } else {
-      logger.trace("Don't support PluralForm updates if not MySQL");
+      logger.trace("Don't support PluralForm updates for this database");
     }
+  }
+
+  String getUpdatePluralFormsSql() {
+    if (dbUtils.isPostgres()) {
+      return ""
+          + "update tm_text_unit tu\n"
+          + "set plural_form_id = d.plural_form_id, plural_form_other = d.plural_form_other\n"
+          + "from (\n"
+          + "    select tu_inner.id as tu_id, atu.plural_form_id as plural_form_id, atu.plural_form_other as plural_form_other\n"
+          + "    from tm_text_unit tu_inner\n"
+          + "    inner join asset_text_unit_to_tm_text_unit map on map.tm_text_unit_id = tu_inner.id\n"
+          + "    inner join asset_text_unit atu on map.asset_text_unit_id = atu.id\n"
+          + "    where tu_inner.plural_form_id is null and atu.plural_form_id is not null\n"
+          + ") d\n"
+          + "where tu.id = d.tu_id";
+    }
+
+    return ""
+        + "update tm_text_unit tu, (\n"
+        + "    select tu.id as tu_id, atu.plural_form_id as plural_form_id, atu.plural_form_other as plural_form_other \n"
+        + "    from tm_text_unit tu\n"
+        + "    inner join asset_text_unit_to_tm_text_unit map on map.tm_text_unit_id = tu.id\n"
+        + "    inner join asset_text_unit atu on map.asset_text_unit_id = atu.id\n"
+        + "    where \n"
+        + "        tu.plural_form_id is null and atu.plural_form_id is not null\n"
+        + "    ) d\n"
+        + "set tu.plural_form_id = d.plural_form_id, tu.plural_form_other =  d.plural_form_other "
+        + "where tu.id = d.tu_id";
   }
 
   @Bean(name = "jobDetailPluralFromUpdater")

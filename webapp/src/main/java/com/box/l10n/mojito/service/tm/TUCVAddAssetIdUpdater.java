@@ -10,27 +10,47 @@ public class TUCVAddAssetIdUpdater {
   static Logger logger = LoggerFactory.getLogger(TUCVAddAssetIdUpdaterJob.class);
 
   public void performUpdate(JdbcTemplate jdbcTemplate) {
+    performUpdate(jdbcTemplate, false);
+  }
+
+  public void performUpdate(JdbcTemplate jdbcTemplate, boolean postgres) {
     int updateCount = 0;
     do {
       try {
-        updateCount =
-            jdbcTemplate.update(
-                ""
-                    + "update tm_text_unit_current_variant tucv, (\n"
-                    + "    select tucv.id as tucv_id, tu.asset_id as asset_id\n"
-                    + "    from tm_text_unit_current_variant tucv\n"
-                    + "    inner join tm_text_unit as tu on tu.id = tucv.tm_text_unit_id\n"
-                    + "    where \n"
-                    + "        tucv.asset_id is null\n"
-                    + "    limit 100000 \n"
-                    + "    ) d\n"
-                    + "set tucv.asset_id = d.asset_id "
-                    + "where tucv.id = d.tucv_id and tucv.asset_id is null");
+        updateCount = jdbcTemplate.update(getUpdateSql(postgres));
 
         logger.info("TmTextUnitCurrentVariant update count: {}", updateCount);
       } catch (Exception e) {
         logger.error("Couldn't update asset id, ignore", e);
       }
     } while (updateCount > 0);
+  }
+
+  String getUpdateSql(boolean postgres) {
+    if (postgres) {
+      return ""
+          + "update tm_text_unit_current_variant tucv\n"
+          + "set asset_id = d.asset_id\n"
+          + "from (\n"
+          + "    select tucv_inner.id as tucv_id, tu.asset_id as asset_id\n"
+          + "    from tm_text_unit_current_variant tucv_inner\n"
+          + "    inner join tm_text_unit as tu on tu.id = tucv_inner.tm_text_unit_id\n"
+          + "    where tucv_inner.asset_id is null\n"
+          + "    limit 100000\n"
+          + ") d\n"
+          + "where tucv.id = d.tucv_id and tucv.asset_id is null";
+    }
+
+    return ""
+        + "update tm_text_unit_current_variant tucv, (\n"
+        + "    select tucv.id as tucv_id, tu.asset_id as asset_id\n"
+        + "    from tm_text_unit_current_variant tucv\n"
+        + "    inner join tm_text_unit as tu on tu.id = tucv.tm_text_unit_id\n"
+        + "    where \n"
+        + "        tucv.asset_id is null\n"
+        + "    limit 100000 \n"
+        + "    ) d\n"
+        + "set tucv.asset_id = d.asset_id "
+        + "where tucv.id = d.tucv_id and tucv.asset_id is null";
   }
 }

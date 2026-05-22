@@ -218,7 +218,7 @@ public class QuartzPollableTaskScheduler {
         action = "reschedule";
         logger.debug("Job already scheduled for key: {}, reschedule", keyName);
         if (cleanupOnUniqueIdReschedule
-            && dbUtils.isQuartzMysql()
+            && (dbUtils.isQuartzMysql() || dbUtils.isQuartzPostgres())
             && quartzJobInfo.getUniqueId() != null) {
           recordScheduleJobStep(
               metricTags,

@@ -47,23 +47,32 @@ public class AssetExtractionByBranchRemoverJob implements Job {
   @Override
   public void execute(JobExecutionContext context) throws JobExecutionException {
 
-    if (dbUtils.isMysql()) {
+    if (dbUtils.isMysql() || dbUtils.isPostgres()) {
       logger.info(
-          "For Mysql only, remove asset extraction by branch that have an asset extraction that is used as last asset extraction");
+          "Remove asset extraction by branch that have an asset extraction that is used as last asset extraction");
       try {
-        int deleteCount =
-            jdbcTemplate.update(
-                "delete aebb\n"
-                    + "from asset_extraction_by_branch aebb\n"
-                    + "inner join asset a on aebb.asset_id = a.id\n"
-                    + "where a.last_successful_asset_extraction_id = aebb.asset_extraction_id");
+        int deleteCount = jdbcTemplate.update(getDeleteAssetExtractionByBranchSql());
         logger.info("AssetExtractionByBranch delete count: {}", deleteCount);
       } catch (Exception e) {
         logger.error("Couldn't remove asset extraction by branch, ignore", e);
       }
     } else {
-      logger.trace("Don't support asset updates if not MySQL");
+      logger.trace("Don't support asset updates for this database");
     }
+  }
+
+  String getDeleteAssetExtractionByBranchSql() {
+    if (dbUtils.isPostgres()) {
+      return "delete from asset_extraction_by_branch aebb\n"
+          + "using asset a\n"
+          + "where aebb.asset_id = a.id\n"
+          + "and a.last_successful_asset_extraction_id = aebb.asset_extraction_id";
+    }
+
+    return "delete aebb\n"
+        + "from asset_extraction_by_branch aebb\n"
+        + "inner join asset a on aebb.asset_id = a.id\n"
+        + "where a.last_successful_asset_extraction_id = aebb.asset_extraction_id";
   }
 
   @Bean(name = "jobDetailAssetExtractionByBranchRemover")

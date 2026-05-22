@@ -47,11 +47,11 @@ public class TUCVAddAssetIdUpdaterJob implements Job {
   @Override
   public void execute(JobExecutionContext context) throws JobExecutionException {
 
-    if (dbUtils.isMysql()) {
-      logger.info("For Mysql only, update text unit current variant to de-normalize the asset id");
-      tucvAddAssetIdUpdater.performUpdate(jdbcTemplate);
+    if (dbUtils.isMysql() || dbUtils.isPostgres()) {
+      logger.info("Update text unit current variant to de-normalize the asset id");
+      tucvAddAssetIdUpdater.performUpdate(jdbcTemplate, dbUtils.isPostgres());
     } else {
-      logger.trace("Don't support asset updates if not MySQL");
+      logger.trace("Don't support asset updates for this database");
     }
   }
 

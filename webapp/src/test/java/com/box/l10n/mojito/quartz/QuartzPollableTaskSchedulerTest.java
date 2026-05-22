@@ -89,7 +89,7 @@ public class QuartzPollableTaskSchedulerTest extends ServiceTestBase {
      * skipped due to the rescheduling caused by the third task. Verify that the output of the third
      * job is returned.
      */
-    Assume.assumeTrue(dbUtils.isQuartzMysql());
+    Assume.assumeTrue(dbUtils.isQuartzMysql() || dbUtils.isQuartzPostgres());
     QuartzJobInfo<Long, Void> quartzJobInfo =
         QuartzJobInfo.newBuilder(AQuartzPollableJobVoidOutput.class).withUniqueId("test1").build();
     QuartzJobInfo<Long, Void> quartzJobInfo2 =
@@ -126,7 +126,7 @@ public class QuartzPollableTaskSchedulerTest extends ServiceTestBase {
   @Test
   public void testRescheduleJobsWithUniqueIdAndNonVoidOutput()
       throws ExecutionException, InterruptedException {
-    Assume.assumeTrue(dbUtils.isQuartzMysql());
+    Assume.assumeTrue(dbUtils.isQuartzMysql() || dbUtils.isQuartzPostgres());
     QuartzJobInfo<Long, AQuartzPollableJobOutput> quartzJobInfo =
         QuartzJobInfo.newBuilder(AQuartzPollableJobNonVoidOutput.class)
             .withUniqueId("test1")

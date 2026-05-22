@@ -22,9 +22,9 @@ Maven does not need to be installed globally: the repository includes the
 `./mvnw` wrapper. You do not need to install Node.js or npm separately: the
 first build installs the versions pinned by the project.
 
-MySQL, Docker, Redis, and OpenSearch are **not required**. Mojito starts with an
-embedded, in-memory HSQLDB database, and the Maven build provides the frontend
-toolchain.
+PostgreSQL, Docker, Redis, and OpenSearch are **not required**. Mojito starts
+with an embedded, in-memory HSQLDB database, and the Maven build provides the
+frontend toolchain.
 
 ### Install Java 21
 
@@ -55,8 +55,8 @@ and npm under `webapp/node`, installs frontend dependencies, and builds both the
 Spring Boot application and React frontend.
 
 The `no-local-config` profile prevents Maven tests from inheriting unrelated
-configuration under `~/.l10n`. It is useful when a local MySQL configuration
-exists but MySQL is not running.
+configuration under `~/.l10n`. It is useful when a local database configuration
+exists but that database is not running.
 
 ### Start Mojito
 
@@ -76,46 +76,43 @@ Password: ChangeMe
 The packaged application includes the built frontend. Its in-memory database is
 reset each time the application stops.
 
-## Optional: persistent MySQL
+## Optional: persistent PostgreSQL
 
-Use MySQL 8 when you need data to survive application restarts, want to exercise
-Flyway migrations, or need behavior closer to a production database. You can use
-an existing local MySQL installation or run MySQL in Docker.
+Use PostgreSQL 16 when you need data to survive application restarts, want to
+exercise Flyway migrations, or need behavior closer to a production database.
+You can use an existing local PostgreSQL installation or run PostgreSQL in
+Docker.
 
-### MySQL in Docker
+### PostgreSQL in Docker
 
-The following command starts MySQL 8, publishes it only on localhost, and keeps
-its data in a named Docker volume:
+The following command starts PostgreSQL 16, publishes it only on localhost, and
+keeps its data in a named Docker volume:
 
 ```sh
-docker run --name mojito-mysql \
-  --publish 127.0.0.1:3306:3306 \
-  --env MYSQL_ROOT_PASSWORD=ChangeMe \
-  --env MYSQL_DATABASE=mojito \
-  --env MYSQL_USER=mojito \
-  --env MYSQL_PASSWORD=ChangeMe \
-  --volume mojito-mysql-data:/var/lib/mysql \
-  --detach mysql:8.0.34 \
-  --character-set-server=utf8mb4 \
-  --collation-server=utf8mb4_bin
+docker run --name mojito-postgres \
+  --publish 127.0.0.1:5432:5432 \
+  --env POSTGRES_DB=mojito \
+  --env POSTGRES_USER=mojito \
+  --env POSTGRES_PASSWORD=ChangeMe \
+  --volume mojito-postgres-data:/var/lib/postgresql/data \
+  --detach postgres:16
 ```
 
 The `ChangeMe` credentials are examples for a local-only development instance.
 Do not reuse them in shared or production environments.
 
-### Existing local MySQL
+### Existing local PostgreSQL
 
-If MySQL 8 is already running on your machine, create the same database and
-local development user:
+If PostgreSQL 16 is already running on your machine, create the same database
+and local development user:
 
 ```sql
-CREATE USER IF NOT EXISTS 'mojito'@'localhost' IDENTIFIED BY 'ChangeMe';
-CREATE DATABASE IF NOT EXISTS mojito CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
-GRANT ALL PRIVILEGES ON mojito.* TO 'mojito'@'localhost';
-FLUSH PRIVILEGES;
+CREATE USER mojito WITH PASSWORD 'ChangeMe';
+CREATE DATABASE mojito OWNER mojito;
+GRANT ALL PRIVILEGES ON DATABASE mojito TO mojito;
 ```
 
-### Configure Mojito to use MySQL
+### Configure Mojito to use PostgreSQL
 
 Create the local configuration directory:
 
@@ -126,10 +123,11 @@ mkdir -p ~/.l10n/config/webapp
 Then create `~/.l10n/config/webapp/application.properties` with:
 
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/mojito?characterEncoding=UTF-8&useUnicode=true
+spring.profiles.active=postgres
+spring.datasource.url=jdbc:postgresql://localhost:5432/mojito
 spring.datasource.username=mojito
 spring.datasource.password=ChangeMe
-spring.datasource.driverClassName=com.mysql.cj.jdbc.Driver
+spring.datasource.driverClassName=org.postgresql.Driver
 spring.flyway.enabled=true
 spring.flyway.clean-disabled=true
 l10n.flyway.clean=false
@@ -154,7 +152,7 @@ For a more production-like local environment, the API/worker Docker Compose
 stack builds Mojito inside its Java 21 container, so this path requires Docker
 but does not require Java or Maven to be installed on the host. It includes:
 
-- MySQL 8 with a persistent named volume.
+- PostgreSQL 16 with a persistent named volume.
 - OpenSearch with the analysis plugins used by Mojito.
 - The Mojito API and background workers running on Java 21.
 
@@ -171,7 +169,7 @@ The application runs at [http://localhost:8080/login](http://localhost:8080/logi
 with `admin` / `ChangeMe`. OpenSearch is available only on
 [http://127.0.0.1:9200](http://127.0.0.1:9200).
 
-Stop the containers while preserving the named MySQL and OpenSearch volumes:
+Stop the containers while preserving the named PostgreSQL and OpenSearch volumes:
 
 ```sh
 docker compose -f docker/docker-compose-api-worker.yml down
@@ -194,8 +192,9 @@ java -jar webapp/target/mojito-webapp-*-exec.jar \
 
 The search index is optional. See `dev-docs/design/022-search-index.md` for its
 configuration and current limitations. Prefer
-`docker/docker-compose-api-worker.yml` for a complete stack; the older
-`docker/docker-compose.yml` still uses MySQL 5.7 and an outdated Java image.
+`docker/docker-compose-api-worker.yml` for a complete API/worker stack; the
+smaller `docker/docker-compose.yml` runs only the webapp, PostgreSQL, and
+OpenSearch.
 
 ## Frontend development with Vite
 
@@ -253,6 +252,13 @@ Run one backend test class:
 ./mvnw -pl webapp -Pno-local-config -Dtest=YourTestClass test
 ```
 
+Run the Postgres-specific integration tests with Testcontainers enabled:
+
+```sh
+./mvnw -pl webapp -Pno-local-config -Dmojito.test.postgres=true \
+  -Dtest=PostgresFlywayMigrationTest,PostgresBaselineSchemaTest test
+```
+
 Backend integration tests should extend `WSTestBase` or `ServiceTestBase`. Their
 shared setup binds Mojito's singleton AspectJ transaction and bean-configurer
 aspects to the active test context before each test, including when bean
@@ -300,7 +306,7 @@ run ./mvnw -Pno-local-config -DskipTests install, start the application with its
 embedded HSQLDB database, and verify the login page. If I will be doing frontend
 work, also enable HEADER,DATABASE authentication and start the Vite development
 server. Run a relevant test and tell me which URLs and commands to use. Do not
-install MySQL, Docker, Redis, or OpenSearch unless I explicitly ask.
+install PostgreSQL, Docker, Redis, or OpenSearch unless I explicitly ask.
 ```
 
 Codex can inspect the repository, run the build, diagnose common setup issues,
@@ -323,7 +329,7 @@ script for this repository is:
 `./mvnw -version`; both must report Java 21. Select the correct `JAVA_HOME` in
 your shell or IDE, then retry.
 
-**A test unexpectedly connects to MySQL.** Run the command with
+**A test unexpectedly connects to a local database.** Run the command with
 `-Pno-local-config` to ignore configuration under `~/.l10n` and use the embedded
 HSQLDB defaults.
 

@@ -1,7 +1,7 @@
 # Docker compose
 
 Run `docker-compose up` from within `mojito/docker/` or `docker-compose -f docker/docker-compose.yml up` from the
-project directory. It will start Mysql and build/start the Webapp.
+project directory. It will start PostgreSQL and build/start the Webapp.
 
 In detached mode `docker compose up -d`. And to remove everything including volumes: `docker compose rm -s -v` to remove
 volumes.
@@ -12,27 +12,27 @@ For older version, may need to set some env variable `COMPOSE_DOCKER_CLI_BUILD=1
 
 ## To use a local data directory
 
-Create the data directory for mysql: `mkdir mojito/docker/.data/db`
+Create the data directory for PostgreSQL: `mkdir mojito/docker/.data/db`
 
 ```
 services:
   db:
-    image: mysql:5.7
+    image: postgres:16
     volumes:
-      - "./.data/db:/var/lib/mysql"
+      - "./.data/db:/var/lib/postgresql/data"
 ```
 
 or named volumes
 
 ```
 volumes:
-  - mojito_mysql
+  - mojito_postgres
     
 services:
   db:
-    image: mysql:5.7
+    image: postgres:16
     volumes:
-      - "mojito_mysql:/var/lib/mysql"
+      - "mojito_postgres:/var/lib/postgresql/data"
 ```
 
 ## Common issues
@@ -96,25 +96,20 @@ service: `docker-machine ip default`.
 `export l10n_resttemplate_host="192.168.99.111" ` and then whatever CLI command you have to run, eg.
 `mojito demo-create -n dockertest`
 
-### Extra configuration for mysql
+### Extra configuration for PostgreSQL
 
 ```
 services:
     db:
-    image: mysql:5.7
+    image: postgres:16
         user: "1000:50" # needed on Mac
         volumes:
-          - "./.data/db:/var/lib/mysql"
+          - "./.data/db:/var/lib/postgresql/data"
         restart: always
         environment:
-          MYSQL_ROOT_PASSWORD: ChangeMe
-          MYSQL_DATABASE: mojito
-          MYSQL_USER: mojito
-          MYSQL_PASSWORD: ChangeMe
-        command:
-          - --character-set-server=utf8mb4
-          - --collation-server=utf8mb4_bin
-          - --innodb_use_native_aio=0 # needed on Mac
+          POSTGRES_DB: mojito
+          POSTGRES_USER: mojito
+          POSTGRES_PASSWORD: ChangeMe
 ```
 
 ## Alpine version
@@ -129,12 +124,12 @@ ones defined in the `Dockerfile`. For example, `MOJITO_PORT` was used in the `Do
 Kubernetes with a value like `tcp://{ip}:{port}` which was making the CLI command fail in the container. Replaced
 `MOJITO_PORT` with `MOJITO_SERVER_PORT` in the `Dockerfile` and the CLI command.
 
-### Port forwarding for MySQL
+### Port forwarding for PostgreSQL
 
-First forward the pod port to the localhost port, then in the container use `socat` to forward pod port to the remote MySQL
-server. Finally connect the SQL client to the localhost port: `33306`.
+First forward the pod port to the localhost port, then in the container use `socat` to forward pod port to the remote
+PostgreSQL server. Finally connect the SQL client to the localhost port: `35432`.
 
 ```
-kubectl port-forward svc/mojito-webapp 33306:3306
-socat TCP-LISTEN:3306,reuseaddr,fork TCP:mojito-mysql-staging.mysql.database.azure.com:3306
+kubectl port-forward svc/mojito-webapp 35432:5432
+socat TCP-LISTEN:5432,reuseaddr,fork TCP:mojito-postgres-staging.postgres.database.azure.com:5432
 ```

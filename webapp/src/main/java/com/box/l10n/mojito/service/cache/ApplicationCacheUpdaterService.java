@@ -15,7 +15,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Component;
 
 /**
- * Class that implements MySQL optimized versions of the upsert methods for the database-backed
+ * Class that implements database optimized versions of the upsert methods for the database-backed
  * cache.
  */
 @Component
@@ -29,7 +29,7 @@ public class ApplicationCacheUpdaterService {
 
   @Autowired DBUtils dbUtils;
 
-  /** Upsert a cache entry with a TTL, with a MySql optimized version. */
+  /** Upsert a cache entry with a TTL, with optimized SQL for supported databases. */
   void upsertWithTTL(
       @Param("cacheTypeId") short cacheTypeId,
       @Param("keyMD5") String keyMD5,
@@ -42,6 +42,25 @@ public class ApplicationCacheUpdaterService {
               + "ON DUPLICATE KEY UPDATE value = :value, created_date = CURRENT_TIMESTAMP, expiry_date = ADDDATE(CURRENT_TIMESTAMP, INTERVAL :ttlInSeconds SECOND)";
 
       Query query = entityManager.createNativeQuery(mySqlQuery);
+      query.setParameter("cacheTypeId", cacheTypeId);
+      query.setParameter("keyMD5", keyMD5);
+      query.setParameter("value", value);
+      query.setParameter("ttlInSeconds", ttlInSeconds);
+      query.executeUpdate();
+
+      entityManager.flush();
+      entityManager.clear();
+    } else if (dbUtils.isPostgres()) {
+      String postgreSqlQuery =
+          "INSERT INTO application_cache "
+              + "(cache_type_id, key_md5, value, created_date, expiry_date) "
+              + "VALUES (:cacheTypeId, :keyMD5, :value, CURRENT_TIMESTAMP, "
+              + "CURRENT_TIMESTAMP + (:ttlInSeconds * INTERVAL '1 second')) "
+              + "ON CONFLICT (cache_type_id, key_md5) DO UPDATE "
+              + "SET value = :value, created_date = CURRENT_TIMESTAMP, "
+              + "expiry_date = CURRENT_TIMESTAMP + (:ttlInSeconds * INTERVAL '1 second')";
+
+      Query query = entityManager.createNativeQuery(postgreSqlQuery);
       query.setParameter("cacheTypeId", cacheTypeId);
       query.setParameter("keyMD5", keyMD5);
       query.setParameter("value", value);
@@ -63,7 +82,8 @@ public class ApplicationCacheUpdaterService {
       if (existingEntry.isPresent()) {
         applicationCache = existingEntry.get();
         applicationCache.setValue(value);
-        applicationCache.setCreatedDate(currentSqlTimestamp.plusSeconds((int) ttlInSeconds));
+        applicationCache.setCreatedDate(currentSqlTimestamp);
+        applicationCache.setExpiryDate(currentSqlTimestamp.plusSeconds((int) ttlInSeconds));
       } else {
         applicationCache =
             new ApplicationCache(
@@ -77,7 +97,9 @@ public class ApplicationCacheUpdaterService {
     }
   }
 
-  /** Upsert a cache entry without a TTL being specified, with a MySql optimized version. */
+  /**
+   * Upsert a cache entry without a TTL being specified, with optimized SQL for supported databases.
+   */
   void upsertNoExpiryDate(
       @Param("cacheTypeId") short cacheTypeId,
       @Param("keyMD5") String keyMD5,
@@ -89,6 +111,23 @@ public class ApplicationCacheUpdaterService {
               + "ON DUPLICATE KEY UPDATE value = :value, created_date = CURRENT_TIMESTAMP";
 
       Query query = entityManager.createNativeQuery(mySqlQuery);
+      query.setParameter("cacheTypeId", cacheTypeId);
+      query.setParameter("keyMD5", keyMD5);
+      query.setParameter("value", value);
+
+      query.executeUpdate();
+
+      entityManager.flush();
+      entityManager.clear();
+    } else if (dbUtils.isPostgres()) {
+      String postgreSqlQuery =
+          "INSERT INTO application_cache "
+              + "(cache_type_id, key_md5, value, created_date, expiry_date) "
+              + "VALUES (:cacheTypeId, :keyMD5, :value, CURRENT_TIMESTAMP, NULL) "
+              + "ON CONFLICT (cache_type_id, key_md5) DO UPDATE "
+              + "SET value = :value, created_date = CURRENT_TIMESTAMP";
+
+      Query query = entityManager.createNativeQuery(postgreSqlQuery);
       query.setParameter("cacheTypeId", cacheTypeId);
       query.setParameter("keyMD5", keyMD5);
       query.setParameter("value", value);
