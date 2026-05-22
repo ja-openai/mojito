@@ -510,11 +510,22 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Override
   public boolean requeueFailed(
       String queueName, AsyncJobId id, Instant availableAt, String jobData) {
-    AsyncJobQueueValidation.validateQueueName(queueName);
     Instant validatedAvailableAt =
         AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
-    long parsedId = parseId(id);
+    return requeueFailedAtDatabaseTime(queueName, id, validatedAvailableAt, jobData, databaseNow());
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Override
+  public boolean requeueFailedNow(String queueName, AsyncJobId id, String jobData) {
     Instant now = databaseNow();
+    return requeueFailedAtDatabaseTime(queueName, id, now, jobData, now);
+  }
+
+  private boolean requeueFailedAtDatabaseTime(
+      String queueName, AsyncJobId id, Instant availableAt, String jobData, Instant updatedDate) {
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    long parsedId = parseId(id);
 
     String sql =
         """
@@ -535,9 +546,9 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("queuedStatus", AsyncJobStatus.QUEUED.getDatabaseValue())
-            .addValue("availableAt", Timestamp.from(validatedAvailableAt))
+            .addValue("availableAt", Timestamp.from(availableAt))
             .addValue("jobData", jobData)
-            .addValue("updatedDate", Timestamp.from(now))
+            .addValue("updatedDate", Timestamp.from(updatedDate))
             .addValue("id", parsedId)
             .addValue("queueName", queueName)
             .addValue("failedStatus", AsyncJobStatus.FAILED.getDatabaseValue());

@@ -134,6 +134,19 @@ public interface AsyncJobStore {
   boolean requeueFailed(String queueName, AsyncJobId id, Instant availableAt, String jobData);
 
   /**
+   * Moves a terminal failed job back to queued state for immediate operator-driven replay.
+   *
+   * <p>Durable implementations should anchor "now" on database time, not JVM time, so replay
+   * availability stays consistent with claim ordering under pod clock skew.
+   *
+   * @param jobData optional replacement payload; null keeps existing value
+   * @return true if a failed job was requeued, false if the job was not failed or did not exist
+   */
+  default boolean requeueFailedNow(String queueName, AsyncJobId id, String jobData) {
+    return requeueFailed(queueName, id, Instant.now(), jobData);
+  }
+
+  /**
    * Deletes a bounded batch of terminal jobs older than {@code updatedBefore}.
    *
    * <p>Only {@link AsyncJobStatus#DONE} and {@link AsyncJobStatus#FAILED} are accepted. Operators

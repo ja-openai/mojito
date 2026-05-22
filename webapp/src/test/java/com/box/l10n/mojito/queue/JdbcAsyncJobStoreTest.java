@@ -233,6 +233,35 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void requeueFailedNowUsesDatabaseCurrentTimestampForAvailableAt() {
+    String fixedDatabaseTimestampSql = "VALUES TIMESTAMP '2099-01-01 00:00:00'";
+    JdbcAsyncJobStore futureClockStore =
+        new JdbcAsyncJobStore(
+            new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource()),
+            AsyncJobQueueJdbcDialect.HSQL.claimNextJobsSql(),
+            fixedDatabaseTimestampSql);
+    Instant fixedDatabaseNow =
+        jdbcTemplate.queryForObject(fixedDatabaseTimestampSql, Timestamp.class).toInstant();
+    AsyncJobId id = futureClockStore.enqueue("assetlocalize", "{\"step\":\"new\"}", Instant.EPOCH);
+    AsyncJobRecord claimed =
+        futureClockStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(30))
+            .get(0);
+    assertThat(
+            futureClockStore.markFailed(
+                "assetlocalize", id, "worker-a", claimed.leaseToken(), null, "operator replay"))
+        .isTrue();
+
+    assertThat(futureClockStore.requeueFailedNow("assetlocalize", id, null)).isTrue();
+
+    AsyncJobRecord requeued = futureClockStore.getByIds(List.of(id)).get(0);
+    assertThat(requeued.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(requeued.availableAt()).isEqualTo(fixedDatabaseNow);
+    assertThat(requeued.attemptCount()).isZero();
+    assertThat(requeued.lastError()).isEqualTo("operator replay");
+  }
+
+  @Test
   public void markFailedPersistsTerminalStateAndPreventsReclaim() {
     AsyncJobId id =
         jdbcAsyncJobStore.enqueue(

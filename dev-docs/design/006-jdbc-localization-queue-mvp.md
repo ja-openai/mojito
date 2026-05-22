@@ -267,6 +267,9 @@ Operator Controls
 - Store-level inspection supports listing recent jobs by `queue_name` and `status`.
 - Store-level inspection, claim, and cleanup methods reject excessive caller-provided limits so an
   admin path cannot accidentally issue pathological queue-table queries.
+- The queue inspection service wraps the store with a bounded default limit, status parsing,
+  same-queue id checks, capped payload previews for lists, full-payload detail lookup, and
+  failed-only replay that maps missing/non-failed jobs to explicit operator errors.
 - Store-level replay only transitions `failed -> queued`; it does not touch running or completed
   jobs, resets the attempt budget for a fresh retry cycle, and keeps the previous `last_error`
   until success or the next failure.
@@ -275,8 +278,8 @@ Operator Controls
 - Optional scheduled retention wraps the store primitive when
   `l10n.org.async-job-queue.retention.enabled=true`, deleting at most `batch-size` done rows and
   `batch-size` failed rows per queue per run.
-- A REST/admin surface can wrap these primitives later with authentication, audit logging, and
-  payload redaction.
+- A REST/admin surface can wrap the inspection service later after an explicit authorization,
+  payload-redaction, and replay-audit review.
 
 Rollout Plan
 1. Implement queue infra + assetlocalize-only integration behind feature flag.
