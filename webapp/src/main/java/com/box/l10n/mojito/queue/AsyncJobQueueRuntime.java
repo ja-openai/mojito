@@ -129,6 +129,7 @@ class AsyncJobQueueRuntime {
         nextPollFuture = null;
       }
     }
+    awaitActivePollBeforeExecutorShutdown();
     executor.shutdown();
   }
 
@@ -236,6 +237,7 @@ class AsyncJobQueueRuntime {
 
     synchronized (scheduleLock) {
       pollInProgress.set(false);
+      scheduleLock.notifyAll();
       if (wakeRequested.getAndSet(false)) {
         pollCycleResult = PollCycleResult.wakeup();
       }
@@ -247,6 +249,46 @@ class AsyncJobQueueRuntime {
           recordPollScheduleFailure();
         }
       }
+    }
+  }
+
+  private void awaitActivePollBeforeExecutorShutdown() {
+    long shutdownAwaitTerminationMs = queueSettings.getShutdownAwaitTerminationMs();
+    if (shutdownAwaitTerminationMs <= 0) {
+      return;
+    }
+
+    long deadlineNanos =
+        System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(shutdownAwaitTerminationMs);
+    boolean timedOut = false;
+    boolean interrupted = false;
+    synchronized (scheduleLock) {
+      while (pollInProgress.get()) {
+        long remainingNanos = deadlineNanos - System.nanoTime();
+        if (remainingNanos <= 0) {
+          timedOut = true;
+          break;
+        }
+        try {
+          scheduleLock.wait(Math.max(1, TimeUnit.NANOSECONDS.toMillis(remainingNanos)));
+        } catch (InterruptedException e) {
+          interrupted = true;
+          break;
+        }
+      }
+    }
+
+    if (timedOut) {
+      logger.warn(
+          "Timed out waiting for active async queue poll to stop before executor shutdown for {}",
+          queueName);
+      meterRegistry.counter("asyncJobQueue.stop.pollTimeout", "queueName", queueName).increment();
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+      logger.warn(
+          "Interrupted while waiting for active async queue poll to stop before executor shutdown for {}",
+          queueName);
     }
   }
 

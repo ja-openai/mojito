@@ -1597,6 +1597,104 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void stopWaitsForActivePollBeforeShuttingDownExecutor() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    CountDownLatch claimStarted = new CountDownLatch(1);
+    CountDownLatch allowClaimReturn = new CountDownLatch(1);
+    CountDownLatch handlerStarted = new CountDownLatch(1);
+    CountDownLatch doneMarked = new CountDownLatch(1);
+
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenAnswer(
+            invocation -> {
+              claimStarted.countDown();
+              assertThat(allowClaimReturn.await(2, TimeUnit.SECONDS)).isTrue();
+              return List.of(claimedJob(1));
+            });
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenAnswer(
+            invocation -> {
+              doneMarked.countDown();
+              return true;
+            });
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setShutdownAwaitTerminationMs(1_000);
+    ThreadPoolTaskExecutor gracefulExecutor = newGracefulExecutor(1, 1_000);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  handlerStarted.countDown();
+                  return AsyncJobHandlerResult.done();
+                }),
+            taskScheduler,
+            gracefulExecutor);
+
+    try {
+      asyncJobQueueRuntime.start();
+      Thread pollThread =
+          new Thread(taskScheduler.scheduledTasks().get(0), "async-queue-poll-test");
+      pollThread.start();
+      assertThat(claimStarted.await(2, TimeUnit.SECONDS)).isTrue();
+
+      CountDownLatch stopStarted = new CountDownLatch(1);
+      Thread stopThread =
+          new Thread(
+              () -> {
+                stopStarted.countDown();
+                asyncJobQueueRuntime.stop();
+              },
+              "async-queue-stop-test");
+      stopThread.start();
+      assertThat(stopStarted.await(1, TimeUnit.SECONDS)).isTrue();
+      stopThread.join(100);
+      assertThat(stopThread.isAlive()).isTrue();
+
+      allowClaimReturn.countDown();
+
+      assertThat(handlerStarted.await(2, TimeUnit.SECONDS)).isTrue();
+      assertThat(doneMarked.await(2, TimeUnit.SECONDS)).isTrue();
+      pollThread.join(2_000);
+      stopThread.join(2_000);
+      assertThat(pollThread.isAlive()).isFalse();
+      assertThat(stopThread.isAlive()).isFalse();
+    } finally {
+      gracefulExecutor.shutdown();
+    }
+
+    verify(asyncJobStore, times(0))
+        .requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            anyString());
+    verify(asyncJobStore, times(0))
+        .markFailed(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any(), anyString());
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.executor.rejected")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.stop.pollTimeout")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+  }
+
+  @Test
   public void wakeupDuringActivePollSchedulesImmediateFollowUpPoll() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
@@ -1997,6 +2095,14 @@ public class AsyncJobQueueRuntimeTest {
 
   private ThreadPoolTaskExecutor newExecutor(int concurrency) {
     ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+    configureExecutor(threadPoolTaskExecutor, concurrency);
+    return threadPoolTaskExecutor;
+  }
+
+  private ThreadPoolTaskExecutor newGracefulExecutor(int concurrency, long awaitTerminationMs) {
+    ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+    threadPoolTaskExecutor.setWaitForTasksToCompleteOnShutdown(true);
+    threadPoolTaskExecutor.setAwaitTerminationMillis(awaitTerminationMs);
     configureExecutor(threadPoolTaskExecutor, concurrency);
     return threadPoolTaskExecutor;
   }

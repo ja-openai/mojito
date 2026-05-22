@@ -204,7 +204,8 @@ Test Coverage
   summaries, bounded runtime configuration, retry backoff, executor rejection containment,
   explicit requeue budget exhaustion, scheduling, notification wakeup coalescing, runtime poll
   failure recovery, runtime latency timers, state-transition false-return and exception metrics,
-  trigger scheduling failure metrics, bounded graceful executor shutdown,
+  trigger scheduling failure metrics, bounded graceful executor shutdown, active-poll shutdown
+  races,
   coordinator startup cleanup, synchronized trigger routing, null-safe queue configuration binding,
   and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
@@ -253,6 +254,7 @@ Monitoring (MVP Required)
   - failed state transitions/fencing failures by transition
   - failed immediate trigger/wakeup scheduling
   - failed initial or follow-up scheduled-poll registration
+  - active poll did not stop before the bounded executor shutdown wait elapsed
   - status metrics reporting failures
 
 Operator Controls
