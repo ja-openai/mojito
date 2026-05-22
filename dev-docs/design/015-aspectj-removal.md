@@ -29,7 +29,8 @@ Framework modes:
 
 Remaining annotation usage:
 
-- `299` `@Transactional` usages remain across production and test sources.
+- `74` `@Transactional` usages remain across production and test sources: `17` production
+  repository-method annotations and `57` Spring test transaction boundaries.
 - No `@Configurable`, `@Pollable`, `@Timed`, `@StopWatch`, `@RunAs`, `@JsonRawString`, AspectJ
   method-security, AspectJ async, AspectJ caching, or annotation retry usage remains in source.
 
@@ -415,13 +416,13 @@ should not depend on method weaving.
 
 ### Build Cleanup
 
-After all usages are gone:
+The AspectJ build path has been removed:
 
-- Remove `aspectj-maven-plugin` from `webapp`.
-- Remove `aspectj-maven-plugin.version`, `aspectjrt`, `aspectjtools`, `spring-aspects`, and
-  `spring-security-aspects` where no longer needed.
-- Remove obsolete aspect classes and `Aspects.aspectOf(...)` configuration.
-- Confirm Maven compile/test no longer invokes `ajc`.
+- `aspectj-maven-plugin` no longer runs in `webapp`.
+- `aspectj-maven-plugin.version`, `aspectjrt`, `aspectjtools`, `spring-aspects`, and
+  `spring-security-aspects` are no longer present where they were used for weaving.
+- Obsolete aspect classes and `Aspects.aspectOf(...)` configuration are gone.
+- `mvn -pl webapp -DskipTests test-compile` no longer invokes `ajc`.
 
 ## Validation
 

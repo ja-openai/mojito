@@ -18,7 +18,7 @@ public interface BlobStorageTestShared {
   BlobStorage getBlobStorage();
 
   @Before
-  default void bbefore() { // don't call it "before", aspectj would not compile :-|
+  default void bbefore() {
     Assume.assumeNotNull(getBlobStorage());
   }
 
