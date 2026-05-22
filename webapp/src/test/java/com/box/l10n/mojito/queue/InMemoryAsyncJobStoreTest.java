@@ -396,6 +396,7 @@ public class InMemoryAsyncJobStoreTest {
                 AsyncJobStatus.DONE,
                 Instant.now().plusSeconds(1),
                 excessiveLimit));
+    assertThrows(IllegalArgumentException.class, () -> inMemoryAsyncJobStore.getByIds(manyIds()));
   }
 
   @Test
@@ -462,5 +463,11 @@ public class InMemoryAsyncJobStoreTest {
                 queueName, id, "worker-a", claimed.leaseToken(), null, "boom"))
         .isTrue();
     return id;
+  }
+
+  private List<AsyncJobId> manyIds() {
+    return java.util.stream.IntStream.rangeClosed(0, AsyncJobQueueValidation.STORE_QUERY_LIMIT_MAX)
+        .mapToObj(index -> new AsyncJobId(String.valueOf(index + 1)))
+        .toList();
   }
 }

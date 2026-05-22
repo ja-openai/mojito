@@ -601,6 +601,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     if (ids == null || ids.isEmpty()) {
       return Collections.emptyList();
     }
+    AsyncJobQueueValidation.validateStoreQueryLimit("ids", ids.size());
 
     List<Long> parsedIds = parseIds(ids);
     if (parsedIds.isEmpty()) {

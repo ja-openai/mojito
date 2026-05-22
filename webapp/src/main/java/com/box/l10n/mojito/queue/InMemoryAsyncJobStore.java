@@ -320,6 +320,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
     if (ids == null || ids.isEmpty()) {
       return Collections.emptyList();
     }
+    AsyncJobQueueValidation.validateStoreQueryLimit("ids", ids.size());
 
     List<AsyncJobRecord> jobs = new ArrayList<>(ids.size());
     for (AsyncJobId id : ids) {

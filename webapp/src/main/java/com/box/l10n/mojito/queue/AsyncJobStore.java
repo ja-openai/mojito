@@ -156,6 +156,10 @@ public interface AsyncJobStore {
    */
   int deleteTerminalJobs(String queueName, AsyncJobStatus status, Instant updatedBefore, int limit);
 
-  /** Fetches jobs by id; missing ids are omitted from the returned list. */
+  /**
+   * Fetches jobs by id; missing ids are omitted from the returned list.
+   *
+   * <p>Implementations should reject excessive id batches instead of issuing unbounded lookups.
+   */
   List<AsyncJobRecord> getByIds(List<AsyncJobId> ids);
 }

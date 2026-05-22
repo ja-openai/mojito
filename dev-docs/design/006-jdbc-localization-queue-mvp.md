@@ -275,8 +275,9 @@ Monitoring (MVP Required)
 
 Operator Controls
 - Store-level inspection supports listing recent jobs by `queue_name` and `status`.
-- Store-level inspection, claim, and cleanup methods reject excessive caller-provided limits so an
-  admin path cannot accidentally issue pathological queue-table queries.
+- Store-level inspection, batch id lookup, claim, and cleanup methods reject excessive
+  caller-provided limits so an admin path cannot accidentally issue pathological queue-table
+  queries.
 - The queue inspection service wraps the store with a bounded default limit, status parsing,
   same-queue id checks, capped payload previews for lists, full-payload detail lookup, and
   failed-only replay that maps missing/non-failed jobs to explicit operator errors and emits
