@@ -72,18 +72,24 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
       for (Map.Entry<String, AsyncJobHandler> entry : handlersByQueueName.entrySet()) {
         String queueName = entry.getKey();
         AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(queueName);
-        AsyncJobQueueRuntime runtime =
-            new AsyncJobQueueRuntime(
-                queueName,
-                asyncJobStore,
-                queueSettings,
-                entry.getValue(),
-                taskScheduler,
-                queueExecutor(queueName, queueSettings),
-                meterRegistry,
-                workerId(queueName));
-        runtime.start();
-        runtimesByQueueName.put(queueName, runtime);
+        try {
+          AsyncJobQueueRuntime runtime =
+              new AsyncJobQueueRuntime(
+                  queueName,
+                  asyncJobStore,
+                  queueSettings,
+                  entry.getValue(),
+                  taskScheduler,
+                  queueExecutor(queueName, queueSettings),
+                  meterRegistry,
+                  workerId(queueName));
+          runtimesByQueueName.put(queueName, runtime);
+          runtime.start();
+        } catch (RuntimeException e) {
+          logger.error("Failed to start async job queue runtime for {}", queueName, e);
+          stopStartedRuntimes();
+          throw e;
+        }
       }
 
       for (String configuredQueueName : asyncJobQueueProperties.getQueues().keySet()) {
@@ -101,8 +107,7 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
   @Override
   public void stop() {
     synchronized (lifecycleLock) {
-      runtimesByQueueName.values().forEach(AsyncJobQueueRuntime::stop);
-      runtimesByQueueName.clear();
+      stopStartedRuntimes();
       running = false;
     }
   }
@@ -154,5 +159,10 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
 
   private String workerId(String queueName) {
     return queueName + "-" + UUID.randomUUID();
+  }
+
+  private void stopStartedRuntimes() {
+    runtimesByQueueName.values().forEach(AsyncJobQueueRuntime::stop);
+    runtimesByQueueName.clear();
   }
 }
