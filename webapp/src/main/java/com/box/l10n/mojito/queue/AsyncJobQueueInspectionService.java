@@ -1,9 +1,12 @@
 package com.box.l10n.mojito.queue;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -12,13 +15,17 @@ import org.springframework.stereotype.Service;
 @ConditionalOnProperty(name = "l10n.org.async-job-queue.enabled", havingValue = "true")
 public class AsyncJobQueueInspectionService {
 
+  static Logger logger = LoggerFactory.getLogger(AsyncJobQueueInspectionService.class);
+
   static final int DEFAULT_LIMIT = 100;
   static final int JOB_DATA_PREVIEW_MAX_LENGTH = 512;
 
   private final AsyncJobStore asyncJobStore;
+  private final MeterRegistry meterRegistry;
 
-  public AsyncJobQueueInspectionService(AsyncJobStore asyncJobStore) {
+  public AsyncJobQueueInspectionService(AsyncJobStore asyncJobStore, MeterRegistry meterRegistry) {
     this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
+    this.meterRegistry = Objects.requireNonNull(meterRegistry);
   }
 
   public List<AsyncJobSummary> findJobs(String queueName, String status, Integer limit) {
@@ -53,18 +60,47 @@ public class AsyncJobQueueInspectionService {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobId asyncJobId = new AsyncJobId(jobId);
 
-    if (asyncJobStore.requeueFailedNow(validatedQueueName, asyncJobId, jobData)) {
-      return getJob(validatedQueueName, asyncJobId.value());
-    }
+    try {
+      if (asyncJobStore.requeueFailedNow(validatedQueueName, asyncJobId, jobData)) {
+        incrementRequeueCounter(validatedQueueName, "succeeded");
+        logger.info(
+            "Requeued failed async job for queue {}, job {}, replacementPayload={}",
+            validatedQueueName,
+            asyncJobId.value(),
+            jobData != null);
+        return getJob(validatedQueueName, asyncJobId.value());
+      }
 
-    boolean jobExistsInQueue =
-        asyncJobStore.getByIds(List.of(asyncJobId)).stream()
-            .anyMatch(record -> validatedQueueName.equals(record.queueName()));
-    if (!jobExistsInQueue) {
-      throw new AsyncJobNotFoundException(
-          "Async job not found for queue " + validatedQueueName + ": " + asyncJobId.value());
+      boolean jobExistsInQueue =
+          asyncJobStore.getByIds(List.of(asyncJobId)).stream()
+              .anyMatch(record -> validatedQueueName.equals(record.queueName()));
+      if (!jobExistsInQueue) {
+        incrementRequeueCounter(validatedQueueName, "notFound");
+        logger.warn(
+            "Failed to requeue async job for queue {}; job {} was not found",
+            validatedQueueName,
+            asyncJobId.value());
+        throw new AsyncJobNotFoundException(
+            "Async job not found for queue " + validatedQueueName + ": " + asyncJobId.value());
+      }
+      incrementRequeueCounter(validatedQueueName, "notFailed");
+      logger.warn(
+          "Failed to requeue async job for queue {}; job {} is not failed",
+          validatedQueueName,
+          asyncJobId.value());
+      throw new AsyncJobNotFailedException(
+          "Async job is not in failed state: " + asyncJobId.value());
+    } catch (AsyncJobNotFoundException | AsyncJobNotFailedException exception) {
+      throw exception;
+    } catch (RuntimeException exception) {
+      incrementRequeueCounter(validatedQueueName, "failed");
+      logger.warn(
+          "Failed to requeue async job for queue {}, job {}",
+          validatedQueueName,
+          asyncJobId.value(),
+          exception);
+      throw exception;
     }
-    throw new AsyncJobNotFailedException("Async job is not in failed state: " + asyncJobId.value());
   }
 
   private AsyncJobStatus parseStatus(String status) {
@@ -121,6 +157,12 @@ public class AsyncJobQueueInspectionService {
     return jobData.length() <= JOB_DATA_PREVIEW_MAX_LENGTH
         ? jobData
         : jobData.substring(0, JOB_DATA_PREVIEW_MAX_LENGTH);
+  }
+
+  private void incrementRequeueCounter(String queueName, String result) {
+    meterRegistry
+        .counter("asyncJobQueue.inspection.requeue", "queueName", queueName, "result", result)
+        .increment();
   }
 
   public record AsyncJobSummary(

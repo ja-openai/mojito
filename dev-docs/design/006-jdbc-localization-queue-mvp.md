@@ -262,6 +262,11 @@ Monitoring (MVP Required)
   - failed initial or follow-up scheduled-poll registration
   - active poll did not stop before the bounded executor shutdown wait elapsed
   - status metrics reporting failures
+- Operator counters/logs:
+  - `asyncJobQueue.inspection.requeue` by `queueName,result` for service-level replay attempts;
+    results are low-cardinality (`succeeded`, `notFound`, `notFailed`, `failed`)
+  - replay logs include queue/job identifiers and whether replacement payload was supplied, never
+    the payload itself
 
 Operator Controls
 - Store-level inspection supports listing recent jobs by `queue_name` and `status`.
@@ -269,7 +274,8 @@ Operator Controls
   admin path cannot accidentally issue pathological queue-table queries.
 - The queue inspection service wraps the store with a bounded default limit, status parsing,
   same-queue id checks, capped payload previews for lists, full-payload detail lookup, and
-  failed-only replay that maps missing/non-failed jobs to explicit operator errors.
+  failed-only replay that maps missing/non-failed jobs to explicit operator errors and emits
+  replay counters/logs.
 - Store-level replay only transitions `failed -> queued`; it does not touch running or completed
   jobs, resets the attempt budget for a fresh retry cycle, and keeps the previous `last_error`
   until success or the next failure.

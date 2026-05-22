@@ -3,12 +3,15 @@ package com.box.l10n.mojito.queue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import org.junit.Test;
 
 public class AsyncJobQueueInspectionServiceTest {
+
+  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 
   @Test
   public void findJobsReturnsBoundedSafeSummaries() {
@@ -65,6 +68,7 @@ public class AsyncJobQueueInspectionServiceTest {
     assertThat(replayed.availableAt()).isBetween(beforeReplay, Instant.now().plusSeconds(1));
     assertThat(replayed.lastError()).isEqualTo("boom");
     assertThat(replayed.jobData()).isEqualTo("{\"step\":\"fixed\"}");
+    assertRequeueCounter("succeeded", 1);
   }
 
   @Test
@@ -78,6 +82,26 @@ public class AsyncJobQueueInspectionServiceTest {
         .isInstanceOf(AsyncJobQueueInspectionService.AsyncJobNotFoundException.class);
     assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", queuedId.value(), null))
         .isInstanceOf(AsyncJobQueueInspectionService.AsyncJobNotFailedException.class);
+    assertRequeueCounter("notFound", 1);
+    assertRequeueCounter("notFailed", 1);
+  }
+
+  @Test
+  public void requeueFailedJobRecordsStoreFailures() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public boolean requeueFailedNow(String queueName, AsyncJobId id, String jobData) {
+                throw new IllegalStateException("database unavailable");
+              }
+            },
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "1", null))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("database unavailable");
+    assertRequeueCounter("failed", 1);
   }
 
   @Test
@@ -94,7 +118,7 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   private AsyncJobQueueInspectionService inspectionService(InMemoryAsyncJobStore store) {
-    return new AsyncJobQueueInspectionService(store);
+    return new AsyncJobQueueInspectionService(store, meterRegistry);
   }
 
   private AsyncJobId failedJob(
@@ -104,5 +128,16 @@ public class AsyncJobQueueInspectionServiceTest {
     assertThat(store.markFailed(queueName, id, "worker", job.leaseToken(), null, lastError))
         .isTrue();
     return id;
+  }
+
+  private void assertRequeueCounter(String result, double count) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.inspection.requeue")
+                .tag("queueName", "assetlocalize")
+                .tag("result", result)
+                .counter()
+                .count())
+        .isEqualTo(count);
   }
 }
