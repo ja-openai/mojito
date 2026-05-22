@@ -135,6 +135,7 @@ public class AsyncJobQueueInspectionServiceTest {
     assertThat(replayed.lastError()).isEqualTo("boom");
     assertThat(replayed.jobData()).isEqualTo("{\"step\":\"fixed\"}");
     assertRequeueCounter("succeeded", 1);
+    assertNoGetCounter("succeeded");
   }
 
   @Test
@@ -201,6 +202,7 @@ public class AsyncJobQueueInspectionServiceTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("lookup unavailable");
     assertRequeueCounter("failed", 1);
+    assertNoGetCounter("failed");
     assertThat(
             meterRegistry
                 .find("asyncJobQueue.inspection.requeue")
@@ -254,6 +256,16 @@ public class AsyncJobQueueInspectionServiceTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private void assertNoGetCounter(String result) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.inspection.get")
+                .tag("queueName", "assetlocalize")
+                .tag("result", result)
+                .counter())
+        .isNull();
   }
 
   private void assertGetCounter(String result, double count) {

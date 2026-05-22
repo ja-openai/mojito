@@ -77,12 +77,7 @@ public class AsyncJobQueueInspectionService {
       throw exception;
     }
     try {
-      AsyncJobDetails job =
-          asyncJobStore.getByIds(List.of(asyncJobId)).stream()
-              .filter(record -> validatedQueueName.equals(record.queueName()))
-              .findFirst()
-              .map(this::toDetails)
-              .orElse(null);
+      AsyncJobDetails job = findJobDetails(validatedQueueName, asyncJobId);
       if (job != null) {
         incrementGetCounter(validatedQueueName, "succeeded");
         return job;
@@ -118,7 +113,11 @@ public class AsyncJobQueueInspectionService {
     try {
       if (asyncJobStore.requeueFailedNow(validatedQueueName, asyncJobId, jobData)) {
         requeueSucceeded = true;
-        AsyncJobDetails job = getJob(validatedQueueName, asyncJobId.value());
+        AsyncJobDetails job = findJobDetails(validatedQueueName, asyncJobId);
+        if (job == null) {
+          throw new AsyncJobNotFoundException(
+              "Async job not found for queue " + validatedQueueName + ": " + asyncJobId.value());
+        }
         incrementRequeueCounter(validatedQueueName, "succeeded");
         logger.info(
             "Requeued failed async job for queue {}, job {}, replacementPayload={}",
@@ -166,6 +165,14 @@ public class AsyncJobQueueInspectionService {
           exception);
       throw exception;
     }
+  }
+
+  private AsyncJobDetails findJobDetails(String validatedQueueName, AsyncJobId asyncJobId) {
+    return asyncJobStore.getByIds(List.of(asyncJobId)).stream()
+        .filter(record -> validatedQueueName.equals(record.queueName()))
+        .findFirst()
+        .map(this::toDetails)
+        .orElse(null);
   }
 
   private AsyncJobStatus parseStatus(String status) {
