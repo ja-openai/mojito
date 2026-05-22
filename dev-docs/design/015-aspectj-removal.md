@@ -23,7 +23,8 @@ Build wiring:
 
 Framework modes:
 
-- `Application` still uses `@EnableTransactionManagement(mode = AdviceMode.ASPECTJ)`.
+- `Application` uses default Spring transaction management. Production `@Transactional` usages are
+  now repository methods only; test usages are Spring test transaction boundaries.
 
 Remaining annotation usage:
 
@@ -276,15 +277,14 @@ Removed during this workstream:
 - XLIFF import steps no longer rely on woven `@Transactional` methods while processing imported
   text units; Okapi import steps now receive the transaction manager explicitly and wrap each
   imported variant write in visible commit/rollback code.
+- `Application` no longer enables AspectJ transaction mode. The remaining production transaction
+  annotations are repository methods, which are reached through Spring Data proxies rather than
+  self-invoked service methods.
 
 In progress:
 
-- Transaction migration remains. `@Transactional` usage is broad, so the next code changes should
-  target self-invoked, checked-exception, retry, or `REQUIRES_NEW` boundaries before switching
-  `@EnableTransactionManagement` away from AspectJ mode.
-- Final `webapp` build cleanup remains blocked on the transaction migration. Keep `webapp`
-  `spring-aspects`, `aspectjrt`, and `aspectj-maven-plugin` until no remaining behavior depends on
-  Spring's woven transaction aspect.
+- Final `webapp` build cleanup remains. Remove `spring-aspects`, `aspectjrt`, and
+  `aspectj-maven-plugin`, then confirm Maven compile/test no longer invokes `ajc`.
 
 ## Migration Principles
 

@@ -15,7 +15,6 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration;
 import org.springframework.boot.context.ApplicationPidFileWriter;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
-import org.springframework.context.annotation.AdviceMode;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.auditing.DateTimeProvider;
@@ -38,7 +37,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableJpaAuditing(dateTimeProviderRef = "zonedDateTimeProvider")
 @EnableJpaRepositories
 @EnableScheduling
-@EnableTransactionManagement(mode = AdviceMode.ASPECTJ)
+@EnableTransactionManagement
 @EntityScan(basePackageClasses = BaseEntity.class)
 @ConfigurationPropertiesScan
 public class Application {
