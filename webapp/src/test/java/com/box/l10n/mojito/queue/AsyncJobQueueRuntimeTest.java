@@ -315,6 +315,76 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void expiredLeaseFencesStaleDoneAndAllowsReclaim() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AtomicInteger attempts = new AtomicInteger();
+    CountDownLatch firstAttemptStarted = new CountDownLatch(1);
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 25, 0);
+    queueSettings.setMaxAttempts(3);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  int attempt = attempts.incrementAndGet();
+                  if (attempt == 1) {
+                    firstAttemptStarted.countDown();
+                    Thread.sleep(100);
+                    return AsyncJobHandlerResult.done("{\"stale\":true}");
+                  }
+                  return AsyncJobHandlerResult.done("{\"reclaimed\":true}");
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(firstAttemptStarted.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTransitionFailure("done", 1);
+    AsyncJobRecord expiredRunningJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(expiredRunningJob.status()).isEqualTo(AsyncJobStatus.RUNNING);
+    assertThat(expiredRunningJob.attemptCount()).isEqualTo(1);
+    assertThat(expiredRunningJob.jobData()).isEqualTo("{\"id\":1}");
+    assertThat(expiredRunningJob.leaseUntil()).isBeforeOrEqualTo(Instant.now());
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.completed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForAtomicValue(attempts, 2);
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
+    AsyncJobRecord completedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(completedJob.status()).isEqualTo(AsyncJobStatus.DONE);
+    assertThat(completedJob.attemptCount()).isEqualTo(2);
+    assertThat(completedJob.jobData()).isEqualTo("{\"reclaimed\":true}");
+    assertThat(completedJob.workerId()).isNull();
+    assertThat(completedJob.leaseToken()).isNull();
+    assertThat(completedJob.leaseUntil()).isNull();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.leaseExpiredReclaimed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.completed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void transitionFailureCounterRecordsFailedDoneTransition() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
