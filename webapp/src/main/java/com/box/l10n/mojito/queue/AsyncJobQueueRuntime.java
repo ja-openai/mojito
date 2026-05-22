@@ -278,20 +278,30 @@ class AsyncJobQueueRuntime {
     inFlightCount.incrementAndGet();
     try {
       executor.execute(() -> processClaimedJob(asyncJobRecord));
-    } catch (RejectedExecutionException e) {
+    } catch (RuntimeException e) {
       inFlightCount.decrementAndGet();
-      handleExecutorRejection(asyncJobRecord, e);
+      handleExecutorSubmitFailure(asyncJobRecord, e);
     }
   }
 
-  private void handleExecutorRejection(
-      AsyncJobRecord asyncJobRecord, RejectedExecutionException e) {
-    meterRegistry.counter("asyncJobQueue.executor.rejected", "queueName", queueName).increment();
+  private void handleExecutorSubmitFailure(AsyncJobRecord asyncJobRecord, RuntimeException e) {
+    boolean rejected = e instanceof RejectedExecutionException;
+    if (rejected) {
+      meterRegistry.counter("asyncJobQueue.executor.rejected", "queueName", queueName).increment();
+    } else {
+      meterRegistry
+          .counter("asyncJobQueue.executor.submit.failed", "queueName", queueName)
+          .increment();
+    }
     String errorMessage = errorMessage(e);
+    String failureDescription = rejected ? "rejected" : "failed to accept";
+    String failedTransition = rejected ? "executorRejectedFailed" : "executorSubmitFailed";
+    String requeueTransition = rejected ? "executorRejectedRequeue" : "executorSubmitRequeue";
 
     if (asyncJobRecord.attemptCount() >= queueSettings.getMaxAttempts()) {
       logger.error(
-          "Queue executor rejected claimed job {} for queue {}; marking failed after {} attempts",
+          "Queue executor {} claimed job {} for queue {}; marking failed after {} attempts",
+          failureDescription,
           asyncJobRecord.id(),
           queueName,
           asyncJobRecord.attemptCount(),
@@ -308,19 +318,19 @@ class AsyncJobQueueRuntime {
                 errorMessage);
       } catch (RuntimeException transitionException) {
         logger.warn(
-            "Failed to mark executor-rejected job {} failed for queue {}",
+            "Failed to mark executor-submit-failed job {} failed for queue {}",
             asyncJobRecord.id(),
             queueName,
             transitionException);
-        recordTransitionFailure("executorRejectedFailed");
+        recordTransitionFailure(failedTransition);
         return;
       }
       if (!markedFailed) {
         logger.warn(
-            "Failed to mark executor-rejected job {} failed for queue {}",
+            "Failed to mark executor-submit-failed job {} failed for queue {}",
             asyncJobRecord.id(),
             queueName);
-        recordTransitionFailure("executorRejectedFailed");
+        recordTransitionFailure(failedTransition);
       } else {
         meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
       }
@@ -328,7 +338,11 @@ class AsyncJobQueueRuntime {
     }
 
     logger.warn(
-        "Queue executor rejected claimed job {} for queue {}", asyncJobRecord.id(), queueName, e);
+        "Queue executor {} claimed job {} for queue {}",
+        failureDescription,
+        asyncJobRecord.id(),
+        queueName,
+        e);
     boolean requeued;
     try {
       requeued =
@@ -342,16 +356,19 @@ class AsyncJobQueueRuntime {
               errorMessage);
     } catch (RuntimeException transitionException) {
       logger.warn(
-          "Failed to requeue rejected job {} for queue {}",
+          "Failed to requeue executor-submit-failed job {} for queue {}",
           asyncJobRecord.id(),
           queueName,
           transitionException);
-      recordTransitionFailure("executorRejectedRequeue");
+      recordTransitionFailure(requeueTransition);
       return;
     }
     if (!requeued) {
-      logger.warn("Failed to requeue rejected job {} for queue {}", asyncJobRecord.id(), queueName);
-      recordTransitionFailure("executorRejectedRequeue");
+      logger.warn(
+          "Failed to requeue executor-submit-failed job {} for queue {}",
+          asyncJobRecord.id(),
+          queueName);
+      recordTransitionFailure(requeueTransition);
     }
   }
 
