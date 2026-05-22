@@ -29,6 +29,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongUnaryOperator;
 import org.junit.After;
 import org.junit.Test;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -1794,11 +1798,31 @@ public class AsyncJobQueueRuntimeTest {
                 .counter()
                 .count())
         .isEqualTo(1);
+    assertClaimFailureCounter("other", 1);
     assertThat(taskScheduler.scheduledTasks()).hasSize(2);
     long scheduledDelayMs =
         taskScheduler.scheduledStartTimes().get(1).getTime()
             - taskScheduler.scheduleInvocationTimes().get(1);
     assertThat(scheduledDelayMs).isBetween(50L, 150L);
+  }
+
+  @Test
+  public void claimFailureCounterClassifiesDatabaseContention() {
+    assertThat(AsyncJobQueueRuntime.claimFailureKind(new IllegalStateException("boom")))
+        .isEqualTo("other");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new IllegalStateException(
+                    "wrapped", new DeadlockLoserDataAccessException("deadlock", null))))
+        .isEqualTo("deadlock");
+    assertThat(AsyncJobQueueRuntime.claimFailureKind(new CannotAcquireLockException("busy")))
+        .isEqualTo("lock");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new PessimisticLockingFailureException("lock wait timeout")))
+        .isEqualTo("lock");
+    assertThat(AsyncJobQueueRuntime.claimFailureKind(new QueryTimeoutException("timeout")))
+        .isEqualTo("timeout");
   }
 
   @Test
@@ -2216,6 +2240,17 @@ public class AsyncJobQueueRuntimeTest {
       Thread.sleep(20);
     }
     throw new AssertionError("Timed out waiting for trigger failure count " + expectedCount);
+  }
+
+  private void assertClaimFailureCounter(String failure, double expectedCount) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.claim.failed")
+                .tag("queueName", "assetlocalize")
+                .tag("failure", failure)
+                .counter()
+                .count())
+        .isEqualTo(expectedCount);
   }
 
   private void waitForAtomicValue(AtomicInteger atomicInteger, int expectedValue)

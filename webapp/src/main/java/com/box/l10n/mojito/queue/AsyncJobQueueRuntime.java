@@ -16,6 +16,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongUnaryOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -175,6 +180,9 @@ class AsyncJobQueueRuntime {
               claimLimit,
               workerId,
               java.time.Duration.ofMillis(queueSettings.getLeaseDurationMs()));
+    } catch (RuntimeException e) {
+      recordClaimFailure(e);
+      throw e;
     } finally {
       meterRegistry
           .timer("asyncJobQueue.claim.latency", "queueName", queueName)
@@ -736,6 +744,45 @@ class AsyncJobQueueRuntime {
         .counter(
             "asyncJobQueue.transition.failed", "queueName", queueName, "transition", transition)
         .increment();
+  }
+
+  private void recordClaimFailure(RuntimeException e) {
+    meterRegistry
+        .counter(
+            "asyncJobQueue.claim.failed", "queueName", queueName, "failure", claimFailureKind(e))
+        .increment();
+  }
+
+  static String claimFailureKind(Throwable throwable) {
+    if (hasCause(throwable, DeadlockLoserDataAccessException.class)) {
+      return "deadlock";
+    }
+    if (hasCause(
+        throwable, CannotAcquireLockException.class, PessimisticLockingFailureException.class)) {
+      return "lock";
+    }
+    if (hasCause(throwable, QueryTimeoutException.class)) {
+      return "timeout";
+    }
+    if (hasCause(throwable, DataAccessException.class)) {
+      return "dataAccess";
+    }
+    return "other";
+  }
+
+  @SafeVarargs
+  private static boolean hasCause(
+      Throwable throwable, Class<? extends Throwable>... exceptionTypes) {
+    Throwable current = throwable;
+    while (current != null) {
+      for (Class<? extends Throwable> exceptionType : exceptionTypes) {
+        if (exceptionType.isInstance(current)) {
+          return true;
+        }
+      }
+      current = current.getCause();
+    }
+    return false;
   }
 
   private String errorMessage(Exception e) {

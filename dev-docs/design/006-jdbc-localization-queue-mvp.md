@@ -257,6 +257,8 @@ Monitoring (MVP Required)
   - claim SQL latency
 - Error counters:
   - deadlocks / lock timeouts / claim exceptions
+  - `asyncJobQueue.claim.failed` by `queueName,failure` with low-cardinality failure kinds
+    (`deadlock`, `lock`, `timeout`, `dataAccess`, `other`)
   - failed state transitions/fencing failures by transition
   - failed immediate trigger/wakeup scheduling
   - failed initial or follow-up scheduled-poll registration
