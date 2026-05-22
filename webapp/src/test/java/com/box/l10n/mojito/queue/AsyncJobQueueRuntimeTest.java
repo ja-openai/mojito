@@ -174,6 +174,40 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void runtimePublishesExecutorLoadGauges() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    CountDownLatch started = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(
+                asyncJobRecord -> {
+                  started.countDown();
+                  release.await(5, TimeUnit.SECONDS);
+                  return AsyncJobHandlerResult.done();
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(started.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForGaugeValue("asyncJobQueue.executor.active", 1);
+    assertGaugeValue("asyncJobQueue.executor.queued", 0);
+    assertGaugeValue("asyncJobQueue.inflight", 1);
+
+    release.countDown();
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
+    waitForGaugeValue("asyncJobQueue.executor.active", 0);
+    assertGaugeValue("asyncJobQueue.executor.queued", 0);
+    assertGaugeValue("asyncJobQueue.inflight", 0);
+  }
+
+  @Test
   public void pollRecordsLeaseExpiredReclaims() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     CountDownLatch processed = new CountDownLatch(1);
@@ -1501,6 +1535,27 @@ public class AsyncJobQueueRuntimeTest {
       Thread.sleep(20);
     }
     throw new AssertionError("Timed out waiting for in-flight count " + expectedInFlightCount);
+  }
+
+  private void waitForGaugeValue(String meterName, double expectedValue)
+      throws InterruptedException {
+    long timeoutAt = System.currentTimeMillis() + 3_000;
+    while (System.currentTimeMillis() < timeoutAt) {
+      if (gaugeValue(meterName) == expectedValue) {
+        return;
+      }
+      Thread.sleep(20);
+    }
+    throw new AssertionError(
+        "Timed out waiting for gauge " + meterName + " value " + expectedValue);
+  }
+
+  private void assertGaugeValue(String meterName, double expectedValue) {
+    assertThat(gaugeValue(meterName)).isEqualTo(expectedValue);
+  }
+
+  private double gaugeValue(String meterName) {
+    return meterRegistry.get(meterName).tag("queueName", "assetlocalize").gauge().value();
   }
 
   @FunctionalInterface

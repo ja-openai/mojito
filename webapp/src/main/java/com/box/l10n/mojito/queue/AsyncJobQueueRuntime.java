@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -94,6 +95,16 @@ class AsyncJobQueueRuntime {
         Tags.of("queueName", queueName),
         this,
         AsyncJobQueueRuntime::inFlightCount);
+    meterRegistry.gauge(
+        "asyncJobQueue.executor.active",
+        Tags.of("queueName", queueName),
+        executor,
+        ThreadPoolTaskExecutor::getActiveCount);
+    meterRegistry.gauge(
+        "asyncJobQueue.executor.queued",
+        Tags.of("queueName", queueName),
+        executor,
+        AsyncJobQueueRuntime::executorQueueSize);
   }
 
   void start() {
@@ -188,6 +199,11 @@ class AsyncJobQueueRuntime {
 
   int inFlightCount() {
     return inFlightCount.get();
+  }
+
+  private static int executorQueueSize(ThreadPoolTaskExecutor executor) {
+    ThreadPoolExecutor threadPoolExecutor = executor.getThreadPoolExecutor();
+    return threadPoolExecutor.getQueue().size();
   }
 
   private void runScheduledPoll(long pollSequence) {
