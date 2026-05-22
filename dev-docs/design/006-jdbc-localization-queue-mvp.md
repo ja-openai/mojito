@@ -34,12 +34,14 @@ Async Job Data Model
 - Columns:
   - `id` bigint PK
   - `queue_name` varchar(64) not null
-  - `status` enum/string: `queued`, `running`, `done`
+  - `status` enum/string: `queued`, `running`, `done`, `failed`
   - `available_at` datetime(6) not null (retry/backoff eligibility)
   - `lease_until` datetime(6) null (running lease expiry)
   - `lease_token` varchar(64) null (fencing token for current lease owner)
   - `worker_id` varchar(128) null
   - `job_data` longtext not null (JSON-serialized queue payload)
+  - `attempt_count` int not null default 0
+  - `last_error` text null
   - `created_date` datetime(6) not null
   - `updated_date` datetime(6) not null
 - Indexes:
@@ -55,7 +57,7 @@ Execution Flow (MVP)
 5. Worker executes localization logic.
 6. Worker saves pollable output blob and calls `finishTask(...)`.
 7. Worker marks queue row `done`.
-8. On failure: either requeue for a future run or mark `done`; failure details stay in higher-level job/pollable metadata.
+8. On failure: retry until the per-queue attempt budget is exhausted; then mark the queue row `failed` with `last_error` for operator triage.
 
 Transaction Boundaries (Critical)
 - TX A (enqueue): insert queue row.
@@ -79,7 +81,9 @@ Failure + Restart Semantics
 - Claim writes a new random `lease_token`; stale workers that lost lease cannot update queue state.
 - Retry policy:
   - runner decides retry vs completion outside the store
-  - on retry, set `status=queued`, `available_at=<nextAttemptAt>` (optionally update `job_data`)
+  - each claim increments `attempt_count`
+  - on retry, set `status=queued`, `available_at=<nextAttemptAt>` and persist `last_error`
+  - when `attempt_count` reaches `max-attempts`, set `status=failed`, clear lease owner fields, and keep `last_error`
   - on terminal completion, set `status=done` and finalize pollable metadata separately
 
 Polling / Multi-Queue Design
@@ -95,6 +99,7 @@ Queue Runtime Config (example)
 - `l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=250`
 - `l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=20`
 - `l10n.org.async-job-queue.queues.assetlocalize.max-concurrency=10`
+- `l10n.org.async-job-queue.queues.assetlocalize.max-attempts=5`
 - `l10n.org.async-job-queue.queues.assetlocalize.lease-duration-ms=120000`
 - `l10n.org.async-job-queue.queues.assetlocalize.heartbeat-interval-ms=20000`
 

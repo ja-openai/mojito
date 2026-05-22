@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -52,6 +52,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
                   null,
                   null,
                   jobData,
+                  0,
+                  null,
                   now,
                   now));
           return id;
@@ -81,13 +83,13 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           List<StoredAsyncJob> claimable =
               jobsById.values().stream()
                   .filter(
-                  job ->
-                      job.queueName().equals(queueName)
-                          && ((job.status() == AsyncJobStatus.QUEUED
-                                  && !job.availableAt().isAfter(now))
-                              || (job.status() == AsyncJobStatus.RUNNING
-                                  && job.leaseUntil() != null
-                                  && !job.leaseUntil().isAfter(now))))
+                      job ->
+                          job.queueName().equals(queueName)
+                              && ((job.status() == AsyncJobStatus.QUEUED
+                                      && !job.availableAt().isAfter(now))
+                                  || (job.status() == AsyncJobStatus.RUNNING
+                                      && job.leaseUntil() != null
+                                      && !job.leaseUntil().isAfter(now))))
                   .sorted(CLAIM_ORDER)
                   .limit(limit)
                   .toList();
@@ -110,11 +112,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
 
   @Override
   public boolean heartbeat(
-      String queueName,
-      AsyncJobId id,
-      String workerId,
-      String leaseToken,
-      Duration leaseDuration) {
+      String queueName, AsyncJobId id, String workerId, String leaseToken, Duration leaseDuration) {
     Objects.requireNonNull(queueName);
     Objects.requireNonNull(workerId);
     Objects.requireNonNull(leaseDuration);
@@ -164,7 +162,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
       String workerId,
       String leaseToken,
       Instant availableAt,
-      String jobData) {
+      String jobData,
+      String lastError) {
     Objects.requireNonNull(queueName);
     Objects.requireNonNull(workerId);
     Objects.requireNonNull(availableAt);
@@ -179,7 +178,33 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           }
           Instant now = Instant.now();
           String nextJobData = jobData == null ? job.jobData() : jobData;
-          jobsById.put(job.id(), job.withRequeue(availableAt, nextJobData, now));
+          jobsById.put(job.id(), job.withRequeue(availableAt, nextJobData, lastError, now));
+          return true;
+        });
+  }
+
+  @Override
+  public boolean markFailed(
+      String queueName,
+      AsyncJobId id,
+      String workerId,
+      String leaseToken,
+      String jobData,
+      String lastError) {
+    Objects.requireNonNull(queueName);
+    Objects.requireNonNull(workerId);
+    validateLeaseToken(leaseToken);
+
+    return withQueueLock(
+        queueName,
+        () -> {
+          StoredAsyncJob job = jobsById.get(id);
+          if (!isCurrentLeaseOwner(job, queueName, workerId, leaseToken)) {
+            return false;
+          }
+          Instant now = Instant.now();
+          String nextJobData = jobData == null ? job.jobData() : jobData;
+          jobsById.put(job.id(), job.withFailure(nextJobData, lastError, now));
           return true;
         });
   }
@@ -247,6 +272,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
         job.workerId(),
         job.leaseToken(),
         job.jobData(),
+        job.attemptCount(),
+        job.lastError(),
         job.createdDate(),
         job.updatedDate());
   }
@@ -268,6 +295,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
       String workerId,
       String leaseToken,
       String jobData,
+      int attemptCount,
+      String lastError,
       Instant createdDate,
       Instant updatedDate) {
 
@@ -287,6 +316,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           nextWorkerId,
           nextLeaseToken,
           jobData,
+          attemptCount + 1,
+          lastError,
           createdDate,
           now);
     }
@@ -302,6 +333,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           workerId,
           leaseToken,
           jobData,
+          attemptCount,
+          lastError,
           createdDate,
           now);
     }
@@ -317,11 +350,14 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           null,
           null,
           nextJobData,
+          attemptCount,
+          null,
           createdDate,
           now);
     }
 
-    StoredAsyncJob withRequeue(Instant nextAvailableAt, String nextJobData, Instant now) {
+    StoredAsyncJob withRequeue(
+        Instant nextAvailableAt, String nextJobData, String nextLastError, Instant now) {
       return new StoredAsyncJob(
           idLong,
           id,
@@ -332,6 +368,25 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           null,
           null,
           nextJobData,
+          attemptCount,
+          nextLastError,
+          createdDate,
+          now);
+    }
+
+    StoredAsyncJob withFailure(String nextJobData, String nextLastError, Instant now) {
+      return new StoredAsyncJob(
+          idLong,
+          id,
+          queueName,
+          AsyncJobStatus.FAILED,
+          availableAt,
+          null,
+          null,
+          null,
+          nextJobData,
+          attemptCount,
+          nextLastError,
           createdDate,
           now);
     }

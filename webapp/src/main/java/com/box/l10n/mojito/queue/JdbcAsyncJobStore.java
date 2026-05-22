@@ -24,8 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Low-level JDBC operations for async job state.
  *
- * <p>State transitions are kept in explicit short transactions to avoid long-lived DB
- * transactions around async job execution.
+ * <p>State transitions are kept in explicit short transactions to avoid long-lived DB transactions
+ * around async job execution.
  */
 public class JdbcAsyncJobStore implements AsyncJobStore {
 
@@ -37,10 +37,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   @Override
-  public AsyncJobId enqueue(
-      String queueName,
-      String jobData,
-      Instant availableAt) {
+  public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
     Objects.requireNonNull(queueName);
     Objects.requireNonNull(jobData);
     Objects.requireNonNull(availableAt);
@@ -134,7 +131,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
             .addValue("limit", limit);
 
     List<Long> ids =
-        namedParameterJdbcTemplate.query(selectIdsSql, selectParams, (rs, rowNum) -> rs.getLong("id"));
+        namedParameterJdbcTemplate.query(
+            selectIdsSql, selectParams, (rs, rowNum) -> rs.getLong("id"));
     if (ids.isEmpty()) {
       return Collections.emptyList();
     }
@@ -147,6 +145,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
           worker_id = :workerId,
           lease_token = :leaseToken,
           lease_until = :leaseUntil,
+          attempt_count = attempt_count + 1,
           updated_date = :updatedDate
         WHERE id = :id
           AND queue_name = :queueName
@@ -194,11 +193,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   @Override
   public boolean heartbeat(
-      String queueName,
-      AsyncJobId id,
-      String workerId,
-      String leaseToken,
-      Duration leaseDuration) {
+      String queueName, AsyncJobId id, String workerId, String leaseToken, Duration leaseDuration) {
     Objects.requireNonNull(queueName);
     Objects.requireNonNull(workerId);
     Objects.requireNonNull(leaseDuration);
@@ -256,6 +251,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
           worker_id = NULL,
           lease_token = NULL,
           job_data = COALESCE(:jobData, job_data),
+          last_error = NULL,
           updated_date = :updatedDate
         WHERE id = :id
           AND queue_name = :queueName
@@ -287,7 +283,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       String workerId,
       String leaseToken,
       Instant availableAt,
-      String jobData) {
+      String jobData,
+      String lastError) {
     Objects.requireNonNull(queueName);
     Objects.requireNonNull(workerId);
     Objects.requireNonNull(availableAt);
@@ -305,6 +302,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
           worker_id = NULL,
           lease_token = NULL,
           job_data = COALESCE(:jobData, job_data),
+          last_error = :lastError,
           updated_date = :updatedDate
         WHERE id = :id
           AND queue_name = :queueName
@@ -319,6 +317,56 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
             .addValue("queuedStatus", AsyncJobStatus.QUEUED.getDatabaseValue())
             .addValue("availableAt", Timestamp.from(availableAt))
             .addValue("jobData", jobData)
+            .addValue("lastError", lastError)
+            .addValue("updatedDate", Timestamp.from(now))
+            .addValue("now", Timestamp.from(now))
+            .addValue("id", parsedId)
+            .addValue("queueName", queueName)
+            .addValue("runningStatus", AsyncJobStatus.RUNNING.getDatabaseValue())
+            .addValue("workerId", workerId)
+            .addValue("leaseToken", leaseToken);
+    return namedParameterJdbcTemplate.update(sql, params) == 1;
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Override
+  public boolean markFailed(
+      String queueName,
+      AsyncJobId id,
+      String workerId,
+      String leaseToken,
+      String jobData,
+      String lastError) {
+    Objects.requireNonNull(queueName);
+    Objects.requireNonNull(workerId);
+    validateLeaseToken(leaseToken);
+    long parsedId = parseId(id);
+    Instant now = Instant.now();
+
+    String sql =
+        """
+        UPDATE async_job_queue
+        SET
+          status = :failedStatus,
+          lease_until = NULL,
+          worker_id = NULL,
+          lease_token = NULL,
+          job_data = COALESCE(:jobData, job_data),
+          last_error = :lastError,
+          updated_date = :updatedDate
+        WHERE id = :id
+          AND queue_name = :queueName
+          AND status = :runningStatus
+          AND lease_until > :now
+          AND worker_id = :workerId
+          AND lease_token = :leaseToken
+        """;
+
+    MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("failedStatus", AsyncJobStatus.FAILED.getDatabaseValue())
+            .addValue("jobData", jobData)
+            .addValue("lastError", lastError)
             .addValue("updatedDate", Timestamp.from(now))
             .addValue("now", Timestamp.from(now))
             .addValue("id", parsedId)
@@ -345,8 +393,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         new MapSqlParameterSource().addValue("queueName", queueName),
         (rs, rowNum) ->
             new AsyncJobStatusCount(
-                AsyncJobStatus.fromDatabaseValue(rs.getString("status")),
-                rs.getLong("count")));
+                AsyncJobStatus.fromDatabaseValue(rs.getString("status")), rs.getLong("count")));
   }
 
   @Transactional(readOnly = true)
@@ -372,15 +419,15 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
           worker_id,
           lease_token,
           job_data,
+          attempt_count,
+          last_error,
           created_date,
           updated_date
         FROM async_job_queue
         WHERE id IN (:ids)
         """;
     return namedParameterJdbcTemplate.query(
-        sql,
-        new MapSqlParameterSource().addValue("ids", parsedIds),
-        asyncJobRowMapper());
+        sql, new MapSqlParameterSource().addValue("ids", parsedIds), asyncJobRowMapper());
   }
 
   private RowMapper<AsyncJobRecord> asyncJobRowMapper() {
@@ -394,6 +441,8 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
             resultSet.getString("worker_id"),
             resultSet.getString("lease_token"),
             resultSet.getString("job_data"),
+            resultSet.getInt("attempt_count"),
+            resultSet.getString("last_error"),
             toInstant(resultSet, "created_date"),
             toInstant(resultSet, "updated_date"));
   }

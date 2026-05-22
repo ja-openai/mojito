@@ -5,7 +5,8 @@ import java.util.Arrays;
 public enum AsyncJobStatus {
   QUEUED("queued"),
   RUNNING("running"),
-  DONE("done");
+  DONE("done"),
+  FAILED("failed");
 
   private final String databaseValue;
 

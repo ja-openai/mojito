@@ -18,11 +18,11 @@ public class InMemoryAsyncJobStoreTest {
         inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"name\":\"first\"}", now.minusSeconds(2));
     inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"name\":\"later\"}", now.plusSeconds(30));
     AsyncJobId secondReadyId =
-        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"name\":\"second\"}", now.minusSeconds(1));
+        inMemoryAsyncJobStore.enqueue(
+            "assetlocalize", "{\"name\":\"second\"}", now.minusSeconds(1));
 
     List<AsyncJobRecord> claimed =
-        inMemoryAsyncJobStore.claimNextJobs(
-            "assetlocalize", 10, "worker-a", Duration.ofSeconds(5));
+        inMemoryAsyncJobStore.claimNextJobs("assetlocalize", 10, "worker-a", Duration.ofSeconds(5));
 
     assertThat(claimed).hasSize(2);
     assertThat(claimed.get(0).id()).isEqualTo(firstReadyId);
@@ -83,7 +83,8 @@ public class InMemoryAsyncJobStoreTest {
                 "worker-b",
                 claimed.leaseToken(),
                 Instant.now().plusSeconds(1),
-                "{\"v\":2}"))
+                "{\"v\":2}",
+                null))
         .isFalse();
 
     assertThat(
@@ -118,7 +119,8 @@ public class InMemoryAsyncJobStoreTest {
                 "worker-a",
                 claimed.leaseToken(),
                 Instant.now().plusSeconds(1),
-                "{\"v\":2}"))
+                "{\"v\":2}",
+                null))
         .isFalse();
   }
 
@@ -140,7 +142,8 @@ public class InMemoryAsyncJobStoreTest {
                 "worker-a",
                 claimed.leaseToken(),
                 nextAvailableAt,
-                "{\"step\":\"requeued\"}"))
+                "{\"step\":\"requeued\"}",
+                "temporary failure"))
         .isTrue();
 
     assertThat(
@@ -154,6 +157,8 @@ public class InMemoryAsyncJobStoreTest {
             .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
             .get(0);
     assertThat(reclaimed.jobData()).isEqualTo("{\"step\":\"requeued\"}");
+    assertThat(reclaimed.attemptCount()).isEqualTo(2);
+    assertThat(reclaimed.lastError()).isEqualTo("temporary failure");
 
     assertThat(
             inMemoryAsyncJobStore.markDone(
@@ -166,6 +171,37 @@ public class InMemoryAsyncJobStoreTest {
     assertThat(done.workerId()).isNull();
     assertThat(done.leaseToken()).isNull();
     assertThat(done.leaseUntil()).isNull();
+    assertThat(done.lastError()).isNull();
+  }
+
+  @Test
+  public void markFailedPersistsTerminalStateAndError() {
+    AsyncJobId id =
+        inMemoryAsyncJobStore.enqueue(
+            "assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        inMemoryAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+
+    assertThat(
+            inMemoryAsyncJobStore.markFailed(
+                "assetlocalize",
+                id,
+                "worker-a",
+                claimed.leaseToken(),
+                "{\"step\":\"failed\"}",
+                "boom"))
+        .isTrue();
+
+    AsyncJobRecord failed = inMemoryAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(failed.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failed.jobData()).isEqualTo("{\"step\":\"failed\"}");
+    assertThat(failed.attemptCount()).isEqualTo(1);
+    assertThat(failed.lastError()).isEqualTo("boom");
+    assertThat(failed.workerId()).isNull();
+    assertThat(failed.leaseToken()).isNull();
+    assertThat(failed.leaseUntil()).isNull();
   }
 
   @Test

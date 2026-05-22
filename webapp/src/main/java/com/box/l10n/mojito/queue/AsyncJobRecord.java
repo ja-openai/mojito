@@ -11,5 +11,7 @@ public record AsyncJobRecord(
     String workerId,
     String leaseToken,
     String jobData,
+    int attemptCount,
+    String lastError,
     Instant createdDate,
     Instant updatedDate) {}

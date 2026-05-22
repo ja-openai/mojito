@@ -39,11 +39,7 @@ public interface AsyncJobStore {
    * @return true if lease was renewed, false if the lease expired or caller no longer owns it
    */
   boolean heartbeat(
-      String queueName,
-      AsyncJobId id,
-      String workerId,
-      String leaseToken,
-      Duration leaseDuration);
+      String queueName, AsyncJobId id, String workerId, String leaseToken, Duration leaseDuration);
 
   /**
    * Marks a running job as done and optionally updates job data atomically.
@@ -58,6 +54,7 @@ public interface AsyncJobStore {
    * Requeue a running job for a future claim.
    *
    * @param jobData optional replacement payload; null keeps the existing value
+   * @param lastError optional latest processing error; null clears the previous error
    * @return true if transition succeeded, false if the lease expired or caller no longer owns it
    */
   boolean requeue(
@@ -66,7 +63,23 @@ public interface AsyncJobStore {
       String workerId,
       String leaseToken,
       Instant availableAt,
-      String jobData);
+      String jobData,
+      String lastError);
+
+  /**
+   * Marks a running job as terminally failed.
+   *
+   * @param jobData optional replacement payload; null keeps existing value
+   * @param lastError failure summary to persist for inspection
+   * @return true if transition succeeded, false if the lease expired or caller no longer owns it
+   */
+  boolean markFailed(
+      String queueName,
+      AsyncJobId id,
+      String workerId,
+      String leaseToken,
+      String jobData,
+      String lastError);
 
   /** Returns per-status counters for a queue at query time. */
   List<AsyncJobStatusCount> countByStatus(String queueName);

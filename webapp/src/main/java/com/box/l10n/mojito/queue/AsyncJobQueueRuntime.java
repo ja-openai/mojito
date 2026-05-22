@@ -20,6 +20,8 @@ class AsyncJobQueueRuntime {
 
   static Logger logger = LoggerFactory.getLogger(AsyncJobQueueRuntime.class);
 
+  private static final int MAX_ERROR_LENGTH = 4_000;
+
   private final String queueName;
   private final AsyncJobStore asyncJobStore;
   private final AsyncJobQueueProperties.QueueSettings queueSettings;
@@ -202,7 +204,8 @@ class AsyncJobQueueRuntime {
               asyncJobRecord.workerId(),
               asyncJobRecord.leaseToken(),
               Instant.now(),
-              null);
+              null,
+              errorMessage(e));
       if (!requeued) {
         logger.warn(
             "Failed to requeue rejected job {} for queue {}", asyncJobRecord.id(), queueName);
@@ -219,13 +222,7 @@ class AsyncJobQueueRuntime {
       }
       applyHandlerResult(asyncJobRecord, asyncJobHandlerResult);
     } catch (Exception e) {
-      logger.error(
-          "Async job handler failed for queue {}, job {}; requeueing with base delay",
-          queueName,
-          asyncJobRecord.id(),
-          e);
-      meterRegistry.counter("asyncJobQueue.handler.failed", "queueName", queueName).increment();
-      requeueWithDelay(asyncJobRecord, basePollDelayMs(), null);
+      handleProcessingFailure(asyncJobRecord, e);
     } finally {
       if (heartbeatFuture != null) {
         heartbeatFuture.cancel(false);
@@ -265,7 +262,8 @@ class AsyncJobQueueRuntime {
                 asyncJobRecord.workerId(),
                 asyncJobRecord.leaseToken(),
                 availableAt,
-                asyncJobHandlerResult.jobData());
+                asyncJobHandlerResult.jobData(),
+                null);
         if (!requeued) {
           logger.warn(
               "Failed to requeue async job {} for queue {}", asyncJobRecord.id(), queueName);
@@ -276,7 +274,48 @@ class AsyncJobQueueRuntime {
     }
   }
 
-  private void requeueWithDelay(AsyncJobRecord asyncJobRecord, long delayMs, String jobData) {
+  private void handleProcessingFailure(AsyncJobRecord asyncJobRecord, Exception e) {
+    meterRegistry.counter("asyncJobQueue.handler.failed", "queueName", queueName).increment();
+    String errorMessage = errorMessage(e);
+
+    if (asyncJobRecord.attemptCount() >= queueSettings.getMaxAttempts()) {
+      logger.error(
+          "Async job handler failed for queue {}, job {}; marking failed after {} attempts",
+          queueName,
+          asyncJobRecord.id(),
+          asyncJobRecord.attemptCount(),
+          e);
+      boolean markedFailed =
+          asyncJobStore.markFailed(
+              queueName,
+              asyncJobRecord.id(),
+              asyncJobRecord.workerId(),
+              asyncJobRecord.leaseToken(),
+              null,
+              errorMessage);
+      if (!markedFailed) {
+        logger.warn(
+            "Failed to mark async job {} failed for queue {}", asyncJobRecord.id(), queueName);
+      } else {
+        meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
+      }
+      return;
+    }
+
+    logger.error(
+        "Async job handler failed for queue {}, job {}; requeueing attempt {}/{} with base delay",
+        queueName,
+        asyncJobRecord.id(),
+        asyncJobRecord.attemptCount(),
+        queueSettings.getMaxAttempts(),
+        e);
+    if (requeueWithDelay(asyncJobRecord, basePollDelayMs(), null, errorMessage)) {
+      meterRegistry.counter("asyncJobQueue.retried", "queueName", queueName).increment();
+    }
+  }
+
+  private boolean requeueWithDelay(
+      AsyncJobRecord asyncJobRecord, long delayMs, String jobData, String lastError) {
     boolean requeued =
         asyncJobStore.requeue(
             queueName,
@@ -284,13 +323,23 @@ class AsyncJobQueueRuntime {
             asyncJobRecord.workerId(),
             asyncJobRecord.leaseToken(),
             Instant.now().plusMillis(Math.max(0, delayMs)),
-            jobData);
+            jobData,
+            lastError);
     if (!requeued) {
       logger.warn(
           "Failed to requeue async job {} after handler failure for queue {}",
           asyncJobRecord.id(),
           queueName);
     }
+    return requeued;
+  }
+
+  private String errorMessage(Exception e) {
+    String message = e.getClass().getName();
+    if (e.getMessage() != null && !e.getMessage().isBlank()) {
+      message += ": " + e.getMessage();
+    }
+    return message.length() > MAX_ERROR_LENGTH ? message.substring(0, MAX_ERROR_LENGTH) : message;
   }
 
   private ScheduledFuture<?> scheduleHeartbeat(AsyncJobRecord asyncJobRecord) {
@@ -349,6 +398,9 @@ class AsyncJobQueueRuntime {
     if (queueSettings.getHeartbeatIntervalMs() >= queueSettings.getLeaseDurationMs()
         && queueSettings.getHeartbeatIntervalMs() > 0) {
       throw new IllegalArgumentException("heartbeatIntervalMs must be < leaseDurationMs");
+    }
+    if (queueSettings.getMaxAttempts() <= 0) {
+      throw new IllegalArgumentException("maxAttempts must be > 0");
     }
   }
 

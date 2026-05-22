@@ -7,6 +7,8 @@ CREATE TABLE async_job_queue (
   worker_id VARCHAR(128) NULL,
   lease_token VARCHAR(64) NULL,
   job_data LONGTEXT NOT NULL,
+  attempt_count INT NOT NULL DEFAULT 0,
+  last_error TEXT NULL,
   created_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   updated_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 );

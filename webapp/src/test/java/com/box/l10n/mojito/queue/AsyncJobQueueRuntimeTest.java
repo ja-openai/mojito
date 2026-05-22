@@ -182,6 +182,45 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void handlerFailuresStopRetryingAfterMaxAttempts() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AtomicInteger attempts = new AtomicInteger();
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(2);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  attempts.incrementAndGet();
+                  throw new IllegalStateException("poison");
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+    waitForAtomicValue(attempts, 1);
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.QUEUED, 1);
+
+    Thread.sleep(10);
+    asyncJobQueueRuntime.pollOnce();
+    waitForAtomicValue(attempts, 2);
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.FAILED, 1);
+
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(failedJob.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failedJob.attemptCount()).isEqualTo(2);
+    assertThat(failedJob.lastError()).contains("poison");
+    assertThat(failedJob.workerId()).isNull();
+    assertThat(failedJob.leaseToken()).isNull();
+    assertThat(failedJob.leaseUntil()).isNull();
+  }
+
+  @Test
   public void cancelledScheduledPollBecomesNoOpIfItStillRuns() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
@@ -219,6 +258,23 @@ public class AsyncJobQueueRuntimeTest {
     queueSettings.setMaxConcurrency(1);
     queueSettings.setLeaseDurationMs(100);
     queueSettings.setHeartbeatIntervalMs(100);
+
+    org.junit.Assert.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            runtime(
+                new InMemoryAsyncJobStore(),
+                queueSettings,
+                handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+                mock(TaskScheduler.class),
+                executor));
+  }
+
+  @Test
+  public void maxAttemptsMustBePositive() {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setMaxAttempts(0);
 
     org.junit.Assert.assertThrows(
         IllegalArgumentException.class,

@@ -57,6 +57,7 @@ public class AsyncJobQueueProperties {
     private int maxConcurrency = 10;
     private long leaseDurationMs = 120_000;
     private long heartbeatIntervalMs = 20_000;
+    private int maxAttempts = 5;
 
     public long getPollIntervalMs() {
       return pollIntervalMs;
@@ -104,6 +105,14 @@ public class AsyncJobQueueProperties {
 
     public void setHeartbeatIntervalMs(long heartbeatIntervalMs) {
       this.heartbeatIntervalMs = heartbeatIntervalMs;
+    }
+
+    public int getMaxAttempts() {
+      return maxAttempts;
+    }
+
+    public void setMaxAttempts(int maxAttempts) {
+      this.maxAttempts = maxAttempts;
     }
   }
 }
