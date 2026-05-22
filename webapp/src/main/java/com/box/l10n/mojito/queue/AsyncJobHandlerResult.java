@@ -1,9 +1,17 @@
 package com.box.l10n.mojito.queue;
 
 import java.time.Instant;
+import java.util.Objects;
 
 /** Result of processing a claimed async job. */
 public record AsyncJobHandlerResult(Action action, Instant availableAt, String jobData) {
+
+  public AsyncJobHandlerResult {
+    Objects.requireNonNull(action);
+    if (action == Action.DONE && availableAt != null) {
+      throw new IllegalArgumentException("availableAt must be null for done async job results");
+    }
+  }
 
   public enum Action {
     DONE,
