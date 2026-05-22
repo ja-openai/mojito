@@ -369,6 +369,8 @@ class AsyncJobQueueRuntime {
           asyncJobRecord.id(),
           queueName);
       recordTransitionFailure(requeueTransition);
+    } else {
+      meterRegistry.counter("asyncJobQueue.retried", "queueName", queueName).increment();
     }
   }
 

@@ -636,6 +636,13 @@ public class AsyncJobQueueRuntimeTest {
                 .counter()
                 .count())
         .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.retried")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
     verify(asyncJobStore)
         .requeueAfter(
             anyString(),
