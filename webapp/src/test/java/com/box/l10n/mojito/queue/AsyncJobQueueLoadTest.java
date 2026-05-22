@@ -225,6 +225,72 @@ public class AsyncJobQueueLoadTest {
     assertThat(elapsedMs).isLessThan(10_000);
   }
 
+  @Test
+  public void stressFailsLeaseExpiredJobsTerminallyWithoutDuplicateHandlers() throws Exception {
+    int jobCount = 24;
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    for (int i = 0; i < jobCount; i++) {
+      inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":" + i + "}", Instant.EPOCH);
+    }
+
+    AtomicInteger handlerInvocations = new AtomicInteger();
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings();
+    queueSettings.setMaxAttempts(1);
+    queueSettings.setLeaseDurationMs(25);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        new AsyncJobQueueRuntime(
+            "assetlocalize",
+            inMemoryAsyncJobStore,
+            queueSettings,
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) throws Exception {
+                handlerInvocations.incrementAndGet();
+                Thread.sleep(80);
+                return AsyncJobHandlerResult.done();
+              }
+            },
+            mock(TaskScheduler.class),
+            executor,
+            meterRegistry,
+            "worker-a");
+
+    long startedAt = System.nanoTime();
+    long timeoutAt = System.currentTimeMillis() + 10_000;
+    while (statusCount(inMemoryAsyncJobStore, AsyncJobStatus.FAILED) < jobCount
+        && System.currentTimeMillis() < timeoutAt) {
+      asyncJobQueueRuntime.pollOnce();
+      Thread.sleep(1);
+    }
+    waitForCounter("asyncJobQueue.failed", jobCount);
+    waitForCounter("asyncJobQueue.attempt.exhausted", jobCount);
+    waitForCounter("asyncJobQueue.leaseExpiredReclaimed", jobCount);
+    waitForTransitionFailure("done", jobCount);
+    long elapsedMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+
+    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.FAILED)).isEqualTo(jobCount);
+    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.QUEUED)).isZero();
+    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.RUNNING)).isZero();
+    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.DONE)).isZero();
+    assertThat(handlerInvocations.get()).isEqualTo(jobCount);
+    assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, jobCount))
+        .hasSize(jobCount)
+        .allSatisfy(
+            job -> {
+              assertThat(job.attemptCount()).isEqualTo(2);
+              assertThat(job.lastError()).contains("Attempt budget exhausted");
+              assertThat(job.workerId()).isNull();
+              assertThat(job.leaseToken()).isNull();
+              assertThat(job.leaseUntil()).isNull();
+            });
+    assertThat(elapsedMs).isLessThan(10_000);
+  }
+
   private AsyncJobQueueProperties.QueueSettings queueSettings() {
     AsyncJobQueueProperties.QueueSettings queueSettings =
         new AsyncJobQueueProperties.QueueSettings();
@@ -260,6 +326,25 @@ public class AsyncJobQueueLoadTest {
     }
     throw new AssertionError(
         "Timed out waiting for counter " + meterName + " count " + expectedCount);
+  }
+
+  private void waitForTransitionFailure(String transition, double expectedCount)
+      throws InterruptedException {
+    long timeoutAt = System.currentTimeMillis() + 3_000;
+    while (System.currentTimeMillis() < timeoutAt) {
+      Counter counter =
+          meterRegistry
+              .find("asyncJobQueue.transition.failed")
+              .tag("queueName", "assetlocalize")
+              .tag("transition", transition)
+              .counter();
+      if (counter != null && counter.count() == expectedCount) {
+        return;
+      }
+      Thread.sleep(20);
+    }
+    throw new AssertionError(
+        "Timed out waiting for transition failure " + transition + " count " + expectedCount);
   }
 
   private double counterCount(String meterName) {
