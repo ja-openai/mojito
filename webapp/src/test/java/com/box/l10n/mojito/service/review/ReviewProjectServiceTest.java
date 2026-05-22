@@ -565,6 +565,36 @@ public class ReviewProjectServiceTest {
     verify(transactionManager, never()).commit(transactionStatus);
   }
 
+  @Test
+  public void updateRequestAssignedPmCommitsTransaction() {
+    doReturn(2).when(reviewProjectService).updateRequestAssignedPmNoTx(44L, 202L, "pm change");
+
+    assertEquals(2, reviewProjectService.updateRequestAssignedPm(44L, 202L, "pm change"));
+
+    ArgumentCaptor<TransactionDefinition> transactionDefinitionCaptor =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactionManager).getTransaction(transactionDefinitionCaptor.capture());
+    assertEquals(false, transactionDefinitionCaptor.getValue().isReadOnly());
+    verify(transactionManager).commit(transactionStatus);
+    verify(transactionManager, never()).rollback(transactionStatus);
+  }
+
+  @Test
+  public void updateRequestAssignedPmRollsBackTransactionOnRuntimeException() {
+    RuntimeException failure = new RuntimeException("pm failed");
+    doThrow(failure).when(reviewProjectService).updateRequestAssignedPmNoTx(44L, 202L, "pm change");
+
+    try {
+      reviewProjectService.updateRequestAssignedPm(44L, 202L, "pm change");
+      fail("Expected updateRequestAssignedPm to rethrow failure");
+    } catch (RuntimeException e) {
+      assertEquals(failure, e);
+    }
+
+    verify(transactionManager).rollback(transactionStatus);
+    verify(transactionManager, never()).commit(transactionStatus);
+  }
+
   private CreateGlossaryTermCandidateReviewProjectJobInput
       createGlossaryTermCandidateReviewProjectJobInput() {
     return new CreateGlossaryTermCandidateReviewProjectJobInput(
