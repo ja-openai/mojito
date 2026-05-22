@@ -2548,7 +2548,6 @@ public class ReviewProjectService {
     return deletedProjects;
   }
 
-  @Transactional
   public ReviewProjectTextUnitDetail saveDecision(
       Long reviewProjectTextUnitId,
       String target,
@@ -2559,7 +2558,41 @@ public class ReviewProjectService {
       Long expectedCurrentTmTextUnitVariantId,
       boolean overrideChangedCurrent,
       String decisionNotes) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      ReviewProjectTextUnitDetail result =
+          saveDecisionNoTx(
+              reviewProjectTextUnitId,
+              target,
+              comment,
+              status,
+              includedInLocalizedFile,
+              decisionState,
+              expectedCurrentTmTextUnitVariantId,
+              overrideChangedCurrent,
+              decisionNotes);
+      transactionManager.commit(transaction);
+      return result;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
 
+  ReviewProjectTextUnitDetail saveDecisionNoTx(
+      Long reviewProjectTextUnitId,
+      String target,
+      String comment,
+      String status,
+      Boolean includedInLocalizedFile,
+      DecisionState decisionState,
+      Long expectedCurrentTmTextUnitVariantId,
+      boolean overrideChangedCurrent,
+      String decisionNotes) {
     Stopwatch totalStopwatch = Stopwatch.createStarted();
     String totalResult = "success";
     boolean hasTarget = target != null;
