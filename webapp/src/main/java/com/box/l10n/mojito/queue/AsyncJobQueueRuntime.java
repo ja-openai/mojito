@@ -235,7 +235,14 @@ class AsyncJobQueueRuntime {
         pollCycleResult = PollCycleResult.wakeup();
       }
       if (started) {
-        scheduleNextPoll(pollCycleResult.nextDelayMs());
+        try {
+          scheduleNextPoll(pollCycleResult.nextDelayMs());
+        } catch (RuntimeException e) {
+          logger.warn("Failed to schedule next poll for queue {}", queueName, e);
+          meterRegistry
+              .counter("asyncJobQueue.poll.schedule.failed", "queueName", queueName)
+              .increment();
+        }
       }
     }
   }

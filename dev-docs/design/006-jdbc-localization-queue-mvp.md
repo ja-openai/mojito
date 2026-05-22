@@ -227,6 +227,7 @@ Monitoring (MVP Required)
   - deadlocks / lock timeouts / claim exceptions
   - failed state transitions/fencing failures by transition
   - failed immediate trigger/wakeup scheduling
+  - failed scheduled-poll rescheduling after a poll cycle
   - status metrics reporting failures
 
 Operator Controls
