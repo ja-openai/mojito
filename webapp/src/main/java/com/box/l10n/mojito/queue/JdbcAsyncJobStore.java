@@ -29,10 +29,31 @@ import org.springframework.transaction.annotation.Transactional;
  */
 public class JdbcAsyncJobStore implements AsyncJobStore {
 
+  static final String DEFAULT_CLAIM_NEXT_JOBS_SQL =
+      """
+      SELECT id
+      FROM async_job_queue
+      WHERE queue_name = :queueName
+        AND (
+          (status = :queuedStatus AND available_at <= :now)
+          OR (status = :runningStatus AND lease_until <= :now)
+        )
+      ORDER BY available_at, id
+      LIMIT :limit
+      FOR UPDATE SKIP LOCKED
+      """;
+
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+  private final String claimNextJobsSql;
 
   public JdbcAsyncJobStore(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    this(namedParameterJdbcTemplate, DEFAULT_CLAIM_NEXT_JOBS_SQL);
+  }
+
+  JdbcAsyncJobStore(
+      NamedParameterJdbcTemplate namedParameterJdbcTemplate, String claimNextJobsSql) {
     this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    this.claimNextJobsSql = claimNextJobsSql;
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -108,20 +129,6 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     Instant now = Instant.now();
     Instant leaseUntil = now.plus(leaseDuration);
 
-    String selectIdsSql =
-        """
-        SELECT id
-        FROM async_job_queue
-        WHERE queue_name = :queueName
-          AND (
-            (status = :queuedStatus AND available_at <= :now)
-            OR (status = :runningStatus AND lease_until <= :now)
-          )
-        ORDER BY available_at, id
-        LIMIT :limit
-        FOR UPDATE SKIP LOCKED
-        """;
-
     MapSqlParameterSource selectParams =
         new MapSqlParameterSource()
             .addValue("queueName", queueName)
@@ -132,7 +139,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
 
     List<Long> ids =
         namedParameterJdbcTemplate.query(
-            selectIdsSql, selectParams, (rs, rowNum) -> rs.getLong("id"));
+            claimNextJobsSql, selectParams, (rs, rowNum) -> rs.getLong("id"));
     if (ids.isEmpty()) {
       return Collections.emptyList();
     }

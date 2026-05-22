@@ -28,6 +28,11 @@ Why Plain SQL (not Hibernate/JPA) for Async Job Hot Path
 - Queue claim/lease relies on deterministic lock semantics (`FOR UPDATE SKIP LOCKED`).
 - JPA/Hibernate adds hidden flush/session behavior that is risky for queue correctness and latency.
 - SQL keeps control explicit and easier to reason about under contention.
+- A Hibernate entity can still be useful for read-only/admin inspection later, but the claim,
+  heartbeat, requeue, and finalize transitions should stay in a small native-SQL adapter.
+- MySQL and PostgreSQL can share the same core queue contract and nearly the same claim SQL. The
+  main portability boundary is DDL/migrations and any database-specific timestamp/default syntax,
+  not the Java queue runtime.
 
 Async Job Data Model
 - Table: `async_job_queue`.
@@ -122,6 +127,31 @@ Claim SQL Pattern
   1. `SELECT id FROM ... WHERE queue_name=? AND ((status='queued' AND available_at<=now()) OR (status='running' AND lease_until<=now())) ORDER BY available_at, id LIMIT ? FOR UPDATE SKIP LOCKED`
   2. `UPDATE ... SET status='running', lease_until=?, worker_id=?, lease_token=?, updated_at=now() WHERE id IN (...)`
 - Return claimed rows to orchestrator.
+
+PostgreSQL Portability
+- Keep `AsyncJobStore` as the stable core contract and keep `JdbcAsyncJobStore` as the production
+  hot-path implementation.
+- MySQL 8 and PostgreSQL both support `FOR UPDATE SKIP LOCKED`; the current claim pattern is the
+  right shape for both.
+- Do not put the hot claim/finalize path behind generic Hibernate entity updates. Hibernate is fine
+  for operator search/admin views, but not for the queue state machine where row locks, fencing
+  predicates, and short transaction boundaries must remain explicit.
+- To support PostgreSQL cleanly, add database-specific Flyway locations or migrations for the queue
+  table:
+  - MySQL: `BIGINT AUTO_INCREMENT`, `DATETIME(6)`, optional `ON UPDATE CURRENT_TIMESTAMP(6)`.
+  - PostgreSQL: `BIGSERIAL` or identity column, `TIMESTAMP(6)`/`TIMESTAMPTZ`, no MySQL `ON UPDATE`
+    clause.
+- Keep the production Java implementation as "standard core + a few native queries"; that is the
+  smallest path that preserves correctness and gives us a Postgres migration seam.
+
+Test Coverage
+- Unit tests cover in-memory store semantics, runtime adaptive polling, bounded retries, heartbeats,
+  scheduling, and Spring configuration.
+- JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, and status
+  counts against an embedded datasource using a test-compatible claim query.
+- Load/perf smoke coverage processes hundreds of jobs through the runtime and asserts bounded
+  completion with no duplicate execution. This is a CI guardrail, not a replacement for a
+  database-backed benchmark against MySQL/PostgreSQL.
 
 Monitoring (MVP Required)
 - Gauges:
