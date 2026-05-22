@@ -181,6 +181,36 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void requeueFailedJobRecordsSingleFailureWhenPostReplayLookupFails() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public boolean requeueFailedNow(String queueName, AsyncJobId id, String jobData) {
+                return true;
+              }
+
+              @Override
+              public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
+                throw new IllegalStateException("lookup unavailable");
+              }
+            },
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "1", null))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("lookup unavailable");
+    assertRequeueCounter("failed", 1);
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.inspection.requeue")
+                .tag("queueName", "assetlocalize")
+                .tag("result", "succeeded")
+                .counter())
+        .isNull();
+  }
+
+  @Test
   public void validatesStatusAndLimit() {
     AsyncJobQueueInspectionService service = inspectionService(new InMemoryAsyncJobStore());
 

@@ -114,15 +114,18 @@ public class AsyncJobQueueInspectionService {
       throw exception;
     }
 
+    boolean requeueSucceeded = false;
     try {
       if (asyncJobStore.requeueFailedNow(validatedQueueName, asyncJobId, jobData)) {
+        requeueSucceeded = true;
+        AsyncJobDetails job = getJob(validatedQueueName, asyncJobId.value());
         incrementRequeueCounter(validatedQueueName, "succeeded");
         logger.info(
             "Requeued failed async job for queue {}, job {}, replacementPayload={}",
             validatedQueueName,
             asyncJobId.value(),
             jobData != null);
-        return getJob(validatedQueueName, asyncJobId.value());
+        return job;
       }
 
       boolean jobExistsInQueue =
@@ -145,6 +148,14 @@ public class AsyncJobQueueInspectionService {
       throw new AsyncJobNotFailedException(
           "Async job is not in failed state: " + asyncJobId.value());
     } catch (AsyncJobNotFoundException | AsyncJobNotFailedException exception) {
+      if (requeueSucceeded) {
+        incrementRequeueCounter(validatedQueueName, "failed");
+        logger.warn(
+            "Requeued failed async job for queue {}, job {}, but failed to inspect the replayed job",
+            validatedQueueName,
+            asyncJobId.value(),
+            exception);
+      }
       throw exception;
     } catch (RuntimeException exception) {
       incrementRequeueCounter(validatedQueueName, "failed");
