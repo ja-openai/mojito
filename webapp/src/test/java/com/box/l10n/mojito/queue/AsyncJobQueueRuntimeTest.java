@@ -581,6 +581,51 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void transitionFailureCounterRecordsNonFatalDoneTransitionWithoutHandlerRetry()
+      throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch doneAttempted = new CountDownLatch(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenAnswer(
+            invocation -> {
+              doneAttempted.countDown();
+              throw new NonFatalTestError("done invariant");
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(doneAttempted.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTransitionFailure("done", 1);
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.handler.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+    verify(asyncJobStore, times(0))
+        .requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            anyString());
+  }
+
+  @Test
   public void nullHandlerResultRetriesInsteadOfCompletingJob() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =
@@ -698,6 +743,57 @@ public class AsyncJobQueueRuntimeTest {
     asyncJobQueueRuntime.pollOnce();
 
     waitForTransitionFailure("requeue", 1);
+  }
+
+  @Test
+  public void transitionFailureCounterRecordsNonFatalHandlerRequestedRequeueWithoutHandlerRetry()
+      throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch requeueAttempted = new CountDownLatch(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeue(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Instant.class),
+            any(),
+            any()))
+        .thenAnswer(
+            invocation -> {
+              requeueAttempted.countDown();
+              throw new NonFatalTestError("requeue invariant");
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.requeue(Instant.now())),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(requeueAttempted.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTransitionFailure("requeue", 1);
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.handler.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+    verify(asyncJobStore, times(0))
+        .requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            anyString());
   }
 
   @Test
@@ -3253,6 +3349,12 @@ public class AsyncJobQueueRuntimeTest {
   @FunctionalInterface
   private interface ThrowingProcessor {
     AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) throws Exception;
+  }
+
+  private static class NonFatalTestError extends Error {
+    NonFatalTestError(String message) {
+      super(message);
+    }
   }
 
   private static class InlineImmediateTaskScheduler implements TaskScheduler {

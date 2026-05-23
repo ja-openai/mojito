@@ -677,7 +677,10 @@ class AsyncJobQueueRuntime {
                   asyncJobRecord.workerId(),
                   asyncJobRecord.leaseToken(),
                   asyncJobHandlerResult.jobData());
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
+          if (isJvmFatal(e)) {
+            throw (Error) e;
+          }
           logger.warn(
               "Failed to mark async job {} done for queue {}", asyncJobRecord.id(), queueName, e);
           recordTransitionFailure("done");
@@ -720,7 +723,10 @@ class AsyncJobQueueRuntime {
                     asyncJobHandlerResult.jobData(),
                     null);
           }
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
+          if (isJvmFatal(e)) {
+            throw (Error) e;
+          }
           logger.warn(
               "Failed to requeue async job {} for queue {}", asyncJobRecord.id(), queueName, e);
           recordTransitionFailure("requeue");
