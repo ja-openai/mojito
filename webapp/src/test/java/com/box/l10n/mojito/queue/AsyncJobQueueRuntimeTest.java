@@ -3531,10 +3531,43 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void scheduledBackoffPollsCapJitterAtMaxPollInterval() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of());
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 200, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs + 500);
+
+    asyncJobQueueRuntime.start();
+    taskScheduler.scheduledTasks().get(0).run();
+
+    assertThat(taskScheduler.scheduledStartTimes()).hasSize(2);
+    long scheduledDelayMs =
+        taskScheduler.scheduledStartTimes().get(1).getTime()
+            - taskScheduler.scheduleInvocationTimes().get(1);
+    assertThat(scheduledDelayMs).isBetween(180L, 220L);
+  }
+
+  @Test
   public void scheduledBackoffPollJitterCannotCollapsePositiveDelayToImmediate() {
     assertThat(AsyncJobQueueRuntime.scheduledPollDelayMs(200, delayMs -> 0)).isEqualTo(1);
     assertThat(AsyncJobQueueRuntime.scheduledPollDelayMs(200, delayMs -> -100)).isEqualTo(1);
     assertThat(AsyncJobQueueRuntime.scheduledPollDelayMs(0, delayMs -> 50)).isZero();
+  }
+
+  @Test
+  public void scheduledBackoffPollJitterCannotExceedMaxPollInterval() {
+    assertThat(AsyncJobQueueRuntime.scheduledPollDelayMs(200, delayMs -> 500, 250)).isEqualTo(250);
+    assertThat(AsyncJobQueueRuntime.scheduledPollDelayMs(200, delayMs -> 0, 250)).isEqualTo(1);
+    assertThat(AsyncJobQueueRuntime.scheduledPollDelayMs(0, delayMs -> 500, 250)).isZero();
   }
 
   @Test

@@ -435,7 +435,8 @@ class AsyncJobQueueRuntime {
   }
 
   private void scheduleNextPoll(long delayMs) {
-    long boundedDelayMs = scheduledPollDelayMs(delayMs, pollDelayJitter);
+    long boundedDelayMs =
+        scheduledPollDelayMs(delayMs, pollDelayJitter, queueSettings.getMaxPollIntervalMs());
     long pollSequence = scheduledPollSequence + 1;
     long previousPollSequence = scheduledPollSequence;
     scheduledPollSequence = pollSequence;
@@ -1260,12 +1261,18 @@ class AsyncJobQueueRuntime {
   }
 
   static long scheduledPollDelayMs(long delayMs, LongUnaryOperator pollDelayJitter) {
+    return scheduledPollDelayMs(delayMs, pollDelayJitter, Long.MAX_VALUE);
+  }
+
+  static long scheduledPollDelayMs(
+      long delayMs, LongUnaryOperator pollDelayJitter, long maxDelayMs) {
     Objects.requireNonNull(pollDelayJitter);
     long boundedDelayMs = Math.max(0, delayMs);
     if (boundedDelayMs <= 0) {
       return 0;
     }
-    return positiveJitteredDelayMs(boundedDelayMs, pollDelayJitter.applyAsLong(boundedDelayMs));
+    return boundedJitteredDelayMs(
+        boundedDelayMs, pollDelayJitter.applyAsLong(boundedDelayMs), maxDelayMs);
   }
 
   static long jitterRangeMs(long delayMs, int jitterPercent) {
