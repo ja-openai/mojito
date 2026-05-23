@@ -54,12 +54,13 @@ Async Job Data Model
   - `(queue_name, status, available_at)`
   - `(queue_name, status, lease_until)`
   - optional idempotency/correlation key can be modeled in `job_data`
-- Database constraints/types reject invalid ids, unsupported statuses, negative attempt counts,
+- Database constraints/types reject unsupported statuses, negative attempt counts,
   invalid queue names, oversized persisted errors, terminal failed rows without a nonblank
   persisted error, blank running lease owners, and inconsistent lease owner fields where a row is
   `running` without `(lease_until, worker_id, lease_token)` or a non-running row still has lease
-  ownership attached. MySQL uses an unsigned auto-increment id because MySQL rejects `CHECK`
-  constraints that reference an `AUTO_INCREMENT` column.
+  ownership attached. MySQL uses a signed `BIGINT AUTO_INCREMENT` id so generated ids stay within
+  Java `long`/`AsyncJobId` bounds; MySQL rejects `CHECK` constraints that reference an
+  `AUTO_INCREMENT` column, so PostgreSQL/HSQL keep the explicit positive-id check.
 
 Execution Flow (MVP)
 1. Parent `GenerateMultiLocalizedAssetJob` still creates child `pollable_task`s for fan-out, while

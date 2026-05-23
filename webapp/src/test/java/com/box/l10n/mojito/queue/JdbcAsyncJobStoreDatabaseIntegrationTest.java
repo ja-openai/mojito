@@ -71,7 +71,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     assertCoreQueueMigrationShape(postgresqlMigration);
 
     assertThat(mysqlMigration)
-        .contains("id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY")
+        .contains("id BIGINT AUTO_INCREMENT PRIMARY KEY")
+        .doesNotContain("BIGINT UNSIGNED")
         .contains("available_at DATETIME(6) NOT NULL")
         .contains("lease_until DATETIME(6) NULL")
         .contains("job_data LONGTEXT NOT NULL")
