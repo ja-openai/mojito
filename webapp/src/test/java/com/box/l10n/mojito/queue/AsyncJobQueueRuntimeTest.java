@@ -2434,6 +2434,42 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void scheduledPollRecoversAfterNonFatalClaimError() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenThrow(new AssertionError("bad invariant"))
+        .thenReturn(List.of());
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    taskScheduler.scheduledTasks().get(0).run();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(taskScheduler.scheduledTasks()).hasSize(2);
+
+    taskScheduler.scheduledTasks().get(1).run();
+
+    verify(asyncJobStore, times(2))
+        .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
+    assertThat(taskScheduler.scheduledTasks()).hasSize(3);
+  }
+
+  @Test
   public void claimFailureCounterClassifiesDatabaseContention() {
     assertThat(AsyncJobQueueRuntime.claimFailureKind(new IllegalStateException("boom")))
         .isEqualTo("other");

@@ -298,7 +298,14 @@ class AsyncJobQueueRuntime {
     PollCycleResult pollCycleResult;
     try {
       pollCycleResult = pollOnce();
-    } catch (RuntimeException e) {
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        synchronized (scheduleLock) {
+          pollInProgress.set(false);
+          scheduleLock.notifyAll();
+        }
+        throw (Error) e;
+      }
       logger.error("Async queue poll failed for queue {}", queueName, e);
       meterRegistry.counter("asyncJobQueue.poll.failed", "queueName", queueName).increment();
       pollCycleResult = PollCycleResult.failed(basePollDelayMs());
