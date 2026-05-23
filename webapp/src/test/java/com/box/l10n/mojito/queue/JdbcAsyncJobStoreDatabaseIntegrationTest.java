@@ -1059,6 +1059,9 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("CHECK (attempt_count >= 0)")
         .contains("C__ASYNC_JOB_QUEUE__LAST_ERROR_LENGTH")
         .contains("CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000)")
+        .contains("C__ASYNC_JOB_QUEUE__FAILED_LAST_ERROR")
+        .contains(
+            "CHECK (status <> 'failed' OR (last_error IS NOT NULL AND TRIM(last_error) <> ''))")
         .contains("C__ASYNC_JOB_QUEUE__RUNNING_LEASE_OWNER")
         .contains("C__ASYNC_JOB_QUEUE__LEASE_OWNER_NONBLANK")
         .contains("OR (TRIM(worker_id) <> '' AND TRIM(lease_token) <> '')")

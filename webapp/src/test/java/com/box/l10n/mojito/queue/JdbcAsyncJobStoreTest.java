@@ -67,6 +67,8 @@ public class JdbcAsyncJobStoreTest {
             CHECK (attempt_count >= 0),
           CONSTRAINT C_ASYNC_JOB_QUEUE_LAST_ERROR_LENGTH
             CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000),
+          CONSTRAINT C_ASYNC_JOB_QUEUE_FAILED_LAST_ERROR
+            CHECK (status <> 'failed' OR (last_error IS NOT NULL AND TRIM(last_error) <> '')),
           CONSTRAINT C_ASYNC_JOB_QUEUE_RUNNING_LEASE_OWNER
             CHECK (
               (status = 'running' AND lease_until IS NOT NULL AND worker_id IS NOT NULL AND lease_token IS NOT NULL)
@@ -805,6 +807,46 @@ public class JdbcAsyncJobStoreTest {
                 "{}",
                 1,
                 oversizedLastError));
+  }
+
+  @Test
+  public void schemaRejectsFailedRowsWithoutPersistedErrorWrittenDirectly() {
+    assertSchemaViolation(
+        """
+        INSERT INTO async_job_queue (
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          attempt_count,
+          last_error
+        ) VALUES (
+          'assetlocalize',
+          'failed',
+          CURRENT_TIMESTAMP,
+          '{}',
+          1,
+          NULL
+        )
+        """);
+    assertSchemaViolation(
+        """
+        INSERT INTO async_job_queue (
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          attempt_count,
+          last_error
+        ) VALUES (
+          'assetlocalize',
+          'failed',
+          CURRENT_TIMESTAMP,
+          '{}',
+          1,
+          '   '
+        )
+        """);
   }
 
   @Test

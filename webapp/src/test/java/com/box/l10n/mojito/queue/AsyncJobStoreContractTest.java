@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -235,6 +236,36 @@ public class AsyncJobStoreContractTest {
     assertThat(stillFailed.lastError()).isEqualTo("operator-visible failure");
   }
 
+  @Test
+  public void terminalFailureRequiresPersistedError() {
+    AsyncJobId id =
+        asyncJobStore.enqueue("assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        asyncJobStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5)).get(0);
+
+    assertThrows(
+        NullPointerException.class,
+        () ->
+            asyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", claimed.leaseToken(), null, null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            asyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", claimed.leaseToken(), null, "   "));
+
+    AsyncJobRecord stillRunning = asyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(stillRunning.status()).isEqualTo(AsyncJobStatus.RUNNING);
+    assertThat(stillRunning.workerId()).isEqualTo("worker-a");
+    assertThat(stillRunning.leaseToken()).isEqualTo(claimed.leaseToken());
+
+    assertThat(
+            asyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", claimed.leaseToken(), null, "visible failure"))
+        .isTrue();
+    assertThat(asyncJobStore.getByIds(List.of(id)).get(0).lastError()).isEqualTo("visible failure");
+  }
+
   private AsyncJobRecord claimEventually(
       String queueName, String workerId, Duration leaseDuration, Duration timeout)
       throws InterruptedException {
@@ -339,6 +370,8 @@ public class AsyncJobStoreContractTest {
               CHECK (attempt_count >= 0),
             CONSTRAINT C_ASYNC_JOB_QUEUE_LAST_ERROR_LENGTH
               CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000),
+            CONSTRAINT C_ASYNC_JOB_QUEUE_FAILED_LAST_ERROR
+              CHECK (status <> 'failed' OR (last_error IS NOT NULL AND TRIM(last_error) <> '')),
             CONSTRAINT C_ASYNC_JOB_QUEUE_RUNNING_LEASE_OWNER
               CHECK (
                 (status = 'running' AND lease_until IS NOT NULL AND worker_id IS NOT NULL AND lease_token IS NOT NULL)

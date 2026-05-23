@@ -21,6 +21,8 @@ CREATE TABLE async_job_queue (
     CHECK (attempt_count >= 0),
   CONSTRAINT C__ASYNC_JOB_QUEUE__LAST_ERROR_LENGTH
     CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000),
+  CONSTRAINT C__ASYNC_JOB_QUEUE__FAILED_LAST_ERROR
+    CHECK (status <> 'failed' OR (last_error IS NOT NULL AND TRIM(last_error) <> '')),
   CONSTRAINT C__ASYNC_JOB_QUEUE__RUNNING_LEASE_OWNER
     CHECK (
       (status = 'running' AND lease_until IS NOT NULL AND worker_id IS NOT NULL AND lease_token IS NOT NULL)

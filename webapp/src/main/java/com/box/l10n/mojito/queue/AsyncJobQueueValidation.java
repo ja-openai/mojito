@@ -144,6 +144,14 @@ final class AsyncJobQueueValidation {
     return lastError.substring(0, LAST_ERROR_MAX_LENGTH);
   }
 
+  static String validateFailureLastError(String lastError) {
+    String truncatedLastError = truncateLastError(Objects.requireNonNull(lastError));
+    if (truncatedLastError.isBlank()) {
+      throw new IllegalArgumentException("lastError must not be blank for failed async jobs");
+    }
+    return truncatedLastError;
+  }
+
   static AsyncJobStatus validateTerminalStatus(AsyncJobStatus status) {
     Objects.requireNonNull(status);
     if (status != AsyncJobStatus.DONE && status != AsyncJobStatus.FAILED) {

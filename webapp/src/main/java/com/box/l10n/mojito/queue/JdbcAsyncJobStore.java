@@ -432,6 +432,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobQueueValidation.validateWorkerId(workerId);
     validateLeaseToken(leaseToken);
+    String validatedLastError = AsyncJobQueueValidation.validateFailureLastError(lastError);
     long parsedId = parseId(id);
     Instant now = databaseNow();
 
@@ -458,7 +459,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         new MapSqlParameterSource()
             .addValue("failedStatus", AsyncJobStatus.FAILED.getDatabaseValue())
             .addValue("jobData", jobData)
-            .addValue("lastError", AsyncJobQueueValidation.truncateLastError(lastError))
+            .addValue("lastError", validatedLastError)
             .addValue("updatedDate", Timestamp.from(now))
             .addValue("now", Timestamp.from(now))
             .addValue("id", parsedId)

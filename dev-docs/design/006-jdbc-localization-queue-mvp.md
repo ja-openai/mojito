@@ -55,9 +55,10 @@ Async Job Data Model
   - `(queue_name, status, lease_until)`
   - optional idempotency/correlation key can be modeled in `job_data`
 - Database constraints reject non-positive ids, unsupported statuses, negative attempt counts,
-  invalid queue names, oversized persisted errors, blank running lease owners, and inconsistent
-  lease owner fields where a row is `running` without `(lease_until, worker_id, lease_token)` or a
-  non-running row still has lease ownership attached.
+  invalid queue names, oversized persisted errors, terminal failed rows without a nonblank
+  persisted error, blank running lease owners, and inconsistent lease owner fields where a row is
+  `running` without `(lease_until, worker_id, lease_token)` or a non-running row still has lease
+  ownership attached.
 
 Execution Flow (MVP)
 1. Parent `GenerateMultiLocalizedAssetJob` still creates child `pollable_task`s for fan-out, while
@@ -117,7 +118,8 @@ Failure + Restart Semantics
   - runner decides retry vs completion outside the store
   - each claim increments `attempt_count`
   - on retry, set `status=queued`, `available_at=<nextAttemptAt>` and persist `last_error`
-  - when `attempt_count` reaches `max-attempts`, set `status=failed`, clear lease owner fields, and keep `last_error`
+  - when `attempt_count` reaches `max-attempts`, set `status=failed`, clear lease owner fields, and
+    keep a nonblank `last_error`
   - handler-requested requeues also consume attempts and fail terminally at `max-attempts`; otherwise
     a handler that always returns `REQUEUE` can bypass the poison-job budget
   - handler-requested requeues without an explicit `available_at` use the queue's configured

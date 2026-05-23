@@ -113,7 +113,7 @@ public interface AsyncJobStore {
    * Marks a running job as terminally failed.
    *
    * @param jobData optional replacement payload; null keeps existing value
-   * @param lastError failure summary to persist for inspection
+   * @param lastError nonblank failure summary to persist for inspection
    * @return true if transition succeeded, false if the lease expired or caller no longer owns it
    */
   boolean markFailed(

@@ -210,6 +210,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobQueueValidation.validateWorkerId(workerId);
     validateLeaseToken(leaseToken);
+    String validatedLastError = AsyncJobQueueValidation.validateFailureLastError(lastError);
 
     return withQueueLock(
         queueName,
@@ -220,10 +221,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           }
           Instant now = Instant.now();
           String nextJobData = jobData == null ? job.jobData() : jobData;
-          jobsById.put(
-              job.id(),
-              job.withFailure(
-                  nextJobData, AsyncJobQueueValidation.truncateLastError(lastError), now));
+          jobsById.put(job.id(), job.withFailure(nextJobData, validatedLastError, now));
           return true;
         });
   }
