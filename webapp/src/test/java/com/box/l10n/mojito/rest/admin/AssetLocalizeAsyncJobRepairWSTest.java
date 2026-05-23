@@ -11,12 +11,22 @@ import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLo
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskNotFoundException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskRepairException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.RepairResult;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.server.ResponseStatusException;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -37,6 +47,39 @@ public class AssetLocalizeAsyncJobRepairWSTest {
     when(repairService.repairTerminalPollableTask("1")).thenReturn(expected);
 
     assertThat(ws.repairPollableTask("1")).isEqualTo(expected);
+  }
+
+  @Test
+  public void repairControllerOnlyExposesNarrowPollableRepairPostWithoutRequestBody()
+      throws Exception {
+    Method repairMethod =
+        AssetLocalizeAsyncJobRepairWS.class.getDeclaredMethod("repairPollableTask", String.class);
+    PostMapping postMapping = repairMethod.getAnnotation(PostMapping.class);
+    List<String> mutatingHandlers =
+        Arrays.stream(AssetLocalizeAsyncJobRepairWS.class.getDeclaredMethods())
+            .filter(
+                method ->
+                    method.isAnnotationPresent(PostMapping.class)
+                        || method.isAnnotationPresent(PutMapping.class)
+                        || method.isAnnotationPresent(PatchMapping.class)
+                        || method.isAnnotationPresent(DeleteMapping.class))
+            .map(Method::getName)
+            .toList();
+    List<String> getHandlers =
+        Arrays.stream(AssetLocalizeAsyncJobRepairWS.class.getDeclaredMethods())
+            .filter(method -> method.isAnnotationPresent(GetMapping.class))
+            .map(Method::getName)
+            .toList();
+    boolean acceptsRequestBody =
+        Arrays.stream(repairMethod.getParameterAnnotations())
+            .flatMap(Arrays::stream)
+            .map(Annotation::annotationType)
+            .anyMatch(RequestBody.class::equals);
+
+    assertThat(mutatingHandlers).containsExactly("repairPollableTask");
+    assertThat(getHandlers).isEmpty();
+    assertThat(postMapping.value()).containsExactly("/{asyncJobId}/pollable-task/repair");
+    assertThat(acceptsRequestBody).isFalse();
   }
 
   @Test
