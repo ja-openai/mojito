@@ -104,6 +104,8 @@ public class AsyncJobQueueJdbcTransactionConfigurationTest {
             last_error LONGVARCHAR NULL,
             created_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            CONSTRAINT C_ASYNC_JOB_QUEUE_ID_POSITIVE
+              CHECK (id > 0),
             CONSTRAINT C_ASYNC_JOB_QUEUE_STATUS
               CHECK (status IN ('queued', 'running', 'done', 'failed')),
             CONSTRAINT C_ASYNC_JOB_QUEUE_ATTEMPT_NONNEGATIVE

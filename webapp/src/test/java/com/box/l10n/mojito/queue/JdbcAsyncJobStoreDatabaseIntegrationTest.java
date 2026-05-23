@@ -435,6 +435,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("attempt_count")
         .contains("NOT NULL DEFAULT 0")
         .contains("last_error TEXT NULL")
+        .contains("C__ASYNC_JOB_QUEUE__ID_POSITIVE")
+        .contains("CHECK (id > 0)")
         .contains("C__ASYNC_JOB_QUEUE__STATUS")
         .contains("CHECK (status IN ('queued', 'running', 'done', 'failed'))")
         .contains("C__ASYNC_JOB_QUEUE__ATTEMPT_NONNEGATIVE")

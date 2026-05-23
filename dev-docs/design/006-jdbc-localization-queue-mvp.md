@@ -53,9 +53,9 @@ Async Job Data Model
   - `(queue_name, status, available_at)`
   - `(queue_name, status, lease_until)`
   - optional idempotency/correlation key can be modeled in `job_data`
-- Database constraints reject unsupported statuses, negative attempt counts, and inconsistent lease
-  owner fields where a row is `running` without `(lease_until, worker_id, lease_token)` or a
-  non-running row still has lease ownership attached.
+- Database constraints reject non-positive ids, unsupported statuses, negative attempt counts, and
+  inconsistent lease owner fields where a row is `running` without `(lease_until, worker_id,
+  lease_token)` or a non-running row still has lease ownership attached.
 
 Execution Flow (MVP)
 1. Parent `GenerateMultiLocalizedAssetJob` still creates child `pollable_task`s.

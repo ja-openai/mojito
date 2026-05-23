@@ -58,6 +58,8 @@ public class JdbcAsyncJobStoreTest {
           last_error LONGVARCHAR NULL,
           created_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL,
           updated_date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          CONSTRAINT C_ASYNC_JOB_QUEUE_ID_POSITIVE
+            CHECK (id > 0),
           CONSTRAINT C_ASYNC_JOB_QUEUE_STATUS
             CHECK (status IN ('queued', 'running', 'done', 'failed')),
           CONSTRAINT C_ASYNC_JOB_QUEUE_ATTEMPT_NONNEGATIVE
@@ -495,7 +497,27 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
-  public void schemaRejectsInvalidStatusAttemptAndLeaseOwnerShape() {
+  public void schemaRejectsInvalidIdStatusAttemptAndLeaseOwnerShape() {
+    assertSchemaViolation(
+        """
+        INSERT INTO async_job_queue (
+          id,
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          created_date,
+          updated_date
+        ) VALUES (
+          0,
+          'assetlocalize',
+          'queued',
+          CURRENT_TIMESTAMP,
+          '{}',
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+        """);
     assertSchemaViolation(
         """
         INSERT INTO async_job_queue (
