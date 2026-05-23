@@ -146,7 +146,7 @@ final class AsyncJobQueueValidation {
   }
 
   static String validateFailureLastError(String lastError) {
-    String truncatedLastError = truncateLastError(Objects.requireNonNull(lastError));
+    String truncatedLastError = truncateLastError(Objects.requireNonNull(lastError, "lastError"));
     if (truncatedLastError.isBlank()) {
       throw new IllegalArgumentException("lastError must not be blank for failed async jobs");
     }

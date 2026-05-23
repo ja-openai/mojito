@@ -27,6 +27,10 @@ public record AsyncJobRecord(
     if (attemptCount < 0) {
       throw new IllegalArgumentException("attemptCount must be >= 0");
     }
+    if (attemptCount > AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX) {
+      throw new IllegalArgumentException(
+          "attemptCount must be <= " + AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX);
+    }
     Objects.requireNonNull(createdDate);
     Objects.requireNonNull(updatedDate);
 
@@ -36,6 +40,9 @@ public record AsyncJobRecord(
       validateLeaseToken(leaseToken);
     } else if (leaseUntil != null || workerId != null || leaseToken != null) {
       throw new IllegalArgumentException("only running async jobs can have a lease owner");
+    }
+    if (status == AsyncJobStatus.FAILED) {
+      AsyncJobQueueValidation.validateFailureLastError(lastError);
     }
   }
 

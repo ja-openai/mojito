@@ -42,9 +42,25 @@ public class AsyncJobRecordTest {
             NOW.minusSeconds(10),
             NOW,
             false);
+    AsyncJobRecord failed =
+        new AsyncJobRecord(
+            new AsyncJobId("3"),
+            "assetlocalize",
+            AsyncJobStatus.FAILED,
+            NOW.minusSeconds(1),
+            null,
+            null,
+            null,
+            "{}",
+            AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX,
+            "terminal failure",
+            NOW.minusSeconds(10),
+            NOW,
+            false);
 
     assertThat(running.status()).isEqualTo(AsyncJobStatus.RUNNING);
     assertThat(done.status()).isEqualTo(AsyncJobStatus.DONE);
+    assertThat(failed.attemptCount()).isEqualTo(AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX);
   }
 
   @Test
@@ -85,12 +101,59 @@ public class AsyncJobRecordTest {
     assertThat(exception).hasMessageContaining("attemptCount must be >= 0");
   }
 
+  @Test
+  public void rejectsAttemptCountAboveStoreCap() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                record(
+                    AsyncJobStatus.DONE,
+                    null,
+                    null,
+                    null,
+                    AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX + 1));
+
+    assertThat(exception).hasMessageContaining("attemptCount must be <=");
+  }
+
+  @Test
+  public void rejectsFailedRecordsWithoutPersistedError() {
+    NullPointerException missing =
+        assertThrows(
+            NullPointerException.class,
+            () -> record(AsyncJobStatus.FAILED, null, null, null, 1, null));
+    IllegalArgumentException blank =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> record(AsyncJobStatus.FAILED, null, null, null, 1, " "));
+
+    assertThat(missing).hasMessageContaining("lastError");
+    assertThat(blank).hasMessageContaining("lastError must not be blank");
+  }
+
   private AsyncJobRecord record(
       AsyncJobStatus status,
       Instant leaseUntil,
       String workerId,
       String leaseToken,
       int attemptCount) {
+    return record(
+        status,
+        leaseUntil,
+        workerId,
+        leaseToken,
+        attemptCount,
+        status == AsyncJobStatus.FAILED ? "terminal failure" : null);
+  }
+
+  private AsyncJobRecord record(
+      AsyncJobStatus status,
+      Instant leaseUntil,
+      String workerId,
+      String leaseToken,
+      int attemptCount,
+      String lastError) {
     return new AsyncJobRecord(
         new AsyncJobId("1"),
         "assetlocalize",
@@ -101,7 +164,7 @@ public class AsyncJobRecordTest {
         leaseToken,
         "{}",
         attemptCount,
-        null,
+        lastError,
         NOW.minusSeconds(10),
         NOW,
         false);
