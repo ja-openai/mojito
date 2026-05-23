@@ -105,16 +105,19 @@ public class AsyncJobQueueCoordinatorTest {
 
     coordinator.triggerPollNow("unknown");
     assertThat(scheduledPolls).hasSize(1);
+    assertTriggerMissedCounter("unknown", "missingRuntime", 1);
 
     coordinator.triggerPollNow("assetlocalize");
     assertThat(scheduledPolls).hasSize(2);
     assertThat(scheduledPolls.get(0).isCancelled()).isTrue();
+    assertNoTriggerMissedCounter("assetlocalize", "missingRuntime");
 
     coordinator.stop();
     assertThat(scheduledPolls.get(1).isCancelled()).isTrue();
 
     coordinator.triggerPollNow("assetlocalize");
     assertThat(scheduledPolls).hasSize(2);
+    assertTriggerMissedCounter("assetlocalize", "notRunning", 1);
   }
 
   @Test
@@ -356,6 +359,24 @@ public class AsyncJobQueueCoordinatorTest {
     executor.setQueueCapacity(0);
     executor.initialize();
     return executor;
+  }
+
+  private void assertTriggerMissedCounter(String queueName, String reason, double expectedCount) {
+    assertThat(
+            meterRegistry
+                .counter("asyncJobQueue.trigger.missed", "queueName", queueName, "reason", reason)
+                .count())
+        .isEqualTo(expectedCount);
+  }
+
+  private void assertNoTriggerMissedCounter(String queueName, String reason) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.trigger.missed")
+                .tag("queueName", queueName)
+                .tag("reason", reason)
+                .counter())
+        .isNull();
   }
 
   private AsyncJobHandler handler(String queueName) {

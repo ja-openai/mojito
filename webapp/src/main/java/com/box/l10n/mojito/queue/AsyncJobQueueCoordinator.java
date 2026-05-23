@@ -146,7 +146,13 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
       AsyncJobQueueRuntime runtime = runtimesByQueueName.get(validatedQueueName);
       if (runtime != null) {
         runtime.triggerPollNow();
+        return;
       }
+      String reason = running ? "missingRuntime" : "notRunning";
+      meterRegistry
+          .counter(
+              "asyncJobQueue.trigger.missed", "queueName", validatedQueueName, "reason", reason)
+          .increment();
     }
   }
 
