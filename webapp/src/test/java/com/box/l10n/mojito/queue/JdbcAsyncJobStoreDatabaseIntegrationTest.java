@@ -386,6 +386,27 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
                   '   '
                 )
                 """));
+    assertThrows(
+        DataAccessException.class,
+        () ->
+            jdbcTemplate.update(
+                """
+                INSERT INTO async_job_queue (
+                  queue_name,
+                  status,
+                  available_at,
+                  job_data,
+                  attempt_count,
+                  last_error
+                ) VALUES (
+                  'assetlocalize',
+                  'done',
+                  CURRENT_TIMESTAMP,
+                  '{}',
+                  1,
+                  'stale failure'
+                )
+                """));
   }
 
   private void assertStoreIgnoresNonPositiveIdsIfSchemaAllows(
@@ -1186,6 +1207,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("C__ASYNC_JOB_QUEUE__FAILED_LAST_ERROR")
         .contains(
             "CHECK (status <> 'failed' OR (last_error IS NOT NULL AND TRIM(last_error) <> ''))")
+        .contains("C__ASYNC_JOB_QUEUE__DONE_LAST_ERROR")
+        .contains("CHECK (status <> 'done' OR last_error IS NULL)")
         .contains("C__ASYNC_JOB_QUEUE__RUNNING_LEASE_OWNER")
         .contains("C__ASYNC_JOB_QUEUE__LEASE_OWNER_NONBLANK")
         .contains("OR (TRIM(worker_id) <> '' AND TRIM(lease_token) <> '')")

@@ -134,7 +134,8 @@ Failure + Restart Semantics
     budget
   - operator replay can move a `failed` row back to `queued`, reset `attempt_count=0`, preserve
     `last_error` for inspection, and optionally replace `job_data`
-  - on terminal completion, set `status=done` and finalize pollable metadata separately
+  - on terminal completion, set `status=done`, clear `last_error`, and finalize pollable metadata
+    separately
 
 Polling / Multi-Queue Design
 - We need isolation like Quartz schedulers.

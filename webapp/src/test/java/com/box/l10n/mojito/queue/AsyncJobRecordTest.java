@@ -133,6 +133,16 @@ public class AsyncJobRecordTest {
   }
 
   @Test
+  public void rejectsDoneRecordsWithPersistedError() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> record(AsyncJobStatus.DONE, null, null, null, 1, "stale failure"));
+
+    assertThat(exception).hasMessageContaining("done async jobs must not have lastError");
+  }
+
+  @Test
   public void truncatesPersistedErrorsToStorageLimit() {
     String longError = "x".repeat(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH + 1);
 

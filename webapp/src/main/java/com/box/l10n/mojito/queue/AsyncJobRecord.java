@@ -45,6 +45,9 @@ public record AsyncJobRecord(
     if (status == AsyncJobStatus.FAILED) {
       lastError = AsyncJobQueueValidation.validateFailureLastError(lastError);
     }
+    if (status == AsyncJobStatus.DONE && lastError != null) {
+      throw new IllegalArgumentException("done async jobs must not have lastError");
+    }
   }
 
   public AsyncJobRecord withLeaseReclaimed(boolean leaseReclaimed) {
