@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -131,6 +133,27 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
   }
 
   @Test
+  public void recordsInvalidAsyncJobId() {
+    assertThatThrownBy(() -> repairService.repairTerminalPollableTask("bad"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("canonical positive numeric string");
+
+    verify(asyncJobStore, never()).getByIds(any());
+    assertRepairCounter("unknown", "invalidJobId", 1);
+  }
+
+  @Test
+  public void recordsAsyncJobLookupFailure() {
+    when(asyncJobStore.getByIds(List.of(new AsyncJobId("1"))))
+        .thenThrow(new IllegalStateException("database unavailable"));
+
+    assertThatThrownBy(() -> repairService.repairTerminalPollableTask("1"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("database unavailable");
+    assertRepairCounter("unknown", "jobLookupFailed", 1);
+  }
+
+  @Test
   public void recordsMissingPollableTask() {
     when(pollableTaskService.getPollableTask(42L)).thenReturn(null);
 
@@ -151,6 +174,23 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
                     asyncJobRecord(AsyncJobStatus.FAILED, "1", "handler failed", "{bad-json")))
         .isInstanceOf(RuntimeException.class);
     assertRepairCounter("failed", "invalidPayload", 1);
+  }
+
+  @Test
+  public void recordsPollableTaskFinishFailure() {
+    PollableTask pollableTask = pollableTask(42L, false);
+    when(pollableTaskService.getPollableTask(42L)).thenReturn(pollableTask);
+    doThrow(new IllegalStateException("finish failed"))
+        .when(pollableTaskService)
+        .finishTask(eq(42L), isNull(), isNull(), isNull());
+
+    assertThatThrownBy(
+            () ->
+                repairService.repairTerminalPollableTask(
+                    asyncJobRecord(AsyncJobStatus.DONE, "1", null)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("finish failed");
+    assertRepairCounter("done", "finishFailed", 1);
   }
 
   private AsyncJobRecord asyncJobRecord(AsyncJobStatus status, String id, String lastError) {

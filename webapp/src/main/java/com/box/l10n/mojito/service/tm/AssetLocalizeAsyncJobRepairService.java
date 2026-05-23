@@ -41,9 +41,23 @@ public class AssetLocalizeAsyncJobRepairService {
   }
 
   public RepairResult repairTerminalPollableTask(String asyncJobIdValue) {
-    AsyncJobId asyncJobId = new AsyncJobId(asyncJobIdValue);
+    AsyncJobId asyncJobId;
+    try {
+      asyncJobId = new AsyncJobId(asyncJobIdValue);
+    } catch (RuntimeException exception) {
+      recordRepair("unknown", "invalidJobId");
+      throw exception;
+    }
+
+    List<AsyncJobRecord> asyncJobRecords;
+    try {
+      asyncJobRecords = asyncJobStore.getByIds(List.of(asyncJobId));
+    } catch (RuntimeException exception) {
+      recordRepair("unknown", "jobLookupFailed");
+      throw exception;
+    }
     AsyncJobRecord asyncJobRecord =
-        asyncJobStore.getByIds(List.of(asyncJobId)).stream()
+        asyncJobRecords.stream()
             .filter(
                 record ->
                     AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME.equals(record.queueName()))
@@ -99,13 +113,23 @@ public class AssetLocalizeAsyncJobRepairService {
           "alreadyFinished");
     }
 
-    if (asyncJobRecord.status() == AsyncJobStatus.FAILED) {
-      ExceptionHolder exceptionHolder = new ExceptionHolder(pollableTask);
-      exceptionHolder.setExpected(true);
-      exceptionHolder.setException(new IllegalStateException(lastError(asyncJobRecord)));
-      pollableTaskService.finishTask(pollableTask.getId(), null, exceptionHolder, null);
-    } else {
-      pollableTaskService.finishTask(pollableTask.getId(), null, null, null);
+    try {
+      if (asyncJobRecord.status() == AsyncJobStatus.FAILED) {
+        ExceptionHolder exceptionHolder = new ExceptionHolder(pollableTask);
+        exceptionHolder.setExpected(true);
+        exceptionHolder.setException(new IllegalStateException(lastError(asyncJobRecord)));
+        pollableTaskService.finishTask(pollableTask.getId(), null, exceptionHolder, null);
+      } else {
+        pollableTaskService.finishTask(pollableTask.getId(), null, null, null);
+      }
+    } catch (RuntimeException exception) {
+      recordRepair(asyncJobRecord.status(), "finishFailed");
+      logger.warn(
+          "Failed to repair assetlocalize pollable task {} for terminal async job {}",
+          pollableTask.getId(),
+          asyncJobRecord.id().value(),
+          exception);
+      throw exception;
     }
 
     recordRepair(asyncJobRecord.status(), "repaired");
