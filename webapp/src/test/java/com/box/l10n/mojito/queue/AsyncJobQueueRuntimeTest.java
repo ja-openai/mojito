@@ -1998,6 +1998,58 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void triggerPollNowPreservesExistingPollWhenImmediateScheduleThrowsNonFatalError() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of());
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    Runnable[] firstScheduledPoll = new Runnable[1];
+    DummyScheduledFuture firstScheduledFuture = new DummyScheduledFuture();
+    AtomicInteger scheduleInvocations = new AtomicInteger();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(
+            invocation -> {
+              int invocationCount = scheduleInvocations.incrementAndGet();
+              if (invocationCount == 1) {
+                firstScheduledPoll[0] = invocation.getArgument(0);
+                return firstScheduledFuture;
+              }
+              if (invocationCount == 2) {
+                throw new AssertionError("scheduler invariant");
+              }
+              return new DummyScheduledFuture();
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    asyncJobQueueRuntime.triggerPollNow();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.trigger.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(firstScheduledFuture.isCancelled()).isFalse();
+
+    firstScheduledPoll[0].run();
+
+    verify(asyncJobStore, times(1))
+        .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
+    assertThat(scheduleInvocations.get()).isEqualTo(3);
+  }
+
+  @Test
   public void startRecordsFailureAndClearsStartedWhenInitialScheduleReturnsNull() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     when(taskScheduler.schedule(any(Runnable.class), any(Date.class))).thenReturn(null);
@@ -2014,6 +2066,37 @@ public class AsyncJobQueueRuntimeTest {
         org.junit.Assert.assertThrows(IllegalStateException.class, asyncJobQueueRuntime::start);
 
     assertThat(exception).hasMessageContaining("TaskScheduler returned null ScheduledFuture");
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.schedule.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+
+    asyncJobQueueRuntime.triggerPollNow();
+
+    verify(taskScheduler, times(1)).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
+  public void startRecordsFailureAndClearsStartedWhenInitialScheduleThrowsNonFatalError() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenThrow(new AssertionError("scheduler invariant"));
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            mock(AsyncJobStore.class),
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor);
+
+    AssertionError exception =
+        org.junit.Assert.assertThrows(AssertionError.class, asyncJobQueueRuntime::start);
+
+    assertThat(exception).hasMessageContaining("scheduler invariant");
     assertThat(
             meterRegistry
                 .get("asyncJobQueue.poll.schedule.failed")
@@ -2507,6 +2590,57 @@ public class AsyncJobQueueRuntimeTest {
               }
               if (invocationCount == 2) {
                 throw new IllegalStateException("scheduler unavailable");
+              }
+              return new DummyScheduledFuture();
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    assertThat(scheduledPoll[0]).isNotNull();
+
+    scheduledPoll[0].run();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.schedule.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    verify(asyncJobStore, times(1))
+        .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
+
+    asyncJobQueueRuntime.triggerPollNow();
+    assertThat(scheduleInvocations.get()).isEqualTo(3);
+  }
+
+  @Test
+  public void scheduledPollRecordsFailureWhenNextPollScheduleThrowsNonFatalError() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of());
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    Runnable[] scheduledPoll = new Runnable[1];
+    AtomicInteger scheduleInvocations = new AtomicInteger();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(
+            invocation -> {
+              int invocationCount = scheduleInvocations.incrementAndGet();
+              if (invocationCount == 1) {
+                scheduledPoll[0] = invocation.getArgument(0);
+                return new DummyScheduledFuture();
+              }
+              if (invocationCount == 2) {
+                throw new AssertionError("scheduler invariant");
               }
               return new DummyScheduledFuture();
             });

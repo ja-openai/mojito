@@ -117,11 +117,11 @@ class AsyncJobQueueRuntime {
       started = true;
       try {
         scheduleNextPoll(0);
-      } catch (RuntimeException e) {
+      } catch (Throwable e) {
         started = false;
         logger.warn("Failed to schedule initial poll for queue {}", queueName, e);
         recordPollScheduleFailure();
-        throw e;
+        throw unchecked(e);
       }
     }
   }
@@ -162,7 +162,10 @@ class AsyncJobQueueRuntime {
         if (previousPollFuture != null) {
           previousPollFuture.cancel(false);
         }
-      } catch (RuntimeException e) {
+      } catch (Throwable e) {
+        if (isJvmFatal(e)) {
+          throw (Error) e;
+        }
         logger.warn("Failed to trigger immediate poll for queue {}", queueName, e);
         meterRegistry.counter("asyncJobQueue.trigger.failed", "queueName", queueName).increment();
       }
@@ -320,7 +323,10 @@ class AsyncJobQueueRuntime {
       if (started) {
         try {
           scheduleNextPoll(pollCycleResult.nextDelayMs());
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
+          if (isJvmFatal(e)) {
+            throw (Error) e;
+          }
           logger.warn("Failed to schedule next poll for queue {}", queueName, e);
           recordPollScheduleFailure();
         }
@@ -384,11 +390,11 @@ class AsyncJobQueueRuntime {
       if (scheduledFuture == null) {
         throw new IllegalStateException("TaskScheduler returned null ScheduledFuture");
       }
-    } catch (RuntimeException e) {
+    } catch (Throwable e) {
       if (scheduledPollSequence == pollSequence) {
         scheduledPollSequence = previousPollSequence;
       }
-      throw e;
+      throw unchecked(e);
     }
     if (scheduledPollSequence == pollSequence) {
       nextPollFuture = scheduledFuture;
@@ -768,6 +774,19 @@ class AsyncJobQueueRuntime {
   private boolean isJvmFatal(Throwable throwable) {
     return throwable instanceof VirtualMachineError
         || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
+  }
+
+  private RuntimeException unchecked(Throwable throwable) {
+    if (isJvmFatal(throwable)) {
+      throw (Error) throwable;
+    }
+    if (throwable instanceof RuntimeException runtimeException) {
+      return runtimeException;
+    }
+    if (throwable instanceof Error error) {
+      throw error;
+    }
+    return new IllegalStateException(throwable);
   }
 
   private void handleProcessingFailure(AsyncJobRecord asyncJobRecord, Throwable e) {
