@@ -586,10 +586,11 @@ public class AsyncJobQueueRuntimeTest {
   public void attemptBudgetExhaustionCallsPermanentFailureCallbackAfterMarkFailed()
       throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(2, true);
     CountDownLatch callbackInvoked = new CountDownLatch(1);
     AtomicInteger handlerInvocations = new AtomicInteger();
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
-        .thenReturn(List.of(claimedJob(2, true)));
+        .thenReturn(List.of(claimedJob));
     when(asyncJobStore.markFailed(
             anyString(), any(AsyncJobId.class), anyString(), anyString(), any(), anyString()))
         .thenReturn(true);
@@ -615,6 +616,13 @@ public class AsyncJobQueueRuntimeTest {
               @Override
               public void onJobFailedPermanently(
                   AsyncJobRecord asyncJobRecord, Throwable failure, String lastError) {
+                assertThat(asyncJobRecord.id()).isEqualTo(claimedJob.id());
+                assertThat(asyncJobRecord.status()).isEqualTo(AsyncJobStatus.FAILED);
+                assertThat(asyncJobRecord.jobData()).isEqualTo(claimedJob.jobData());
+                assertThat(asyncJobRecord.lastError()).contains("Attempt budget exhausted");
+                assertThat(asyncJobRecord.workerId()).isNull();
+                assertThat(asyncJobRecord.leaseToken()).isNull();
+                assertThat(asyncJobRecord.leaseUntil()).isNull();
                 assertThat(failure).hasMessageContaining("Attempt budget exhausted");
                 assertThat(lastError).contains("Attempt budget exhausted");
                 callbackInvoked.countDown();
@@ -818,7 +826,13 @@ public class AsyncJobQueueRuntimeTest {
               public void onJobDone(
                   AsyncJobRecord asyncJobRecord, AsyncJobHandlerResult asyncJobHandlerResult) {
                 assertThat(ordering.getAndIncrement()).isEqualTo(2);
-                assertThat(asyncJobRecord).isSameAs(claimedJob);
+                assertThat(asyncJobRecord.id()).isEqualTo(claimedJob.id());
+                assertThat(asyncJobRecord.status()).isEqualTo(AsyncJobStatus.DONE);
+                assertThat(asyncJobRecord.jobData()).isEqualTo("{\"done\":true}");
+                assertThat(asyncJobRecord.lastError()).isNull();
+                assertThat(asyncJobRecord.workerId()).isNull();
+                assertThat(asyncJobRecord.leaseToken()).isNull();
+                assertThat(asyncJobRecord.leaseUntil()).isNull();
                 assertThat(asyncJobHandlerResult.jobData()).isEqualTo("{\"done\":true}");
                 callbackInvoked.countDown();
               }
@@ -966,7 +980,13 @@ public class AsyncJobQueueRuntimeTest {
               public void onJobFailedPermanently(
                   AsyncJobRecord asyncJobRecord, Throwable failure, String lastError) {
                 assertThat(ordering.getAndIncrement()).isEqualTo(2);
-                assertThat(asyncJobRecord).isSameAs(claimedJob);
+                assertThat(asyncJobRecord.id()).isEqualTo(claimedJob.id());
+                assertThat(asyncJobRecord.status()).isEqualTo(AsyncJobStatus.FAILED);
+                assertThat(asyncJobRecord.jobData()).isEqualTo(claimedJob.jobData());
+                assertThat(asyncJobRecord.lastError()).contains("boom");
+                assertThat(asyncJobRecord.workerId()).isNull();
+                assertThat(asyncJobRecord.leaseToken()).isNull();
+                assertThat(asyncJobRecord.leaseUntil()).isNull();
                 assertThat(failure).isSameAs(handlerFailure);
                 assertThat(lastError).contains("boom");
                 callbackInvoked.countDown();
