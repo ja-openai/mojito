@@ -247,6 +247,29 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void invalidClaimedJobsFailPollBeforeHandlerExecution() throws Exception {
+    AtomicInteger handlerInvocations = new AtomicInteger();
+
+    assertInvalidClaimFailsBeforeHandler(
+        List.of(claimedJob("stats", AsyncJobStatus.RUNNING, "worker-a")),
+        "wrongQueueName",
+        handlerInvocations);
+    assertInvalidClaimFailsBeforeHandler(
+        List.of(claimedJob("assetlocalize", AsyncJobStatus.QUEUED, null)),
+        "wrongStatus",
+        handlerInvocations);
+    assertInvalidClaimFailsBeforeHandler(
+        List.of(claimedJob("assetlocalize", AsyncJobStatus.RUNNING, "worker-b")),
+        "wrongWorkerId",
+        handlerInvocations);
+    assertInvalidClaimFailsBeforeHandler(null, "nullList", handlerInvocations);
+    assertInvalidClaimFailsBeforeHandler(
+        java.util.Collections.singletonList(null), "nullRecord", handlerInvocations);
+
+    assertThat(handlerInvocations.get()).isZero();
+  }
+
+  @Test
   public void runtimePublishesExecutorLoadGauges() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
@@ -2593,6 +2616,55 @@ public class AsyncJobQueueRuntimeTest {
         now.minusSeconds(10),
         now,
         leaseReclaimed);
+  }
+
+  private AsyncJobRecord claimedJob(String queueName, AsyncJobStatus status, String workerId) {
+    Instant now = Instant.now();
+    boolean running = status == AsyncJobStatus.RUNNING;
+    return new AsyncJobRecord(
+        new AsyncJobId("1"),
+        queueName,
+        status,
+        now.minusSeconds(5),
+        running ? now.plusSeconds(30) : null,
+        running ? workerId : null,
+        running ? "lease-token" : null,
+        "{}",
+        1,
+        null,
+        now.minusSeconds(10),
+        now,
+        false);
+  }
+
+  private void assertInvalidClaimFailsBeforeHandler(
+      List<AsyncJobRecord> claimedJobs, String reason, AtomicInteger handlerInvocations) {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(claimedJobs);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(
+                asyncJobRecord -> {
+                  handlerInvocations.incrementAndGet();
+                  return AsyncJobHandlerResult.done();
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    org.junit.Assert.assertThrows(IllegalStateException.class, asyncJobQueueRuntime::pollOnce);
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.claim.invalid")
+                .tag("queueName", "assetlocalize")
+                .tag("reason", reason)
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(asyncJobQueueRuntime.inFlightCount()).isZero();
   }
 
   private void waitForStatusCount(

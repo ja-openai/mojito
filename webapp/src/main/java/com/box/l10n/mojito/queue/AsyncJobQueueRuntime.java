@@ -188,6 +188,7 @@ class AsyncJobQueueRuntime {
           .timer("asyncJobQueue.claim.latency", "queueName", queueName)
           .record(System.nanoTime() - claimStartNanos, TimeUnit.NANOSECONDS);
     }
+    validateClaimedJobs(claimedJobs);
 
     if (claimedJobs.isEmpty()) {
       currentPollDelayMs = nextEmptyPollDelayMs();
@@ -209,6 +210,58 @@ class AsyncJobQueueRuntime {
     boolean continueImmediately = freeCapacity() > 0 && claimedJobs.size() == claimLimit;
     return PollCycleResult.claimed(
         claimedJobs.size(), continueImmediately ? 0 : basePollDelayMs(), continueImmediately);
+  }
+
+  private void validateClaimedJobs(List<AsyncJobRecord> claimedJobs) {
+    if (claimedJobs == null) {
+      throw invalidClaim("nullList", "AsyncJobStore returned a null claimed job list");
+    }
+    for (AsyncJobRecord claimedJob : claimedJobs) {
+      validateClaimedJob(claimedJob);
+    }
+  }
+
+  private void validateClaimedJob(AsyncJobRecord claimedJob) {
+    if (claimedJob == null) {
+      throw invalidClaim("nullRecord", "AsyncJobStore returned a null claimed job record");
+    }
+    if (!queueName.equals(claimedJob.queueName())) {
+      throw invalidClaim(
+          "wrongQueueName",
+          "AsyncJobStore returned job "
+              + claimedJob.id().value()
+              + " for queue "
+              + claimedJob.queueName()
+              + " while polling queue "
+              + queueName);
+    }
+    if (claimedJob.status() != AsyncJobStatus.RUNNING) {
+      throw invalidClaim(
+          "wrongStatus",
+          "AsyncJobStore returned job "
+              + claimedJob.id().value()
+              + " with status "
+              + claimedJob.status().getDatabaseValue()
+              + " while polling queue "
+              + queueName);
+    }
+    if (!workerId.equals(claimedJob.workerId())) {
+      throw invalidClaim(
+          "wrongWorkerId",
+          "AsyncJobStore returned job "
+              + claimedJob.id().value()
+              + " for worker "
+              + claimedJob.workerId()
+              + " while polling as "
+              + workerId);
+    }
+  }
+
+  private IllegalStateException invalidClaim(String reason, String message) {
+    meterRegistry
+        .counter("asyncJobQueue.claim.invalid", "queueName", queueName, "reason", reason)
+        .increment();
+    return new IllegalStateException(message);
   }
 
   int inFlightCount() {
