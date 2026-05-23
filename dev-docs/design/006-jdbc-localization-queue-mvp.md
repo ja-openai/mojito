@@ -171,6 +171,10 @@ Adaptive Polling (per queue)
   `max-retry-delay-ms`, plus retry-specific jitter (`retry-jitter-percent`, default 20%) that keeps
   the final retry delay positive and still capped. Handler requested requeues can still provide an
   explicit `available_at`.
+- Production callers should enqueue through `AsyncJobQueueSubmissionService`, not directly through
+  the low-level store. The service records enqueue telemetry and triggers the local runtime for jobs
+  that are immediately available; future-dated jobs rely on normal polling until their availability
+  window opens.
 
 Optional Wakeup Signals
 - Wakeups are an optimization only. The durable queue table remains the source of truth and the
@@ -289,6 +293,10 @@ Monitoring (MVP Required)
   - active poll shutdown wait was interrupted before executor shutdown
   - status metrics reporting failures
 - Operator counters/logs:
+  - `asyncJobQueue.enqueue` by `queueName,result` for production enqueue attempts; results are
+    low-cardinality (`succeeded`, `failed`)
+  - `asyncJobQueue.enqueueWakeup.failed` by `queueName` when enqueue succeeded but the local
+    runtime wakeup failed; polling remains the correctness fallback
   - `asyncJobQueue.inspection.find` by `queueName,status,result` for bounded list attempts;
     invalid caller status is tagged as `status=invalid`, not the caller-provided value
   - `asyncJobQueue.inspection.get` by `queueName,result` for detail lookup attempts;
