@@ -391,6 +391,51 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   }
 
   @Test
+  public void stopRecordsInterruptedJoinAndPreservesInterruptFlag() throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    CountDownLatch getConnectionStarted = new CountDownLatch(1);
+    CountDownLatch unblockGetConnection = new CountDownLatch(1);
+    when(dataSource.getConnection())
+        .thenAnswer(
+            invocation -> {
+              getConnectionStarted.countDown();
+              boolean unblocked = false;
+              while (!unblocked) {
+                try {
+                  unblocked = unblockGetConnection.await(10, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException ignored) {
+                  // Simulate a driver call that ignores interruption until the socket unblocks.
+                }
+              }
+              throw new SQLException("connection unavailable");
+            });
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setPostgresListenTimeoutMs(1);
+    wakeupSettings.setReconnectDelayMs(1);
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            dataSource, wakeupSettings, mock(AsyncJobQueueCoordinator.class), meterRegistry);
+
+    try {
+      listener.start();
+      assertThat(getConnectionStarted.await(1, TimeUnit.SECONDS)).isTrue();
+
+      Thread.currentThread().interrupt();
+      listener.stop();
+
+      assertThat(Thread.currentThread().isInterrupted()).isTrue();
+      assertSimpleCounter("asyncJobQueue.wakeup.listener.stopInterrupted", 1);
+      assertListenerGaugeValue("asyncJobQueue.wakeup.listener.running", 0);
+      assertListenerGaugeValue("asyncJobQueue.wakeup.listener.connected", 0);
+    } finally {
+      Thread.interrupted();
+      unblockGetConnection.countDown();
+      listener.stop();
+    }
+  }
+
+  @Test
   public void startRejectsDuplicateListenerWhenPreviousStopTimedOut() throws Exception {
     DataSource dataSource = mock(DataSource.class);
     CountDownLatch getConnectionStarted = new CountDownLatch(1);

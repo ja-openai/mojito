@@ -316,60 +316,70 @@ public class AsyncJobQueueLoadTest {
 
     AtomicInteger handlerInvocations = new AtomicInteger();
     AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings();
+    queueSettings.setClaimBatchSize(jobCount);
+    queueSettings.setMaxConcurrency(jobCount);
     queueSettings.setMaxAttempts(1);
     queueSettings.setLeaseDurationMs(25);
-    AsyncJobQueueRuntime asyncJobQueueRuntime =
-        new AsyncJobQueueRuntime(
-            "assetlocalize",
-            inMemoryAsyncJobStore,
-            queueSettings,
-            new AsyncJobHandler() {
-              @Override
-              public String queueName() {
-                return "assetlocalize";
-              }
+    ThreadPoolTaskExecutor leaseExpiryExecutor = newExecutor(jobCount);
+    try {
+      AsyncJobQueueRuntime asyncJobQueueRuntime =
+          new AsyncJobQueueRuntime(
+              "assetlocalize",
+              inMemoryAsyncJobStore,
+              queueSettings,
+              new AsyncJobHandler() {
+                @Override
+                public String queueName() {
+                  return "assetlocalize";
+                }
 
-              @Override
-              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) throws Exception {
-                handlerInvocations.incrementAndGet();
-                Thread.sleep(80);
-                return AsyncJobHandlerResult.done();
-              }
-            },
-            mock(TaskScheduler.class),
-            executor,
-            meterRegistry,
-            "worker-a");
+                @Override
+                public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord)
+                    throws Exception {
+                  handlerInvocations.incrementAndGet();
+                  Thread.sleep(80);
+                  return AsyncJobHandlerResult.done();
+                }
+              },
+              mock(TaskScheduler.class),
+              leaseExpiryExecutor,
+              meterRegistry,
+              "worker-a");
 
-    long startedAt = System.nanoTime();
-    long timeoutAt = System.currentTimeMillis() + 10_000;
-    while (!leaseExpiredStressComplete(inMemoryAsyncJobStore, jobCount)
-        && System.currentTimeMillis() < timeoutAt) {
-      asyncJobQueueRuntime.pollOnce();
-      Thread.sleep(1);
+      long startedAt = System.nanoTime();
+      long timeoutAt = System.currentTimeMillis() + 10_000;
+      while (!leaseExpiredStressComplete(inMemoryAsyncJobStore, jobCount)
+          && System.currentTimeMillis() < timeoutAt) {
+        asyncJobQueueRuntime.pollOnce();
+        Thread.sleep(1);
+      }
+      long elapsedMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+
+      assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.FAILED)).isEqualTo(jobCount);
+      assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.QUEUED)).isZero();
+      assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.RUNNING)).isZero();
+      assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.DONE)).isZero();
+      assertThat(handlerInvocations.get()).isEqualTo(jobCount);
+      assertThat(counterCount("asyncJobQueue.failed")).isEqualTo(jobCount);
+      assertThat(counterCount("asyncJobQueue.attempt.exhausted")).isEqualTo(jobCount);
+      assertThat(counterCount("asyncJobQueue.leaseExpiredReclaimed")).isEqualTo(jobCount);
+      assertThat(transitionFailureCount("done")).isEqualTo(jobCount);
+      assertThat(
+              inMemoryAsyncJobStore.findByStatus(
+                  "assetlocalize", AsyncJobStatus.FAILED, jobCount))
+          .hasSize(jobCount)
+          .allSatisfy(
+              job -> {
+                assertThat(job.attemptCount()).isEqualTo(2);
+                assertThat(job.lastError()).contains("Attempt budget exhausted");
+                assertThat(job.workerId()).isNull();
+                assertThat(job.leaseToken()).isNull();
+                assertThat(job.leaseUntil()).isNull();
+              });
+      assertThat(elapsedMs).isLessThan(10_000);
+    } finally {
+      leaseExpiryExecutor.shutdown();
     }
-    long elapsedMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
-
-    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.FAILED)).isEqualTo(jobCount);
-    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.QUEUED)).isZero();
-    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.RUNNING)).isZero();
-    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.DONE)).isZero();
-    assertThat(handlerInvocations.get()).isEqualTo(jobCount);
-    assertThat(counterCount("asyncJobQueue.failed")).isEqualTo(jobCount);
-    assertThat(counterCount("asyncJobQueue.attempt.exhausted")).isEqualTo(jobCount);
-    assertThat(counterCount("asyncJobQueue.leaseExpiredReclaimed")).isEqualTo(jobCount);
-    assertThat(transitionFailureCount("done")).isEqualTo(jobCount);
-    assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, jobCount))
-        .hasSize(jobCount)
-        .allSatisfy(
-            job -> {
-              assertThat(job.attemptCount()).isEqualTo(2);
-              assertThat(job.lastError()).contains("Attempt budget exhausted");
-              assertThat(job.workerId()).isNull();
-              assertThat(job.leaseToken()).isNull();
-              assertThat(job.leaseUntil()).isNull();
-            });
-    assertThat(elapsedMs).isLessThan(10_000);
   }
 
   private boolean leaseExpiredStressComplete(
