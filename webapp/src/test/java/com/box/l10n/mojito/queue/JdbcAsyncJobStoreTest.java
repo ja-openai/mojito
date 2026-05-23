@@ -820,6 +820,59 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void requeueMethodsValidateInputsBeforeReadingDatabaseClock() {
+    JdbcAsyncJobStore brokenClockStore = storeWithBrokenDatabaseClock();
+    AsyncJobId id = new AsyncJobId("1");
+    Instant outsideDatabaseTimestampRange =
+        AsyncJobQueueValidation.DATABASE_TIMESTAMP_MAX.plusNanos(1);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            brokenClockStore.requeue(
+                " ", id, "worker-a", "lease-token", Instant.now(), null, null));
+    assertThrows(
+        NullPointerException.class,
+        () ->
+            brokenClockStore.requeue(
+                "assetlocalize", null, "worker-a", "lease-token", Instant.now(), null, null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            brokenClockStore.requeue(
+                "assetlocalize", id, " ", "lease-token", Instant.now(), null, null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            brokenClockStore.requeue(
+                "assetlocalize", id, "worker-a", " ", Instant.now(), null, null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            brokenClockStore.requeue(
+                "assetlocalize",
+                id,
+                "worker-a",
+                "lease-token",
+                outsideDatabaseTimestampRange,
+                null,
+                null));
+    assertThrows(
+        NullPointerException.class,
+        () ->
+            brokenClockStore.requeueAfter(
+                "assetlocalize", id, "worker-a", "lease-token", null, null, null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            brokenClockStore.requeueFailed(
+                "assetlocalize", id, outsideDatabaseTimestampRange, null));
+    assertThrows(
+        NullPointerException.class,
+        () -> brokenClockStore.requeueFailedNow("assetlocalize", null, null));
+  }
+
+  @Test
   public void rejectsLeaseDurationOutsideDatabaseTimestampBoundsBeforeClaimWrite() {
     jdbcAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
 
@@ -885,6 +938,13 @@ public class JdbcAsyncJobStoreTest {
     return java.util.stream.IntStream.rangeClosed(0, AsyncJobQueueValidation.STORE_QUERY_LIMIT_MAX)
         .mapToObj(index -> new AsyncJobId(String.valueOf(index + 1)))
         .toList();
+  }
+
+  private JdbcAsyncJobStore storeWithBrokenDatabaseClock() {
+    return new JdbcAsyncJobStore(
+        new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource()),
+        AsyncJobQueueJdbcDialect.HSQL.claimNextJobsSql(),
+        "SELECT missing_clock FROM missing_clock_table");
   }
 
   private void assertSchemaViolation(String sql) {

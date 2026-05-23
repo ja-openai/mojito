@@ -336,7 +336,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       Instant availableAt,
       String jobData,
       String lastError) {
-    Objects.requireNonNull(availableAt);
+    validateRequeueInput(queueName, id, workerId, leaseToken, availableAt);
     return requeueAtDatabaseTime(
         queueName, id, workerId, leaseToken, availableAt, jobData, lastError, databaseNow());
   }
@@ -351,6 +351,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       Duration delay,
       String jobData,
       String lastError) {
+    validateRequeueOwnership(queueName, id, workerId, leaseToken);
     Objects.requireNonNull(delay);
     Instant now = databaseNow();
     Duration boundedDelay = delay.isNegative() ? Duration.ZERO : delay;
@@ -531,6 +532,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Override
   public boolean requeueFailed(
       String queueName, AsyncJobId id, Instant availableAt, String jobData) {
+    validateFailedReplayInput(queueName, id);
     Instant validatedAvailableAt =
         AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
     return requeueFailedAtDatabaseTime(queueName, id, validatedAvailableAt, jobData, databaseNow());
@@ -539,6 +541,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   @Override
   public boolean requeueFailedNow(String queueName, AsyncJobId id, String jobData) {
+    validateFailedReplayInput(queueName, id);
     Instant now = databaseNow();
     return requeueFailedAtDatabaseTime(queueName, id, now, jobData, now);
   }
@@ -699,6 +702,25 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Async job id must be a numeric string: " + id.value(), e);
     }
+  }
+
+  private void validateRequeueInput(
+      String queueName, AsyncJobId id, String workerId, String leaseToken, Instant availableAt) {
+    validateRequeueOwnership(queueName, id, workerId, leaseToken);
+    AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
+  }
+
+  private void validateRequeueOwnership(
+      String queueName, AsyncJobId id, String workerId, String leaseToken) {
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    AsyncJobQueueValidation.validateWorkerId(workerId);
+    validateLeaseToken(leaseToken);
+    parseId(id);
+  }
+
+  private void validateFailedReplayInput(String queueName, AsyncJobId id) {
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    parseId(id);
   }
 
   private void validateLeaseToken(String leaseToken) {
