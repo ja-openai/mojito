@@ -178,7 +178,20 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
   }
 
   private void stopStartedRuntimes() {
-    runtimesByQueueName.values().forEach(AsyncJobQueueRuntime::stop);
+    runtimesByQueueName.forEach(
+        (queueName, runtime) -> {
+          try {
+            runtime.stop();
+          } catch (Throwable e) {
+            if (isJvmFatal(e)) {
+              throw (Error) e;
+            }
+            logger.warn("Failed to stop async job queue runtime for {}", queueName, e);
+            meterRegistry
+                .counter("asyncJobQueue.runtime.stop.failed", "queueName", queueName)
+                .increment();
+          }
+        });
     runtimesByQueueName.clear();
   }
 

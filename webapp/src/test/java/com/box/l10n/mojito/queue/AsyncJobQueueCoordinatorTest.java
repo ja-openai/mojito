@@ -134,6 +134,48 @@ public class AsyncJobQueueCoordinatorTest {
   }
 
   @Test
+  public void stopContinuesStoppingRuntimesWhenOneRuntimeStopFails() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    List<TestScheduledFuture> scheduledPolls = new ArrayList<>();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(
+            invocation -> {
+              TestScheduledFuture scheduledFuture = new TestScheduledFuture();
+              scheduledPolls.add(scheduledFuture);
+              return scheduledFuture;
+            });
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            new AsyncJobQueueProperties(),
+            List.of(handler("assetlocalize"), handler("stats")),
+            taskScheduler,
+            meterRegistry) {
+          @Override
+          ThreadPoolTaskExecutor queueExecutor(
+              String queueName, AsyncJobQueueProperties.QueueSettings queueSettings) {
+            if ("assetlocalize".equals(queueName)) {
+              return initializedExecutor(new ThrowingShutdownThreadPoolTaskExecutor());
+            }
+            return initializedExecutor(new ThreadPoolTaskExecutor());
+          }
+        };
+
+    coordinator.start();
+    assertThat(scheduledPolls).hasSize(2);
+
+    coordinator.stop();
+
+    assertThat(coordinator.isRunning()).isFalse();
+    assertThat(scheduledPolls).allMatch(TestScheduledFuture::isCancelled);
+    assertThat(
+            meterRegistry
+                .counter("asyncJobQueue.runtime.stop.failed", "queueName", "assetlocalize")
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void startHandlesNullConfiguredQueues() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     List<TestScheduledFuture> scheduledPolls = new ArrayList<>();
@@ -266,6 +308,14 @@ public class AsyncJobQueueCoordinatorTest {
     assertThat(interrupted.get()).isFalse();
   }
 
+  private ThreadPoolTaskExecutor initializedExecutor(ThreadPoolTaskExecutor executor) {
+    executor.setCorePoolSize(1);
+    executor.setMaxPoolSize(1);
+    executor.setQueueCapacity(0);
+    executor.initialize();
+    return executor;
+  }
+
   private AsyncJobHandler handler(String queueName) {
     return new AsyncJobHandler() {
       @Override
@@ -283,6 +333,13 @@ public class AsyncJobQueueCoordinatorTest {
   private static class NonFatalTestError extends Error {
     NonFatalTestError(String message) {
       super(message);
+    }
+  }
+
+  private static class ThrowingShutdownThreadPoolTaskExecutor extends ThreadPoolTaskExecutor {
+    @Override
+    public void shutdown() {
+      throw new IllegalStateException("executor shutdown unavailable");
     }
   }
 
