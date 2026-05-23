@@ -80,6 +80,28 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
   }
 
   @Test
+  public void notifyJobAvailablePropagatesFatalErrorsWithoutFailureCounter() throws Exception {
+    FatalTestError fatalTestError = new FatalTestError("fatal notify");
+    DataSource dataSource = mock(DataSource.class);
+    when(dataSource.getConnection()).thenThrow(fatalTestError);
+    JdbcPostgresAsyncJobQueueWakeupNotifier notifier =
+        new JdbcPostgresAsyncJobQueueWakeupNotifier(
+            dataSource, "mojito_async_job_queue", meterRegistry);
+
+    assertThatThrownBy(() -> notifier.notifyJobAvailable("assetlocalize", new AsyncJobId("42")))
+        .isSameAs(fatalTestError);
+
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.wakeup.notify")
+                .tag("queueName", "assetlocalize")
+                .tag("provider", "postgres")
+                .tag("result", "failed")
+                .counter())
+        .isNull();
+  }
+
+  @Test
   public void notifyJobAvailableValidatesBoundedInputsBeforeSql() throws Exception {
     DataSource dataSource = mock(DataSource.class);
     JdbcPostgresAsyncJobQueueWakeupNotifier notifier =
@@ -113,5 +135,11 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private static class FatalTestError extends VirtualMachineError {
+    FatalTestError(String message) {
+      super(message);
+    }
   }
 }

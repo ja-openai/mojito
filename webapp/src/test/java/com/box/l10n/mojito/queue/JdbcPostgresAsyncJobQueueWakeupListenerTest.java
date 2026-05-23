@@ -80,6 +80,19 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   }
 
   @Test
+  public void handleNotificationPropagatesFatalTriggerErrorsWithoutFailureCounter() {
+    FatalTestError fatalTestError = new FatalTestError("fatal trigger");
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    doThrow(fatalTestError).when(coordinator).triggerPollNow("assetlocalize");
+    JdbcPostgresAsyncJobQueueWakeupListener listener = listener(coordinator);
+
+    assertThatThrownBy(() -> listener.handleNotification("mojito_async_job_queue", "assetlocalize"))
+        .isSameAs(fatalTestError);
+
+    assertThat(receivedCounter("assetlocalize", "triggerFailed")).isNull();
+  }
+
+  @Test
   public void handleNotificationSkipsTriggerWhenJitterSleepIsInterrupted() {
     AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
     AsyncJobQueueProperties.WakeupSettings wakeupSettings =
@@ -356,15 +369,17 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   }
 
   private void assertReceivedCounter(String queueName, String result, double count) {
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.wakeup.received")
-                .tag("queueName", queueName)
-                .tag("provider", "postgres")
-                .tag("result", result)
-                .counter()
-                .count())
-        .isEqualTo(count);
+    Counter counter = receivedCounter(queueName, result);
+    assertThat(counter == null ? 0 : counter.count()).isEqualTo(count);
+  }
+
+  private Counter receivedCounter(String queueName, String result) {
+    return meterRegistry
+        .find("asyncJobQueue.wakeup.received")
+        .tag("queueName", queueName)
+        .tag("provider", "postgres")
+        .tag("result", result)
+        .counter();
   }
 
   private void assertListenCounter(String result, double count) {
@@ -422,6 +437,12 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
 
     public String getParameter() {
       return parameter;
+    }
+  }
+
+  private static class FatalTestError extends VirtualMachineError {
+    FatalTestError(String message) {
+      super(message);
     }
   }
 }
