@@ -412,13 +412,16 @@ class AsyncJobQueueRuntime {
     inFlightCount.incrementAndGet();
     try {
       executor.execute(() -> processClaimedJob(asyncJobRecord));
-    } catch (RuntimeException e) {
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
       inFlightCount.decrementAndGet();
       handleExecutorSubmitFailure(asyncJobRecord, e);
     }
   }
 
-  private void handleExecutorSubmitFailure(AsyncJobRecord asyncJobRecord, RuntimeException e) {
+  private void handleExecutorSubmitFailure(AsyncJobRecord asyncJobRecord, Throwable e) {
     boolean rejected = e instanceof RejectedExecutionException;
     if (rejected) {
       meterRegistry.counter("asyncJobQueue.executor.rejected", "queueName", queueName).increment();
@@ -450,7 +453,10 @@ class AsyncJobQueueRuntime {
                 asyncJobRecord.leaseToken(),
                 null,
                 errorMessage);
-      } catch (RuntimeException transitionException) {
+      } catch (Throwable transitionException) {
+        if (isJvmFatal(transitionException)) {
+          throw (Error) transitionException;
+        }
         logger.warn(
             "Failed to mark executor-submit-failed job {} failed for queue {}",
             asyncJobRecord.id(),
@@ -488,7 +494,10 @@ class AsyncJobQueueRuntime {
               Duration.ofMillis(retryDelayMs(asyncJobRecord.attemptCount())),
               null,
               errorMessage);
-    } catch (RuntimeException transitionException) {
+    } catch (Throwable transitionException) {
+      if (isJvmFatal(transitionException)) {
+        throw (Error) transitionException;
+      }
       logger.warn(
           "Failed to requeue executor-submit-failed job {} for queue {}",
           asyncJobRecord.id(),

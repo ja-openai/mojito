@@ -1215,6 +1215,74 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void executorSubmitNonFatalErrorRequeuesAndReleasesCapacity() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch requeued = new CountDownLatch(1);
+    AtomicInteger handlerInvocations = new AtomicInteger();
+
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            anyString()))
+        .thenAnswer(
+            invocation -> {
+              requeued.countDown();
+              return true;
+            });
+
+    ThreadPoolTaskExecutor failingExecutor =
+        newFailingSubmitExecutor(new NonFatalTestError("executor invariant"));
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(
+                asyncJobRecord -> {
+                  handlerInvocations.incrementAndGet();
+                  return AsyncJobHandlerResult.done();
+                }),
+            mock(TaskScheduler.class),
+            failingExecutor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(requeued.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(handlerInvocations.get()).isZero();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.executor.submit.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.retried")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    verify(asyncJobStore)
+        .requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            contains("executor invariant"));
+    failingExecutor.shutdown();
+  }
+
+  @Test
   public void executorRejectionsStopRetryingAfterMaxAttempts() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =
@@ -3273,12 +3341,18 @@ public class AsyncJobQueueRuntimeTest {
     return threadPoolTaskExecutor;
   }
 
-  private ThreadPoolTaskExecutor newFailingSubmitExecutor(RuntimeException exception) {
+  private ThreadPoolTaskExecutor newFailingSubmitExecutor(Throwable exception) {
     ThreadPoolTaskExecutor threadPoolTaskExecutor =
         new ThreadPoolTaskExecutor() {
           @Override
           public void execute(Runnable task) {
-            throw exception;
+            if (exception instanceof RuntimeException runtimeException) {
+              throw runtimeException;
+            }
+            if (exception instanceof Error error) {
+              throw error;
+            }
+            throw new IllegalStateException(exception);
           }
         };
     configureExecutor(threadPoolTaskExecutor, 1);
