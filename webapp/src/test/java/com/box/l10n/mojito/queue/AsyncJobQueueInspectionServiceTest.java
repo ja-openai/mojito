@@ -240,6 +240,70 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void readOperationsPropagateFatalStoreErrorsWithoutFailureCounters() {
+    FatalTestError fatalFindError = new FatalTestError("fatal find");
+    AsyncJobQueueInspectionService findService =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public List<AsyncJobRecord> findByStatus(
+                  String queueName, AsyncJobStatus status, int limit) {
+                throw fatalFindError;
+              }
+            },
+            noOpCoordinator(),
+            meterRegistry);
+    assertThatThrownBy(() -> findService.findJobs("assetlocalize", "failed", 10))
+        .isSameAs(fatalFindError);
+    assertNoFindCounter("failed", "failed");
+
+    FatalTestError fatalCountError = new FatalTestError("fatal count");
+    AsyncJobQueueInspectionService countService =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public List<AsyncJobStatusCount> countByStatus(String queueName) {
+                throw fatalCountError;
+              }
+            },
+            noOpCoordinator(),
+            meterRegistry);
+    assertThatThrownBy(() -> countService.countJobsByStatus("assetlocalize"))
+        .isSameAs(fatalCountError);
+    assertNoCountCounter("failed");
+
+    FatalTestError fatalReadyStatusError = new FatalTestError("fatal ready status");
+    AsyncJobQueueInspectionService readyStatusService =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public AsyncJobReadyStatus readyStatus(String queueName) {
+                throw fatalReadyStatusError;
+              }
+            },
+            noOpCoordinator(),
+            meterRegistry);
+    assertThatThrownBy(() -> readyStatusService.readyStatus("assetlocalize"))
+        .isSameAs(fatalReadyStatusError);
+    assertNoReadyStatusCounter("failed");
+
+    FatalTestError fatalExpiredLeaseStatusError = new FatalTestError("fatal expired lease status");
+    AsyncJobQueueInspectionService expiredLeaseStatusService =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public AsyncJobExpiredLeaseStatus expiredLeaseStatus(String queueName) {
+                throw fatalExpiredLeaseStatusError;
+              }
+            },
+            noOpCoordinator(),
+            meterRegistry);
+    assertThatThrownBy(() -> expiredLeaseStatusService.expiredLeaseStatus("assetlocalize"))
+        .isSameAs(fatalExpiredLeaseStatusError);
+    assertNoExpiredLeaseStatusCounter("failed");
+  }
+
+  @Test
   public void getJobRecordsStoreFailures() {
     AsyncJobQueueInspectionService service =
         new AsyncJobQueueInspectionService(
@@ -585,6 +649,17 @@ public class AsyncJobQueueInspectionServiceTest {
         .isEqualTo(count);
   }
 
+  private void assertNoFindCounter(String status, String result) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.inspection.find")
+                .tag("queueName", "assetlocalize")
+                .tag("status", status)
+                .tag("result", result)
+                .counter())
+        .isNull();
+  }
+
   private void assertNoGetCounter(String result) {
     assertThat(
             meterRegistry
@@ -617,6 +692,16 @@ public class AsyncJobQueueInspectionServiceTest {
         .isEqualTo(count);
   }
 
+  private void assertNoCountCounter(String result) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.inspection.count")
+                .tag("queueName", "assetlocalize")
+                .tag("result", result)
+                .counter())
+        .isNull();
+  }
+
   private void assertReadyStatusCounter(String result, double count) {
     assertThat(
             meterRegistry
@@ -628,6 +713,16 @@ public class AsyncJobQueueInspectionServiceTest {
         .isEqualTo(count);
   }
 
+  private void assertNoReadyStatusCounter(String result) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.inspection.readyStatus")
+                .tag("queueName", "assetlocalize")
+                .tag("result", result)
+                .counter())
+        .isNull();
+  }
+
   private void assertExpiredLeaseStatusCounter(String result, double count) {
     assertThat(
             meterRegistry
@@ -637,6 +732,16 @@ public class AsyncJobQueueInspectionServiceTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private void assertNoExpiredLeaseStatusCounter(String result) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.inspection.expiredLeaseStatus")
+                .tag("queueName", "assetlocalize")
+                .tag("result", result)
+                .counter())
+        .isNull();
   }
 
   private static class NonFatalTestError extends Error {
