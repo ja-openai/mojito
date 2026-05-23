@@ -287,6 +287,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .isEqualTo(1);
     assertThat(store.getByIds(List.of(id))).isEmpty();
 
+    runScheduledAvailabilityContract(store);
     runRelativeRetryAndImmediateReplayContract(store);
     runConcurrentClaimContract(store);
     runRuntimeDrainContract(store);
@@ -478,6 +479,28 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     assertThat(store.readyStatus(queueName).count()).isZero();
     assertThat(store.findByStatus(queueName, AsyncJobStatus.QUEUED, 10)).isEmpty();
     assertThat(store.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(5))).isEmpty();
+  }
+
+  private void runScheduledAvailabilityContract(AsyncJobStore store) {
+    String queueName = "scheduled-availability";
+    AsyncJobId immediateId = store.enqueueNow(queueName, "{\"step\":\"immediate\"}");
+    AsyncJobId futureId =
+        store.enqueue(queueName, "{\"step\":\"future\"}", Instant.now().plusSeconds(30));
+
+    List<AsyncJobRecord> claimed =
+        store.claimNextJobs(queueName, 10, "worker-a", Duration.ofSeconds(5));
+    assertThat(claimed).extracting(AsyncJobRecord::id).containsExactly(immediateId);
+    AsyncJobRecord immediate = claimed.get(0);
+    assertThat(immediate.jobData()).isEqualTo("{\"step\":\"immediate\"}");
+    assertThat(immediate.attemptCount()).isEqualTo(1);
+
+    assertThat(store.markDone(queueName, immediateId, "worker-a", immediate.leaseToken(), null))
+        .isTrue();
+    assertThat(store.claimNextJobs(queueName, 10, "worker-b", Duration.ofSeconds(5))).isEmpty();
+    AsyncJobRecord future = store.getByIds(List.of(futureId)).get(0);
+    assertThat(future.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(future.attemptCount()).isZero();
+    assertThat(statusCount(store, queueName, AsyncJobStatus.QUEUED)).isEqualTo(1);
   }
 
   private void runRelativeRetryAndImmediateReplayContract(AsyncJobStore store) throws Exception {
