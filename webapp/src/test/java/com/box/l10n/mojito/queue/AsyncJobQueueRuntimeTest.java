@@ -3874,6 +3874,16 @@ public class AsyncJobQueueRuntimeTest {
             AsyncJobQueueRuntime.claimFailureKind(
                 new IllegalStateException("wrapped", batchWrapper)))
         .isEqualTo("lock");
+    RuntimeException suppressedSqlWrapper = new RuntimeException("suppressed sql");
+    suppressedSqlWrapper.addSuppressed(new SQLException("postgres statement timeout", "57014"));
+    assertThat(AsyncJobQueueRuntime.claimFailureKind(suppressedSqlWrapper)).isEqualTo("timeout");
+    RuntimeException suppressedSpringWrapper = new RuntimeException("suppressed spring");
+    suppressedSpringWrapper.addSuppressed(new CannotAcquireLockException("busy"));
+    assertThat(AsyncJobQueueRuntime.claimFailureKind(suppressedSpringWrapper)).isEqualTo("lock");
+    RuntimeException suppressedMessageWrapper = new RuntimeException("suppressed message");
+    suppressedMessageWrapper.addSuppressed(new RuntimeException("deadlock detected"));
+    assertThat(AsyncJobQueueRuntime.claimFailureKind(suppressedMessageWrapper))
+        .isEqualTo("deadlock");
     assertThat(
             AsyncJobQueueRuntime.claimFailureKind(new SQLException("unknown data access", "99999")))
         .isEqualTo("other");

@@ -1126,10 +1126,7 @@ class AsyncJobQueueRuntime {
 
   private static String sqlFailureKind(Throwable throwable) {
     Set<Throwable> visitedThrowables = throwableIdentitySet();
-    Deque<Throwable> pendingThrowables = new ArrayDeque<>();
-    if (throwable != null) {
-      pendingThrowables.add(throwable);
-    }
+    Deque<Throwable> pendingThrowables = pendingThrowables(throwable);
     while (!pendingThrowables.isEmpty()) {
       Throwable current = pendingThrowables.removeFirst();
       if (!visitedThrowables.add(current)) {
@@ -1140,15 +1137,8 @@ class AsyncJobQueueRuntime {
         if (failureKind != null) {
           return failureKind;
         }
-        SQLException nextException = sqlException.getNextException();
-        if (nextException != null) {
-          pendingThrowables.add(nextException);
-        }
       }
-      Throwable cause = current.getCause();
-      if (cause != null) {
-        pendingThrowables.add(cause);
-      }
+      appendRelatedThrowables(pendingThrowables, current);
     }
     return null;
   }
@@ -1188,29 +1178,64 @@ class AsyncJobQueueRuntime {
   private static boolean hasCause(
       Throwable throwable, Class<? extends Throwable>... exceptionTypes) {
     Set<Throwable> visitedThrowables = throwableIdentitySet();
-    Throwable current = throwable;
-    while (current != null && visitedThrowables.add(current)) {
+    Deque<Throwable> pendingThrowables = pendingThrowables(throwable);
+    while (!pendingThrowables.isEmpty()) {
+      Throwable current = pendingThrowables.removeFirst();
+      if (!visitedThrowables.add(current)) {
+        continue;
+      }
       for (Class<? extends Throwable> exceptionType : exceptionTypes) {
         if (exceptionType.isInstance(current)) {
           return true;
         }
       }
-      current = current.getCause();
+      appendRelatedThrowables(pendingThrowables, current);
     }
     return false;
   }
 
   private static boolean hasMessageContaining(Throwable throwable, String needle) {
     Set<Throwable> visitedThrowables = throwableIdentitySet();
-    Throwable current = throwable;
-    while (current != null && visitedThrowables.add(current)) {
+    Deque<Throwable> pendingThrowables = pendingThrowables(throwable);
+    while (!pendingThrowables.isEmpty()) {
+      Throwable current = pendingThrowables.removeFirst();
+      if (!visitedThrowables.add(current)) {
+        continue;
+      }
       String message = current.getMessage();
       if (message != null && message.toLowerCase(java.util.Locale.ROOT).contains(needle)) {
         return true;
       }
-      current = current.getCause();
+      appendRelatedThrowables(pendingThrowables, current);
     }
     return false;
+  }
+
+  private static Deque<Throwable> pendingThrowables(Throwable throwable) {
+    Deque<Throwable> pendingThrowables = new ArrayDeque<>();
+    if (throwable != null) {
+      pendingThrowables.add(throwable);
+    }
+    return pendingThrowables;
+  }
+
+  private static void appendRelatedThrowables(
+      Deque<Throwable> pendingThrowables, Throwable throwable) {
+    Throwable cause = throwable.getCause();
+    if (cause != null) {
+      pendingThrowables.add(cause);
+    }
+    for (Throwable suppressed : throwable.getSuppressed()) {
+      if (suppressed != null) {
+        pendingThrowables.add(suppressed);
+      }
+    }
+    if (throwable instanceof SQLException sqlException) {
+      SQLException nextException = sqlException.getNextException();
+      if (nextException != null) {
+        pendingThrowables.add(nextException);
+      }
+    }
   }
 
   private static Set<Throwable> throwableIdentitySet() {
