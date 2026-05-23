@@ -206,6 +206,35 @@ public class AsyncJobStoreContractTest {
     assertThat(asyncJobStore.getByIds(List.of(id)).get(0).lastError()).isNull();
   }
 
+  @Test
+  public void failedReplayIsScopedToQueueName() {
+    AsyncJobId id =
+        asyncJobStore.enqueue("assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        asyncJobStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5)).get(0);
+
+    assertThat(
+            asyncJobStore.markFailed(
+                "assetlocalize",
+                id,
+                "worker-a",
+                claimed.leaseToken(),
+                "{\"step\":\"failed\"}",
+                "operator-visible failure"))
+        .isTrue();
+
+    assertThat(
+            asyncJobStore.requeueFailed(
+                "otherqueue", id, Instant.now().minusSeconds(1), "{\"step\":\"wrong-queue\"}"))
+        .isFalse();
+
+    AsyncJobRecord stillFailed = asyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(stillFailed.queueName()).isEqualTo("assetlocalize");
+    assertThat(stillFailed.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(stillFailed.jobData()).isEqualTo("{\"step\":\"failed\"}");
+    assertThat(stillFailed.lastError()).isEqualTo("operator-visible failure");
+  }
+
   private AsyncJobRecord claimEventually(
       String queueName, String workerId, Duration leaseDuration, Duration timeout)
       throws InterruptedException {

@@ -263,6 +263,8 @@ Test Coverage
 - Shared store contract tests now assert expired running leases are visible before recovery and
   disappear after a successful reclaim, so future backends cannot silently omit the stalled-worker
   signal.
+- Shared store contract tests also assert operator replay is scoped by both queue name and job id,
+  preventing future multi-queue backends from replaying a failed row through the wrong queue.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.
