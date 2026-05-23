@@ -33,6 +33,7 @@ public record AsyncJobRecord(
     }
     Objects.requireNonNull(createdDate);
     Objects.requireNonNull(updatedDate);
+    lastError = AsyncJobQueueValidation.truncateLastError(lastError);
 
     if (status == AsyncJobStatus.RUNNING) {
       Objects.requireNonNull(leaseUntil);
@@ -42,7 +43,7 @@ public record AsyncJobRecord(
       throw new IllegalArgumentException("only running async jobs can have a lease owner");
     }
     if (status == AsyncJobStatus.FAILED) {
-      AsyncJobQueueValidation.validateFailureLastError(lastError);
+      lastError = AsyncJobQueueValidation.validateFailureLastError(lastError);
     }
   }
 

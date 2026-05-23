@@ -132,6 +132,17 @@ public class AsyncJobRecordTest {
     assertThat(blank).hasMessageContaining("lastError must not be blank");
   }
 
+  @Test
+  public void truncatesPersistedErrorsToStorageLimit() {
+    String longError = "x".repeat(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH + 1);
+
+    AsyncJobRecord queued = record(AsyncJobStatus.QUEUED, null, null, null, 1, longError);
+    AsyncJobRecord failed = record(AsyncJobStatus.FAILED, null, null, null, 1, longError);
+
+    assertThat(queued.lastError()).hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+    assertThat(failed.lastError()).hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+  }
+
   private AsyncJobRecord record(
       AsyncJobStatus status,
       Instant leaseUntil,
