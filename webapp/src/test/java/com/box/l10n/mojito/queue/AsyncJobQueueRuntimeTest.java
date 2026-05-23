@@ -3868,6 +3868,12 @@ public class AsyncJobQueueRuntimeTest {
             AsyncJobQueueRuntime.claimFailureKind(
                 new SQLException("mysql lock wait timeout", "HY000", 1205)))
         .isEqualTo("lock");
+    SQLException batchWrapper = new SQLException("batch update wrapper", "99999");
+    batchWrapper.setNextException(new SQLException("postgres lock unavailable", "55P03"));
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new IllegalStateException("wrapped", batchWrapper)))
+        .isEqualTo("lock");
     assertThat(
             AsyncJobQueueRuntime.claimFailureKind(new SQLException("unknown data access", "99999")))
         .isEqualTo("other");

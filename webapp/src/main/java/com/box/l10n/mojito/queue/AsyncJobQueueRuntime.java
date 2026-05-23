@@ -6,8 +6,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -1124,15 +1126,29 @@ class AsyncJobQueueRuntime {
 
   private static String sqlFailureKind(Throwable throwable) {
     Set<Throwable> visitedThrowables = throwableIdentitySet();
-    Throwable current = throwable;
-    while (current != null && visitedThrowables.add(current)) {
+    Deque<Throwable> pendingThrowables = new ArrayDeque<>();
+    if (throwable != null) {
+      pendingThrowables.add(throwable);
+    }
+    while (!pendingThrowables.isEmpty()) {
+      Throwable current = pendingThrowables.removeFirst();
+      if (!visitedThrowables.add(current)) {
+        continue;
+      }
       if (current instanceof SQLException sqlException) {
         String failureKind = sqlFailureKind(sqlException);
         if (failureKind != null) {
           return failureKind;
         }
+        SQLException nextException = sqlException.getNextException();
+        if (nextException != null) {
+          pendingThrowables.add(nextException);
+        }
       }
-      current = current.getCause();
+      Throwable cause = current.getCause();
+      if (cause != null) {
+        pendingThrowables.add(cause);
+      }
     }
     return null;
   }
