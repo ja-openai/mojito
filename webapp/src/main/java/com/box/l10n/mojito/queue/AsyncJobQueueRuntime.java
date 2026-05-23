@@ -908,8 +908,28 @@ class AsyncJobQueueRuntime {
     } else {
       meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
       notifyJobFailedPermanently(
-          asyncJobRecord, new IllegalStateException(errorMessage), errorMessage);
+          failedCallbackRecord(asyncJobRecord, asyncJobHandlerResult.jobData(), errorMessage),
+          new IllegalStateException(errorMessage),
+          errorMessage);
     }
+  }
+
+  private AsyncJobRecord failedCallbackRecord(
+      AsyncJobRecord asyncJobRecord, String jobData, String lastError) {
+    return new AsyncJobRecord(
+        asyncJobRecord.id(),
+        asyncJobRecord.queueName(),
+        AsyncJobStatus.FAILED,
+        asyncJobRecord.availableAt(),
+        null,
+        null,
+        null,
+        jobData != null ? jobData : asyncJobRecord.jobData(),
+        asyncJobRecord.attemptCount(),
+        lastError,
+        asyncJobRecord.createdDate(),
+        java.time.Instant.now(),
+        asyncJobRecord.leaseReclaimed());
   }
 
   private boolean isJvmFatal(Throwable throwable) {

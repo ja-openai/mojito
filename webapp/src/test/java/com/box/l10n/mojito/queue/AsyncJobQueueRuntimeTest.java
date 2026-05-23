@@ -2939,6 +2939,59 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void handlerRequestedRequeueExhaustionCallbackSeesTerminalPayload() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue(
+            "assetlocalize", "{\"step\":0}", Instant.now().minusSeconds(1));
+    CountDownLatch callbackInvoked = new CountDownLatch(1);
+    AtomicReference<AsyncJobRecord> callbackRecord = new AtomicReference<>();
+    AtomicReference<String> callbackLastError = new AtomicReference<>();
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                return AsyncJobHandlerResult.requeue(null, "{\"step\":1}");
+              }
+
+              @Override
+              public void onJobFailedPermanently(
+                  AsyncJobRecord asyncJobRecord, Throwable failure, String lastError) {
+                callbackRecord.set(asyncJobRecord);
+                callbackLastError.set(lastError);
+                callbackInvoked.countDown();
+              }
+            },
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(callbackInvoked.await(2, TimeUnit.SECONDS)).isTrue();
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    AsyncJobRecord observedCallbackRecord = callbackRecord.get();
+    assertThat(failedJob.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failedJob.jobData()).isEqualTo("{\"step\":1}");
+    assertThat(observedCallbackRecord.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(observedCallbackRecord.jobData()).isEqualTo("{\"step\":1}");
+    assertThat(observedCallbackRecord.workerId()).isNull();
+    assertThat(observedCallbackRecord.leaseToken()).isNull();
+    assertThat(observedCallbackRecord.leaseUntil()).isNull();
+    assertThat(callbackLastError.get()).contains("Handler requested requeue");
+  }
+
+  @Test
   public void handlerFailurePersistsBoundedErrorSummaryOnRetryAndTerminalFailure()
       throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
