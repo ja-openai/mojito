@@ -327,16 +327,33 @@ class AsyncJobQueueRuntime {
         pollCycleResult = PollCycleResult.wakeup();
       }
       if (started) {
-        try {
-          scheduleNextPoll(pollCycleResult.nextDelayMs());
-        } catch (Throwable e) {
-          if (isJvmFatal(e)) {
-            throw (Error) e;
-          }
-          logger.warn("Failed to schedule next poll for queue {}", queueName, e);
-          recordPollScheduleFailure();
-        }
+        scheduleNextPollAfterCycle(pollCycleResult.nextDelayMs());
       }
+    }
+  }
+
+  private void scheduleNextPollAfterCycle(long delayMs) {
+    try {
+      scheduleNextPoll(delayMs);
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
+      logger.warn("Failed to schedule next poll for queue {}", queueName, e);
+      recordPollScheduleFailure();
+      scheduleRecoveryPollAfterScheduleFailure();
+    }
+  }
+
+  private void scheduleRecoveryPollAfterScheduleFailure() {
+    try {
+      scheduleNextPoll(basePollDelayMs());
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
+      logger.warn("Failed to schedule recovery poll for queue {}", queueName, e);
+      recordPollScheduleFailure();
     }
   }
 

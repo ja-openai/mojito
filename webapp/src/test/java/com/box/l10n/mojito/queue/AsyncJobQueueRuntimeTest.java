@@ -3109,13 +3109,13 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
-  public void scheduledPollRecordsFailureWhenNextPollScheduleFails() {
+  public void scheduledPollRecoversWhenNextPollScheduleFails() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
         .thenReturn(List.of());
 
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
-    Runnable[] scheduledPoll = new Runnable[1];
+    Runnable[] scheduledPoll = new Runnable[2];
     AtomicInteger scheduleInvocations = new AtomicInteger();
     when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
         .thenAnswer(
@@ -3128,6 +3128,9 @@ public class AsyncJobQueueRuntimeTest {
               if (invocationCount == 2) {
                 throw new IllegalStateException("scheduler unavailable");
               }
+              if (invocationCount == 3) {
+                scheduledPoll[1] = invocation.getArgument(0);
+              }
               return new DummyScheduledFuture();
             });
 
@@ -3154,19 +3157,22 @@ public class AsyncJobQueueRuntimeTest {
         .isEqualTo(1);
     verify(asyncJobStore, times(1))
         .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
-
-    asyncJobQueueRuntime.triggerPollNow();
     assertThat(scheduleInvocations.get()).isEqualTo(3);
+    assertThat(scheduledPoll[1]).isNotNull();
+
+    scheduledPoll[1].run();
+    verify(asyncJobStore, times(2))
+        .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
   }
 
   @Test
-  public void scheduledPollRecordsFailureWhenNextPollScheduleThrowsNonFatalError() {
+  public void scheduledPollRecoversWhenNextPollScheduleThrowsNonFatalError() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
         .thenReturn(List.of());
 
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
-    Runnable[] scheduledPoll = new Runnable[1];
+    Runnable[] scheduledPoll = new Runnable[2];
     AtomicInteger scheduleInvocations = new AtomicInteger();
     when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
         .thenAnswer(
@@ -3179,6 +3185,9 @@ public class AsyncJobQueueRuntimeTest {
               if (invocationCount == 2) {
                 throw new AssertionError("scheduler invariant");
               }
+              if (invocationCount == 3) {
+                scheduledPoll[1] = invocation.getArgument(0);
+              }
               return new DummyScheduledFuture();
             });
 
@@ -3205,9 +3214,12 @@ public class AsyncJobQueueRuntimeTest {
         .isEqualTo(1);
     verify(asyncJobStore, times(1))
         .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
-
-    asyncJobQueueRuntime.triggerPollNow();
     assertThat(scheduleInvocations.get()).isEqualTo(3);
+    assertThat(scheduledPoll[1]).isNotNull();
+
+    scheduledPoll[1].run();
+    verify(asyncJobStore, times(2))
+        .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
   }
 
   @Test
