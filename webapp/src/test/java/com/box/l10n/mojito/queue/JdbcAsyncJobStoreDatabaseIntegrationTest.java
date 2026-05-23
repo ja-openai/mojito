@@ -1058,6 +1058,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("C__ASYNC_JOB_QUEUE__ATTEMPT_NONNEGATIVE")
         .contains("CHECK (attempt_count >= 0)")
         .contains("C__ASYNC_JOB_QUEUE__RUNNING_LEASE_OWNER")
+        .contains("C__ASYNC_JOB_QUEUE__LEASE_OWNER_NONBLANK")
+        .contains("OR (TRIM(worker_id) <> '' AND TRIM(lease_token) <> '')")
         .contains("I__ASYNC_JOB_QUEUE__QNAME_STATUS_AVAILABLE_ID")
         .contains("ON async_job_queue (queue_name, status, available_at, id)")
         .contains("I__ASYNC_JOB_QUEUE__QNAME_STATUS_LEASE_ID")

@@ -23,6 +23,11 @@ CREATE TABLE async_job_queue (
     CHECK (
       (status = 'running' AND lease_until IS NOT NULL AND worker_id IS NOT NULL AND lease_token IS NOT NULL)
       OR (status <> 'running' AND lease_until IS NULL AND worker_id IS NULL AND lease_token IS NULL)
+    ),
+  CONSTRAINT C__ASYNC_JOB_QUEUE__LEASE_OWNER_NONBLANK
+    CHECK (
+      status <> 'running'
+      OR (TRIM(worker_id) <> '' AND TRIM(lease_token) <> '')
     )
 );
 
