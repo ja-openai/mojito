@@ -4,6 +4,7 @@ import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobInvalidPayloadException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobLookupException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobNotFoundException;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskLookupException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskNotFoundException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskRepairException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.RepairResult;
@@ -37,6 +38,7 @@ public class AssetLocalizeAsyncJobRepairWS {
         | AssetLocalizePollableTaskNotFoundException exception) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, exception.getMessage(), exception);
     } catch (AssetLocalizeAsyncJobLookupException
+        | AssetLocalizePollableTaskLookupException
         | AssetLocalizePollableTaskRepairException exception) {
       throw new ResponseStatusException(
           HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage(), exception);

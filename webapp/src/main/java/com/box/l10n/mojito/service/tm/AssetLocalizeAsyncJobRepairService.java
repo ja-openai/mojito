@@ -100,7 +100,14 @@ public class AssetLocalizeAsyncJobRepairService {
       throw new AssetLocalizeAsyncJobInvalidPayloadException(
           "Invalid asset localize async job payload: " + asyncJobRecord.id().value(), exception);
     }
-    PollableTask pollableTask = pollableTaskService.getPollableTask(payload.pollableTaskId());
+    PollableTask pollableTask;
+    try {
+      pollableTask = pollableTaskService.getPollableTask(payload.pollableTaskId());
+    } catch (RuntimeException exception) {
+      recordRepair(asyncJobRecord.status(), "pollableTaskLookupFailed");
+      throw new AssetLocalizePollableTaskLookupException(
+          "Failed to look up pollable task: " + payload.pollableTaskId(), exception);
+    }
     if (pollableTask == null) {
       recordRepair(asyncJobRecord.status(), "pollableTaskNotFound");
       throw new AssetLocalizePollableTaskNotFoundException(
@@ -200,6 +207,12 @@ public class AssetLocalizeAsyncJobRepairService {
   public static class AssetLocalizePollableTaskNotFoundException extends RuntimeException {
     public AssetLocalizePollableTaskNotFoundException(String message) {
       super(message);
+    }
+  }
+
+  public static class AssetLocalizePollableTaskLookupException extends RuntimeException {
+    public AssetLocalizePollableTaskLookupException(String message, Throwable cause) {
+      super(message, cause);
     }
   }
 

@@ -22,6 +22,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobInvalidPayloadException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobLookupException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobNotFoundException;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskLookupException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskNotFoundException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskRepairException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -168,6 +169,21 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
         .isInstanceOf(AssetLocalizePollableTaskNotFoundException.class)
         .hasMessageContaining("PollableTask not found");
     assertRepairCounter("failed", "pollableTaskNotFound", 1);
+  }
+
+  @Test
+  public void recordsPollableTaskLookupFailure() {
+    when(pollableTaskService.getPollableTask(42L))
+        .thenThrow(new IllegalStateException("database unavailable"));
+
+    assertThatThrownBy(
+            () ->
+                repairService.repairTerminalPollableTask(
+                    asyncJobRecord(AsyncJobStatus.FAILED, "1", "handler failed")))
+        .isInstanceOf(AssetLocalizePollableTaskLookupException.class)
+        .hasMessageContaining("Failed to look up pollable task: 42")
+        .hasCauseInstanceOf(IllegalStateException.class);
+    assertRepairCounter("failed", "pollableTaskLookupFailed", 1);
   }
 
   @Test

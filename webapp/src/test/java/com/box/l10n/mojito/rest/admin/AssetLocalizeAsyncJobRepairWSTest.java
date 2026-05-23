@@ -8,6 +8,7 @@ import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobInvalidPayloadException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobLookupException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobNotFoundException;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskLookupException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskNotFoundException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskRepairException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.RepairResult;
@@ -140,6 +141,21 @@ public class AssetLocalizeAsyncJobRepairWSTest {
     when(repairService.repairTerminalPollableTask("1"))
         .thenThrow(
             new AssetLocalizeAsyncJobLookupException(
+                "lookup failed", new IllegalStateException("database unavailable")));
+
+    assertThatThrownBy(() -> ws.repairPollableTask("1"))
+        .isInstanceOf(ResponseStatusException.class)
+        .satisfies(
+            exception ->
+                assertThat(((ResponseStatusException) exception).getStatusCode())
+                    .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR));
+  }
+
+  @Test
+  public void mapsPollableTaskLookupFailureToInternalServerError() {
+    when(repairService.repairTerminalPollableTask("1"))
+        .thenThrow(
+            new AssetLocalizePollableTaskLookupException(
                 "lookup failed", new IllegalStateException("database unavailable")));
 
     assertThatThrownBy(() -> ws.repairPollableTask("1"))
