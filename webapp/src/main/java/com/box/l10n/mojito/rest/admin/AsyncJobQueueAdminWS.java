@@ -2,12 +2,15 @@ package com.box.l10n.mojito.rest.admin;
 
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobSummary;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -31,4 +34,46 @@ public class AsyncJobQueueAdminWS {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
     }
   }
+
+  @GetMapping("/{queueName}/jobs")
+  public List<AsyncJobRedactedSummary> findJobs(
+      @PathVariable String queueName,
+      @RequestParam(name = "status", defaultValue = "failed") String status,
+      @RequestParam(name = "limit", required = false) Integer limit) {
+    try {
+      return inspectionService.findJobs(queueName, status, limit).stream()
+          .map(this::toRedactedSummary)
+          .toList();
+    } catch (IllegalArgumentException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+    }
+  }
+
+  private AsyncJobRedactedSummary toRedactedSummary(AsyncJobSummary summary) {
+    return new AsyncJobRedactedSummary(
+        summary.id(),
+        summary.queueName(),
+        summary.status(),
+        summary.availableAt(),
+        summary.leaseUntil(),
+        summary.workerId(),
+        summary.attemptCount(),
+        summary.lastError(),
+        summary.jobDataLength(),
+        summary.createdDate(),
+        summary.updatedDate());
+  }
+
+  public record AsyncJobRedactedSummary(
+      String id,
+      String queueName,
+      String status,
+      Instant availableAt,
+      Instant leaseUntil,
+      String workerId,
+      int attemptCount,
+      String lastError,
+      int jobDataLength,
+      Instant createdDate,
+      Instant updatedDate) {}
 }

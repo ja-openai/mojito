@@ -6,6 +6,8 @@ import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobSummary;
+import java.time.Instant;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,6 +43,50 @@ public class AsyncJobQueueAdminWSTest {
         .thenThrow(new IllegalArgumentException("bad queue"));
 
     assertThatThrownBy(() -> ws.countJobsByStatus("bad queue"))
+        .isInstanceOf(ResponseStatusException.class)
+        .satisfies(
+            exception ->
+                assertThat(((ResponseStatusException) exception).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST));
+  }
+
+  @Test
+  public void findJobsReturnsPayloadRedactedSummaries() {
+    Instant now = Instant.now();
+    when(inspectionService.findJobs("assetlocalize", "failed", 50))
+        .thenReturn(
+            List.of(
+                new AsyncJobSummary(
+                    "1",
+                    "assetlocalize",
+                    "failed",
+                    now.minusSeconds(30),
+                    null,
+                    null,
+                    5,
+                    "handler failed",
+                    512,
+                    "{\"secret\":\"not returned\"}",
+                    now.minusSeconds(60),
+                    now)));
+
+    List<AsyncJobQueueAdminWS.AsyncJobRedactedSummary> jobs =
+        ws.findJobs("assetlocalize", "failed", 50);
+
+    assertThat(jobs).hasSize(1);
+    AsyncJobQueueAdminWS.AsyncJobRedactedSummary job = jobs.get(0);
+    assertThat(job.id()).isEqualTo("1");
+    assertThat(job.status()).isEqualTo("failed");
+    assertThat(job.lastError()).isEqualTo("handler failed");
+    assertThat(job.jobDataLength()).isEqualTo(512);
+  }
+
+  @Test
+  public void mapsInvalidFindJobsInputToBadRequest() {
+    when(inspectionService.findJobs("assetlocalize", "broken", 10))
+        .thenThrow(new IllegalArgumentException("bad status"));
+
+    assertThatThrownBy(() -> ws.findJobs("assetlocalize", "broken", 10))
         .isInstanceOf(ResponseStatusException.class)
         .satisfies(
             exception ->
