@@ -108,6 +108,23 @@ public class AsyncJobQueueSubmissionServiceTest {
 
     verify(store, never()).enqueue(anyString(), anyString(), any(Instant.class));
     verify(coordinator, never()).triggerPollNow("assetlocalize");
+    assertEnqueueCounter("invalidAvailableAt", 1);
+    assertNoEnqueueCounter("failed");
+  }
+
+  @Test
+  public void enqueueEvaluatesWakeupDecisionBeforeStoreWrite() {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueSubmissionService service =
+        new AsyncJobQueueSubmissionService(store, coordinator, meterRegistry, throwingClock());
+
+    assertThatThrownBy(() -> service.enqueue("assetlocalize", "{\"id\":1}", NOW))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("clock unavailable");
+
+    verify(store, never()).enqueue(anyString(), anyString(), any(Instant.class));
+    verify(coordinator, never()).triggerPollNow("assetlocalize");
     assertEnqueueCounter("failed", 1);
   }
 
@@ -195,6 +212,9 @@ public class AsyncJobQueueSubmissionServiceTest {
     verify(store, never()).enqueueNow(anyString(), anyString());
     verify(store, never()).enqueue(anyString(), anyString(), any(Instant.class));
     verify(coordinator, never()).triggerPollNow("assetlocalize");
+    assertEnqueueCounter("invalidPayload", 1);
+    assertEnqueueCounter("invalidAvailableAt", 1);
+    assertNoEnqueueCounter("failed");
   }
 
   @Test
@@ -210,13 +230,33 @@ public class AsyncJobQueueSubmissionServiceTest {
 
     verify(store, never()).enqueueNow(anyString(), anyString());
     verify(coordinator, never()).triggerPollNow("assetlocalize");
-    assertEnqueueCounter("failed", 1);
+    assertEnqueueCounter("invalidPayload", 1);
+    assertNoEnqueueCounter("failed");
   }
 
   private AsyncJobQueueSubmissionService submissionService(
       AsyncJobStore store, AsyncJobQueueCoordinator coordinator) {
     return new AsyncJobQueueSubmissionService(
         store, coordinator, meterRegistry, Clock.fixed(NOW, ZoneOffset.UTC));
+  }
+
+  private Clock throwingClock() {
+    return new Clock() {
+      @Override
+      public ZoneOffset getZone() {
+        return ZoneOffset.UTC;
+      }
+
+      @Override
+      public Clock withZone(java.time.ZoneId zone) {
+        return this;
+      }
+
+      @Override
+      public Instant instant() {
+        throw new IllegalStateException("clock unavailable");
+      }
+    };
   }
 
   private void assertEnqueueCounter(String result, double count) {

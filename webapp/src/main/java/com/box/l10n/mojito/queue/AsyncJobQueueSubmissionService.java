@@ -43,8 +43,8 @@ public class AsyncJobQueueSubmissionService {
 
   public AsyncJobId enqueueNow(String queueName, String jobData) {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
+    String validatedJobData = validateJobDataForEnqueue(validatedQueueName, jobData);
     try {
-      String validatedJobData = AsyncJobQueueValidation.validateJobData(jobData);
       AsyncJobId asyncJobId = asyncJobStore.enqueueNow(validatedQueueName, validatedJobData);
       incrementEnqueueCounter(validatedQueueName, "succeeded");
       triggerEnqueueWakeup(validatedQueueName, asyncJobId);
@@ -61,14 +61,14 @@ public class AsyncJobQueueSubmissionService {
 
   public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
+    String validatedJobData = validateJobDataForEnqueue(validatedQueueName, jobData);
+    Instant validatedAvailableAt = validateAvailableAtForEnqueue(validatedQueueName, availableAt);
     try {
-      String validatedJobData = AsyncJobQueueValidation.validateJobData(jobData);
-      Instant validatedAvailableAt =
-          AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
+      boolean shouldTriggerWakeup = !validatedAvailableAt.isAfter(clock.instant());
       AsyncJobId asyncJobId =
           asyncJobStore.enqueue(validatedQueueName, validatedJobData, validatedAvailableAt);
       incrementEnqueueCounter(validatedQueueName, "succeeded");
-      if (!validatedAvailableAt.isAfter(clock.instant())) {
+      if (shouldTriggerWakeup) {
         triggerEnqueueWakeup(validatedQueueName, asyncJobId);
       }
       return asyncJobId;
@@ -79,6 +79,24 @@ public class AsyncJobQueueSubmissionService {
       incrementEnqueueCounter(validatedQueueName, "failed");
       logger.warn("Failed to enqueue async job for queue {}", validatedQueueName, exception);
       throw unchecked(exception);
+    }
+  }
+
+  private String validateJobDataForEnqueue(String queueName, String jobData) {
+    try {
+      return AsyncJobQueueValidation.validateJobData(jobData);
+    } catch (RuntimeException exception) {
+      incrementEnqueueCounter(queueName, "invalidPayload");
+      throw exception;
+    }
+  }
+
+  private Instant validateAvailableAtForEnqueue(String queueName, Instant availableAt) {
+    try {
+      return AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
+    } catch (RuntimeException exception) {
+      incrementEnqueueCounter(queueName, "invalidAvailableAt");
+      throw exception;
     }
   }
 
