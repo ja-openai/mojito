@@ -27,8 +27,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.sql.DataSource;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.support.EncodedResource;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -43,6 +46,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public class JdbcAsyncJobStoreDatabaseIntegrationTest {
 
   private static final String ENABLE_PROPERTY = "mojito.asyncJobQueue.testcontainers";
+  private static final String PERF_ENABLE_PROPERTY = "mojito.asyncJobQueue.perf";
+  private static final Logger logger =
+      LoggerFactory.getLogger(JdbcAsyncJobStoreDatabaseIntegrationTest.class);
 
   @Test
   public void postgresqlMigrationIsOutsideDefaultMysqlFlywayLocation() {
@@ -102,10 +108,33 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     }
   }
 
+  @Test
+  public void runtimePerformanceSmokeRunsAgainstRealDatabases() throws Exception {
+    assumeContainerTestsEnabled();
+    assumePerformanceTestsEnabled();
+
+    try (PostgreSQLContainer<?> container = new PostgreSQLContainer<>("postgres:16")) {
+      runRuntimePerformanceSmoke(
+          container,
+          AsyncJobQueueJdbcDialect.POSTGRESQL,
+          "db/postgresql/migration/V92__Async_Job_Queue.sql");
+    }
+    try (MySQLContainer<?> container = new MySQLContainer<>("mysql:8.4")) {
+      runRuntimePerformanceSmoke(
+          container, AsyncJobQueueJdbcDialect.MYSQL, "db/migration/V92__Async_Job_Queue.sql");
+    }
+  }
+
   private void assumeContainerTestsEnabled() {
     assumeTrue(
         "Set -D" + ENABLE_PROPERTY + "=true to run Docker-backed queue integration tests",
         Boolean.getBoolean(ENABLE_PROPERTY));
+  }
+
+  private void assumePerformanceTestsEnabled() {
+    assumeTrue(
+        "Set -D" + PERF_ENABLE_PROPERTY + "=true to run queue performance smoke tests",
+        Boolean.getBoolean(PERF_ENABLE_PROPERTY));
   }
 
   private void runStoreContract(
@@ -213,6 +242,38 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     runRuntimeDrainContract(store);
     runRuntimeLeaseReclaimFencingContract(store);
     runRuntimeContentionContract(store);
+  }
+
+  private void runRuntimePerformanceSmoke(
+      JdbcDatabaseContainer<?> container, AsyncJobQueueJdbcDialect dialect, String migrationPath)
+      throws Exception {
+    container.start();
+    DataSource dataSource = dataSource(container);
+    runMigration(dataSource, migrationPath);
+    AsyncJobStore store =
+        transactionalStore(
+            dataSource, new JdbcAsyncJobStore(new NamedParameterJdbcTemplate(dataSource), dialect));
+
+    RuntimeContentionResult result =
+        runRuntimeContention(
+            store,
+            "runtime-perf-" + dialect.name().toLowerCase(),
+            1_000,
+            4,
+            4,
+            32,
+            Duration.ofSeconds(45),
+            Duration.ZERO);
+
+    logger.info(
+        "Async job queue {} perf smoke drained {} jobs in {} ms at {} jobs/s with {} polls and {} poll failures",
+        dialect,
+        result.jobCount(),
+        result.elapsedMs(),
+        result.jobsPerSecond(),
+        result.pollCount(),
+        result.pollFailureCount());
+    assertThat(result.jobsPerSecond()).isGreaterThan(10.0);
   }
 
   private DataSource dataSource(JdbcDatabaseContainer<?> container) {
@@ -518,16 +579,37 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
   }
 
   private void runRuntimeContentionContract(AsyncJobStore store) throws Exception {
-    String queueName = "runtime-contention";
-    int jobCount = 240;
-    int runtimeCount = 4;
-    int concurrencyPerRuntime = 2;
+    RuntimeContentionResult result =
+        runRuntimeContention(
+            store,
+            "runtime-contention",
+            240,
+            4,
+            2,
+            4,
+            Duration.ofSeconds(20),
+            Duration.ofMillis(1));
+    assertThat(result.pollCount()).isGreaterThan(0);
+  }
+
+  private RuntimeContentionResult runRuntimeContention(
+      AsyncJobStore store,
+      String queueName,
+      int jobCount,
+      int runtimeCount,
+      int concurrencyPerRuntime,
+      int claimBatchSize,
+      Duration timeout,
+      Duration handlerDelay)
+      throws Exception {
     for (int i = 0; i < jobCount; i++) {
       store.enqueue(queueName, "{\"id\":" + i + "}", Instant.now().minusSeconds(1));
     }
 
+    long handlerDelayMs = Math.max(0, handlerDelay.toMillis());
     Set<AsyncJobId> processedJobIds = ConcurrentHashMap.newKeySet();
     AtomicInteger duplicateExecutions = new AtomicInteger();
+    AtomicInteger pollFailures = new AtomicInteger();
     ConcurrentHashMap<String, AtomicInteger> processedByWorker = new ConcurrentHashMap<>();
     CountDownLatch start = new CountDownLatch(1);
     ExecutorService pollExecutor = Executors.newFixedThreadPool(runtimeCount);
@@ -546,7 +628,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
             new AsyncJobQueueRuntime(
                 queueName,
                 store,
-                runtimeQueueSettings(4, concurrencyPerRuntime, Duration.ofSeconds(30)),
+                runtimeQueueSettings(claimBatchSize, concurrencyPerRuntime, Duration.ofSeconds(30)),
                 new AsyncJobHandler() {
                   @Override
                   public String queueName() {
@@ -562,7 +644,9 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
                     processedByWorker
                         .computeIfAbsent(workerId, unused -> new AtomicInteger())
                         .incrementAndGet();
-                    Thread.sleep(1);
+                    if (handlerDelayMs > 0) {
+                      Thread.sleep(handlerDelayMs);
+                    }
                     return AsyncJobHandlerResult.done("{\"worker\":\"" + workerId + "\"}");
                   }
                 },
@@ -572,7 +656,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
                 workerId));
       }
 
-      Instant deadline = Instant.now().plusSeconds(20);
+      Instant deadline = Instant.now().plus(timeout);
       for (AsyncJobQueueRuntime runtime : runtimes) {
         pollFutures.add(
             pollExecutor.submit(
@@ -582,7 +666,12 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
                   while (Instant.now().isBefore(deadline)
                       && (statusCount(store, queueName, AsyncJobStatus.DONE) < jobCount
                           || anyRuntimeInFlight(runtimes))) {
-                    runtime.pollOnce();
+                    try {
+                      runtime.pollOnce();
+                    } catch (DataAccessException e) {
+                      pollFailures.incrementAndGet();
+                      Thread.sleep(5);
+                    }
                     polls++;
                     Thread.sleep(1);
                   }
@@ -590,13 +679,15 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
                 }));
       }
 
+      long startedAt = System.nanoTime();
       start.countDown();
       int pollCount = 0;
       for (Future<Integer> pollFuture : pollFutures) {
-        pollCount += pollFuture.get(30, TimeUnit.SECONDS);
+        pollCount += pollFuture.get(timeout.plusSeconds(10).toMillis(), TimeUnit.MILLISECONDS);
       }
       waitForAllRuntimesIdle(runtimes);
       waitForAggregatedProcessingLatencyCount(meterRegistries, queueName, jobCount);
+      long elapsedMs = Math.max(1, Duration.ofNanos(System.nanoTime() - startedAt).toMillis());
 
       assertThat(statusCount(store, queueName, AsyncJobStatus.DONE)).isEqualTo(jobCount);
       assertThat(statusCount(store, queueName, AsyncJobStatus.QUEUED)).isZero();
@@ -608,12 +699,28 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
           .isEqualTo(jobCount);
       assertThat(counterCount(meterRegistries, "asyncJobQueue.completed", queueName))
           .isEqualTo(jobCount);
-      assertThat(pollCount).isGreaterThan(0);
+      return new RuntimeContentionResult(jobCount, elapsedMs, pollCount, pollFailures.get());
     } finally {
       pollExecutor.shutdownNow();
       assertThat(pollExecutor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
-      runtimeExecutors.forEach(ThreadPoolTaskExecutor::shutdown);
+      shutdownRuntimeExecutors(runtimeExecutors);
       meterRegistries.forEach(SimpleMeterRegistry::close);
+    }
+  }
+
+  private void shutdownRuntimeExecutors(List<ThreadPoolTaskExecutor> runtimeExecutors)
+      throws InterruptedException {
+    for (ThreadPoolTaskExecutor runtimeExecutor : runtimeExecutors) {
+      runtimeExecutor.shutdown();
+      assertThat(runtimeExecutor.getThreadPoolExecutor().awaitTermination(10, TimeUnit.SECONDS))
+          .isTrue();
+    }
+  }
+
+  private record RuntimeContentionResult(
+      int jobCount, long elapsedMs, int pollCount, int pollFailureCount) {
+    double jobsPerSecond() {
+      return jobCount * 1_000.0 / Math.max(1, elapsedMs);
     }
   }
 
