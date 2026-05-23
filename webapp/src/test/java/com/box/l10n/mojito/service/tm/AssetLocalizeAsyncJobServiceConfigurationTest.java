@@ -17,35 +17,36 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 public class AssetLocalizeAsyncJobServiceConfigurationTest {
 
   @Test
-  public void assetLocalizeAsyncJobServicesAreNotCreatedByDefault() {
+  public void assetLocalizeAsyncJobComponentsAreNotCreatedByDefault() {
     try (AnnotationConfigApplicationContext context = createContext()) {
-      assertServicesAreAbsent(context);
+      assertComponentsAreAbsent(context);
     }
   }
 
   @Test
-  public void assetLocalizeAsyncJobServicesAreNotCreatedWhenOnlyQueueIsEnabled() {
+  public void assetLocalizeAsyncJobComponentsAreNotCreatedWhenOnlyQueueIsEnabled() {
     try (AnnotationConfigApplicationContext context =
         createContext("l10n.org.async-job-queue.enabled=true")) {
-      assertServicesAreAbsent(context);
+      assertComponentsAreAbsent(context);
     }
   }
 
   @Test
-  public void assetLocalizeAsyncJobServicesAreNotCreatedWhenOnlyAssetLocalizeQueueIsEnabled() {
+  public void assetLocalizeAsyncJobComponentsAreNotCreatedWhenOnlyAssetLocalizeQueueIsEnabled() {
     try (AnnotationConfigApplicationContext context =
         createContext("l10n.org.async-job-queue.asset-localize.enabled=true")) {
-      assertServicesAreAbsent(context);
+      assertComponentsAreAbsent(context);
     }
   }
 
   @Test
-  public void assetLocalizeAsyncJobServicesAreCreatedWhenBothFlagsAreEnabled() {
+  public void assetLocalizeAsyncJobComponentsAreCreatedWhenBothFlagsAreEnabled() {
     try (AnnotationConfigApplicationContext context =
         createContext(
             "l10n.org.async-job-queue.enabled=true",
             "l10n.org.async-job-queue.asset-localize.enabled=true")) {
       assertThat(context.getBean(AssetLocalizeAsyncJobSubmissionService.class)).isNotNull();
+      assertThat(context.getBean(AssetLocalizeAsyncJobHandler.class)).isNotNull();
       assertThat(context.getBean(AssetLocalizeAsyncJobRepairService.class)).isNotNull();
     }
   }
@@ -65,18 +66,25 @@ public class AssetLocalizeAsyncJobServiceConfigurationTest {
     context
         .getBeanFactory()
         .registerSingleton(
+            "localizedAssetGenerationService", mock(LocalizedAssetGenerationService.class));
+    context
+        .getBeanFactory()
+        .registerSingleton(
             "asyncJobQueueSubmissionService", mock(AsyncJobQueueSubmissionService.class));
     context.getBeanFactory().registerSingleton("asyncJobStore", mock(AsyncJobStore.class));
     context.getBeanFactory().registerSingleton("objectMapper", new ObjectMapper());
     context.getBeanFactory().registerSingleton("meterRegistry", new SimpleMeterRegistry());
     context.register(
-        AssetLocalizeAsyncJobSubmissionService.class, AssetLocalizeAsyncJobRepairService.class);
+        AssetLocalizeAsyncJobSubmissionService.class,
+        AssetLocalizeAsyncJobHandler.class,
+        AssetLocalizeAsyncJobRepairService.class);
     context.refresh();
     return context;
   }
 
-  private void assertServicesAreAbsent(AnnotationConfigApplicationContext context) {
+  private void assertComponentsAreAbsent(AnnotationConfigApplicationContext context) {
     assertThat(context.getBeansOfType(AssetLocalizeAsyncJobSubmissionService.class)).isEmpty();
+    assertThat(context.getBeansOfType(AssetLocalizeAsyncJobHandler.class)).isEmpty();
     assertThat(context.getBeansOfType(AssetLocalizeAsyncJobRepairService.class)).isEmpty();
   }
 }
