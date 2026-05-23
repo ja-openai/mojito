@@ -131,19 +131,21 @@ public class AsyncJobQueueSubmissionServiceTest {
   }
 
   @Test
-  public void enqueueEvaluatesWakeupDecisionBeforeStoreWrite() {
+  public void enqueueRecordsWakeupDecisionFailureWithoutFailingSubmission() {
     AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobId asyncJobId = new AsyncJobId("42");
+    when(store.enqueue("assetlocalize", "{\"id\":1}", NOW)).thenReturn(asyncJobId);
     AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
     AsyncJobQueueSubmissionService service =
         new AsyncJobQueueSubmissionService(store, coordinator, meterRegistry, throwingClock());
 
-    assertThatThrownBy(() -> service.enqueue("assetlocalize", "{\"id\":1}", NOW))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("clock unavailable");
+    assertThat(service.enqueue("assetlocalize", "{\"id\":1}", NOW)).isSameAs(asyncJobId);
 
-    verify(store, never()).enqueue(anyString(), anyString(), any(Instant.class));
-    verify(coordinator, never()).triggerPollNow("assetlocalize");
-    assertEnqueueCounter("failed", 1);
+    verify(store).enqueue("assetlocalize", "{\"id\":1}", NOW);
+    verify(coordinator).triggerPollNow("assetlocalize");
+    assertEnqueueCounter("succeeded", 1);
+    assertEnqueueWakeupDecisionFailureCounter(1);
+    assertNoEnqueueCounter("failed");
   }
 
   @Test
@@ -380,6 +382,16 @@ public class AsyncJobQueueSubmissionServiceTest {
                 .tag("queueName", "assetlocalize")
                 .counter())
         .isNull();
+  }
+
+  private void assertEnqueueWakeupDecisionFailureCounter(double count) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.enqueueWakeup.decision.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(count);
   }
 
   private static class FatalTestError extends VirtualMachineError {

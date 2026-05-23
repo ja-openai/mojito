@@ -99,11 +99,10 @@ public class AsyncJobQueueSubmissionService {
     String validatedJobData = validateJobDataForEnqueue(validatedQueueName, jobData);
     Instant validatedAvailableAt = validateAvailableAtForEnqueue(validatedQueueName, availableAt);
     try {
-      boolean shouldTriggerWakeup = !validatedAvailableAt.isAfter(clock.instant());
       AsyncJobId asyncJobId =
           asyncJobStore.enqueue(validatedQueueName, validatedJobData, validatedAvailableAt);
       incrementEnqueueCounter(validatedQueueName, "succeeded");
-      if (shouldTriggerWakeup) {
+      if (shouldTriggerWakeup(validatedQueueName, validatedAvailableAt)) {
         triggerEnqueueWakeup(validatedQueueName, asyncJobId);
       }
       return asyncJobId;
@@ -114,6 +113,25 @@ public class AsyncJobQueueSubmissionService {
       incrementEnqueueCounter(validatedQueueName, "failed");
       logger.warn("Failed to enqueue async job for queue {}", validatedQueueName, exception);
       throw unchecked(exception);
+    }
+  }
+
+  private boolean shouldTriggerWakeup(String queueName, Instant availableAt) {
+    try {
+      return !availableAt.isAfter(clock.instant());
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
+      meterRegistry
+          .counter("asyncJobQueue.enqueueWakeup.decision.failed", "queueName", queueName)
+          .increment();
+      logger.warn(
+          "Failed to determine async job queue wakeup timing after enqueue for queue {}; "
+              + "triggering wakeup to avoid leaving ready work idle",
+          queueName,
+          exception);
+      return true;
     }
   }
 
