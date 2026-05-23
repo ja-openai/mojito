@@ -1612,6 +1612,51 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void nonFatalHandlerThrowablesUseAttemptBudgetAndPersistError() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  throw new AssertionError("bad invariant");
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.FAILED, 1);
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(failedJob.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failedJob.attemptCount()).isEqualTo(1);
+    assertThat(failedJob.lastError()).contains("java.lang.AssertionError: bad invariant");
+    assertThat(failedJob.workerId()).isNull();
+    assertThat(failedJob.leaseToken()).isNull();
+    assertThat(failedJob.leaseUntil()).isNull();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.handler.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void handlerRequestedRequeuesStopAfterMaxAttempts() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =

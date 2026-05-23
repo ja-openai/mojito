@@ -502,8 +502,14 @@ class AsyncJobQueueRuntime {
           Objects.requireNonNull(
               asyncJobHandler.process(asyncJobRecord), "AsyncJobHandlerResult must not be null");
       applyHandlerResult(asyncJobRecord, asyncJobHandlerResult);
-    } catch (Exception e) {
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
       handleProcessingFailure(asyncJobRecord, e);
+      if (hasCause(e, InterruptedException.class)) {
+        Thread.currentThread().interrupt();
+      }
     } finally {
       if (heartbeatFuture != null) {
         heartbeatFuture.cancel(false);
@@ -733,7 +739,12 @@ class AsyncJobQueueRuntime {
     }
   }
 
-  private void handleProcessingFailure(AsyncJobRecord asyncJobRecord, Exception e) {
+  private boolean isJvmFatal(Throwable throwable) {
+    return throwable instanceof VirtualMachineError
+        || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
+  }
+
+  private void handleProcessingFailure(AsyncJobRecord asyncJobRecord, Throwable e) {
     meterRegistry.counter("asyncJobQueue.handler.failed", "queueName", queueName).increment();
     String errorMessage = errorMessage(e);
 
@@ -895,7 +906,7 @@ class AsyncJobQueueRuntime {
     return false;
   }
 
-  private String errorMessage(Exception e) {
+  private String errorMessage(Throwable e) {
     String message = e.getClass().getName();
     if (e.getMessage() != null && !e.getMessage().isBlank()) {
       message += ": " + e.getMessage();
