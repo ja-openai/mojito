@@ -689,6 +689,33 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void requeueFailedJobRecordsSingleFailureWhenPostReplayLookupFindsNoJob() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public boolean requeueFailedNow(String queueName, AsyncJobId id, String jobData) {
+                return true;
+              }
+
+              @Override
+              public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
+                return List.of();
+              }
+            },
+            noOpCoordinator(),
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "1", null))
+        .isInstanceOf(AsyncJobQueueInspectionService.AsyncJobNotFoundException.class)
+        .hasMessageContaining("Async job not found for queue assetlocalize: 1");
+    assertRequeueCounter("failed", 1);
+    assertNoRequeueCounter("succeeded");
+    assertNoRequeueCounter("notFound");
+    assertNoGetCounter("notFound");
+  }
+
+  @Test
   public void validatesStatusAndLimit() {
     AsyncJobQueueInspectionService service = inspectionService(new InMemoryAsyncJobStore());
 
