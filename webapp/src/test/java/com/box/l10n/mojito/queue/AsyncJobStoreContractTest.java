@@ -102,6 +102,30 @@ public class AsyncJobStoreContractTest {
   }
 
   @Test
+  public void expiredLeaseStatusTracksLeaseRecoveryBoundary() throws Exception {
+    AsyncJobId id =
+        asyncJobStore.enqueue("assetlocalize", "{\"v\":1}", Instant.now().minusSeconds(1));
+    AsyncJobRecord firstClaim =
+        asyncJobStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofMillis(50)).get(0);
+
+    assertThat(asyncJobStore.expiredLeaseStatus("assetlocalize").count()).isEqualTo(0);
+
+    AsyncJobExpiredLeaseStatus expiredLeaseStatus =
+        expiredLeaseStatusEventually("assetlocalize", Duration.ofSeconds(2));
+    assertThat(expiredLeaseStatus.count()).isEqualTo(1);
+    assertThat(expiredLeaseStatus.oldestLeaseUntil())
+        .isBeforeOrEqualTo(expiredLeaseStatus.observedAt());
+
+    AsyncJobRecord reclaimed =
+        asyncJobStore.claimNextJobs("assetlocalize", 1, "worker-b", Duration.ofSeconds(5)).get(0);
+
+    assertThat(reclaimed.id()).isEqualTo(id);
+    assertThat(reclaimed.leaseReclaimed()).isTrue();
+    assertThat(reclaimed.leaseToken()).isNotEqualTo(firstClaim.leaseToken());
+    assertThat(asyncJobStore.expiredLeaseStatus("assetlocalize").count()).isEqualTo(0);
+  }
+
+  @Test
   public void requeuePersistsErrorAndCompletionClearsIt() throws Exception {
     AsyncJobId id =
         asyncJobStore.enqueue("assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
@@ -196,6 +220,21 @@ public class AsyncJobStoreContractTest {
     }
     assertThat(claimed).as("claim should succeed before timeout").isNotEmpty();
     return claimed.get(0);
+  }
+
+  private AsyncJobExpiredLeaseStatus expiredLeaseStatusEventually(
+      String queueName, Duration timeout) throws InterruptedException {
+    Instant deadline = Instant.now().plus(timeout);
+    AsyncJobExpiredLeaseStatus expiredLeaseStatus = asyncJobStore.expiredLeaseStatus(queueName);
+    while (Instant.now().isBefore(deadline)) {
+      expiredLeaseStatus = asyncJobStore.expiredLeaseStatus(queueName);
+      if (expiredLeaseStatus.count() > 0) {
+        return expiredLeaseStatus;
+      }
+      Thread.sleep(10);
+    }
+    assertThat(expiredLeaseStatus.count()).as("expired lease should appear before timeout").isOne();
+    return expiredLeaseStatus;
   }
 
   private interface StoreHarnessFactory {

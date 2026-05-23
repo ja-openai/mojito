@@ -260,6 +260,9 @@ Test Coverage
   counts against an embedded datasource using the `hsql` dialect. Store tests also cover bounded
   inspection/cleanup limits and terminal-row deletion so retention jobs cannot accidentally delete
   queued/running work.
+- Shared store contract tests now assert expired running leases are visible before recovery and
+  disappear after a successful reclaim, so future backends cannot silently omit the stalled-worker
+  signal.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.
