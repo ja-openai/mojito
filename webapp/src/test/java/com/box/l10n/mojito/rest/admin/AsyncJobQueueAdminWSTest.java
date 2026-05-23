@@ -11,6 +11,7 @@ import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobNotFound
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobReadyStatusSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobSummary;
+import java.lang.reflect.Method;
 import java.lang.reflect.RecordComponent;
 import java.time.Instant;
 import java.util.Arrays;
@@ -21,6 +22,11 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.server.ResponseStatusException;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -182,6 +188,30 @@ public class AsyncJobQueueAdminWSTest {
     assertThat(componentNames)
         .contains("jobDataLength")
         .doesNotContain("jobData", "jobDataPreview");
+  }
+
+  @Test
+  public void adminQueueControllerOnlyExposesReadOnlyGetHandlers() {
+    List<String> getHandlers =
+        Arrays.stream(AsyncJobQueueAdminWS.class.getDeclaredMethods())
+            .filter(method -> method.isAnnotationPresent(GetMapping.class))
+            .map(Method::getName)
+            .toList();
+    List<String> mutatingHandlers =
+        Arrays.stream(AsyncJobQueueAdminWS.class.getDeclaredMethods())
+            .filter(
+                method ->
+                    method.isAnnotationPresent(PostMapping.class)
+                        || method.isAnnotationPresent(PutMapping.class)
+                        || method.isAnnotationPresent(PatchMapping.class)
+                        || method.isAnnotationPresent(DeleteMapping.class))
+            .map(Method::getName)
+            .toList();
+
+    assertThat(getHandlers)
+        .containsExactlyInAnyOrder(
+            "countJobsByStatus", "readyStatus", "expiredLeaseStatus", "findJobs", "getJob");
+    assertThat(mutatingHandlers).isEmpty();
   }
 
   @Test
