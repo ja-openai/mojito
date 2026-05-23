@@ -60,13 +60,17 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("lease_until DATETIME(6) NULL")
         .contains("created_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)")
         .contains(
-            "updated_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            "updated_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)")
+        .doesNotContain("C__ASYNC_JOB_QUEUE__ID_POSITIVE")
+        .doesNotContain("CHECK (id > 0)");
     assertThat(postgresqlMigration)
         .contains("id BIGSERIAL PRIMARY KEY")
         .contains("available_at TIMESTAMPTZ(6) NOT NULL")
         .contains("lease_until TIMESTAMPTZ(6) NULL")
         .contains("created_date TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
         .contains("updated_date TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
+        .contains("C__ASYNC_JOB_QUEUE__ID_POSITIVE")
+        .contains("CHECK (id > 0)")
         .doesNotContain("ON UPDATE");
   }
 
@@ -435,8 +439,6 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("attempt_count")
         .contains("NOT NULL DEFAULT 0")
         .contains("last_error TEXT NULL")
-        .contains("C__ASYNC_JOB_QUEUE__ID_POSITIVE")
-        .contains("CHECK (id > 0)")
         .contains("C__ASYNC_JOB_QUEUE__STATUS")
         .contains("CHECK (status IN ('queued', 'running', 'done', 'failed'))")
         .contains("C__ASYNC_JOB_QUEUE__ATTEMPT_NONNEGATIVE")
