@@ -267,6 +267,8 @@ Test Coverage
   preventing future multi-queue backends from replaying a failed row through the wrong queue.
 - Inspection service tests assert cross-queue replay attempts are reported as not found and do not
   wake any runtime, so operator tooling cannot accidentally replay a job through the wrong queue.
+- Retention cleaner tests assert configured queue names and handler-discovered queue names are
+  de-duplicated before cleanup, preventing duplicate purge attempts and metrics for the same queue.
 - Admin REST tests assert the public redacted job response shape exposes payload length but not
   `jobData` or `jobDataPreview`, making payload-redaction regressions visible at test time.
 - Coordinator tests assert duplicate handler beans for one queue fail startup before any runtime is

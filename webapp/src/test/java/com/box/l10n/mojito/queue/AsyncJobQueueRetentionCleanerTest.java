@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -177,6 +178,36 @@ public class AsyncJobQueueRetentionCleanerTest {
 
     retentionCleaner.cleanupTerminalJobs();
 
+    assertDeletedCounter("assetlocalize", AsyncJobStatus.DONE, 1);
+    assertDeletedCounter("assetlocalize", AsyncJobStatus.FAILED, 2);
+  }
+
+  @Test
+  public void cleanupTerminalJobsDeduplicatesConfiguredAndHandlerQueues() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.DONE), any(Instant.class), eq(100)))
+        .thenReturn(1);
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.FAILED), any(Instant.class), eq(100)))
+        .thenReturn(2);
+
+    AsyncJobQueueRetentionCleaner retentionCleaner =
+        new AsyncJobQueueRetentionCleaner(
+            asyncJobStore,
+            queueProperties("assetlocalize"),
+            List.of(handler("assetlocalize")),
+            meterRegistry,
+            () -> CLEANUP_NOW);
+
+    retentionCleaner.cleanupTerminalJobs();
+
+    verify(asyncJobStore, times(1))
+        .deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.DONE), any(Instant.class), eq(100));
+    verify(asyncJobStore, times(1))
+        .deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.FAILED), any(Instant.class), eq(100));
     assertDeletedCounter("assetlocalize", AsyncJobStatus.DONE, 1);
     assertDeletedCounter("assetlocalize", AsyncJobStatus.FAILED, 2);
   }
