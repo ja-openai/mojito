@@ -943,6 +943,52 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void transitionFailureCounterRecordsNonFatalTerminalFailureTransition() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch markFailedAttempted = new CountDownLatch(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markFailed(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any(), anyString()))
+        .thenAnswer(
+            invocation -> {
+              markFailedAttempted.countDown();
+              throw new NonFatalTestError("mark failed invariant");
+            });
+
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  throw new IllegalStateException("poison");
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(markFailedAttempted.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTransitionFailure("failed", 1);
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.handler.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry.find("asyncJobQueue.failed").tag("queueName", "assetlocalize").counter())
+        .isNull();
+  }
+
+  @Test
   public void transitionFailureCounterRecordsFailedRequeueExhaustedTransition() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
@@ -985,6 +1031,55 @@ public class AsyncJobQueueRuntimeTest {
             any(Duration.class),
             any(),
             anyString());
+  }
+
+  @Test
+  public void transitionFailureCounterRecordsNonFatalRequeueExhaustedTransition() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch markFailedAttempted = new CountDownLatch(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markFailed(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any(), anyString()))
+        .thenAnswer(
+            invocation -> {
+              markFailedAttempted.countDown();
+              throw new NonFatalTestError("mark failed invariant");
+            });
+
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(asyncJobRecord -> AsyncJobHandlerResult.requeue(null)),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(markFailedAttempted.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTransitionFailure("requeueExhausted", 1);
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.requeue.exhausted")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.handler.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+    assertThat(
+            meterRegistry.find("asyncJobQueue.failed").tag("queueName", "assetlocalize").counter())
+        .isNull();
   }
 
   @Test
@@ -1068,6 +1163,58 @@ public class AsyncJobQueueRuntimeTest {
                 .counter()
                 .count())
         .isEqualTo(1);
+  }
+
+  @Test
+  public void transitionFailureCounterRecordsNonFatalRetryRequeue() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch requeueAttempted = new CountDownLatch(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.requeueAfter(
+            anyString(),
+            any(AsyncJobId.class),
+            anyString(),
+            anyString(),
+            any(Duration.class),
+            any(),
+            anyString()))
+        .thenAnswer(
+            invocation -> {
+              requeueAttempted.countDown();
+              throw new NonFatalTestError("requeue invariant");
+            });
+
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(2);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  throw new IllegalStateException("temporary");
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(requeueAttempted.await(2, TimeUnit.SECONDS)).isTrue();
+    waitForTransitionFailure("retry", 1);
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.handler.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry.find("asyncJobQueue.retried").tag("queueName", "assetlocalize").counter())
+        .isNull();
   }
 
   @Test
@@ -1439,7 +1586,7 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
-  public void heartbeatExceptionRecordsCounterWithoutInterruptingJob() throws Exception {
+  public void heartbeatNonFatalErrorRecordsCounterWithoutInterruptingJob() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
     CountDownLatch started = new CountDownLatch(1);
@@ -1458,7 +1605,7 @@ public class AsyncJobQueueRuntimeTest {
         .thenReturn(List.of(claimedJob));
     when(asyncJobStore.heartbeat(
             anyString(), any(AsyncJobId.class), anyString(), anyString(), any(Duration.class)))
-        .thenThrow(new IllegalStateException("database unavailable"));
+        .thenThrow(new NonFatalTestError("database unavailable"));
     when(asyncJobStore.markDone(
             anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
         .thenAnswer(
@@ -2932,6 +3079,7 @@ public class AsyncJobQueueRuntimeTest {
                 .counter()
                 .count())
         .isEqualTo(1);
+    assertClaimFailureCounter("other", 1);
     assertThat(taskScheduler.scheduledTasks()).hasSize(2);
 
     taskScheduler.scheduledTasks().get(1).run();

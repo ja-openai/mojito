@@ -194,9 +194,12 @@ class AsyncJobQueueRuntime {
               claimLimit,
               workerId,
               java.time.Duration.ofMillis(queueSettings.getLeaseDurationMs()));
-    } catch (RuntimeException e) {
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
       recordClaimFailure(e);
-      throw e;
+      throw unchecked(e);
     } finally {
       meterRegistry
           .timer("asyncJobQueue.claim.latency", "queueName", queueName)
@@ -781,7 +784,10 @@ class AsyncJobQueueRuntime {
               asyncJobRecord.leaseToken(),
               asyncJobHandlerResult.jobData(),
               errorMessage);
-    } catch (RuntimeException e) {
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
       logger.warn(
           "Failed to mark requeue-exhausted async job {} failed for queue {}",
           asyncJobRecord.id(),
@@ -840,7 +846,10 @@ class AsyncJobQueueRuntime {
                 asyncJobRecord.leaseToken(),
                 null,
                 errorMessage);
-      } catch (RuntimeException transitionException) {
+      } catch (Throwable transitionException) {
+        if (isJvmFatal(transitionException)) {
+          throw (Error) transitionException;
+        }
         logger.warn(
             "Failed to mark async job {} failed for queue {}",
             asyncJobRecord.id(),
@@ -894,7 +903,10 @@ class AsyncJobQueueRuntime {
               Duration.ofMillis(Math.max(0, delayMs)),
               jobData,
               lastError);
-    } catch (RuntimeException e) {
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
       logger.warn("Failed to requeue async job {} for queue {}", asyncJobRecord.id(), queueName, e);
       recordTransitionFailure(transitionFailureName);
       return false;
@@ -942,7 +954,7 @@ class AsyncJobQueueRuntime {
         .increment();
   }
 
-  private void recordClaimFailure(RuntimeException e) {
+  private void recordClaimFailure(Throwable e) {
     meterRegistry
         .counter(
             "asyncJobQueue.claim.failed", "queueName", queueName, "failure", claimFailureKind(e))
@@ -1019,7 +1031,10 @@ class AsyncJobQueueRuntime {
             "Failed to renew heartbeat for queue {}, job {}", queueName, asyncJobRecord.id());
         meterRegistry.counter("asyncJobQueue.heartbeat.failed", "queueName", queueName).increment();
       }
-    } catch (RuntimeException e) {
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
       logger.warn(
           "Failed to renew heartbeat for queue {}, job {}", queueName, asyncJobRecord.id(), e);
       meterRegistry.counter("asyncJobQueue.heartbeat.failed", "queueName", queueName).increment();
