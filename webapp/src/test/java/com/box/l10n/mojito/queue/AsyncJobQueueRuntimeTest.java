@@ -3126,12 +3126,18 @@ public class AsyncJobQueueRuntimeTest {
       assertThat(runtimeGauge("asyncJobQueue.inflight")).isNotNull();
       assertThat(runtimeGauge("asyncJobQueue.executor.active")).isNotNull();
       assertThat(runtimeGauge("asyncJobQueue.executor.queued")).isNotNull();
+      assertThat(runtimeGauge("asyncJobQueue.poll.started")).isNotNull();
+      assertThat(runtimeGauge("asyncJobQueue.poll.scheduled")).isNotNull();
+      assertThat(runtimeGauge("asyncJobQueue.poll.active")).isNotNull();
 
       firstRuntime.stop();
 
       assertThat(runtimeGauge("asyncJobQueue.inflight")).isNull();
       assertThat(runtimeGauge("asyncJobQueue.executor.active")).isNull();
       assertThat(runtimeGauge("asyncJobQueue.executor.queued")).isNull();
+      assertThat(runtimeGauge("asyncJobQueue.poll.started")).isNull();
+      assertThat(runtimeGauge("asyncJobQueue.poll.scheduled")).isNull();
+      assertThat(runtimeGauge("asyncJobQueue.poll.active")).isNull();
 
       AsyncJobQueueRuntime secondRuntime =
           runtime(
@@ -3142,13 +3148,70 @@ public class AsyncJobQueueRuntimeTest {
               secondExecutor);
 
       assertThat(runtimeGauge("asyncJobQueue.inflight")).isNotNull();
+      assertThat(runtimeGauge("asyncJobQueue.poll.started")).isNotNull();
 
       secondRuntime.stop();
 
       assertThat(runtimeGauge("asyncJobQueue.inflight")).isNull();
+      assertThat(runtimeGauge("asyncJobQueue.poll.started")).isNull();
     } finally {
       firstExecutor.shutdown();
       secondExecutor.shutdown();
+    }
+  }
+
+  @Test
+  public void runtimePollLifecycleGaugesExposeStartedScheduledAndActiveStates() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    CountDownLatch claimStarted = new CountDownLatch(1);
+    CountDownLatch allowClaimReturn = new CountDownLatch(1);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenAnswer(
+            invocation -> {
+              claimStarted.countDown();
+              assertThat(allowClaimReturn.await(2, TimeUnit.SECONDS)).isTrue();
+              return List.of();
+            });
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    Thread pollThread = null;
+    try {
+      asyncJobQueueRuntime.start();
+
+      assertGaugeValue("asyncJobQueue.poll.started", 1);
+      assertGaugeValue("asyncJobQueue.poll.scheduled", 1);
+      assertGaugeValue("asyncJobQueue.poll.active", 0);
+
+      pollThread = new Thread(taskScheduler.scheduledTasks().get(0), "async-queue-poll-gauge-test");
+      pollThread.start();
+      assertThat(claimStarted.await(2, TimeUnit.SECONDS)).isTrue();
+
+      assertGaugeValue("asyncJobQueue.poll.started", 1);
+      assertGaugeValue("asyncJobQueue.poll.scheduled", 0);
+      assertGaugeValue("asyncJobQueue.poll.active", 1);
+
+      allowClaimReturn.countDown();
+      pollThread.join(2_000);
+
+      assertThat(pollThread.isAlive()).isFalse();
+      assertGaugeValue("asyncJobQueue.poll.started", 1);
+      assertGaugeValue("asyncJobQueue.poll.scheduled", 1);
+      assertGaugeValue("asyncJobQueue.poll.active", 0);
+    } finally {
+      allowClaimReturn.countDown();
+      asyncJobQueueRuntime.stop();
+      if (pollThread != null) {
+        pollThread.join(2_000);
+      }
     }
   }
 
@@ -4048,6 +4111,58 @@ public class AsyncJobQueueRuntimeTest {
     scheduledPoll[1].run();
     verify(asyncJobStore, times(2))
         .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
+  }
+
+  @Test
+  public void scheduledPollRecordsUnscheduledLoopWhenRecoveryScheduleFails() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of());
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    Runnable[] scheduledPoll = new Runnable[1];
+    AtomicInteger scheduleInvocations = new AtomicInteger();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(
+            invocation -> {
+              int invocationCount = scheduleInvocations.incrementAndGet();
+              if (invocationCount == 1) {
+                scheduledPoll[0] = invocation.getArgument(0);
+                return new DummyScheduledFuture();
+              }
+              throw new IllegalStateException("scheduler unavailable");
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    scheduledPoll[0].run();
+
+    assertThat(scheduleInvocations.get()).isEqualTo(3);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.schedule.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(2);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.unscheduled")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertGaugeValue("asyncJobQueue.poll.started", 1);
+    assertGaugeValue("asyncJobQueue.poll.scheduled", 0);
+    assertGaugeValue("asyncJobQueue.poll.active", 0);
   }
 
   @Test

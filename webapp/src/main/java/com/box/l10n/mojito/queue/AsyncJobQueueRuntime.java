@@ -332,7 +332,28 @@ class AsyncJobQueueRuntime {
         Gauge.builder(
                 "asyncJobQueue.executor.queued", executor, AsyncJobQueueRuntime::executorQueueSize)
             .tags(queueTags)
+            .register(meterRegistry),
+        Gauge.builder("asyncJobQueue.poll.started", this, AsyncJobQueueRuntime::startedGauge)
+            .tags(queueTags)
+            .register(meterRegistry),
+        Gauge.builder("asyncJobQueue.poll.scheduled", this, AsyncJobQueueRuntime::scheduledGauge)
+            .tags(queueTags)
+            .register(meterRegistry),
+        Gauge.builder("asyncJobQueue.poll.active", this, AsyncJobQueueRuntime::activePollGauge)
+            .tags(queueTags)
             .register(meterRegistry));
+  }
+
+  private int startedGauge() {
+    return started ? 1 : 0;
+  }
+
+  private int scheduledGauge() {
+    return nextPollFuture != null ? 1 : 0;
+  }
+
+  private int activePollGauge() {
+    return pollInProgress.get() ? 1 : 0;
   }
 
   private void removeRuntimeGauges() {
@@ -403,6 +424,7 @@ class AsyncJobQueueRuntime {
       }
       logger.warn("Failed to schedule recovery poll for queue {}", queueName, e);
       recordPollScheduleFailure();
+      recordPollUnscheduled();
     }
   }
 
@@ -476,6 +498,10 @@ class AsyncJobQueueRuntime {
 
   private void recordPollScheduleFailure() {
     meterRegistry.counter("asyncJobQueue.poll.schedule.failed", "queueName", queueName).increment();
+  }
+
+  private void recordPollUnscheduled() {
+    meterRegistry.counter("asyncJobQueue.poll.unscheduled", "queueName", queueName).increment();
   }
 
   private void submitClaimedJob(AsyncJobRecord asyncJobRecord) {

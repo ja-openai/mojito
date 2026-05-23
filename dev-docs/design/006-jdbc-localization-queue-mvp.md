@@ -341,6 +341,9 @@ Monitoring (MVP Required)
     `asyncJobQueue.running.expired.oldestAgeMs`; this separates worker-crash/stall recovery from
     normal queued backlog
   - executor active/queued by queue
+  - local poll-loop health via `asyncJobQueue.poll.started`,
+    `asyncJobQueue.poll.scheduled`, and `asyncJobQueue.poll.active`; alert when a started runtime
+    has no scheduled or active poll for a sustained interval
 - Counters:
   - claimed, completed, retried, execution-failed, lease-expired-reclaimed, poll-skipped-saturated
   - local executor rejections before queue state recovery
@@ -369,6 +372,8 @@ Monitoring (MVP Required)
   - failed state transitions/fencing failures by transition
   - failed immediate trigger/wakeup scheduling
   - failed initial or follow-up scheduled-poll registration
+  - `asyncJobQueue.poll.unscheduled` when both normal and recovery poll scheduling fail, leaving
+    the local runtime dependent on a future enqueue/wakeup to restart polling
   - active poll did not stop before the bounded executor shutdown wait elapsed
   - active poll shutdown wait was interrupted before executor shutdown
   - status metrics reporting failures
