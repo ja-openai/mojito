@@ -200,6 +200,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .isEqualTo(1);
     assertThat(store.getByIds(List.of(id))).isEmpty();
 
+    runRelativeRetryAndImmediateReplayContract(store);
     runConcurrentClaimContract(store);
   }
 
@@ -217,6 +218,59 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     // store directly, so wrap each store call to keep SELECT ... FOR UPDATE and its update fenced.
     return new TransactionalAsyncJobStore(
         delegate, new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
+  }
+
+  private void runRelativeRetryAndImmediateReplayContract(AsyncJobStore store) throws Exception {
+    String queueName = "relative-retry";
+    AsyncJobId id = store.enqueue(queueName, "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        store.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(5)).get(0);
+
+    assertThat(
+            store.requeueAfter(
+                queueName,
+                id,
+                "worker-a",
+                claimed.leaseToken(),
+                Duration.ofMillis(500),
+                "{\"step\":\"retry\"}",
+                "retryable failure"))
+        .isTrue();
+    AsyncJobRecord requeued = store.getByIds(List.of(id)).get(0);
+    assertThat(requeued.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(requeued.workerId()).isNull();
+    assertThat(requeued.leaseToken()).isNull();
+    assertThat(requeued.leaseUntil()).isNull();
+    assertThat(requeued.lastError()).isEqualTo("retryable failure");
+    assertThat(requeued.jobData()).isEqualTo("{\"step\":\"retry\"}");
+    assertThat(store.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(5))).isEmpty();
+
+    AsyncJobRecord retried =
+        claimEventually(store, queueName, "worker-b", Duration.ofSeconds(5), Duration.ofSeconds(3));
+    assertThat(retried.id()).isEqualTo(id);
+    assertThat(retried.attemptCount()).isEqualTo(2);
+    assertThat(retried.lastError()).isEqualTo("retryable failure");
+    assertThat(
+            store.markFailed(
+                queueName,
+                id,
+                "worker-b",
+                retried.leaseToken(),
+                "{\"step\":\"failed\"}",
+                "terminal failure"))
+        .isTrue();
+
+    assertThat(store.requeueFailedNow(queueName, id, "{\"step\":\"operator-fixed\"}")).isTrue();
+    AsyncJobRecord replayed =
+        store.claimNextJobs(queueName, 1, "worker-c", Duration.ofSeconds(5)).get(0);
+    assertThat(replayed.id()).isEqualTo(id);
+    assertThat(replayed.attemptCount()).isEqualTo(1);
+    assertThat(replayed.lastError()).isEqualTo("terminal failure");
+    assertThat(replayed.jobData()).isEqualTo("{\"step\":\"operator-fixed\"}");
+    assertThat(
+            store.markDone(queueName, id, "worker-c", replayed.leaseToken(), "{\"step\":\"done\"}"))
+        .isTrue();
+    assertThat(store.getByIds(List.of(id)).get(0).lastError()).isNull();
   }
 
   private void runConcurrentClaimContract(AsyncJobStore store) throws Exception {
@@ -381,6 +435,22 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     }
 
     @Override
+    public boolean requeueAfter(
+        String queueName,
+        AsyncJobId id,
+        String workerId,
+        String leaseToken,
+        Duration delay,
+        String jobData,
+        String lastError) {
+      return Boolean.TRUE.equals(
+          transactionTemplate.execute(
+              status ->
+                  delegate.requeueAfter(
+                      queueName, id, workerId, leaseToken, delay, jobData, lastError)));
+    }
+
+    @Override
     public boolean markFailed(
         String queueName,
         AsyncJobId id,
@@ -411,6 +481,12 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
       return Boolean.TRUE.equals(
           transactionTemplate.execute(
               status -> delegate.requeueFailed(queueName, id, availableAt, jobData)));
+    }
+
+    @Override
+    public boolean requeueFailedNow(String queueName, AsyncJobId id, String jobData) {
+      return Boolean.TRUE.equals(
+          transactionTemplate.execute(status -> delegate.requeueFailedNow(queueName, id, jobData)));
     }
 
     @Override
