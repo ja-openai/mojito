@@ -3133,6 +3133,63 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void triggerPollNowRecordsSupersededPollCancelFailureSeparately() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of());
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    Runnable[] scheduledPolls = new Runnable[2];
+    AtomicInteger scheduleInvocations = new AtomicInteger();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(
+            invocation -> {
+              int invocationCount = scheduleInvocations.incrementAndGet();
+              if (invocationCount == 1) {
+                scheduledPolls[0] = invocation.getArgument(0);
+                return new ThrowingCancelScheduledFuture();
+              }
+              if (invocationCount == 2) {
+                scheduledPolls[1] = invocation.getArgument(0);
+                return new DummyScheduledFuture();
+              }
+              return new DummyScheduledFuture();
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    asyncJobQueueRuntime.triggerPollNow();
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.cancel.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.trigger.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+
+    scheduledPolls[0].run();
+    scheduledPolls[1].run();
+
+    verify(asyncJobStore, times(1))
+        .claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class));
+  }
+
+  @Test
   public void stopRecordsScheduledPollCancelFailureAndStillShutsDownExecutor() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))

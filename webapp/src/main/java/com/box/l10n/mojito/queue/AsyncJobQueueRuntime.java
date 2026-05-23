@@ -162,16 +162,29 @@ class AsyncJobQueueRuntime {
       ScheduledFuture<?> previousPollFuture = nextPollFuture;
       try {
         scheduleNextPoll(0);
-        if (previousPollFuture != null) {
-          previousPollFuture.cancel(false);
-        }
       } catch (Throwable e) {
         if (isJvmFatal(e)) {
           throw (Error) e;
         }
         logger.warn("Failed to trigger immediate poll for queue {}", queueName, e);
         meterRegistry.counter("asyncJobQueue.trigger.failed", "queueName", queueName).increment();
+        return;
       }
+      if (previousPollFuture != null) {
+        cancelSupersededPollFuture(previousPollFuture);
+      }
+    }
+  }
+
+  private void cancelSupersededPollFuture(ScheduledFuture<?> previousPollFuture) {
+    try {
+      previousPollFuture.cancel(false);
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
+      logger.warn("Failed to cancel superseded async queue poll for {}", queueName, e);
+      meterRegistry.counter("asyncJobQueue.poll.cancel.failed", "queueName", queueName).increment();
     }
   }
 
