@@ -5,10 +5,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 final class AsyncJobQueueValidation {
 
   static final int QUEUE_NAME_MAX_LENGTH = 64;
+  static final Pattern QUEUE_NAME_PATTERN = Pattern.compile("[A-Za-z0-9._-]+");
   static final int WORKER_ID_MAX_LENGTH = 128;
   static final int LAST_ERROR_MAX_LENGTH = 4_000;
   static final int CLAIM_BATCH_SIZE_MAX = 1_000;
@@ -83,6 +85,10 @@ final class AsyncJobQueueValidation {
     if (queueName.length() > QUEUE_NAME_MAX_LENGTH) {
       throw new IllegalArgumentException(
           "queueName must be at most " + QUEUE_NAME_MAX_LENGTH + " characters");
+    }
+    if (!QUEUE_NAME_PATTERN.matcher(queueName).matches()) {
+      throw new IllegalArgumentException(
+          "queueName must contain only letters, numbers, dots, underscores, or dashes");
     }
     return queueName;
   }

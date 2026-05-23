@@ -159,6 +159,8 @@ Validation guardrails:
 - `max-concurrency` is capped at 256 to avoid accidental oversized local executors.
 - `max-attempts` is capped at 100 so poison jobs cannot be made effectively unbounded by
   configuration.
+- Queue names are restricted to short ASCII metric-safe identifiers (`letters`, `numbers`, `.`,
+  `_`, `-`) because they appear in DB rows, REST paths, logs, thread names, and metric tags.
 - Poll, heartbeat, retry, lease, and status-metric intervals have explicit upper bounds to catch
   pathological scheduler/SQL timestamp settings during startup validation.
 - Executor shutdown wait is bounded and defaults to 30 seconds so app shutdown gives in-flight

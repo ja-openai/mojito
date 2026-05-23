@@ -102,6 +102,30 @@ public class AsyncJobQueueValidationTest {
   }
 
   @Test
+  public void validateQueueNameAllowsOnlyBoundedMetricSafeIdentifiers() {
+    assertThat(AsyncJobQueueValidation.validateQueueName("assetlocalize"))
+        .isEqualTo("assetlocalize");
+    assertThat(AsyncJobQueueValidation.validateQueueName("stats.v2_batch-1"))
+        .isEqualTo("stats.v2_batch-1");
+
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> AsyncJobQueueValidation.validateQueueName("asset localize")))
+        .hasMessageContaining("letters, numbers, dots, underscores, or dashes");
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> AsyncJobQueueValidation.validateQueueName("asset/localize")))
+        .hasMessageContaining("letters, numbers, dots, underscores, or dashes");
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> AsyncJobQueueValidation.validateQueueName("asset:localize")))
+        .hasMessageContaining("letters, numbers, dots, underscores, or dashes");
+  }
+
+  @Test
   public void validateStatusMetricsIntervalRejectsExcessiveInterval() {
     assertThat(
             AsyncJobQueueValidation.validateStatusMetricsIntervalMs(
