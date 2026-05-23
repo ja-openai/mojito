@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -108,11 +110,57 @@ public class AssetLocalizeAsyncJobSubmissionServiceTest {
 
     verify(pollableTaskExceptionUtils).processException(eq(failure), any(ExceptionHolder.class));
     verify(pollableTaskService).finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
+    assertScheduleCounter("failed", 1);
+  }
+
+  @Test
+  public void scheduleJobFinishesPollableTaskWhenInputSaveFails() {
+    RuntimeException failure = new RuntimeException("blob store down");
+    LocalizedAssetBody input = new LocalizedAssetBody();
+    PollableTask pollableTask = pollableTask(42L);
+    QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo =
+        QuartzJobInfo.newBuilder(GenerateLocalizedAssetJob.class).withInput(input).build();
+    when(pollableTaskService.createPollableTask(
+            null, GenerateLocalizedAssetJob.class.getCanonicalName(), null, 0, 3600))
+        .thenReturn(pollableTask);
+    doThrow(failure).when(pollableTaskBlobStorage).saveInput(42L, input);
+
+    assertThatThrownBy(() -> service.scheduleJob(quartzJobInfo)).isSameAs(failure);
+
+    verify(asyncJobQueueSubmissionService, never())
+        .enqueueNow(any(String.class), any(String.class));
+    verify(pollableTaskExceptionUtils).processException(eq(failure), any(ExceptionHolder.class));
+    verify(pollableTaskService).finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
+    assertScheduleCounter("failed", 1);
+  }
+
+  @Test
+  public void scheduleJobRecordsCleanupFailureAndPropagatesOriginalSubmissionFailure() {
+    RuntimeException failure = new RuntimeException("enqueue down");
+    RuntimeException cleanupFailure = new RuntimeException("finish down");
+    PollableTask pollableTask = pollableTask(42L);
+    QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo =
+        QuartzJobInfo.newBuilder(GenerateLocalizedAssetJob.class)
+            .withInput(new LocalizedAssetBody())
+            .build();
+    when(pollableTaskService.createPollableTask(
+            null, GenerateLocalizedAssetJob.class.getCanonicalName(), null, 0, 3600))
+        .thenReturn(pollableTask);
+    when(asyncJobQueueSubmissionService.enqueueNow(
+            eq(AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME), any(String.class)))
+        .thenThrow(failure);
+    doThrow(cleanupFailure)
+        .when(pollableTaskService)
+        .finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
+
+    assertThatThrownBy(() -> service.scheduleJob(quartzJobInfo)).isSameAs(failure);
+
+    verify(pollableTaskExceptionUtils).processException(eq(failure), any(ExceptionHolder.class));
+    assertScheduleCounter("failed", 1);
     assertThat(
             meterRegistry
-                .get("assetLocalizeAsyncJob.schedule")
+                .get("assetLocalizeAsyncJob.submission.finish.failed")
                 .tag("queueName", AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME)
-                .tag("result", "failed")
                 .counter()
                 .count())
         .isEqualTo(1);
@@ -122,5 +170,16 @@ public class AssetLocalizeAsyncJobSubmissionServiceTest {
     PollableTask pollableTask = new PollableTask();
     pollableTask.setId(id);
     return pollableTask;
+  }
+
+  private void assertScheduleCounter(String result, double expectedCount) {
+    assertThat(
+            meterRegistry
+                .get("assetLocalizeAsyncJob.schedule")
+                .tag("queueName", AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME)
+                .tag("result", result)
+                .counter()
+                .count())
+        .isEqualTo(expectedCount);
   }
 }
