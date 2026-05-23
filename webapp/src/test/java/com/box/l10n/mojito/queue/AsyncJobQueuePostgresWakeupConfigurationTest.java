@@ -10,6 +10,7 @@ import javax.sql.DataSource;
 import org.junit.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.context.LifecycleProcessor;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -112,5 +113,30 @@ public class AsyncJobQueuePostgresWakeupConfigurationTest {
     AsyncJobQueueCoordinator asyncJobQueueCoordinator() {
       return mock(AsyncJobQueueCoordinator.class);
     }
+
+    @Bean(name = "lifecycleProcessor")
+    LifecycleProcessor lifecycleProcessor() {
+      return new NoOpLifecycleProcessor();
+    }
+  }
+
+  static class NoOpLifecycleProcessor implements LifecycleProcessor {
+
+    @Override
+    public void start() {}
+
+    @Override
+    public void stop() {}
+
+    @Override
+    public boolean isRunning() {
+      return false;
+    }
+
+    @Override
+    public void onRefresh() {}
+
+    @Override
+    public void onClose() {}
   }
 }
