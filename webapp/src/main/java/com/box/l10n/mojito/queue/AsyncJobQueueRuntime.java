@@ -506,6 +506,7 @@ class AsyncJobQueueRuntime {
         recordTransitionFailure(failedTransition);
       } else {
         meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
+        notifyJobFailedPermanently(asyncJobRecord, e, errorMessage);
       }
       return;
     }
@@ -653,6 +654,8 @@ class AsyncJobQueueRuntime {
       recordTransitionFailure("attemptBudgetExhausted");
     } else {
       meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
+      notifyJobFailedPermanently(
+          asyncJobRecord, new IllegalStateException(errorMessage), errorMessage);
     }
   }
 
@@ -699,6 +702,7 @@ class AsyncJobQueueRuntime {
         recordTransitionFailure("heartbeatScheduleFailed");
       } else {
         meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
+        notifyJobFailedPermanently(asyncJobRecord, e, errorMessage);
       }
       return;
     }
@@ -748,6 +752,7 @@ class AsyncJobQueueRuntime {
           recordTransitionFailure("done");
         } else {
           meterRegistry.counter("asyncJobQueue.completed", "queueName", queueName).increment();
+          notifyJobDone(asyncJobRecord, asyncJobHandlerResult);
         }
       }
       case REQUEUE -> {
@@ -839,6 +844,8 @@ class AsyncJobQueueRuntime {
       recordTransitionFailure("requeueExhausted");
     } else {
       meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
+      notifyJobFailedPermanently(
+          asyncJobRecord, new IllegalStateException(errorMessage), errorMessage);
     }
   }
 
@@ -899,6 +906,7 @@ class AsyncJobQueueRuntime {
         recordTransitionFailure("failed");
       } else {
         meterRegistry.counter("asyncJobQueue.failed", "queueName", queueName).increment();
+        notifyJobFailedPermanently(asyncJobRecord, e, errorMessage);
       }
       return;
     }
@@ -953,6 +961,40 @@ class AsyncJobQueueRuntime {
     return requeued;
   }
 
+  private void notifyJobDone(
+      AsyncJobRecord asyncJobRecord, AsyncJobHandlerResult asyncJobHandlerResult) {
+    try {
+      asyncJobHandler.onJobDone(asyncJobRecord, asyncJobHandlerResult);
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
+      logger.warn(
+          "Async job handler done callback failed for queue {}, job {}",
+          queueName,
+          asyncJobRecord.id(),
+          e);
+      recordHandlerCompletionCallbackFailure("done");
+    }
+  }
+
+  private void notifyJobFailedPermanently(
+      AsyncJobRecord asyncJobRecord, Throwable failure, String lastError) {
+    try {
+      asyncJobHandler.onJobFailedPermanently(asyncJobRecord, failure, lastError);
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
+      logger.warn(
+          "Async job handler permanent-failure callback failed for queue {}, job {}",
+          queueName,
+          asyncJobRecord.id(),
+          e);
+      recordHandlerCompletionCallbackFailure("failed");
+    }
+  }
+
   long retryDelayMs(int attemptCount) {
     long delayMs = basePollDelayMs();
     long maxRetryDelayMs = maxRetryDelayMs();
@@ -986,6 +1028,13 @@ class AsyncJobQueueRuntime {
     meterRegistry
         .counter(
             "asyncJobQueue.transition.failed", "queueName", queueName, "transition", transition)
+        .increment();
+  }
+
+  private void recordHandlerCompletionCallbackFailure(String callback) {
+    meterRegistry
+        .counter(
+            "asyncJobQueue.handler.completion.failed", "queueName", queueName, "callback", callback)
         .increment();
   }
 

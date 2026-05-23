@@ -38,6 +38,8 @@ public class GenerateMultiLocalizedAssetJobTest {
 
   @Mock QuartzPollableTaskScheduler quartzPollableTaskSchedulerMock;
 
+  @Mock AssetLocalizeAsyncJobSubmissionService assetLocalizeAsyncJobSubmissionService;
+
   @Mock PollableFuture<LocalizedAssetBody> pollableFutureMock;
 
   @Mock PollableTask pollableTaskMock;
@@ -83,7 +85,11 @@ public class GenerateMultiLocalizedAssetJobTest {
     when(pollableTaskMock.getId()).thenReturn(1L).thenReturn(2L);
     when(quartzPollableTaskSchedulerMock.scheduleJob(isA(QuartzJobInfo.class)))
         .thenReturn(pollableFutureMock);
+    when(assetLocalizeAsyncJobSubmissionService.scheduleJob(isA(QuartzJobInfo.class)))
+        .thenReturn(pollableFutureMock);
     generateMultiLocalizedAssetJob.quartzPollableTaskScheduler = quartzPollableTaskSchedulerMock;
+    generateMultiLocalizedAssetJob.assetLocalizeAsyncJobSubmissionService =
+        assetLocalizeAsyncJobSubmissionService;
     generateMultiLocalizedAssetJob.meterRegistry = meterRegistry;
     multiLocalizedAssetBody = new MultiLocalizedAssetBody();
     List<LocaleInfo> localeInfos = new ArrayList<>();
@@ -124,5 +130,24 @@ public class GenerateMultiLocalizedAssetJobTest {
     List<QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody>> allValues =
         quartzJobInfoCaptor.getAllValues();
     assertThat(allValues.stream().map(QuartzJobInfo::getScheduler)).containsOnly("assetlocalize");
+  }
+
+  @Test
+  public void testDurableAsyncQueueFlagRoutesChildJobsToAssetLocalizeQueue() throws Exception {
+    generateMultiLocalizedAssetJob.asyncJobQueueEnabled = true;
+    generateMultiLocalizedAssetJob.asyncJobQueueAssetLocalizeEnabled = true;
+
+    MultiLocalizedAssetBody output = generateMultiLocalizedAssetJob.call(multiLocalizedAssetBody);
+
+    verify(assetLocalizeAsyncJobSubmissionService, times(2))
+        .scheduleJob(quartzJobInfoCaptor.capture());
+    verify(quartzPollableTaskSchedulerMock, times(0)).scheduleJob(isA(QuartzJobInfo.class));
+    List<QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody>> allValues =
+        quartzJobInfoCaptor.getAllValues();
+    assertThat(allValues.stream().map(QuartzJobInfo::getScheduler))
+        .containsOnly(multiLocalizedAssetBody.getSchedulerName());
+    assertThat(output.getGenerateLocalizedAssetJobIds().size()).isEqualTo(2);
+    assertThat(output.getGenerateLocalizedAssetJobIds().get("fr-FR")).isEqualTo(1L);
+    assertThat(output.getGenerateLocalizedAssetJobIds().get("ga-IE")).isEqualTo(2L);
   }
 }

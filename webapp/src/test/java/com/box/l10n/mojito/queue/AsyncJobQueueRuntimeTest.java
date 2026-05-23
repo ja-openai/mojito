@@ -565,6 +565,53 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void attemptBudgetExhaustionCallsPermanentFailureCallbackAfterMarkFailed()
+      throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    CountDownLatch callbackInvoked = new CountDownLatch(1);
+    AtomicInteger handlerInvocations = new AtomicInteger();
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob(2, true)));
+    when(asyncJobStore.markFailed(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any(), anyString()))
+        .thenReturn(true);
+
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                handlerInvocations.incrementAndGet();
+                return AsyncJobHandlerResult.done();
+              }
+
+              @Override
+              public void onJobFailedPermanently(
+                  AsyncJobRecord asyncJobRecord, Throwable failure, String lastError) {
+                assertThat(failure).hasMessageContaining("Attempt budget exhausted");
+                assertThat(lastError).contains("Attempt budget exhausted");
+                callbackInvoked.countDown();
+              }
+            },
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(callbackInvoked.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(handlerInvocations.get()).isZero();
+  }
+
+  @Test
   public void attemptBudgetExhaustionRecordsNonFatalMarkFailedTransitionWithoutHandlerFailure()
       throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
@@ -715,6 +762,190 @@ public class AsyncJobQueueRuntimeTest {
             any(Duration.class),
             any(),
             anyString());
+  }
+
+  @Test
+  public void doneCompletionCallbackRunsOnlyAfterDoneTransitionSucceeds() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    CountDownLatch callbackInvoked = new CountDownLatch(1);
+    AtomicInteger ordering = new AtomicInteger();
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenAnswer(
+            invocation -> {
+              assertThat(ordering.getAndIncrement()).isEqualTo(1);
+              return true;
+            });
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                assertThat(ordering.getAndIncrement()).isZero();
+                return AsyncJobHandlerResult.done("{\"done\":true}");
+              }
+
+              @Override
+              public void onJobDone(
+                  AsyncJobRecord asyncJobRecord, AsyncJobHandlerResult asyncJobHandlerResult) {
+                assertThat(ordering.getAndIncrement()).isEqualTo(2);
+                assertThat(asyncJobRecord).isSameAs(claimedJob);
+                assertThat(asyncJobHandlerResult.jobData()).isEqualTo("{\"done\":true}");
+                callbackInvoked.countDown();
+              }
+            },
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(callbackInvoked.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(ordering.get()).isEqualTo(3);
+  }
+
+  @Test
+  public void doneCompletionCallbackIsNotCalledWhenDoneTransitionIsFenced() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AtomicInteger callbacks = new AtomicInteger();
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob(1)));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenReturn(false);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                return AsyncJobHandlerResult.done();
+              }
+
+              @Override
+              public void onJobDone(
+                  AsyncJobRecord asyncJobRecord, AsyncJobHandlerResult asyncJobHandlerResult) {
+                callbacks.incrementAndGet();
+              }
+            },
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForTransitionFailure("done", 1);
+    assertThat(callbacks.get()).isZero();
+  }
+
+  @Test
+  public void permanentFailureCallbackRunsOnlyAfterFailedTransitionSucceeds() throws Exception {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(2);
+    RuntimeException handlerFailure = new RuntimeException("boom");
+    CountDownLatch callbackInvoked = new CountDownLatch(1);
+    AtomicInteger ordering = new AtomicInteger();
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+    when(asyncJobStore.markFailed(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any(), anyString()))
+        .thenAnswer(
+            invocation -> {
+              assertThat(ordering.getAndIncrement()).isEqualTo(1);
+              return true;
+            });
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(2);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings,
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                assertThat(ordering.getAndIncrement()).isZero();
+                throw handlerFailure;
+              }
+
+              @Override
+              public void onJobFailedPermanently(
+                  AsyncJobRecord asyncJobRecord, Throwable failure, String lastError) {
+                assertThat(ordering.getAndIncrement()).isEqualTo(2);
+                assertThat(asyncJobRecord).isSameAs(claimedJob);
+                assertThat(failure).isSameAs(handlerFailure);
+                assertThat(lastError).contains("boom");
+                callbackInvoked.countDown();
+              }
+            },
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(callbackInvoked.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(ordering.get()).isEqualTo(3);
+  }
+
+  @Test
+  public void permanentFailureCallbackIsNotCalledOnRetryableFailure() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AtomicInteger callbacks = new AtomicInteger();
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettingsWithoutRetryJitter(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(2);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                throw new RuntimeException("retry me");
+              }
+
+              @Override
+              public void onJobFailedPermanently(
+                  AsyncJobRecord asyncJobRecord, Throwable failure, String lastError) {
+                callbacks.incrementAndGet();
+              }
+            },
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.QUEUED, 1);
+    assertThat(callbacks.get()).isZero();
   }
 
   @Test

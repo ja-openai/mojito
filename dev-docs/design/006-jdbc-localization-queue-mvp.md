@@ -63,9 +63,13 @@ Execution Flow (MVP)
 3. Queue worker claims jobs for `queue_name=assetlocalize`.
 4. Worker loads input from existing pollable blob storage.
 5. Worker executes localization logic.
-6. Worker saves pollable output blob and calls `finishTask(...)`.
-7. Worker marks queue row `done`.
-8. On failure: retry until the per-queue attempt budget is exhausted; then mark the queue row `failed` with `last_error` for operator triage.
+6. Worker saves pollable output blob.
+7. Runtime marks queue row `done`.
+8. Runtime invokes the handler post-terminal callback to call `finishTask(...)` only after the
+   queue row is terminal.
+9. On failure: retry until the per-queue attempt budget is exhausted; then mark the queue row
+   `failed` with `last_error` for operator triage and run the same post-terminal callback to
+   finish the pollable task with the captured exception.
 
 Transaction Boundaries (Critical)
 - TX A (enqueue): insert queue row.
@@ -73,6 +77,9 @@ Transaction Boundaries (Critical)
 - No DB transaction during heavy work (`generateLocalized`).
 - TX C (heartbeat): extend `lease_until` while running.
 - TX D (finalize): mark `done` OR `queued` with future `available_at`.
+- TX E (pollable finalize): after TX D successfully marks a row terminal, finish the child
+  `pollable_task` and emit `asyncJobQueue.handler.completion.failed` if that post-terminal
+  callback fails.
 - Heartbeat/finalize/requeue updates must match `(id, worker_id, lease_token)` for fencing.
 
 Spring Guardrails Against Transaction Leakage
@@ -115,6 +122,7 @@ Polling / Multi-Queue Design
 
 Queue Runtime Config (example)
 - `l10n.org.async-job-queue.enabled=true`
+- `l10n.org.async-job-queue.asset-localize.enabled=true`
 - `l10n.org.async-job-queue.store=jdbc`
 - `l10n.org.async-job-queue.jdbc-dialect=mysql` (`postgresql` supported for the hot-path SQL seam)
 - `l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=250`
