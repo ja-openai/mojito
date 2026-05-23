@@ -70,18 +70,55 @@ public class AsyncJobQueueRetentionCleanerTest {
 
     retentionCleaner.cleanupTerminalJobs();
 
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.retention.failed")
-                .tag("queueName", "assetlocalize")
-                .tag("status", "done")
-                .counter()
-                .count())
-        .isEqualTo(1);
+    assertFailedCounter("assetlocalize", AsyncJobStatus.DONE, 1);
     assertDeletedCounter("assetlocalize", AsyncJobStatus.FAILED, 2);
     verify(asyncJobStore)
         .deleteTerminalJobs(
             eq("assetlocalize"), eq(AsyncJobStatus.FAILED), any(Instant.class), eq(100));
+  }
+
+  @Test
+  public void cleanupTerminalJobsRecordsFailureWhenClockFailsAndContinuesAcrossStatuses() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+
+    AsyncJobQueueRetentionCleaner retentionCleaner =
+        new AsyncJobQueueRetentionCleaner(
+            asyncJobStore,
+            queueProperties("assetlocalize"),
+            List.of(),
+            meterRegistry,
+            () -> {
+              throw new IllegalStateException("clock unavailable");
+            });
+
+    retentionCleaner.cleanupTerminalJobs();
+
+    assertFailedCounter("assetlocalize", AsyncJobStatus.DONE, 1);
+    assertFailedCounter("assetlocalize", AsyncJobStatus.FAILED, 1);
+  }
+
+  @Test
+  public void cleanupTerminalJobsRecordsNonFatalStoreErrorAndContinuesAcrossStatuses() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.DONE), any(Instant.class), eq(100)))
+        .thenThrow(new AssertionError("store invariant"));
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.FAILED), any(Instant.class), eq(100)))
+        .thenReturn(2);
+
+    AsyncJobQueueRetentionCleaner retentionCleaner =
+        new AsyncJobQueueRetentionCleaner(
+            asyncJobStore,
+            queueProperties("assetlocalize"),
+            List.of(),
+            meterRegistry,
+            () -> CLEANUP_NOW);
+
+    retentionCleaner.cleanupTerminalJobs();
+
+    assertFailedCounter("assetlocalize", AsyncJobStatus.DONE, 1);
+    assertDeletedCounter("assetlocalize", AsyncJobStatus.FAILED, 2);
   }
 
   @Test
@@ -107,14 +144,7 @@ public class AsyncJobQueueRetentionCleanerTest {
 
     retentionCleaner.cleanupTerminalJobs();
 
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.retention.failed")
-                .tag("queueName", "broken")
-                .tag("status", "done")
-                .counter()
-                .count())
-        .isEqualTo(1);
+    assertFailedCounter("broken", AsyncJobStatus.DONE, 1);
     assertDeletedCounter("assetlocalize", AsyncJobStatus.DONE, 3);
     assertDeletedCounter("assetlocalize", AsyncJobStatus.FAILED, 4);
     verify(asyncJobStore)
@@ -214,6 +244,17 @@ public class AsyncJobQueueRetentionCleanerTest {
     assertThat(
             meterRegistry
                 .get("asyncJobQueue.retention.deleted")
+                .tag("queueName", queueName)
+                .tag("status", status.getDatabaseValue())
+                .counter()
+                .count())
+        .isEqualTo(expectedCount);
+  }
+
+  private void assertFailedCounter(String queueName, AsyncJobStatus status, double expectedCount) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.retention.failed")
                 .tag("queueName", queueName)
                 .tag("status", status.getDatabaseValue())
                 .counter()

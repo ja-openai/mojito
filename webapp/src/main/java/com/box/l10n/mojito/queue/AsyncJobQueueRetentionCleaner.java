@@ -78,8 +78,9 @@ public class AsyncJobQueueRetentionCleaner {
 
   private void cleanupTerminalJobs(
       String queueName, AsyncJobStatus status, long retentionMs, int batchSize) {
-    Instant updatedBefore = nowSupplier.get().minus(Duration.ofMillis(retentionMs));
+    Instant updatedBefore = null;
     try {
+      updatedBefore = nowSupplier.get().minus(Duration.ofMillis(retentionMs));
       int deletedCount =
           asyncJobStore.deleteTerminalJobs(queueName, status, updatedBefore, batchSize);
       if (deletedCount > 0) {
@@ -98,7 +99,10 @@ public class AsyncJobQueueRetentionCleaner {
                 status.getDatabaseValue())
             .increment(deletedCount);
       }
-    } catch (RuntimeException e) {
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
       logger.warn(
           "Failed to delete async job queue {} rows for queue {} older than {}",
           status.getDatabaseValue(),
@@ -123,5 +127,10 @@ public class AsyncJobQueueRetentionCleaner {
         .map(AsyncJobQueueValidation::validateQueueName)
         .forEach(queueNames::add);
     return queueNames;
+  }
+
+  private boolean isJvmFatal(Throwable throwable) {
+    return throwable instanceof VirtualMachineError
+        || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
   }
 }
