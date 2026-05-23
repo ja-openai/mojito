@@ -249,6 +249,57 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void queueWaitLatencySkipsLeaseExpiredReclaims() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    Instant reclaimedAt = Instant.EPOCH.plusSeconds(600);
+    AsyncJobRecord reclaimedJob =
+        new AsyncJobRecord(
+            new AsyncJobId("1"),
+            "assetlocalize",
+            AsyncJobStatus.RUNNING,
+            Instant.EPOCH,
+            reclaimedAt.plusSeconds(30),
+            "worker-a",
+            "lease-token",
+            "{\"id\":1}",
+            2,
+            null,
+            Instant.EPOCH,
+            reclaimedAt,
+            true);
+    when(asyncJobStore.claimNextJobs(
+            anyString(), anyInt(), anyString(), any(java.time.Duration.class)))
+        .thenReturn(List.of(reclaimedJob));
+    when(asyncJobStore.markDone(
+            anyString(), any(AsyncJobId.class), anyString(), anyString(), any()))
+        .thenReturn(true);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.queueWait.latency")
+                .tag("queueName", "assetlocalize")
+                .timer())
+        .isNull();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.leaseExpiredReclaimed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void invalidClaimedJobsFailPollBeforeHandlerExecution() throws Exception {
     AtomicInteger handlerInvocations = new AtomicInteger();
 

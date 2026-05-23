@@ -1078,6 +1078,9 @@ class AsyncJobQueueRuntime {
 
   private void recordQueueWaitLatency(List<AsyncJobRecord> claimedJobs) {
     for (AsyncJobRecord claimedJob : claimedJobs) {
+      if (claimedJob.leaseReclaimed()) {
+        continue;
+      }
       if (claimedJob.availableAt() == null || claimedJob.updatedDate() == null) {
         continue;
       }
