@@ -51,7 +51,7 @@ public class AssetLocalizeAsyncJobRepairService {
             .orElseThrow(
                 () -> {
                   recordRepair("unknown", "jobNotFound");
-                  return new IllegalArgumentException(
+                  return new AssetLocalizeAsyncJobNotFoundException(
                       "Asset localize async job not found: " + asyncJobId.value());
                 });
     return repairTerminalPollableTask(asyncJobRecord);
@@ -87,7 +87,8 @@ public class AssetLocalizeAsyncJobRepairService {
     PollableTask pollableTask = pollableTaskService.getPollableTask(payload.pollableTaskId());
     if (pollableTask == null) {
       recordRepair(asyncJobRecord.status(), "pollableTaskNotFound");
-      throw new IllegalStateException("PollableTask not found: " + payload.pollableTaskId());
+      throw new AssetLocalizePollableTaskNotFoundException(
+          "PollableTask not found: " + payload.pollableTaskId());
     }
     if (pollableTask.getFinishedDate() != null) {
       recordRepair(asyncJobRecord.status(), "alreadyFinished");
@@ -146,4 +147,16 @@ public class AssetLocalizeAsyncJobRepairService {
 
   public record RepairResult(
       String asyncJobId, Long pollableTaskId, String status, String result) {}
+
+  public static class AssetLocalizeAsyncJobNotFoundException extends RuntimeException {
+    public AssetLocalizeAsyncJobNotFoundException(String message) {
+      super(message);
+    }
+  }
+
+  public static class AssetLocalizePollableTaskNotFoundException extends RuntimeException {
+    public AssetLocalizePollableTaskNotFoundException(String message) {
+      super(message);
+    }
+  }
 }

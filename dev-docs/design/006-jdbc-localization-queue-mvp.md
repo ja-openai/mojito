@@ -90,6 +90,9 @@ Pollable Finalization Repair
 - For `failed` rows it finishes the child `pollable_task` with an `ExceptionHolder` synthesized from
   the persisted `last_error`, preserving operator-visible task failure without replaying work.
 - Repair emits `assetLocalizeAsyncJob.repair{queueName,status,result}` with bounded tags.
+- The admin-only endpoint
+  `POST /api/admin/async-job-queue/assetlocalize/jobs/{asyncJobId}/pollable-task/repair` exposes
+  the same bounded result without returning job payload.
 
 Spring Guardrails Against Transaction Leakage
 - Orchestrator method uses `@Transactional(propagation = NOT_SUPPORTED)`.
@@ -346,8 +349,10 @@ Operator Controls
 - Optional scheduled retention wraps the store primitive when
   `l10n.org.async-job-queue.retention.enabled=true`, deleting at most `batch-size` done rows and
   `batch-size` failed rows per queue per run.
-- A REST/admin surface can wrap the inspection service later after an explicit authorization,
-  payload-redaction, and replay-audit review.
+- A broader REST/admin surface can wrap the inspection service later after an explicit
+  authorization, payload-redaction, and replay-audit review. The narrow assetlocalize pollable
+  repair endpoint is exposed first because it returns only ids/status/result and does not replay
+  work or expose payload.
 
 Rollout Plan
 1. Implement queue infra + assetlocalize-only integration behind feature flag.

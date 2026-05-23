@@ -17,6 +17,8 @@ import com.box.l10n.mojito.queue.AsyncJobStatus;
 import com.box.l10n.mojito.queue.AsyncJobStore;
 import com.box.l10n.mojito.service.pollableTask.ExceptionHolder;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobNotFoundException;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskNotFoundException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -123,7 +125,7 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
     when(asyncJobStore.getByIds(List.of(new AsyncJobId("1")))).thenReturn(List.of());
 
     assertThatThrownBy(() -> repairService.repairTerminalPollableTask("1"))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(AssetLocalizeAsyncJobNotFoundException.class)
         .hasMessageContaining("not found");
     assertRepairCounter("unknown", "jobNotFound", 1);
   }
@@ -136,7 +138,7 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
             () ->
                 repairService.repairTerminalPollableTask(
                     asyncJobRecord(AsyncJobStatus.FAILED, "1", "handler failed")))
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(AssetLocalizePollableTaskNotFoundException.class)
         .hasMessageContaining("PollableTask not found");
     assertRepairCounter("failed", "pollableTaskNotFound", 1);
   }

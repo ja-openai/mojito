@@ -222,6 +222,8 @@ public class WebSecurityConfig {
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/admin/temporary-bulk-translation-accept/**")
                 .hasRole("ADMIN")
+                .requestMatchers("/api/admin/async-job-queue/**")
+                .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/mcp")
                 .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/mcp")
