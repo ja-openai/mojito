@@ -520,7 +520,18 @@ class AsyncJobQueueRuntime {
       }
     } finally {
       if (heartbeatFuture != null) {
-        heartbeatFuture.cancel(false);
+        try {
+          heartbeatFuture.cancel(false);
+        } catch (RuntimeException e) {
+          logger.warn(
+              "Failed to cancel async queue heartbeat for queue {}, job {}",
+              queueName,
+              asyncJobRecord.id(),
+              e);
+          meterRegistry
+              .counter("asyncJobQueue.heartbeat.cancel.failed", "queueName", queueName)
+              .increment();
+        }
       }
       inFlightCount.decrementAndGet();
       meterRegistry

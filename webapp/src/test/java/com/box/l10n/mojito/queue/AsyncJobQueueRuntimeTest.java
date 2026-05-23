@@ -1295,6 +1295,43 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void heartbeatCancelFailureStillReleasesCapacityAndRecordsLatency() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
+        .thenAnswer(invocation -> new ThrowingCancelScheduledFuture());
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 200, 25),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.heartbeat.cancel.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.processing.latency")
+                .tag("queueName", "assetlocalize")
+                .timer()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void heartbeatScheduleFailureRequeuesWithoutProcessing() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
