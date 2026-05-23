@@ -127,6 +127,20 @@ public class AsyncJobStoreContractTest {
   }
 
   @Test
+  public void emptyBacklogStatusReportsNoOldestTimestamps() {
+    AsyncJobReadyStatus readyStatus = asyncJobStore.readyStatus("assetlocalize");
+    AsyncJobExpiredLeaseStatus expiredLeaseStatus =
+        asyncJobStore.expiredLeaseStatus("assetlocalize");
+
+    assertThat(readyStatus.count()).isZero();
+    assertThat(readyStatus.oldestAvailableAt()).isNull();
+    assertThat(readyStatus.observedAt()).isNotNull();
+    assertThat(expiredLeaseStatus.count()).isZero();
+    assertThat(expiredLeaseStatus.oldestLeaseUntil()).isNull();
+    assertThat(expiredLeaseStatus.observedAt()).isNotNull();
+  }
+
+  @Test
   public void requeuePersistsErrorAndCompletionClearsIt() throws Exception {
     AsyncJobId id =
         asyncJobStore.enqueue("assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
