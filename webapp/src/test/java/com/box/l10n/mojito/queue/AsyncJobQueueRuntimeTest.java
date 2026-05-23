@@ -2749,7 +2749,9 @@ public class AsyncJobQueueRuntimeTest {
     AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
     assertThat(failedJob.lastError()).contains("java.lang.RuntimeException: handler wrapper");
     assertThat(failedJob.lastError()).contains("java.sql.SQLException: batch wrapper");
-    assertThat(failedJob.lastError()).contains("java.sql.SQLException: mysql deadlock");
+    assertThat(failedJob.lastError()).contains("SQLState=99999");
+    assertThat(failedJob.lastError())
+        .contains("java.sql.SQLException: mysql deadlock [SQLState=40001, errorCode=1213]");
     assertThat(failedJob.lastError()).hasSizeLessThanOrEqualTo(4_000);
   }
 

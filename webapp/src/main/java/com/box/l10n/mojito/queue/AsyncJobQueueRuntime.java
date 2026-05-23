@@ -1268,6 +1268,29 @@ class AsyncJobQueueRuntime {
     if (throwable.getMessage() != null && !throwable.getMessage().isBlank()) {
       message.append(": ").append(throwable.getMessage());
     }
+    if (throwable instanceof SQLException sqlException) {
+      appendSqlExceptionSummary(message, sqlException);
+    }
+  }
+
+  private void appendSqlExceptionSummary(StringBuilder message, SQLException sqlException) {
+    String sqlState = sqlException.getSQLState();
+    int errorCode = sqlException.getErrorCode();
+    if ((sqlState == null || sqlState.isBlank()) && errorCode == 0) {
+      return;
+    }
+    message.append(" [");
+    boolean hasSqlState = sqlState != null && !sqlState.isBlank();
+    if (hasSqlState) {
+      message.append("SQLState=").append(sqlState);
+    }
+    if (errorCode != 0) {
+      if (hasSqlState) {
+        message.append(", ");
+      }
+      message.append("errorCode=").append(errorCode);
+    }
+    message.append("]");
   }
 
   private ScheduledFuture<?> scheduleHeartbeat(AsyncJobRecord asyncJobRecord) {

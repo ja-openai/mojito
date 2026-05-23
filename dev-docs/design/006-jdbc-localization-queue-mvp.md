@@ -132,6 +132,8 @@ Failure + Restart Semantics
     saturate at that cap, so corrupt/manual rows cannot overflow the claim increment while still
     allowing repeated reclaim attempts to terminal-fail an expired lease at the maximum configured
     budget
+  - persisted `last_error` is bounded and includes cause, suppressed, and JDBC chained exception
+    summaries; SQL exceptions include SQLState/vendor error code details for operator triage
   - operator replay can move a `failed` row back to `queued`, reset `attempt_count=0`, preserve
     `last_error` for inspection, and optionally replace `job_data`
   - on terminal completion, set `status=done`, clear `last_error`, and finalize pollable metadata
