@@ -13,6 +13,7 @@ import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -103,14 +104,35 @@ public class GenerateMultiLocalizedAssetJob
 
   PollableFuture<LocalizedAssetBody> scheduleLocalizedAssetJob(
       QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo) {
-    if (asyncJobQueueEnabled && asyncJobQueueAssetLocalizeEnabled) {
-      if (assetLocalizeAsyncJobSubmissionService == null) {
-        throw new IllegalStateException(
-            "Asset localize async queue is enabled but the submission service is unavailable");
+    String route = isAssetLocalizeAsyncQueueEnabled() ? "assetlocalize" : "quartz";
+    try {
+      PollableFuture<LocalizedAssetBody> pollableFuture;
+      if (isAssetLocalizeAsyncQueueEnabled()) {
+        if (assetLocalizeAsyncJobSubmissionService == null) {
+          throw new IllegalStateException(
+              "Asset localize async queue is enabled but the submission service is unavailable");
+        }
+        pollableFuture = assetLocalizeAsyncJobSubmissionService.scheduleJob(quartzJobInfo);
+      } else {
+        pollableFuture = quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
       }
-      return assetLocalizeAsyncJobSubmissionService.scheduleJob(quartzJobInfo);
+      recordLocalizedAssetSchedule(route, "succeeded");
+      return pollableFuture;
+    } catch (RuntimeException e) {
+      recordLocalizedAssetSchedule(route, "failed");
+      throw e;
     }
-    return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+  }
+
+  private boolean isAssetLocalizeAsyncQueueEnabled() {
+    return asyncJobQueueEnabled && asyncJobQueueAssetLocalizeEnabled;
+  }
+
+  private void recordLocalizedAssetSchedule(String route, String result) {
+    meterRegistry
+        .counter(
+            "GenerateMultiLocalizedAssetJob.schedule", Tags.of("route", route, "result", result))
+        .increment();
   }
 
   private LocalizedAssetBody createLocalizedAssetBody(

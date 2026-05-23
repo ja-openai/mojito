@@ -295,6 +295,8 @@ Monitoring (MVP Required)
   - local executor submit failures and handler-requested requeue budget exhaustion
   - heartbeat renewal false-return, exception, and schedule failures
   - terminal-row retention deletions and cleanup failures by queue/status
+  - `GenerateMultiLocalizedAssetJob.schedule` by `route,result` to validate child fan-out canaries
+    across Quartz and durable queue routes
   - `assetWS.getLocalizedAssetForContentAsync.schedule` by `route,result` to validate
     single-locale canaries without relying on queue-table side effects
   - `asyncJobQueue.leaseExpiredReclaimed` is emitted from claim results marked by the store when a

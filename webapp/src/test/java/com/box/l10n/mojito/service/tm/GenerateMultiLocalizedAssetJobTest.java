@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.tm;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
@@ -120,6 +121,7 @@ public class GenerateMultiLocalizedAssetJobTest {
     assertThat(output.getGenerateLocalizedAssetJobIds().size()).isEqualTo(2);
     assertThat(output.getGenerateLocalizedAssetJobIds().get("fr-FR")).isEqualTo(1L);
     assertThat(output.getGenerateLocalizedAssetJobIds().get("ga-IE")).isEqualTo(2L);
+    assertThat(scheduleCount("quartz", "succeeded")).isEqualTo(2);
   }
 
   @Test
@@ -149,5 +151,27 @@ public class GenerateMultiLocalizedAssetJobTest {
     assertThat(output.getGenerateLocalizedAssetJobIds().size()).isEqualTo(2);
     assertThat(output.getGenerateLocalizedAssetJobIds().get("fr-FR")).isEqualTo(1L);
     assertThat(output.getGenerateLocalizedAssetJobIds().get("ga-IE")).isEqualTo(2L);
+    assertThat(scheduleCount("assetlocalize", "succeeded")).isEqualTo(2);
+  }
+
+  @Test
+  public void testDurableAsyncQueueEnabledFailsFastWhenSubmissionServiceUnavailable() {
+    generateMultiLocalizedAssetJob.asyncJobQueueEnabled = true;
+    generateMultiLocalizedAssetJob.asyncJobQueueAssetLocalizeEnabled = true;
+    generateMultiLocalizedAssetJob.assetLocalizeAsyncJobSubmissionService = null;
+
+    assertThatThrownBy(() -> generateMultiLocalizedAssetJob.call(multiLocalizedAssetBody))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("submission service is unavailable");
+    assertThat(scheduleCount("assetlocalize", "failed")).isEqualTo(1);
+  }
+
+  private double scheduleCount(String route, String result) {
+    return meterRegistry
+        .get("GenerateMultiLocalizedAssetJob.schedule")
+        .tag("route", route)
+        .tag("result", result)
+        .counter()
+        .count();
   }
 }
