@@ -77,6 +77,26 @@ public class AsyncJobQueueSubmissionServiceTest {
   }
 
   @Test
+  public void enqueueRejectsOutOfRangeAvailableAtBeforeStoreOrWakeup() {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueSubmissionService service = submissionService(store, coordinator);
+
+    assertThatThrownBy(
+            () ->
+                service.enqueue(
+                    "assetlocalize",
+                    "{\"id\":1}",
+                    AsyncJobQueueValidation.DATABASE_TIMESTAMP_MAX.plusNanos(1)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("availableAt must be between");
+
+    verify(store, never()).enqueue(anyString(), anyString(), any(Instant.class));
+    verify(coordinator, never()).triggerPollNow("assetlocalize");
+    assertEnqueueCounter("failed", 1);
+  }
+
+  @Test
   public void enqueueRecordsWakeupFailureWithoutFailingSubmission() {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);

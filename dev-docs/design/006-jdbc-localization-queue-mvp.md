@@ -271,6 +271,8 @@ Test Coverage
   `jobData` or `jobDataPreview`, making payload-redaction regressions visible at test time.
 - Coordinator tests assert duplicate handler beans for one queue fail startup before any runtime is
   scheduled, preserving the one local poller/executor per logical queue contract.
+- Submission service tests assert out-of-range `availableAt` values are rejected before store
+  enqueue or worker wakeup, preserving the portable timestamp bounds at the production API edge.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.
