@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobDetails;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobNotFoundException;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobReadyStatusSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobSummary;
 import java.time.Instant;
@@ -45,6 +46,29 @@ public class AsyncJobQueueAdminWSTest {
         .thenThrow(new IllegalArgumentException("bad queue"));
 
     assertThatThrownBy(() -> ws.countJobsByStatus("bad queue"))
+        .isInstanceOf(ResponseStatusException.class)
+        .satisfies(
+            exception ->
+                assertThat(((ResponseStatusException) exception).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST));
+  }
+
+  @Test
+  public void readyStatusReturnsServiceResult() {
+    Instant now = Instant.now();
+    AsyncJobReadyStatusSummary readyStatus =
+        new AsyncJobReadyStatusSummary("assetlocalize", 2, now.minusSeconds(3), now, 3000);
+    when(inspectionService.readyStatus("assetlocalize")).thenReturn(readyStatus);
+
+    assertThat(ws.readyStatus("assetlocalize")).isEqualTo(readyStatus);
+  }
+
+  @Test
+  public void mapsInvalidReadyStatusInputToBadRequest() {
+    when(inspectionService.readyStatus("bad queue"))
+        .thenThrow(new IllegalArgumentException("bad queue"));
+
+    assertThatThrownBy(() -> ws.readyStatus("bad queue"))
         .isInstanceOf(ResponseStatusException.class)
         .satisfies(
             exception ->

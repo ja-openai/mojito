@@ -3,6 +3,7 @@ package com.box.l10n.mojito.rest.admin;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobDetails;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobNotFoundException;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobReadyStatusSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobSummary;
 import java.time.Instant;
@@ -32,6 +33,15 @@ public class AsyncJobQueueAdminWS {
   public List<AsyncJobStatusCountSummary> countJobsByStatus(@PathVariable String queueName) {
     try {
       return inspectionService.countJobsByStatus(queueName);
+    } catch (IllegalArgumentException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+    }
+  }
+
+  @GetMapping("/{queueName}/ready-status")
+  public AsyncJobReadyStatusSummary readyStatus(@PathVariable String queueName) {
+    try {
+      return inspectionService.readyStatus(queueName);
     } catch (IllegalArgumentException exception) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
     }

@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.queue;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumMap;
 import java.util.List;
@@ -98,6 +99,28 @@ public class AsyncJobQueueInspectionService {
       incrementCountCounter(validatedQueueName, "failed");
       logger.warn(
           "Failed to count async jobs by status for queue {}", validatedQueueName, exception);
+      throw unchecked(exception);
+    }
+  }
+
+  public AsyncJobReadyStatusSummary readyStatus(String queueName) {
+    String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
+    try {
+      AsyncJobReadyStatus readyStatus = asyncJobStore.readyStatus(validatedQueueName);
+      incrementReadyStatusCounter(validatedQueueName, "succeeded");
+      return new AsyncJobReadyStatusSummary(
+          validatedQueueName,
+          readyStatus.count(),
+          readyStatus.oldestAvailableAt(),
+          readyStatus.observedAt(),
+          readyOldestAgeMs(readyStatus));
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
+      incrementReadyStatusCounter(validatedQueueName, "failed");
+      logger.warn(
+          "Failed to inspect async ready status for queue {}", validatedQueueName, exception);
       throw unchecked(exception);
     }
   }
@@ -322,6 +345,20 @@ public class AsyncJobQueueInspectionService {
         .increment();
   }
 
+  private void incrementReadyStatusCounter(String queueName, String result) {
+    meterRegistry
+        .counter("asyncJobQueue.inspection.readyStatus", "queueName", queueName, "result", result)
+        .increment();
+  }
+
+  private long readyOldestAgeMs(AsyncJobReadyStatus readyStatus) {
+    if (readyStatus.count() == 0) {
+      return 0L;
+    }
+    return Math.max(
+        0L, Duration.between(readyStatus.oldestAvailableAt(), readyStatus.observedAt()).toMillis());
+  }
+
   private Map<AsyncJobStatus, Long> zeroCountsByStatus() {
     Map<AsyncJobStatus, Long> countsByStatus = new EnumMap<>(AsyncJobStatus.class);
     for (AsyncJobStatus status : AsyncJobStatus.values()) {
@@ -373,6 +410,13 @@ public class AsyncJobQueueInspectionService {
       Instant updatedDate) {}
 
   public record AsyncJobStatusCountSummary(String status, long count) {}
+
+  public record AsyncJobReadyStatusSummary(
+      String queueName,
+      long count,
+      Instant oldestAvailableAt,
+      Instant observedAt,
+      long oldestAgeMs) {}
 
   public static class AsyncJobNotFoundException extends RuntimeException {
     public AsyncJobNotFoundException(String message) {

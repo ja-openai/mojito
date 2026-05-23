@@ -341,12 +341,18 @@ Monitoring (MVP Required)
     the payload itself
   - `asyncJobQueue.inspection.count` by `queueName,result` for read-only admin status-count
     lookups
+  - `asyncJobQueue.inspection.readyStatus` by `queueName,result` for read-only ready backlog
+    lookups
 
 Operator Controls
 - Store-level inspection supports listing recent jobs by `queue_name` and `status`.
 - Read-only admin status counts are exposed via
   `GET /api/admin/async-job-queue/queues/{queueName}/status-counts`; the response contains only
   stable status/count pairs and never job payload.
+- Read-only ready backlog is exposed via
+  `GET /api/admin/async-job-queue/queues/{queueName}/ready-status`; the response contains
+  queueName, ready count, oldest ready availability, observation time, and oldest ready age, never
+  job payload.
 - Read-only admin job summaries are exposed via
   `GET /api/admin/async-job-queue/queues/{queueName}/jobs?status=failed&limit=100`; the response
   intentionally omits `job_data` and `jobDataPreview`, returning only metadata, last error, and

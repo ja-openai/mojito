@@ -108,6 +108,42 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void readyStatusReturnsReadyBacklogWithoutPayloads() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    store.enqueue("assetlocalize", "{\"step\":\"ready\"}", Instant.now().minusSeconds(3));
+    store.enqueue("assetlocalize", "{\"step\":\"delayed\"}", Instant.now().plusSeconds(60));
+    AsyncJobQueueInspectionService service = inspectionService(store);
+
+    AsyncJobQueueInspectionService.AsyncJobReadyStatusSummary readyStatus =
+        service.readyStatus("assetlocalize");
+
+    assertThat(readyStatus.queueName()).isEqualTo("assetlocalize");
+    assertThat(readyStatus.count()).isEqualTo(1);
+    assertThat(readyStatus.oldestAvailableAt()).isBeforeOrEqualTo(readyStatus.observedAt());
+    assertThat(readyStatus.oldestAgeMs()).isGreaterThanOrEqualTo(0);
+    assertReadyStatusCounter("succeeded", 1);
+  }
+
+  @Test
+  public void readyStatusRecordsStoreFailures() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public AsyncJobReadyStatus readyStatus(String queueName) {
+                throw new IllegalStateException("database unavailable");
+              }
+            },
+            noOpCoordinator(),
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.readyStatus("assetlocalize"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("database unavailable");
+    assertReadyStatusCounter("failed", 1);
+  }
+
+  @Test
   public void findJobsRecordsInvalidInputAndStoreFailures() {
     AsyncJobQueueInspectionService invalidInputService =
         inspectionService(new InMemoryAsyncJobStore());
@@ -481,6 +517,17 @@ public class AsyncJobQueueInspectionServiceTest {
     assertThat(
             meterRegistry
                 .get("asyncJobQueue.inspection.count")
+                .tag("queueName", "assetlocalize")
+                .tag("result", result)
+                .counter()
+                .count())
+        .isEqualTo(count);
+  }
+
+  private void assertReadyStatusCounter(String result, double count) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.inspection.readyStatus")
                 .tag("queueName", "assetlocalize")
                 .tag("result", result)
                 .counter()
