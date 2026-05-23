@@ -1,5 +1,7 @@
 package com.box.l10n.mojito.queue;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.time.Duration;
@@ -38,6 +40,7 @@ class AsyncJobQueueRuntime {
   private final MeterRegistry meterRegistry;
   private final String workerId;
   private final LongUnaryOperator pollDelayJitter;
+  private final List<Meter> runtimeGauges;
 
   private final Object scheduleLock = new Object();
   private final AtomicInteger inFlightCount = new AtomicInteger();
@@ -92,21 +95,7 @@ class AsyncJobQueueRuntime {
         pollDelayJitter != null ? pollDelayJitter : this::applyRandomPollDelayJitter;
     AsyncJobQueueValidation.validateQueueSettings(queueSettings);
     this.currentPollDelayMs = basePollDelayMs();
-    meterRegistry.gauge(
-        "asyncJobQueue.inflight",
-        Tags.of("queueName", queueName),
-        this,
-        AsyncJobQueueRuntime::inFlightCount);
-    meterRegistry.gauge(
-        "asyncJobQueue.executor.active",
-        Tags.of("queueName", queueName),
-        executor,
-        ThreadPoolTaskExecutor::getActiveCount);
-    meterRegistry.gauge(
-        "asyncJobQueue.executor.queued",
-        Tags.of("queueName", queueName),
-        executor,
-        AsyncJobQueueRuntime::executorQueueSize);
+    this.runtimeGauges = registerRuntimeGauges();
   }
 
   void start() {
@@ -146,7 +135,11 @@ class AsyncJobQueueRuntime {
       }
     }
     awaitActivePollBeforeExecutorShutdown();
-    executor.shutdown();
+    try {
+      executor.shutdown();
+    } finally {
+      removeRuntimeGauges();
+    }
   }
 
   void triggerPollNow() {
@@ -288,6 +281,26 @@ class AsyncJobQueueRuntime {
   private static int executorQueueSize(ThreadPoolTaskExecutor executor) {
     ThreadPoolExecutor threadPoolExecutor = executor.getThreadPoolExecutor();
     return threadPoolExecutor.getQueue().size();
+  }
+
+  private List<Meter> registerRuntimeGauges() {
+    Tags queueTags = Tags.of("queueName", queueName);
+    return List.<Meter>of(
+        Gauge.builder("asyncJobQueue.inflight", this, AsyncJobQueueRuntime::inFlightCount)
+            .tags(queueTags)
+            .register(meterRegistry),
+        Gauge.builder(
+                "asyncJobQueue.executor.active", executor, ThreadPoolTaskExecutor::getActiveCount)
+            .tags(queueTags)
+            .register(meterRegistry),
+        Gauge.builder(
+                "asyncJobQueue.executor.queued", executor, AsyncJobQueueRuntime::executorQueueSize)
+            .tags(queueTags)
+            .register(meterRegistry));
+  }
+
+  private void removeRuntimeGauges() {
+    runtimeGauges.forEach(meterRegistry::remove);
   }
 
   private void runScheduledPoll(long pollSequence) {

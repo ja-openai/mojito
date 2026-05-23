@@ -12,6 +12,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
@@ -2482,6 +2483,48 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void stopRemovesRuntimeGaugesSoRestartCanRebind() {
+    ThreadPoolTaskExecutor firstExecutor = newExecutor(1);
+    ThreadPoolTaskExecutor secondExecutor = newExecutor(1);
+    try {
+      AsyncJobQueueRuntime firstRuntime =
+          runtime(
+              mock(AsyncJobStore.class),
+              queueSettings(100, 1_000, 1, 1, 10_000, 0),
+              handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+              mock(TaskScheduler.class),
+              firstExecutor);
+
+      assertThat(runtimeGauge("asyncJobQueue.inflight")).isNotNull();
+      assertThat(runtimeGauge("asyncJobQueue.executor.active")).isNotNull();
+      assertThat(runtimeGauge("asyncJobQueue.executor.queued")).isNotNull();
+
+      firstRuntime.stop();
+
+      assertThat(runtimeGauge("asyncJobQueue.inflight")).isNull();
+      assertThat(runtimeGauge("asyncJobQueue.executor.active")).isNull();
+      assertThat(runtimeGauge("asyncJobQueue.executor.queued")).isNull();
+
+      AsyncJobQueueRuntime secondRuntime =
+          runtime(
+              mock(AsyncJobStore.class),
+              queueSettings(100, 1_000, 1, 1, 10_000, 0),
+              handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+              mock(TaskScheduler.class),
+              secondExecutor);
+
+      assertThat(runtimeGauge("asyncJobQueue.inflight")).isNotNull();
+
+      secondRuntime.stop();
+
+      assertThat(runtimeGauge("asyncJobQueue.inflight")).isNull();
+    } finally {
+      firstExecutor.shutdown();
+      secondExecutor.shutdown();
+    }
+  }
+
+  @Test
   public void triggerPollNowPreservesExistingPollWhenImmediateScheduleFails() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
@@ -3682,6 +3725,10 @@ public class AsyncJobQueueRuntimeTest {
       Thread.sleep(20);
     }
     throw new AssertionError("Timed out waiting for trigger failure count " + expectedCount);
+  }
+
+  private Gauge runtimeGauge(String meterName) {
+    return meterRegistry.find(meterName).tag("queueName", "assetlocalize").gauge();
   }
 
   private void assertClaimFailureCounter(String failure, double expectedCount) {
