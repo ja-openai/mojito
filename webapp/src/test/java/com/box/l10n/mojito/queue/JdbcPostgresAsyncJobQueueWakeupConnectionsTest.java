@@ -3,6 +3,7 @@ package com.box.l10n.mojito.queue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +37,21 @@ public class JdbcPostgresAsyncJobQueueWakeupConnectionsTest {
     }
 
     verify(connection).setAutoCommit(false);
+  }
+
+  @Test
+  public void ensureAutoCommitRestoresManualCommitConnectionsOnlyOnce() throws Exception {
+    Connection connection = mock(Connection.class);
+    when(connection.getAutoCommit()).thenReturn(false);
+    when(connection.isClosed()).thenReturn(false);
+    JdbcPostgresAsyncJobQueueWakeupConnections.AutoCommitScope scope =
+        JdbcPostgresAsyncJobQueueWakeupConnections.ensureAutoCommit(connection);
+
+    scope.close();
+    scope.close();
+
+    verify(connection).setAutoCommit(true);
+    verify(connection, times(1)).setAutoCommit(false);
   }
 
   @Test
