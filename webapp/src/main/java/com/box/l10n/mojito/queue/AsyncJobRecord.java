@@ -23,7 +23,7 @@ public record AsyncJobRecord(
     AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(status);
     Objects.requireNonNull(availableAt);
-    Objects.requireNonNull(jobData);
+    jobData = AsyncJobQueueValidation.validateJobData(jobData);
     if (attemptCount < 0) {
       throw new IllegalArgumentException("attemptCount must be >= 0");
     }

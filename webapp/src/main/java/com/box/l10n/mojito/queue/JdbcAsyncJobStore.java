@@ -70,20 +70,20 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
   @Override
   public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
     AsyncJobQueueValidation.validateQueueName(queueName);
-    Objects.requireNonNull(jobData);
+    String validatedJobData = AsyncJobQueueValidation.validateJobData(jobData);
     Instant validatedAvailableAt =
         AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
 
-    return enqueueAtDatabaseTime(queueName, jobData, validatedAvailableAt, databaseNow());
+    return enqueueAtDatabaseTime(queueName, validatedJobData, validatedAvailableAt, databaseNow());
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   @Override
   public AsyncJobId enqueueNow(String queueName, String jobData) {
     AsyncJobQueueValidation.validateQueueName(queueName);
-    Objects.requireNonNull(jobData);
+    String validatedJobData = AsyncJobQueueValidation.validateJobData(jobData);
     Instant now = databaseNow();
-    return enqueueAtDatabaseTime(queueName, jobData, now, now);
+    return enqueueAtDatabaseTime(queueName, validatedJobData, now, now);
   }
 
   private AsyncJobId enqueueAtDatabaseTime(
@@ -295,6 +295,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     AsyncJobQueueValidation.validateWorkerId(workerId);
     validateLeaseToken(leaseToken);
     long parsedId = parseId(id);
+    String validatedJobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
     Instant now = databaseNow();
 
     String sql =
@@ -319,7 +320,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("doneStatus", AsyncJobStatus.DONE.getDatabaseValue())
-            .addValue("jobData", jobData)
+            .addValue("jobData", validatedJobData)
             .addValue("updatedDate", Timestamp.from(now))
             .addValue("now", Timestamp.from(now))
             .addValue("id", parsedId)
@@ -387,6 +388,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     Objects.requireNonNull(now);
     validateLeaseToken(leaseToken);
     long parsedId = parseId(id);
+    String validatedJobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
 
     String sql =
         """
@@ -412,7 +414,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         new MapSqlParameterSource()
             .addValue("queuedStatus", AsyncJobStatus.QUEUED.getDatabaseValue())
             .addValue("availableAt", Timestamp.from(validatedAvailableAt))
-            .addValue("jobData", jobData)
+            .addValue("jobData", validatedJobData)
             .addValue("lastError", AsyncJobQueueValidation.truncateLastError(lastError))
             .addValue("updatedDate", Timestamp.from(now))
             .addValue("now", Timestamp.from(now))
@@ -438,6 +440,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     validateLeaseToken(leaseToken);
     String validatedLastError = AsyncJobQueueValidation.validateFailureLastError(lastError);
     long parsedId = parseId(id);
+    String validatedJobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
     Instant now = databaseNow();
 
     String sql =
@@ -462,7 +465,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("failedStatus", AsyncJobStatus.FAILED.getDatabaseValue())
-            .addValue("jobData", jobData)
+            .addValue("jobData", validatedJobData)
             .addValue("lastError", validatedLastError)
             .addValue("updatedDate", Timestamp.from(now))
             .addValue("now", Timestamp.from(now))
@@ -607,6 +610,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
       String queueName, AsyncJobId id, Instant availableAt, String jobData, Instant updatedDate) {
     AsyncJobQueueValidation.validateQueueName(queueName);
     long parsedId = parseId(id);
+    String validatedJobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
 
     String sql =
         """
@@ -628,7 +632,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         new MapSqlParameterSource()
             .addValue("queuedStatus", AsyncJobStatus.QUEUED.getDatabaseValue())
             .addValue("availableAt", Timestamp.from(availableAt))
-            .addValue("jobData", jobData)
+            .addValue("jobData", validatedJobData)
             .addValue("updatedDate", Timestamp.from(updatedDate))
             .addValue("id", parsedId)
             .addValue("queueName", queueName)

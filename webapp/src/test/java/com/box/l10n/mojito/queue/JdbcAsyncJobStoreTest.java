@@ -65,6 +65,8 @@ public class JdbcAsyncJobStoreTest {
             CHECK (status IN ('queued', 'running', 'done', 'failed')),
           CONSTRAINT C_ASYNC_JOB_QUEUE_ATTEMPT_RANGE
             CHECK (attempt_count BETWEEN 0 AND 101),
+          CONSTRAINT C_ASYNC_JOB_QUEUE_JOB_DATA_LENGTH
+            CHECK (CHAR_LENGTH(job_data) <= 1000000),
           CONSTRAINT C_ASYNC_JOB_QUEUE_LAST_ERROR_LENGTH
             CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000),
           CONSTRAINT C_ASYNC_JOB_QUEUE_FAILED_LAST_ERROR
@@ -859,6 +861,30 @@ public class JdbcAsyncJobStoreTest {
                 "{}",
                 1,
                 oversizedLastError));
+  }
+
+  @Test
+  public void schemaRejectsOversizedJobDataWrittenDirectly() {
+    String oversizedJobData = "x".repeat(AsyncJobQueueValidation.JOB_DATA_MAX_LENGTH + 1);
+
+    assertThrows(
+        DataIntegrityViolationException.class,
+        () ->
+            jdbcTemplate.update(
+                """
+                INSERT INTO async_job_queue (
+                  queue_name,
+                  status,
+                  available_at,
+                  job_data,
+                  attempt_count
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                "assetlocalize",
+                AsyncJobStatus.QUEUED.getDatabaseValue(),
+                Timestamp.from(Instant.now()),
+                oversizedJobData,
+                0));
   }
 
   @Test

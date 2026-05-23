@@ -197,6 +197,22 @@ public class AsyncJobQueueSubmissionServiceTest {
     verify(coordinator, never()).triggerPollNow("assetlocalize");
   }
 
+  @Test
+  public void enqueueRejectsOversizedPayloadBeforeStoreOrWakeup() {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueSubmissionService service = submissionService(store, coordinator);
+    String oversizedPayload = "x".repeat(AsyncJobQueueValidation.JOB_DATA_MAX_LENGTH + 1);
+
+    assertThatThrownBy(() -> service.enqueueNow("assetlocalize", oversizedPayload))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("jobData must be at most");
+
+    verify(store, never()).enqueueNow(anyString(), anyString());
+    verify(coordinator, never()).triggerPollNow("assetlocalize");
+    assertEnqueueCounter("failed", 1);
+  }
+
   private AsyncJobQueueSubmissionService submissionService(
       AsyncJobStore store, AsyncJobQueueCoordinator coordinator) {
     return new AsyncJobQueueSubmissionService(

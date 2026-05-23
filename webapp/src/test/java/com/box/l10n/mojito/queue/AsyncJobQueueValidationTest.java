@@ -65,6 +65,21 @@ public class AsyncJobQueueValidationTest {
   }
 
   @Test
+  public void validateJobDataBoundsPersistedPayload() {
+    String maxPayload = "x".repeat(AsyncJobQueueValidation.JOB_DATA_MAX_LENGTH);
+    String tooLargePayload = maxPayload + "x";
+
+    assertThat(AsyncJobQueueValidation.validateJobData(maxPayload)).isSameAs(maxPayload);
+    assertThat(AsyncJobQueueValidation.validateOptionalJobData(null)).isNull();
+
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> AsyncJobQueueValidation.validateJobData(tooLargePayload)))
+        .hasMessageContaining("jobData must be at most");
+  }
+
+  @Test
   public void validateTerminalStatusRejectsNonTerminalStatuses() {
     assertThat(AsyncJobQueueValidation.validateTerminalStatus(AsyncJobStatus.DONE))
         .isEqualTo(AsyncJobStatus.DONE);

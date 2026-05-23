@@ -304,6 +304,27 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
 
   private void assertSchemaRejectsInvalidDirectWrites(DataSource dataSource) {
     JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+    String oversizedPayload = "x".repeat(AsyncJobQueueValidation.JOB_DATA_MAX_LENGTH + 1);
+    assertThrows(
+        DataAccessException.class,
+        () ->
+            jdbcTemplate.update(
+                """
+                INSERT INTO async_job_queue (
+                  queue_name,
+                  status,
+                  available_at,
+                  job_data,
+                  attempt_count
+                ) VALUES (
+                  'assetlocalize',
+                  'queued',
+                  CURRENT_TIMESTAMP,
+                  ?,
+                  0
+                )
+                """,
+                oversizedPayload));
     assertThrows(
         DataAccessException.class,
         () ->
@@ -1158,6 +1179,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("CHECK (status IN ('queued', 'running', 'done', 'failed'))")
         .contains("C__ASYNC_JOB_QUEUE__ATTEMPT_RANGE")
         .contains("CHECK (attempt_count BETWEEN 0 AND 101)")
+        .contains("C__ASYNC_JOB_QUEUE__JOB_DATA_LENGTH")
+        .contains("CHECK (CHAR_LENGTH(job_data) <= 1000000)")
         .contains("C__ASYNC_JOB_QUEUE__LAST_ERROR_LENGTH")
         .contains("CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000)")
         .contains("C__ASYNC_JOB_QUEUE__FAILED_LAST_ERROR")

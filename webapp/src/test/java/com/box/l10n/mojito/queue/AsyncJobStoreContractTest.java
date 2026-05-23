@@ -266,6 +266,63 @@ public class AsyncJobStoreContractTest {
     assertThat(asyncJobStore.getByIds(List.of(id)).get(0).lastError()).isEqualTo("visible failure");
   }
 
+  @Test
+  public void rejectsOversizedPayloadsWithoutChangingState() {
+    String oversizedPayload = "x".repeat(AsyncJobQueueValidation.JOB_DATA_MAX_LENGTH + 1);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> asyncJobStore.enqueueNow("assetlocalize", oversizedPayload));
+
+    AsyncJobId id =
+        asyncJobStore.enqueue("assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        asyncJobStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5)).get(0);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            asyncJobStore.markDone(
+                "assetlocalize", id, "worker-a", claimed.leaseToken(), oversizedPayload));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            asyncJobStore.requeue(
+                "assetlocalize",
+                id,
+                "worker-a",
+                claimed.leaseToken(),
+                Instant.now(),
+                oversizedPayload,
+                "too large"));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            asyncJobStore.markFailed(
+                "assetlocalize",
+                id,
+                "worker-a",
+                claimed.leaseToken(),
+                oversizedPayload,
+                "too large"));
+
+    AsyncJobRecord stillRunning = asyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(stillRunning.status()).isEqualTo(AsyncJobStatus.RUNNING);
+    assertThat(stillRunning.jobData()).isEqualTo("{\"step\":\"new\"}");
+
+    assertThat(
+            asyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", claimed.leaseToken(), null, "visible failure"))
+        .isTrue();
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> asyncJobStore.requeueFailed("assetlocalize", id, Instant.now(), oversizedPayload));
+
+    AsyncJobRecord stillFailed = asyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(stillFailed.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(stillFailed.jobData()).isEqualTo("{\"step\":\"new\"}");
+  }
+
   private AsyncJobRecord claimEventually(
       String queueName, String workerId, Duration leaseDuration, Duration timeout)
       throws InterruptedException {
@@ -368,6 +425,8 @@ public class AsyncJobStoreContractTest {
               CHECK (status IN ('queued', 'running', 'done', 'failed')),
             CONSTRAINT C_ASYNC_JOB_QUEUE_ATTEMPT_RANGE
               CHECK (attempt_count BETWEEN 0 AND 101),
+            CONSTRAINT C_ASYNC_JOB_QUEUE_JOB_DATA_LENGTH
+              CHECK (CHAR_LENGTH(job_data) <= 1000000),
             CONSTRAINT C_ASYNC_JOB_QUEUE_LAST_ERROR_LENGTH
               CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000),
             CONSTRAINT C_ASYNC_JOB_QUEUE_FAILED_LAST_ERROR

@@ -44,8 +44,8 @@ public class AsyncJobQueueSubmissionService {
   public AsyncJobId enqueueNow(String queueName, String jobData) {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
     try {
-      Objects.requireNonNull(jobData);
-      AsyncJobId asyncJobId = asyncJobStore.enqueueNow(validatedQueueName, jobData);
+      String validatedJobData = AsyncJobQueueValidation.validateJobData(jobData);
+      AsyncJobId asyncJobId = asyncJobStore.enqueueNow(validatedQueueName, validatedJobData);
       incrementEnqueueCounter(validatedQueueName, "succeeded");
       triggerEnqueueWakeup(validatedQueueName, asyncJobId);
       return asyncJobId;
@@ -62,11 +62,11 @@ public class AsyncJobQueueSubmissionService {
   public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
     try {
-      Objects.requireNonNull(jobData);
+      String validatedJobData = AsyncJobQueueValidation.validateJobData(jobData);
       Instant validatedAvailableAt =
           AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
       AsyncJobId asyncJobId =
-          asyncJobStore.enqueue(validatedQueueName, jobData, validatedAvailableAt);
+          asyncJobStore.enqueue(validatedQueueName, validatedJobData, validatedAvailableAt);
       incrementEnqueueCounter(validatedQueueName, "succeeded");
       if (!validatedAvailableAt.isAfter(clock.instant())) {
         triggerEnqueueWakeup(validatedQueueName, asyncJobId);

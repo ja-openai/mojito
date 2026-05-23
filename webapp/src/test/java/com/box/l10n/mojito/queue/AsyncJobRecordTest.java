@@ -143,6 +143,32 @@ public class AsyncJobRecordTest {
     assertThat(failed.lastError()).hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
   }
 
+  @Test
+  public void rejectsOversizedPersistedPayload() {
+    String oversizedJobData = "x".repeat(AsyncJobQueueValidation.JOB_DATA_MAX_LENGTH + 1);
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                new AsyncJobRecord(
+                    new AsyncJobId("1"),
+                    "assetlocalize",
+                    AsyncJobStatus.QUEUED,
+                    NOW.minusSeconds(1),
+                    null,
+                    null,
+                    null,
+                    oversizedJobData,
+                    0,
+                    null,
+                    NOW.minusSeconds(10),
+                    NOW,
+                    false));
+
+    assertThat(exception).hasMessageContaining("jobData must be at most");
+  }
+
   private AsyncJobRecord record(
       AsyncJobStatus status,
       Instant leaseUntil,

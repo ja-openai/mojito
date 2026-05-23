@@ -31,7 +31,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   @Override
   public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
     AsyncJobQueueValidation.validateQueueName(queueName);
-    Objects.requireNonNull(jobData);
+    String validatedJobData = AsyncJobQueueValidation.validateJobData(jobData);
     Instant validatedAvailableAt =
         AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
 
@@ -52,7 +52,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
                   null,
                   null,
                   null,
-                  jobData,
+                  validatedJobData,
                   0,
                   null,
                   now,
@@ -149,6 +149,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobQueueValidation.validateWorkerId(workerId);
     validateLeaseToken(leaseToken);
+    String validatedJobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
 
     return withQueueLock(
         queueName,
@@ -158,7 +159,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
             return false;
           }
           Instant now = Instant.now();
-          String nextJobData = jobData == null ? job.jobData() : jobData;
+          String nextJobData = validatedJobData == null ? job.jobData() : validatedJobData;
           jobsById.put(job.id(), job.withCompletion(nextJobData, now));
           return true;
         });
@@ -178,6 +179,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
     Instant validatedAvailableAt =
         AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
     validateLeaseToken(leaseToken);
+    String validatedJobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
 
     return withQueueLock(
         queueName,
@@ -187,7 +189,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
             return false;
           }
           Instant now = Instant.now();
-          String nextJobData = jobData == null ? job.jobData() : jobData;
+          String nextJobData = validatedJobData == null ? job.jobData() : validatedJobData;
           jobsById.put(
               job.id(),
               job.withRequeue(
@@ -211,6 +213,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
     AsyncJobQueueValidation.validateWorkerId(workerId);
     validateLeaseToken(leaseToken);
     String validatedLastError = AsyncJobQueueValidation.validateFailureLastError(lastError);
+    String validatedJobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
 
     return withQueueLock(
         queueName,
@@ -220,7 +223,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
             return false;
           }
           Instant now = Instant.now();
-          String nextJobData = jobData == null ? job.jobData() : jobData;
+          String nextJobData = validatedJobData == null ? job.jobData() : validatedJobData;
           jobsById.put(job.id(), job.withFailure(nextJobData, validatedLastError, now));
           return true;
         });
@@ -315,6 +318,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
     AsyncJobQueueValidation.validateQueueName(queueName);
     Instant validatedAvailableAt =
         AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
+    String validatedJobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
 
     return withQueueLock(
         queueName,
@@ -326,7 +330,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
             return false;
           }
           Instant now = Instant.now();
-          String nextJobData = jobData == null ? job.jobData() : jobData;
+          String nextJobData = validatedJobData == null ? job.jobData() : validatedJobData;
           jobsById.put(job.id(), job.withFailedReplay(validatedAvailableAt, nextJobData, now));
           return true;
         });

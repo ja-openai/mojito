@@ -12,6 +12,7 @@ final class AsyncJobQueueValidation {
   static final int QUEUE_NAME_MAX_LENGTH = 64;
   static final Pattern QUEUE_NAME_PATTERN = Pattern.compile("[A-Za-z0-9._-]+");
   static final int WORKER_ID_MAX_LENGTH = 128;
+  static final int JOB_DATA_MAX_LENGTH = 1_000_000;
   static final int LAST_ERROR_MAX_LENGTH = 4_000;
   static final int CLAIM_BATCH_SIZE_MAX = 1_000;
   static final int MAX_CONCURRENCY_MAX = 256;
@@ -136,6 +137,19 @@ final class AsyncJobQueueValidation {
               + " for async job queue JDBC storage");
     }
     return instant;
+  }
+
+  static String validateJobData(String jobData) {
+    Objects.requireNonNull(jobData);
+    if (jobData.length() > JOB_DATA_MAX_LENGTH) {
+      throw new IllegalArgumentException(
+          "jobData must be at most " + JOB_DATA_MAX_LENGTH + " characters");
+    }
+    return jobData;
+  }
+
+  static String validateOptionalJobData(String jobData) {
+    return jobData == null ? null : validateJobData(jobData);
   }
 
   static String truncateLastError(String lastError) {
