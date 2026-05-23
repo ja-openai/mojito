@@ -65,10 +65,17 @@ public class JdbcAsyncJobStoreTest {
             CHECK (status IN ('queued', 'running', 'done', 'failed')),
           CONSTRAINT C_ASYNC_JOB_QUEUE_ATTEMPT_NONNEGATIVE
             CHECK (attempt_count >= 0),
+          CONSTRAINT C_ASYNC_JOB_QUEUE_LAST_ERROR_LENGTH
+            CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000),
           CONSTRAINT C_ASYNC_JOB_QUEUE_RUNNING_LEASE_OWNER
             CHECK (
               (status = 'running' AND lease_until IS NOT NULL AND worker_id IS NOT NULL AND lease_token IS NOT NULL)
               OR (status <> 'running' AND lease_until IS NULL AND worker_id IS NULL AND lease_token IS NULL)
+            ),
+          CONSTRAINT C_ASYNC_JOB_QUEUE_LEASE_OWNER_NONBLANK
+            CHECK (
+              status <> 'running'
+              OR (TRIM(worker_id) <> '' AND TRIM(lease_token) <> '')
             )
         )
         """);
@@ -772,6 +779,32 @@ public class JdbcAsyncJobStoreTest {
 
     AsyncJobRecord failed = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
     assertThat(failed.lastError()).hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+  }
+
+  @Test
+  public void schemaRejectsOversizedLastErrorWrittenDirectly() {
+    String oversizedLastError = "x".repeat(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH + 1);
+
+    assertThrows(
+        DataIntegrityViolationException.class,
+        () ->
+            jdbcTemplate.update(
+                """
+                INSERT INTO async_job_queue (
+                  queue_name,
+                  status,
+                  available_at,
+                  job_data,
+                  attempt_count,
+                  last_error
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                "assetlocalize",
+                AsyncJobStatus.FAILED.getDatabaseValue(),
+                Timestamp.from(Instant.now()),
+                "{}",
+                1,
+                oversizedLastError));
   }
 
   @Test
