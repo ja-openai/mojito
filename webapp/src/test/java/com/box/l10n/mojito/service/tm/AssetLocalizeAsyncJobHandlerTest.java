@@ -103,6 +103,26 @@ public class AssetLocalizeAsyncJobHandlerTest {
   }
 
   @Test
+  public void processMissingPollableTaskRecordsFailureBeforeRuntimeTerminalFailure()
+      throws Exception {
+    when(pollableTaskService.getPollableTask(42L)).thenReturn(null);
+
+    assertThatThrownBy(() -> handler.process(asyncJobRecord(jobData(42L), 1)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("PollableTask not found: 42");
+
+    verify(pollableTaskService, times(0)).finishTask(eq(42L), isNull(), any(), isNull());
+    assertThat(
+            meterRegistry
+                .get("assetLocalizeAsyncJob.process")
+                .tag("queueName", AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME)
+                .tag("result", "failed")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void onJobDoneFinishesPollableTaskAfterQueueDoneTransition() {
     String jobData = jobData(42L);
 

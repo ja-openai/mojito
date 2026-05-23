@@ -53,13 +53,12 @@ public class AssetLocalizeAsyncJobHandler implements AsyncJobHandler {
 
   @Override
   public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) throws Exception {
-    AssetLocalizeAsyncJobPayload payload = payloadFrom(asyncJobRecord.jobData());
-    requirePollableTask(payload.pollableTaskId());
-
     boolean success = false;
     try (var timer =
         Timer.resource(meterRegistry, "AssetLocalizeAsyncJobHandler.process")
             .tag("queueName", queueName())) {
+      AssetLocalizeAsyncJobPayload payload = payloadFrom(asyncJobRecord.jobData());
+      requirePollableTask(payload.pollableTaskId());
       LocalizedAssetBody input =
           pollableTaskBlobStorage.getInput(payload.pollableTaskId(), LocalizedAssetBody.class);
       LocalizedAssetBody output = localizedAssetGenerationService.generate(input);
