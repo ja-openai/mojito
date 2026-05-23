@@ -3745,6 +3745,18 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void claimFailureCounterHandlesCyclicThrowableCauses() {
+    RuntimeException root = new RuntimeException("root");
+    RuntimeException loop = new RuntimeException("loop");
+    RuntimeException deadlock = new RuntimeException("deadlock detected");
+    root.initCause(loop);
+    loop.initCause(deadlock);
+    deadlock.initCause(loop);
+
+    assertThat(AsyncJobQueueRuntime.claimFailureKind(root)).isEqualTo("deadlock");
+  }
+
+  @Test
   public void scheduledPollRecoversWhenNextPollScheduleFails() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))

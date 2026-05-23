@@ -5,8 +5,10 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -1124,8 +1126,9 @@ class AsyncJobQueueRuntime {
   @SafeVarargs
   private static boolean hasCause(
       Throwable throwable, Class<? extends Throwable>... exceptionTypes) {
+    Set<Throwable> visitedThrowables = throwableIdentitySet();
     Throwable current = throwable;
-    while (current != null) {
+    while (current != null && visitedThrowables.add(current)) {
       for (Class<? extends Throwable> exceptionType : exceptionTypes) {
         if (exceptionType.isInstance(current)) {
           return true;
@@ -1137,8 +1140,9 @@ class AsyncJobQueueRuntime {
   }
 
   private static boolean hasMessageContaining(Throwable throwable, String needle) {
+    Set<Throwable> visitedThrowables = throwableIdentitySet();
     Throwable current = throwable;
-    while (current != null) {
+    while (current != null && visitedThrowables.add(current)) {
       String message = current.getMessage();
       if (message != null && message.toLowerCase(java.util.Locale.ROOT).contains(needle)) {
         return true;
@@ -1146,6 +1150,10 @@ class AsyncJobQueueRuntime {
       current = current.getCause();
     }
     return false;
+  }
+
+  private static Set<Throwable> throwableIdentitySet() {
+    return Collections.newSetFromMap(new IdentityHashMap<>());
   }
 
   private String errorMessage(Throwable e) {
