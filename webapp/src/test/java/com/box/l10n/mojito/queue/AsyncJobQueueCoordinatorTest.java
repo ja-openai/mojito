@@ -58,6 +58,30 @@ public class AsyncJobQueueCoordinatorTest {
   }
 
   @Test
+  public void startStopsAlreadyStartedRuntimesWhenLaterRuntimeThrowsNonFatalError() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    TestScheduledFuture firstScheduledPoll = new TestScheduledFuture();
+    NonFatalTestError nonFatalTestError = new NonFatalTestError("scheduler invariant");
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(invocation -> firstScheduledPoll)
+        .thenThrow(nonFatalTestError);
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            new AsyncJobQueueProperties(),
+            List.of(handler("assetlocalize"), handler("stats")),
+            taskScheduler,
+            meterRegistry);
+
+    NonFatalTestError exception = assertThrows(NonFatalTestError.class, coordinator::start);
+
+    assertThat(exception).isSameAs(nonFatalTestError);
+    assertThat(coordinator.isRunning()).isFalse();
+    assertThat(firstScheduledPoll.isCancelled()).isTrue();
+    verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
   public void triggerPollNowRespectsLifecycleAndQueueName() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     List<TestScheduledFuture> scheduledPolls = new ArrayList<>();
@@ -254,6 +278,12 @@ public class AsyncJobQueueCoordinatorTest {
         return AsyncJobHandlerResult.done();
       }
     };
+  }
+
+  private static class NonFatalTestError extends Error {
+    NonFatalTestError(String message) {
+      super(message);
+    }
   }
 
   private static class TestScheduledFuture implements ScheduledFuture<Object> {

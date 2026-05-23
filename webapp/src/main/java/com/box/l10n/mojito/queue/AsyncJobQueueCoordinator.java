@@ -89,10 +89,13 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
                   workerId(queueName));
           runtimesByQueueName.put(queueName, runtime);
           runtime.start();
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
+          if (isJvmFatal(e)) {
+            throw (Error) e;
+          }
           logger.error("Failed to start async job queue runtime for {}", queueName, e);
           stopStartedRuntimes();
-          throw e;
+          throw unchecked(e);
         }
       }
 
@@ -177,5 +180,20 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
   private void stopStartedRuntimes() {
     runtimesByQueueName.values().forEach(AsyncJobQueueRuntime::stop);
     runtimesByQueueName.clear();
+  }
+
+  private boolean isJvmFatal(Throwable throwable) {
+    return throwable instanceof VirtualMachineError
+        || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
+  }
+
+  private RuntimeException unchecked(Throwable throwable) {
+    if (throwable instanceof RuntimeException runtimeException) {
+      return runtimeException;
+    }
+    if (throwable instanceof Error error) {
+      throw error;
+    }
+    return new IllegalStateException(throwable);
   }
 }
