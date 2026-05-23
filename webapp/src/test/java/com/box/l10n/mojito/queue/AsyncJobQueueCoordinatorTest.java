@@ -316,6 +316,30 @@ public class AsyncJobQueueCoordinatorTest {
   }
 
   @Test
+  public void startRejectsInvalidHandlerlessQueueSettingsBeforeScheduling() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setMaxConcurrency(0);
+    asyncJobQueueProperties.getQueues().put("stats", queueSettings);
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            asyncJobQueueProperties,
+            List.of(),
+            taskScheduler,
+            meterRegistry);
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, coordinator::start);
+
+    assertThat(exception).hasMessageContaining("maxConcurrency must be > 0");
+    assertThat(coordinator.isRunning()).isFalse();
+    verify(taskScheduler, never()).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
   public void queueExecutorGracefullyWaitsForInFlightWorkOnShutdown() throws Exception {
     AsyncJobQueueProperties.QueueSettings queueSettings =
         new AsyncJobQueueProperties.QueueSettings();

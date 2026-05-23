@@ -55,6 +55,7 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
       if (running) {
         return;
       }
+      AsyncJobQueueValidation.validateProperties(asyncJobQueueProperties);
 
       runtimesByQueueName.clear();
 
@@ -67,11 +68,6 @@ public class AsyncJobQueueCoordinator implements SmartLifecycle {
               "Multiple AsyncJobHandler beans registered for queue: " + queueName);
         }
       }
-
-      asyncJobQueueProperties
-          .getQueues()
-          .keySet()
-          .forEach(AsyncJobQueueValidation::validateQueueName);
 
       for (Map.Entry<String, AsyncJobHandler> entry : handlersByQueueName.entrySet()) {
         String queueName = entry.getKey();
