@@ -130,8 +130,16 @@ class AsyncJobQueueRuntime {
     synchronized (scheduleLock) {
       started = false;
       if (nextPollFuture != null) {
-        nextPollFuture.cancel(false);
-        nextPollFuture = null;
+        try {
+          nextPollFuture.cancel(false);
+        } catch (RuntimeException e) {
+          logger.warn("Failed to cancel scheduled async queue poll for {}", queueName, e);
+          meterRegistry
+              .counter("asyncJobQueue.poll.cancel.failed", "queueName", queueName)
+              .increment();
+        } finally {
+          nextPollFuture = null;
+        }
       }
     }
     awaitActivePollBeforeExecutorShutdown();

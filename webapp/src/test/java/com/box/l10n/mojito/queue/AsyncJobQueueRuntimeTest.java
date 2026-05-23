@@ -1882,6 +1882,33 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void stopRecordsScheduledPollCancelFailureAndStillShutsDownExecutor() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(invocation -> new ThrowingCancelScheduledFuture());
+    ThreadPoolTaskExecutor stopExecutor = newExecutor(1);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            mock(AsyncJobStore.class),
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            stopExecutor);
+
+    asyncJobQueueRuntime.start();
+    asyncJobQueueRuntime.stop();
+
+    assertThat(stopExecutor.getThreadPoolExecutor().isShutdown()).isTrue();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.cancel.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void triggerPollNowPreservesExistingPollWhenImmediateScheduleFails() {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
@@ -3071,6 +3098,13 @@ public class AsyncJobQueueRuntimeTest {
     public Object get(long timeout, TimeUnit unit)
         throws InterruptedException, ExecutionException, TimeoutException {
       return null;
+    }
+  }
+
+  private static class ThrowingCancelScheduledFuture extends DummyScheduledFuture {
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+      throw new IllegalStateException("cancel unavailable");
     }
   }
 
