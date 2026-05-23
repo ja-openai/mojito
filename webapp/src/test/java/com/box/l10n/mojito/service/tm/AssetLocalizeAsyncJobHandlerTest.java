@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -158,6 +159,20 @@ public class AssetLocalizeAsyncJobHandlerTest {
   }
 
   @Test
+  public void onJobDoneRecordsPollableTaskFinishFailureAndRethrows() {
+    RuntimeException failure = new RuntimeException("finish down");
+    String jobData = jobData(42L);
+    doThrow(failure).when(pollableTaskService).finishTask(42L, null, null, null);
+
+    assertThatThrownBy(
+            () ->
+                handler.onJobDone(asyncJobRecord(jobData, 1), AsyncJobHandlerResult.done(jobData)))
+        .isSameAs(failure);
+
+    assertPollableTaskFinishFailureCounter("done", 1);
+  }
+
+  @Test
   public void onJobFailedPermanentlyFinishesPollableTaskWithExceptionAfterQueueFailedTransition() {
     RuntimeException failure = new RuntimeException("terminal");
     PollableTask pollableTask = pollableTask(42L);
@@ -175,6 +190,26 @@ public class AssetLocalizeAsyncJobHandlerTest {
                 .counter()
                 .count())
         .isEqualTo(1);
+  }
+
+  @Test
+  public void onJobFailedPermanentlyRecordsPollableTaskFinishFailureAndRethrows() {
+    RuntimeException failure = new RuntimeException("terminal");
+    RuntimeException finishFailure = new RuntimeException("finish down");
+    PollableTask pollableTask = pollableTask(42L);
+    when(pollableTaskService.getPollableTask(42L)).thenReturn(pollableTask);
+    doThrow(finishFailure)
+        .when(pollableTaskService)
+        .finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
+
+    assertThatThrownBy(
+            () ->
+                handler.onJobFailedPermanently(
+                    asyncJobRecord(jobData(42L), 3), failure, "terminal"))
+        .isSameAs(finishFailure);
+
+    verify(pollableTaskExceptionUtils).processException(eq(failure), any(ExceptionHolder.class));
+    assertPollableTaskFinishFailureCounter("failed", 1);
   }
 
   private String jobData(long pollableTaskId) {
@@ -204,5 +239,16 @@ public class AssetLocalizeAsyncJobHandlerTest {
     PollableTask pollableTask = new PollableTask();
     pollableTask.setId(id);
     return pollableTask;
+  }
+
+  private void assertPollableTaskFinishFailureCounter(String callback, double expectedCount) {
+    assertThat(
+            meterRegistry
+                .get("assetLocalizeAsyncJob.pollableTask.finish.failed")
+                .tag("queueName", AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME)
+                .tag("callback", callback)
+                .counter()
+                .count())
+        .isEqualTo(expectedCount);
   }
 }

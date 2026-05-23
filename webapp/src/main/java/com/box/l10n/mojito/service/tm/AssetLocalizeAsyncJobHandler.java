@@ -80,38 +80,48 @@ public class AssetLocalizeAsyncJobHandler implements AsyncJobHandler {
   @Override
   public void onJobDone(
       AsyncJobRecord asyncJobRecord, AsyncJobHandlerResult asyncJobHandlerResult) {
-    AssetLocalizeAsyncJobPayload payload =
-        payloadFrom(
-            asyncJobHandlerResult.jobData() != null
-                ? asyncJobHandlerResult.jobData()
-                : asyncJobRecord.jobData());
-    pollableTaskService.finishTask(payload.pollableTaskId(), null, null, null);
-    meterRegistry
-        .counter(
-            "assetLocalizeAsyncJob.pollableTask.finished",
-            "queueName",
-            queueName(),
-            "result",
-            "succeeded")
-        .increment();
+    try {
+      AssetLocalizeAsyncJobPayload payload =
+          payloadFrom(
+              asyncJobHandlerResult.jobData() != null
+                  ? asyncJobHandlerResult.jobData()
+                  : asyncJobRecord.jobData());
+      pollableTaskService.finishTask(payload.pollableTaskId(), null, null, null);
+      meterRegistry
+          .counter(
+              "assetLocalizeAsyncJob.pollableTask.finished",
+              "queueName",
+              queueName(),
+              "result",
+              "succeeded")
+          .increment();
+    } catch (RuntimeException exception) {
+      recordPollableTaskFinishFailure("done");
+      throw exception;
+    }
   }
 
   @Override
   public void onJobFailedPermanently(
       AsyncJobRecord asyncJobRecord, Throwable failure, String lastError) {
-    AssetLocalizeAsyncJobPayload payload = payloadFrom(asyncJobRecord.jobData());
-    PollableTask pollableTask = requirePollableTask(payload.pollableTaskId());
-    ExceptionHolder exceptionHolder = new ExceptionHolder(pollableTask);
-    pollableTaskExceptionUtils.processException(failure, exceptionHolder);
-    pollableTaskService.finishTask(pollableTask.getId(), null, exceptionHolder, null);
-    meterRegistry
-        .counter(
-            "assetLocalizeAsyncJob.pollableTask.finished",
-            "queueName",
-            queueName(),
-            "result",
-            "failed")
-        .increment();
+    try {
+      AssetLocalizeAsyncJobPayload payload = payloadFrom(asyncJobRecord.jobData());
+      PollableTask pollableTask = requirePollableTask(payload.pollableTaskId());
+      ExceptionHolder exceptionHolder = new ExceptionHolder(pollableTask);
+      pollableTaskExceptionUtils.processException(failure, exceptionHolder);
+      pollableTaskService.finishTask(pollableTask.getId(), null, exceptionHolder, null);
+      meterRegistry
+          .counter(
+              "assetLocalizeAsyncJob.pollableTask.finished",
+              "queueName",
+              queueName(),
+              "result",
+              "failed")
+          .increment();
+    } catch (RuntimeException exception) {
+      recordPollableTaskFinishFailure("failed");
+      throw exception;
+    }
   }
 
   private PollableTask requirePollableTask(Long pollableTaskId) {
@@ -124,5 +134,16 @@ public class AssetLocalizeAsyncJobHandler implements AsyncJobHandler {
 
   private AssetLocalizeAsyncJobPayload payloadFrom(String jobData) {
     return objectMapper.readValueUnchecked(jobData, AssetLocalizeAsyncJobPayload.class);
+  }
+
+  private void recordPollableTaskFinishFailure(String callback) {
+    meterRegistry
+        .counter(
+            "assetLocalizeAsyncJob.pollableTask.finish.failed",
+            "queueName",
+            queueName(),
+            "callback",
+            callback)
+        .increment();
   }
 }
