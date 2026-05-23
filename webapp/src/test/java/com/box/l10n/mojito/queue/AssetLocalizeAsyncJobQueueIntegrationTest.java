@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,6 +19,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableTaskExceptionUtils;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobHandler;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobPayload;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobSubmissionService;
 import com.box.l10n.mojito.service.tm.GenerateLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.LocalizedAssetGenerationService;
@@ -209,8 +209,7 @@ public class AssetLocalizeAsyncJobQueueIntegrationTest {
   }
 
   @Test
-  public void pollableDoneCallbackFailureLeavesQueueJobDoneAndRecordsCallbackMetrics()
-      throws Exception {
+  public void pollableDoneCallbackFailureLeavesQueueJobDoneAndCanBeRepaired() throws Exception {
     InMemoryAsyncJobStore asyncJobStore = new InMemoryAsyncJobStore();
     PollableTask pollableTask = pollableTask(42L);
     AtomicReference<LocalizedAssetBody> storedInput = new AtomicReference<>();
@@ -232,7 +231,9 @@ public class AssetLocalizeAsyncJobQueueIntegrationTest {
         .when(pollableTaskBlobStorage)
         .saveInput(eq(42L), any(LocalizedAssetBody.class));
     when(localizedAssetGenerationService.generate(input)).thenReturn(output);
-    doThrow(finishFailure).when(pollableTaskService).finishTask(42L, null, null, null);
+    when(pollableTaskService.finishTask(42L, null, null, null))
+        .thenThrow(finishFailure)
+        .thenReturn(pollableTask);
 
     AsyncJobQueueSubmissionService queueSubmissionService =
         new AsyncJobQueueSubmissionService(asyncJobStore, asyncJobQueueCoordinator, meterRegistry);
@@ -281,11 +282,22 @@ public class AssetLocalizeAsyncJobQueueIntegrationTest {
     verify(pollableTaskBlobStorage).saveOutput(42L, output);
     verify(pollableTaskExceptionUtils, times(0))
         .processException(any(Throwable.class), any(ExceptionHolder.class));
+
+    AssetLocalizeAsyncJobRepairService repairService =
+        new AssetLocalizeAsyncJobRepairService(
+            asyncJobStore, pollableTaskService, objectMapper, meterRegistry);
+
+    AssetLocalizeAsyncJobRepairService.RepairResult repairResult =
+        repairService.repairTerminalPollableTask(completedJob);
+
+    assertThat(repairResult.result()).isEqualTo("repaired");
+    assertThat(repairResult.status()).isEqualTo("done");
+    verify(pollableTaskService, times(2)).finishTask(42L, null, null, null);
+    assertRepairCounter("done", "repaired", 1);
   }
 
   @Test
-  public void pollableFailedCallbackFailureLeavesQueueJobFailedAndRecordsCallbackMetrics()
-      throws Exception {
+  public void pollableFailedCallbackFailureLeavesQueueJobFailedAndCanBeRepaired() throws Exception {
     InMemoryAsyncJobStore asyncJobStore = new InMemoryAsyncJobStore();
     PollableTask pollableTask = pollableTask(42L);
     LocalizedAssetBody input = new LocalizedAssetBody();
@@ -298,9 +310,9 @@ public class AssetLocalizeAsyncJobQueueIntegrationTest {
     when(pollableTaskService.getPollableTask(42L)).thenReturn(pollableTask);
     when(pollableTaskBlobStorage.getInput(42L, LocalizedAssetBody.class)).thenReturn(input);
     when(localizedAssetGenerationService.generate(input)).thenThrow(generationFailure);
-    doThrow(finishFailure)
-        .when(pollableTaskService)
-        .finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
+    when(pollableTaskService.finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull()))
+        .thenThrow(finishFailure)
+        .thenReturn(pollableTask);
 
     AsyncJobQueueSubmissionService queueSubmissionService =
         new AsyncJobQueueSubmissionService(asyncJobStore, asyncJobQueueCoordinator, meterRegistry);
@@ -351,7 +363,19 @@ public class AssetLocalizeAsyncJobQueueIntegrationTest {
     assertThat(failedJob.lastError()).contains("generate failed");
     verify(pollableTaskExceptionUtils)
         .processException(eq(generationFailure), any(ExceptionHolder.class));
-    verify(pollableTaskService).finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
+
+    AssetLocalizeAsyncJobRepairService repairService =
+        new AssetLocalizeAsyncJobRepairService(
+            asyncJobStore, pollableTaskService, objectMapper, meterRegistry);
+
+    AssetLocalizeAsyncJobRepairService.RepairResult repairResult =
+        repairService.repairTerminalPollableTask(failedJob);
+
+    assertThat(repairResult.result()).isEqualTo("repaired");
+    assertThat(repairResult.status()).isEqualTo("failed");
+    verify(pollableTaskService, times(2))
+        .finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
+    assertRepairCounter("failed", "repaired", 1);
   }
 
   private AsyncJobQueueProperties.QueueSettings queueSettings() {
@@ -414,6 +438,18 @@ public class AssetLocalizeAsyncJobQueueIntegrationTest {
     }
     throw new AssertionError(
         "Timed out waiting for " + expectedCount + " " + counterName + " callback=" + callback);
+  }
+
+  private void assertRepairCounter(String status, String result, double expectedCount) {
+    assertThat(
+            meterRegistry
+                .get("assetLocalizeAsyncJob.repair")
+                .tag("queueName", AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME)
+                .tag("status", status)
+                .tag("result", result)
+                .counter()
+                .count())
+        .isEqualTo(expectedCount);
   }
 
   private PollableTask pollableTask(long id) {
