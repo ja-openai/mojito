@@ -311,7 +311,7 @@ public class AsyncJobQueueInspectionService {
         record.leaseUntil(),
         record.workerId(),
         record.attemptCount(),
-        record.lastError(),
+        AsyncJobQueueValidation.truncateLastError(record.lastError()),
         jobData.length(),
         preview(jobData),
         record.createdDate(),
@@ -327,7 +327,7 @@ public class AsyncJobQueueInspectionService {
         record.leaseUntil(),
         record.workerId(),
         record.attemptCount(),
-        record.lastError(),
+        AsyncJobQueueValidation.truncateLastError(record.lastError()),
         record.jobData(),
         record.createdDate(),
         record.updatedDate());

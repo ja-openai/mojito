@@ -267,8 +267,8 @@ Test Coverage
 - Inspection service tests assert cross-queue replay attempts are reported as not found and do not
   wake any runtime, so operator tooling cannot accidentally replay a job through the wrong queue.
   They also assert fatal replay wakeup errors propagate instead of being counted as ordinary replay
-  or wakeup failures, and fatal read-path store errors are not counted as ordinary inspection
-  failures.
+  or wakeup failures, oversized store-returned errors are bounded before reaching operator
+  responses, and fatal read-path store errors are not counted as ordinary inspection failures.
 - Retention cleaner tests assert configured queue names and handler-discovered queue names are
   de-duplicated before cleanup, preventing duplicate purge attempts and metrics for the same queue.
   They also assert fatal cleanup errors propagate instead of being counted as ordinary retention
@@ -400,9 +400,9 @@ Operator Controls
 - Operator replay of a terminal failed job triggers the local runtime after the row is requeued so
   manual recovery is not delayed until the next idle poll cycle.
 - The queue inspection service wraps the store with a bounded default limit, status parsing,
-  same-queue id checks, capped payload previews for lists, full-payload detail lookup, and
-  failed-only replay that maps missing/non-failed jobs to explicit operator errors and emits
-  replay counters/logs.
+  same-queue id checks, capped payload previews for lists, bounded error summaries,
+  full-payload detail lookup, and failed-only replay that maps missing/non-failed jobs to explicit
+  operator errors and emits replay counters/logs.
 - Store-level replay only transitions `failed -> queued`; it does not touch running or completed
   jobs, resets the attempt budget for a fresh retry cycle, and keeps the previous `last_error`
   until success or the next failure.

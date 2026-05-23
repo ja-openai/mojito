@@ -68,6 +68,46 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void inspectionCapsOversizedLastErrorReturnedByStore() {
+    String oversizedLastError = "x".repeat(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH + 100);
+    Instant now = Instant.now();
+    AsyncJobRecord failedRecord =
+        new AsyncJobRecord(
+            new AsyncJobId("1"),
+            "assetlocalize",
+            AsyncJobStatus.FAILED,
+            now.minusSeconds(1),
+            null,
+            null,
+            null,
+            "{\"step\":\"failed\"}",
+            3,
+            oversizedLastError,
+            now.minusSeconds(2),
+            now.minusSeconds(1),
+            false);
+    InMemoryAsyncJobStore store =
+        new InMemoryAsyncJobStore() {
+          @Override
+          public List<AsyncJobRecord> findByStatus(
+              String queueName, AsyncJobStatus status, int limit) {
+            return List.of(failedRecord);
+          }
+
+          @Override
+          public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
+            return List.of(failedRecord);
+          }
+        };
+    AsyncJobQueueInspectionService service = inspectionService(store);
+
+    assertThat(service.findJobs("assetlocalize", "failed", 10).get(0).lastError())
+        .hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+    assertThat(service.getJob("assetlocalize", "1").lastError())
+        .hasSize(AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH);
+  }
+
+  @Test
   public void countJobsByStatusReturnsStableStatusSetWithoutPayloads() {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     store.enqueue("assetlocalize", "{\"step\":\"queued\"}", Instant.now().plusSeconds(60));
