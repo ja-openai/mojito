@@ -890,6 +890,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
       Map<String, Double> claimFailuresByKind = claimFailureCounts(meterRegistries, queueName);
       assertThat(claimFailuresByKind.values().stream().mapToDouble(Double::doubleValue).sum())
           .isEqualTo(pollFailures.get());
+      assertThat(claimFailuresByKind).doesNotContainKeys("dataAccess", "other");
       return new RuntimeContentionResult(
           jobCount, elapsedMs, pollCount, pollFailures.get(), claimFailuresByKind);
     } finally {
