@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.InputStream;
@@ -22,6 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.sql.DataSource;
 import org.junit.Test;
@@ -209,6 +211,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     runRelativeRetryAndImmediateReplayContract(store);
     runConcurrentClaimContract(store);
     runRuntimeDrainContract(store);
+    runRuntimeLeaseReclaimFencingContract(store);
   }
 
   private DataSource dataSource(JdbcDatabaseContainer<?> container) {
@@ -359,15 +362,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     ThreadPoolTaskExecutor executor = runtimeExecutor(6);
     try {
       AsyncJobQueueProperties.QueueSettings queueSettings =
-          new AsyncJobQueueProperties.QueueSettings();
-      queueSettings.setPollIntervalMs(1);
-      queueSettings.setMaxPollIntervalMs(50);
-      queueSettings.setClaimBatchSize(12);
-      queueSettings.setMaxConcurrency(6);
-      queueSettings.setLeaseDurationMs(30_000);
-      queueSettings.setHeartbeatIntervalMs(0);
-      queueSettings.setPollJitterPercent(0);
-      queueSettings.setRetryJitterPercent(0);
+          runtimeQueueSettings(12, 6, Duration.ofSeconds(30));
 
       AsyncJobQueueRuntime runtime =
           new AsyncJobQueueRuntime(
@@ -421,6 +416,145 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     }
   }
 
+  private void runRuntimeLeaseReclaimFencingContract(AsyncJobStore store) throws Exception {
+    String queueName = "runtime-fence";
+    AsyncJobId id = store.enqueue(queueName, "{\"id\":1}", Instant.now().minusSeconds(1));
+
+    CountDownLatch firstAttemptStarted = new CountDownLatch(1);
+    CountDownLatch releaseFirstAttempt = new CountDownLatch(1);
+    AtomicInteger slowInvocations = new AtomicInteger();
+    AtomicInteger reclaimInvocations = new AtomicInteger();
+    AtomicBoolean reclaimedLeaseObserved = new AtomicBoolean();
+    SimpleMeterRegistry slowMeterRegistry = new SimpleMeterRegistry();
+    SimpleMeterRegistry reclaimMeterRegistry = new SimpleMeterRegistry();
+    ThreadPoolTaskExecutor slowExecutor = runtimeExecutor(1);
+    ThreadPoolTaskExecutor reclaimExecutor = runtimeExecutor(1);
+    try {
+      AsyncJobQueueRuntime slowRuntime =
+          new AsyncJobQueueRuntime(
+              queueName,
+              store,
+              runtimeQueueSettings(1, 1, Duration.ofMillis(75)),
+              new AsyncJobHandler() {
+                @Override
+                public String queueName() {
+                  return queueName;
+                }
+
+                @Override
+                public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord)
+                    throws Exception {
+                  slowInvocations.incrementAndGet();
+                  firstAttemptStarted.countDown();
+                  releaseFirstAttempt.await(5, TimeUnit.SECONDS);
+                  return AsyncJobHandlerResult.done("{\"stale\":true}");
+                }
+              },
+              mock(TaskScheduler.class),
+              slowExecutor,
+              slowMeterRegistry,
+              "runtime-slow");
+      AsyncJobQueueRuntime reclaimRuntime =
+          new AsyncJobQueueRuntime(
+              queueName,
+              store,
+              runtimeQueueSettings(1, 1, Duration.ofSeconds(5)),
+              new AsyncJobHandler() {
+                @Override
+                public String queueName() {
+                  return queueName;
+                }
+
+                @Override
+                public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                  reclaimInvocations.incrementAndGet();
+                  reclaimedLeaseObserved.set(asyncJobRecord.leaseReclaimed());
+                  return AsyncJobHandlerResult.done("{\"reclaimed\":true}");
+                }
+              },
+              mock(TaskScheduler.class),
+              reclaimExecutor,
+              reclaimMeterRegistry,
+              "runtime-reclaimer");
+
+      slowRuntime.pollOnce();
+
+      assertThat(firstAttemptStarted.await(3, TimeUnit.SECONDS)).isTrue();
+      AsyncJobRecord firstClaim = store.getByIds(List.of(id)).get(0);
+      assertThat(firstClaim.status()).isEqualTo(AsyncJobStatus.RUNNING);
+      assertThat(firstClaim.workerId()).isEqualTo("runtime-slow");
+      assertThat(firstClaim.attemptCount()).isEqualTo(1);
+
+      pollUntilDone(reclaimRuntime, store, queueName, 1);
+
+      releaseFirstAttempt.countDown();
+      waitForRuntimeIdle(slowRuntime);
+
+      AsyncJobRecord completed = store.getByIds(List.of(id)).get(0);
+      assertThat(completed.status()).isEqualTo(AsyncJobStatus.DONE);
+      assertThat(completed.attemptCount()).isEqualTo(2);
+      assertThat(completed.jobData()).isEqualTo("{\"reclaimed\":true}");
+      assertThat(completed.workerId()).isNull();
+      assertThat(completed.leaseToken()).isNull();
+      assertThat(completed.leaseUntil()).isNull();
+      assertThat(slowInvocations.get()).isEqualTo(1);
+      assertThat(reclaimInvocations.get()).isEqualTo(1);
+      assertThat(reclaimedLeaseObserved.get()).isTrue();
+      assertThat(counterCount(slowMeterRegistry, "asyncJobQueue.completed", queueName)).isZero();
+      assertThat(transitionFailureCount(slowMeterRegistry, queueName, "done")).isEqualTo(1);
+      assertThat(
+              counterCount(reclaimMeterRegistry, "asyncJobQueue.leaseExpiredReclaimed", queueName))
+          .isEqualTo(1);
+      assertThat(counterCount(reclaimMeterRegistry, "asyncJobQueue.completed", queueName))
+          .isEqualTo(1);
+    } finally {
+      releaseFirstAttempt.countDown();
+      slowExecutor.shutdown();
+      reclaimExecutor.shutdown();
+      slowMeterRegistry.close();
+      reclaimMeterRegistry.close();
+    }
+  }
+
+  private void pollUntilDone(
+      AsyncJobQueueRuntime runtime, AsyncJobStore store, String queueName, int expectedDone)
+      throws InterruptedException {
+    Instant deadline = Instant.now().plusSeconds(10);
+    while (Instant.now().isBefore(deadline)
+        && (statusCount(store, queueName, AsyncJobStatus.DONE) < expectedDone
+            || runtime.inFlightCount() > 0)) {
+      runtime.pollOnce();
+      Thread.sleep(10);
+    }
+
+    assertThat(statusCount(store, queueName, AsyncJobStatus.DONE)).isEqualTo(expectedDone);
+    waitForRuntimeIdle(runtime);
+  }
+
+  private void waitForRuntimeIdle(AsyncJobQueueRuntime runtime) throws InterruptedException {
+    Instant deadline = Instant.now().plusSeconds(5);
+    while (Instant.now().isBefore(deadline) && runtime.inFlightCount() > 0) {
+      Thread.sleep(10);
+    }
+    assertThat(runtime.inFlightCount()).isZero();
+  }
+
+  private AsyncJobQueueProperties.QueueSettings runtimeQueueSettings(
+      int claimBatchSize, int maxConcurrency, Duration leaseDuration) {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        new AsyncJobQueueProperties.QueueSettings();
+    queueSettings.setPollIntervalMs(1);
+    queueSettings.setMaxPollIntervalMs(50);
+    queueSettings.setClaimBatchSize(claimBatchSize);
+    queueSettings.setMaxConcurrency(maxConcurrency);
+    queueSettings.setLeaseDurationMs(leaseDuration.toMillis());
+    queueSettings.setHeartbeatIntervalMs(0);
+    queueSettings.setMaxAttempts(3);
+    queueSettings.setPollJitterPercent(0);
+    queueSettings.setRetryJitterPercent(0);
+    return queueSettings;
+  }
+
   private void waitForProcessingLatencyCount(
       SimpleMeterRegistry meterRegistry, String queueName, int expectedCount)
       throws InterruptedException {
@@ -444,6 +578,23 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
                 .timer()
                 .count())
         .isEqualTo(expectedCount);
+  }
+
+  private double counterCount(
+      SimpleMeterRegistry meterRegistry, String meterName, String queueName) {
+    Counter counter = meterRegistry.find(meterName).tag("queueName", queueName).counter();
+    return counter == null ? 0 : counter.count();
+  }
+
+  private double transitionFailureCount(
+      SimpleMeterRegistry meterRegistry, String queueName, String transition) {
+    Counter counter =
+        meterRegistry
+            .find("asyncJobQueue.transition.failed")
+            .tag("queueName", queueName)
+            .tag("transition", transition)
+            .counter();
+    return counter == null ? 0 : counter.count();
   }
 
   private ThreadPoolTaskExecutor runtimeExecutor(int concurrency) {
