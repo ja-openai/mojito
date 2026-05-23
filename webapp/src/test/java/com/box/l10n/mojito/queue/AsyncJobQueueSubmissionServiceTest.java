@@ -181,6 +181,27 @@ public class AsyncJobQueueSubmissionServiceTest {
   }
 
   @Test
+  public void enqueuePropagatesFatalCrossProcessWakeupErrorsWithoutNotifyFailureCounter() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueWakeupNotifier wakeupNotifier = mock(AsyncJobQueueWakeupNotifier.class);
+    FatalTestError fatalTestError = new FatalTestError("fatal enqueue notify");
+    doThrow(fatalTestError)
+        .when(wakeupNotifier)
+        .notifyJobAvailable(anyString(), any(AsyncJobId.class));
+    AsyncJobQueueSubmissionService service = submissionService(store, coordinator, wakeupNotifier);
+
+    assertThatThrownBy(() -> service.enqueueNow("assetlocalize", "{\"id\":1}"))
+        .isSameAs(fatalTestError);
+
+    assertThat(store.findByStatus("assetlocalize", AsyncJobStatus.QUEUED, 10)).hasSize(1);
+    verify(coordinator).triggerPollNow("assetlocalize");
+    assertEnqueueCounter("succeeded", 1);
+    assertNoEnqueueCounter("failed");
+    assertNoEnqueueWakeupNotifyFailureCounter();
+  }
+
+  @Test
   public void enqueuePropagatesFatalWakeupErrorsWithoutWakeupFailureCounter() {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
@@ -350,6 +371,15 @@ public class AsyncJobQueueSubmissionServiceTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private void assertNoEnqueueWakeupNotifyFailureCounter() {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.enqueueWakeup.notify.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
   }
 
   private static class FatalTestError extends VirtualMachineError {
