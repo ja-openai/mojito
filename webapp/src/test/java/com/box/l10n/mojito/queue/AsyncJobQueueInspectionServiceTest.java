@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
@@ -370,6 +371,23 @@ public class AsyncJobQueueInspectionServiceTest {
         .isInstanceOf(AsyncJobQueueInspectionService.AsyncJobNotFailedException.class);
     assertRequeueCounter("notFound", 1);
     assertRequeueCounter("notFailed", 1);
+  }
+
+  @Test
+  public void requeueFailedJobTreatsOtherQueueJobIdAsNotFound() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    AsyncJobId otherQueueId = failedJob(store, "other", "{\"step\":\"failed\"}", "boom");
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueInspectionService service = inspectionService(store, coordinator);
+
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", otherQueueId.value(), null))
+        .isInstanceOf(AsyncJobQueueInspectionService.AsyncJobNotFoundException.class);
+
+    verifyNoInteractions(coordinator);
+    assertRequeueCounter("notFound", 1);
+    AsyncJobRecord otherQueueJob = store.getByIds(List.of(otherQueueId)).get(0);
+    assertThat(otherQueueJob.queueName()).isEqualTo("other");
+    assertThat(otherQueueJob.status()).isEqualTo(AsyncJobStatus.FAILED);
   }
 
   @Test

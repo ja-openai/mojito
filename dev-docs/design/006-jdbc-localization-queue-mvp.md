@@ -265,6 +265,8 @@ Test Coverage
   signal.
 - Shared store contract tests also assert operator replay is scoped by both queue name and job id,
   preventing future multi-queue backends from replaying a failed row through the wrong queue.
+- Inspection service tests assert cross-queue replay attempts are reported as not found and do not
+  wake any runtime, so operator tooling cannot accidentally replay a job through the wrong queue.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.
