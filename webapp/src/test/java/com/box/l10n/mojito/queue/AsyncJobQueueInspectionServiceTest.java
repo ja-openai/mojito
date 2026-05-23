@@ -67,6 +67,47 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void countJobsByStatusReturnsStableStatusSetWithoutPayloads() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    store.enqueue("assetlocalize", "{\"step\":\"queued\"}", Instant.now().plusSeconds(60));
+    failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
+    AsyncJobQueueInspectionService service = inspectionService(store);
+
+    List<AsyncJobQueueInspectionService.AsyncJobStatusCountSummary> counts =
+        service.countJobsByStatus("assetlocalize");
+
+    assertThat(counts)
+        .extracting(
+            AsyncJobQueueInspectionService.AsyncJobStatusCountSummary::status,
+            AsyncJobQueueInspectionService.AsyncJobStatusCountSummary::count)
+        .containsExactlyInAnyOrder(
+            org.assertj.core.groups.Tuple.tuple("queued", 1L),
+            org.assertj.core.groups.Tuple.tuple("running", 0L),
+            org.assertj.core.groups.Tuple.tuple("done", 0L),
+            org.assertj.core.groups.Tuple.tuple("failed", 1L));
+    assertCountCounter("succeeded", 1);
+  }
+
+  @Test
+  public void countJobsByStatusRecordsStoreFailures() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public List<AsyncJobStatusCount> countByStatus(String queueName) {
+                throw new IllegalStateException("database unavailable");
+              }
+            },
+            noOpCoordinator(),
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.countJobsByStatus("assetlocalize"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("database unavailable");
+    assertCountCounter("failed", 1);
+  }
+
+  @Test
   public void findJobsRecordsInvalidInputAndStoreFailures() {
     AsyncJobQueueInspectionService invalidInputService =
         inspectionService(new InMemoryAsyncJobStore());
@@ -429,6 +470,17 @@ public class AsyncJobQueueInspectionServiceTest {
     assertThat(
             meterRegistry
                 .get("asyncJobQueue.inspection.get")
+                .tag("queueName", "assetlocalize")
+                .tag("result", result)
+                .counter()
+                .count())
+        .isEqualTo(count);
+  }
+
+  private void assertCountCounter(String result, double count) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.inspection.count")
                 .tag("queueName", "assetlocalize")
                 .tag("result", result)
                 .counter()

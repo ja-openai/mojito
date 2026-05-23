@@ -329,9 +329,14 @@ Monitoring (MVP Required)
     local runtime wakeup failed; polling remains the correctness fallback
   - replay logs include queue/job identifiers and whether replacement payload was supplied, never
     the payload itself
+  - `asyncJobQueue.inspection.count` by `queueName,result` for read-only admin status-count
+    lookups
 
 Operator Controls
 - Store-level inspection supports listing recent jobs by `queue_name` and `status`.
+- Read-only admin status counts are exposed via
+  `GET /api/admin/async-job-queue/queues/{queueName}/status-counts`; the response contains only
+  stable status/count pairs and never job payload.
 - Store-level inspection, batch id lookup, claim, and cleanup methods reject excessive
   caller-provided limits so an admin path cannot accidentally issue pathological queue-table
   queries.
@@ -350,9 +355,9 @@ Operator Controls
   `l10n.org.async-job-queue.retention.enabled=true`, deleting at most `batch-size` done rows and
   `batch-size` failed rows per queue per run.
 - A broader REST/admin surface can wrap the inspection service later after an explicit
-  authorization, payload-redaction, and replay-audit review. The narrow assetlocalize pollable
-  repair endpoint is exposed first because it returns only ids/status/result and does not replay
-  work or expose payload.
+  authorization, payload-redaction, and replay-audit review. The narrow status-count and
+  assetlocalize pollable-repair endpoints are exposed first because they do not replay work or
+  expose payload.
 
 Rollout Plan
 1. Implement queue infra + assetlocalize-only integration behind feature flag.

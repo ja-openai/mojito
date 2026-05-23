@@ -2,8 +2,10 @@ package com.box.l10n.mojito.queue;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +73,31 @@ public class AsyncJobQueueInspectionService {
           validatedQueueName,
           parsedStatus.getDatabaseValue(),
           exception);
+      throw unchecked(exception);
+    }
+  }
+
+  public List<AsyncJobStatusCountSummary> countJobsByStatus(String queueName) {
+    String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
+    try {
+      Map<AsyncJobStatus, Long> countsByStatus = zeroCountsByStatus();
+      for (AsyncJobStatusCount statusCount : asyncJobStore.countByStatus(validatedQueueName)) {
+        countsByStatus.put(statusCount.status(), statusCount.count());
+      }
+      incrementCountCounter(validatedQueueName, "succeeded");
+      return countsByStatus.entrySet().stream()
+          .map(
+              entry ->
+                  new AsyncJobStatusCountSummary(
+                      entry.getKey().getDatabaseValue(), Math.max(0L, entry.getValue())))
+          .toList();
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
+      incrementCountCounter(validatedQueueName, "failed");
+      logger.warn(
+          "Failed to count async jobs by status for queue {}", validatedQueueName, exception);
       throw unchecked(exception);
     }
   }
@@ -289,6 +316,20 @@ public class AsyncJobQueueInspectionService {
         .increment();
   }
 
+  private void incrementCountCounter(String queueName, String result) {
+    meterRegistry
+        .counter("asyncJobQueue.inspection.count", "queueName", queueName, "result", result)
+        .increment();
+  }
+
+  private Map<AsyncJobStatus, Long> zeroCountsByStatus() {
+    Map<AsyncJobStatus, Long> countsByStatus = new EnumMap<>(AsyncJobStatus.class);
+    for (AsyncJobStatus status : AsyncJobStatus.values()) {
+      countsByStatus.put(status, 0L);
+    }
+    return countsByStatus;
+  }
+
   private boolean isJvmFatal(Throwable throwable) {
     return throwable instanceof VirtualMachineError
         || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
@@ -330,6 +371,8 @@ public class AsyncJobQueueInspectionService {
       String jobData,
       Instant createdDate,
       Instant updatedDate) {}
+
+  public record AsyncJobStatusCountSummary(String status, long count) {}
 
   public static class AsyncJobNotFoundException extends RuntimeException {
     public AsyncJobNotFoundException(String message) {
