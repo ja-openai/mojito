@@ -269,6 +269,8 @@ Test Coverage
   wake any runtime, so operator tooling cannot accidentally replay a job through the wrong queue.
 - Retention cleaner tests assert configured queue names and handler-discovered queue names are
   de-duplicated before cleanup, preventing duplicate purge attempts and metrics for the same queue.
+  They also assert fatal cleanup errors propagate instead of being counted as ordinary retention
+  failures.
 - Admin REST tests assert the public redacted job response shape exposes payload length but not
   `jobData` or `jobDataPreview`, making payload-redaction regressions visible at test time.
 - Coordinator tests assert duplicate handler beans for one queue fail startup before any runtime is

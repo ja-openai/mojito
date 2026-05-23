@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -120,6 +121,32 @@ public class AsyncJobQueueRetentionCleanerTest {
 
     assertFailedCounter("assetlocalize", AsyncJobStatus.DONE, 1);
     assertDeletedCounter("assetlocalize", AsyncJobStatus.FAILED, 2);
+  }
+
+  @Test
+  public void cleanupTerminalJobsPropagatesFatalStoreErrorsWithoutFailureCounter() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    FatalTestError fatalTestError = new FatalTestError("fatal retention");
+    when(asyncJobStore.deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.DONE), any(Instant.class), eq(100)))
+        .thenThrow(fatalTestError);
+
+    AsyncJobQueueRetentionCleaner retentionCleaner =
+        new AsyncJobQueueRetentionCleaner(
+            asyncJobStore,
+            queueProperties("assetlocalize"),
+            List.of(),
+            meterRegistry,
+            () -> CLEANUP_NOW);
+
+    FatalTestError exception =
+        assertThrows(FatalTestError.class, retentionCleaner::cleanupTerminalJobs);
+
+    assertThat(exception).isSameAs(fatalTestError);
+    assertNoFailedCounter("assetlocalize", AsyncJobStatus.DONE);
+    verify(asyncJobStore, never())
+        .deleteTerminalJobs(
+            eq("assetlocalize"), eq(AsyncJobStatus.FAILED), any(Instant.class), eq(100));
   }
 
   @Test
@@ -291,5 +318,21 @@ public class AsyncJobQueueRetentionCleanerTest {
                 .counter()
                 .count())
         .isEqualTo(expectedCount);
+  }
+
+  private void assertNoFailedCounter(String queueName, AsyncJobStatus status) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.retention.failed")
+                .tag("queueName", queueName)
+                .tag("status", status.getDatabaseValue())
+                .counter())
+        .isNull();
+  }
+
+  private static class FatalTestError extends VirtualMachineError {
+    FatalTestError(String message) {
+      super(message);
+    }
   }
 }
