@@ -328,8 +328,8 @@ class AsyncJobQueueRuntime {
         }
         throw (Error) e;
       }
-      logger.error("Async queue poll failed for queue {}", queueName, e);
-      meterRegistry.counter("asyncJobQueue.poll.failed", "queueName", queueName).increment();
+      logPollFailure(e);
+      recordPollFailure(e);
       pollCycleResult = PollCycleResult.failed(basePollDelayMs());
     }
 
@@ -996,8 +996,29 @@ class AsyncJobQueueRuntime {
         .increment();
   }
 
+  private void logPollFailure(Throwable e) {
+    String failureKind = claimFailureKind(e);
+    if (isTransientClaimFailure(failureKind)) {
+      logger.warn("Transient async queue poll failed for queue {}: {}", queueName, failureKind, e);
+    } else {
+      logger.error("Async queue poll failed for queue {}", queueName, e);
+    }
+  }
+
+  private void recordPollFailure(Throwable e) {
+    String failureKind = claimFailureKind(e);
+    meterRegistry.counter("asyncJobQueue.poll.failed", "queueName", queueName).increment();
+    meterRegistry
+        .counter(
+            "asyncJobQueue.poll.failed.byFailure", "queueName", queueName, "failure", failureKind)
+        .increment();
+  }
+
   static String claimFailureKind(Throwable throwable) {
     if (hasCause(throwable, DeadlockLoserDataAccessException.class)) {
+      return "deadlock";
+    }
+    if (hasMessageContaining(throwable, "deadlock")) {
       return "deadlock";
     }
     if (hasCause(
@@ -1013,6 +1034,12 @@ class AsyncJobQueueRuntime {
     return "other";
   }
 
+  private static boolean isTransientClaimFailure(String failureKind) {
+    return "deadlock".equals(failureKind)
+        || "lock".equals(failureKind)
+        || "timeout".equals(failureKind);
+  }
+
   @SafeVarargs
   private static boolean hasCause(
       Throwable throwable, Class<? extends Throwable>... exceptionTypes) {
@@ -1022,6 +1049,18 @@ class AsyncJobQueueRuntime {
         if (exceptionType.isInstance(current)) {
           return true;
         }
+      }
+      current = current.getCause();
+    }
+    return false;
+  }
+
+  private static boolean hasMessageContaining(Throwable throwable, String needle) {
+    Throwable current = throwable;
+    while (current != null) {
+      String message = current.getMessage();
+      if (message != null && message.toLowerCase(java.util.Locale.ROOT).contains(needle)) {
+        return true;
       }
       current = current.getCause();
     }

@@ -3216,6 +3216,7 @@ public class AsyncJobQueueRuntimeTest {
                 .count())
         .isEqualTo(1);
     assertClaimFailureCounter("other", 1);
+    assertPollFailureKindCounter("other", 1);
     assertThat(taskScheduler.scheduledTasks()).hasSize(2);
     long scheduledDelayMs =
         taskScheduler.scheduledStartTimes().get(1).getTime()
@@ -3251,6 +3252,7 @@ public class AsyncJobQueueRuntimeTest {
                 .count())
         .isEqualTo(1);
     assertClaimFailureCounter("other", 1);
+    assertPollFailureKindCounter("other", 1);
     assertThat(taskScheduler.scheduledTasks()).hasSize(2);
 
     taskScheduler.scheduledTasks().get(1).run();
@@ -3261,6 +3263,30 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void scheduledPollTagsTransientDatabaseContentionFailure() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"));
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    taskScheduler.scheduledTasks().get(0).run();
+
+    assertClaimFailureCounter("deadlock", 1);
+    assertPollFailureKindCounter("deadlock", 1);
+    assertThat(taskScheduler.scheduledTasks()).hasSize(2);
+  }
+
+  @Test
   public void claimFailureCounterClassifiesDatabaseContention() {
     assertThat(AsyncJobQueueRuntime.claimFailureKind(new IllegalStateException("boom")))
         .isEqualTo("other");
@@ -3268,6 +3294,10 @@ public class AsyncJobQueueRuntimeTest {
             AsyncJobQueueRuntime.claimFailureKind(
                 new IllegalStateException(
                     "wrapped", new DeadlockLoserDataAccessException("deadlock", null))))
+        .isEqualTo("deadlock");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new CannotAcquireLockException("Deadlock found when trying to get lock")))
         .isEqualTo("deadlock");
     assertThat(AsyncJobQueueRuntime.claimFailureKind(new CannotAcquireLockException("busy")))
         .isEqualTo("lock");
@@ -3863,6 +3893,17 @@ public class AsyncJobQueueRuntimeTest {
     assertThat(
             meterRegistry
                 .get("asyncJobQueue.claim.failed")
+                .tag("queueName", "assetlocalize")
+                .tag("failure", failure)
+                .counter()
+                .count())
+        .isEqualTo(expectedCount);
+  }
+
+  private void assertPollFailureKindCounter(String failure, double expectedCount) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.failed.byFailure")
                 .tag("queueName", "assetlocalize")
                 .tag("failure", failure)
                 .counter()
