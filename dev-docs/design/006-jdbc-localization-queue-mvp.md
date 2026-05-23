@@ -267,6 +267,8 @@ Test Coverage
   preventing future multi-queue backends from replaying a failed row through the wrong queue.
 - Inspection service tests assert cross-queue replay attempts are reported as not found and do not
   wake any runtime, so operator tooling cannot accidentally replay a job through the wrong queue.
+  They also assert fatal replay wakeup errors propagate instead of being counted as ordinary replay
+  or wakeup failures.
 - Retention cleaner tests assert configured queue names and handler-discovered queue names are
   de-duplicated before cleanup, preventing duplicate purge attempts and metrics for the same queue.
   They also assert fatal cleanup errors propagate instead of being counted as ordinary retention

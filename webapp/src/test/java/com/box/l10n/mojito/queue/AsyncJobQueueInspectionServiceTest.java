@@ -359,6 +359,25 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void requeueFailedJobPropagatesFatalWakeupErrorsWithoutFailureCounters() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    AsyncJobId id = failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    FatalTestError fatalTestError = new FatalTestError("fatal replay wakeup");
+    doThrow(fatalTestError).when(coordinator).triggerPollNow("assetlocalize");
+    AsyncJobQueueInspectionService service = inspectionService(store, coordinator);
+
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", id.value(), null))
+        .isSameAs(fatalTestError);
+
+    AsyncJobRecord replayedJob = store.getByIds(List.of(id)).get(0);
+    assertThat(replayedJob.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertNoRequeueCounter("succeeded");
+    assertNoRequeueCounter("failed");
+    assertNoRequeueWakeupFailureCounter();
+  }
+
+  @Test
   public void requeueFailedJobRejectsMissingAndNonFailedJobs() {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     AsyncJobId queuedId =
@@ -523,6 +542,16 @@ public class AsyncJobQueueInspectionServiceTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private void assertNoRequeueCounter(String result) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.inspection.requeue")
+                .tag("queueName", "assetlocalize")
+                .tag("result", result)
+                .counter())
+        .isNull();
   }
 
   private void assertRequeueWakeupFailureCounter(double count) {
