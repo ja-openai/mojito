@@ -92,6 +92,25 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void findJobsRecordsNonFatalStoreErrors() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public List<AsyncJobRecord> findByStatus(
+                  String queueName, AsyncJobStatus status, int limit) {
+                throw new NonFatalTestError("store invariant");
+              }
+            },
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.findJobs("assetlocalize", "failed", 10))
+        .isInstanceOf(NonFatalTestError.class)
+        .hasMessageContaining("store invariant");
+    assertFindCounter("failed", "failed", 1);
+  }
+
+  @Test
   public void getJobRecordsStoreFailures() {
     AsyncJobQueueInspectionService service =
         new AsyncJobQueueInspectionService(
@@ -107,6 +126,42 @@ public class AsyncJobQueueInspectionServiceTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("database unavailable");
     assertGetCounter("failed", 1);
+  }
+
+  @Test
+  public void getJobRecordsNonFatalStoreErrors() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
+                throw new NonFatalTestError("lookup invariant");
+              }
+            },
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.getJob("assetlocalize", "1"))
+        .isInstanceOf(NonFatalTestError.class)
+        .hasMessageContaining("lookup invariant");
+    assertGetCounter("failed", 1);
+  }
+
+  @Test
+  public void getJobPropagatesFatalJvmErrorsWithoutFailureCounter() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public List<AsyncJobRecord> getByIds(List<AsyncJobId> ids) {
+                throw new FatalTestError("fatal");
+              }
+            },
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.getJob("assetlocalize", "1"))
+        .isInstanceOf(FatalTestError.class)
+        .hasMessageContaining("fatal");
+    assertNoGetCounter("failed");
   }
 
   @Test
@@ -206,6 +261,24 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void requeueFailedJobRecordsNonFatalStoreErrors() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public boolean requeueFailedNow(String queueName, AsyncJobId id, String jobData) {
+                throw new NonFatalTestError("requeue invariant");
+              }
+            },
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "1", null))
+        .isInstanceOf(NonFatalTestError.class)
+        .hasMessageContaining("requeue invariant");
+    assertRequeueCounter("failed", 1);
+  }
+
+  @Test
   public void requeueFailedJobRecordsSingleFailureWhenPostReplayLookupFails() {
     AsyncJobQueueInspectionService service =
         new AsyncJobQueueInspectionService(
@@ -301,5 +374,17 @@ public class AsyncJobQueueInspectionServiceTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private static class NonFatalTestError extends Error {
+    NonFatalTestError(String message) {
+      super(message);
+    }
+  }
+
+  private static class FatalTestError extends VirtualMachineError {
+    FatalTestError(String message) {
+      super(message);
+    }
   }
 }

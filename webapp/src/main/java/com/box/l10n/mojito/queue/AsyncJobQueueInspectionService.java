@@ -56,14 +56,17 @@ public class AsyncJobQueueInspectionService {
               .toList();
       incrementFindCounter(validatedQueueName, parsedStatus.getDatabaseValue(), "succeeded");
       return jobs;
-    } catch (RuntimeException exception) {
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
       incrementFindCounter(validatedQueueName, parsedStatus.getDatabaseValue(), "failed");
       logger.warn(
           "Failed to inspect async jobs for queue {}, status {}",
           validatedQueueName,
           parsedStatus.getDatabaseValue(),
           exception);
-      throw exception;
+      throw unchecked(exception);
     }
   }
 
@@ -88,14 +91,17 @@ public class AsyncJobQueueInspectionService {
           "Async job not found for queue " + validatedQueueName + ": " + asyncJobId.value());
     } catch (AsyncJobNotFoundException exception) {
       throw exception;
-    } catch (RuntimeException exception) {
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
       incrementGetCounter(validatedQueueName, "failed");
       logger.warn(
           "Failed to inspect async job for queue {}, job {}",
           validatedQueueName,
           asyncJobId.value(),
           exception);
-      throw exception;
+      throw unchecked(exception);
     }
   }
 
@@ -156,14 +162,17 @@ public class AsyncJobQueueInspectionService {
             exception);
       }
       throw exception;
-    } catch (RuntimeException exception) {
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
       incrementRequeueCounter(validatedQueueName, "failed");
       logger.warn(
           "Failed to requeue async job for queue {}, job {}",
           validatedQueueName,
           asyncJobId.value(),
           exception);
-      throw exception;
+      throw unchecked(exception);
     }
   }
 
@@ -254,6 +263,21 @@ public class AsyncJobQueueInspectionService {
     meterRegistry
         .counter("asyncJobQueue.inspection.get", "queueName", queueName, "result", result)
         .increment();
+  }
+
+  private boolean isJvmFatal(Throwable throwable) {
+    return throwable instanceof VirtualMachineError
+        || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
+  }
+
+  private RuntimeException unchecked(Throwable throwable) {
+    if (throwable instanceof RuntimeException runtimeException) {
+      return runtimeException;
+    }
+    if (throwable instanceof Error error) {
+      throw error;
+    }
+    return new IllegalStateException(throwable);
   }
 
   public record AsyncJobSummary(
