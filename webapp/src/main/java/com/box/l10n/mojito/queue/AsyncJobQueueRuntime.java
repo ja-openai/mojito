@@ -276,6 +276,16 @@ class AsyncJobQueueRuntime {
               + " while polling queue "
               + queueName);
     }
+    if (claimedJob.attemptCount() <= 0) {
+      throw invalidClaim(
+          "invalidAttemptCount",
+          "AsyncJobStore returned claimed job "
+              + claimedJob.id().value()
+              + " with non-positive attempt count "
+              + claimedJob.attemptCount()
+              + " while polling queue "
+              + queueName);
+    }
     if (!workerId.equals(claimedJob.workerId())) {
       throw invalidClaim(
           "wrongWorkerId",

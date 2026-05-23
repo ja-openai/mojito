@@ -315,6 +315,8 @@ public class AsyncJobQueueRuntimeTest {
         List.of(claimedJob("assetlocalize", AsyncJobStatus.RUNNING, "worker-b")),
         "wrongWorkerId",
         handlerInvocations);
+    assertInvalidClaimFailsBeforeHandler(
+        List.of(claimedJob(0)), "invalidAttemptCount", handlerInvocations);
     assertInvalidClaimFailsBeforeHandler(null, "nullList", handlerInvocations);
     assertInvalidClaimFailsBeforeHandler(
         java.util.Collections.singletonList(null), "nullRecord", handlerInvocations);
