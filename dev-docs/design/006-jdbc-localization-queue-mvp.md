@@ -165,10 +165,12 @@ Adaptive Polling (per queue)
   - if no job claimed for N cycles, increase sleep up to cap
   - on successful claim, reset to base interval
 - Scheduled non-immediate polls apply small bounded jitter (`poll-jitter-percent`, default 10%) so
-  pods do not synchronize into the same empty-poll or wakeup cadence.
+  pods do not synchronize into the same empty-poll or wakeup cadence. Jitter cannot collapse a
+  positive scheduled delay to zero.
 - Unexpected handler exceptions retry with exponential backoff from the base poll interval, capped by
-  `max-retry-delay-ms`, plus retry-specific jitter (`retry-jitter-percent`, default 20%). Handler
-  requested requeues can still provide an explicit `available_at`.
+  `max-retry-delay-ms`, plus retry-specific jitter (`retry-jitter-percent`, default 20%) that keeps
+  the final retry delay positive and still capped. Handler requested requeues can still provide an
+  explicit `available_at`.
 
 Optional Wakeup Signals
 - Wakeups are an optimization only. The durable queue table remains the source of truth and the

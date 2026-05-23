@@ -2228,6 +2228,13 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void scheduledBackoffPollJitterCannotCollapsePositiveDelayToImmediate() {
+    assertThat(AsyncJobQueueRuntime.scheduledPollDelayMs(200, delayMs -> 0)).isEqualTo(1);
+    assertThat(AsyncJobQueueRuntime.scheduledPollDelayMs(200, delayMs -> -100)).isEqualTo(1);
+    assertThat(AsyncJobQueueRuntime.scheduledPollDelayMs(0, delayMs -> 50)).isZero();
+  }
+
+  @Test
   public void scheduledBackoffSaturatesExtremeDelayDate() {
     assertThat(AsyncJobQueueRuntime.startDateAfterMillis(Long.MAX_VALUE).getTime())
         .isEqualTo(Long.MAX_VALUE);
@@ -2485,6 +2492,11 @@ public class AsyncJobQueueRuntimeTest {
     assertThat(AsyncJobQueueRuntime.addJitter(Long.MAX_VALUE - 5, 10)).isEqualTo(Long.MAX_VALUE);
     assertThat(AsyncJobQueueRuntime.addJitter(5, -10)).isZero();
     assertThat(AsyncJobQueueRuntime.addJitter(100, -25)).isEqualTo(75);
+    assertThat(AsyncJobQueueRuntime.positiveJitteredDelayMs(5, 0)).isEqualTo(1);
+    assertThat(AsyncJobQueueRuntime.positiveJitteredDelayMs(5, -10)).isEqualTo(1);
+    assertThat(AsyncJobQueueRuntime.positiveJitteredDelayMs(0, -10)).isZero();
+    assertThat(AsyncJobQueueRuntime.boundedJitteredDelayMs(100, 0, 500)).isEqualTo(1);
+    assertThat(AsyncJobQueueRuntime.boundedJitteredDelayMs(100, 650, 500)).isEqualTo(500);
   }
 
   @Test

@@ -357,10 +357,7 @@ class AsyncJobQueueRuntime {
   }
 
   private void scheduleNextPoll(long delayMs) {
-    long boundedDelayMs = Math.max(0, delayMs);
-    if (boundedDelayMs > 0) {
-      boundedDelayMs = Math.max(0, pollDelayJitter.applyAsLong(boundedDelayMs));
-    }
+    long boundedDelayMs = scheduledPollDelayMs(delayMs, pollDelayJitter);
     long pollSequence = scheduledPollSequence + 1;
     long previousPollSequence = scheduledPollSequence;
     scheduledPollSequence = pollSequence;
@@ -825,7 +822,7 @@ class AsyncJobQueueRuntime {
 
   long retryDelayMs(int attemptCount) {
     long delayMs = basePollDelayMs();
-    long maxRetryDelayMs = Math.max(delayMs, queueSettings.getMaxRetryDelayMs());
+    long maxRetryDelayMs = maxRetryDelayMs();
     int boundedAttemptCount = Math.max(1, attemptCount);
     for (int i = 1; i < boundedAttemptCount && delayMs < maxRetryDelayMs; i++) {
       if (delayMs > Long.MAX_VALUE / 2) {
@@ -842,7 +839,14 @@ class AsyncJobQueueRuntime {
   }
 
   private long applyRetryDelayJitter(long delayMs) {
-    return applyRandomDelayJitter(delayMs, queueSettings.getRetryJitterPercent());
+    return boundedJitteredDelayMs(
+        delayMs,
+        applyRandomDelayJitter(delayMs, queueSettings.getRetryJitterPercent()),
+        maxRetryDelayMs());
+  }
+
+  private long maxRetryDelayMs() {
+    return Math.max(basePollDelayMs(), queueSettings.getMaxRetryDelayMs());
   }
 
   private void recordTransitionFailure(String transition) {
@@ -989,7 +993,31 @@ class AsyncJobQueueRuntime {
 
     long jitterRangeMs = jitterRangeMs(delayMs, jitterPercent);
     long jitter = ThreadLocalRandom.current().nextLong(-jitterRangeMs, jitterRangeMs + 1);
-    return addJitter(delayMs, jitter);
+    return positiveJitteredDelayMs(delayMs, addJitter(delayMs, jitter));
+  }
+
+  static long positiveJitteredDelayMs(long originalDelayMs, long jitteredDelayMs) {
+    if (originalDelayMs <= 0) {
+      return Math.max(0, jitteredDelayMs);
+    }
+    return Math.max(1, jitteredDelayMs);
+  }
+
+  static long boundedJitteredDelayMs(long originalDelayMs, long jitteredDelayMs, long maxDelayMs) {
+    long positiveDelayMs = positiveJitteredDelayMs(originalDelayMs, jitteredDelayMs);
+    if (originalDelayMs <= 0) {
+      return positiveDelayMs;
+    }
+    return Math.min(positiveDelayMs, Math.max(1, maxDelayMs));
+  }
+
+  static long scheduledPollDelayMs(long delayMs, LongUnaryOperator pollDelayJitter) {
+    Objects.requireNonNull(pollDelayJitter);
+    long boundedDelayMs = Math.max(0, delayMs);
+    if (boundedDelayMs <= 0) {
+      return 0;
+    }
+    return positiveJitteredDelayMs(boundedDelayMs, pollDelayJitter.applyAsLong(boundedDelayMs));
   }
 
   static long jitterRangeMs(long delayMs, int jitterPercent) {
