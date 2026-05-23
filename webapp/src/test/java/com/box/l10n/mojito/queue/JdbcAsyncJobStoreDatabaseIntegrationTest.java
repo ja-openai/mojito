@@ -993,6 +993,11 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     }
 
     @Override
+    public AsyncJobReadyStatus readyStatus(String queueName) {
+      return transactionTemplate.execute(status -> delegate.readyStatus(queueName));
+    }
+
+    @Override
     public List<AsyncJobRecord> findByStatus(String queueName, AsyncJobStatus status, int limit) {
       return transactionTemplate.execute(
           transactionStatus -> delegate.findByStatus(queueName, status, limit));

@@ -717,6 +717,27 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void readyStatusCountsOnlyClaimableQueuedJobs() {
+    Instant oldReadyAt = Instant.now().minusSeconds(30);
+    jdbcAsyncJobStore.enqueue("assetlocalize", "{\"name\":\"old-ready\"}", oldReadyAt);
+    jdbcAsyncJobStore.enqueue(
+        "assetlocalize", "{\"name\":\"new-ready\"}", Instant.now().minusSeconds(1));
+    jdbcAsyncJobStore.enqueue(
+        "assetlocalize", "{\"name\":\"delayed\"}", Instant.now().plusSeconds(60));
+    AsyncJobRecord running =
+        jdbcAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+    assertThat(running.jobData()).isEqualTo("{\"name\":\"old-ready\"}");
+
+    AsyncJobReadyStatus readyStatus = jdbcAsyncJobStore.readyStatus("assetlocalize");
+
+    assertThat(readyStatus.count()).isEqualTo(1);
+    assertThat(readyStatus.oldestAvailableAt()).isBeforeOrEqualTo(readyStatus.observedAt());
+    assertThat(readyStatus.oldestAvailableAt()).isAfter(oldReadyAt);
+  }
+
+  @Test
   public void deleteTerminalJobsDeletesOnlyBoundedMatchingTerminalRows() {
     completeJob("assetlocalize", "{\"name\":\"done-1\"}");
     completeJob("assetlocalize", "{\"name\":\"done-2\"}");

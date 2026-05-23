@@ -43,6 +43,10 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertGaugeValue("assetlocalize", AsyncJobStatus.DONE, 0);
     assertGaugeValue("assetlocalize", AsyncJobStatus.FAILED, 0);
     assertGaugeValue("stats", AsyncJobStatus.QUEUED, 0);
+    assertReadyCountGaugeValue("assetlocalize", 1);
+    assertThat(readyOldestAgeGaugeValue("assetlocalize")).isGreaterThanOrEqualTo(0);
+    assertReadyCountGaugeValue("stats", 0);
+    assertReadyOldestAgeGaugeValue("stats", 0);
 
     asyncJobStore.markDone(
         "assetlocalize", runningJob.id(), "worker-a", runningJob.leaseToken(), "{\"id\":2}");
@@ -51,6 +55,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
     assertGaugeValue("assetlocalize", AsyncJobStatus.RUNNING, 0);
     assertGaugeValue("assetlocalize", AsyncJobStatus.DONE, 1);
+    assertReadyCountGaugeValue("assetlocalize", 1);
   }
 
   @Test
@@ -75,6 +80,10 @@ public class AsyncJobQueueStatusMetricsReporterTest {
         .thenThrow(new IllegalStateException("database unavailable"));
     when(asyncJobStore.countByStatus("assetlocalize"))
         .thenReturn(List.of(new AsyncJobStatusCount(AsyncJobStatus.QUEUED, 7)));
+    when(asyncJobStore.readyStatus("assetlocalize"))
+        .thenReturn(
+            new AsyncJobReadyStatus(
+                2, Instant.parse("2026-05-23T00:00:00Z"), Instant.parse("2026-05-23T00:00:03Z")));
 
     AsyncJobQueueStatusMetricsReporter reporter =
         new AsyncJobQueueStatusMetricsReporter(
@@ -87,6 +96,8 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertGaugeValue("assetlocalize", AsyncJobStatus.RUNNING, 0);
     assertGaugeValue("assetlocalize", AsyncJobStatus.DONE, 0);
     assertGaugeValue("assetlocalize", AsyncJobStatus.FAILED, 0);
+    assertReadyCountGaugeValue("assetlocalize", 2);
+    assertReadyOldestAgeGaugeValue("assetlocalize", 3000);
   }
 
   @Test
@@ -95,6 +106,8 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     when(asyncJobStore.countByStatus("broken")).thenThrow(new AssertionError("store invariant"));
     when(asyncJobStore.countByStatus("assetlocalize"))
         .thenReturn(List.of(new AsyncJobStatusCount(AsyncJobStatus.FAILED, 3)));
+    when(asyncJobStore.readyStatus("assetlocalize"))
+        .thenReturn(new AsyncJobReadyStatus(0, null, Instant.parse("2026-05-23T00:00:00Z")));
 
     AsyncJobQueueStatusMetricsReporter reporter =
         new AsyncJobQueueStatusMetricsReporter(
@@ -107,6 +120,23 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertGaugeValue("assetlocalize", AsyncJobStatus.RUNNING, 0);
     assertGaugeValue("assetlocalize", AsyncJobStatus.DONE, 0);
     assertGaugeValue("assetlocalize", AsyncJobStatus.FAILED, 3);
+    assertReadyCountGaugeValue("assetlocalize", 0);
+    assertReadyOldestAgeGaugeValue("assetlocalize", 0);
+  }
+
+  @Test
+  public void reportStatusCountsDoesNotCountFutureQueuedJobsAsReady() {
+    InMemoryAsyncJobStore asyncJobStore = new InMemoryAsyncJobStore();
+    asyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().plusSeconds(60));
+    AsyncJobQueueStatusMetricsReporter reporter =
+        new AsyncJobQueueStatusMetricsReporter(
+            asyncJobStore, queueProperties("assetlocalize"), List.of(), meterRegistry);
+
+    reporter.reportStatusCounts();
+
+    assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 1);
+    assertReadyCountGaugeValue("assetlocalize", 0);
+    assertReadyOldestAgeGaugeValue("assetlocalize", 0);
   }
 
   @Test
@@ -197,6 +227,28 @@ public class AsyncJobQueueStatusMetricsReporterTest {
                 .counter()
                 .count())
         .isEqualTo(expectedCount);
+  }
+
+  private void assertReadyCountGaugeValue(String queueName, long expectedValue) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.ready.count")
+                .tag("queueName", queueName)
+                .gauge()
+                .value())
+        .isEqualTo(expectedValue);
+  }
+
+  private void assertReadyOldestAgeGaugeValue(String queueName, long expectedValue) {
+    assertThat(readyOldestAgeGaugeValue(queueName)).isEqualTo(expectedValue);
+  }
+
+  private double readyOldestAgeGaugeValue(String queueName) {
+    return meterRegistry
+        .get("asyncJobQueue.ready.oldestAgeMs")
+        .tag("queueName", queueName)
+        .gauge()
+        .value();
   }
 
   private static class FatalTestError extends VirtualMachineError {

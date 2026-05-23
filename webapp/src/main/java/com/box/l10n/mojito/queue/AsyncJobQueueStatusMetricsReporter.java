@@ -2,6 +2,7 @@ package com.box.l10n.mojito.queue;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import java.time.Duration;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -30,6 +31,8 @@ public class AsyncJobQueueStatusMetricsReporter {
   private final List<AsyncJobHandler> asyncJobHandlers;
   private final MeterRegistry meterRegistry;
   private final Map<StatusMetricKey, AtomicLong> statusGauges = new ConcurrentHashMap<>();
+  private final Map<String, AtomicLong> readyCountGauges = new ConcurrentHashMap<>();
+  private final Map<String, AtomicLong> readyOldestAgeGauges = new ConcurrentHashMap<>();
 
   public AsyncJobQueueStatusMetricsReporter(
       AsyncJobStore asyncJobStore,
@@ -72,6 +75,10 @@ public class AsyncJobQueueStatusMetricsReporter {
     countsByStatus.forEach(
         (status, count) ->
             statusGauge(queueName, status).set(count == null ? 0L : Math.max(0L, count)));
+
+    AsyncJobReadyStatus readyStatus = asyncJobStore.readyStatus(queueName);
+    readyCountGauge(queueName).set(Math.max(0L, readyStatus.count()));
+    readyOldestAgeGauge(queueName).set(readyOldestAgeMs(readyStatus));
   }
 
   private Set<String> queueNames() {
@@ -100,6 +107,32 @@ public class AsyncJobQueueStatusMetricsReporter {
                 "asyncJobQueue.status",
                 Tags.of("queueName", queueName, "status", status.getDatabaseValue()),
                 new AtomicLong()));
+  }
+
+  private AtomicLong readyCountGauge(String queueName) {
+    return readyCountGauges.computeIfAbsent(
+        queueName,
+        ignored ->
+            meterRegistry.gauge(
+                "asyncJobQueue.ready.count", Tags.of("queueName", queueName), new AtomicLong()));
+  }
+
+  private AtomicLong readyOldestAgeGauge(String queueName) {
+    return readyOldestAgeGauges.computeIfAbsent(
+        queueName,
+        ignored ->
+            meterRegistry.gauge(
+                "asyncJobQueue.ready.oldestAgeMs",
+                Tags.of("queueName", queueName),
+                new AtomicLong()));
+  }
+
+  private long readyOldestAgeMs(AsyncJobReadyStatus readyStatus) {
+    if (readyStatus.count() == 0) {
+      return 0L;
+    }
+    return Math.max(
+        0L, Duration.between(readyStatus.oldestAvailableAt(), readyStatus.observedAt()).toMillis());
   }
 
   private boolean isJvmFatal(Throwable throwable) {

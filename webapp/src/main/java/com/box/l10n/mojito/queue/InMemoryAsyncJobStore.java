@@ -245,6 +245,28 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   }
 
   @Override
+  public AsyncJobReadyStatus readyStatus(String queueName) {
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    return withQueueLock(
+        queueName,
+        () -> {
+          Instant now = Instant.now();
+          List<StoredAsyncJob> readyJobs =
+              jobsById.values().stream()
+                  .filter(job -> job.queueName().equals(queueName))
+                  .filter(job -> job.status() == AsyncJobStatus.QUEUED)
+                  .filter(job -> !job.availableAt().isAfter(now))
+                  .toList();
+          Instant oldestAvailableAt =
+              readyJobs.stream()
+                  .map(StoredAsyncJob::availableAt)
+                  .min(Comparator.naturalOrder())
+                  .orElse(null);
+          return new AsyncJobReadyStatus(readyJobs.size(), oldestAvailableAt, now);
+        });
+  }
+
+  @Override
   public List<AsyncJobRecord> findByStatus(String queueName, AsyncJobStatus status, int limit) {
     if (limit <= 0) {
       return Collections.emptyList();

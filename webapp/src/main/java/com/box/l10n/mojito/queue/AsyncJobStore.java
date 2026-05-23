@@ -128,6 +128,14 @@ public interface AsyncJobStore {
   List<AsyncJobStatusCount> countByStatus(String queueName);
 
   /**
+   * Returns ready queued work for a queue at query time.
+   *
+   * <p>"Ready" means status is queued and availability is not in the future. Delayed retries remain
+   * visible in status counts but do not contribute to ready backlog or ready-age gauges.
+   */
+  AsyncJobReadyStatus readyStatus(String queueName);
+
+  /**
    * Lists recent jobs for a queue/status, primarily for operator inspection.
    *
    * <p>This is not used for claiming work; claim ordering remains backend-specific.
