@@ -3,6 +3,7 @@ package com.box.l10n.mojito.queue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -140,6 +141,70 @@ public class AssetLocalizeAsyncJobQueueIntegrationTest {
     verify(pollableTaskService).finishTask(42L, null, null, null);
     verify(pollableTaskExceptionUtils, times(0))
         .processException(any(Throwable.class), any(ExceptionHolder.class));
+  }
+
+  @Test
+  public void failedAssetLocalizeJobRunsThroughDurableQueueAndFinishesPollableTaskWithException()
+      throws Exception {
+    InMemoryAsyncJobStore asyncJobStore = new InMemoryAsyncJobStore();
+    PollableTask pollableTask = pollableTask(42L);
+    LocalizedAssetBody input = new LocalizedAssetBody();
+    RuntimeException failure = new RuntimeException("generate failed");
+
+    when(pollableTaskService.createPollableTask(
+            7L, GenerateLocalizedAssetJob.class.getCanonicalName(), "message", 0, 3600))
+        .thenReturn(pollableTask);
+    when(pollableTaskService.getPollableTask(42L)).thenReturn(pollableTask);
+    when(pollableTaskBlobStorage.getInput(42L, LocalizedAssetBody.class)).thenReturn(input);
+    when(localizedAssetGenerationService.generate(input)).thenThrow(failure);
+
+    AsyncJobQueueSubmissionService queueSubmissionService =
+        new AsyncJobQueueSubmissionService(asyncJobStore, asyncJobQueueCoordinator, meterRegistry);
+    AssetLocalizeAsyncJobSubmissionService assetSubmissionService =
+        new AssetLocalizeAsyncJobSubmissionService(
+            pollableTaskService,
+            pollableTaskBlobStorage,
+            pollableTaskExceptionUtils,
+            queueSubmissionService,
+            objectMapper,
+            meterRegistry);
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings();
+    queueSettings.setMaxAttempts(1);
+    AssetLocalizeAsyncJobHandler handler =
+        new AssetLocalizeAsyncJobHandler(
+            pollableTaskService,
+            pollableTaskBlobStorage,
+            pollableTaskExceptionUtils,
+            localizedAssetGenerationService,
+            objectMapper,
+            meterRegistry);
+    AsyncJobQueueRuntime runtime =
+        new AsyncJobQueueRuntime(
+            AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME,
+            asyncJobStore,
+            queueSettings,
+            handler,
+            org.mockito.Mockito.mock(TaskScheduler.class),
+            executor,
+            meterRegistry,
+            "worker-a");
+
+    assetSubmissionService.scheduleJob(
+        QuartzJobInfo.newBuilder(GenerateLocalizedAssetJob.class)
+            .withParentId(7L)
+            .withInput(input)
+            .withMessage("message")
+            .build());
+
+    runtime.pollOnce();
+    waitForStatusCount(asyncJobStore, AsyncJobStatus.FAILED, 1);
+
+    AsyncJobRecord failedJob =
+        asyncJobStore.getByIds(List.of(new AsyncJobId("1"))).stream().findFirst().orElseThrow();
+    assertThat(failedJob.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failedJob.lastError()).contains("generate failed");
+    verify(pollableTaskExceptionUtils).processException(eq(failure), any(ExceptionHolder.class));
+    verify(pollableTaskService).finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
   }
 
   private AsyncJobQueueProperties.QueueSettings queueSettings() {
