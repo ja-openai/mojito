@@ -46,6 +46,40 @@ public class AsyncJobQueueRetentionCleanerConfigurationTest {
     }
   }
 
+  @Test
+  public void retentionCleanerBeanIsNotCreatedWhenQueueIsDisabledEvenIfRetentionIsEnabled() {
+    try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+      TestPropertyValues.of("l10n.org.async-job-queue.retention.enabled=true").applyTo(context);
+      context.register(
+          AsyncJobQueueProperties.class,
+          AsyncJobQueueRetentionCleaner.class,
+          RetentionCleanerTestConfig.class);
+
+      context.refresh();
+
+      assertThat(context.getBeansOfType(AsyncJobQueueRetentionCleaner.class)).isEmpty();
+    }
+  }
+
+  @Test
+  public void retentionCleanerBeanIsNotCreatedWhenSchedulingIsDisabled() {
+    try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+      context.getEnvironment().setActiveProfiles("disablescheduling");
+      TestPropertyValues.of(
+              "l10n.org.async-job-queue.enabled=true",
+              "l10n.org.async-job-queue.retention.enabled=true")
+          .applyTo(context);
+      context.register(
+          AsyncJobQueueProperties.class,
+          AsyncJobQueueRetentionCleaner.class,
+          RetentionCleanerTestConfig.class);
+
+      context.refresh();
+
+      assertThat(context.getBeansOfType(AsyncJobQueueRetentionCleaner.class)).isEmpty();
+    }
+  }
+
   @Configuration
   @EnableConfigurationProperties(AsyncJobQueueProperties.class)
   static class RetentionCleanerTestConfig {
