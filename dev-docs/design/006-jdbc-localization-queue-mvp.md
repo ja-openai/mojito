@@ -143,6 +143,8 @@ Validation guardrails:
   jobs a controlled chance to finish without allowing indefinite JVM termination delays.
 - Retention interval, retention ages, and cleanup batch size have explicit upper bounds; scheduled
   retention is disabled by default.
+- Handler-provided explicit requeue timestamps are validated against the portable database timestamp
+  range before store transitions so bad handler output retries through the normal failure path.
 
 How Many "Cron" Loops?
 - Not one cron for the whole system and not one physical process per queue.

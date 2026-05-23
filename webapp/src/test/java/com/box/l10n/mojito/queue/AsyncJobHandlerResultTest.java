@@ -38,4 +38,23 @@ public class AsyncJobHandlerResultTest {
 
     assertThat(exception).hasMessageContaining("availableAt must be null");
   }
+
+  @Test
+  public void rejectsRequeueAvailableAtOutsideDatabaseTimestampBounds() {
+    IllegalArgumentException tooEarly =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                AsyncJobHandlerResult.requeue(
+                    AsyncJobQueueValidation.DATABASE_TIMESTAMP_MIN.minusNanos(1)));
+    IllegalArgumentException tooLate =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                AsyncJobHandlerResult.requeue(
+                    AsyncJobQueueValidation.DATABASE_TIMESTAMP_MAX.plusNanos(1)));
+
+    assertThat(tooEarly).hasMessageContaining("availableAt must be between");
+    assertThat(tooLate).hasMessageContaining("availableAt must be between");
+  }
 }

@@ -11,6 +11,9 @@ public record AsyncJobHandlerResult(Action action, Instant availableAt, String j
     if (action == Action.DONE && availableAt != null) {
       throw new IllegalArgumentException("availableAt must be null for done async job results");
     }
+    if (availableAt != null) {
+      AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
+    }
   }
 
   public enum Action {
