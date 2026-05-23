@@ -194,10 +194,17 @@ public class AsyncJobQueueInspectionService {
       incrementRequeueCounter(validatedQueueName, "invalidId");
       throw exception;
     }
+    String validatedJobData;
+    try {
+      validatedJobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
+    } catch (RuntimeException exception) {
+      incrementRequeueCounter(validatedQueueName, "invalidPayload");
+      throw exception;
+    }
 
     boolean requeueSucceeded = false;
     try {
-      if (asyncJobStore.requeueFailedNow(validatedQueueName, asyncJobId, jobData)) {
+      if (asyncJobStore.requeueFailedNow(validatedQueueName, asyncJobId, validatedJobData)) {
         requeueSucceeded = true;
         triggerReplayWakeup(validatedQueueName, asyncJobId);
         AsyncJobDetails job = findJobDetails(validatedQueueName, asyncJobId);

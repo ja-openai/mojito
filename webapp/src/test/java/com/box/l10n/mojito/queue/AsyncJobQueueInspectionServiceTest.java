@@ -536,6 +536,23 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void requeueFailedJobRejectsOversizedPayloadBeforeStoreOrWakeup() {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(store, coordinator, meterRegistry);
+    String oversizedPayload = "x".repeat(AsyncJobQueueValidation.JOB_DATA_MAX_LENGTH + 1);
+
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "1", oversizedPayload))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("jobData must be at most");
+
+    verifyNoInteractions(store, coordinator);
+    assertRequeueCounter("invalidPayload", 1);
+    assertNoRequeueCounter("failed");
+  }
+
+  @Test
   public void requeueFailedJobRecordsStoreFailures() {
     AsyncJobQueueInspectionService service =
         new AsyncJobQueueInspectionService(
