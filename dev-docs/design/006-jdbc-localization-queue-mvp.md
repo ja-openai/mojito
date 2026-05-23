@@ -151,6 +151,7 @@ Queue Runtime Config (example)
 - `l10n.org.async-job-queue.asset-localize.enabled=true`
 - `l10n.org.async-job-queue.store=jdbc`
 - `l10n.org.async-job-queue.jdbc-dialect=mysql` (`postgresql` supported for the hot-path SQL seam)
+- `l10n.org.async-job-queue.wakeup.trigger-jitter-ms=50`
 - `l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=250`
 - `l10n.org.async-job-queue.queues.assetlocalize.claim-batch-size=20`
 - `l10n.org.async-job-queue.queues.assetlocalize.max-concurrency=10`
@@ -175,6 +176,8 @@ Validation guardrails:
   `_`, `-`) because they appear in DB rows, REST paths, logs, thread names, and metric tags.
 - Poll, heartbeat, retry, lease, and status-metric intervals have explicit upper bounds to catch
   pathological scheduler/SQL timestamp settings during startup validation.
+- Cross-process wakeup trigger jitter is bounded to 5 seconds and defaults to 50 ms so PostgreSQL
+  notification broadcasts do not herd every pod into the same claim statement.
 - Executor shutdown wait is bounded and defaults to 30 seconds so app shutdown gives in-flight
   jobs a controlled chance to finish without allowing indefinite JVM termination delays.
 - Retention interval, retention ages, and cleanup batch size have explicit upper bounds; scheduled
@@ -221,8 +224,9 @@ Optional Wakeup Signals
 - PostgreSQL can add an optional `LISTEN/NOTIFY` provider:
   - enqueue commits the queue row, then sends a notification with only the logical `queue_name`
   - listeners on every pod coalesce duplicate notifications per queue
-  - listener callbacks call `triggerPollNow()` with tiny random jitter to avoid waking every pod
-    into the same claim statement at the same millisecond
+  - listener callbacks call `triggerPollNow()` after bounded random
+    `wakeup.trigger-jitter-ms` delay to avoid waking every pod into the same claim statement at the
+    same millisecond
   - failed listeners reconnect and rely on normal polling while disconnected
   - listener shutdown keeps the thread reference while a stop is still in flight, records stop
     timeouts, and refuses duplicate starts until the previous listener thread exits

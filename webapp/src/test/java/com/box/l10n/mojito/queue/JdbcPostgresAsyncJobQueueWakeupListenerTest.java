@@ -79,6 +79,41 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   }
 
   @Test
+  public void handleNotificationSkipsTriggerWhenJitterSleepIsInterrupted() {
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            mock(DataSource.class), wakeupSettings, coordinator, meterRegistry) {
+          @Override
+          long triggerJitterDelayMs() {
+            return 1_000;
+          }
+        };
+
+    Thread.currentThread().interrupt();
+    try {
+      listener.handleNotification("mojito_async_job_queue", "assetlocalize");
+    } finally {
+      Thread.interrupted();
+    }
+
+    verify(coordinator, never()).triggerPollNow("assetlocalize");
+    assertReceivedCounter("assetlocalize", "triggerInterrupted", 1);
+  }
+
+  @Test
+  public void triggerJitterDelayStaysWithinConfiguredRange() {
+    assertThat(JdbcPostgresAsyncJobQueueWakeupListener.randomTriggerJitterDelayMs(0)).isZero();
+
+    for (int i = 0; i < 100; i++) {
+      assertThat(JdbcPostgresAsyncJobQueueWakeupListener.randomTriggerJitterDelayMs(25))
+          .isBetween(0L, 25L);
+    }
+  }
+
+  @Test
   public void quotedIdentifierAllowsOnlySafeIdentifiers() {
     assertThat(JdbcPostgresAsyncJobQueueWakeupListener.quotedIdentifier("mojito_async_job_queue"))
         .isEqualTo("\"mojito_async_job_queue\"");
@@ -218,11 +253,11 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
 
   private JdbcPostgresAsyncJobQueueWakeupListener listener(
       AsyncJobQueueCoordinator asyncJobQueueCoordinator) {
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setTriggerJitterMs(0);
     return new JdbcPostgresAsyncJobQueueWakeupListener(
-        mock(DataSource.class),
-        new AsyncJobQueueProperties.WakeupSettings(),
-        asyncJobQueueCoordinator,
-        meterRegistry);
+        mock(DataSource.class), wakeupSettings, asyncJobQueueCoordinator, meterRegistry);
   }
 
   private void assertReceivedCounter(String queueName, String result, double count) {

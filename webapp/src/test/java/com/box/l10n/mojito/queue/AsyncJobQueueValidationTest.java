@@ -272,6 +272,12 @@ public class AsyncJobQueueValidationTest {
                 AsyncJobQueueValidation.WAKEUP_LISTEN_TIMEOUT_MS_MAX + 1),
         "wakeup.postgresListenTimeoutMs must be <=");
     assertInvalidWakeupSetting(
+        settings -> settings.setTriggerJitterMs(-1), "wakeup.triggerJitterMs must be >= 0");
+    assertInvalidWakeupSetting(
+        settings ->
+            settings.setTriggerJitterMs(AsyncJobQueueValidation.WAKEUP_TRIGGER_JITTER_MS_MAX + 1),
+        "wakeup.triggerJitterMs must be <=");
+    assertInvalidWakeupSetting(
         settings -> settings.setReconnectDelayMs(0), "wakeup.reconnectDelayMs must be > 0");
     assertInvalidWakeupSetting(
         settings ->

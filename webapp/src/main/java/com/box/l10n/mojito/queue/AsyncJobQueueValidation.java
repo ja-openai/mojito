@@ -30,6 +30,7 @@ final class AsyncJobQueueValidation {
   static final long RETENTION_AGE_MS_MAX = Duration.ofDays(365).toMillis();
   static final int RETENTION_BATCH_SIZE_MAX = STORE_QUERY_LIMIT_MAX;
   static final long WAKEUP_LISTEN_TIMEOUT_MS_MAX = Duration.ofMinutes(5).toMillis();
+  static final long WAKEUP_TRIGGER_JITTER_MS_MAX = Duration.ofSeconds(5).toMillis();
   static final long WAKEUP_RECONNECT_DELAY_MS_MAX = Duration.ofHours(1).toMillis();
   static final Pattern POSTGRES_CHANNEL_PATTERN = Pattern.compile("[A-Za-z_][A-Za-z0-9_]{0,62}");
   // Conservative portable bounds for MySQL DATETIME after JDBC/default-timezone conversion.
@@ -74,6 +75,10 @@ final class AsyncJobQueueValidation {
         "wakeup.postgresListenTimeoutMs",
         wakeupSettings.getPostgresListenTimeoutMs(),
         WAKEUP_LISTEN_TIMEOUT_MS_MAX);
+    validateWakeupNonNegativeDurationMs(
+        "wakeup.triggerJitterMs",
+        wakeupSettings.getTriggerJitterMs(),
+        WAKEUP_TRIGGER_JITTER_MS_MAX);
     validateWakeupPositiveDurationMs(
         "wakeup.reconnectDelayMs",
         wakeupSettings.getReconnectDelayMs(),
@@ -367,6 +372,17 @@ final class AsyncJobQueueValidation {
       String fieldName, long durationMs, long maxDurationMs) {
     if (durationMs <= 0) {
       throw new IllegalArgumentException(fieldName + " must be > 0");
+    }
+    if (durationMs > maxDurationMs) {
+      throw new IllegalArgumentException(fieldName + " must be <= " + maxDurationMs);
+    }
+    return durationMs;
+  }
+
+  private static long validateWakeupNonNegativeDurationMs(
+      String fieldName, long durationMs, long maxDurationMs) {
+    if (durationMs < 0) {
+      throw new IllegalArgumentException(fieldName + " must be >= 0");
     }
     if (durationMs > maxDurationMs) {
       throw new IllegalArgumentException(fieldName + " must be <= " + maxDurationMs);

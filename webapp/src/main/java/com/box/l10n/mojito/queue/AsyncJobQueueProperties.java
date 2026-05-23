@@ -111,6 +111,7 @@ public class AsyncJobQueueProperties {
     private String mode = AsyncJobQueueValidation.WAKEUP_MODE_POLLING;
     private String postgresChannel = "mojito_async_job_queue";
     private long postgresListenTimeoutMs = 5_000;
+    private long triggerJitterMs = 50;
     private long reconnectDelayMs = 5_000;
     private int reconnectJitterPercent = 20;
 
@@ -136,6 +137,14 @@ public class AsyncJobQueueProperties {
 
     public void setPostgresListenTimeoutMs(long postgresListenTimeoutMs) {
       this.postgresListenTimeoutMs = postgresListenTimeoutMs;
+    }
+
+    public long getTriggerJitterMs() {
+      return triggerJitterMs;
+    }
+
+    public void setTriggerJitterMs(long triggerJitterMs) {
+      this.triggerJitterMs = triggerJitterMs;
     }
 
     public long getReconnectDelayMs() {

@@ -24,6 +24,7 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
   private final DataSource dataSource;
   private final String channel;
   private final long listenTimeoutMs;
+  private final long triggerJitterMs;
   private final long reconnectDelayMs;
   private final int reconnectJitterPercent;
   private final AsyncJobQueueCoordinator asyncJobQueueCoordinator;
@@ -54,6 +55,7 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
     this.channel =
         AsyncJobQueueValidation.validatePostgresChannel(wakeupSettings.getPostgresChannel());
     this.listenTimeoutMs = wakeupSettings.getPostgresListenTimeoutMs();
+    this.triggerJitterMs = wakeupSettings.getTriggerJitterMs();
     this.reconnectDelayMs = wakeupSettings.getReconnectDelayMs();
     this.reconnectJitterPercent = wakeupSettings.getReconnectJitterPercent();
     this.asyncJobQueueCoordinator = Objects.requireNonNull(asyncJobQueueCoordinator);
@@ -219,6 +221,10 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
           exception);
       return;
     }
+    if (!sleepBeforeTrigger(queueName)) {
+      incrementReceivedCounter(queueName, "triggerInterrupted");
+      return;
+    }
     try {
       asyncJobQueueCoordinator.triggerPollNow(queueName);
       incrementReceivedCounter(queueName, "triggered");
@@ -232,6 +238,35 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
           queueName,
           exception);
     }
+  }
+
+  private boolean sleepBeforeTrigger(String queueName) {
+    long delayMs = triggerJitterDelayMs();
+    if (delayMs <= 0) {
+      return true;
+    }
+    try {
+      TimeUnit.MILLISECONDS.sleep(delayMs);
+      return true;
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      logger.debug(
+          "Interrupted before triggering async queue poll from PostgreSQL wakeup for queue {}",
+          queueName,
+          exception);
+      return false;
+    }
+  }
+
+  long triggerJitterDelayMs() {
+    return randomTriggerJitterDelayMs(triggerJitterMs);
+  }
+
+  static long randomTriggerJitterDelayMs(long triggerJitterMs) {
+    if (triggerJitterMs <= 0) {
+      return 0;
+    }
+    return ThreadLocalRandom.current().nextLong(triggerJitterMs + 1);
   }
 
   private String notificationName(Object notification) throws ReflectiveOperationException {
