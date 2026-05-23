@@ -162,6 +162,60 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   }
 
   @Test
+  public void listenerHealthGaugesExposeLifecycleAndConnectionState() throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    PGConnection pgConnection = mock(PGConnection.class);
+    CountDownLatch notificationPollStarted = new CountDownLatch(1);
+    AtomicInteger keepPolling = new AtomicInteger(1);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getAutoCommit()).thenReturn(true);
+    when(connection.createStatement()).thenReturn(statement);
+    when(connection.unwrap(PGConnection.class)).thenReturn(pgConnection);
+    when(pgConnection.getNotifications(anyInt()))
+        .thenAnswer(
+            invocation -> {
+              notificationPollStarted.countDown();
+              while (keepPolling.get() == 1) {
+                try {
+                  TimeUnit.MILLISECONDS.sleep(5);
+                } catch (InterruptedException exception) {
+                  Thread.currentThread().interrupt();
+                  return null;
+                }
+              }
+              return null;
+            });
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setPostgresListenTimeoutMs(500);
+    wakeupSettings.setReconnectDelayMs(1);
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            dataSource, wakeupSettings, mock(AsyncJobQueueCoordinator.class), meterRegistry);
+
+    assertListenerGaugeValue("asyncJobQueue.wakeup.listener.running", 0);
+    assertListenerGaugeValue("asyncJobQueue.wakeup.listener.connected", 0);
+    assertListenerGaugeValue("asyncJobQueue.wakeup.listener.threadAlive", 0);
+
+    try {
+      listener.start();
+
+      assertThat(notificationPollStarted.await(1, TimeUnit.SECONDS)).isTrue();
+      waitForListenerGaugeValue("asyncJobQueue.wakeup.listener.running", 1);
+      waitForListenerGaugeValue("asyncJobQueue.wakeup.listener.connected", 1);
+      waitForListenerGaugeValue("asyncJobQueue.wakeup.listener.threadAlive", 1);
+    } finally {
+      keepPolling.set(0);
+      listener.stop();
+    }
+    waitForListenerGaugeValue("asyncJobQueue.wakeup.listener.running", 0);
+    waitForListenerGaugeValue("asyncJobQueue.wakeup.listener.connected", 0);
+    waitForListenerGaugeValue("asyncJobQueue.wakeup.listener.threadAlive", 0);
+  }
+
+  @Test
   public void startEnablesAutoCommitBeforeListening() throws Exception {
     DataSource dataSource = mock(DataSource.class);
     Connection connection = mock(Connection.class);
@@ -278,6 +332,9 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
       listener.stop();
 
       assertSimpleCounter("asyncJobQueue.wakeup.listener.stopTimeout", 1);
+      assertListenerGaugeValue("asyncJobQueue.wakeup.listener.running", 0);
+      assertListenerGaugeValue("asyncJobQueue.wakeup.listener.connected", 0);
+      assertListenerGaugeValue("asyncJobQueue.wakeup.listener.threadAlive", 1);
       assertThatThrownBy(listener::start)
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("previous listener thread is still stopping");
@@ -323,6 +380,31 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   private void assertSimpleCounter(String name, double count) {
     Counter counter = meterRegistry.find(name).counter();
     assertThat(counter == null ? 0 : counter.count()).isEqualTo(count);
+  }
+
+  private void waitForListenerGaugeValue(String name, double expectedValue)
+      throws InterruptedException {
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+    while (System.nanoTime() < deadline) {
+      if (listenerGaugeValue(name) == expectedValue) {
+        return;
+      }
+      TimeUnit.MILLISECONDS.sleep(10);
+    }
+    assertListenerGaugeValue(name, expectedValue);
+  }
+
+  private void assertListenerGaugeValue(String name, double expectedValue) {
+    assertThat(listenerGaugeValue(name)).isEqualTo(expectedValue);
+  }
+
+  private double listenerGaugeValue(String name) {
+    return meterRegistry
+        .get(name)
+        .tag("provider", "postgres")
+        .tag("channel", "mojito_async_job_queue")
+        .gauge()
+        .value();
   }
 
   public static class TestNotification {

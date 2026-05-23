@@ -1,12 +1,16 @@
 package com.box.l10n.mojito.queue;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -31,6 +35,8 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
   private final int reconnectJitterPercent;
   private final AsyncJobQueueCoordinator asyncJobQueueCoordinator;
   private final MeterRegistry meterRegistry;
+  // Keep listener gauges bound for the bean lifetime so stopped/disconnected states remain visible.
+  private final List<Meter> listenerGauges;
   private final AtomicReference<ListenConnection> activeConnection = new AtomicReference<>();
   private final Object lifecycleLock = new Object();
 
@@ -62,6 +68,7 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
     this.reconnectJitterPercent = wakeupSettings.getReconnectJitterPercent();
     this.asyncJobQueueCoordinator = Objects.requireNonNull(asyncJobQueueCoordinator);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
+    this.listenerGauges = registerListenerGauges();
   }
 
   @Override
@@ -327,6 +334,42 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
     long jitter = ThreadLocalRandom.current().nextLong(-jitterRangeMs, jitterRangeMs + 1);
     return AsyncJobQueueRuntime.positiveJitteredDelayMs(
         reconnectDelayMs, AsyncJobQueueRuntime.addJitter(reconnectDelayMs, jitter));
+  }
+
+  private List<Meter> registerListenerGauges() {
+    Tags tags = Tags.of("provider", "postgres", "channel", channel);
+    return List.<Meter>of(
+        Gauge.builder(
+                "asyncJobQueue.wakeup.listener.running",
+                this,
+                JdbcPostgresAsyncJobQueueWakeupListener::runningGauge)
+            .tags(tags)
+            .register(meterRegistry),
+        Gauge.builder(
+                "asyncJobQueue.wakeup.listener.connected",
+                this,
+                JdbcPostgresAsyncJobQueueWakeupListener::connectedGauge)
+            .tags(tags)
+            .register(meterRegistry),
+        Gauge.builder(
+                "asyncJobQueue.wakeup.listener.threadAlive",
+                this,
+                JdbcPostgresAsyncJobQueueWakeupListener::threadAliveGauge)
+            .tags(tags)
+            .register(meterRegistry));
+  }
+
+  private int runningGauge() {
+    return running ? 1 : 0;
+  }
+
+  private int connectedGauge() {
+    return activeConnection.get() != null ? 1 : 0;
+  }
+
+  private int threadAliveGauge() {
+    Thread thread = listenerThread;
+    return thread != null && thread.isAlive() ? 1 : 0;
   }
 
   private void closeActiveConnection() {

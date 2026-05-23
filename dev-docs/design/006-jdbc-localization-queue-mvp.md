@@ -306,10 +306,10 @@ Test Coverage
   enqueue or worker wakeup, preserving the portable timestamp bounds at the production API edge.
   They also assert due-now scheduled jobs trigger immediate worker wakeup while future jobs remain
   delayed, and fatal wakeup errors propagate instead of being counted as ordinary wakeup failures.
-- PostgreSQL wakeup listener tests assert stop-timeout accounting, duplicate-start rejection, and
-  duplicate-notification coalescing, so a stuck listener cannot silently coexist with a replacement
-  listener after lifecycle restart and a notification burst cannot trigger repeated local polls for
-  the same queue.
+- PostgreSQL wakeup listener tests assert listener health gauges, stop-timeout accounting,
+  duplicate-start rejection, and duplicate-notification coalescing, so a stuck listener cannot
+  silently coexist with a replacement listener after lifecycle restart and a notification burst
+  cannot trigger repeated local polls for the same queue.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.
@@ -351,6 +351,10 @@ Monitoring (MVP Required)
   - local poll-loop health via `asyncJobQueue.poll.started`,
     `asyncJobQueue.poll.scheduled`, and `asyncJobQueue.poll.active`; alert when a started runtime
     has no scheduled or active poll for a sustained interval
+  - PostgreSQL wakeup listener health via `asyncJobQueue.wakeup.listener.running`,
+    `asyncJobQueue.wakeup.listener.connected`, and `asyncJobQueue.wakeup.listener.threadAlive`;
+    alert when a running listener is disconnected for a sustained interval or when a stopped
+    listener still has a live thread
 - Counters:
   - claimed, completed, retried, execution-failed, lease-expired-reclaimed, poll-skipped-saturated
   - local executor rejections before queue state recovery
