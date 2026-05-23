@@ -11,7 +11,9 @@ import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobNotFound
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobReadyStatusSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobSummary;
+import java.lang.reflect.RecordComponent;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
@@ -168,6 +170,18 @@ public class AsyncJobQueueAdminWSTest {
     assertThat(job.status()).isEqualTo("failed");
     assertThat(job.lastError()).isEqualTo("handler failed");
     assertThat(job.jobDataLength()).isEqualTo("{\"secret\":\"not returned\"}".length());
+  }
+
+  @Test
+  public void redactedSummaryRecordDoesNotExposePayloadFields() {
+    List<String> componentNames =
+        Arrays.stream(AsyncJobQueueAdminWS.AsyncJobRedactedSummary.class.getRecordComponents())
+            .map(RecordComponent::getName)
+            .toList();
+
+    assertThat(componentNames)
+        .contains("jobDataLength")
+        .doesNotContain("jobData", "jobDataPreview");
   }
 
   @Test

@@ -267,6 +267,8 @@ Test Coverage
   preventing future multi-queue backends from replaying a failed row through the wrong queue.
 - Inspection service tests assert cross-queue replay attempts are reported as not found and do not
   wake any runtime, so operator tooling cannot accidentally replay a job through the wrong queue.
+- Admin REST tests assert the public redacted job response shape exposes payload length but not
+  `jobData` or `jobDataPreview`, making payload-redaction regressions visible at test time.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.
