@@ -2,6 +2,7 @@ package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.when;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.junit.After;
 import org.junit.Test;
@@ -64,6 +66,31 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
     verify(preparedStatement).execute();
     verify(connection).setAutoCommit(false);
     assertNotifyCounter("assetlocalize", "succeeded", 1);
+  }
+
+  @Test
+  public void notifyJobAvailableTreatsAutoCommitRestoreFailureAsSuccessfulNotify()
+      throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    Connection connection = mock(Connection.class);
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getAutoCommit()).thenReturn(false);
+    when(connection.isClosed()).thenReturn(false);
+    when(connection.prepareStatement("SELECT pg_notify(?, ?)")).thenReturn(preparedStatement);
+    doThrow(new SQLException("restore unavailable")).when(connection).setAutoCommit(false);
+    JdbcPostgresAsyncJobQueueWakeupNotifier notifier =
+        new JdbcPostgresAsyncJobQueueWakeupNotifier(
+            dataSource, "mojito_async_job_queue", meterRegistry);
+
+    notifier.notifyJobAvailable("assetlocalize", new AsyncJobId("42"));
+
+    verify(connection).setAutoCommit(true);
+    verify(preparedStatement).execute();
+    verify(connection).setAutoCommit(false);
+    verify(connection).close();
+    assertNotifyCounter("assetlocalize", "succeeded", 1);
+    assertNoNotifyCounter("assetlocalize", "failed");
   }
 
   @Test
@@ -135,6 +162,17 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private void assertNoNotifyCounter(String queueName, String result) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.wakeup.notify")
+                .tag("queueName", queueName)
+                .tag("provider", "postgres")
+                .tag("result", result)
+                .counter())
+        .isNull();
   }
 
   private static class FatalTestError extends VirtualMachineError {

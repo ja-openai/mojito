@@ -343,15 +343,11 @@ public class AsyncJobQueueLoadTest {
 
     long startedAt = System.nanoTime();
     long timeoutAt = System.currentTimeMillis() + 10_000;
-    while (statusCount(inMemoryAsyncJobStore, AsyncJobStatus.FAILED) < jobCount
+    while (!leaseExpiredStressComplete(inMemoryAsyncJobStore, jobCount)
         && System.currentTimeMillis() < timeoutAt) {
       asyncJobQueueRuntime.pollOnce();
       Thread.sleep(1);
     }
-    waitForCounter("asyncJobQueue.failed", jobCount);
-    waitForCounter("asyncJobQueue.attempt.exhausted", jobCount);
-    waitForCounter("asyncJobQueue.leaseExpiredReclaimed", jobCount);
-    waitForTransitionFailure("done", jobCount);
     long elapsedMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
 
     assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.FAILED)).isEqualTo(jobCount);
@@ -359,6 +355,10 @@ public class AsyncJobQueueLoadTest {
     assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.RUNNING)).isZero();
     assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.DONE)).isZero();
     assertThat(handlerInvocations.get()).isEqualTo(jobCount);
+    assertThat(counterCount("asyncJobQueue.failed")).isEqualTo(jobCount);
+    assertThat(counterCount("asyncJobQueue.attempt.exhausted")).isEqualTo(jobCount);
+    assertThat(counterCount("asyncJobQueue.leaseExpiredReclaimed")).isEqualTo(jobCount);
+    assertThat(transitionFailureCount("done")).isEqualTo(jobCount);
     assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, jobCount))
         .hasSize(jobCount)
         .allSatisfy(
@@ -370,6 +370,15 @@ public class AsyncJobQueueLoadTest {
               assertThat(job.leaseUntil()).isNull();
             });
     assertThat(elapsedMs).isLessThan(10_000);
+  }
+
+  private boolean leaseExpiredStressComplete(
+      InMemoryAsyncJobStore inMemoryAsyncJobStore, int jobCount) {
+    return statusCount(inMemoryAsyncJobStore, AsyncJobStatus.FAILED) == jobCount
+        && counterCount("asyncJobQueue.failed") == jobCount
+        && counterCount("asyncJobQueue.attempt.exhausted") == jobCount
+        && counterCount("asyncJobQueue.leaseExpiredReclaimed") == jobCount
+        && transitionFailureCount("done") == jobCount;
   }
 
   private AsyncJobQueueProperties.QueueSettings queueSettings() {
@@ -409,27 +418,18 @@ public class AsyncJobQueueLoadTest {
         "Timed out waiting for counter " + meterName + " count " + expectedCount);
   }
 
-  private void waitForTransitionFailure(String transition, double expectedCount)
-      throws InterruptedException {
-    long timeoutAt = System.currentTimeMillis() + 3_000;
-    while (System.currentTimeMillis() < timeoutAt) {
-      Counter counter =
-          meterRegistry
-              .find("asyncJobQueue.transition.failed")
-              .tag("queueName", "assetlocalize")
-              .tag("transition", transition)
-              .counter();
-      if (counter != null && counter.count() == expectedCount) {
-        return;
-      }
-      Thread.sleep(20);
-    }
-    throw new AssertionError(
-        "Timed out waiting for transition failure " + transition + " count " + expectedCount);
-  }
-
   private double counterCount(String meterName) {
     Counter counter = meterRegistry.find(meterName).tag("queueName", "assetlocalize").counter();
+    return counter == null ? 0 : counter.count();
+  }
+
+  private double transitionFailureCount(String transition) {
+    Counter counter =
+        meterRegistry
+            .find("asyncJobQueue.transition.failed")
+            .tag("queueName", "assetlocalize")
+            .tag("transition", transition)
+            .counter();
     return counter == null ? 0 : counter.count();
   }
 
