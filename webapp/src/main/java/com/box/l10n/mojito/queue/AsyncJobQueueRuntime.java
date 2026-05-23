@@ -580,21 +580,23 @@ class AsyncJobQueueRuntime {
         Thread.currentThread().interrupt();
       }
     } finally {
+      Throwable fatalCleanupFailure = null;
       if (heartbeatFuture != null) {
         try {
           heartbeatFuture.cancel(false);
         } catch (Throwable e) {
           if (isJvmFatal(e)) {
-            throw (Error) e;
+            fatalCleanupFailure = e;
+          } else {
+            logger.warn(
+                "Failed to cancel async queue heartbeat for queue {}, job {}",
+                queueName,
+                asyncJobRecord.id(),
+                e);
+            meterRegistry
+                .counter("asyncJobQueue.heartbeat.cancel.failed", "queueName", queueName)
+                .increment();
           }
-          logger.warn(
-              "Failed to cancel async queue heartbeat for queue {}, job {}",
-              queueName,
-              asyncJobRecord.id(),
-              e);
-          meterRegistry
-              .counter("asyncJobQueue.heartbeat.cancel.failed", "queueName", queueName)
-              .increment();
         }
       }
       inFlightCount.decrementAndGet();
@@ -602,6 +604,9 @@ class AsyncJobQueueRuntime {
           .timer("asyncJobQueue.processing.latency", "queueName", queueName)
           .record(System.nanoTime() - processingStartNanos, TimeUnit.NANOSECONDS);
       triggerPollNow();
+      if (fatalCleanupFailure != null) {
+        throw (Error) fatalCleanupFailure;
+      }
     }
   }
 

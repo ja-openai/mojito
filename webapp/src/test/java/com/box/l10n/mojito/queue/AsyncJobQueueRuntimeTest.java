@@ -1721,6 +1721,46 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void fatalHeartbeatCancelStillReleasesCapacityAndRecordsLatencyBeforePropagating()
+      throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
+        .thenAnswer(invocation -> new FatalCancelScheduledFuture());
+    CountDownLatch uncaughtObserved = new CountDownLatch(1);
+    AtomicReference<Throwable> uncaughtThrowable = new AtomicReference<>();
+    ThreadPoolTaskExecutor fatalExecutor =
+        newUncaughtCapturingExecutor(uncaughtThrowable, uncaughtObserved);
+    try {
+      AsyncJobQueueRuntime asyncJobQueueRuntime =
+          runtime(
+              inMemoryAsyncJobStore,
+              queueSettings(100, 1_000, 1, 1, 200, 25),
+              handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+              taskScheduler,
+              fatalExecutor);
+
+      asyncJobQueueRuntime.pollOnce();
+
+      waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
+      assertThat(uncaughtObserved.await(2, TimeUnit.SECONDS)).isTrue();
+      assertThat(uncaughtThrowable.get()).isInstanceOf(FatalTestError.class);
+      assertThat(asyncJobQueueRuntime.inFlightCount()).isZero();
+      assertThat(
+              meterRegistry
+                  .get("asyncJobQueue.processing.latency")
+                  .tag("queueName", "assetlocalize")
+                  .timer()
+                  .count())
+          .isEqualTo(1);
+    } finally {
+      fatalExecutor.shutdown();
+    }
+  }
+
+  @Test
   public void heartbeatScheduleFailureRequeuesWithoutProcessing() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
@@ -3799,6 +3839,12 @@ public class AsyncJobQueueRuntimeTest {
     }
   }
 
+  private static class FatalTestError extends VirtualMachineError {
+    FatalTestError(String message) {
+      super(message);
+    }
+  }
+
   private static class InlineImmediateTaskScheduler implements TaskScheduler {
 
     private final AtomicInteger scheduleInvocations = new AtomicInteger();
@@ -3927,6 +3973,13 @@ public class AsyncJobQueueRuntimeTest {
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
       throw new AssertionError("cancel invariant");
+    }
+  }
+
+  private static class FatalCancelScheduledFuture extends DummyScheduledFuture {
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+      throw new FatalTestError("cancel fatal");
     }
   }
 
