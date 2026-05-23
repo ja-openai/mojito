@@ -141,6 +141,7 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
     Class<?> pgConnectionClass = Class.forName("org.postgresql.PGConnection");
     Method getNotifications = pgConnectionClass.getMethod("getNotifications", int.class);
     try (Connection connection = dataSource.getConnection()) {
+      JdbcPostgresAsyncJobQueueWakeupConnections.ensureAutoCommit(connection);
       activeConnection.set(connection);
       listen(connection);
       Object pgConnection = unwrapPgConnection(connection, pgConnectionClass);

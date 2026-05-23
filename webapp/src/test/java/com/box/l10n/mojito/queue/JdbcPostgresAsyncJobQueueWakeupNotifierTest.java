@@ -29,6 +29,7 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
     Connection connection = mock(Connection.class);
     PreparedStatement preparedStatement = mock(PreparedStatement.class);
     when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getAutoCommit()).thenReturn(true);
     when(connection.prepareStatement("SELECT pg_notify(?, ?)")).thenReturn(preparedStatement);
     JdbcPostgresAsyncJobQueueWakeupNotifier notifier =
         new JdbcPostgresAsyncJobQueueWakeupNotifier(
@@ -41,6 +42,25 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
     verify(preparedStatement).execute();
     verify(preparedStatement).close();
     verify(connection).close();
+    assertNotifyCounter("assetlocalize", "succeeded", 1);
+  }
+
+  @Test
+  public void notifyJobAvailableEnablesAutoCommitBeforePublishing() throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    Connection connection = mock(Connection.class);
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getAutoCommit()).thenReturn(false);
+    when(connection.prepareStatement("SELECT pg_notify(?, ?)")).thenReturn(preparedStatement);
+    JdbcPostgresAsyncJobQueueWakeupNotifier notifier =
+        new JdbcPostgresAsyncJobQueueWakeupNotifier(
+            dataSource, "mojito_async_job_queue", meterRegistry);
+
+    notifier.notifyJobAvailable("assetlocalize", new AsyncJobId("42"));
+
+    verify(connection).setAutoCommit(true);
+    verify(preparedStatement).execute();
     assertNotifyCounter("assetlocalize", "succeeded", 1);
   }
 

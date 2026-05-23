@@ -3,6 +3,7 @@ package com.box.l10n.mojito.queue;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Objects;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
@@ -37,8 +38,7 @@ class JdbcPostgresAsyncJobQueueWakeupNotifier implements AsyncJobQueueWakeupNoti
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(asyncJobId);
     try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement("SELECT pg_notify(?, ?)")) {
+        PreparedStatement preparedStatement = prepareNotifyStatement(connection)) {
       preparedStatement.setString(1, channel);
       preparedStatement.setString(2, validatedQueueName);
       preparedStatement.execute();
@@ -54,6 +54,11 @@ class JdbcPostgresAsyncJobQueueWakeupNotifier implements AsyncJobQueueWakeupNoti
           asyncJobId.value(),
           exception);
     }
+  }
+
+  private PreparedStatement prepareNotifyStatement(Connection connection) throws SQLException {
+    JdbcPostgresAsyncJobQueueWakeupConnections.ensureAutoCommit(connection);
+    return connection.prepareStatement("SELECT pg_notify(?, ?)");
   }
 
   private void incrementNotifyCounter(String queueName, String result) {
