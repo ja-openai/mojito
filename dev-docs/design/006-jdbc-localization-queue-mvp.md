@@ -147,8 +147,9 @@ Validation guardrails:
   range before store transitions so bad handler output retries through the normal failure path.
 - The in-memory store enforces the same timestamp bounds as the JDBC store so local/runtime tests do
   not accept queue state that durable storage would reject.
-- Queue job ids are validated as positive numeric strings before operator inspection/replay calls
-  reach a store, so invalid operator input is tagged consistently across in-memory and JDBC stores.
+- Queue job ids are validated as canonical positive numeric strings before operator
+  inspection/replay calls reach a store, so aliases like `+1` or `01` cannot resolve differently
+  between in-memory and JDBC stores.
 
 How Many "Cron" Loops?
 - Not one cron for the whole system and not one physical process per queue.

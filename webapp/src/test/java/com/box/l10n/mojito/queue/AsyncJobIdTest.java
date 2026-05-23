@@ -15,10 +15,12 @@ public class AsyncJobIdTest {
   }
 
   @Test
-  public void rejectsBlankNonNumericAndNonPositiveIds() {
+  public void rejectsBlankNonCanonicalNonNumericAndNonPositiveIds() {
     assertInvalidId(" ");
     assertInvalidId("abc");
     assertInvalidId("1.5");
+    assertInvalidId("+1");
+    assertInvalidId("01");
     assertInvalidId("0");
     assertInvalidId("-1");
     assertInvalidId("9223372036854775808");
