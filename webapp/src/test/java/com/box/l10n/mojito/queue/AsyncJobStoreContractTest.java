@@ -38,6 +38,20 @@ public class AsyncJobStoreContractTest {
   }
 
   @Test
+  public void enqueueNowCreatesImmediatelyClaimableQueuedJob() {
+    AsyncJobId id = asyncJobStore.enqueueNow("assetlocalize", "{\"step\":\"new\"}");
+
+    AsyncJobRecord claimed =
+        asyncJobStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5)).get(0);
+
+    assertThat(claimed.id()).isEqualTo(id);
+    assertThat(claimed.queueName()).isEqualTo("assetlocalize");
+    assertThat(claimed.status()).isEqualTo(AsyncJobStatus.RUNNING);
+    assertThat(claimed.jobData()).isEqualTo("{\"step\":\"new\"}");
+    assertThat(claimed.attemptCount()).isEqualTo(1);
+  }
+
+  @Test
   public void reclaimedLeaseFencesStaleOwnerTransitions() throws Exception {
     AsyncJobId id =
         asyncJobStore.enqueue("assetlocalize", "{\"v\":1}", Instant.now().minusSeconds(1));

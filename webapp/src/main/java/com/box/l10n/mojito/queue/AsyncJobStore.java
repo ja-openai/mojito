@@ -22,6 +22,18 @@ public interface AsyncJobStore {
   AsyncJobId enqueue(String queueName, String jobData, Instant availableAt);
 
   /**
+   * Enqueues a job that should be claimable immediately.
+   *
+   * <p>Durable implementations should anchor "now" on database time, not JVM time, so immediate
+   * availability stays consistent with claim ordering under pod clock skew.
+   *
+   * @return persistent async job id
+   */
+  default AsyncJobId enqueueNow(String queueName, String jobData) {
+    return enqueue(queueName, jobData, Instant.now());
+  }
+
+  /**
    * Claims up to {@code limit} jobs for a worker and assigns a new lease token + lease window.
    *
    * <p>Claim policy is backend-specific but generally includes:

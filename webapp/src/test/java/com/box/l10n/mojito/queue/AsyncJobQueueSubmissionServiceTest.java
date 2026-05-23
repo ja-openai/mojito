@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
@@ -34,6 +35,7 @@ public class AsyncJobQueueSubmissionServiceTest {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
     AsyncJobQueueSubmissionService service = submissionService(store, coordinator);
+    Instant beforeEnqueue = Instant.now().minusMillis(1);
 
     AsyncJobId asyncJobId = service.enqueueNow("assetlocalize", "{\"id\":1}");
 
@@ -41,9 +43,25 @@ public class AsyncJobQueueSubmissionServiceTest {
     AsyncJobRecord job = store.getByIds(List.of(asyncJobId)).get(0);
     assertThat(job.queueName()).isEqualTo("assetlocalize");
     assertThat(job.status()).isEqualTo(AsyncJobStatus.QUEUED);
-    assertThat(job.availableAt()).isEqualTo(NOW);
+    assertThat(job.availableAt()).isBetween(beforeEnqueue, Instant.now().plusSeconds(1));
     assertEnqueueCounter("succeeded", 1);
     assertNoEnqueueWakeupFailureCounter();
+  }
+
+  @Test
+  public void enqueueNowUsesStoreImmediateEnqueue() {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobId asyncJobId = new AsyncJobId("42");
+    when(store.enqueueNow("assetlocalize", "{\"id\":1}")).thenReturn(asyncJobId);
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueSubmissionService service = submissionService(store, coordinator);
+
+    assertThat(service.enqueueNow("assetlocalize", "{\"id\":1}")).isSameAs(asyncJobId);
+
+    verify(store).enqueueNow("assetlocalize", "{\"id\":1}");
+    verify(store, never()).enqueue(anyString(), anyString(), any(Instant.class));
+    verify(coordinator).triggerPollNow("assetlocalize");
+    assertEnqueueCounter("succeeded", 1);
   }
 
   @Test
@@ -80,7 +98,7 @@ public class AsyncJobQueueSubmissionServiceTest {
         submissionService(
             new InMemoryAsyncJobStore() {
               @Override
-              public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
+              public AsyncJobId enqueueNow(String queueName, String jobData) {
                 throw new IllegalStateException("database unavailable");
               }
             },
@@ -98,7 +116,7 @@ public class AsyncJobQueueSubmissionServiceTest {
         submissionService(
             new InMemoryAsyncJobStore() {
               @Override
-              public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
+              public AsyncJobId enqueueNow(String queueName, String jobData) {
                 throw new FatalTestError("fatal");
               }
             },
@@ -123,6 +141,7 @@ public class AsyncJobQueueSubmissionServiceTest {
         .isInstanceOf(NullPointerException.class);
     assertThatThrownBy(() -> service.enqueue("assetlocalize", "{\"id\":1}", null))
         .isInstanceOf(NullPointerException.class);
+    verify(store, never()).enqueueNow(anyString(), anyString());
     verify(store, never()).enqueue(anyString(), anyString(), any(Instant.class));
     verify(coordinator, never()).triggerPollNow("assetlocalize");
   }

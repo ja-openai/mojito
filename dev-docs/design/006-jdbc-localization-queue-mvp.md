@@ -175,6 +175,8 @@ Adaptive Polling (per queue)
   the low-level store. The service records enqueue telemetry and triggers the local runtime for jobs
   that are immediately available; future-dated jobs rely on normal polling until their availability
   window opens.
+- Immediate durable enqueue uses the store's `enqueueNow` method so JDBC can anchor `available_at`,
+  `created_date`, and `updated_date` on database time instead of the producer JVM clock.
 
 Optional Wakeup Signals
 - Wakeups are an optimization only. The durable queue table remains the source of truth and the

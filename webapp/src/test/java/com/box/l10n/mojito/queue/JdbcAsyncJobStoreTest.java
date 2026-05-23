@@ -401,6 +401,26 @@ public class JdbcAsyncJobStoreTest {
   }
 
   @Test
+  public void enqueueNowUsesDatabaseCurrentTimestampForAvailableAt() {
+    String fixedDatabaseTimestampSql = "VALUES TIMESTAMP '2099-01-01 00:00:00'";
+    JdbcAsyncJobStore futureClockStore =
+        new JdbcAsyncJobStore(
+            new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource()),
+            AsyncJobQueueJdbcDialect.HSQL.claimNextJobsSql(),
+            fixedDatabaseTimestampSql);
+    Instant fixedDatabaseNow =
+        jdbcTemplate.queryForObject(fixedDatabaseTimestampSql, Timestamp.class).toInstant();
+
+    AsyncJobId id = futureClockStore.enqueueNow("assetlocalize", "{\"step\":\"new\"}");
+
+    AsyncJobRecord queued = futureClockStore.getByIds(List.of(id)).get(0);
+    assertThat(queued.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(queued.availableAt()).isEqualTo(fixedDatabaseNow);
+    assertThat(queued.createdDate()).isEqualTo(fixedDatabaseNow);
+    assertThat(queued.updatedDate()).isEqualTo(fixedDatabaseNow);
+  }
+
+  @Test
   public void requeueAfterUsesDatabaseCurrentTimestampForAvailableAt() {
     String fixedDatabaseTimestampSql = "VALUES TIMESTAMP '2099-01-01 00:00:00'";
     JdbcAsyncJobStore futureClockStore =

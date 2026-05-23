@@ -74,6 +74,20 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     Instant validatedAvailableAt =
         AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
 
+    return enqueueAtDatabaseTime(queueName, jobData, validatedAvailableAt, databaseNow());
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Override
+  public AsyncJobId enqueueNow(String queueName, String jobData) {
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    Objects.requireNonNull(jobData);
+    Instant now = databaseNow();
+    return enqueueAtDatabaseTime(queueName, jobData, now, now);
+  }
+
+  private AsyncJobId enqueueAtDatabaseTime(
+      String queueName, String jobData, Instant availableAt, Instant now) {
     String sql =
         """
         INSERT INTO async_job_queue (
@@ -93,12 +107,11 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         )
         """;
 
-    Instant now = databaseNow();
     MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("queueName", queueName)
             .addValue("status", AsyncJobStatus.QUEUED.getDatabaseValue())
-            .addValue("availableAt", Timestamp.from(validatedAvailableAt))
+            .addValue("availableAt", Timestamp.from(availableAt))
             .addValue("jobData", jobData)
             .addValue("createdDate", Timestamp.from(now))
             .addValue("updatedDate", Timestamp.from(now));

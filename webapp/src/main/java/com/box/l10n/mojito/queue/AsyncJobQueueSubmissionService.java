@@ -42,7 +42,21 @@ public class AsyncJobQueueSubmissionService {
   }
 
   public AsyncJobId enqueueNow(String queueName, String jobData) {
-    return enqueue(queueName, jobData, clock.instant());
+    String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
+    try {
+      Objects.requireNonNull(jobData);
+      AsyncJobId asyncJobId = asyncJobStore.enqueueNow(validatedQueueName, jobData);
+      incrementEnqueueCounter(validatedQueueName, "succeeded");
+      triggerEnqueueWakeup(validatedQueueName, asyncJobId);
+      return asyncJobId;
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
+      incrementEnqueueCounter(validatedQueueName, "failed");
+      logger.warn("Failed to enqueue async job for queue {}", validatedQueueName, exception);
+      throw unchecked(exception);
+    }
   }
 
   public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
