@@ -67,6 +67,7 @@ public class AsyncJobQueueRuntimeTest {
     assertThat(first.nextDelayMs()).isEqualTo(200);
     assertThat(second.nextDelayMs()).isEqualTo(400);
     assertThat(third.nextDelayMs()).isEqualTo(400);
+    assertRuntimeCounter("asyncJobQueue.poll.empty", 3);
   }
 
   @Test
@@ -120,6 +121,8 @@ public class AsyncJobQueueRuntimeTest {
 
     assertThat(first.claimedCount()).isEqualTo(1);
     assertThat(second.skippedSaturated()).isTrue();
+    assertRuntimeCounter("asyncJobQueue.claimed", 1);
+    assertRuntimeCounter("asyncJobQueue.poll.skippedSaturated", 1);
     assertThat(inMemoryAsyncJobStore.countByStatus("assetlocalize"))
         .containsExactlyInAnyOrder(
             new AsyncJobStatusCount(AsyncJobStatus.QUEUED, 1),
@@ -4677,6 +4680,11 @@ public class AsyncJobQueueRuntimeTest {
                 .tag("failure", failure)
                 .counter()
                 .count())
+        .isEqualTo(expectedCount);
+  }
+
+  private void assertRuntimeCounter(String meterName, double expectedCount) {
+    assertThat(meterRegistry.get(meterName).tag("queueName", "assetlocalize").counter().count())
         .isEqualTo(expectedCount);
   }
 

@@ -365,8 +365,7 @@ public class AsyncJobQueueLoadTest {
       assertThat(counterCount("asyncJobQueue.leaseExpiredReclaimed")).isEqualTo(jobCount);
       assertThat(transitionFailureCount("done")).isEqualTo(jobCount);
       assertThat(
-              inMemoryAsyncJobStore.findByStatus(
-                  "assetlocalize", AsyncJobStatus.FAILED, jobCount))
+              inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, jobCount))
           .hasSize(jobCount)
           .allSatisfy(
               job -> {
