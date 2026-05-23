@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobDetails;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobNotFoundException;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobSummary;
 import java.time.Instant;
@@ -87,6 +89,58 @@ public class AsyncJobQueueAdminWSTest {
         .thenThrow(new IllegalArgumentException("bad status"));
 
     assertThatThrownBy(() -> ws.findJobs("assetlocalize", "broken", 10))
+        .isInstanceOf(ResponseStatusException.class)
+        .satisfies(
+            exception ->
+                assertThat(((ResponseStatusException) exception).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST));
+  }
+
+  @Test
+  public void getJobReturnsPayloadRedactedSummary() {
+    Instant now = Instant.now();
+    when(inspectionService.getJob("assetlocalize", "1"))
+        .thenReturn(
+            new AsyncJobDetails(
+                "1",
+                "assetlocalize",
+                "failed",
+                now.minusSeconds(30),
+                null,
+                null,
+                5,
+                "handler failed",
+                "{\"secret\":\"not returned\"}",
+                now.minusSeconds(60),
+                now));
+
+    AsyncJobQueueAdminWS.AsyncJobRedactedSummary job = ws.getJob("assetlocalize", "1");
+
+    assertThat(job.id()).isEqualTo("1");
+    assertThat(job.status()).isEqualTo("failed");
+    assertThat(job.lastError()).isEqualTo("handler failed");
+    assertThat(job.jobDataLength()).isEqualTo("{\"secret\":\"not returned\"}".length());
+  }
+
+  @Test
+  public void mapsMissingJobToNotFound() {
+    when(inspectionService.getJob("assetlocalize", "404"))
+        .thenThrow(new AsyncJobNotFoundException("not found"));
+
+    assertThatThrownBy(() -> ws.getJob("assetlocalize", "404"))
+        .isInstanceOf(ResponseStatusException.class)
+        .satisfies(
+            exception ->
+                assertThat(((ResponseStatusException) exception).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND));
+  }
+
+  @Test
+  public void mapsInvalidGetJobInputToBadRequest() {
+    when(inspectionService.getJob("assetlocalize", "bad"))
+        .thenThrow(new IllegalArgumentException("bad id"));
+
+    assertThatThrownBy(() -> ws.getJob("assetlocalize", "bad"))
         .isInstanceOf(ResponseStatusException.class)
         .satisfies(
             exception ->

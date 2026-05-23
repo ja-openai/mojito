@@ -1,6 +1,8 @@
 package com.box.l10n.mojito.rest.admin;
 
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobDetails;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobNotFoundException;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobSummary;
 import java.time.Instant;
@@ -49,6 +51,18 @@ public class AsyncJobQueueAdminWS {
     }
   }
 
+  @GetMapping("/{queueName}/jobs/{jobId}")
+  public AsyncJobRedactedSummary getJob(
+      @PathVariable String queueName, @PathVariable String jobId) {
+    try {
+      return toRedactedSummary(inspectionService.getJob(queueName, jobId));
+    } catch (AsyncJobNotFoundException exception) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, exception.getMessage(), exception);
+    } catch (IllegalArgumentException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+    }
+  }
+
   private AsyncJobRedactedSummary toRedactedSummary(AsyncJobSummary summary) {
     return new AsyncJobRedactedSummary(
         summary.id(),
@@ -62,6 +76,21 @@ public class AsyncJobQueueAdminWS {
         summary.jobDataLength(),
         summary.createdDate(),
         summary.updatedDate());
+  }
+
+  private AsyncJobRedactedSummary toRedactedSummary(AsyncJobDetails details) {
+    return new AsyncJobRedactedSummary(
+        details.id(),
+        details.queueName(),
+        details.status(),
+        details.availableAt(),
+        details.leaseUntil(),
+        details.workerId(),
+        details.attemptCount(),
+        details.lastError(),
+        details.jobData().length(),
+        details.createdDate(),
+        details.updatedDate());
   }
 
   public record AsyncJobRedactedSummary(

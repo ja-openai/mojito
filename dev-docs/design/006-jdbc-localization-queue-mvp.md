@@ -341,6 +341,9 @@ Operator Controls
   `GET /api/admin/async-job-queue/queues/{queueName}/jobs?status=failed&limit=100`; the response
   intentionally omits `job_data` and `jobDataPreview`, returning only metadata, last error, and
   payload length.
+- Read-only admin job detail is exposed via
+  `GET /api/admin/async-job-queue/queues/{queueName}/jobs/{jobId}` with the same redacted response
+  shape and `404` for missing queue/id pairs.
 - Store-level inspection, batch id lookup, claim, and cleanup methods reject excessive
   caller-provided limits so an admin path cannot accidentally issue pathological queue-table
   queries.
@@ -359,8 +362,8 @@ Operator Controls
   `l10n.org.async-job-queue.retention.enabled=true`, deleting at most `batch-size` done rows and
   `batch-size` failed rows per queue per run.
 - A broader REST/admin surface can wrap the inspection service later after an explicit replay-audit
-  review. The narrow status-count, redacted-summary, and assetlocalize pollable-repair endpoints are
-  exposed first because they do not replay work or expose payload.
+  review. The narrow status-count, redacted-summary/detail, and assetlocalize pollable-repair
+  endpoints are exposed first because they do not replay work or expose payload.
 
 Rollout Plan
 1. Implement queue infra + assetlocalize-only integration behind feature flag.
