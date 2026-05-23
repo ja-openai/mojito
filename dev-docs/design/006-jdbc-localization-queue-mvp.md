@@ -54,7 +54,7 @@ Async Job Data Model
   - `(queue_name, status, available_at)`
   - `(queue_name, status, lease_until)`
   - optional idempotency/correlation key can be modeled in `job_data`
-- Database constraints/types reject unsupported statuses, negative attempt counts,
+- Database constraints/types reject unsupported statuses, out-of-range attempt counts,
   invalid queue names, oversized persisted errors, terminal failed rows without a nonblank
   persisted error, blank running lease owners, and inconsistent lease owner fields where a row is
   `running` without `(lease_until, worker_id, lease_token)` or a non-running row still has lease
@@ -128,6 +128,10 @@ Failure + Restart Semantics
     retry jitter around the base poll interval so batches do not reschedule in lockstep
   - lease-expired reclaims also consume attempts; if reclaiming a row pushes `attempt_count` past
     `max-attempts`, the runtime marks it `failed` before invoking the handler again
+  - persisted `attempt_count` is capped at 101 (`MAX_ATTEMPTS_MAX + 1`) and claim increments
+    saturate at that cap, so corrupt/manual rows cannot overflow the claim increment while still
+    allowing repeated reclaim attempts to terminal-fail an expired lease at the maximum configured
+    budget
   - operator replay can move a `failed` row back to `queued`, reset `attempt_count=0`, preserve
     `last_error` for inspection, and optionally replace `job_data`
   - on terminal completion, set `status=done` and finalize pollable metadata separately

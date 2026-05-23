@@ -149,7 +149,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     container.start();
     DataSource dataSource = dataSource(container);
     runMigration(dataSource, migrationPath);
-    assertSchemaRejectsFailedRowsWithoutPersistedError(dataSource);
+    assertSchemaRejectsInvalidDirectWrites(dataSource);
     AsyncJobStore store =
         transactionalStore(
             dataSource, new JdbcAsyncJobStore(new NamedParameterJdbcTemplate(dataSource), dialect));
@@ -299,8 +299,27 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         delegate, new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
   }
 
-  private void assertSchemaRejectsFailedRowsWithoutPersistedError(DataSource dataSource) {
+  private void assertSchemaRejectsInvalidDirectWrites(DataSource dataSource) {
     JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+    assertThrows(
+        DataAccessException.class,
+        () ->
+            jdbcTemplate.update(
+                """
+                INSERT INTO async_job_queue (
+                  queue_name,
+                  status,
+                  available_at,
+                  job_data,
+                  attempt_count
+                ) VALUES (
+                  'assetlocalize',
+                  'queued',
+                  CURRENT_TIMESTAMP,
+                  '{}',
+                  102
+                )
+                """));
     assertThrows(
         DataAccessException.class,
         () ->
@@ -1104,8 +1123,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("C__ASYNC_JOB_QUEUE__QUEUE_NAME")
         .contains("C__ASYNC_JOB_QUEUE__STATUS")
         .contains("CHECK (status IN ('queued', 'running', 'done', 'failed'))")
-        .contains("C__ASYNC_JOB_QUEUE__ATTEMPT_NONNEGATIVE")
-        .contains("CHECK (attempt_count >= 0)")
+        .contains("C__ASYNC_JOB_QUEUE__ATTEMPT_RANGE")
+        .contains("CHECK (attempt_count BETWEEN 0 AND 101)")
         .contains("C__ASYNC_JOB_QUEUE__LAST_ERROR_LENGTH")
         .contains("CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000)")
         .contains("C__ASYNC_JOB_QUEUE__FAILED_LAST_ERROR")

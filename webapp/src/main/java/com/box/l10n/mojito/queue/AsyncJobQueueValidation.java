@@ -16,6 +16,7 @@ final class AsyncJobQueueValidation {
   static final int CLAIM_BATCH_SIZE_MAX = 1_000;
   static final int MAX_CONCURRENCY_MAX = 256;
   static final int MAX_ATTEMPTS_MAX = 100;
+  static final int STORED_ATTEMPT_COUNT_MAX = MAX_ATTEMPTS_MAX + 1;
   static final int STORE_QUERY_LIMIT_MAX = 1_000;
   static final long STATUS_METRICS_INTERVAL_MS_MAX = Duration.ofHours(1).toMillis();
   static final long POLL_INTERVAL_MS_MAX = Duration.ofHours(1).toMillis();

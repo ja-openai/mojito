@@ -183,7 +183,10 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
           worker_id = :workerId,
           lease_token = :leaseToken,
           lease_until = :leaseUntil,
-          attempt_count = attempt_count + 1,
+          attempt_count = CASE
+            WHEN attempt_count < :storedAttemptCountMax THEN attempt_count + 1
+            ELSE attempt_count
+          END,
           updated_date = :updatedDate
         WHERE id = :id
           AND queue_name = :queueName
@@ -208,6 +211,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
               .addValue("workerId", workerId)
               .addValue("leaseToken", leaseToken)
               .addValue("leaseUntil", Timestamp.from(leaseUntil))
+              .addValue("storedAttemptCountMax", AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX)
               .addValue("updatedDate", Timestamp.from(now))
               .addValue("now", Timestamp.from(now))
               .addValue("id", claimCandidate.id())

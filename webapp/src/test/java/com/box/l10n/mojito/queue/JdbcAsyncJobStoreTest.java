@@ -63,8 +63,8 @@ public class JdbcAsyncJobStoreTest {
             CHECK (id > 0),
           CONSTRAINT C_ASYNC_JOB_QUEUE_STATUS
             CHECK (status IN ('queued', 'running', 'done', 'failed')),
-          CONSTRAINT C_ASYNC_JOB_QUEUE_ATTEMPT_NONNEGATIVE
-            CHECK (attempt_count >= 0),
+          CONSTRAINT C_ASYNC_JOB_QUEUE_ATTEMPT_RANGE
+            CHECK (attempt_count BETWEEN 0 AND 101),
           CONSTRAINT C_ASYNC_JOB_QUEUE_LAST_ERROR_LENGTH
             CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000),
           CONSTRAINT C_ASYNC_JOB_QUEUE_FAILED_LAST_ERROR
@@ -696,6 +696,26 @@ public class JdbcAsyncJobStoreTest {
           'queued',
           CURRENT_TIMESTAMP,
           '{}',
+          102,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+        """);
+    assertSchemaViolation(
+        """
+        INSERT INTO async_job_queue (
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          attempt_count,
+          created_date,
+          updated_date
+        ) VALUES (
+          'assetlocalize',
+          'queued',
+          CURRENT_TIMESTAMP,
+          '{}',
           -1,
           CURRENT_TIMESTAMP,
           CURRENT_TIMESTAMP
@@ -743,6 +763,38 @@ public class JdbcAsyncJobStoreTest {
           CURRENT_TIMESTAMP
         )
         """);
+  }
+
+  @Test
+  public void claimSaturatesAttemptCountAtSchemaCap() {
+    Instant now = Instant.now();
+    jdbcTemplate.update(
+        """
+        INSERT INTO async_job_queue (
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          attempt_count,
+          created_date,
+          updated_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        "assetlocalize",
+        AsyncJobStatus.QUEUED.getDatabaseValue(),
+        Timestamp.from(now.minusSeconds(1)),
+        "{}",
+        AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX,
+        Timestamp.from(now.minusSeconds(1)),
+        Timestamp.from(now.minusSeconds(1)));
+
+    List<AsyncJobRecord> claimed =
+        jdbcAsyncJobStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(10));
+
+    assertThat(claimed).hasSize(1);
+    assertThat(claimed.get(0).attemptCount())
+        .isEqualTo(AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX);
+    assertThat(claimed.get(0).status()).isEqualTo(AsyncJobStatus.RUNNING);
   }
 
   @Test

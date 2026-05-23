@@ -461,7 +461,9 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           nextWorkerId,
           nextLeaseToken,
           jobData,
-          attemptCount + 1,
+          attemptCount >= AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX
+              ? AsyncJobQueueValidation.STORED_ATTEMPT_COUNT_MAX
+              : attemptCount + 1,
           lastError,
           createdDate,
           now);
