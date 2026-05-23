@@ -126,11 +126,16 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
         if (isJvmFatal(exception)) {
           throw (Error) exception;
         }
-        incrementListenCounter("failed");
-        logger.warn(
-            "PostgreSQL async queue wakeup listener failed for channel {}; reconnecting",
-            channel,
-            exception);
+        if (running) {
+          incrementListenCounter("failed");
+          logger.warn(
+              "PostgreSQL async queue wakeup listener failed for channel {}; reconnecting",
+              channel,
+              exception);
+        } else {
+          logger.debug(
+              "PostgreSQL async queue wakeup listener stopped for channel {}", channel, exception);
+        }
       } finally {
         closeActiveConnection();
       }

@@ -10,9 +10,13 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.junit.After;
 import org.junit.Test;
@@ -123,6 +127,48 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
     verify(connection, timeout(1_000)).setAutoCommit(false);
   }
 
+  @Test
+  public void stopDoesNotRecordExpectedSocketCloseAsListenFailure() throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    PGConnection pgConnection = mock(PGConnection.class);
+    CountDownLatch notificationPollStarted = new CountDownLatch(1);
+    CountDownLatch connectionClosed = new CountDownLatch(1);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getAutoCommit()).thenReturn(true);
+    when(connection.createStatement()).thenReturn(statement);
+    when(connection.unwrap(PGConnection.class)).thenReturn(pgConnection);
+    org.mockito.Mockito.doAnswer(
+            invocation -> {
+              connectionClosed.countDown();
+              return null;
+            })
+        .when(connection)
+        .close();
+    when(pgConnection.getNotifications(anyInt()))
+        .thenAnswer(
+            invocation -> {
+              notificationPollStarted.countDown();
+              connectionClosed.await(1, TimeUnit.SECONDS);
+              throw new SQLException("socket closed");
+            });
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setPostgresListenTimeoutMs(100);
+    wakeupSettings.setReconnectDelayMs(1);
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            dataSource, wakeupSettings, mock(AsyncJobQueueCoordinator.class), meterRegistry);
+
+    listener.start();
+    assertThat(notificationPollStarted.await(1, TimeUnit.SECONDS)).isTrue();
+    listener.stop();
+
+    assertListenCounter("connected", 1);
+    assertListenCounter("failed", 0);
+  }
+
   private JdbcPostgresAsyncJobQueueWakeupListener listener(
       AsyncJobQueueCoordinator asyncJobQueueCoordinator) {
     return new JdbcPostgresAsyncJobQueueWakeupListener(
@@ -142,5 +188,15 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private void assertListenCounter(String result, double count) {
+    Counter counter =
+        meterRegistry
+            .find("asyncJobQueue.wakeup.listen")
+            .tag("provider", "postgres")
+            .tag("result", result)
+            .counter();
+    assertThat(counter == null ? 0 : counter.count()).isEqualTo(count);
   }
 }
