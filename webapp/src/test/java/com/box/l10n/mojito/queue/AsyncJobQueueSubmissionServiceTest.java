@@ -128,6 +128,22 @@ public class AsyncJobQueueSubmissionServiceTest {
   }
 
   @Test
+  public void enqueuePropagatesFatalWakeupErrorsWithoutWakeupFailureCounter() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    FatalTestError fatalTestError = new FatalTestError("fatal wakeup");
+    doThrow(fatalTestError).when(coordinator).triggerPollNow("assetlocalize");
+    AsyncJobQueueSubmissionService service = submissionService(store, coordinator);
+
+    assertThatThrownBy(() -> service.enqueueNow("assetlocalize", "{\"id\":1}"))
+        .isSameAs(fatalTestError);
+
+    assertThat(store.findByStatus("assetlocalize", AsyncJobStatus.QUEUED, 10)).hasSize(1);
+    assertEnqueueCounter("succeeded", 1);
+    assertNoEnqueueWakeupFailureCounter();
+  }
+
+  @Test
   public void enqueueRecordsStoreFailures() {
     AsyncJobQueueSubmissionService service =
         submissionService(
