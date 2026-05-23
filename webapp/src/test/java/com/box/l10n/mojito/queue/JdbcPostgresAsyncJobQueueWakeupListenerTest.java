@@ -310,6 +310,45 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   }
 
   @Test
+  public void stopRecordsConnectionCloseFailureAfterListening() throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    PGConnection pgConnection = mock(PGConnection.class);
+    CountDownLatch notificationPollStarted = new CountDownLatch(1);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getAutoCommit()).thenReturn(true);
+    when(connection.createStatement()).thenReturn(statement);
+    when(connection.unwrap(PGConnection.class)).thenReturn(pgConnection);
+    doThrow(new SQLException("close unavailable")).when(connection).close();
+    when(pgConnection.getNotifications(anyInt()))
+        .thenAnswer(
+            invocation -> {
+              notificationPollStarted.countDown();
+              try {
+                Thread.sleep(1_000);
+              } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+              }
+              return null;
+            });
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setPostgresListenTimeoutMs(100);
+    wakeupSettings.setReconnectDelayMs(1);
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            dataSource, wakeupSettings, mock(AsyncJobQueueCoordinator.class), meterRegistry);
+
+    listener.start();
+    assertThat(notificationPollStarted.await(1, TimeUnit.SECONDS)).isTrue();
+    listener.stop();
+
+    assertSimpleCounter("asyncJobQueue.wakeup.listener.close.failed", 1);
+    waitForListenerGaugeValue("asyncJobQueue.wakeup.listener.connected", 0);
+  }
+
+  @Test
   public void stopDoesNotRecordExpectedSocketCloseAsListenFailure() throws Exception {
     DataSource dataSource = mock(DataSource.class);
     Connection connection = mock(Connection.class);
