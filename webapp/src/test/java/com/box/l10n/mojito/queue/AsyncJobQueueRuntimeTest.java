@@ -1332,6 +1332,43 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void heartbeatCancelErrorStillReleasesCapacityAndRecordsLatency() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.scheduleAtFixedRate(any(Runnable.class), any(Date.class), anyLong()))
+        .thenAnswer(invocation -> new NonFatalErrorCancelScheduledFuture());
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 200, 25),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.heartbeat.cancel.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.processing.latency")
+                .tag("queueName", "assetlocalize")
+                .timer()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void heartbeatScheduleFailureRequeuesWithoutProcessing() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
@@ -1923,6 +1960,33 @@ public class AsyncJobQueueRuntimeTest {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
         .thenAnswer(invocation -> new ThrowingCancelScheduledFuture());
+    ThreadPoolTaskExecutor stopExecutor = newExecutor(1);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            mock(AsyncJobStore.class),
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            stopExecutor);
+
+    asyncJobQueueRuntime.start();
+    asyncJobQueueRuntime.stop();
+
+    assertThat(stopExecutor.getThreadPoolExecutor().isShutdown()).isTrue();
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.poll.cancel.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void stopRecordsScheduledPollCancelErrorAndStillShutsDownExecutor() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(invocation -> new NonFatalErrorCancelScheduledFuture());
     ThreadPoolTaskExecutor stopExecutor = newExecutor(1);
     AsyncJobQueueRuntime asyncJobQueueRuntime =
         runtime(
@@ -3312,6 +3376,13 @@ public class AsyncJobQueueRuntimeTest {
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
       throw new IllegalStateException("cancel unavailable");
+    }
+  }
+
+  private static class NonFatalErrorCancelScheduledFuture extends DummyScheduledFuture {
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+      throw new AssertionError("cancel invariant");
     }
   }
 

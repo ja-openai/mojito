@@ -132,7 +132,10 @@ class AsyncJobQueueRuntime {
       if (nextPollFuture != null) {
         try {
           nextPollFuture.cancel(false);
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
+          if (isJvmFatal(e)) {
+            throw (Error) e;
+          }
           logger.warn("Failed to cancel scheduled async queue poll for {}", queueName, e);
           meterRegistry
               .counter("asyncJobQueue.poll.cancel.failed", "queueName", queueName)
@@ -535,7 +538,10 @@ class AsyncJobQueueRuntime {
       if (heartbeatFuture != null) {
         try {
           heartbeatFuture.cancel(false);
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
+          if (isJvmFatal(e)) {
+            throw (Error) e;
+          }
           logger.warn(
               "Failed to cancel async queue heartbeat for queue {}, job {}",
               queueName,
