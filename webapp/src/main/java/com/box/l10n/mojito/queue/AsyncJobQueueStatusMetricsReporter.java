@@ -51,7 +51,10 @@ public class AsyncJobQueueStatusMetricsReporter {
     for (String queueName : queueNames()) {
       try {
         reportStatusCounts(queueName);
-      } catch (RuntimeException e) {
+      } catch (Throwable e) {
+        if (isJvmFatal(e)) {
+          throw (Error) e;
+        }
         logger.warn("Failed to report async job queue status metrics for {}", queueName, e);
         meterRegistry
             .counter("asyncJobQueue.statusMetrics.failed", "queueName", queueName)
@@ -97,6 +100,11 @@ public class AsyncJobQueueStatusMetricsReporter {
                 "asyncJobQueue.status",
                 Tags.of("queueName", queueName, "status", status.getDatabaseValue()),
                 new AtomicLong()));
+  }
+
+  private boolean isJvmFatal(Throwable throwable) {
+    return throwable instanceof VirtualMachineError
+        || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
   }
 
   private record StatusMetricKey(String queueName, AsyncJobStatus status) {}

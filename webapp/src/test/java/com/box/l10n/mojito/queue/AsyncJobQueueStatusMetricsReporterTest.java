@@ -65,13 +65,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
     reporter.reportStatusCounts();
 
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.statusMetrics.failed")
-                .tag("queueName", "assetlocalize")
-                .counter()
-                .count())
-        .isEqualTo(1);
+    assertFailedCounter("assetlocalize", 1);
   }
 
   @Test
@@ -88,17 +82,45 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
     reporter.reportStatusCounts();
 
-    assertThat(
-            meterRegistry
-                .get("asyncJobQueue.statusMetrics.failed")
-                .tag("queueName", "broken")
-                .counter()
-                .count())
-        .isEqualTo(1);
+    assertFailedCounter("broken", 1);
     assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 7);
     assertGaugeValue("assetlocalize", AsyncJobStatus.RUNNING, 0);
     assertGaugeValue("assetlocalize", AsyncJobStatus.DONE, 0);
     assertGaugeValue("assetlocalize", AsyncJobStatus.FAILED, 0);
+  }
+
+  @Test
+  public void reportStatusCountsRecordsNonFatalStoreErrorAndContinuesAfterQueueFails() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    when(asyncJobStore.countByStatus("broken")).thenThrow(new AssertionError("store invariant"));
+    when(asyncJobStore.countByStatus("assetlocalize"))
+        .thenReturn(List.of(new AsyncJobStatusCount(AsyncJobStatus.FAILED, 3)));
+
+    AsyncJobQueueStatusMetricsReporter reporter =
+        new AsyncJobQueueStatusMetricsReporter(
+            asyncJobStore, queueProperties("broken", "assetlocalize"), List.of(), meterRegistry);
+
+    reporter.reportStatusCounts();
+
+    assertFailedCounter("broken", 1);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 0);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.RUNNING, 0);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.DONE, 0);
+    assertGaugeValue("assetlocalize", AsyncJobStatus.FAILED, 3);
+  }
+
+  @Test
+  public void reportStatusCountsPropagatesFatalJvmErrors() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    FatalTestError fatalTestError = new FatalTestError("fatal");
+    when(asyncJobStore.countByStatus("assetlocalize")).thenThrow(fatalTestError);
+
+    AsyncJobQueueStatusMetricsReporter reporter =
+        new AsyncJobQueueStatusMetricsReporter(
+            asyncJobStore, queueProperties("assetlocalize"), List.of(), meterRegistry);
+
+    assertThat(assertThrows(FatalTestError.class, reporter::reportStatusCounts))
+        .isSameAs(fatalTestError);
   }
 
   @Test
@@ -165,5 +187,21 @@ public class AsyncJobQueueStatusMetricsReporterTest {
                 .gauge()
                 .value())
         .isEqualTo(expectedValue);
+  }
+
+  private void assertFailedCounter(String queueName, double expectedCount) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.statusMetrics.failed")
+                .tag("queueName", queueName)
+                .counter()
+                .count())
+        .isEqualTo(expectedCount);
+  }
+
+  private static class FatalTestError extends VirtualMachineError {
+    FatalTestError(String message) {
+      super(message);
+    }
   }
 }
