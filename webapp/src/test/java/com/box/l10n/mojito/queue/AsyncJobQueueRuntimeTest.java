@@ -2690,6 +2690,36 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void handlerFailuresPersistBoundedCauseChainForOperators() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  throw new IllegalStateException(
+                      "wrapper", new IllegalArgumentException("bad payload"));
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.FAILED, 1);
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(failedJob.lastError()).contains("java.lang.IllegalStateException: wrapper");
+    assertThat(failedJob.lastError())
+        .contains("caused by java.lang.IllegalArgumentException: bad payload");
+    assertThat(failedJob.lastError()).hasSizeLessThanOrEqualTo(4_000);
+  }
+
+  @Test
   public void nonFatalHandlerThrowablesUseAttemptBudgetAndPersistError() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =

@@ -1157,11 +1157,27 @@ class AsyncJobQueueRuntime {
   }
 
   private String errorMessage(Throwable e) {
-    String message = e.getClass().getName();
-    if (e.getMessage() != null && !e.getMessage().isBlank()) {
-      message += ": " + e.getMessage();
+    StringBuilder message = new StringBuilder();
+    Set<Throwable> visitedThrowables = throwableIdentitySet();
+    Throwable current = e;
+    while (current != null && visitedThrowables.add(current)) {
+      if (!message.isEmpty()) {
+        message.append("; caused by ");
+      }
+      appendThrowableSummary(message, current);
+      if (message.length() >= AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH) {
+        break;
+      }
+      current = current.getCause();
     }
-    return AsyncJobQueueValidation.truncateLastError(message);
+    return AsyncJobQueueValidation.truncateLastError(message.toString());
+  }
+
+  private void appendThrowableSummary(StringBuilder message, Throwable throwable) {
+    message.append(throwable.getClass().getName());
+    if (throwable.getMessage() != null && !throwable.getMessage().isBlank()) {
+      message.append(": ").append(throwable.getMessage());
+    }
   }
 
   private ScheduledFuture<?> scheduleHeartbeat(AsyncJobRecord asyncJobRecord) {
