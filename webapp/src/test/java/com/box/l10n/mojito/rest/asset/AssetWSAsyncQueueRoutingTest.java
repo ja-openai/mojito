@@ -67,6 +67,7 @@ public class AssetWSAsyncQueueRoutingTest {
     assertThat(jobInfo.getInput()).isSameAs(input);
     assertThat(jobInfo.getScheduler()).isEqualTo("defaultScheduler");
     assertThat(jobInfo.isInlineInput()).isFalse();
+    assertThat(scheduleCount("quartz", "succeeded")).isEqualTo(1);
   }
 
   @Test
@@ -87,6 +88,7 @@ public class AssetWSAsyncQueueRoutingTest {
     assertThat(jobInfo.getInput()).isSameAs(input);
     assertThat(jobInfo.getScheduler()).isEqualTo("defaultScheduler");
     assertThat(jobInfo.isInlineInput()).isFalse();
+    assertThat(scheduleCount("assetlocalize", "succeeded")).isEqualTo(1);
   }
 
   @Test
@@ -99,6 +101,7 @@ public class AssetWSAsyncQueueRoutingTest {
             () -> assetWS.getLocalizedAssetForContentAsync(11L, new LocalizedAssetBody()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("submission service is unavailable");
+    assertThat(scheduleCount("assetlocalize", "failed")).isEqualTo(1);
   }
 
   private Asset asset() {
@@ -108,5 +111,15 @@ public class AssetWSAsyncQueueRoutingTest {
     Asset asset = new Asset();
     asset.setRepository(repository);
     return asset;
+  }
+
+  private double scheduleCount(String route, String result) {
+    return assetWS
+        .meterRegistry
+        .get("assetWS.getLocalizedAssetForContentAsync.schedule")
+        .tag("route", route)
+        .tag("result", result)
+        .counter()
+        .count();
   }
 }

@@ -265,14 +265,36 @@ public class AssetWS {
 
   PollableFuture<LocalizedAssetBody> scheduleLocalizedAssetJob(
       QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo) {
-    if (asyncJobQueueEnabled && asyncJobQueueAssetLocalizeEnabled) {
-      if (assetLocalizeAsyncJobSubmissionService == null) {
-        throw new IllegalStateException(
-            "Asset localize async queue is enabled but the submission service is unavailable");
+    String route = isAssetLocalizeAsyncQueueEnabled() ? "assetlocalize" : "quartz";
+    try {
+      PollableFuture<LocalizedAssetBody> pollableFuture;
+      if (isAssetLocalizeAsyncQueueEnabled()) {
+        if (assetLocalizeAsyncJobSubmissionService == null) {
+          throw new IllegalStateException(
+              "Asset localize async queue is enabled but the submission service is unavailable");
+        }
+        pollableFuture = assetLocalizeAsyncJobSubmissionService.scheduleJob(quartzJobInfo);
+      } else {
+        pollableFuture = quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
       }
-      return assetLocalizeAsyncJobSubmissionService.scheduleJob(quartzJobInfo);
+      recordLocalizedAssetAsyncSchedule(route, "succeeded");
+      return pollableFuture;
+    } catch (RuntimeException e) {
+      recordLocalizedAssetAsyncSchedule(route, "failed");
+      throw e;
     }
-    return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+  }
+
+  private boolean isAssetLocalizeAsyncQueueEnabled() {
+    return asyncJobQueueEnabled && asyncJobQueueAssetLocalizeEnabled;
+  }
+
+  private void recordLocalizedAssetAsyncSchedule(String route, String result) {
+    meterRegistry
+        .counter(
+            "assetWS.getLocalizedAssetForContentAsync.schedule",
+            Tags.of("route", route, "result", result))
+        .increment();
   }
 
   /**
