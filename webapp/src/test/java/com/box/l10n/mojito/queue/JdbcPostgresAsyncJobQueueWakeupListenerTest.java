@@ -91,6 +91,7 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
     PGConnection pgConnection = mock(PGConnection.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.getAutoCommit()).thenReturn(false);
+    when(connection.isClosed()).thenReturn(false);
     when(connection.createStatement()).thenReturn(statement);
     when(connection.unwrap(PGConnection.class)).thenReturn(pgConnection);
     when(pgConnection.getNotifications(anyInt()))
@@ -119,6 +120,7 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
     } finally {
       listener.stop();
     }
+    verify(connection, timeout(1_000)).setAutoCommit(false);
   }
 
   private JdbcPostgresAsyncJobQueueWakeupListener listener(

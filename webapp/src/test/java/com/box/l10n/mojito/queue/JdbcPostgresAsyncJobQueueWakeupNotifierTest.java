@@ -52,6 +52,7 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
     PreparedStatement preparedStatement = mock(PreparedStatement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.getAutoCommit()).thenReturn(false);
+    when(connection.isClosed()).thenReturn(false);
     when(connection.prepareStatement("SELECT pg_notify(?, ?)")).thenReturn(preparedStatement);
     JdbcPostgresAsyncJobQueueWakeupNotifier notifier =
         new JdbcPostgresAsyncJobQueueWakeupNotifier(
@@ -61,6 +62,7 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
 
     verify(connection).setAutoCommit(true);
     verify(preparedStatement).execute();
+    verify(connection).setAutoCommit(false);
     assertNotifyCounter("assetlocalize", "succeeded", 1);
   }
 

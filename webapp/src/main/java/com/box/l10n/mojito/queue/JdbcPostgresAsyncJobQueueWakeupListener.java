@@ -9,6 +9,7 @@ import java.sql.Statement;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
@@ -27,7 +28,7 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
   private final int reconnectJitterPercent;
   private final AsyncJobQueueCoordinator asyncJobQueueCoordinator;
   private final MeterRegistry meterRegistry;
-  private final AtomicReference<Connection> activeConnection = new AtomicReference<>();
+  private final AtomicReference<ListenConnection> activeConnection = new AtomicReference<>();
   private final Object lifecycleLock = new Object();
 
   private volatile boolean running;
@@ -140,9 +141,11 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
   private void listenUntilDisconnected() throws Exception {
     Class<?> pgConnectionClass = Class.forName("org.postgresql.PGConnection");
     Method getNotifications = pgConnectionClass.getMethod("getNotifications", int.class);
-    try (Connection connection = dataSource.getConnection()) {
-      JdbcPostgresAsyncJobQueueWakeupConnections.ensureAutoCommit(connection);
-      activeConnection.set(connection);
+    try (Connection connection = dataSource.getConnection();
+        JdbcPostgresAsyncJobQueueWakeupConnections.AutoCommitScope ignored =
+            JdbcPostgresAsyncJobQueueWakeupConnections.ensureAutoCommit(connection)) {
+      ListenConnection listenConnection = new ListenConnection(connection, ignored);
+      activeConnection.set(listenConnection);
       listen(connection);
       Object pgConnection = unwrapPgConnection(connection, pgConnectionClass);
       incrementListenCounter("connected");
@@ -156,6 +159,7 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
           handleNotification(notificationName(notification), notificationPayload(notification));
         }
       }
+      activeConnection.compareAndSet(listenConnection, null);
     } catch (InvocationTargetException exception) {
       Throwable targetException = exception.getTargetException();
       if (targetException instanceof Exception targetCheckedException) {
@@ -243,12 +247,12 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
   }
 
   private void closeActiveConnection() {
-    Connection connection = activeConnection.getAndSet(null);
-    if (connection == null) {
+    ListenConnection listenConnection = activeConnection.getAndSet(null);
+    if (listenConnection == null) {
       return;
     }
     try {
-      connection.close();
+      listenConnection.close();
     } catch (SQLException exception) {
       logger.warn(
           "Failed to close PostgreSQL async queue wakeup listener connection for channel {}",
@@ -286,5 +290,27 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
   private boolean isJvmFatal(Throwable throwable) {
     return throwable instanceof VirtualMachineError
         || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
+  }
+
+  private static final class ListenConnection implements AutoCloseable {
+    private final Connection connection;
+    private final JdbcPostgresAsyncJobQueueWakeupConnections.AutoCommitScope autoCommitScope;
+    private final AtomicBoolean closed = new AtomicBoolean();
+
+    private ListenConnection(
+        Connection connection,
+        JdbcPostgresAsyncJobQueueWakeupConnections.AutoCommitScope autoCommitScope) {
+      this.connection = connection;
+      this.autoCommitScope = autoCommitScope;
+    }
+
+    @Override
+    public void close() throws SQLException {
+      if (!closed.compareAndSet(false, true)) {
+        return;
+      }
+      autoCommitScope.close();
+      connection.close();
+    }
   }
 }
