@@ -158,6 +158,87 @@ public class AsyncJobQueueLoadTest {
   }
 
   @Test
+  public void stressHandlerRequestedRequeuesWithinBoundedTimeWithoutDuplicateCompletions()
+      throws Exception {
+    int jobCount = 150;
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    for (int i = 0; i < jobCount; i++) {
+      inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":" + i + "}", Instant.EPOCH);
+    }
+
+    ConcurrentHashMap<AsyncJobId, AtomicInteger> attemptsById = new ConcurrentHashMap<>();
+    Set<AsyncJobId> completedJobIds = ConcurrentHashMap.newKeySet();
+    AtomicInteger duplicateCompletions = new AtomicInteger();
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings();
+    queueSettings.setMaxAttempts(2);
+    queueSettings.setRetryJitterPercent(0);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        new AsyncJobQueueRuntime(
+            "assetlocalize",
+            inMemoryAsyncJobStore,
+            queueSettings,
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                int attempt =
+                    attemptsById
+                        .computeIfAbsent(asyncJobRecord.id(), ignored -> new AtomicInteger())
+                        .incrementAndGet();
+                if (attempt == 1) {
+                  return AsyncJobHandlerResult.requeue(Instant.EPOCH, "{\"stage\":\"deferred\"}");
+                }
+                if (!completedJobIds.add(asyncJobRecord.id())) {
+                  duplicateCompletions.incrementAndGet();
+                }
+                return AsyncJobHandlerResult.done("{\"stage\":\"done\"}");
+              }
+            },
+            mock(TaskScheduler.class),
+            executor,
+            meterRegistry,
+            "worker-a");
+
+    long startedAt = System.nanoTime();
+    long timeoutAt = System.currentTimeMillis() + 10_000;
+    while (statusCount(inMemoryAsyncJobStore, AsyncJobStatus.DONE) < jobCount
+        && System.currentTimeMillis() < timeoutAt) {
+      asyncJobQueueRuntime.pollOnce();
+      Thread.sleep(1);
+    }
+    long elapsedMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+
+    waitForCounter("asyncJobQueue.completed", jobCount);
+    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.DONE)).isEqualTo(jobCount);
+    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.QUEUED)).isZero();
+    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.RUNNING)).isZero();
+    assertThat(statusCount(inMemoryAsyncJobStore, AsyncJobStatus.FAILED)).isZero();
+    assertThat(inMemoryAsyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.DONE, jobCount))
+        .hasSize(jobCount)
+        .allSatisfy(
+            job -> {
+              assertThat(job.attemptCount()).isEqualTo(2);
+              assertThat(job.jobData()).isEqualTo("{\"stage\":\"done\"}");
+              assertThat(job.lastError()).isNull();
+              assertThat(job.workerId()).isNull();
+              assertThat(job.leaseToken()).isNull();
+              assertThat(job.leaseUntil()).isNull();
+            });
+    assertThat(attemptsById).hasSize(jobCount);
+    assertThat(attemptsById.values())
+        .allSatisfy(attempts -> assertThat(attempts.get()).isEqualTo(2));
+    assertThat(completedJobIds).hasSize(jobCount);
+    assertThat(duplicateCompletions.get()).isZero();
+    assertThat(counterCount("asyncJobQueue.requeued")).isEqualTo(jobCount);
+    assertThat(counterCount("asyncJobQueue.handler.failed")).isZero();
+    assertThat(elapsedMs).isLessThan(10_000);
+  }
+
+  @Test
   public void stressFailsPoisonJobsTerminallyWithinAttemptBudget() throws Exception {
     int jobCount = 80;
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();

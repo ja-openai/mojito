@@ -302,8 +302,9 @@ Test Coverage
     multi-runtime lease reclaim fencing, and concurrent runtime claiming without duplicate
     execution or stranded queued/running rows
 - Load/perf smoke coverage processes hundreds of jobs through the runtime and asserts bounded
-  completion with no duplicate execution. This is a CI guardrail, not a replacement for a
-  database-backed benchmark against MySQL/PostgreSQL.
+  completion with no duplicate execution across happy-path, transient-failure, handler-requested
+  deferral, poison-job, and expired-lease exhaustion paths. This is a CI guardrail, not a
+  replacement for a database-backed benchmark against MySQL/PostgreSQL.
 - The optional real-database perf smoke drains 1,000 jobs per backend through competing runtimes,
   logs throughput, and keeps only a very low floor assertion to catch pathological regressions
   without making developer machines timing-sensitive:
