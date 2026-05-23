@@ -38,7 +38,7 @@ class JdbcPostgresAsyncJobQueueWakeupNotifier implements AsyncJobQueueWakeupNoti
     Objects.requireNonNull(asyncJobId);
     try (Connection connection = dataSource.getConnection();
         JdbcPostgresAsyncJobQueueWakeupConnections.AutoCommitScope ignored =
-            JdbcPostgresAsyncJobQueueWakeupConnections.ensureAutoCommit(connection);
+            JdbcPostgresAsyncJobQueueWakeupConnections.ensureAutoCommit(connection, meterRegistry);
         PreparedStatement preparedStatement =
             connection.prepareStatement("SELECT pg_notify(?, ?)")) {
       preparedStatement.setString(1, channel);

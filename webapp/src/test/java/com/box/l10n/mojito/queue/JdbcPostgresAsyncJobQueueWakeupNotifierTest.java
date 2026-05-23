@@ -91,6 +91,7 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
     verify(connection).close();
     assertNotifyCounter("assetlocalize", "succeeded", 1);
     assertNoNotifyCounter("assetlocalize", "failed");
+    assertAutoCommitRestoreFailureCounter(1);
   }
 
   @Test
@@ -173,6 +174,16 @@ public class JdbcPostgresAsyncJobQueueWakeupNotifierTest {
                 .tag("result", result)
                 .counter())
         .isNull();
+  }
+
+  private void assertAutoCommitRestoreFailureCounter(double count) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.wakeup.connection.autoCommitRestore.failed")
+                .tag("provider", "postgres")
+                .counter()
+                .count())
+        .isEqualTo(count);
   }
 
   private static class FatalTestError extends VirtualMachineError {
