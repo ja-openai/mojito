@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongUnaryOperator;
 import org.junit.After;
 import org.junit.Test;
@@ -1657,6 +1658,55 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void fatalHandlerErrorsEscapeWithoutQueueTransition() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    CountDownLatch fatalObserved = new CountDownLatch(1);
+    AtomicReference<Throwable> uncaughtThrowable = new AtomicReference<>();
+    ThreadPoolTaskExecutor fatalCapturingExecutor =
+        newUncaughtCapturingExecutor(uncaughtThrowable, fatalObserved);
+
+    try {
+      AsyncJobQueueRuntime asyncJobQueueRuntime =
+          runtime(
+              inMemoryAsyncJobStore,
+              queueSettings(1, 1_000, 1, 1, 10_000, 0),
+              handler(
+                  asyncJobRecord -> {
+                    throw new InternalError("fatal vm state");
+                  }),
+              mock(TaskScheduler.class),
+              fatalCapturingExecutor);
+
+      asyncJobQueueRuntime.pollOnce();
+
+      assertThat(fatalObserved.await(2, TimeUnit.SECONDS)).isTrue();
+      assertThat(uncaughtThrowable.get()).isInstanceOf(InternalError.class);
+      assertThat(uncaughtThrowable.get()).hasMessageContaining("fatal vm state");
+      assertThat(asyncJobQueueRuntime.inFlightCount()).isZero();
+
+      AsyncJobRecord runningJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+      assertThat(runningJob.status()).isEqualTo(AsyncJobStatus.RUNNING);
+      assertThat(runningJob.lastError()).isNull();
+      assertThat(
+              meterRegistry
+                  .find("asyncJobQueue.handler.failed")
+                  .tag("queueName", "assetlocalize")
+                  .counter())
+          .isNull();
+      assertThat(
+              meterRegistry
+                  .find("asyncJobQueue.failed")
+                  .tag("queueName", "assetlocalize")
+                  .counter())
+          .isNull();
+    } finally {
+      fatalCapturingExecutor.shutdown();
+    }
+  }
+
+  @Test
   public void handlerRequestedRequeuesStopAfterMaxAttempts() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =
@@ -2676,6 +2726,23 @@ public class AsyncJobQueueRuntimeTest {
             throw exception;
           }
         };
+    configureExecutor(threadPoolTaskExecutor, 1);
+    return threadPoolTaskExecutor;
+  }
+
+  private ThreadPoolTaskExecutor newUncaughtCapturingExecutor(
+      AtomicReference<Throwable> uncaughtThrowable, CountDownLatch uncaughtObserved) {
+    ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+    threadPoolTaskExecutor.setThreadFactory(
+        runnable -> {
+          Thread thread = new Thread(runnable, "async-job-fatal-handler-test");
+          thread.setUncaughtExceptionHandler(
+              (ignoredThread, throwable) -> {
+                uncaughtThrowable.compareAndSet(null, throwable);
+                uncaughtObserved.countDown();
+              });
+          return thread;
+        });
     configureExecutor(threadPoolTaskExecutor, 1);
     return threadPoolTaskExecutor;
   }
