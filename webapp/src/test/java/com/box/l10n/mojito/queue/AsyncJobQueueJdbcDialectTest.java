@@ -21,6 +21,8 @@ public class AsyncJobQueueJdbcDialectTest {
         .isEqualTo(AsyncJobQueueJdbcDialect.POSTGRESQL);
     assertThat(AsyncJobQueueJdbcDialect.fromConfig("postgresql"))
         .isEqualTo(AsyncJobQueueJdbcDialect.POSTGRESQL);
+    assertThat(AsyncJobQueueJdbcDialect.fromConfig(" postgresql "))
+        .isEqualTo(AsyncJobQueueJdbcDialect.POSTGRESQL);
     assertThat(AsyncJobQueueJdbcDialect.fromConfig("hsql-db"))
         .isEqualTo(AsyncJobQueueJdbcDialect.HSQL);
   }

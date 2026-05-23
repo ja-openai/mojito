@@ -72,7 +72,7 @@ enum AsyncJobQueueJdbcDialect {
       return MYSQL;
     }
 
-    return switch (dialect.toLowerCase(Locale.ROOT).replace("-", "").replace("_", "")) {
+    return switch (dialect.trim().toLowerCase(Locale.ROOT).replace("-", "").replace("_", "")) {
       case "mysql" -> MYSQL;
       case "postgres", "postgresql" -> POSTGRESQL;
       case "hsql", "hsqldb" -> HSQL;
