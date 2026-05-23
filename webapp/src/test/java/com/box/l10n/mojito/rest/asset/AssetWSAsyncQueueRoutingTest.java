@@ -92,6 +92,38 @@ public class AssetWSAsyncQueueRoutingTest {
   }
 
   @Test
+  public void getLocalizedAssetForContentAsyncUsesQuartzWhenOnlyGlobalQueueIsEnabled()
+      throws Exception {
+    LocalizedAssetBody input = new LocalizedAssetBody();
+    assetWS.asyncJobQueueEnabled = true;
+    when(quartzPollableTaskScheduler.scheduleJob(isA(QuartzJobInfo.class)))
+        .thenReturn(pollableFuture);
+
+    PollableTask result = assetWS.getLocalizedAssetForContentAsync(11L, input);
+
+    assertThat(result).isSameAs(pollableTask);
+    verify(quartzPollableTaskScheduler).scheduleJob(isA(QuartzJobInfo.class));
+    verify(assetLocalizeAsyncJobSubmissionService, times(0)).scheduleJob(isA(QuartzJobInfo.class));
+    assertThat(scheduleCount("quartz", "succeeded")).isEqualTo(1);
+  }
+
+  @Test
+  public void getLocalizedAssetForContentAsyncUsesQuartzWhenOnlyAssetLocalizeQueueIsEnabled()
+      throws Exception {
+    LocalizedAssetBody input = new LocalizedAssetBody();
+    assetWS.asyncJobQueueAssetLocalizeEnabled = true;
+    when(quartzPollableTaskScheduler.scheduleJob(isA(QuartzJobInfo.class)))
+        .thenReturn(pollableFuture);
+
+    PollableTask result = assetWS.getLocalizedAssetForContentAsync(11L, input);
+
+    assertThat(result).isSameAs(pollableTask);
+    verify(quartzPollableTaskScheduler).scheduleJob(isA(QuartzJobInfo.class));
+    verify(assetLocalizeAsyncJobSubmissionService, times(0)).scheduleJob(isA(QuartzJobInfo.class));
+    assertThat(scheduleCount("quartz", "succeeded")).isEqualTo(1);
+  }
+
+  @Test
   public void getLocalizedAssetForContentAsyncFailsFastWhenQueueEnabledButUnavailable() {
     assetWS.asyncJobQueueEnabled = true;
     assetWS.asyncJobQueueAssetLocalizeEnabled = true;

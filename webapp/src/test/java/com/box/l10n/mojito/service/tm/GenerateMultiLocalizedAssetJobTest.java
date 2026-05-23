@@ -155,6 +155,28 @@ public class GenerateMultiLocalizedAssetJobTest {
   }
 
   @Test
+  public void testOnlyGlobalAsyncQueueFlagKeepsChildJobsOnQuartz() throws Exception {
+    generateMultiLocalizedAssetJob.asyncJobQueueEnabled = true;
+
+    generateMultiLocalizedAssetJob.call(multiLocalizedAssetBody);
+
+    verify(quartzPollableTaskSchedulerMock, times(2)).scheduleJob(isA(QuartzJobInfo.class));
+    verify(assetLocalizeAsyncJobSubmissionService, times(0)).scheduleJob(isA(QuartzJobInfo.class));
+    assertThat(scheduleCount("quartz", "succeeded")).isEqualTo(2);
+  }
+
+  @Test
+  public void testOnlyAssetLocalizeAsyncQueueFlagKeepsChildJobsOnQuartz() throws Exception {
+    generateMultiLocalizedAssetJob.asyncJobQueueAssetLocalizeEnabled = true;
+
+    generateMultiLocalizedAssetJob.call(multiLocalizedAssetBody);
+
+    verify(quartzPollableTaskSchedulerMock, times(2)).scheduleJob(isA(QuartzJobInfo.class));
+    verify(assetLocalizeAsyncJobSubmissionService, times(0)).scheduleJob(isA(QuartzJobInfo.class));
+    assertThat(scheduleCount("quartz", "succeeded")).isEqualTo(2);
+  }
+
+  @Test
   public void testDurableAsyncQueueEnabledFailsFastWhenSubmissionServiceUnavailable() {
     generateMultiLocalizedAssetJob.asyncJobQueueEnabled = true;
     generateMultiLocalizedAssetJob.asyncJobQueueAssetLocalizeEnabled = true;
