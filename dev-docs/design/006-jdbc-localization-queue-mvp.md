@@ -325,9 +325,9 @@ Test Coverage
     `async-job-queue-real-db-contract` job so real-database locking stays covered without slowing
     every PR
   - default unit test runs compile this class but skip container startup unless explicitly enabled
-  - the real-database contract validates store transitions, runtime drain/finalize behavior,
-    multi-runtime lease reclaim fencing, and concurrent runtime claiming without duplicate
-    execution or stranded queued/running rows
+  - the real-database contract validates store transitions, scheduled availability filtering,
+    runtime drain/finalize behavior, multi-runtime lease reclaim fencing, and concurrent runtime
+    claiming without duplicate execution or stranded queued/running rows
 - Load/perf smoke coverage processes hundreds of jobs through the runtime and asserts bounded
   completion with no duplicate execution across happy-path, transient-failure, handler-requested
   deferral, poison-job, and expired-lease exhaustion paths. This is a CI guardrail, not a
