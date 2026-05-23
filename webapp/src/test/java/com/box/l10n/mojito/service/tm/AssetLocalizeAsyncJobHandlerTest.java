@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.PollableTask;
@@ -112,6 +113,23 @@ public class AssetLocalizeAsyncJobHandlerTest {
         .hasMessageContaining("PollableTask not found: 42");
 
     verify(pollableTaskService, times(0)).finishTask(eq(42L), isNull(), any(), isNull());
+    assertThat(
+            meterRegistry
+                .get("assetLocalizeAsyncJob.process")
+                .tag("queueName", AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME)
+                .tag("result", "failed")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void processMalformedPayloadRecordsFailureBeforePollableLookup() throws Exception {
+    assertThatThrownBy(() -> handler.process(asyncJobRecord("{\"pollableTaskId\":0}", 1)))
+        .isInstanceOf(RuntimeException.class);
+
+    verifyNoInteractions(
+        pollableTaskService, pollableTaskBlobStorage, localizedAssetGenerationService);
     assertThat(
             meterRegistry
                 .get("assetLocalizeAsyncJob.process")
