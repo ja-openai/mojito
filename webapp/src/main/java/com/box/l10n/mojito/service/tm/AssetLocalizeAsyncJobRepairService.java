@@ -54,7 +54,8 @@ public class AssetLocalizeAsyncJobRepairService {
       asyncJobRecords = asyncJobStore.getByIds(List.of(asyncJobId));
     } catch (RuntimeException exception) {
       recordRepair("unknown", "jobLookupFailed");
-      throw exception;
+      throw new AssetLocalizeAsyncJobLookupException(
+          "Failed to look up asset localize async job: " + asyncJobId.value(), exception);
     }
     AsyncJobRecord asyncJobRecord =
         asyncJobRecords.stream()
@@ -96,7 +97,8 @@ public class AssetLocalizeAsyncJobRepairService {
               asyncJobRecord.jobData(), AssetLocalizeAsyncJobPayload.class);
     } catch (RuntimeException exception) {
       recordRepair(asyncJobRecord.status(), "invalidPayload");
-      throw exception;
+      throw new AssetLocalizeAsyncJobInvalidPayloadException(
+          "Invalid asset localize async job payload: " + asyncJobRecord.id().value(), exception);
     }
     PollableTask pollableTask = pollableTaskService.getPollableTask(payload.pollableTaskId());
     if (pollableTask == null) {
@@ -129,7 +131,12 @@ public class AssetLocalizeAsyncJobRepairService {
           pollableTask.getId(),
           asyncJobRecord.id().value(),
           exception);
-      throw exception;
+      throw new AssetLocalizePollableTaskRepairException(
+          "Failed to repair pollable task "
+              + pollableTask.getId()
+              + " for asset localize async job "
+              + asyncJobRecord.id().value(),
+          exception);
     }
 
     recordRepair(asyncJobRecord.status(), "repaired");
@@ -178,9 +185,27 @@ public class AssetLocalizeAsyncJobRepairService {
     }
   }
 
+  public static class AssetLocalizeAsyncJobLookupException extends RuntimeException {
+    public AssetLocalizeAsyncJobLookupException(String message, Throwable cause) {
+      super(message, cause);
+    }
+  }
+
+  public static class AssetLocalizeAsyncJobInvalidPayloadException extends RuntimeException {
+    public AssetLocalizeAsyncJobInvalidPayloadException(String message, Throwable cause) {
+      super(message, cause);
+    }
+  }
+
   public static class AssetLocalizePollableTaskNotFoundException extends RuntimeException {
     public AssetLocalizePollableTaskNotFoundException(String message) {
       super(message);
+    }
+  }
+
+  public static class AssetLocalizePollableTaskRepairException extends RuntimeException {
+    public AssetLocalizePollableTaskRepairException(String message, Throwable cause) {
+      super(message, cause);
     }
   }
 }

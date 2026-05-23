@@ -1,8 +1,11 @@
 package com.box.l10n.mojito.rest.admin;
 
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobInvalidPayloadException;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobLookupException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobNotFoundException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskNotFoundException;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskRepairException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.RepairResult;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -33,6 +36,12 @@ public class AssetLocalizeAsyncJobRepairWS {
     } catch (AssetLocalizeAsyncJobNotFoundException
         | AssetLocalizePollableTaskNotFoundException exception) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, exception.getMessage(), exception);
+    } catch (AssetLocalizeAsyncJobLookupException
+        | AssetLocalizePollableTaskRepairException exception) {
+      throw new ResponseStatusException(
+          HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage(), exception);
+    } catch (AssetLocalizeAsyncJobInvalidPayloadException exception) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
     } catch (IllegalStateException exception) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
     } catch (IllegalArgumentException exception) {

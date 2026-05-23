@@ -19,8 +19,11 @@ import com.box.l10n.mojito.queue.AsyncJobStatus;
 import com.box.l10n.mojito.queue.AsyncJobStore;
 import com.box.l10n.mojito.service.pollableTask.ExceptionHolder;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobInvalidPayloadException;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobLookupException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizeAsyncJobNotFoundException;
 import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskNotFoundException;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobRepairService.AssetLocalizePollableTaskRepairException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -148,8 +151,9 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
         .thenThrow(new IllegalStateException("database unavailable"));
 
     assertThatThrownBy(() -> repairService.repairTerminalPollableTask("1"))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("database unavailable");
+        .isInstanceOf(AssetLocalizeAsyncJobLookupException.class)
+        .hasMessageContaining("Failed to look up asset localize async job")
+        .hasCauseInstanceOf(IllegalStateException.class);
     assertRepairCounter("unknown", "jobLookupFailed", 1);
   }
 
@@ -172,7 +176,8 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
             () ->
                 repairService.repairTerminalPollableTask(
                     asyncJobRecord(AsyncJobStatus.FAILED, "1", "handler failed", "{bad-json")))
-        .isInstanceOf(RuntimeException.class);
+        .isInstanceOf(AssetLocalizeAsyncJobInvalidPayloadException.class)
+        .hasMessageContaining("Invalid asset localize async job payload");
     assertRepairCounter("failed", "invalidPayload", 1);
   }
 
@@ -188,8 +193,9 @@ public class AssetLocalizeAsyncJobRepairServiceTest {
             () ->
                 repairService.repairTerminalPollableTask(
                     asyncJobRecord(AsyncJobStatus.DONE, "1", null)))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("finish failed");
+        .isInstanceOf(AssetLocalizePollableTaskRepairException.class)
+        .hasMessageContaining("Failed to repair pollable task 42")
+        .hasCauseInstanceOf(IllegalStateException.class);
     assertRepairCounter("done", "finishFailed", 1);
   }
 
