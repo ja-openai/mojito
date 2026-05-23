@@ -170,6 +170,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
 
     assertThat(assertThrows(FatalTestError.class, reporter::reportStatusCounts))
         .isSameAs(fatalTestError);
+    assertNoFailedCounter("assetlocalize");
   }
 
   @Test
@@ -271,6 +272,15 @@ public class AsyncJobQueueStatusMetricsReporterTest {
                 .counter()
                 .count())
         .isEqualTo(expectedCount);
+  }
+
+  private void assertNoFailedCounter(String queueName) {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.statusMetrics.failed")
+                .tag("queueName", queueName)
+                .counter())
+        .isNull();
   }
 
   private void assertReadyCountGaugeValue(String queueName, long expectedValue) {
