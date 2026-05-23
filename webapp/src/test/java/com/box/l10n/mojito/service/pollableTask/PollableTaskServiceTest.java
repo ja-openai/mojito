@@ -48,6 +48,11 @@ public class PollableTaskServiceTest extends ServiceTestBase {
   }
 
   @Test
+  public void testGetPollableTaskMissingReturnsNull() {
+    assertNull(pollableTaskService.getPollableTask(Long.MAX_VALUE));
+  }
+
+  @Test
   public void testCreateParentTask() {
     PollableTask createPollableTask =
         pollableTaskService.createPollableTask(

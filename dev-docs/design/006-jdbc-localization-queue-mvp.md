@@ -82,6 +82,15 @@ Transaction Boundaries (Critical)
   callback fails.
 - Heartbeat/finalize/requeue updates must match `(id, worker_id, lease_token)` for fencing.
 
+Pollable Finalization Repair
+- `AssetLocalizeAsyncJobRepairService.repairTerminalPollableTask(...)` is an idempotent repair path
+  for the rare case where TX D succeeds but TX E fails.
+- For `done` rows it parses the persisted `job_data`, loads the child `pollable_task`, and finishes
+  it only if it is still open.
+- For `failed` rows it finishes the child `pollable_task` with an `ExceptionHolder` synthesized from
+  the persisted `last_error`, preserving operator-visible task failure without replaying work.
+- Repair emits `assetLocalizeAsyncJob.repair{queueName,status,result}` with bounded tags.
+
 Spring Guardrails Against Transaction Leakage
 - Orchestrator method uses `@Transactional(propagation = NOT_SUPPORTED)`.
 - Claim/heartbeat/finalize each in separate bean methods with `@Transactional(REQUIRES_NEW)`.
