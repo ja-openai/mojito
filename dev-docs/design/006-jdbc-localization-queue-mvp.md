@@ -277,6 +277,8 @@ Test Coverage
   and inspection/retention queues safe.
 - Submission service tests assert out-of-range `availableAt` values are rejected before store
   enqueue or worker wakeup, preserving the portable timestamp bounds at the production API edge.
+  They also assert due-now scheduled jobs trigger immediate worker wakeup while future jobs remain
+  delayed.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.

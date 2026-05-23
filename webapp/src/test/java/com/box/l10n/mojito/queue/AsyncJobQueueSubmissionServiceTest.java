@@ -77,6 +77,21 @@ public class AsyncJobQueueSubmissionServiceTest {
   }
 
   @Test
+  public void enqueueDueJobTriggersImmediateWakeup() {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobId asyncJobId = new AsyncJobId("42");
+    when(store.enqueue("assetlocalize", "{\"id\":1}", NOW)).thenReturn(asyncJobId);
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueSubmissionService service = submissionService(store, coordinator);
+
+    assertThat(service.enqueue("assetlocalize", "{\"id\":1}", NOW)).isSameAs(asyncJobId);
+
+    verify(store).enqueue("assetlocalize", "{\"id\":1}", NOW);
+    verify(coordinator).triggerPollNow("assetlocalize");
+    assertEnqueueCounter("succeeded", 1);
+  }
+
+  @Test
   public void enqueueRejectsOutOfRangeAvailableAtBeforeStoreOrWakeup() {
     AsyncJobStore store = mock(AsyncJobStore.class);
     AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
