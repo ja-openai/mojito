@@ -254,11 +254,11 @@ Test Coverage
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
   handler-only queues, queue discovery de-duplication, ready backlog gauges, oldest ready-job age,
   expired running lease gauges, delayed-job exclusion, and non-fatal reporting failures.
-- JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
-  replay, lease-reclaim markers, timestamp-bound validation, bounded error summaries, and status
-  counts against an embedded datasource using the `hsql` dialect. Store tests also cover bounded
-  inspection/cleanup limits and terminal-row deletion so retention jobs cannot accidentally delete
-  queued/running work.
+- JDBC store tests exercise enqueue, claim, concurrent claim/requeue/complete cycles, lease
+  fencing, requeue, terminal failure, operator replay, lease-reclaim markers, timestamp-bound
+  validation, bounded error summaries, and status counts against an embedded datasource using the
+  `hsql` dialect. Store tests also cover bounded inspection/cleanup limits and terminal-row
+  deletion so retention jobs cannot accidentally delete queued/running work.
 - Shared store contract tests now assert expired running leases are visible before recovery and
   disappear after a successful reclaim, so future backends cannot silently omit the stalled-worker
   signal.

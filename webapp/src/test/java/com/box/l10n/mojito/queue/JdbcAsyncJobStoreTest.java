@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.sql.DataSource;
 import org.junit.After;
 import org.junit.Before;
@@ -345,6 +346,121 @@ public class JdbcAsyncJobStoreTest {
       assertThat(statusCount(queueName, AsyncJobStatus.QUEUED)).isZero();
       assertThat(statusCount(queueName, AsyncJobStatus.RUNNING)).isZero();
       assertThat(statusCount(queueName, AsyncJobStatus.FAILED)).isZero();
+    } finally {
+      stop.set(true);
+      executorService.shutdownNow();
+      assertThat(executorService.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+    }
+  }
+
+  @Test
+  public void concurrentClaimsCanRequeueAndCompleteEachJobOnce() throws Exception {
+    String queueName = "assetlocalize";
+    int jobCount = 60;
+    int workerCount = 6;
+    int batchSize = 3;
+    for (int i = 0; i < jobCount; i++) {
+      jdbcAsyncJobStore.enqueue(queueName, "{\"id\":" + i + "}", Instant.now().minusSeconds(1));
+    }
+
+    ConcurrentHashMap<AsyncJobId, AtomicInteger> claimsById = new ConcurrentHashMap<>();
+    Set<AsyncJobId> completedIds = ConcurrentHashMap.newKeySet();
+    AtomicBoolean stop = new AtomicBoolean();
+    CountDownLatch start = new CountDownLatch(1);
+    ExecutorService executorService = Executors.newFixedThreadPool(workerCount);
+    List<Future<Integer>> futures = new ArrayList<>();
+    try {
+      for (int workerIndex = 0; workerIndex < workerCount; workerIndex++) {
+        String workerId = "worker-" + workerIndex;
+        futures.add(
+            executorService.submit(
+                () -> {
+                  start.await();
+                  int completed = 0;
+                  try {
+                    while (!stop.get() && statusCount(queueName, AsyncJobStatus.DONE) < jobCount) {
+                      List<AsyncJobRecord> claimed =
+                          jdbcAsyncJobStore.claimNextJobs(
+                              queueName, batchSize, workerId, Duration.ofSeconds(30));
+                      if (claimed.isEmpty()) {
+                        Thread.sleep(5);
+                        continue;
+                      }
+
+                      for (AsyncJobRecord job : claimed) {
+                        int claimNumber =
+                            claimsById
+                                .computeIfAbsent(job.id(), ignored -> new AtomicInteger())
+                                .incrementAndGet();
+                        assertThat(claimNumber)
+                            .as(
+                                "job should only be claimed for deferral and completion: %s",
+                                job.id())
+                            .isLessThanOrEqualTo(2);
+
+                        if (claimNumber == 1) {
+                          assertThat(job.attemptCount()).isEqualTo(1);
+                          assertThat(
+                                  jdbcAsyncJobStore.requeue(
+                                      queueName,
+                                      job.id(),
+                                      workerId,
+                                      job.leaseToken(),
+                                      Instant.now().minusSeconds(1),
+                                      "{\"stage\":\"deferred\"}",
+                                      null))
+                              .isTrue();
+                        } else {
+                          assertThat(job.attemptCount()).isEqualTo(2);
+                          assertThat(job.jobData()).isEqualTo("{\"stage\":\"deferred\"}");
+                          assertThat(completedIds.add(job.id()))
+                              .as("job should only complete once: %s", job.id())
+                              .isTrue();
+                          assertThat(
+                                  jdbcAsyncJobStore.markDone(
+                                      queueName,
+                                      job.id(),
+                                      workerId,
+                                      job.leaseToken(),
+                                      "{\"stage\":\"done\"}"))
+                              .isTrue();
+                          completed++;
+                        }
+                      }
+                    }
+                    return completed;
+                  } catch (Throwable throwable) {
+                    stop.set(true);
+                    throw throwable;
+                  }
+                }));
+      }
+
+      start.countDown();
+      int completed = 0;
+      for (Future<Integer> future : futures) {
+        completed += future.get(30, TimeUnit.SECONDS);
+      }
+
+      assertThat(completed).isEqualTo(jobCount);
+      assertThat(completedIds).hasSize(jobCount);
+      assertThat(claimsById).hasSize(jobCount);
+      assertThat(claimsById.values()).allSatisfy(claims -> assertThat(claims.get()).isEqualTo(2));
+      assertThat(statusCount(queueName, AsyncJobStatus.DONE)).isEqualTo(jobCount);
+      assertThat(statusCount(queueName, AsyncJobStatus.QUEUED)).isZero();
+      assertThat(statusCount(queueName, AsyncJobStatus.RUNNING)).isZero();
+      assertThat(statusCount(queueName, AsyncJobStatus.FAILED)).isZero();
+      assertThat(jdbcAsyncJobStore.findByStatus(queueName, AsyncJobStatus.DONE, jobCount))
+          .hasSize(jobCount)
+          .allSatisfy(
+              job -> {
+                assertThat(job.attemptCount()).isEqualTo(2);
+                assertThat(job.jobData()).isEqualTo("{\"stage\":\"done\"}");
+                assertThat(job.lastError()).isNull();
+                assertThat(job.workerId()).isNull();
+                assertThat(job.leaseToken()).isNull();
+                assertThat(job.leaseUntil()).isNull();
+              });
     } finally {
       stop.set(true);
       executorService.shutdownNow();
