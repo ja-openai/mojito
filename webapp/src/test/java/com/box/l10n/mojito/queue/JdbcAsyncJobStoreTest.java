@@ -71,6 +71,8 @@ public class JdbcAsyncJobStoreTest {
             CHECK (last_error IS NULL OR CHAR_LENGTH(last_error) <= 4000),
           CONSTRAINT C_ASYNC_JOB_QUEUE_FAILED_LAST_ERROR
             CHECK (status <> 'failed' OR (last_error IS NOT NULL AND TRIM(last_error) <> '')),
+          CONSTRAINT C_ASYNC_JOB_QUEUE_DONE_LAST_ERROR
+            CHECK (status <> 'done' OR last_error IS NULL),
           CONSTRAINT C_ASYNC_JOB_QUEUE_RUNNING_LEASE_OWNER
             CHECK (
               (status = 'running' AND lease_until IS NOT NULL AND worker_id IS NOT NULL AND lease_token IS NOT NULL)
@@ -923,6 +925,28 @@ public class JdbcAsyncJobStoreTest {
           '{}',
           1,
           '   '
+        )
+        """);
+  }
+
+  @Test
+  public void schemaRejectsDoneRowsWithPersistedErrorWrittenDirectly() {
+    assertSchemaViolation(
+        """
+        INSERT INTO async_job_queue (
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          attempt_count,
+          last_error
+        ) VALUES (
+          'assetlocalize',
+          'done',
+          CURRENT_TIMESTAMP,
+          '{}',
+          1,
+          'stale failure'
         )
         """);
   }
