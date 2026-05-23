@@ -82,6 +82,43 @@ public class AsyncJobQueueCoordinatorTest {
   }
 
   @Test
+  public void startRecordsRuntimeStopFailureDuringRollback() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    TestScheduledFuture firstScheduledPoll = new TestScheduledFuture();
+    when(taskScheduler.schedule(any(Runnable.class), any(Date.class)))
+        .thenAnswer(invocation -> firstScheduledPoll)
+        .thenThrow(new IllegalStateException("scheduler unavailable"));
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            new AsyncJobQueueProperties(),
+            List.of(handler("assetlocalize"), handler("stats")),
+            taskScheduler,
+            meterRegistry) {
+          @Override
+          ThreadPoolTaskExecutor queueExecutor(
+              String queueName, AsyncJobQueueProperties.QueueSettings queueSettings) {
+            if ("assetlocalize".equals(queueName)) {
+              return initializedExecutor(new ThrowingShutdownThreadPoolTaskExecutor());
+            }
+            return initializedExecutor(new ThreadPoolTaskExecutor());
+          }
+        };
+
+    IllegalStateException exception = assertThrows(IllegalStateException.class, coordinator::start);
+
+    assertThat(exception).hasMessageContaining("scheduler unavailable");
+    assertThat(coordinator.isRunning()).isFalse();
+    assertThat(firstScheduledPoll.isCancelled()).isTrue();
+    assertThat(
+            meterRegistry
+                .counter("asyncJobQueue.runtime.stop.failed", "queueName", "assetlocalize")
+                .count())
+        .isEqualTo(1);
+    verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
   public void triggerPollNowRespectsLifecycleAndQueueName() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     List<TestScheduledFuture> scheduledPolls = new ArrayList<>();
