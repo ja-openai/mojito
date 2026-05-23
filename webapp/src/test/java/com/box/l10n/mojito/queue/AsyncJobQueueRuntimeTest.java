@@ -855,6 +855,60 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void doneCompletionCallbackFailureLeavesJobDoneAndRecordsMetric() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                return AsyncJobHandlerResult.done("{\"done\":true}");
+              }
+
+              @Override
+              public void onJobDone(
+                  AsyncJobRecord asyncJobRecord, AsyncJobHandlerResult asyncJobHandlerResult) {
+                throw new IllegalStateException("pollable callback failed");
+              }
+            },
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.DONE, 1);
+    AsyncJobRecord completedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(completedJob.status()).isEqualTo(AsyncJobStatus.DONE);
+    assertThat(completedJob.jobData()).isEqualTo("{\"done\":true}");
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.completed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.handler.completion.failed")
+                .tag("queueName", "assetlocalize")
+                .tag("callback", "done")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void permanentFailureCallbackRunsOnlyAfterFailedTransitionSucceeds() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(2);
@@ -907,6 +961,63 @@ public class AsyncJobQueueRuntimeTest {
 
     assertThat(callbackInvoked.await(2, TimeUnit.SECONDS)).isTrue();
     assertThat(ordering.get()).isEqualTo(3);
+  }
+
+  @Test
+  public void permanentFailureCallbackFailureLeavesJobFailedAndRecordsMetric() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettings(100, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            new AsyncJobHandler() {
+              @Override
+              public String queueName() {
+                return "assetlocalize";
+              }
+
+              @Override
+              public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                throw new IllegalStateException("poison");
+              }
+
+              @Override
+              public void onJobFailedPermanently(
+                  AsyncJobRecord asyncJobRecord, Throwable failure, String lastError) {
+                throw new IllegalStateException("pollable callback failed");
+              }
+            },
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.FAILED, 1);
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(failedJob.status()).isEqualTo(AsyncJobStatus.FAILED);
+    assertThat(failedJob.lastError()).contains("poison");
+    waitForInFlightCount(asyncJobQueueRuntime, 0);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.handler.completion.failed")
+                .tag("queueName", "assetlocalize")
+                .tag("callback", "failed")
+                .counter()
+                .count())
+        .isEqualTo(1);
   }
 
   @Test

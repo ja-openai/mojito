@@ -249,9 +249,8 @@ Test Coverage
   explicit requeue budget exhaustion, scheduling, notification wakeup coalescing, runtime poll
   failure recovery, runtime latency timers, state-transition false-return and exception metrics,
   trigger scheduling failure metrics, bounded graceful executor shutdown, active-poll shutdown
-  races,
-  coordinator startup cleanup, synchronized trigger routing, null-safe queue configuration binding,
-  and Spring configuration.
+  races, post-terminal callback failure isolation, coordinator startup cleanup, synchronized trigger
+  routing, null-safe queue configuration binding, and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
   handler-only queues, queue discovery de-duplication, ready backlog gauges, oldest ready-job age,
   expired running lease gauges, delayed-job exclusion, and non-fatal reporting failures.
