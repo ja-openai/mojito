@@ -269,6 +269,47 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   }
 
   @Test
+  public void stopRecordsAutoCommitRestoreFailureAfterListening() throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    PGConnection pgConnection = mock(PGConnection.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getAutoCommit()).thenReturn(false);
+    when(connection.isClosed()).thenReturn(false);
+    when(connection.createStatement()).thenReturn(statement);
+    when(connection.unwrap(PGConnection.class)).thenReturn(pgConnection);
+    doThrow(new SQLException("restore unavailable")).when(connection).setAutoCommit(false);
+    when(pgConnection.getNotifications(anyInt()))
+        .thenAnswer(
+            invocation -> {
+              try {
+                Thread.sleep(10);
+              } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+              }
+              return null;
+            });
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setPostgresListenTimeoutMs(1);
+    wakeupSettings.setReconnectDelayMs(1);
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            dataSource, wakeupSettings, mock(AsyncJobQueueCoordinator.class), meterRegistry);
+
+    try {
+      listener.start();
+      verify(statement, timeout(1_000)).execute("LISTEN \"mojito_async_job_queue\"");
+    } finally {
+      listener.stop();
+    }
+
+    verify(connection, timeout(1_000)).setAutoCommit(false);
+    assertAutoCommitRestoreFailureCounter(1);
+  }
+
+  @Test
   public void stopDoesNotRecordExpectedSocketCloseAsListenFailure() throws Exception {
     DataSource dataSource = mock(DataSource.class);
     Connection connection = mock(Connection.class);
@@ -394,6 +435,15 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
 
   private void assertSimpleCounter(String name, double count) {
     Counter counter = meterRegistry.find(name).counter();
+    assertThat(counter == null ? 0 : counter.count()).isEqualTo(count);
+  }
+
+  private void assertAutoCommitRestoreFailureCounter(double count) {
+    Counter counter =
+        meterRegistry
+            .find("asyncJobQueue.wakeup.connection.autoCommitRestore.failed")
+            .tag("provider", "postgres")
+            .counter();
     assertThat(counter == null ? 0 : counter.count()).isEqualTo(count);
   }
 
