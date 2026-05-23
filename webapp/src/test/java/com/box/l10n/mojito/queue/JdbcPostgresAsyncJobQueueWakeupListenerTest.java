@@ -17,6 +17,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.sql.DataSource;
 import org.junit.After;
 import org.junit.Test;
@@ -169,6 +170,52 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
     assertListenCounter("failed", 0);
   }
 
+  @Test
+  public void startRejectsDuplicateListenerWhenPreviousStopTimedOut() throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    CountDownLatch getConnectionStarted = new CountDownLatch(1);
+    CountDownLatch unblockGetConnection = new CountDownLatch(1);
+    AtomicInteger connectionAttempts = new AtomicInteger();
+    when(dataSource.getConnection())
+        .thenAnswer(
+            invocation -> {
+              connectionAttempts.incrementAndGet();
+              getConnectionStarted.countDown();
+              boolean unblocked = false;
+              while (!unblocked) {
+                try {
+                  unblocked = unblockGetConnection.await(10, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException ignored) {
+                  // Simulate a driver call that ignores interruption until the socket unblocks.
+                }
+              }
+              throw new SQLException("connection unavailable");
+            });
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setPostgresListenTimeoutMs(1);
+    wakeupSettings.setReconnectDelayMs(1);
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            dataSource, wakeupSettings, mock(AsyncJobQueueCoordinator.class), meterRegistry);
+
+    try {
+      listener.start();
+      assertThat(getConnectionStarted.await(1, TimeUnit.SECONDS)).isTrue();
+      listener.stop();
+
+      assertSimpleCounter("asyncJobQueue.wakeup.listener.stopTimeout", 1);
+      assertThatThrownBy(listener::start)
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("previous listener thread is still stopping");
+      assertSimpleCounter("asyncJobQueue.wakeup.listener.startBlocked", 1);
+      assertThat(connectionAttempts).hasValue(1);
+    } finally {
+      unblockGetConnection.countDown();
+      listener.stop();
+    }
+  }
+
   private JdbcPostgresAsyncJobQueueWakeupListener listener(
       AsyncJobQueueCoordinator asyncJobQueueCoordinator) {
     return new JdbcPostgresAsyncJobQueueWakeupListener(
@@ -197,6 +244,11 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
             .tag("provider", "postgres")
             .tag("result", result)
             .counter();
+    assertThat(counter == null ? 0 : counter.count()).isEqualTo(count);
+  }
+
+  private void assertSimpleCounter(String name, double count) {
+    Counter counter = meterRegistry.find(name).counter();
     assertThat(counter == null ? 0 : counter.count()).isEqualTo(count);
   }
 }

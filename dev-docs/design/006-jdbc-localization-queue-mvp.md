@@ -224,6 +224,8 @@ Optional Wakeup Signals
   - listener callbacks call `triggerPollNow()` with tiny random jitter to avoid waking every pod
     into the same claim statement at the same millisecond
   - failed listeners reconnect and rely on normal polling while disconnected
+  - listener shutdown keeps the thread reference while a stop is still in flight, records stop
+    timeouts, and refuses duplicate starts until the previous listener thread exits
 - Do not put job payloads, job IDs, or correctness state in notifications. `FOR UPDATE SKIP LOCKED`
   remains the only work arbitration mechanism.
 - Metrics should include notifications sent/received/coalesced, listener reconnects, and
@@ -299,6 +301,8 @@ Test Coverage
   enqueue or worker wakeup, preserving the portable timestamp bounds at the production API edge.
   They also assert due-now scheduled jobs trigger immediate worker wakeup while future jobs remain
   delayed, and fatal wakeup errors propagate instead of being counted as ordinary wakeup failures.
+- PostgreSQL wakeup listener tests assert stop-timeout accounting and duplicate-start rejection, so
+  a stuck listener cannot silently coexist with a replacement listener after lifecycle restart.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.

@@ -66,6 +66,12 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
       if (running) {
         return;
       }
+      if (listenerThread != null && listenerThread.isAlive()) {
+        meterRegistry.counter("asyncJobQueue.wakeup.listener.startBlocked").increment();
+        throw new IllegalStateException(
+            "Cannot start PostgreSQL async queue wakeup listener because the previous listener"
+                + " thread is still stopping");
+      }
       running = true;
       listenerThread = new Thread(this::runListenerLoop, "async-job-postgres-wakeup-listener");
       listenerThread.setDaemon(true);
@@ -87,13 +93,21 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
     if (threadToJoin != null && threadToJoin != Thread.currentThread()) {
       try {
         threadToJoin.join(Math.min(5_000, Math.max(1, listenTimeoutMs)));
+        if (threadToJoin.isAlive()) {
+          meterRegistry.counter("asyncJobQueue.wakeup.listener.stopTimeout").increment();
+          logger.warn(
+              "Timed out waiting for PostgreSQL async queue wakeup listener to stop for channel {}",
+              channel);
+        }
       } catch (InterruptedException exception) {
         Thread.currentThread().interrupt();
         meterRegistry.counter("asyncJobQueue.wakeup.listener.stopInterrupted").increment();
       }
     }
     synchronized (lifecycleLock) {
-      listenerThread = null;
+      if (listenerThread == threadToJoin && (threadToJoin == null || !threadToJoin.isAlive())) {
+        listenerThread = null;
+      }
     }
   }
 
