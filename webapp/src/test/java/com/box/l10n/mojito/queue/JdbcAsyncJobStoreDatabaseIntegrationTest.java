@@ -1042,7 +1042,8 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
   private Map<String, Double> claimFailureCounts(
       List<SimpleMeterRegistry> meterRegistries, String queueName) {
     Map<String, Double> countsByKind = new LinkedHashMap<>();
-    for (String failureKind : List.of("deadlock", "lock", "timeout", "dataAccess", "other")) {
+    for (String failureKind :
+        List.of("deadlock", "serialization", "lock", "timeout", "dataAccess", "other")) {
       double count =
           meterRegistries.stream()
               .mapToDouble(

@@ -356,7 +356,7 @@ Monitoring (MVP Required)
 - Error counters:
   - deadlocks / lock timeouts / claim exceptions
   - `asyncJobQueue.claim.failed` by `queueName,failure` with low-cardinality failure kinds
-    (`deadlock`, `lock`, `timeout`, `dataAccess`, `other`)
+    (`deadlock`, `serialization`, `lock`, `timeout`, `dataAccess`, `other`)
   - `asyncJobQueue.poll.failed.byFailure` by `queueName,failure` for scheduled poll recovery;
     this mirrors the claim failure taxonomy so MySQL contention can be tracked without relying on
     logs

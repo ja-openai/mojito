@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Date;
@@ -1098,6 +1099,10 @@ class AsyncJobQueueRuntime {
   }
 
   static String claimFailureKind(Throwable throwable) {
+    String sqlFailureKind = sqlFailureKind(throwable);
+    if (sqlFailureKind != null) {
+      return sqlFailureKind;
+    }
     if (hasCause(throwable, DeadlockLoserDataAccessException.class)) {
       return "deadlock";
     }
@@ -1117,8 +1122,48 @@ class AsyncJobQueueRuntime {
     return "other";
   }
 
+  private static String sqlFailureKind(Throwable throwable) {
+    Set<Throwable> visitedThrowables = throwableIdentitySet();
+    Throwable current = throwable;
+    while (current != null && visitedThrowables.add(current)) {
+      if (current instanceof SQLException sqlException) {
+        String failureKind = sqlFailureKind(sqlException);
+        if (failureKind != null) {
+          return failureKind;
+        }
+      }
+      current = current.getCause();
+    }
+    return null;
+  }
+
+  private static String sqlFailureKind(SQLException sqlException) {
+    int errorCode = sqlException.getErrorCode();
+    if (errorCode == 1213) {
+      return "deadlock";
+    }
+    if (errorCode == 1205) {
+      return "lock";
+    }
+    String sqlState = sqlException.getSQLState();
+    if ("40001".equals(sqlState)) {
+      return "serialization";
+    }
+    if ("40P01".equals(sqlState)) {
+      return "deadlock";
+    }
+    if ("55P03".equals(sqlState)) {
+      return "lock";
+    }
+    if ("57014".equals(sqlState)) {
+      return "timeout";
+    }
+    return null;
+  }
+
   private static boolean isTransientClaimFailure(String failureKind) {
     return "deadlock".equals(failureKind)
+        || "serialization".equals(failureKind)
         || "lock".equals(failureKind)
         || "timeout".equals(failureKind);
   }

@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -3842,6 +3843,34 @@ public class AsyncJobQueueRuntimeTest {
         .isEqualTo("lock");
     assertThat(AsyncJobQueueRuntime.claimFailureKind(new QueryTimeoutException("timeout")))
         .isEqualTo("timeout");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new IllegalStateException(
+                    "wrapped", new SQLException("serialization failure", "40001"))))
+        .isEqualTo("serialization");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new SQLException("postgres deadlock detected", "40P01")))
+        .isEqualTo("deadlock");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new SQLException("postgres lock unavailable", "55P03")))
+        .isEqualTo("lock");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new SQLException("postgres statement timeout", "57014")))
+        .isEqualTo("timeout");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new SQLException("mysql deadlock", "40001", 1213)))
+        .isEqualTo("deadlock");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(
+                new SQLException("mysql lock wait timeout", "HY000", 1205)))
+        .isEqualTo("lock");
+    assertThat(
+            AsyncJobQueueRuntime.claimFailureKind(new SQLException("unknown data access", "99999")))
+        .isEqualTo("other");
   }
 
   @Test
