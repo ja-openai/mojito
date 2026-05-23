@@ -518,7 +518,10 @@ class AsyncJobQueueRuntime {
       }
       try {
         heartbeatFuture = scheduleHeartbeat(asyncJobRecord);
-      } catch (RuntimeException e) {
+      } catch (Throwable e) {
+        if (isJvmFatal(e)) {
+          throw (Error) e;
+        }
         handleHeartbeatScheduleFailure(asyncJobRecord, e);
         return;
       }
@@ -583,7 +586,10 @@ class AsyncJobQueueRuntime {
               asyncJobRecord.leaseToken(),
               null,
               errorMessage);
-    } catch (RuntimeException e) {
+    } catch (Throwable e) {
+      if (isJvmFatal(e)) {
+        throw (Error) e;
+      }
       logger.warn(
           "Failed to mark attempt-budget-exhausted job {} failed for queue {}",
           asyncJobRecord.id(),
@@ -603,7 +609,7 @@ class AsyncJobQueueRuntime {
     }
   }
 
-  private void handleHeartbeatScheduleFailure(AsyncJobRecord asyncJobRecord, RuntimeException e) {
+  private void handleHeartbeatScheduleFailure(AsyncJobRecord asyncJobRecord, Throwable e) {
     meterRegistry
         .counter("asyncJobQueue.heartbeat.schedule.failed", "queueName", queueName)
         .increment();
@@ -626,7 +632,10 @@ class AsyncJobQueueRuntime {
                 asyncJobRecord.leaseToken(),
                 null,
                 errorMessage);
-      } catch (RuntimeException transitionException) {
+      } catch (Throwable transitionException) {
+        if (isJvmFatal(transitionException)) {
+          throw (Error) transitionException;
+        }
         logger.warn(
             "Failed to mark heartbeat-schedule-failed job {} failed for queue {}",
             asyncJobRecord.id(),
