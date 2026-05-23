@@ -7,7 +7,8 @@ Context
 - We need a durable queue model with bounded concurrency, retries, and monitoring.
 
 Goals
-- Replace high-fan-out locale child execution with a durable MySQL queue.
+- Replace high-fan-out locale child execution and async single-locale asset generation with a
+  durable MySQL queue.
 - Keep existing API/CLI contract and PollableTask UX.
 - Keep implementation simple and targeted to one workload first (`assetlocalize` path).
 - Design for multi-queue isolation now (without overbuilding).
@@ -19,7 +20,7 @@ Non-Goals (MVP)
 
 Decision Summary
 - Keep Quartz for parent orchestration and cron-like jobs.
-- Introduce a new JDBC-backed async job queue only for localized-asset child jobs.
+- Introduce a new JDBC-backed async job queue only for localized-asset async jobs.
 - Use plain SQL (`JdbcTemplate`/`NamedParameterJdbcTemplate`) for async job claim/lease/finalize.
 - Use strict short transaction boundaries around queue state transitions only.
 - Use one logical poller loop per queue type with dedicated executor per queue.
@@ -58,8 +59,9 @@ Async Job Data Model
   lease_token)` or a non-running row still has lease ownership attached.
 
 Execution Flow (MVP)
-1. Parent `GenerateMultiLocalizedAssetJob` still creates child `pollable_task`s.
-2. Instead of scheduling a child Quartz job, enqueue one async job row per child.
+1. Parent `GenerateMultiLocalizedAssetJob` still creates child `pollable_task`s for fan-out, while
+   the async single-locale `AssetWS` endpoint creates one pollable task directly.
+2. Instead of scheduling a Quartz job, enqueue one async job row per localized-asset task.
 3. Queue worker claims jobs for `queue_name=assetlocalize`.
 4. Worker loads input from existing pollable blob storage.
 5. Worker executes localization logic.

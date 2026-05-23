@@ -24,6 +24,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pushrun.PushRunRepository;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobSubmissionService;
 import com.box.l10n.mojito.service.tm.GenerateLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.GenerateMultiLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -77,10 +78,19 @@ public class AssetWS {
 
   @Autowired QuartzPollableTaskScheduler quartzPollableTaskScheduler;
 
+  @Autowired(required = false)
+  AssetLocalizeAsyncJobSubmissionService assetLocalizeAsyncJobSubmissionService;
+
   @Autowired MeterRegistry meterRegistry;
 
   @Value("${l10n.assetWS.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
+
+  @Value("${l10n.org.async-job-queue.enabled:false}")
+  boolean asyncJobQueueEnabled;
+
+  @Value("${l10n.org.async-job-queue.asset-localize.enabled:false}")
+  boolean asyncJobQueueAssetLocalizeEnabled;
 
   /**
    * Gets the list of {@link Asset} for a given {@link Repository} and other optional filters
@@ -249,8 +259,20 @@ public class AssetWS {
             .withScheduler(schedulerName)
             .build();
     PollableFuture<LocalizedAssetBody> localizedAssetBodyPollableFuture =
-        quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+        scheduleLocalizedAssetJob(quartzJobInfo);
     return localizedAssetBodyPollableFuture.getPollableTask();
+  }
+
+  PollableFuture<LocalizedAssetBody> scheduleLocalizedAssetJob(
+      QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo) {
+    if (asyncJobQueueEnabled && asyncJobQueueAssetLocalizeEnabled) {
+      if (assetLocalizeAsyncJobSubmissionService == null) {
+        throw new IllegalStateException(
+            "Asset localize async queue is enabled but the submission service is unavailable");
+      }
+      return assetLocalizeAsyncJobSubmissionService.scheduleJob(quartzJobInfo);
+    }
+    return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
   }
 
   /**
