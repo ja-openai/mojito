@@ -1245,8 +1245,12 @@ class AsyncJobQueueRuntime {
   private String errorMessage(Throwable e) {
     StringBuilder message = new StringBuilder();
     Set<Throwable> visitedThrowables = throwableIdentitySet();
-    Throwable current = e;
-    while (current != null && visitedThrowables.add(current)) {
+    Deque<Throwable> pendingThrowables = pendingThrowables(e);
+    while (!pendingThrowables.isEmpty()) {
+      Throwable current = pendingThrowables.removeFirst();
+      if (!visitedThrowables.add(current)) {
+        continue;
+      }
       if (!message.isEmpty()) {
         message.append("; caused by ");
       }
@@ -1254,7 +1258,7 @@ class AsyncJobQueueRuntime {
       if (message.length() >= AsyncJobQueueValidation.LAST_ERROR_MAX_LENGTH) {
         break;
       }
-      current = current.getCause();
+      appendRelatedThrowables(pendingThrowables, current);
     }
     return AsyncJobQueueValidation.truncateLastError(message.toString());
   }

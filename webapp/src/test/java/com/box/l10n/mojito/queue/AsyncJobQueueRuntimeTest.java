@@ -2721,6 +2721,39 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void handlerFailuresPersistRelatedThrowableDetailsForOperators() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+    SQLException batchWrapper = new SQLException("batch wrapper", "99999");
+    batchWrapper.setNextException(new SQLException("mysql deadlock", "40001", 1213));
+    RuntimeException wrapper = new RuntimeException("handler wrapper");
+    wrapper.addSuppressed(batchWrapper);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  throw wrapper;
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.FAILED, 1);
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(failedJob.lastError()).contains("java.lang.RuntimeException: handler wrapper");
+    assertThat(failedJob.lastError()).contains("java.sql.SQLException: batch wrapper");
+    assertThat(failedJob.lastError()).contains("java.sql.SQLException: mysql deadlock");
+    assertThat(failedJob.lastError()).hasSizeLessThanOrEqualTo(4_000);
+  }
+
+  @Test
   public void handlerFailuresPersistCyclicCauseChainsWithoutHanging() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =
