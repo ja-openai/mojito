@@ -322,7 +322,16 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
     try {
       TimeUnit.MILLISECONDS.sleep(delayMs);
     } catch (InterruptedException exception) {
-      Thread.currentThread().interrupt();
+      if (!running) {
+        Thread.currentThread().interrupt();
+        return;
+      }
+      meterRegistry.counter("asyncJobQueue.wakeup.listener.reconnectSleepInterrupted").increment();
+      logger.warn(
+          "PostgreSQL async queue wakeup listener reconnect sleep was interrupted for channel {}; "
+              + "continuing without preserving the interrupt flag to avoid a reconnect spin",
+          channel,
+          exception);
     }
   }
 

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -484,6 +485,48 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
     }
   }
 
+  @Test
+  public void reconnectSleepInterruptWhileRunningDoesNotSpinReconnectLoop() throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    CountDownLatch firstConnectionAttempt = new CountDownLatch(1);
+    CountDownLatch secondConnectionAttempt = new CountDownLatch(1);
+    AtomicInteger connectionAttempts = new AtomicInteger();
+    when(dataSource.getConnection())
+        .thenAnswer(
+            invocation -> {
+              int attempt = connectionAttempts.incrementAndGet();
+              if (attempt == 1) {
+                firstConnectionAttempt.countDown();
+              }
+              if (attempt == 2) {
+                secondConnectionAttempt.countDown();
+              }
+              throw new SQLException("connection unavailable");
+            });
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setPostgresListenTimeoutMs(1);
+    wakeupSettings.setReconnectDelayMs(10_000);
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            dataSource, wakeupSettings, mock(AsyncJobQueueCoordinator.class), meterRegistry);
+
+    try {
+      listener.start();
+      assertThat(firstConnectionAttempt.await(1, TimeUnit.SECONDS)).isTrue();
+
+      listenerThread(listener).interrupt();
+
+      assertThat(secondConnectionAttempt.await(1, TimeUnit.SECONDS)).isTrue();
+      TimeUnit.MILLISECONDS.sleep(100);
+
+      assertThat(connectionAttempts).hasValue(2);
+      assertSimpleCounter("asyncJobQueue.wakeup.listener.reconnectSleepInterrupted", 1);
+    } finally {
+      listener.stop();
+    }
+  }
+
   private JdbcPostgresAsyncJobQueueWakeupListener listener(
       AsyncJobQueueCoordinator asyncJobQueueCoordinator) {
     AsyncJobQueueProperties.WakeupSettings wakeupSettings =
@@ -491,6 +534,12 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
     wakeupSettings.setTriggerJitterMs(0);
     return new JdbcPostgresAsyncJobQueueWakeupListener(
         mock(DataSource.class), wakeupSettings, asyncJobQueueCoordinator, meterRegistry);
+  }
+
+  private Thread listenerThread(JdbcPostgresAsyncJobQueueWakeupListener listener) throws Exception {
+    Field field = JdbcPostgresAsyncJobQueueWakeupListener.class.getDeclaredField("listenerThread");
+    field.setAccessible(true);
+    return (Thread) field.get(listener);
   }
 
   private void assertReceivedCounter(String queueName, String result, double count) {
