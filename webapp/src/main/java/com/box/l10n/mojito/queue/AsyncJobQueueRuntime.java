@@ -6,8 +6,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.time.Duration;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
@@ -198,7 +200,7 @@ class AsyncJobQueueRuntime {
           .timer("asyncJobQueue.claim.latency", "queueName", queueName)
           .record(System.nanoTime() - claimStartNanos, TimeUnit.NANOSECONDS);
     }
-    validateClaimedJobs(claimedJobs);
+    validateClaimedJobs(claimedJobs, claimLimit);
 
     if (claimedJobs.isEmpty()) {
       currentPollDelayMs = nextEmptyPollDelayMs();
@@ -222,12 +224,31 @@ class AsyncJobQueueRuntime {
         claimedJobs.size(), continueImmediately ? 0 : basePollDelayMs(), continueImmediately);
   }
 
-  private void validateClaimedJobs(List<AsyncJobRecord> claimedJobs) {
+  private void validateClaimedJobs(List<AsyncJobRecord> claimedJobs, int claimLimit) {
     if (claimedJobs == null) {
       throw invalidClaim("nullList", "AsyncJobStore returned a null claimed job list");
     }
+    if (claimedJobs.size() > claimLimit) {
+      throw invalidClaim(
+          "tooManyRecords",
+          "AsyncJobStore returned "
+              + claimedJobs.size()
+              + " claimed jobs while polling queue "
+              + queueName
+              + " with claim limit "
+              + claimLimit);
+    }
+    Set<AsyncJobId> claimedJobIds = new HashSet<>();
     for (AsyncJobRecord claimedJob : claimedJobs) {
       validateClaimedJob(claimedJob);
+      if (!claimedJobIds.add(claimedJob.id())) {
+        throw invalidClaim(
+            "duplicateRecord",
+            "AsyncJobStore returned duplicate claimed job "
+                + claimedJob.id().value()
+                + " while polling queue "
+                + queueName);
+      }
     }
   }
 

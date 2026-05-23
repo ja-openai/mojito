@@ -318,6 +318,18 @@ public class AsyncJobQueueRuntimeTest {
     assertInvalidClaimFailsBeforeHandler(null, "nullList", handlerInvocations);
     assertInvalidClaimFailsBeforeHandler(
         java.util.Collections.singletonList(null), "nullRecord", handlerInvocations);
+    assertInvalidClaimFailsBeforeHandler(
+        List.of(claimedJobWithId("1"), claimedJobWithId("1")),
+        "duplicateRecord",
+        handlerInvocations,
+        2,
+        2);
+    assertInvalidClaimFailsBeforeHandler(
+        List.of(claimedJobWithId("1"), claimedJobWithId("2")),
+        "tooManyRecords",
+        handlerInvocations,
+        1,
+        1);
 
     assertThat(handlerInvocations.get()).isZero();
   }
@@ -4103,6 +4115,24 @@ public class AsyncJobQueueRuntimeTest {
     return claimedJob(attemptCount, false);
   }
 
+  private AsyncJobRecord claimedJobWithId(String id) {
+    Instant now = Instant.now();
+    return new AsyncJobRecord(
+        new AsyncJobId(id),
+        "assetlocalize",
+        AsyncJobStatus.RUNNING,
+        now.minusSeconds(5),
+        now.plusSeconds(30),
+        "worker-a",
+        "lease-token",
+        "{}",
+        1,
+        null,
+        now.minusSeconds(10),
+        now,
+        false);
+  }
+
   private AsyncJobRecord claimedJob(int attemptCount, boolean leaseReclaimed) {
     Instant now = Instant.now();
     return new AsyncJobRecord(
@@ -4142,13 +4172,22 @@ public class AsyncJobQueueRuntimeTest {
 
   private void assertInvalidClaimFailsBeforeHandler(
       List<AsyncJobRecord> claimedJobs, String reason, AtomicInteger handlerInvocations) {
+    assertInvalidClaimFailsBeforeHandler(claimedJobs, reason, handlerInvocations, 1, 1);
+  }
+
+  private void assertInvalidClaimFailsBeforeHandler(
+      List<AsyncJobRecord> claimedJobs,
+      String reason,
+      AtomicInteger handlerInvocations,
+      int claimBatchSize,
+      int maxConcurrency) {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
         .thenReturn(claimedJobs);
     AsyncJobQueueRuntime asyncJobQueueRuntime =
         runtime(
             asyncJobStore,
-            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            queueSettings(100, 1_000, claimBatchSize, maxConcurrency, 10_000, 0),
             handler(
                 asyncJobRecord -> {
                   handlerInvocations.incrementAndGet();
