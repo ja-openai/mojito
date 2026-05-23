@@ -3784,6 +3784,44 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void scheduledPollPropagatesFatalClaimErrorWithoutFailureMetrics() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    FatalTestError fatalTestError = new FatalTestError("fatal claim");
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenThrow(fatalTestError);
+
+    RecordingTaskScheduler taskScheduler = new RecordingTaskScheduler();
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done()),
+            taskScheduler,
+            executor,
+            delayMs -> delayMs);
+
+    asyncJobQueueRuntime.start();
+    FatalTestError thrown =
+        org.junit.Assert.assertThrows(
+            FatalTestError.class, () -> taskScheduler.scheduledTasks().get(0).run());
+
+    assertThat(thrown).isSameAs(fatalTestError);
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.poll.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.claim.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+    assertThat(taskScheduler.scheduledTasks()).hasSize(1);
+  }
+
+  @Test
   public void claimFailureCounterClassifiesDatabaseContention() {
     assertThat(AsyncJobQueueRuntime.claimFailureKind(new IllegalStateException("boom")))
         .isEqualTo("other");
