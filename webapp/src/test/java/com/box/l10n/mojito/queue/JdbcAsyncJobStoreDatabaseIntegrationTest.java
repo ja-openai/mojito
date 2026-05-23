@@ -115,6 +115,44 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
   }
 
   @Test
+  public void postgresqlWakeupProviderDeliversRealNotifications() throws Exception {
+    assumeContainerTestsEnabled();
+    try (PostgreSQLContainer<?> container = new PostgreSQLContainer<>("postgres:16")) {
+      container.start();
+      DataSource dataSource = dataSource(container);
+      SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+      AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+      AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+          new AsyncJobQueueProperties.WakeupSettings();
+      wakeupSettings.setPostgresListenTimeoutMs(100);
+      wakeupSettings.setReconnectDelayMs(10);
+      JdbcPostgresAsyncJobQueueWakeupListener listener =
+          new JdbcPostgresAsyncJobQueueWakeupListener(
+              dataSource, wakeupSettings, coordinator, meterRegistry);
+      JdbcPostgresAsyncJobQueueWakeupNotifier notifier =
+          new JdbcPostgresAsyncJobQueueWakeupNotifier(
+              dataSource, wakeupSettings.getPostgresChannel(), meterRegistry);
+
+      try {
+        listener.start();
+        waitForPostgresWakeupListenerConnected(meterRegistry);
+
+        notifier.notifyJobAvailable("assetlocalize", new AsyncJobId("42"));
+
+        org.mockito.Mockito.verify(coordinator, org.mockito.Mockito.timeout(5_000))
+            .triggerPollNow("assetlocalize");
+        assertThat(postgresWakeupNotifyCount(meterRegistry, "assetlocalize", "succeeded"))
+            .isEqualTo(1);
+        assertThat(postgresWakeupReceivedCount(meterRegistry, "assetlocalize", "triggered"))
+            .isEqualTo(1);
+      } finally {
+        listener.stop();
+        meterRegistry.close();
+      }
+    }
+  }
+
+  @Test
   public void runtimePerformanceSmokeRunsAgainstRealDatabases() throws Exception {
     assumeContainerTestsEnabled();
     assumePerformanceTestsEnabled();
@@ -996,6 +1034,53 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
             .find("asyncJobQueue.transition.failed")
             .tag("queueName", queueName)
             .tag("transition", transition)
+            .counter();
+    return counter == null ? 0 : counter.count();
+  }
+
+  private void waitForPostgresWakeupListenerConnected(SimpleMeterRegistry meterRegistry)
+      throws InterruptedException {
+    Instant deadline = Instant.now().plusSeconds(5);
+    while (Instant.now().isBefore(deadline)) {
+      if (postgresWakeupListenCount(meterRegistry, "connected") > 0) {
+        return;
+      }
+      Thread.sleep(10);
+    }
+
+    assertThat(postgresWakeupListenCount(meterRegistry, "connected")).isGreaterThan(0);
+  }
+
+  private double postgresWakeupListenCount(SimpleMeterRegistry meterRegistry, String result) {
+    Counter counter =
+        meterRegistry
+            .find("asyncJobQueue.wakeup.listen")
+            .tag("provider", "postgres")
+            .tag("result", result)
+            .counter();
+    return counter == null ? 0 : counter.count();
+  }
+
+  private double postgresWakeupNotifyCount(
+      SimpleMeterRegistry meterRegistry, String queueName, String result) {
+    Counter counter =
+        meterRegistry
+            .find("asyncJobQueue.wakeup.notify")
+            .tag("queueName", queueName)
+            .tag("provider", "postgres")
+            .tag("result", result)
+            .counter();
+    return counter == null ? 0 : counter.count();
+  }
+
+  private double postgresWakeupReceivedCount(
+      SimpleMeterRegistry meterRegistry, String queueName, String result) {
+    Counter counter =
+        meterRegistry
+            .find("asyncJobQueue.wakeup.received")
+            .tag("queueName", queueName)
+            .tag("provider", "postgres")
+            .tag("result", result)
             .counter();
     return counter == null ? 0 : counter.count();
   }
