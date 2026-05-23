@@ -72,6 +72,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("id BIGINT AUTO_INCREMENT PRIMARY KEY")
         .contains("available_at DATETIME(6) NOT NULL")
         .contains("lease_until DATETIME(6) NULL")
+        .contains("job_data LONGTEXT NOT NULL")
         .contains("created_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)")
         .contains(
             "updated_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)")
@@ -81,6 +82,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .contains("id BIGSERIAL PRIMARY KEY")
         .contains("available_at TIMESTAMPTZ(6) NOT NULL")
         .contains("lease_until TIMESTAMPTZ(6) NULL")
+        .contains("job_data TEXT NOT NULL")
         .contains("created_date TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
         .contains("updated_date TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP")
         .contains("C__ASYNC_JOB_QUEUE__ID_POSITIVE")
