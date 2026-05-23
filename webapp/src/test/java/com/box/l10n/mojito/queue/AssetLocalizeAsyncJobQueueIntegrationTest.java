@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -207,6 +208,81 @@ public class AssetLocalizeAsyncJobQueueIntegrationTest {
     verify(pollableTaskService).finishTask(eq(42L), isNull(), any(ExceptionHolder.class), isNull());
   }
 
+  @Test
+  public void pollableDoneCallbackFailureLeavesQueueJobDoneAndRecordsCallbackMetrics()
+      throws Exception {
+    InMemoryAsyncJobStore asyncJobStore = new InMemoryAsyncJobStore();
+    PollableTask pollableTask = pollableTask(42L);
+    AtomicReference<LocalizedAssetBody> storedInput = new AtomicReference<>();
+    LocalizedAssetBody input = new LocalizedAssetBody();
+    LocalizedAssetBody output = new LocalizedAssetBody();
+    RuntimeException finishFailure = new RuntimeException("finish down");
+
+    when(pollableTaskService.createPollableTask(
+            7L, GenerateLocalizedAssetJob.class.getCanonicalName(), "message", 0, 3600))
+        .thenReturn(pollableTask);
+    when(pollableTaskService.getPollableTask(42L)).thenReturn(pollableTask);
+    when(pollableTaskBlobStorage.getInput(42L, LocalizedAssetBody.class))
+        .thenAnswer(invocation -> storedInput.get());
+    org.mockito.Mockito.doAnswer(
+            invocation -> {
+              storedInput.set(invocation.getArgument(1));
+              return null;
+            })
+        .when(pollableTaskBlobStorage)
+        .saveInput(eq(42L), any(LocalizedAssetBody.class));
+    when(localizedAssetGenerationService.generate(input)).thenReturn(output);
+    doThrow(finishFailure).when(pollableTaskService).finishTask(42L, null, null, null);
+
+    AsyncJobQueueSubmissionService queueSubmissionService =
+        new AsyncJobQueueSubmissionService(asyncJobStore, asyncJobQueueCoordinator, meterRegistry);
+    AssetLocalizeAsyncJobSubmissionService assetSubmissionService =
+        new AssetLocalizeAsyncJobSubmissionService(
+            pollableTaskService,
+            pollableTaskBlobStorage,
+            pollableTaskExceptionUtils,
+            queueSubmissionService,
+            objectMapper,
+            meterRegistry);
+    AssetLocalizeAsyncJobHandler handler =
+        new AssetLocalizeAsyncJobHandler(
+            pollableTaskService,
+            pollableTaskBlobStorage,
+            pollableTaskExceptionUtils,
+            localizedAssetGenerationService,
+            objectMapper,
+            meterRegistry);
+    AsyncJobQueueRuntime runtime =
+        new AsyncJobQueueRuntime(
+            AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME,
+            asyncJobStore,
+            queueSettings(),
+            handler,
+            org.mockito.Mockito.mock(TaskScheduler.class),
+            executor,
+            meterRegistry,
+            "worker-a");
+
+    assetSubmissionService.scheduleJob(
+        QuartzJobInfo.newBuilder(GenerateLocalizedAssetJob.class)
+            .withParentId(7L)
+            .withInput(input)
+            .withMessage("message")
+            .build());
+
+    runtime.pollOnce();
+    waitForStatusCount(asyncJobStore, AsyncJobStatus.DONE, 1);
+    waitForCallbackCounter("assetLocalizeAsyncJob.pollableTask.finish.failed", "done", 1);
+    waitForCallbackCounter("asyncJobQueue.handler.completion.failed", "done", 1);
+
+    AsyncJobRecord completedJob =
+        asyncJobStore.getByIds(List.of(new AsyncJobId("1"))).stream().findFirst().orElseThrow();
+    assertThat(completedJob.status()).isEqualTo(AsyncJobStatus.DONE);
+    verify(pollableTaskBlobStorage).saveOutput(42L, output);
+    verify(pollableTaskExceptionUtils, times(0))
+        .processException(any(Throwable.class), any(ExceptionHolder.class));
+  }
+
   private AsyncJobQueueProperties.QueueSettings queueSettings() {
     AsyncJobQueueProperties.QueueSettings queueSettings =
         new AsyncJobQueueProperties.QueueSettings();
@@ -245,6 +321,28 @@ public class AssetLocalizeAsyncJobQueueIntegrationTest {
       Thread.sleep(10);
     }
     throw new AssertionError("Timed out waiting for " + expectedCount + " " + status + " jobs");
+  }
+
+  private void waitForCallbackCounter(String counterName, String callback, int expectedCount)
+      throws InterruptedException {
+    Instant deadline = Instant.now().plus(Duration.ofSeconds(2));
+    while (Instant.now().isBefore(deadline)) {
+      double count =
+          java.util.Optional.ofNullable(
+                  meterRegistry
+                      .find(counterName)
+                      .tag("queueName", AssetLocalizeAsyncJobSubmissionService.QUEUE_NAME)
+                      .tag("callback", callback)
+                      .counter())
+              .map(counter -> counter.count())
+              .orElse(0.0);
+      if (count == expectedCount) {
+        return;
+      }
+      Thread.sleep(10);
+    }
+    throw new AssertionError(
+        "Timed out waiting for " + expectedCount + " " + counterName + " callback=" + callback);
   }
 
   private PollableTask pollableTask(long id) {
