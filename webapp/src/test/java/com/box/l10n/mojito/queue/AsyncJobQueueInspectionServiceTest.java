@@ -116,7 +116,13 @@ public class AsyncJobQueueInspectionServiceTest {
     assertThatThrownBy(() -> service.getJob("assetlocalize", " "))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Async job id must not be blank");
-    assertGetCounter("invalidId", 1);
+    assertThatThrownBy(() -> service.getJob("assetlocalize", "abc"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Async job id must be a positive numeric string");
+    assertThatThrownBy(() -> service.getJob("assetlocalize", "-1"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Async job id must be a positive numeric string");
+    assertGetCounter("invalidId", 3);
   }
 
   @Test
@@ -160,7 +166,13 @@ public class AsyncJobQueueInspectionServiceTest {
     assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", " ", null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Async job id must not be blank");
-    assertRequeueCounter("invalidId", 1);
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "abc", null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Async job id must be a positive numeric string");
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "0", null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Async job id must be a positive numeric string");
+    assertRequeueCounter("invalidId", 3);
   }
 
   @Test
