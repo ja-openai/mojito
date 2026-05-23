@@ -119,6 +119,40 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   }
 
   @Test
+  public void triggerJitterInterruptWhileRunningDoesNotPoisonListenerThread() throws Exception {
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            mock(DataSource.class), wakeupSettings, coordinator, meterRegistry) {
+          @Override
+          long triggerJitterDelayMs() {
+            return 1_000;
+          }
+        };
+    AtomicInteger interruptPreserved = new AtomicInteger(-1);
+    setListenerRunning(listener, true);
+
+    Thread notificationThread =
+        new Thread(
+            () -> {
+              Thread.currentThread().interrupt();
+              listener.handleNotification("mojito_async_job_queue", "assetlocalize");
+              interruptPreserved.set(Thread.currentThread().isInterrupted() ? 1 : 0);
+            },
+            "postgres-wakeup-trigger-jitter-interrupt-test");
+    notificationThread.start();
+    notificationThread.join(1_000);
+
+    assertThat(notificationThread.isAlive()).isFalse();
+    assertThat(interruptPreserved).hasValue(0);
+    verify(coordinator, never()).triggerPollNow("assetlocalize");
+    assertReceivedCounter("assetlocalize", "triggerInterrupted", 1);
+    assertSimpleCounter("asyncJobQueue.wakeup.listener.triggerSleepInterrupted", 1);
+  }
+
+  @Test
   public void triggerJitterDelayStaysWithinConfiguredRange() {
     assertThat(JdbcPostgresAsyncJobQueueWakeupListener.randomTriggerJitterDelayMs(0)).isZero();
 
@@ -540,6 +574,13 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
     Field field = JdbcPostgresAsyncJobQueueWakeupListener.class.getDeclaredField("listenerThread");
     field.setAccessible(true);
     return (Thread) field.get(listener);
+  }
+
+  private void setListenerRunning(JdbcPostgresAsyncJobQueueWakeupListener listener, boolean running)
+      throws Exception {
+    Field field = JdbcPostgresAsyncJobQueueWakeupListener.class.getDeclaredField("running");
+    field.setAccessible(true);
+    field.set(listener, running);
   }
 
   private void assertReceivedCounter(String queueName, String result, double count) {

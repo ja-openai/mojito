@@ -286,7 +286,16 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
       TimeUnit.MILLISECONDS.sleep(delayMs);
       return true;
     } catch (InterruptedException exception) {
-      Thread.currentThread().interrupt();
+      if (!running) {
+        Thread.currentThread().interrupt();
+      } else {
+        meterRegistry.counter("asyncJobQueue.wakeup.listener.triggerSleepInterrupted").increment();
+        logger.warn(
+            "PostgreSQL async queue wakeup trigger jitter sleep was interrupted for channel {}; "
+                + "skipping this wakeup without preserving the interrupt flag",
+            channel,
+            exception);
+      }
       logger.debug(
           "Interrupted before triggering async queue polls from PostgreSQL wakeup for queues {}",
           queueNames,
