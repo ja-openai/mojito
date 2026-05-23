@@ -145,6 +145,8 @@ Validation guardrails:
   retention is disabled by default.
 - Handler-provided explicit requeue timestamps are validated against the portable database timestamp
   range before store transitions so bad handler output retries through the normal failure path.
+- The in-memory store enforces the same timestamp bounds as the JDBC store so local/runtime tests do
+  not accept queue state that durable storage would reject.
 
 How Many "Cron" Loops?
 - Not one cron for the whole system and not one physical process per queue.

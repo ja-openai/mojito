@@ -480,6 +480,63 @@ public class InMemoryAsyncJobStoreTest {
   }
 
   @Test
+  public void rejectsTimestampsOutsideDatabaseTimestampBounds() {
+    assertInvalidTimestamp(
+        "availableAt",
+        () ->
+            inMemoryAsyncJobStore.enqueue(
+                "assetlocalize",
+                "{}",
+                AsyncJobQueueValidation.DATABASE_TIMESTAMP_MIN.minusNanos(1)));
+    assertInvalidTimestamp(
+        "availableAt",
+        () ->
+            inMemoryAsyncJobStore.enqueue(
+                "assetlocalize",
+                "{}",
+                AsyncJobQueueValidation.DATABASE_TIMESTAMP_MAX.plusNanos(1)));
+
+    AsyncJobId id =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        inMemoryAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+    assertInvalidTimestamp(
+        "availableAt",
+        () ->
+            inMemoryAsyncJobStore.requeue(
+                "assetlocalize",
+                id,
+                "worker-a",
+                claimed.leaseToken(),
+                AsyncJobQueueValidation.DATABASE_TIMESTAMP_MAX.plusNanos(1),
+                null,
+                "bad timestamp"));
+
+    assertThat(
+            inMemoryAsyncJobStore.markFailed(
+                "assetlocalize", id, "worker-a", claimed.leaseToken(), null, "boom"))
+        .isTrue();
+    assertInvalidTimestamp(
+        "availableAt",
+        () ->
+            inMemoryAsyncJobStore.requeueFailed(
+                "assetlocalize",
+                id,
+                AsyncJobQueueValidation.DATABASE_TIMESTAMP_MIN.minusNanos(1),
+                null));
+    assertInvalidTimestamp(
+        "updatedBefore",
+        () ->
+            inMemoryAsyncJobStore.deleteTerminalJobs(
+                "assetlocalize",
+                AsyncJobStatus.FAILED,
+                AsyncJobQueueValidation.DATABASE_TIMESTAMP_MAX.plusNanos(1),
+                1));
+  }
+
+  @Test
   public void rejectsLeaseDurationThatOverflowsInstantRange() {
     inMemoryAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
 
@@ -491,6 +548,35 @@ public class InMemoryAsyncJobStoreTest {
                     "assetlocalize", 1, "worker-a", Duration.ofSeconds(Long.MAX_VALUE)));
 
     assertThat(exception).hasMessageContaining("leaseUntil");
+  }
+
+  @Test
+  public void rejectsHeartbeatLeaseDurationThatOverflowsDatabaseTimestampBounds() {
+    AsyncJobId id =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{}", Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        inMemoryAsyncJobStore
+            .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(5))
+            .get(0);
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                inMemoryAsyncJobStore.heartbeat(
+                    "assetlocalize",
+                    id,
+                    "worker-a",
+                    claimed.leaseToken(),
+                    Duration.ofSeconds(Long.MAX_VALUE)));
+
+    assertThat(exception).hasMessageContaining("leaseUntil");
+  }
+
+  private void assertInvalidTimestamp(String fieldName, Runnable runnable) {
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, runnable::run);
+    assertThat(exception).hasMessageContaining(fieldName + " must be between");
   }
 
   private AsyncJobId completeJob(String queueName, String jobData) {

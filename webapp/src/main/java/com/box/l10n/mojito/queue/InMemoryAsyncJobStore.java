@@ -32,7 +32,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   public AsyncJobId enqueue(String queueName, String jobData, Instant availableAt) {
     AsyncJobQueueValidation.validateQueueName(queueName);
     Objects.requireNonNull(jobData);
-    Objects.requireNonNull(availableAt);
+    Instant validatedAvailableAt =
+        AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
 
     return withQueueLock(
         queueName,
@@ -47,7 +48,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
                   id,
                   queueName,
                   AsyncJobStatus.QUEUED,
-                  availableAt,
+                  validatedAvailableAt,
                   null,
                   null,
                   null,
@@ -80,7 +81,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
         () -> {
           Instant now = Instant.now();
           Instant leaseUntil =
-              AsyncJobQueueValidation.plusDuration("leaseUntil", now, leaseDuration);
+              AsyncJobQueueValidation.plusDurationWithinDatabaseTimestampRange(
+                  "leaseUntil", now, leaseDuration);
 
           List<StoredAsyncJob> claimable =
               jobsById.values().stream()
@@ -134,7 +136,9 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           jobsById.put(
               job.id(),
               job.withLeaseUntil(
-                  AsyncJobQueueValidation.plusDuration("leaseUntil", now, leaseDuration), now));
+                  AsyncJobQueueValidation.plusDurationWithinDatabaseTimestampRange(
+                      "leaseUntil", now, leaseDuration),
+                  now));
           return true;
         });
   }
@@ -171,7 +175,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
       String lastError) {
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobQueueValidation.validateWorkerId(workerId);
-    Objects.requireNonNull(availableAt);
+    Instant validatedAvailableAt =
+        AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
     validateLeaseToken(leaseToken);
 
     return withQueueLock(
@@ -186,7 +191,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           jobsById.put(
               job.id(),
               job.withRequeue(
-                  availableAt,
+                  validatedAvailableAt,
                   nextJobData,
                   AsyncJobQueueValidation.truncateLastError(lastError),
                   now));
@@ -266,7 +271,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   public boolean requeueFailed(
       String queueName, AsyncJobId id, Instant availableAt, String jobData) {
     AsyncJobQueueValidation.validateQueueName(queueName);
-    Objects.requireNonNull(availableAt);
+    Instant validatedAvailableAt =
+        AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
 
     return withQueueLock(
         queueName,
@@ -279,7 +285,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
           }
           Instant now = Instant.now();
           String nextJobData = jobData == null ? job.jobData() : jobData;
-          jobsById.put(job.id(), job.withFailedReplay(availableAt, nextJobData, now));
+          jobsById.put(job.id(), job.withFailedReplay(validatedAvailableAt, nextJobData, now));
           return true;
         });
   }
@@ -294,7 +300,8 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
 
     AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobStatus terminalStatus = AsyncJobQueueValidation.validateTerminalStatus(status);
-    Objects.requireNonNull(updatedBefore);
+    Instant validatedUpdatedBefore =
+        AsyncJobQueueValidation.validateDatabaseTimestamp("updatedBefore", updatedBefore);
 
     return withQueueLock(
         queueName,
@@ -305,7 +312,7 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
                       job ->
                           job.queueName().equals(queueName)
                               && job.status() == terminalStatus
-                              && job.updatedDate().isBefore(updatedBefore))
+                              && job.updatedDate().isBefore(validatedUpdatedBefore))
                   .sorted(Comparator.comparing(StoredAsyncJob::updatedDate))
                   .limit(boundedLimit)
                   .map(StoredAsyncJob::id)
