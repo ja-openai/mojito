@@ -16,7 +16,9 @@ import java.sql.Connection;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -314,13 +316,14 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
             Duration.ZERO);
 
     logger.info(
-        "Async job queue {} perf smoke drained {} jobs in {} ms at {} jobs/s with {} polls and {} poll failures",
+        "Async job queue {} perf smoke drained {} jobs in {} ms at {} jobs/s with {} polls, {} poll failures, claim failures by kind {}",
         dialect,
         result.jobCount(),
         result.elapsedMs(),
         result.jobsPerSecond(),
         result.pollCount(),
-        result.pollFailureCount());
+        result.pollFailureCount(),
+        result.claimFailuresByKind());
     assertThat(result.jobsPerSecond()).isGreaterThan(10.0);
   }
 
@@ -884,7 +887,11 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
           .isEqualTo(jobCount);
       assertThat(counterCount(meterRegistries, "asyncJobQueue.completed", queueName))
           .isEqualTo(jobCount);
-      return new RuntimeContentionResult(jobCount, elapsedMs, pollCount, pollFailures.get());
+      Map<String, Double> claimFailuresByKind = claimFailureCounts(meterRegistries, queueName);
+      assertThat(claimFailuresByKind.values().stream().mapToDouble(Double::doubleValue).sum())
+          .isEqualTo(pollFailures.get());
+      return new RuntimeContentionResult(
+          jobCount, elapsedMs, pollCount, pollFailures.get(), claimFailuresByKind);
     } finally {
       pollExecutor.shutdownNow();
       assertThat(pollExecutor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
@@ -903,7 +910,11 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
   }
 
   private record RuntimeContentionResult(
-      int jobCount, long elapsedMs, int pollCount, int pollFailureCount) {
+      int jobCount,
+      long elapsedMs,
+      int pollCount,
+      int pollFailureCount,
+      Map<String, Double> claimFailuresByKind) {
     double jobsPerSecond() {
       return jobCount * 1_000.0 / Math.max(1, elapsedMs);
     }
@@ -1025,6 +1036,30 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     return meterRegistries.stream()
         .mapToDouble(meterRegistry -> counterCount(meterRegistry, meterName, queueName))
         .sum();
+  }
+
+  private Map<String, Double> claimFailureCounts(
+      List<SimpleMeterRegistry> meterRegistries, String queueName) {
+    Map<String, Double> countsByKind = new LinkedHashMap<>();
+    for (String failureKind : List.of("deadlock", "lock", "timeout", "dataAccess", "other")) {
+      double count =
+          meterRegistries.stream()
+              .mapToDouble(
+                  meterRegistry -> {
+                    Counter counter =
+                        meterRegistry
+                            .find("asyncJobQueue.claim.failed")
+                            .tag("queueName", queueName)
+                            .tag("failure", failureKind)
+                            .counter();
+                    return counter == null ? 0 : counter.count();
+                  })
+              .sum();
+      if (count > 0) {
+        countsByKind.put(failureKind, count);
+      }
+    }
+    return countsByKind;
   }
 
   private double transitionFailureCount(
