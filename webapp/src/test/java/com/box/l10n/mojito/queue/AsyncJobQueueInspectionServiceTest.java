@@ -2,6 +2,9 @@ package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
@@ -84,6 +87,7 @@ public class AsyncJobQueueInspectionServiceTest {
                 throw new IllegalStateException("database unavailable");
               }
             },
+            noOpCoordinator(),
             meterRegistry);
     assertThatThrownBy(() -> failingStoreService.findJobs("assetlocalize", "failed", 10))
         .isInstanceOf(IllegalStateException.class)
@@ -102,6 +106,7 @@ public class AsyncJobQueueInspectionServiceTest {
                 throw new NonFatalTestError("store invariant");
               }
             },
+            noOpCoordinator(),
             meterRegistry);
 
     assertThatThrownBy(() -> service.findJobs("assetlocalize", "failed", 10))
@@ -120,6 +125,7 @@ public class AsyncJobQueueInspectionServiceTest {
                 throw new IllegalStateException("database unavailable");
               }
             },
+            noOpCoordinator(),
             meterRegistry);
 
     assertThatThrownBy(() -> service.getJob("assetlocalize", "1"))
@@ -138,6 +144,7 @@ public class AsyncJobQueueInspectionServiceTest {
                 throw new NonFatalTestError("lookup invariant");
               }
             },
+            noOpCoordinator(),
             meterRegistry);
 
     assertThatThrownBy(() -> service.getJob("assetlocalize", "1"))
@@ -156,6 +163,7 @@ public class AsyncJobQueueInspectionServiceTest {
                 throw new FatalTestError("fatal");
               }
             },
+            noOpCoordinator(),
             meterRegistry);
 
     assertThatThrownBy(() -> service.getJob("assetlocalize", "1"))
@@ -190,19 +198,40 @@ public class AsyncJobQueueInspectionServiceTest {
   public void requeueFailedJobResetsAttemptsAndPreservesLastError() {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     AsyncJobId id = failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
-    AsyncJobQueueInspectionService service = inspectionService(store);
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueInspectionService service = inspectionService(store, coordinator);
     Instant beforeReplay = Instant.now().minusMillis(1);
 
     AsyncJobQueueInspectionService.AsyncJobDetails replayed =
         service.requeueFailedJob("assetlocalize", id.value(), "{\"step\":\"fixed\"}");
 
+    verify(coordinator).triggerPollNow("assetlocalize");
     assertThat(replayed.status()).isEqualTo("queued");
     assertThat(replayed.attemptCount()).isZero();
     assertThat(replayed.availableAt()).isBetween(beforeReplay, Instant.now().plusSeconds(1));
     assertThat(replayed.lastError()).isEqualTo("boom");
     assertThat(replayed.jobData()).isEqualTo("{\"step\":\"fixed\"}");
     assertRequeueCounter("succeeded", 1);
+    assertNoRequeueWakeupFailureCounter();
     assertNoGetCounter("succeeded");
+  }
+
+  @Test
+  public void requeueFailedJobRecordsWakeupFailureWithoutFailingReplay() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    AsyncJobId id = failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    doThrow(new IllegalStateException("scheduler unavailable"))
+        .when(coordinator)
+        .triggerPollNow("assetlocalize");
+    AsyncJobQueueInspectionService service = inspectionService(store, coordinator);
+
+    AsyncJobQueueInspectionService.AsyncJobDetails replayed =
+        service.requeueFailedJob("assetlocalize", id.value(), null);
+
+    assertThat(replayed.status()).isEqualTo("queued");
+    assertRequeueCounter("succeeded", 1);
+    assertRequeueWakeupFailureCounter(1);
   }
 
   @Test
@@ -252,6 +281,7 @@ public class AsyncJobQueueInspectionServiceTest {
                 throw new IllegalStateException("database unavailable");
               }
             },
+            noOpCoordinator(),
             meterRegistry);
 
     assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "1", null))
@@ -270,6 +300,7 @@ public class AsyncJobQueueInspectionServiceTest {
                 throw new NonFatalTestError("requeue invariant");
               }
             },
+            noOpCoordinator(),
             meterRegistry);
 
     assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "1", null))
@@ -293,6 +324,7 @@ public class AsyncJobQueueInspectionServiceTest {
                 throw new IllegalStateException("lookup unavailable");
               }
             },
+            noOpCoordinator(),
             meterRegistry);
 
     assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", "1", null))
@@ -320,7 +352,16 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   private AsyncJobQueueInspectionService inspectionService(InMemoryAsyncJobStore store) {
-    return new AsyncJobQueueInspectionService(store, meterRegistry);
+    return inspectionService(store, noOpCoordinator());
+  }
+
+  private AsyncJobQueueInspectionService inspectionService(
+      InMemoryAsyncJobStore store, AsyncJobQueueCoordinator coordinator) {
+    return new AsyncJobQueueInspectionService(store, coordinator, meterRegistry);
+  }
+
+  private AsyncJobQueueCoordinator noOpCoordinator() {
+    return mock(AsyncJobQueueCoordinator.class);
   }
 
   private AsyncJobId failedJob(
@@ -341,6 +382,25 @@ public class AsyncJobQueueInspectionServiceTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private void assertRequeueWakeupFailureCounter(double count) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.inspection.requeueWakeup.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(count);
+  }
+
+  private void assertNoRequeueWakeupFailureCounter() {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.inspection.requeueWakeup.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
   }
 
   private void assertFindCounter(String status, String result, double count) {

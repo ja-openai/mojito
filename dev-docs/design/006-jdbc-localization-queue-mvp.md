@@ -295,6 +295,8 @@ Monitoring (MVP Required)
     invalid caller job ids are tagged as `result=invalidId`
   - `asyncJobQueue.inspection.requeue` by `queueName,result` for service-level replay attempts;
     results are low-cardinality (`succeeded`, `notFound`, `notFailed`, `invalidId`, `failed`)
+  - `asyncJobQueue.inspection.requeueWakeup.failed` by `queueName` when a replay succeeded but the
+    local runtime wakeup failed; polling remains the correctness fallback
   - replay logs include queue/job identifiers and whether replacement payload was supplied, never
     the payload itself
 
@@ -303,6 +305,8 @@ Operator Controls
 - Store-level inspection, batch id lookup, claim, and cleanup methods reject excessive
   caller-provided limits so an admin path cannot accidentally issue pathological queue-table
   queries.
+- Operator replay of a terminal failed job triggers the local runtime after the row is requeued so
+  manual recovery is not delayed until the next idle poll cycle.
 - The queue inspection service wraps the store with a bounded default limit, status parsing,
   same-queue id checks, capped payload previews for lists, full-payload detail lookup, and
   failed-only replay that maps missing/non-failed jobs to explicit operator errors and emits

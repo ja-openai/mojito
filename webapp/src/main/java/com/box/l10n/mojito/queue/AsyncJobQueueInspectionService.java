@@ -21,10 +21,15 @@ public class AsyncJobQueueInspectionService {
   static final int JOB_DATA_PREVIEW_MAX_LENGTH = 512;
 
   private final AsyncJobStore asyncJobStore;
+  private final AsyncJobQueueCoordinator asyncJobQueueCoordinator;
   private final MeterRegistry meterRegistry;
 
-  public AsyncJobQueueInspectionService(AsyncJobStore asyncJobStore, MeterRegistry meterRegistry) {
+  public AsyncJobQueueInspectionService(
+      AsyncJobStore asyncJobStore,
+      AsyncJobQueueCoordinator asyncJobQueueCoordinator,
+      MeterRegistry meterRegistry) {
     this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
+    this.asyncJobQueueCoordinator = Objects.requireNonNull(asyncJobQueueCoordinator);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
   }
 
@@ -119,6 +124,7 @@ public class AsyncJobQueueInspectionService {
     try {
       if (asyncJobStore.requeueFailedNow(validatedQueueName, asyncJobId, jobData)) {
         requeueSucceeded = true;
+        triggerReplayWakeup(validatedQueueName, asyncJobId);
         AsyncJobDetails job = findJobDetails(validatedQueueName, asyncJobId);
         if (job == null) {
           throw new AsyncJobNotFoundException(
@@ -173,6 +179,24 @@ public class AsyncJobQueueInspectionService {
           asyncJobId.value(),
           exception);
       throw unchecked(exception);
+    }
+  }
+
+  private void triggerReplayWakeup(String queueName, AsyncJobId asyncJobId) {
+    try {
+      asyncJobQueueCoordinator.triggerPollNow(queueName);
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
+      meterRegistry
+          .counter("asyncJobQueue.inspection.requeueWakeup.failed", "queueName", queueName)
+          .increment();
+      logger.warn(
+          "Failed to trigger async job queue wakeup after replay for queue {}, job {}",
+          queueName,
+          asyncJobId.value(),
+          exception);
     }
   }
 
