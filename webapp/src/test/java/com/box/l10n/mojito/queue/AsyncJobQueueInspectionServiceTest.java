@@ -504,6 +504,31 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void requeueFailedJobPropagatesFatalCrossProcessWakeupErrorsWithoutFailureCounters() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    AsyncJobId id = failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueWakeupNotifier wakeupNotifier = mock(AsyncJobQueueWakeupNotifier.class);
+    FatalTestError fatalTestError = new FatalTestError("fatal replay notify");
+    doThrow(fatalTestError)
+        .when(wakeupNotifier)
+        .notifyJobAvailable(anyString(), any(AsyncJobId.class));
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(store, coordinator, wakeupNotifier, meterRegistry);
+
+    assertThatThrownBy(() -> service.requeueFailedJob("assetlocalize", id.value(), null))
+        .isSameAs(fatalTestError);
+
+    verify(coordinator).triggerPollNow("assetlocalize");
+    AsyncJobRecord replayedJob = store.getByIds(List.of(id)).get(0);
+    assertThat(replayedJob.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertNoRequeueCounter("succeeded");
+    assertNoRequeueCounter("failed");
+    assertNoRequeueWakeupFailureCounter();
+    assertNoRequeueWakeupNotifyFailureCounter();
+  }
+
+  @Test
   public void requeueFailedJobPropagatesFatalWakeupErrorsWithoutFailureCounters() {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     AsyncJobId id = failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
@@ -743,6 +768,15 @@ public class AsyncJobQueueInspectionServiceTest {
                 .counter()
                 .count())
         .isEqualTo(count);
+  }
+
+  private void assertNoRequeueWakeupNotifyFailureCounter() {
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.inspection.requeueWakeup.notify.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
   }
 
   private void assertFindCounter(String status, String result, double count) {
