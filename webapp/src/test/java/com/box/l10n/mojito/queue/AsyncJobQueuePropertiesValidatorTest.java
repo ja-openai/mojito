@@ -4,6 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import org.junit.Test;
+import org.springframework.beans.factory.BeanCreationException;
+import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 public class AsyncJobQueuePropertiesValidatorTest {
 
@@ -15,6 +20,30 @@ public class AsyncJobQueuePropertiesValidatorTest {
     validator.afterPropertiesSet();
 
     assertThat(properties.getStore()).isEqualTo("in-memory");
+  }
+
+  @Test
+  public void validatorBeanIsNotCreatedByDefaultSoInvalidQueuePropertiesStayInert() {
+    try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+      context.register(AsyncJobQueuePropertiesValidator.class, InvalidPropertiesTestConfig.class);
+
+      context.refresh();
+
+      assertThat(context.getBeansOfType(AsyncJobQueuePropertiesValidator.class)).isEmpty();
+    }
+  }
+
+  @Test
+  public void validatorBeanFailsStartupWhenQueueIsEnabledAndPropertiesAreInvalid() {
+    try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+      TestPropertyValues.of("l10n.org.async-job-queue.enabled=true").applyTo(context);
+      context.register(AsyncJobQueuePropertiesValidator.class, InvalidPropertiesTestConfig.class);
+
+      BeanCreationException exception = assertThrows(BeanCreationException.class, context::refresh);
+
+      assertThat(exception).hasRootCauseInstanceOf(IllegalArgumentException.class);
+      assertThat(exception.getRootCause()).hasMessageContaining("store must be one of");
+    }
   }
 
   @Test
@@ -141,5 +170,16 @@ public class AsyncJobQueuePropertiesValidatorTest {
         assertThrows(IllegalArgumentException.class, validator::afterPropertiesSet);
     assertThat(shutdownAwaitException)
         .hasMessageContaining("shutdownAwaitTerminationMs must be <=");
+  }
+
+  @Configuration
+  static class InvalidPropertiesTestConfig {
+
+    @Bean
+    AsyncJobQueueProperties asyncJobQueueProperties() {
+      AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
+      asyncJobQueueProperties.setStore("redis");
+      return asyncJobQueueProperties;
+    }
   }
 }
