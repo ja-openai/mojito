@@ -14,6 +14,7 @@ public record AsyncJobHandlerResult(Action action, Instant availableAt, String j
     if (availableAt != null) {
       AsyncJobQueueValidation.validateDatabaseTimestamp("availableAt", availableAt);
     }
+    jobData = AsyncJobQueueValidation.validateOptionalJobData(jobData);
   }
 
   public enum Action {

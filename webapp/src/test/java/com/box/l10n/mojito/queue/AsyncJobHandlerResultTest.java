@@ -57,4 +57,20 @@ public class AsyncJobHandlerResultTest {
     assertThat(tooEarly).hasMessageContaining("availableAt must be between");
     assertThat(tooLate).hasMessageContaining("availableAt must be between");
   }
+
+  @Test
+  public void rejectsOversizedReplacementPayload() {
+    String oversizedPayload = "x".repeat(AsyncJobQueueValidation.JOB_DATA_MAX_LENGTH + 1);
+
+    IllegalArgumentException doneException =
+        assertThrows(
+            IllegalArgumentException.class, () -> AsyncJobHandlerResult.done(oversizedPayload));
+    IllegalArgumentException requeueException =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AsyncJobHandlerResult.requeue(null, oversizedPayload));
+
+    assertThat(doneException).hasMessageContaining("jobData must be at most");
+    assertThat(requeueException).hasMessageContaining("jobData must be at most");
+  }
 }

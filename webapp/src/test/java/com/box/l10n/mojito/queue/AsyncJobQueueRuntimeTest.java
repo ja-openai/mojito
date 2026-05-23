@@ -1165,6 +1165,52 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void oversizedHandlerResultPayloadRetriesAsHandlerFailure() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        queueSettingsWithoutRetryJitter(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(2);
+    String oversizedPayload = "x".repeat(AsyncJobQueueValidation.JOB_DATA_MAX_LENGTH + 1);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(asyncJobRecord -> AsyncJobHandlerResult.done(oversizedPayload)),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.QUEUED, 1);
+    AsyncJobRecord requeuedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(requeuedJob.attemptCount()).isEqualTo(1);
+    assertThat(requeuedJob.jobData()).isEqualTo("{\"id\":1}");
+    assertThat(requeuedJob.lastError()).contains("jobData must be at most");
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.handler.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.retried")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.transition.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+  }
+
+  @Test
   public void transitionFailureCounterRecordsFailedHandlerRequestedRequeue() throws Exception {
     AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
     AsyncJobRecord claimedJob = claimedJob(1);
