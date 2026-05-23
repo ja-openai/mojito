@@ -253,8 +253,8 @@ Test Coverage
   coordinator startup cleanup, synchronized trigger routing, null-safe queue configuration binding,
   and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
-  handler-only queues, ready backlog gauges, oldest ready-job age, expired running lease gauges,
-  delayed-job exclusion, and non-fatal reporting failures.
+  handler-only queues, queue discovery de-duplication, ready backlog gauges, oldest ready-job age,
+  expired running lease gauges, delayed-job exclusion, and non-fatal reporting failures.
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
   replay, lease-reclaim markers, timestamp-bound validation, bounded error summaries, and status
   counts against an embedded datasource using the `hsql` dialect. Store tests also cover bounded

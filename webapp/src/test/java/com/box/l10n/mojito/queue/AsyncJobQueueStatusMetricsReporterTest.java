@@ -3,6 +3,8 @@ package com.box.l10n.mojito.queue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -184,6 +186,31 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     reporter.reportStatusCounts();
 
     assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 0);
+  }
+
+  @Test
+  public void reportStatusCountsDeduplicatesConfiguredAndHandlerQueues() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    Instant observedAt = Instant.parse("2026-05-23T00:00:00Z");
+    when(asyncJobStore.countByStatus("assetlocalize"))
+        .thenReturn(List.of(new AsyncJobStatusCount(AsyncJobStatus.QUEUED, 1)));
+    when(asyncJobStore.readyStatus("assetlocalize"))
+        .thenReturn(new AsyncJobReadyStatus(0, null, observedAt));
+    when(asyncJobStore.expiredLeaseStatus("assetlocalize"))
+        .thenReturn(new AsyncJobExpiredLeaseStatus(0, null, observedAt));
+    AsyncJobQueueStatusMetricsReporter reporter =
+        new AsyncJobQueueStatusMetricsReporter(
+            asyncJobStore,
+            queueProperties("assetlocalize"),
+            List.of(handler("assetlocalize")),
+            meterRegistry);
+
+    reporter.reportStatusCounts();
+
+    verify(asyncJobStore, times(1)).countByStatus("assetlocalize");
+    verify(asyncJobStore, times(1)).readyStatus("assetlocalize");
+    verify(asyncJobStore, times(1)).expiredLeaseStatus("assetlocalize");
+    assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 1);
   }
 
   @Test
