@@ -2720,6 +2720,38 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void handlerFailuresPersistCyclicCauseChainsWithoutHanging() throws Exception {
+    InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
+    AsyncJobId asyncJobId =
+        inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"id\":1}", Instant.now().minusSeconds(1));
+    AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(1, 1_000, 1, 1, 10_000, 0);
+    queueSettings.setMaxAttempts(1);
+    RuntimeException root = new RuntimeException("root");
+    RuntimeException loop = new RuntimeException("loop");
+    root.initCause(loop);
+    loop.initCause(root);
+
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            inMemoryAsyncJobStore,
+            queueSettings,
+            handler(
+                asyncJobRecord -> {
+                  throw root;
+                }),
+            mock(TaskScheduler.class),
+            executor);
+
+    asyncJobQueueRuntime.pollOnce();
+
+    waitForStatusCount(inMemoryAsyncJobStore, "assetlocalize", AsyncJobStatus.FAILED, 1);
+    AsyncJobRecord failedJob = inMemoryAsyncJobStore.getByIds(List.of(asyncJobId)).get(0);
+    assertThat(failedJob.lastError()).contains("java.lang.RuntimeException: root");
+    assertThat(failedJob.lastError()).contains("caused by java.lang.RuntimeException: loop");
+    assertThat(failedJob.lastError()).hasSizeLessThanOrEqualTo(4_000);
+  }
+
+  @Test
   public void nonFatalHandlerThrowablesUseAttemptBudgetAndPersistError() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =
