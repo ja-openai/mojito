@@ -9,6 +9,7 @@ enum AsyncJobQueueJdbcDialect {
       SELECT id, status
       FROM async_job_queue
       WHERE queue_name = :queueName
+        AND id > 0
         AND (
           (status = :queuedStatus AND available_at <= :now)
           OR (status = :runningStatus AND lease_until <= :now)
@@ -24,6 +25,7 @@ enum AsyncJobQueueJdbcDialect {
       SELECT id, status
       FROM async_job_queue
       WHERE queue_name = :queueName
+        AND id > 0
         AND (
           (status = :queuedStatus AND available_at <= :now)
           OR (status = :runningStatus AND lease_until <= :now)
@@ -39,6 +41,7 @@ enum AsyncJobQueueJdbcDialect {
       SELECT id, status
       FROM async_job_queue
       WHERE queue_name = :queueName
+        AND id > 0
         AND (
           (status = :queuedStatus AND available_at <= :now)
           OR (status = :runningStatus AND lease_until <= :now)

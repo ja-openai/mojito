@@ -153,6 +153,9 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     AsyncJobStore store =
         transactionalStore(
             dataSource, new JdbcAsyncJobStore(new NamedParameterJdbcTemplate(dataSource), dialect));
+    if (dialect == AsyncJobQueueJdbcDialect.MYSQL) {
+      assertStoreIgnoresNonPositiveIdsIfSchemaAllows(dataSource, store);
+    }
 
     AsyncJobId id =
         store.enqueue("assetlocalize", "{\"step\":\"new\"}", Instant.now().minusSeconds(1));
@@ -362,6 +365,36 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
                   '   '
                 )
                 """));
+  }
+
+  private void assertStoreIgnoresNonPositiveIdsIfSchemaAllows(
+      DataSource dataSource, AsyncJobStore store) {
+    String queueName = "corrupt-negative-id";
+    JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+    jdbcTemplate.update(
+        """
+        INSERT INTO async_job_queue (
+          id,
+          queue_name,
+          status,
+          available_at,
+          job_data,
+          attempt_count
+        ) VALUES (
+          -1,
+          ?,
+          'queued',
+          CURRENT_TIMESTAMP,
+          '{}',
+          0
+        )
+        """,
+        queueName);
+
+    assertThat(statusCount(store, queueName, AsyncJobStatus.QUEUED)).isZero();
+    assertThat(store.readyStatus(queueName).count()).isZero();
+    assertThat(store.findByStatus(queueName, AsyncJobStatus.QUEUED, 10)).isEmpty();
+    assertThat(store.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(5))).isEmpty();
   }
 
   private void runRelativeRetryAndImmediateReplayContract(AsyncJobStore store) throws Exception {

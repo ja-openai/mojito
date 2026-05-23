@@ -483,6 +483,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         SELECT status, COUNT(*) AS count
         FROM async_job_queue
         WHERE queue_name = :queueName
+          AND id > 0
         GROUP BY status
         """;
     return namedParameterJdbcTemplate.query(
@@ -503,6 +504,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         SELECT COUNT(*) AS count, MIN(available_at) AS oldest_available_at
         FROM async_job_queue
         WHERE queue_name = :queueName
+          AND id > 0
           AND status = :queuedStatus
           AND available_at <= :now
         """;
@@ -527,6 +529,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
         SELECT COUNT(*) AS count, MIN(lease_until) AS oldest_lease_until
         FROM async_job_queue
         WHERE queue_name = :queueName
+          AND id > 0
           AND status = :runningStatus
           AND lease_until <= :now
         """;
@@ -568,6 +571,7 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
           updated_date
         FROM async_job_queue
         WHERE queue_name = :queueName
+          AND id > 0
           AND status = :status
         ORDER BY updated_date DESC, id DESC
         LIMIT :limit
