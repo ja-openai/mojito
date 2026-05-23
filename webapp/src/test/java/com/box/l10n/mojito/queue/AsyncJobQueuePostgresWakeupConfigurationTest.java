@@ -95,6 +95,25 @@ public class AsyncJobQueuePostgresWakeupConfigurationTest {
     }
   }
 
+  @Test
+  public void postgresWakeupModeFailsFastForDefaultInMemoryStore() {
+    try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+      TestPropertyValues.of(
+              "l10n.org.async-job-queue.enabled=true",
+              "l10n.org.async-job-queue.wakeup.mode=postgres-listen-notify")
+          .applyTo(context);
+      context.register(
+          AsyncJobQueueProperties.class,
+          AsyncJobQueueWakeupConfiguration.class,
+          WakeupTestConfig.class);
+
+      assertThatThrownBy(context::refresh)
+          .hasRootCauseInstanceOf(IllegalArgumentException.class)
+          .hasRootCauseMessage(
+              "wakeup.mode=postgres-listen-notify requires store=jdbc and jdbcDialect=postgresql");
+    }
+  }
+
   @Configuration
   @EnableConfigurationProperties(AsyncJobQueueProperties.class)
   static class WakeupTestConfig {
