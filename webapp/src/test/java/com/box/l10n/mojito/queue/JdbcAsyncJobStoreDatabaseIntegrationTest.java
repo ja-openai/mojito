@@ -2,7 +2,10 @@ package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Mockito.mock;
 
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -19,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.sql.DataSource;
 import org.junit.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -27,6 +31,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.MySQLContainer;
@@ -202,6 +208,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
 
     runRelativeRetryAndImmediateReplayContract(store);
     runConcurrentClaimContract(store);
+    runRuntimeDrainContract(store);
   }
 
   private DataSource dataSource(JdbcDatabaseContainer<?> container) {
@@ -337,6 +344,115 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
       executorService.shutdownNow();
       assertThat(executorService.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
     }
+  }
+
+  private void runRuntimeDrainContract(AsyncJobStore store) throws Exception {
+    String queueName = "runtime-drain";
+    int jobCount = 80;
+    for (int i = 0; i < jobCount; i++) {
+      store.enqueue(queueName, "{\"id\":" + i + "}", Instant.now().minusSeconds(1));
+    }
+
+    Set<AsyncJobId> processedJobIds = ConcurrentHashMap.newKeySet();
+    AtomicInteger duplicateExecutions = new AtomicInteger();
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    ThreadPoolTaskExecutor executor = runtimeExecutor(6);
+    try {
+      AsyncJobQueueProperties.QueueSettings queueSettings =
+          new AsyncJobQueueProperties.QueueSettings();
+      queueSettings.setPollIntervalMs(1);
+      queueSettings.setMaxPollIntervalMs(50);
+      queueSettings.setClaimBatchSize(12);
+      queueSettings.setMaxConcurrency(6);
+      queueSettings.setLeaseDurationMs(30_000);
+      queueSettings.setHeartbeatIntervalMs(0);
+      queueSettings.setPollJitterPercent(0);
+      queueSettings.setRetryJitterPercent(0);
+
+      AsyncJobQueueRuntime runtime =
+          new AsyncJobQueueRuntime(
+              queueName,
+              store,
+              queueSettings,
+              new AsyncJobHandler() {
+                @Override
+                public String queueName() {
+                  return queueName;
+                }
+
+                @Override
+                public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord) {
+                  if (!processedJobIds.add(asyncJobRecord.id())) {
+                    duplicateExecutions.incrementAndGet();
+                  }
+                  return AsyncJobHandlerResult.done();
+                }
+              },
+              mock(TaskScheduler.class),
+              executor,
+              meterRegistry,
+              "runtime-worker");
+
+      Instant deadline = Instant.now().plusSeconds(15);
+      while (Instant.now().isBefore(deadline)
+          && (statusCount(store, queueName, AsyncJobStatus.DONE) < jobCount
+              || runtime.inFlightCount() > 0)) {
+        runtime.pollOnce();
+        Thread.sleep(2);
+      }
+
+      assertThat(statusCount(store, queueName, AsyncJobStatus.DONE)).isEqualTo(jobCount);
+      assertThat(statusCount(store, queueName, AsyncJobStatus.QUEUED)).isZero();
+      assertThat(statusCount(store, queueName, AsyncJobStatus.RUNNING)).isZero();
+      assertThat(statusCount(store, queueName, AsyncJobStatus.FAILED)).isZero();
+      assertThat(processedJobIds).hasSize(jobCount);
+      assertThat(duplicateExecutions.get()).isZero();
+      assertThat(
+              meterRegistry
+                  .get("asyncJobQueue.completed")
+                  .tag("queueName", queueName)
+                  .counter()
+                  .count())
+          .isEqualTo(jobCount);
+      waitForProcessingLatencyCount(meterRegistry, queueName, jobCount);
+    } finally {
+      executor.shutdown();
+      meterRegistry.close();
+    }
+  }
+
+  private void waitForProcessingLatencyCount(
+      SimpleMeterRegistry meterRegistry, String queueName, int expectedCount)
+      throws InterruptedException {
+    Instant deadline = Instant.now().plusSeconds(3);
+    while (Instant.now().isBefore(deadline)) {
+      Timer timer =
+          meterRegistry
+              .find("asyncJobQueue.processing.latency")
+              .tag("queueName", queueName)
+              .timer();
+      if (timer != null && timer.count() == expectedCount) {
+        return;
+      }
+      Thread.sleep(10);
+    }
+
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.processing.latency")
+                .tag("queueName", queueName)
+                .timer()
+                .count())
+        .isEqualTo(expectedCount);
+  }
+
+  private ThreadPoolTaskExecutor runtimeExecutor(int concurrency) {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(concurrency);
+    executor.setMaxPoolSize(concurrency);
+    executor.setQueueCapacity(0);
+    executor.initialize();
+    return executor;
   }
 
   private long statusCount(AsyncJobStore store, String queueName, AsyncJobStatus status) {
