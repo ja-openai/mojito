@@ -205,6 +205,29 @@ public class AsyncJobQueueCoordinatorTest {
   }
 
   @Test
+  public void startDoesNotScheduleRuntimeForConfiguredQueueWithoutHandler() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
+    asyncJobQueueProperties
+        .getQueues()
+        .put("assetlocalize", new AsyncJobQueueProperties.QueueSettings());
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            asyncJobQueueProperties,
+            List.of(),
+            taskScheduler,
+            meterRegistry);
+
+    coordinator.start();
+
+    assertThat(coordinator.isRunning()).isTrue();
+    verify(taskScheduler, never()).schedule(any(Runnable.class), any(Date.class));
+
+    coordinator.stop();
+  }
+
+  @Test
   public void startRejectsInvalidHandlerQueueNameBeforeScheduling() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     AsyncJobQueueCoordinator coordinator =
