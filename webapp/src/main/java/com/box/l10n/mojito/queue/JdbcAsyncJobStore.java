@@ -235,12 +235,33 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     List<AsyncJobRecord> claimedJobs = new ArrayList<>();
     for (Map.Entry<AsyncJobId, String> claimEntry : leaseTokenById.entrySet()) {
       AsyncJobRecord job = claimedJobsById.get(claimEntry.getKey());
-      if (job != null) {
-        claimedJobs.add(
-            job.withLeaseReclaimed(Boolean.TRUE.equals(leaseReclaimedById.get(job.id()))));
+      if (job == null) {
+        throw new IllegalStateException(
+            "Async job claim readback missing claimed job "
+                + claimEntry.getKey().value()
+                + " for queue "
+                + queueName);
       }
+      validateClaimReadback(queueName, workerId, claimEntry.getValue(), job);
+      claimedJobs.add(
+          job.withLeaseReclaimed(Boolean.TRUE.equals(leaseReclaimedById.get(job.id()))));
     }
     return claimedJobs;
+  }
+
+  private void validateClaimReadback(
+      String queueName, String workerId, String leaseToken, AsyncJobRecord job) {
+    if (!queueName.equals(job.queueName())
+        || job.status() != AsyncJobStatus.RUNNING
+        || !workerId.equals(job.workerId())
+        || !leaseToken.equals(job.leaseToken())
+        || job.attemptCount() <= 0) {
+      throw new IllegalStateException(
+          "Async job claim readback returned inconsistent claimed job "
+              + job.id().value()
+              + " for queue "
+              + queueName);
+    }
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)

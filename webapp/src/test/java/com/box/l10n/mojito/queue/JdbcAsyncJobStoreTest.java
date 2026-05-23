@@ -27,7 +27,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.transaction.support.TransactionTemplate;
 
 public class JdbcAsyncJobStoreTest {
 
@@ -294,6 +296,38 @@ public class JdbcAsyncJobStoreTest {
     assertThat(changedJob.workerId()).isEqualTo("other-worker");
     assertThat(changedJob.leaseToken()).isEqualTo("other-token");
     assertThat(changedJob.leaseUntil()).isBefore(Instant.now());
+  }
+
+  @Test
+  public void claimReadbackInvariantRollsBackClaimInTransaction() {
+    AsyncJobId id =
+        jdbcAsyncJobStore.enqueue("assetlocalize", "{\"v\":1}", Instant.now().minusSeconds(1));
+    DataSource dataSource = jdbcTemplate.getDataSource();
+    JdbcAsyncJobStore missingReadbackStore =
+        new JdbcAsyncJobStore(
+            new ClaimReadbackDroppingNamedParameterJdbcTemplate(dataSource),
+            AsyncJobQueueJdbcDialect.HSQL);
+    TransactionTemplate transactionTemplate =
+        new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+
+    IllegalStateException exception =
+        assertThrows(
+            IllegalStateException.class,
+            () ->
+                transactionTemplate.execute(
+                    status ->
+                        missingReadbackStore.claimNextJobs(
+                            "assetlocalize", 1, "worker-a", Duration.ofSeconds(5))));
+
+    assertThat(exception)
+        .hasMessageContaining("claim readback missing claimed job")
+        .hasMessageContaining(id.value());
+    AsyncJobRecord rolledBackJob = jdbcAsyncJobStore.getByIds(List.of(id)).get(0);
+    assertThat(rolledBackJob.status()).isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(rolledBackJob.attemptCount()).isZero();
+    assertThat(rolledBackJob.workerId()).isNull();
+    assertThat(rolledBackJob.leaseToken()).isNull();
+    assertThat(rolledBackJob.leaseUntil()).isNull();
   }
 
   @Test
@@ -1318,6 +1352,22 @@ public class JdbcAsyncJobStoreTest {
         jdbcTemplate.update(raceSql, Long.parseLong(id.value()));
       }
       return rows;
+    }
+  }
+
+  private static class ClaimReadbackDroppingNamedParameterJdbcTemplate
+      extends NamedParameterJdbcTemplate {
+
+    ClaimReadbackDroppingNamedParameterJdbcTemplate(DataSource dataSource) {
+      super(dataSource);
+    }
+
+    @Override
+    public <T> List<T> query(String sql, SqlParameterSource paramSource, RowMapper<T> rowMapper) {
+      if (sql.contains("WHERE id IN (:ids)")) {
+        return List.of();
+      }
+      return super.query(sql, paramSource, rowMapper);
     }
   }
 }
