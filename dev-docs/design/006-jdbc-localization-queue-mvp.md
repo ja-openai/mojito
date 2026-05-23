@@ -269,6 +269,8 @@ Test Coverage
   wake any runtime, so operator tooling cannot accidentally replay a job through the wrong queue.
 - Admin REST tests assert the public redacted job response shape exposes payload length but not
   `jobData` or `jobDataPreview`, making payload-redaction regressions visible at test time.
+- Coordinator tests assert duplicate handler beans for one queue fail startup before any runtime is
+  scheduled, preserving the one local poller/executor per logical queue contract.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.

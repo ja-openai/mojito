@@ -224,6 +224,25 @@ public class AsyncJobQueueCoordinatorTest {
   }
 
   @Test
+  public void startRejectsDuplicateHandlersForOneQueueBeforeScheduling() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    AsyncJobQueueCoordinator coordinator =
+        new AsyncJobQueueCoordinator(
+            mock(AsyncJobStore.class),
+            new AsyncJobQueueProperties(),
+            List.of(handler("assetlocalize"), handler("assetlocalize")),
+            taskScheduler,
+            meterRegistry);
+
+    IllegalStateException exception = assertThrows(IllegalStateException.class, coordinator::start);
+
+    assertThat(exception)
+        .hasMessageContaining("Multiple AsyncJobHandler beans registered for queue: assetlocalize");
+    assertThat(coordinator.isRunning()).isFalse();
+    verify(taskScheduler, never()).schedule(any(Runnable.class), any(Date.class));
+  }
+
+  @Test
   public void startRejectsInvalidConfiguredQueueNameBeforeStartingHandlers() {
     TaskScheduler taskScheduler = mock(TaskScheduler.class);
     AsyncJobQueueProperties asyncJobQueueProperties = new AsyncJobQueueProperties();
