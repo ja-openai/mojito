@@ -54,11 +54,12 @@ Async Job Data Model
   - `(queue_name, status, available_at)`
   - `(queue_name, status, lease_until)`
   - optional idempotency/correlation key can be modeled in `job_data`
-- Database constraints reject non-positive ids, unsupported statuses, negative attempt counts,
+- Database constraints/types reject invalid ids, unsupported statuses, negative attempt counts,
   invalid queue names, oversized persisted errors, terminal failed rows without a nonblank
   persisted error, blank running lease owners, and inconsistent lease owner fields where a row is
   `running` without `(lease_until, worker_id, lease_token)` or a non-running row still has lease
-  ownership attached.
+  ownership attached. MySQL uses an unsigned auto-increment id because MySQL rejects `CHECK`
+  constraints that reference an `AUTO_INCREMENT` column.
 
 Execution Flow (MVP)
 1. Parent `GenerateMultiLocalizedAssetJob` still creates child `pollable_task`s for fan-out, while
@@ -242,7 +243,8 @@ PostgreSQL Portability
   location. It uses `TIMESTAMPTZ(6)` for queue timing columns so leases and retry availability are
   stored as absolute instants, independent of session timezone. Production rollout still needs
   Postgres Flyway plugin and location wiring for that database family.
-  - MySQL: `BIGINT AUTO_INCREMENT`, `DATETIME(6)`, optional `ON UPDATE CURRENT_TIMESTAMP(6)`.
+  - MySQL: `BIGINT UNSIGNED AUTO_INCREMENT`, `DATETIME(6)`, optional
+    `ON UPDATE CURRENT_TIMESTAMP(6)`.
   - PostgreSQL: `BIGSERIAL` or identity column, `TIMESTAMPTZ(6)`, no MySQL `ON UPDATE` clause.
 - Keep the production Java implementation as "standard core + a few native queries"; that is the
   smallest path that preserves correctness and gives us a Postgres migration seam.

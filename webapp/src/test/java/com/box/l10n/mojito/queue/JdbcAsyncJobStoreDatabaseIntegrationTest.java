@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 
@@ -32,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.support.EncodedResource;
 import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -69,16 +71,15 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     assertCoreQueueMigrationShape(postgresqlMigration);
 
     assertThat(mysqlMigration)
-        .contains("id BIGINT AUTO_INCREMENT PRIMARY KEY")
+        .contains("id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY")
         .contains("available_at DATETIME(6) NOT NULL")
         .contains("lease_until DATETIME(6) NULL")
         .contains("job_data LONGTEXT NOT NULL")
         .contains("created_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)")
         .contains(
             "updated_date DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)")
-        .contains("C__ASYNC_JOB_QUEUE__ID_POSITIVE")
-        .contains("CHECK (id > 0)")
-        .contains("CHECK (REGEXP_LIKE(queue_name, '^[A-Za-z0-9._-]+$', 'c'))");
+        .contains("CHECK (REGEXP_LIKE(queue_name, '^[A-Za-z0-9._-]+$', 'c'))")
+        .doesNotContain("C__ASYNC_JOB_QUEUE__ID_POSITIVE");
     assertThat(postgresqlMigration)
         .contains("id BIGSERIAL PRIMARY KEY")
         .contains("available_at TIMESTAMPTZ(6) NOT NULL")
@@ -147,6 +148,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     container.start();
     DataSource dataSource = dataSource(container);
     runMigration(dataSource, migrationPath);
+    assertSchemaRejectsFailedRowsWithoutPersistedError(dataSource);
     AsyncJobStore store =
         transactionalStore(
             dataSource, new JdbcAsyncJobStore(new NamedParameterJdbcTemplate(dataSource), dialect));
@@ -294,6 +296,52 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     // store directly, so wrap each store call to keep SELECT ... FOR UPDATE and its update fenced.
     return new TransactionalAsyncJobStore(
         delegate, new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
+  }
+
+  private void assertSchemaRejectsFailedRowsWithoutPersistedError(DataSource dataSource) {
+    JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+    assertThrows(
+        DataAccessException.class,
+        () ->
+            jdbcTemplate.update(
+                """
+                INSERT INTO async_job_queue (
+                  queue_name,
+                  status,
+                  available_at,
+                  job_data,
+                  attempt_count,
+                  last_error
+                ) VALUES (
+                  'assetlocalize',
+                  'failed',
+                  CURRENT_TIMESTAMP,
+                  '{}',
+                  1,
+                  NULL
+                )
+                """));
+    assertThrows(
+        DataAccessException.class,
+        () ->
+            jdbcTemplate.update(
+                """
+                INSERT INTO async_job_queue (
+                  queue_name,
+                  status,
+                  available_at,
+                  job_data,
+                  attempt_count,
+                  last_error
+                ) VALUES (
+                  'assetlocalize',
+                  'failed',
+                  CURRENT_TIMESTAMP,
+                  '{}',
+                  1,
+                  '   '
+                )
+                """));
   }
 
   private void runRelativeRetryAndImmediateReplayContract(AsyncJobStore store) throws Exception {
