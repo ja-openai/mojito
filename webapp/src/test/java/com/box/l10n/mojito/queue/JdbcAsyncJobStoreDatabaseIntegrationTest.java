@@ -212,6 +212,7 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     runConcurrentClaimContract(store);
     runRuntimeDrainContract(store);
     runRuntimeLeaseReclaimFencingContract(store);
+    runRuntimeContentionContract(store);
   }
 
   private DataSource dataSource(JdbcDatabaseContainer<?> container) {
@@ -516,6 +517,106 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
     }
   }
 
+  private void runRuntimeContentionContract(AsyncJobStore store) throws Exception {
+    String queueName = "runtime-contention";
+    int jobCount = 240;
+    int runtimeCount = 4;
+    int concurrencyPerRuntime = 2;
+    for (int i = 0; i < jobCount; i++) {
+      store.enqueue(queueName, "{\"id\":" + i + "}", Instant.now().minusSeconds(1));
+    }
+
+    Set<AsyncJobId> processedJobIds = ConcurrentHashMap.newKeySet();
+    AtomicInteger duplicateExecutions = new AtomicInteger();
+    ConcurrentHashMap<String, AtomicInteger> processedByWorker = new ConcurrentHashMap<>();
+    CountDownLatch start = new CountDownLatch(1);
+    ExecutorService pollExecutor = Executors.newFixedThreadPool(runtimeCount);
+    List<ThreadPoolTaskExecutor> runtimeExecutors = new ArrayList<>();
+    List<SimpleMeterRegistry> meterRegistries = new ArrayList<>();
+    List<AsyncJobQueueRuntime> runtimes = new ArrayList<>();
+    List<Future<Integer>> pollFutures = new ArrayList<>();
+    try {
+      for (int runtimeIndex = 0; runtimeIndex < runtimeCount; runtimeIndex++) {
+        String workerId = "runtime-contention-" + runtimeIndex;
+        ThreadPoolTaskExecutor runtimeExecutor = runtimeExecutor(concurrencyPerRuntime);
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+        runtimeExecutors.add(runtimeExecutor);
+        meterRegistries.add(meterRegistry);
+        runtimes.add(
+            new AsyncJobQueueRuntime(
+                queueName,
+                store,
+                runtimeQueueSettings(4, concurrencyPerRuntime, Duration.ofSeconds(30)),
+                new AsyncJobHandler() {
+                  @Override
+                  public String queueName() {
+                    return queueName;
+                  }
+
+                  @Override
+                  public AsyncJobHandlerResult process(AsyncJobRecord asyncJobRecord)
+                      throws Exception {
+                    if (!processedJobIds.add(asyncJobRecord.id())) {
+                      duplicateExecutions.incrementAndGet();
+                    }
+                    processedByWorker
+                        .computeIfAbsent(workerId, unused -> new AtomicInteger())
+                        .incrementAndGet();
+                    Thread.sleep(1);
+                    return AsyncJobHandlerResult.done("{\"worker\":\"" + workerId + "\"}");
+                  }
+                },
+                mock(TaskScheduler.class),
+                runtimeExecutor,
+                meterRegistry,
+                workerId));
+      }
+
+      Instant deadline = Instant.now().plusSeconds(20);
+      for (AsyncJobQueueRuntime runtime : runtimes) {
+        pollFutures.add(
+            pollExecutor.submit(
+                () -> {
+                  start.await();
+                  int polls = 0;
+                  while (Instant.now().isBefore(deadline)
+                      && (statusCount(store, queueName, AsyncJobStatus.DONE) < jobCount
+                          || anyRuntimeInFlight(runtimes))) {
+                    runtime.pollOnce();
+                    polls++;
+                    Thread.sleep(1);
+                  }
+                  return polls;
+                }));
+      }
+
+      start.countDown();
+      int pollCount = 0;
+      for (Future<Integer> pollFuture : pollFutures) {
+        pollCount += pollFuture.get(30, TimeUnit.SECONDS);
+      }
+      waitForAllRuntimesIdle(runtimes);
+      waitForAggregatedProcessingLatencyCount(meterRegistries, queueName, jobCount);
+
+      assertThat(statusCount(store, queueName, AsyncJobStatus.DONE)).isEqualTo(jobCount);
+      assertThat(statusCount(store, queueName, AsyncJobStatus.QUEUED)).isZero();
+      assertThat(statusCount(store, queueName, AsyncJobStatus.RUNNING)).isZero();
+      assertThat(statusCount(store, queueName, AsyncJobStatus.FAILED)).isZero();
+      assertThat(processedJobIds).hasSize(jobCount);
+      assertThat(duplicateExecutions.get()).isZero();
+      assertThat(processedByWorker.values().stream().mapToInt(AtomicInteger::get).sum())
+          .isEqualTo(jobCount);
+      assertThat(counterCount(meterRegistries, "asyncJobQueue.completed", queueName))
+          .isEqualTo(jobCount);
+      assertThat(pollCount).isGreaterThan(0);
+    } finally {
+      pollExecutor.shutdownNow();
+      assertThat(pollExecutor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+      runtimeExecutors.forEach(ThreadPoolTaskExecutor::shutdown);
+      meterRegistries.forEach(SimpleMeterRegistry::close);
+    }
+  }
+
   private void pollUntilDone(
       AsyncJobQueueRuntime runtime, AsyncJobStore store, String queueName, int expectedDone)
       throws InterruptedException {
@@ -537,6 +638,19 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
       Thread.sleep(10);
     }
     assertThat(runtime.inFlightCount()).isZero();
+  }
+
+  private void waitForAllRuntimesIdle(List<AsyncJobQueueRuntime> runtimes)
+      throws InterruptedException {
+    Instant deadline = Instant.now().plusSeconds(5);
+    while (Instant.now().isBefore(deadline) && anyRuntimeInFlight(runtimes)) {
+      Thread.sleep(10);
+    }
+    assertThat(anyRuntimeInFlight(runtimes)).isFalse();
+  }
+
+  private boolean anyRuntimeInFlight(List<AsyncJobQueueRuntime> runtimes) {
+    return runtimes.stream().anyMatch(runtime -> runtime.inFlightCount() > 0);
   }
 
   private AsyncJobQueueProperties.QueueSettings runtimeQueueSettings(
@@ -580,10 +694,45 @@ public class JdbcAsyncJobStoreDatabaseIntegrationTest {
         .isEqualTo(expectedCount);
   }
 
+  private void waitForAggregatedProcessingLatencyCount(
+      List<SimpleMeterRegistry> meterRegistries, String queueName, int expectedCount)
+      throws InterruptedException {
+    Instant deadline = Instant.now().plusSeconds(5);
+    while (Instant.now().isBefore(deadline)) {
+      if (processingLatencyCount(meterRegistries, queueName) == expectedCount) {
+        return;
+      }
+      Thread.sleep(10);
+    }
+
+    assertThat(processingLatencyCount(meterRegistries, queueName)).isEqualTo(expectedCount);
+  }
+
+  private long processingLatencyCount(List<SimpleMeterRegistry> meterRegistries, String queueName) {
+    return meterRegistries.stream()
+        .mapToLong(
+            meterRegistry -> {
+              Timer timer =
+                  meterRegistry
+                      .find("asyncJobQueue.processing.latency")
+                      .tag("queueName", queueName)
+                      .timer();
+              return timer == null ? 0 : timer.count();
+            })
+        .sum();
+  }
+
   private double counterCount(
       SimpleMeterRegistry meterRegistry, String meterName, String queueName) {
     Counter counter = meterRegistry.find(meterName).tag("queueName", queueName).counter();
     return counter == null ? 0 : counter.count();
+  }
+
+  private double counterCount(
+      List<SimpleMeterRegistry> meterRegistries, String meterName, String queueName) {
+    return meterRegistries.stream()
+        .mapToDouble(meterRegistry -> counterCount(meterRegistry, meterName, queueName))
+        .sum();
   }
 
   private double transitionFailureCount(
