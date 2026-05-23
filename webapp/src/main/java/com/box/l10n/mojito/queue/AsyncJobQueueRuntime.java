@@ -446,10 +446,10 @@ class AsyncJobQueueRuntime {
     try {
       executor.execute(() -> processClaimedJob(asyncJobRecord));
     } catch (Throwable e) {
+      inFlightCount.decrementAndGet();
       if (isJvmFatal(e)) {
         throw (Error) e;
       }
-      inFlightCount.decrementAndGet();
       handleExecutorSubmitFailure(asyncJobRecord, e);
     }
   }

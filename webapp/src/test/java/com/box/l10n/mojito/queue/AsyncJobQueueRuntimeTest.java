@@ -1482,6 +1482,43 @@ public class AsyncJobQueueRuntimeTest {
   }
 
   @Test
+  public void executorSubmitFatalErrorReleasesCapacityBeforePropagating() {
+    AsyncJobStore asyncJobStore = mock(AsyncJobStore.class);
+    AsyncJobRecord claimedJob = claimedJob(1);
+    AtomicInteger handlerInvocations = new AtomicInteger();
+    FatalTestError fatalTestError = new FatalTestError("executor fatal");
+
+    when(asyncJobStore.claimNextJobs(anyString(), anyInt(), anyString(), any(Duration.class)))
+        .thenReturn(List.of(claimedJob));
+
+    ThreadPoolTaskExecutor failingExecutor = newFailingSubmitExecutor(fatalTestError);
+    AsyncJobQueueRuntime asyncJobQueueRuntime =
+        runtime(
+            asyncJobStore,
+            queueSettings(100, 1_000, 1, 1, 10_000, 0),
+            handler(
+                asyncJobRecord -> {
+                  handlerInvocations.incrementAndGet();
+                  return AsyncJobHandlerResult.done();
+                }),
+            mock(TaskScheduler.class),
+            failingExecutor);
+
+    assertThat(org.junit.Assert.assertThrows(FatalTestError.class, asyncJobQueueRuntime::pollOnce))
+        .isSameAs(fatalTestError);
+
+    assertThat(asyncJobQueueRuntime.inFlightCount()).isZero();
+    assertThat(handlerInvocations.get()).isZero();
+    assertThat(
+            meterRegistry
+                .find("asyncJobQueue.executor.submit.failed")
+                .tag("queueName", "assetlocalize")
+                .counter())
+        .isNull();
+    failingExecutor.shutdown();
+  }
+
+  @Test
   public void executorRejectionsStopRetryingAfterMaxAttempts() throws Exception {
     InMemoryAsyncJobStore inMemoryAsyncJobStore = new InMemoryAsyncJobStore();
     AsyncJobId asyncJobId =
