@@ -223,7 +223,8 @@ Optional Wakeup Signals
 - MySQL uses adaptive polling plus jitter only.
 - PostgreSQL can add an optional `LISTEN/NOTIFY` provider:
   - enqueue commits the queue row, then sends a notification with only the logical `queue_name`
-  - listeners on every pod coalesce duplicate notifications per queue
+  - listeners on every pod coalesce duplicate notifications per queue within each driver
+    notification batch and count skipped duplicates
   - listener callbacks call `triggerPollNow()` after bounded random
     `wakeup.trigger-jitter-ms` delay to avoid waking every pod into the same claim statement at the
     same millisecond
@@ -305,8 +306,10 @@ Test Coverage
   enqueue or worker wakeup, preserving the portable timestamp bounds at the production API edge.
   They also assert due-now scheduled jobs trigger immediate worker wakeup while future jobs remain
   delayed, and fatal wakeup errors propagate instead of being counted as ordinary wakeup failures.
-- PostgreSQL wakeup listener tests assert stop-timeout accounting and duplicate-start rejection, so
-  a stuck listener cannot silently coexist with a replacement listener after lifecycle restart.
+- PostgreSQL wakeup listener tests assert stop-timeout accounting, duplicate-start rejection, and
+  duplicate-notification coalescing, so a stuck listener cannot silently coexist with a replacement
+  listener after lifecycle restart and a notification burst cannot trigger repeated local polls for
+  the same queue.
 - Spring configuration tests assert the JDBC store starts and commits transactions under the
   application's AspectJ transaction mode, because claim correctness depends on locking and
   updating in one transaction.

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.Counter;
@@ -111,6 +112,43 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
       assertThat(JdbcPostgresAsyncJobQueueWakeupListener.randomTriggerJitterDelayMs(25))
           .isBetween(0L, 25L);
     }
+  }
+
+  @Test
+  public void handleNotificationsCoalescesDuplicateQueuePayloadsInBatch() throws Exception {
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AtomicInteger jitterCalls = new AtomicInteger();
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setTriggerJitterMs(0);
+    JdbcPostgresAsyncJobQueueWakeupListener listener =
+        new JdbcPostgresAsyncJobQueueWakeupListener(
+            mock(DataSource.class), wakeupSettings, coordinator, meterRegistry) {
+          @Override
+          long triggerJitterDelayMs() {
+            jitterCalls.incrementAndGet();
+            return 0;
+          }
+        };
+
+    listener.handleNotifications(
+        new Object[] {
+          new TestNotification("mojito_async_job_queue", "assetlocalize"),
+          new TestNotification("mojito_async_job_queue", "assetlocalize"),
+          new TestNotification("mojito_async_job_queue", "repo-stats"),
+          new TestNotification("other_channel", "assetlocalize"),
+          new TestNotification("mojito_async_job_queue", "asset localize")
+        });
+
+    verify(coordinator).triggerPollNow("assetlocalize");
+    verify(coordinator).triggerPollNow("repo-stats");
+    verifyNoMoreInteractions(coordinator);
+    assertThat(jitterCalls).hasValue(1);
+    assertReceivedCounter("assetlocalize", "duplicate", 1);
+    assertReceivedCounter("assetlocalize", "triggered", 1);
+    assertReceivedCounter("repo-stats", "triggered", 1);
+    assertReceivedCounter("unknown", "wrongChannel", 1);
+    assertReceivedCounter("unknown", "invalidPayload", 1);
   }
 
   @Test
@@ -285,5 +323,23 @@ public class JdbcPostgresAsyncJobQueueWakeupListenerTest {
   private void assertSimpleCounter(String name, double count) {
     Counter counter = meterRegistry.find(name).counter();
     assertThat(counter == null ? 0 : counter.count()).isEqualTo(count);
+  }
+
+  public static class TestNotification {
+    private final String name;
+    private final String parameter;
+
+    TestNotification(String name, String parameter) {
+      this.name = name;
+      this.parameter = parameter;
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public String getParameter() {
+      return parameter;
+    }
   }
 }

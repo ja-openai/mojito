@@ -6,7 +6,9 @@ import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -176,9 +178,7 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
         if (notifications == null || notifications.length == 0) {
           continue;
         }
-        for (Object notification : notifications) {
-          handleNotification(notificationName(notification), notificationPayload(notification));
-        }
+        handleNotifications(notifications);
       }
       activeConnection.compareAndSet(listenConnection, null);
     } catch (InvocationTargetException exception) {
@@ -206,6 +206,22 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
   }
 
   void handleNotification(String notificationChannel, String payload) {
+    Set<String> queueNames = new LinkedHashSet<>(1);
+    collectNotification(notificationChannel, payload, queueNames);
+    triggerQueuePolls(queueNames);
+  }
+
+  void handleNotifications(Object[] notifications) throws ReflectiveOperationException {
+    Set<String> queueNames = new LinkedHashSet<>(notifications.length);
+    for (Object notification : notifications) {
+      collectNotification(
+          notificationName(notification), notificationPayload(notification), queueNames);
+    }
+    triggerQueuePolls(queueNames);
+  }
+
+  private void collectNotification(
+      String notificationChannel, String payload, Set<String> queueNames) {
     if (!channel.equals(notificationChannel)) {
       incrementReceivedCounter("unknown", "wrongChannel");
       return;
@@ -221,26 +237,39 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
           exception);
       return;
     }
-    if (!sleepBeforeTrigger(queueName)) {
-      incrementReceivedCounter(queueName, "triggerInterrupted");
-      return;
-    }
-    try {
-      asyncJobQueueCoordinator.triggerPollNow(queueName);
-      incrementReceivedCounter(queueName, "triggered");
-    } catch (Throwable exception) {
-      if (isJvmFatal(exception)) {
-        throw (Error) exception;
-      }
-      incrementReceivedCounter(queueName, "triggerFailed");
-      logger.warn(
-          "Failed to trigger async queue poll from PostgreSQL wakeup for queue {}",
-          queueName,
-          exception);
+    if (!queueNames.add(queueName)) {
+      incrementReceivedCounter(queueName, "duplicate");
     }
   }
 
-  private boolean sleepBeforeTrigger(String queueName) {
+  private void triggerQueuePolls(Set<String> queueNames) {
+    if (queueNames.isEmpty()) {
+      return;
+    }
+    if (!sleepBeforeTrigger(queueNames)) {
+      for (String queueName : queueNames) {
+        incrementReceivedCounter(queueName, "triggerInterrupted");
+      }
+      return;
+    }
+    for (String queueName : queueNames) {
+      try {
+        asyncJobQueueCoordinator.triggerPollNow(queueName);
+        incrementReceivedCounter(queueName, "triggered");
+      } catch (Throwable exception) {
+        if (isJvmFatal(exception)) {
+          throw (Error) exception;
+        }
+        incrementReceivedCounter(queueName, "triggerFailed");
+        logger.warn(
+            "Failed to trigger async queue poll from PostgreSQL wakeup for queue {}",
+            queueName,
+            exception);
+      }
+    }
+  }
+
+  private boolean sleepBeforeTrigger(Set<String> queueNames) {
     long delayMs = triggerJitterDelayMs();
     if (delayMs <= 0) {
       return true;
@@ -251,8 +280,8 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
       logger.debug(
-          "Interrupted before triggering async queue poll from PostgreSQL wakeup for queue {}",
-          queueName,
+          "Interrupted before triggering async queue polls from PostgreSQL wakeup for queues {}",
+          queueNames,
           exception);
       return false;
     }
