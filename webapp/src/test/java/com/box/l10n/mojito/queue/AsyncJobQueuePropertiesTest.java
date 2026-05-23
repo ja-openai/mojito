@@ -17,6 +17,11 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
       "l10n.org.async-job-queue.enabled=true",
       "l10n.org.async-job-queue.store=jdbc",
       "l10n.org.async-job-queue.jdbc-dialect=postgresql",
+      "l10n.org.async-job-queue.wakeup.mode=postgres-listen-notify",
+      "l10n.org.async-job-queue.wakeup.postgres-channel=mojito_async_queue",
+      "l10n.org.async-job-queue.wakeup.postgres-listen-timeout-ms=3000",
+      "l10n.org.async-job-queue.wakeup.reconnect-delay-ms=7000",
+      "l10n.org.async-job-queue.wakeup.reconnect-jitter-percent=15",
       "l10n.org.async-job-queue.status-metrics-interval-ms=12000",
       "l10n.org.async-job-queue.retention.enabled=true",
       "l10n.org.async-job-queue.retention.interval-ms=600000",
@@ -46,6 +51,12 @@ public class AsyncJobQueuePropertiesTest {
   public void testQueueConfigMapBinding() {
     assertThat(asyncJobQueueProperties.getStore()).isEqualTo("jdbc");
     assertThat(asyncJobQueueProperties.getJdbcDialect()).isEqualTo("postgresql");
+    assertThat(asyncJobQueueProperties.getWakeup().getMode()).isEqualTo("postgres-listen-notify");
+    assertThat(asyncJobQueueProperties.getWakeup().getPostgresChannel())
+        .isEqualTo("mojito_async_queue");
+    assertThat(asyncJobQueueProperties.getWakeup().getPostgresListenTimeoutMs()).isEqualTo(3000);
+    assertThat(asyncJobQueueProperties.getWakeup().getReconnectDelayMs()).isEqualTo(7000);
+    assertThat(asyncJobQueueProperties.getWakeup().getReconnectJitterPercent()).isEqualTo(15);
     assertThat(asyncJobQueueProperties.getStatusMetricsIntervalMs()).isEqualTo(12000);
     assertThat(asyncJobQueueProperties.getRetention().isEnabled()).isTrue();
     assertThat(asyncJobQueueProperties.getRetention().getIntervalMs()).isEqualTo(600000);
@@ -101,5 +112,15 @@ public class AsyncJobQueuePropertiesTest {
 
     assertThat(properties.getRetention()).isNotNull();
     assertThat(properties.getRetention().isEnabled()).isFalse();
+  }
+
+  @Test
+  public void setWakeupHandlesNull() {
+    AsyncJobQueueProperties properties = new AsyncJobQueueProperties();
+
+    properties.setWakeup(null);
+
+    assertThat(properties.getWakeup()).isNotNull();
+    assertThat(properties.getWakeup().getMode()).isEqualTo("polling");
   }
 }

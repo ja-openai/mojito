@@ -2,6 +2,8 @@ package com.box.l10n.mojito.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -445,6 +447,24 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void requeueFailedJobPublishesCrossProcessWakeupHintAfterReplay() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    AsyncJobId id = failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueWakeupNotifier wakeupNotifier = mock(AsyncJobQueueWakeupNotifier.class);
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(store, coordinator, wakeupNotifier, meterRegistry);
+
+    AsyncJobQueueInspectionService.AsyncJobDetails replayed =
+        service.requeueFailedJob("assetlocalize", id.value(), null);
+
+    assertThat(replayed.status()).isEqualTo("queued");
+    verify(coordinator).triggerPollNow("assetlocalize");
+    verify(wakeupNotifier).notifyJobAvailable("assetlocalize", id);
+    assertRequeueCounter("succeeded", 1);
+  }
+
+  @Test
   public void requeueFailedJobRecordsWakeupFailureWithoutFailingReplay() {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     AsyncJobId id = failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
@@ -460,6 +480,27 @@ public class AsyncJobQueueInspectionServiceTest {
     assertThat(replayed.status()).isEqualTo("queued");
     assertRequeueCounter("succeeded", 1);
     assertRequeueWakeupFailureCounter(1);
+  }
+
+  @Test
+  public void requeueFailedJobRecordsCrossProcessWakeupFailureWithoutFailingReplay() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    AsyncJobId id = failedJob(store, "assetlocalize", "{\"step\":\"failed\"}", "boom");
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueWakeupNotifier wakeupNotifier = mock(AsyncJobQueueWakeupNotifier.class);
+    doThrow(new IllegalStateException("notify unavailable"))
+        .when(wakeupNotifier)
+        .notifyJobAvailable(anyString(), any(AsyncJobId.class));
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(store, coordinator, wakeupNotifier, meterRegistry);
+
+    AsyncJobQueueInspectionService.AsyncJobDetails replayed =
+        service.requeueFailedJob("assetlocalize", id.value(), null);
+
+    assertThat(replayed.status()).isEqualTo("queued");
+    verify(coordinator).triggerPollNow("assetlocalize");
+    assertRequeueCounter("succeeded", 1);
+    assertRequeueWakeupNotifyFailureCounter(1);
   }
 
   @Test
@@ -692,6 +733,16 @@ public class AsyncJobQueueInspectionServiceTest {
                 .tag("queueName", "assetlocalize")
                 .counter())
         .isNull();
+  }
+
+  private void assertRequeueWakeupNotifyFailureCounter(double count) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.inspection.requeueWakeup.notify.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(count);
   }
 
   private void assertFindCounter(String status, String result, double count) {

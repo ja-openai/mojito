@@ -214,6 +214,74 @@ public class AsyncJobQueueValidationTest {
         "retention.batchSize must be <=");
   }
 
+  @Test
+  public void validateWakeupSettingsAllowsPollingForAnyStore() {
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+
+    assertThat(
+            AsyncJobQueueValidation.validateWakeupSettings(
+                wakeupSettings, AsyncJobQueueValidation.STORE_IN_MEMORY, null))
+        .isSameAs(wakeupSettings);
+  }
+
+  @Test
+  public void validateWakeupSettingsRequiresPostgresJdbcForListenNotify() {
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    wakeupSettings.setMode(AsyncJobQueueValidation.WAKEUP_MODE_POSTGRES_LISTEN_NOTIFY);
+
+    assertThat(
+            AsyncJobQueueValidation.validateWakeupSettings(
+                wakeupSettings,
+                AsyncJobQueueValidation.STORE_JDBC,
+                AsyncJobQueueJdbcDialect.POSTGRESQL))
+        .isSameAs(wakeupSettings);
+
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                    AsyncJobQueueValidation.validateWakeupSettings(
+                        wakeupSettings, AsyncJobQueueValidation.STORE_IN_MEMORY, null)))
+        .hasMessageContaining("requires store=jdbc and jdbcDialect=postgresql");
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                    AsyncJobQueueValidation.validateWakeupSettings(
+                        wakeupSettings,
+                        AsyncJobQueueValidation.STORE_JDBC,
+                        AsyncJobQueueJdbcDialect.MYSQL)))
+        .hasMessageContaining("requires store=jdbc and jdbcDialect=postgresql");
+  }
+
+  @Test
+  public void validateWakeupSettingsRejectsUnsafePostgresConfig() {
+    assertInvalidWakeupSetting(settings -> settings.setMode(""), "wakeup.mode must not be blank");
+    assertInvalidWakeupSetting(settings -> settings.setMode("redis"), "wakeup.mode must be one of");
+    assertInvalidWakeupSetting(
+        settings -> settings.setPostgresChannel("bad-channel"),
+        "wakeup.postgresChannel must be a PostgreSQL-safe identifier");
+    assertInvalidWakeupSetting(
+        settings -> settings.setPostgresListenTimeoutMs(0),
+        "wakeup.postgresListenTimeoutMs must be > 0");
+    assertInvalidWakeupSetting(
+        settings ->
+            settings.setPostgresListenTimeoutMs(
+                AsyncJobQueueValidation.WAKEUP_LISTEN_TIMEOUT_MS_MAX + 1),
+        "wakeup.postgresListenTimeoutMs must be <=");
+    assertInvalidWakeupSetting(
+        settings -> settings.setReconnectDelayMs(0), "wakeup.reconnectDelayMs must be > 0");
+    assertInvalidWakeupSetting(
+        settings ->
+            settings.setReconnectDelayMs(AsyncJobQueueValidation.WAKEUP_RECONNECT_DELAY_MS_MAX + 1),
+        "wakeup.reconnectDelayMs must be <=");
+    assertInvalidWakeupSetting(
+        settings -> settings.setReconnectJitterPercent(101),
+        "wakeup.reconnectJitterPercent must be between 0 and 100");
+  }
+
   private void assertInvalidQueueSetting(
       java.util.function.Consumer<AsyncJobQueueProperties.QueueSettings> mutator,
       String expectedMessage) {
@@ -239,6 +307,24 @@ public class AsyncJobQueueValidationTest {
             assertThrows(
                 IllegalArgumentException.class,
                 () -> AsyncJobQueueValidation.validateRetentionSettings(retentionSettings)))
+        .hasMessageContaining(expectedMessage);
+  }
+
+  private void assertInvalidWakeupSetting(
+      java.util.function.Consumer<AsyncJobQueueProperties.WakeupSettings> mutator,
+      String expectedMessage) {
+    AsyncJobQueueProperties.WakeupSettings wakeupSettings =
+        new AsyncJobQueueProperties.WakeupSettings();
+    mutator.accept(wakeupSettings);
+
+    assertThat(
+            assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                    AsyncJobQueueValidation.validateWakeupSettings(
+                        wakeupSettings,
+                        AsyncJobQueueValidation.STORE_JDBC,
+                        AsyncJobQueueJdbcDialect.POSTGRESQL)))
         .hasMessageContaining(expectedMessage);
   }
 }

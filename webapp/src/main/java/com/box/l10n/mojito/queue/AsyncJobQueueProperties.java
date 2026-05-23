@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
  * l10n.org.async-job-queue.enabled=true
  * l10n.org.async-job-queue.store=jdbc
  * l10n.org.async-job-queue.jdbc-dialect=mysql
+ * l10n.org.async-job-queue.wakeup.mode=polling
  * l10n.org.async-job-queue.status-metrics-interval-ms=10000
  * l10n.org.async-job-queue.queues.assetlocalize.poll-interval-ms=250
  * l10n.org.async-job-queue.queues.assetlocalize.poll-jitter-percent=10
@@ -41,6 +42,8 @@ public class AsyncJobQueueProperties {
   private String jdbcDialect = "mysql";
 
   private long statusMetricsIntervalMs = 10_000;
+
+  private WakeupSettings wakeup = new WakeupSettings();
 
   private RetentionSettings retention = new RetentionSettings();
 
@@ -70,6 +73,17 @@ public class AsyncJobQueueProperties {
     this.statusMetricsIntervalMs = statusMetricsIntervalMs;
   }
 
+  public WakeupSettings getWakeup() {
+    if (wakeup == null) {
+      wakeup = new WakeupSettings();
+    }
+    return wakeup;
+  }
+
+  public void setWakeup(WakeupSettings wakeup) {
+    this.wakeup = wakeup == null ? new WakeupSettings() : wakeup;
+  }
+
   public RetentionSettings getRetention() {
     if (retention == null) {
       retention = new RetentionSettings();
@@ -90,6 +104,55 @@ public class AsyncJobQueueProperties {
 
   public void setQueues(Map<String, QueueSettings> queues) {
     this.queues = queues == null ? new HashMap<>() : queues;
+  }
+
+  /** Best-effort cross-process wakeup hints; workers still poll for durability. */
+  public static class WakeupSettings {
+    private String mode = AsyncJobQueueValidation.WAKEUP_MODE_POLLING;
+    private String postgresChannel = "mojito_async_job_queue";
+    private long postgresListenTimeoutMs = 5_000;
+    private long reconnectDelayMs = 5_000;
+    private int reconnectJitterPercent = 20;
+
+    public String getMode() {
+      return mode;
+    }
+
+    public void setMode(String mode) {
+      this.mode = mode;
+    }
+
+    public String getPostgresChannel() {
+      return postgresChannel;
+    }
+
+    public void setPostgresChannel(String postgresChannel) {
+      this.postgresChannel = postgresChannel;
+    }
+
+    public long getPostgresListenTimeoutMs() {
+      return postgresListenTimeoutMs;
+    }
+
+    public void setPostgresListenTimeoutMs(long postgresListenTimeoutMs) {
+      this.postgresListenTimeoutMs = postgresListenTimeoutMs;
+    }
+
+    public long getReconnectDelayMs() {
+      return reconnectDelayMs;
+    }
+
+    public void setReconnectDelayMs(long reconnectDelayMs) {
+      this.reconnectDelayMs = reconnectDelayMs;
+    }
+
+    public int getReconnectJitterPercent() {
+      return reconnectJitterPercent;
+    }
+
+    public void setReconnectJitterPercent(int reconnectJitterPercent) {
+      this.reconnectJitterPercent = reconnectJitterPercent;
+    }
   }
 
   /** Runtime settings for one logical async job queue. */

@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -25,14 +27,37 @@ public class AsyncJobQueueInspectionService {
 
   private final AsyncJobStore asyncJobStore;
   private final AsyncJobQueueCoordinator asyncJobQueueCoordinator;
+  private final AsyncJobQueueWakeupNotifier asyncJobQueueWakeupNotifier;
   private final MeterRegistry meterRegistry;
 
+  @Autowired
   public AsyncJobQueueInspectionService(
       AsyncJobStore asyncJobStore,
       AsyncJobQueueCoordinator asyncJobQueueCoordinator,
+      ObjectProvider<AsyncJobQueueWakeupNotifier> asyncJobQueueWakeupNotifier,
+      MeterRegistry meterRegistry) {
+    this(
+        asyncJobStore,
+        asyncJobQueueCoordinator,
+        asyncJobQueueWakeupNotifier.getIfAvailable(() -> AsyncJobQueueWakeupNotifier.NO_OP),
+        meterRegistry);
+  }
+
+  AsyncJobQueueInspectionService(
+      AsyncJobStore asyncJobStore,
+      AsyncJobQueueCoordinator asyncJobQueueCoordinator,
+      MeterRegistry meterRegistry) {
+    this(asyncJobStore, asyncJobQueueCoordinator, AsyncJobQueueWakeupNotifier.NO_OP, meterRegistry);
+  }
+
+  AsyncJobQueueInspectionService(
+      AsyncJobStore asyncJobStore,
+      AsyncJobQueueCoordinator asyncJobQueueCoordinator,
+      AsyncJobQueueWakeupNotifier asyncJobQueueWakeupNotifier,
       MeterRegistry meterRegistry) {
     this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
     this.asyncJobQueueCoordinator = Objects.requireNonNull(asyncJobQueueCoordinator);
+    this.asyncJobQueueWakeupNotifier = Objects.requireNonNull(asyncJobQueueWakeupNotifier);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
   }
 
@@ -276,6 +301,21 @@ public class AsyncJobQueueInspectionService {
           .increment();
       logger.warn(
           "Failed to trigger async job queue wakeup after replay for queue {}, job {}",
+          queueName,
+          asyncJobId.value(),
+          exception);
+    }
+    try {
+      asyncJobQueueWakeupNotifier.notifyJobAvailable(queueName, asyncJobId);
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
+      meterRegistry
+          .counter("asyncJobQueue.inspection.requeueWakeup.notify.failed", "queueName", queueName)
+          .increment();
+      logger.warn(
+          "Failed to publish async job queue wakeup after replay for queue {}, job {}",
           queueName,
           asyncJobId.value(),
           exception);

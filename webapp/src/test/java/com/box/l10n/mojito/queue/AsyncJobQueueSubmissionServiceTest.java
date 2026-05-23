@@ -65,14 +65,32 @@ public class AsyncJobQueueSubmissionServiceTest {
   }
 
   @Test
+  public void enqueueNowPublishesCrossProcessWakeupHintAfterStoreWrite() {
+    AsyncJobStore store = mock(AsyncJobStore.class);
+    AsyncJobId asyncJobId = new AsyncJobId("42");
+    when(store.enqueueNow("assetlocalize", "{\"id\":1}")).thenReturn(asyncJobId);
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueWakeupNotifier wakeupNotifier = mock(AsyncJobQueueWakeupNotifier.class);
+    AsyncJobQueueSubmissionService service = submissionService(store, coordinator, wakeupNotifier);
+
+    assertThat(service.enqueueNow("assetlocalize", "{\"id\":1}")).isSameAs(asyncJobId);
+
+    verify(coordinator).triggerPollNow("assetlocalize");
+    verify(wakeupNotifier).notifyJobAvailable("assetlocalize", asyncJobId);
+    assertEnqueueCounter("succeeded", 1);
+  }
+
+  @Test
   public void enqueueFutureJobDoesNotTriggerImmediateWakeup() {
     InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
     AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
-    AsyncJobQueueSubmissionService service = submissionService(store, coordinator);
+    AsyncJobQueueWakeupNotifier wakeupNotifier = mock(AsyncJobQueueWakeupNotifier.class);
+    AsyncJobQueueSubmissionService service = submissionService(store, coordinator, wakeupNotifier);
 
     service.enqueue("assetlocalize", "{\"id\":1}", NOW.plus(Duration.ofMinutes(5)));
 
     verify(coordinator, never()).triggerPollNow("assetlocalize");
+    verify(wakeupNotifier, never()).notifyJobAvailable(anyString(), any(AsyncJobId.class));
     assertEnqueueCounter("succeeded", 1);
   }
 
@@ -142,6 +160,24 @@ public class AsyncJobQueueSubmissionServiceTest {
     assertThat(store.getByIds(List.of(asyncJobId))).hasSize(1);
     assertEnqueueCounter("succeeded", 1);
     assertEnqueueWakeupFailureCounter(1);
+  }
+
+  @Test
+  public void enqueueRecordsCrossProcessWakeupFailureWithoutFailingSubmission() {
+    InMemoryAsyncJobStore store = new InMemoryAsyncJobStore();
+    AsyncJobQueueCoordinator coordinator = mock(AsyncJobQueueCoordinator.class);
+    AsyncJobQueueWakeupNotifier wakeupNotifier = mock(AsyncJobQueueWakeupNotifier.class);
+    doThrow(new IllegalStateException("notify unavailable"))
+        .when(wakeupNotifier)
+        .notifyJobAvailable(anyString(), any(AsyncJobId.class));
+    AsyncJobQueueSubmissionService service = submissionService(store, coordinator, wakeupNotifier);
+
+    AsyncJobId asyncJobId = service.enqueueNow("assetlocalize", "{\"id\":1}");
+
+    assertThat(store.getByIds(List.of(asyncJobId))).hasSize(1);
+    verify(coordinator).triggerPollNow("assetlocalize");
+    assertEnqueueCounter("succeeded", 1);
+    assertEnqueueWakeupNotifyFailureCounter(1);
   }
 
   @Test
@@ -236,8 +272,15 @@ public class AsyncJobQueueSubmissionServiceTest {
 
   private AsyncJobQueueSubmissionService submissionService(
       AsyncJobStore store, AsyncJobQueueCoordinator coordinator) {
+    return submissionService(store, coordinator, AsyncJobQueueWakeupNotifier.NO_OP);
+  }
+
+  private AsyncJobQueueSubmissionService submissionService(
+      AsyncJobStore store,
+      AsyncJobQueueCoordinator coordinator,
+      AsyncJobQueueWakeupNotifier wakeupNotifier) {
     return new AsyncJobQueueSubmissionService(
-        store, coordinator, meterRegistry, Clock.fixed(NOW, ZoneOffset.UTC));
+        store, coordinator, wakeupNotifier, meterRegistry, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private Clock throwingClock() {
@@ -297,6 +340,16 @@ public class AsyncJobQueueSubmissionServiceTest {
                 .tag("queueName", "assetlocalize")
                 .counter())
         .isNull();
+  }
+
+  private void assertEnqueueWakeupNotifyFailureCounter(double count) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.enqueueWakeup.notify.failed")
+                .tag("queueName", "assetlocalize")
+                .counter()
+                .count())
+        .isEqualTo(count);
   }
 
   private static class FatalTestError extends VirtualMachineError {

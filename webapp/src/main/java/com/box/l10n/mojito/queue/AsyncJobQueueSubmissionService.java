@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ public class AsyncJobQueueSubmissionService {
 
   private final AsyncJobStore asyncJobStore;
   private final AsyncJobQueueCoordinator asyncJobQueueCoordinator;
+  private final AsyncJobQueueWakeupNotifier asyncJobQueueWakeupNotifier;
   private final MeterRegistry meterRegistry;
   private final Clock clock;
 
@@ -26,8 +28,26 @@ public class AsyncJobQueueSubmissionService {
   public AsyncJobQueueSubmissionService(
       AsyncJobStore asyncJobStore,
       AsyncJobQueueCoordinator asyncJobQueueCoordinator,
+      MeterRegistry meterRegistry,
+      ObjectProvider<AsyncJobQueueWakeupNotifier> asyncJobQueueWakeupNotifier) {
+    this(
+        asyncJobStore,
+        asyncJobQueueCoordinator,
+        asyncJobQueueWakeupNotifier.getIfAvailable(() -> AsyncJobQueueWakeupNotifier.NO_OP),
+        meterRegistry,
+        Clock.systemUTC());
+  }
+
+  AsyncJobQueueSubmissionService(
+      AsyncJobStore asyncJobStore,
+      AsyncJobQueueCoordinator asyncJobQueueCoordinator,
       MeterRegistry meterRegistry) {
-    this(asyncJobStore, asyncJobQueueCoordinator, meterRegistry, Clock.systemUTC());
+    this(
+        asyncJobStore,
+        asyncJobQueueCoordinator,
+        AsyncJobQueueWakeupNotifier.NO_OP,
+        meterRegistry,
+        Clock.systemUTC());
   }
 
   AsyncJobQueueSubmissionService(
@@ -35,8 +55,23 @@ public class AsyncJobQueueSubmissionService {
       AsyncJobQueueCoordinator asyncJobQueueCoordinator,
       MeterRegistry meterRegistry,
       Clock clock) {
+    this(
+        asyncJobStore,
+        asyncJobQueueCoordinator,
+        AsyncJobQueueWakeupNotifier.NO_OP,
+        meterRegistry,
+        clock);
+  }
+
+  AsyncJobQueueSubmissionService(
+      AsyncJobStore asyncJobStore,
+      AsyncJobQueueCoordinator asyncJobQueueCoordinator,
+      AsyncJobQueueWakeupNotifier asyncJobQueueWakeupNotifier,
+      MeterRegistry meterRegistry,
+      Clock clock) {
     this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
     this.asyncJobQueueCoordinator = Objects.requireNonNull(asyncJobQueueCoordinator);
+    this.asyncJobQueueWakeupNotifier = Objects.requireNonNull(asyncJobQueueWakeupNotifier);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
     this.clock = Objects.requireNonNull(clock);
   }
@@ -112,6 +147,21 @@ public class AsyncJobQueueSubmissionService {
           .increment();
       logger.warn(
           "Failed to trigger async job queue wakeup after enqueue for queue {}, job {}",
+          queueName,
+          asyncJobId.value(),
+          exception);
+    }
+    try {
+      asyncJobQueueWakeupNotifier.notifyJobAvailable(queueName, asyncJobId);
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
+      meterRegistry
+          .counter("asyncJobQueue.enqueueWakeup.notify.failed", "queueName", queueName)
+          .increment();
+      logger.warn(
+          "Failed to publish async job queue wakeup after enqueue for queue {}, job {}",
           queueName,
           asyncJobId.value(),
           exception);

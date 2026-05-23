@@ -29,11 +29,16 @@ final class AsyncJobQueueValidation {
   static final long RETENTION_INTERVAL_MS_MAX = Duration.ofDays(1).toMillis();
   static final long RETENTION_AGE_MS_MAX = Duration.ofDays(365).toMillis();
   static final int RETENTION_BATCH_SIZE_MAX = STORE_QUERY_LIMIT_MAX;
+  static final long WAKEUP_LISTEN_TIMEOUT_MS_MAX = Duration.ofMinutes(5).toMillis();
+  static final long WAKEUP_RECONNECT_DELAY_MS_MAX = Duration.ofHours(1).toMillis();
+  static final Pattern POSTGRES_CHANNEL_PATTERN = Pattern.compile("[A-Za-z_][A-Za-z0-9_]{0,62}");
   // Conservative portable bounds for MySQL DATETIME after JDBC/default-timezone conversion.
   static final Instant DATABASE_TIMESTAMP_MIN = Instant.parse("1000-01-02T00:00:00Z");
   static final Instant DATABASE_TIMESTAMP_MAX = Instant.parse("9999-12-31T00:00:00Z");
   static final String STORE_IN_MEMORY = "in-memory";
   static final String STORE_JDBC = "jdbc";
+  static final String WAKEUP_MODE_POLLING = "polling";
+  static final String WAKEUP_MODE_POSTGRES_LISTEN_NOTIFY = "postgres-listen-notify";
 
   private AsyncJobQueueValidation() {}
 
@@ -43,9 +48,11 @@ final class AsyncJobQueueValidation {
     String store = validateStore(asyncJobQueueProperties.getStore());
     validateStatusMetricsIntervalMs(asyncJobQueueProperties.getStatusMetricsIntervalMs());
     validateRetentionSettings(asyncJobQueueProperties.getRetention());
+    AsyncJobQueueJdbcDialect jdbcDialect = null;
     if (STORE_JDBC.equals(store)) {
-      AsyncJobQueueJdbcDialect.fromConfig(asyncJobQueueProperties.getJdbcDialect());
+      jdbcDialect = AsyncJobQueueJdbcDialect.fromConfig(asyncJobQueueProperties.getJdbcDialect());
     }
+    validateWakeupSettings(asyncJobQueueProperties.getWakeup(), store, jdbcDialect);
     for (Map.Entry<String, AsyncJobQueueProperties.QueueSettings> queueEntry :
         asyncJobQueueProperties.getQueues().entrySet()) {
       validateQueueName(queueEntry.getKey());
@@ -54,6 +61,63 @@ final class AsyncJobQueueValidation {
       }
     }
     return asyncJobQueueProperties;
+  }
+
+  static AsyncJobQueueProperties.WakeupSettings validateWakeupSettings(
+      AsyncJobQueueProperties.WakeupSettings wakeupSettings,
+      String store,
+      AsyncJobQueueJdbcDialect jdbcDialect) {
+    Objects.requireNonNull(wakeupSettings);
+    String mode = validateWakeupMode(wakeupSettings.getMode());
+    validatePostgresChannel(wakeupSettings.getPostgresChannel());
+    validateWakeupPositiveDurationMs(
+        "wakeup.postgresListenTimeoutMs",
+        wakeupSettings.getPostgresListenTimeoutMs(),
+        WAKEUP_LISTEN_TIMEOUT_MS_MAX);
+    validateWakeupPositiveDurationMs(
+        "wakeup.reconnectDelayMs",
+        wakeupSettings.getReconnectDelayMs(),
+        WAKEUP_RECONNECT_DELAY_MS_MAX);
+    if (wakeupSettings.getReconnectJitterPercent() < 0
+        || wakeupSettings.getReconnectJitterPercent() > 100) {
+      throw new IllegalArgumentException("wakeup.reconnectJitterPercent must be between 0 and 100");
+    }
+    if (WAKEUP_MODE_POSTGRES_LISTEN_NOTIFY.equals(mode)) {
+      if (!STORE_JDBC.equals(store) || jdbcDialect != AsyncJobQueueJdbcDialect.POSTGRESQL) {
+        throw new IllegalArgumentException(
+            "wakeup.mode=postgres-listen-notify requires store=jdbc and jdbcDialect=postgresql");
+      }
+    }
+    return wakeupSettings;
+  }
+
+  static String validateWakeupMode(String wakeupMode) {
+    Objects.requireNonNull(wakeupMode);
+    if (wakeupMode.isBlank()) {
+      throw new IllegalArgumentException("wakeup.mode must not be blank");
+    }
+    String normalizedWakeupMode = wakeupMode.trim();
+    if (!WAKEUP_MODE_POLLING.equals(normalizedWakeupMode)
+        && !WAKEUP_MODE_POSTGRES_LISTEN_NOTIFY.equals(normalizedWakeupMode)) {
+      throw new IllegalArgumentException(
+          "wakeup.mode must be one of: "
+              + WAKEUP_MODE_POLLING
+              + ", "
+              + WAKEUP_MODE_POSTGRES_LISTEN_NOTIFY);
+    }
+    return normalizedWakeupMode;
+  }
+
+  static String validatePostgresChannel(String postgresChannel) {
+    Objects.requireNonNull(postgresChannel);
+    if (postgresChannel.isBlank()) {
+      throw new IllegalArgumentException("wakeup.postgresChannel must not be blank");
+    }
+    if (!POSTGRES_CHANNEL_PATTERN.matcher(postgresChannel).matches()) {
+      throw new IllegalArgumentException(
+          "wakeup.postgresChannel must be a PostgreSQL-safe identifier");
+    }
+    return postgresChannel;
   }
 
   static String validateStore(String store) {
@@ -295,6 +359,17 @@ final class AsyncJobQueueValidation {
   private static long validateRetentionDurationMs(String fieldName, long durationMs) {
     if (durationMs <= 0) {
       throw new IllegalArgumentException(fieldName + " must be > 0");
+    }
+    return durationMs;
+  }
+
+  private static long validateWakeupPositiveDurationMs(
+      String fieldName, long durationMs, long maxDurationMs) {
+    if (durationMs <= 0) {
+      throw new IllegalArgumentException(fieldName + " must be > 0");
+    }
+    if (durationMs > maxDurationMs) {
+      throw new IllegalArgumentException(fieldName + " must be <= " + maxDurationMs);
     }
     return durationMs;
   }
