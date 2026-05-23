@@ -95,6 +95,11 @@ public class JdbcAsyncJobStoreTest {
         CREATE INDEX I_ASYNC_JOB_QUEUE_QNAME_STATUS_LEASE_ID
           ON async_job_queue (queue_name, status, lease_until, id)
         """);
+    jdbcTemplate.execute(
+        """
+        CREATE INDEX I_ASYNC_JOB_QUEUE_QNAME_STATUS_UPDATED_ID
+          ON async_job_queue (queue_name, status, updated_date, id)
+        """);
     jdbcAsyncJobStore =
         new JdbcAsyncJobStore(
             new NamedParameterJdbcTemplate(dataSource), AsyncJobQueueJdbcDialect.HSQL);

@@ -337,6 +337,43 @@ public class AsyncJobStoreContractTest {
     assertThat(stillFailed.jobData()).isEqualTo("{\"step\":\"new\"}");
   }
 
+  @Test
+  public void deleteTerminalJobsIsBoundedAndHonorsRetentionBoundaryAndScope() {
+    completeJob("assetlocalize", "{\"step\":\"done-1\"}");
+    completeJob("assetlocalize", "{\"step\":\"done-2\"}");
+    failJob("assetlocalize", "{\"step\":\"failed\"}");
+    AsyncJobId queuedId =
+        asyncJobStore.enqueue(
+            "assetlocalize", "{\"step\":\"queued\"}", Instant.now().plusSeconds(60));
+    asyncJobStore.enqueue("assetlocalize", "{\"step\":\"running\"}", Instant.now().minusSeconds(1));
+    AsyncJobRecord runningJob =
+        asyncJobStore.claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofSeconds(60)).get(0);
+    completeJob("stats", "{\"step\":\"other-queue\"}");
+
+    assertThat(
+            asyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.DONE, Instant.now().minusSeconds(60), 10))
+        .isZero();
+    assertThat(asyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.DONE, 10)).hasSize(2);
+
+    assertThat(
+            asyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.DONE, Instant.now().plusSeconds(60), 1))
+        .isEqualTo(1);
+    assertThat(asyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.DONE, 10)).hasSize(1);
+    assertThat(asyncJobStore.findByStatus("stats", AsyncJobStatus.DONE, 10)).hasSize(1);
+    assertThat(asyncJobStore.getByIds(List.of(queuedId)).get(0).status())
+        .isEqualTo(AsyncJobStatus.QUEUED);
+    assertThat(asyncJobStore.getByIds(List.of(runningJob.id())).get(0).status())
+        .isEqualTo(AsyncJobStatus.RUNNING);
+
+    assertThat(
+            asyncJobStore.deleteTerminalJobs(
+                "assetlocalize", AsyncJobStatus.FAILED, Instant.now().plusSeconds(60), 10))
+        .isEqualTo(1);
+    assertThat(asyncJobStore.findByStatus("assetlocalize", AsyncJobStatus.FAILED, 10)).isEmpty();
+  }
+
   private AsyncJobRecord claimEventually(
       String queueName, String workerId, Duration leaseDuration, Duration timeout)
       throws InterruptedException {
@@ -366,6 +403,28 @@ public class AsyncJobStoreContractTest {
     }
     assertThat(expiredLeaseStatus.count()).as("expired lease should appear before timeout").isOne();
     return expiredLeaseStatus;
+  }
+
+  private AsyncJobId completeJob(String queueName, String jobData) {
+    AsyncJobId id = asyncJobStore.enqueue(queueName, jobData, Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        asyncJobStore.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(60)).get(0);
+
+    assertThat(asyncJobStore.markDone(queueName, id, "worker-a", claimed.leaseToken(), jobData))
+        .isTrue();
+    return id;
+  }
+
+  private AsyncJobId failJob(String queueName, String jobData) {
+    AsyncJobId id = asyncJobStore.enqueue(queueName, jobData, Instant.now().minusSeconds(1));
+    AsyncJobRecord claimed =
+        asyncJobStore.claimNextJobs(queueName, 1, "worker-a", Duration.ofSeconds(60)).get(0);
+
+    assertThat(
+            asyncJobStore.markFailed(
+                queueName, id, "worker-a", claimed.leaseToken(), jobData, "retention failure"))
+        .isTrue();
+    return id;
   }
 
   private interface StoreHarnessFactory {
@@ -468,6 +527,11 @@ public class AsyncJobStoreContractTest {
           """
           CREATE INDEX I_ASYNC_JOB_QUEUE_QNAME_STATUS_LEASE_ID
             ON async_job_queue (queue_name, status, lease_until, id)
+          """);
+      jdbcTemplate.execute(
+          """
+          CREATE INDEX I_ASYNC_JOB_QUEUE_QNAME_STATUS_UPDATED_ID
+            ON async_job_queue (queue_name, status, updated_date, id)
           """);
     }
   }

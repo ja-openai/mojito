@@ -127,8 +127,13 @@ public class AsyncJobQueueJdbcTransactionConfigurationTest {
               CHECK (
                 status <> 'running'
                 OR (TRIM(worker_id) <> '' AND TRIM(lease_token) <> '')
-              )
+            )
           )
+          """);
+      jdbcTemplate.execute(
+          """
+          CREATE INDEX I_ASYNC_JOB_QUEUE_QNAME_STATUS_UPDATED_ID
+            ON async_job_queue (queue_name, status, updated_date, id)
           """);
       return new Object();
     }
