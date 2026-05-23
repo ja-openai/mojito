@@ -244,7 +244,7 @@ PostgreSQL Portability
   location. It uses `TIMESTAMPTZ(6)` for queue timing columns so leases and retry availability are
   stored as absolute instants, independent of session timezone. Production rollout still needs
   Postgres Flyway plugin and location wiring for that database family.
-  - MySQL: `BIGINT UNSIGNED AUTO_INCREMENT`, `DATETIME(6)`, optional
+  - MySQL: signed `BIGINT AUTO_INCREMENT`, `DATETIME(6)`, optional
     `ON UPDATE CURRENT_TIMESTAMP(6)`.
   - PostgreSQL: `BIGSERIAL` or identity column, `TIMESTAMPTZ(6)`, no MySQL `ON UPDATE` clause.
 - Keep the production Java implementation as "standard core + a few native queries"; that is the
