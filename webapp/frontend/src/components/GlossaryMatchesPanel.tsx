@@ -99,7 +99,10 @@ export function GlossaryMatchesPanel({
           {errorMessage}
         </div>
       ) : isLoading ? (
-        <div className="glossary-match-panel__state">Loading glossary matches…</div>
+        <div className="glossary-match-panel__state">
+          <span className="spinner spinner--md" aria-hidden />
+          <span>Loading glossary…</span>
+        </div>
       ) : matches.length === 0 ? (
         <div className="glossary-match-panel__state">{emptyMessage}</div>
       ) : (
@@ -118,6 +121,7 @@ export function GlossaryMatchesPanel({
               ? 'glossary-match-panel__pair-value glossary-match-panel__pair-value--muted'
               : 'glossary-match-panel__pair-value';
             const note = match.targetComment || match.comment || match.definition || null;
+            const hasDetails = Boolean(complianceMessage || imageEvidence.length);
 
             return (
               <article
@@ -140,37 +144,43 @@ export function GlossaryMatchesPanel({
                   <div className={requiredTargetClassName}>{requiredTarget}</div>
                 </div>
 
-                {complianceMessage ? (
-                  <div className="glossary-match-panel__compliance-note">{complianceMessage}</div>
-                ) : null}
+                {note ? <div className="glossary-match-panel__note">{note}</div> : null}
 
-                {note || evidenceSummary ? (
-                  <div className="glossary-match-panel__meta">
-                    {note ? <span>{note}</span> : null}
-                    {note && evidenceSummary ? (
-                      <span className="glossary-match-panel__separator">·</span>
+                {hasDetails ? (
+                  <details className="glossary-match-panel__details">
+                    <summary>Details</summary>
+
+                    {complianceMessage ? (
+                      <div className="glossary-match-panel__compliance-note">
+                        {complianceMessage}
+                      </div>
                     ) : null}
-                    {evidenceSummary ? <span>{evidenceSummary}</span> : null}
-                  </div>
-                ) : null}
 
-                {imageEvidence.length > 0 ? (
-                  <div className="glossary-match-panel__evidence">
-                    {imageEvidence.map((evidence, index) => (
-                      <a
-                        key={`${match.tmTextUnitId}:${evidence.imageKey}:${index}`}
-                        className="glossary-match-panel__evidence-thumb"
-                        href={resolveAttachmentUrl(evidence.imageKey)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <img
-                          src={resolveAttachmentUrl(evidence.imageKey)}
-                          alt={evidence.caption || 'Evidence'}
-                        />
-                      </a>
-                    ))}
-                  </div>
+                    {evidenceSummary ? (
+                      <div className="glossary-match-panel__meta">
+                        <span>{evidenceSummary}</span>
+                      </div>
+                    ) : null}
+
+                    {imageEvidence.length > 0 ? (
+                      <div className="glossary-match-panel__evidence">
+                        {imageEvidence.map((evidence, index) => (
+                          <a
+                            key={`${match.tmTextUnitId}:${evidence.imageKey}:${index}`}
+                            className="glossary-match-panel__evidence-thumb"
+                            href={resolveAttachmentUrl(evidence.imageKey)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <img
+                              src={resolveAttachmentUrl(evidence.imageKey)}
+                              alt={evidence.caption || 'Evidence'}
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                  </details>
                 ) : null}
               </article>
             );

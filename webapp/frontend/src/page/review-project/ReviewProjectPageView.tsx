@@ -97,6 +97,7 @@ import {
   findGlossaryTargetForTextUnit,
   findGlossaryTermByTmTextUnitId,
 } from '../../utils/glossaryTermLookup';
+import { hasIcuParameters } from '../../utils/icuPreview';
 import { prepareDbBackedUploadFile } from '../../utils/image-upload-optimizer';
 import { toHtmlLangTag } from '../../utils/localeTag';
 import { canManageGlossaryTerms } from '../../utils/permissions';
@@ -117,6 +118,10 @@ import {
 } from '../../utils/textUnitDetailUrl';
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
+import {
+  loadReviewProjectShortcutHelpPreference,
+  REVIEW_PROJECT_SHORTCUT_HELP_KEY,
+} from './review-project-preferences';
 
 const Chevron = ({ direction }: { direction: 'left' | 'right' | 'up' | 'down' }) => (
   <svg
@@ -170,6 +175,7 @@ type SortOrderFilter = 'asc' | 'desc';
 type EditKind = 'translation' | 'status' | 'comment';
 type TerminologyConfidenceChoice = 'unspecified' | '1' | '2' | '3' | '4' | '5';
 type TerminologyResolutionStatusChoice = ApiTerminologyResolutionStatus;
+type ContextTab = 'glossary' | 'icu' | 'history' | 'context';
 
 const SAVING_INDICATOR_MIN_MS = 600;
 const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
@@ -424,6 +430,13 @@ function parseDecisionStateFilter(value: string | null): DecisionStateFilter {
 
 function normalizeNullableString(value?: string | null): string {
   return value ?? '';
+}
+
+function formatTabCount(count?: number): string | null {
+  if (!count) {
+    return null;
+  }
+  return count > 99 ? '99+' : String(count);
 }
 
 function getEditKinds(textUnit: ApiReviewProjectTextUnit): EditKind[] {
@@ -802,6 +815,9 @@ export function ReviewProjectPageView({
   const [detailIsDirty, setDetailIsDirty] = useState(false);
   const [focusTranslationKey, setFocusTranslationKey] = useState(0);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [shortcutHelpPreference, setShortcutHelpPreference] = useState(() =>
+    loadReviewProjectShortcutHelpPreference(),
+  );
   const [pendingSelection, setPendingSelection] = useState<{
     id: number;
     index?: number;
@@ -1154,6 +1170,17 @@ export function ReviewProjectPageView({
     return () => window.removeEventListener('keydown', handleKeyNav);
   }, [handleKeyNav]);
 
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key && event.key !== REVIEW_PROJECT_SHORTCUT_HELP_KEY) {
+        return;
+      }
+      setShortcutHelpPreference(loadReviewProjectShortcutHelpPreference());
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   const collapseList = useCallback(() => {
     setIsListCollapsed(true);
     setListWidthPct(0);
@@ -1238,6 +1265,7 @@ export function ReviewProjectPageView({
         onRequestDetailsQueryHandled={onRequestDetailsQueryHandled}
         onRequestDetailsFlowFinished={onRequestDetailsFlowFinished}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        showShortcutsButton={shortcutHelpPreference === 'header'}
         onReviewPending={() => setDecisionStateFilter('PENDING')}
       />
 
@@ -1390,6 +1418,15 @@ export function ReviewProjectPageView({
           )}
         </section>
       </div>
+      {shortcutHelpPreference === 'bottom' ? (
+        <ReviewProjectShortcutBar
+          primaryShortcutLabel={primaryShortcutLabel}
+          primaryAdvanceShortcutLabel={primaryAdvanceShortcutLabel}
+          isTerminologyProject={isTerminologyProject}
+          isTerminologyDeciderProject={isTerminologyDeciderProject}
+          onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        />
+      ) : null}
       {isScreenshotModalOpen ? (
         <ScreenshotOverlay
           screenshotImages={screenshotModalImages}
@@ -1615,10 +1652,8 @@ function DetailPane({
   const [showStaleDecision, setShowStaleDecision] = useState(false);
 
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
-  const [isIcuCollapsed, setIsIcuCollapsed] = useState(true);
-  const [isGlossaryCollapsed, setIsGlossaryCollapsed] = useState(false);
-  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
+  const [activeContextTab, setActiveContextTab] = useState<ContextTab>('glossary');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiChatReviewMessage[]>([]);
@@ -1663,6 +1698,10 @@ function DetailPane({
   const [draftStatusChoice, setDraftStatusChoice] = useState<StatusChoice>(snapshot.statusChoice);
   const [draftComment, setDraftComment] = useState(snapshot.comment ?? '');
   const [draftDecisionNotes, setDraftDecisionNotes] = useState(snapshot.decisionNotes ?? '');
+  const hasIcuMessage = useMemo(
+    () => hasIcuParameters(source) || hasIcuParameters(draftTarget),
+    [draftTarget, source],
+  );
   const [draftTerminologyRecommendation, setDraftTerminologyRecommendation] =
     useState<ApiTerminologyFeedbackRecommendation | null>(terminologySnapshot.recommendation);
   const [draftTerminologyConfidence, setDraftTerminologyConfidence] =
@@ -1825,7 +1864,7 @@ function DetailPane({
 
   const historyQuery = useQuery({
     queryKey: ['review-project-text-unit-history', workbenchTextUnitId, localeTag],
-    enabled: workbenchTextUnitId != null && Boolean(localeTag) && !isHistoryCollapsed,
+    enabled: workbenchTextUnitId != null && Boolean(localeTag) && activeContextTab === 'history',
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     queryFn: () => {
@@ -1838,7 +1877,7 @@ function DetailPane({
 
   const aiTranslateAttemptsQuery = useQuery({
     queryKey: ['review-project-text-unit-ai-translate-attempts', workbenchTextUnitId, localeTag],
-    enabled: workbenchTextUnitId != null && Boolean(localeTag) && !isHistoryCollapsed,
+    enabled: workbenchTextUnitId != null && Boolean(localeTag) && activeContextTab === 'history',
     staleTime: 0,
     refetchOnWindowFocus: false,
     queryFn: () => {
@@ -2791,8 +2830,8 @@ function DetailPane({
   useEffect(() => {
     setShowBaseline(false);
     setShowStaleDecision(false);
-    setIsIcuCollapsed(true);
     setIcuPreviewMode('target');
+    setActiveContextTab('glossary');
   }, [textUnit.id]);
 
   useEffect(() => {
@@ -3386,21 +3425,6 @@ function DetailPane({
                 </button>
               ) : null}
 
-              <IcuPreviewSection
-                sourceMessage={source}
-                targetMessage={draftTarget}
-                targetLocale={localeTag}
-                mode={icuPreviewMode}
-                isCollapsed={isIcuCollapsed}
-                onToggleCollapsed={() => setIsIcuCollapsed((current) => !current)}
-                onChangeMode={(mode) => {
-                  setIcuPreviewMode(mode);
-                  setIsIcuCollapsed(false);
-                }}
-                className="review-project-detail__field review-project-detail__field--icu"
-                titleClassName="review-project-detail__label"
-              />
-
               <div className="review-project-detail__field review-project-detail__field--ai-chat">
                 <div className="review-project-detail__label-row">
                   <div className="review-project-detail__label">AI Chat Review</div>
@@ -3483,49 +3507,6 @@ function DetailPane({
             </div>
           ) : null}
 
-          {!terminologyTerm && glossaryTermTarget && glossaryPartOfSpeech ? (
-            <div className="review-project-detail__field">
-              <div className="review-project-detail__label">POS</div>
-              <div className="review-project-detail__value">{glossaryPartOfSpeech}</div>
-            </div>
-          ) : null}
-
-          {!terminologyTerm && glossaryTermTarget && glossaryTermType ? (
-            <div className="review-project-detail__field">
-              <div className="review-project-detail__label">Type</div>
-              <div className="review-project-detail__value">{glossaryTermType}</div>
-            </div>
-          ) : null}
-
-          {terminologyTerm ? <TerminologyEvidencePanel term={terminologyTerm} /> : null}
-
-          <div className="review-project-detail__field">
-            <button
-              type="button"
-              className="review-project-detail__history-toggle"
-              onClick={() => setIsGlossaryCollapsed((current) => !current)}
-              aria-expanded={!isGlossaryCollapsed}
-            >
-              <span className="review-project-detail__label">Glossary</span>
-              <span className="review-project-detail__baseline-toggle review-project-detail__label-actions--fade">
-                {isGlossaryCollapsed ? 'Show' : 'Hide'}
-              </span>
-            </button>
-            {!isGlossaryCollapsed ? (
-              <GlossaryMatchesPanel
-                matches={glossaryMatchesQuery.data ?? []}
-                isLoading={glossaryMatchesQuery.isLoading}
-                errorMessage={
-                  glossaryMatchesQuery.error instanceof Error
-                    ? glossaryMatchesQuery.error.message
-                    : null
-                }
-                currentTarget={isTerminologyProject ? (source ?? '') : draftTarget}
-                showHeader={false}
-              />
-            ) : null}
-          </div>
-
           <div className="review-project-detail__field">
             <div className="review-project-detail__label-row">
               <div className="review-project-detail__label">Id</div>
@@ -3562,44 +3543,151 @@ function DetailPane({
             </div>
           </div>
 
-          {!isTerminologyProject ? (
-            <div className="review-project-detail__field review-project-detail__field--status">
-              <div className="review-project-detail__label">Status</div>
-              <PillDropdown
-                value={draftStatusChoice}
-                options={STATUS_CHOICES.map((option) => ({
-                  value: option.value,
-                  label: option.label,
-                }))}
-                onChange={handleStatusChange}
-                ariaLabel="Translation status"
-                className="review-project-detail__status-dropdown"
-                disabled={isStatusDropdownDisabled}
-              />
+          {!terminologyTerm && glossaryTermTarget && glossaryPartOfSpeech ? (
+            <div className="review-project-detail__field">
+              <div className="review-project-detail__label">POS</div>
+              <div className="review-project-detail__value">{glossaryPartOfSpeech}</div>
             </div>
           ) : null}
 
-          <div className="review-project-detail__field review-project-detail__field--history">
-            <button
-              type="button"
-              className="review-project-detail__history-toggle"
-              onClick={() => setIsHistoryCollapsed((current) => !current)}
-              aria-expanded={!isHistoryCollapsed}
-            >
-              <span className="review-project-detail__label">History</span>
-              <span className="review-project-detail__baseline-toggle review-project-detail__label-actions--fade">
-                {isHistoryCollapsed ? 'Show' : 'Hide'}
-              </span>
-            </button>
-            {!isHistoryCollapsed ? (
-              <TextUnitHistoryTimeline
-                isLoading={historyQuery.isLoading}
-                errorMessage={historyQuery.isError ? historyErrorMessage : null}
-                entries={historyRows}
-                initialDate={formatDateTime(textUnit.tmTextUnit?.createdDate)}
-                emptyMessage="No history yet."
-              />
-            ) : null}
+          {!terminologyTerm && glossaryTermTarget && glossaryTermType ? (
+            <div className="review-project-detail__field">
+              <div className="review-project-detail__label">Type</div>
+              <div className="review-project-detail__value">{glossaryTermType}</div>
+            </div>
+          ) : null}
+
+          {terminologyTerm ? <TerminologyEvidencePanel term={terminologyTerm} /> : null}
+
+          <div className="review-project-detail__context-panel">
+            <div className="review-project-detail__context-tabs" role="tablist">
+              {[
+                {
+                  value: 'glossary' as const,
+                  label: 'Glossary',
+                  count: glossaryMatchesQuery.data?.length,
+                },
+                {
+                  value: 'icu' as const,
+                  label: 'ICU',
+                  count: hasIcuMessage ? 1 : undefined,
+                },
+                { value: 'history' as const, label: 'History' },
+                { value: 'context' as const, label: 'Context' },
+              ].map((tab) =>
+                (() => {
+                  const tabCount = formatTabCount(tab.count);
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      className={`review-project-detail__context-tab${
+                        activeContextTab === tab.value ? ' is-active' : ''
+                      }`}
+                      role="tab"
+                      aria-selected={activeContextTab === tab.value}
+                      onClick={() => {
+                        setActiveContextTab(tab.value);
+                      }}
+                    >
+                      <span className="review-project-detail__context-tab-label">{tab.label}</span>
+                      <span
+                        className={`review-project-detail__context-tab-count-slot${
+                          tabCount ? ' has-count' : ''
+                        }`}
+                      >
+                        {tabCount ? (
+                          <>
+                            <span className="review-project-detail__context-tab-dot" aria-hidden>
+                              ·
+                            </span>
+                            <span className="review-project-detail__context-tab-count">
+                              {tabCount}
+                            </span>
+                          </>
+                        ) : null}
+                      </span>
+                    </button>
+                  );
+                })(),
+              )}
+            </div>
+
+            <div className="review-project-detail__context-body">
+              {activeContextTab === 'glossary' ? (
+                <GlossaryMatchesPanel
+                  matches={glossaryMatchesQuery.data ?? []}
+                  isLoading={glossaryMatchesQuery.isLoading}
+                  errorMessage={
+                    glossaryMatchesQuery.error instanceof Error
+                      ? glossaryMatchesQuery.error.message
+                      : null
+                  }
+                  currentTarget={isTerminologyProject ? (source ?? '') : draftTarget}
+                  showHeader={false}
+                />
+              ) : null}
+
+              {activeContextTab === 'icu' ? (
+                hasIcuMessage ? (
+                  <IcuPreviewSection
+                    sourceMessage={source}
+                    targetMessage={draftTarget}
+                    targetLocale={localeTag}
+                    mode={icuPreviewMode}
+                    isCollapsed={false}
+                    onToggleCollapsed={() => undefined}
+                    onChangeMode={setIcuPreviewMode}
+                    className="review-project-detail__field review-project-detail__field--icu review-project-detail__field--icu-tab"
+                    titleClassName="review-project-detail__label"
+                  />
+                ) : (
+                  <div className="review-project-detail__context-empty">
+                    No ICU placeholders detected.
+                  </div>
+                )
+              ) : null}
+
+              {activeContextTab === 'history' ? (
+                <TextUnitHistoryTimeline
+                  isLoading={historyQuery.isLoading}
+                  errorMessage={historyQuery.isError ? historyErrorMessage : null}
+                  entries={historyRows}
+                  initialDate={formatDateTime(textUnit.tmTextUnit?.createdDate)}
+                  emptyMessage="No history yet."
+                />
+              ) : null}
+
+              {activeContextTab === 'context' ? (
+                <div className="review-project-detail__context-stack">
+                  {repositoryName || assetPath ? (
+                    <div className="review-project-detail__field">
+                      <div className="review-project-detail__label">Location</div>
+                      <div className="review-project-detail__value review-project-detail__value--meta">
+                        {[repositoryName, assetPath].filter(Boolean).join(' / ')}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {!isTerminologyProject ? (
+                    <div className="review-project-detail__field review-project-detail__field--status">
+                      <div className="review-project-detail__label">Status</div>
+                      <PillDropdown
+                        value={draftStatusChoice}
+                        options={STATUS_CHOICES.map((option) => ({
+                          value: option.value,
+                          label: option.label,
+                        }))}
+                        onChange={handleStatusChange}
+                        ariaLabel="Translation status"
+                        className="review-project-detail__status-dropdown"
+                        disabled={isStatusDropdownDisabled}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -3789,6 +3877,73 @@ function ScreenshotOverlay({
   );
 }
 
+function ReviewProjectShortcutBar({
+  primaryShortcutLabel,
+  primaryAdvanceShortcutLabel,
+  isTerminologyProject,
+  isTerminologyDeciderProject,
+  onOpenShortcuts,
+}: {
+  primaryShortcutLabel: string;
+  primaryAdvanceShortcutLabel: string;
+  isTerminologyProject: boolean;
+  isTerminologyDeciderProject: boolean;
+  onOpenShortcuts: () => void;
+}) {
+  const decisionShortcuts = isTerminologyProject
+    ? [
+        {
+          keyLabel: 'A',
+          label: isTerminologyDeciderProject ? 'Approved' : 'Recommend approved',
+        },
+        {
+          keyLabel: 'C',
+          label: isTerminologyDeciderProject ? 'Candidate' : 'Recommend candidate',
+        },
+        {
+          keyLabel: 'R',
+          label: isTerminologyDeciderProject ? 'Rejected' : 'Recommend rejected',
+        },
+      ]
+    : [
+        { keyLabel: 'A', label: 'Accept' },
+        { keyLabel: 'E', label: 'Edit' },
+        { keyLabel: 'P', label: 'Pending' },
+      ];
+
+  return (
+    <div className="review-project-shortcut-bar">
+      <span className="review-project-shortcut-bar__item">
+        <kbd>↑</kbd>
+        <kbd>↓</kbd>
+        <span>Next/Prev</span>
+      </span>
+      {decisionShortcuts.map((shortcut) => (
+        <span key={shortcut.keyLabel} className="review-project-shortcut-bar__item">
+          <kbd>{shortcut.keyLabel}</kbd>
+          <span>{shortcut.label}</span>
+        </span>
+      ))}
+      <span className="review-project-shortcut-bar__item">
+        <kbd>Cmd/Ctrl Enter</kbd>
+        <span>{primaryShortcutLabel}</span>
+      </span>
+      <span className="review-project-shortcut-bar__item">
+        <kbd>Cmd/Ctrl Shift Enter</kbd>
+        <span>{primaryAdvanceShortcutLabel}</span>
+      </span>
+      <button
+        type="button"
+        className="review-project-shortcut-bar__button"
+        onClick={onOpenShortcuts}
+      >
+        <kbd>/</kbd>
+        <span>Help</span>
+      </button>
+    </div>
+  );
+}
+
 function ReviewProjectHeader({
   projectId,
   project,
@@ -3801,6 +3956,7 @@ function ReviewProjectHeader({
   onRequestDetailsQueryHandled,
   onRequestDetailsFlowFinished,
   onOpenShortcuts,
+  showShortcutsButton,
   onReviewPending,
 }: {
   projectId: number;
@@ -3814,6 +3970,7 @@ function ReviewProjectHeader({
   onRequestDetailsQueryHandled: () => void;
   onRequestDetailsFlowFinished: () => void;
   onOpenShortcuts: () => void;
+  showShortcutsButton: boolean;
   onReviewPending: () => void;
 }) {
   const { dueDate, textUnitCount, wordCount, status, type } = project;
@@ -4500,18 +4657,20 @@ function ReviewProjectHeader({
             ) : (
               <span title={dueDateTooltip}>Due {formatDate(dueDate)}</span>
             )}
-            <button
-              type="button"
-              className="review-project-page__header-help"
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpenShortcuts();
-              }}
-              aria-label="Keyboard shortcuts"
-              title="Keyboard shortcuts"
-            >
-              <span aria-hidden="true">?</span>
-            </button>
+            {showShortcutsButton ? (
+              <button
+                type="button"
+                className="review-project-page__header-help"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenShortcuts();
+                }}
+                aria-label="Keyboard shortcuts"
+                title="Keyboard shortcuts"
+              >
+                <span aria-hidden="true">?</span>
+              </button>
+            ) : null}
             <button
               type="button"
               className={`review-project-page__header-action ${actionClass}`}

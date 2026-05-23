@@ -7,6 +7,12 @@ import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
+import {
+  DEFAULT_REVIEW_PROJECT_SHORTCUT_HELP,
+  loadReviewProjectShortcutHelpPreference,
+  type ReviewProjectShortcutHelpPreference,
+  saveReviewProjectShortcutHelpPreference,
+} from '../review-project/review-project-preferences';
 import { WORKSET_SIZE_DEFAULT } from '../workbench/workbench-constants';
 import { clampWorksetSize } from '../workbench/workbench-helpers';
 import {
@@ -25,6 +31,8 @@ export function SettingsPage() {
   const [savedPreferredLocales, setSavedPreferredLocales] = useState<string[]>(() =>
     loadPreferredLocales(),
   );
+  const [shortcutHelpPreference, setShortcutHelpPreference] =
+    useState<ReviewProjectShortcutHelpPreference>(() => loadReviewProjectShortcutHelpPreference());
   const [worksetDraft, setWorksetDraft] = useState<string>(() =>
     savedWorkset == null ? '' : String(savedWorkset),
   );
@@ -136,6 +144,11 @@ export function SettingsPage() {
     setPreferredLocalesDraft(next);
   };
 
+  const handleShortcutHelpPreferenceChange = (value: ReviewProjectShortcutHelpPreference) => {
+    saveReviewProjectShortcutHelpPreference(value);
+    setShortcutHelpPreference(value);
+  };
+
   return (
     <div className="settings-page">
       <div className="settings-page__header">
@@ -185,6 +198,57 @@ export function SettingsPage() {
               Reset
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="settings-card" aria-labelledby="settings-review-projects">
+        <div className="settings-card__header">
+          <h2 id="settings-review-projects">Review projects</h2>
+        </div>
+        <div className="settings-field">
+          <div className="settings-field__label">Shortcut help</div>
+          <div className="settings-radio-group">
+            {[
+              {
+                value: 'header' as const,
+                label: 'Header button',
+                description: 'Show the keyboard shortcuts button in the project header.',
+              },
+              {
+                value: 'bottom' as const,
+                label: 'Bottom bar',
+                description: 'Show the main shortcuts at the bottom of the review screen.',
+              },
+              {
+                value: 'hidden' as const,
+                label: 'Hidden',
+                description: 'Do not show shortcut help in the review project UI.',
+              },
+            ].map((option) => (
+              <label key={option.value} className="settings-radio-option">
+                <input
+                  type="radio"
+                  name="review-project-shortcut-help"
+                  value={option.value}
+                  checked={shortcutHelpPreference === option.value}
+                  onChange={() => handleShortcutHelpPreferenceChange(option.value)}
+                />
+                <span className="settings-radio-option__body">
+                  <span className="settings-radio-option__label">{option.label}</span>
+                  <span className="settings-hint">{option.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className="settings-hint">
+            Default is{' '}
+            {DEFAULT_REVIEW_PROJECT_SHORTCUT_HELP === 'header'
+              ? 'Header button'
+              : DEFAULT_REVIEW_PROJECT_SHORTCUT_HELP === 'bottom'
+                ? 'Bottom bar'
+                : 'Hidden'}
+            .
+          </p>
         </div>
       </section>
 

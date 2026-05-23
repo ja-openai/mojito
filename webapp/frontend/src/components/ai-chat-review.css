@@ -263,7 +263,7 @@
 }
 
 .ai-chat-review__button--primary {
-  border-color: color-mix(in srgb, var(--color-accent) 84%, transparent);
-  background: color-mix(in srgb, var(--color-accent) 88%, transparent);
-  color: var(--color-on-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 78%, transparent);
+  background: transparent;
+  color: var(--color-text);
 }
