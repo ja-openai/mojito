@@ -144,6 +144,52 @@ public class AsyncJobQueueInspectionServiceTest {
   }
 
   @Test
+  public void expiredLeaseStatusReturnsExpiredRunningBacklogWithoutPayloads() {
+    Instant observedAt = Instant.parse("2026-05-23T00:00:03Z");
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public AsyncJobExpiredLeaseStatus expiredLeaseStatus(String queueName) {
+                return new AsyncJobExpiredLeaseStatus(
+                    2, Instant.parse("2026-05-23T00:00:00Z"), observedAt);
+              }
+            },
+            noOpCoordinator(),
+            meterRegistry);
+
+    AsyncJobQueueInspectionService.AsyncJobExpiredLeaseStatusSummary expiredLeaseStatus =
+        service.expiredLeaseStatus("assetlocalize");
+
+    assertThat(expiredLeaseStatus.queueName()).isEqualTo("assetlocalize");
+    assertThat(expiredLeaseStatus.count()).isEqualTo(2);
+    assertThat(expiredLeaseStatus.oldestLeaseUntil())
+        .isEqualTo(Instant.parse("2026-05-23T00:00:00Z"));
+    assertThat(expiredLeaseStatus.observedAt()).isEqualTo(observedAt);
+    assertThat(expiredLeaseStatus.oldestAgeMs()).isEqualTo(3000);
+    assertExpiredLeaseStatusCounter("succeeded", 1);
+  }
+
+  @Test
+  public void expiredLeaseStatusRecordsStoreFailures() {
+    AsyncJobQueueInspectionService service =
+        new AsyncJobQueueInspectionService(
+            new InMemoryAsyncJobStore() {
+              @Override
+              public AsyncJobExpiredLeaseStatus expiredLeaseStatus(String queueName) {
+                throw new IllegalStateException("database unavailable");
+              }
+            },
+            noOpCoordinator(),
+            meterRegistry);
+
+    assertThatThrownBy(() -> service.expiredLeaseStatus("assetlocalize"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("database unavailable");
+    assertExpiredLeaseStatusCounter("failed", 1);
+  }
+
+  @Test
   public void findJobsRecordsInvalidInputAndStoreFailures() {
     AsyncJobQueueInspectionService invalidInputService =
         inspectionService(new InMemoryAsyncJobStore());
@@ -528,6 +574,17 @@ public class AsyncJobQueueInspectionServiceTest {
     assertThat(
             meterRegistry
                 .get("asyncJobQueue.inspection.readyStatus")
+                .tag("queueName", "assetlocalize")
+                .tag("result", result)
+                .counter()
+                .count())
+        .isEqualTo(count);
+  }
+
+  private void assertExpiredLeaseStatusCounter(String result, double count) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.inspection.expiredLeaseStatus")
                 .tag("queueName", "assetlocalize")
                 .tag("result", result)
                 .counter()

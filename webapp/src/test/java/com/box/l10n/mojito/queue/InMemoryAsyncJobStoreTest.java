@@ -396,6 +396,25 @@ public class InMemoryAsyncJobStoreTest {
   }
 
   @Test
+  public void expiredLeaseStatusCountsOnlyRunningJobsWithExpiredLeases() throws Exception {
+    inMemoryAsyncJobStore.enqueue("assetlocalize", "{\"name\":\"expired\"}", Instant.now());
+    inMemoryAsyncJobStore
+        .claimNextJobs("assetlocalize", 1, "worker-a", Duration.ofMillis(50))
+        .get(0);
+
+    assertThat(inMemoryAsyncJobStore.expiredLeaseStatus("assetlocalize").count()).isEqualTo(0);
+
+    Thread.sleep(80);
+
+    AsyncJobExpiredLeaseStatus expiredLeaseStatus =
+        inMemoryAsyncJobStore.expiredLeaseStatus("assetlocalize");
+
+    assertThat(expiredLeaseStatus.count()).isEqualTo(1);
+    assertThat(expiredLeaseStatus.oldestLeaseUntil())
+        .isBeforeOrEqualTo(expiredLeaseStatus.observedAt());
+  }
+
+  @Test
   public void deleteTerminalJobsDeletesOnlyBoundedMatchingTerminalRows() {
     completeJob("assetlocalize", "{\"name\":\"done-1\"}");
     completeJob("assetlocalize", "{\"name\":\"done-2\"}");

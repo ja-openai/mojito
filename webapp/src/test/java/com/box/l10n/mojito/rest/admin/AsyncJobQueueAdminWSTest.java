@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobDetails;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobExpiredLeaseStatusSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobNotFoundException;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobReadyStatusSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
@@ -69,6 +70,29 @@ public class AsyncJobQueueAdminWSTest {
         .thenThrow(new IllegalArgumentException("bad queue"));
 
     assertThatThrownBy(() -> ws.readyStatus("bad queue"))
+        .isInstanceOf(ResponseStatusException.class)
+        .satisfies(
+            exception ->
+                assertThat(((ResponseStatusException) exception).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST));
+  }
+
+  @Test
+  public void expiredLeaseStatusReturnsServiceResult() {
+    Instant now = Instant.now();
+    AsyncJobExpiredLeaseStatusSummary expiredLeaseStatus =
+        new AsyncJobExpiredLeaseStatusSummary("assetlocalize", 2, now.minusSeconds(3), now, 3000);
+    when(inspectionService.expiredLeaseStatus("assetlocalize")).thenReturn(expiredLeaseStatus);
+
+    assertThat(ws.expiredLeaseStatus("assetlocalize")).isEqualTo(expiredLeaseStatus);
+  }
+
+  @Test
+  public void mapsInvalidExpiredLeaseStatusInputToBadRequest() {
+    when(inspectionService.expiredLeaseStatus("bad queue"))
+        .thenThrow(new IllegalArgumentException("bad queue"));
+
+    assertThatThrownBy(() -> ws.expiredLeaseStatus("bad queue"))
         .isInstanceOf(ResponseStatusException.class)
         .satisfies(
             exception ->

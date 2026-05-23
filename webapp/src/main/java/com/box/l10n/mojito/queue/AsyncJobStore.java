@@ -136,6 +136,15 @@ public interface AsyncJobStore {
   AsyncJobReadyStatus readyStatus(String queueName);
 
   /**
+   * Returns running jobs whose lease already expired for a queue at query time.
+   *
+   * <p>Expired leases are claimable by the queue runtime, but they are reported separately from
+   * ready queued work so operators can distinguish new backlog from crashed/stalled worker
+   * recovery.
+   */
+  AsyncJobExpiredLeaseStatus expiredLeaseStatus(String queueName);
+
+  /**
    * Lists recent jobs for a queue/status, primarily for operator inspection.
    *
    * <p>This is not used for claiming work; claim ordering remains backend-specific.

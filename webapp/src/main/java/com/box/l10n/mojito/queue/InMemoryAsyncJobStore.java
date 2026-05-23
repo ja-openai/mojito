@@ -267,6 +267,28 @@ public class InMemoryAsyncJobStore implements AsyncJobStore {
   }
 
   @Override
+  public AsyncJobExpiredLeaseStatus expiredLeaseStatus(String queueName) {
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    return withQueueLock(
+        queueName,
+        () -> {
+          Instant now = Instant.now();
+          List<StoredAsyncJob> expiredLeaseJobs =
+              jobsById.values().stream()
+                  .filter(job -> job.queueName().equals(queueName))
+                  .filter(job -> job.status() == AsyncJobStatus.RUNNING)
+                  .filter(job -> job.leaseUntil() != null && !job.leaseUntil().isAfter(now))
+                  .toList();
+          Instant oldestLeaseUntil =
+              expiredLeaseJobs.stream()
+                  .map(StoredAsyncJob::leaseUntil)
+                  .min(Comparator.naturalOrder())
+                  .orElse(null);
+          return new AsyncJobExpiredLeaseStatus(expiredLeaseJobs.size(), oldestLeaseUntil, now);
+        });
+  }
+
+  @Override
   public List<AsyncJobRecord> findByStatus(String queueName, AsyncJobStatus status, int limit) {
     if (limit <= 0) {
       return Collections.emptyList();

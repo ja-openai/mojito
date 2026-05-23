@@ -2,6 +2,7 @@ package com.box.l10n.mojito.rest.admin;
 
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobDetails;
+import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobExpiredLeaseStatusSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobNotFoundException;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobReadyStatusSummary;
 import com.box.l10n.mojito.queue.AsyncJobQueueInspectionService.AsyncJobStatusCountSummary;
@@ -42,6 +43,15 @@ public class AsyncJobQueueAdminWS {
   public AsyncJobReadyStatusSummary readyStatus(@PathVariable String queueName) {
     try {
       return inspectionService.readyStatus(queueName);
+    } catch (IllegalArgumentException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+    }
+  }
+
+  @GetMapping("/{queueName}/expired-lease-status")
+  public AsyncJobExpiredLeaseStatusSummary expiredLeaseStatus(@PathVariable String queueName) {
+    try {
+      return inspectionService.expiredLeaseStatus(queueName);
     } catch (IllegalArgumentException exception) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
     }

@@ -514,6 +514,30 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
 
   @Transactional(readOnly = true)
   @Override
+  public AsyncJobExpiredLeaseStatus expiredLeaseStatus(String queueName) {
+    AsyncJobQueueValidation.validateQueueName(queueName);
+    Instant now = databaseNow();
+    String sql =
+        """
+        SELECT COUNT(*) AS count, MIN(lease_until) AS oldest_lease_until
+        FROM async_job_queue
+        WHERE queue_name = :queueName
+          AND status = :runningStatus
+          AND lease_until <= :now
+        """;
+    return namedParameterJdbcTemplate.queryForObject(
+        sql,
+        new MapSqlParameterSource()
+            .addValue("queueName", queueName)
+            .addValue("runningStatus", AsyncJobStatus.RUNNING.getDatabaseValue())
+            .addValue("now", Timestamp.from(now)),
+        (resultSet, rowNum) ->
+            new AsyncJobExpiredLeaseStatus(
+                resultSet.getLong("count"), toInstant(resultSet, "oldest_lease_until"), now));
+  }
+
+  @Transactional(readOnly = true)
+  @Override
   public List<AsyncJobRecord> findByStatus(String queueName, AsyncJobStatus status, int limit) {
     if (limit <= 0) {
       return Collections.emptyList();

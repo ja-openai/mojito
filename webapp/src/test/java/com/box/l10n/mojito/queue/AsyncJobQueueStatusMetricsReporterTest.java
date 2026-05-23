@@ -47,6 +47,10 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertThat(readyOldestAgeGaugeValue("assetlocalize")).isGreaterThanOrEqualTo(0);
     assertReadyCountGaugeValue("stats", 0);
     assertReadyOldestAgeGaugeValue("stats", 0);
+    assertExpiredLeaseCountGaugeValue("assetlocalize", 0);
+    assertExpiredLeaseOldestAgeGaugeValue("assetlocalize", 0);
+    assertExpiredLeaseCountGaugeValue("stats", 0);
+    assertExpiredLeaseOldestAgeGaugeValue("stats", 0);
 
     asyncJobStore.markDone(
         "assetlocalize", runningJob.id(), "worker-a", runningJob.leaseToken(), "{\"id\":2}");
@@ -56,6 +60,7 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertGaugeValue("assetlocalize", AsyncJobStatus.RUNNING, 0);
     assertGaugeValue("assetlocalize", AsyncJobStatus.DONE, 1);
     assertReadyCountGaugeValue("assetlocalize", 1);
+    assertExpiredLeaseCountGaugeValue("assetlocalize", 0);
   }
 
   @Test
@@ -84,6 +89,10 @@ public class AsyncJobQueueStatusMetricsReporterTest {
         .thenReturn(
             new AsyncJobReadyStatus(
                 2, Instant.parse("2026-05-23T00:00:00Z"), Instant.parse("2026-05-23T00:00:03Z")));
+    when(asyncJobStore.expiredLeaseStatus("assetlocalize"))
+        .thenReturn(
+            new AsyncJobExpiredLeaseStatus(
+                1, Instant.parse("2026-05-23T00:00:00Z"), Instant.parse("2026-05-23T00:00:04Z")));
 
     AsyncJobQueueStatusMetricsReporter reporter =
         new AsyncJobQueueStatusMetricsReporter(
@@ -98,6 +107,8 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertGaugeValue("assetlocalize", AsyncJobStatus.FAILED, 0);
     assertReadyCountGaugeValue("assetlocalize", 2);
     assertReadyOldestAgeGaugeValue("assetlocalize", 3000);
+    assertExpiredLeaseCountGaugeValue("assetlocalize", 1);
+    assertExpiredLeaseOldestAgeGaugeValue("assetlocalize", 4000);
   }
 
   @Test
@@ -108,6 +119,8 @@ public class AsyncJobQueueStatusMetricsReporterTest {
         .thenReturn(List.of(new AsyncJobStatusCount(AsyncJobStatus.FAILED, 3)));
     when(asyncJobStore.readyStatus("assetlocalize"))
         .thenReturn(new AsyncJobReadyStatus(0, null, Instant.parse("2026-05-23T00:00:00Z")));
+    when(asyncJobStore.expiredLeaseStatus("assetlocalize"))
+        .thenReturn(new AsyncJobExpiredLeaseStatus(0, null, Instant.parse("2026-05-23T00:00:00Z")));
 
     AsyncJobQueueStatusMetricsReporter reporter =
         new AsyncJobQueueStatusMetricsReporter(
@@ -122,6 +135,8 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertGaugeValue("assetlocalize", AsyncJobStatus.FAILED, 3);
     assertReadyCountGaugeValue("assetlocalize", 0);
     assertReadyOldestAgeGaugeValue("assetlocalize", 0);
+    assertExpiredLeaseCountGaugeValue("assetlocalize", 0);
+    assertExpiredLeaseOldestAgeGaugeValue("assetlocalize", 0);
   }
 
   @Test
@@ -137,6 +152,8 @@ public class AsyncJobQueueStatusMetricsReporterTest {
     assertGaugeValue("assetlocalize", AsyncJobStatus.QUEUED, 1);
     assertReadyCountGaugeValue("assetlocalize", 0);
     assertReadyOldestAgeGaugeValue("assetlocalize", 0);
+    assertExpiredLeaseCountGaugeValue("assetlocalize", 0);
+    assertExpiredLeaseOldestAgeGaugeValue("assetlocalize", 0);
   }
 
   @Test
@@ -249,6 +266,26 @@ public class AsyncJobQueueStatusMetricsReporterTest {
         .tag("queueName", queueName)
         .gauge()
         .value();
+  }
+
+  private void assertExpiredLeaseCountGaugeValue(String queueName, long expectedValue) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.running.expired.count")
+                .tag("queueName", queueName)
+                .gauge()
+                .value())
+        .isEqualTo(expectedValue);
+  }
+
+  private void assertExpiredLeaseOldestAgeGaugeValue(String queueName, long expectedValue) {
+    assertThat(
+            meterRegistry
+                .get("asyncJobQueue.running.expired.oldestAgeMs")
+                .tag("queueName", queueName)
+                .gauge()
+                .value())
+        .isEqualTo(expectedValue);
   }
 
   private static class FatalTestError extends VirtualMachineError {

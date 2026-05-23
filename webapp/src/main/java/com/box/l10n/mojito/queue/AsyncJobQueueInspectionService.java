@@ -125,6 +125,31 @@ public class AsyncJobQueueInspectionService {
     }
   }
 
+  public AsyncJobExpiredLeaseStatusSummary expiredLeaseStatus(String queueName) {
+    String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
+    try {
+      AsyncJobExpiredLeaseStatus expiredLeaseStatus =
+          asyncJobStore.expiredLeaseStatus(validatedQueueName);
+      incrementExpiredLeaseStatusCounter(validatedQueueName, "succeeded");
+      return new AsyncJobExpiredLeaseStatusSummary(
+          validatedQueueName,
+          expiredLeaseStatus.count(),
+          expiredLeaseStatus.oldestLeaseUntil(),
+          expiredLeaseStatus.observedAt(),
+          expiredLeaseOldestAgeMs(expiredLeaseStatus));
+    } catch (Throwable exception) {
+      if (isJvmFatal(exception)) {
+        throw (Error) exception;
+      }
+      incrementExpiredLeaseStatusCounter(validatedQueueName, "failed");
+      logger.warn(
+          "Failed to inspect async expired lease status for queue {}",
+          validatedQueueName,
+          exception);
+      throw unchecked(exception);
+    }
+  }
+
   public AsyncJobDetails getJob(String queueName, String jobId) {
     String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
     AsyncJobId asyncJobId;
@@ -351,12 +376,29 @@ public class AsyncJobQueueInspectionService {
         .increment();
   }
 
+  private void incrementExpiredLeaseStatusCounter(String queueName, String result) {
+    meterRegistry
+        .counter(
+            "asyncJobQueue.inspection.expiredLeaseStatus", "queueName", queueName, "result", result)
+        .increment();
+  }
+
   private long readyOldestAgeMs(AsyncJobReadyStatus readyStatus) {
     if (readyStatus.count() == 0) {
       return 0L;
     }
     return Math.max(
         0L, Duration.between(readyStatus.oldestAvailableAt(), readyStatus.observedAt()).toMillis());
+  }
+
+  private long expiredLeaseOldestAgeMs(AsyncJobExpiredLeaseStatus expiredLeaseStatus) {
+    if (expiredLeaseStatus.count() == 0) {
+      return 0L;
+    }
+    return Math.max(
+        0L,
+        Duration.between(expiredLeaseStatus.oldestLeaseUntil(), expiredLeaseStatus.observedAt())
+            .toMillis());
   }
 
   private Map<AsyncJobStatus, Long> zeroCountsByStatus() {
@@ -415,6 +457,13 @@ public class AsyncJobQueueInspectionService {
       String queueName,
       long count,
       Instant oldestAvailableAt,
+      Instant observedAt,
+      long oldestAgeMs) {}
+
+  public record AsyncJobExpiredLeaseStatusSummary(
+      String queueName,
+      long count,
+      Instant oldestLeaseUntil,
       Instant observedAt,
       long oldestAgeMs) {}
 

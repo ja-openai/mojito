@@ -253,8 +253,8 @@ Test Coverage
   coordinator startup cleanup, synchronized trigger routing, null-safe queue configuration binding,
   and Spring configuration.
 - Metrics reporter tests cover per-status depth gauges, zeroing missing statuses, configured queues,
-  handler-only queues, ready backlog gauges, oldest ready-job age, delayed-job exclusion, and
-  non-fatal reporting failures.
+  handler-only queues, ready backlog gauges, oldest ready-job age, expired running lease gauges,
+  delayed-job exclusion, and non-fatal reporting failures.
 - JDBC store tests exercise enqueue, claim, lease fencing, requeue, terminal failure, operator
   replay, lease-reclaim markers, timestamp-bound validation, bounded error summaries, and status
   counts against an embedded datasource using the `hsql` dialect. Store tests also cover bounded
@@ -292,6 +292,9 @@ Monitoring (MVP Required)
   - ready queued backlog via sampled `asyncJobQueue.ready.count` and
     `asyncJobQueue.ready.oldestAgeMs`; delayed retry/future work stays visible in queued status
     counts but does not contribute to ready backlog
+  - expired running leases via sampled `asyncJobQueue.running.expired.count` and
+    `asyncJobQueue.running.expired.oldestAgeMs`; this separates worker-crash/stall recovery from
+    normal queued backlog
   - executor active/queued by queue
 - Counters:
   - claimed, completed, retried, execution-failed, lease-expired-reclaimed, poll-skipped-saturated
@@ -343,6 +346,8 @@ Monitoring (MVP Required)
     lookups
   - `asyncJobQueue.inspection.readyStatus` by `queueName,result` for read-only ready backlog
     lookups
+  - `asyncJobQueue.inspection.expiredLeaseStatus` by `queueName,result` for read-only expired
+    running lease lookups
 
 Operator Controls
 - Store-level inspection supports listing recent jobs by `queue_name` and `status`.
@@ -353,6 +358,10 @@ Operator Controls
   `GET /api/admin/async-job-queue/queues/{queueName}/ready-status`; the response contains
   queueName, ready count, oldest ready availability, observation time, and oldest ready age, never
   job payload.
+- Read-only expired running leases are exposed via
+  `GET /api/admin/async-job-queue/queues/{queueName}/expired-lease-status`; the response contains
+  queueName, expired lease count, oldest expired lease timestamp, observation time, and oldest
+  expired lease age, never job payload.
 - Read-only admin job summaries are exposed via
   `GET /api/admin/async-job-queue/queues/{queueName}/jobs?status=failed&limit=100`; the response
   intentionally omits `job_data` and `jobDataPreview`, returning only metadata, last error, and

@@ -33,6 +33,8 @@ public class AsyncJobQueueStatusMetricsReporter {
   private final Map<StatusMetricKey, AtomicLong> statusGauges = new ConcurrentHashMap<>();
   private final Map<String, AtomicLong> readyCountGauges = new ConcurrentHashMap<>();
   private final Map<String, AtomicLong> readyOldestAgeGauges = new ConcurrentHashMap<>();
+  private final Map<String, AtomicLong> expiredLeaseCountGauges = new ConcurrentHashMap<>();
+  private final Map<String, AtomicLong> expiredLeaseOldestAgeGauges = new ConcurrentHashMap<>();
 
   public AsyncJobQueueStatusMetricsReporter(
       AsyncJobStore asyncJobStore,
@@ -79,6 +81,10 @@ public class AsyncJobQueueStatusMetricsReporter {
     AsyncJobReadyStatus readyStatus = asyncJobStore.readyStatus(queueName);
     readyCountGauge(queueName).set(Math.max(0L, readyStatus.count()));
     readyOldestAgeGauge(queueName).set(readyOldestAgeMs(readyStatus));
+
+    AsyncJobExpiredLeaseStatus expiredLeaseStatus = asyncJobStore.expiredLeaseStatus(queueName);
+    expiredLeaseCountGauge(queueName).set(Math.max(0L, expiredLeaseStatus.count()));
+    expiredLeaseOldestAgeGauge(queueName).set(expiredLeaseOldestAgeMs(expiredLeaseStatus));
   }
 
   private Set<String> queueNames() {
@@ -127,12 +133,42 @@ public class AsyncJobQueueStatusMetricsReporter {
                 new AtomicLong()));
   }
 
+  private AtomicLong expiredLeaseCountGauge(String queueName) {
+    return expiredLeaseCountGauges.computeIfAbsent(
+        queueName,
+        ignored ->
+            meterRegistry.gauge(
+                "asyncJobQueue.running.expired.count",
+                Tags.of("queueName", queueName),
+                new AtomicLong()));
+  }
+
+  private AtomicLong expiredLeaseOldestAgeGauge(String queueName) {
+    return expiredLeaseOldestAgeGauges.computeIfAbsent(
+        queueName,
+        ignored ->
+            meterRegistry.gauge(
+                "asyncJobQueue.running.expired.oldestAgeMs",
+                Tags.of("queueName", queueName),
+                new AtomicLong()));
+  }
+
   private long readyOldestAgeMs(AsyncJobReadyStatus readyStatus) {
     if (readyStatus.count() == 0) {
       return 0L;
     }
     return Math.max(
         0L, Duration.between(readyStatus.oldestAvailableAt(), readyStatus.observedAt()).toMillis());
+  }
+
+  private long expiredLeaseOldestAgeMs(AsyncJobExpiredLeaseStatus expiredLeaseStatus) {
+    if (expiredLeaseStatus.count() == 0) {
+      return 0L;
+    }
+    return Math.max(
+        0L,
+        Duration.between(expiredLeaseStatus.oldestLeaseUntil(), expiredLeaseStatus.observedAt())
+            .toMillis());
   }
 
   private boolean isJvmFatal(Throwable throwable) {
