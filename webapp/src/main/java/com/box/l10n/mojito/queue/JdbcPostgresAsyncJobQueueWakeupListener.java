@@ -414,8 +414,7 @@ class JdbcPostgresAsyncJobQueueWakeupListener implements SmartLifecycle {
   }
 
   private boolean isJvmFatal(Throwable throwable) {
-    return throwable instanceof VirtualMachineError
-        || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
+    return AsyncJobQueueFatalErrors.isJvmFatal(throwable);
   }
 
   private static final class ListenConnection implements AutoCloseable {

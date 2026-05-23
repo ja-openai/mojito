@@ -172,8 +172,7 @@ public class AsyncJobQueueStatusMetricsReporter {
   }
 
   private boolean isJvmFatal(Throwable throwable) {
-    return throwable instanceof VirtualMachineError
-        || "java.lang.ThreadDeath".equals(throwable.getClass().getName());
+    return AsyncJobQueueFatalErrors.isJvmFatal(throwable);
   }
 
   private record StatusMetricKey(String queueName, AsyncJobStatus status) {}
