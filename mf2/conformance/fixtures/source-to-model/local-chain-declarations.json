@@ -1,0 +1,64 @@
+{
+  "name": "local-chain-declarations",
+  "source": ".local $first = {$name}\n.local $second = {$first}\n.local $prefix = {|Hello|}\n{{{$prefix}, {$second}!}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "first",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "name" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "second",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "first" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "prefix",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "Hello" }
+        }
+      }
+    ],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "prefix" }
+      },
+      ", ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "second" }
+      },
+      "!"
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Mojito" },
+      "expected": "Hello, Mojito!"
+    }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Mojito" },
+      "expected": [
+        { "type": "expression", "value": "Hello" },
+        { "type": "text", "value": ", " },
+        { "type": "expression", "value": "Mojito" },
+        { "type": "text", "value": "!" }
+      ]
+    }
+  ]
+}

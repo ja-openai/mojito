@@ -1,0 +1,7 @@
+{
+  "name": "match-selectors-without-space",
+  "source": ".input {$x :x} .local $y = {y :y} .match $x$y * * {{foo}}",
+  "expectedDiagnostics": [
+    { "code": "missing-match-space" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "invalid-option-name",
+  "source": "Hello, {$name :string -key=|display name|}!",
+  "expectedDiagnostics": [
+    { "code": "invalid-function-option" }
+  ]
+}

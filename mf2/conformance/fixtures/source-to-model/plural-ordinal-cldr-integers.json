@@ -1,0 +1,1530 @@
+{
+  "name": "plural-ordinal-cldr-integers",
+  "source": ".input {$count :number select=ordinal}\n.match $count\nzero {{zero}}\none {{one}}\ntwo {{two}}\nfew {{few}}\nmany {{many}}\nother {{other}}\n* {{other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": {
+            "type": "variable",
+            "name": "count"
+          },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "select": {
+                "type": "literal",
+                "value": "ordinal"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [
+      {
+        "type": "variable",
+        "name": "count"
+      }
+    ],
+    "variants": [
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "zero"
+          }
+        ],
+        "value": [
+          "zero"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "one"
+          }
+        ],
+        "value": [
+          "one"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "two"
+          }
+        ],
+        "value": [
+          "two"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "few"
+          }
+        ],
+        "value": [
+          "few"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "many"
+          }
+        ],
+        "value": [
+          "many"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "other"
+          }
+        ],
+        "value": [
+          "other"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "*"
+          }
+        ],
+        "value": [
+          "other"
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "af",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "am",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "an",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ar",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "as",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "as",
+      "arguments": {
+        "count": "6"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "as",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "as",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "as",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "ast",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "az",
+      "arguments": {
+        "count": "3"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "az",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "az",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "az",
+      "arguments": {
+        "count": "9"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "az-Arab",
+      "arguments": {
+        "count": "3"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "az-Arab",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "az-Arab",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "az-Arab",
+      "arguments": {
+        "count": "9"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "bal",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "bal",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "be",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "be",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "bg",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "blo",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "blo",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "blo",
+      "arguments": {
+        "count": "7"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "blo",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "zero"
+    },
+    {
+      "locale": "bn",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "bn",
+      "arguments": {
+        "count": "6"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "bn",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "bn",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "bn",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "bs",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ca",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "ca",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "ca",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ca",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "ce",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "cs",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "cv",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "cy",
+      "arguments": {
+        "count": "3"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "cy",
+      "arguments": {
+        "count": "5"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "cy",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "cy",
+      "arguments": {
+        "count": "10"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "cy",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "cy",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "zero"
+    },
+    {
+      "locale": "da",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "de",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "dsb",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "el",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "en",
+      "arguments": {
+        "count": "3"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "en",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "en",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "en",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "en-US-u-nu-latn",
+      "arguments": {
+        "count": "3"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "en-US-u-nu-latn",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "en-US-u-nu-latn",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "en-US-u-nu-latn",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "es",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "et",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "eu",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "fa",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "fi",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "fil",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "fil",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "fr",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "fr",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "fy",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ga",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "ga",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "gd",
+      "arguments": {
+        "count": "3"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "gd",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "gd",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "gd",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "gl",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "gsw",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "gu",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "gu",
+      "arguments": {
+        "count": "6"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "gu",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "gu",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "gu",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "he",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "hi",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "hi",
+      "arguments": {
+        "count": "6"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "hi",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "hi",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "hi",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "hr",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "hsb",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "hu",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "hu",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "hy",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "hy",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ia",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "id",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ie",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "is",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "it",
+      "arguments": {
+        "count": "8"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "it",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ja",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ka",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "ka",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "ka",
+      "arguments": {
+        "count": "21"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "kk",
+      "arguments": {
+        "count": "6"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "kk",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "km",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "kn",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ko",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "kok",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "kok",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "kok",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "kok",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "kok-Latn",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "kok-Latn",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "kok-Latn",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "kok-Latn",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "kw",
+      "arguments": {
+        "count": "5"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "kw",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "kw",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ky",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "lij",
+      "arguments": {
+        "count": "8"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "lij",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "lld",
+      "arguments": {
+        "count": "8"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "lld",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "lo",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "lo",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "lt",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "lv",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "mk",
+      "arguments": {
+        "count": "7"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "mk",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "mk",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "mk",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "ml",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "mn",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "mo",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "mo",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "mr",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "mr",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "mr",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "mr",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "ms",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "ms",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "my",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "nb",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ne",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "ne",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "nl",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "no",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "or",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "or",
+      "arguments": {
+        "count": "6"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "or",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "or",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "or",
+      "arguments": {
+        "count": "2"
+      },
+      "expected": "two"
+    },
+    {
+      "locale": "pa",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "pl",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "prg",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ps",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "pt",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "pt-AO",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "pt-PT-u-nu-latn",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ro",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "ro",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ru",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sc",
+      "arguments": {
+        "count": "8"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "sc",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "scn",
+      "arguments": {
+        "count": "8"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "scn",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sd",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sh",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "si",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sk",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sl",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sq",
+      "arguments": {
+        "count": "4"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "sq",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "sq",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sr",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sr-Latn",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sv",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "sv",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sw",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ta",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "te",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "th",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "tk",
+      "arguments": {
+        "count": "6"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "tk",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "tl",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "tl",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "tpi",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "tr",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "uk",
+      "arguments": {
+        "count": "3"
+      },
+      "expected": "few"
+    },
+    {
+      "locale": "uk",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "und",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ur",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "uz",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "vec",
+      "arguments": {
+        "count": "8"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "vec",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "vi",
+      "arguments": {
+        "count": "1"
+      },
+      "expected": "one"
+    },
+    {
+      "locale": "vi",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "yue",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "zh",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "zh-Hant-TW",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "zu",
+      "arguments": {
+        "count": "0"
+      },
+      "expected": "other"
+    }
+  ]
+}

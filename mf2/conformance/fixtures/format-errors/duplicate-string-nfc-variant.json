@@ -1,0 +1,35 @@
+{
+  "name": "duplicate-string-nfc-variant",
+  "model": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "x",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "\u1e0a\u0323" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "x" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "\u1e0a\u0323" }],
+        "value": ["Not normalized"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "\u1e0c\u0307" }],
+        "value": ["Normalized"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Wrong"]
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": {},
+  "expectedError": { "code": "duplicate-variant" }
+}

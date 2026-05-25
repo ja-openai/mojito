@@ -1,0 +1,65 @@
+{
+  "name": "plural-cardinal-pt",
+  "source": ".input {$count :number}\n.match $count\none {{one}}\nother {{other}}\n* {{other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "count" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": ["one"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "other" }],
+        "value": ["other"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "pt",
+      "arguments": { "count": 0 },
+      "expected": "one"
+    },
+    {
+      "locale": "pt-BR",
+      "arguments": { "count": 0 },
+      "expected": "one"
+    },
+    {
+      "locale": "pt-AO",
+      "arguments": { "count": 0 },
+      "expected": "one"
+    },
+    {
+      "locale": "pt-AO",
+      "arguments": { "count": 2 },
+      "expected": "other"
+    },
+    {
+      "locale": "pt-PT",
+      "arguments": { "count": 0 },
+      "expected": "other"
+    },
+    {
+      "locale": "pt-PT",
+      "arguments": { "count": 1 },
+      "expected": "one"
+    }
+  ]
+}

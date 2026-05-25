@@ -1,0 +1,20 @@
+{
+  "name": "local-self-reference",
+  "model": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "name",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "name" }
+        }
+      }
+    ],
+    "pattern": ["_"]
+  },
+  "locale": "en",
+  "arguments": {},
+  "expectedError": { "code": "duplicate-declaration" }
+}

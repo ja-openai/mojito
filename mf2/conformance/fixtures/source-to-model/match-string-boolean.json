@@ -1,0 +1,50 @@
+{
+  "name": "match-string-boolean",
+  "source": ".input {$enabled :string}\n.match $enabled\ntrue {{Enabled}}\nfalse {{Disabled}}\n* {{Unknown}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "enabled",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "enabled" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "enabled" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "true" }],
+        "value": ["Enabled"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "false" }],
+        "value": ["Disabled"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Unknown"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "enabled": true },
+      "expected": "Enabled"
+    },
+    {
+      "locale": "en",
+      "arguments": { "enabled": false },
+      "expected": "Disabled"
+    },
+    {
+      "locale": "en",
+      "arguments": { "enabled": null },
+      "expected": "Unknown"
+    }
+  ]
+}

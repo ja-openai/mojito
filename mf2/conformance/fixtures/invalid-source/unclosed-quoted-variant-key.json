@@ -1,0 +1,9 @@
+{
+  "name": "unclosed-quoted-variant-key",
+  "source": ".input {$status :string}\n.match $status\n|active {{Broken}}\n* {{Other}}",
+  "expectedDiagnostics": [
+    {
+      "code": "unclosed-quoted-literal"
+    }
+  ]
+}

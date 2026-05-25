@@ -1,0 +1,48 @@
+{
+  "name": "unquoted-literal-placeholder",
+  "source": "Status: {ready}; count: {42}; emoji: {🥔}.",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Status: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "ready" }
+      },
+      "; count: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "42" }
+      },
+      "; emoji: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "🥔" }
+      },
+      "."
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Status: ready; count: 42; emoji: 🥔."
+    }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": [
+        { "type": "text", "value": "Status: " },
+        { "type": "expression", "value": "ready" },
+        { "type": "text", "value": "; count: " },
+        { "type": "expression", "value": "42" },
+        { "type": "text", "value": "; emoji: " },
+        { "type": "expression", "value": "🥔" },
+        { "type": "text", "value": "." }
+      ]
+    }
+  ]
+}

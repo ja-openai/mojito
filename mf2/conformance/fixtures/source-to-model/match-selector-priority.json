@@ -1,0 +1,67 @@
+{
+  "name": "match-selector-priority",
+  "source": ".input {$first :string}\n.input {$second :string}\n.match $first $second\n* * {{fallback}}\n* exact {{second exact}}\nexact * {{first exact}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "first",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "first" },
+          "function": { "type": "function", "name": "string" }
+        }
+      },
+      {
+        "type": "input",
+        "name": "second",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "second" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [
+      { "type": "variable", "name": "first" },
+      { "type": "variable", "name": "second" }
+    ],
+    "variants": [
+      {
+        "keys": [{ "type": "*" }, { "type": "*" }],
+        "value": ["fallback"]
+      },
+      {
+        "keys": [{ "type": "*" }, { "type": "literal", "value": "exact" }],
+        "value": ["second exact"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "exact" }, { "type": "*" }],
+        "value": ["first exact"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "first": "other", "second": "other" },
+      "expected": "fallback"
+    },
+    {
+      "locale": "en",
+      "arguments": { "first": "other", "second": "exact" },
+      "expected": "second exact"
+    },
+    {
+      "locale": "en",
+      "arguments": { "first": "exact", "second": "other" },
+      "expected": "first exact"
+    },
+    {
+      "locale": "en",
+      "arguments": { "first": "exact", "second": "exact" },
+      "expected": "first exact"
+    }
+  ]
+}

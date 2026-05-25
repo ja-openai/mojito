@@ -1,0 +1,7 @@
+{
+  "name": "unquoted-literal-backslash",
+  "source": "bad {\\u0000placeholder}",
+  "expectedDiagnostics": [
+    { "code": "invalid-literal" }
+  ]
+}

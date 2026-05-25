@@ -1,0 +1,13 @@
+{
+  "name": "invalid-pattern-empty-text-message",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [""]
+  },
+  "locale": "en",
+  "arguments": {},
+  "expectedError": {
+    "code": "invalid-pattern-text"
+  }
+}

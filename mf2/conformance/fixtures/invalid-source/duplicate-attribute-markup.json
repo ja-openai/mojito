@@ -1,0 +1,7 @@
+{
+  "name": "duplicate-attribute-markup",
+  "source": "Click {#link @href=|profile| @href=|settings|}here{/link}.",
+  "expectedDiagnostics": [
+    { "code": "duplicate-attribute-name" }
+  ]
+}

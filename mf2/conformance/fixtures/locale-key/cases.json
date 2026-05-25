@@ -1,0 +1,16 @@
+{
+  "canonical": [
+    { "source": " FR_ca ", "expected": "fr-CA" },
+    { "source": "zh_hant_tw", "expected": "zh-Hant-TW" },
+    { "source": "pt-PT-u-nu-latn", "expected": "pt-PT" },
+    { "source": "kok-Latn", "expected": "kok-Latn" },
+    { "source": "en-US-x-private", "expected": "en-US" }
+  ],
+  "lookupChains": [
+    { "source": "zh-Hant-HK-u-nu-latn", "expected": ["zh-Hant-HK", "zh-Hant", "zh"] },
+    { "source": " FR_ca ", "expected": ["fr-CA", "fr"] },
+    { "source": "pt-PT-u-nu-latn", "expected": ["pt-PT", "pt"] },
+    { "source": "pt-AO", "expected": ["pt-AO", "pt"] },
+    { "source": "en-US-x-private", "expected": ["en-US", "en"] }
+  ]
+}

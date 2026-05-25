@@ -1,0 +1,25 @@
+{
+  "name": "missing-selector-annotation-none",
+  "model": {
+    "type": "select",
+    "declarations": [],
+    "selectors": [{ "type": "variable", "name": "status" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "active" }],
+        "value": ["Active"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": {
+    "status": "active"
+  },
+  "expectedError": {
+    "code": "missing-selector-annotation"
+  }
+}

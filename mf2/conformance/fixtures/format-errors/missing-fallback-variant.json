@@ -1,0 +1,31 @@
+{
+  "name": "missing-fallback-variant",
+  "model": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "status",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "status" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "status" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "active" }],
+        "value": ["Active"]
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": {
+    "status": "active"
+  },
+  "expectedError": {
+    "code": "missing-fallback-variant"
+  }
+}

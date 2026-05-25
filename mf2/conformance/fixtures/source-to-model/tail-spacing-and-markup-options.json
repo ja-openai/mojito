@@ -1,0 +1,96 @@
+{
+  "name": "tail-spacing-and-markup-options",
+  "source": "Tap {#link href = $profileUrl @title = |Profile page|}profile{/link href = |profile|}. {$name :string label = |display name| @kind = person}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Tap ",
+      {
+        "type": "markup",
+        "kind": "open",
+        "name": "link",
+        "options": {
+          "href": { "type": "variable", "name": "profileUrl" }
+        },
+        "attributes": {
+          "title": { "type": "literal", "value": "Profile page" }
+        }
+      },
+      "profile",
+      {
+        "type": "markup",
+        "kind": "close",
+        "name": "link",
+        "options": {
+          "href": { "type": "literal", "value": "profile" }
+        }
+      },
+      ". ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" },
+        "function": {
+          "type": "function",
+          "name": "string",
+          "options": {
+            "label": { "type": "literal", "value": "display name" }
+          }
+        },
+        "attributes": {
+          "kind": { "type": "literal", "value": "person" }
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {
+        "name": "Jean",
+        "profileUrl": "/people/jean"
+      },
+      "expected": "Tap profile. Jean"
+    }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": {
+        "name": "Jean",
+        "profileUrl": "/people/jean"
+      },
+      "expected": [
+        { "type": "text", "value": "Tap " },
+        {
+          "type": "markup",
+          "kind": "open",
+          "name": "link",
+          "options": {
+            "href": { "type": "variable", "name": "profileUrl" }
+          },
+          "attributes": {
+            "title": { "type": "literal", "value": "Profile page" }
+          }
+        },
+        { "type": "text", "value": "profile" },
+        {
+          "type": "markup",
+          "kind": "close",
+          "name": "link",
+          "options": {
+            "href": { "type": "literal", "value": "profile" }
+          }
+        },
+        { "type": "text", "value": ". " },
+        {
+          "type": "expression",
+          "value": "Jean",
+          "attributes": {
+            "kind": { "type": "literal", "value": "person" }
+          }
+        }
+      ]
+    }
+  ]
+}

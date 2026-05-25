@@ -1,0 +1,23 @@
+{
+  "name": "text-around-variable",
+  "source": "User {$name} has signed in.",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "User ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" }
+      },
+      " has signed in."
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Sam" },
+      "expected": "User Sam has signed in."
+    }
+  ]
+}

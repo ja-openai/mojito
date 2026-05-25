@@ -1,0 +1,44 @@
+{
+  "name": "variant-key-count-mismatch",
+  "model": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "status",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "status" },
+          "function": { "type": "function", "name": "string" }
+        }
+      },
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [
+      { "type": "variable", "name": "status" },
+      { "type": "variable", "name": "count" }
+    ],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "active" }],
+        "value": ["Active"]
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": {
+    "status": "active",
+    "count": 1
+  },
+  "expectedError": {
+    "code": "variant-key-count-mismatch"
+  }
+}

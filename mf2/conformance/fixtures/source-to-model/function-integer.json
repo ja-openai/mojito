@@ -1,0 +1,23 @@
+{
+  "name": "function-integer",
+  "source": "Count: {$count :integer}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Count: ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "count" },
+        "function": { "type": "function", "name": "integer" }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "count": 7 },
+      "expected": "Count: 7"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "name": "string-nfc-selection",
+  "source": ".local $x = {\u1e0a\u0323 :string}\n.match $x\n\u1e0c\u0307 {{Right}}\n* {{Wrong}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "x",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "\u1e0a\u0323" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "x" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "\u1e0c\u0307" }],
+        "value": ["Right"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Wrong"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Right"
+    }
+  ]
+}

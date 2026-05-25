@@ -1,0 +1,44 @@
+{
+  "name": "fallback-unresolved-selector",
+  "source": ".input {$foo :string}\n.match $foo\n1 {{one}}\n* {{other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "foo",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "foo" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "foo" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["one"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "foo": "1" },
+      "expected": "one"
+    }
+  ],
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "other",
+      "expectedErrors": [{ "code": "unresolved-variable" }]
+    }
+  ]
+}

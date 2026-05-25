@@ -1,0 +1,7 @@
+{
+  "name": "duplicate-attribute-placeholder",
+  "source": "Hello, {$name @note=short @note=long}!",
+  "expectedDiagnostics": [
+    { "code": "duplicate-attribute-name" }
+  ]
+}

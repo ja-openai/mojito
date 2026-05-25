@@ -1,0 +1,123 @@
+{
+  "name": "match-wildcard-middle-selector",
+  "source": ".input {$usage :string}\n.input {$case :string}\n.input {$number :string}\n.match $usage $case $number\nbare * singular {{Schild}}\nbare * plural {{Schilde}}\ndefinite nominative singular {{der Schild}}\ndefinite accusative singular {{den Schild}}\ndefinite dative singular {{dem Schild}}\n* * * {{Schild}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "usage",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "usage" },
+          "function": { "type": "function", "name": "string" }
+        }
+      },
+      {
+        "type": "input",
+        "name": "case",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "case" },
+          "function": { "type": "function", "name": "string" }
+        }
+      },
+      {
+        "type": "input",
+        "name": "number",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "number" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [
+      { "type": "variable", "name": "usage" },
+      { "type": "variable", "name": "case" },
+      { "type": "variable", "name": "number" }
+    ],
+    "variants": [
+      {
+        "keys": [
+          { "type": "literal", "value": "bare" },
+          { "type": "*" },
+          { "type": "literal", "value": "singular" }
+        ],
+        "value": ["Schild"]
+      },
+      {
+        "keys": [
+          { "type": "literal", "value": "bare" },
+          { "type": "*" },
+          { "type": "literal", "value": "plural" }
+        ],
+        "value": ["Schilde"]
+      },
+      {
+        "keys": [
+          { "type": "literal", "value": "definite" },
+          { "type": "literal", "value": "nominative" },
+          { "type": "literal", "value": "singular" }
+        ],
+        "value": ["der Schild"]
+      },
+      {
+        "keys": [
+          { "type": "literal", "value": "definite" },
+          { "type": "literal", "value": "accusative" },
+          { "type": "literal", "value": "singular" }
+        ],
+        "value": ["den Schild"]
+      },
+      {
+        "keys": [
+          { "type": "literal", "value": "definite" },
+          { "type": "literal", "value": "dative" },
+          { "type": "literal", "value": "singular" }
+        ],
+        "value": ["dem Schild"]
+      },
+      {
+        "keys": [
+          { "type": "*" },
+          { "type": "*" },
+          { "type": "*" }
+        ],
+        "value": ["Schild"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "de",
+      "arguments": { "usage": "bare", "case": "nominative", "number": "singular" },
+      "expected": "Schild"
+    },
+    {
+      "locale": "de",
+      "arguments": { "usage": "bare", "case": "dative", "number": "plural" },
+      "expected": "Schilde"
+    },
+    {
+      "locale": "de",
+      "arguments": { "usage": "definite", "case": "nominative", "number": "singular" },
+      "expected": "der Schild"
+    },
+    {
+      "locale": "de",
+      "arguments": { "usage": "definite", "case": "accusative", "number": "singular" },
+      "expected": "den Schild"
+    },
+    {
+      "locale": "de",
+      "arguments": { "usage": "definite", "case": "dative", "number": "singular" },
+      "expected": "dem Schild"
+    },
+    {
+      "locale": "de",
+      "arguments": { "usage": "definite", "case": "genitive", "number": "plural" },
+      "expected": "Schild"
+    }
+  ]
+}

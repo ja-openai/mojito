@@ -1,0 +1,22 @@
+{
+  "name": "currency-format",
+  "source": "Total: {$amount :currency currency=$currency}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Total: ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "amount" },
+        "function": {
+          "type": "function",
+          "name": "currency",
+          "options": {
+            "currency": { "type": "variable", "name": "currency" }
+          }
+        }
+      }
+    ]
+  }
+}

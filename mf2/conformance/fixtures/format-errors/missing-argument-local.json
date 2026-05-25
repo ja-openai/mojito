@@ -1,0 +1,27 @@
+{
+  "name": "missing-argument-local",
+  "model": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "displayName",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "name" }
+        }
+      }
+    ],
+    "pattern": [
+      "Hello, ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "displayName" }
+      },
+      "!"
+    ]
+  },
+  "locale": "en",
+  "arguments": {},
+  "expectedError": { "code": "unresolved-variable" }
+}

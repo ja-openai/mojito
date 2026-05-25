@@ -1,0 +1,25 @@
+{
+  "name": "invalid-input-declaration-literal",
+  "model": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "count" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "pattern": ["Count"]
+  },
+  "locale": "en",
+  "arguments": {
+    "count": 1
+  },
+  "expectedError": {
+    "code": "invalid-input-declaration"
+  }
+}

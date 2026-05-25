@@ -1,0 +1,16 @@
+{
+  "name": "escaped-braces",
+  "source": "Use \\{left\\}, \\{right\\}, and \\\\.",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": ["Use {left}, {right}, and \\."]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Use {left}, {right}, and \\."
+    }
+  ]
+}
