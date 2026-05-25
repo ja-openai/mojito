@@ -1,0 +1,177 @@
+# MF2 CLDR Data Generation
+
+This subproject owns generated locale data used by MF2 runtimes. It starts with
+plural rules because plural data is small enough to ship selectively and is
+updated independently from parser/runtime code.
+
+Regenerate the vendored plural rule implementations for every runtime package:
+
+```sh
+sh update_generated.sh
+```
+
+Generate a custom locale subset for an embedded or product-specific build:
+
+```sh
+python3 generator/generate_plural_rules.py \
+  --locales en,fr,ru,ar,ja \
+  --targets java \
+  --java-source-root \
+  --out /tmp/mf2-plurals-custom
+```
+
+The checked-in runtime data is:
+
+- `generated/all`: every locale present in CLDR supplemental plural data. This
+  is the default runtime data used by Rust, Swift, Python, Java, Kotlin,
+  JavaScript, Go, and PHP.
+
+Current size smoke results from CLDR `main` on 2026-05-19:
+
+- all CLDR plural locales: JSON ~125 KB, Python ~116 KB, Rust ~62 KB, Swift
+  ~81 KB, Java ~71 KB, Kotlin ~64 KB, JavaScript ~53 KB, PHP ~69 KB
+
+Locale filtering remains a generator capability, not a first-class checked-in
+artifact. For embedded clients, generate a product locale allowlist in the
+client build and validate it against the same conformance/ICU comparison tools.
+
+The generator emits:
+
+- `plural_rules.json`: compact shared rule data and metadata
+- `python/cldr_plural_rules.py`: Python evaluator and generated data
+- `rust/cldr_plural_rules.rs`: Rust evaluator and generated data
+- `swift/CldrPluralRules.swift`: Swift evaluator and generated data
+- `java/com/box/l10n/mojito/mf2/CldrPluralRules.java`: Java evaluator
+  and generated data
+- `kotlin/com/box/l10n/mojito/mf2/CldrPluralRules.kt`: Kotlin
+  evaluator and generated data
+- `javascript/cldr_plural_rules.js`: JavaScript evaluator and generated data
+- `go/cldr_plural_rules.go`: Go evaluator and generated data
+- `php/CldrPluralRules.php`: PHP evaluator and generated data
+
+Use `--targets` to emit only the files a language build needs. For example,
+`--java-package` controls the generated package name and `--java-source-root`
+targets a Java source tree directly.
+
+The generated evaluators intentionally depend on each runtime's tiny
+`LocaleKey` helper for canonicalization and structural lookup. The generated
+part owns plural rule data and plural-specific parent maps; `LocaleKey` owns the
+shared string algorithm and remains independent of parser/runtime formatting.
+
+Locale IDs in generated data are canonical BCP47-style keys such as `pt-PT`,
+not CLDR underscore keys. The generated evaluators accept underscore input for
+compatibility, strip extensions such as `u-nu-latn` for plural lookup, and walk
+the structural fallback chain. The `parents` maps are generated only from
+plural-specific parent locale data. CLDR's general resource `parentLocales`
+rules are intentionally not applied to plural selection; ICU4J comparison probes
+cover cases like `pt-AO`, `sr-Latn`, `az-Arab`, and Unicode extensions.
+
+Runtime packages vendor the all-locale generated file into their package source
+trees so they remain installable without reaching outside the package. Use
+`check_generated.sh` in CI to fail when vendored generated files drift from the
+shared generator.
+
+Validate generated all-locale cardinal and ordinal category selection against
+ICU4J `PluralRules`:
+
+```sh
+sh validate_plural_rules.sh
+```
+
+This compares category keywords only, not formatted message output. Number
+formatting and localized decimal separators belong in later number-formatting
+tests.
+
+## Experimental Number Data
+
+`generated/experimental-number/number_data.json` is an experimental,
+drop-without-migration probe for generated number/currency data. It is not used
+by the runtime packages yet, and it should not be treated as a stable data
+contract. The current artifact keeps a deliberately tiny set of probe locales
+and currencies so we can compare shape, size, and ICU behavior before deciding
+whether generated number formatting is worth productizing.
+
+Regenerate the experimental data:
+
+```sh
+python3 generator/generate_number_data.py --out generated/experimental-number --clean
+```
+
+Generate a custom probe set:
+
+```sh
+python3 generator/generate_number_data.py \
+  --locales en-US,fr-FR,ja-JP,ar-EG \
+  --currencies USD,EUR,JPY \
+  --out /tmp/mf2-number-probe
+```
+
+Validate the checked-in experimental artifact:
+
+```sh
+sh validate_number_data.sh
+```
+
+Keep full date/calendar data out of this subproject until needed. Plural rules
+are small enough to ship broadly; number/currency data needs this separate
+experimental track before it becomes a runtime dependency.
+
+The generator currently sets compact decimal operands `c`/`e` to zero. That is
+correct for ordinary numeric arguments but not enough for compact-decimal
+selection semantics; wire runtime number formatting into operands before relying
+on compact exponent rules.
+
+## Relative-Time Data
+
+`generated/relative-time/all/relative_time.json` is a generated CLDR
+relative-time data artifact for a future optional `:relativeTime` function
+package. It is not part of the tiny MF2 core runtime yet. The data comes from
+CLDR `cldr-dates-full` `dateFields` and keeps localized numeric patterns such
+as `{0}m ago`, `in {0} days`, and locale-specific forms that deliberately omit
+`{0}` for categories like Arabic `one`/`two`.
+
+Regenerate all-locale relative-time data:
+
+```sh
+python3 generator/generate_relative_time_data.py \
+  --out generated/relative-time/all \
+  --clean
+```
+
+Generate an embedded/client-side subset:
+
+```sh
+python3 generator/generate_relative_time_data.py \
+  --locales en,fr,ja \
+  --styles narrow,short \
+  --units second,minute,hour,day \
+  --numeric-only \
+  --out /tmp/mf2-relative-time-custom \
+  --clean
+```
+
+Validate the checked-in relative-time artifact:
+
+```sh
+sh validate_relative_time_data.sh
+```
+
+The validator reads known CLDR samples from
+`fixtures/relative-time-patterns.json` so future generator changes keep the data
+contract visible instead of burying sample expectations in Python code.
+
+Current size smoke results from CLDR `main` on 2026-05-21:
+
+- all locales, long/short/narrow, numeric patterns plus natural relative terms:
+  JSON ~2.9 MB, gzip ~123 KB, deduplicated to 269 pattern sets for 766 locales
+- all locales, long/short/narrow, numeric-only: JSON ~1.5 MB
+- all locales, narrow-only, numeric-only: JSON ~518 KB
+
+MF2 does not currently standardize a `:relativeTime` function. Treat this data
+as the generated-locale-data foundation for a Mojito/UMF registry function, not
+as a core MessageFormat 2 grammar feature.
+
+Do not silently ship the all-locale artifact in tiny runtime cores. Java/Kotlin
+relative-time support should be an explicit CLDR/ICU adapter with a resource
+packaging decision: full all-locale server data, generated locale subsets for
+embedded clients, or platform ICU where the host provides a supported API.
