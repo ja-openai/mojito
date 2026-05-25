@@ -1,0 +1,344 @@
+package com.box.l10n.mojito.mf2;
+
+import java.text.NumberFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.FormatStyle;
+import java.util.Currency;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+
+final class Mf2JdkFunctions {
+    private Mf2JdkFunctions() {}
+
+    static void registerFormatters(Map<String, Mf2FunctionRegistry.Formatter> formatters) {
+        formatters.put("number", Mf2JdkFunctions::formatNumber);
+        formatters.put("percent", Mf2JdkFunctions::formatPercent);
+        formatters.put("integer", Mf2JdkFunctions::formatInteger);
+        formatters.put("currency", Mf2JdkFunctions::formatCurrency);
+        formatters.put("datetime", Mf2JdkFunctions::formatDateTime);
+        formatters.put("date", Mf2JdkFunctions::formatDate);
+        formatters.put("time", Mf2JdkFunctions::formatTime);
+    }
+
+    private static String formatNumber(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        double value = Mf2FunctionSupport.parseCallDecimal(call, "Number function requires a numeric operand.");
+        NumberFormat format = NumberFormat.getNumberInstance(locale(call.locale()));
+        format.setGroupingUsed(false);
+        Integer minimumFractionDigits = minimumFractionDigits(call);
+        if (minimumFractionDigits != null) {
+            format.setMinimumFractionDigits(minimumFractionDigits);
+        }
+        return applySignDisplay(format.format(value), value, call);
+    }
+
+    private static String formatPercent(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        double value = Mf2FunctionSupport.parseCallDecimal(call, "Percent function requires a numeric operand.");
+        NumberFormat format = NumberFormat.getPercentInstance(locale(call.locale()));
+        format.setGroupingUsed(false);
+        Integer minimumFractionDigits = minimumFractionDigits(call);
+        if (minimumFractionDigits != null) {
+            format.setMinimumFractionDigits(minimumFractionDigits);
+        }
+        Integer maximumFractionDigits = maximumFractionDigits(call);
+        if (maximumFractionDigits != null) {
+            format.setMaximumFractionDigits(maximumFractionDigits);
+        }
+        return applySignDisplay(format.format(value), value, call);
+    }
+
+    private static String formatInteger(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        double value = Mf2FunctionSupport.parseCallDecimal(call, "Integer function requires a numeric operand.");
+        NumberFormat format = NumberFormat.getIntegerInstance(locale(call.locale()));
+        format.setGroupingUsed(false);
+        return applySignDisplay(format.format((long) value), value, call);
+    }
+
+    private static String formatCurrency(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        double value = Mf2FunctionSupport.parseCallDecimal(
+                call, "Currency function requires a numeric operand.");
+        String currency = currencyCode(call);
+        if (currency == null) {
+            throw Mf2Exception.badOperand("Currency function requires a currency option.");
+        }
+        NumberFormat format = NumberFormat.getCurrencyInstance(locale(call.locale()));
+        try {
+            format.setCurrency(Currency.getInstance(currency));
+        } catch (IllegalArgumentException error) {
+            throw Mf2Exception.badOperand("Currency option must be an ISO 4217 currency code.");
+        }
+        Integer fractionDigits = currencyFractionDigits(call);
+        if (fractionDigits != null) {
+            format.setMinimumFractionDigits(fractionDigits);
+            format.setMaximumFractionDigits(fractionDigits);
+        }
+        return format.format(value);
+    }
+
+    private static String formatDate(Mf2FunctionRegistry.FunctionCall call) throws Mf2Exception {
+        LocalDate date = dateFrom(call.rawValue(), call.value())
+                .or(() -> parseSourceLocalDate(call.inheritedSource()))
+                .orElseThrow(() -> Mf2Exception.badOperand("Date function requires a date or datetime operand."));
+        return DateTimeFormatter.ofLocalizedDate(dateStyle(call.optionValue("length", call.optionValue("style", "short"))))
+                .withLocale(locale(call.locale()))
+                .format(date);
+    }
+
+    private static String formatTime(Mf2FunctionRegistry.FunctionCall call) throws Mf2Exception {
+        LocalTime time = timeFrom(call.rawValue(), call.value())
+                .or(() -> parseSourceLocalTime(call.inheritedSource()))
+                .orElseThrow(() -> Mf2Exception.badOperand("Datetime and time functions require a datetime operand."));
+        return DateTimeFormatter.ofLocalizedTime(timeStyle(call.optionValue("precision", call.optionValue("style", "short"))))
+                .withLocale(locale(call.locale()))
+                .format(time);
+    }
+
+    private static String formatDateTime(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        ZonedDateTime dateTime = zonedDateTimeFrom(call.rawValue(), call.value())
+                .or(() -> parseSourceZonedDateTime(call.inheritedSource()))
+                .orElseThrow(() -> Mf2Exception.badOperand("Datetime function requires a date or datetime operand."));
+        FormatStyle style = call.optionValue("style", null) == null ? null : dateStyle(call.optionValue("style", "short"));
+        FormatStyle dateStyle = style != null ? style : dateStyle(call.optionValue("dateLength", "short"));
+        FormatStyle timeStyle = style != null ? style : timeStyle(call.optionValue("timePrecision", "short"));
+        return DateTimeFormatter.ofLocalizedDateTime(dateStyle, timeStyle)
+                .withLocale(locale(call.locale()))
+                .format(dateTime);
+    }
+
+    private static String currencyCode(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        String currency = call.optionValue("currency", null);
+        if (currency != null) {
+            return currency;
+        }
+        return inheritedCurrencyCode(call.inheritedSource());
+    }
+
+    private static String inheritedCurrencyCode(Mf2FunctionRegistry.FunctionSourceRef source)
+            throws Mf2Exception {
+        if (source == null) {
+            return null;
+        }
+        if (source.function().name().equals("currency")) {
+            String currency = source.optionValue("currency", null);
+            if (currency != null) {
+                return currency;
+            }
+        }
+        return inheritedCurrencyCode(source.inheritedSource());
+    }
+
+    private static Integer currencyFractionDigits(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        String value = call.optionValue("fractionDigits", null);
+        if (value == null || value.equals("auto")) {
+            return null;
+        }
+        return Mf2FunctionSupport.parseNonNegativeOption(
+                value, "fractionDigits option must be auto or a non-negative integer.");
+    }
+
+    private static Integer minimumFractionDigits(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        String value = call.optionValue("minimumFractionDigits", null);
+        if (value == null) {
+            return null;
+        }
+        return Mf2FunctionSupport.parseNonNegativeOption(value, "minimumFractionDigits option must be a non-negative integer.");
+    }
+
+    private static Integer maximumFractionDigits(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        String value = call.optionValue("maximumFractionDigits", null);
+        if (value == null) {
+            return null;
+        }
+        return Mf2FunctionSupport.parseNonNegativeOption(value, "maximumFractionDigits option must be a non-negative integer.");
+    }
+
+    private static String applySignDisplay(
+            String formatted, double value, Mf2FunctionRegistry.FunctionCall call) {
+        if (value >= 0.0 && "always".equals(functionOptionLiteral(call.function(), "signDisplay", null))) {
+            return "+" + formatted;
+        }
+        return formatted;
+    }
+
+    private static String functionOptionLiteral(Mf2Message.FunctionRef function, String name, String fallback) {
+        Mf2Message.ExpressionArgument option = function.options().get(name);
+        return option instanceof Mf2Message.LiteralArgument literal ? literal.value() : fallback;
+    }
+
+    private static Locale locale(String locale) {
+        return Locale.forLanguageTag(locale.replace('_', '-'));
+    }
+
+    private static FormatStyle dateStyle(String value) throws Mf2Exception {
+        return switch (value) {
+            case "full" -> FormatStyle.FULL;
+            case "long" -> FormatStyle.LONG;
+            case "medium" -> FormatStyle.MEDIUM;
+            case "short" -> FormatStyle.SHORT;
+            default -> throw Mf2FunctionSupport.badOption("Date length option must be full, long, medium, or short.");
+        };
+    }
+
+    private static FormatStyle timeStyle(String value) throws Mf2Exception {
+        return switch (value) {
+            case "full", "long", "medium", "short", "second" -> FormatStyle.MEDIUM;
+            default -> throw Mf2FunctionSupport.badOption("Time precision option must be full, long, medium, short, or second.");
+        };
+    }
+
+    private static Optional<LocalDate> dateFrom(Object rawValue, String renderedValue) {
+        if (rawValue instanceof LocalDate value) {
+            return Optional.of(value);
+        }
+        if (rawValue instanceof LocalDateTime value) {
+            return Optional.of(value.toLocalDate());
+        }
+        if (rawValue instanceof OffsetDateTime value) {
+            return Optional.of(value.toLocalDate());
+        }
+        if (rawValue instanceof ZonedDateTime value) {
+            return Optional.of(value.toLocalDate());
+        }
+        if (rawValue instanceof Instant value) {
+            return Optional.of(value.atZone(ZoneOffset.UTC).toLocalDate());
+        }
+        if (rawValue instanceof java.util.Date value) {
+            return Optional.of(value.toInstant().atZone(ZoneOffset.UTC).toLocalDate());
+        }
+        return parseLocalDate(renderedValue)
+                .or(() -> parseLocalDateTime(renderedValue).map(LocalDateTime::toLocalDate))
+                .or(() -> parseZonedDateTime(renderedValue).map(ZonedDateTime::toLocalDate));
+    }
+
+    private static Optional<LocalTime> timeFrom(Object rawValue, String renderedValue) {
+        if (rawValue instanceof LocalTime value) {
+            return Optional.of(value);
+        }
+        if (rawValue instanceof LocalDateTime value) {
+            return Optional.of(value.toLocalTime());
+        }
+        if (rawValue instanceof OffsetDateTime value) {
+            return Optional.of(value.toLocalTime());
+        }
+        if (rawValue instanceof ZonedDateTime value) {
+            return Optional.of(value.toLocalTime());
+        }
+        if (rawValue instanceof Instant value) {
+            return Optional.of(value.atZone(ZoneOffset.UTC).toLocalTime());
+        }
+        if (rawValue instanceof java.util.Date value) {
+            return Optional.of(value.toInstant().atZone(ZoneOffset.UTC).toLocalTime());
+        }
+        return parseLocalTime(renderedValue)
+                .or(() -> parseLocalDateTime(renderedValue).map(LocalDateTime::toLocalTime))
+                .or(() -> parseZonedDateTime(renderedValue).map(ZonedDateTime::toLocalTime));
+    }
+
+    private static Optional<ZonedDateTime> zonedDateTimeFrom(Object rawValue, String renderedValue) {
+        if (rawValue instanceof ZonedDateTime value) {
+            return Optional.of(value);
+        }
+        if (rawValue instanceof OffsetDateTime value) {
+            return Optional.of(value.toZonedDateTime());
+        }
+        if (rawValue instanceof Instant value) {
+            return Optional.of(value.atZone(ZoneOffset.UTC));
+        }
+        if (rawValue instanceof java.util.Date value) {
+            return Optional.of(value.toInstant().atZone(ZoneOffset.UTC));
+        }
+        if (rawValue instanceof LocalDateTime value) {
+            return Optional.of(value.atZone(ZoneOffset.UTC));
+        }
+        if (rawValue instanceof LocalDate value) {
+            return Optional.of(value.atStartOfDay(ZoneOffset.UTC));
+        }
+        return parseZonedDateTime(renderedValue)
+                .or(() -> parseLocalDateTime(renderedValue).map(value -> value.atZone(ZoneOffset.UTC)))
+                .or(() -> parseLocalDate(renderedValue).map(value -> value.atStartOfDay(ZoneOffset.UTC)));
+    }
+
+    private static Optional<LocalDate> parseSourceLocalDate(
+            Mf2FunctionRegistry.FunctionSourceRef source) {
+        if (source == null) {
+            return Optional.empty();
+        }
+        Optional<LocalDate> date = dateFrom(source.value(), source.value());
+        return date.isPresent() ? date : parseSourceLocalDate(source.inheritedSource());
+    }
+
+    private static Optional<LocalTime> parseSourceLocalTime(
+            Mf2FunctionRegistry.FunctionSourceRef source) {
+        if (source == null) {
+            return Optional.empty();
+        }
+        Optional<LocalTime> time = timeFrom(source.value(), source.value());
+        return time.isPresent() ? time : parseSourceLocalTime(source.inheritedSource());
+    }
+
+    private static Optional<ZonedDateTime> parseSourceZonedDateTime(
+            Mf2FunctionRegistry.FunctionSourceRef source) {
+        if (source == null) {
+            return Optional.empty();
+        }
+        Optional<ZonedDateTime> dateTime = zonedDateTimeFrom(source.value(), source.value());
+        return dateTime.isPresent() ? dateTime : parseSourceZonedDateTime(source.inheritedSource());
+    }
+
+    private static Optional<LocalDate> parseLocalDate(String value) {
+        try {
+            return Optional.of(LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE));
+        } catch (DateTimeParseException error) {
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<LocalTime> parseLocalTime(String value) {
+        try {
+            return Optional.of(LocalTime.parse(value, DateTimeFormatter.ISO_LOCAL_TIME));
+        } catch (DateTimeParseException error) {
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<LocalDateTime> parseLocalDateTime(String value) {
+        try {
+            return Optional.of(LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        } catch (DateTimeParseException error) {
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<ZonedDateTime> parseZonedDateTime(String value) {
+        try {
+            return Optional.of(ZonedDateTime.parse(value));
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return Optional.of(OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toZonedDateTime());
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return Optional.of(Instant.parse(value).atZone(ZoneOffset.UTC));
+        } catch (DateTimeParseException ignored) {
+            return Optional.empty();
+        }
+    }
+}
