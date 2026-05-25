@@ -1,0 +1,80 @@
+package com.box.l10n.mojito.mf2;
+
+public final class Mf2Exception extends Exception {
+    private static final long serialVersionUID = 1L;
+
+    private final String code;
+
+    public Mf2Exception(String code, String message) {
+        super(message);
+        this.code = code;
+    }
+
+    public String code() {
+        return code;
+    }
+
+    static Mf2Exception missingArgument(String name) {
+        return new Mf2Exception("missing-argument", "Missing argument $" + name + ".");
+    }
+
+    static Mf2Exception unresolvedVariable(String name) {
+        return new Mf2Exception("unresolved-variable", "Variable $" + name + " could not be resolved.");
+    }
+
+    static Mf2Exception unsupportedFunction(String name) {
+        return new Mf2Exception(
+                "unsupported-function",
+                "Function :" + name + " is not supported by this formatter registry.");
+    }
+
+    static Mf2Exception badOperand(String message) {
+        return new Mf2Exception("bad-operand", message);
+    }
+
+    static Mf2Exception duplicateDeclaration(String name) {
+        return new Mf2Exception(
+                "duplicate-declaration",
+                "Declaration $" + name + " is defined more than once.");
+    }
+
+    static Mf2Exception variantKeyCountMismatch() {
+        return new Mf2Exception(
+                "variant-key-count-mismatch",
+                "Variant key count must match selector count.");
+    }
+
+    static Mf2Exception duplicateVariant() {
+        return new Mf2Exception(
+                "duplicate-variant",
+                "Select variants must have unique key tuples.");
+    }
+
+    static Mf2Exception missingFallbackVariant() {
+        return new Mf2Exception(
+                "missing-fallback-variant",
+                "Select messages must include a catch-all fallback variant.");
+    }
+
+    static Mf2Exception missingSelectorAnnotation(String name) {
+        return new Mf2Exception(
+                "missing-selector-annotation",
+                "Selector $" + name + " must reference a declaration with a function.");
+    }
+
+    static Mf2Exception invalidInputDeclaration(String name) {
+        return new Mf2Exception(
+                "invalid-input-declaration",
+                "Input declaration $" + name + " must bind the same variable name.");
+    }
+
+    static Mf2Exception invalidPatternText() {
+        return new Mf2Exception(
+                "invalid-pattern-text", "Pattern text parts must be non-empty.");
+    }
+
+    static Mf2Exception invalidMarkupKind() {
+        return new Mf2Exception(
+                "invalid-markup-kind", "Markup kind must be open, standalone, or close.");
+    }
+}
