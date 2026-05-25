@@ -1,0 +1,230 @@
+{
+  "messages": {
+    "assignee.files": {
+      "en": {
+        "type": "select",
+        "declarations": [
+          {
+            "type": "input",
+            "name": "gender",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "gender" },
+              "function": { "type": "function", "name": "string" }
+            }
+          },
+          {
+            "type": "input",
+            "name": "count",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "count" },
+              "function": { "type": "function", "name": "number" }
+            }
+          }
+        ],
+        "selectors": [
+          { "type": "variable", "name": "gender" },
+          { "type": "variable", "name": "count" }
+        ],
+        "variants": [
+          {
+            "keys": [
+              { "type": "literal", "value": "male" },
+              { "type": "literal", "value": "one" }
+            ],
+            "value": ["He reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " file"]
+          },
+          {
+            "keys": [
+              { "type": "literal", "value": "female" },
+              { "type": "literal", "value": "one" }
+            ],
+            "value": ["She reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " file"]
+          },
+          {
+            "keys": [
+              { "type": "literal", "value": "male" },
+              { "type": "*" }
+            ],
+            "value": ["He reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " files"]
+          },
+          {
+            "keys": [
+              { "type": "literal", "value": "female" },
+              { "type": "*" }
+            ],
+            "value": ["She reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " files"]
+          },
+          {
+            "keys": [
+              { "type": "*" },
+              { "type": "*" }
+            ],
+            "value": ["They reviewed ", { "type": "expression", "arg": { "type": "variable", "name": "count" } }, " files"]
+          }
+        ]
+      }
+    },
+    "cart.items": {
+      "en": {
+        "type": "select",
+        "declarations": [
+          {
+            "type": "input",
+            "name": "count",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "count" },
+              "function": { "type": "function", "name": "number" }
+            }
+          }
+        ],
+        "selectors": [{ "type": "variable", "name": "count" }],
+        "variants": [
+          {
+            "keys": [{ "type": "literal", "value": "one" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " item"]
+          },
+          {
+            "keys": [{ "type": "*" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " items"]
+          }
+        ]
+      },
+      "fr": {
+        "type": "select",
+        "declarations": [
+          {
+            "type": "input",
+            "name": "count",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "count" },
+              "function": { "type": "function", "name": "number" }
+            }
+          }
+        ],
+        "selectors": [{ "type": "variable", "name": "count" }],
+        "variants": [
+          {
+            "keys": [{ "type": "literal", "value": "one" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " article"]
+          },
+          {
+            "keys": [{ "type": "*" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " articles"]
+          }
+        ]
+      },
+      "ru": {
+        "type": "select",
+        "declarations": [
+          {
+            "type": "input",
+            "name": "count",
+            "value": {
+              "type": "expression",
+              "arg": { "type": "variable", "name": "count" },
+              "function": { "type": "function", "name": "number" }
+            }
+          }
+        ],
+        "selectors": [{ "type": "variable", "name": "count" }],
+        "variants": [
+          {
+            "keys": [{ "type": "literal", "value": "one" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " предмет"]
+          },
+          {
+            "keys": [{ "type": "literal", "value": "few" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " предмета"]
+          },
+          {
+            "keys": [{ "type": "literal", "value": "many" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " предметов"]
+          },
+          {
+            "keys": [{ "type": "*" }],
+            "value": [{ "type": "expression", "arg": { "type": "variable", "name": "count" } }, " предмета"]
+          }
+        ]
+      }
+    },
+    "checkout.total": {
+      "en": {
+        "type": "message",
+        "declarations": [],
+        "pattern": [
+          "Total: ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "amount" },
+            "function": {
+              "type": "function",
+              "name": "currency",
+              "options": {
+                "currency": { "type": "literal", "value": "USD" }
+              }
+            }
+          }
+        ]
+      },
+      "fr": {
+        "type": "message",
+        "declarations": [],
+        "pattern": [
+          "Total : ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "amount" },
+            "function": {
+              "type": "function",
+              "name": "currency",
+              "options": {
+                "currency": { "type": "literal", "value": "EUR" }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "file.saved": {
+      "en": {
+        "type": "message",
+        "declarations": [],
+        "pattern": [
+          "File ",
+          { "type": "expression", "arg": { "type": "variable", "name": "fileName" } },
+          " saved."
+        ]
+      }
+    },
+    "debug.raw": {
+      "en": {
+        "type": "message",
+        "declarations": [],
+        "pattern": [
+          "Raw: ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "value" },
+            "function": { "type": "function", "name": "rawType" }
+          }
+        ]
+      }
+    },
+    "welcome": {
+      "en": {
+        "type": "message",
+        "declarations": [],
+        "pattern": ["Welcome, ", { "type": "expression", "arg": { "type": "variable", "name": "name" } }, "!"]
+      },
+      "fr": {
+        "type": "message",
+        "declarations": [],
+        "pattern": ["Bienvenue, ", { "type": "expression", "arg": { "type": "variable", "name": "name" } }, " !"]
+      }
+    }
+  }
+}

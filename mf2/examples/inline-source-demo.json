@@ -1,0 +1,194 @@
+{
+  "cases": [
+    {
+      "label": "welcome",
+      "source": "Welcome, {$name}!",
+      "locale": "en",
+      "arguments": { "name": "Mojito" },
+      "expected": "Welcome, Mojito!"
+    },
+    {
+      "label": "checkout.total",
+      "source": "Total: {$amount :currency currency=USD}",
+      "locale": "en",
+      "arguments": { "amount": 1234.5 },
+      "expected": "Total: $1,234.50"
+    },
+    {
+      "label": "checkout.total",
+      "source": "Total : {$amount :currency currency=EUR}",
+      "locale": "fr",
+      "arguments": { "amount": 1234.5 },
+      "expected": "Total : 1\u202f234,50 €"
+    },
+    {
+      "label": "file.saved",
+      "source": "File {$fileName} saved.",
+      "locale": "en",
+      "bidiIsolation": "default",
+      "arguments": { "fileName": "\u05e9\u05dc\u05d5\u05dd.txt" },
+      "expected": "File \u2068\u05e9\u05dc\u05d5\u05dd.txt\u2069 saved."
+    },
+    {
+      "label": "local.alias",
+      "source": ".local $product = {|Mojito|}\n.local $hello = {|Welcome|}\n{{{$hello} to {$product}.}}",
+      "locale": "en",
+      "arguments": {},
+      "expected": "Welcome to Mojito."
+    },
+    {
+      "label": "unicode.identifiers",
+      "source": ".input {$caf\u00e9 :number}\n.local $\u30e6\u30fc\u30b6\u30fc = {|Mojito|}\n{{{$\u30e6\u30fc\u30b6\u30fc}: {$caf\u00e9}}}",
+      "locale": "en",
+      "arguments": { "caf\u00e9": 7 },
+      "expected": "Mojito: 7"
+    },
+    {
+      "label": "cart.items",
+      "source": ".input {$count :number}\n.match $count\none {{{$count} item}}\n* {{{$count} items}}",
+      "locale": "en",
+      "arguments": { "count": 1 },
+      "expected": "1 item"
+    },
+    {
+      "label": "cart.items",
+      "source": ".input {$count :number}\n.match $count\none {{{$count} item}}\n* {{{$count} items}}",
+      "locale": "en",
+      "arguments": { "count": 5 },
+      "expected": "5 items"
+    },
+    {
+      "label": "cart.items",
+      "source": ".input {$count :number}\n.match $count\none {{{$count} предмет}}\nfew {{{$count} предмета}}\nmany {{{$count} предметов}}\n* {{{$count} предмета}}",
+      "locale": "ru",
+      "arguments": { "count": 2 },
+      "expected": "2 предмета"
+    },
+    {
+      "label": "cart.items",
+      "source": ".input {$count :number}\n.match $count\none {{{$count} предмет}}\nfew {{{$count} предмета}}\nmany {{{$count} предметов}}\n* {{{$count} предмета}}",
+      "locale": "ru",
+      "arguments": { "count": 5 },
+      "expected": "5 предметов"
+    },
+    {
+      "label": "rank.ordinal",
+      "source": ".input {$rank :number select=ordinal}\n.match $rank\none {{{$rank}st}}\ntwo {{{$rank}nd}}\nfew {{{$rank}rd}}\n* {{{$rank}th}}",
+      "locale": "en",
+      "arguments": { "rank": 21 },
+      "expected": "21st"
+    },
+    {
+      "label": "stock.exact",
+      "source": ".input {$count :number select=exact}\n.match $count\n1 {{Exactly one left}}\none {{Plural one}}\n* {{Other stock count}}",
+      "locale": "en",
+      "arguments": { "count": 1 },
+      "expected": "Exactly one left"
+    },
+    {
+      "label": "activity.age",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": -90 },
+      "expected": "2m ago"
+    },
+    {
+      "label": "activity.age",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "ja",
+      "arguments": { "delta": 180 },
+      "expected": "3分後"
+    },
+    {
+      "label": "activity.age",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "ar",
+      "arguments": { "delta": -60 },
+      "expected": "قبل دقيقة واحدة"
+    },
+    {
+      "label": "activity.chat",
+      "source": "{$delta :relativeTime style=narrow numeric=auto policy=chat}",
+      "locale": "en",
+      "arguments": { "delta": -44 },
+      "expected": "now"
+    },
+    {
+      "label": "assignee.files",
+      "source": ".input {$gender :string}\n.input {$count :number}\n.match $gender $count\nmale one {{He reviewed {$count} file}}\nfemale one {{She reviewed {$count} file}}\nmale * {{He reviewed {$count} files}}\nfemale * {{She reviewed {$count} files}}\n* * {{They reviewed {$count} files}}",
+      "locale": "en",
+      "arguments": { "gender": "male", "count": 1 },
+      "expected": "He reviewed 1 file"
+    },
+    {
+      "label": "assignee.files",
+      "source": ".input {$gender :string}\n.input {$count :number}\n.match $gender $count\nmale one {{He reviewed {$count} file}}\nfemale one {{She reviewed {$count} file}}\nmale * {{He reviewed {$count} files}}\nfemale * {{She reviewed {$count} files}}\n* * {{They reviewed {$count} files}}",
+      "locale": "en",
+      "arguments": { "gender": "female", "count": 3 },
+      "expected": "She reviewed 3 files"
+    },
+    {
+      "label": "assignee.files",
+      "source": ".input {$gender :string}\n.input {$count :number}\n.match $gender $count\nmale one {{He reviewed {$count} file}}\nfemale one {{She reviewed {$count} file}}\nmale * {{He reviewed {$count} files}}\nfemale * {{She reviewed {$count} files}}\n* * {{They reviewed {$count} files}}",
+      "locale": "en",
+      "arguments": { "gender": "unknown", "count": 2 },
+      "expected": "They reviewed 2 files"
+    }
+  ],
+  "partsCases": [
+    {
+      "label": "link.parts",
+      "source": "Tap {#link href = $profileUrl @title = |Profile page|}profile{/link href = |profile|}. {$name :string label = |display name| @kind = person}",
+      "locale": "en",
+      "arguments": {
+        "name": "Jean",
+        "profileUrl": "/people/jean"
+      },
+      "expected": [
+        { "type": "text", "value": "Tap " },
+        {
+          "type": "markup",
+          "kind": "open",
+          "name": "link",
+          "options": {
+            "href": { "type": "variable", "name": "profileUrl" }
+          },
+          "attributes": {
+            "title": { "type": "literal", "value": "Profile page" }
+          }
+        },
+        { "type": "text", "value": "profile" },
+        {
+          "type": "markup",
+          "kind": "close",
+          "name": "link",
+          "options": {
+            "href": { "type": "literal", "value": "profile" }
+          }
+        },
+        { "type": "text", "value": ". " },
+        {
+          "type": "expression",
+          "value": "Jean",
+          "attributes": {
+            "kind": { "type": "literal", "value": "person" }
+          }
+        }
+      ]
+    }
+  ],
+  "fallbackCases": [
+    {
+      "label": "missing.name",
+      "source": "User: {$name}",
+      "locale": "en",
+      "arguments": {},
+      "expected": "User: {$name}",
+      "expectedParts": [
+        { "type": "text", "value": "User: " },
+        { "type": "fallback", "source": "$name" }
+      ],
+      "expectedErrors": [{ "code": "unresolved-variable" }]
+    }
+  ]
+}
