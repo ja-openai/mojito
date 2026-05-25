@@ -1,0 +1,887 @@
+// Generated from Unicode CLDR by mf2/cldr/update_generated.sh; do not edit by hand.
+use crate::locale_key::plural_lookup_chain;
+
+
+#[derive(Debug, Clone, Copy)]
+pub struct NumberOperands {
+    pub n: f64,
+    pub i: i64,
+    pub v: i64,
+    pub w: i64,
+    pub f: i64,
+    pub t: i64,
+    pub e: i64,
+    pub c: i64,
+}
+
+impl NumberOperands {
+    pub fn from_str(value: &str) -> Option<Self> {
+        let n = value.parse::<f64>().ok()?.abs();
+        if !n.is_finite() { return None; }
+        let normalized = value.trim_start_matches(['-', '+']).to_ascii_lowercase();
+        let base = normalized.split('e').next().unwrap_or(&normalized);
+        let fraction = base.split_once('.').map(|(_, fraction)| fraction).unwrap_or("");
+        let fraction_trimmed = fraction.trim_end_matches('0');
+        Some(Self {
+            n,
+            i: n.trunc() as i64,
+            v: fraction.len() as i64,
+            w: fraction_trimmed.len() as i64,
+            f: if fraction.is_empty() { 0 } else { fraction.parse().ok()? },
+            t: if fraction_trimmed.is_empty() { 0 } else { fraction_trimmed.parse().ok()? },
+            e: 0,
+            c: 0,
+        })
+    }
+
+    fn operand_i64(&self, name: &str) -> i64 {
+        match name {
+            "i" => self.i, "v" => self.v, "w" => self.w, "f" => self.f, "t" => self.t, "e" => self.e, "c" => self.c,
+            "n" => self.n as i64,
+            _ => 0,
+        }
+    }
+
+    fn operand_f64(&self, name: &str) -> f64 {
+        if name == "n" { self.n } else { self.operand_i64(name) as f64 }
+    }
+}
+
+pub fn select_cardinal(locale: &str, operands: NumberOperands) -> &'static str {
+    match lookup_rule_id(CARDINAL_LOCALES, CARDINAL_PARENTS, locale) {
+        Some("r0") => select_cardinal_r0(operands),
+        Some("r1") => select_cardinal_r1(operands),
+        Some("r2") => select_cardinal_r2(operands),
+        Some("r3") => select_cardinal_r3(operands),
+        Some("r4") => select_cardinal_r4(operands),
+        Some("r5") => select_cardinal_r5(operands),
+        Some("r6") => select_cardinal_r6(operands),
+        Some("r7") => select_cardinal_r7(operands),
+        Some("r8") => select_cardinal_r8(operands),
+        Some("r9") => select_cardinal_r9(operands),
+        Some("r10") => select_cardinal_r10(operands),
+        Some("r11") => select_cardinal_r11(operands),
+        Some("r12") => select_cardinal_r12(operands),
+        Some("r13") => select_cardinal_r13(operands),
+        Some("r14") => select_cardinal_r14(operands),
+        Some("r15") => select_cardinal_r15(operands),
+        Some("r16") => select_cardinal_r16(operands),
+        Some("r17") => select_cardinal_r17(operands),
+        Some("r18") => select_cardinal_r18(operands),
+        Some("r19") => select_cardinal_r19(operands),
+        Some("r20") => select_cardinal_r20(operands),
+        Some("r21") => select_cardinal_r21(operands),
+        Some("r22") => select_cardinal_r22(operands),
+        Some("r23") => select_cardinal_r23(operands),
+        Some("r24") => select_cardinal_r24(operands),
+        Some("r25") => select_cardinal_r25(operands),
+        Some("r26") => select_cardinal_r26(operands),
+        Some("r27") => select_cardinal_r27(operands),
+        Some("r28") => select_cardinal_r28(operands),
+        Some("r29") => select_cardinal_r29(operands),
+        Some("r30") => select_cardinal_r30(operands),
+        Some("r31") => select_cardinal_r31(operands),
+        Some("r32") => select_cardinal_r32(operands),
+        Some("r33") => select_cardinal_r33(operands),
+        Some("r34") => select_cardinal_r34(operands),
+        Some("r35") => select_cardinal_r35(operands),
+        Some("r36") => select_cardinal_r36(operands),
+        Some("r37") => select_cardinal_r37(operands),
+        Some("r38") => select_cardinal_r38(operands),
+        Some("r39") => select_cardinal_r39(operands),
+        _ => "other",
+    }
+}
+
+pub fn select_ordinal(locale: &str, operands: NumberOperands) -> &'static str {
+    match lookup_rule_id(ORDINAL_LOCALES, ORDINAL_PARENTS, locale) {
+        Some("r0") => select_ordinal_r0(operands),
+        Some("r1") => select_ordinal_r1(operands),
+        Some("r2") => select_ordinal_r2(operands),
+        Some("r3") => select_ordinal_r3(operands),
+        Some("r4") => select_ordinal_r4(operands),
+        Some("r5") => select_ordinal_r5(operands),
+        Some("r6") => select_ordinal_r6(operands),
+        Some("r7") => select_ordinal_r7(operands),
+        Some("r8") => select_ordinal_r8(operands),
+        Some("r9") => select_ordinal_r9(operands),
+        Some("r10") => select_ordinal_r10(operands),
+        Some("r11") => select_ordinal_r11(operands),
+        Some("r12") => select_ordinal_r12(operands),
+        Some("r13") => select_ordinal_r13(operands),
+        Some("r14") => select_ordinal_r14(operands),
+        Some("r15") => select_ordinal_r15(operands),
+        Some("r16") => select_ordinal_r16(operands),
+        Some("r17") => select_ordinal_r17(operands),
+        Some("r18") => select_ordinal_r18(operands),
+        Some("r19") => select_ordinal_r19(operands),
+        Some("r20") => select_ordinal_r20(operands),
+        Some("r21") => select_ordinal_r21(operands),
+        Some("r22") => select_ordinal_r22(operands),
+        Some("r23") => select_ordinal_r23(operands),
+        Some("r24") => select_ordinal_r24(operands),
+        _ => "other",
+    }
+}
+
+static CARDINAL_LOCALES: &[(&str, &str)] = &[
+    ("af", "r0"),
+    ("ak", "r1"),
+    ("am", "r2"),
+    ("an", "r0"),
+    ("ar", "r3"),
+    ("ars", "r3"),
+    ("as", "r2"),
+    ("asa", "r0"),
+    ("ast", "r4"),
+    ("az", "r0"),
+    ("bal", "r0"),
+    ("be", "r5"),
+    ("bem", "r0"),
+    ("bez", "r0"),
+    ("bg", "r0"),
+    ("bho", "r1"),
+    ("blo", "r6"),
+    ("bm", "r7"),
+    ("bn", "r2"),
+    ("bo", "r7"),
+    ("br", "r8"),
+    ("brx", "r0"),
+    ("bs", "r9"),
+    ("ca", "r10"),
+    ("ce", "r0"),
+    ("ceb", "r11"),
+    ("cgg", "r0"),
+    ("chr", "r0"),
+    ("ckb", "r0"),
+    ("cs", "r12"),
+    ("csw", "r1"),
+    ("cv", "r6"),
+    ("cy", "r13"),
+    ("da", "r14"),
+    ("de", "r4"),
+    ("doi", "r2"),
+    ("dsb", "r15"),
+    ("dv", "r0"),
+    ("dz", "r7"),
+    ("ee", "r0"),
+    ("el", "r0"),
+    ("en", "r4"),
+    ("eo", "r0"),
+    ("es", "r16"),
+    ("et", "r4"),
+    ("eu", "r0"),
+    ("fa", "r2"),
+    ("ff", "r17"),
+    ("fi", "r4"),
+    ("fil", "r11"),
+    ("fo", "r0"),
+    ("fr", "r18"),
+    ("fur", "r0"),
+    ("fy", "r4"),
+    ("ga", "r19"),
+    ("gd", "r20"),
+    ("gl", "r4"),
+    ("gsw", "r0"),
+    ("gu", "r2"),
+    ("guw", "r1"),
+    ("gv", "r21"),
+    ("ha", "r0"),
+    ("haw", "r0"),
+    ("he", "r22"),
+    ("hi", "r2"),
+    ("hnj", "r7"),
+    ("hr", "r9"),
+    ("hsb", "r15"),
+    ("hu", "r0"),
+    ("hy", "r17"),
+    ("ia", "r4"),
+    ("id", "r7"),
+    ("ie", "r4"),
+    ("ig", "r7"),
+    ("ii", "r7"),
+    ("io", "r4"),
+    ("is", "r23"),
+    ("it", "r10"),
+    ("iu", "r24"),
+    ("ja", "r7"),
+    ("jbo", "r7"),
+    ("jgo", "r0"),
+    ("jmc", "r0"),
+    ("jv", "r7"),
+    ("jw", "r7"),
+    ("ka", "r0"),
+    ("kab", "r17"),
+    ("kaj", "r0"),
+    ("kcg", "r0"),
+    ("kde", "r7"),
+    ("kea", "r7"),
+    ("kk", "r0"),
+    ("kkj", "r0"),
+    ("kl", "r0"),
+    ("km", "r7"),
+    ("kn", "r2"),
+    ("ko", "r7"),
+    ("kok", "r2"),
+    ("kok-Latn", "r2"),
+    ("ks", "r0"),
+    ("ksb", "r0"),
+    ("ksh", "r6"),
+    ("ku", "r0"),
+    ("kw", "r25"),
+    ("ky", "r0"),
+    ("lag", "r26"),
+    ("lb", "r0"),
+    ("lg", "r0"),
+    ("lij", "r4"),
+    ("lkt", "r7"),
+    ("lld", "r10"),
+    ("ln", "r1"),
+    ("lo", "r7"),
+    ("lt", "r27"),
+    ("lv", "r28"),
+    ("mas", "r0"),
+    ("mg", "r1"),
+    ("mgo", "r0"),
+    ("mk", "r29"),
+    ("ml", "r0"),
+    ("mn", "r0"),
+    ("mo", "r30"),
+    ("mr", "r0"),
+    ("ms", "r7"),
+    ("mt", "r31"),
+    ("my", "r7"),
+    ("nah", "r0"),
+    ("naq", "r24"),
+    ("nb", "r0"),
+    ("nd", "r0"),
+    ("ne", "r0"),
+    ("nl", "r4"),
+    ("nn", "r0"),
+    ("nnh", "r0"),
+    ("no", "r0"),
+    ("nqo", "r7"),
+    ("nr", "r0"),
+    ("nso", "r1"),
+    ("ny", "r0"),
+    ("nyn", "r0"),
+    ("om", "r0"),
+    ("or", "r0"),
+    ("os", "r0"),
+    ("osa", "r7"),
+    ("pa", "r1"),
+    ("pap", "r0"),
+    ("pcm", "r2"),
+    ("pl", "r32"),
+    ("prg", "r28"),
+    ("ps", "r0"),
+    ("pt", "r33"),
+    ("pt-PT", "r10"),
+    ("rm", "r0"),
+    ("ro", "r30"),
+    ("rof", "r0"),
+    ("ru", "r34"),
+    ("rwk", "r0"),
+    ("sah", "r7"),
+    ("saq", "r0"),
+    ("sat", "r24"),
+    ("sc", "r4"),
+    ("scn", "r10"),
+    ("sd", "r0"),
+    ("sdh", "r0"),
+    ("se", "r24"),
+    ("seh", "r0"),
+    ("ses", "r7"),
+    ("sg", "r7"),
+    ("sgs", "r35"),
+    ("sh", "r9"),
+    ("shi", "r36"),
+    ("si", "r37"),
+    ("sk", "r12"),
+    ("sl", "r38"),
+    ("sma", "r24"),
+    ("smi", "r24"),
+    ("smj", "r24"),
+    ("smn", "r24"),
+    ("sms", "r24"),
+    ("sn", "r0"),
+    ("so", "r0"),
+    ("sq", "r0"),
+    ("sr", "r9"),
+    ("ss", "r0"),
+    ("ssy", "r0"),
+    ("st", "r0"),
+    ("su", "r7"),
+    ("sv", "r4"),
+    ("sw", "r4"),
+    ("syr", "r0"),
+    ("ta", "r0"),
+    ("te", "r0"),
+    ("teo", "r0"),
+    ("th", "r7"),
+    ("ti", "r1"),
+    ("tig", "r0"),
+    ("tk", "r0"),
+    ("tl", "r11"),
+    ("tn", "r0"),
+    ("to", "r7"),
+    ("tpi", "r7"),
+    ("tr", "r0"),
+    ("ts", "r0"),
+    ("tzm", "r39"),
+    ("ug", "r0"),
+    ("uk", "r34"),
+    ("und", "r7"),
+    ("ur", "r4"),
+    ("uz", "r0"),
+    ("ve", "r0"),
+    ("vec", "r10"),
+    ("vi", "r7"),
+    ("vo", "r0"),
+    ("vun", "r0"),
+    ("wa", "r1"),
+    ("wae", "r0"),
+    ("wo", "r7"),
+    ("xh", "r0"),
+    ("xog", "r0"),
+    ("yi", "r4"),
+    ("yo", "r7"),
+    ("yue", "r7"),
+    ("zh", "r7"),
+    ("zu", "r2"),
+];
+
+static ORDINAL_LOCALES: &[(&str, &str)] = &[
+    ("af", "r0"),
+    ("am", "r0"),
+    ("an", "r0"),
+    ("ar", "r0"),
+    ("as", "r1"),
+    ("ast", "r0"),
+    ("az", "r2"),
+    ("bal", "r3"),
+    ("be", "r4"),
+    ("bg", "r0"),
+    ("blo", "r5"),
+    ("bn", "r1"),
+    ("bs", "r0"),
+    ("ca", "r6"),
+    ("ce", "r0"),
+    ("cs", "r0"),
+    ("cv", "r0"),
+    ("cy", "r7"),
+    ("da", "r0"),
+    ("de", "r0"),
+    ("dsb", "r0"),
+    ("el", "r0"),
+    ("en", "r8"),
+    ("es", "r0"),
+    ("et", "r0"),
+    ("eu", "r0"),
+    ("fa", "r0"),
+    ("fi", "r0"),
+    ("fil", "r3"),
+    ("fr", "r3"),
+    ("fy", "r0"),
+    ("ga", "r3"),
+    ("gd", "r9"),
+    ("gl", "r0"),
+    ("gsw", "r0"),
+    ("gu", "r10"),
+    ("he", "r0"),
+    ("hi", "r10"),
+    ("hr", "r0"),
+    ("hsb", "r0"),
+    ("hu", "r11"),
+    ("hy", "r3"),
+    ("ia", "r0"),
+    ("id", "r0"),
+    ("ie", "r0"),
+    ("is", "r0"),
+    ("it", "r12"),
+    ("ja", "r0"),
+    ("ka", "r13"),
+    ("kk", "r14"),
+    ("km", "r0"),
+    ("kn", "r0"),
+    ("ko", "r0"),
+    ("kok", "r15"),
+    ("kok-Latn", "r15"),
+    ("kw", "r16"),
+    ("ky", "r0"),
+    ("lij", "r17"),
+    ("lld", "r12"),
+    ("lo", "r3"),
+    ("lt", "r0"),
+    ("lv", "r0"),
+    ("mk", "r18"),
+    ("ml", "r0"),
+    ("mn", "r0"),
+    ("mo", "r3"),
+    ("mr", "r15"),
+    ("ms", "r3"),
+    ("my", "r0"),
+    ("nb", "r0"),
+    ("ne", "r19"),
+    ("nl", "r0"),
+    ("no", "r0"),
+    ("or", "r20"),
+    ("pa", "r0"),
+    ("pl", "r0"),
+    ("prg", "r0"),
+    ("ps", "r0"),
+    ("pt", "r0"),
+    ("ro", "r3"),
+    ("ru", "r0"),
+    ("sc", "r12"),
+    ("scn", "r17"),
+    ("sd", "r0"),
+    ("sh", "r0"),
+    ("si", "r0"),
+    ("sk", "r0"),
+    ("sl", "r0"),
+    ("sq", "r21"),
+    ("sr", "r0"),
+    ("sv", "r22"),
+    ("sw", "r0"),
+    ("ta", "r0"),
+    ("te", "r0"),
+    ("th", "r0"),
+    ("tk", "r23"),
+    ("tl", "r3"),
+    ("tpi", "r0"),
+    ("tr", "r0"),
+    ("uk", "r24"),
+    ("und", "r0"),
+    ("ur", "r0"),
+    ("uz", "r0"),
+    ("vec", "r12"),
+    ("vi", "r3"),
+    ("yue", "r0"),
+    ("zh", "r0"),
+    ("zu", "r0"),
+];
+
+static CARDINAL_PARENTS: &[(&str, &str)] = &[
+];
+
+static ORDINAL_PARENTS: &[(&str, &str)] = &[
+];
+
+fn lookup_rule_id(
+    locales: &'static [(&'static str, &'static str)],
+    parents: &'static [(&'static str, &'static str)],
+    locale: &str,
+) -> Option<&'static str> {
+    plural_lookup_chain(locale, parents)
+        .into_iter()
+        .find_map(|lookup| locales.iter().find(|(candidate, _)| *candidate == lookup).map(|(_, rule)| *rule))
+}
+
+fn select_cardinal_r0(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r1(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r2(operands: NumberOperands) -> &'static str {
+    if (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) || (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r3(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0 { return "zero"; }
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0 { return "two"; }
+    if (operands.operand_f64("n") % 100.0).fract() == 0.0 && 3.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 10.0 { return "few"; }
+    if (operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 99.0 { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r4(operands: NumberOperands) -> &'static str {
+    if 1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r5(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 1.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 11.0) { return "one"; }
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 2.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 4.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 12.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 14.0) { return "few"; }
+    if ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 0.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 0.0) || ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 5.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 9.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 14.0) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r6(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0 { return "zero"; }
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r7(_operands: NumberOperands) -> &'static str {
+    "other"
+}
+
+fn select_cardinal_r8(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 1.0 && !((((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 11.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 71.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 71.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 91.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 91.0))) { return "one"; }
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 2.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 2.0 && !((((operands.operand_f64("n") % 100.0).fract() == 0.0 && 12.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 12.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 72.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 72.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 92.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 92.0))) { return "two"; }
+    if (((operands.operand_f64("n") % 10.0).fract() == 0.0 && 3.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 4.0) || ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 9.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 9.0)) && !((((operands.operand_f64("n") % 100.0).fract() == 0.0 && 10.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 19.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 70.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 79.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 90.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 99.0))) { return "few"; }
+    if !(operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0) && (operands.operand_f64("n") % 1000000.0).fract() == 0.0 && 0.0 <= (operands.operand_f64("n") % 1000000.0) && (operands.operand_f64("n") % 1000000.0) <= 0.0 { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r9(operands: NumberOperands) -> &'static str {
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 1 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 1 && !(11 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 11)) || (1 <= (operands.operand_i64("f") % 10) && (operands.operand_i64("f") % 10) <= 1 && !(11 <= (operands.operand_i64("f") % 100) && (operands.operand_i64("f") % 100) <= 11)) { return "one"; }
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 2 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 4 && !(12 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 14)) || (2 <= (operands.operand_i64("f") % 10) && (operands.operand_i64("f") % 10) <= 4 && !(12 <= (operands.operand_i64("f") % 100) && (operands.operand_i64("f") % 100) <= 14)) { return "few"; }
+    "other"
+}
+
+fn select_cardinal_r10(operands: NumberOperands) -> &'static str {
+    if 1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 { return "one"; }
+    if (0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 0 && !(0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) && 0 <= (operands.operand_i64("i") % 1000000) && (operands.operand_i64("i") % 1000000) <= 0 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0) || (!(0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 5)) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r11(operands: NumberOperands) -> &'static str {
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && ((1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1) || (2 <= operands.operand_i64("i") && operands.operand_i64("i") <= 2) || (3 <= operands.operand_i64("i") && operands.operand_i64("i") <= 3))) || (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && !(((4 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 4) || (6 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 6) || (9 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 9)))) || (!(0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0) && !(((4 <= (operands.operand_i64("f") % 10) && (operands.operand_i64("f") % 10) <= 4) || (6 <= (operands.operand_i64("f") % 10) && (operands.operand_i64("f") % 10) <= 6) || (9 <= (operands.operand_i64("f") % 10) && (operands.operand_i64("f") % 10) <= 9)))) { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r12(operands: NumberOperands) -> &'static str {
+    if 1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 { return "one"; }
+    if 2 <= operands.operand_i64("i") && operands.operand_i64("i") <= 4 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 { return "few"; }
+    if !(0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r13(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0 { return "zero"; }
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0 { return "two"; }
+    if operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 3.0 { return "few"; }
+    if operands.operand_f64("n").fract() == 0.0 && 6.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 6.0 { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r14(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) || (!(0 <= operands.operand_i64("t") && operands.operand_i64("t") <= 0) && ((0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) || (1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1))) { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r15(operands: NumberOperands) -> &'static str {
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 1 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 1) || (1 <= (operands.operand_i64("f") % 100) && (operands.operand_i64("f") % 100) <= 1) { return "one"; }
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 2 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 2) || (2 <= (operands.operand_i64("f") % 100) && (operands.operand_i64("f") % 100) <= 2) { return "two"; }
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 3 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 4) || (3 <= (operands.operand_i64("f") % 100) && (operands.operand_i64("f") % 100) <= 4) { return "few"; }
+    "other"
+}
+
+fn select_cardinal_r16(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if (0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 0 && !(0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) && 0 <= (operands.operand_i64("i") % 1000000) && (operands.operand_i64("i") % 1000000) <= 0 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0) || (!(0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 5)) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r17(operands: NumberOperands) -> &'static str {
+    if (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) || (1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1) { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r18(operands: NumberOperands) -> &'static str {
+    if (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) || (1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1) { return "one"; }
+    if (0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 0 && !(0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) && 0 <= (operands.operand_i64("i") % 1000000) && (operands.operand_i64("i") % 1000000) <= 0 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0) || (!(0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 5)) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r19(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0 { return "two"; }
+    if operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 6.0 { return "few"; }
+    if operands.operand_f64("n").fract() == 0.0 && 7.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 10.0 { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r20(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) || (operands.operand_f64("n").fract() == 0.0 && 11.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 11.0) { return "one"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0) || (operands.operand_f64("n").fract() == 0.0 && 12.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 12.0) { return "two"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 10.0) || (operands.operand_f64("n").fract() == 0.0 && 13.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 19.0) { return "few"; }
+    "other"
+}
+
+fn select_cardinal_r21(operands: NumberOperands) -> &'static str {
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 1 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 1 { return "one"; }
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 2 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 2 { return "two"; }
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && ((0 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 0) || (20 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 20) || (40 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 40) || (60 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 60) || (80 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 80)) { return "few"; }
+    if !(0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r22(operands: NumberOperands) -> &'static str {
+    if (1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0) || (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0 && !(0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0)) { return "one"; }
+    if 2 <= operands.operand_i64("i") && operands.operand_i64("i") <= 2 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 { return "two"; }
+    "other"
+}
+
+fn select_cardinal_r23(operands: NumberOperands) -> &'static str {
+    if (0 <= operands.operand_i64("t") && operands.operand_i64("t") <= 0 && 1 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 1 && !(11 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 11)) || (1 <= (operands.operand_i64("t") % 10) && (operands.operand_i64("t") % 10) <= 1 && !(11 <= (operands.operand_i64("t") % 100) && (operands.operand_i64("t") % 100) <= 11)) { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r24(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0 { return "two"; }
+    "other"
+}
+
+fn select_cardinal_r25(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0 { return "zero"; }
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if (((operands.operand_f64("n") % 100.0).fract() == 0.0 && 2.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 2.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 22.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 22.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 42.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 42.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 62.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 62.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 82.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 82.0)) || ((operands.operand_f64("n") % 1000.0).fract() == 0.0 && 0.0 <= (operands.operand_f64("n") % 1000.0) && (operands.operand_f64("n") % 1000.0) <= 0.0 && (((operands.operand_f64("n") % 100000.0).fract() == 0.0 && 1000.0 <= (operands.operand_f64("n") % 100000.0) && (operands.operand_f64("n") % 100000.0) <= 20000.0) || ((operands.operand_f64("n") % 100000.0).fract() == 0.0 && 40000.0 <= (operands.operand_f64("n") % 100000.0) && (operands.operand_f64("n") % 100000.0) <= 40000.0) || ((operands.operand_f64("n") % 100000.0).fract() == 0.0 && 60000.0 <= (operands.operand_f64("n") % 100000.0) && (operands.operand_f64("n") % 100000.0) <= 60000.0) || ((operands.operand_f64("n") % 100000.0).fract() == 0.0 && 80000.0 <= (operands.operand_f64("n") % 100000.0) && (operands.operand_f64("n") % 100000.0) <= 80000.0))) || (!(operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0) && (operands.operand_f64("n") % 1000000.0).fract() == 0.0 && 100000.0 <= (operands.operand_f64("n") % 1000000.0) && (operands.operand_f64("n") % 1000000.0) <= 100000.0) { return "two"; }
+    if ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 3.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 3.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 23.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 23.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 43.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 43.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 63.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 63.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 83.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 83.0) { return "few"; }
+    if !(operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) && (((operands.operand_f64("n") % 100.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 1.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 21.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 21.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 41.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 41.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 61.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 61.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 81.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 81.0)) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r26(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0 { return "zero"; }
+    if ((0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) || (1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1)) && !(operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0) { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r27(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 1.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 19.0) { return "one"; }
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 2.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 9.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 19.0) { return "few"; }
+    if !(0 <= operands.operand_i64("f") && operands.operand_i64("f") <= 0) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r28(operands: NumberOperands) -> &'static str {
+    if ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 0.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 0.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 19.0) || (2 <= operands.operand_i64("v") && operands.operand_i64("v") <= 2 && 11 <= (operands.operand_i64("f") % 100) && (operands.operand_i64("f") % 100) <= 19) { return "zero"; }
+    if ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 1.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 11.0)) || (2 <= operands.operand_i64("v") && operands.operand_i64("v") <= 2 && 1 <= (operands.operand_i64("f") % 10) && (operands.operand_i64("f") % 10) <= 1 && !(11 <= (operands.operand_i64("f") % 100) && (operands.operand_i64("f") % 100) <= 11)) || (!(2 <= operands.operand_i64("v") && operands.operand_i64("v") <= 2) && 1 <= (operands.operand_i64("f") % 10) && (operands.operand_i64("f") % 10) <= 1) { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r29(operands: NumberOperands) -> &'static str {
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 1 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 1 && !(11 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 11)) || (1 <= (operands.operand_i64("f") % 10) && (operands.operand_i64("f") % 10) <= 1 && !(11 <= (operands.operand_i64("f") % 100) && (operands.operand_i64("f") % 100) <= 11)) { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r30(operands: NumberOperands) -> &'static str {
+    if 1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 { return "one"; }
+    if (!(0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0)) || (operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0) || (!(operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) && (operands.operand_f64("n") % 100.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 19.0) { return "few"; }
+    "other"
+}
+
+fn select_cardinal_r31(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0 { return "two"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 3.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 10.0) { return "few"; }
+    if (operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 19.0 { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r32(operands: NumberOperands) -> &'static str {
+    if 1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 { return "one"; }
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 2 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 4 && !(12 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 14) { return "few"; }
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && !(1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1) && 0 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 1) || (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 5 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 9) || (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 12 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 14) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r33(operands: NumberOperands) -> &'static str {
+    if 0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 { return "one"; }
+    if (0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 0 && !(0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) && 0 <= (operands.operand_i64("i") % 1000000) && (operands.operand_i64("i") % 1000000) <= 0 && 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0) || (!(0 <= operands.operand_i64("e") && operands.operand_i64("e") <= 5)) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r34(operands: NumberOperands) -> &'static str {
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 1 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 1 && !(11 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 11) { return "one"; }
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 2 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 4 && !(12 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 14) { return "few"; }
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 0 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 0) || (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 5 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 9) || (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 11 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 14) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r35(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 1.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 11.0) { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0 { return "two"; }
+    if !(operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0) && (operands.operand_f64("n") % 10.0).fract() == 0.0 && 2.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 9.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 19.0) { return "few"; }
+    if !(0 <= operands.operand_i64("f") && operands.operand_i64("f") <= 0) { return "many"; }
+    "other"
+}
+
+fn select_cardinal_r36(operands: NumberOperands) -> &'static str {
+    if (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) || (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 10.0 { return "few"; }
+    "other"
+}
+
+fn select_cardinal_r37(operands: NumberOperands) -> &'static str {
+    if ((operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0) || (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0)) || (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0 && 1 <= operands.operand_i64("f") && operands.operand_i64("f") <= 1) { return "one"; }
+    "other"
+}
+
+fn select_cardinal_r38(operands: NumberOperands) -> &'static str {
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 1 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 1 { return "one"; }
+    if 0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 2 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 2 { return "two"; }
+    if (0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0 && 3 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 4) || (!(0 <= operands.operand_i64("v") && operands.operand_i64("v") <= 0)) { return "few"; }
+    "other"
+}
+
+fn select_cardinal_r39(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) || (operands.operand_f64("n").fract() == 0.0 && 11.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 99.0) { return "one"; }
+    "other"
+}
+
+fn select_ordinal_r0(_operands: NumberOperands) -> &'static str {
+    "other"
+}
+
+fn select_ordinal_r1(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) || (operands.operand_f64("n").fract() == 0.0 && 5.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 5.0) || (operands.operand_f64("n").fract() == 0.0 && 7.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 7.0) || (operands.operand_f64("n").fract() == 0.0 && 8.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 8.0) || (operands.operand_f64("n").fract() == 0.0 && 9.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 9.0) || (operands.operand_f64("n").fract() == 0.0 && 10.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 10.0) { return "one"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0) || (operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 3.0) { return "two"; }
+    if operands.operand_f64("n").fract() == 0.0 && 4.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 4.0 { return "few"; }
+    if operands.operand_f64("n").fract() == 0.0 && 6.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 6.0 { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r2(operands: NumberOperands) -> &'static str {
+    if ((1 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 1) || (2 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 2) || (5 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 5) || (7 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 7) || (8 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 8)) || ((20 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 20) || (50 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 50) || (70 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 70) || (80 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 80)) { return "one"; }
+    if ((3 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 3) || (4 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 4)) || ((100 <= (operands.operand_i64("i") % 1000) && (operands.operand_i64("i") % 1000) <= 100) || (200 <= (operands.operand_i64("i") % 1000) && (operands.operand_i64("i") % 1000) <= 200) || (300 <= (operands.operand_i64("i") % 1000) && (operands.operand_i64("i") % 1000) <= 300) || (400 <= (operands.operand_i64("i") % 1000) && (operands.operand_i64("i") % 1000) <= 400) || (500 <= (operands.operand_i64("i") % 1000) && (operands.operand_i64("i") % 1000) <= 500) || (600 <= (operands.operand_i64("i") % 1000) && (operands.operand_i64("i") % 1000) <= 600) || (700 <= (operands.operand_i64("i") % 1000) && (operands.operand_i64("i") % 1000) <= 700) || (800 <= (operands.operand_i64("i") % 1000) && (operands.operand_i64("i") % 1000) <= 800) || (900 <= (operands.operand_i64("i") % 1000) && (operands.operand_i64("i") % 1000) <= 900)) { return "few"; }
+    if (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) || (6 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 6) || ((40 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 40) || (60 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 60) || (90 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 90)) { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r3(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    "other"
+}
+
+fn select_ordinal_r4(operands: NumberOperands) -> &'static str {
+    if (((operands.operand_f64("n") % 10.0).fract() == 0.0 && 2.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 2.0) || ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 3.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 3.0)) && !((((operands.operand_f64("n") % 100.0).fract() == 0.0 && 12.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 12.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 13.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 13.0))) { return "few"; }
+    "other"
+}
+
+fn select_ordinal_r5(operands: NumberOperands) -> &'static str {
+    if 0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0 { return "zero"; }
+    if 1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 { return "one"; }
+    if (2 <= operands.operand_i64("i") && operands.operand_i64("i") <= 2) || (3 <= operands.operand_i64("i") && operands.operand_i64("i") <= 3) || (4 <= operands.operand_i64("i") && operands.operand_i64("i") <= 4) || (5 <= operands.operand_i64("i") && operands.operand_i64("i") <= 5) || (6 <= operands.operand_i64("i") && operands.operand_i64("i") <= 6) { return "few"; }
+    "other"
+}
+
+fn select_ordinal_r6(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) || (operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 3.0) { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0 { return "two"; }
+    if operands.operand_f64("n").fract() == 0.0 && 4.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 4.0 { return "few"; }
+    "other"
+}
+
+fn select_ordinal_r7(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0) || (operands.operand_f64("n").fract() == 0.0 && 7.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 7.0) || (operands.operand_f64("n").fract() == 0.0 && 8.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 8.0) || (operands.operand_f64("n").fract() == 0.0 && 9.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 9.0) { return "zero"; }
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0 { return "two"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 3.0) || (operands.operand_f64("n").fract() == 0.0 && 4.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 4.0) { return "few"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 5.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 5.0) || (operands.operand_f64("n").fract() == 0.0 && 6.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 6.0) { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r8(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 1.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 11.0) { return "one"; }
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 2.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 2.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 12.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 12.0) { return "two"; }
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 3.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 3.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 13.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 13.0) { return "few"; }
+    "other"
+}
+
+fn select_ordinal_r9(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) || (operands.operand_f64("n").fract() == 0.0 && 11.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 11.0) { return "one"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0) || (operands.operand_f64("n").fract() == 0.0 && 12.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 12.0) { return "two"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 3.0) || (operands.operand_f64("n").fract() == 0.0 && 13.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 13.0) { return "few"; }
+    "other"
+}
+
+fn select_ordinal_r10(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0) || (operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 3.0) { return "two"; }
+    if operands.operand_f64("n").fract() == 0.0 && 4.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 4.0 { return "few"; }
+    if operands.operand_f64("n").fract() == 0.0 && 6.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 6.0 { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r11(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) || (operands.operand_f64("n").fract() == 0.0 && 5.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 5.0) { return "one"; }
+    "other"
+}
+
+fn select_ordinal_r12(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 11.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 11.0) || (operands.operand_f64("n").fract() == 0.0 && 8.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 8.0) || (operands.operand_f64("n").fract() == 0.0 && 80.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 80.0) || (operands.operand_f64("n").fract() == 0.0 && 800.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 800.0) { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r13(operands: NumberOperands) -> &'static str {
+    if 1 <= operands.operand_i64("i") && operands.operand_i64("i") <= 1 { return "one"; }
+    if (0 <= operands.operand_i64("i") && operands.operand_i64("i") <= 0) || ((2 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 20) || (40 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 40) || (60 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 60) || (80 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 80)) { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r14(operands: NumberOperands) -> &'static str {
+    if ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 6.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 6.0) || ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 9.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 9.0) || ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 0.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 0.0 && !(operands.operand_f64("n").fract() == 0.0 && 0.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 0.0)) { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r15(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0) || (operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 3.0) { return "two"; }
+    if operands.operand_f64("n").fract() == 0.0 && 4.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 4.0 { return "few"; }
+    "other"
+}
+
+fn select_ordinal_r16(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 4.0) || (((operands.operand_f64("n") % 100.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 4.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 21.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 24.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 41.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 44.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 61.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 64.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 81.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 84.0)) { return "one"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 5.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 5.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 5.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 5.0) { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r17(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 11.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 11.0) || (operands.operand_f64("n").fract() == 0.0 && 8.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 8.0) || (operands.operand_f64("n").fract() == 0.0 && 80.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 89.0) || (operands.operand_f64("n").fract() == 0.0 && 800.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 899.0) { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r18(operands: NumberOperands) -> &'static str {
+    if 1 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 1 && !(11 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 11) { return "one"; }
+    if 2 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 2 && !(12 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 12) { return "two"; }
+    if ((7 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 7) || (8 <= (operands.operand_i64("i") % 10) && (operands.operand_i64("i") % 10) <= 8)) && !(((17 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 17) || (18 <= (operands.operand_i64("i") % 100) && (operands.operand_i64("i") % 100) <= 18))) { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r19(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 4.0 { return "one"; }
+    "other"
+}
+
+fn select_ordinal_r20(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0) || (operands.operand_f64("n").fract() == 0.0 && 5.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 5.0) || (operands.operand_f64("n").fract() == 0.0 && 7.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 9.0) { return "one"; }
+    if (operands.operand_f64("n").fract() == 0.0 && 2.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 2.0) || (operands.operand_f64("n").fract() == 0.0 && 3.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 3.0) { return "two"; }
+    if operands.operand_f64("n").fract() == 0.0 && 4.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 4.0 { return "few"; }
+    if operands.operand_f64("n").fract() == 0.0 && 6.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 6.0 { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r21(operands: NumberOperands) -> &'static str {
+    if operands.operand_f64("n").fract() == 0.0 && 1.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 1.0 { return "one"; }
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 4.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 4.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 14.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 14.0) { return "many"; }
+    "other"
+}
+
+fn select_ordinal_r22(operands: NumberOperands) -> &'static str {
+    if (((operands.operand_f64("n") % 10.0).fract() == 0.0 && 1.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 1.0) || ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 2.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 2.0)) && !((((operands.operand_f64("n") % 100.0).fract() == 0.0 && 11.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 11.0) || ((operands.operand_f64("n") % 100.0).fract() == 0.0 && 12.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 12.0))) { return "one"; }
+    "other"
+}
+
+fn select_ordinal_r23(operands: NumberOperands) -> &'static str {
+    if (((operands.operand_f64("n") % 10.0).fract() == 0.0 && 6.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 6.0) || ((operands.operand_f64("n") % 10.0).fract() == 0.0 && 9.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 9.0)) || (operands.operand_f64("n").fract() == 0.0 && 10.0 <= operands.operand_f64("n") && operands.operand_f64("n") <= 10.0) { return "few"; }
+    "other"
+}
+
+fn select_ordinal_r24(operands: NumberOperands) -> &'static str {
+    if (operands.operand_f64("n") % 10.0).fract() == 0.0 && 3.0 <= (operands.operand_f64("n") % 10.0) && (operands.operand_f64("n") % 10.0) <= 3.0 && !((operands.operand_f64("n") % 100.0).fract() == 0.0 && 13.0 <= (operands.operand_f64("n") % 100.0) && (operands.operand_f64("n") % 100.0) <= 13.0) { return "few"; }
+    "other"
+}
