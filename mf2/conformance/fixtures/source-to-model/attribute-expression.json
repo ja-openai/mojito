@@ -1,0 +1,45 @@
+{
+  "name": "attribute-expression",
+  "source": "Hello, {$name @title=|user| @private}!",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Hello, ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" },
+        "attributes": {
+          "title": { "type": "literal", "value": "user" },
+          "private": true
+        }
+      },
+      "!"
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Alex" },
+      "expected": "Hello, Alex!"
+    }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Alex" },
+      "expected": [
+        { "type": "text", "value": "Hello, " },
+        {
+          "type": "expression",
+          "value": "Alex",
+          "attributes": {
+            "title": { "type": "literal", "value": "user" },
+            "private": true
+          }
+        },
+        { "type": "text", "value": "!" }
+      ]
+    }
+  ]
+}

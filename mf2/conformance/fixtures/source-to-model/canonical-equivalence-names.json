@@ -1,0 +1,43 @@
+{
+  "name": "canonical-equivalence-names",
+  "source": ".local $caf\u00e9 = {|NFC|}\n.local $cafe\u0301 = {|NFD|}\n{{{$caf\u00e9}/{$cafe\u0301}}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "caf\u00e9",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "NFC" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "cafe\u0301",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "NFD" }
+        }
+      }
+    ],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "caf\u00e9" }
+      },
+      "/",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "cafe\u0301" }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "NFC/NFD"
+    }
+  ]
+}

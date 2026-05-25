@@ -1,0 +1,51 @@
+{
+  "name": "integer-select-exact-en",
+  "source": ".input {$count :integer select=exact}\n.match $count\n1 {{Exactly one}}\none {{Plural one}}\n* {{Other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" },
+          "function": {
+            "type": "function",
+            "name": "integer",
+            "options": {
+              "select": { "type": "literal", "value": "exact" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "count" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["Exactly one"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": ["Plural one"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "count": 1 },
+      "expected": "Exactly one"
+    },
+    {
+      "locale": "en",
+      "arguments": { "count": 2 },
+      "expected": "Other"
+    }
+  ]
+}

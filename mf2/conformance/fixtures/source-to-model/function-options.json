@@ -1,0 +1,30 @@
+{
+  "name": "function-options",
+  "source": "Price: {$amount :number style=currency currency=USD}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Price: ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "amount" },
+        "function": {
+          "type": "function",
+          "name": "number",
+          "options": {
+            "currency": { "type": "literal", "value": "USD" },
+            "style": { "type": "literal", "value": "currency" }
+          }
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "amount": 12.5 },
+      "expected": "Price: 12.5"
+    }
+  ]
+}

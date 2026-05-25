@@ -1,0 +1,78 @@
+{
+  "name": "plural-cardinal-fr",
+  "source": ".input {$count :number}\n.match $count\none {{{$count} élément}}\nother {{{$count} éléments}}\n* {{{$count} éléments}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "count" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " élément"
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "other" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " éléments"
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": [
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "count" }
+          },
+          " éléments"
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "fr",
+      "arguments": { "count": 0 },
+      "expected": "0 élément"
+    },
+    {
+      "locale": "fr",
+      "arguments": { "count": 1 },
+      "expected": "1 élément"
+    },
+    {
+      "locale": "fr",
+      "arguments": { "count": 2 },
+      "expected": "2 éléments"
+    },
+    {
+      "locale": "fr-CA",
+      "arguments": { "count": 1 },
+      "expected": "1 élément"
+    },
+    {
+      "locale": "FR_ca",
+      "arguments": { "count": 2 },
+      "expected": "2 éléments"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "unclosed-placeholder",
+  "source": "Hello, {$name",
+  "expectedDiagnostics": [
+    { "code": "unclosed-placeholder" }
+  ]
+}

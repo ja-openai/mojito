@@ -1,0 +1,41 @@
+{
+  "name": "invalid-markup-kind-variant",
+  "model": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "status",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "status" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "status" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "active" }],
+        "value": [
+          {
+            "type": "markup",
+            "kind": "toggle",
+            "name": "link"
+          }
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": {
+    "status": "active"
+  },
+  "expectedError": {
+    "code": "invalid-markup-kind"
+  }
+}

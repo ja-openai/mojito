@@ -1,0 +1,179 @@
+{
+  "name": "plural-cardinal-cldr-fraction-1",
+  "source": ".input {$count :number minimumFractionDigits=1}\n.match $count\nzero {{zero}}\none {{one}}\ntwo {{two}}\nfew {{few}}\nmany {{many}}\nother {{other}}\n* {{other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": {
+            "type": "variable",
+            "name": "count"
+          },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "minimumFractionDigits": {
+                "type": "literal",
+                "value": "1"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [
+      {
+        "type": "variable",
+        "name": "count"
+      }
+    ],
+    "variants": [
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "zero"
+          }
+        ],
+        "value": [
+          "zero"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "one"
+          }
+        ],
+        "value": [
+          "one"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "two"
+          }
+        ],
+        "value": [
+          "two"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "few"
+          }
+        ],
+        "value": [
+          "few"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "many"
+          }
+        ],
+        "value": [
+          "many"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "literal",
+            "value": "other"
+          }
+        ],
+        "value": [
+          "other"
+        ]
+      },
+      {
+        "keys": [
+          {
+            "type": "*"
+          }
+        ],
+        "value": [
+          "other"
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "be",
+      "arguments": {
+        "count": "0.1"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "cs",
+      "arguments": {
+        "count": "0.0"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "gv",
+      "arguments": {
+        "count": "0.0"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "lt",
+      "arguments": {
+        "count": "0.1"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "pl",
+      "arguments": {
+        "count": "0.0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "ru",
+      "arguments": {
+        "count": "0.0"
+      },
+      "expected": "other"
+    },
+    {
+      "locale": "sgs",
+      "arguments": {
+        "count": "0.1"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "sk",
+      "arguments": {
+        "count": "0.0"
+      },
+      "expected": "many"
+    },
+    {
+      "locale": "uk",
+      "arguments": {
+        "count": "0.0"
+      },
+      "expected": "other"
+    }
+  ]
+}

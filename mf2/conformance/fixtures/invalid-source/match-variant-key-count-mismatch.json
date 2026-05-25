@@ -1,0 +1,7 @@
+{
+  "name": "match-variant-key-count-mismatch",
+  "source": ".input {$gender :string}\n.input {$count :number}\n.match $gender $count\nmale {{Missing count key}}\n* * {{Fallback}}",
+  "expectedDiagnostics": [
+    { "code": "variant-key-count-mismatch" }
+  ]
+}

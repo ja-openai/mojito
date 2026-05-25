@@ -1,0 +1,38 @@
+{
+  "name": "function-string-values",
+  "source": "Value: {$value :string}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Value: ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "value" },
+        "function": { "type": "function", "name": "string" }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "value": "alpha" },
+      "expected": "Value: alpha"
+    },
+    {
+      "locale": "en",
+      "arguments": { "value": 42 },
+      "expected": "Value: 42"
+    },
+    {
+      "locale": "en",
+      "arguments": { "value": true },
+      "expected": "Value: true"
+    },
+    {
+      "locale": "en",
+      "arguments": { "value": null },
+      "expected": "Value: "
+    }
+  ]
+}

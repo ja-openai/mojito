@@ -1,0 +1,34 @@
+{
+  "name": "variable-basic",
+  "source": "Hello, {$name}!",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Hello, ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" }
+      },
+      "!"
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Alex" },
+      "expected": "Hello, Alex!"
+    }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Alex" },
+      "expected": [
+        { "type": "text", "value": "Hello, " },
+        { "type": "expression", "value": "Alex" },
+        { "type": "text", "value": "!" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "name": "match-quoted-variant-key",
+  "source": ".input {$status :string}\n.match $status\n|active| {{Quoted active}}\n|*| {{Literal star}}\n* {{Other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "status",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "status" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "status" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "active" }],
+        "value": ["Quoted active"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "*" }],
+        "value": ["Literal star"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "status": "active" },
+      "expected": "Quoted active"
+    },
+    {
+      "locale": "en",
+      "arguments": { "status": "*" },
+      "expected": "Literal star"
+    },
+    {
+      "locale": "en",
+      "arguments": { "status": "paused" },
+      "expected": "Other"
+    }
+  ]
+}

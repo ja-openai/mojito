@@ -1,0 +1,33 @@
+{
+  "name": "quoted-option-attribute-values",
+  "source": "User {$name :string label=|display name| @title=|Shown user name|}.",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "User ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" },
+        "function": {
+          "type": "function",
+          "name": "string",
+          "options": {
+            "label": { "type": "literal", "value": "display name" }
+          }
+        },
+        "attributes": {
+          "title": { "type": "literal", "value": "Shown user name" }
+        }
+      },
+      "."
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Alex" },
+      "expected": "User Alex."
+    }
+  ]
+}

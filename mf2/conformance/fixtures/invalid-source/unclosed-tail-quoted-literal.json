@@ -1,0 +1,7 @@
+{
+  "name": "unclosed-tail-quoted-literal",
+  "source": "User {$name :string label=|display name}.",
+  "expectedDiagnostics": [
+    { "code": "unclosed-quoted-literal" }
+  ]
+}

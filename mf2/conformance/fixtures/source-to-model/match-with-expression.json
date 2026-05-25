@@ -1,0 +1,55 @@
+{
+  "name": "match-with-expression",
+  "source": ".input {$status :string}\n.match $status\nactive {{User {$name} is active}}\n* {{User {$name} is inactive}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "status",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "status" },
+          "function": { "type": "function", "name": "string" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "status" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "active" }],
+        "value": [
+          "User ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "name" }
+          },
+          " is active"
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": [
+          "User ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "name" }
+          },
+          " is inactive"
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "status": "active", "name": "Alex" },
+      "expected": "User Alex is active"
+    },
+    {
+      "locale": "en",
+      "arguments": { "status": "paused", "name": "Alex" },
+      "expected": "User Alex is inactive"
+    }
+  ]
+}

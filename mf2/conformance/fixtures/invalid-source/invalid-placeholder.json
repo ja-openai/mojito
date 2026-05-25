@@ -1,0 +1,7 @@
+{
+  "name": "invalid-placeholder",
+  "source": "Hello, {}!",
+  "expectedDiagnostics": [
+    { "code": "missing-expression" }
+  ]
+}

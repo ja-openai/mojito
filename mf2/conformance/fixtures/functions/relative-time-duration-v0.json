@@ -1,0 +1,194 @@
+{
+  "name": "relative-time-duration-v0",
+  "status": "proposal",
+  "spec": "../../../spec/functions/relative-time.md",
+  "description": "Future shared conformance cases for the experimental :relativeTime registry function. These cases are not consumed by the current MF2 runners until the function is implemented.",
+  "defaultOptions": {
+    "style": "short",
+    "numeric": "always",
+    "policy": "precise",
+    "unit": "auto"
+  },
+  "cases": [
+    {
+      "label": "past-seconds-narrow",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": -30 },
+      "expected": "30s ago",
+      "resolved": {
+        "seconds": -30,
+        "unit": "second",
+        "quantity": 30,
+        "direction": "past",
+        "pluralCategory": "other",
+        "pattern": "{0}s ago"
+      }
+    },
+    {
+      "label": "past-minutes-rounded-narrow",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": -90 },
+      "expected": "2m ago",
+      "resolved": {
+        "seconds": -90,
+        "unit": "minute",
+        "quantity": 2,
+        "direction": "past",
+        "pluralCategory": "other",
+        "pattern": "{0}m ago"
+      }
+    },
+    {
+      "label": "future-hour-narrow",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": 3600 },
+      "expected": "in 1h",
+      "resolved": {
+        "seconds": 3600,
+        "unit": "hour",
+        "quantity": 1,
+        "direction": "future",
+        "pluralCategory": "one",
+        "pattern": "in {0}h"
+      }
+    },
+    {
+      "label": "explicit-day-auto-yesterday",
+      "source": "{$delta :relativeTime style=long numeric=auto unit=day}",
+      "locale": "en",
+      "arguments": { "delta": -86400 },
+      "expected": "yesterday",
+      "resolved": {
+        "seconds": -86400,
+        "unit": "day",
+        "quantity": 1,
+        "direction": "past",
+        "relativeOffset": "-1"
+      }
+    },
+    {
+      "label": "explicit-day-always-future",
+      "source": "{$delta :relativeTime style=long numeric=always unit=day}",
+      "locale": "en",
+      "arguments": { "delta": 86400 },
+      "expected": "in 1 day",
+      "resolved": {
+        "seconds": 86400,
+        "unit": "day",
+        "quantity": 1,
+        "direction": "future",
+        "pluralCategory": "one",
+        "pattern": "in {0} day"
+      }
+    },
+    {
+      "label": "chat-now-auto",
+      "source": "{$delta :relativeTime style=narrow numeric=auto policy=chat}",
+      "locale": "en",
+      "arguments": { "delta": -44 },
+      "expected": "now",
+      "resolved": {
+        "seconds": -44,
+        "unit": "second",
+        "quantity": 44,
+        "direction": "past",
+        "relativeOffset": "0",
+        "policyRange": "0 <= n < 45"
+      }
+    },
+    {
+      "label": "chat-boundary-minute-auto",
+      "source": "{$delta :relativeTime style=narrow numeric=auto policy=chat}",
+      "locale": "en",
+      "arguments": { "delta": -45 },
+      "expected": "1m ago",
+      "resolved": {
+        "seconds": -45,
+        "unit": "minute",
+        "quantity": 1,
+        "direction": "past",
+        "pluralCategory": "one",
+        "pattern": "{0}m ago",
+        "policyRange": "45 <= n < 2700"
+      }
+    },
+    {
+      "label": "chat-numeric-always-keeps-seconds",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=chat}",
+      "locale": "en",
+      "arguments": { "delta": -44 },
+      "expected": "44s ago",
+      "resolved": {
+        "seconds": -44,
+        "unit": "second",
+        "quantity": 44,
+        "direction": "past",
+        "pluralCategory": "other",
+        "pattern": "{0}s ago"
+      }
+    },
+    {
+      "label": "japanese-future-minute",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "ja",
+      "arguments": { "delta": 180 },
+      "expected": "3分後",
+      "resolved": {
+        "seconds": 180,
+        "unit": "minute",
+        "quantity": 3,
+        "direction": "future",
+        "pluralCategory": "other",
+        "pattern": "{0}分後"
+      }
+    },
+    {
+      "label": "arabic-one-pattern-without-placeholder",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "ar",
+      "arguments": { "delta": -60 },
+      "expected": "قبل دقيقة واحدة",
+      "resolved": {
+        "seconds": -60,
+        "unit": "minute",
+        "quantity": 1,
+        "direction": "past",
+        "pluralCategory": "one",
+        "pattern": "قبل دقيقة واحدة"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "label": "non-numeric-operand",
+      "source": "{$delta :relativeTime}",
+      "locale": "en",
+      "arguments": { "delta": "soon" },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
+      "label": "unknown-style",
+      "source": "{$delta :relativeTime style=tiny}",
+      "locale": "en",
+      "arguments": { "delta": 60 },
+      "expectedError": { "code": "bad-option" }
+    },
+    {
+      "label": "unknown-policy",
+      "source": "{$delta :relativeTime policy=timeline}",
+      "locale": "en",
+      "arguments": { "delta": 60 },
+      "expectedError": { "code": "bad-option" }
+    },
+    {
+      "label": "missing-locale-data",
+      "source": "{$delta :relativeTime}",
+      "locale": "zz",
+      "arguments": { "delta": 60 },
+      "expectedError": { "code": "missing-locale-data" }
+    }
+  ]
+}

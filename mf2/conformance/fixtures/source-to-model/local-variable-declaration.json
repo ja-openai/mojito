@@ -1,0 +1,32 @@
+{
+  "name": "local-variable-declaration",
+  "source": ".local $displayName = {$name}\n{{Hello, {$displayName}!}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "displayName",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "name" }
+        }
+      }
+    ],
+    "pattern": [
+      "Hello, ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "displayName" }
+      },
+      "!"
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Alex" },
+      "expected": "Hello, Alex!"
+    }
+  ]
+}

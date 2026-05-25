@@ -1,0 +1,44 @@
+{
+  "name": "percent-select-exact-en",
+  "source": ".input {$ratio :percent}\n.match $ratio\n12.5 {{Twelve and a half percent}}\n* {{Other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "ratio",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "ratio" },
+          "function": {
+            "type": "function",
+            "name": "percent"
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "ratio" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "12.5" }],
+        "value": ["Twelve and a half percent"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "ratio": 0.125 },
+      "expected": "Twelve and a half percent"
+    },
+    {
+      "locale": "en",
+      "arguments": { "ratio": 0.2 },
+      "expected": "Other"
+    }
+  ]
+}

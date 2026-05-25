@@ -1,0 +1,7 @@
+{
+  "name": "unclosed-quoted-pattern",
+  "source": ".input {$count :number}\n{{Count: {$count}",
+  "expectedDiagnostics": [
+    { "code": "unclosed-quoted-pattern" }
+  ]
+}

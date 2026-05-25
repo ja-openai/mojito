@@ -1,0 +1,28 @@
+{
+  "name": "local-forward-reference",
+  "model": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "first",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "second" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "second",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "ok" }
+        }
+      }
+    ],
+    "pattern": ["_"]
+  },
+  "locale": "en",
+  "arguments": {},
+  "expectedError": { "code": "duplicate-declaration" }
+}

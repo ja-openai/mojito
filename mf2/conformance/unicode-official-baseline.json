@@ -1,0 +1,72 @@
+{
+  "passed": 461,
+  "skipped": 0,
+  "notWired": 0,
+  "total": 461,
+  "files": {
+    "tests/syntax.json": {
+      "passed": 114,
+      "skipped": 0
+    },
+    "tests/syntax-errors.json": {
+      "passed": 133,
+      "skipped": 0
+    },
+    "tests/bidi.json": {
+      "passed": 27,
+      "skipped": 0
+    },
+    "tests/data-model-errors.json": {
+      "passed": 23,
+      "skipped": 0
+    },
+    "tests/functions/string.json": {
+      "passed": 9,
+      "skipped": 0
+    },
+    "tests/functions/number.json": {
+      "passed": 41,
+      "skipped": 0
+    },
+    "tests/functions/percent.json": {
+      "passed": 13,
+      "skipped": 0
+    },
+    "tests/functions/currency.json": {
+      "passed": 12,
+      "skipped": 0
+    },
+    "tests/functions/date.json": {
+      "passed": 7,
+      "skipped": 0
+    },
+    "tests/functions/datetime.json": {
+      "passed": 7,
+      "skipped": 0
+    },
+    "tests/functions/time.json": {
+      "passed": 6,
+      "skipped": 0
+    },
+    "tests/functions/offset.json": {
+      "passed": 16,
+      "skipped": 0
+    },
+    "tests/functions/integer.json": {
+      "passed": 13,
+      "skipped": 0
+    },
+    "tests/u-options.json": {
+      "passed": 10,
+      "skipped": 0
+    },
+    "tests/fallback.json": {
+      "passed": 8,
+      "skipped": 0
+    },
+    "tests/pattern-selection.json": {
+      "passed": 22,
+      "skipped": 0
+    }
+  }
+}

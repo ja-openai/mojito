@@ -1,0 +1,19 @@
+{
+  "name": "invalid-markup-kind-message",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "markup",
+        "kind": "toggle",
+        "name": "link"
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": {},
+  "expectedError": {
+    "code": "invalid-markup-kind"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "invalid-function-name",
+  "source": "Hello, {$name :-bad}!",
+  "expectedDiagnostics": [
+    { "code": "invalid-function-name" }
+  ]
+}

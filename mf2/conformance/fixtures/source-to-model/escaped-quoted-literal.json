@@ -1,0 +1,55 @@
+{
+  "name": "escaped-quoted-literal",
+  "source": "Value: {|a\\\\\\{\\|\\}|}. {$name :string label=|x\\|y| @title=|a\\\\\\{\\|\\}|}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Value: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "a\\{|}" }
+      },
+      ". ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "name" },
+        "function": {
+          "type": "function",
+          "name": "string",
+          "options": {
+            "label": { "type": "literal", "value": "x|y" }
+          }
+        },
+        "attributes": {
+          "title": { "type": "literal", "value": "a\\{|}" }
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Jean" },
+      "expected": "Value: a\\{|}. Jean"
+    }
+  ],
+  "partsCases": [
+    {
+      "locale": "en",
+      "arguments": { "name": "Jean" },
+      "expected": [
+        { "type": "text", "value": "Value: " },
+        { "type": "expression", "value": "a\\{|}" },
+        { "type": "text", "value": ". " },
+        {
+          "type": "expression",
+          "value": "Jean",
+          "attributes": {
+            "title": { "type": "literal", "value": "a\\{|}" }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "duplicate-function-option-placeholder",
+  "source": "Hello, {$count :number style=percent style=decimal}!",
+  "expectedDiagnostics": [
+    { "code": "duplicate-option-name" }
+  ]
+}

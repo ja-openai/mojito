@@ -1,0 +1,7 @@
+{
+  "name": "simple-message-leading-dot",
+  "source": ".",
+  "expectedDiagnostics": [
+    { "code": "invalid-simple-start" }
+  ]
+}
