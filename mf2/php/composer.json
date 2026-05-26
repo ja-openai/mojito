@@ -1,0 +1,28 @@
+{
+  "name": "mojito/messageformat2",
+  "description": "MessageFormat 2 parser and formatter for Mojito.",
+  "type": "library",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/box/mojito",
+  "support": {
+    "source": "https://github.com/box/mojito"
+  },
+  "autoload": {
+    "psr-4": {
+      "Mojito\\MessageFormat2\\": "src/"
+    },
+    "files": [
+      "src/Errors.php",
+      "src/LocaleKey.php",
+      "src/Parser.php",
+      "src/PortableFunctions.php",
+      "src/Formatter.php",
+      "src/PluralRules.php",
+      "src/CldrPluralRules.php"
+    ]
+  },
+  "require": {
+    "php": ">=8.2",
+    "ext-intl": "*"
+  }
+}
