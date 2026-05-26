@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mojito-mf2"
+version = "0.1.0"
+description = "MessageFormat 2 parser and formatter for Mojito."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Mojito MF2 Contributors" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Internationalization",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Repository = "https://github.com/box/mojito"
+
+[project.optional-dependencies]
+babel = ["Babel>=2.14"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mojito_mf2 = ["py.typed"]
