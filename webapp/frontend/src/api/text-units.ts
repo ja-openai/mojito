@@ -1,3 +1,4 @@
+import { containsLikePattern } from '../utils/likeSearch';
 import { normalizePollableTaskErrorMessage } from '../utils/pollableTask';
 import { isTransientHttpError, poll } from '../utils/poller';
 
@@ -447,6 +448,22 @@ export function getCanonicalTextSearch(
   };
 }
 
+function toBackendTextSearchPredicate(predicate: TextSearchPredicate) {
+  if (predicate.searchType === 'contains') {
+    return {
+      field: predicate.field,
+      searchType: 'ILIKE',
+      value: containsLikePattern(predicate.value),
+    };
+  }
+
+  return {
+    field: predicate.field,
+    searchType: predicate.searchType.toUpperCase(),
+    value: predicate.value,
+  };
+}
+
 function parseTmTextUnitIds(value: string): number[] {
   return value
     .split(/[,\s]+/)
@@ -520,11 +537,7 @@ function buildSearchBody(request: TextUnitSearchRequest): TextUnitSearchBody {
   if (textSearch) {
     body.textSearch = {
       operator: textSearch.operator,
-      predicates: textSearch.predicates.map((predicate) => ({
-        field: predicate.field,
-        searchType: predicate.searchType.toUpperCase(),
-        value: predicate.value,
-      })),
+      predicates: textSearch.predicates.map(toBackendTextSearchPredicate),
     };
   }
 

@@ -1544,16 +1544,13 @@ public class ReviewProjectService {
       String searchQuery,
       SearchReviewProjectsCriteria.SearchMatchType matchType) {
 
-    boolean ignoreCase = matchType == SearchReviewProjectsCriteria.SearchMatchType.ILIKE;
-    String queryValue = ignoreCase ? searchQuery.toLowerCase() : searchQuery;
-    Expression<String> valueExpression = ignoreCase ? cb.lower(expression) : expression;
-
     return switch (matchType) {
-      case EXACT -> cb.equal(valueExpression, searchQuery);
-      case ILIKE, CONTAINS -> {
-        String pattern = "%" + escapeForLike(queryValue) + "%";
-        yield cb.like(valueExpression, pattern, '\\');
+      case EXACT -> cb.equal(expression, searchQuery);
+      case CONTAINS -> {
+        String pattern = "%" + escapeForLike(searchQuery) + "%";
+        yield cb.like(expression, pattern, '\\');
       }
+      case ILIKE -> cb.like(cb.lower(expression), searchQuery.toLowerCase(), '\\');
     };
   }
 

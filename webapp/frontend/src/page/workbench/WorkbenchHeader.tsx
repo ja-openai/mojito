@@ -13,6 +13,7 @@ import {
 import { SearchControl } from '../../components/SearchControl';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
+import { CONTAINS_SEARCH_HELPER, ILIKE_SEARCH_HELPER } from '../../utils/likeSearch';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';
 import { resultSizePresets, WORKSET_SIZE_DEFAULT, WORKSET_SIZE_MIN } from './workbench-constants';
@@ -42,12 +43,20 @@ const searchAttributeOptions: SearchAttributeOption[] = [
 
 const searchTypeOptions: SearchTypeOption[] = [
   { value: 'exact', label: 'Exact match', helper: 'Full string' },
-  { value: 'contains', label: 'Contains', helper: 'Case-sensitive' },
-  { value: 'ilike', label: 'iLike', helper: 'Pattern (% = any, _ = 1 char)' },
+  {
+    value: 'contains',
+    label: 'Contains',
+    helper: CONTAINS_SEARCH_HELPER,
+  },
+  {
+    value: 'ilike',
+    label: 'iLike',
+    helper: ILIKE_SEARCH_HELPER,
+  },
   {
     value: 'regex',
     label: 'Regex',
-    helper: '\\x{FFFF}, ^/$, .*, (?i)incensitive',
+    helper: '\\x{FFFF}, ^/$, .*, (?i)insensitive',
   },
 ];
 

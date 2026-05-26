@@ -28,6 +28,7 @@ import {
   useReviewProjectRequests,
   useReviewProjects,
 } from '../../hooks/useReviewProjects';
+import { containsLikePattern } from '../../utils/likeSearch';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';
 import { loadPreferredLocales } from '../workbench/workbench-preferences';
@@ -475,8 +476,13 @@ export function ReviewProjectsPage() {
           : searchField === 'createdBy'
             ? 'CREATED_BY'
             : 'NAME';
+    const normalizedSearchQuery = searchQuery.trim();
     const searchMatchTypeValue: ReviewProjectsSearchRequest['searchMatchType'] =
-      searchType === 'exact' ? 'EXACT' : searchType === 'ilike' ? 'ILIKE' : 'CONTAINS';
+      searchType === 'exact' ? 'EXACT' : 'ILIKE';
+    const backendSearchQuery =
+      searchType === 'contains' && normalizedSearchQuery
+        ? containsLikePattern(normalizedSearchQuery)
+        : normalizedSearchQuery;
     const selectedLocaleSet = new Set(selectedLocaleTags);
     const localeTags =
       selectedLocaleTags.length === 0
@@ -497,7 +503,7 @@ export function ReviewProjectsPage() {
       dueAfter,
       dueBefore,
       limit,
-      searchQuery: searchQuery.trim() || undefined,
+      searchQuery: backendSearchQuery || undefined,
       searchField: searchFieldValue,
       searchMatchType: searchMatchTypeValue,
     };

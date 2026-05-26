@@ -995,6 +995,38 @@ public class TextUnitSearcherTest extends ServiceTestBase {
 
   @Transactional
   @Test
+  public void testILikeSearchSourceEscapedWildcard() {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+    TMTextUnit percentTextUnit =
+        tmService.addTMTextUnit(
+            tmTestData.tm.getId(),
+            tmTestData.asset.getId(),
+            "percent_text_unit",
+            "Discount 10% today",
+            "Comment");
+    TMTextUnit backslashTextUnit =
+        tmService.addTMTextUnit(
+            tmTestData.tm.getId(),
+            tmTestData.asset.getId(),
+            "backslash_text_unit",
+            "Regex \\\\w+ example",
+            "Comment");
+    TextUnitSearcherParameters textUnitSearcherParameters =
+        new TextUnitSearcherParametersForTesting();
+    textUnitSearcherParameters.setRepositoryIds(tmTestData.repository.getId());
+    textUnitSearcherParameters.setSource("%\\%%");
+    textUnitSearcherParameters.setSearchType(SearchType.ILIKE);
+
+    List<TextUnitDTO> textUnitDTOs = textUnitSearcher.search(textUnitSearcherParameters);
+
+    assertThat(textUnitDTOs)
+        .extracting(TextUnitDTO::getTmTextUnitId)
+        .contains(percentTextUnit.getId())
+        .doesNotContain(backslashTextUnit.getId());
+  }
+
+  @Transactional
+  @Test
   public void testExactMatchSearchTarget() {
     testSearchText(
         "target",

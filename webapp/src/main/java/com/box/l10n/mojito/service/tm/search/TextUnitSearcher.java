@@ -476,7 +476,7 @@ public class TextUnitSearcher {
               ? cb.equal(column, value)
               : cb.equal(md5Column, DigestUtils.md5Hex(value));
       case CONTAINS -> cb.like(column, containsPattern(value), '\\');
-      case ILIKE -> cb.like(cb.lower(column), value.toLowerCase());
+      case ILIKE -> cb.like(cb.lower(column), value.toLowerCase(), '\\');
       case REGEX -> cb.isTrue(cb.function("REGEXP_LIKE", Boolean.class, column, cb.literal(value)));
     };
   }

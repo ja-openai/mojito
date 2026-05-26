@@ -357,7 +357,7 @@ public class ScreenshotService {
     if (searchType == null || SearchType.CONTAINS.equals(searchType)) {
       predicate = builder.like(searchPath, escapeAndWrapValueForContains(searchValue));
     } else if (SearchType.ILIKE.equals(searchType)) {
-      predicate = builder.like(builder.lower(searchPath), searchValue.toLowerCase());
+      predicate = builder.like(builder.lower(searchPath), searchValue.toLowerCase(), '\\');
     } else {
       predicate = builder.equal(searchPath, searchValue);
     }

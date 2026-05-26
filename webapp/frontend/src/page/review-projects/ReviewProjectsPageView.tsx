@@ -48,6 +48,7 @@ import {
   formatLocalDateTime as formatDateTime,
   getLocalAndUtcDateTimeTooltip,
 } from '../../utils/dateTime';
+import { CONTAINS_SEARCH_HELPER, ILIKE_SEARCH_HELPER } from '../../utils/likeSearch';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import {
   type CompletionFilter,
@@ -1200,9 +1201,17 @@ function FilterControls({
                 kind: 'radio',
                 label: 'Match',
                 options: [
-                  { value: 'contains', label: 'Contains' },
+                  {
+                    value: 'contains',
+                    label: 'Contains',
+                    helper: CONTAINS_SEARCH_HELPER,
+                  },
                   { value: 'exact', label: 'Exact' },
-                  { value: 'ilike', label: 'iLike' },
+                  {
+                    value: 'ilike',
+                    label: 'iLike',
+                    helper: ILIKE_SEARCH_HELPER,
+                  },
                 ],
                 value: filters.searchType,
                 onChange: (value) =>
