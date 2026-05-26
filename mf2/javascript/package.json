@@ -1,0 +1,38 @@
+{
+  "name": "@mojito-mf2/core",
+  "version": "0.1.0",
+  "description": "MessageFormat 2 parser and formatter for Mojito.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/box/mojito.git",
+    "directory": "mf2/javascript"
+  },
+  "type": "module",
+  "types": "./src/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    }
+  },
+  "scripts": {
+    "bench:format": "node tools/benchmark.js",
+    "bench:parse": "node tools/parse-benchmark.js",
+    "bench:plural": "node --expose-gc tools/plural-benchmark.js",
+    "check": "node tests/package-boundary-test.js && npm run check:types && node tools/conformance.js ../conformance/fixtures/source-to-model",
+    "check:types": "tsc -p tsconfig.types.json",
+    "demo": "node examples/demo.js",
+    "generate:plurals": "sh ../cldr/update_generated.sh",
+    "unicode-tests": "node tools/unicode-tests.js ../third_party/message-format-wg/test ../conformance/unicode-official-baseline.json"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.3"
+  }
+}
