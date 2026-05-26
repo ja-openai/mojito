@@ -17,6 +17,7 @@ public record SearchReviewProjectsView(List<ReviewProject> reviewProject) {
       Integer textUnitCount,
       Integer wordCount,
       Long decidedCount,
+      Long decidedWordCount,
       ReviewProjectType type,
       ReviewProjectTerminologyPhase terminologyPhase,
       ReviewProjectStatus status,

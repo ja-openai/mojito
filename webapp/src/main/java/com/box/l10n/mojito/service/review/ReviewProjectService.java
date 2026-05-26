@@ -936,6 +936,10 @@ public class ReviewProjectService {
           sortedProjects.stream()
               .mapToLong(project -> Optional.ofNullable(project.decidedCount()).orElse(0L))
               .sum();
+      long decidedWordCount =
+          sortedProjects.stream()
+              .mapToLong(project -> Optional.ofNullable(project.decidedWordCount()).orElse(0L))
+              .sum();
       ZonedDateTime dueDate =
           sortedProjects.stream()
               .map(SearchReviewProjectsView.ReviewProject::dueDate)
@@ -957,6 +961,7 @@ public class ReviewProjectService {
               textUnitCount,
               wordCount,
               decidedCount,
+              decidedWordCount,
               dueDate,
               sortedProjects));
     }
@@ -1050,6 +1055,7 @@ public class ReviewProjectService {
                 root.get(ReviewProject_.textUnitCount),
                 root.get(ReviewProject_.wordCount),
                 root.get(ReviewProject_.decidedCount),
+                cb.literal(0L),
                 root.get(ReviewProject_.type),
                 root.get(ReviewProject_.terminologyPhase),
                 root.get(ReviewProject_.status),
@@ -1170,6 +1176,7 @@ public class ReviewProjectService {
                 root.get(ReviewProject_.textUnitCount),
                 root.get(ReviewProject_.wordCount),
                 root.get(ReviewProject_.decidedCount),
+                cb.literal(0L),
                 root.get(ReviewProject_.type),
                 root.get(ReviewProject_.terminologyPhase),
                 root.get(ReviewProject_.status),
@@ -1197,6 +1204,10 @@ public class ReviewProjectService {
       return List.of();
     }
 
+    Map<Long, Long> decidedWordCountsByProjectId =
+        getDecidedWordCountsByProjectId(
+            projectDetails.stream().map(SearchReviewProjectDetail::id).toList());
+
     return projectDetails.stream()
         .map(
             detail -> {
@@ -1209,6 +1220,7 @@ public class ReviewProjectService {
                   detail.textUnitCount(),
                   detail.wordCount(),
                   Optional.ofNullable(detail.decidedCount()).orElse(0L),
+                  Optional.ofNullable(decidedWordCountsByProjectId.get(detail.id())).orElse(0L),
                   detail.type(),
                   detail.terminologyPhase(),
                   detail.status(),
@@ -1225,6 +1237,64 @@ public class ReviewProjectService {
                       detail.assignedTranslatorUsername()));
             })
         .toList();
+  }
+
+  private Map<Long, Long> getDecidedWordCountsByProjectId(List<Long> projectIds) {
+    if (projectIds == null || projectIds.isEmpty()) {
+      return Map.of();
+    }
+
+    List<Object[]> rows =
+        entityManager
+            .createQuery(
+                """
+                select project.id, coalesce(sum(coalesce(tmTextUnit.wordCount, 0)), 0)
+                from ReviewProjectTextUnit reviewTextUnit
+                join reviewTextUnit.reviewProject project
+                join reviewTextUnit.tmTextUnit tmTextUnit
+                where project.id in :projectIds
+                  and (
+                    (
+                      project.type in :terminologyTypes
+                      and project.terminologyPhase = :specialistInputPhase
+                      and exists (
+                        select 1
+                        from ReviewProjectTextUnitFeedback feedback
+                        where feedback.reviewProjectTextUnit = reviewTextUnit
+                      )
+                    )
+                    or (
+                      (
+                        project.type not in :terminologyTypes
+                        or project.terminologyPhase is null
+                        or project.terminologyPhase <> :specialistInputPhase
+                      )
+                      and exists (
+                        select 1
+                        from ReviewProjectTextUnitDecision decision
+                        where decision.reviewProjectTextUnit = reviewTextUnit
+                          and decision.decisionState = :decidedState
+                      )
+                    )
+                  )
+                group by project.id
+                """,
+                Object[].class)
+            .setParameter("projectIds", projectIds)
+            .setParameter(
+                "terminologyTypes",
+                List.of(ReviewProjectType.TERMINOLOGY, ReviewProjectType.TERM_CANDIDATE))
+            .setParameter("specialistInputPhase", ReviewProjectTerminologyPhase.SPECIALIST_INPUT)
+            .setParameter("decidedState", DecisionState.DECIDED)
+            .getResultList();
+
+    Map<Long, Long> result = new HashMap<>();
+    for (Object[] row : rows) {
+      if (row[0] instanceof Long projectId && row[1] instanceof Number decidedWordCount) {
+        result.put(projectId, decidedWordCount.longValue());
+      }
+    }
+    return result;
   }
 
   private List<Predicate> buildProjectSearchPredicates(

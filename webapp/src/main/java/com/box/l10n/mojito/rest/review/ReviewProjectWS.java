@@ -564,6 +564,7 @@ public class ReviewProjectWS {
         Integer textUnitCount,
         Integer wordCount,
         Long decidedCount,
+        Long decidedWordCount,
         ReviewProjectType type,
         ReviewProjectTerminologyPhase terminologyPhase,
         ReviewProjectStatus status,
@@ -595,6 +596,7 @@ public class ReviewProjectWS {
         Integer textUnitCount,
         Integer wordCount,
         Long decidedCount,
+        Long decidedWordCount,
         ZonedDateTime dueDate,
         List<SearchReviewProjectsResponse.ReviewProject> reviewProjects) {}
   }
@@ -760,6 +762,7 @@ public class ReviewProjectWS {
         view.textUnitCount(),
         view.wordCount(),
         view.decidedCount(),
+        view.decidedWordCount(),
         view.type(),
         view.terminologyPhase(),
         view.status(),
@@ -797,6 +800,7 @@ public class ReviewProjectWS {
         view.textUnitCount(),
         view.wordCount(),
         view.decidedCount(),
+        view.decidedWordCount(),
         view.dueDate(),
         view.reviewProjects().stream().map(this::toSearchReviewProjectsResponse).toList());
   }

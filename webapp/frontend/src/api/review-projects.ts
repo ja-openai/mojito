@@ -295,6 +295,7 @@ export type ApiReviewProjectSummary = {
   textUnitCount?: number | null;
   wordCount?: number | null;
   decidedCount?: number | null;
+  decidedWordCount?: number | null;
   type: ApiReviewProjectType;
   terminologyPhase?: ApiReviewProjectTerminologyPhase | null;
   status: ApiReviewProjectStatus;
@@ -323,6 +324,7 @@ export type ApiReviewProjectRequestGroupSummary = {
   textUnitCount?: number | null;
   wordCount?: number | null;
   decidedCount?: number | null;
+  decidedWordCount?: number | null;
   dueDate?: string | null;
   reviewProjects?: ApiReviewProjectSummary[] | null;
 };

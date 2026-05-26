@@ -1055,6 +1055,39 @@
   overflow: hidden;
 }
 
+.review-projects-page__progress-tooltip {
+  position: relative;
+}
+
+.review-projects-page__progress-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 50%;
+  bottom: calc(100% + var(--space-2));
+  z-index: 20;
+  width: max-content;
+  max-width: min(24rem, 80vw);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.12);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.25;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(50%, 2px);
+  white-space: normal;
+}
+
+.review-projects-page__progress-tooltip:hover::after,
+.review-projects-page__progress-tooltip:focus-visible::after {
+  opacity: 1;
+  transform: translate(50%, 0);
+}
+
 .review-projects-page__progress-fill {
   display: block;
   height: 100%;

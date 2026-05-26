@@ -14,6 +14,7 @@ public record SearchReviewProjectDetail(
     Integer textUnitCount,
     Integer wordCount,
     Long decidedCount,
+    Long decidedWordCount,
     ReviewProjectType type,
     ReviewProjectTerminologyPhase terminologyPhase,
     ReviewProjectStatus status,

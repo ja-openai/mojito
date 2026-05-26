@@ -15,6 +15,7 @@ public record SearchReviewProjectRequestsView(
       Integer textUnitCount,
       Integer wordCount,
       Long decidedCount,
+      Long decidedWordCount,
       ZonedDateTime dueDate,
       List<SearchReviewProjectsView.ReviewProject> reviewProjects) {}
 }

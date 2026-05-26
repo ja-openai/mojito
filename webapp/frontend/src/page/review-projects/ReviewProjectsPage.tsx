@@ -171,6 +171,7 @@ const toFiniteNumberOrNull = (value: unknown) => {
 
 const toReviewProjectRow = (project: ApiReviewProjectSummary): ReviewProjectRow => {
   const decidedCountRaw = Number(project.decidedCount ?? 0);
+  const decidedWordCountRaw = Number(project.decidedWordCount ?? 0);
   const textUnitCountRaw = toFiniteNumberOrNull(project.textUnitCount);
   const wordCountRaw = toFiniteNumberOrNull(project.wordCount);
 
@@ -184,6 +185,7 @@ const toReviewProjectRow = (project: ApiReviewProjectSummary): ReviewProjectRow 
     status: project.status,
     localeTag: project.locale?.bcp47Tag ?? null,
     decidedCount: Number.isFinite(decidedCountRaw) ? decidedCountRaw : 0,
+    decidedWordCount: Number.isFinite(decidedWordCountRaw) ? decidedWordCountRaw : 0,
     textUnitCount: textUnitCountRaw,
     wordCount: wordCountRaw,
     dueDate: project.dueDate ?? null,
@@ -212,6 +214,9 @@ const toReviewProjectRequestGroupRow = (
   const decidedCountRaw =
     toFiniteNumberOrNull(requestGroup.decidedCount) ??
     projects.reduce((sum, project) => sum + project.decidedCount, 0);
+  const decidedWordCountRaw =
+    toFiniteNumberOrNull(requestGroup.decidedWordCount) ??
+    projects.reduce((sum, project) => sum + project.decidedWordCount, 0);
   const localeTags = Array.from(
     new Set(
       projects.map((project) => project.localeTag).filter((tag): tag is string => Boolean(tag)),
@@ -241,6 +246,7 @@ const toReviewProjectRequestGroupRow = (
     closedProjectCount: Math.max(0, toFiniteNumberOrNull(requestGroup.closedProjectCount) ?? 0),
     localeTags,
     decidedCount: Math.max(0, decidedCountRaw ?? 0),
+    decidedWordCount: Math.max(0, decidedWordCountRaw ?? 0),
     textUnitCount: Math.max(0, textUnitCount ?? 0),
     wordCount: Math.max(0, wordCount ?? 0),
     dueDate: requestGroup.dueDate ?? null,

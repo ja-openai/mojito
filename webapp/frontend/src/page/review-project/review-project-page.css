@@ -324,6 +324,46 @@
   font-size: var(--font-size-md);
 }
 
+.review-project-page__header-progress--tooltip,
+.review-project-page__header-progress-label--tooltip {
+  position: relative;
+}
+
+.review-project-page__header-progress--tooltip::after,
+.review-project-page__header-progress-label--tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 50%;
+  z-index: 20;
+  width: max-content;
+  max-width: min(24rem, 80vw);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.12);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.25;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -2px);
+  transition:
+    opacity 0.08s ease,
+    transform 0.08s ease;
+  white-space: normal;
+}
+
+.review-project-page__header-progress--tooltip:hover::after,
+.review-project-page__header-progress--tooltip:focus-visible::after,
+.review-project-page__header-progress-label--tooltip:hover::after,
+.review-project-page__header-progress-label--tooltip:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .review-project-page__header-locale-pill {
   font-size: var(--font-size-xs);
   padding: 0 var(--space-2);

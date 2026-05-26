@@ -113,6 +113,7 @@ export type ReviewProjectRow = {
   status: ApiReviewProjectStatus;
   localeTag: string | null;
   decidedCount: number;
+  decidedWordCount: number;
   textUnitCount: number | null;
   wordCount: number | null;
   dueDate: string | null;
@@ -771,7 +772,7 @@ const getProjectCompletionState = (project: ReviewProjectRow) => {
   return getCompletionState(project.decidedCount, project.textUnitCount ?? 0);
 };
 
-const getProjectProgressDoneLabel = () => 'reviewed';
+const getProjectProgressDoneLabel = () => 'words reviewed';
 
 const getLanguageCompletionMetrics = (projects: ReviewProjectRow[]) => {
   const totalLanguages = projects.length;
@@ -802,11 +803,11 @@ const getTerminologyGroupProgressMetrics = (projects: ReviewProjectRow[]) => {
   }, 0);
   const totalSpecialists = specialistProjects.length;
   const pmDecided = pmProjects.reduce(
-    (sum, project) => sum + toFiniteNonNegative(project.decidedCount),
+    (sum, project) => sum + toFiniteNonNegative(project.decidedWordCount),
     0,
   );
   const pmTotal = pmProjects.reduce(
-    (sum, project) => sum + toFiniteNonNegative(project.textUnitCount ?? 0),
+    (sum, project) => sum + toFiniteNonNegative(project.wordCount ?? 0),
     0,
   );
   const pmProgress = getProgressMetrics(pmDecided, pmTotal);
@@ -824,7 +825,7 @@ const getTerminologyGroupProgressMetrics = (projects: ReviewProjectRow[]) => {
     pmProgressTitle:
       pmProjects.length === 0
         ? 'No decider project'
-        : `Decider reviewed: ${formatNumber(pmProgress.decided)} of ${formatNumber(pmProgress.total)}`,
+        : `Decider reviewed: ${formatNumber(pmProgress.decided)} of ${formatNumber(pmProgress.total)} words`,
   };
 };
 
@@ -841,6 +842,7 @@ export type ReviewProjectRequestGroupRow = {
   closedProjectCount: number;
   localeTags: string[];
   decidedCount: number;
+  decidedWordCount: number;
   textUnitCount: number;
   wordCount: number;
   dueDate: string | null;
@@ -953,6 +955,7 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
   const dueByKey = new Map<string, number | null>();
   for (const project of projects) {
     const decidedCount = toFiniteNonNegative(project.decidedCount);
+    const decidedWordCount = toFiniteNonNegative(project.decidedWordCount);
     const textUnitCount = toFiniteNonNegative(project.textUnitCount ?? 0);
     const wordCount = toFiniteNonNegative(project.wordCount ?? 0);
     const key =
@@ -969,6 +972,7 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
         closedProjectCount: project.status === 'CLOSED' ? 1 : 0,
         localeTags: project.localeTag ? [project.localeTag] : [],
         decidedCount,
+        decidedWordCount,
         textUnitCount,
         wordCount,
         dueDate: project.dueDate ?? null,
@@ -982,6 +986,7 @@ function buildRequestGroups(projects: ReviewProjectRow[]): ReviewProjectRequestG
     existing.openProjectCount += project.status === 'OPEN' ? 1 : 0;
     existing.closedProjectCount += project.status === 'CLOSED' ? 1 : 0;
     existing.decidedCount += decidedCount;
+    existing.decidedWordCount += decidedWordCount;
     existing.textUnitCount += textUnitCount;
     existing.wordCount += wordCount;
     if (!existing.createdByUsername && project.requestCreatedByUsername) {
@@ -1328,8 +1333,8 @@ function ReviewProjectRowView({
   reviewProjectsSessionKey?: string | null;
 }) {
   const { decided, total, percentWidth, percentLabel } = getProgressMetrics(
-    project.decidedCount,
-    project.textUnitCount ?? 0,
+    project.decidedWordCount,
+    project.wordCount ?? 0,
   );
   const progressDoneLabel = getProjectProgressDoneLabel();
   const localeTag = project.localeTag;
@@ -1471,11 +1476,12 @@ function ReviewProjectRowView({
             <span className="review-projects-page__muted">No locale</span>
           )}
         </div>
-        <div className="review-projects-page__progress">
-          <div
-            className="review-projects-page__progress-bar"
-            title={`${formatNumber(decided)} of ${formatNumber(total)} ${progressDoneLabel}`}
-          >
+        <div
+          className="review-projects-page__progress review-projects-page__progress-tooltip"
+          data-tooltip={`${formatNumber(decided)} of ${formatNumber(total)} ${progressDoneLabel}`}
+          aria-label={`${formatNumber(decided)} of ${formatNumber(total)} ${progressDoneLabel}`}
+        >
+          <div className="review-projects-page__progress-bar">
             <div
               className="review-projects-page__progress-fill"
               style={{ width: percentWidth }}
@@ -2134,15 +2140,20 @@ function RequestGroupsSection({
                       </span>
                     )}
                   </div>
-                  <div className="review-projects-page__progress">
-                    <div
-                      className="review-projects-page__progress-bar"
-                      title={
-                        terminologyProgress != null
-                          ? terminologyProgress.pmProgressTitle
-                          : `${completedLanguages} of ${totalLanguages} locales complete`
-                      }
-                    >
+                  <div
+                    className="review-projects-page__progress review-projects-page__progress-tooltip"
+                    data-tooltip={
+                      terminologyProgress != null
+                        ? terminologyProgress.pmProgressTitle
+                        : `${completedLanguages} of ${totalLanguages} locales complete`
+                    }
+                    aria-label={
+                      terminologyProgress != null
+                        ? terminologyProgress.pmProgressTitle
+                        : `${completedLanguages} of ${totalLanguages} locales complete`
+                    }
+                  >
+                    <div className="review-projects-page__progress-bar">
                       <div
                         className="review-projects-page__progress-fill"
                         style={{
@@ -2159,8 +2170,9 @@ function RequestGroupsSection({
                       </div>
                       {terminologyProgress != null ? (
                         <div
-                          className="review-projects-page__progress-detail"
-                          title={terminologyProgress.specialistProgressTitle}
+                          className="review-projects-page__progress-detail review-projects-page__progress-tooltip"
+                          data-tooltip={terminologyProgress.specialistProgressTitle}
+                          aria-label={terminologyProgress.specialistProgressTitle}
                         >
                           Advisors {terminologyProgress.specialistCompletionLabel}
                         </div>
@@ -2184,7 +2196,7 @@ function RequestGroupsSection({
                         total: projectTotal,
                         percentWidth: projectPercentWidth,
                         percentLabel: projectPercentLabel,
-                      } = getProgressMetrics(project.decidedCount, project.textUnitCount ?? 0);
+                      } = getProgressMetrics(project.decidedWordCount, project.wordCount ?? 0);
                       const translatorAssignmentAction = getTranslatorAssignmentAction(
                         project,
                         assignmentControls,
@@ -2301,7 +2313,11 @@ function RequestGroupsSection({
                                 strings={project.textUnitCount ?? null}
                               />
                             </div>
-                            <div className="review-projects-page__request-project-progress">
+                            <div
+                              className="review-projects-page__request-project-progress review-projects-page__progress-tooltip"
+                              data-tooltip={`${formatNumber(projectDecided)} of ${formatNumber(projectTotal)} ${projectProgressDoneLabel}`}
+                              aria-label={`${formatNumber(projectDecided)} of ${formatNumber(projectTotal)} ${projectProgressDoneLabel}`}
+                            >
                               <div className="review-projects-page__request-project-meta">
                                 {project.status === 'CLOSED' ? (
                                   <Pill className="review-projects-page__status-pill status-closed">
@@ -2309,10 +2325,7 @@ function RequestGroupsSection({
                                   </Pill>
                                 ) : null}
                               </div>
-                              <div
-                                className="review-projects-page__progress-bar"
-                                title={`${formatNumber(projectDecided)} of ${formatNumber(projectTotal)} ${projectProgressDoneLabel}`}
-                              >
+                              <div className="review-projects-page__progress-bar">
                                 <div
                                   className="review-projects-page__progress-fill"
                                   style={{ width: projectPercentWidth }}

@@ -156,6 +156,16 @@ const mergeScreenshotImageKeys = (...groups: string[][]) => {
   return result;
 };
 
+const getTextUnitWordCount = (textUnit: ApiReviewProjectTextUnit) => {
+  const wordCount = textUnit.tmTextUnit?.wordCount;
+  return typeof wordCount === 'number' && Number.isFinite(wordCount) && wordCount > 0
+    ? wordCount
+    : 0;
+};
+
+const sumTextUnitWords = (textUnits: ApiReviewProjectTextUnit[]) =>
+  textUnits.reduce((sum, textUnit) => sum + getTextUnitWordCount(textUnit), 0);
+
 type StatusChoice = 'ACCEPTED' | 'NEEDS_REVIEW' | 'NEEDS_TRANSLATION' | 'REJECTED';
 
 const STATUS_CHOICES: Array<{ value: StatusChoice; label: string }> = [
@@ -4141,26 +4151,46 @@ function ReviewProjectHeader({
     specialistInputPercentLabel,
     specialistInputTitle,
   } = useMemo(() => {
-    const selected = textUnits?.length ?? 0;
+    const selectedTextUnits = textUnits ?? [];
+    const selected = selectedTextUnits.length;
+    const selectedWords = sumTextUnitWords(selectedTextUnits);
     const hasSpecialistFeedback = (tu: ApiReviewProjectTextUnit) =>
       (tu.terminologyFeedbacks ?? []).length > 0;
-    const decided =
+    const decidedTextUnits =
       isTerminologyProject && terminologyPhase === 'SPECIALIST_INPUT'
-        ? (textUnits?.filter(hasSpecialistFeedback).length ?? 0)
-        : (textUnits?.filter((tu) => getDecisionState(tu) === 'DECIDED').length ?? 0);
-    const specialistInputCount =
+        ? selectedTextUnits.filter(hasSpecialistFeedback)
+        : selectedTextUnits.filter((tu) => getDecisionState(tu) === 'DECIDED');
+    const decided = decidedTextUnits.length;
+    const decidedWords = sumTextUnitWords(decidedTextUnits);
+    const specialistInputTextUnits =
       isTerminologyProject && terminologyPhase === 'PM_RESOLUTION'
-        ? (textUnits?.filter((tu) => (tu.terminologyFeedbacks ?? []).length > 0).length ?? 0)
-        : 0;
+        ? selectedTextUnits.filter((tu) => (tu.terminologyFeedbacks ?? []).length > 0)
+        : [];
+    const specialistInputCount = specialistInputTextUnits.length;
+    const specialistInputWords = sumTextUnitWords(specialistInputTextUnits);
     const pending = Math.max(0, selected - decided);
-    const percent = selected > 0 ? (decided / selected) * 100 : 0;
+    const hasWordProgress = selectedWords > 0;
+    const percent = hasWordProgress
+      ? (decidedWords / selectedWords) * 100
+      : selected > 0
+        ? (decided / selected) * 100
+        : 0;
     const progressLabel =
       isTerminologyProject && terminologyPhase === 'PM_RESOLUTION'
         ? 'Decider reviewed'
         : 'Reviewed';
-    const title = selected > 0 ? `${progressLabel}: ${decided}/${selected}` : 'No text units';
-    const specialistInputPercent =
-      selected > 0 && specialistInputCount > 0 ? (specialistInputCount / selected) * 100 : 0;
+    const progressValue = hasWordProgress
+      ? `${formatNumber(decidedWords)} of ${formatNumber(selectedWords)} words reviewed`
+      : `${decided} of ${selected} text units reviewed`;
+    const title = selected > 0 ? `${progressLabel}: ${progressValue}` : 'No text units';
+    const specialistInputPercent = hasWordProgress
+      ? (specialistInputWords / selectedWords) * 100
+      : selected > 0 && specialistInputCount > 0
+        ? (specialistInputCount / selected) * 100
+        : 0;
+    const specialistInputValue = hasWordProgress
+      ? `${formatNumber(specialistInputWords)} of ${formatNumber(selectedWords)} words with advisor input`
+      : `${specialistInputCount} of ${selected} text units with advisor input`;
     return {
       selectedCount: selected,
       decidedCount: decided,
@@ -4170,7 +4200,7 @@ function ReviewProjectHeader({
       progressTitle: title,
       specialistInputPercentLabel: Math.floor(specialistInputPercent),
       specialistInputTitle:
-        selected > 0 ? `Advisor input: ${specialistInputCount}/${selected}` : 'No text units',
+        selected > 0 ? `Advisor input: ${specialistInputValue}` : 'No text units',
     };
   }, [isTerminologyProject, terminologyPhase, textUnits]);
 
@@ -4587,18 +4617,25 @@ function ReviewProjectHeader({
           <div className="review-project-page__header-group review-project-page__header-group--stats">
             <CountsInline words={wordCount} strings={textUnitCount ?? selectedCount} />
             <span className="review-project-page__header-dot">•</span>
-            <div className="review-project-page__header-progress">
-              <span className="review-project-page__header-progress-label" title={progressTitle}>
+            <div
+              className="review-project-page__header-progress review-project-page__header-progress--tooltip"
+              data-tooltip={progressTitle}
+              aria-label={progressTitle}
+              tabIndex={0}
+            >
+              <span className="review-project-page__header-progress-label">
                 {progressPercentLabel}%
               </span>
-              <ProgressBar percent={progressPercent} title={progressTitle} />
+              <ProgressBar percent={progressPercent} />
             </div>
             {isTerminologyProject && terminologyPhase === 'PM_RESOLUTION' ? (
               <>
                 <span className="review-project-page__header-dot">•</span>
                 <span
-                  className="review-project-page__header-progress-label"
-                  title={specialistInputTitle}
+                  className="review-project-page__header-progress-label review-project-page__header-progress-label--tooltip"
+                  data-tooltip={specialistInputTitle}
+                  aria-label={specialistInputTitle}
+                  tabIndex={0}
                 >
                   Advisor input {specialistInputPercentLabel}%
                 </span>
@@ -5450,9 +5487,9 @@ function CountsInline({
   );
 }
 
-function ProgressBar({ percent, title }: { percent: number; title?: string }) {
+function ProgressBar({ percent }: { percent: number }) {
   return (
-    <div className="review-project-page__header-progress-bar" title={title}>
+    <div className="review-project-page__header-progress-bar">
       <div
         className="review-project-page__header-progress-fill"
         style={{ width: `${Math.min(Math.max(percent, 0), 100)}%` }}
