@@ -81,6 +81,7 @@ export function UserMenu() {
   const toolLinks = isAdmin
     ? [
         { label: 'Character helper', path: '/tools/char-code' },
+        { label: 'Bidi helper', path: '/tools/bidi-helper' },
         { label: 'ICU preview', path: '/tools/icu-preview' },
       ]
     : [];
