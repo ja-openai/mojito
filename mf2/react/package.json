@@ -1,0 +1,30 @@
+{
+  "name": "@mojito-mf2/react",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./runtime": "./src/runtime.js"
+  },
+  "scripts": {
+    "bench:render": "node --expose-gc src/benchmark.js",
+    "build": "vite build",
+    "check": "node src/smoke-test.js && node src/compile-catalog-demo.js --check && vite build",
+    "demo:compile": "node src/compile-catalog-demo.js",
+    "dev": "vite --host 127.0.0.1 --port 8790"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "@mojito-mf2/core": "file:../javascript"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.0.2",
+    "vite": "8.0.13",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  }
+}
