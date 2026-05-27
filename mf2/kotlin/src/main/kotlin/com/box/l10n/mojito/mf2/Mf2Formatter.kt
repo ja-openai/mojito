@@ -1,0 +1,814 @@
+package com.box.l10n.mojito.mf2
+
+import java.text.Normalizer
+import kotlin.math.truncate
+
+class Mf2FunctionRegistry internal constructor(
+    private val formatters: Map<String, Mf2FunctionFormatter>,
+    private val selectors: Map<String, Mf2Selector>,
+) {
+    companion object {
+        @JvmStatic
+        fun portable(): Mf2FunctionRegistry = Mf2FunctionRegistries.portable()
+
+        @JvmStatic
+        fun defaults(): Mf2FunctionRegistry = Mf2FunctionRegistries.jdk()
+    }
+
+    fun withFunction(name: String, formatter: Mf2FunctionFormatter): Mf2FunctionRegistry =
+        Mf2FunctionRegistry(formatters + (name to formatter), selectors)
+
+    fun withSelector(name: String, selector: Mf2Selector): Mf2FunctionRegistry =
+        Mf2FunctionRegistry(formatters, selectors + (name to selector))
+
+    internal fun hasFormatter(functionRef: Map<String, Any?>): Boolean =
+        formatters.containsKey(stringValue(functionRef["name"]))
+
+    internal fun hasSelector(functionRef: Map<String, Any?>): Boolean =
+        selectors.containsKey(stringValue(functionRef["name"]))
+
+    internal fun format(call: Mf2FunctionCall): String =
+        formatters[stringValue(call.function["name"])]?.invoke(call)
+            ?: throw Mf2Error(
+                "unsupported-function",
+                "Function :${call.function["name"]} is not supported by this formatter registry.",
+            )
+
+    internal fun select(match: Mf2FunctionMatch): Int? =
+        selectors[stringValue(match.function["name"])]?.invoke(match)
+}
+
+object Mf2Formatter {
+    @JvmStatic
+    private fun formatResult(
+        model: Mf2Model,
+        arguments: Map<String, Any?> = emptyMap(),
+        locale: String = "en",
+        bidiIsolation: Mf2BidiIsolation = Mf2BidiIsolation.NONE,
+        functions: Mf2FunctionRegistry = Mf2FunctionRegistry.defaults(),
+        onMissingArgument: Mf2RecoveryHandler = ::defaultRecovery,
+        onFormatError: Mf2RecoveryHandler = ::defaultRecovery,
+    ): Mf2FormatResult {
+        val result = formatToPartsResult(
+            model,
+            arguments,
+            locale,
+            functions,
+            onMissingArgument,
+            onFormatError,
+        )
+        return Mf2FormatResult(partsToString(result.parts, bidiIsolation), result.errors)
+    }
+
+    @JvmStatic
+    fun formatMessage(
+        model: Mf2Model,
+        arguments: Map<String, Any?> = emptyMap(),
+        locale: String = "en",
+        bidiIsolation: Mf2BidiIsolation = Mf2BidiIsolation.NONE,
+        functions: Mf2FunctionRegistry = Mf2FunctionRegistry.defaults(),
+        onMissingArgument: Mf2RecoveryHandler = ::defaultRecovery,
+        onFormatError: Mf2RecoveryHandler = ::defaultRecovery,
+    ): Mf2FormatResult = formatResult(
+        model,
+        arguments,
+        locale,
+        bidiIsolation,
+        functions,
+        onMissingArgument,
+        onFormatError,
+    )
+
+    @JvmStatic
+    private fun formatToPartsResult(
+        model: Mf2Model,
+        arguments: Map<String, Any?> = emptyMap(),
+        locale: String = "en",
+        functions: Mf2FunctionRegistry = Mf2FunctionRegistry.defaults(),
+        onMissingArgument: Mf2RecoveryHandler = ::defaultRecovery,
+        onFormatError: Mf2RecoveryHandler = ::defaultRecovery,
+    ): Mf2PartsResult {
+        validateModel(model)
+        val context = FormatContext(
+            arguments,
+            locale,
+            functions,
+            fallback = true,
+            onMissingArgument = onMissingArgument,
+            onFormatError = onFormatError,
+        )
+        context.applyDeclarations(modelDeclarations(model))
+        val parts = when (model["type"]) {
+            "message" -> context.formatPatternToParts(asList(model["pattern"]))
+            "select" -> context.formatSelectToParts(modelSelectors(model), modelVariants(model))
+            else -> throw Mf2Error("unsupported-message-type", "Unsupported message type: ${model["type"]}")
+        }
+        return Mf2PartsResult(parts, context.errors)
+    }
+
+    @JvmStatic
+    fun formatMessageToParts(
+        model: Mf2Model,
+        arguments: Map<String, Any?> = emptyMap(),
+        locale: String = "en",
+        functions: Mf2FunctionRegistry = Mf2FunctionRegistry.defaults(),
+        onMissingArgument: Mf2RecoveryHandler = ::defaultRecovery,
+        onFormatError: Mf2RecoveryHandler = ::defaultRecovery,
+    ): Mf2PartsResult = formatToPartsResult(
+        model,
+        arguments,
+        locale,
+        functions,
+        onMissingArgument,
+        onFormatError,
+    )
+
+    @JvmStatic
+    fun partsToString(
+        parts: List<Mf2Part>,
+        bidiIsolation: Mf2BidiIsolation = Mf2BidiIsolation.NONE,
+    ): String {
+        val output = StringBuilder()
+        for (part in parts) {
+            when (part["type"]) {
+                "text" -> output.append(stringValue(part["value"]))
+                "fallback" -> output.append(part["value"] as? String ?: fallbackValue(stringValue(part["source"])))
+                "expression" -> output.append(
+                    isolateExpression(
+                        stringValue(part["value"]),
+                        bidiIsolation,
+                        part["dir"] as? String,
+                    ),
+                )
+            }
+        }
+        return output.toString()
+    }
+}
+
+private class FormatContext(
+    arguments: Map<String, Any?>,
+    locale: String,
+    private val functions: Mf2FunctionRegistry,
+    private val fallback: Boolean,
+    private val onMissingArgument: Mf2RecoveryHandler,
+    private val onFormatError: Mf2RecoveryHandler,
+) {
+    private val arguments = LinkedHashMap(arguments)
+    private val locals = linkedMapOf<String, ResolvedValue>()
+    private val failedLocals = mutableSetOf<String>()
+    private val selectorAnnotations = linkedMapOf<String, SelectorAnnotation>()
+    val errors = mutableListOf<Mf2Error>()
+    private val locale = locale.takeIf { it.isNotBlank() } ?: "en"
+
+    fun applyDeclarations(declarations: List<Map<String, Any?>>) {
+        selectorAnnotations += selectorAnnotations(declarations)
+        for (declaration in declarations) {
+            when (declaration["type"]) {
+                "input" -> applyInputDeclaration(declaration)
+                "local" -> {
+                    val name = stringValue(declaration["name"])
+                    val output = formatExpressionOutput(asMap(declaration["value"]))
+                    if (output.hadError) {
+                        failedLocals += name
+                        locals.remove(name)
+                    } else {
+                        locals[name] = ResolvedValue(output.value, output.source)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun applyInputDeclaration(input: Map<String, Any?>) {
+        val name = stringValue(input["name"])
+        val functionRef = asMap(input["value"])["function"] as? Map<String, Any?> ?: return
+        if (!functions.hasFormatter(functionRef) || !functions.hasSelector(functionRef)) return
+        if (!hasValue(name)) {
+            if (!fallback) throw Mf2Error.missingArgument(name)
+            failedLocals += name
+            errors += unresolvedVariable(name)
+            errors += Mf2Error.badOperand("Function operand is not available.")
+            return
+        }
+        val inputValue = value(name)
+        recordFunctionResolutionErrors(functionRef, inputValue.source)
+        try {
+            val rendered = valueToString(inputValue.rawValue)
+            val formatted = functions.format(
+                Mf2FunctionCall(
+                    value = rendered,
+                    rawValue = inputValue.rawValue,
+                    function = functionRef,
+                    locale = locale,
+                    optionResolver = { optionName, fallbackValue -> optionValue(functionRef, optionName, fallbackValue) },
+                    inheritedSource = inputValue.source,
+                ),
+            )
+            val sourceValue = inputValue.source?.value ?: rendered
+            locals[name] = ResolvedValue(formatted, Mf2FunctionSource(sourceValue, functionRef, inputValue.source))
+        } catch (error: Mf2Error) {
+            if (!fallback) throw error
+            errors += fallbackError(error)
+            failedLocals += name
+            locals.remove(name)
+        }
+    }
+
+    fun formatSelectToParts(
+        selectors: List<Map<String, Any?>>,
+        variants: List<Map<String, Any?>>,
+    ): List<Mf2Part> {
+        val selectorValues = selectors.map { selectorValue(it) }
+        val signatures = mutableSetOf<List<String>>()
+        var fallbackVariant: Map<String, Any?>? = null
+        var selected: Map<String, Any?>? = null
+        var selectedRank: List<Int>? = null
+        for (variant in variants) {
+            validateVariant(variant, selectorValues, signatures)
+            val keys = variantKeys(variant)
+            if (fallbackVariant == null && keys.all { it["type"] == "*" }) fallbackVariant = variant
+            val rank = variantMatchRank(variant, selectorValues)
+            if (rank != null && (selectedRank == null || compareRank(rank, selectedRank!!) > 0)) {
+                selected = variant
+                selectedRank = rank
+            }
+        }
+        if (fallbackVariant == null) throw Mf2Error(
+            "missing-fallback-variant",
+            "Select messages must include a catch-all fallback variant.",
+        )
+        val variant = selected ?: fallbackVariant
+        return formatPatternToParts(asList(variant["value"]))
+    }
+
+    private fun selectorValue(selector: Map<String, Any?>): SelectorValue {
+        val name = stringValue(selector["name"])
+        val annotation = selectorAnnotations[name]
+        if (!hasValue(name)) {
+            if (!fallback) throw Mf2Error.missingArgument(name)
+            if (!failedLocals.contains(name)) errors += unresolvedVariable(name)
+            if (annotation != null && functions.hasSelector(annotation.function)) {
+                if (!failedLocals.contains(name)) errors += Mf2Error.badOperand("Selector operand is not available.")
+                errors += Mf2Error.badSelector("Selector operand is not available.")
+            }
+            return SelectorValue(
+                rendered = "",
+                normalizedRendered = if (annotation?.isString == true) normalizeStringKey("") else null,
+                exactMatch = false,
+                selectionKey = null,
+                function = annotation?.function,
+                source = null,
+            )
+        }
+        val resolved = value(name)
+        val rendered = valueToString(resolved.rawValue)
+        recordSelectorResolutionErrors(annotation)
+        return SelectorValue(
+            rendered = rendered,
+            normalizedRendered = if (annotation?.isString == true) normalizeStringKey(rendered) else null,
+            exactMatch = annotation == null || annotation.exactMatch,
+            selectionKey = selectionKey(locale, annotation, resolved),
+            function = annotation?.function,
+            source = resolved.source,
+        )
+    }
+
+    fun formatPatternToParts(pattern: List<Any?>): List<Mf2Part> {
+        val parts = mutableListOf<Mf2Part>()
+        for (part in pattern) {
+            if (part is String) {
+                parts += linkedMapOf("type" to "text", "value" to part)
+                continue
+            }
+            val item = asMap(part)
+            when (item["type"]) {
+                "expression" -> {
+                    val output = formatExpressionOutput(item)
+                    if (output.hadError) {
+                        val source = output.fallbackSource ?: fallbackSource(item)
+                        val fallbackPart = linkedMapOf<String, Any?>("type" to "fallback", "source" to source)
+                        if (output.value != fallbackValue(source)) fallbackPart["value"] = output.value
+                        parts += fallbackPart
+                    } else {
+                        val expressionPart = linkedMapOf<String, Any?>("type" to "expression", "value" to output.value)
+                        val attributes = asMap(item["attributes"])
+                        if (attributes.isNotEmpty()) expressionPart["attributes"] = attributes
+                        if (output.direction != null) expressionPart["dir"] = output.direction
+                        parts += expressionPart
+                    }
+                }
+                "markup" -> {
+                    val options = asMap(item["options"])
+                    if (options.containsKey("u:dir")) {
+                        val error = Mf2Error.badOption("u:dir is not valid on markup.")
+                        if (!fallback) throw error
+                        errors += error
+                    }
+                    val markup = linkedMapOf<String, Any?>(
+                        "type" to "markup",
+                        "kind" to item["kind"],
+                        "name" to item["name"],
+                    )
+                    if (options.isNotEmpty()) markup["options"] = options
+                    val attributes = asMap(item["attributes"])
+                    if (attributes.isNotEmpty()) markup["attributes"] = attributes
+                    parts += markup
+                }
+                else -> throw Mf2Error("unsupported-pattern-part", "Unsupported pattern part: ${item["type"]}")
+            }
+        }
+        return parts
+    }
+
+    private fun formatExpressionOutput(expression: Map<String, Any?>): ExpressionOutput {
+        val arg = expression["arg"] as? Map<String, Any?>
+        var value: String
+        var rawValue: Any?
+        var source: FunctionSource? = null
+        when (arg?.get("type")) {
+            null -> {
+                value = ""
+                rawValue = ""
+            }
+            "literal" -> {
+                value = stringValue(arg["value"])
+                rawValue = value
+            }
+            "variable" -> {
+                val name = stringValue(arg["name"])
+                if (!hasValue(name)) {
+                    if (!fallback) throw Mf2Error.missingArgument(name)
+                    val error = unresolvedVariable(name)
+                    if (!failedLocals.contains(name)) errors += error
+                    if (expression["function"] != null) errors += Mf2Error.badOperand("Function operand is not available.")
+                    val source = fallbackSource(expression)
+                    return ExpressionOutput(
+                        recoverMissingArgument(expression, name, source, error),
+                        true,
+                        null,
+                        null,
+                        source,
+                    )
+                }
+                val resolved = value(name)
+                rawValue = resolved.rawValue
+                value = valueToString(rawValue)
+                source = resolved.source
+            }
+            else -> throw Mf2Error("unsupported-expression-arg", "Unsupported expression arg: ${arg?.get("type")}")
+        }
+        val functionRef = expression["function"] as? Map<String, Any?> ?: return ExpressionOutput(
+            value,
+            false,
+            source,
+            bidiDirectionFromSource(source),
+        )
+        recordFunctionResolutionErrors(functionRef, source)
+        val direction = bidiDirectionForFunction(functionRef, source)
+        return try {
+            val formatted = functions.format(
+                Mf2FunctionCall(
+                    value = value,
+                    rawValue = rawValue,
+                    function = functionRef,
+                    locale = locale,
+                    optionResolver = { optionName, fallbackValue -> optionValue(functionRef, optionName, fallbackValue) },
+                    inheritedSource = source,
+                ),
+            )
+            ExpressionOutput(formatted, false, Mf2FunctionSource(source?.value ?: value, functionRef, source), direction)
+        } catch (error: Mf2Error) {
+            if (!fallback) throw error
+            val recoverable = fallbackError(error)
+            errors += recoverable
+            val source = fallbackSource(expression)
+            ExpressionOutput(
+                recoverFormatError(expression, source, recoverable),
+                true,
+                null,
+                null,
+                source,
+            )
+        }
+    }
+
+    private fun recoverMissingArgument(
+        expression: Map<String, Any?>,
+        variableName: String,
+        source: String,
+        error: Mf2Error,
+    ): String =
+        recoverValue(
+            onMissingArgument,
+            Mf2RecoveryContext(
+                code = error.code,
+                message = error.message ?: "",
+                locale = locale,
+                variableName = variableName,
+                functionName = stringValue(asMap(expression["function"])["name"]).ifBlank { null },
+                sourceExpression = expressionSource(expression),
+                fallbackValue = fallbackValue(source),
+                error = error,
+            ),
+        )
+
+    private fun recoverFormatError(
+        expression: Map<String, Any?>,
+        source: String,
+        error: Mf2Error,
+    ): String {
+        val arg = asMap(expression["arg"])
+        val variableName = if (arg["type"] == "variable") stringValue(arg["name"]) else null
+        return recoverValue(
+            onFormatError,
+            Mf2RecoveryContext(
+                code = error.code,
+                message = error.message ?: "",
+                locale = locale,
+                variableName = variableName,
+                functionName = stringValue(asMap(expression["function"])["name"]).ifBlank { null },
+                sourceExpression = expressionSource(expression),
+                fallbackValue = fallbackValue(source),
+                error = error,
+            ),
+        )
+    }
+
+    private fun optionValue(functionRef: Map<String, Any?>, optionName: String, fallbackValue: String?): String? {
+        val option = asMap(functionRef["options"])[optionName] ?: return fallbackValue
+        val optionMap = asMap(option)
+        return when (optionMap["type"]) {
+            "literal" -> stringValue(optionMap["value"])
+            "variable" -> {
+                val name = stringValue(optionMap["name"])
+                if (!hasValue(name)) throw Mf2Error.missingArgument(name)
+                valueToString(value(name).rawValue)
+            }
+            else -> fallbackValue
+        }
+    }
+
+    private fun hasValue(name: String): Boolean = !failedLocals.contains(name) && (locals.containsKey(name) || arguments.containsKey(name))
+
+    private fun value(name: String): ResolvedValue = locals[name] ?: ResolvedValue(arguments[name], null)
+
+    private fun recordFunctionResolutionErrors(functionRef: Map<String, Any?>, source: FunctionSource?) {
+        if (!isNumericFunction(functionRef)) return
+        if (!numericSelectUsesVariable(functionRef) && !inheritedExactNumericSource(source)) return
+        val error = Mf2Error.badOption("Numeric select option is not valid in this context.")
+        if (!fallback) throw error
+        errors += error
+    }
+
+    private fun recordSelectorResolutionErrors(annotation: SelectorAnnotation?) {
+        if (annotation?.function?.get("name") != "currency") return
+        val error = Mf2Error.badSelector("Currency selector is not supported.")
+        if (!fallback) throw error
+        errors += error
+    }
+
+    private fun validateVariant(
+        variant: Map<String, Any?>,
+        selectorValues: List<SelectorValue>,
+        signatures: MutableSet<List<String>>,
+    ) {
+        val keys = variantKeys(variant)
+        if (keys.size != selectorValues.size) throw Mf2Error(
+            "variant-key-count-mismatch",
+            "Variant key count must match selector count.",
+        )
+        val signature = variantKeySignature(keys, selectorValues)
+        if (!signatures.add(signature)) throw Mf2Error(
+            "duplicate-variant",
+            "Select variants must have unique key tuples.",
+        )
+    }
+
+    private fun variantMatchRank(variant: Map<String, Any?>, selectorValues: List<SelectorValue>): List<Int>? {
+        val keys = variantKeys(variant)
+        if (keys.size != selectorValues.size) return null
+        return keys.mapIndexed { index, key -> keyMatchRank(key, selectorValues[index]) ?: return null }
+    }
+
+    private fun keyMatchRank(key: Map<String, Any?>, selector: SelectorValue): Int? {
+        if (key["type"] == "*") return 0
+        val keyValue = stringValue(key["value"])
+        if ((selector.exactMatch && literalKeyMatches(keyValue, selector)) || keyValue == selector.selectionKey) return 1
+        val functionRef = selector.function ?: return null
+        return try {
+            functions.select(
+                Mf2FunctionMatch(
+                    value = selector.rendered,
+                    rawValue = selector.rendered,
+                    function = functionRef,
+                    key = keyValue,
+                    locale = locale,
+                    optionResolver = { optionName, fallbackValue -> optionValue(functionRef, optionName, fallbackValue) },
+                    inheritedSource = selector.source,
+                ),
+            )
+        } catch (error: Mf2Error) {
+            if (!fallback) throw error
+            errors += fallbackError(error)
+            errors += Mf2Error.badSelector("Selector failed to match.")
+            null
+        }
+    }
+}
+
+private fun validateModel(model: Mf2Model) {
+    val declarations = modelDeclarations(model)
+    validateDeclarations(declarations)
+    when (model["type"]) {
+        "message" -> validatePattern(asList(model["pattern"]))
+        "select" -> {
+            validateSelectorAnnotations(declarations, modelSelectors(model))
+            for (variant in modelVariants(model)) validatePattern(asList(variant["value"]))
+        }
+    }
+}
+
+private fun validateDeclarations(declarations: List<Map<String, Any?>>) {
+    val names = mutableSetOf<String>()
+    for (declaration in declarations) {
+        val name = stringValue(declaration["name"])
+        if (declaration["type"] == "input") validateInputDeclaration(declaration)
+        if (!names.add(name)) throw Mf2Error("duplicate-declaration", "Declaration $$name is defined more than once.")
+    }
+    validateLocalReferences(declarations)
+}
+
+private fun validateLocalReferences(declarations: List<Map<String, Any?>>) {
+    val forbidden = mutableSetOf<String>()
+    for (declaration in declarations.asReversed()) {
+        if (declaration["type"] != "local") continue
+        val name = stringValue(declaration["name"])
+        forbidden += name
+        if (expressionReferencesAny(asMap(declaration["value"]), forbidden)) {
+            throw Mf2Error("duplicate-declaration", "Declaration $$name is defined more than once.")
+        }
+    }
+}
+
+private fun expressionReferencesAny(expression: Map<String, Any?>, names: Set<String>): Boolean =
+    argReferencesAny(asMap(expression["arg"]), names) ||
+        asMap(expression["function"])
+            .let { asMap(it["options"]).values }
+            .any { argReferencesAny(asMap(it), names) }
+
+private fun argReferencesAny(arg: Map<String, Any?>, names: Set<String>): Boolean =
+    arg["type"] == "variable" && names.contains(stringValue(arg["name"]))
+
+private fun validateInputDeclaration(declaration: Map<String, Any?>) {
+    val name = stringValue(declaration["name"])
+    val arg = asMap(asMap(declaration["value"])["arg"])
+    if (arg["type"] == "variable" && arg["name"] == name) return
+    throw Mf2Error("invalid-input-declaration", "Input declaration $$name must bind the same variable name.")
+}
+
+private fun validatePattern(pattern: List<Any?>) {
+    for (part in pattern) {
+        if (part is String && part.isEmpty()) throw Mf2Error("invalid-pattern-text", "Pattern text parts must be non-empty.")
+        val item = asMap(part)
+        if (item["type"] == "markup") validateMarkup(item)
+    }
+}
+
+private fun validateMarkup(markup: Map<String, Any?>) {
+    if (stringValue(markup["kind"]) in setOf("open", "standalone", "close")) return
+    throw Mf2Error("invalid-markup-kind", "Markup kind must be open, standalone, or close.")
+}
+
+private fun validateSelectorAnnotations(declarations: List<Map<String, Any?>>, selectors: List<Map<String, Any?>>) {
+    val annotations = selectorAnnotations(declarations)
+    for (selector in selectors) {
+        val name = stringValue(selector["name"])
+        if (!annotations.containsKey(name)) throw Mf2Error(
+            "missing-selector-annotation",
+            "Selector $$name must reference a declaration with a function.",
+        )
+    }
+}
+
+private fun selectorAnnotations(declarations: List<Map<String, Any?>>): Map<String, SelectorAnnotation> {
+    val expressions = linkedMapOf<String, Map<String, Any?>>()
+    val annotations = linkedMapOf<String, SelectorAnnotation>()
+    for (declaration in declarations) {
+        val name = stringValue(declaration["name"])
+        val expression = asMap(declaration["value"])
+        expressions[name] = expression
+        val functionRef = expression["function"] as? Map<String, Any?>
+        if (functionRef != null) annotations[name] = SelectorAnnotation.from(functionRef)
+    }
+    var changed = true
+    while (changed) {
+        changed = false
+        for ((name, expression) in expressions) {
+            if (annotations.containsKey(name)) continue
+            val arg = asMap(expression["arg"])
+            if (arg["type"] != "variable") continue
+            val inherited = annotations[stringValue(arg["name"])] ?: continue
+            annotations[name] = inherited
+            changed = true
+        }
+    }
+    return annotations
+}
+
+private fun modelDeclarations(model: Mf2Model): List<Map<String, Any?>> = asList(model["declarations"]).map(::asMap)
+
+private fun modelSelectors(model: Mf2Model): List<Map<String, Any?>> = asList(model["selectors"]).map(::asMap)
+
+private fun modelVariants(model: Mf2Model): List<Map<String, Any?>> = asList(model["variants"]).map(::asMap)
+
+private fun variantKeys(variant: Map<String, Any?>): List<Map<String, Any?>> = asList(variant["keys"]).map(::asMap)
+
+private fun variantKeySignature(keys: List<Map<String, Any?>>, selectorValues: List<SelectorValue>): List<String> =
+    keys.mapIndexed { index, key ->
+        if (key["type"] == "*") {
+            "*"
+        } else {
+            val selector = selectorValues[index]
+            "=" + if (selector.normalizedRendered == null) {
+                stringValue(key["value"])
+            } else {
+                normalizeStringKey(stringValue(key["value"]))
+            }
+        }
+    }
+
+private fun compareRank(left: List<Int>, right: List<Int>): Int {
+    val size = minOf(left.size, right.size)
+    for (index in 0 until size) {
+        val comparison = left[index].compareTo(right[index])
+        if (comparison != 0) return comparison
+    }
+    return left.size.compareTo(right.size)
+}
+
+private fun literalKeyMatches(value: String, selector: SelectorValue): Boolean =
+    if (selector.normalizedRendered == null) {
+        value == selector.rendered
+    } else {
+        normalizeStringKey(value) == selector.normalizedRendered
+    }
+
+private fun selectionKey(locale: String, annotation: SelectorAnnotation?, resolvedValue: ResolvedValue): String? {
+    if (annotation == null || !annotation.isNumeric || annotation.numberSelect == "exact") return null
+    var operand = valueToString(resolvedValue.rawValue)
+    if (annotation.function["name"] == "percent") {
+        operand = if (operand.endsWith("%")) {
+            operand.dropLast(1)
+        } else {
+            val sourceValue = resolvedValue.source?.value ?: operand
+            val sourceNumber = sourceValue.toDoubleOrNull() ?: return null
+            formatNumberValue(sourceNumber * 100.0)
+        }
+    }
+    return selectPluralCategory(locale, operand, annotation.numberSelect)
+}
+
+private fun selectPluralCategory(locale: String, value: String, select: String): String? =
+    try {
+        if (select == "ordinal") PluralRules.selectOrdinal(locale, value) else PluralRules.selectCardinal(locale, value)
+    } catch (_: RuntimeException) {
+        null
+    }
+
+private fun normalizeStringKey(value: String): String = Normalizer.normalize(value, Normalizer.Form.NFC)
+
+private fun fallbackError(error: Mf2Error): Mf2Error =
+    if (error.code == "unsupported-function") Mf2Error("unknown-function", error.message ?: "") else error
+
+private fun unresolvedVariable(name: String): Mf2Error =
+    Mf2Error.unresolvedVariable(name)
+
+private fun fallbackSource(expression: Map<String, Any?>): String {
+    val arg = expression["arg"] as? Map<String, Any?>
+    if (arg != null) return expressionArgSource(arg)
+    val functionRef = expression["function"] as? Map<String, Any?>
+    return if (functionRef != null) functionSource(functionRef) else ""
+}
+
+private fun fallbackValue(source: String): String = "{$source}"
+
+private fun defaultRecovery(context: Mf2RecoveryContext): String = context.fallbackValue
+
+private fun recoverValue(handler: Mf2RecoveryHandler, context: Mf2RecoveryContext): String =
+    handler(context) ?: context.fallbackValue
+
+private fun expressionSource(expression: Map<String, Any?>): String {
+    val items = mutableListOf<String>()
+    val arg = expression["arg"] as? Map<String, Any?>
+    if (arg != null) items += expressionArgSource(arg)
+    val functionRef = expression["function"] as? Map<String, Any?>
+    if (functionRef != null) items += functionSource(functionRef)
+    return items.joinToString(prefix = "{", postfix = "}", separator = " ")
+}
+
+private fun expressionArgSource(arg: Map<String, Any?>): String =
+    if (arg["type"] == "variable") "$${stringValue(arg["name"])}" else quoteLiteralSource(stringValue(arg["value"]))
+
+private fun functionSource(functionRef: Map<String, Any?>): String {
+    val source = StringBuilder(":").append(stringValue(functionRef["name"]))
+    for ((name, value) in asMap(functionRef["options"])) {
+        source.append(" ").append(name).append("=").append(expressionArgSource(asMap(value)))
+    }
+    return source.toString()
+}
+
+private fun quoteLiteralSource(value: String): String =
+    buildString {
+        append("|")
+        for (char in value) {
+            if (char == '\\' || char == '|') append("\\")
+            append(char)
+        }
+        append("|")
+    }
+
+private fun isolateExpression(value: String, bidiIsolation: Mf2BidiIsolation, direction: String?): String =
+    if (bidiIsolation == Mf2BidiIsolation.DEFAULT) "${bidiMarker(direction)}$value\u2069" else value
+
+private fun bidiMarker(direction: String?): Char =
+    when (direction ?: "auto") {
+        "ltr" -> '\u2066'
+        "rtl" -> '\u2067'
+        else -> '\u2068'
+    }
+
+private fun bidiDirectionForFunction(functionRef: Map<String, Any?>, source: FunctionSource?): String? {
+    val value = functionOptionLiteral(functionRef, "u:dir", null)
+    if (value != null) return parseBidiDirection(value)
+    return bidiDirectionFromSource(source)
+}
+
+private fun bidiDirectionFromSource(source: FunctionSource?): String? {
+    if (source == null) return null
+    val value = functionOptionLiteral(source.function, "u:dir", null)
+    if (value != null) return parseBidiDirection(value)
+    return bidiDirectionFromSource(source.inherited)
+}
+
+private fun parseBidiDirection(value: String): String =
+    if (value in setOf("auto", "ltr", "rtl")) value else throw Mf2Error.badOption("u:dir option must be auto, ltr, or rtl.")
+
+private fun valueToString(value: Any?): String =
+    when (value) {
+        null -> ""
+        is String -> value
+        is Boolean -> if (value) "true" else "false"
+        is Float -> formatNumberValue(value.toDouble())
+        is Double -> formatNumberValue(value)
+        is Number -> value.toString()
+        else -> value.toString()
+    }
+
+private fun formatNumberValue(value: Double): String =
+    if (value.isFinite() && value == truncate(value)) value.toLong().toString() else value.toString()
+
+private data class ResolvedValue(
+    val rawValue: Any?,
+    val source: FunctionSource?,
+)
+
+private typealias FunctionSource = Mf2FunctionSource
+
+private data class ExpressionOutput(
+    val value: String,
+    val hadError: Boolean,
+    val source: FunctionSource?,
+    val direction: String?,
+    val fallbackSource: String? = null,
+)
+
+private data class SelectorValue(
+    val rendered: String,
+    val normalizedRendered: String?,
+    val exactMatch: Boolean,
+    val selectionKey: String?,
+    val function: Map<String, Any?>?,
+    val source: FunctionSource?,
+)
+
+private data class SelectorAnnotation(
+    val function: Map<String, Any?>,
+    val numberSelect: String,
+) {
+    val exactMatch: Boolean
+        get() = function["name"] == "string" || (isNumeric && numberSelect == "exact")
+
+    val isString: Boolean
+        get() = function["name"] == "string"
+
+    val isNumeric: Boolean
+        get() = isNumericFunction(function)
+
+    companion object {
+        fun from(functionRef: Map<String, Any?>): SelectorAnnotation {
+            val select = functionOptionLiteral(functionRef, "select", null)
+            return SelectorAnnotation(functionRef, if (select in setOf("ordinal", "exact")) select!! else "plural")
+        }
+    }
+}
