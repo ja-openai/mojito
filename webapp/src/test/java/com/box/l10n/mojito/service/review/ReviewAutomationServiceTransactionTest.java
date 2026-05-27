@@ -211,11 +211,11 @@ public class ReviewAutomationServiceTransactionTest {
     }
 
     @Override
-    BatchUpsertResult batchUpsertNoTx(List<BatchUpsertRow> rows) {
+    BatchUpsertResult batchUpsertNoTx(List<BatchUpsertRow> rows, BatchUpsertMode mode) {
       if (failure != null) {
         throw failure;
       }
-      return new BatchUpsertResult(0, 0);
+      return new BatchUpsertResult(0, 0, 0);
     }
 
     @Override
