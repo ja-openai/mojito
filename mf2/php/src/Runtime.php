@@ -1,0 +1,1181 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MF2;
+
+final class FunctionRegistry
+{
+    public function __construct(private array $formatters = [], private array $selectors = [])
+    {
+    }
+
+    public static function defaults(): self
+    {
+        return new self(
+            [
+                'string' => static fn(array $call): string => $call['value'],
+                'number' => __NAMESPACE__ . '\\format_number',
+                'percent' => __NAMESPACE__ . '\\format_percent',
+                'currency' => __NAMESPACE__ . '\\format_currency',
+                'integer' => __NAMESPACE__ . '\\format_integer',
+                'datetime' => __NAMESPACE__ . '\\format_datetime',
+                'date' => __NAMESPACE__ . '\\format_date',
+                'time' => __NAMESPACE__ . '\\format_time',
+                'offset' => __NAMESPACE__ . '\\format_offset',
+            ],
+            [
+                'number' => __NAMESPACE__ . '\\select_number',
+                'percent' => __NAMESPACE__ . '\\select_percent',
+                'currency' => static fn(array $match): never => throw MF2Error::badSelector('Currency selector is not supported.'),
+                'integer' => __NAMESPACE__ . '\\select_integer',
+                'offset' => __NAMESPACE__ . '\\select_offset',
+            ],
+        );
+    }
+
+    public function withFunction(string $name, callable $formatter): self
+    {
+        $formatters = $this->formatters;
+        $formatters[$name] = $formatter;
+        return new self($formatters, $this->selectors);
+    }
+
+    public function withSelector(string $name, callable $selector): self
+    {
+        $selectors = $this->selectors;
+        $selectors[$name] = $selector;
+        return new self($this->formatters, $selectors);
+    }
+
+    public function hasFormatter(?array $functionRef): bool
+    {
+        return $functionRef !== null && array_key_exists((string) ($functionRef['name'] ?? ''), $this->formatters);
+    }
+
+    public function hasSelector(?array $functionRef): bool
+    {
+        return $functionRef !== null && array_key_exists((string) ($functionRef['name'] ?? ''), $this->selectors);
+    }
+
+    public function format(array $call): string
+    {
+        $name = (string) ($call['function']['name'] ?? '');
+        $formatter = $this->formatters[$name] ?? null;
+        if ($formatter === null) {
+            throw new MF2Error('unsupported-function', "Function :{$name} is not supported by this formatter registry.");
+        }
+        return (string) $formatter($call);
+    }
+
+    public function select(array $match): ?int
+    {
+        $name = (string) ($match['function']['name'] ?? '');
+        $selector = $this->selectors[$name] ?? null;
+        return $selector === null ? null : $selector($match);
+    }
+}
+
+function format_message(array $model, array $arguments = [], array $options = []): string
+{
+    return parts_to_string(format_message_to_parts($model, $arguments, $options), $options['bidiIsolation'] ?? 'none');
+}
+
+function format_message_to_parts(array $model, array $arguments = [], array $options = []): array
+{
+    validate_model($model);
+    $context = new FormatContext($arguments, locale_option($options), functions_option($options), false);
+    $context->applyDeclarations($model['declarations'] ?? []);
+    return match ($model['type'] ?? '') {
+        'message' => $context->formatPatternToParts($model['pattern'] ?? []),
+        'select' => $context->formatSelectToParts($model['selectors'] ?? [], $model['variants'] ?? []),
+        default => throw new MF2Error('unsupported-message-type', 'Unsupported message type: ' . ($model['type'] ?? '')),
+    };
+}
+
+function format_message_with_fallback(array $model, array $arguments = [], array $options = []): array
+{
+    $result = format_message_to_parts_with_fallback($model, $arguments, $options);
+    return ['value' => parts_to_string($result['parts'], $options['bidiIsolation'] ?? 'none'), 'errors' => $result['errors']];
+}
+
+function format_message_to_parts_with_fallback(array $model, array $arguments = [], array $options = []): array
+{
+    try {
+        validate_model($model);
+    } catch (\Throwable $error) {
+        return ['parts' => [], 'errors' => [as_mf2_error($error)]];
+    }
+    $context = new FormatContext($arguments, locale_option($options), functions_option($options), true);
+    try {
+        $context->applyDeclarations($model['declarations'] ?? []);
+    } catch (\Throwable $error) {
+        $context->errors[] = as_mf2_error($error);
+    }
+    try {
+        $parts = ($model['type'] ?? '') === 'message'
+            ? $context->formatPatternToParts($model['pattern'] ?? [])
+            : $context->formatSelectToParts($model['selectors'] ?? [], $model['variants'] ?? []);
+    } catch (\Throwable $error) {
+        $context->errors[] = as_mf2_error($error);
+        $parts = [];
+    }
+    return ['parts' => $parts, 'errors' => $context->errors];
+}
+
+function locale_option(array $options): string
+{
+    $locale = trim((string) ($options['locale'] ?? 'en'));
+    return $locale === '' ? 'en' : $locale;
+}
+
+function functions_option(array $options): FunctionRegistry
+{
+    return $options['functions'] ?? FunctionRegistry::defaults();
+}
+
+final class FormatContext
+{
+    public array $errors = [];
+    private array $locals = [];
+    private array $failedLocals = [];
+    private array $selectorAnnotations = [];
+
+    public function __construct(private array $arguments, private string $locale, private FunctionRegistry $functions, private bool $fallback)
+    {
+    }
+
+    public function applyDeclarations(array $declarations): void
+    {
+        $this->selectorAnnotations = selector_annotations($declarations);
+        foreach ($declarations as $declaration) {
+            if (($declaration['type'] ?? '') === 'input') {
+                $this->applyInputDeclaration($declaration);
+            }
+            if (($declaration['type'] ?? '') === 'local') {
+                $output = $this->formatExpressionOutput($declaration['value'] ?? []);
+                $name = (string) ($declaration['name'] ?? '');
+                if ($output['hadError']) {
+                    $this->failedLocals[$name] = true;
+                    unset($this->locals[$name]);
+                } else {
+                    $this->locals[$name] = ['rawValue' => $output['value'], 'source' => $output['source']];
+                }
+            }
+        }
+    }
+
+    private function applyInputDeclaration(array $input): void
+    {
+        $functionRef = $input['value']['function'] ?? null;
+        if ($functionRef === null || !$this->functions->hasFormatter($functionRef) || !$this->functions->hasSelector($functionRef)) {
+            return;
+        }
+        $name = (string) ($input['name'] ?? '');
+        if (!$this->hasValue($name)) {
+            if (!$this->fallback) {
+                throw MF2Error::missingArgument($name);
+            }
+            $this->failedLocals[$name] = true;
+            $this->errors[] = unresolved_variable($name);
+            $this->errors[] = MF2Error::badOperand('Function operand is not available.');
+            return;
+        }
+        $inputValue = $this->value($name);
+        $this->recordFunctionResolutionErrors($functionRef, $inputValue['source']);
+        try {
+            $rendered = value_to_string($inputValue['rawValue']);
+            $formatted = $this->functions->format([
+                'value' => $rendered,
+                'rawValue' => $inputValue['rawValue'],
+                'function' => $functionRef,
+                'locale' => $this->locale,
+                'optionValue' => fn(string $optionName, mixed $fallback): mixed => $this->optionValue($functionRef, $optionName, $fallback),
+                'inheritedSource' => $inputValue['source'],
+            ]);
+            $sourceValue = $inputValue['source']['value'] ?? $rendered;
+            $this->locals[$name] = ['rawValue' => $formatted, 'source' => $this->functionSource($sourceValue, $functionRef, $inputValue['source'])];
+        } catch (\Throwable $error) {
+            if (!$this->fallback) {
+                throw $error;
+            }
+            $this->errors[] = fallback_error($error);
+            $this->failedLocals[$name] = true;
+        }
+    }
+
+    public function formatSelectToParts(array $selectors, array $variants): array
+    {
+        $selectorValues = array_map(fn(array $selector): array => $this->selectorValue($selector), $selectors);
+        $signatures = [];
+        $fallback = null;
+        $selected = null;
+        $selectedRank = null;
+        foreach ($variants as $variant) {
+            $this->validateVariant($variant, $selectorValues, $signatures);
+            if ($fallback === null && array_reduce($variant['keys'] ?? [], static fn(bool $ok, array $key): bool => $ok && ($key['type'] ?? '') === '*', true)) {
+                $fallback = $variant;
+            }
+            $rank = $this->variantMatchRank($variant, $selectorValues);
+            if ($rank !== null && ($selectedRank === null || compare_rank($rank, $selectedRank) > 0)) {
+                $selected = $variant;
+                $selectedRank = $rank;
+            }
+        }
+        if ($fallback === null) {
+            throw new MF2Error('missing-fallback-variant', 'Select messages must include a catch-all fallback variant.');
+        }
+        return $this->formatPatternToParts(($selected ?? $fallback)['value'] ?? []);
+    }
+
+    private function selectorValue(array $selector): array
+    {
+        $name = (string) ($selector['name'] ?? '');
+        $annotation = $this->selectorAnnotations[$name] ?? null;
+        if (!$this->hasValue($name)) {
+            if (!$this->fallback) {
+                throw MF2Error::missingArgument($name);
+            }
+            if (!isset($this->failedLocals[$name])) {
+                $this->errors[] = unresolved_variable($name);
+            }
+            if ($annotation !== null && $this->functions->hasSelector($annotation->function)) {
+                if (!isset($this->failedLocals[$name])) {
+                    $this->errors[] = MF2Error::badOperand('Selector operand is not available.');
+                }
+                $this->errors[] = new MF2Error('bad-selector', 'Selector operand is not available.');
+            }
+            return ['rendered' => '', 'normalizedRendered' => $annotation?->isString() ? normalize_string_key('') : null, 'exactMatch' => false, 'selectionKey' => null, 'function' => $annotation?->function, 'source' => null];
+        }
+        $value = $this->value($name);
+        $rendered = value_to_string($value['rawValue']);
+        $this->recordSelectorResolutionErrors($annotation);
+        return [
+            'rendered' => $rendered,
+            'normalizedRendered' => $annotation?->isString() ? normalize_string_key($rendered) : null,
+            'exactMatch' => $annotation === null || $annotation->exactMatch(),
+            'selectionKey' => selection_key($this->locale, $annotation, $value),
+            'function' => $annotation?->function,
+            'source' => $value['source'],
+        ];
+    }
+
+    public function formatPatternToParts(array $pattern): array
+    {
+        $parts = [];
+        foreach ($pattern as $part) {
+            if (is_string($part)) {
+                $parts[] = ['type' => 'text', 'value' => $part];
+                continue;
+            }
+            if (($part['type'] ?? '') === 'expression') {
+                $output = $this->formatExpressionOutput($part);
+                if ($output['hadError']) {
+                    $parts[] = ['type' => 'fallback', 'source' => fallback_source($part)];
+                } else {
+                    $expressionPart = ['type' => 'expression', 'value' => $output['value']];
+                    if (isset($part['attributes']) && count($part['attributes']) > 0) {
+                        $expressionPart['attributes'] = $part['attributes'];
+                    }
+                    if ($output['direction'] !== null) {
+                        $expressionPart['direction'] = $output['direction'];
+                    }
+                    $parts[] = $expressionPart;
+                }
+                continue;
+            }
+            if (($part['type'] ?? '') === 'markup') {
+                if (isset($part['options']['u:dir'])) {
+                    $error = new MF2Error('bad-option', 'u:dir is not valid on markup.');
+                    if (!$this->fallback) {
+                        throw $error;
+                    }
+                    $this->errors[] = $error;
+                }
+                $markup = ['type' => 'markup', 'kind' => $part['kind'] ?? '', 'name' => $part['name'] ?? ''];
+                if (isset($part['options']) && count($part['options']) > 0) {
+                    $markup['options'] = $part['options'];
+                }
+                if (isset($part['attributes']) && count($part['attributes']) > 0) {
+                    $markup['attributes'] = $part['attributes'];
+                }
+                $parts[] = $markup;
+                continue;
+            }
+            throw new MF2Error('unsupported-pattern-part', 'Unsupported pattern part: ' . ($part['type'] ?? ''));
+        }
+        return $parts;
+    }
+
+    private function formatExpressionOutput(array $expression): array
+    {
+        $source = null;
+        $arg = $expression['arg'] ?? null;
+        if ($arg === null) {
+            $value = '';
+            $rawValue = '';
+        } elseif (($arg['type'] ?? '') === 'literal') {
+            $value = (string) ($arg['value'] ?? '');
+            $rawValue = $value;
+        } elseif (($arg['type'] ?? '') === 'variable') {
+            $name = (string) ($arg['name'] ?? '');
+            if (!$this->hasValue($name)) {
+                if (!$this->fallback) {
+                    throw MF2Error::missingArgument($name);
+                }
+                if (!isset($this->failedLocals[$name])) {
+                    $this->errors[] = unresolved_variable($name);
+                }
+                if (isset($expression['function'])) {
+                    $this->errors[] = MF2Error::badOperand('Function operand is not available.');
+                }
+                return ['value' => fallback_source($expression), 'hadError' => true, 'source' => null, 'direction' => null];
+            }
+            $resolved = $this->value($name);
+            $rawValue = $resolved['rawValue'];
+            $value = value_to_string($rawValue);
+            $source = $resolved['source'];
+        } else {
+            throw new MF2Error('unsupported-expression-arg', 'Unsupported expression arg: ' . ($arg['type'] ?? ''));
+        }
+        $functionRef = $expression['function'] ?? null;
+        if ($functionRef === null) {
+            return ['value' => $value, 'hadError' => false, 'source' => $source, 'direction' => bidi_direction_from_source($source)];
+        }
+        $this->recordFunctionResolutionErrors($functionRef, $source);
+        $direction = bidi_direction_for_function($functionRef, $source);
+        try {
+            $formatted = $this->functions->format([
+                'value' => $value,
+                'rawValue' => $rawValue,
+                'function' => $functionRef,
+                'locale' => $this->locale,
+                'optionValue' => fn(string $name, mixed $fallback): mixed => $this->optionValue($functionRef, $name, $fallback),
+                'inheritedSource' => $source,
+            ]);
+            $sourceValue = $source['value'] ?? $value;
+            return ['value' => $formatted, 'hadError' => false, 'source' => $this->functionSource($sourceValue, $functionRef, $source), 'direction' => $direction];
+        } catch (\Throwable $error) {
+            if (!$this->fallback) {
+                throw $error;
+            }
+            $this->errors[] = fallback_error($error);
+            return ['value' => fallback_source($expression), 'hadError' => true, 'source' => null, 'direction' => null];
+        }
+    }
+
+    private function optionValue(array $functionRef, string $optionName, mixed $fallback): mixed
+    {
+        $option = $functionRef['options'][$optionName] ?? null;
+        if ($option === null) {
+            return $fallback;
+        }
+        if (($option['type'] ?? '') === 'literal') {
+            return (string) ($option['value'] ?? '');
+        }
+        if (($option['type'] ?? '') === 'variable') {
+            $name = (string) ($option['name'] ?? '');
+            if (!$this->hasValue($name)) {
+                throw MF2Error::missingArgument($name);
+            }
+            return value_to_string($this->value($name)['rawValue']);
+        }
+        return $fallback;
+    }
+
+    private function hasValue(string $name): bool
+    {
+        return !isset($this->failedLocals[$name]) && (array_key_exists($name, $this->locals) || array_key_exists($name, $this->arguments));
+    }
+
+    private function value(string $name): array
+    {
+        return $this->locals[$name] ?? ['rawValue' => $this->arguments[$name], 'source' => null];
+    }
+
+    private function recordFunctionResolutionErrors(array $functionRef, ?array $source): void
+    {
+        if (!is_numeric_function($functionRef)) {
+            return;
+        }
+        if (!numeric_select_uses_variable($functionRef) && !inherited_exact_numeric_source($source)) {
+            return;
+        }
+        $error = new MF2Error('bad-option', 'Numeric select option is not valid in this context.');
+        if (!$this->fallback) {
+            throw $error;
+        }
+        $this->errors[] = $error;
+    }
+
+    private function recordSelectorResolutionErrors(?SelectorAnnotation $annotation): void
+    {
+        if (($annotation?->function['name'] ?? '') !== 'currency') {
+            return;
+        }
+        $error = new MF2Error('bad-selector', 'Currency selector is not supported.');
+        if (!$this->fallback) {
+            throw $error;
+        }
+        $this->errors[] = $error;
+    }
+
+    private function functionSource(string $value, array $functionRef, ?array $inherited): array
+    {
+        return [
+            'value' => $value,
+            'function' => $functionRef,
+            'inherited' => $inherited,
+            'optionValue' => fn(string $name, mixed $fallback): mixed => $this->optionValue($functionRef, $name, $fallback),
+        ];
+    }
+
+    private function validateVariant(array $variant, array $selectorValues, array &$signatures): void
+    {
+        if (count($variant['keys'] ?? []) !== count($selectorValues)) {
+            throw new MF2Error('variant-key-count-mismatch', 'Variant key count must match selector count.');
+        }
+        $signature = json_encode(variant_key_signature($variant['keys'] ?? [], $selectorValues), JSON_UNESCAPED_UNICODE);
+        if (isset($signatures[$signature])) {
+            throw new MF2Error('duplicate-variant', 'Select variants must have unique key tuples.');
+        }
+        $signatures[$signature] = true;
+    }
+
+    private function variantMatchRank(array $variant, array $selectorValues): ?array
+    {
+        if (count($variant['keys'] ?? []) !== count($selectorValues)) {
+            return null;
+        }
+        $rank = [];
+        foreach (($variant['keys'] ?? []) as $index => $key) {
+            $itemRank = $this->keyMatchRank($key, $selectorValues[$index]);
+            if ($itemRank === null) {
+                return null;
+            }
+            $rank[] = $itemRank;
+        }
+        return $rank;
+    }
+
+    private function keyMatchRank(array $key, array $selector): ?int
+    {
+        if (($key['type'] ?? '') === '*') {
+            return 0;
+        }
+        if (($selector['exactMatch'] && literal_key_matches((string) ($key['value'] ?? ''), $selector)) || (($key['value'] ?? null) === $selector['selectionKey'])) {
+            return 1;
+        }
+        if ($selector['function'] === null) {
+            return null;
+        }
+        try {
+            return $this->functions->select([
+                'value' => $selector['rendered'],
+                'rawValue' => $selector['rendered'],
+                'function' => $selector['function'],
+                'key' => (string) ($key['value'] ?? ''),
+                'locale' => $this->locale,
+                'optionValue' => fn(string $name, mixed $fallback): mixed => $this->optionValue($selector['function'], $name, $fallback),
+                'inheritedSource' => $selector['source'],
+            ]);
+        } catch (\Throwable $error) {
+            if (!$this->fallback) {
+                throw $error;
+            }
+            $this->errors[] = fallback_error($error);
+            $this->errors[] = new MF2Error('bad-selector', 'Selector failed to match.');
+            return null;
+        }
+    }
+}
+
+function validate_model(array $model): void
+{
+    validate_declarations($model['declarations'] ?? []);
+    if (($model['type'] ?? '') === 'message') {
+        validate_pattern($model['pattern'] ?? []);
+    } elseif (($model['type'] ?? '') === 'select') {
+        validate_selector_annotations($model['declarations'] ?? [], $model['selectors'] ?? []);
+        foreach ($model['variants'] ?? [] as $variant) {
+            validate_pattern($variant['value'] ?? []);
+        }
+    }
+}
+
+function validate_declarations(array $declarations): void
+{
+    $names = [];
+    foreach ($declarations as $declaration) {
+        $name = (string) ($declaration['name'] ?? '');
+        if (($declaration['type'] ?? '') === 'input') {
+            validate_input_declaration($declaration);
+        }
+        if (isset($names[$name])) {
+            throw new MF2Error('duplicate-declaration', "Declaration \${$name} is defined more than once.");
+        }
+        $names[$name] = true;
+    }
+    validate_local_references($declarations);
+}
+
+function validate_local_references(array $declarations): void
+{
+    $forbidden = [];
+    for ($index = count($declarations) - 1; $index >= 0; $index -= 1) {
+        $declaration = $declarations[$index];
+        if (($declaration['type'] ?? '') !== 'local') {
+            continue;
+        }
+        $forbidden[(string) ($declaration['name'] ?? '')] = true;
+        if (expression_references_any($declaration['value'] ?? [], $forbidden)) {
+            throw new MF2Error('duplicate-declaration', 'Local declaration $' . ($declaration['name'] ?? '') . ' must not reference itself or later local declarations.');
+        }
+    }
+}
+
+function expression_references_any(array $expression, array $names): bool
+{
+    if (arg_references_any($expression['arg'] ?? null, $names)) {
+        return true;
+    }
+    foreach ($expression['function']['options'] ?? [] as $option) {
+        if (arg_references_any($option, $names)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function arg_references_any(?array $arg, array $names): bool
+{
+    return ($arg['type'] ?? '') === 'variable' && isset($names[(string) ($arg['name'] ?? '')]);
+}
+
+function validate_input_declaration(array $declaration): void
+{
+    $arg = $declaration['value']['arg'] ?? null;
+    if (($arg['type'] ?? '') === 'variable' && ($arg['name'] ?? '') === ($declaration['name'] ?? '')) {
+        return;
+    }
+    throw new MF2Error('invalid-input-declaration', 'Input declaration $' . ($declaration['name'] ?? '') . ' must bind the same variable name.');
+}
+
+function validate_pattern(array $pattern): void
+{
+    foreach ($pattern as $part) {
+        if (is_string($part) && $part === '') {
+            throw new MF2Error('invalid-pattern-text', 'Pattern text parts must be non-empty.');
+        }
+        if (is_array($part) && ($part['type'] ?? '') === 'markup') {
+            validate_markup($part);
+        }
+    }
+}
+
+function validate_markup(array $markup): void
+{
+    if (in_array($markup['kind'] ?? '', ['open', 'standalone', 'close'], true)) {
+        return;
+    }
+    throw new MF2Error('invalid-markup-kind', 'Markup kind must be open, standalone, or close.');
+}
+
+function validate_selector_annotations(array $declarations, array $selectors): void
+{
+    $annotations = selector_annotations($declarations);
+    foreach ($selectors as $selector) {
+        if (!isset($annotations[(string) ($selector['name'] ?? '')])) {
+            throw new MF2Error('missing-selector-annotation', 'Selector $' . ($selector['name'] ?? '') . ' must reference a declaration with a function.');
+        }
+    }
+}
+
+function selector_annotations(array $declarations): array
+{
+    $expressions = [];
+    $annotations = [];
+    foreach ($declarations as $declaration) {
+        $name = (string) ($declaration['name'] ?? '');
+        $expressions[$name] = $declaration['value'] ?? [];
+        if (isset($declaration['value']['function'])) {
+            $annotations[$name] = SelectorAnnotation::from($declaration['value']['function']);
+        }
+    }
+    $changed = true;
+    while ($changed) {
+        $changed = false;
+        foreach ($expressions as $name => $expression) {
+            if (isset($annotations[$name]) || ($expression['arg']['type'] ?? '') !== 'variable') {
+                continue;
+            }
+            $sourceName = (string) ($expression['arg']['name'] ?? '');
+            if (isset($annotations[$sourceName])) {
+                $annotations[$name] = $annotations[$sourceName];
+                $changed = true;
+            }
+        }
+    }
+    return $annotations;
+}
+
+final class SelectorAnnotation
+{
+    private function __construct(public array $function, public string $numberSelect)
+    {
+    }
+
+    public static function from(array $functionRef): self
+    {
+        $option = $functionRef['options']['select'] ?? null;
+        $select = ($option['type'] ?? '') === 'literal' ? (string) ($option['value'] ?? '') : 'plural';
+        return new self($functionRef, in_array($select, ['ordinal', 'exact'], true) ? $select : 'plural');
+    }
+
+    public function exactMatch(): bool
+    {
+        return ($this->function['name'] ?? '') === 'string' || ($this->isNumeric() && $this->numberSelect === 'exact');
+    }
+
+    public function isString(): bool
+    {
+        return ($this->function['name'] ?? '') === 'string';
+    }
+
+    public function isNumeric(): bool
+    {
+        return in_array($this->function['name'] ?? '', ['number', 'integer', 'percent', 'offset'], true);
+    }
+}
+
+function selection_key(string $locale, ?SelectorAnnotation $annotation, array $resolvedValue): ?string
+{
+    if ($annotation === null || !$annotation->isNumeric() || $annotation->numberSelect === 'exact') {
+        return null;
+    }
+    $operand = value_to_string($resolvedValue['rawValue']);
+    if (($annotation->function['name'] ?? '') === 'percent') {
+        $operand = str_ends_with($operand, '%') ? substr($operand, 0, -1) : value_to_string(((float) $operand) * 100);
+    }
+    return select_plural_category($locale, $operand, $annotation->numberSelect);
+}
+
+function select_plural_category(string $locale, mixed $value, string $select = 'plural'): ?string
+{
+    try {
+        return $select === 'ordinal' ? select_ordinal($locale, $value) : select_cardinal($locale, $value);
+    } catch (\Throwable) {
+        return null;
+    }
+}
+
+function variant_key_signature(array $keys, array $selectorValues): array
+{
+    $output = [];
+    foreach ($keys as $index => $key) {
+        if (($key['type'] ?? '') === '*') {
+            $output[] = ['*', ''];
+            continue;
+        }
+        $selector = $selectorValues[$index];
+        $output[] = ['=', $selector['normalizedRendered'] === null ? (string) ($key['value'] ?? '') : normalize_string_key((string) ($key['value'] ?? ''))];
+    }
+    return $output;
+}
+
+function compare_rank(array $left, array $right): int
+{
+    $length = min(count($left), count($right));
+    for ($index = 0; $index < $length; $index += 1) {
+        if ($left[$index] !== $right[$index]) {
+            return $left[$index] - $right[$index];
+        }
+    }
+    return count($left) - count($right);
+}
+
+function literal_key_matches(string $value, array $selector): bool
+{
+    return $selector['normalizedRendered'] === null ? $value === $selector['rendered'] : normalize_string_key($value) === $selector['normalizedRendered'];
+}
+
+function normalize_string_key(string $value): string
+{
+    return \Normalizer::normalize($value, \Normalizer::FORM_C) ?: $value;
+}
+
+function unresolved_variable(string $name): MF2Error
+{
+    return new MF2Error('unresolved-variable', "Variable \${$name} could not be resolved.");
+}
+
+function fallback_error(\Throwable $error): MF2Error
+{
+    $mf2 = as_mf2_error($error);
+    return $mf2->mf2Code === 'unsupported-function' ? new MF2Error('unknown-function', $mf2->getMessage()) : $mf2;
+}
+
+function as_mf2_error(\Throwable $error): MF2Error
+{
+    return $error instanceof MF2Error ? $error : new MF2Error('error', $error->getMessage());
+}
+
+function fallback_source(array $expression): string
+{
+    if (isset($expression['arg'])) {
+        return expression_arg_source($expression['arg']);
+    }
+    if (isset($expression['function'])) {
+        return function_source($expression['function']);
+    }
+    return '';
+}
+
+function expression_arg_source(array $arg): string
+{
+    if (($arg['type'] ?? '') === 'variable') {
+        return '$' . ($arg['name'] ?? '');
+    }
+    return quote_literal_source((string) ($arg['value'] ?? ''));
+}
+
+function function_source(array $functionRef): string
+{
+    $source = ':' . ($functionRef['name'] ?? '');
+    foreach ($functionRef['options'] ?? [] as $name => $value) {
+        $source .= ' ' . $name . '=' . expression_arg_source($value);
+    }
+    return $source;
+}
+
+function quote_literal_source(string $value): string
+{
+    return '|' . str_replace(['\\', '|'], ['\\\\', '\\|'], $value) . '|';
+}
+
+function parts_to_string(array $parts, string $bidiIsolation = 'none'): string
+{
+    $output = '';
+    foreach ($parts as $part) {
+        if (($part['type'] ?? '') === 'text') {
+            $output .= (string) ($part['value'] ?? '');
+        } elseif (($part['type'] ?? '') === 'fallback') {
+            $output .= '{' . ($part['source'] ?? '') . '}';
+        } elseif (($part['type'] ?? '') === 'expression') {
+            $output .= isolate_expression((string) ($part['value'] ?? ''), $bidiIsolation, $part['direction'] ?? null);
+        }
+    }
+    return $output;
+}
+
+function isolate_expression(string $value, string $bidiIsolation, ?string $direction): string
+{
+    return $bidiIsolation === 'default' ? bidi_marker($direction) . $value . "\u{2069}" : $value;
+}
+
+function bidi_marker(?string $direction): string
+{
+    return match ($direction) {
+        'ltr' => "\u{2066}",
+        'rtl' => "\u{2067}",
+        default => "\u{2068}",
+    };
+}
+
+function bidi_direction_for_function(array $functionRef, ?array $source): ?string
+{
+    $value = function_option_literal($functionRef, 'u:dir', null);
+    if ($value !== null) {
+        return parse_bidi_direction($value);
+    }
+    return bidi_direction_from_source($source);
+}
+
+function bidi_direction_from_source(?array $source): ?string
+{
+    if ($source === null) {
+        return null;
+    }
+    $value = function_option_literal($source['function'], 'u:dir', null);
+    if ($value !== null) {
+        return parse_bidi_direction($value);
+    }
+    return bidi_direction_from_source($source['inherited']);
+}
+
+function parse_bidi_direction(string $value): string
+{
+    if (in_array($value, ['auto', 'ltr', 'rtl'], true)) {
+        return $value;
+    }
+    throw new MF2Error('bad-option', 'u:dir option must be auto, ltr, or rtl.');
+}
+
+function function_option_literal(array $functionRef, string $name, mixed $fallback): mixed
+{
+    $option = $functionRef['options'][$name] ?? null;
+    return ($option['type'] ?? null) === 'literal' ? ($option['value'] ?? '') : $fallback;
+}
+
+function source_option_value(?array $source, string $name, mixed $fallback): mixed
+{
+    if ($source === null) {
+        return $fallback;
+    }
+    if (isset($source['optionValue']) && is_callable($source['optionValue'])) {
+        return $source['optionValue']($name, $fallback);
+    }
+    return function_option_literal($source['function'], $name, $fallback);
+}
+
+function is_numeric_function(?array $functionRef): bool
+{
+    return in_array($functionRef['name'] ?? '', ['number', 'integer', 'percent', 'offset'], true);
+}
+
+function is_decimal_source_function(?array $functionRef): bool
+{
+    return is_numeric_function($functionRef) || ($functionRef['name'] ?? '') === 'currency';
+}
+
+function numeric_select_uses_variable(?array $functionRef): bool
+{
+    return ($functionRef['options']['select']['type'] ?? null) === 'variable';
+}
+
+function inherited_exact_numeric_source(?array $source): bool
+{
+    if ($source === null) {
+        return false;
+    }
+    if (is_numeric_function($source['function']) && source_option_value($source, 'select', null) === 'exact') {
+        return true;
+    }
+    return inherited_exact_numeric_source($source['inherited']);
+}
+
+function invalid_numeric_selector(array $functionRef, ?array $source): bool
+{
+    $select = function_option_literal($functionRef, 'select', null);
+    return numeric_select_uses_variable($functionRef) || ($select !== 'exact' && inherited_exact_numeric_source($source));
+}
+
+function value_to_string(mixed $value): string
+{
+    if ($value === null) {
+        return '';
+    }
+    if (is_bool($value)) {
+        return $value ? 'true' : 'false';
+    }
+    if (is_int($value)) {
+        return (string) $value;
+    }
+    if (is_float($value)) {
+        if (is_finite($value) && floor($value) === $value) {
+            return (string) (int) $value;
+        }
+        return rtrim(rtrim(sprintf('%.14F', $value), '0'), '.');
+    }
+    return (string) $value;
+}
+
+function format_number(array $call): string
+{
+    $value = parse_call_decimal($call, 'Number function requires a numeric operand.');
+    return format_decimal_number($value, sign_display_always($call['function']), minimum_fraction_digits($call));
+}
+
+function select_number(array $match): ?int
+{
+    if (invalid_numeric_selector($match['function'], $match['inheritedSource'])) {
+        throw MF2Error::badSelector('Number selector cannot match this operand.');
+    }
+    $value = parse_match_decimal($match, 'Number selector requires a numeric operand.');
+    $key = parse_decimal_number($match['key']);
+    return $key !== null && $value == $key ? 1 : null;
+}
+
+function format_percent(array $call): string
+{
+    $value = parse_call_decimal($call, 'Percent function requires a numeric operand.');
+    $formatted = format_decimal_with_maximum_fraction_digits($value * 100, maximum_fraction_digits($call));
+    if (sign_display_always($call['function']) && $value >= 0) {
+        $formatted = '+' . $formatted;
+    }
+    return append_minimum_fraction_digits($formatted, minimum_fraction_digits($call)) . '%';
+}
+
+function select_percent(array $match): ?int
+{
+    if (invalid_numeric_selector($match['function'], $match['inheritedSource'])) {
+        throw MF2Error::badSelector('Percent selector cannot match this operand.');
+    }
+    $value = parse_match_decimal($match, 'Percent selector requires a numeric operand.') * 100;
+    $key = parse_decimal_number($match['key']);
+    return $key !== null && $value == $key ? 1 : null;
+}
+
+function format_currency(array $call): string
+{
+    $value = parse_call_decimal($call, 'Currency function requires a numeric operand.');
+    $currency = currency_code($call);
+    if ($currency === null) {
+        throw MF2Error::badOperand('Currency function requires a currency option.');
+    }
+    $digits = currency_fraction_digits($call);
+    $number = $digits === null ? format_decimal_number($value, false, 0) : number_format($value, $digits, '.', '');
+    return $currency . ' ' . $number;
+}
+
+function format_integer(array $call): string
+{
+    $value = parse_call_decimal($call, 'Integer function requires a numeric operand.');
+    $integer = (int) ($value < 0 ? ceil($value) : floor($value));
+    return sign_display_always($call['function']) && $integer >= 0 ? '+' . $integer : (string) $integer;
+}
+
+function select_integer(array $match): ?int
+{
+    if (invalid_numeric_selector($match['function'], $match['inheritedSource'])) {
+        throw MF2Error::badSelector('Integer selector cannot match this operand.');
+    }
+    $value = parse_match_decimal($match, 'Integer selector requires a numeric operand.');
+    $key = parse_integer($match['key']);
+    return $key !== null && (int) ($value < 0 ? ceil($value) : floor($value)) === $key ? 1 : null;
+}
+
+function format_offset(array $call): string
+{
+    $value = parse_required_integer($call['value'], 'Offset function requires a numeric operand.');
+    $result = $value + offset_delta($call);
+    return inherited_sign_display_always($call['inheritedSource']) && $result >= 0 ? '+' . $result : (string) $result;
+}
+
+function select_offset(array $match): ?int
+{
+    $value = parse_required_integer($match['value'], 'Offset selector requires a numeric operand.');
+    $key = parse_integer($match['key']);
+    return $key !== null && $value === $key ? 1 : null;
+}
+
+function format_datetime(array $call): string
+{
+    if (is_iso_date($call['value']) || is_iso_datetime($call['value'])) {
+        return $call['value'];
+    }
+    throw MF2Error::badOperand('Datetime function requires a date or datetime operand.');
+}
+
+function format_date(array $call): string
+{
+    if (is_iso_date($call['value']) || is_iso_datetime($call['value'])) {
+        return $call['value'];
+    }
+    throw MF2Error::badOperand('Date function requires a date or datetime operand.');
+}
+
+function format_time(array $call): string
+{
+    if (is_iso_datetime($call['value'])) {
+        return $call['value'];
+    }
+    throw MF2Error::badOperand('Datetime and time functions require a datetime operand.');
+}
+
+function parse_call_decimal(array $call, string $message): float
+{
+    $parsed = parse_decimal_number($call['value']);
+    if ($parsed === null) {
+        $parsed = parse_source_decimal($call['inheritedSource']);
+    }
+    if ($parsed === null) {
+        throw MF2Error::badOperand($message);
+    }
+    return $parsed;
+}
+
+function parse_match_decimal(array $match, string $message): float
+{
+    $parsed = parse_decimal_number($match['value']);
+    if ($parsed === null) {
+        $parsed = parse_source_decimal($match['inheritedSource']);
+    }
+    if ($parsed === null) {
+        throw MF2Error::badSelector($message);
+    }
+    return $parsed;
+}
+
+function parse_source_decimal(?array $source): ?float
+{
+    if ($source === null) {
+        return null;
+    }
+    if (is_decimal_source_function($source['function'])) {
+        return parse_decimal_number($source['value']);
+    }
+    return parse_source_decimal($source['inherited']);
+}
+
+function parse_decimal_number(mixed $value): ?float
+{
+    $text = value_to_string($value);
+    if (preg_match('/^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/', $text) !== 1) {
+        return null;
+    }
+    $parsed = (float) $text;
+    return is_finite($parsed) ? $parsed : null;
+}
+
+function format_decimal_number(float $value, bool $signAlways, int $minimumFractionDigits): string
+{
+    $formatted = value_to_string($value);
+    if (str_ends_with($formatted, '.0')) {
+        $formatted = substr($formatted, 0, -2);
+    }
+    if ($signAlways && $value >= 0) {
+        $formatted = '+' . $formatted;
+    }
+    return append_minimum_fraction_digits($formatted, $minimumFractionDigits);
+}
+
+function format_decimal_with_maximum_fraction_digits(float $value, ?int $digits): string
+{
+    if ($digits === null) {
+        return format_decimal_number($value, false, 0);
+    }
+    $formatted = number_format($value, $digits, '.', '');
+    $formatted = rtrim(rtrim($formatted, '0'), '.');
+    return $formatted === '-0' ? '0' : $formatted;
+}
+
+function append_minimum_fraction_digits(string $formatted, int $minimumFractionDigits): string
+{
+    if ($minimumFractionDigits === 0) {
+        return $formatted;
+    }
+    $dot = strpos($formatted, '.');
+    $fractionDigits = $dot === false ? 0 : strlen($formatted) - $dot - 1;
+    $output = $formatted;
+    if ($fractionDigits === 0) {
+        $output .= '.';
+    }
+    for ($index = $fractionDigits; $index < $minimumFractionDigits; $index += 1) {
+        $output .= '0';
+    }
+    return $output;
+}
+
+function minimum_fraction_digits(array $call): int
+{
+    $value = $call['optionValue']('minimumFractionDigits', null);
+    return $value === null ? 0 : parse_non_negative_option($value, 'minimumFractionDigits option must be a non-negative integer.');
+}
+
+function maximum_fraction_digits(array $call): ?int
+{
+    $value = $call['optionValue']('maximumFractionDigits', null);
+    return $value === null ? null : parse_non_negative_option($value, 'maximumFractionDigits option must be a non-negative integer.');
+}
+
+function currency_code(array $call): ?string
+{
+    return $call['optionValue']('currency', null) ?? inherited_currency_code($call['inheritedSource']);
+}
+
+function inherited_currency_code(?array $source): ?string
+{
+    if ($source === null) {
+        return null;
+    }
+    if (($source['function']['name'] ?? '') === 'currency') {
+        $currency = source_option_value($source, 'currency', null);
+        if ($currency !== null) {
+            return $currency;
+        }
+    }
+    return inherited_currency_code($source['inherited']);
+}
+
+function currency_fraction_digits(array $call): ?int
+{
+    $value = $call['optionValue']('fractionDigits', null);
+    if ($value === null || $value === 'auto') {
+        return null;
+    }
+    return parse_non_negative_option($value, 'fractionDigits option must be auto or a non-negative integer.');
+}
+
+function parse_non_negative_option(mixed $value, string $message): int
+{
+    if (preg_match('/^\d+$/', value_to_string($value)) !== 1) {
+        throw MF2Error::badOption($message);
+    }
+    return (int) $value;
+}
+
+function sign_display_always(array $functionRef): bool
+{
+    return function_option_literal($functionRef, 'signDisplay', null) === 'always';
+}
+
+function inherited_sign_display_always(?array $source): bool
+{
+    if ($source === null) {
+        return false;
+    }
+    if (in_array($source['function']['name'] ?? '', ['number', 'integer'], true) && source_option_value($source, 'signDisplay', null) === 'always') {
+        return true;
+    }
+    return inherited_sign_display_always($source['inherited']);
+}
+
+function offset_delta(array $call): int
+{
+    $add = $call['optionValue']('add', null);
+    $subtract = $call['optionValue']('subtract', null);
+    if (($add === null && $subtract === null) || ($add !== null && $subtract !== null)) {
+        throw MF2Error::badOption('Offset function requires exactly one of add or subtract.');
+    }
+    $value = parse_integer($add ?? $subtract);
+    if ($value === null) {
+        throw MF2Error::badOption($add !== null ? 'Offset add option must be an integer.' : 'Offset subtract option must be an integer.');
+    }
+    return $add !== null ? $value : -$value;
+}
+
+function parse_required_integer(mixed $value, string $message): int
+{
+    $parsed = parse_integer($value);
+    if ($parsed === null) {
+        throw MF2Error::badOperand($message);
+    }
+    return $parsed;
+}
+
+function parse_integer(mixed $value): ?int
+{
+    $text = value_to_string($value);
+    if (preg_match('/^[+-]?\d+$/', $text) !== 1) {
+        return null;
+    }
+    return (int) $text;
+}
+
+function is_iso_datetime(mixed $value): bool
+{
+    $text = value_to_string($value);
+    $separator = strpos($text, 'T');
+    return $separator !== false && is_iso_date(substr($text, 0, $separator)) && is_iso_time(substr($text, $separator + 1));
+}
+
+function is_iso_date(mixed $value): bool
+{
+    return preg_match('/^\d{4}-\d{2}-\d{2}$/', value_to_string($value)) === 1;
+}
+
+function is_iso_time(mixed $value): bool
+{
+    return preg_match('/^\d{2}:\d{2}:\d{2}$/', value_to_string($value)) === 1;
+}

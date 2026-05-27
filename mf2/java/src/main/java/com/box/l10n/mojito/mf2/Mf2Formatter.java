@@ -905,7 +905,8 @@ final class Mf2Formatter {
     private static boolean isNumericFunction(Mf2Message.FunctionRef function) {
         return function.name().equals("number")
                 || function.name().equals("integer")
-                || function.name().equals("percent");
+                || function.name().equals("percent")
+                || function.name().equals("offset");
     }
 
     private static boolean numericSelectUsesVariable(Mf2Message.FunctionRef function) {

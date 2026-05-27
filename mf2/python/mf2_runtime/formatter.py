@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation, ROUND_DOWN
 import unicodedata
 from typing import Any
 
@@ -260,7 +261,16 @@ class _FormatContext:
     def apply_declarations(self, declarations: list[dict[str, Any]]) -> None:
         self.selector_annotations = _selector_annotations(declarations)
         for declaration in declarations:
-            if declaration.get("type") == "local":
+            if declaration.get("type") == "input":
+                value = declaration.get("value", {})
+                if value.get("function") is None or declaration["name"] not in self.values:
+                    continue
+                rendered = self._format_expression_output(value)
+                if rendered.had_error:
+                    self.failed_locals.add(declaration["name"])
+                else:
+                    self.values[declaration["name"]] = rendered.value
+            elif declaration.get("type") == "local":
                 rendered = self._format_expression_output(declaration["value"])
                 if rendered.had_error:
                     self.failed_locals.add(declaration["name"])
@@ -275,6 +285,7 @@ class _FormatContext:
         selector_values = []
         for selector in selectors:
             name = selector["name"]
+            annotation = self.selector_annotations.get(name)
             if name not in self.values:
                 if self.fallback:
                     if name not in self.failed_locals:
@@ -287,6 +298,7 @@ class _FormatContext:
                             ),
                             exact_match=False,
                             selection_key=None,
+                            function=annotation.function if annotation else None,
                         )
                     )
                     continue
@@ -302,11 +314,13 @@ class _FormatContext:
                     normalized_rendered=normalized_rendered,
                     exact_match=self._exact_match(name),
                     selection_key=self._selection_key(name, value),
+                    function=annotation.function if annotation else None,
                 )
             )
 
         fallback = None
         selected = None
+        selected_rank = None
         signatures: set[tuple[tuple[str, str], ...]] = set()
         for variant in variants:
             keys = variant.get("keys", [])
@@ -324,8 +338,10 @@ class _FormatContext:
             signatures.add(signature)
             if all(key.get("type") == "*" for key in keys):
                 fallback = variant
-            if selected is None and _variant_matches(keys, selector_values):
+            rank = _variant_match_rank(keys, selector_values)
+            if rank is not None and (selected_rank is None or _compare_rank(rank, selected_rank) > 0):
                 selected = variant
+                selected_rank = rank
 
         if fallback is None:
             raise MF2Error(
@@ -484,7 +500,7 @@ class _SelectorAnnotation:
 
     @property
     def is_numeric(self) -> bool:
-        return self.function in {"number", "integer"}
+        return self.function in {"number", "integer", "offset"}
 
     @property
     def is_string(self) -> bool:
@@ -497,6 +513,7 @@ class _SelectorValue:
     normalized_rendered: str | None
     exact_match: bool
     selection_key: str | None
+    function: str | None
 
 
 @dataclass(frozen=True)
@@ -505,15 +522,62 @@ class _ExpressionOutput:
     had_error: bool
 
 
-def _variant_matches(keys: list[dict[str, Any]], selector_values: list[_SelectorValue]) -> bool:
+def _variant_match_rank(keys: list[dict[str, Any]], selector_values: list[_SelectorValue]) -> list[int] | None:
     if len(keys) != len(selector_values):
-        return False
-    return all(
-        key.get("type") == "*"
-        or (selector.exact_match and _literal_key_matches(key.get("value", ""), selector))
-        or key.get("value") == selector.selection_key
-        for key, selector in zip(keys, selector_values)
-    )
+        return None
+    rank = []
+    for key, selector in zip(keys, selector_values):
+        item_rank = _key_match_rank(key, selector)
+        if item_rank is None:
+            return None
+        rank.append(item_rank)
+    return rank
+
+
+def _key_match_rank(key: dict[str, Any], selector: _SelectorValue) -> int | None:
+    if key.get("type") == "*":
+        return 0
+    value = str(key.get("value", ""))
+    if (selector.exact_match and _literal_key_matches(value, selector)) or value == selector.selection_key:
+        return 1
+    return 1 if _numeric_key_matches(value, selector) else None
+
+
+def _compare_rank(left: list[int], right: list[int]) -> int:
+    for left_item, right_item in zip(left, right):
+        if left_item != right_item:
+            return left_item - right_item
+    return len(left) - len(right)
+
+
+def _numeric_key_matches(value: str, selector: _SelectorValue) -> bool:
+    if selector.function == "offset":
+        key = _parse_integer_or_none(value)
+        rendered = _parse_integer_or_none(selector.rendered)
+        return key is not None and rendered is not None and key == rendered
+    if selector.function == "integer":
+        key = _parse_integer_or_none(value)
+        rendered = _parse_decimal_or_none(selector.rendered)
+        return key is not None and rendered is not None and int(rendered.to_integral_value(rounding=ROUND_DOWN)) == key
+    if selector.function == "number":
+        key_decimal = _parse_decimal_or_none(value)
+        rendered_decimal = _parse_decimal_or_none(selector.rendered)
+        return key_decimal is not None and rendered_decimal is not None and key_decimal == rendered_decimal
+    return False
+
+
+def _parse_integer_or_none(value: str) -> int | None:
+    text = str(value)
+    if not text or not (text.isdigit() or (text[0] in "+-" and text[1:].isdigit())):
+        return None
+    return int(text)
+
+
+def _parse_decimal_or_none(value: str) -> Decimal | None:
+    try:
+        return Decimal(str(value))
+    except InvalidOperation:
+        return None
 
 
 def _literal_key_matches(value: str, selector: _SelectorValue) -> bool:

@@ -743,7 +743,10 @@ fn inherited_exact_numeric_source(
 }
 
 fn is_numeric_function(function: &FunctionRef) -> bool {
-    function.name == "number" || function.name == "integer" || function.name == "percent"
+    function.name == "number"
+        || function.name == "integer"
+        || function.name == "percent"
+        || function.name == "offset"
 }
 
 fn is_decimal_source_function(function: &FunctionRef) -> bool {

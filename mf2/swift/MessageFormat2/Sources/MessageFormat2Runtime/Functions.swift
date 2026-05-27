@@ -11,7 +11,8 @@ public struct MF2FunctionRegistry: @unchecked Sendable {
         formatters: [
             "string": passthroughFunction,
             "number": passthroughFunction,
-            "integer": passthroughFunction,
+            "integer": integerFunction,
+            "offset": offsetFunction,
             "datetime": passthroughFunction,
             "date": passthroughFunction,
             "time": passthroughFunction,
@@ -60,4 +61,36 @@ public struct MF2FunctionCall {
 
 private func passthroughFunction(_ call: MF2FunctionCall) throws -> String {
     call.value
+}
+
+private func integerFunction(_ call: MF2FunctionCall) throws -> String {
+    let value = try parseNumber(call.value, error: .badOperand("Integer function requires a numeric operand."))
+    return String(Int(value.rounded(.towardZero)))
+}
+
+private func offsetFunction(_ call: MF2FunctionCall) throws -> String {
+    let value = try parseInteger(call.value, error: .badOperand("Offset function requires a numeric operand."))
+    let add = try call.optionValue("add")
+    let subtract = try call.optionValue("subtract")
+    guard (add == nil) != (subtract == nil) else {
+        throw MF2Error.badOption("Offset function requires exactly one of add or subtract.")
+    }
+    if let add {
+        return String(value + (try parseInteger(add, error: .badOption("Offset add option must be an integer."))))
+    }
+    return String(value - (try parseInteger(subtract ?? "", error: .badOption("Offset subtract option must be an integer."))))
+}
+
+private func parseNumber(_ value: String, error: MF2Error) throws -> Double {
+    guard let parsed = Double(value), parsed.isFinite else {
+        throw error
+    }
+    return parsed
+}
+
+private func parseInteger(_ value: String, error: MF2Error) throws -> Int {
+    guard let parsed = Int(value), String(parsed) == value || (value.hasPrefix("+") && String(parsed) == String(value.dropFirst())) else {
+        throw error
+    }
+    return parsed
 }

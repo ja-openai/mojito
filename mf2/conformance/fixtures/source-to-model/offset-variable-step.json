@@ -1,0 +1,87 @@
+{
+  "name": "offset-variable-step",
+  "source": ".input {$like_count :integer}\n.input {$hidden_count :integer}\n.local $visible_count = {$like_count :offset subtract=$hidden_count}\n.match $like_count $visible_count\n0 * {{Nobody liked your post.}}\n* one {{{$name} and {$visible_count} other visible user liked your post.}}\n* * {{{$name} and {$visible_count} other visible users liked your post.}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "like_count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "like_count" },
+          "function": { "type": "function", "name": "integer" }
+        }
+      },
+      {
+        "type": "input",
+        "name": "hidden_count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "hidden_count" },
+          "function": { "type": "function", "name": "integer" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "visible_count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "like_count" },
+          "function": {
+            "type": "function",
+            "name": "offset",
+            "options": {
+              "subtract": { "type": "variable", "name": "hidden_count" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [
+      { "type": "variable", "name": "like_count" },
+      { "type": "variable", "name": "visible_count" }
+    ],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "0" }, { "type": "*" }],
+        "value": ["Nobody liked your post."]
+      },
+      {
+        "keys": [{ "type": "*" }, { "type": "literal", "value": "one" }],
+        "value": [
+          { "type": "expression", "arg": { "type": "variable", "name": "name" } },
+          " and ",
+          { "type": "expression", "arg": { "type": "variable", "name": "visible_count" } },
+          " other visible user liked your post."
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }, { "type": "*" }],
+        "value": [
+          { "type": "expression", "arg": { "type": "variable", "name": "name" } },
+          " and ",
+          { "type": "expression", "arg": { "type": "variable", "name": "visible_count" } },
+          " other visible users liked your post."
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "like_count": 0, "hidden_count": 0, "name": "Alex" },
+      "expected": "Nobody liked your post."
+    },
+    {
+      "locale": "en",
+      "arguments": { "like_count": 2, "hidden_count": 1, "name": "Alex" },
+      "expected": "Alex and 1 other visible user liked your post."
+    },
+    {
+      "locale": "en",
+      "arguments": { "like_count": 5, "hidden_count": 2, "name": "Alex" },
+      "expected": "Alex and 3 other visible users liked your post."
+    }
+  ]
+}

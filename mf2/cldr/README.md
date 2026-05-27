@@ -29,7 +29,7 @@ The checked-in runtime data is:
 Current size smoke results from CLDR `main` on 2026-05-19:
 
 - all CLDR plural locales: JSON ~125 KB, Python ~116 KB, Rust ~62 KB, Swift
-  ~81 KB, Java ~71 KB
+  ~81 KB, Java ~71 KB, JavaScript ~53 KB, PHP ~69 KB
 
 Locale filtering remains a generator capability, not a first-class checked-in
 artifact. For embedded clients, generate a product locale allowlist in the
@@ -43,6 +43,8 @@ The generator emits:
 - `swift/PluralRules.swift`: Swift evaluator and generated data
 - `java/com/box/l10n/mojito/mf2/GeneratedPluralRules.java`: Java evaluator
   and generated data
+- `javascript/plural_rules.js`: JavaScript evaluator and generated data
+- `php/GeneratedPluralRules.php`: PHP evaluator and generated data
 
 Use `--targets` to emit only the files a language build needs. For example,
 Java's Maven build runs the shared generator with
@@ -64,9 +66,9 @@ cover cases like `pt-AO`, `sr-Latn`, `az-Arab`, and Unicode extensions.
 
 The current Rust runtime compiles the generated all-locale file by path. The
 Java Maven project runs the generator into `target/generated-sources` during
-`generate-sources`. The Python and Swift runtime starters vendor the all-locale
-generated file into their package trees so they remain installable without
-reaching outside the package.
+`generate-sources`. The Python, Swift, JavaScript, and PHP runtime starters vendor
+the all-locale generated file into their package trees so they remain
+installable without reaching outside the package.
 
 Validate generated all-locale cardinal and ordinal category selection against
 ICU4J `PluralRules`:

@@ -16,6 +16,7 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
     case invalidPatternText
     case invalidMarkupKind
     case badOperand(String)
+    case badOption(String)
 
     public var code: String {
         switch self {
@@ -49,6 +50,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "invalid-markup-kind"
         case .badOperand:
             "bad-operand"
+        case .badOption:
+            "bad-option"
         }
     }
 
@@ -83,6 +86,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
         case .invalidMarkupKind:
             "Markup kind must be open, standalone, or close."
         case let .badOperand(message):
+            message
+        case let .badOption(message):
             message
         }
     }

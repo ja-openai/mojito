@@ -1,0 +1,23 @@
+{
+  "name": "@mojito-mf2/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./errors": "./src/errors.js",
+    "./locale-key": "./src/locale-key.js",
+    "./parser": "./src/parser.js",
+    "./plural-rules": "./src/generated_plural_rules.js",
+    "./runtime": "./src/runtime.js"
+  },
+  "scripts": {
+    "bench:format": "node src/benchmark.js",
+    "bench:parse": "node src/parse-benchmark.js",
+    "bench:plural": "node --expose-gc src/plural-benchmark.js",
+    "check": "node src/package-boundary-test.js && node src/conformance.js ../conformance/fixtures/source-to-model",
+    "demo": "node src/demo.js",
+    "generate:plurals": "python3 ../cldr/generator/generate_plural_rules.py --targets javascript --out src --javascript-source-root --quiet",
+    "unicode-tests": "node src/unicode-tests.js ../third_party/message-format-wg/test ../conformance/unicode-official-baseline.json"
+  }
+}

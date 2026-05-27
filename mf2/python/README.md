@@ -26,7 +26,8 @@ Current scope:
 - format the shared conformance fixture slice
 - support declarations, local variables, variable/literal expressions, basic
   function registry pass-through, markup-as-parts-stripped string output,
-  exact-match selectors, and `:number select=exact` with catch-all fallback
+  exact-match selectors, ranked multi-selector matching, `:offset` locals, and
+  fixed numeric selector keys with catch-all fallback
 - expose both the rendered string value and raw Python argument value to custom
   function callbacks
 - expose `format_message_to_parts` for text, expression, and markup boundary

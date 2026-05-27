@@ -188,8 +188,16 @@ private struct MF2FormatContext {
         selectorAnnotations = collectSelectorAnnotations(for: declarations)
         for declaration in declarations {
             switch declaration {
-            case .input:
-                continue
+            case let .input(name, value):
+                guard value.function != nil, values[MF2NameKey(name)] != nil else {
+                    continue
+                }
+                let rendered = try formatExpressionOutput(value)
+                if rendered.hadError {
+                    failedLocals.insert(MF2NameKey(name))
+                } else {
+                    values[MF2NameKey(name)] = .string(rendered.value)
+                }
             case let .local(name, value):
                 let rendered = try formatExpressionOutput(value)
                 if rendered.hadError {
@@ -214,7 +222,8 @@ private struct MF2FormatContext {
                         rendered: "",
                         normalizedRendered: annotation?.isString == true ? normalizeStringKey("") : nil,
                         exactMatch: false,
-                        selectionKey: nil
+                        selectionKey: nil,
+                        function: annotation?.function
                     )
                 }
                 throw MF2Error.missingArgument(selector.name)
@@ -225,13 +234,15 @@ private struct MF2FormatContext {
                 rendered: rendered,
                 normalizedRendered: annotation?.isString == true ? normalizeStringKey(rendered) : nil,
                 exactMatch: annotation?.exactMatch ?? true,
-                selectionKey: selectionKey(selectorName: selector.name, value: value)
+                selectionKey: selectionKey(selectorName: selector.name, value: value),
+                function: annotation?.function
             )
         }
 
         var signatures: Set<[MF2VariantKeySignature]> = []
         var fallbackVariant: MF2Variant?
         var selected: MF2Variant?
+        var selectedRank: [Int]?
         for variant in variants {
             guard variant.keys.count == selectorValues.count else {
                 throw MF2Error.variantKeyCountMismatch
@@ -242,8 +253,10 @@ private struct MF2FormatContext {
             if fallbackVariant == nil, variant.isFallback {
                 fallbackVariant = variant
             }
-            if selected == nil, variant.matches(selectorValues: selectorValues) {
+            if let rank = variant.matchRank(selectorValues: selectorValues),
+               selectedRank == nil || compareRank(rank, selectedRank!) > 0 {
                 selected = variant
+                selectedRank = rank
             }
         }
 
@@ -461,7 +474,7 @@ private struct MF2SelectorAnnotation {
     }
 
     var isNumeric: Bool {
-        function == "number" || function == "integer"
+        function == "number" || function == "integer" || function == "offset"
     }
 
     private static func numberSelect(from option: MF2ExpressionArgument?) -> MF2NumberSelect {
@@ -480,18 +493,18 @@ private struct MF2SelectorAnnotation {
 }
 
 private extension MF2Variant {
-    func matches(selectorValues: [MF2SelectorValue]) -> Bool {
+    func matchRank(selectorValues: [MF2SelectorValue]) -> [Int]? {
         guard keys.count == selectorValues.count else {
-            return false
+            return nil
         }
-        return zip(keys, selectorValues).allSatisfy { key, selector in
-            switch key {
-            case .catchAll:
-                true
-            case let .literal(value):
-                (selector.exactMatch && literalKeyMatches(value, selector: selector)) || value == selector.selectionKey
+        var rank: [Int] = []
+        for (key, selector) in zip(keys, selectorValues) {
+            guard let itemRank = keyMatchRank(key, selector: selector) else {
+                return nil
             }
+            rank.append(itemRank)
         }
+        return rank
     }
 
     func signature(selectorValues: [MF2SelectorValue]) -> [MF2VariantKeySignature] {
@@ -511,6 +524,7 @@ private struct MF2SelectorValue {
     let normalizedRendered: String?
     let exactMatch: Bool
     let selectionKey: String?
+    let function: String?
 }
 
 private struct MF2ExpressionOutput {
@@ -521,6 +535,49 @@ private struct MF2ExpressionOutput {
 private enum MF2VariantKeySignature: Hashable {
     case literal(String)
     case catchAll
+}
+
+private func keyMatchRank(_ key: MF2VariantKey, selector: MF2SelectorValue) -> Int? {
+    switch key {
+    case .catchAll:
+        return 0
+    case let .literal(value):
+        if (selector.exactMatch && literalKeyMatches(value, selector: selector)) || value == selector.selectionKey {
+            return 1
+        }
+        return numericKeyMatches(value, selector: selector) ? 1 : nil
+    }
+}
+
+private func compareRank(_ left: [Int], _ right: [Int]) -> Int {
+    for (leftItem, rightItem) in zip(left, right) {
+        if leftItem != rightItem {
+            return leftItem - rightItem
+        }
+    }
+    return left.count - right.count
+}
+
+private func numericKeyMatches(_ value: String, selector: MF2SelectorValue) -> Bool {
+    switch selector.function {
+    case "offset":
+        guard let key = Int(value), let rendered = Int(selector.rendered) else {
+            return false
+        }
+        return key == rendered
+    case "integer":
+        guard let key = Int(value), let rendered = Double(selector.rendered) else {
+            return false
+        }
+        return Int(rendered.rounded(.towardZero)) == key
+    case "number":
+        guard let key = Double(value), let rendered = Double(selector.rendered) else {
+            return false
+        }
+        return key == rendered
+    default:
+        return false
+    }
 }
 
 private func literalKeyMatches(_ value: String, selector: MF2SelectorValue) -> Bool {

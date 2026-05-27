@@ -459,7 +459,8 @@ public final class Mf2FunctionRegistry {
     private static boolean isNumericFunction(Mf2Message.FunctionRef function) {
         return function.name().equals("number")
                 || function.name().equals("integer")
-                || function.name().equals("percent");
+                || function.name().equals("percent")
+                || function.name().equals("offset");
     }
 
     private static boolean isDecimalSourceFunction(Mf2Message.FunctionRef function) {

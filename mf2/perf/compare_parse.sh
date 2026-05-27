@@ -10,8 +10,10 @@ WARMUP_ITERATIONS="${4:-10000}"
 
 echo "== valid sources =="
 (cd rust/mf2-prototype && cargo run --release -- bench-parse "../../${VALID_FIXTURES}" "${ITERATIONS}" "${WARMUP_ITERATIONS}")
+(cd javascript && npm run bench:parse -- "../${VALID_FIXTURES}" "${ITERATIONS}" "${WARMUP_ITERATIONS}")
 (cd java && sh run.sh bench-parse "../${VALID_FIXTURES}" "${ITERATIONS}" "${WARMUP_ITERATIONS}")
 
 echo "== invalid sources =="
 (cd rust/mf2-prototype && cargo run --release -- bench-parse "../../${INVALID_FIXTURES}" "${ITERATIONS}" "${WARMUP_ITERATIONS}")
+(cd javascript && npm run bench:parse -- "../${INVALID_FIXTURES}" "${ITERATIONS}" "${WARMUP_ITERATIONS}")
 (cd java && sh run.sh bench-parse "../${INVALID_FIXTURES}" "${ITERATIONS}" "${WARMUP_ITERATIONS}")

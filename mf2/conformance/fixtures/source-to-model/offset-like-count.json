@@ -1,0 +1,90 @@
+{
+  "name": "offset-like-count",
+  "source": ".input {$like_count :integer}\n.local $others_count = {$like_count :offset subtract=1}\n.match $like_count $others_count\n0 * {{Your post has no likes.}}\n1 * {{{$name} liked your post.}}\n* 1 {{{$name} and {$others_count} other user liked your post.}}\n* * {{{$name} and {$others_count} other users liked your post.}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "like_count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "like_count" },
+          "function": { "type": "function", "name": "integer" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "others_count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "like_count" },
+          "function": {
+            "type": "function",
+            "name": "offset",
+            "options": {
+              "subtract": { "type": "literal", "value": "1" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [
+      { "type": "variable", "name": "like_count" },
+      { "type": "variable", "name": "others_count" }
+    ],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "0" }, { "type": "*" }],
+        "value": ["Your post has no likes."]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1" }, { "type": "*" }],
+        "value": [
+          { "type": "expression", "arg": { "type": "variable", "name": "name" } },
+          " liked your post."
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }, { "type": "literal", "value": "1" }],
+        "value": [
+          { "type": "expression", "arg": { "type": "variable", "name": "name" } },
+          " and ",
+          { "type": "expression", "arg": { "type": "variable", "name": "others_count" } },
+          " other user liked your post."
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }, { "type": "*" }],
+        "value": [
+          { "type": "expression", "arg": { "type": "variable", "name": "name" } },
+          " and ",
+          { "type": "expression", "arg": { "type": "variable", "name": "others_count" } },
+          " other users liked your post."
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "like_count": 0, "name": "Alex" },
+      "expected": "Your post has no likes."
+    },
+    {
+      "locale": "en",
+      "arguments": { "like_count": 1, "name": "Alex" },
+      "expected": "Alex liked your post."
+    },
+    {
+      "locale": "en",
+      "arguments": { "like_count": 2, "name": "Alex" },
+      "expected": "Alex and 1 other user liked your post."
+    },
+    {
+      "locale": "en",
+      "arguments": { "like_count": 3, "name": "Alex" },
+      "expected": "Alex and 2 other users liked your post."
+    }
+  ]
+}

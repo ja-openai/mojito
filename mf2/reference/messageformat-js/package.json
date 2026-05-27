@@ -1,0 +1,13 @@
+{
+  "name": "@mojito-mf2/reference-messageformat-js",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "node --expose-gc bench.js"
+  },
+  "dependencies": {
+    "@mojito-mf2/core": "file:../../javascript",
+    "messageformat": "4.0.0"
+  }
+}

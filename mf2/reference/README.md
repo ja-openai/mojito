@@ -8,6 +8,8 @@ Current harnesses:
 
 - `icu4j/`: ICU4J MessageFormat 2 technical preview
 - `icu4cxx/`: optional ICU4C++ MessageFormat 2 technical preview harness
+- `messageformat-js/`: npm `messageformat` v4 parser/runtime benchmark against
+  the native JavaScript core
 - `fixtures/currency-simple-vs-icu4j.json`: diagnostic fixture showing where
   the current dependency-free `:currency` demo formatter matches or diverges
   from ICU4J currency formatting

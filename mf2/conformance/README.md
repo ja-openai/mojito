@@ -133,11 +133,18 @@ The source-to-model fixtures currently cover:
   with `u:dir` overriding isolation direction and parts output preserving raw
   values for UI renderers
 - exact-match `.match` selectors and catch-all fallback, including multi-selector
-  matching,
+  matching, selector-order priority independent of variant row order,
   `:number select=exact`, `:integer select=exact`, and primitive `:string`
-  selector values, plus quoted literal variant keys distinct from catch-all `*`;
+  selector values, exact numeric/category ties where row order decides the
+  winner, plus quoted literal variant keys distinct from catch-all `*`;
   `:string` selection normalizes comparison keys to NFC internally without
   mutating the parsed model or formatted output
+- fixed numeric variant keys for `:offset` locals, including the common
+  `$count` plus `$count - 1` selector shape where the offset selector matches
+  fixed keys such as `1`, plural categories such as `one`, and a
+  selector-priority case where the raw count row wins over an earlier offset
+  row; variable-valued offset options are also fixture-backed so shifted plural
+  category selection is not limited to hardcoded deltas
 - fallback formatting for unresolved variables and unresolved select selectors,
   including fallback parts with `source` metadata and collected
   `unresolved-variable` errors

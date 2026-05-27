@@ -1,0 +1,72 @@
+{
+  "name": "offset-selector-priority",
+  "source": ".input {$like_count :integer}\n.local $others_count = {$like_count :offset subtract=1}\n.match $like_count $others_count\n* * {{fallback}}\n* 1 {{offset one}}\n2 * {{raw two}}\n* 2 {{offset two}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "like_count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "like_count" },
+          "function": { "type": "function", "name": "integer" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "others_count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "like_count" },
+          "function": {
+            "type": "function",
+            "name": "offset",
+            "options": {
+              "subtract": { "type": "literal", "value": "1" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [
+      { "type": "variable", "name": "like_count" },
+      { "type": "variable", "name": "others_count" }
+    ],
+    "variants": [
+      {
+        "keys": [{ "type": "*" }, { "type": "*" }],
+        "value": ["fallback"]
+      },
+      {
+        "keys": [{ "type": "*" }, { "type": "literal", "value": "1" }],
+        "value": ["offset one"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "2" }, { "type": "*" }],
+        "value": ["raw two"]
+      },
+      {
+        "keys": [{ "type": "*" }, { "type": "literal", "value": "2" }],
+        "value": ["offset two"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "like_count": 1 },
+      "expected": "fallback"
+    },
+    {
+      "locale": "en",
+      "arguments": { "like_count": 2 },
+      "expected": "raw two"
+    },
+    {
+      "locale": "en",
+      "arguments": { "like_count": 3 },
+      "expected": "offset two"
+    }
+  ]
+}

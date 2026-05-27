@@ -21,10 +21,10 @@ The third argument is untimed warmup iterations. This matters for JVM and other
 managed runtimes, but we use it for every language so the comparison shape stays
 consistent.
 
-`compare.sh` includes Mojito's Rust, Swift, Python, and Java runtime starters
-plus the ICU4J and optional ICU4C++ reference harnesses. Reference harnesses compile
-`MessageFormatter` instances before the timed loop and skip unsupported fixture
-cases with an explicit count.
+`compare.sh` includes Mojito's Rust, Swift, Python, JavaScript, and Java runtime
+starters plus the ICU4J and optional ICU4C++ reference harnesses. Reference
+harnesses compile `MessageFormatter` instances before the timed loop and skip
+unsupported fixture cases with an explicit count.
 
 Use `profile.sh rss` for wall-clock process measurements and max resident set
 size:
@@ -68,6 +68,12 @@ Parser smoke run with 1,000,000 timed iterations and 100,000 warmup iterations:
 
 - Valid source fixtures: Rust about 1.77M parses/sec, Java about 2.16M parses/sec
 - Invalid source fixtures: Rust about 6.15M parses/sec, Java about 8.06M parses/sec
+
+After the JavaScript starter landed, a 5,000-iteration smoke showed JavaScript
+at about 317K format ops/sec, 208K valid-source parses/sec, and 411K
+invalid-source parses/sec on the then-current 52-fixture source corpus. The JS
+plural micro-smoke showed generated CLDR rules at about 424 ns/op and cached
+platform `Intl.PluralRules` at about 299 ns/op for the sampled locales.
 
 Java JFR smoke profiles point at ordinary string/parser work after warmup:
 quoted-pattern scanning, name splitting, immutable model list construction, and

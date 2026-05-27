@@ -1,0 +1,50 @@
+{
+  "name": "integer-fixed-after-fallback",
+  "source": ".input {$count :integer}\n.match $count\n* {{fallback}}\n1 {{exact one}}\none {{plural one}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "count",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "count" },
+          "function": { "type": "function", "name": "integer" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "count" }],
+    "variants": [
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["fallback"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["exact one"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": ["plural one"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "count": 1 },
+      "expected": "exact one"
+    },
+    {
+      "locale": "en",
+      "arguments": { "count": 1.2 },
+      "expected": "exact one"
+    },
+    {
+      "locale": "en",
+      "arguments": { "count": 2 },
+      "expected": "fallback"
+    }
+  ]
+}
