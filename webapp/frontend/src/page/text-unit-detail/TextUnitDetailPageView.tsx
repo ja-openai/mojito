@@ -25,11 +25,25 @@ import { getGlossaryTermScreenshotEvidence } from '../../utils/glossaryTermEvide
 export type TextUnitDetailMetaRow = {
   label: string;
   value: string;
+  kind?: 'targetComment';
 };
 
 export type TextUnitDetailMetaSection = {
   title: string;
   rows: TextUnitDetailMetaRow[];
+};
+
+type TargetCommentEditorProps = {
+  draft: string;
+  isEditing: boolean;
+  canEdit: boolean;
+  isSaving: boolean;
+  isDisabled: boolean;
+  disabledReason: string | null;
+  onStart: () => void;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
 };
 
 export type { TextUnitDetailHistoryComment, TextUnitDetailHistoryRow };
@@ -98,6 +112,7 @@ type TextUnitDetailPageViewProps = {
   isMetaLoading: boolean;
   metaErrorMessage: string | null;
   metaSections: TextUnitDetailMetaSection[];
+  targetCommentEditor: TargetCommentEditorProps;
   metaWarningMessage: string | null;
   isHistoryCollapsed: boolean;
   onToggleHistoryCollapsed: () => void;
@@ -160,6 +175,7 @@ export function TextUnitDetailPageView({
   isMetaLoading,
   metaErrorMessage,
   metaSections,
+  targetCommentEditor,
   metaWarningMessage,
   isHistoryCollapsed,
   onToggleHistoryCollapsed,
@@ -503,7 +519,12 @@ export function TextUnitDetailPageView({
                 ) : (
                   <div className="text-unit-detail-page__sections">
                     {metaSections.map((section) => (
-                      <MetaSection key={section.title} title={section.title} rows={section.rows} />
+                      <MetaSection
+                        key={section.title}
+                        title={section.title}
+                        rows={section.rows}
+                        targetCommentEditor={targetCommentEditor}
+                      />
                     ))}
 
                     {metaWarningMessage ? (
@@ -601,15 +622,69 @@ function SectionHeader({
   );
 }
 
-function MetaSection({ title, rows }: { title: string; rows: TextUnitDetailMetaRow[] }) {
+function MetaSection({
+  title,
+  rows,
+  targetCommentEditor,
+}: {
+  title: string;
+  rows: TextUnitDetailMetaRow[];
+  targetCommentEditor: TargetCommentEditorProps;
+}) {
   return (
     <section className="text-unit-detail-page__meta-section">
       <h3 className="text-unit-detail-page__meta-title">{title}</h3>
       <dl className="text-unit-detail-page__meta">
         {rows.map((row) => (
           <div key={row.label} className="text-unit-detail-page__meta-row">
-            <dt>{row.label}</dt>
-            <dd>{row.value}</dd>
+            <dt>
+              <span className="text-unit-detail-page__meta-label">{row.label}</span>
+              {row.kind === 'targetComment' && targetCommentEditor.canEdit ? (
+                <button
+                  type="button"
+                  className="text-unit-detail-page__meta-edit-button"
+                  onClick={targetCommentEditor.onStart}
+                  disabled={targetCommentEditor.isEditing || targetCommentEditor.isDisabled}
+                  title={targetCommentEditor.disabledReason ?? undefined}
+                >
+                  Edit
+                </button>
+              ) : null}
+            </dt>
+            <dd>
+              {row.kind === 'targetComment' && targetCommentEditor.isEditing ? (
+                <div className="text-unit-detail-page__meta-editor">
+                  <AutoTextarea
+                    className="text-unit-detail-page__meta-textarea"
+                    value={targetCommentEditor.draft}
+                    onChange={(event) => targetCommentEditor.onChange(event.target.value)}
+                    minRows={2}
+                    disabled={targetCommentEditor.isSaving}
+                    aria-label="Target comment"
+                  />
+                  <div className="text-unit-detail-page__meta-editor-actions">
+                    <button
+                      type="button"
+                      className="text-unit-detail-page__button text-unit-detail-page__button--primary"
+                      onClick={targetCommentEditor.onSave}
+                      disabled={targetCommentEditor.isSaving}
+                    >
+                      {targetCommentEditor.isSaving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      className="text-unit-detail-page__button"
+                      onClick={targetCommentEditor.onCancel}
+                      disabled={targetCommentEditor.isSaving}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                row.value
+              )}
+            </dd>
           </div>
         ))}
       </dl>

@@ -97,6 +97,8 @@ export function TextUnitDetailPage() {
   const [baselineStatus, setBaselineStatus] = useState<
     'Accepted' | 'To review' | 'To translate' | 'Rejected'
   >('To translate');
+  const [targetCommentDraft, setTargetCommentDraft] = useState('');
+  const [isTargetCommentEditing, setIsTargetCommentEditing] = useState(false);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [pendingValidationSave, setPendingValidationSave] = useState<{
     request: SaveTextUnitRequest;
@@ -287,7 +289,13 @@ export function TextUnitDetailPage() {
       setDraftStatus(nextStatus);
       setSaveErrorMessage(null);
       setPendingValidationSave(null);
-      setIsHistoryCollapsed(false);
+      if ('targetComment' in request) {
+        setTargetCommentDraft(saved.targetComment ?? request.targetComment ?? '');
+        setIsTargetCommentEditing(false);
+        setIsMetaCollapsed(false);
+      } else {
+        setIsHistoryCollapsed(false);
+      }
 
       void queryClient.invalidateQueries({
         queryKey: ['text-unit-detail', tmTextUnitId, localeTag],
@@ -384,6 +392,16 @@ export function TextUnitDetailPage() {
     editorSeedKey,
     isSourceOnly,
   ]);
+
+  useEffect(() => {
+    setIsTargetCommentEditing(false);
+  }, [activeTextUnit?.tmTextUnitId, displayLocale]);
+
+  useEffect(() => {
+    if (!isTargetCommentEditing) {
+      setTargetCommentDraft(activeTextUnit?.targetComment ?? '');
+    }
+  }, [activeTextUnit?.targetComment, isTargetCommentEditing]);
 
   const aiContextKey = useMemo(() => {
     if (!activeTextUnit || !localeForEditing) {
@@ -513,7 +531,11 @@ export function TextUnitDetailPage() {
       { label: 'AssetPath', value: formatValue(textUnitQuery.data?.assetPath) },
       { label: 'PluralForm', value: formatValue(textUnitQuery.data?.pluralForm) },
       { label: 'PluralFormOther', value: formatValue(textUnitQuery.data?.pluralFormOther) },
-      { label: 'TargetComment', value: formatValue(textUnitQuery.data?.targetComment) },
+      {
+        label: 'TargetComment',
+        value: formatValue(textUnitQuery.data?.targetComment),
+        kind: 'targetComment',
+      },
       { label: 'Location', value: formatValue(textUnitLocation) },
     ];
 
@@ -771,6 +793,53 @@ export function TextUnitDetailPage() {
     setSaveErrorMessage(null);
     setPendingValidationSave(null);
   }, [baselineStatus, baselineTarget]);
+
+  const handleStartTargetCommentEditing = useCallback(() => {
+    setTargetCommentDraft(activeTextUnit?.targetComment ?? '');
+    setIsTargetCommentEditing(true);
+  }, [activeTextUnit?.targetComment]);
+
+  const handleCancelTargetCommentEditing = useCallback(() => {
+    setTargetCommentDraft(activeTextUnit?.targetComment ?? '');
+    setIsTargetCommentEditing(false);
+  }, [activeTextUnit?.targetComment]);
+
+  const handleSaveTargetComment = useCallback(async () => {
+    if (!canEdit) {
+      setSaveErrorMessage('You cannot edit this locale.');
+      return;
+    }
+
+    if (isSourceOnly) {
+      setSaveErrorMessage('Target comments can only be edited for target locales.');
+      return;
+    }
+
+    if (isEditorDirty) {
+      setSaveErrorMessage('Save or reset the translation before editing the target comment.');
+      return;
+    }
+
+    const request = buildSaveRequest(baselineTarget);
+    if (!request) {
+      return;
+    }
+
+    const trimmedComment = targetCommentDraft.trim();
+    setIsMetaCollapsed(false);
+    await saveMutation.mutateAsync({
+      ...request,
+      targetComment: trimmedComment ? trimmedComment : null,
+    });
+  }, [
+    baselineTarget,
+    buildSaveRequest,
+    canEdit,
+    isEditorDirty,
+    isSourceOnly,
+    saveMutation,
+    targetCommentDraft,
+  ]);
 
   const handleRequestDeleteEditor = useCallback(() => {
     if (!canDeleteCurrentTranslation || deleteMutation.isPending || saveMutation.isPending) {
@@ -1070,6 +1139,22 @@ export function TextUnitDetailPage() {
       isMetaLoading={textUnitQuery.isLoading}
       metaErrorMessage={getQueryErrorMessage(textUnitQuery.error)}
       metaSections={metaSections}
+      targetCommentEditor={{
+        draft: targetCommentDraft,
+        isEditing: isTargetCommentEditing,
+        canEdit: canEdit && !isSourceOnly,
+        isSaving: saveMutation.isPending,
+        isDisabled: isEditorDirty || saveMutation.isPending,
+        disabledReason: isEditorDirty
+          ? 'Save or reset the translation before editing the target comment.'
+          : null,
+        onStart: handleStartTargetCommentEditing,
+        onChange: setTargetCommentDraft,
+        onSave: () => {
+          void handleSaveTargetComment();
+        },
+        onCancel: handleCancelTargetCommentEditing,
+      }}
       metaWarningMessage={
         gitBlameQuery.isError
           ? `Git blame metadata is unavailable: ${getQueryErrorMessage(gitBlameQuery.error) ?? '-'}`
