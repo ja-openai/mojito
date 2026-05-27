@@ -11,6 +11,7 @@ import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import jakarta.persistence.EntityManager;
@@ -177,10 +178,14 @@ public class TextUnitSearcher {
         cb.equal(context.pluralFormForLocale.get("locale"), context.locale));
 
     if (usesGlossaryTermMetadata(searchParameters)) {
+      context.glossary = context.repository.join(Glossary.class, SqmJoinType.LEFT);
+      context.glossary.on(cb.equal(context.glossary.get("backingRepository"), context.repository));
+
       context.glossaryTermMetadata =
           context.textUnit.join(GlossaryTermMetadata.class, SqmJoinType.LEFT);
       context.glossaryTermMetadata.on(
-          cb.equal(context.glossaryTermMetadata.get("tmTextUnit"), context.textUnit));
+          cb.equal(context.glossaryTermMetadata.get("tmTextUnit"), context.textUnit),
+          cb.equal(context.glossaryTermMetadata.get("glossary"), context.glossary));
     }
 
     if (usesAssetTextUnitUsages(searchParameters)) {
@@ -591,7 +596,7 @@ public class TextUnitSearcher {
 
     predicates.add(
         cb.or(
-            cb.isNull(context.glossaryTermMetadata.get("id")),
+            cb.isNull(context.glossary.get("id")),
             cb.equal(context.glossaryTermMetadata.get("status"), glossaryStatusFilter.name())));
   }
 
@@ -799,6 +804,7 @@ public class TextUnitSearcher {
     JpaJoin<AssetTextUnitToTMTextUnit, AssetTextUnit> assetTextUnit;
     JpaJoin<TMTextUnit, PluralForm> pluralForm;
     JpaEntityJoin<PluralFormForLocale> pluralFormForLocale;
+    JpaEntityJoin<Glossary> glossary;
     JpaEntityJoin<GlossaryTermMetadata> glossaryTermMetadata;
     JpaSetJoin<AssetTextUnit, String> usage;
   }
