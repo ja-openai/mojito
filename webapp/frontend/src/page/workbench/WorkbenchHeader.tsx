@@ -42,7 +42,7 @@ const searchAttributeOptions: SearchAttributeOption[] = [
 ];
 
 const searchTypeOptions: SearchTypeOption[] = [
-  { value: 'exact', label: 'Exact match', helper: 'Full string' },
+  { value: 'exact', label: 'Exact match', helper: 'Find only the full text you type' },
   {
     value: 'contains',
     label: 'Contains',
@@ -56,7 +56,7 @@ const searchTypeOptions: SearchTypeOption[] = [
   {
     value: 'regex',
     label: 'Regex',
-    helper: '\\x{FFFF}, ^/$, .*, (?i)insensitive',
+    helper: 'Advanced: use a regular expression, e.g. \\x{FFFF}, ^/$, .*, (?i)insensitive',
   },
 ];
 
