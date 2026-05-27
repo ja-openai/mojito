@@ -3579,7 +3579,7 @@ function DetailPane({
                 },
                 {
                   value: 'icu' as const,
-                  label: 'ICU',
+                  label: 'Placeholders',
                   count: hasIcuMessage ? 1 : undefined,
                 },
                 { value: 'history' as const, label: 'History' },
