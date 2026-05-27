@@ -27,6 +27,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 /**
  * @author jeanaurambault
@@ -42,7 +44,16 @@ public class SlaCheckerServiceTest {
 
   @Mock RepositoryRepository repositoryRepository;
 
+  @Mock PlatformTransactionManager transactionManager;
+
+  @Mock TransactionStatus transactionStatus;
+
   @Spy DateTimeUtils dateTimeUtils;
+
+  @org.junit.Before
+  public void setup() {
+    doReturn(transactionStatus).when(transactionManager).getTransaction(any());
+  }
 
   @Test
   public void testCheckForIncidents() {

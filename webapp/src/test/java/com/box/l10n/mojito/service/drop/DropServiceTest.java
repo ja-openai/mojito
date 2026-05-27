@@ -60,7 +60,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
  * @author jaurambault
@@ -88,6 +91,8 @@ public class DropServiceTest extends ServiceTestBase {
   @Autowired TranslationKitRepository translationKitRepository;
 
   @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   @Autowired TMService tmService;
 
@@ -799,38 +804,44 @@ public class DropServiceTest extends ServiceTestBase {
     }
   }
 
-  @Transactional
   public void checkTranslationKitStatistics(Drop drop) throws DropExporterException {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+    try {
+      logger.debug("Check statistics");
+      Drop d = dropRepository.findById(drop.getId()).orElse(null);
 
-    logger.debug("Check statistics");
-    Drop d = dropRepository.findById(drop.getId()).orElse(null);
+      for (TranslationKit tk : d.getTranslationKits()) {
 
-    for (TranslationKit tk : d.getTranslationKits()) {
-
-      assertEquals(
-          "For locale: " + tk.getLocale().getBcp47Tag(),
-          tk.getNumTranslationKitUnits(),
-          tk.getNumTranslatedTranslationKitUnits());
-      assertNotNull(tk.getWordCount());
-      assertTrue(tk.getImported());
-
-      if (tk.getLocale().getBcp47Tag().equals("ko-KR")) {
         assertEquals(
-            "For locale: " + tk.getLocale().getBcp47Tag(), 1, tk.getNotFoundTextUnitIds().size());
-        assertEquals(
-            "For locale: " + tk.getLocale().getBcp47Tag(), 1, tk.getNumSourceEqualsTarget());
-        assertEquals(1, tk.getWordCount().intValue());
-      } else {
-        if (tk.getLocale().getBcp47Tag().equals("ja-JP")) {
-          assertEquals(9, tk.getWordCount().intValue());
-        } else {
+            "For locale: " + tk.getLocale().getBcp47Tag(),
+            tk.getNumTranslationKitUnits(),
+            tk.getNumTranslatedTranslationKitUnits());
+        assertNotNull(tk.getWordCount());
+        assertTrue(tk.getImported());
+
+        if (tk.getLocale().getBcp47Tag().equals("ko-KR")) {
+          assertEquals(
+              "For locale: " + tk.getLocale().getBcp47Tag(), 1, tk.getNotFoundTextUnitIds().size());
+          assertEquals(
+              "For locale: " + tk.getLocale().getBcp47Tag(), 1, tk.getNumSourceEqualsTarget());
           assertEquals(1, tk.getWordCount().intValue());
+        } else {
+          if (tk.getLocale().getBcp47Tag().equals("ja-JP")) {
+            assertEquals(9, tk.getWordCount().intValue());
+          } else {
+            assertEquals(1, tk.getWordCount().intValue());
+          }
+          assertEquals(
+              "For locale: " + tk.getLocale().getBcp47Tag(), 0, tk.getNotFoundTextUnitIds().size());
+          assertEquals(
+              "For locale: " + tk.getLocale().getBcp47Tag(), 0, tk.getNumSourceEqualsTarget());
         }
-        assertEquals(
-            "For locale: " + tk.getLocale().getBcp47Tag(), 0, tk.getNotFoundTextUnitIds().size());
-        assertEquals(
-            "For locale: " + tk.getLocale().getBcp47Tag(), 0, tk.getNumSourceEqualsTarget());
       }
+      transactionManager.commit(transaction);
+    } catch (RuntimeException | Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
     }
   }
 

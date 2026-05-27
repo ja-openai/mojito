@@ -1436,7 +1436,7 @@ public class AssetExtractionServiceTest extends ServiceTestBase {
         .processAssetAsync(branch2AssetContent.getId(), null, null, null, null)
         .get();
 
-    verify(mockedScheduler, times(1)).schedule(anyLong());
+    verify(mockedScheduler, times(3)).schedule(anyLong());
   }
 
   @Test

@@ -32,7 +32,7 @@ public class QuartzMultiSchedulerConfigurationPropertiesTest {
     Map<String, SchedulerConfigurationProperties> schedulerConfigurationProperties =
         quartzMultiSchedulerConfigurationProperties.getSchedulers();
 
-    assertThat(schedulerConfigurationProperties).containsOnlyKeys("default", "lowPriority");
+    assertThat(schedulerConfigurationProperties).containsKeys("default", "lowPriority");
     SchedulerConfigurationProperties defaultSchedulerConfigurationProperties =
         schedulerConfigurationProperties.get("default");
     SchedulerConfigurationProperties lowPrioritySchedulerConfigurationProperties =

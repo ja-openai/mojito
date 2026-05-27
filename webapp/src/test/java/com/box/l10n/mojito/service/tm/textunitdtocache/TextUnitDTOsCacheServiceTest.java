@@ -29,6 +29,7 @@ import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.test.TestIdWatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
@@ -277,6 +278,7 @@ public class TextUnitDTOsCacheServiceTest extends ServiceTestBase {
   public void fetchFromDatabaseIfduplicatedMd5InCache() {
     TextUnitDTOsCacheService textUnitDTOsCacheService = spy(new TextUnitDTOsCacheService());
     textUnitDTOsCacheService.textUnitUtils = new TextUnitUtils();
+    textUnitDTOsCacheService.meterRegistry = new SimpleMeterRegistry();
     TextUnitDTOsCacheBlobStorage textUnitDTOsCacheBlobStorageMock =
         mock(TextUnitDTOsCacheBlobStorage.class);
     textUnitDTOsCacheService.textUnitDTOsCacheBlobStorage = textUnitDTOsCacheBlobStorageMock;
