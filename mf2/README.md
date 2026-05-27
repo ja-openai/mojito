@@ -9,17 +9,23 @@ It is intentionally split into conformance data and implementation prototypes:
 - `swift/MessageFormat2/`: native zero-dependency Swift runtime starter
 - `python/`: zero-dependency Python runtime starter
 - `java/`: zero-dependency Java runtime starter for JVM/Kotlin interop
+- `javascript/`: zero-dependency JavaScript parser/runtime starter
+- `react/`: FormatJS-style React wrapper and Vite demo over the JavaScript core
+- `go/`: native Go parser/runtime starter
+- `php/`: native PHP parser/runtime starter using the built-in `intl` extension
+  for Unicode NFC selector keys
 - `reference/`: ICU reference comparison harnesses
 - `cldr/`: generated CLDR plural-rule data, experimental number data, and
   relative-time data generators
 - `examples/`: shared parser-free catalog demo used by all starter runtimes
-- `editor-prototype/`: dependency-free HTML translator workbench prototype backed
-  by the Rust parser/runtime before the Mojito React/LSP surface is built
+- `editor-prototype/`: HTML translator workbench prototype backed by the
+  JavaScript parser/runtime in the browser, with optional Rust comparison before
+  the Mojito React/LSP surface is built
 - `spec/`: project-level drafts for registry functions that are not part of
   the MF2 core grammar
 - `third_party/message-format-wg/test/`: vendored Unicode MessageFormat WG
-  official tests, consumed directly by the Rust `unicode-tests` scoreboard
-  runner
+  official tests, consumed directly by the Rust, Java, JavaScript, Go, and PHP
+  `unicode-tests` scoreboard runners
 
 The contract is:
 
@@ -53,13 +59,46 @@ The starter implementations mirror those boundaries even before they become
 separate published packages. Rust has `parser`, `model`, `runtime`, `cldr`, and
 `diagnostic` modules, with plural selection wired through generated CLDR code.
 Python has `formatter`, `plural`, generated plural rules, `locale_key`, `errors`,
-and a compatibility `model` facade. Swift has `Model`, `Formatter`, generated
-plural rules, `PluralRules`, `Locale`, and `Errors` files inside the runtime
-target. Java keeps the production artifact under `src/main/java`; conformance
-runners, demos, benchmarks, fixture JSON loading, and demo-only functions live
+and a compatibility `model` facade. JavaScript has source parsing, generated
+CLDR plural rules, runtime formatting, parts output, and locale-key helpers as
+ES modules. Go has source parsing, generated CLDR plural rules, runtime
+formatting, parts output, locale-key helpers, and uses `golang.org/x/text` for
+spec-compliant NFC string selection while a generated zero-dependency normalizer
+remains an open packaging decision. PHP has source parsing, generated CLDR
+plural rules, runtime formatting, parts output, and locale-key helpers; it
+relies on PHP `intl` for spec-compliant NFC string selection. The React wrapper
+stays thin: catalog parsing, string hooks, parts hooks, component rendering,
+HTML `<bdi>` isolation for rich output, independent preview direction, parsed
+contract display, and demo scenario rendering all delegate to the JavaScript
+core. Swift has `Model`, `Formatter`, generated plural rules, `PluralRules`,
+`Locale`, and `Errors` files inside the runtime target. Java keeps the
+production artifact under `src/main/java`; conformance runners, demos,
+benchmarks, fixture JSON loading, and demo-only functions live
 under `src/test/java` so they do not ship in the library jar. The locale-key
 helpers are string-only; generated plural rules keep string APIs and do not
 depend on a rich locale object.
+
+## Runtime Optimization Notes
+
+Correctness and simple architecture come first, but MF2 runtimes should make
+common product strings cheap. Small compiled fast paths are acceptable when they
+are isolated from the generic model semantics and measured with both speed and
+memory smoke tests.
+
+Current guidance:
+
+- Prevalidate or compile once where the host language can keep a message object.
+- Keep `format()` string-only paths separate from `formatToParts` when that
+  avoids avoidable part allocations.
+- Start with simple patterns: literal text, markup stripped from string output,
+  and unannotated literal/variable expressions.
+- Use weak/owned caches so compiled helpers do not outlive the parsed model or
+  catalog entry.
+- Do not duplicate behavior by special-casing fixtures; unsupported complex
+  messages must fall back to the generic runtime path.
+- Track memory alongside throughput. The JavaScript simple-message fast path is
+  intentionally a small `WeakMap` cache, measured at roughly hundreds of bytes
+  per retained model in a stress smoke, with near-zero per-call heap growth.
 
 ## Current Slice
 
@@ -135,9 +174,11 @@ The current conformance slice covers:
   dependency order, and non-empty pattern text parts, plus valid markup kind
   values and missing runtime argument errors
 
-Rust and Java currently parse MF2 source into the official data model for this
-slice. Swift and Python currently consume the expected official data model from
-fixtures and format it. They do not parse MF2 source yet.
+Rust, Java, JavaScript, Go, and PHP currently parse MF2 source into the official data
+model for this slice and run the vendored Unicode MessageFormat WG suite at
+461 passed, 0 skipped, 0 not wired. Swift and Python currently consume the
+expected official data model from fixtures and format it. They do not parse MF2
+source yet.
 
 ## V0 Target
 
@@ -163,6 +204,16 @@ Run all current checks:
 sh check.sh
 ```
 
+Run the vendored Unicode MessageFormat WG suite directly:
+
+```sh
+(cd rust/mf2-prototype && cargo run -- unicode-tests)
+(cd java && sh run.sh unicode-tests)
+(cd javascript && npm run unicode-tests)
+(cd go && go test ./...)
+(cd php && php tests/unicode_tests.php)
+```
+
 Run the first MF2 editor prototype:
 
 ```sh
@@ -178,6 +229,10 @@ Run the tiny app-facing catalog demos directly:
 (cd rust/mf2-prototype && cargo run --example inline_translate_demo)
 (cd swift/MessageFormat2 && swift run MessageFormat2TranslateDemo)
 (cd python && python3 examples/translate_demo.py)
+(cd go && go run ./cmd/demo)
+(cd php && php examples/demo.php)
+(cd javascript && npm run demo)
+(cd react && npm install && npm run dev)
 (cd java && sh run.sh demo)
 (cd java && sh run.sh inline-demo)
 (cd java && sh run.sh showcase)
@@ -187,6 +242,15 @@ Run a simple cross-language format benchmark:
 
 ```sh
 sh perf/compare.sh
+```
+
+Run JavaScript-specific speed and memory smoke checks:
+
+```sh
+(cd javascript && npm run bench:format)
+(cd javascript && npm run bench:parse)
+(cd javascript && npm run bench:plural)
+(cd react && npm run bench:render)
 ```
 
 Run process-level RSS and CPU-time profiling:
@@ -217,6 +281,7 @@ Run ICU reference comparison:
 ```sh
 sh reference/icu4j/run.sh compare ../../conformance/fixtures/source-to-model
 sh reference/icu4cxx/run.sh compare ../../conformance/fixtures/source-to-model
+(cd reference/messageformat-js && npm install && npm run bench)
 ```
 
 The reference comparison intentionally reports unsupported cases and mismatches
