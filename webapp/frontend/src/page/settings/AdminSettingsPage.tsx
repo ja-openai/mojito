@@ -39,12 +39,12 @@ export function AdminSettingsPage() {
                 type="button"
                 className="settings-directory__card"
                 onClick={() => {
-                  void navigate('/settings/system/ai-translate/prompt-suffixes');
+                  void navigate('/settings/system/ai-translate/prompts');
                 }}
               >
-                <div className="settings-directory__title">AI prompt suffixes</div>
+                <div className="settings-directory__title">Prompts</div>
                 <div className="settings-directory__description">
-                  Manage locale-specific prompt suffixes.
+                  Manage locale-specific prompts and regex-triggered source rules.
                 </div>
               </button>
             </div>

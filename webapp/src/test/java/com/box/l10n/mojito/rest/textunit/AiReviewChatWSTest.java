@@ -64,7 +64,7 @@ public class AiReviewChatWSTest {
 
   @Test
   public void chatAppendsLocalePromptSuffixToSystemPrompt() {
-    when(aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix("fr-FR", null))
+    when(aiTranslateLocalePromptSuffixService.getLocalePromptSuffix("fr-FR"))
         .thenReturn("Use Canadian French terminology.");
     doNothing().when(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, "Bonjour");
     when(openAIClient.getResponses(any(), any()))
@@ -128,14 +128,13 @@ public class AiReviewChatWSTest {
                 "result",
                 "completed")
             .count());
-    verify(aiTranslateLocalePromptSuffixService).getEffectivePromptSuffix("fr-FR", null);
+    verify(aiTranslateLocalePromptSuffixService).getLocalePromptSuffix("fr-FR");
     verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, "Bonjour");
   }
 
   @Test
   public void chatFallsBackToBasePromptWhenLocalePromptSuffixIsMissing() {
-    when(aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix("ja-JP", null))
-        .thenReturn(null);
+    when(aiTranslateLocalePromptSuffixService.getLocalePromptSuffix("ja-JP")).thenReturn(null);
     when(openAIClient.getResponses(any(), any()))
         .thenReturn(
             CompletableFuture.completedFuture(
@@ -176,13 +175,12 @@ public class AiReviewChatWSTest {
     verify(openAIClient).getResponses(requestCaptor.capture(), any());
 
     assertEquals(AiReviewType.PROMPT_ALL, requestCaptor.getValue().instructions());
-    verify(aiTranslateLocalePromptSuffixService).getEffectivePromptSuffix("ja-JP", null);
+    verify(aiTranslateLocalePromptSuffixService).getLocalePromptSuffix("ja-JP");
   }
 
   @Test
   public void chatUsesAdaptiveRequestTimeout() {
-    when(aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix("ja-JP", null))
-        .thenReturn(null);
+    when(aiTranslateLocalePromptSuffixService.getLocalePromptSuffix("ja-JP")).thenReturn(null);
     when(openAIClient.getResponses(any(), any()))
         .thenReturn(CompletableFuture.completedFuture(successResponse("Natural imperative.")));
 
@@ -331,8 +329,7 @@ public class AiReviewChatWSTest {
 
   @Test
   public void chatIgnoresAssistantOnlyHistoryAndFallsBackToDefaultPrompt() {
-    when(aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix("ja-JP", null))
-        .thenReturn(null);
+    when(aiTranslateLocalePromptSuffixService.getLocalePromptSuffix("ja-JP")).thenReturn(null);
     when(openAIClient.getResponses(any(), any()))
         .thenReturn(CompletableFuture.completedFuture(successResponse("Retry succeeded.")));
 

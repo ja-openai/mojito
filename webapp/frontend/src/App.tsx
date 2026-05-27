@@ -26,8 +26,8 @@ import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
 import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
-import { AdminAiLocalePromptSuffixPage } from './page/settings/AdminAiLocalePromptSuffixPage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
+import { AdminAiTranslatePromptsPage } from './page/settings/AdminAiTranslatePromptsPage';
 import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
 import { AdminGlossaryWorkflowPage } from './page/settings/AdminGlossaryWorkflowPage';
 import { AdminReviewAutomationBatchPage } from './page/settings/AdminReviewAutomationBatchPage';
@@ -255,11 +255,31 @@ export function App() {
             />
             <Route
               path="/settings/admin/ai-translate/prompt-suffixes"
-              element={<AdminAiLocalePromptSuffixPage />}
+              element={<Navigate to="/settings/admin/ai-translate/prompts" replace />}
             />
             <Route
               path="/settings/system/ai-translate/prompt-suffixes"
-              element={<AdminAiLocalePromptSuffixPage />}
+              element={<Navigate to="/settings/system/ai-translate/prompts" replace />}
+            />
+            <Route
+              path="/settings/admin/ai-translate/prompts"
+              element={<AdminAiTranslatePromptsPage />}
+            />
+            <Route
+              path="/settings/system/ai-translate/prompts"
+              element={<AdminAiTranslatePromptsPage />}
+            />
+            <Route
+              path="/settings/admin/ai-translate/source-prompt-rules"
+              element={
+                <Navigate to="/settings/admin/ai-translate/prompts?tab=source-rules" replace />
+              }
+            />
+            <Route
+              path="/settings/system/ai-translate/source-prompt-rules"
+              element={
+                <Navigate to="/settings/system/ai-translate/prompts?tab=source-rules" replace />
+              }
             />
             <Route path="/settings/admin/teams" element={<AdminTeamsPage />} />
             <Route path="/settings/admin/users" element={<AdminUserSettingsPage />} />

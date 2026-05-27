@@ -28,6 +28,8 @@ import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateBatchesImportJob.AiTranslateBatchesImportInput;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateBatchesImportJob.AiTranslateBatchesImportOutput;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateSourcePromptRuleService.ActiveSourcePromptRule;
+import com.box.l10n.mojito.service.oaitranslate.AiTranslateSourcePromptRuleService.MatchedPromptSuffixes;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateTextUnitAttemptService.NoBatchAttemptRequest;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateTextUnitAttemptService.NoBatchImportedVariant;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateType.CompletionInput;
@@ -123,6 +125,7 @@ public class AiTranslateService {
   private final AiTranslateScreenshotService aiTranslateScreenshotService;
   private final AiTranslateLegacyBatchService aiTranslateLegacyBatchService;
   private final AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService;
+  private final AiTranslateSourcePromptRuleService aiTranslateSourcePromptRuleService;
   private final AiTranslateTextUnitAttemptService aiTranslateTextUnitAttemptService;
   private final MeterRegistry meterRegistry;
   private final AtomicInteger noBatchRequestsInFlight;
@@ -184,6 +187,7 @@ public class AiTranslateService {
       AiTranslateScreenshotService aiTranslateScreenshotService,
       AiTranslateLegacyBatchService aiTranslateLegacyBatchService,
       AiTranslateLocalePromptSuffixService aiTranslateLocalePromptSuffixService,
+      AiTranslateSourcePromptRuleService aiTranslateSourcePromptRuleService,
       AiTranslateTextUnitAttemptService aiTranslateTextUnitAttemptService) {
     this.textUnitSearcher = textUnitSearcher;
     this.repositoryRepository = repositoryRepository;
@@ -206,6 +210,7 @@ public class AiTranslateService {
     this.aiTranslateScreenshotService = aiTranslateScreenshotService;
     this.aiTranslateLegacyBatchService = aiTranslateLegacyBatchService;
     this.aiTranslateLocalePromptSuffixService = aiTranslateLocalePromptSuffixService;
+    this.aiTranslateSourcePromptRuleService = aiTranslateSourcePromptRuleService;
     this.aiTranslateTextUnitAttemptService = aiTranslateTextUnitAttemptService;
     this.noBatchRequestsInFlight =
         meterRegistry.gauge(
@@ -281,6 +286,11 @@ public class AiTranslateService {
       String screenshotUUID,
       List<TextUnitDTOWithVariantComments> textUnitDTOWithVariantCommentsList) {}
 
+  record SourcePromptRuleBucket(List<Long> ruleIds, List<String> ruleNames, String promptSuffix) {}
+
+  record PreparedNoBatchTextUnit(
+      TextUnitDTOWithVariantComments textUnitDTOWithVariantComments, TextUnit textUnit) {}
+
   static Map<String, TextUnitsByScreenshot> groupTextUnitsByScreenshot(
       List<TextUnitDTOWithVariantComments> textUnitDTOWithVariantCommentsList) {
     Map<String, TextUnitsByScreenshot> groups = new LinkedHashMap<>();
@@ -355,6 +365,8 @@ public class AiTranslateService {
             assetTextUnitRepository,
             AiTranslateRelatedStringsProvider.Type.fromString(
                 aiTranslateInput.relatedStringsType()));
+    List<ActiveSourcePromptRule> activeSourcePromptRules =
+        aiTranslateSourcePromptRuleService.getActiveRules();
 
     Stopwatch stopwatchForTotal = Stopwatch.createStarted();
     long runInputTokens = 0L;
@@ -418,11 +430,8 @@ public class AiTranslateService {
 
         AiTranslateType aiTranslateType =
             AiTranslateType.fromString(aiTranslateInput.translateType());
-        String prompt =
-            getPrompt(
-                aiTranslateType.getPrompt(),
-                aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix(
-                    bcp47Tag, aiTranslateInput.promptSuffix()));
+        String localePromptSuffix =
+            aiTranslateLocalePromptSuffixService.getLocalePromptSuffix(bcp47Tag);
         Status importStatus = Status.valueOf(aiTranslateInput.importStatus());
 
         int groupedRequestCount = 0;
@@ -435,12 +444,8 @@ public class AiTranslateService {
         for (TextUnitsByScreenshot textUnitsByScreenshot :
             groupTextUnitsByScreenshot(textUnitDTOWithVariantCommentsList).values()) {
 
-          CompletionMultiTextUnitInput.Builder builder =
-              CompletionMultiTextUnitInput.builder(bcp47Tag);
-          List<TextUnitDTOWithVariantComments> requestedTextUnitDTOWithVariantComments =
-              new ArrayList<>();
-          int requestTextUnitCount = 0;
-          int requestSourceCharCount = 0;
+          Map<SourcePromptRuleBucket, List<PreparedNoBatchTextUnit>> textUnitsByPromptRuleBucket =
+              new LinkedHashMap<>();
 
           for (TextUnitDTOWithVariantComments textUnitDTOWithVariantComments :
               textUnitsByScreenshot.textUnitDTOWithVariantCommentsList()) {
@@ -459,125 +464,171 @@ public class AiTranslateService {
               continue;
             }
 
-            requestTextUnitCount++;
-            requestSourceCharCount += safeLength(textUnitDTO.getSource());
-            requestedTextUnitDTOWithVariantComments.add(textUnitDTOWithVariantComments);
-            builder.addTextUnit(
-                new TextUnit(
-                    textUnitDTO.getTmTextUnitId(),
-                    textUnitDTO.getSource(),
-                    textUnitDTO.getComment(),
-                    textUnitDTO.getTarget() == null
-                        ? null
-                        : new TextUnit.ExistingTarget(
-                            textUnitDTO.getTarget(),
-                            textUnitDTO.getTargetComment(),
-                            !textUnitDTO.isIncludedInLocalizedFile(),
-                            textUnitDTOWithVariantComments.tmTextUnitVariantComments().stream()
-                                .filter(
-                                    tmTextUnitVariantComment ->
-                                        TMTextUnitVariantComment.Severity.ERROR.equals(
-                                            tmTextUnitVariantComment.getSeverity()))
-                                .map(TMTextUnitVariantComment::getContent)
-                                .toList()),
-                    glossaryTermsOrSkip.terms().stream()
-                        .map(AiTranslateService::convertGlossaryTermForMulti)
-                        .toList(),
-                    relatedStringsProvider.getRelatedStrings(textUnitDTO)));
+            MatchedPromptSuffixes matchedPromptSuffixes =
+                aiTranslateSourcePromptRuleService.matchPromptSuffixes(
+                    textUnitDTO.getSource(), activeSourcePromptRules);
+            SourcePromptRuleBucket sourcePromptRuleBucket =
+                new SourcePromptRuleBucket(
+                    matchedPromptSuffixes.ruleIds(),
+                    matchedPromptSuffixes.ruleNames(),
+                    matchedPromptSuffixes.promptSuffix());
+            textUnitsByPromptRuleBucket
+                .computeIfAbsent(sourcePromptRuleBucket, ignored -> new ArrayList<>())
+                .add(
+                    new PreparedNoBatchTextUnit(
+                        textUnitDTOWithVariantComments,
+                        new TextUnit(
+                            textUnitDTO.getTmTextUnitId(),
+                            textUnitDTO.getSource(),
+                            textUnitDTO.getComment(),
+                            textUnitDTO.getTarget() == null
+                                ? null
+                                : new TextUnit.ExistingTarget(
+                                    textUnitDTO.getTarget(),
+                                    textUnitDTO.getTargetComment(),
+                                    !textUnitDTO.isIncludedInLocalizedFile(),
+                                    textUnitDTOWithVariantComments
+                                        .tmTextUnitVariantComments()
+                                        .stream()
+                                        .filter(
+                                            tmTextUnitVariantComment ->
+                                                TMTextUnitVariantComment.Severity.ERROR.equals(
+                                                    tmTextUnitVariantComment.getSeverity()))
+                                        .map(TMTextUnitVariantComment::getContent)
+                                        .toList()),
+                            glossaryTermsOrSkip.terms().stream()
+                                .map(AiTranslateService::convertGlossaryTermForMulti)
+                                .toList(),
+                            relatedStringsProvider.getRelatedStrings(textUnitDTO))));
           }
 
-          if (requestedTextUnitDTOWithVariantComments.isEmpty()) {
-            continue;
+          for (Map.Entry<SourcePromptRuleBucket, List<PreparedNoBatchTextUnit>> bucketEntry :
+              textUnitsByPromptRuleBucket.entrySet()) {
+            SourcePromptRuleBucket sourcePromptRuleBucket = bucketEntry.getKey();
+            List<PreparedNoBatchTextUnit> preparedTextUnits = bucketEntry.getValue();
+            if (preparedTextUnits.isEmpty()) {
+              continue;
+            }
+
+            CompletionMultiTextUnitInput.Builder builder =
+                CompletionMultiTextUnitInput.builder(bcp47Tag);
+            List<TextUnitDTOWithVariantComments> requestedTextUnitDTOWithVariantComments =
+                new ArrayList<>();
+            int requestSourceCharCount = 0;
+            for (PreparedNoBatchTextUnit preparedTextUnit : preparedTextUnits) {
+              TextUnitDTO textUnitDTO =
+                  preparedTextUnit.textUnitDTOWithVariantComments().textUnitDTO();
+              requestSourceCharCount += safeLength(textUnitDTO.getSource());
+              requestedTextUnitDTOWithVariantComments.add(
+                  preparedTextUnit.textUnitDTOWithVariantComments());
+              builder.addTextUnit(preparedTextUnit.textUnit());
+            }
+            int requestTextUnitCount = requestedTextUnitDTOWithVariantComments.size();
+
+            CompletionMultiTextUnitInput completionMultiTextUnitInput = builder.build();
+
+            String inputAsJsonString =
+                objectMapper.writeValueAsStringUnchecked(completionMultiTextUnitInput);
+
+            String prompt =
+                getPrompt(
+                    aiTranslateType.getPrompt(),
+                    AiTranslateLocalePromptSuffixService.combinePromptSuffixes(
+                        localePromptSuffix,
+                        sourcePromptRuleBucket.promptSuffix(),
+                        aiTranslateInput.promptSuffix()));
+
+            ResponsesRequest.Builder requestBuilder =
+                ResponsesRequest.builder()
+                    .model(model)
+                    .instructions(prompt)
+                    .reasoningEffort(getReasoningEffort(aiTranslateInput))
+                    .textVerbosity(getTextVerbosity(aiTranslateInput))
+                    .addUserText(inputAsJsonString)
+                    .addJsonSchema(aiTranslateType.getOutputJsonSchemaClass());
+
+            if (!sourcePromptRuleBucket.ruleIds().isEmpty()) {
+              logger.debug(
+                  "AI Translate request bucket includes source prompt rules: {}",
+                  sourcePromptRuleBucket.ruleNames());
+            }
+
+            boolean hasScreenshot = textUnitsByScreenshot.screenshotUUID() != null;
+            Optional.ofNullable(textUnitsByScreenshot.screenshotUUID())
+                .flatMap(aiTranslateScreenshotService::getImageBytes)
+                .map(ImageBytes::toDataUrl)
+                .ifPresent(requestBuilder::addUserImageUrl);
+
+            ResponsesRequest responsesRequest = requestBuilder.build();
+            String lineageRequestGroupId =
+                createNoBatchLineageAttempts(
+                    currentTask.getId(),
+                    repositoryLocale.getLocale().getId(),
+                    aiTranslateType.name(),
+                    model,
+                    responsesRequest,
+                    requestedTextUnitDTOWithVariantComments.stream()
+                        .map(TextUnitDTOWithVariantComments::textUnitDTO)
+                        .toList());
+            Tags requestTags =
+                metricTags(
+                    MODE_NO_BATCH,
+                    repository.getName(),
+                    model,
+                    bcp47Tag,
+                    Boolean.toString(hasScreenshot));
+
+            int timeout =
+                resolveNoBatchTimeoutSeconds(
+                    aiTranslateInput.timeoutSeconds(),
+                    requestTextUnitCount,
+                    requestSourceCharCount,
+                    hasScreenshot,
+                    getReasoningEffort(aiTranslateInput));
+
+            incrementCounter(
+                metricName("groupedRequestTextUnits"), requestTags, requestTextUnitCount);
+            incrementCounter(
+                metricName("groupedRequestSourceChars"), requestTags, requestSourceCharCount);
+            incrementCounter(metricName("groupedRequestTimeoutSeconds"), requestTags, timeout);
+
+            Stopwatch stopwatchForRequest = Stopwatch.createStarted();
+            noBatchRequestsInFlight.incrementAndGet();
+
+            CompletableFuture<ResponsesResponse> responsesResponseCompletableFuture =
+                openAIClientPool
+                    .submit(
+                        openAIClient ->
+                            openAIClient.getResponses(
+                                responsesRequest, Duration.ofSeconds(timeout)))
+                    .whenComplete(
+                        (response, throwable) -> {
+                          try {
+                            meterRegistry
+                                .timer(
+                                    metricName("requestDuration"),
+                                    requestTags.and("result", getRequestResultTag(throwable)))
+                                .record(stopwatchForRequest.elapsed());
+                            incrementProviderFailureCounter(requestTags, throwable);
+                          } finally {
+                            noBatchRequestsInFlight.decrementAndGet();
+                          }
+                        });
+
+            incrementCounter(metricName("groupedRequests"), requestTags);
+            groupedRequestCount++;
+
+            TextUnitsByScreenshotWithResponsesResponse textUnitsByScreenshotWithResponsesResponse =
+                new TextUnitsByScreenshotWithResponsesResponse(
+                    responsesRequest,
+                    lineageRequestGroupId,
+                    textUnitsByScreenshot,
+                    requestedTextUnitDTOWithVariantComments,
+                    timeout,
+                    responsesResponseCompletableFuture);
+            textUnitsByScreenshotWithResponsesResponseList.add(
+                textUnitsByScreenshotWithResponsesResponse);
           }
-
-          CompletionMultiTextUnitInput completionMultiTextUnitInput = builder.build();
-
-          String inputAsJsonString =
-              objectMapper.writeValueAsStringUnchecked(completionMultiTextUnitInput);
-
-          ResponsesRequest.Builder requestBuilder =
-              ResponsesRequest.builder()
-                  .model(model)
-                  .instructions(prompt)
-                  .reasoningEffort(getReasoningEffort(aiTranslateInput))
-                  .textVerbosity(getTextVerbosity(aiTranslateInput))
-                  .addUserText(inputAsJsonString)
-                  .addJsonSchema(aiTranslateType.getOutputJsonSchemaClass());
-
-          boolean hasScreenshot = textUnitsByScreenshot.screenshotUUID() != null;
-          Optional.ofNullable(textUnitsByScreenshot.screenshotUUID())
-              .flatMap(aiTranslateScreenshotService::getImageBytes)
-              .map(ImageBytes::toDataUrl)
-              .ifPresent(requestBuilder::addUserImageUrl);
-
-          ResponsesRequest responsesRequest = requestBuilder.build();
-          String lineageRequestGroupId =
-              createNoBatchLineageAttempts(
-                  currentTask.getId(),
-                  repositoryLocale.getLocale().getId(),
-                  aiTranslateType.name(),
-                  model,
-                  responsesRequest,
-                  requestedTextUnitDTOWithVariantComments.stream()
-                      .map(TextUnitDTOWithVariantComments::textUnitDTO)
-                      .toList());
-          Tags requestTags =
-              metricTags(
-                  MODE_NO_BATCH,
-                  repository.getName(),
-                  model,
-                  bcp47Tag,
-                  Boolean.toString(hasScreenshot));
-
-          int timeout =
-              resolveNoBatchTimeoutSeconds(
-                  aiTranslateInput.timeoutSeconds(),
-                  requestTextUnitCount,
-                  requestSourceCharCount,
-                  hasScreenshot,
-                  getReasoningEffort(aiTranslateInput));
-
-          incrementCounter(
-              metricName("groupedRequestTextUnits"), requestTags, requestTextUnitCount);
-          incrementCounter(
-              metricName("groupedRequestSourceChars"), requestTags, requestSourceCharCount);
-          incrementCounter(metricName("groupedRequestTimeoutSeconds"), requestTags, timeout);
-
-          Stopwatch stopwatchForRequest = Stopwatch.createStarted();
-          noBatchRequestsInFlight.incrementAndGet();
-
-          CompletableFuture<ResponsesResponse> responsesResponseCompletableFuture =
-              openAIClientPool
-                  .submit(
-                      openAIClient ->
-                          openAIClient.getResponses(responsesRequest, Duration.ofSeconds(timeout)))
-                  .whenComplete(
-                      (response, throwable) -> {
-                        try {
-                          meterRegistry
-                              .timer(
-                                  metricName("requestDuration"),
-                                  requestTags.and("result", getRequestResultTag(throwable)))
-                              .record(stopwatchForRequest.elapsed());
-                          incrementProviderFailureCounter(requestTags, throwable);
-                        } finally {
-                          noBatchRequestsInFlight.decrementAndGet();
-                        }
-                      });
-
-          incrementCounter(metricName("groupedRequests"), requestTags);
-          groupedRequestCount++;
-
-          TextUnitsByScreenshotWithResponsesResponse textUnitsByScreenshotWithResponsesResponse =
-              new TextUnitsByScreenshotWithResponsesResponse(
-                  responsesRequest,
-                  lineageRequestGroupId,
-                  textUnitsByScreenshot,
-                  requestedTextUnitDTOWithVariantComments,
-                  timeout,
-                  responsesResponseCompletableFuture);
-          textUnitsByScreenshotWithResponsesResponseList.add(
-              textUnitsByScreenshotWithResponsesResponse);
         }
 
         List<TextUnitDTOWithVariantCommentOrError> textUnitDTOWithVariantCommentOrErrors =

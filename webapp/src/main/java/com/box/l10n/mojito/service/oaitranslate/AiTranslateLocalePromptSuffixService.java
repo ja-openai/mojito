@@ -29,17 +29,12 @@ public class AiTranslateLocalePromptSuffixService {
   }
 
   @Transactional(readOnly = true)
-  public String getEffectivePromptSuffix(String localeTag, String requestPromptSuffix) {
+  public String getLocalePromptSuffix(String localeTag) {
     String normalizedLocaleTag = requireLocaleTag(localeTag);
-    String savedPromptSuffix = null;
 
     AiTranslateLocalePromptSuffixEntity entity =
         repository.findByLocaleBcp47TagIgnoreCase(normalizedLocaleTag);
-    if (entity != null) {
-      savedPromptSuffix = normalizeOptionalPromptSuffix(entity.getPromptSuffix());
-    }
-
-    return combinePromptSuffixes(savedPromptSuffix, requestPromptSuffix);
+    return entity == null ? null : normalizeOptionalPromptSuffix(entity.getPromptSuffix());
   }
 
   @Transactional

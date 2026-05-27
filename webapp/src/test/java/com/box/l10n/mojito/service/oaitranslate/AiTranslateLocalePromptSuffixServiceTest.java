@@ -51,27 +51,30 @@ public class AiTranslateLocalePromptSuffixServiceTest extends ServiceTestBase {
 
   @Test
   @Transactional
-  public void testGetEffectivePromptSuffixUsesSavedLocaleSuffixBeforeRequestSuffix() {
+  public void testGetLocalePromptSuffixReturnsSavedLocaleSuffix() {
     aiTranslateLocalePromptSuffixService.upsert("fr-FR", "Use Canadian French tone.");
 
     assertEquals(
-        "Use Canadian French tone. Prefer concise product language.",
-        aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix(
-            "fr-FR", "Prefer concise product language."));
+        "Use Canadian French tone.",
+        aiTranslateLocalePromptSuffixService.getLocalePromptSuffix("fr-FR"));
   }
 
   @Test
   @Transactional
-  public void testGetEffectivePromptSuffixReturnsRequestSuffixWhenLocaleHasNoSavedSuffix() {
+  public void testGetLocalePromptSuffixReturnsNullWhenLocaleHasNoSavedSuffix() {
+    assertNull(aiTranslateLocalePromptSuffixService.getLocalePromptSuffix("fr-FR"));
+  }
+
+  @Test
+  public void testCombinePromptSuffixesSkipsBlankValues() {
     assertEquals(
-        "Prefer concise product language.",
-        aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix(
-            "fr-FR", " Prefer concise product language. "));
+        "Use Canadian French tone. Prefer concise product language.",
+        AiTranslateLocalePromptSuffixService.combinePromptSuffixes(
+            "Use Canadian French tone.", null, " ", " Prefer concise product language. "));
   }
 
   @Test
-  @Transactional
-  public void testGetEffectivePromptSuffixReturnsNullWhenNoSavedOrRequestSuffixExists() {
-    assertNull(aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix("fr-FR", "   "));
+  public void testCombinePromptSuffixesReturnsNullWhenNoSuffixExists() {
+    assertNull(AiTranslateLocalePromptSuffixService.combinePromptSuffixes(null, "   "));
   }
 }

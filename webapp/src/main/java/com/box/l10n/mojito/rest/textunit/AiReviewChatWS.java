@@ -219,8 +219,7 @@ public class AiReviewChatWS {
   }
 
   private String getPrompt(String localeTag) {
-    String promptSuffix =
-        aiTranslateLocalePromptSuffixService.getEffectivePromptSuffix(localeTag, null);
+    String promptSuffix = aiTranslateLocalePromptSuffixService.getLocalePromptSuffix(localeTag);
     return promptSuffix == null
         ? AiReviewType.PROMPT_ALL
         : "%s %s".formatted(AiReviewType.PROMPT_ALL, promptSuffix);
