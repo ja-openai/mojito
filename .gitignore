@@ -33,6 +33,7 @@ release.properties
 **/node_modules/
 # Vite/Node caches and outputs
 **/.vite/
+/mf2/editor-prototype/dist/
 **/.eslintcache
 **/.parcel-cache/
 **/.turbo/

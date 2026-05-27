@@ -3,12 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MF2 Component Demo Redirect</title>
+    <title>MF2 Mojito Review Demo</title>
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./tms-demo.css" />
-    <meta http-equiv="refresh" content="0; url=./review-demo.html" />
   </head>
-  <body>
+  <body data-demo-page="review">
     <nav class="prototype-nav" aria-label="MF2 prototype demos">
       <a class="prototype-nav-brand" href="./">MF2 prototype</a>
       <div class="prototype-nav-links">
@@ -20,15 +19,15 @@
     <header class="topbar">
       <div>
         <h1>Mojito MF2 Component Demo</h1>
-        <p>The root prototype opens the single React/TSX component playground.</p>
+        <p>Single React/TSX integration playground for the production-shaped translator editor.</p>
       </div>
       <div class="button-row">
         <div class="status">Prototype</div>
       </div>
     </header>
 
-    <main class="tms-shell panel" style="padding: 16px">
-      <p><a href="./review-demo.html">Open the component demo</a>.</p>
-    </main>
+    <div id="reviewDemoRoot"></div>
+
+    <script type="module" src="./src/review-demo/main.tsx"></script>
   </body>
 </html>

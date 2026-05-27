@@ -2,11 +2,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild lib-lab-source.js --bundle --format=esm --outfile=lib-lab.bundle.js",
-    "check": "node smoke-test.mjs && npm run build"
+    "dev": "vite --host 127.0.0.1 --port 8788",
+    "build": "vite build",
+    "serve": "node server.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "node smoke-test.mjs && node model-smoke-test.mjs && node component-smoke-test.mjs && npm run typecheck && npm run build"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.2",
     "@codemirror/lint": "^6.8.5",
+    "@mojito-mf2/core": "file:../javascript",
     "codemirror": "^6.0.2",
     "prosemirror-commands": "^1.7.1",
     "prosemirror-history": "^1.4.1",
@@ -16,6 +21,13 @@
     "prosemirror-view": "^1.41.3"
   },
   "devDependencies": {
-    "esbuild": "^0.25.12"
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "esbuild": "^0.28.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.13"
   }
 }

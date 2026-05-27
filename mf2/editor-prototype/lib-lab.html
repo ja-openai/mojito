@@ -8,13 +8,20 @@
     <link rel="stylesheet" href="./lib-lab.css" />
   </head>
   <body>
+    <nav class="prototype-nav" aria-label="MF2 prototype demos">
+      <a class="prototype-nav-brand" href="./">MF2 prototype</a>
+      <div class="prototype-nav-links">
+        <a href="./review-demo.html">Component demo</a>
+        <a href="./lib-lab.html" aria-current="page">Library lab</a>
+      </div>
+    </nav>
+
     <header class="topbar">
       <div>
         <h1>MF2 Editor Library Lab</h1>
-        <p>Compare raw-code and WYSIWYG editor directions against the same Rust MF2 parser/runtime.</p>
+        <p>Compare raw-code and WYSIWYG editor directions against the JavaScript MF2 parser/runtime.</p>
       </div>
       <div class="button-row">
-        <a class="nav-button" href="./">Workbench</a>
         <div class="status" id="status">Starting</div>
       </div>
     </header>
@@ -22,41 +29,111 @@
     <main class="lab-shell">
       <section class="panel source-contract-panel">
         <div class="panel-header">
-          <h2>CodeMirror Raw Source MF2</h2>
-          <span class="eyebrow">Source defines the target placeholder contract</span>
+          <h2>Source contract</h2>
+          <span class="eyebrow">Placeholders, selectors, markup, and row requirements</span>
+          <label class="locale-field sample-field">
+            Sample
+            <select id="sampleSelect">
+              <option value="plural">Plural</option>
+              <option value="gender">Gender + plural</option>
+              <option value="offsetLikes">Offset</option>
+              <option value="offsetVariable">Variable offset</option>
+              <option value="markup">Markup</option>
+              <option value="placeholders">Many placeholders</option>
+              <option value="completion">Autocomplete filter</option>
+            </select>
+          </label>
         </div>
-        <div id="sourceCodemirror" class="source-codemirror-host"></div>
+        <details id="sourceRawDrawer" class="source-raw-drawer">
+          <summary>Raw source MF2</summary>
+          <div id="sourceCodemirror" class="source-codemirror-host"></div>
+        </details>
+        <div id="sourceContractSummary" class="contract-summary"></div>
+        <div id="sourceProsePreview" class="source-prose-preview" aria-label="Source prose preview"></div>
       </section>
 
       <section class="lab-grid">
-        <section class="panel">
+        <section class="panel target-raw-panel">
           <div class="panel-header">
             <h2>CodeMirror Target MF2</h2>
             <div class="button-row">
               <button type="button" data-sample="plural">Plural</button>
               <button type="button" data-sample="gender">Gender + plural</button>
+              <button type="button" data-sample="offsetLikes">Offset</button>
+              <button type="button" data-sample="offsetVariable">Variable offset</button>
               <button type="button" data-sample="markup">Markup</button>
+              <button type="button" data-sample="placeholders">Many placeholders</button>
+              <button type="button" data-sample="completion">Autocomplete filter</button>
             </div>
           </div>
           <div id="codemirror" class="codemirror-host"></div>
+          <div class="native-raw-experiment">
+            <div class="native-raw-header">
+              <div>
+                <h3>Native Raw Target MF2</h3>
+                <p>No-library textarea prototype for parser diagnostics, placeholder completion, restore, and text helpers.</p>
+              </div>
+              <div id="nativeRawShortcuts" class="shortcut-strip native-raw-shortcuts"></div>
+            </div>
+            <div class="native-raw-shell">
+              <pre id="nativeRawHighlight" class="native-raw-highlight" aria-hidden="true"></pre>
+              <textarea
+                id="nativeRawEditor"
+                class="native-raw-editor"
+                aria-describedby="nativeRawDiagnostics"
+                aria-label="Native raw target MF2"
+                spellcheck="false"
+              ></textarea>
+              <div id="nativeRawCompletion" class="placeholder-autocomplete native-raw-completion" hidden></div>
+            </div>
+            <div id="nativeRawDiagnostics" class="native-raw-diagnostics" aria-live="polite"></div>
+          </div>
         </section>
 
-        <section class="panel">
+        <section class="panel target-editor-panel">
           <div class="panel-header">
-            <h2>ProseMirror WYSIWYG Variant</h2>
-            <button type="button" id="insertPlaceholder">Insert placeholder</button>
+            <h2>Target editor</h2>
+            <div class="button-row">
+              <label class="locale-field target-language-field">
+                Target language
+                <select id="targetLanguage">
+                  <option value="en">English</option>
+                  <option value="fr">French</option>
+                  <option value="ru">Russian</option>
+                  <option value="ar">Arabic</option>
+                  <option value="ja">Japanese</option>
+                </select>
+              </label>
+              <button type="button" data-editor-mode="wysiwyg" aria-pressed="true">Edit text</button>
+              <button type="button" data-editor-mode="raw" aria-pressed="false">Raw MF2</button>
+              <select id="placeholderSelect" class="placeholder-select" aria-label="Placeholder to insert" hidden></select>
+              <button type="button" id="insertPlaceholder" hidden>Insert</button>
+              <select id="markupSelect" class="placeholder-select" aria-label="Markup to wrap"></select>
+              <button type="button" id="wrapMarkup">Wrap</button>
+            </div>
           </div>
-          <div class="variant-tabs" id="variantTabs"></div>
-          <div id="pluralTools" class="plural-tools"></div>
-          <div id="prosemirror" class="rich-host"></div>
-          <p class="hint">Text edits update the selected MF2 variant. Placeholder chips stay atomic.</p>
+          <div class="rich-host rich-mode-only">
+            <div class="variant-forms" id="variantTabs" aria-label="Message forms"></div>
+            <div id="prosemirror" class="prosemirror-host"></div>
+            <div id="placeholderAutocomplete" class="placeholder-autocomplete" hidden></div>
+          </div>
+          <div id="rowHelperStrip" class="row-helper-strip rich-mode-only"></div>
+          <div id="inlineDiagnostics" class="inline-diagnostics rich-mode-only"></div>
+          <details id="rowToolsDrawer" class="helper-drawer rich-mode-only">
+            <summary>
+              <span>Row tools</span>
+              <small>Open for selector keys, CLDR rows, fixed values, and generated row order.</small>
+            </summary>
+            <div id="variantKeyEditor" class="variant-key-editor"></div>
+            <div id="pluralTools" class="plural-tools"></div>
+          </details>
         </section>
 
         <section class="panel side-panel">
           <div class="panel-header">
-            <h2>Rust Preview</h2>
+            <h2>JavaScript Preview</h2>
             <label class="locale-field">
-              Locale
+              Preview locale
               <select id="locale">
                 <option value="en">en</option>
                 <option value="fr">fr</option>
@@ -64,6 +141,21 @@
                 <option value="ar">ar</option>
                 <option value="ja">ja</option>
               </select>
+            </label>
+            <label class="locale-field">
+              Preview dir
+              <select id="previewDirection">
+                <option value="target">target locale</option>
+                <option value="ltr">ltr</option>
+                <option value="rtl">rtl</option>
+                <option value="auto">auto</option>
+              </select>
+            </label>
+            <span id="targetDirectionLabel" class="direction-pill">LTR target</span>
+            <button type="button" id="debugModeToggle" class="debug-toggle" aria-pressed="false">Debug</button>
+            <label class="compare-field debug-only">
+              <input type="checkbox" id="compareRust" />
+              Compare Rust
             </label>
           </div>
           <div class="subpanel">
@@ -74,18 +166,148 @@
             <h3>Rendered</h3>
             <output id="rendered"></output>
           </div>
-          <div class="subpanel">
+          <details class="advanced parts-preview debug-only">
+            <summary>Parts / bidi</summary>
+            <div class="bidi-preview">
+              <strong>Escaped rendered text</strong>
+              <code id="escapedRendered"></code>
+            </div>
+            <div class="bidi-preview">
+              <strong>Parts as HTML nodes</strong>
+              <div id="htmlPartsPreview" class="html-parts-preview"></div>
+            </div>
+            <div id="partsPreview" class="parts-list"></div>
+          </details>
+          <div class="subpanel debug-only">
             <h3>Quality</h3>
             <ul id="diagnostics" class="diagnostics"></ul>
           </div>
-          <details class="advanced">
-            <summary>Rust model</summary>
+          <details class="advanced scenario-subpanel debug-only">
+            <summary>Source / target scenarios</summary>
+            <div id="scenarioMatrix" class="scenario-matrix"></div>
+          </details>
+          <details class="advanced debug-only">
+            <summary>MF2 model</summary>
             <pre id="model"></pre>
           </details>
         </section>
       </section>
+
+      <section class="panel bidi-typing-panel">
+        <div class="panel-header">
+          <h2>Bidi Typing Lab</h2>
+          <span class="eyebrow">Inspect mixed LTR/RTL text and invisible bidi controls</span>
+        </div>
+        <div class="bidi-lab-grid">
+          <div class="bidi-lab-editor">
+            <div class="button-row bidi-toolbar" role="group" aria-label="Text direction">
+              <button type="button" data-bidi-direction="ltr" aria-pressed="true">LTR textarea</button>
+              <button type="button" data-bidi-direction="rtl" aria-pressed="false">RTL textarea</button>
+              <button type="button" data-bidi-direction="auto" aria-pressed="false">Auto</button>
+              <button type="button" id="clearBidiText">Clear</button>
+            </div>
+            <textarea id="bidiInput" class="bidi-input" dir="ltr" spellcheck="false">File שלום.txt saved.</textarea>
+            <div class="button-row bidi-toolbar" id="bidiSampleButtons"></div>
+            <p id="bidiSampleNote" class="bidi-sample-note">Select a sample to see its intended logical sentence.</p>
+            <div class="button-row bidi-toolbar" id="bidiMarkerButtons"></div>
+            <div class="button-row bidi-toolbar" role="group" aria-label="Wrap selected text with an isolate">
+              <button type="button" data-bidi-wrap="ltr">Wrap LRI...PDI</button>
+              <button type="button" data-bidi-wrap="rtl">Wrap RLI...PDI</button>
+              <button type="button" data-bidi-wrap="auto">Wrap FSI...PDI</button>
+            </div>
+            <details class="bidi-legacy-controls">
+              <summary>Legacy/debug controls</summary>
+              <div class="button-row bidi-toolbar" id="bidiLegacyMarkerButtons"></div>
+              <p class="hint-inline">Legacy embeddings and overrides close with PDF. Prefer isolates for product text.</p>
+            </details>
+            <div class="bidi-case-study">
+              <h3>English UI + Hebrew Span</h3>
+              <div class="bidi-case-grid">
+                <div>
+                  <strong>Wrong base direction</strong>
+                  <p dir="rtl">what does this mean טעא?</p>
+                  <code>dir=rtl, raw RTL token</code>
+                </div>
+                <div>
+                  <strong>Safe English rendering</strong>
+                  <p dir="ltr">what does this mean <bdi dir="rtl">טעא</bdi>?</p>
+                  <code>dir=ltr + &lt;bdi dir="rtl"&gt;טעא&lt;/bdi&gt;</code>
+                </div>
+              </div>
+              <p class="hint-inline">Plain text equivalent: LTR paragraph + RLI around the Hebrew token + PDI.</p>
+            </div>
+            <div class="bidi-case-study">
+              <h3>English UI + Hebrew Message</h3>
+              <div class="bidi-case-grid">
+                <div>
+                  <strong>Wrong message direction</strong>
+                  <p dir="ltr">שלום, איך אפשר לעזור?</p>
+                  <code>English UI, but message block left as dir=ltr</code>
+                </div>
+                <div>
+                  <strong>Safe Hebrew rendering</strong>
+                  <p dir="rtl">שלום, איך אפשר לעזור?</p>
+                  <code>English UI chrome + message block dir=rtl</code>
+                </div>
+              </div>
+              <p class="hint-inline">If the whole answer is Hebrew, prefer an RTL answer block when the renderer supports block direction. Use one long RLI...PDI only for plain text, unknown renderers, copy/paste safety, or transports that cannot carry block direction.</p>
+            </div>
+          </div>
+          <div class="bidi-lab-preview">
+            <h3>Rendered Preview</h3>
+            <div class="button-row bidi-toolbar" role="group" aria-label="Rendered preview direction">
+              <button type="button" data-bidi-render-direction="ltr" aria-pressed="true">LTR preview</button>
+              <button type="button" data-bidi-render-direction="rtl" aria-pressed="false">RTL preview</button>
+              <button type="button" data-bidi-render-direction="auto" aria-pressed="false">Auto preview</button>
+            </div>
+            <div id="bidiDirectionSummary" class="bidi-direction-summary"></div>
+            <output id="bidiRendered" class="bidi-rendered" dir="ltr"></output>
+            <div class="button-row bidi-toolbar">
+              <button type="button" id="bidiPlayLogical">Play logical order</button>
+              <button type="button" id="bidiPlayVisual">Play visual order</button>
+              <button type="button" id="bidiStopOrder">Stop</button>
+            </div>
+            <h3>Logical Order</h3>
+            <div id="bidiLogicalOrder" class="bidi-order-strip"></div>
+            <h3>Visual Reading Order</h3>
+            <div id="bidiVisualOrder" class="bidi-order-strip"></div>
+            <p class="hint-inline">Visual order is measured from browser layout; zero-width controls appear as labeled cells.</p>
+            <h3>Escaped Text</h3>
+            <code id="bidiEscaped" class="bidi-escaped"></code>
+            <h3>Isolation Recipes</h3>
+            <div id="bidiIsolationRecipes" class="bidi-isolation-recipes"></div>
+            <h3>Marker Checks</h3>
+            <div id="bidiMarkerDiagnostics" class="bidi-marker-diagnostics"></div>
+            <h3>Codepoints</h3>
+            <div id="bidiCodepoints" class="bidi-codepoints"></div>
+          </div>
+          <div class="bidi-lab-guide">
+            <h3>How to use the controls</h3>
+            <ul>
+              <li><strong>LTR/RTL/Auto textarea</strong> changes only the typing field base direction.</li>
+              <li><strong>LTR/RTL/Auto preview</strong> changes only the rendered output base direction.</li>
+              <li><strong>LRM/RLM/ALM</strong> are point marks. They do not wrap text and do not close.</li>
+              <li><strong>LRI/RLI/FSI ... PDI</strong> isolate inserted values. PDI closes any of the three isolate starts.</li>
+            </ul>
+            <dl class="bidi-marker-guide">
+              <dt>LRM</dt>
+              <dd>Left-to-right mark. A small LTR hint at one position, often for punctuation or boundaries.</dd>
+              <dt>RLM</dt>
+              <dd>Right-to-left mark. A small RTL hint at one position, often for punctuation or boundaries.</dd>
+              <dt>ALM</dt>
+              <dd>Arabic letter mark. Like an RTL hint with Arabic-specific behavior around numbers and punctuation.</dd>
+              <dt>LRI ... PDI</dt>
+              <dd>Wrap a known LTR span, such as ChatGPT, OpenAI, a URL, code, or an ID inside RTL text.</dd>
+              <dt>RLI ... PDI</dt>
+              <dd>Wrap a known RTL span, such as a Hebrew or Arabic name inside LTR text.</dd>
+              <dt>FSI ... PDI</dt>
+              <dd>First Strong Isolate. The F means first strong character; the span direction is inferred from the first strong letter inside. Use it for unknown user text, not for known LTR brands/code.</dd>
+            </dl>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <script type="module" src="./lib-lab.bundle.js"></script>
+    <script type="module" src="./lib-lab-source.js"></script>
   </body>
 </html>
