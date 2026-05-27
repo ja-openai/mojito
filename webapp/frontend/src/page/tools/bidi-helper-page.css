@@ -1,0 +1,293 @@
+@import './char-code-helper.css';
+
+.bidi-helper-page {
+  max-width: 84rem;
+  margin: 0 auto;
+  width: 100%;
+  padding: var(--space-5) var(--space-7);
+}
+
+.bidi-helper-page h2,
+.bidi-helper-page h3 {
+  margin: 0;
+}
+
+.bidi-helper-page h2 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bidi-helper-page h3 {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bidi-helper-page__grid,
+.bidi-helper-page__lower-grid {
+  align-items: start;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.bidi-helper-page__grid {
+  grid-template-columns: minmax(20rem, 1fr) minmax(20rem, 1fr);
+}
+
+.bidi-helper-page__lower-grid {
+  grid-template-columns: minmax(20rem, 1.15fr) minmax(18rem, 0.85fr);
+}
+
+.bidi-helper-page__panel {
+  align-content: start;
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding-top: var(--space-3);
+}
+
+.bidi-helper-page__panel-header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.bidi-helper-page__segmented,
+.bidi-helper-page__samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.bidi-helper-page .btn--ghost {
+  background: var(--color-surface);
+  border-color: color-mix(in srgb, var(--color-border) 80%, transparent);
+  color: var(--color-text);
+  padding: var(--space-2) var(--space-3);
+}
+
+.bidi-helper-page .btn--ghost:hover,
+.bidi-helper-page .btn--ghost:focus-visible {
+  border-color: var(--color-focus-border);
+  color: var(--color-text);
+}
+
+.bidi-helper-page__segmented .btn[aria-pressed='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.bidi-helper-page__textarea,
+.bidi-helper-page__preview {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-lg);
+  line-height: 1.5;
+  min-height: 8rem;
+  padding: var(--space-3);
+  text-align: start;
+  white-space: pre-wrap;
+}
+
+.bidi-helper-page__textarea {
+  font-family: var(--font-family-sans);
+  resize: vertical;
+}
+
+.bidi-helper-page__preview {
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.bidi-helper-page__note {
+  background: var(--color-surface);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+}
+
+.bidi-helper-page__tool-section,
+.bidi-helper-page__details {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.bidi-helper-page__details {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-2);
+  padding: var(--space-3);
+}
+
+.bidi-helper-page__details summary {
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bidi-helper-page__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.bidi-helper-page__summary span {
+  background: var(--color-surface);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+}
+
+.bidi-helper-page__summary strong {
+  color: var(--color-primary);
+  font-family: var(--font-family-mono);
+}
+
+.bidi-helper-page__order-group,
+.bidi-helper-page__order-line {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.bidi-helper-page__line-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bidi-helper-page__order-strip {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-height: 3rem;
+  padding: var(--space-2);
+}
+
+.bidi-helper-page__order-cell {
+  align-items: center;
+  background: var(--color-surface);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-2);
+  display: inline-grid;
+  gap: 0 var(--space-1);
+  grid-template-columns: auto minmax(0, auto);
+  min-width: 5.25rem;
+  padding: var(--space-1) var(--space-2);
+}
+
+.bidi-helper-page__order-cell--control {
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-warning) 40%, var(--color-border));
+}
+
+.bidi-helper-page__order-cell em {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-style: normal;
+  grid-row: span 3;
+}
+
+.bidi-helper-page__order-cell strong {
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.bidi-helper-page__order-cell code {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.1;
+}
+
+.bidi-helper-page__order-direction {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.bidi-helper-page__escaped,
+.bidi-helper-page__recipes code {
+  background: var(--color-surface);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-2);
+  display: block;
+  overflow-wrap: anywhere;
+  padding: var(--space-2);
+  white-space: pre-wrap;
+}
+
+.bidi-helper-page__diagnostics,
+.bidi-helper-page__recipes,
+.bidi-helper-page__guide {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.bidi-helper-page__diagnostic {
+  border-left: 0.25rem solid var(--color-primary);
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+}
+
+.bidi-helper-page__diagnostic span,
+.bidi-helper-page__recipes span,
+.bidi-helper-page__guide dd {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.bidi-helper-page__diagnostic--error {
+  border-left-color: var(--color-danger);
+}
+
+.bidi-helper-page__diagnostic--error strong {
+  color: var(--color-danger);
+}
+
+.bidi-helper-page__recipes {
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.bidi-helper-page__recipes div {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-2);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.bidi-helper-page__guide {
+  margin: 0;
+}
+
+.bidi-helper-page__guide dt {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bidi-helper-page__guide dd {
+  margin: calc(-1 * var(--space-1)) 0 var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .bidi-helper-page__grid,
+  .bidi-helper-page__lower-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bidi-helper-page__panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

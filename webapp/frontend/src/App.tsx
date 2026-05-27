@@ -54,6 +54,7 @@ import { SettingsPage } from './page/settings/SettingsPage';
 import { TeamDetailPage } from './page/settings/TeamDetailPage';
 import { StatisticsPage } from './page/statistics/StatisticsPage';
 import { TextUnitDetailPage } from './page/text-unit-detail/TextUnitDetailPage';
+import { BidiHelperPage } from './page/tools/BidiHelperPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { IcuMessagePreviewPage } from './page/tools/IcuMessagePreviewPage';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
@@ -176,6 +177,7 @@ export function App() {
               element={<Navigate to="/settings/system/team-pools" replace />}
             />
             <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
+            <Route path="/tools/bidi-helper" element={<BidiHelperPage />} />
             <Route path="/tools/icu-preview" element={<IcuMessagePreviewPage />} />
             <Route path="*" element={<Navigate to="/repositories" replace />} />
           </Route>
