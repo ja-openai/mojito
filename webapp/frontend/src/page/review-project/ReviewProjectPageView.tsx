@@ -119,8 +119,10 @@ import {
 import { REVIEW_PROJECTS_SESSION_QUERY_KEY } from '../review-projects/review-projects-session-state';
 import type { ReviewProjectMutationControls } from './review-project-mutations';
 import {
+  getDefaultReviewProjectShortcutHelpPreference,
   loadReviewProjectShortcutHelpPreference,
   REVIEW_PROJECT_SHORTCUT_HELP_KEY,
+  saveReviewProjectShortcutHelpPreference,
 } from './review-project-preferences';
 
 const Chevron = ({ direction }: { direction: 'left' | 'right' | 'up' | 'down' }) => (
@@ -791,6 +793,7 @@ export function ReviewProjectPageView({
 }: Props) {
   const user = useUser();
   const canEditRequest = user.role === 'ROLE_ADMIN';
+  const defaultShortcutHelpPreference = getDefaultReviewProjectShortcutHelpPreference(user.role);
   const [searchParams, setSearchParams] = useSearchParams();
   const reviewProjectsSessionKey = searchParams.get(REVIEW_PROJECTS_SESSION_QUERY_KEY);
   const locale = project?.locale ?? null;
@@ -826,8 +829,9 @@ export function ReviewProjectPageView({
   const [focusTranslationKey, setFocusTranslationKey] = useState(0);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [shortcutHelpPreference, setShortcutHelpPreference] = useState(() =>
-    loadReviewProjectShortcutHelpPreference(),
+    loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
   );
+  const isShortcutBarVisible = shortcutHelpPreference === 'bottom';
   const [pendingSelection, setPendingSelection] = useState<{
     id: number;
     index?: number;
@@ -1185,11 +1189,22 @@ export function ReviewProjectPageView({
       if (event.key && event.key !== REVIEW_PROJECT_SHORTCUT_HELP_KEY) {
         return;
       }
-      setShortcutHelpPreference(loadReviewProjectShortcutHelpPreference());
+      setShortcutHelpPreference(
+        loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
+      );
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+  }, [defaultShortcutHelpPreference]);
+
+  const handleShortcutBarVisibilityChange = useCallback(
+    (visible: boolean) => {
+      const nextPreference = visible ? 'bottom' : 'header';
+      saveReviewProjectShortcutHelpPreference(nextPreference, defaultShortcutHelpPreference);
+      setShortcutHelpPreference(nextPreference);
+    },
+    [defaultShortcutHelpPreference],
+  );
 
   const collapseList = useCallback(() => {
     setIsListCollapsed(true);
@@ -1275,7 +1290,7 @@ export function ReviewProjectPageView({
         onRequestDetailsQueryHandled={onRequestDetailsQueryHandled}
         onRequestDetailsFlowFinished={onRequestDetailsFlowFinished}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
-        showShortcutsButton={shortcutHelpPreference === 'header'}
+        showShortcutsButton
         onReviewPending={() => setDecisionStateFilter('PENDING')}
       />
 
@@ -1428,7 +1443,7 @@ export function ReviewProjectPageView({
           )}
         </section>
       </div>
-      {shortcutHelpPreference === 'bottom' ? (
+      {isShortcutBarVisible ? (
         <ReviewProjectShortcutBar
           primaryShortcutLabel={primaryShortcutLabel}
           primaryAdvanceShortcutLabel={primaryAdvanceShortcutLabel}
@@ -1569,6 +1584,14 @@ export function ReviewProjectPageView({
               </>
             )}
           </ul>
+          <label className="review-project-shortcuts__option">
+            <input
+              type="checkbox"
+              checked={isShortcutBarVisible}
+              onChange={(event) => handleShortcutBarVisibilityChange(event.target.checked)}
+            />
+            <span>Show shortcut bar at the bottom</span>
+          </label>
         </div>
         <div className="modal__actions">
           <button type="button" className="modal__button" onClick={() => setIsShortcutsOpen(false)}>
