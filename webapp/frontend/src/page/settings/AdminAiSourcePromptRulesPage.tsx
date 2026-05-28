@@ -249,7 +249,7 @@ export function AdminAiSourcePromptRulesPage({
   const pageContent = (
     <div className="settings-page settings-page--wide ai-locale-prompt-page ai-source-prompt-page">
       <section className="settings-card">
-        <div className="settings-card__content">
+        <div className="settings-card__content ai-source-prompt-page__content">
           <div className="ai-locale-prompt-page__toolbar ai-source-prompt-page__toolbar">
             <SearchControl
               value={searchQuery}
@@ -266,13 +266,17 @@ export function AdminAiSourcePromptRulesPage({
             </button>
           </div>
 
-          <div className="ai-locale-prompt-page__count">
-            <span className="ai-locale-prompt-page__count-text">
-              {rows.length} {rows.length === 1 ? 'rule' : 'rules'}
+          <div className="ai-locale-prompt-page__count ai-source-prompt-page__count">
+            <span
+              className="ai-locale-prompt-page__count-text ai-source-prompt-page__count-badge"
+              aria-label={`${rows.length} ${rows.length === 1 ? 'rule' : 'rules'}`}
+              title={`${rows.length} ${rows.length === 1 ? 'rule' : 'rules'}`}
+            >
+              {rows.length}
             </span>
             {statusNotice ? (
               <span
-                className={`settings-hint ai-locale-prompt-page__status${
+                className={`settings-hint ai-locale-prompt-page__status ai-source-prompt-page__status${
                   statusNotice.kind === 'error' ? ' is-error' : ''
                 }`}
               >
