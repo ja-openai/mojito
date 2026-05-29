@@ -113,7 +113,7 @@ public class AiReviewChatWSTest {
     assertEquals(
         "%s %s".formatted(AiReviewType.PROMPT_ALL, "Use Canadian French terminology."),
         requestCaptor.getValue().instructions());
-    assertEquals("gpt-5.4", requestCaptor.getValue().model());
+    assertEquals("gpt-5.5", requestCaptor.getValue().model());
     assertEquals("Prefer the accepted locale phrasing.", response.message().content());
     assertEquals("Bonjour", response.suggestions().getFirst().content());
     assertEquals(
@@ -122,7 +122,7 @@ public class AiReviewChatWSTest {
             .timer(
                 "AiReviewChatWS.requestDuration",
                 "model",
-                "gpt-5.4",
+                "gpt-5.5",
                 "locale",
                 "fr-FR",
                 "result",
@@ -226,7 +226,7 @@ public class AiReviewChatWSTest {
     assertEquals(
         1.0,
         meterRegistry
-            .counter("AiReviewChatWS.timeouts", "model", "gpt-5.4", "locale", "ja-JP")
+            .counter("AiReviewChatWS.timeouts", "model", "gpt-5.5", "locale", "ja-JP")
             .count(),
         0.0);
     assertEquals(
@@ -235,7 +235,7 @@ public class AiReviewChatWSTest {
             .timer(
                 "AiReviewChatWS.requestDuration",
                 "model",
-                "gpt-5.4",
+                "gpt-5.5",
                 "locale",
                 "ja-JP",
                 "result",
@@ -276,7 +276,7 @@ public class AiReviewChatWSTest {
             .counter(
                 "AiReviewChatWS.providerFailures",
                 "model",
-                "gpt-5.4",
+                "gpt-5.5",
                 "locale",
                 "ja-JP",
                 "statusCode",
@@ -289,7 +289,7 @@ public class AiReviewChatWSTest {
             .timer(
                 "AiReviewChatWS.requestDuration",
                 "model",
-                "gpt-5.4",
+                "gpt-5.5",
                 "locale",
                 "ja-JP",
                 "result",
@@ -373,7 +373,7 @@ public class AiReviewChatWSTest {
         "completed",
         null,
         null,
-        "gpt-5.4",
+        "gpt-5.5",
         List.of(
             responseOutput(
                 """

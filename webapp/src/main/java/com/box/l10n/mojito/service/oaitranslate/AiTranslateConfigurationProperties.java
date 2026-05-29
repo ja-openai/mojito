@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class AiTranslateConfigurationProperties {
   String openaiClientToken;
   String schedulerName = QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
-  String modelName = "gpt-5.4";
+  String modelName = "gpt-5.5";
   PoolProperties pool = new PoolProperties();
   RetryProperties retry = new RetryProperties();
   NoBatchProperties noBatch = new NoBatchProperties();
@@ -234,9 +234,9 @@ public class AiTranslateConfigurationProperties {
 
   public static class PricingProperties {
     // Rough defaults for the current default model; keep raw token usage as the source of truth.
-    double inputCostPerMillion = 1.75d;
-    double cachedInputCostPerMillion = 0.175d;
-    double outputCostPerMillion = 14.0d;
+    double inputCostPerMillion = 5.0d;
+    double cachedInputCostPerMillion = 0.5d;
+    double outputCostPerMillion = 30.0d;
 
     public double getInputCostPerMillion() {
       return inputCostPerMillion;
