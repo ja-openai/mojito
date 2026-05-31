@@ -132,12 +132,17 @@ Current platform adapter status:
 - Python keeps core stdlib-only and exposes an optional `mojito_mf2.babel`
   registry for Babel-backed number, percent, integer, currency, date, time,
   datetime, and relative-time formatting.
+- Swift exposes an explicit `MF2FunctionRegistry.foundation` registry for
+  Foundation-backed number, percent, integer, currency, date, time, and datetime
+  formatting. On Apple platforms it also supports relative time via
+  `RelativeDateTimeFormatter`; non-Apple Swift keeps relative time deferred
+  unless Foundation support is validated there.
 - Java and Kotlin defaults use JDK-backed number, percent, integer, currency,
   date, time, and datetime formatting. The JDK does not provide a public
   ICU-style relative-time formatter, so production relative time remains an
   explicit ICU/CLDR follow-up instead of a fake default handler.
-- Swift, Rust, Go, and PHP currently keep relative time out of production
-  registries unless an explicit platform adapter is added.
+- Rust, Go, and PHP currently keep relative time out of production registries
+  unless an explicit platform adapter is added.
 
 Java/Kotlin relative time should not be added to the core jar by copying the
 sample catalog function into `defaults`. The generated all-locale CLDR

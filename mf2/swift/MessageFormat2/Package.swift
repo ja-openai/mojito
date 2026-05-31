@@ -24,5 +24,9 @@ let package = Package(
             name: "MessageFormat2TranslateDemo",
             dependencies: ["MessageFormat2"]
         ),
+        .executableTarget(
+            name: "MessageFormat2FoundationDemo",
+            dependencies: ["MessageFormat2"]
+        ),
     ]
 )

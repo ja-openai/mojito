@@ -23,6 +23,7 @@ checks, benchmarks, and demos, but they are not client-facing products.
 - `Model.swift`: official Unicode MF2 Interchange Data Model types
 - `Parser.swift`: source-to-model parser and diagnostics for the supported slice
 - `Formatter.swift`: parser-free formatting and selector matching
+- `FoundationFunctions.swift`: opt-in Foundation-backed platform registry
 - `Errors.swift`: public formatter errors
 
 Generated CLDR plural rules and locale-key lookup helpers are formatter internals,
@@ -31,6 +32,7 @@ matching the Java package-private helper boundary.
 The stable public API uses Swift-native `MF2*` types plus top-level wrappers:
 `parseToModel`, `formatMessage`, `formatMessageToParts`,
 `MF2FunctionRegistry.defaults`, `MF2FunctionRegistry.portable`,
+`MF2FunctionRegistry.foundation`,
 `MF2FunctionCall`, `MF2FunctionMatch`,
 `MF2ParseResult`, `MF2ParseDiagnostic`, `MF2RecoveryContext`, and `MF2Error`.
 
@@ -51,11 +53,19 @@ let result = try formatMessage(
 matches `MF2FunctionRegistry.portable`: dependency-free handlers for `:string`,
 `:offset`, unlocalized numeric formatting for `:number`, `:integer`, and
 `:percent`, plus numeric selectors and CLDR plural matching. Unsupported
-functions recover with visible MF2 fallback output and collected diagnostics. A
-future Foundation formatter adapter can provide locale-pretty platform
-formatting without changing the core registry boundary. Swift currently keeps
-`:relativeTime` out of production registries until a real Foundation or CLDR
-adapter is added.
+functions recover with visible MF2 fallback output and collected diagnostics.
+
+`MF2FunctionRegistry.foundation` is the explicit Foundation-backed platform
+registry. It keeps portable selectors and `:offset`, then overrides formatters
+for `:number`, `:integer`, `:percent`, `:currency`, `:date`, `:time`, and
+`:datetime` with Foundation `NumberFormatter` and `DateFormatter` behavior.
+On Apple platforms it also registers `:relativeTime` with
+`RelativeDateTimeFormatter`; non-Apple Swift keeps relative time deferred rather
+than shipping a fake implementation. The Foundation registry is opt-in so
+embedded clients can keep the dependency-free portable behavior when they need
+the smallest predictable surface. Date/time formatting accepts `dateStyle`,
+`timeStyle`, and `timeZone`, with legacy `length`, `precision`, `dateLength`,
+`timePrecision`, and shared `style` aliases retained.
 
 The formatter decodes expression and markup attributes into the model, preserving
 them for tooling and future parts/rendering workflows.
@@ -77,6 +87,7 @@ Run:
 ```sh
 swift run MessageFormat2Conformance
 swift run MessageFormat2TranslateDemo
+swift run MessageFormat2FoundationDemo
 swift run -c release MessageFormat2Conformance --bench ../../conformance/fixtures/source-to-model
 swift run -c release MessageFormat2Conformance --bench-parse ../../conformance/fixtures/source-to-model
 ```

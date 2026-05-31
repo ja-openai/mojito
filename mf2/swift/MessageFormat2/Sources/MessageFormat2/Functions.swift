@@ -17,6 +17,8 @@ public struct MF2FunctionRegistry: @unchecked Sendable {
 
     public static let defaults = portable
 
+    public static let foundation = makeFoundationFunctionRegistry()
+
     public func withFunction(_ name: String, formatter: @escaping MF2FunctionFormatter) -> MF2FunctionRegistry {
         var formatters = self.formatters
         formatters[name] = formatter
