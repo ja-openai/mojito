@@ -1,0 +1,138 @@
+<?php
+
+declare(strict_types=1);
+
+use Mojito\MessageFormat2\IntlFunctions;
+use function Mojito\MessageFormat2\format_message;
+use function Mojito\MessageFormat2\Internal\error_code;
+use function Mojito\MessageFormat2\parse_to_model;
+
+require_once __DIR__ . '/../src/bootstrap.php';
+
+$source = implode('; ', [
+    'number={$amount :number minimumFractionDigits=2}',
+    'percent={$ratio :percent maximumFractionDigits=1}',
+    'currency={$price :currency currency=EUR}',
+    'date={$due :date dateStyle=full timeZone=UTC}',
+    'time={$start :time timeStyle=medium timeZone=UTC}',
+    'datetime={$created :datetime dateStyle=medium timeStyle=medium timeZone=UTC}',
+]);
+$parse = parse_to_model($source);
+if ($parse['hasDiagnostics']) {
+    fail('unexpected parser diagnostics: ' . json_encode($parse['diagnostics'], JSON_UNESCAPED_UNICODE));
+}
+
+$arguments = [
+    'amount' => 12345.678,
+    'ratio' => 0.1234,
+    'price' => 9876.5,
+    'due' => '2026-05-21',
+    'start' => '2026-05-21T14:30:15Z',
+    'created' => new DateTimeImmutable('2026-05-21T14:30:15Z'),
+];
+
+foreach (['en-US', 'fr-FR', 'ja-JP', 'ar-EG'] as $locale) {
+    $actual = format_message($parse['model'], $arguments, [
+        'locale' => $locale,
+        'functions' => IntlFunctions::registry(),
+    ]);
+    assert_error_codes("{$locale} Intl adapter errors", $actual['errors'], []);
+    assert_same("{$locale} Intl adapter output", expected_output($locale, $arguments), $actual['value']);
+}
+
+$relative = parse_to_model('relative={$days :relativeTime unit=day}')['model'];
+$relativeOutput = format_message($relative, ['days' => -1], ['functions' => IntlFunctions::registry()]);
+assert_same('relativeTime fallback value', 'relative={$days}', $relativeOutput['value']);
+assert_error_codes('relativeTime fallback errors', $relativeOutput['errors'], ['unknown-function']);
+
+$laTime = parse_to_model('time={$start :time timeStyle=short timeZone=America/Los_Angeles}')['model'];
+$laTimeOutput = format_message($laTime, ['start' => '2026-05-21T14:30:15Z'], [
+    'locale' => 'en-US',
+    'functions' => IntlFunctions::registry(),
+]);
+assert_error_codes('timeZone adapter errors', $laTimeOutput['errors'], []);
+assert_same(
+    'timeZone adapter output',
+    'time=' . expected_date('en-US', '2026-05-21T14:30:15Z', IntlDateFormatter::NONE, IntlDateFormatter::SHORT, 'America/Los_Angeles'),
+    $laTimeOutput['value'],
+);
+
+$badTimeZone = parse_to_model('time={$start :time timeStyle=short timeZone=No/Such_Zone}')['model'];
+$badTimeZoneOutput = format_message($badTimeZone, ['start' => '2026-05-21T14:30:15Z'], [
+    'functions' => IntlFunctions::registry(),
+]);
+assert_error_codes('invalid timeZone errors', $badTimeZoneOutput['errors'], ['bad-option']);
+
+echo "PHP Intl function registry tests passed.\n";
+
+function expected_output(string $locale, array $arguments): string
+{
+    return implode('; ', [
+        'number=' . expected_number($locale, $arguments['amount'], minFractionDigits: 2),
+        'percent=' . expected_number($locale, $arguments['ratio'], NumberFormatter::PERCENT, maxFractionDigits: 1),
+        'currency=' . expected_currency($locale, $arguments['price'], 'EUR'),
+        'date=' . expected_date($locale, $arguments['due'], IntlDateFormatter::FULL, IntlDateFormatter::NONE),
+        'time=' . expected_date($locale, $arguments['start'], IntlDateFormatter::NONE, IntlDateFormatter::MEDIUM),
+        'datetime=' . expected_date($locale, $arguments['created'], IntlDateFormatter::MEDIUM, IntlDateFormatter::MEDIUM),
+    ]);
+}
+
+function expected_number(
+    string $locale,
+    float $value,
+    int $style = NumberFormatter::DECIMAL,
+    ?int $minFractionDigits = null,
+    ?int $maxFractionDigits = null,
+): string {
+    $formatter = new NumberFormatter($locale, $style);
+    if ($minFractionDigits !== null) {
+        $formatter->setAttribute(NumberFormatter::MIN_FRACTION_DIGITS, $minFractionDigits);
+    }
+    if ($maxFractionDigits !== null) {
+        $formatter->setAttribute(NumberFormatter::MAX_FRACTION_DIGITS, $maxFractionDigits);
+    }
+    $formatted = $formatter->format($value);
+    return $formatted === false ? fail('NumberFormatter failed') : $formatted;
+}
+
+function expected_currency(string $locale, float $value, string $currency): string
+{
+    $formatter = new NumberFormatter($locale, NumberFormatter::CURRENCY);
+    $formatted = $formatter->formatCurrency($value, $currency);
+    return $formatted === false ? fail('NumberFormatter currency failed') : $formatted;
+}
+
+function expected_date(
+    string $locale,
+    DateTimeInterface|string $value,
+    int $dateStyle,
+    int $timeStyle,
+    string $timeZone = 'UTC',
+): string
+{
+    $formatter = new IntlDateFormatter($locale, $dateStyle, $timeStyle, $timeZone, IntlDateFormatter::GREGORIAN);
+    $date = $value instanceof DateTimeInterface ? $value : new DateTimeImmutable($value, new DateTimeZone($timeZone));
+    $formatted = $formatter->format($date);
+    return $formatted === false ? fail('IntlDateFormatter failed') : $formatted;
+}
+
+function assert_same(string $label, mixed $expected, mixed $actual): void
+{
+    if ($expected !== $actual) {
+        fail("{$label}: expected " . json_encode($expected, JSON_UNESCAPED_UNICODE) . ', got ' . json_encode($actual, JSON_UNESCAPED_UNICODE));
+    }
+}
+
+function assert_error_codes(string $label, array $actualErrors, array $expected): void
+{
+    $actual = array_map(static fn(Throwable $error): string => error_code($error), $actualErrors);
+    sort($actual, SORT_STRING);
+    sort($expected, SORT_STRING);
+    assert_same($label, $expected, $actual);
+}
+
+function fail(string $message): never
+{
+    fwrite(STDERR, $message . "\n");
+    exit(1);
+}

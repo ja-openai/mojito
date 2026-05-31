@@ -150,8 +150,13 @@ Current platform adapter status:
   formatting. ICU4X currency, percent/unit patterns, and relative-time support
   are not stable enough in the currently used crates, so those functions are
   not faked in the adapter.
-- Go and PHP currently keep relative time out of production registries unless
-  an explicit platform adapter is added.
+- PHP has an explicit `IntlFunctions::registry()` adapter for PHP Intl-backed
+  number, percent, integer, currency, date, time, and datetime formatting.
+  Relative time remains deferred because PHP's current Intl extension does not
+  expose `IntlRelativeTimeFormatter` in this environment.
+- Go keeps platform formatting deferred. `golang.org/x/text/message` is useful
+  for localized numeric printing, but it does not provide the clean date, time,
+  currency, and relative-time surface needed for an honest MF2 platform registry.
 
 Java/Kotlin relative time should not be added to the core jar by copying the
 sample catalog function into `defaults`. The generated all-locale CLDR

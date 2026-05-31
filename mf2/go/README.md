@@ -26,10 +26,13 @@ recoverable values or `("", false)` to decline and use the visible fallback.
 `PortableFunctionRegistry`: dependency-free handlers for `:string`, `:offset`,
 unlocalized numeric formatting for `:number`, `:integer`, and `:percent`, plus
 numeric selectors and CLDR plural matching. Unsupported functions recover with
-visible MF2 fallback output and collected diagnostics. A future locale formatter
-adapter can provide locale-pretty platform formatting without changing the core
-registry boundary. Go currently keeps `:relativeTime` out of production
-registries until a real locale-data adapter is added.
+visible MF2 fallback output and collected diagnostics.
+
+Go platform formatting is intentionally deferred. `golang.org/x/text/message`
+is useful for localized numeric printing, but it does not yet provide the clean
+date, time, currency, and relative-time formatter surface needed for an honest
+MF2 platform registry. Keep future locale-data or ICU adapters explicit rather
+than adding partial behavior to the portable registry.
 
 Run:
 

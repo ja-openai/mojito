@@ -9,6 +9,7 @@ use function Mojito\MessageFormat2\Internal\canonical_locale_key;
 use function Mojito\MessageFormat2\Internal\locale_lookup_chain;
 use function Mojito\MessageFormat2\parse_to_model;
 use Mojito\MessageFormat2\FunctionRegistry;
+use Mojito\MessageFormat2\IntlFunctions;
 
 require_once __DIR__ . '/../src/bootstrap.php';
 
@@ -169,8 +170,12 @@ function assert_public_api_boundary(): void
     sort($classes);
     assert_json_equal('public PHP classes', [
         'Mojito\\MessageFormat2\\FunctionRegistry',
+        'Mojito\\MessageFormat2\\IntlFunctions',
         'Mojito\\MessageFormat2\\MF2Error',
     ], $classes);
+
+    assert_same('Intl registry formatter', true, IntlFunctions::registry()->hasFormatter(['name' => 'currency']));
+    assert_same('Intl registry keeps relative time unsupported', false, IntlFunctions::registry()->hasFormatter(['name' => 'relativeTime']));
 }
 
 function read_json(string $path): array

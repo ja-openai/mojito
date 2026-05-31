@@ -893,6 +893,9 @@ function value_to_string(mixed $value): string
     if ($value === null) {
         return '';
     }
+    if ($value instanceof \DateTimeInterface) {
+        return $value->format(\DateTimeInterface::ATOM);
+    }
     if (is_bool($value)) {
         return $value ? 'true' : 'false';
     }

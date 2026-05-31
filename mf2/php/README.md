@@ -27,10 +27,29 @@ recoverable values.
 matches `FunctionRegistry::portable()`: dependency-free handlers for `:string`,
 `:offset`, unlocalized numeric formatting for `:number`, `:integer`, and
 `:percent`, plus numeric selectors and CLDR plural matching. Unsupported
-functions recover with visible MF2 fallback output and collected diagnostics. A
-future Intl-backed adapter can provide locale-pretty platform formatting without
-changing the core registry boundary. PHP currently keeps `:relativeTime` out of
-production registries until a real Intl/CLDR adapter is added.
+functions recover with visible MF2 fallback output and collected diagnostics.
+
+`IntlFunctions::registry()` is the explicit PHP Intl adapter. It starts from the
+portable registry and overrides `:number`, `:integer`, `:percent`, `:currency`,
+`:date`, `:time`, and `:datetime` with locale-pretty handlers backed by
+`NumberFormatter` and `IntlDateFormatter`. Date/time formatting accepts
+`dateStyle`, `timeStyle`, and `timeZone`, with legacy `length`, `precision`,
+`dateLength`, `timePrecision`, and shared `style` aliases retained:
+
+```php
+use Mojito\MessageFormat2\IntlFunctions;
+use function Mojito\MessageFormat2\format_message;
+
+$result = format_message($model, $arguments, [
+    'locale' => 'fr-FR',
+    'functions' => IntlFunctions::registry(),
+]);
+```
+
+PHP currently keeps `:relativeTime` out of production registries because the
+local/current Intl extension exposes `NumberFormatter` and `IntlDateFormatter`
+but not `IntlRelativeTimeFormatter`. Add a dedicated CLDR or future Intl
+adapter instead of faking relative-time output in portable/default registries.
 
 Regenerate the vendored plural rules:
 
@@ -42,7 +61,9 @@ Run checks:
 
 ```sh
 php tests/conformance.php
+php tests/intl_functions.php
 php tests/unicode_tests.php
 php examples/demo.php
+php examples/intl_demo.php
 php bench.php
 ```
