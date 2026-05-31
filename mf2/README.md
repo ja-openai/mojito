@@ -12,6 +12,7 @@ tools, and shared examples:
 - `java/`: zero-dependency Java runtime package
 - `java-icu4j/`: opt-in ICU4J formatter adapter for the Java runtime package
 - `kotlin/`: native Kotlin/JVM parser/runtime package
+- `kotlin-icu4j/`: opt-in ICU4J formatter adapter for the Kotlin runtime package
 - `javascript/`: zero-dependency JavaScript parser/runtime package
 - `go/`: native Go parser/runtime package
 - `php/`: native PHP parser/runtime package using the built-in `intl` extension
@@ -141,7 +142,7 @@ Current platform adapter status:
 - Java and Kotlin defaults use JDK-backed number, percent, integer, currency,
   date, time, and datetime formatting. The JDK does not provide a public
   ICU-style relative-time formatter, so production relative time stays out of
-  those defaults. Java also has an explicit `java-icu4j` adapter artifact for
+  those defaults. Java and Kotlin also have explicit ICU4J adapter artifacts for
   ICU4J-backed number, percent, integer, currency, date, time, datetime, and
   relative-time formatting.
 - Rust exposes an optional `icu4x` feature and `FunctionRegistry::icu4x()`

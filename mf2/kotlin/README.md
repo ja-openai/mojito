@@ -41,8 +41,9 @@ dependency-free and unlocalized for size-sensitive or platform-owned hosts.
 Unsupported functions recover with visible MF2 fallback output and collected
 diagnostics. The JDK does not expose an ICU-style localized relative-time
 formatter, so `:relativeTime` is intentionally not part of the Kotlin default
-registry. A production relative-time formatter should land as an explicit
-ICU/CLDR adapter, not as portable or JDK behavior.
+registry. Use the separate `messageformat2-kotlin-icu4j` adapter when an
+application wants ICU4J-backed `:relativeTime` plus richer ICU locale
+formatting.
 
 Local conformance, demo, and benchmark entry points stay under
 `src/test/kotlin` so they do not ship in the production jar.
