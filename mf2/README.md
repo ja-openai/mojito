@@ -10,6 +10,7 @@ tools, and shared examples:
 - `swift/MessageFormat2/`: native zero-dependency Swift runtime package
 - `python/`: zero-dependency Python parser/runtime package
 - `java/`: zero-dependency Java runtime package
+- `java-icu4j/`: opt-in ICU4J formatter adapter for the Java runtime package
 - `kotlin/`: native Kotlin/JVM parser/runtime package
 - `javascript/`: zero-dependency JavaScript parser/runtime package
 - `go/`: native Go parser/runtime package
@@ -139,8 +140,10 @@ Current platform adapter status:
   unless Foundation support is validated there.
 - Java and Kotlin defaults use JDK-backed number, percent, integer, currency,
   date, time, and datetime formatting. The JDK does not provide a public
-  ICU-style relative-time formatter, so production relative time remains an
-  explicit ICU/CLDR follow-up instead of a fake default handler.
+  ICU-style relative-time formatter, so production relative time stays out of
+  those defaults. Java also has an explicit `java-icu4j` adapter artifact for
+  ICU4J-backed number, percent, integer, currency, date, time, datetime, and
+  relative-time formatting.
 - Rust exposes an optional `icu4x` feature and `FunctionRegistry::icu4x()`
   registry for ICU4X-backed number, integer, date, time, and datetime
   formatting. ICU4X currency, percent/unit patterns, and relative-time support

@@ -27,7 +27,8 @@ Current target:
   arity, duplicate variants, and missing fallback variants
 - use generated CLDR cardinal and ordinal plural rules
 - keep locale-key canonicalization/fallback string-only
-- keep ICU4J as a reference comparison target, not a runtime dependency
+- keep the core jar zero-runtime-dependency; ICU4J support lives in the
+  separate `mf2/java-icu4j` adapter artifact
 
 `src/main/java` is the library artifact. Local conformance runners, demos,
 benchmarks, fixture JSON loading, and example-only functions live under
@@ -80,9 +81,10 @@ JDK registry. It starts from portable behavior and overrides number,
 percent, integer, currency, and date/time formatters with Java JDK-backed
 formatting. The JDK does not expose an ICU-style localized relative-time
 formatter, so `:relativeTime` is intentionally not part of the Java default
-registry. The sample catalog has a test-only CLDR-data implementation; a
-production relative-time formatter should land as an explicit ICU/CLDR adapter,
-not as portable or JDK behavior.
+registry. Use the separate `messageformat2-java-icu4j` adapter when an
+application wants ICU4J-backed `:relativeTime` plus richer ICU locale
+formatting. The sample catalog has a test-only CLDR-data implementation and is
+not production registry behavior.
 
 The conformance and sample demos use test-only fixture/sample registries for
 stable dependency-free output. Those shims live under `src/test/java` and are
