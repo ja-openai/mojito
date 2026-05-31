@@ -11,7 +11,9 @@ import java.util.regex.PatternSyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 @Service
 public class AiTranslateSourcePromptRuleService {
@@ -22,9 +24,13 @@ public class AiTranslateSourcePromptRuleService {
       LoggerFactory.getLogger(AiTranslateSourcePromptRuleService.class);
 
   private final AiTranslateSourcePromptRuleRepository repository;
+  private final PlatformTransactionManager transactionManager;
 
-  public AiTranslateSourcePromptRuleService(AiTranslateSourcePromptRuleRepository repository) {
+  public AiTranslateSourcePromptRuleService(
+      AiTranslateSourcePromptRuleRepository repository,
+      PlatformTransactionManager transactionManager) {
     this.repository = repository;
+    this.transactionManager = transactionManager;
   }
 
   public record SourcePromptRule(
@@ -64,21 +70,71 @@ public class AiTranslateSourcePromptRuleService {
 
   public record RegexTestResult(boolean matches, List<RegexMatch> matchesList) {}
 
-  @Transactional(readOnly = true)
   public List<SourcePromptRule> getAll() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      List<SourcePromptRule> rules = getAllNoTx();
+      transactionManager.commit(transaction);
+      return rules;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<SourcePromptRule> getAllNoTx() {
     return repository.findAllByOrderByPriorityAscNameAsc().stream().map(this::toRecord).toList();
   }
 
-  @Transactional(readOnly = true)
   public List<ActiveSourcePromptRule> getActiveRules() {
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+    transactionDefinition.setReadOnly(true);
+    TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
+    try {
+      List<ActiveSourcePromptRule> rules = getActiveRulesNoTx();
+      transactionManager.commit(transaction);
+      return rules;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  List<ActiveSourcePromptRule> getActiveRulesNoTx() {
     return repository.findByEnabledTrueOrderByPriorityAscIdAsc().stream()
         .map(this::toActiveRuleOrNull)
         .filter(Objects::nonNull)
         .toList();
   }
 
-  @Transactional
   public SourcePromptRule upsert(SourcePromptRuleInput input) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      SourcePromptRule rule = upsertNoTx(input);
+      transactionManager.commit(transaction);
+      return rule;
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  SourcePromptRule upsertNoTx(SourcePromptRuleInput input) {
     if (input == null) {
       throw new IllegalArgumentException("Rule input is required");
     }
@@ -117,8 +173,23 @@ public class AiTranslateSourcePromptRuleService {
     return toRecord(entity);
   }
 
-  @Transactional
   public void delete(long id) {
+    TransactionStatus transaction =
+        transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+    try {
+      deleteNoTx(id);
+      transactionManager.commit(transaction);
+    } catch (RuntimeException e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    } catch (Error e) {
+      transactionManager.rollback(transaction);
+      throw e;
+    }
+  }
+
+  void deleteNoTx(long id) {
     AiTranslateSourcePromptRuleEntity entity =
         repository
             .findById(id)

@@ -131,6 +131,8 @@ Removed during this workstream:
   add/copy comment paths now open their transaction boundaries explicitly.
 - `AiTranslateLocalePromptSuffixService` no longer uses `@Transactional`; locale prompt suffix
   reads and writes now open read-only or read-write transactions explicitly.
+- `AiTranslateSourcePromptRuleService` no longer uses `@Transactional`; source prompt rule reads
+  and writes now open read-only or read-write transactions explicitly.
 - `AiTranslateRunService` no longer uses `@Transactional`; AI translate run creation, status
   updates, and recent-run reads now open their transaction boundaries explicitly.
 - `ReviewAutomationRunService` no longer uses `@Transactional`; review automation run creation,

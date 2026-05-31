@@ -9,11 +9,14 @@ import static org.mockito.Mockito.mock;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.junit.Test;
+import org.springframework.transaction.PlatformTransactionManager;
 
 public class AiTranslateSourcePromptRuleServiceTest {
 
   AiTranslateSourcePromptRuleService aiTranslateSourcePromptRuleService =
-      new AiTranslateSourcePromptRuleService(mock(AiTranslateSourcePromptRuleRepository.class));
+      new AiTranslateSourcePromptRuleService(
+          mock(AiTranslateSourcePromptRuleRepository.class),
+          mock(PlatformTransactionManager.class));
 
   @Test
   public void testMatchesSourceText() {
