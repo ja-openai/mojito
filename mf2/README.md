@@ -141,8 +141,13 @@ Current platform adapter status:
   date, time, and datetime formatting. The JDK does not provide a public
   ICU-style relative-time formatter, so production relative time remains an
   explicit ICU/CLDR follow-up instead of a fake default handler.
-- Rust, Go, and PHP currently keep relative time out of production registries
-  unless an explicit platform adapter is added.
+- Rust exposes an optional `icu4x` feature and `FunctionRegistry::icu4x()`
+  registry for ICU4X-backed number, integer, date, time, and datetime
+  formatting. ICU4X currency, percent/unit patterns, and relative-time support
+  are not stable enough in the currently used crates, so those functions are
+  not faked in the adapter.
+- Go and PHP currently keep relative time out of production registries unless
+  an explicit platform adapter is added.
 
 Java/Kotlin relative time should not be added to the core jar by copying the
 sample catalog function into `defaults`. The generated all-locale CLDR

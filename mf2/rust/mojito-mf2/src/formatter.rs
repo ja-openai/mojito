@@ -13,6 +13,8 @@ use crate::model::{
 use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
+#[cfg(feature = "icu4x")]
+mod icu4x_functions;
 mod portable_functions;
 
 use portable_functions::{
@@ -382,6 +384,13 @@ impl FunctionRegistry {
     pub fn portable() -> Self {
         let mut registry = Self::empty_registry();
         portable_functions::register(&mut registry);
+        registry
+    }
+
+    #[cfg(feature = "icu4x")]
+    pub fn icu4x() -> Self {
+        let mut registry = Self::portable();
+        icu4x_functions::register(&mut registry);
         registry
     }
 

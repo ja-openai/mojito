@@ -38,10 +38,32 @@ and currently matches `FunctionRegistry::portable()`: dependency-free handlers
 for `:string`, `:offset`, unlocalized numeric formatting for `:number`,
 `:integer`, and `:percent`, plus numeric selectors and CLDR plural matching.
 Unsupported functions recover with visible MF2 fallback output and collected
-diagnostics. A future ICU4X-backed adapter can provide locale-pretty platform
-formatting without changing the core registry boundary. Rust currently keeps
-`:relativeTime` out of production registries until a real ICU4X or CLDR adapter
-is added.
+diagnostics.
+
+For locale-pretty formatting, enable the optional ICU4X adapter:
+
+```toml
+mojito-mf2 = { version = "0.1.0", features = ["icu4x"] }
+```
+
+```rust
+let registry = mojito_mf2::FunctionRegistry::icu4x();
+let options = mojito_mf2::FormatOptions::new("fr").with_functions(&registry);
+```
+
+The ICU4X registry starts from `portable()` and overrides `:number`,
+`:integer`, `:date`, `:time`, and `:datetime` with ICU4X-backed formatting.
+It intentionally does not register `:currency` or `:relativeTime`: current
+ICU4X crates do not provide stable production APIs for those functions. It also
+does not override `:percent` yet because `icu_decimal` formats decimal numbers
+but not locale-native percent/unit patterns. The portable unlocalized percent
+handler remains available. Date/time `full` style is accepted for API parity
+and currently maps to ICU4X `long`, because the stable ICU4X static field sets
+expose long/medium/short lengths. Date/time formatting accepts `dateStyle`,
+`timeStyle`, and `timeZone=UTC`; legacy `length`, `precision`, `dateLength`,
+`timePrecision`, and shared `style` aliases are retained. Non-UTC `timeZone`
+values return a bad-option diagnostic until the adapter has real time-zone
+support.
 
 The public formatter surface is intentionally small:
 
@@ -112,19 +134,24 @@ Supported now:
   invalid selector options, and supports exact selection of the formatted value
 - cardinal and ordinal plural category matching for number inputs in every
   generated CLDR plural locale
+- optional ICU4X-backed `:number`, `:integer`, `:date`, `:time`, and
+  `:datetime` formatting behind the `icu4x` feature and explicit
+  `FunctionRegistry::icu4x()`
 
 Unsupported for this first slice:
 
-- locale-sensitive number/date/time formatting
-- `:currency`, `:date`, `:time`, and `:datetime` default formatting
+- locale-sensitive formatting in the default dependency-free registry
+- ICU4X-backed `:percent`, `:currency`, and `:relativeTime` formatting
 - full MF2 Unicode `name` grammar for variables, functions, markup, and options
 
 Run:
 
 ```sh
 cargo test
+cargo test --features icu4x
 cargo run --example translate_demo
 cargo run --example inline_translate_demo
+cargo run --features icu4x --example icu4x_demo
 cargo run -- conformance ../../conformance/fixtures/source-to-model
 cargo run -- unicode-tests
 cargo run -- compile ../../conformance/fixtures/source-to-model/variable-basic.json
