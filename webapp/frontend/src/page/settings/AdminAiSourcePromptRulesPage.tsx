@@ -14,8 +14,8 @@ import {
 } from '../../api/ai-translate-source-prompt-rules';
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { Modal } from '../../components/Modal';
-import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
+import { useUser } from '../../hooks/useUser';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {

@@ -43,8 +43,8 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import { MultiSelectChip } from '../../components/MultiSelectChip';
 import { PillDropdown } from '../../components/PillDropdown';
-import { useUser } from '../../components/RequireUser';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import { useUser } from '../../hooks/useUser';
 import {
   formatLocalDateTime,
   getLocalAndUtcDateTimeTooltip,

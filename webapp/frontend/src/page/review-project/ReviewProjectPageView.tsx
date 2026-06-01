@@ -65,7 +65,6 @@ import { LocalePill } from '../../components/LocalePill';
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
-import { useUser } from '../../components/RequireUser';
 import {
   RequestAttachmentsDropzone,
   type RequestAttachmentUploadQueueItem,
@@ -79,6 +78,7 @@ import {
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import { useUser } from '../../hooks/useUser';
 import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
 import {
   formatLocalDate as formatDate,

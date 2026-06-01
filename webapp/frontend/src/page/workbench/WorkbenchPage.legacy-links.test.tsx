@@ -9,7 +9,7 @@ import { WorkbenchPage } from './WorkbenchPage';
 const searchTextUnitsMock = vi.hoisted(() => vi.fn(() => Promise.resolve([])));
 const locationSearches: string[] = [];
 
-vi.mock('../../components/RequireUser', () => ({
+vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({
     username: 'admin',
     role: 'ROLE_ADMIN',

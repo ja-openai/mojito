@@ -3,8 +3,8 @@ import './settings-page.css';
 import { useEffect, useMemo, useState } from 'react';
 
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
-import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
 import {

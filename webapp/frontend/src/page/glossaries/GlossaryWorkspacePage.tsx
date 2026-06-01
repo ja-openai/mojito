@@ -6,8 +6,8 @@ import { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { exportGlossary, fetchGlossary, importGlossary } from '../../api/glossaries';
-import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import { canAccessGlossaries } from '../../utils/permissions';
 import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
 import { AdminGlossaryTermsPanel } from '../settings/AdminGlossaryTermsPanel';

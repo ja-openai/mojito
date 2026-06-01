@@ -13,8 +13,8 @@ import {
   type TextUnitIngestionSnapshot,
 } from '../../api/monitoring';
 import type { TextUnitSearchRequest } from '../../api/text-units';
-import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 
 type StatisticsViewMode = 'all' | 'repository';
 type StatisticsMetric = 'textUnits' | 'words';

@@ -6,8 +6,8 @@ import { Navigate, useParams } from 'react-router-dom';
 
 import { fetchReviewFeature, updateReviewFeature } from '../../api/review-features';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
-import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 

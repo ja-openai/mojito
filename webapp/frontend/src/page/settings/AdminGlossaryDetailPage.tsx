@@ -8,9 +8,9 @@ import { deleteGlossary, fetchGlossary, updateGlossary } from '../../api/glossar
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
-import { useUser } from '../../components/RequireUser';
 import { useLocales } from '../../hooks/useLocales';
 import { REPOSITORIES_QUERY_KEY, useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import { buildScopedGlossaryLocaleOptions } from '../../utils/glossaryLocaleScope';
 import { buildGlossaryWorkbenchState } from '../../utils/glossaryWorkbench';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';

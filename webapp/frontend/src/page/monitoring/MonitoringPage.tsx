@@ -11,7 +11,7 @@ import {
   MAX_MONITORING_ITERATIONS,
   MIN_MONITORING_ITERATIONS,
 } from '../../api/monitoring';
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 
 const DEFAULT_ITERATIONS = 5;
 const SERIES_SECTIONS: {

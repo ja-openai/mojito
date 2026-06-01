@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { ApiUserProfile } from '../api/users';
-import { useUser } from './RequireUser';
+import { useUser } from '../hooks/useUser';
 
 function formatRole(role: ApiUserProfile['role']) {
   switch (role) {

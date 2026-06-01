@@ -15,8 +15,8 @@ import {
 } from '../../api/teams';
 import type { ApiAuthority, ApiUserLocale } from '../../api/users';
 import { createUser } from '../../api/users';
-import { useUser } from '../../components/RequireUser';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import { useUser } from '../../hooks/useUser';
 import { USERS_QUERY_KEY } from '../../hooks/useUsers';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 

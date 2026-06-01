@@ -20,7 +20,6 @@ import {
   REVIEW_PROJECT_TYPES,
 } from '../../api/review-projects';
 import { ConfirmModal } from '../../components/ConfirmModal';
-import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
 import {
   REVIEW_PROJECT_REQUESTS_QUERY_KEY,
@@ -28,6 +27,7 @@ import {
   useReviewProjectRequests,
   useReviewProjects,
 } from '../../hooks/useReviewProjects';
+import { useUser } from '../../hooks/useUser';
 import { containsLikePattern } from '../../utils/likeSearch';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';

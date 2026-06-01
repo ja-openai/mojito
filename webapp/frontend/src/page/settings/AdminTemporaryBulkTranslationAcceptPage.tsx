@@ -11,8 +11,8 @@ import {
   executeBulkTranslationAccept,
 } from '../../api/temporary-bulk-translation-accept';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
-import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import {
   useRepositorySelection,
   useRepositorySelectionOptions,

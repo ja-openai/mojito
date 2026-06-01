@@ -6,7 +6,7 @@ import {
   fetchGlossaryTranslationProposals,
   fetchGlossaryWorkspaceSummary,
 } from '../../api/glossaries';
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 import { canManageGlossaryTerms } from '../../utils/permissions';
 
 type GlossaryWorkspaceSyncCardProps = {

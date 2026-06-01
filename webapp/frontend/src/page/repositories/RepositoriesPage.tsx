@@ -13,8 +13,8 @@ import {
   fetchReviewFeatureRepositoryCoverage,
 } from '../../api/review-features';
 import type { TextUnitSearchRequest } from '../../api/text-units';
-import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import type { LocaleSelectionOption as LocaleOption } from '../../utils/localeSelection';
 import {
   filterMyLocales,

@@ -13,8 +13,9 @@ import {
   useParams,
 } from 'react-router-dom';
 
-import { RequireUser, useUser } from './components/RequireUser';
+import { RequireUser } from './components/RequireUser';
 import { UserMenu } from './components/UserMenu';
+import { useUser } from './hooks/useUser';
 import { AiTranslatePage } from './page/ai-translate/AiTranslatePage';
 import { GlossariesPage } from './page/glossaries/GlossariesPage';
 import { GlossaryWorkspacePage } from './page/glossaries/GlossaryWorkspacePage';

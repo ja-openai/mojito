@@ -14,7 +14,7 @@ import {
 import { fetchReviewFeatureOptions } from '../../api/review-features';
 import { fetchTeams } from '../../api/teams';
 import { Modal } from '../../components/Modal';
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 import {
   DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,
   DEFAULT_REVIEW_AUTOMATION_TIME_ZONE,

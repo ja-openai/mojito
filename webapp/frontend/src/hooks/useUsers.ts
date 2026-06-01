@@ -8,7 +8,7 @@ const USERS_QUERY_KEY = ['users'];
 export const useUsers = () => {
   return useQuery<ApiUser[]>({
     queryKey: USERS_QUERY_KEY,
-    queryFn: () => fetchAllUsersAdmin(),
+    queryFn: fetchAllUsersAdmin,
     staleTime: 30_000,
   });
 };

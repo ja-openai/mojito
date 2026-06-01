@@ -11,8 +11,8 @@ import {
   fetchReviewFeatureBatchExport,
   fetchReviewFeatureOptions,
 } from '../../api/review-features';
-import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type ParsedRow = {

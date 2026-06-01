@@ -7,8 +7,8 @@ import { Link, Navigate } from 'react-router-dom';
 
 import { type ApiTeam, createTeam, fetchTeamsWithOptions } from '../../api/teams';
 import { Modal } from '../../components/Modal';
-import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
+import { useUser } from '../../hooks/useUser';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type StatusNotice = {

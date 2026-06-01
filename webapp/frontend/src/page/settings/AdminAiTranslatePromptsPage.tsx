@@ -4,7 +4,7 @@ import './term-index-explorer-page.css';
 
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 import { AdminAiLocalePromptSuffixPage } from './AdminAiLocalePromptSuffixPage';
 import { AdminAiSourcePromptRulesPage } from './AdminAiSourcePromptRulesPage';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';

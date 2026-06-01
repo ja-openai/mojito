@@ -14,10 +14,10 @@ import {
 import { AutoTextarea } from '../../components/AutoTextarea';
 import { LocaleMultiSelect, type LocaleOption } from '../../components/LocaleMultiSelect';
 import { Modal } from '../../components/Modal';
-import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
 import { useLocales } from '../../hooks/useLocales';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';

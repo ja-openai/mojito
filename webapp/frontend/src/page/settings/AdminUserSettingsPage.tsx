@@ -13,13 +13,13 @@ import {
   type FilterOption,
   MultiSectionFilterChip,
 } from '../../components/filters/MultiSectionFilterChip';
-import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import { useUser } from '../../hooks/useUser';
 import { USERS_QUERY_KEY, useUsers } from '../../hooks/useUsers';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import { getUserDisplayName } from '../../utils/userDisplayName';

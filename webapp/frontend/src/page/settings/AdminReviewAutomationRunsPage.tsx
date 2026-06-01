@@ -9,9 +9,9 @@ import {
   fetchReviewAutomationRuns,
 } from '../../api/review-automations';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
-import { useUser } from '../../components/RequireUser';
 import { ReviewAutomationRunsTable } from '../../components/ReviewAutomationRunsTable';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import { useUser } from '../../hooks/useUser';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const RUN_HISTORY_LIMIT_PRESETS = [20, 50, 100];

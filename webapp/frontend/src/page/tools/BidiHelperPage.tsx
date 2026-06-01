@@ -2,7 +2,7 @@ import './bidi-helper-page.css';
 
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 
 type Direction = 'auto' | 'ltr' | 'rtl';
 

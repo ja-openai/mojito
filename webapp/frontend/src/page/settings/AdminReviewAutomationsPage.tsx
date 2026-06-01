@@ -16,11 +16,11 @@ import { fetchTeams } from '../../api/teams';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
-import { useUser } from '../../components/RequireUser';
 import { ReviewAutomationScheduleBuilderModal } from '../../components/ReviewAutomationScheduleBuilderModal';
 import { ReviewFeatureMultiSelect } from '../../components/ReviewFeatureMultiSelect';
 import { SearchControl } from '../../components/SearchControl';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import { useUser } from '../../hooks/useUser';
 import { formatLocalDateTime as formatDateTime } from '../../utils/dateTime';
 import {
   DEFAULT_REVIEW_AUTOMATION_CRON_EXPRESSION,

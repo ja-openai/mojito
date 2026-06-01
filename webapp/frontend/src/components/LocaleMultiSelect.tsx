@@ -1,3 +1,4 @@
+import { hasSameSet } from '../utils/arraySelection';
 import type { MultiSelectCustomAction, MultiSelectOption } from './MultiSelectChip';
 import { MultiSelectChip } from './MultiSelectChip';
 
@@ -45,23 +46,15 @@ export function LocaleMultiSelect({
   }));
   const allLocaleTags = options.map((option) => option.tag);
 
-  const hasSameTags = (left: string[], right: string[]) => {
-    if (left.length !== right.length) {
-      return false;
-    }
-    const rightSet = new Set(right.map((tag) => tag.toLowerCase()));
-    return left.every((tag) => rightSet.has(tag.toLowerCase()));
-  };
-
   const availableLocaleSet = new Set(options.map((option) => option.tag.toLowerCase()));
   const myLocaleSelections =
     myLocaleTags?.filter((tag) => availableLocaleSet.has(tag.toLowerCase())) ?? [];
   const isAllLocaleSelectionActive =
-    allLocaleTags.length > 0 && hasSameTags(selectedTags, allLocaleTags);
+    allLocaleTags.length > 0 && hasSameSet(selectedTags, allLocaleTags, (tag) => tag.toLowerCase());
   const isMyLocaleSelectionActive =
     !isAllLocaleSelectionActive &&
     myLocaleSelections.length > 0 &&
-    hasSameTags(selectedTags, myLocaleSelections);
+    hasSameSet(selectedTags, myLocaleSelections, (tag) => tag.toLowerCase());
 
   const localeCustomActions: MultiSelectCustomAction[] =
     myLocaleSelections.length > 0 && !showSelectionPresets

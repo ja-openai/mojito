@@ -22,12 +22,12 @@ import {
   updateReviewProjectTextUnitTerminologyMetadata,
 } from '../../api/review-projects';
 import type { TextUnitIntegrityCheckResult } from '../../api/text-units';
-import { useUser } from '../../components/RequireUser';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import {
   REVIEW_PROJECT_REQUESTS_QUERY_KEY,
   REVIEW_PROJECTS_QUERY_KEY,
 } from '../../hooks/useReviewProjects';
+import { useUser } from '../../hooks/useUser';
 import {
   buildIntegrityCheckErrorReport,
   checkTextUnitIntegrityWithRetry,

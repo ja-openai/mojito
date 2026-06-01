@@ -24,7 +24,6 @@ import {
   updateTranslationIncidentStatus,
 } from '../../api/translation-incidents';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
-import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
@@ -32,6 +31,7 @@ import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs'
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 
 const STATUS_FILTERS: Array<{
   label: string;

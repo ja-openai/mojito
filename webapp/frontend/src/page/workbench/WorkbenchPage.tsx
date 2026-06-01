@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { TextUnitSearchRequest } from '../../api/text-units';
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
 import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';

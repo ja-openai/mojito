@@ -3,7 +3,7 @@ import './glossary-workflow-page.css';
 
 import { Link, Navigate } from 'react-router-dom';
 
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 import { TermIndexSubnav } from './AdminTermIndexExplorerPage';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 

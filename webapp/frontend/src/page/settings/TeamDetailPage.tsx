@@ -33,7 +33,7 @@ import { type ApiUser, fetchAllUsersAdmin } from '../../api/users';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { Modal } from '../../components/Modal';
 import { MultiSelectChip } from '../../components/MultiSelectChip';
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 import { getUserDisplayName, getUserLabel } from '../../utils/userDisplayName';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 

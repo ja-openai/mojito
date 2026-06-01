@@ -21,8 +21,8 @@ import {
 import { JsonPayloadModal, type JsonPayloadModalItem } from '../../components/JsonPayloadModal';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
-import { useUser } from '../../components/RequireUser';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 

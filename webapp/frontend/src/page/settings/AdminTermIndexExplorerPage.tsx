@@ -53,7 +53,6 @@ import { MultiSelectChip, type MultiSelectCustomAction } from '../../components/
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import { PillDropdown } from '../../components/PillDropdown';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
-import { useUser } from '../../components/RequireUser';
 import { SearchControl } from '../../components/SearchControl';
 import {
   SingleSelectDropdown,
@@ -63,6 +62,7 @@ import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs'
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import { useRepositories } from '../../hooks/useRepositories';
+import { useUser } from '../../hooks/useUser';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import { formatLocalDateTime } from '../../utils/dateTime';
 import {

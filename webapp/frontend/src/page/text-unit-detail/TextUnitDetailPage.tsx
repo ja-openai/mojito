@@ -29,7 +29,7 @@ import {
   searchTextUnits,
   type TextUnitSearchRequest,
 } from '../../api/text-units';
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
 import {
   buildGlossaryContextMessage,

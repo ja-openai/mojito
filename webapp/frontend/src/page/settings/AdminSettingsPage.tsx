@@ -2,7 +2,7 @@ import './settings-page.css';
 
 import { Navigate, useNavigate } from 'react-router-dom';
 
-import { useUser } from '../../components/RequireUser';
+import { useUser } from '../../hooks/useUser';
 
 export function AdminSettingsPage() {
   const user = useUser();

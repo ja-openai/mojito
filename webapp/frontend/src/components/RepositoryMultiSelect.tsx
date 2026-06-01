@@ -1,3 +1,4 @@
+import { hasSameSet } from '../utils/arraySelection';
 import type { RepositorySelectionOption } from '../utils/repositorySelection';
 import type { MultiSelectCustomAction, MultiSelectOption } from './MultiSelectChip';
 import { MultiSelectChip } from './MultiSelectChip';
@@ -48,28 +49,20 @@ export function RepositoryMultiSelect({
     .filter((option) => option.isGlossary)
     .map((option) => option.id);
 
-  const hasSameIds = (left: number[], right: number[]) => {
-    if (left.length !== right.length) {
-      return false;
-    }
-    const rightSet = new Set(right);
-    return left.every((id) => rightSet.has(id));
-  };
-
   const quickActions: MultiSelectCustomAction[] | undefined = showSelectionPresets
     ? [
         {
           label: 'All',
           onClick: () => onChange(allRepositoryIds),
           disabled: allRepositoryIds.length === 0,
-          active: allRepositoryIds.length > 0 && hasSameIds(selectedIds, allRepositoryIds),
+          active: allRepositoryIds.length > 0 && hasSameSet(selectedIds, allRepositoryIds),
           ariaLabel: 'Select all repositories',
         },
         {
           label: 'Repositories',
           onClick: () => onChange(productRepositoryIds),
           disabled: productRepositoryIds.length === 0,
-          active: productRepositoryIds.length > 0 && hasSameIds(selectedIds, productRepositoryIds),
+          active: productRepositoryIds.length > 0 && hasSameSet(selectedIds, productRepositoryIds),
           ariaLabel: 'Select repositories excluding glossaries',
         },
         {
@@ -77,7 +70,7 @@ export function RepositoryMultiSelect({
           onClick: () => onChange(glossaryRepositoryIds),
           disabled: glossaryRepositoryIds.length === 0,
           active:
-            glossaryRepositoryIds.length > 0 && hasSameIds(selectedIds, glossaryRepositoryIds),
+            glossaryRepositoryIds.length > 0 && hasSameSet(selectedIds, glossaryRepositoryIds),
           ariaLabel: 'Select glossary backing repositories only',
         },
         {
@@ -120,14 +113,14 @@ export function RepositoryMultiSelect({
           if (
             showSelectionPresets &&
             productRepositoryIds.length > 0 &&
-            hasSameIds(selectedValues, productRepositoryIds)
+            hasSameSet(selectedValues, productRepositoryIds)
           ) {
             return 'Repositories';
           }
           if (
             showSelectionPresets &&
             glossaryRepositoryIds.length > 0 &&
-            hasSameIds(selectedValues, glossaryRepositoryIds)
+            hasSameSet(selectedValues, glossaryRepositoryIds)
           ) {
             return 'Glossaries';
           }
