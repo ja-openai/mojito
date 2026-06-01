@@ -43,17 +43,17 @@ function formatIntlCurrency(call) {
 }
 
 function formatIntlDate(call) {
-  return dateFormatter(call.locale, call, { dateStyle: dateTimeStyle(call, "dateStyle", "medium") }).format(parseDate(call.rawValue, call.value, "Date function requires a date operand."));
+  return dateFormatter(call.locale, call, { dateStyle: dateTimeStyle(call, "dateStyle", "length", "medium") }).format(parseDate(call.rawValue, call.value, "Date function requires a date operand."));
 }
 
 function formatIntlTime(call) {
-  return dateFormatter(call.locale, call, { timeStyle: dateTimeStyle(call, "timeStyle", "medium") }).format(parseDate(call.rawValue, call.value, "Time function requires a date operand."));
+  return dateFormatter(call.locale, call, { timeStyle: dateTimeStyle(call, "timeStyle", "precision", "medium") }).format(parseDate(call.rawValue, call.value, "Time function requires a date operand."));
 }
 
 function formatIntlDateTime(call) {
   return dateFormatter(call.locale, call, {
-    dateStyle: dateTimeStyle(call, "dateStyle", "medium"),
-    timeStyle: dateTimeStyle(call, "timeStyle", "medium"),
+    dateStyle: dateTimeStyle(call, "dateStyle", "dateLength", "medium"),
+    timeStyle: dateTimeStyle(call, "timeStyle", "timePrecision", "medium"),
   }).format(parseDate(call.rawValue, call.value, "Datetime function requires a date operand."));
 }
 
@@ -110,8 +110,10 @@ function parseDate(rawValue, rendered, message) {
   return date;
 }
 
-function dateTimeStyle(call, optionName, fallback) {
-  return optionOneOf(call, optionName, ["full", "long", "medium", "short"], fallback);
+function dateTimeStyle(call, optionName, legacyOptionName, fallback) {
+  const sharedStyle = call.optionValue("style", fallback);
+  const legacyValue = call.optionValue(legacyOptionName, sharedStyle);
+  return optionOneOf(call, optionName, ["full", "long", "medium", "short"], legacyValue);
 }
 
 function optionOneOf(call, optionName, allowed, fallback) {

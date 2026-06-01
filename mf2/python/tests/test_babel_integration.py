@@ -19,7 +19,7 @@ class BabelIntegrationTest(unittest.TestCase):
 
     @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
     def test_babel_registry_formats_platform_values(self) -> None:
-        from babel.dates import format_date, format_datetime, format_time, format_timedelta
+        from babel.dates import format_date, format_datetime, format_time, format_timedelta, get_timezone
         from babel.numbers import format_currency, format_decimal, format_percent
 
         babel_function_registry = importlib.import_module("mojito_mf2.babel").babel_function_registry
@@ -28,9 +28,9 @@ class BabelIntegrationTest(unittest.TestCase):
             "number={$amount :number maximumFractionDigits=2}; "
             "percent={$rate :percent maximumFractionDigits=1}; "
             "currency={$price :currency currency=EUR}; "
-            "date={$instant :date length=full}; "
-            "time={$instant :time precision=medium}; "
-            "datetime={$instant :datetime style=medium}; "
+            "date={$instant :date dateStyle=full timeZone=UTC}; "
+            "time={$instant :time timeStyle=medium timeZone=UTC}; "
+            "datetime={$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}; "
             "relative={$delta :relativeTime unit=day numeric=always}"
         )
         parsed = parse_to_model(source)
@@ -56,12 +56,21 @@ class BabelIntegrationTest(unittest.TestCase):
                 f"percent={format_percent(0.1234, format='#,##0.#%', locale=locale)}; "
                 f"currency={format_currency(9876, 'EUR', locale=locale)}; "
                 f"date={format_date(instant.date(), format='full', locale=locale)}; "
-                f"time={format_time(instant.time(), format='medium', locale=locale)}; "
-                f"datetime={format_datetime(instant, format='medium', locale=locale)}; "
+                f"time={format_time(instant.time(), format='medium', locale=locale, tzinfo=get_timezone('UTC'))}; "
+                f"datetime={format_datetime(instant, format='medium', locale=locale, tzinfo=get_timezone('UTC'))}; "
                 f"relative={format_timedelta(timedelta(days=-3), granularity='day', add_direction=True, format='long', locale=locale)}"
             )
             self.assertEqual(expected, actual.value)
             self.assertEqual([], actual.errors)
+
+        mixed_styles = parse_to_model("{$instant :datetime dateStyle=full timeStyle=short}")
+        mixed_result = format_message(
+            mixed_styles.model,
+            {"instant": instant},
+            locale="en",
+            functions=functions,
+        )
+        self.assertEqual(["bad-option"], [error.code for error in mixed_result.errors])
 
     @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
     def test_babel_registry_keeps_currency_out_of_portable_registry(self) -> None:

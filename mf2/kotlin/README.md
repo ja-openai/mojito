@@ -39,7 +39,9 @@ JDK-backed formatting for `:number`, `:integer`, `:percent`, `:currency`,
 selectors, and CLDR plural matching. `Mf2FunctionRegistry.portable()` remains
 dependency-free and unlocalized for size-sensitive or platform-owned hosts.
 Unsupported functions recover with visible MF2 fallback output and collected
-diagnostics. The JDK does not expose an ICU-style localized relative-time
+diagnostics. Date/time formatting accepts `dateStyle`, `timeStyle`, and
+`timeZone`, with legacy `length`, `precision`, `dateLength`, `timePrecision`,
+and shared `style` aliases retained. The JDK does not expose an ICU-style localized relative-time
 formatter, so `:relativeTime` is intentionally not part of the Kotlin default
 registry. Use the separate `messageformat2-kotlin-icu4j` adapter when an
 application wants ICU4J-backed `:relativeTime` plus richer ICU locale

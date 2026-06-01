@@ -21,9 +21,9 @@ object KotlinJdkRegistryDemo {
         "number={${'$'}amount :number minimumFractionDigits=2}",
         "percent={${'$'}rate :percent minimumFractionDigits=1 maximumFractionDigits=1}",
         "currency={${'$'}price :currency currency=EUR}",
-        "date={${'$'}due :date length=full}",
-        "time={${'$'}start :time precision=medium}",
-        "datetime={${'$'}created :datetime style=medium}",
+        "date={${'$'}due :date dateStyle=full timeZone=UTC}",
+        "time={${'$'}start :time timeStyle=medium timeZone=UTC}",
+        "datetime={${'$'}created :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
     ).joinToString("; ")
 
     @JvmStatic

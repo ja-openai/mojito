@@ -1,11 +1,13 @@
 package com.box.l10n.mojito.mf2;
 
 import java.text.NumberFormat;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -88,34 +90,36 @@ final class Mf2JdkFunctions {
     }
 
     private static String formatDate(Mf2FunctionRegistry.FunctionCall call) throws Mf2Exception {
-        LocalDate date = dateFrom(call.rawValue(), call.value())
-                .or(() -> parseSourceLocalDate(call.inheritedSource()))
+        ZoneId zone = timeZone(call);
+        LocalDate date = dateFrom(call.rawValue(), call.value(), zone)
+                .or(() -> parseSourceLocalDate(call.inheritedSource(), zone))
                 .orElseThrow(() -> Mf2Exception.badOperand("Date function requires a date or datetime operand."));
-        return DateTimeFormatter.ofLocalizedDate(dateStyle(call.optionValue("length", call.optionValue("style", "short"))))
+        return DateTimeFormatter.ofLocalizedDate(dateStyle(dateStyleOption(call)))
                 .withLocale(locale(call.locale()))
                 .format(date);
     }
 
     private static String formatTime(Mf2FunctionRegistry.FunctionCall call) throws Mf2Exception {
-        LocalTime time = timeFrom(call.rawValue(), call.value())
-                .or(() -> parseSourceLocalTime(call.inheritedSource()))
+        ZoneId zone = timeZone(call);
+        LocalTime time = timeFrom(call.rawValue(), call.value(), zone)
+                .or(() -> parseSourceLocalTime(call.inheritedSource(), zone))
                 .orElseThrow(() -> Mf2Exception.badOperand("Datetime and time functions require a datetime operand."));
-        return DateTimeFormatter.ofLocalizedTime(timeStyle(call.optionValue("precision", call.optionValue("style", "short"))))
+        return DateTimeFormatter.ofLocalizedTime(timeStyle(timeStyleOption(call)))
                 .withLocale(locale(call.locale()))
                 .format(time);
     }
 
     private static String formatDateTime(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        ZonedDateTime dateTime = zonedDateTimeFrom(call.rawValue(), call.value())
-                .or(() -> parseSourceZonedDateTime(call.inheritedSource()))
+        ZoneId zone = timeZone(call);
+        ZonedDateTime dateTime = zonedDateTimeFrom(call.rawValue(), call.value(), zone)
+                .or(() -> parseSourceZonedDateTime(call.inheritedSource(), zone))
                 .orElseThrow(() -> Mf2Exception.badOperand("Datetime function requires a date or datetime operand."));
-        FormatStyle style = call.optionValue("style", null) == null ? null : dateStyle(call.optionValue("style", "short"));
-        FormatStyle dateStyle = style != null ? style : dateStyle(call.optionValue("dateLength", "short"));
-        FormatStyle timeStyle = style != null ? style : timeStyle(call.optionValue("timePrecision", "short"));
+        FormatStyle dateStyle = dateStyle(dateTimeDateStyleOption(call));
+        FormatStyle timeStyle = timeStyle(dateTimeTimeStyleOption(call));
         return DateTimeFormatter.ofLocalizedDateTime(dateStyle, timeStyle)
                 .withLocale(locale(call.locale()))
-                .format(dateTime);
+                .format(dateTime.withZoneSameInstant(zone));
     }
 
     private static String currencyCode(Mf2FunctionRegistry.FunctionCall call)
@@ -186,24 +190,62 @@ final class Mf2JdkFunctions {
         return Locale.forLanguageTag(locale.replace('_', '-'));
     }
 
+    private static String dateStyleOption(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        return call.optionValue(
+                "dateStyle",
+                call.optionValue("length", call.optionValue("style", "short")));
+    }
+
+    private static String timeStyleOption(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        return call.optionValue(
+                "timeStyle",
+                call.optionValue("precision", call.optionValue("style", "short")));
+    }
+
+    private static String dateTimeDateStyleOption(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        return call.optionValue(
+                "dateStyle",
+                call.optionValue("dateLength", call.optionValue("style", "short")));
+    }
+
+    private static String dateTimeTimeStyleOption(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        return call.optionValue(
+                "timeStyle",
+                call.optionValue("timePrecision", call.optionValue("style", "short")));
+    }
+
+    private static ZoneId timeZone(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        String value = call.optionValue("timeZone", "UTC");
+        try {
+            return ZoneId.of(value);
+        } catch (DateTimeException error) {
+            throw Mf2FunctionSupport.badOption("timeZone option must be a valid time zone identifier.");
+        }
+    }
+
     private static FormatStyle dateStyle(String value) throws Mf2Exception {
         return switch (value) {
             case "full" -> FormatStyle.FULL;
             case "long" -> FormatStyle.LONG;
             case "medium" -> FormatStyle.MEDIUM;
             case "short" -> FormatStyle.SHORT;
-            default -> throw Mf2FunctionSupport.badOption("Date length option must be full, long, medium, or short.");
+            default -> throw Mf2FunctionSupport.badOption("Date style option must be full, long, medium, or short.");
         };
     }
 
     private static FormatStyle timeStyle(String value) throws Mf2Exception {
         return switch (value) {
             case "full", "long", "medium", "short", "second" -> FormatStyle.MEDIUM;
-            default -> throw Mf2FunctionSupport.badOption("Time precision option must be full, long, medium, short, or second.");
+            default -> throw Mf2FunctionSupport.badOption("Time style option must be full, long, medium, short, or second.");
         };
     }
 
-    private static Optional<LocalDate> dateFrom(Object rawValue, String renderedValue) {
+    private static Optional<LocalDate> dateFrom(Object rawValue, String renderedValue, ZoneId zone) {
         if (rawValue instanceof LocalDate value) {
             return Optional.of(value);
         }
@@ -211,23 +253,23 @@ final class Mf2JdkFunctions {
             return Optional.of(value.toLocalDate());
         }
         if (rawValue instanceof OffsetDateTime value) {
-            return Optional.of(value.toLocalDate());
+            return Optional.of(value.atZoneSameInstant(zone).toLocalDate());
         }
         if (rawValue instanceof ZonedDateTime value) {
-            return Optional.of(value.toLocalDate());
+            return Optional.of(value.withZoneSameInstant(zone).toLocalDate());
         }
         if (rawValue instanceof Instant value) {
-            return Optional.of(value.atZone(ZoneOffset.UTC).toLocalDate());
+            return Optional.of(value.atZone(zone).toLocalDate());
         }
         if (rawValue instanceof java.util.Date value) {
-            return Optional.of(value.toInstant().atZone(ZoneOffset.UTC).toLocalDate());
+            return Optional.of(value.toInstant().atZone(zone).toLocalDate());
         }
         return parseLocalDate(renderedValue)
                 .or(() -> parseLocalDateTime(renderedValue).map(LocalDateTime::toLocalDate))
-                .or(() -> parseZonedDateTime(renderedValue).map(ZonedDateTime::toLocalDate));
+                .or(() -> parseZonedDateTime(renderedValue).map(value -> value.withZoneSameInstant(zone).toLocalDate()));
     }
 
-    private static Optional<LocalTime> timeFrom(Object rawValue, String renderedValue) {
+    private static Optional<LocalTime> timeFrom(Object rawValue, String renderedValue, ZoneId zone) {
         if (rawValue instanceof LocalTime value) {
             return Optional.of(value);
         }
@@ -235,71 +277,72 @@ final class Mf2JdkFunctions {
             return Optional.of(value.toLocalTime());
         }
         if (rawValue instanceof OffsetDateTime value) {
-            return Optional.of(value.toLocalTime());
+            return Optional.of(value.atZoneSameInstant(zone).toLocalTime());
         }
         if (rawValue instanceof ZonedDateTime value) {
-            return Optional.of(value.toLocalTime());
+            return Optional.of(value.withZoneSameInstant(zone).toLocalTime());
         }
         if (rawValue instanceof Instant value) {
-            return Optional.of(value.atZone(ZoneOffset.UTC).toLocalTime());
+            return Optional.of(value.atZone(zone).toLocalTime());
         }
         if (rawValue instanceof java.util.Date value) {
-            return Optional.of(value.toInstant().atZone(ZoneOffset.UTC).toLocalTime());
+            return Optional.of(value.toInstant().atZone(zone).toLocalTime());
         }
         return parseLocalTime(renderedValue)
                 .or(() -> parseLocalDateTime(renderedValue).map(LocalDateTime::toLocalTime))
-                .or(() -> parseZonedDateTime(renderedValue).map(ZonedDateTime::toLocalTime));
+                .or(() -> parseZonedDateTime(renderedValue).map(value -> value.withZoneSameInstant(zone).toLocalTime()));
     }
 
-    private static Optional<ZonedDateTime> zonedDateTimeFrom(Object rawValue, String renderedValue) {
+    private static Optional<ZonedDateTime> zonedDateTimeFrom(Object rawValue, String renderedValue, ZoneId zone) {
         if (rawValue instanceof ZonedDateTime value) {
-            return Optional.of(value);
+            return Optional.of(value.withZoneSameInstant(zone));
         }
         if (rawValue instanceof OffsetDateTime value) {
-            return Optional.of(value.toZonedDateTime());
+            return Optional.of(value.atZoneSameInstant(zone));
         }
         if (rawValue instanceof Instant value) {
-            return Optional.of(value.atZone(ZoneOffset.UTC));
+            return Optional.of(value.atZone(zone));
         }
         if (rawValue instanceof java.util.Date value) {
-            return Optional.of(value.toInstant().atZone(ZoneOffset.UTC));
+            return Optional.of(value.toInstant().atZone(zone));
         }
         if (rawValue instanceof LocalDateTime value) {
-            return Optional.of(value.atZone(ZoneOffset.UTC));
+            return Optional.of(value.atZone(zone));
         }
         if (rawValue instanceof LocalDate value) {
-            return Optional.of(value.atStartOfDay(ZoneOffset.UTC));
+            return Optional.of(value.atStartOfDay(zone));
         }
         return parseZonedDateTime(renderedValue)
-                .or(() -> parseLocalDateTime(renderedValue).map(value -> value.atZone(ZoneOffset.UTC)))
-                .or(() -> parseLocalDate(renderedValue).map(value -> value.atStartOfDay(ZoneOffset.UTC)));
+                .map(value -> value.withZoneSameInstant(zone))
+                .or(() -> parseLocalDateTime(renderedValue).map(value -> value.atZone(zone)))
+                .or(() -> parseLocalDate(renderedValue).map(value -> value.atStartOfDay(zone)));
     }
 
     private static Optional<LocalDate> parseSourceLocalDate(
-            Mf2FunctionRegistry.FunctionSourceRef source) {
+            Mf2FunctionRegistry.FunctionSourceRef source, ZoneId zone) {
         if (source == null) {
             return Optional.empty();
         }
-        Optional<LocalDate> date = dateFrom(source.value(), source.value());
-        return date.isPresent() ? date : parseSourceLocalDate(source.inheritedSource());
+        Optional<LocalDate> date = dateFrom(source.value(), source.value(), zone);
+        return date.isPresent() ? date : parseSourceLocalDate(source.inheritedSource(), zone);
     }
 
     private static Optional<LocalTime> parseSourceLocalTime(
-            Mf2FunctionRegistry.FunctionSourceRef source) {
+            Mf2FunctionRegistry.FunctionSourceRef source, ZoneId zone) {
         if (source == null) {
             return Optional.empty();
         }
-        Optional<LocalTime> time = timeFrom(source.value(), source.value());
-        return time.isPresent() ? time : parseSourceLocalTime(source.inheritedSource());
+        Optional<LocalTime> time = timeFrom(source.value(), source.value(), zone);
+        return time.isPresent() ? time : parseSourceLocalTime(source.inheritedSource(), zone);
     }
 
     private static Optional<ZonedDateTime> parseSourceZonedDateTime(
-            Mf2FunctionRegistry.FunctionSourceRef source) {
+            Mf2FunctionRegistry.FunctionSourceRef source, ZoneId zone) {
         if (source == null) {
             return Optional.empty();
         }
-        Optional<ZonedDateTime> dateTime = zonedDateTimeFrom(source.value(), source.value());
-        return dateTime.isPresent() ? dateTime : parseSourceZonedDateTime(source.inheritedSource());
+        Optional<ZonedDateTime> dateTime = zonedDateTimeFrom(source.value(), source.value(), zone);
+        return dateTime.isPresent() ? dateTime : parseSourceZonedDateTime(source.inheritedSource(), zone);
     }
 
     private static Optional<LocalDate> parseLocalDate(String value) {

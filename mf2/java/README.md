@@ -79,7 +79,9 @@ display.
 `Mf2FunctionRegistry.defaults()` is the public default entry point for the Java
 JDK registry. It starts from portable behavior and overrides number,
 percent, integer, currency, and date/time formatters with Java JDK-backed
-formatting. The JDK does not expose an ICU-style localized relative-time
+formatting. Date/time formatting accepts `dateStyle`, `timeStyle`, and
+`timeZone`, with legacy `length`, `precision`, `dateLength`, `timePrecision`,
+and shared `style` aliases retained. The JDK does not expose an ICU-style localized relative-time
 formatter, so `:relativeTime` is intentionally not part of the Java default
 registry. Use the separate `messageformat2-java-icu4j` adapter when an
 application wants ICU4J-backed `:relativeTime` plus richer ICU locale

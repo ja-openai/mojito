@@ -67,6 +67,11 @@ assert.equal(
   formatMessageFromFormatter(intlDate.model, { instant: "2026-05-21T14:30:15Z" }, { locale: "ja-JP", functions: intlRegistry }).value,
   `At ${new Intl.DateTimeFormat("ja-JP", { dateStyle: "full", timeStyle: "short", timeZone: "UTC" }).format(new Date("2026-05-21T14:30:15Z"))}`,
 );
+const intlLegacyDate = parseToModelFromParser("At {$instant :datetime dateLength=full timePrecision=short timeZone=UTC}");
+assert.equal(
+  formatMessageFromFormatter(intlLegacyDate.model, { instant: "2026-05-21T14:30:15Z" }, { locale: "fr-FR", functions: intlRegistry }).value,
+  `At ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "full", timeStyle: "short", timeZone: "UTC" }).format(new Date("2026-05-21T14:30:15Z"))}`,
+);
 assert.equal(new MF2Error("test", "test").code, "test");
 assert.equal("partsToString" in core, false);
 assert.equal("formatMessageStrict" in core, false);

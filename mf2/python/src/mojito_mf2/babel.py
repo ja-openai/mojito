@@ -5,7 +5,13 @@ from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from typing import Any
 
 try:
-    from babel.dates import format_date, format_datetime, format_time, format_timedelta
+    from babel.dates import (
+        format_date,
+        format_datetime,
+        format_time,
+        format_timedelta,
+        get_timezone,
+    )
     from babel.numbers import format_currency, format_decimal, format_percent
 except ModuleNotFoundError as error:  # pragma: no cover - exercised when Babel is absent.
     raise ImportError(
@@ -85,7 +91,7 @@ def _format_date(call: FunctionCall) -> str:
     value = _date_from(call.raw_value, call.value)
     return format_date(
         value,
-        format=_style(call, "length", call.option_value("style", "medium") or "medium"),
+        format=_date_style(call),
         locale=call.locale,
     )
 
@@ -94,8 +100,9 @@ def _format_time(call: FunctionCall) -> str:
     value = _time_from(call.raw_value, call.value)
     return format_time(
         value,
-        format=_style(call, "precision", call.option_value("style", "medium") or "medium"),
+        format=_time_style(call),
         locale=call.locale,
+        tzinfo=_time_zone(call),
     )
 
 
@@ -103,8 +110,9 @@ def _format_datetime(call: FunctionCall) -> str:
     value = _datetime_from(call.raw_value, call.value)
     return format_datetime(
         value,
-        format=_style(call, "style", "medium"),
+        format=_datetime_style(call),
         locale=call.locale,
+        tzinfo=_time_zone(call),
     )
 
 
@@ -218,8 +226,50 @@ def _parse_datetime_or_none(rendered: str) -> datetime | None:
         return None
 
 
-def _style(call: FunctionCall, option_name: str, default: str) -> str:
-    return _option_one_of(call, option_name, {"full", "long", "medium", "short"}, default)
+def _date_style(call: FunctionCall) -> str:
+    return _style(call, ("dateStyle", "length", "style"), "medium", "Date style")
+
+
+def _time_style(call: FunctionCall) -> str:
+    return _style(call, ("timeStyle", "precision", "style"), "medium", "Time style")
+
+
+def _datetime_style(call: FunctionCall) -> str:
+    shared = call.option_value("style")
+    date_style = _first_option(call, ("dateStyle", "dateLength"))
+    time_style = _first_option(call, ("timeStyle", "timePrecision"))
+    if date_style is not None and time_style is not None and date_style != time_style:
+        raise MF2Error(
+            "bad-option",
+            "Babel datetime formatting currently requires dateStyle and timeStyle to match.",
+        )
+    return _validate_style(date_style or time_style or shared or "medium", "Datetime style")
+
+
+def _style(
+    call: FunctionCall,
+    option_names: tuple[str, ...],
+    default: str,
+    label: str,
+) -> str:
+    return _validate_style(_first_option(call, option_names) or default, label)
+
+
+def _first_option(call: FunctionCall, option_names: tuple[str, ...]) -> str | None:
+    for option_name in option_names:
+        value = call.option_value(option_name)
+        if value is not None:
+            return value
+    return None
+
+
+def _validate_style(value: str, label: str) -> str:
+    if value in {"full", "long", "medium", "short"}:
+        return value
+    raise MF2Error(
+        "bad-option",
+        f"{label} option must be one of full, long, medium, short.",
+    )
 
 
 def _option_one_of(
@@ -235,6 +285,17 @@ def _option_one_of(
             f"{option_name} option must be one of {', '.join(sorted(allowed))}.",
         )
     return value
+
+
+def _time_zone(call: FunctionCall) -> Any:
+    value = call.option_value("timeZone", "UTC") or "UTC"
+    try:
+        return get_timezone(value)
+    except Exception as error:
+        raise MF2Error(
+            "bad-option",
+            "timeZone option must be a valid time zone identifier.",
+        ) from error
 
 
 def _timedelta(value: Decimal, unit: str) -> timedelta:

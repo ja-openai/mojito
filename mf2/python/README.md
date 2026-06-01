@@ -84,8 +84,13 @@ The Babel registry provides locale-pretty `:number`, `:percent`, `:integer`,
 `:currency`, `:date`, `:time`, `:datetime`, and `:relativeTime` formatters where
 Babel supports them. Importing `mojito_mf2` does not import or require Babel;
 importing `mojito_mf2.babel` without the optional dependency fails with an
-install hint. Fixture-only handlers for Unicode official tests and demos live
-under `tools`, `tests`, or `examples`, not in the production formatter.
+install hint. Date/time formatting accepts the shared adapter options
+`dateStyle`, `timeStyle`, and `timeZone`; legacy `length`, `precision`,
+`dateLength`, `timePrecision`, and shared `style` aliases are still accepted.
+Babel exposes one combined datetime style, so `:datetime` currently requires
+`dateStyle` and `timeStyle` to match when both are provided. Fixture-only
+handlers for Unicode official tests and demos live under `tools`, `tests`, or
+`examples`, not in the production formatter.
 
 Catalogs can load the official Unicode MF2 model directly or parse source
 messages into the same model. A future package split can keep source parsing out

@@ -61,6 +61,11 @@ const functions = createIntlFunctionRegistry(FunctionRegistry);
 const result = formatMessage(model, { delta: -1 }, { locale: "fr", functions });
 ```
 
+The Intl date/time adapter uses `dateStyle`, `timeStyle`, and `timeZone` as the
+canonical option names. Legacy `length`, `precision`, `dateLength`,
+`timePrecision`, and shared `style` aliases are accepted for parity with the
+other runtimes.
+
 TypeScript uses the same JavaScript package. The public `.d.ts` files
 live beside the ESM modules and are exposed through the package root `types`
 condition. This keeps TypeScript as a typed consumer surface for

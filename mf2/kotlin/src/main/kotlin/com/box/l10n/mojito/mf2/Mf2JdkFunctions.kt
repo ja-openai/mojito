@@ -1,11 +1,13 @@
 package com.box.l10n.mojito.mf2
 
 import java.text.NumberFormat
+import java.time.DateTimeException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -66,33 +68,35 @@ internal object Mf2JdkFunctions {
     }
 
     private fun formatDate(call: Mf2FunctionCall): String {
-        val date = dateFrom(call.rawValue, call.value)
-            ?: parseSourceLocalDate(call.inheritedSource)
+        val zone = timeZone(call)
+        val date = dateFrom(call.rawValue, call.value, zone)
+            ?: parseSourceLocalDate(call.inheritedSource, zone)
             ?: throw Mf2Error.badOperand("Date function requires a date or datetime operand.")
-        return DateTimeFormatter.ofLocalizedDate(dateStyle(call.optionValue("length", call.optionValue("style", "short")) ?: "short"))
+        return DateTimeFormatter.ofLocalizedDate(dateStyle(dateStyleOption(call)))
             .withLocale(locale(call.locale))
             .format(date)
     }
 
     private fun formatTime(call: Mf2FunctionCall): String {
-        val time = timeFrom(call.rawValue, call.value)
-            ?: parseSourceLocalTime(call.inheritedSource)
+        val zone = timeZone(call)
+        val time = timeFrom(call.rawValue, call.value, zone)
+            ?: parseSourceLocalTime(call.inheritedSource, zone)
             ?: throw Mf2Error.badOperand("Datetime and time functions require a datetime operand.")
-        return DateTimeFormatter.ofLocalizedTime(timeStyle(call.optionValue("precision", call.optionValue("style", "short")) ?: "short"))
+        return DateTimeFormatter.ofLocalizedTime(timeStyle(timeStyleOption(call)))
             .withLocale(locale(call.locale))
             .format(time)
     }
 
     private fun formatDateTime(call: Mf2FunctionCall): String {
-        val dateTime = zonedDateTimeFrom(call.rawValue, call.value)
-            ?: parseSourceZonedDateTime(call.inheritedSource)
+        val zone = timeZone(call)
+        val dateTime = zonedDateTimeFrom(call.rawValue, call.value, zone)
+            ?: parseSourceZonedDateTime(call.inheritedSource, zone)
             ?: throw Mf2Error.badOperand("Datetime function requires a date or datetime operand.")
-        val style = call.optionValue("style", null)?.let { dateStyle(it) }
-        val dateStyle = style ?: dateStyle(call.optionValue("dateLength", "short") ?: "short")
-        val timeStyle = style ?: timeStyle(call.optionValue("timePrecision", "short") ?: "short")
+        val dateStyle = dateStyle(dateTimeDateStyleOption(call))
+        val timeStyle = timeStyle(dateTimeTimeStyleOption(call))
         return DateTimeFormatter.ofLocalizedDateTime(dateStyle, timeStyle)
             .withLocale(locale(call.locale))
-            .format(dateTime)
+            .format(dateTime.withZoneSameInstant(zone))
     }
 
     private fun currencyCode(call: Mf2FunctionCall): String? =
@@ -125,73 +129,106 @@ internal object Mf2JdkFunctions {
 
     private fun locale(locale: String): Locale = Locale.forLanguageTag(locale.replace('_', '-'))
 
+    private fun dateStyleOption(call: Mf2FunctionCall): String =
+        call.optionValue(
+            "dateStyle",
+            call.optionValue("length", call.optionValue("style", "short")),
+        ) ?: "short"
+
+    private fun timeStyleOption(call: Mf2FunctionCall): String =
+        call.optionValue(
+            "timeStyle",
+            call.optionValue("precision", call.optionValue("style", "short")),
+        ) ?: "short"
+
+    private fun dateTimeDateStyleOption(call: Mf2FunctionCall): String =
+        call.optionValue(
+            "dateStyle",
+            call.optionValue("dateLength", call.optionValue("style", "short")),
+        ) ?: "short"
+
+    private fun dateTimeTimeStyleOption(call: Mf2FunctionCall): String =
+        call.optionValue(
+            "timeStyle",
+            call.optionValue("timePrecision", call.optionValue("style", "short")),
+        ) ?: "short"
+
+    private fun timeZone(call: Mf2FunctionCall): ZoneId {
+        val value = call.optionValue("timeZone", "UTC") ?: "UTC"
+        return try {
+            ZoneId.of(value)
+        } catch (error: DateTimeException) {
+            throw Mf2Error.badOption("timeZone option must be a valid time zone identifier.")
+        }
+    }
+
     private fun dateStyle(value: String): FormatStyle =
         when (value) {
             "full" -> FormatStyle.FULL
             "long" -> FormatStyle.LONG
             "medium" -> FormatStyle.MEDIUM
             "short" -> FormatStyle.SHORT
-            else -> throw Mf2Error.badOption("Date length option must be full, long, medium, or short.")
+            else -> throw Mf2Error.badOption("Date style option must be full, long, medium, or short.")
         }
 
     private fun timeStyle(value: String): FormatStyle =
         when (value) {
             "full", "long", "medium", "short", "second" -> FormatStyle.MEDIUM
-            else -> throw Mf2Error.badOption("Time precision option must be full, long, medium, short, or second.")
+            else -> throw Mf2Error.badOption("Time style option must be full, long, medium, short, or second.")
         }
 
-    private fun dateFrom(rawValue: Any?, renderedValue: String): LocalDate? =
+    private fun dateFrom(rawValue: Any?, renderedValue: String, zone: ZoneId): LocalDate? =
         when (rawValue) {
             is LocalDate -> rawValue
             is LocalDateTime -> rawValue.toLocalDate()
-            is OffsetDateTime -> rawValue.toLocalDate()
-            is ZonedDateTime -> rawValue.toLocalDate()
-            is Instant -> rawValue.atZone(ZoneOffset.UTC).toLocalDate()
-            is java.util.Date -> rawValue.toInstant().atZone(ZoneOffset.UTC).toLocalDate()
+            is OffsetDateTime -> rawValue.atZoneSameInstant(zone).toLocalDate()
+            is ZonedDateTime -> rawValue.withZoneSameInstant(zone).toLocalDate()
+            is Instant -> rawValue.atZone(zone).toLocalDate()
+            is java.util.Date -> rawValue.toInstant().atZone(zone).toLocalDate()
             else -> parseLocalDate(renderedValue)
                 ?: parseLocalDateTime(renderedValue)?.toLocalDate()
-                ?: parseZonedDateTime(renderedValue)?.toLocalDate()
+                ?: parseZonedDateTime(renderedValue)?.withZoneSameInstant(zone)?.toLocalDate()
         }
 
-    private fun timeFrom(rawValue: Any?, renderedValue: String): LocalTime? =
+    private fun timeFrom(rawValue: Any?, renderedValue: String, zone: ZoneId): LocalTime? =
         when (rawValue) {
             is LocalTime -> rawValue
             is LocalDateTime -> rawValue.toLocalTime()
-            is OffsetDateTime -> rawValue.toLocalTime()
-            is ZonedDateTime -> rawValue.toLocalTime()
-            is Instant -> rawValue.atZone(ZoneOffset.UTC).toLocalTime()
-            is java.util.Date -> rawValue.toInstant().atZone(ZoneOffset.UTC).toLocalTime()
+            is OffsetDateTime -> rawValue.atZoneSameInstant(zone).toLocalTime()
+            is ZonedDateTime -> rawValue.withZoneSameInstant(zone).toLocalTime()
+            is Instant -> rawValue.atZone(zone).toLocalTime()
+            is java.util.Date -> rawValue.toInstant().atZone(zone).toLocalTime()
             else -> parseLocalTime(renderedValue)
                 ?: parseLocalDateTime(renderedValue)?.toLocalTime()
-                ?: parseZonedDateTime(renderedValue)?.toLocalTime()
+                ?: parseZonedDateTime(renderedValue)?.withZoneSameInstant(zone)?.toLocalTime()
         }
 
-    private fun zonedDateTimeFrom(rawValue: Any?, renderedValue: String): ZonedDateTime? =
+    private fun zonedDateTimeFrom(rawValue: Any?, renderedValue: String, zone: ZoneId): ZonedDateTime? =
         when (rawValue) {
-            is ZonedDateTime -> rawValue
-            is OffsetDateTime -> rawValue.toZonedDateTime()
-            is Instant -> rawValue.atZone(ZoneOffset.UTC)
-            is java.util.Date -> rawValue.toInstant().atZone(ZoneOffset.UTC)
-            is LocalDateTime -> rawValue.atZone(ZoneOffset.UTC)
-            is LocalDate -> rawValue.atStartOfDay(ZoneOffset.UTC)
-            else -> parseZonedDateTime(renderedValue)
-                ?: parseLocalDateTime(renderedValue)?.atZone(ZoneOffset.UTC)
-                ?: parseLocalDate(renderedValue)?.atStartOfDay(ZoneOffset.UTC)
+            is ZonedDateTime -> rawValue.withZoneSameInstant(zone)
+            is OffsetDateTime -> rawValue.atZoneSameInstant(zone)
+            is Instant -> rawValue.atZone(zone)
+            is java.util.Date -> rawValue.toInstant().atZone(zone)
+            is LocalDateTime -> rawValue.atZone(zone)
+            is LocalDate -> rawValue.atStartOfDay(zone)
+            else -> parseZonedDateTime(renderedValue)?.withZoneSameInstant(zone)
+                ?: parseLocalDateTime(renderedValue)?.atZone(zone)
+                ?: parseLocalDate(renderedValue)?.atStartOfDay(zone)
         }
 
-    private fun parseSourceLocalDate(source: Mf2FunctionSource?): LocalDate? {
+    private fun parseSourceLocalDate(source: Mf2FunctionSource?, zone: ZoneId): LocalDate? {
         if (source == null) return null
-        return dateFrom(source.value, source.value) ?: parseSourceLocalDate(source.inherited)
+        return dateFrom(source.value, source.value, zone) ?: parseSourceLocalDate(source.inherited, zone)
     }
 
-    private fun parseSourceLocalTime(source: Mf2FunctionSource?): LocalTime? {
+    private fun parseSourceLocalTime(source: Mf2FunctionSource?, zone: ZoneId): LocalTime? {
         if (source == null) return null
-        return timeFrom(source.value, source.value) ?: parseSourceLocalTime(source.inherited)
+        return timeFrom(source.value, source.value, zone) ?: parseSourceLocalTime(source.inherited, zone)
     }
 
-    private fun parseSourceZonedDateTime(source: Mf2FunctionSource?): ZonedDateTime? {
+    private fun parseSourceZonedDateTime(source: Mf2FunctionSource?, zone: ZoneId): ZonedDateTime? {
         if (source == null) return null
-        return zonedDateTimeFrom(source.value, source.value) ?: parseSourceZonedDateTime(source.inherited)
+        return zonedDateTimeFrom(source.value, source.value, zone) ?: parseSourceZonedDateTime(source.inherited, zone)
     }
 
     private fun parseLocalDate(value: String): LocalDate? =

@@ -11,9 +11,9 @@ CATALOG = {
         "currency {$price :currency currency=EUR}"
     ),
     "instant": (
-        "Date {$instant :date length=full}; "
-        "time {$instant :time precision=medium}; "
-        "datetime {$instant :datetime style=medium}"
+        "Date {$instant :date dateStyle=full timeZone=UTC}; "
+        "time {$instant :time timeStyle=medium timeZone=UTC}; "
+        "datetime {$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}"
     ),
     "relative": "Due {$delta :relativeTime unit=day numeric=always}",
 }
