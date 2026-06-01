@@ -158,6 +158,19 @@ Current platform adapter status:
   for localized numeric printing, but it does not provide the clean date, time,
   currency, and relative-time surface needed for an honest MF2 platform registry.
 
+Platform date/time adapters use `dateStyle`, `timeStyle`, and `timeZone` as the
+canonical public options. Existing aliases remain accepted for compatibility:
+`length` for `dateStyle`, `precision` for `timeStyle`, `dateLength` and
+`timePrecision` for `:datetime`, and shared `style` when both date and time use
+the same style. Rust ICU4X is currently UTC-only and rejects other `timeZone`
+values; Python Babel accepts split style names but requires `dateStyle` and
+`timeStyle` to match for `:datetime` because Babel exposes one combined datetime
+style.
+
+See `platform-adapter-parity.md` for the current cross-language behavior audit
+and follow-up gaps between JDK, ICU4J, Intl, Babel, Foundation, ICU4X, and PHP
+Intl adapters.
+
 Java/Kotlin relative time should not be added to the core jar by copying the
 sample catalog function into `defaults`. The generated all-locale CLDR
 relative-time artifact is about 2.9 MB raw, or about 123 KB gzip-compressed,
