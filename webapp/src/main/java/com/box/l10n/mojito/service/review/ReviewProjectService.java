@@ -1055,7 +1055,7 @@ public class ReviewProjectService {
                 root.get(ReviewProject_.textUnitCount),
                 root.get(ReviewProject_.wordCount),
                 root.get(ReviewProject_.decidedCount),
-                cb.literal(0L),
+                root.get(ReviewProject_.decidedWordCount),
                 root.get(ReviewProject_.type),
                 root.get(ReviewProject_.terminologyPhase),
                 root.get(ReviewProject_.status),
@@ -1176,7 +1176,7 @@ public class ReviewProjectService {
                 root.get(ReviewProject_.textUnitCount),
                 root.get(ReviewProject_.wordCount),
                 root.get(ReviewProject_.decidedCount),
-                cb.literal(0L),
+                root.get(ReviewProject_.decidedWordCount),
                 root.get(ReviewProject_.type),
                 root.get(ReviewProject_.terminologyPhase),
                 root.get(ReviewProject_.status),
@@ -1204,10 +1204,6 @@ public class ReviewProjectService {
       return List.of();
     }
 
-    Map<Long, Long> decidedWordCountsByProjectId =
-        getDecidedWordCountsByProjectId(
-            projectDetails.stream().map(SearchReviewProjectDetail::id).toList());
-
     return projectDetails.stream()
         .map(
             detail -> {
@@ -1220,7 +1216,7 @@ public class ReviewProjectService {
                   detail.textUnitCount(),
                   detail.wordCount(),
                   Optional.ofNullable(detail.decidedCount()).orElse(0L),
-                  Optional.ofNullable(decidedWordCountsByProjectId.get(detail.id())).orElse(0L),
+                  Optional.ofNullable(detail.decidedWordCount()).orElse(0L),
                   detail.type(),
                   detail.terminologyPhase(),
                   detail.status(),
@@ -1237,64 +1233,6 @@ public class ReviewProjectService {
                       detail.assignedTranslatorUsername()));
             })
         .toList();
-  }
-
-  private Map<Long, Long> getDecidedWordCountsByProjectId(List<Long> projectIds) {
-    if (projectIds == null || projectIds.isEmpty()) {
-      return Map.of();
-    }
-
-    List<Object[]> rows =
-        entityManager
-            .createQuery(
-                """
-                select project.id, coalesce(sum(coalesce(tmTextUnit.wordCount, 0)), 0)
-                from ReviewProjectTextUnit reviewTextUnit
-                join reviewTextUnit.reviewProject project
-                join reviewTextUnit.tmTextUnit tmTextUnit
-                where project.id in :projectIds
-                  and (
-                    (
-                      project.type in :terminologyTypes
-                      and project.terminologyPhase = :specialistInputPhase
-                      and exists (
-                        select 1
-                        from ReviewProjectTextUnitFeedback feedback
-                        where feedback.reviewProjectTextUnit = reviewTextUnit
-                      )
-                    )
-                    or (
-                      (
-                        project.type not in :terminologyTypes
-                        or project.terminologyPhase is null
-                        or project.terminologyPhase <> :specialistInputPhase
-                      )
-                      and exists (
-                        select 1
-                        from ReviewProjectTextUnitDecision decision
-                        where decision.reviewProjectTextUnit = reviewTextUnit
-                          and decision.decisionState = :decidedState
-                      )
-                    )
-                  )
-                group by project.id
-                """,
-                Object[].class)
-            .setParameter("projectIds", projectIds)
-            .setParameter(
-                "terminologyTypes",
-                List.of(ReviewProjectType.TERMINOLOGY, ReviewProjectType.TERM_CANDIDATE))
-            .setParameter("specialistInputPhase", ReviewProjectTerminologyPhase.SPECIALIST_INPUT)
-            .setParameter("decidedState", DecisionState.DECIDED)
-            .getResultList();
-
-    Map<Long, Long> result = new HashMap<>();
-    for (Object[] row : rows) {
-      if (row[0] instanceof Long projectId && row[1] instanceof Number decidedWordCount) {
-        result.put(projectId, decidedWordCount.longValue());
-      }
-    }
-    return result;
   }
 
   private List<Predicate> buildProjectSearchPredicates(
@@ -2248,7 +2186,11 @@ public class ReviewProjectService {
 
     decision.setDecisionState(decisionState);
     reviewProjectTextUnitDecisionRepository.saveAndFlush(decision);
-    updateProjectDecidedCount(project.getId(), wasDecided, decisionState == DecisionState.DECIDED);
+    updateProjectDecidedCount(
+        project.getId(),
+        getWordCount(textUnit),
+        wasDecided,
+        decisionState == DecisionState.DECIDED);
     return fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId);
   }
 
@@ -2310,7 +2252,7 @@ public class ReviewProjectService {
     feedback.setNotes(truncate(normalizeOptional(notes), 4000));
     reviewProjectTextUnitFeedbackRepository.saveAndFlush(feedback);
     if (project.getTerminologyPhase() == ReviewProjectTerminologyPhase.SPECIALIST_INPUT) {
-      updateProjectDecidedCount(project.getId(), wasDecided, true);
+      updateProjectDecidedCount(project.getId(), getWordCount(textUnit), wasDecided, true);
     }
 
     return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
@@ -2412,7 +2354,7 @@ public class ReviewProjectService {
     decision.setReviewedVariant(null);
     decision.setNotes(truncate(normalizeOptional(notes), 4000));
     reviewProjectTextUnitDecisionRepository.saveAndFlush(decision);
-    updateProjectDecidedCount(project.getId(), wasDecided, true);
+    updateProjectDecidedCount(project.getId(), getWordCount(textUnit), wasDecided, true);
 
     return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
   }
@@ -2694,15 +2636,25 @@ public class ReviewProjectService {
     return TermIndexReview.STATUS_ACCEPTED;
   }
 
-  private void updateProjectDecidedCount(Long projectId, boolean wasDecided, boolean isDecided) {
+  private void updateProjectDecidedCount(
+      Long projectId, long wordCount, boolean wasDecided, boolean isDecided) {
     if (wasDecided == isDecided) {
       return;
     }
     if (isDecided) {
       reviewProjectRepository.incrementDecidedCount(projectId);
+      reviewProjectRepository.incrementDecidedWordCount(projectId, wordCount);
     } else {
       reviewProjectRepository.decrementDecidedCount(projectId);
+      reviewProjectRepository.decrementDecidedWordCount(projectId, wordCount);
     }
+  }
+
+  private long getWordCount(ReviewProjectTextUnit textUnit) {
+    if (textUnit == null || textUnit.getTmTextUnit() == null) {
+      return 0L;
+    }
+    return Optional.ofNullable(textUnit.getTmTextUnit().getWordCount()).orElse(0);
   }
 
   private Map<Long, List<ReviewProjectTextUnitFeedback>>

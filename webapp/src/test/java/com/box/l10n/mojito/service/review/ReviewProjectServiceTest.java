@@ -817,6 +817,7 @@ public class ReviewProjectServiceTest {
     reviewProject.setType(ReviewProjectType.TERMINOLOGY);
     TMTextUnit tmTextUnit = new TMTextUnit();
     tmTextUnit.setId(321L);
+    tmTextUnit.setWordCount(7);
     ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
     reviewProjectTextUnit.setId(55L);
     reviewProjectTextUnit.setReviewProject(reviewProject);
@@ -849,6 +850,7 @@ public class ReviewProjectServiceTest {
     assertEquals(ReviewProjectTextUnitDecision.DecisionState.DECIDED, decision.getDecisionState());
     assertEquals("final", decision.getNotes());
     verify(reviewProjectRepository).incrementDecidedCount(12L);
+    verify(reviewProjectRepository).incrementDecidedWordCount(12L, 7L);
   }
 
   @Test

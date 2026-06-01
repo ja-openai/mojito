@@ -53,6 +53,9 @@ public class ReviewProject extends AuditableEntity {
   @Column(name = "decided_count", nullable = false)
   private Long decidedCount = 0L;
 
+  @Column(name = "decided_word_count", nullable = false)
+  private Long decidedWordCount = 0L;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(
       name = "review_project_request_id",
@@ -149,6 +152,14 @@ public class ReviewProject extends AuditableEntity {
 
   public void setDecidedCount(Long decidedCount) {
     this.decidedCount = decidedCount;
+  }
+
+  public Long getDecidedWordCount() {
+    return decidedWordCount;
+  }
+
+  public void setDecidedWordCount(Long decidedWordCount) {
+    this.decidedWordCount = decidedWordCount;
   }
 
   public User getCreatedByUser() {
