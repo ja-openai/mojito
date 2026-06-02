@@ -93,15 +93,18 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
                 on rptud.review_project_text_unit_id = rptu.id
               left join review_project_text_unit_feedback rptuf
                 on rptuf.review_project_text_unit_id = rptu.id
-              where (
-                rp_inner.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
-                and rp_inner.terminology_phase = 'SPECIALIST_INPUT'
-                and rptuf.id is not null
-              ) or (
-                not (rp_inner.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
-                  and coalesce(rp_inner.terminology_phase, '') = 'SPECIALIST_INPUT')
-                and rptud.decision_state = 'DECIDED'
-              )
+              where rp_inner.review_project_request_id = :requestId
+                and (
+                  (
+                    rp_inner.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
+                    and rp_inner.terminology_phase = 'SPECIALIST_INPUT'
+                    and rptuf.id is not null
+                  ) or (
+                    not (rp_inner.type in ('TERMINOLOGY', 'TERM_CANDIDATE')
+                      and coalesce(rp_inner.terminology_phase, '') = 'SPECIALIST_INPUT')
+                    and rptud.decision_state = 'DECIDED'
+                  )
+                )
             ) decided_units
             join tm_text_unit tu
               on tu.id = decided_units.tm_text_unit_id
