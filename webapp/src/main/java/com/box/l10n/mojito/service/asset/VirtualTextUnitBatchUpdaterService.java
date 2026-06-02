@@ -25,8 +25,6 @@ import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,8 +60,6 @@ public class VirtualTextUnitBatchUpdaterService {
   @Autowired PluralFormService pluralFormService;
 
   @Autowired RepositoryStatisticsJobScheduler repositoryStatisticsJobScheduler;
-
-  @Autowired EntityManager entityManager;
 
   @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
 
@@ -265,24 +261,7 @@ public class VirtualTextUnitBatchUpdaterService {
 
     for (List<Long> batchId : batchIds) {
       logger.debug("Deleting asset text unit to tm text unit map: {}", batchId.size());
-      StringBuilder builder =
-          new StringBuilder("delete from asset_text_unit_to_tm_text_unit where ");
-
-      for (int i = 0; i < batchId.size(); i++) {
-        builder.append("asset_text_unit_id = :p").append(i);
-
-        if (i != batchId.size() - 1) {
-          builder.append(" or ");
-        }
-      }
-
-      Query query = entityManager.createNativeQuery(builder.toString());
-
-      for (int i = 0; i < batchId.size(); i++) {
-        query.setParameter("p" + i, batchId.get(i));
-      }
-
-      int executeUpdate = query.executeUpdate();
+      int executeUpdate = assetTextUnitToTMTextUnitRepository.deleteByAssetTextUnitIdIn(batchId);
       logger.debug("Deleted: {} asset_text_unit_to_tm_text_unit", executeUpdate);
     }
   }
