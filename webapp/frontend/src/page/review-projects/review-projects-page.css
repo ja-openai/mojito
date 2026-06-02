@@ -1006,6 +1006,11 @@
   font-size: var(--font-size-md);
 }
 
+.review-projects-page__due-date--overdue {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
 .review-projects-page__list-assignment-inline {
   flex-wrap: wrap;
   row-gap: 0;

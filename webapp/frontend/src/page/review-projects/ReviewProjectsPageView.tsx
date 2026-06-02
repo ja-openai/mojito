@@ -736,6 +736,14 @@ const buildDueDateTitle = (value: string | null, includeEarliestDueHint = false)
   return `${baseTitle}\n${tooltip}`;
 };
 
+const isPastDueDate = (value: string | null) => {
+  if (!value) {
+    return false;
+  }
+  const dueMs = Date.parse(value);
+  return Number.isFinite(dueMs) && dueMs < Date.now();
+};
+
 const toFiniteNonNegative = (value: unknown) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
@@ -1403,7 +1411,10 @@ function ReviewProjectRowView({
               {REVIEW_PROJECT_STATUS_LABELS[project.status]}
             </Pill>
           ) : project.dueDate ? (
-            <span title={buildDueDateTitle(project.dueDate)}>
+            <span
+              className={isPastDue ? 'review-projects-page__due-date--overdue' : undefined}
+              title={buildDueDateTitle(project.dueDate)}
+            >
               Due {formatDateTime(project.dueDate)}
             </span>
           ) : null}
@@ -1973,6 +1984,9 @@ function RequestGroupsSection({
             const terminologyProgress = isTerminologyGroup
               ? getTerminologyGroupProgressMetrics(group.projects)
               : null;
+            const isGroupPastDue =
+              visibleProjects.some((project) => project.status !== 'CLOSED') &&
+              isPastDueDate(group.dueDate);
             const averageWordCount = getAverageCount(
               group.projects.map((project) => project.wordCount),
             );
@@ -2085,7 +2099,12 @@ function RequestGroupsSection({
                   </div>
                   <div className="review-projects-page__meta">
                     {group.dueDate ? (
-                      <span title={buildDueDateTitle(group.dueDate, true)}>
+                      <span
+                        className={
+                          isGroupPastDue ? 'review-projects-page__due-date--overdue' : undefined
+                        }
+                        title={buildDueDateTitle(group.dueDate, true)}
+                      >
                         Earliest due* {formatDateTime(group.dueDate)}
                       </span>
                     ) : null}

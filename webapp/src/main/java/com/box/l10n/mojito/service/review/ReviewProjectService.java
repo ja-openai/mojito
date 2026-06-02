@@ -1081,12 +1081,51 @@ public class ReviewProjectService {
                 assignedTranslatorJoin.get(User_.id),
                 assignedTranslatorJoin.get(User_.username)))
         .distinct(true)
-        .orderBy(cb.desc(root.get(ReviewProject_.id)));
+        .orderBy(reviewProjectSearchOrder(cb, root, request, accessContext));
 
     TypedQuery<SearchReviewProjectDetail> query = entityManager.createQuery(cq);
     query.setMaxResults(request.limit());
 
     return query.getResultList();
+  }
+
+  private List<jakarta.persistence.criteria.Order> reviewProjectSearchOrder(
+      CriteriaBuilder cb,
+      Root<ReviewProject> root,
+      SearchReviewProjectsCriteria request,
+      ProjectAccessContext accessContext) {
+    if (!shouldUseTranslatorPriorityOrder(request, accessContext)) {
+      return List.of(cb.desc(root.get(ReviewProject_.id)));
+    }
+    return List.of(
+        // PM request I18N-98 asks for type priority first, then due date. If overdue work needs to
+        // outrank future emergency work later, add reviewProjectOverduePriority before type.
+        cb.asc(reviewProjectTypePriority(cb, root)),
+        cb.asc(cb.selectCase().when(cb.isNull(root.get(ReviewProject_.dueDate)), 1).otherwise(0)),
+        cb.asc(root.get(ReviewProject_.dueDate)),
+        cb.desc(root.get(ReviewProject_.id)));
+  }
+
+  private boolean shouldUseTranslatorPriorityOrder(
+      SearchReviewProjectsCriteria request, ProjectAccessContext accessContext) {
+    SearchReviewProjectsCriteria.AssignedScope assignedScope =
+        request.assignedScope() != null
+            ? request.assignedScope()
+            : SearchReviewProjectsCriteria.AssignedScope.TO_ME;
+    return accessContext.translator()
+        && !accessContext.admin()
+        && assignedScope == SearchReviewProjectsCriteria.AssignedScope.TO_ME;
+  }
+
+  private jakarta.persistence.criteria.Expression<Integer> reviewProjectTypePriority(
+      CriteriaBuilder cb, Root<ReviewProject> root) {
+    return cb.<ReviewProjectType, Integer>selectCase(root.get(ReviewProject_.type))
+        .when(ReviewProjectType.EMERGENCY, 0)
+        .when(ReviewProjectType.NORMAL, 1)
+        .when(ReviewProjectType.BUG_FIXES, 2)
+        .when(ReviewProjectType.TERMINOLOGY, 3)
+        .when(ReviewProjectType.TERM_CANDIDATE, 3)
+        .otherwise(4);
   }
 
   private List<Long> findRequestIdsByStatuses(
@@ -1125,7 +1164,7 @@ public class ReviewProjectService {
     cq.where(predicates.toArray(Predicate[]::new))
         .select(requestJoin.get(ReviewProjectRequest_.id))
         .groupBy(requestJoin.get(ReviewProjectRequest_.id))
-        .orderBy(cb.desc(requestJoin.get(ReviewProjectRequest_.id)));
+        .orderBy(reviewProjectRequestSearchOrder(cb, root, requestJoin, request, accessContext));
 
     TypedQuery<Long> query = entityManager.createQuery(cq);
     query.setMaxResults(request.limit());
@@ -1205,6 +1244,26 @@ public class ReviewProjectService {
         .orderBy(cb.desc(root.get(ReviewProject_.id)));
 
     return entityManager.createQuery(cq).getResultList();
+  }
+
+  private List<jakarta.persistence.criteria.Order> reviewProjectRequestSearchOrder(
+      CriteriaBuilder cb,
+      Root<ReviewProject> root,
+      Join<ReviewProject, ReviewProjectRequest> requestJoin,
+      SearchReviewProjectsCriteria request,
+      ProjectAccessContext accessContext) {
+    if (!shouldUseTranslatorPriorityOrder(request, accessContext)) {
+      return List.of(cb.desc(requestJoin.get(ReviewProjectRequest_.id)));
+    }
+    return List.of(
+        cb.asc(cb.min(reviewProjectTypePriority(cb, root))),
+        cb.asc(
+            cb.min(
+                cb.<Integer>selectCase()
+                    .when(cb.isNull(root.get(ReviewProject_.dueDate)), 1)
+                    .otherwise(0))),
+        cb.asc(cb.least(root.get(ReviewProject_.dueDate))),
+        cb.desc(requestJoin.get(ReviewProjectRequest_.id)));
   }
 
   private List<SearchReviewProjectsView.ReviewProject> toReviewProjectViews(
