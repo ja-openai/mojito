@@ -123,6 +123,10 @@ public class ReviewProjectServiceTest {
   private final TeamUserRepository teamUserRepository = Mockito.mock(TeamUserRepository.class);
   private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository =
       Mockito.mock(ReviewProjectAssignmentHistoryRepository.class);
+  private final ReviewProjectAssignmentWindowService reviewProjectAssignmentWindowService =
+      Mockito.mock(ReviewProjectAssignmentWindowService.class);
+  private final ReviewProjectTimeSpentStatService reviewProjectTimeSpentStatService =
+      Mockito.mock(ReviewProjectTimeSpentStatService.class);
   private final TeamSlackNotificationService teamSlackNotificationService =
       Mockito.mock(TeamSlackNotificationService.class);
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler =
@@ -167,6 +171,8 @@ public class ReviewProjectServiceTest {
                 teamRepository,
                 teamUserRepository,
                 reviewProjectAssignmentHistoryRepository,
+                reviewProjectAssignmentWindowService,
+                reviewProjectTimeSpentStatService,
                 teamSlackNotificationService,
                 quartzPollableTaskScheduler,
                 reviewFeatureRepository,

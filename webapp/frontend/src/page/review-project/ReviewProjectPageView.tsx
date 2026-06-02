@@ -1285,6 +1285,7 @@ export function ReviewProjectPageView({
         mutations={mutations}
         canEditRequest={canEditRequest}
         isTranslator={user.role === 'ROLE_TRANSLATOR'}
+        currentUsername={user.username}
         reviewProjectsSessionKey={reviewProjectsSessionKey}
         openRequestDetailsQuery={openRequestDetailsQuery}
         requestDetailsSource={requestDetailsSource}
@@ -3985,6 +3986,7 @@ function ReviewProjectHeader({
   mutations,
   canEditRequest,
   isTranslator,
+  currentUsername,
   reviewProjectsSessionKey,
   openRequestDetailsQuery,
   requestDetailsSource,
@@ -4000,6 +4002,7 @@ function ReviewProjectHeader({
   mutations: ReviewProjectMutationControls;
   canEditRequest: boolean;
   isTranslator: boolean;
+  currentUsername: string;
   reviewProjectsSessionKey: string | null;
   openRequestDetailsQuery: boolean;
   requestDetailsSource: 'list' | null;
@@ -4022,6 +4025,10 @@ function ReviewProjectHeader({
     [project.reviewProjectRequest?.screenshotImageIds],
   );
   const assignment = project.assignment ?? null;
+  const isCurrentAssignedTranslator =
+    isTranslator &&
+    assignment?.assignedTranslatorUsername != null &&
+    assignment.assignedTranslatorUsername === currentUsername;
   const isTerminologyProject = isTerminologyReviewProjectType(type);
   const pmAssignmentLabel = isTerminologyProject ? 'Decider' : 'PM';
   const translatorAssignmentLabel = isTerminologyProject ? 'Advisor' : 'Translator';
@@ -4034,6 +4041,14 @@ function ReviewProjectHeader({
   const nextStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [showSelfReportModal, setShowSelfReportModal] = useState(false);
+  const [selfReportedMinutesDraft, setSelfReportedMinutesDraft] = useState(
+    assignment?.selfReportedMinutes == null ? '' : String(assignment.selfReportedMinutes),
+  );
+  const [selfReportedNoteDraft, setSelfReportedNoteDraft] = useState(
+    assignment?.selfReportedNote ?? '',
+  );
+  const [selfReportedSaveError, setSelfReportedSaveError] = useState<string | null>(null);
   const [closeRequestCopyStatus, setCloseRequestCopyStatus] = useState<
     'idle' | 'copied' | 'failed'
   >('idle');
@@ -4247,8 +4262,24 @@ function ReviewProjectHeader({
       setShowCloseWarning(true);
       return;
     }
+    if (
+      status === 'OPEN' &&
+      isCurrentAssignedTranslator &&
+      assignment?.selfReportedMinutes == null
+    ) {
+      setSelfReportedSaveError(null);
+      setShowSelfReportModal(true);
+      return;
+    }
     mutations.onRequestProjectStatus(nextStatus);
-  }, [mutations, nextStatus, pendingCount, status]);
+  }, [
+    assignment?.selfReportedMinutes,
+    isCurrentAssignedTranslator,
+    mutations,
+    nextStatus,
+    pendingCount,
+    status,
+  ]);
 
   const confirmCloseProject = useCallback(() => {
     setShowCloseWarning(false);
@@ -4339,6 +4370,35 @@ function ReviewProjectHeader({
     }
   }, [translatorCloseRequestHtml, translatorCloseRequestMessage]);
 
+  const dismissSelfReportModal = useCallback(() => {
+    if (mutations.isProjectAssignmentSaving || mutations.isProjectStatusSaving) {
+      return;
+    }
+    setShowSelfReportModal(false);
+    setSelfReportedSaveError(null);
+  }, [mutations.isProjectAssignmentSaving, mutations.isProjectStatusSaving]);
+
+  const saveSelfReportedTimeAndClose = useCallback(async () => {
+    const minutes = Number.parseInt(selfReportedMinutesDraft, 10);
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      setSelfReportedSaveError('Enter time spent in minutes.');
+      return;
+    }
+    try {
+      setSelfReportedSaveError(null);
+      await mutations.onRequestProjectSelfReportedTime({
+        selfReportedMinutes: minutes,
+        note: selfReportedNoteDraft,
+      });
+      setShowSelfReportModal(false);
+      mutations.onRequestProjectStatus('CLOSED');
+    } catch (error) {
+      setSelfReportedSaveError(
+        error instanceof Error ? error.message : 'Failed to save reported time.',
+      );
+    }
+  }, [mutations, selfReportedMinutesDraft, selfReportedNoteDraft]);
+
   useEffect(() => {
     if (!showDescription) {
       return;
@@ -4356,6 +4416,14 @@ function ReviewProjectHeader({
     setRequestSaveError(null);
     setProjectDueDateSaveError(null);
   }, [assignment?.teamId, description, dueDate, name, requestAttachments, showDescription, type]);
+
+  useEffect(() => {
+    setSelfReportedMinutesDraft(
+      assignment?.selfReportedMinutes == null ? '' : String(assignment.selfReportedMinutes),
+    );
+    setSelfReportedNoteDraft(assignment?.selfReportedNote ?? '');
+    setSelfReportedSaveError(null);
+  }, [assignment?.selfReportedMinutes, assignment?.selfReportedNote]);
 
   useEffect(() => {
     const nextUrls = new Set(
@@ -4754,6 +4822,29 @@ function ReviewProjectHeader({
           </div>
 
           <div className="review-project-page__header-group review-project-page__header-group--meta">
+            {isCurrentAssignedTranslator && status === 'OPEN' ? (
+              assignment?.assignmentAcceptedAt == null ? (
+                <button
+                  type="button"
+                  className="review-project-page__header-link"
+                  onClick={() => {
+                    void mutations.onRequestProjectAssignmentAccept();
+                  }}
+                  disabled={mutations.isProjectAssignmentSaving}
+                >
+                  Accept assignment
+                </button>
+              ) : (
+                <span title={getLocalAndUtcDateTimeTooltip(assignment.assignmentAcceptedAt)}>
+                  Accepted {formatDateTime(assignment.assignmentAcceptedAt)}
+                </span>
+              )
+            ) : null}
+            {isCurrentAssignedTranslator && status === 'OPEN' ? (
+              <span className="review-project-page__header-dot" aria-hidden>
+                •
+              </span>
+            ) : null}
             {canEditRequest ? (
               <button
                 type="button"
@@ -4829,6 +4920,55 @@ function ReviewProjectHeader({
           </div>
         </div>
       </header>
+      <Modal
+        open={showSelfReportModal}
+        size="sm"
+        role="dialog"
+        ariaLabel="Report time spent"
+        closeOnBackdrop={!mutations.isProjectAssignmentSaving && !mutations.isProjectStatusSaving}
+      >
+        <div className="modal__title">Report time spent</div>
+        <div className="modal__body">
+          <label className="review-project-page__self-report-field">
+            <span className="review-project-page__close-request-label">Minutes spent</span>
+            <input
+              className="review-project-page__self-report-input"
+              type="number"
+              min="1"
+              step="1"
+              value={selfReportedMinutesDraft}
+              onChange={(event) => setSelfReportedMinutesDraft(event.target.value)}
+            />
+          </label>
+          <label className="review-project-page__self-report-field">
+            <span className="review-project-page__close-request-label">Note optional</span>
+            <textarea
+              className="review-project-page__close-request-message"
+              value={selfReportedNoteDraft}
+              onChange={(event) => setSelfReportedNoteDraft(event.target.value)}
+              rows={3}
+            />
+          </label>
+          {selfReportedSaveError ? (
+            <div className="review-project-page__description-error">{selfReportedSaveError}</div>
+          ) : null}
+        </div>
+        <div className="modal__actions">
+          <button type="button" className="modal__button" onClick={dismissSelfReportModal}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="modal__button modal__button--primary"
+            onClick={() => {
+              void saveSelfReportedTimeAndClose();
+            }}
+            disabled={mutations.isProjectAssignmentSaving || mutations.isProjectStatusSaving}
+          >
+            Save and close
+          </button>
+        </div>
+      </Modal>
       <Modal
         open={showCloseWarning}
         size={isTranslator ? 'xl' : 'md'}

@@ -26,4 +26,23 @@ public interface ReviewProjectTextUnitDecisionRepository
       where d.reviewProjectTextUnit.reviewProject.id in :projectIds
       """)
   int deleteByReviewProjectIds(@Param("projectIds") List<Long> projectIds);
+
+  @Query(
+      """
+      select new com.box.l10n.mojito.service.review.ReviewProjectTimeSpentDecisionRow(
+        decision.id,
+        lastModifiedBy.id,
+        decision.lastModifiedDate,
+        textUnit.wordCount
+      )
+      from ReviewProjectTextUnitDecision decision
+      join decision.reviewProjectTextUnit reviewProjectTextUnit
+      join reviewProjectTextUnit.tmTextUnit textUnit
+      left join decision.lastModifiedByUser lastModifiedBy
+      where reviewProjectTextUnit.reviewProject.id = :reviewProjectId
+        and decision.decisionState = com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED
+      order by decision.lastModifiedDate, decision.id
+      """)
+  List<ReviewProjectTimeSpentDecisionRow> findTimeSpentDecisionRowsByReviewProjectId(
+      @Param("reviewProjectId") Long reviewProjectId);
 }

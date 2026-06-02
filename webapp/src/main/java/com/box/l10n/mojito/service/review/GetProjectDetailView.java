@@ -38,7 +38,11 @@ public record GetProjectDetailView(
       Long assignedPmUserId,
       String assignedPmUsername,
       Long assignedTranslatorUserId,
-      String assignedTranslatorUsername) {}
+      String assignedTranslatorUsername,
+      Long assignmentWindowId,
+      ZonedDateTime assignmentAcceptedAt,
+      Integer selfReportedMinutes,
+      String selfReportedNote) {}
 
   public record ReviewProjectTextUnit(
       Long id,

@@ -107,6 +107,8 @@ public class ReviewProjectService {
   private final TeamRepository teamRepository;
   private final TeamUserRepository teamUserRepository;
   private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository;
+  private final ReviewProjectAssignmentWindowService reviewProjectAssignmentWindowService;
+  private final ReviewProjectTimeSpentStatService reviewProjectTimeSpentStatService;
   private final TeamSlackNotificationService teamSlackNotificationService;
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
   private final ReviewFeatureRepository reviewFeatureRepository;
@@ -142,6 +144,8 @@ public class ReviewProjectService {
       TeamRepository teamRepository,
       TeamUserRepository teamUserRepository,
       ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
+      ReviewProjectAssignmentWindowService reviewProjectAssignmentWindowService,
+      ReviewProjectTimeSpentStatService reviewProjectTimeSpentStatService,
       TeamSlackNotificationService teamSlackNotificationService,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
       ReviewFeatureRepository reviewFeatureRepository,
@@ -173,6 +177,8 @@ public class ReviewProjectService {
     this.teamRepository = teamRepository;
     this.teamUserRepository = teamUserRepository;
     this.reviewProjectAssignmentHistoryRepository = reviewProjectAssignmentHistoryRepository;
+    this.reviewProjectAssignmentWindowService = reviewProjectAssignmentWindowService;
+    this.reviewProjectTimeSpentStatService = reviewProjectTimeSpentStatService;
     this.teamSlackNotificationService = teamSlackNotificationService;
     this.quartzPollableTaskScheduler = quartzPollableTaskScheduler;
     this.reviewFeatureRepository = reviewFeatureRepository;
@@ -1590,7 +1596,11 @@ public class ReviewProjectService {
             project.assignedPmUserId(),
             project.assignedPmUsername(),
             project.assignedTranslatorUserId(),
-            project.assignedTranslatorUsername()),
+            project.assignedTranslatorUsername(),
+            project.assignmentWindowId(),
+            project.assignmentAcceptedAt(),
+            project.selfReportedMinutes(),
+            project.selfReportedNote()),
         reviewProjectTextUnits);
   }
 
@@ -1622,6 +1632,7 @@ public class ReviewProjectService {
           "Translators can only close projects after they are 100% complete");
     }
 
+    ReviewProjectStatus previousStatus = reviewProject.getStatus();
     reviewProject.setStatus(status);
     if (status == ReviewProjectStatus.OPEN) {
       reviewProject.setCloseReason(null);
@@ -1631,6 +1642,14 @@ public class ReviewProjectService {
     }
 
     reviewProjectRepository.save(reviewProject);
+    if (previousStatus == ReviewProjectStatus.OPEN && status == ReviewProjectStatus.CLOSED) {
+      reviewProjectAssignmentWindowService.closeOpenWindow(
+          reviewProject, ReviewProjectAssignmentWindowEndReason.PROJECT_CLOSED);
+      reviewProjectTimeSpentStatService.computeProjectStats(reviewProject, ZonedDateTime.now());
+    } else if (previousStatus == ReviewProjectStatus.CLOSED && status == ReviewProjectStatus.OPEN) {
+      reviewProjectAssignmentWindowService.syncTranslatorAssignmentWindow(
+          reviewProject, null, reviewProject.getAssignedTranslatorUser());
+    }
     return getProjectDetail(projectId);
   }
 
@@ -1718,6 +1737,8 @@ public class ReviewProjectService {
             } else {
               eventType = ReviewProjectAssignmentEventType.REASSIGNED;
             }
+            reviewProjectAssignmentWindowService.syncTranslatorAssignmentWindow(
+                project, previousAssignedTranslator, project.getAssignedTranslatorUser());
             recordAssignmentHistory(project, eventType, "Request team changed");
             assignmentChanged = true;
           }
@@ -1815,6 +1836,8 @@ public class ReviewProjectService {
     reviewProject.setAssignedPmUser(nextAssignedPm);
     reviewProject.setAssignedTranslatorUser(nextAssignedTranslator);
     reviewProjectRepository.save(reviewProject);
+    reviewProjectAssignmentWindowService.syncTranslatorAssignmentWindow(
+        reviewProject, previousAssignedTranslator, nextAssignedTranslator);
 
     boolean teamChanged = !Objects.equals(getEntityId(previousTeam), getEntityId(nextTeam));
     boolean translatorChanged =
@@ -1865,6 +1888,36 @@ public class ReviewProjectService {
             : null;
     return updateProjectAssignment(
         projectId, teamId, assignedPmUserId, teamService.getCurrentUserIdOrThrow(), null);
+  }
+
+  @Transactional
+  public GetProjectDetailView acceptProjectTranslatorAssignment(Long projectId) {
+    ReviewProject reviewProject =
+        reviewProjectRepository
+            .findById(projectId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProject with id: " + projectId + " not found"));
+    assertCurrentUserCanReadProject(reviewProject);
+    reviewProjectAssignmentWindowService.acceptCurrentAssignment(reviewProject);
+    return getProjectDetail(projectId);
+  }
+
+  @Transactional
+  public GetProjectDetailView saveProjectSelfReportedTime(
+      Long projectId, Integer selfReportedMinutes, String note) {
+    ReviewProject reviewProject =
+        reviewProjectRepository
+            .findById(projectId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProject with id: " + projectId + " not found"));
+    assertCurrentUserCanReadProject(reviewProject);
+    reviewProjectAssignmentWindowService.saveSelfReportedTime(
+        reviewProject, selfReportedMinutes, note);
+    return getProjectDetail(projectId);
   }
 
   @Transactional
@@ -3603,6 +3656,8 @@ public class ReviewProjectService {
 
         saved.setWordCount(wordCount);
         saved.setTextUnitCount(textUnitCount);
+        reviewProjectAssignmentWindowService.ensureOpenWindow(
+            saved, saved.getAssignedTranslatorUser());
         recordAssignmentHistory(
             saved, ReviewProjectAssignmentEventType.CREATED_DEFAULT, null, requestedByUser);
         projectIds.add(saved.getId());

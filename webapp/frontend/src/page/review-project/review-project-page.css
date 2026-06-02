@@ -207,6 +207,37 @@
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
 }
 
+.review-project-page__close-request,
+.review-project-page__self-report-field {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.review-project-page__close-request-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.review-project-page__close-request-message,
+.review-project-page__self-report-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  line-height: 1.45;
+}
+
+.review-project-page__close-request-message {
+  min-height: 7rem;
+  resize: vertical;
+}
+
 .review-project-page__header-group--stats {
   flex: 0 0 auto;
   min-width: 260px;

@@ -27,4 +27,8 @@ public record ReviewProjectDetail(
     Long assignedPmUserId,
     String assignedPmUsername,
     Long assignedTranslatorUserId,
-    String assignedTranslatorUsername) {}
+    String assignedTranslatorUsername,
+    Long assignmentWindowId,
+    ZonedDateTime assignmentAcceptedAt,
+    Integer selfReportedMinutes,
+    String selfReportedNote) {}

@@ -314,6 +314,40 @@ public class ReviewProjectWS {
     return toDetailResponse(projectDetail);
   }
 
+  @PostMapping("/review-projects/{projectId}/assignment/accept")
+  public GetReviewProjectResponse acceptReviewProjectTranslatorAssignment(
+      @PathVariable Long projectId) {
+    try {
+      GetProjectDetailView projectDetail =
+          reviewProjectService.acceptProjectTranslatorAssignment(projectId);
+      return toDetailResponse(projectDetail);
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
+  @PostMapping("/review-projects/{projectId}/assignment/self-reported-time")
+  public GetReviewProjectResponse saveReviewProjectSelfReportedTime(
+      @PathVariable Long projectId, @RequestBody SaveSelfReportedTimeRequest request) {
+    if (request == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "request body is required");
+    }
+    try {
+      GetProjectDetailView projectDetail =
+          reviewProjectService.saveProjectSelfReportedTime(
+              projectId, request.selfReportedMinutes(), request.note());
+      return toDetailResponse(projectDetail);
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
   @PostMapping("/review-projects/{projectId}/due-date")
   public GetReviewProjectResponse updateReviewProjectDueDate(
       @PathVariable Long projectId, @RequestBody UpdateReviewProjectDueDateRequest request) {
@@ -522,6 +556,8 @@ public class ReviewProjectWS {
   public record UpdateReviewProjectAssignmentRequest(
       Long teamId, Long assignedPmUserId, Long assignedTranslatorUserId, String note) {}
 
+  public record SaveSelfReportedTimeRequest(Integer selfReportedMinutes, String note) {}
+
   public record UpdateReviewProjectRequestPmAssignmentRequest(Long assignedPmUserId, String note) {}
 
   public record ReviewProjectAssignmentHistoryResponse(List<Entry> entries) {
@@ -649,7 +685,11 @@ public class ReviewProjectWS {
         Long assignedPmUserId,
         String assignedPmUsername,
         Long assignedTranslatorUserId,
-        String assignedTranslatorUsername) {}
+        String assignedTranslatorUsername,
+        Long assignmentWindowId,
+        ZonedDateTime assignmentAcceptedAt,
+        Integer selfReportedMinutes,
+        String selfReportedNote) {}
 
     public record ReviewProjectTextUnit(
         Long id,
@@ -983,7 +1023,11 @@ public class ReviewProjectWS {
                 detail.assignment().assignedPmUserId(),
                 detail.assignment().assignedPmUsername(),
                 detail.assignment().assignedTranslatorUserId(),
-                detail.assignment().assignedTranslatorUsername())
+                detail.assignment().assignedTranslatorUsername(),
+                detail.assignment().assignmentWindowId(),
+                detail.assignment().assignmentAcceptedAt(),
+                detail.assignment().selfReportedMinutes(),
+                detail.assignment().selfReportedNote())
             : null,
         detail.reviewProjectTextUnits().stream().map(this::toTextUnitResponse).toList());
   }

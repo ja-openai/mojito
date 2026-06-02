@@ -38,7 +38,11 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
         assignedPm.id,
         assignedPm.username,
         assignedTranslator.id,
-        assignedTranslator.username
+        assignedTranslator.username,
+        assignmentWindow.id,
+        assignmentWindow.acceptedAt,
+        assignmentWindow.selfReportedMinutes,
+        assignmentWindow.selfReportedNote
       )
       from ReviewProject rp
       left join rp.locale locale
@@ -47,6 +51,9 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
       left join rp.team team
       left join rp.assignedPmUser assignedPm
       left join rp.assignedTranslatorUser assignedTranslator
+      left join ReviewProjectAssignmentWindow assignmentWindow
+        on assignmentWindow.reviewProject = rp
+       and assignmentWindow.endedAt is null
       where rp.id = :id
       """)
   Optional<ReviewProjectDetail> findDetailById(@Param("id") Long id);
