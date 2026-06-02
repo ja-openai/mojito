@@ -4,11 +4,15 @@ import com.box.l10n.mojito.JSR310Migration;
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.PushRun;
 import com.box.l10n.mojito.entity.PushRunAsset;
+import com.box.l10n.mojito.entity.PushRunAssetTmTextUnit;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.service.commit.CommitToPushRunRepository;
 import com.google.common.collect.Lists;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaDelete;
+import jakarta.persistence.criteria.Root;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -17,10 +21,12 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Service that manages PushRuns. Allows creation of PushRuns, association and retrieval of
@@ -42,6 +48,8 @@ public class PushRunService {
 
   final JdbcTemplate jdbcTemplate;
 
+  final TransactionTemplate transactionTemplate;
+
   final CommitToPushRunRepository commitToPushRunRepository;
 
   final PushRunRepository pushRunRepository;
@@ -53,12 +61,14 @@ public class PushRunService {
   public PushRunService(
       EntityManager entityManager,
       JdbcTemplate jdbcTemplate,
+      TransactionTemplate transactionTemplate,
       CommitToPushRunRepository commitToPushRunRepository,
       PushRunRepository pushRunRepository,
       PushRunAssetRepository pushRunAssetRepository,
       PushRunAssetTmTextUnitRepository pushRunAssetTmTextUnitRepository) {
     this.entityManager = entityManager;
     this.jdbcTemplate = jdbcTemplate;
+    this.transactionTemplate = transactionTemplate;
     this.commitToPushRunRepository = commitToPushRunRepository;
     this.pushRunRepository = pushRunRepository;
     this.pushRunAssetRepository = pushRunAssetRepository;
@@ -152,9 +162,10 @@ public class PushRunService {
     int batchNumber = 1;
     int deleteCount;
     do {
-      deleteCount =
-          pushRunAssetTmTextUnitRepository.deleteAllByPushRunWithCreatedDateBefore(
-              beforeDate, DELETE_BATCH_SIZE);
+      List<Long> ids =
+          pushRunAssetTmTextUnitRepository.findIdsByPushRunWithCreatedDateBefore(
+              beforeDate, PageRequest.of(0, DELETE_BATCH_SIZE));
+      deleteCount = deletePushRunAssetTmTextUnitsByIds(ids);
       logger.debug(
           "Deleted {} pushRunAssetTmTextUnit rows in batch: {}", deleteCount, batchNumber++);
     } while (deleteCount == DELETE_BATCH_SIZE);
@@ -162,5 +173,21 @@ public class PushRunService {
     pushRunAssetRepository.deleteAllByPushRunWithCreatedDateBefore(beforeDate);
     commitToPushRunRepository.deleteAllByPushRunWithCreatedDateBefore(beforeDate);
     pushRunRepository.deleteAllByCreatedDateBefore(beforeDate);
+  }
+
+  int deletePushRunAssetTmTextUnitsByIds(List<Long> ids) {
+    if (ids.isEmpty()) {
+      return 0;
+    }
+
+    return transactionTemplate.execute(
+        status -> {
+          CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+          CriteriaDelete<PushRunAssetTmTextUnit> delete =
+              criteriaBuilder.createCriteriaDelete(PushRunAssetTmTextUnit.class);
+          Root<PushRunAssetTmTextUnit> root = delete.from(PushRunAssetTmTextUnit.class);
+          delete.where(root.get("id").in(ids));
+          return entityManager.createQuery(delete).executeUpdate();
+        });
   }
 }

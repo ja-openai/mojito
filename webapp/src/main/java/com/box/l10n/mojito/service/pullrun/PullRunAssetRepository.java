@@ -28,13 +28,9 @@ public interface PullRunAssetRepository extends JpaRepository<PullRunAsset, Long
   @Transactional
   @Modifying
   @Query(
-      nativeQuery = true,
-      value =
-          """
-          delete pra
-          from pull_run pr
-          join pull_run_asset pra on pra.pull_run_id = pr.id
-          where pr.created_date < :beforeDate
-          """)
+      """
+      delete from PullRunAsset pra
+      where pra.pullRun.createdDate < :beforeDate
+      """)
   void deleteAllByPullRunWithCreatedDateBefore(@Param("beforeDate") ZonedDateTime beforeDate);
 }
