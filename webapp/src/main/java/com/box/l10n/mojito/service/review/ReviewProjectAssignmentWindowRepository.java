@@ -33,6 +33,20 @@ public interface ReviewProjectAssignmentWindowRepository
       left join fetch window.reviewProject project
       left join fetch window.assignedTranslatorUser translator
       left join fetch window.selfReportedByUser reporter
+      where project.id in :reviewProjectIds
+        and window.endedAt is null
+      order by window.assignedAt desc, window.id desc
+      """)
+  List<ReviewProjectAssignmentWindow> findOpenWindowsByReviewProjectIds(
+      @Param("reviewProjectIds") List<Long> reviewProjectIds);
+
+  @Query(
+      """
+      select window
+      from ReviewProjectAssignmentWindow window
+      left join fetch window.reviewProject project
+      left join fetch window.assignedTranslatorUser translator
+      left join fetch window.selfReportedByUser reporter
       where project.id = :reviewProjectId
       order by window.assignedAt, window.id
       """)

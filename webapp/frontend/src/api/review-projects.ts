@@ -316,6 +316,8 @@ export type ApiReviewProjectSummary = {
     assignedPmUsername?: string | null;
     assignedTranslatorUserId?: number | null;
     assignedTranslatorUsername?: string | null;
+    assignmentWindowId?: number | null;
+    assignmentAcceptedAt?: string | null;
   } | null;
 };
 
@@ -835,42 +837,6 @@ export const claimReviewProjectTranslatorAssignment = async (
   if (!response.ok) {
     const message = await response.text().catch(() => '');
     throw new Error(message || 'Failed to claim review project assignment');
-  }
-
-  return (await response.json()) as ApiReviewProjectDetail;
-};
-
-export const acceptReviewProjectTranslatorAssignment = async (
-  projectId: number,
-): Promise<ApiReviewProjectDetail> => {
-  const response = await fetch(`/api/review-projects/${projectId}/assignment/accept`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: jsonHeaders,
-  });
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to accept review project assignment');
-  }
-
-  return (await response.json()) as ApiReviewProjectDetail;
-};
-
-export const saveReviewProjectSelfReportedTime = async (
-  projectId: number,
-  payload: { selfReportedMinutes: number; note?: string | null },
-): Promise<ApiReviewProjectDetail> => {
-  const response = await fetch(`/api/review-projects/${projectId}/assignment/self-reported-time`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: jsonHeaders,
-    body: JSON.stringify(payload ?? {}),
-  });
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to save reported time');
   }
 
   return (await response.json()) as ApiReviewProjectDetail;

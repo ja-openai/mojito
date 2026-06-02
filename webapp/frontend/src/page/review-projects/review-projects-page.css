@@ -450,6 +450,24 @@
   width: 100%;
 }
 
+.review-projects-page__reassign-modal-textarea {
+  width: 100%;
+  min-height: 7rem;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  padding: var(--space-2);
+  resize: vertical;
+}
+
+.review-projects-page__reassign-modal-textarea:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
 .review-projects-page__reassign-modal-help {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);

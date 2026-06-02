@@ -30,6 +30,6 @@ export function getAnchoredDropdownPanelStyle({
     right: align === 'right' ? Math.max(viewportPadding, window.innerWidth - rect.right) : 'auto',
     minWidth: rect.width,
     maxWidth,
-    zIndex: 1000,
+    zIndex: 1200,
   };
 }

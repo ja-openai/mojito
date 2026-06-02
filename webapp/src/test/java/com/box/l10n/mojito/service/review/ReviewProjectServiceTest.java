@@ -123,6 +123,8 @@ public class ReviewProjectServiceTest {
   private final TeamUserRepository teamUserRepository = Mockito.mock(TeamUserRepository.class);
   private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository =
       Mockito.mock(ReviewProjectAssignmentHistoryRepository.class);
+  private final ReviewProjectAssignmentWindowRepository reviewProjectAssignmentWindowRepository =
+      Mockito.mock(ReviewProjectAssignmentWindowRepository.class);
   private final ReviewProjectAssignmentWindowService reviewProjectAssignmentWindowService =
       Mockito.mock(ReviewProjectAssignmentWindowService.class);
   private final ReviewProjectTimeSpentStatService reviewProjectTimeSpentStatService =
@@ -171,6 +173,7 @@ public class ReviewProjectServiceTest {
                 teamRepository,
                 teamUserRepository,
                 reviewProjectAssignmentHistoryRepository,
+                reviewProjectAssignmentWindowRepository,
                 reviewProjectAssignmentWindowService,
                 reviewProjectTimeSpentStatService,
                 teamSlackNotificationService,

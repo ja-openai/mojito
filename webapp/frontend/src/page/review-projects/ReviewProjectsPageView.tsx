@@ -1357,6 +1357,7 @@ function ReviewProjectRowView({
   const effectiveTranslatorAssignmentAction = translatorAssignmentAction ?? 'none';
   const canUpdateTranslatorAssignment = effectiveTranslatorAssignmentAction !== 'none';
   const isTranslatorClaimAction = effectiveTranslatorAssignmentAction === 'claim';
+  const isPastDue = project.status !== 'CLOSED' && isPastDueDate(project.dueDate);
 
   return (
     <div className="review-projects-page__row-card">

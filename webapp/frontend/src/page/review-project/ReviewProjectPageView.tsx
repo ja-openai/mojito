@@ -22,6 +22,7 @@ import {
   matchGlossaryTerms,
 } from '../../api/glossaries';
 import type {
+  ApiReviewProjectAssignmentHistoryEntry,
   ApiReviewProjectDetail,
   ApiReviewProjectTerminologyMetadataRequest,
   ApiReviewProjectTerminologyPhase,
@@ -32,6 +33,7 @@ import type {
   ApiTerminologyResolutionStatus,
 } from '../../api/review-projects';
 import {
+  fetchReviewProjectAssignmentHistory,
   isTerminologyReviewProjectType,
   REVIEW_PROJECT_TERMINOLOGY_PHASE_LABELS,
   REVIEW_PROJECT_TYPE_LABELS,
@@ -355,6 +357,23 @@ function statusKeyToChipClass(statusKey: string | null): string {
       return 'rejected';
     default:
       return 'unknown';
+  }
+}
+
+function getAssignmentHistoryEventLabel(
+  eventType: ApiReviewProjectAssignmentHistoryEntry['eventType'],
+) {
+  switch (eventType) {
+    case 'CREATED_DEFAULT':
+      return 'Created';
+    case 'ASSIGNED':
+      return 'Assigned';
+    case 'REASSIGNED':
+      return 'Reassigned';
+    case 'UNASSIGNED':
+      return 'Unassigned';
+    default:
+      return eventType;
   }
 }
 
@@ -1285,7 +1304,6 @@ export function ReviewProjectPageView({
         mutations={mutations}
         canEditRequest={canEditRequest}
         isTranslator={user.role === 'ROLE_TRANSLATOR'}
-        currentUsername={user.username}
         reviewProjectsSessionKey={reviewProjectsSessionKey}
         openRequestDetailsQuery={openRequestDetailsQuery}
         requestDetailsSource={requestDetailsSource}
@@ -3986,7 +4004,6 @@ function ReviewProjectHeader({
   mutations,
   canEditRequest,
   isTranslator,
-  currentUsername,
   reviewProjectsSessionKey,
   openRequestDetailsQuery,
   requestDetailsSource,
@@ -4002,7 +4019,6 @@ function ReviewProjectHeader({
   mutations: ReviewProjectMutationControls;
   canEditRequest: boolean;
   isTranslator: boolean;
-  currentUsername: string;
   reviewProjectsSessionKey: string | null;
   openRequestDetailsQuery: boolean;
   requestDetailsSource: 'list' | null;
@@ -4025,10 +4041,6 @@ function ReviewProjectHeader({
     [project.reviewProjectRequest?.screenshotImageIds],
   );
   const assignment = project.assignment ?? null;
-  const isCurrentAssignedTranslator =
-    isTranslator &&
-    assignment?.assignedTranslatorUsername != null &&
-    assignment.assignedTranslatorUsername === currentUsername;
   const isTerminologyProject = isTerminologyReviewProjectType(type);
   const pmAssignmentLabel = isTerminologyProject ? 'Decider' : 'PM';
   const translatorAssignmentLabel = isTerminologyProject ? 'Advisor' : 'Translator';
@@ -4041,14 +4053,6 @@ function ReviewProjectHeader({
   const nextStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
-  const [showSelfReportModal, setShowSelfReportModal] = useState(false);
-  const [selfReportedMinutesDraft, setSelfReportedMinutesDraft] = useState(
-    assignment?.selfReportedMinutes == null ? '' : String(assignment.selfReportedMinutes),
-  );
-  const [selfReportedNoteDraft, setSelfReportedNoteDraft] = useState(
-    assignment?.selfReportedNote ?? '',
-  );
-  const [selfReportedSaveError, setSelfReportedSaveError] = useState<string | null>(null);
   const [closeRequestCopyStatus, setCloseRequestCopyStatus] = useState<
     'idle' | 'copied' | 'failed'
   >('idle');
@@ -4125,11 +4129,18 @@ function ReviewProjectHeader({
     enabled: canEditRequest && isAssignmentModalOpen && activeAssignmentTeamId != null,
     staleTime: 30_000,
   });
+  const assignmentHistoryQuery = useQuery({
+    queryKey: ['review-project-assignment-history', projectId],
+    queryFn: () => fetchReviewProjectAssignmentHistory(projectId),
+    enabled: canEditRequest && isAssignmentModalOpen,
+    staleTime: 10_000,
+  });
   const requestTeamOptions = useMemo(
     () =>
       buildAssignmentTeamOptions(teamsQuery.data ?? [], assignment?.teamId, assignment?.teamName),
     [assignment?.teamId, assignment?.teamName, teamsQuery.data],
   );
+  const hasRequestTeamOptions = requestTeamOptions.length > 0;
   const assignmentPmUsers = useMemo(
     () =>
       isTerminologyProject
@@ -4262,24 +4273,8 @@ function ReviewProjectHeader({
       setShowCloseWarning(true);
       return;
     }
-    if (
-      status === 'OPEN' &&
-      isCurrentAssignedTranslator &&
-      assignment?.selfReportedMinutes == null
-    ) {
-      setSelfReportedSaveError(null);
-      setShowSelfReportModal(true);
-      return;
-    }
     mutations.onRequestProjectStatus(nextStatus);
-  }, [
-    assignment?.selfReportedMinutes,
-    isCurrentAssignedTranslator,
-    mutations,
-    nextStatus,
-    pendingCount,
-    status,
-  ]);
+  }, [mutations, nextStatus, pendingCount, status]);
 
   const confirmCloseProject = useCallback(() => {
     setShowCloseWarning(false);
@@ -4370,35 +4365,6 @@ function ReviewProjectHeader({
     }
   }, [translatorCloseRequestHtml, translatorCloseRequestMessage]);
 
-  const dismissSelfReportModal = useCallback(() => {
-    if (mutations.isProjectAssignmentSaving || mutations.isProjectStatusSaving) {
-      return;
-    }
-    setShowSelfReportModal(false);
-    setSelfReportedSaveError(null);
-  }, [mutations.isProjectAssignmentSaving, mutations.isProjectStatusSaving]);
-
-  const saveSelfReportedTimeAndClose = useCallback(async () => {
-    const minutes = Number.parseInt(selfReportedMinutesDraft, 10);
-    if (!Number.isFinite(minutes) || minutes <= 0) {
-      setSelfReportedSaveError('Enter time spent in minutes.');
-      return;
-    }
-    try {
-      setSelfReportedSaveError(null);
-      await mutations.onRequestProjectSelfReportedTime({
-        selfReportedMinutes: minutes,
-        note: selfReportedNoteDraft,
-      });
-      setShowSelfReportModal(false);
-      mutations.onRequestProjectStatus('CLOSED');
-    } catch (error) {
-      setSelfReportedSaveError(
-        error instanceof Error ? error.message : 'Failed to save reported time.',
-      );
-    }
-  }, [mutations, selfReportedMinutesDraft, selfReportedNoteDraft]);
-
   useEffect(() => {
     if (!showDescription) {
       return;
@@ -4416,14 +4382,6 @@ function ReviewProjectHeader({
     setRequestSaveError(null);
     setProjectDueDateSaveError(null);
   }, [assignment?.teamId, description, dueDate, name, requestAttachments, showDescription, type]);
-
-  useEffect(() => {
-    setSelfReportedMinutesDraft(
-      assignment?.selfReportedMinutes == null ? '' : String(assignment.selfReportedMinutes),
-    );
-    setSelfReportedNoteDraft(assignment?.selfReportedNote ?? '');
-    setSelfReportedSaveError(null);
-  }, [assignment?.selfReportedMinutes, assignment?.selfReportedNote]);
 
   useEffect(() => {
     const nextUrls = new Set(
@@ -4822,29 +4780,6 @@ function ReviewProjectHeader({
           </div>
 
           <div className="review-project-page__header-group review-project-page__header-group--meta">
-            {isCurrentAssignedTranslator && status === 'OPEN' ? (
-              assignment?.assignmentAcceptedAt == null ? (
-                <button
-                  type="button"
-                  className="review-project-page__header-link"
-                  onClick={() => {
-                    void mutations.onRequestProjectAssignmentAccept();
-                  }}
-                  disabled={mutations.isProjectAssignmentSaving}
-                >
-                  Accept assignment
-                </button>
-              ) : (
-                <span title={getLocalAndUtcDateTimeTooltip(assignment.assignmentAcceptedAt)}>
-                  Accepted {formatDateTime(assignment.assignmentAcceptedAt)}
-                </span>
-              )
-            ) : null}
-            {isCurrentAssignedTranslator && status === 'OPEN' ? (
-              <span className="review-project-page__header-dot" aria-hidden>
-                •
-              </span>
-            ) : null}
             {canEditRequest ? (
               <button
                 type="button"
@@ -4852,7 +4787,7 @@ function ReviewProjectHeader({
                 onClick={openAssignmentModal}
                 title={`Team ${teamDisplayName}`}
               >
-                Assignment
+                Edit assignment
               </button>
             ) : null}
             {canEditRequest && requestId != null ? (
@@ -4920,55 +4855,6 @@ function ReviewProjectHeader({
           </div>
         </div>
       </header>
-      <Modal
-        open={showSelfReportModal}
-        size="sm"
-        role="dialog"
-        ariaLabel="Report time spent"
-        closeOnBackdrop={!mutations.isProjectAssignmentSaving && !mutations.isProjectStatusSaving}
-      >
-        <div className="modal__title">Report time spent</div>
-        <div className="modal__body">
-          <label className="review-project-page__self-report-field">
-            <span className="review-project-page__close-request-label">Minutes spent</span>
-            <input
-              className="review-project-page__self-report-input"
-              type="number"
-              min="1"
-              step="1"
-              value={selfReportedMinutesDraft}
-              onChange={(event) => setSelfReportedMinutesDraft(event.target.value)}
-            />
-          </label>
-          <label className="review-project-page__self-report-field">
-            <span className="review-project-page__close-request-label">Note optional</span>
-            <textarea
-              className="review-project-page__close-request-message"
-              value={selfReportedNoteDraft}
-              onChange={(event) => setSelfReportedNoteDraft(event.target.value)}
-              rows={3}
-            />
-          </label>
-          {selfReportedSaveError ? (
-            <div className="review-project-page__description-error">{selfReportedSaveError}</div>
-          ) : null}
-        </div>
-        <div className="modal__actions">
-          <button type="button" className="modal__button" onClick={dismissSelfReportModal}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="modal__button modal__button--primary"
-            onClick={() => {
-              void saveSelfReportedTimeAndClose();
-            }}
-            disabled={mutations.isProjectAssignmentSaving || mutations.isProjectStatusSaving}
-          >
-            Save and close
-          </button>
-        </div>
-      </Modal>
       <Modal
         open={showCloseWarning}
         size={isTranslator ? 'xl' : 'md'}
@@ -5192,6 +5078,39 @@ function ReviewProjectHeader({
           {assignmentSaveError ? (
             <div className="review-project-page__description-error">{assignmentSaveError}</div>
           ) : null}
+          <div className="review-project-page__assignment-history">
+            <div className="review-project-page__description-label">Assignment history</div>
+            {assignmentHistoryQuery.isLoading ? (
+              <div className="review-project-page__description-hint">Loading history…</div>
+            ) : assignmentHistoryQuery.error ? (
+              <div className="review-project-page__description-error">
+                {getErrorMessage(assignmentHistoryQuery.error, 'Failed to load assignment history')}
+              </div>
+            ) : assignmentHistoryQuery.data?.entries.length ? (
+              <div className="review-project-page__assignment-history-list">
+                {assignmentHistoryQuery.data.entries.slice(0, 6).map((entry) => (
+                  <div className="review-project-page__assignment-history-row" key={entry.id}>
+                    <div>
+                      <strong>{getAssignmentHistoryEventLabel(entry.eventType)}</strong>
+                      {entry.assignedTranslatorUsername ? (
+                        <span> · {entry.assignedTranslatorUsername}</span>
+                      ) : null}
+                      {entry.note ? (
+                        <div className="review-project-page__description-hint">{entry.note}</div>
+                      ) : null}
+                    </div>
+                    <span className="review-project-page__description-hint">
+                      {formatDateTime(entry.createdDate)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="review-project-page__description-hint">
+                No assignment history yet.
+              </div>
+            )}
+          </div>
         </div>
         <div className="modal__actions">
           <button
@@ -5325,7 +5244,14 @@ function ReviewProjectHeader({
                       setRequestSaveError(null);
                     }}
                     noneLabel="No team"
-                    placeholder={teamsQuery.isLoading ? 'Loading teams' : 'Select team'}
+                    placeholder={
+                      teamsQuery.isLoading
+                        ? 'Loading teams'
+                        : hasRequestTeamOptions
+                          ? 'Select team'
+                          : 'No teams configured'
+                    }
+                    noResultsLabel="No teams found"
                     buttonAriaLabel="Select request team"
                     disabled={
                       !canEditRequest ||
@@ -5337,6 +5263,11 @@ function ReviewProjectHeader({
                   {requestTeamDraftId !== (assignment?.teamId ?? null) ? (
                     <span className="review-project-page__description-help">
                       Applies to all projects in this request and clears current project assignees.
+                    </span>
+                  ) : null}
+                  {!teamsQuery.isLoading && !teamsQuery.error && !hasRequestTeamOptions ? (
+                    <span className="review-project-page__description-help">
+                      Create or enable a team in Settings before assigning this request.
                     </span>
                   ) : null}
                   {teamsQuery.error ? (

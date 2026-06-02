@@ -107,6 +107,7 @@ public class ReviewProjectService {
   private final TeamRepository teamRepository;
   private final TeamUserRepository teamUserRepository;
   private final ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository;
+  private final ReviewProjectAssignmentWindowRepository reviewProjectAssignmentWindowRepository;
   private final ReviewProjectAssignmentWindowService reviewProjectAssignmentWindowService;
   private final ReviewProjectTimeSpentStatService reviewProjectTimeSpentStatService;
   private final TeamSlackNotificationService teamSlackNotificationService;
@@ -144,6 +145,7 @@ public class ReviewProjectService {
       TeamRepository teamRepository,
       TeamUserRepository teamUserRepository,
       ReviewProjectAssignmentHistoryRepository reviewProjectAssignmentHistoryRepository,
+      ReviewProjectAssignmentWindowRepository reviewProjectAssignmentWindowRepository,
       ReviewProjectAssignmentWindowService reviewProjectAssignmentWindowService,
       ReviewProjectTimeSpentStatService reviewProjectTimeSpentStatService,
       TeamSlackNotificationService teamSlackNotificationService,
@@ -177,6 +179,7 @@ public class ReviewProjectService {
     this.teamRepository = teamRepository;
     this.teamUserRepository = teamUserRepository;
     this.reviewProjectAssignmentHistoryRepository = reviewProjectAssignmentHistoryRepository;
+    this.reviewProjectAssignmentWindowRepository = reviewProjectAssignmentWindowRepository;
     this.reviewProjectAssignmentWindowService = reviewProjectAssignmentWindowService;
     this.reviewProjectTimeSpentStatService = reviewProjectTimeSpentStatService;
     this.teamSlackNotificationService = teamSlackNotificationService;
@@ -1210,9 +1213,24 @@ public class ReviewProjectService {
       return List.of();
     }
 
+    List<ReviewProjectAssignmentWindow> openWindows =
+        Optional.ofNullable(
+                reviewProjectAssignmentWindowRepository.findOpenWindowsByReviewProjectIds(
+                    projectDetails.stream().map(SearchReviewProjectDetail::id).toList()))
+            .orElse(List.of());
+    Map<Long, ReviewProjectAssignmentWindow> openWindowsByProjectId =
+        openWindows.stream()
+            .collect(
+                Collectors.toMap(
+                    window -> window.getReviewProject().getId(),
+                    Function.identity(),
+                    (first, ignored) -> first));
+
     return projectDetails.stream()
         .map(
             detail -> {
+              ReviewProjectAssignmentWindow assignmentWindow =
+                  openWindowsByProjectId.get(detail.id());
               return new SearchReviewProjectsView.ReviewProject(
                   detail.id(),
                   detail.createdDate(),
@@ -1236,7 +1254,9 @@ public class ReviewProjectService {
                       detail.assignedPmUserId(),
                       detail.assignedPmUsername(),
                       detail.assignedTranslatorUserId(),
-                      detail.assignedTranslatorUsername()));
+                      detail.assignedTranslatorUsername(),
+                      assignmentWindow == null ? null : assignmentWindow.getId(),
+                      assignmentWindow == null ? null : assignmentWindow.getAcceptedAt()));
             })
         .toList();
   }
@@ -1888,36 +1908,6 @@ public class ReviewProjectService {
             : null;
     return updateProjectAssignment(
         projectId, teamId, assignedPmUserId, teamService.getCurrentUserIdOrThrow(), null);
-  }
-
-  @Transactional
-  public GetProjectDetailView acceptProjectTranslatorAssignment(Long projectId) {
-    ReviewProject reviewProject =
-        reviewProjectRepository
-            .findById(projectId)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "reviewProject with id: " + projectId + " not found"));
-    assertCurrentUserCanReadProject(reviewProject);
-    reviewProjectAssignmentWindowService.acceptCurrentAssignment(reviewProject);
-    return getProjectDetail(projectId);
-  }
-
-  @Transactional
-  public GetProjectDetailView saveProjectSelfReportedTime(
-      Long projectId, Integer selfReportedMinutes, String note) {
-    ReviewProject reviewProject =
-        reviewProjectRepository
-            .findById(projectId)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "reviewProject with id: " + projectId + " not found"));
-    assertCurrentUserCanReadProject(reviewProject);
-    reviewProjectAssignmentWindowService.saveSelfReportedTime(
-        reviewProject, selfReportedMinutes, note);
-    return getProjectDetail(projectId);
   }
 
   @Transactional

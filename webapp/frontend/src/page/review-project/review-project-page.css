@@ -207,8 +207,7 @@
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
 }
 
-.review-project-page__close-request,
-.review-project-page__self-report-field {
+.review-project-page__close-request {
   display: grid;
   gap: var(--space-2);
   margin-top: var(--space-3);
@@ -220,8 +219,7 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.review-project-page__close-request-message,
-.review-project-page__self-report-input {
+.review-project-page__close-request-message {
   width: 100%;
   box-sizing: border-box;
   padding: var(--space-3);
@@ -469,6 +467,7 @@
 
 .review-project-page__assignment-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   color: var(--color-text-muted);
@@ -519,6 +518,32 @@
 
 .review-project-page__description-error {
   color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.review-project-page__description-hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.review-project-page__assignment-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.review-project-page__assignment-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.review-project-page__assignment-history-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
   font-size: var(--font-size-sm);
 }
 

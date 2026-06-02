@@ -11,8 +11,6 @@ import type {
   ApiTerminologyResolutionStatus,
 } from '../../api/review-projects';
 import {
-  acceptReviewProjectTranslatorAssignment,
-  saveReviewProjectSelfReportedTime,
   saveReviewProjectTextUnitDecision,
   saveReviewProjectTextUnitTerminologyFeedback,
   saveReviewProjectTextUnitTerminologyResolution,
@@ -140,11 +138,6 @@ export type ReviewProjectMutationControls = {
     teamId?: number | null;
     assignedPmUserId?: number | null;
     assignedTranslatorUserId?: number | null;
-    note?: string | null;
-  }) => Promise<void>;
-  onRequestProjectAssignmentAccept: () => Promise<void>;
-  onRequestProjectSelfReportedTime: (request: {
-    selfReportedMinutes: number;
     note?: string | null;
   }) => Promise<void>;
 };
@@ -378,58 +371,6 @@ export function useReviewProjectMutations(
     },
   });
 
-  const projectAssignmentAcceptMutation = useMutation<ApiReviewProjectDetail, Error, void>({
-    mutationFn: async () => {
-      if (projectId == null) {
-        throw new Error('Missing project id');
-      }
-      return acceptReviewProjectTranslatorAssignment(projectId);
-    },
-    onSuccess: (updatedProject) => {
-      if (projectId == null) {
-        return;
-      }
-      queryClient.setQueryData<ApiReviewProjectDetail>(
-        [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
-        updatedProject,
-      );
-      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
-      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
-      setErrorMessage(null);
-    },
-    onError: (error) => {
-      setErrorMessage(error.message || 'Failed to accept project assignment');
-    },
-  });
-
-  const projectSelfReportedTimeMutation = useMutation<
-    ApiReviewProjectDetail,
-    Error,
-    { selfReportedMinutes: number; note?: string | null }
-  >({
-    mutationFn: async (request) => {
-      if (projectId == null) {
-        throw new Error('Missing project id');
-      }
-      return saveReviewProjectSelfReportedTime(projectId, request);
-    },
-    onSuccess: (updatedProject) => {
-      if (projectId == null) {
-        return;
-      }
-      queryClient.setQueryData<ApiReviewProjectDetail>(
-        [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
-        updatedProject,
-      );
-      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
-      void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
-      setErrorMessage(null);
-    },
-    onError: (error) => {
-      setErrorMessage(error.message || 'Failed to save reported time');
-    },
-  });
-
   const executeAction = useCallback(
     async (action: PendingAction, attemptId: number) => {
       if (projectId == null) {
@@ -441,6 +382,9 @@ export function useReviewProjectMutations(
           return;
         }
         updateTextUnitInCache(updated);
+        void queryClient.invalidateQueries({
+          queryKey: [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
+        });
         void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
         void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
         void queryClient.invalidateQueries({
@@ -641,23 +585,6 @@ export function useReviewProjectMutations(
     [projectAssignmentMutation, projectId],
   );
 
-  const onRequestProjectAssignmentAccept = useCallback(async () => {
-    if (projectId == null || projectAssignmentAcceptMutation.isPending) {
-      return;
-    }
-    await projectAssignmentAcceptMutation.mutateAsync();
-  }, [projectAssignmentAcceptMutation, projectId]);
-
-  const onRequestProjectSelfReportedTime = useCallback(
-    async (request: { selfReportedMinutes: number; note?: string | null }) => {
-      if (projectId == null || projectSelfReportedTimeMutation.isPending) {
-        return;
-      }
-      await projectSelfReportedTimeMutation.mutateAsync(request);
-    },
-    [projectId, projectSelfReportedTimeMutation],
-  );
-
   const onConfirmValidationSave = useCallback(() => {
     if (!pendingValidationSave?.action) {
       return;
@@ -761,10 +688,7 @@ export function useReviewProjectMutations(
       isProjectStatusSaving: projectStatusMutation.isPending,
       isProjectRequestSaving: projectRequestMutation.isPending,
       isProjectDueDateSaving: projectDueDateMutation.isPending,
-      isProjectAssignmentSaving:
-        projectAssignmentMutation.isPending ||
-        projectAssignmentAcceptMutation.isPending ||
-        projectSelfReportedTimeMutation.isPending,
+      isProjectAssignmentSaving: projectAssignmentMutation.isPending,
       errorMessage,
       activeTextUnitId,
       conflictTextUnit,
@@ -790,8 +714,6 @@ export function useReviewProjectMutations(
       onRequestProjectRequestUpdate,
       onRequestProjectDueDateUpdate,
       onRequestProjectAssignmentUpdate,
-      onRequestProjectAssignmentAccept,
-      onRequestProjectSelfReportedTime,
     }),
     [
       activeTextUnitId,
@@ -803,10 +725,8 @@ export function useReviewProjectMutations(
       onOverwriteConflict,
       onRequestDecisionState,
       onRequestProjectAssignmentUpdate,
-      onRequestProjectAssignmentAccept,
       onRequestProjectDueDateUpdate,
       onRequestProjectRequestUpdate,
-      onRequestProjectSelfReportedTime,
       onRequestProjectStatus,
       onRequestSaveDecision,
       onRequestTerminologyFeedback,
@@ -815,11 +735,9 @@ export function useReviewProjectMutations(
       onUseConflictCurrent,
       onRetryValidationSave,
       pendingValidationSave,
-      projectAssignmentAcceptMutation.isPending,
       projectAssignmentMutation.isPending,
       projectDueDateMutation.isPending,
       projectRequestMutation.isPending,
-      projectSelfReportedTimeMutation.isPending,
       projectStatusMutation.isPending,
     ],
   );

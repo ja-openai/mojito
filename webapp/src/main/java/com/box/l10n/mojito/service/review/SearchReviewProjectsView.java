@@ -36,5 +36,7 @@ public record SearchReviewProjectsView(List<ReviewProject> reviewProject) {
       Long assignedPmUserId,
       String assignedPmUsername,
       Long assignedTranslatorUserId,
-      String assignedTranslatorUsername) {}
+      String assignedTranslatorUsername,
+      Long assignmentWindowId,
+      ZonedDateTime assignmentAcceptedAt) {}
 }
