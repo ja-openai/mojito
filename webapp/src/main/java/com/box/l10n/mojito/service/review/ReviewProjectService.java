@@ -1613,6 +1613,14 @@ public class ReviewProjectService {
     if (!userService.isCurrentUserAdmin()) {
       userService.checkUserCanEditLocale(reviewProject.getLocale().getId());
     }
+    if (status == ReviewProjectStatus.CLOSED
+        && reviewProject.getStatus() == ReviewProjectStatus.OPEN
+        && !userService.isCurrentUserAdminOrPm()
+        && userService.isCurrentUserTranslator()
+        && isProjectIncomplete(reviewProject)) {
+      throw new AccessDeniedException(
+          "Translators can only close projects after they are 100% complete");
+    }
 
     reviewProject.setStatus(status);
     if (status == ReviewProjectStatus.OPEN) {
@@ -1624,6 +1632,12 @@ public class ReviewProjectService {
 
     reviewProjectRepository.save(reviewProject);
     return getProjectDetail(projectId);
+  }
+
+  private boolean isProjectIncomplete(ReviewProject reviewProject) {
+    long textUnitCount = Optional.ofNullable(reviewProject.getTextUnitCount()).orElse(0);
+    long decidedCount = Optional.ofNullable(reviewProject.getDecidedCount()).orElse(0L);
+    return decidedCount < textUnitCount;
   }
 
   @Transactional

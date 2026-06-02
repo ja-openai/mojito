@@ -1284,6 +1284,7 @@ export function ReviewProjectPageView({
         textUnits={textUnits}
         mutations={mutations}
         canEditRequest={canEditRequest}
+        isTranslator={user.role === 'ROLE_TRANSLATOR'}
         reviewProjectsSessionKey={reviewProjectsSessionKey}
         openRequestDetailsQuery={openRequestDetailsQuery}
         requestDetailsSource={requestDetailsSource}
@@ -3983,6 +3984,7 @@ function ReviewProjectHeader({
   textUnits: textUnitsProp,
   mutations,
   canEditRequest,
+  isTranslator,
   reviewProjectsSessionKey,
   openRequestDetailsQuery,
   requestDetailsSource,
@@ -3997,6 +3999,7 @@ function ReviewProjectHeader({
   textUnits: ApiReviewProjectTextUnit[];
   mutations: ReviewProjectMutationControls;
   canEditRequest: boolean;
+  isTranslator: boolean;
   reviewProjectsSessionKey: string | null;
   openRequestDetailsQuery: boolean;
   requestDetailsSource: 'list' | null;
@@ -4031,6 +4034,14 @@ function ReviewProjectHeader({
   const nextStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
   const actionLabel = status === 'OPEN' ? 'Close project' : 'Reopen project';
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [closeRequestCopyStatus, setCloseRequestCopyStatus] = useState<
+    'idle' | 'copied' | 'failed'
+  >('idle');
+  const pendingItemLabel =
+    isTerminologyProject && terminologyPhase === 'SPECIALIST_INPUT'
+      ? 'needs advisor input'
+      : 'needs a decision';
+  const progressDoneLabel = 'reviewed';
   const [showDescription, setShowDescription] = useState(false);
   const [isProjectDueDateModalOpen, setIsProjectDueDateModalOpen] = useState(false);
   const [requestNameDraft, setRequestNameDraft] = useState(name ?? '');
@@ -4232,6 +4243,7 @@ function ReviewProjectHeader({
       return;
     }
     if (status === 'OPEN' && pendingCount > 0) {
+      setCloseRequestCopyStatus('idle');
       setShowCloseWarning(true);
       return;
     }
@@ -4245,7 +4257,87 @@ function ReviewProjectHeader({
 
   const dismissCloseWarning = useCallback(() => {
     setShowCloseWarning(false);
+    setCloseRequestCopyStatus('idle');
   }, []);
+
+  const translatorCloseRequestMessage = useMemo(() => {
+    const projectLabel = name?.trim() || `Review project #${projectId}`;
+    const localeLabel = locale?.bcp47Tag?.trim() || 'unknown locale';
+    return [
+      'Hi, I need help closing a review project that is not 100% complete.',
+      '*URL*',
+      window.location.href,
+      '*Project*',
+      `${projectLabel} (${localeLabel})`,
+      '*Progress*',
+      `${pendingCount} pending text unit${pendingCount === 1 ? '' : 's'} (${decidedCount}/${selectedCount} ${progressDoneLabel})`,
+      '*Request*',
+      'Please close this project early if that is appropriate.',
+    ].join('\n\n');
+  }, [
+    decidedCount,
+    locale?.bcp47Tag,
+    name,
+    pendingCount,
+    progressDoneLabel,
+    projectId,
+    selectedCount,
+  ]);
+
+  const translatorCloseRequestHtml = useMemo(() => {
+    const projectLabel = name?.trim() || `Review project #${projectId}`;
+    const localeLabel = locale?.bcp47Tag?.trim() || 'unknown locale';
+    const escapeReportHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    const escapedUrl = escapeReportHtml(window.location.href);
+    return [
+      '<div>',
+      '<p>Hi, I need help closing a review project that is not 100% complete.</p>',
+      `<p><strong>URL</strong><br><a href="${escapedUrl}">${escapedUrl}</a></p>`,
+      `<p><strong>Project</strong><br>${escapeReportHtml(projectLabel)} (${escapeReportHtml(localeLabel)})</p>`,
+      `<p><strong>Progress</strong><br>${pendingCount} pending text unit${
+        pendingCount === 1 ? '' : 's'
+      } (${decidedCount}/${selectedCount} ${progressDoneLabel})</p>`,
+      '<p><strong>Request</strong><br>Please close this project early if that is appropriate.</p>',
+      '</div>',
+    ].join('');
+  }, [
+    decidedCount,
+    locale?.bcp47Tag,
+    name,
+    pendingCount,
+    progressDoneLabel,
+    projectId,
+    selectedCount,
+  ]);
+
+  const copyTranslatorCloseRequest = useCallback(async () => {
+    try {
+      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([translatorCloseRequestHtml], { type: 'text/html' }),
+            'text/plain': new Blob([translatorCloseRequestMessage], { type: 'text/plain' }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(translatorCloseRequestMessage);
+      }
+      setCloseRequestCopyStatus('copied');
+    } catch {
+      try {
+        await navigator.clipboard.writeText(translatorCloseRequestMessage);
+        setCloseRequestCopyStatus('copied');
+      } catch {
+        setCloseRequestCopyStatus('failed');
+      }
+    }
+  }, [translatorCloseRequestHtml, translatorCloseRequestMessage]);
 
   useEffect(() => {
     if (!showDescription) {
@@ -4569,11 +4661,6 @@ function ReviewProjectHeader({
     onReviewPending();
   }, [onReviewPending]);
   const dueDateTooltip = getLocalAndUtcDateTimeTooltip(dueDate);
-  const pendingItemLabel =
-    isTerminologyProject && terminologyPhase === 'SPECIALIST_INPUT'
-      ? 'needs advisor input'
-      : 'needs a decision';
-  const progressDoneLabel = 'reviewed';
 
   return (
     <>
@@ -4744,16 +4831,84 @@ function ReviewProjectHeader({
       </header>
       <Modal
         open={showCloseWarning}
-        size="md"
+        size={isTranslator ? 'xl' : 'md'}
         role="alertdialog"
-        ariaLabel="Close with pending items?"
+        ariaLabel={isTranslator ? 'Project is not ready to close' : 'Close with pending items?'}
+        className={
+          isTranslator
+            ? 'integrity-check-alert-modal integrity-check-alert-modal--report'
+            : undefined
+        }
       >
-        <div className="modal__title">Close with pending items?</div>
-        <div className="modal__body">
-          {pendingCount} text unit{pendingCount === 1 ? '' : 's'} still{' '}
-          {pendingCount === 1 ? pendingItemLabel : pendingItemLabel.replace('needs', 'need')} (
-          {decidedCount}/{selectedCount} {progressDoneLabel}). Close project anyway?
-        </div>
+        {isTranslator ? (
+          <>
+            <div className="modal__header integrity-check-alert-modal__header">
+              <div className="modal__title">Project is not ready to close</div>
+            </div>
+            <div className="integrity-check-alert-modal__body">
+              <div className="integrity-check-alert-modal__error" role="alert">
+                <p>
+                  {pendingCount} text unit{pendingCount === 1 ? '' : 's'} still{' '}
+                  {pendingCount === 1
+                    ? pendingItemLabel
+                    : pendingItemLabel.replace('needs', 'need')}{' '}
+                  ({decidedCount}/{selectedCount} {progressDoneLabel}).
+                </p>
+                <p>You (as a translator) can only close projects when they are 100% complete.</p>
+              </div>
+              <section className="integrity-check-alert-modal__section integrity-check-alert-modal__section--report">
+                <div className="integrity-check-alert-modal__section-header">
+                  <p className="integrity-check-alert-modal__section-title">
+                    If this project should be closed early, copy-paste this message to ask a
+                    PM/admin for help.
+                  </p>
+                  <div className="integrity-check-alert-modal__copy-group">
+                    {closeRequestCopyStatus === 'copied' ? (
+                      <div className="integrity-check-alert-modal__copy-status">Copied.</div>
+                    ) : null}
+                    {closeRequestCopyStatus === 'failed' ? (
+                      <div className="integrity-check-alert-modal__copy-status integrity-check-alert-modal__copy-status--error">
+                        Copy failed.
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="integrity-check-alert-modal__copy-button"
+                      onClick={() => {
+                        void copyTranslatorCloseRequest();
+                      }}
+                      aria-label="Copy close request"
+                      title="Copy close request"
+                    >
+                      <svg
+                        className="integrity-check-alert-modal__copy-icon"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <rect x="8" y="8" width="11" height="13" rx="2" fill="none" />
+                        <path d="M5 16V5a2 2 0 0 1 2-2h9" fill="none" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div
+                  className="integrity-check-alert-modal__report"
+                  dangerouslySetInnerHTML={{ __html: translatorCloseRequestHtml }}
+                />
+              </section>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="modal__title">Close with pending items?</div>
+            <div className="modal__body">
+              {pendingCount} text unit{pendingCount === 1 ? '' : 's'} still{' '}
+              {pendingCount === 1 ? pendingItemLabel : pendingItemLabel.replace('needs', 'need')} (
+              {decidedCount}/{selectedCount} {progressDoneLabel}). Close project anyway?
+            </div>
+          </>
+        )}
         <div className="modal__actions">
           <button type="button" className="modal__button" onClick={dismissCloseWarning}>
             Keep open
@@ -4765,13 +4920,15 @@ function ReviewProjectHeader({
           >
             Review pending
           </button>
-          <button
-            type="button"
-            className="modal__button modal__button--danger"
-            onClick={confirmCloseProject}
-          >
-            Close project
-          </button>
+          {!isTranslator ? (
+            <button
+              type="button"
+              className="modal__button modal__button--danger"
+              onClick={confirmCloseProject}
+            >
+              Close project
+            </button>
+          ) : null}
         </div>
       </Modal>
       <Modal

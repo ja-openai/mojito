@@ -175,6 +175,14 @@
   line-height: 1.45;
 }
 
+.integrity-check-alert-modal__error p {
+  margin: 0;
+}
+
+.integrity-check-alert-modal__error p + p {
+  margin-top: var(--space-3);
+}
+
 .integrity-check-alert-modal__section {
   display: grid;
   gap: var(--space-2);

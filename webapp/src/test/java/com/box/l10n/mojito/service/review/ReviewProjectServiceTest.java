@@ -30,6 +30,7 @@ import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentEventType;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentHistory;
 import com.box.l10n.mojito.entity.review.ReviewProjectRequest;
+import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision;
@@ -205,6 +206,54 @@ public class ReviewProjectServiceTest {
         .save(any(ReviewProjectAssignmentHistory.class));
     verify(teamSlackNotificationService, never())
         .sendReviewProjectAssignmentNotification(any(), any(), any());
+  }
+
+  @Test
+  public void translatorCannotCloseIncompleteProject() {
+    setCurrentUserRole(false, false, true);
+    ReviewProject project = project(11L, team(7L), locale(13L, "fr-FR"), null, currentUser);
+    project.setTextUnitCount(3);
+    project.setDecidedCount(2L);
+    when(reviewProjectRepository.findById(11L)).thenReturn(Optional.of(project));
+
+    try {
+      reviewProjectService.updateProjectStatus(11L, ReviewProjectStatus.CLOSED, null);
+      fail("Expected AccessDeniedException");
+    } catch (AccessDeniedException exception) {
+      assertEquals(
+          "Translators can only close projects after they are 100% complete",
+          exception.getMessage());
+    }
+
+    verify(reviewProjectRepository, never()).save(project);
+  }
+
+  @Test
+  public void translatorCanCloseCompleteProject() {
+    setCurrentUserRole(false, false, true);
+    ReviewProject project = project(11L, team(7L), locale(13L, "fr-FR"), null, currentUser);
+    project.setTextUnitCount(3);
+    project.setDecidedCount(3L);
+    when(reviewProjectRepository.findById(11L)).thenReturn(Optional.of(project));
+
+    reviewProjectService.updateProjectStatus(11L, ReviewProjectStatus.CLOSED, null);
+
+    assertEquals(ReviewProjectStatus.CLOSED, project.getStatus());
+    verify(reviewProjectRepository).save(project);
+  }
+
+  @Test
+  public void pmCanCloseIncompleteProject() {
+    setCurrentUserRole(false, true, false);
+    ReviewProject project = project(11L, team(7L), locale(13L, "fr-FR"), currentUser, null);
+    project.setTextUnitCount(3);
+    project.setDecidedCount(2L);
+    when(reviewProjectRepository.findById(11L)).thenReturn(Optional.of(project));
+
+    reviewProjectService.updateProjectStatus(11L, ReviewProjectStatus.CLOSED, null);
+
+    assertEquals(ReviewProjectStatus.CLOSED, project.getStatus());
+    verify(reviewProjectRepository).save(project);
   }
 
   @Test

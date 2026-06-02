@@ -256,10 +256,17 @@ public class ReviewProjectWS {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
     }
 
-    GetProjectDetailView projectDetail =
-        reviewProjectService.updateProjectStatus(
-            projectId, request.status(), request.closeReason());
-    return toDetailResponse(projectDetail);
+    try {
+      GetProjectDetailView projectDetail =
+          reviewProjectService.updateProjectStatus(
+              projectId, request.status(), request.closeReason());
+      return toDetailResponse(projectDetail);
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
   }
 
   @PostMapping("/review-projects/{projectId}/request")
