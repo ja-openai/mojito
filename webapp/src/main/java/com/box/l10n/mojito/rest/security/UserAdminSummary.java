@@ -17,8 +17,12 @@ public class UserAdminSummary {
   List<UserAdminLocale> userLocales;
   List<Long> teamIds;
   List<String> teamNames;
+  List<Long> pmTeamIds;
+  List<String> pmTeamNames;
   Long pmTeamId;
   String pmTeamName;
+  List<Long> translatorTeamIds;
+  List<String> translatorTeamNames;
   Long translatorTeamId;
   String translatorTeamName;
 
@@ -35,8 +39,12 @@ public class UserAdminSummary {
       List<UserAdminLocale> userLocales,
       List<Long> teamIds,
       List<String> teamNames,
+      List<Long> pmTeamIds,
+      List<String> pmTeamNames,
       Long pmTeamId,
       String pmTeamName,
+      List<Long> translatorTeamIds,
+      List<String> translatorTeamNames,
       Long translatorTeamId,
       String translatorTeamName) {
     this.id = id;
@@ -51,8 +59,12 @@ public class UserAdminSummary {
     this.userLocales = userLocales;
     this.teamIds = teamIds;
     this.teamNames = teamNames;
+    this.pmTeamIds = pmTeamIds;
+    this.pmTeamNames = pmTeamNames;
     this.pmTeamId = pmTeamId;
     this.pmTeamName = pmTeamName;
+    this.translatorTeamIds = translatorTeamIds;
+    this.translatorTeamNames = translatorTeamNames;
     this.translatorTeamId = translatorTeamId;
     this.translatorTeamName = translatorTeamName;
   }
@@ -105,12 +117,28 @@ public class UserAdminSummary {
     return teamNames;
   }
 
+  public List<Long> getPmTeamIds() {
+    return pmTeamIds;
+  }
+
+  public List<String> getPmTeamNames() {
+    return pmTeamNames;
+  }
+
   public Long getPmTeamId() {
     return pmTeamId;
   }
 
   public String getPmTeamName() {
     return pmTeamName;
+  }
+
+  public List<Long> getTranslatorTeamIds() {
+    return translatorTeamIds;
+  }
+
+  public List<String> getTranslatorTeamNames() {
+    return translatorTeamNames;
   }
 
   public Long getTranslatorTeamId() {

@@ -11,10 +11,12 @@ import type { ApiAuthority, ApiUser, ApiUserLocale } from '../../api/users';
 import { deleteUser, updateUser } from '../../api/users';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
+import { MultiSelectChip } from '../../components/MultiSelectChip';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { useLocales } from '../../hooks/useLocales';
 import { useUser } from '../../hooks/useUser';
 import { USERS_QUERY_KEY, useUsers } from '../../hooks/useUsers';
+import { hasSameSet } from '../../utils/arraySelection';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { getUserDisplayName } from '../../utils/userDisplayName';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
@@ -30,6 +32,42 @@ const getLocaleTags = (user: ApiUser) =>
   (user.userLocales ?? [])
     .map((locale) => locale.locale?.bcp47Tag)
     .filter((tag): tag is string => Boolean(tag));
+
+const getRoleTeamIds = (teamIds?: number[] | null, fallbackTeamId?: number | null) =>
+  teamIds ?? (fallbackTeamId != null ? [fallbackTeamId] : []);
+
+const getRoleTeamNames = (teamNames?: string[] | null, fallbackTeamName?: string | null) =>
+  teamNames ?? (fallbackTeamName ? [fallbackTeamName] : []);
+
+const formatTeamNames = (teamNames: string[]) => {
+  const visibleNames = teamNames.filter((name) => name.trim());
+  return visibleNames.length > 0 ? visibleNames.join(', ') : '—';
+};
+
+const formatTeamSelectionSummary =
+  (emptyLabel: string) =>
+  ({
+    options,
+    selectedValues,
+  }: {
+    options: Array<{ value: number; label: string }>;
+    selectedValues: number[];
+  }) => {
+    if (!selectedValues.length) {
+      return emptyLabel;
+    }
+    const selectedSet = new Set(selectedValues);
+    const selectedLabels = options
+      .filter((option) => selectedSet.has(option.value))
+      .map((option) => option.label);
+    if (selectedLabels.length !== selectedValues.length) {
+      return `${selectedValues.length} team${selectedValues.length === 1 ? '' : 's'}`;
+    }
+    if (selectedLabels.length <= 2) {
+      return selectedLabels.join(', ');
+    }
+    return `${selectedLabels.length} teams`;
+  };
 
 const ROLE_OPTIONS = [
   { value: 'ROLE_ADMIN', label: 'Admin' },
@@ -67,8 +105,8 @@ export function AdminUserDetailPage() {
   const [commonNameDraft, setCommonNameDraft] = useState('');
   const [passwordDraft, setPasswordDraft] = useState('');
   const [enabledDraft, setEnabledDraft] = useState(true);
-  const [pmTeamIdDraft, setPmTeamIdDraft] = useState<number | null>(null);
-  const [translatorTeamIdDraft, setTranslatorTeamIdDraft] = useState<number | null>(null);
+  const [pmTeamIdsDraft, setPmTeamIdsDraft] = useState<number[]>([]);
+  const [translatorTeamIdsDraft, setTranslatorTeamIdsDraft] = useState<number[]>([]);
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams'],
     queryFn: fetchTeams,
@@ -88,8 +126,10 @@ export function AdminUserDetailPage() {
     setLocaleDraft(getLocaleTags(userRecord));
     setEnabledDraft(userRecord.enabled ?? true);
     setPasswordDraft('');
-    setPmTeamIdDraft(userRecord.pmTeamId ?? null);
-    setTranslatorTeamIdDraft(userRecord.translatorTeamId ?? null);
+    setPmTeamIdsDraft(getRoleTeamIds(userRecord.pmTeamIds, userRecord.pmTeamId));
+    setTranslatorTeamIdsDraft(
+      getRoleTeamIds(userRecord.translatorTeamIds, userRecord.translatorTeamId),
+    );
   }, [userRecord]);
 
   const localeOptions = useMemo(() => {
@@ -128,8 +168,12 @@ export function AdminUserDetailPage() {
         .map((team) => ({ value: team.id, label: `${team.name} (#${team.id})` })),
     [teamsQuery.data],
   );
-  const savedPmTeamId = userRecord?.pmTeamId ?? null;
-  const savedTranslatorTeamId = userRecord?.translatorTeamId ?? null;
+  const savedPmTeamIds = userRecord
+    ? getRoleTeamIds(userRecord.pmTeamIds, userRecord.pmTeamId)
+    : [];
+  const savedTranslatorTeamIds = userRecord
+    ? getRoleTeamIds(userRecord.translatorTeamIds, userRecord.translatorTeamId)
+    : [];
 
   const isLocaleDirty = useMemo(() => {
     if (normalizedDraftLocales.length !== normalizedSavedLocales.length) {
@@ -149,7 +193,8 @@ export function AdminUserDetailPage() {
   const usernameMissing = normalizedUsername.length === 0;
   const passwordDirty = normalizedPassword.length > 0;
   const isTeamDirty =
-    pmTeamIdDraft !== savedPmTeamId || translatorTeamIdDraft !== savedTranslatorTeamId;
+    !hasSameSet(pmTeamIdsDraft, savedPmTeamIds) ||
+    !hasSameSet(translatorTeamIdsDraft, savedTranslatorTeamIds);
 
   const isDirty = Boolean(
     userRecord &&
@@ -195,9 +240,12 @@ export function AdminUserDetailPage() {
         ...(normalizedPassword ? { password: normalizedPassword } : {}),
       };
       return updateUser(userRecord.id, payload).then(async () => {
+        if (!isTeamDirty) {
+          return;
+        }
         await updateUserTeamAssignment(userRecord.id, {
-          pmTeamId: pmTeamIdDraft,
-          translatorTeamId: translatorTeamIdDraft,
+          pmTeamIds: pmTeamIdsDraft,
+          translatorTeamIds: translatorTeamIdsDraft,
         });
       });
     },
@@ -264,8 +312,12 @@ export function AdminUserDetailPage() {
     Boolean(name && name.trim()),
   );
   const teamSummary = teamNames.length > 0 ? teamNames.join(', ') : '—';
-  const pmTeamSummary = userRecord.pmTeamName?.trim() || '—';
-  const translatorTeamSummary = userRecord.translatorTeamName?.trim() || '—';
+  const pmTeamSummary = formatTeamNames(
+    getRoleTeamNames(userRecord.pmTeamNames, userRecord.pmTeamName),
+  );
+  const translatorTeamSummary = formatTeamNames(
+    getRoleTeamNames(userRecord.translatorTeamNames, userRecord.translatorTeamName),
+  );
 
   const handleReset = () => {
     setUsernameDraft(userRecord.username ?? '');
@@ -277,8 +329,8 @@ export function AdminUserDetailPage() {
     setLocaleDraft(getLocaleTags(userRecord));
     setEnabledDraft(userRecord.enabled ?? true);
     setPasswordDraft('');
-    setPmTeamIdDraft(savedPmTeamId);
-    setTranslatorTeamIdDraft(savedTranslatorTeamId);
+    setPmTeamIdsDraft(savedPmTeamIds);
+    setTranslatorTeamIdsDraft(savedTranslatorTeamIds);
   };
 
   return (
@@ -380,33 +432,37 @@ export function AdminUserDetailPage() {
             <div className="user-detail-page__label">Teams</div>
             <div className="settings-grid settings-grid--two-column">
               <div className="user-detail-page__field">
-                <div className="user-detail-page__label">PM team</div>
-                <SingleSelectDropdown
-                  label="PM team"
+                <div className="user-detail-page__label">PM teams</div>
+                <MultiSelectChip
+                  label="PM teams"
                   options={teamOptions}
-                  value={pmTeamIdDraft}
-                  onChange={(next) => setPmTeamIdDraft(next)}
-                  className="user-detail-page__select"
-                  noneLabel="No PM team"
-                  placeholder="No PM team"
+                  selectedValues={pmTeamIdsDraft}
+                  onChange={setPmTeamIdsDraft}
+                  className="user-detail-page__select user-detail-page__team-select"
+                  placeholder="No PM teams"
+                  emptyOptionsLabel={teamsQuery.isLoading ? 'Loading teams...' : 'No teams found'}
                   noResultsLabel={teamsQuery.isLoading ? 'Loading teams…' : 'No teams found'}
+                  buttonAriaLabel="Select PM teams"
+                  summaryFormatter={formatTeamSelectionSummary('No PM teams')}
                 />
-                <div className="user-detail-page__hint">Current saved value: {pmTeamSummary}.</div>
+                <div className="user-detail-page__hint">Saved PM memberships: {pmTeamSummary}.</div>
               </div>
               <div className="user-detail-page__field">
-                <div className="user-detail-page__label">Translator team</div>
-                <SingleSelectDropdown
-                  label="Translator team"
+                <div className="user-detail-page__label">Translator teams</div>
+                <MultiSelectChip
+                  label="Translator teams"
                   options={teamOptions}
-                  value={translatorTeamIdDraft}
-                  onChange={(next) => setTranslatorTeamIdDraft(next)}
-                  className="user-detail-page__select"
-                  noneLabel="No translator team"
-                  placeholder="No translator team"
+                  selectedValues={translatorTeamIdsDraft}
+                  onChange={setTranslatorTeamIdsDraft}
+                  className="user-detail-page__select user-detail-page__team-select"
+                  placeholder="No translator teams"
+                  emptyOptionsLabel={teamsQuery.isLoading ? 'Loading teams...' : 'No teams found'}
                   noResultsLabel={teamsQuery.isLoading ? 'Loading teams…' : 'No teams found'}
+                  buttonAriaLabel="Select translator teams"
+                  summaryFormatter={formatTeamSelectionSummary('No translator teams')}
                 />
                 <div className="user-detail-page__hint">
-                  Current saved value: {translatorTeamSummary}.
+                  Saved translator memberships: {translatorTeamSummary}.
                 </div>
               </div>
             </div>

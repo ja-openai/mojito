@@ -64,6 +64,10 @@
   width: 100%;
 }
 
+.user-detail-page__team-select.chip-dropdown {
+  width: 100%;
+}
+
 .user-detail-page__locale-select.chip-dropdown {
   width: 100%;
 }

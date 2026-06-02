@@ -374,7 +374,7 @@ export async function replaceTeamLocalePools(
 
 export async function updateUserTeamAssignment(
   userId: number,
-  payload: { pmTeamId: number | null; translatorTeamId: number | null },
+  payload: { pmTeamIds: number[]; translatorTeamIds: number[] },
 ): Promise<void> {
   const response = await fetch(`/api/teams/users/${userId}/assignment`, {
     method: 'PUT',

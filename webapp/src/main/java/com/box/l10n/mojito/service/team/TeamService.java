@@ -421,18 +421,21 @@ public class TeamService {
   }
 
   @Transactional
-  public void setUserTeamAssignments(Long userId, Long pmTeamId, Long translatorTeamId) {
+  public void setUserTeamAssignments(
+      Long userId, List<Long> pmTeamIds, List<Long> translatorTeamIds) {
     User user =
         userRepository
             .findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+    List<Long> normalizedPmTeamIds = normalizeUserTeamAssignmentIds(pmTeamIds);
+    List<Long> normalizedTranslatorTeamIds = normalizeUserTeamAssignmentIds(translatorTeamIds);
 
     Set<Long> currentPmTeamIds =
         teamUserRepository.findByUserIdAndRole(userId, TeamUserRole.PM).stream()
             .map(TeamUser::getTeam)
             .map(Team::getId)
             .collect(Collectors.toCollection(LinkedHashSet::new));
-    Set<Long> nextPmTeamIds = pmTeamId == null ? Set.of() : Set.of(pmTeamId);
+    Set<Long> nextPmTeamIds = new LinkedHashSet<>(normalizedPmTeamIds);
     List<Long> removedPmTeamIds =
         currentPmTeamIds.stream().filter(id -> !nextPmTeamIds.contains(id)).toList();
 
@@ -441,8 +444,7 @@ public class TeamService {
             .map(TeamUser::getTeam)
             .map(Team::getId)
             .collect(Collectors.toCollection(LinkedHashSet::new));
-    Set<Long> nextTranslatorTeamIds =
-        translatorTeamId == null ? Set.of() : Set.of(translatorTeamId);
+    Set<Long> nextTranslatorTeamIds = new LinkedHashSet<>(normalizedTranslatorTeamIds);
     List<Long> removedTranslatorTeamIds =
         currentTranslatorTeamIds.stream()
             .filter(id -> !nextTranslatorTeamIds.contains(id))
@@ -478,7 +480,7 @@ public class TeamService {
     teamUserRepository.deleteByUserIdAndRole(userId, TeamUserRole.PM);
     teamUserRepository.deleteByUserIdAndRole(userId, TeamUserRole.TRANSLATOR);
 
-    if (pmTeamId != null) {
+    for (Long pmTeamId : normalizedPmTeamIds) {
       Team pmTeam = getTeam(pmTeamId);
       TeamUser pmMapping = new TeamUser();
       pmMapping.setTeam(pmTeam);
@@ -487,7 +489,7 @@ public class TeamService {
       teamUserRepository.save(pmMapping);
     }
 
-    if (translatorTeamId != null) {
+    for (Long translatorTeamId : normalizedTranslatorTeamIds) {
       Team translatorTeam = getTeam(translatorTeamId);
       TeamUser translatorMapping = new TeamUser();
       translatorMapping.setTeam(translatorTeam);
@@ -495,6 +497,11 @@ public class TeamService {
       translatorMapping.setRole(TeamUserRole.TRANSLATOR);
       teamUserRepository.save(translatorMapping);
     }
+  }
+
+  private List<Long> normalizeUserTeamAssignmentIds(List<Long> teamIds) {
+    return (teamIds == null ? List.<Long>of() : teamIds)
+        .stream().filter(id -> id != null && id > 0).distinct().toList();
   }
 
   @Transactional(readOnly = true)

@@ -601,8 +601,8 @@ public class UserService {
     }
 
     Map<Long, LinkedHashMap<Long, String>> userTeamsByUserId = new HashMap<>();
-    Map<Long, UserTeamByUserProjection> pmTeamByUserId = new HashMap<>();
-    Map<Long, UserTeamByUserProjection> translatorTeamByUserId = new HashMap<>();
+    Map<Long, LinkedHashMap<Long, String>> pmTeamsByUserId = new HashMap<>();
+    Map<Long, LinkedHashMap<Long, String>> translatorTeamsByUserId = new HashMap<>();
     for (UserTeamByUserProjection row : teamUserRepository.findUserTeamsByUserIds(userIds)) {
       if (row.userId() == null || row.teamId() == null) {
         continue;
@@ -611,10 +611,14 @@ public class UserService {
           .computeIfAbsent(row.userId(), (key) -> new LinkedHashMap<>())
           .putIfAbsent(row.teamId(), row.teamName());
       if (row.role() == TeamUserRole.PM) {
-        pmTeamByUserId.putIfAbsent(row.userId(), row);
+        pmTeamsByUserId
+            .computeIfAbsent(row.userId(), (key) -> new LinkedHashMap<>())
+            .putIfAbsent(row.teamId(), row.teamName());
       }
       if (row.role() == TeamUserRole.TRANSLATOR) {
-        translatorTeamByUserId.putIfAbsent(row.userId(), row);
+        translatorTeamsByUserId
+            .computeIfAbsent(row.userId(), (key) -> new LinkedHashMap<>())
+            .putIfAbsent(row.teamId(), row.teamName());
       }
     }
 
@@ -623,8 +627,14 @@ public class UserService {
             summary -> {
               LinkedHashMap<Long, String> teamMap =
                   userTeamsByUserId.getOrDefault(summary.id(), new LinkedHashMap<>());
-              UserTeamByUserProjection pmTeam = pmTeamByUserId.get(summary.id());
-              UserTeamByUserProjection translatorTeam = translatorTeamByUserId.get(summary.id());
+              LinkedHashMap<Long, String> pmTeamMap =
+                  pmTeamsByUserId.getOrDefault(summary.id(), new LinkedHashMap<>());
+              LinkedHashMap<Long, String> translatorTeamMap =
+                  translatorTeamsByUserId.getOrDefault(summary.id(), new LinkedHashMap<>());
+              List<Long> pmTeamIds = new ArrayList<>(pmTeamMap.keySet());
+              List<String> pmTeamNames = new ArrayList<>(pmTeamMap.values());
+              List<Long> translatorTeamIds = new ArrayList<>(translatorTeamMap.keySet());
+              List<String> translatorTeamNames = new ArrayList<>(translatorTeamMap.values());
               return new UserAdminSummary(
                   summary.id(),
                   summary.username(),
@@ -638,10 +648,14 @@ public class UserService {
                   userLocalesByUserId.getOrDefault(summary.id(), List.of()),
                   new ArrayList<>(teamMap.keySet()),
                   new ArrayList<>(teamMap.values()),
-                  pmTeam != null ? pmTeam.teamId() : null,
-                  pmTeam != null ? pmTeam.teamName() : null,
-                  translatorTeam != null ? translatorTeam.teamId() : null,
-                  translatorTeam != null ? translatorTeam.teamName() : null);
+                  pmTeamIds,
+                  pmTeamNames,
+                  pmTeamIds.isEmpty() ? null : pmTeamIds.get(0),
+                  pmTeamNames.isEmpty() ? null : pmTeamNames.get(0),
+                  translatorTeamIds,
+                  translatorTeamNames,
+                  translatorTeamIds.isEmpty() ? null : translatorTeamIds.get(0),
+                  translatorTeamNames.isEmpty() ? null : translatorTeamNames.get(0));
             })
         .toList();
   }

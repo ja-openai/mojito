@@ -61,7 +61,8 @@ public class TeamWS {
 
   public record LocalePoolsResponse(List<LocalePoolRow> entries) {}
 
-  public record UpdateUserTeamAssignmentsRequest(Long pmTeamId, Long translatorTeamId) {}
+  public record UpdateUserTeamAssignmentsRequest(
+      List<Long> pmTeamIds, List<Long> translatorTeamIds, Long pmTeamId, Long translatorTeamId) {}
 
   public record TeamSlackSettingsResponse(
       boolean enabled, String slackClientId, String slackChannelId) {}
@@ -537,11 +538,22 @@ public class TeamWS {
     try {
       teamService.setUserTeamAssignments(
           userId,
-          request != null ? request.pmTeamId() : null,
-          request != null ? request.translatorTeamId() : null);
+          resolveUserTeamAssignmentIds(
+              request != null ? request.pmTeamIds() : null,
+              request != null ? request.pmTeamId() : null),
+          resolveUserTeamAssignmentIds(
+              request != null ? request.translatorTeamIds() : null,
+              request != null ? request.translatorTeamId() : null));
     } catch (IllegalArgumentException ex) {
       throw toStatusException(ex);
     }
+  }
+
+  private List<Long> resolveUserTeamAssignmentIds(List<Long> teamIds, Long teamId) {
+    if (teamIds != null) {
+      return teamIds;
+    }
+    return teamId == null ? List.of() : List.of(teamId);
   }
 
   private Team getTeamOr404(Long teamId) {
