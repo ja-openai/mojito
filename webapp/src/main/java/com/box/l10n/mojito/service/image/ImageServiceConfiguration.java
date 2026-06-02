@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.image;
 
+import com.box.l10n.mojito.service.blobstorage.BlobStorage;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -14,12 +15,68 @@ import org.springframework.context.annotation.Primary;
  *
  * <p>{@link DatabaseImageService} is the default implementation.
  *
+ * <p>{@link BlobStorageImageService} uses the configured {@link BlobStorage}. Use it with
+ * `l10n.image-service.storage.type=blobStorage`.
+ *
  * <p>{@link S3ImageService} and {@link S3FallbackImageService} both require that configured {@link
  * S3BlobStorage} and {@link com.amazonaws.services.s3.AmazonS3} client instances are available in
  * the container.
  */
 @Configuration
 public class ImageServiceConfiguration {
+
+  @ConditionalOnProperty(value = "l10n.image-service.storage.type", havingValue = "blobStorage")
+  static class BlobStorageImageServiceConfiguration {
+
+    @Autowired BlobStorage blobStorage;
+
+    @Bean
+    public ImageService blobStorageImageService(
+        BlobStorage blobStorage,
+        @Value("${l10n.image-service.storage.blob-storage.prefix:image}") String pathPrefix) {
+      return new BlobStorageImageService(blobStorage, pathPrefix);
+    }
+  }
+
+  @ConditionalOnProperty(
+      value = "l10n.image-service.storage.type",
+      havingValue = "blobStorageFallback")
+  static class BlobStorageFallbackImageServiceConfiguration {
+
+    @Autowired ImageRepository imageRepository;
+
+    @Autowired BlobStorage blobStorage;
+
+    @Bean
+    @Qualifier("databaseImageService")
+    public DatabaseImageService databaseImageService() {
+      return new DatabaseImageService(imageRepository);
+    }
+
+    @Bean
+    @Qualifier("blobStorageImageService")
+    public BlobStorageImageService blobStorageImageService(
+        BlobStorage blobStorage,
+        @Value("${l10n.image-service.storage.blob-storage.prefix:image}") String pathPrefix) {
+      return new BlobStorageImageService(blobStorage, pathPrefix);
+    }
+
+    @Bean
+    public BlobStorageUploadImageAsyncTask blobStorageUploadImageAsyncTask(
+        @Qualifier("blobStorageImageService") BlobStorageImageService blobStorageImageService) {
+      return new BlobStorageUploadImageAsyncTask(blobStorageImageService);
+    }
+
+    @Bean
+    @Primary
+    public ImageService blobStorageImageFallback(
+        @Qualifier("blobStorageImageService") BlobStorageImageService blobStorageImageService,
+        @Qualifier("databaseImageService") DatabaseImageService databaseImageService,
+        BlobStorageUploadImageAsyncTask blobStorageUploadImageAsyncTask) {
+      return new BlobStorageFallbackImageService(
+          blobStorageImageService, databaseImageService, blobStorageUploadImageAsyncTask);
+    }
+  }
 
   @ConditionalOnProperty(value = "l10n.image-service.storage.type", havingValue = "s3Fallback")
   static class S3FallbackImageServiceConfiguration {
