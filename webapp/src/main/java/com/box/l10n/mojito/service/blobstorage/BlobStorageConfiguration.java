@@ -1,7 +1,10 @@
 package com.box.l10n.mojito.service.blobstorage;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.azure.storage.blob.BlobContainerClient;
 import com.box.l10n.mojito.retry.DataIntegrityViolationExceptionRetryTemplate;
+import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage;
+import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorageCleanupJob;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorageConfigurationProperties;
@@ -30,6 +33,10 @@ import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
  *
  * <p>Consider using {@link S3BlobStorage} for larger deployment. An {@link AmazonS3} client must be
  * configured first, and then the storage enabled with the `l10n.blob-storage.type=s3` property
+ *
+ * <p>Azure Blob Storage can also be used for larger deployment. A {@link BlobContainerClient} must
+ * be configured first, and then the storage enabled with the `l10n.blob-storage.type=azure`
+ * property
  */
 @Configuration
 public class BlobStorageConfiguration {
@@ -48,6 +55,21 @@ public class BlobStorageConfiguration {
     public S3BlobStorage s3BlobStorage() {
       logger.info("Configure S3BlobStorage");
       return new S3BlobStorage(amazonS3, s3BlobStorageConfigurationProperties);
+    }
+  }
+
+  @ConditionalOnProperty(value = "l10n.blob-storage.type", havingValue = "azure")
+  @Configuration
+  static class AzureBlobStorageConfigurationConfiguration {
+
+    @Autowired BlobContainerClient blobContainerClient;
+
+    @Autowired AzureBlobStorageConfigurationProperties azureBlobStorageConfigurationProperties;
+
+    @Bean
+    public AzureBlobStorage azureBlobStorage() {
+      logger.info("Configure AzureBlobStorage");
+      return new AzureBlobStorage(blobContainerClient, azureBlobStorageConfigurationProperties);
     }
   }
 
