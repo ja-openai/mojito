@@ -10,14 +10,16 @@ import com.box.l10n.mojito.retry.DeadLockLoserExceptionRetryTemplate;
 import com.google.common.collect.Lists;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaDelete;
+import jakarta.persistence.criteria.Root;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,8 @@ public class PullRunAssetService {
   @Autowired PullRunTextUnitVariantRepository pullRunTextUnitVariantRepository;
 
   @Autowired JdbcTemplate jdbcTemplate;
+
+  @Autowired EntityManager entityManager;
 
   @Autowired MeterRegistry meterRegistry;
 
@@ -91,10 +95,6 @@ public class PullRunAssetService {
             pullRunAsset.getId(), localeId, outputBcp47Tag);
 
     if (!pullRunTextUnitVariants.isEmpty()) {
-      // Delete the rows if ids are not empty
-      NamedParameterJdbcTemplate namedParameterJdbcTemplate =
-          new NamedParameterJdbcTemplate(jdbcTemplate);
-
       Lists.partition(
               pullRunTextUnitVariants.stream()
                   .map(PullRunTextUnitVariant::getId)
@@ -102,12 +102,18 @@ public class PullRunAssetService {
               BATCH_SIZE)
           .forEach(
               idsBatch -> {
-                MapSqlParameterSource parameters = new MapSqlParameterSource();
-                parameters.addValue("ids", idsBatch);
-                namedParameterJdbcTemplate.update(
-                    "delete from pull_run_text_unit_variant where id in (:ids)", parameters);
+                deletePullRunTextUnitVariantsByIds(idsBatch);
               });
     }
+  }
+
+  int deletePullRunTextUnitVariantsByIds(List<Long> ids) {
+    CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+    CriteriaDelete<PullRunTextUnitVariant> delete =
+        criteriaBuilder.createCriteriaDelete(PullRunTextUnitVariant.class);
+    Root<PullRunTextUnitVariant> root = delete.from(PullRunTextUnitVariant.class);
+    delete.where(root.get("id").in(ids));
+    return entityManager.createQuery(delete).executeUpdate();
   }
 
   @Transactional

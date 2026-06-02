@@ -8,7 +8,6 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
@@ -34,22 +33,13 @@ public interface PushRunAssetTmTextUnitRepository
       """)
   List<TMTextUnit> findByPushRun(@Param("pushRun") PushRun pushRun, Pageable pageable);
 
-  @Transactional
-  @Modifying
   @Query(
-      nativeQuery = true,
-      value =
-          """
-          delete push_run_asset_tm_text_unit
-          from push_run_asset_tm_text_unit
-            join (select prattu.id as id
-              from push_run pr
-                join push_run_asset pra on pra.push_run_id = pr.id
-                join push_run_asset_tm_text_unit prattu on prattu.push_run_asset_id = pra.id
-              where pr.created_date < :beforeDate
-              limit :batchSize
-            ) todelete on todelete.id = push_run_asset_tm_text_unit.id
-          """)
-  int deleteAllByPushRunWithCreatedDateBefore(
-      @Param("beforeDate") ZonedDateTime beforeDate, @Param("batchSize") int batchSize);
+      """
+      select prattu.id
+      from PushRunAssetTmTextUnit prattu
+      where prattu.pushRunAsset.pushRun.createdDate < :beforeDate
+      order by prattu.id
+      """)
+  List<Long> findIdsByPushRunWithCreatedDateBefore(
+      @Param("beforeDate") ZonedDateTime beforeDate, Pageable pageable);
 }

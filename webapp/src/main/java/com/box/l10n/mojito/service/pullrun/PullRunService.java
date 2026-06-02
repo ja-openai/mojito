@@ -1,15 +1,23 @@
 package com.box.l10n.mojito.service.pullrun;
 
 import com.box.l10n.mojito.entity.PullRun;
+import com.box.l10n.mojito.entity.PullRunTextUnitVariant;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.service.commit.CommitToPullRunRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaDelete;
+import jakarta.persistence.criteria.Root;
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Service to manage PullRun data.
@@ -29,6 +37,10 @@ public class PullRunService {
   @Autowired PullRunAssetRepository pullRunAssetRepository;
 
   @Autowired PullRunTextUnitVariantRepository pullRunTextUnitVariantRepository;
+
+  @Autowired EntityManager entityManager;
+
+  @Autowired TransactionTemplate transactionTemplate;
 
   @Value("${l10n.PullRunService.cleanup-job.batchsize:100000}")
   int deleteBatchSize;
@@ -56,9 +68,10 @@ public class PullRunService {
     int batchNumber = 1;
     int deleteCount;
     do {
-      deleteCount =
-          pullRunTextUnitVariantRepository.deleteAllByPullRunWithCreatedDateBefore(
-              beforeDate, deleteBatchSize);
+      List<Long> ids =
+          pullRunTextUnitVariantRepository.findIdsByPullRunWithCreatedDateBefore(
+              beforeDate, PageRequest.of(0, deleteBatchSize));
+      deleteCount = deletePullRunTextUnitVariantsByIds(ids);
       logger.debug(
           "Deleted {} pullRunTextUnitVariant rows in batch: {}", deleteCount, batchNumber++);
       waitForConfiguredTime();
@@ -67,6 +80,22 @@ public class PullRunService {
     pullRunAssetRepository.deleteAllByPullRunWithCreatedDateBefore(beforeDate);
     commitToPullRunRepository.deleteAllByPullRunWithCreatedDateBefore(beforeDate);
     pullRunRepository.deleteAllByCreatedDateBefore(beforeDate);
+  }
+
+  int deletePullRunTextUnitVariantsByIds(List<Long> ids) {
+    if (ids.isEmpty()) {
+      return 0;
+    }
+
+    return transactionTemplate.execute(
+        status -> {
+          CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+          CriteriaDelete<PullRunTextUnitVariant> delete =
+              criteriaBuilder.createCriteriaDelete(PullRunTextUnitVariant.class);
+          Root<PullRunTextUnitVariant> root = delete.from(PullRunTextUnitVariant.class);
+          delete.where(root.get("id").in(ids));
+          return entityManager.createQuery(delete).executeUpdate();
+        });
   }
 
   private void waitForConfiguredTime() {
