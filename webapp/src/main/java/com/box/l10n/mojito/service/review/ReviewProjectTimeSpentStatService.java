@@ -2,6 +2,8 @@ package com.box.l10n.mojito.service.review;
 
 import com.box.l10n.mojito.entity.review.ReviewProject;
 import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentWindow;
+import com.box.l10n.mojito.entity.review.ReviewProjectAssignmentWindowEndReason;
+import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTimeSpentAttributionConfidence;
 import com.box.l10n.mojito.entity.review.ReviewProjectTimeSpentReviewFlag;
 import com.box.l10n.mojito.entity.review.ReviewProjectTimeSpentStat;
@@ -10,6 +12,7 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,16 +23,93 @@ public class ReviewProjectTimeSpentStatService {
   private static final long PAUSE_MULTIPLIER = 2L;
 
   private final ReviewProjectAssignmentWindowRepository assignmentWindowRepository;
+  private final ReviewProjectRepository reviewProjectRepository;
   private final ReviewProjectTextUnitDecisionRepository decisionRepository;
   private final ReviewProjectTimeSpentStatRepository statRepository;
 
   public ReviewProjectTimeSpentStatService(
       ReviewProjectAssignmentWindowRepository assignmentWindowRepository,
+      ReviewProjectRepository reviewProjectRepository,
       ReviewProjectTextUnitDecisionRepository decisionRepository,
       ReviewProjectTimeSpentStatRepository statRepository) {
     this.assignmentWindowRepository = Objects.requireNonNull(assignmentWindowRepository);
+    this.reviewProjectRepository = Objects.requireNonNull(reviewProjectRepository);
     this.decisionRepository = Objects.requireNonNull(decisionRepository);
     this.statRepository = Objects.requireNonNull(statRepository);
+  }
+
+  @Transactional(readOnly = true)
+  public TimeSpentReport getReport(TimeSpentReportCriteria criteria) {
+    TimeSpentReportCriteria safeCriteria =
+        criteria == null ? TimeSpentReportCriteria.defaults() : criteria;
+    PageRequest detailLimit = PageRequest.of(0, safeCriteria.detailLimit());
+    PageRequest summaryLimit = PageRequest.of(0, safeCriteria.summaryLimit());
+    ReviewProjectTimeSpentStatRepository.SummaryProjection summary =
+        statRepository.findReportSummary(
+            safeCriteria.activityAfter(),
+            safeCriteria.activityBefore(),
+            safeCriteria.statusName(),
+            safeCriteria.translatorUserId(),
+            safeCriteria.localeBcp47Tag(),
+            ReviewProjectTimeSpentReviewFlag.OK,
+            ReviewProjectTimeSpentReviewFlag.MISSING_REPORT);
+    List<ReviewProjectTimeSpentStatRepository.LinguistSummaryProjection> linguists =
+        statRepository.findLinguistSummaries(
+            safeCriteria.activityAfter(),
+            safeCriteria.activityBefore(),
+            safeCriteria.statusName(),
+            safeCriteria.translatorUserId(),
+            safeCriteria.localeBcp47Tag(),
+            ReviewProjectTimeSpentReviewFlag.OK,
+            ReviewProjectTimeSpentReviewFlag.MISSING_REPORT,
+            summaryLimit);
+    List<ReviewProjectTimeSpentStatRepository.TranslatorScorecardProjection> scorecards =
+        statRepository.findTranslatorScorecards(
+            safeCriteria.activityAfter(),
+            safeCriteria.activityBefore(),
+            safeCriteria.statusName(),
+            safeCriteria.translatorUserId(),
+            safeCriteria.localeBcp47Tag(),
+            ReviewProjectTimeSpentReviewFlag.OK,
+            ReviewProjectTimeSpentReviewFlag.MISSING_REPORT,
+            summaryLimit);
+    List<ReviewProjectTimeSpentStat> windows =
+        statRepository.findReportRows(
+            safeCriteria.activityAfter(),
+            safeCriteria.activityBefore(),
+            safeCriteria.statusName(),
+            safeCriteria.translatorUserId(),
+            safeCriteria.localeBcp47Tag(),
+            detailLimit);
+    return new TimeSpentReport(summary, linguists, scorecards, windows);
+  }
+
+  @Transactional
+  public TimeSpentRecomputeResult recomputeProjectStats(TimeSpentRecomputeRequest request) {
+    TimeSpentRecomputeRequest safeRequest =
+        request == null ? TimeSpentRecomputeRequest.defaults() : request;
+    List<ReviewProject> projects =
+        reviewProjectRepository.findForTimeSpentRecompute(
+            safeRequest.projectCreatedAfter(),
+            safeRequest.projectCreatedBefore(),
+            safeRequest.status(),
+            safeRequest.translatorUserId(),
+            safeRequest.localeBcp47Tag(),
+            PageRequest.of(0, safeRequest.limit()));
+    int computedWindowCount = 0;
+    int backfilledWindowCount = 0;
+    for (ReviewProject reviewProject : projects) {
+      BackfilledAssignmentWindows assignmentWindows = getOrBackfillAssignmentWindows(reviewProject);
+      ZonedDateTime finalizedAt =
+          reviewProject.getStatus() == ReviewProjectStatus.CLOSED ? ZonedDateTime.now() : null;
+      for (ReviewProjectAssignmentWindow assignmentWindow : assignmentWindows.assignmentWindows()) {
+        computeWindowStat(reviewProject, assignmentWindow, finalizedAt);
+        computedWindowCount++;
+      }
+      backfilledWindowCount += assignmentWindows.backfilledWindowCount();
+    }
+    return new TimeSpentRecomputeResult(
+        projects.size(), computedWindowCount, backfilledWindowCount);
   }
 
   @Transactional
@@ -37,6 +117,30 @@ public class ReviewProjectTimeSpentStatService {
     assignmentWindowRepository
         .findByReviewProjectIdOrderByAssignedAt(reviewProject.getId())
         .forEach(window -> computeWindowStat(reviewProject, window, finalizedAt));
+  }
+
+  private BackfilledAssignmentWindows getOrBackfillAssignmentWindows(ReviewProject reviewProject) {
+    List<ReviewProjectAssignmentWindow> assignmentWindows =
+        assignmentWindowRepository.findByReviewProjectIdOrderByAssignedAt(reviewProject.getId());
+    if (!assignmentWindows.isEmpty() || reviewProject.getAssignedTranslatorUser() == null) {
+      return new BackfilledAssignmentWindows(assignmentWindows, 0);
+    }
+
+    ReviewProjectAssignmentWindow assignmentWindow = new ReviewProjectAssignmentWindow();
+    assignmentWindow.setReviewProject(reviewProject);
+    assignmentWindow.setAssignedTranslatorUser(reviewProject.getAssignedTranslatorUser());
+    assignmentWindow.setAssignedTranslatorUsernameSnapshot(
+        reviewProject.getAssignedTranslatorUser().getUsername());
+    assignmentWindow.setAssignedAt(
+        reviewProject.getCreatedDate() == null
+            ? ZonedDateTime.now()
+            : reviewProject.getCreatedDate());
+    if (reviewProject.getStatus() == ReviewProjectStatus.CLOSED) {
+      assignmentWindow.setEndedAt(ZonedDateTime.now());
+      assignmentWindow.setEndReason(ReviewProjectAssignmentWindowEndReason.PROJECT_CLOSED);
+    }
+    return new BackfilledAssignmentWindows(
+        List.of(assignmentWindowRepository.save(assignmentWindow)), 1);
   }
 
   @Transactional
@@ -152,7 +256,10 @@ public class ReviewProjectTimeSpentStatService {
         translatorUserId == null
             ? List.of()
             : decisions.stream()
-                .filter(row -> Objects.equals(row.decisionUserId(), translatorUserId))
+                .filter(
+                    row ->
+                        Objects.equals(row.decisionUserId(), translatorUserId)
+                            && isInWindow(row.decidedAt(), window))
                 .toList();
     if (!actorAttributed.isEmpty()) {
       return new AttributedDecisions(
@@ -255,4 +362,70 @@ public class ReviewProjectTimeSpentStatService {
 
   private record PauseEstimate(
       long rawSeconds, long activeSeconds, long pauseSeconds, long pauseCount) {}
+
+  private record BackfilledAssignmentWindows(
+      List<ReviewProjectAssignmentWindow> assignmentWindows, int backfilledWindowCount) {}
+
+  public record TimeSpentReport(
+      ReviewProjectTimeSpentStatRepository.SummaryProjection summary,
+      List<ReviewProjectTimeSpentStatRepository.LinguistSummaryProjection> linguistSummaries,
+      List<ReviewProjectTimeSpentStatRepository.TranslatorScorecardProjection> translatorScorecards,
+      List<ReviewProjectTimeSpentStat> windows) {}
+
+  public record TimeSpentRecomputeResult(
+      int matchedProjectCount, int computedWindowCount, int backfilledWindowCount) {}
+
+  public record TimeSpentReportCriteria(
+      ZonedDateTime activityAfter,
+      ZonedDateTime activityBefore,
+      ReviewProjectStatus status,
+      Long translatorUserId,
+      String localeBcp47Tag,
+      int summaryLimit,
+      int detailLimit) {
+
+    public TimeSpentReportCriteria {
+      summaryLimit = normalizeLimit(summaryLimit, 100, 500);
+      detailLimit = normalizeLimit(detailLimit, 100, 500);
+      localeBcp47Tag = blankToNull(localeBcp47Tag);
+    }
+
+    public String statusName() {
+      return status == null ? null : status.name();
+    }
+
+    public static TimeSpentReportCriteria defaults() {
+      return new TimeSpentReportCriteria(
+          null, null, ReviewProjectStatus.CLOSED, null, null, 100, 100);
+    }
+  }
+
+  public record TimeSpentRecomputeRequest(
+      ZonedDateTime projectCreatedAfter,
+      ZonedDateTime projectCreatedBefore,
+      ReviewProjectStatus status,
+      Long translatorUserId,
+      String localeBcp47Tag,
+      int limit) {
+
+    public TimeSpentRecomputeRequest {
+      limit = normalizeLimit(limit, 100, 1000);
+      localeBcp47Tag = blankToNull(localeBcp47Tag);
+    }
+
+    public static TimeSpentRecomputeRequest defaults() {
+      return new TimeSpentRecomputeRequest(null, null, ReviewProjectStatus.CLOSED, null, null, 100);
+    }
+  }
+
+  private static int normalizeLimit(int limit, int defaultLimit, int maxLimit) {
+    if (limit <= 0) {
+      return defaultLimit;
+    }
+    return Math.min(limit, maxLimit);
+  }
+
+  private static String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value;
+  }
 }

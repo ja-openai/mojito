@@ -1,8 +1,11 @@
 package com.box.l10n.mojito.service.review;
 
 import com.box.l10n.mojito.entity.review.ReviewProject;
+import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -80,6 +83,28 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
       order by rp.id
       """)
   List<ReviewProject> findByRequestIdWithAssignment(@Param("requestId") Long requestId);
+
+  @Query(
+      """
+      select rp
+      from ReviewProject rp
+      left join fetch rp.reviewProjectRequest
+      left join fetch rp.locale
+      left join fetch rp.assignedTranslatorUser
+      where (:projectCreatedAfter is null or rp.createdDate >= :projectCreatedAfter)
+        and (:projectCreatedBefore is null or rp.createdDate <= :projectCreatedBefore)
+        and (:status is null or rp.status = :status)
+        and (:translatorUserId is null or rp.assignedTranslatorUser.id = :translatorUserId)
+        and (:localeBcp47Tag is null or rp.locale.bcp47Tag = :localeBcp47Tag)
+      order by rp.id
+      """)
+  List<ReviewProject> findForTimeSpentRecompute(
+      @Param("projectCreatedAfter") ZonedDateTime projectCreatedAfter,
+      @Param("projectCreatedBefore") ZonedDateTime projectCreatedBefore,
+      @Param("status") ReviewProjectStatus status,
+      @Param("translatorUserId") Long translatorUserId,
+      @Param("localeBcp47Tag") String localeBcp47Tag,
+      Pageable pageable);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(

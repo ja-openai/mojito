@@ -31,6 +31,7 @@ import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslate
 import { AdminAiTranslatePromptsPage } from './page/settings/AdminAiTranslatePromptsPage';
 import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
 import { AdminGlossaryWorkflowPage } from './page/settings/AdminGlossaryWorkflowPage';
+import { AdminLinguistTimeSpentPage } from './page/settings/AdminLinguistTimeSpentPage';
 import { AdminReviewAutomationBatchPage } from './page/settings/AdminReviewAutomationBatchPage';
 import { AdminReviewAutomationDetailPage } from './page/settings/AdminReviewAutomationDetailPage';
 import { AdminReviewAutomationRunsPage } from './page/settings/AdminReviewAutomationRunsPage';
@@ -206,6 +207,14 @@ export function App() {
             />
             <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
             <Route path="/settings/system/review-features" element={<AdminReviewFeaturesPage />} />
+            <Route
+              path="/settings/admin/linguist-time-spent"
+              element={<AdminLinguistTimeSpentPage />}
+            />
+            <Route
+              path="/settings/system/linguist-time-spent"
+              element={<AdminLinguistTimeSpentPage />}
+            />
             <Route path="/settings/admin/glossaries" element={<LegacyGlossariesRedirect />} />
             <Route path="/settings/system/glossaries" element={<LegacyGlossariesRedirect />} />
             <Route

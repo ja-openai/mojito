@@ -193,6 +193,10 @@
   gap: var(--space-3);
 }
 
+.settings-filter-grid--inline {
+  align-items: end;
+}
+
 .settings-grid {
   display: grid;
   gap: var(--space-3);
@@ -285,6 +289,79 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.settings-actions--wrap {
+  flex-wrap: wrap;
+}
+
+.settings-help-popover {
+  position: relative;
+}
+
+.settings-help-popover summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  list-style: none;
+}
+
+.settings-help-popover summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-help-popover summary:hover,
+.settings-help-popover summary:focus-visible {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+}
+
+.settings-help-popover__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(28rem, calc(100vw - 2rem));
+  padding: var(--space-3);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text);
+}
+
+.settings-help-popover__panel h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-md);
+}
+
+.settings-help-popover__panel p {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.settings-help-popover__panel dl {
+  display: grid;
+  gap: var(--space-1) var(--space-2);
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+}
+
+.settings-help-popover__panel dt {
+  font-weight: var(--font-weight-semibold);
+}
+
+.settings-help-popover__panel dd {
+  margin: 0;
+  color: var(--color-text-muted);
 }
 
 .settings-pills {
@@ -546,5 +623,10 @@
   .settings-filter-grid {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
+  }
+
+  .settings-filter-grid--inline {
+    grid-template-columns: minmax(0, auto) minmax(10rem, 12rem) auto;
+    align-items: end;
   }
 }

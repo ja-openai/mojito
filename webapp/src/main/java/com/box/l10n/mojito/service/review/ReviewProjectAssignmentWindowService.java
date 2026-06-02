@@ -78,6 +78,23 @@ public class ReviewProjectAssignmentWindowService {
   }
 
   @Transactional
+  public void acceptCurrentAssignmentIfAssignedTranslator(ReviewProject reviewProject) {
+    User currentUser = userService.getCurrentUser().orElse(null);
+    User assignedTranslator = reviewProject.getAssignedTranslatorUser();
+    if (currentUser == null
+        || assignedTranslator == null
+        || !Objects.equals(entityId(currentUser), entityId(assignedTranslator))) {
+      return;
+    }
+
+    ReviewProjectAssignmentWindow window = ensureOpenWindow(reviewProject, assignedTranslator);
+    if (window.getAcceptedAt() == null) {
+      window.setAcceptedAt(ZonedDateTime.now());
+      assignmentWindowRepository.save(window);
+    }
+  }
+
+  @Transactional
   public ReviewProjectAssignmentWindow saveSelfReportedTime(
       ReviewProject reviewProject, Integer minutes, String note) {
     if (minutes == null || minutes <= 0) {

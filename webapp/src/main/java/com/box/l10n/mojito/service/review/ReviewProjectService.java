@@ -2252,6 +2252,7 @@ public class ReviewProjectService {
     }
 
     decision.setDecisionState(decisionState);
+    reviewProjectAssignmentWindowService.acceptCurrentAssignmentIfAssignedTranslator(project);
     reviewProjectTextUnitDecisionRepository.saveAndFlush(decision);
     updateProjectDecidedCount(
         project.getId(),
@@ -2319,6 +2320,7 @@ public class ReviewProjectService {
     feedback.setNotes(truncate(normalizeOptional(notes), 4000));
     reviewProjectTextUnitFeedbackRepository.saveAndFlush(feedback);
     if (project.getTerminologyPhase() == ReviewProjectTerminologyPhase.SPECIALIST_INPUT) {
+      reviewProjectAssignmentWindowService.acceptCurrentAssignmentIfAssignedTranslator(project);
       updateProjectDecidedCount(project.getId(), getWordCount(textUnit), wasDecided, true);
     }
 

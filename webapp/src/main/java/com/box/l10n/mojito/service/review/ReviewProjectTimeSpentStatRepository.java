@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.review;
 
+import com.box.l10n.mojito.entity.review.ReviewProjectTimeSpentReviewFlag;
 import com.box.l10n.mojito.entity.review.ReviewProjectTimeSpentStat;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -50,7 +51,7 @@ public interface ReviewProjectTimeSpentStatRepository
         sum(stat.pauseSeconds) as pauseSeconds,
         sum(stat.pauseCount) as pauseCount,
         sum(case when stat.reportedMissing = true then 1 else 0 end) as reportedMissingCount,
-        sum(case when stat.reviewFlag <> com.box.l10n.mojito.entity.review.ReviewProjectTimeSpentReviewFlag.OK then 1 else 0 end) as reviewFlagCount,
+        sum(case when stat.reviewFlag <> :okFlag and stat.reviewFlag <> :missingReportFlag then 1 else 0 end) as reviewFlagCount,
         max(stat.computedAt) as lastComputedAt
       from ReviewProjectTimeSpentStat stat
       where (:activityAfter is null or stat.lastDecisionAt >= :activityAfter)
@@ -64,7 +65,9 @@ public interface ReviewProjectTimeSpentStatRepository
       @Param("activityBefore") ZonedDateTime activityBefore,
       @Param("status") String status,
       @Param("translatorUserId") Long translatorUserId,
-      @Param("localeBcp47Tag") String localeBcp47Tag);
+      @Param("localeBcp47Tag") String localeBcp47Tag,
+      @Param("okFlag") ReviewProjectTimeSpentReviewFlag okFlag,
+      @Param("missingReportFlag") ReviewProjectTimeSpentReviewFlag missingReportFlag);
 
   @Query(
       """
@@ -81,7 +84,7 @@ public interface ReviewProjectTimeSpentStatRepository
         sum(stat.pauseSeconds) as pauseSeconds,
         sum(stat.pauseCount) as pauseCount,
         sum(case when stat.reportedMissing = true then 1 else 0 end) as reportedMissingCount,
-        sum(case when stat.reviewFlag <> com.box.l10n.mojito.entity.review.ReviewProjectTimeSpentReviewFlag.OK then 1 else 0 end) as reviewFlagCount,
+        sum(case when stat.reviewFlag <> :okFlag and stat.reviewFlag <> :missingReportFlag then 1 else 0 end) as reviewFlagCount,
         max(stat.computedAt) as lastComputedAt
       from ReviewProjectTimeSpentStat stat
       where (:activityAfter is null or stat.lastDecisionAt >= :activityAfter)
@@ -98,6 +101,51 @@ public interface ReviewProjectTimeSpentStatRepository
       @Param("status") String status,
       @Param("translatorUserId") Long translatorUserId,
       @Param("localeBcp47Tag") String localeBcp47Tag,
+      @Param("okFlag") ReviewProjectTimeSpentReviewFlag okFlag,
+      @Param("missingReportFlag") ReviewProjectTimeSpentReviewFlag missingReportFlag,
+      Pageable pageable);
+
+  @Query(
+      """
+      select
+        stat.assignedTranslatorUser.id as assignedTranslatorUserId,
+        stat.assignedTranslatorUsername as assignedTranslatorUsername,
+        count(stat.id) as windowCount,
+        count(distinct stat.reviewProject.id) as projectCount,
+        sum(stat.decidedWordCount) as decidedWordCount,
+        avg(stat.assignedToAcceptedSeconds) as averageAssignedToAcceptedSeconds,
+        sum(case when stat.assignedToAcceptedSeconds is null then 1 else 0 end) as notAcceptedCount,
+        sum(case when stat.projectDueDate is not null
+          and stat.lastDecisionAt is not null
+          and stat.lastDecisionAt > stat.projectDueDate
+          then 1 else 0 end) as missedDeadlineCount,
+        sum(case when stat.reportedMissing = true then 1 else 0 end) as reportedMissingCount,
+        sum(case when stat.reviewFlag <> :okFlag and stat.reviewFlag <> :missingReportFlag then 1 else 0 end) as reviewFlagCount,
+        sum(stat.selfReportedSeconds) as selfReportedSeconds,
+        sum(stat.estimatedActiveSeconds) as estimatedActiveSeconds,
+        max(stat.computedAt) as lastComputedAt
+      from ReviewProjectTimeSpentStat stat
+      where (:activityAfter is null or stat.lastDecisionAt >= :activityAfter)
+        and (:activityBefore is null or stat.lastDecisionAt <= :activityBefore)
+        and (:status is null or stat.reviewProjectStatus = :status)
+        and (:translatorUserId is null or stat.assignedTranslatorUser.id = :translatorUserId)
+        and (:localeBcp47Tag is null or stat.localeBcp47Tag = :localeBcp47Tag)
+      group by stat.assignedTranslatorUser.id, stat.assignedTranslatorUsername
+      order by sum(case when stat.projectDueDate is not null
+          and stat.lastDecisionAt is not null
+          and stat.lastDecisionAt > stat.projectDueDate
+          then 1 else 0 end) desc,
+        avg(stat.assignedToAcceptedSeconds) desc,
+        sum(case when stat.reviewFlag <> :okFlag and stat.reviewFlag <> :missingReportFlag then 1 else 0 end) desc
+      """)
+  List<TranslatorScorecardProjection> findTranslatorScorecards(
+      @Param("activityAfter") ZonedDateTime activityAfter,
+      @Param("activityBefore") ZonedDateTime activityBefore,
+      @Param("status") String status,
+      @Param("translatorUserId") Long translatorUserId,
+      @Param("localeBcp47Tag") String localeBcp47Tag,
+      @Param("okFlag") ReviewProjectTimeSpentReviewFlag okFlag,
+      @Param("missingReportFlag") ReviewProjectTimeSpentReviewFlag missingReportFlag,
       Pageable pageable);
 
   interface SummaryProjection {
@@ -130,5 +178,33 @@ public interface ReviewProjectTimeSpentStatRepository
     String getAssignedTranslatorUsername();
 
     String getLocaleBcp47Tag();
+  }
+
+  interface TranslatorScorecardProjection {
+    Long getAssignedTranslatorUserId();
+
+    String getAssignedTranslatorUsername();
+
+    Long getWindowCount();
+
+    Long getProjectCount();
+
+    Long getDecidedWordCount();
+
+    Double getAverageAssignedToAcceptedSeconds();
+
+    Long getNotAcceptedCount();
+
+    Long getMissedDeadlineCount();
+
+    Long getReportedMissingCount();
+
+    Long getReviewFlagCount();
+
+    Long getSelfReportedSeconds();
+
+    Long getEstimatedActiveSeconds();
+
+    ZonedDateTime getLastComputedAt();
   }
 }

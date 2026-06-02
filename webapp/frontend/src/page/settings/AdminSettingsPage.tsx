@@ -94,6 +94,26 @@ export function AdminSettingsPage() {
             </div>
           </section>
 
+          <section className="settings-card" aria-labelledby="settings-review-reporting">
+            <div className="settings-card__header">
+              <h2 id="settings-review-reporting">Review reporting</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/linguist-time-spent');
+                }}
+              >
+                <div className="settings-directory__title">Linguist time spent</div>
+                <div className="settings-directory__description">
+                  Compare self-reported and computed review time by linguist, language, and project.
+                </div>
+              </button>
+            </div>
+          </section>
+
           <section className="settings-card" aria-labelledby="settings-glossaries">
             <div className="settings-card__header">
               <h2 id="settings-glossaries">Glossaries</h2>
@@ -205,25 +225,47 @@ export function AdminSettingsPage() {
       ) : null}
 
       {isPm ? (
-        <section className="settings-card" aria-labelledby="settings-team-directory">
-          <div className="settings-card__header">
-            <h2 id="settings-team-directory">Team settings</h2>
-          </div>
-          <div className="settings-directory">
-            <button
-              type="button"
-              className="settings-directory__card"
-              onClick={() => {
-                void navigate('/settings/system/teams');
-              }}
-            >
-              <div className="settings-directory__title">Teams</div>
-              <div className="settings-directory__description">
-                Review teams and pools you manage.
-              </div>
-            </button>
-          </div>
-        </section>
+        <>
+          <section className="settings-card" aria-labelledby="settings-team-directory">
+            <div className="settings-card__header">
+              <h2 id="settings-team-directory">Team settings</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/teams');
+                }}
+              >
+                <div className="settings-directory__title">Teams</div>
+                <div className="settings-directory__description">
+                  Review teams and pools you manage.
+                </div>
+              </button>
+            </div>
+          </section>
+
+          <section className="settings-card" aria-labelledby="settings-pm-review-reporting">
+            <div className="settings-card__header">
+              <h2 id="settings-pm-review-reporting">Review reporting</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/linguist-time-spent');
+                }}
+              >
+                <div className="settings-directory__title">Linguist time spent</div>
+                <div className="settings-directory__description">
+                  Compare reported and computed review time by linguist, language, and project.
+                </div>
+              </button>
+            </div>
+          </section>
+        </>
       ) : null}
     </div>
   );
