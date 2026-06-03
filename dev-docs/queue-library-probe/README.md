@@ -21,19 +21,49 @@ after source edits. Both POMs intentionally pin the current Java 21/Spring Boot
 baseline, not a claimed compatibility matrix.
 
 The consumer reuses the existing external-package execution/inspection, optional
-wakeup and scheduled-maintenance tests without copying their sources. Its extra
-boundary test checks that queue classes come from exactly one ordinary JAR,
-byte-for-byte identical to the engine artifact just built, and that Mojito business
-classes, Quartz, AspectJ and Hibernate ORM are absent. Spring ORM and JPA APIs
-remain engine dependencies to preserve its transaction-manager compatibility
-checks; these JDBC tests do not exercise the Hibernate/JPA manager path. The consumer alone
+wakeup and scheduled-maintenance tests without copying their sources. The execution
+contract includes a direct public `AsyncJobPermanentFailureException` from a handler
+on MySQL and PostgreSQL, preserving payload and reporting FAILED at attempt one.
+Its boundary tests check every packaged queue class, including private/nested
+classes, for exactly one classpath resource and the same ordinary-JAR code origin,
+and compare the resolved JAR byte-for-byte with the engine artifact just built.
+They also require Mojito business classes, Quartz, AspectJ and (in the default lane)
+Hibernate ORM to be absent.
+An isolated duplicate-coordinator JAR must fail the boundary check even though
+`AsyncJobStore` still has a single origin. Classes are inspected without static
+initialization; this is classpath provenance, not a security sandbox or a ban on
+the consumer's Mockito test instrumentation.
+Spring ORM and JPA APIs remain engine dependencies to preserve its
+transaction-manager compatibility checks. The consumer alone
 selects the two existing V109 scripts as test resources and installs schemas
 explicitly in disposable databases. No migrations or application resources are
 packaged in the engine. This is not a Flyway adoption/upgrade test.
 
+An optional **test-only** JPA host lane consumes the same engine JAR:
+
+```sh
+mvn -f dev-docs/queue-library-probe/consumer/pom.xml -Pjpa spotless:check clean test
+```
+
+It adds Hibernate ORM and HSQL only to the consumer's test classpath, with a tiny
+host entity and explicit `JpaTransactionManager`/`TransactionTemplate` wiring.
+Six tests exercise public queue bootstrap and enqueue: physical JDBC isolation
+and resource suspension/restoration, independent queue commit after host rollback,
+read-only host suspension, real INSERT rollback without poisoning host commit,
+worker-owned business transactions, and both datasource mismatch guards. No
+Mojito entities, AspectJ advice or package-private enqueue primitive are used.
+The host uses `HibernateJpaDialect` and `DELAYED_ACQUISITION_AND_HOLD`; this is not
+a provider/version compatibility matrix or real MySQL/PostgreSQL JPA proof.
+Public enqueue deliberately commits independently, not atomically with host work.
+
+Always use `clean test` when switching lanes. The boundary test requires both
+Hibernate and the optional test class in JPA mode, and rejects both in the lean
+lane; it must not pass because stale compiled classes survived a profile switch.
+
 Without the Testcontainers flag, database cases skip; do not report that run as
 the full consumer proof. Test reports are in `consumer/target/surefire-reports`.
-The existing database CI job runs these separate builds too; adding them does not
+The existing database CI job runs the engine, lean real-DB consumer and optional
+HSQL JPA consumer separately; adding those steps does not
 claim remote CI has passed. No automatic Surefire retries are configured. For
 dependency inspection and local test formatting:
 
@@ -44,7 +74,7 @@ mvn -f dev-docs/queue-library-probe/consumer/pom.xml spotless:apply
 
 This probe does not move Mojito's admission, PollableTask, blob, lineage or Quartz
 integration into the library. It does not establish API stability, release
-licensing/provenance, production capacity, JPA enlistment compatibility or safe
+licensing/provenance, production capacity, atomic host/queue enlistment or safe
 migration adoption. Those remain in `../design/async-job-queue-library.md` and the
 queue review ledger. A production module still needs an agreed extraction and
 host wiring plan.

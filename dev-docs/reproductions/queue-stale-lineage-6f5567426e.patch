@@ -1,0 +1,153 @@
+diff --git a/webapp/src/test/java/com/box/l10n/mojito/queue/AssetLocalizeAsyncJobLineageRetryIntegrationTest.java b/webapp/src/test/java/com/box/l10n/mojito/queue/AssetLocalizeAsyncJobLineageRetryIntegrationTest.java
+index 4db3276f23..05b022bfb1 100644
+--- a/webapp/src/test/java/com/box/l10n/mojito/queue/AssetLocalizeAsyncJobLineageRetryIntegrationTest.java
++++ b/webapp/src/test/java/com/box/l10n/mojito/queue/AssetLocalizeAsyncJobLineageRetryIntegrationTest.java
+@@ -4,0 +5,4 @@
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.ArgumentMatchers.anyList;
++import static org.mockito.ArgumentMatchers.eq;
++import static org.mockito.Mockito.doAnswer;
+@@ -5,0 +10,1 @@
++import static org.mockito.Mockito.spy;
+@@ -8,0 +14,2 @@
++import com.box.l10n.mojito.entity.PullRun;
++import com.box.l10n.mojito.entity.PullRunAsset;
+@@ -17,0 +25,1 @@
++import com.box.l10n.mojito.service.asset.AssetRepository;
+@@ -22,0 +31,2 @@
++import com.box.l10n.mojito.service.pullrun.PullRunService;
++import com.box.l10n.mojito.service.pullrun.PullRunAssetService;
+@@ -37,0 +48,1 @@
++import java.util.concurrent.CountDownLatch;
+@@ -50,0 +62,1 @@
++import org.springframework.test.util.ReflectionTestUtils;
+@@ -76,0 +89,129 @@
++  @Autowired AssetRepository assetRepository;
++  @Autowired PullRunService pullRunService;
++  @Autowired PullRunAssetService pullRunAssetService;
++
++  @Test
++  public void expiredWorkerCannotReplaceWinningLineage() throws Exception {
++    Fixture fixture = createFixture("fr-FR");
++    PullRun run = pullRunService.getOrCreate(fixture.runName(), fixture.repository());
++    PullRunAsset runAsset = pullRunAssetService.getOrCreate(run, fixture.asset());
++    CountDownLatch selected = new CountDownLatch(1);
++    CountDownLatch resume = new CountDownLatch(1);
++    PullRunAssetService gatedLineage = spy(pullRunAssetService);
++    doAnswer(
++            invocation -> {
++              assertNoTransaction();
++              PullRunAsset selectedAsset = invocation.getArgument(0);
++              assertThat(selectedAsset.getId()).isEqualTo(runAsset.getId());
++              assertThat((List<Long>) invocation.getArgument(2))
++                  .containsExactly(fixture.variant().getId());
++              selected.countDown();
++              if (!resume.await(20, TimeUnit.SECONDS)) {
++                throw new AssertionError("Winner did not release the stale lineage writer");
++              }
++              return invocation.callRealMethod();
++            })
++        .when(gatedLineage)
++        .replaceTextUnitVariants(any(PullRunAsset.class), eq(fixture.localeId()), anyList(), eq("fr-FR"));
++    // Never replace fields on the cached Spring singleton: Quartz uses that instance too.
++    TMService staleTm = spy(tmService);
++    ReflectionTestUtils.setField(staleTm, "pullRunAssetService", gatedLineage);
++    SimpleMeterRegistry metrics = new SimpleMeterRegistry();
++    LocalizedAssetGenerationService staleGeneration =
++        new LocalizedAssetGenerationService(
++            assetRepository, repositoryLocaleRepository, staleTm, metrics);
++    AsyncJobStore store = new InMemoryAsyncJobStore();
++    ThreadPoolTaskExecutor staleExecutor = lineageExecutor("stale-lineage-");
++    ThreadPoolTaskExecutor winningExecutor = lineageExecutor("winning-lineage-");
++    AsyncJobQueueProperties.QueueSettings staleSettings = settings();
++    staleSettings.setLeaseDurationMs(1_000);
++    AssetLocalizeAsyncJobOutputStorage outputStorage =
++        new AssetLocalizeAsyncJobOutputStorage(
++            structuredBlobStorage, pollableTaskBlobStorage, objectMapper);
++    AsyncJobQueueRuntime staleRuntime =
++        new AsyncJobQueueRuntime(
++            QUEUE, store, staleSettings,
++            new AssetLocalizeAsyncJobHandler(
++                pollableTaskService, pollableTaskBlobStorage, pollableTaskExceptionUtils,
++                staleGeneration, objectMapper, metrics, outputStorage),
++            mock(TaskScheduler.class), staleExecutor, metrics, "stale-lineage-worker");
++    AsyncJobQueueRuntime winnerRuntime =
++        new AsyncJobQueueRuntime(
++            QUEUE, store, settings(),
++            new AssetLocalizeAsyncJobHandler(
++                pollableTaskService, pollableTaskBlobStorage, pollableTaskExceptionUtils,
++                generationService, objectMapper, metrics, outputStorage),
++            mock(TaskScheduler.class), winningExecutor, metrics, "winning-lineage-worker");
++    try {
++      AssetLocalizeAsyncJobSubmissionService submission =
++          new AssetLocalizeAsyncJobSubmissionService(
++              pollableTaskService, pollableTaskBlobStorage, pollableTaskExceptionUtils,
++              new AsyncJobQueueSubmissionService(store, mock(AsyncJobQueueCoordinator.class), metrics),
++              objectMapper, metrics);
++      long taskId = submission.scheduleJob(
++          QuartzJobInfo.newBuilder(GenerateLocalizedAssetJob.class)
++              .withInput(fixture.input()).withMessage(fixture.runName()).build())
++          .getPollableTask().getId();
++      AsyncJobRecord queued = store.findByStatus(QUEUE, AsyncJobStatus.QUEUED, 10).getFirst();
++      staleRuntime.pollOnce();
++      assertThat(selected.await(10, TimeUnit.SECONDS)).as("A selected the old variant").isTrue();
++      AsyncJobRecord staleClaim = store.getByIds(List.of(queued.id())).getFirst();
++      assertThat(staleClaim.attemptCount()).isEqualTo(1);
++      assertThat(staleClaim.status()).isEqualTo(AsyncJobStatus.RUNNING);
++      TMTextUnitVariant updated = tmService.addCurrentTMTextUnitVariant(
++          fixture.textUnit().getId(), fixture.localeId(), "Page principale");
++      assertThat(updated.getId()).isNotEqualTo(fixture.variant().getId());
++      AsyncJobRecord winner =
++          awaitState(store, queued.id(), winnerRuntime, AsyncJobStatus.DONE, 2, true);
++      assertTask(taskId, fixture.runName(), true);
++      assertLineage(fixture, updated.getId());
++      String winningOutput = pollableTaskBlobStorage.getOutput(taskId, LocalizedAssetBody.class).getContent();
++      assertThat(winningOutput).contains("Page principale").doesNotContain("Accueil");
++      resume.countDown();
++      AsyncJobRecord afterStale =
++          awaitState(store, queued.id(), staleRuntime, AsyncJobStatus.DONE, 2, false);
++      assertThat(afterStale.jobData()).isEqualTo(winner.jobData());
++      assertThat(pollableTaskBlobStorage.getOutput(taskId, LocalizedAssetBody.class).getContent())
++          .isEqualTo(winningOutput);
++      assertTask(taskId, fixture.runName(), true);
++      // A rejected completion must not leave committed business state disagreeing with B's output.
++      assertLineage(fixture, updated.getId());
++    } finally {
++      resume.countDown();
++      try {
++        staleRuntime.stop();
++        winnerRuntime.stop();
++      } finally {
++        try {
++          stopLineageExecutor(staleExecutor);
++        } finally {
++          try {
++            stopLineageExecutor(winningExecutor);
++          } finally {
++            metrics.close();
++          }
++        }
++      }
++    }
++  }
++
++  private static ThreadPoolTaskExecutor lineageExecutor(String prefix) {
++    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
++    executor.setCorePoolSize(1);
++    executor.setMaxPoolSize(1);
++    executor.setQueueCapacity(1);
++    executor.setThreadNamePrefix(prefix);
++    executor.setWaitForTasksToCompleteOnShutdown(true);
++    executor.setAwaitTerminationMillis(5_000);
++    executor.initialize();
++    return executor;
++  }
++
++  private static void stopLineageExecutor(ThreadPoolTaskExecutor executor) throws InterruptedException {
++    ThreadPoolExecutor pool = executor.getThreadPoolExecutor();
++    executor.shutdown();
++    if (!pool.isTerminated()) {
++      pool.shutdownNow();
++    }
++    assertThat(pool.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
++  }
