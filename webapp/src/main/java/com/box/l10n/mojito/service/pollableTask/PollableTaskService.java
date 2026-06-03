@@ -241,6 +241,9 @@ public class PollableTaskService {
    * @param pollableTask
    */
   public void fetchSubTasks(PollableTask pollableTask) {
+    if (pollableTask == null) {
+      return;
+    }
     Hibernate.initialize(pollableTask.getSubTasks());
     pollableTask.getSubTasks().forEach(this::fetchSubTasks);
   }
