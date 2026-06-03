@@ -22,6 +22,7 @@
         <npm.version>11.12.1</npm.version>
         <mojito.test.local-config.dir>webapp</mojito.test.local-config.dir>
         <mojito.test.timezone>UTC</mojito.test.timezone>
+        <surefire.rerunFailingTestsCount>1</surefire.rerunFailingTestsCount>
     </properties>
 
     <dependencies>
@@ -414,7 +415,7 @@
                         -Dspring.profiles.active=${user.name},test -Duser.timezone=${mojito.test.timezone}
                     </argLine>
 
-                    <rerunFailingTestsCount>1</rerunFailingTestsCount>
+                    <rerunFailingTestsCount>${surefire.rerunFailingTestsCount}</rerunFailingTestsCount>
 
 
                     <!-- Use this to run specific sequence of test to replicate issues-->

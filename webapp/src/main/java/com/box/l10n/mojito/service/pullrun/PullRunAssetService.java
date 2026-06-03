@@ -1,6 +1,5 @@
 package com.box.l10n.mojito.service.pullrun;
 
-import com.box.l10n.mojito.JSR310Migration;
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.PullRun;
 import com.box.l10n.mojito.entity.PullRunAsset;
@@ -14,7 +13,10 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaDelete;
 import jakarta.persistence.criteria.Root;
-import java.time.ZonedDateTime;
+import java.sql.Types;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -123,21 +125,23 @@ public class PullRunAssetService {
       List<Long> uniqueTmTextUnitVariantIds,
       String outputBcp47Tag) {
 
-    ZonedDateTime createdTime = ZonedDateTime.now();
+    LocalDateTime createdTime = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
 
     String sql =
         "insert into pull_run_text_unit_variant(pull_run_asset_id, locale_id, tm_text_unit_variant_id, created_date, output_bcp47_tag) values "
-            + uniqueTmTextUnitVariantIds.stream()
-                .map(
-                    tuvId ->
-                        String.format(
-                            "(%s, %s, %s, '%s', '%s') ",
-                            pullRunAsset.getId(),
-                            localeId,
-                            tuvId,
-                            JSR310Migration.toRawSQL(createdTime),
-                            outputBcp47Tag))
-                .collect(Collectors.joining(","));
-    jdbcTemplate.update(sql);
+            + String.join(
+                ",", Collections.nCopies(uniqueTmTextUnitVariantIds.size(), "(?, ?, ?, ?, ?)"));
+    jdbcTemplate.update(
+        sql,
+        statement -> {
+          int parameter = 1;
+          for (Long variantId : uniqueTmTextUnitVariantIds) {
+            statement.setObject(parameter++, pullRunAsset.getId(), Types.BIGINT);
+            statement.setObject(parameter++, localeId, Types.BIGINT);
+            statement.setObject(parameter++, variantId, Types.BIGINT);
+            statement.setObject(parameter++, createdTime, Types.TIMESTAMP);
+            statement.setString(parameter++, outputBcp47Tag);
+          }
+        });
   }
 }

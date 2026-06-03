@@ -81,7 +81,6 @@ import com.box.l10n.mojito.xliff.XliffUtils;
 import com.google.common.base.Preconditions;
 import com.ibm.icu.text.MessageFormat;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityManager;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -94,6 +93,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -1563,9 +1563,10 @@ public class TMService {
       String outputBcp47tag)
       throws UnsupportedAssetFilterTypeException {
 
-    try (Timer.ResourceSample timer =
-        Timer.resource(meterRegistry, "TMService.generateLocalizedBase")
-            .tag("repositoryId", Objects.toString(asset.getRepository().getId()))) {
+    String repositoryId = Objects.toString(asset.getRepository().getId());
+    long startNanos = System.nanoTime();
+    boolean recordDuration = true;
+    try {
 
       IPipelineDriver driver = new PipelineDriver();
 
@@ -1611,6 +1612,32 @@ public class TMService {
       String localizedContent = filterEventsToInMemoryRawDocumentStep.getOutput(rawDocument);
 
       return localizedContent;
+    } catch (VirtualMachineError | ThreadDeath fatal) {
+      // Do not allocate diagnostic state or mask a fatal generation failure with telemetry.
+      recordDuration = false;
+      throw fatal;
+    } finally {
+      if (recordDuration) {
+        recordGenerationDuration(repositoryId, System.nanoTime() - startNanos);
+      }
+    }
+  }
+
+  private void recordGenerationDuration(String repositoryId, long durationNanos) {
+    try {
+      meterRegistry
+          .timer("TMService.generateLocalizedBase", "repositoryId", repositoryId)
+          .record(durationNanos, TimeUnit.NANOSECONDS);
+    } catch (VirtualMachineError | ThreadDeath fatal) {
+      throw fatal;
+    } catch (Throwable failure) {
+      try {
+        logger.warn("Failed to record TM generation duration metric", failure);
+      } catch (VirtualMachineError | ThreadDeath fatal) {
+        throw fatal;
+      } catch (Throwable loggingFailure) {
+        // Diagnostics must not replace the generation result or its original failure.
+      }
     }
   }
 

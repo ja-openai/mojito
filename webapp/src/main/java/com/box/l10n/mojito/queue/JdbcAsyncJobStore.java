@@ -20,6 +20,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.SqlTypeValue;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
@@ -30,6 +31,7 @@ import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.vendor.HibernateJpaDialect;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -176,6 +178,35 @@ public class JdbcAsyncJobStore implements AsyncJobStore {
     String validatedJobData = AsyncJobQueueValidation.validateJobData(jobData);
     Instant now = databaseNow();
     return enqueueAtDatabaseTime(queueName, validatedJobData, now, now);
+  }
+
+  /**
+   * Internal admission primitive: join the caller's explicitly owned transaction, never commit it.
+   * The returned ID is provisional until that transaction commits. Callers must not publish it or
+   * notify workers before commit, and must resolve an uncertain commit through durable request
+   * identity. This does not implement that identity or recovery protocol.
+   *
+   * <p>The caller must use this store's configured transaction manager and propagate insert
+   * failures out of its transaction. The binding checks below do not certify mixed-manager
+   * transactions or mark rollback-only when a caller swallows a failure.
+   */
+  AsyncJobId enqueueNowInCurrentTransaction(String queueName, String jobData) {
+    if (transactionTemplate == null
+        || !TransactionSynchronizationManager.isActualTransactionActive()
+        || !TransactionSynchronizationManager.isSynchronizationActive()
+        || TransactionSynchronizationManager.isCurrentTransactionReadOnly()
+        || !Objects.equals(
+            TransactionSynchronizationManager.getCurrentTransactionIsolationLevel(),
+            TRANSACTION_ISOLATION_LEVEL)
+        || !(TransactionSynchronizationManager.getResource(
+                unwrapTransactionAware(
+                    namedParameterJdbcTemplate.getJdbcTemplate().getDataSource()))
+            instanceof ConnectionHolder)) {
+      throw new IllegalStateException(
+          "Enlisted async job enqueue requires an active writable READ_COMMITTED transaction "
+              + "bound to the configured queue DataSource");
+    }
+    return enqueueNowInTransaction(queueName, jobData);
   }
 
   private AsyncJobId enqueueAtDatabaseTime(

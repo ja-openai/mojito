@@ -35,6 +35,18 @@ public interface MBlobRepository
 	      """)
   List<Long> findExpiredBlobIdsWithNow(@Param("now") ZonedDateTime now, Pageable pageable);
 
+  /**
+   * Recheck the same expiry cutoff while deleting; selected IDs alone are not deletion authority.
+   */
+  @Transactional
+  @Modifying
+  @Query(
+      """
+      delete from #{#entityName} mb where mb.id in :ids
+      and (cast(unix_timestamp(mb.createdDate) as long) + mb.expireAfterSeconds) < cast(unix_timestamp(:now) as long)
+      """)
+  int deleteExpiredByIds(@Param("ids") List<Long> ids, @Param("now") ZonedDateTime now);
+
   @Transactional
   @Modifying
   @Query("delete from #{#entityName} mb where mb.id in ?1")

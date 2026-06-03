@@ -37,7 +37,11 @@ jobs:
       - name: Install webapp reactor dependencies
         run: mvn -pl webapp -am -Pno-local-config install -DskipTests
       - name: Run async job queue MySQL/PostgreSQL contract
-        run: mvn -pl webapp -Pno-local-config -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest,JdbcAsyncJobStorePoolIntegrationTest,JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest,AsyncJobQueueProcessCrashIntegrationTest -Dmojito.asyncJobQueue.testcontainers=true test
+        run: >-
+          mvn -pl webapp -Pno-local-config
+          -Dtest=JdbcAsyncJobStoreDatabaseIntegrationTest,JdbcAsyncJobStorePoolIntegrationTest,JdbcAsyncJobStoreTimezoneIntegrationTest,AsyncJobQueueJpaTransactionIntegrationTest,JdbcPostgresAsyncJobQueueWakeupListenerDatabaseIntegrationTest,AsyncJobQueueProcessCrashIntegrationTest
+          -Dmojito.asyncJobQueue.testcontainers=true
+          -Dsurefire.rerunFailingTestsCount=0 test
       - name: Build queue packaging probe without Mojito parent or AspectJ
         run: mvn -f dev-docs/queue-library-probe/engine/pom.xml clean install
       - name: Verify separate consumer of the ordinary queue JAR
