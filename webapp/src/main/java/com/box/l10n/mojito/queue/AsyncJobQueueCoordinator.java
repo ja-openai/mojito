@@ -1,0 +1,213 @@
+package com.box.l10n.mojito.queue;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.SmartLifecycle;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.stereotype.Service;
+
+/**
+ * Starts one polling runtime per configured handler/queue pair.
+ *
+ * <p>Each runtime owns its own executor and adaptive poll loop while sharing the same queue store.
+ */
+@Service
+@ConditionalOnProperty(name = "l10n.org.async-job-queue.enabled", havingValue = "true")
+public class AsyncJobQueueCoordinator implements SmartLifecycle {
+
+  static Logger logger = LoggerFactory.getLogger(AsyncJobQueueCoordinator.class);
+
+  private final AsyncJobStore asyncJobStore;
+  private final AsyncJobQueueProperties asyncJobQueueProperties;
+  private final List<AsyncJobHandler> asyncJobHandlers;
+  private final TaskScheduler taskScheduler;
+  private final MeterRegistry meterRegistry;
+
+  private final Object lifecycleLock = new Object();
+  private final Map<String, AsyncJobQueueRuntime> runtimesByQueueName = new LinkedHashMap<>();
+
+  private volatile boolean running;
+
+  public AsyncJobQueueCoordinator(
+      AsyncJobStore asyncJobStore,
+      AsyncJobQueueProperties asyncJobQueueProperties,
+      List<AsyncJobHandler> asyncJobHandlers,
+      TaskScheduler taskScheduler,
+      MeterRegistry meterRegistry) {
+    this.asyncJobStore = Objects.requireNonNull(asyncJobStore);
+    this.asyncJobQueueProperties = Objects.requireNonNull(asyncJobQueueProperties);
+    this.asyncJobHandlers = Objects.requireNonNull(asyncJobHandlers);
+    this.taskScheduler = Objects.requireNonNull(taskScheduler);
+    this.meterRegistry = Objects.requireNonNull(meterRegistry);
+  }
+
+  @Override
+  public void start() {
+    synchronized (lifecycleLock) {
+      if (running) {
+        return;
+      }
+      AsyncJobQueueValidation.validateProperties(asyncJobQueueProperties);
+
+      runtimesByQueueName.clear();
+
+      Map<String, AsyncJobHandler> handlersByQueueName = new LinkedHashMap<>();
+      for (AsyncJobHandler asyncJobHandler : asyncJobHandlers) {
+        String queueName = AsyncJobQueueValidation.validateQueueName(asyncJobHandler.queueName());
+        AsyncJobHandler previous = handlersByQueueName.put(queueName, asyncJobHandler);
+        if (previous != null) {
+          throw new IllegalStateException(
+              "Multiple AsyncJobHandler beans registered for queue: " + queueName);
+        }
+      }
+
+      for (Map.Entry<String, AsyncJobHandler> entry : handlersByQueueName.entrySet()) {
+        String queueName = entry.getKey();
+        AsyncJobQueueProperties.QueueSettings queueSettings = queueSettings(queueName);
+        try {
+          AsyncJobQueueRuntime runtime =
+              new AsyncJobQueueRuntime(
+                  queueName,
+                  asyncJobStore,
+                  queueSettings,
+                  entry.getValue(),
+                  taskScheduler,
+                  queueExecutor(queueName, queueSettings),
+                  meterRegistry,
+                  workerId(queueName));
+          runtimesByQueueName.put(queueName, runtime);
+          runtime.start();
+        } catch (Throwable e) {
+          if (isJvmFatal(e)) {
+            throw (Error) e;
+          }
+          logger.error("Failed to start async job queue runtime for {}", queueName, e);
+          stopStartedRuntimes();
+          throw unchecked(e);
+        }
+      }
+
+      for (String configuredQueueName : asyncJobQueueProperties.getQueues().keySet()) {
+        if (!handlersByQueueName.containsKey(configuredQueueName)) {
+          logger.warn(
+              "Async job queue {} is configured but has no handler; polling will not start",
+              configuredQueueName);
+        }
+      }
+
+      running = true;
+    }
+  }
+
+  @Override
+  public void stop() {
+    synchronized (lifecycleLock) {
+      stopStartedRuntimes();
+      running = false;
+    }
+  }
+
+  @Override
+  public void stop(Runnable callback) {
+    stop();
+    callback.run();
+  }
+
+  @Override
+  public boolean isRunning() {
+    return running;
+  }
+
+  @Override
+  public boolean isAutoStartup() {
+    return true;
+  }
+
+  @Override
+  public int getPhase() {
+    return Integer.MAX_VALUE;
+  }
+
+  public void triggerPollNow(String queueName) {
+    String validatedQueueName = AsyncJobQueueValidation.validateQueueName(queueName);
+    synchronized (lifecycleLock) {
+      AsyncJobQueueRuntime runtime = runtimesByQueueName.get(validatedQueueName);
+      if (runtime != null) {
+        runtime.triggerPollNow();
+        return;
+      }
+      String reason = running ? "missingRuntime" : "notRunning";
+      meterRegistry
+          .counter(
+              "asyncJobQueue.trigger.missed", "queueName", validatedQueueName, "reason", reason)
+          .increment();
+    }
+  }
+
+  private AsyncJobQueueProperties.QueueSettings queueSettings(String queueName) {
+    AsyncJobQueueProperties.QueueSettings queueSettings =
+        asyncJobQueueProperties.getQueues().get(queueName);
+    return AsyncJobQueueValidation.validateQueueSettings(
+        queueSettings != null ? queueSettings : new AsyncJobQueueProperties.QueueSettings());
+  }
+
+  ThreadPoolTaskExecutor queueExecutor(
+      String queueName, AsyncJobQueueProperties.QueueSettings queueSettings) {
+    ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+    threadPoolTaskExecutor.setCorePoolSize(queueSettings.getMaxConcurrency());
+    threadPoolTaskExecutor.setMaxPoolSize(queueSettings.getMaxConcurrency());
+    threadPoolTaskExecutor.setQueueCapacity(0);
+    if (queueSettings.getShutdownAwaitTerminationMs() > 0) {
+      threadPoolTaskExecutor.setWaitForTasksToCompleteOnShutdown(true);
+      threadPoolTaskExecutor.setAwaitTerminationMillis(
+          queueSettings.getShutdownAwaitTerminationMs());
+    }
+    threadPoolTaskExecutor.setThreadNamePrefix("async-job-" + queueName + "-");
+    threadPoolTaskExecutor.initialize();
+    return threadPoolTaskExecutor;
+  }
+
+  private String workerId(String queueName) {
+    return queueName + "-" + UUID.randomUUID();
+  }
+
+  private void stopStartedRuntimes() {
+    runtimesByQueueName.forEach(
+        (queueName, runtime) -> {
+          try {
+            runtime.stop();
+          } catch (Throwable e) {
+            if (isJvmFatal(e)) {
+              throw (Error) e;
+            }
+            logger.warn("Failed to stop async job queue runtime for {}", queueName, e);
+            meterRegistry
+                .counter("asyncJobQueue.runtime.stop.failed", "queueName", queueName)
+                .increment();
+          }
+        });
+    runtimesByQueueName.clear();
+  }
+
+  private boolean isJvmFatal(Throwable throwable) {
+    return AsyncJobQueueFatalErrors.isJvmFatal(throwable);
+  }
+
+  private RuntimeException unchecked(Throwable throwable) {
+    if (throwable instanceof RuntimeException runtimeException) {
+      return runtimeException;
+    }
+    if (throwable instanceof Error error) {
+      throw error;
+    }
+    return new IllegalStateException(throwable);
+  }
+}
