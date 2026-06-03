@@ -1,7 +1,6 @@
 package com.box.l10n.mojito.service.blobstorage;
 
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -12,34 +11,42 @@ import org.springframework.stereotype.Component;
 @Component
 public class StructuredBlobStorage {
 
-  @Autowired BlobStorage blobStorage;
+  BlobStorageRouter blobStorageRouter;
+
+  public StructuredBlobStorage(BlobStorageRouter blobStorageRouter) {
+    this.blobStorageRouter = blobStorageRouter;
+  }
 
   public Optional<String> getString(Prefix prefix, String name) {
-    return blobStorage.getString(getFullName(prefix, name));
+    return getBlobStorage(prefix).getString(getFullName(prefix, name));
   }
 
   public Optional<byte[]> getBytes(Prefix prefix, String name) {
-    return blobStorage.getBytes(getFullName(prefix, name));
+    return getBlobStorage(prefix).getBytes(getFullName(prefix, name));
   }
 
   public void put(Prefix prefix, String name, String content, Retention retention) {
-    blobStorage.put(getFullName(prefix, name), content, retention);
+    getBlobStorage(prefix).put(getFullName(prefix, name), content, retention);
   }
 
   public void putBytes(Prefix prefix, String name, byte[] content, Retention retention) {
-    blobStorage.put(getFullName(prefix, name), content, retention);
+    getBlobStorage(prefix).put(getFullName(prefix, name), content, retention);
   }
 
   public void delete(Prefix prefix, String name) {
-    blobStorage.delete(getFullName(prefix, name));
+    getBlobStorage(prefix).delete(getFullName(prefix, name));
   }
 
   public boolean exists(Prefix prefix, String name) {
-    return blobStorage.exists(getFullName(prefix, name));
+    return getBlobStorage(prefix).exists(getFullName(prefix, name));
   }
 
   String getFullName(Prefix prefix, String name) {
     return prefix.toString().toLowerCase() + "/" + name;
+  }
+
+  BlobStorage getBlobStorage(Prefix prefix) {
+    return blobStorageRouter.getBlobStorage(prefix);
   }
 
   public enum Prefix {

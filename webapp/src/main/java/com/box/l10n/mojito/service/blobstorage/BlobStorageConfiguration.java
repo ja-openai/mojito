@@ -12,16 +12,23 @@ import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorage;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorageConfigurationProperties;
 import java.time.Duration;
+import java.util.Map;
 import org.quartz.JobDetail;
 import org.quartz.SimpleTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.scheduling.quartz.JobDetailFactoryBean;
 import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
 
@@ -43,7 +50,7 @@ public class BlobStorageConfiguration {
 
   static Logger logger = LoggerFactory.getLogger(BlobStorageConfiguration.class);
 
-  @ConditionalOnProperty(value = "l10n.blob-storage.type", havingValue = "s3")
+  @Conditional(S3BlobStorageEnabledCondition.class)
   @Configuration
   static class S3BlobStorageConfigurationConfiguration {
 
@@ -58,7 +65,7 @@ public class BlobStorageConfiguration {
     }
   }
 
-  @ConditionalOnProperty(value = "l10n.blob-storage.type", havingValue = "azure")
+  @Conditional(AzureBlobStorageEnabledCondition.class)
   @Configuration
   static class AzureBlobStorageConfigurationConfiguration {
 
@@ -73,10 +80,16 @@ public class BlobStorageConfiguration {
     }
   }
 
-  @ConditionalOnProperty(
-      value = "l10n.blob-storage.type",
-      havingValue = "database",
-      matchIfMissing = true)
+  @Bean
+  @Primary
+  public BlobStorage blobStorage(
+      BlobStorageRouter blobStorageRouter,
+      BlobStorageConfigurationProperties blobStorageConfigurationProperties) {
+    return blobStorageRouter.getBlobStorage(blobStorageConfigurationProperties.getType());
+  }
+
+  @Configuration
+  @Conditional(DatabaseBlobStorageEnabledCondition.class)
   static class DatabaseBlobStorageConfiguration {
 
     @Autowired MBlobRepository mBlobRepository;
@@ -115,6 +128,56 @@ public class BlobStorageConfiguration {
       trigger.setRepeatInterval(Duration.ofMinutes(5).toMillis());
       trigger.setRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY);
       return trigger;
+    }
+  }
+
+  static class DatabaseBlobStorageEnabledCondition extends BlobStorageEnabledCondition {
+
+    DatabaseBlobStorageEnabledCondition() {
+      super(BlobStorageType.DATABASE);
+    }
+  }
+
+  static class S3BlobStorageEnabledCondition extends BlobStorageEnabledCondition {
+
+    S3BlobStorageEnabledCondition() {
+      super(BlobStorageType.S3);
+    }
+  }
+
+  static class AzureBlobStorageEnabledCondition extends BlobStorageEnabledCondition {
+
+    AzureBlobStorageEnabledCondition() {
+      super(BlobStorageType.AZURE);
+    }
+  }
+
+  abstract static class BlobStorageEnabledCondition implements Condition {
+
+    BlobStorageType blobStorageType;
+
+    BlobStorageEnabledCondition(BlobStorageType blobStorageType) {
+      this.blobStorageType = blobStorageType;
+    }
+
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+      Binder binder = Binder.get(context.getEnvironment());
+      BlobStorageType defaultType =
+          binder
+              .bind("l10n.blob-storage.type", BlobStorageType.class)
+              .orElse(BlobStorageType.DATABASE);
+
+      if (blobStorageType == defaultType) {
+        return true;
+      }
+
+      return binder
+          .bind(
+              "l10n.blob-storage.routing.prefixes",
+              Bindable.mapOf(String.class, BlobStorageType.class))
+          .orElse(Map.of())
+          .containsValue(blobStorageType);
     }
   }
 }

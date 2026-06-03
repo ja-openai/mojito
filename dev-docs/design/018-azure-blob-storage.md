@@ -42,8 +42,19 @@ l10n.blob-storage.type=azure
 l10n.blob-storage.azure.prefix=mojito
 ```
 
+Per-prefix routing:
+
+```properties
+l10n.blob-storage.type=azure
+l10n.blob-storage.routing.prefixes.pollable-task=database
+l10n.blob-storage.routing.prefixes.image=azure
+```
+
+`StructuredBlobStorage` uses semantic prefixes, not repository shape, to choose a backend. This lets control-plane data such as `pollable-task` remain DB-backed while large artifact-like prefixes use Azure or S3.
+
 ## Remaining gaps
 
 - Azure and S3 retention cleanup is not owned by Mojito. Operators must configure provider lifecycle rules that match `retention=MIN_1_DAY`; otherwise temporary blobs are retained indefinitely.
 - Image storage can use Azure through `l10n.image-service.storage.type=blobStorage` or `blobStorageFallback` with `l10n.blob-storage.type=azure`.
 - There is no live Azure integration test in the default suite. The unit tests cover request shape, not an actual Azure account/container.
+- Production deployments still need an explicit prefix policy. Recommended initial policy is to keep `pollable-task` in the database and route only large artifact-like prefixes to remote object storage.

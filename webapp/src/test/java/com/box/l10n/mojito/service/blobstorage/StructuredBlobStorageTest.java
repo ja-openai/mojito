@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.blobstorage;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.IMAGE;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.POLLABLE_TASK;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.when;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -15,6 +16,8 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class StructuredBlobStorageTest {
 
   @Mock BlobStorage blobStorage;
+
+  @Mock BlobStorageRouter blobStorageRouter;
 
   @InjectMocks StructuredBlobStorage structuredBlobStorage;
 
@@ -30,6 +33,8 @@ public class StructuredBlobStorageTest {
 
   @Test
   public void testRetention() {
+    when(blobStorageRouter.getBlobStorage(POLLABLE_TASK)).thenReturn(blobStorage);
+
     structuredBlobStorage.put(
         POLLABLE_TASK, "testretention", "testrentention-content", Retention.MIN_1_DAY);
     Mockito.verify(blobStorage)
