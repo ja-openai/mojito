@@ -24,6 +24,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pushrun.PushRunRepository;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.AssetLocalizeAsyncJobSubmissionService;
 import com.box.l10n.mojito.service.tm.GenerateLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.GenerateMultiLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -78,10 +79,22 @@ public class AssetWS {
 
   @Autowired QuartzPollableTaskScheduler quartzPollableTaskScheduler;
 
+  @Autowired(required = false)
+  AssetLocalizeAsyncJobSubmissionService assetLocalizeAsyncJobSubmissionService;
+
   @Autowired MeterRegistry meterRegistry;
 
   @Value("${l10n.assetWS.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
+
+  @Value("${l10n.org.async-job-queue.enabled:false}")
+  boolean asyncJobQueueEnabled;
+
+  @Value("${l10n.org.async-job-queue.asset-localize.enabled:false}")
+  boolean asyncJobQueueAssetLocalizeEnabled;
+
+  @Value("${l10n.org.async-job-queue.asset-localize.producer-enabled:true}")
+  boolean asyncJobQueueAssetLocalizeProducerEnabled = true;
 
   /**
    * Gets the list of {@link Asset} for a given {@link Repository} and other optional filters
@@ -253,11 +266,14 @@ public class AssetWS {
     }
 
     Asset asset = assetRepository.getReferenceById(assetId);
-    meterRegistry
-        .counter(
-            "assetWS.getLocalizedAssetForContentAsync",
-            Tags.of("repositoryId", asset.getRepository().getId().toString()))
-        .increment();
+    String repositoryId = asset.getRepository().getId().toString();
+    recordLocalizedAssetMetric(
+        () ->
+            meterRegistry
+                .counter(
+                    "assetWS.getLocalizedAssetForContentAsync",
+                    Tags.of("repositoryId", repositoryId))
+                .increment());
 
     QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo =
         QuartzJobInfo.newBuilder(GenerateLocalizedAssetJob.class)
@@ -266,8 +282,58 @@ public class AssetWS {
             .withScheduler(schedulerName)
             .build();
     PollableFuture<LocalizedAssetBody> localizedAssetBodyPollableFuture =
-        quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+        scheduleLocalizedAssetJob(quartzJobInfo);
     return localizedAssetBodyPollableFuture.getPollableTask();
+  }
+
+  PollableFuture<LocalizedAssetBody> scheduleLocalizedAssetJob(
+      QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo) {
+    String route = isAssetLocalizeAsyncQueueEnabled() ? "assetlocalize" : "quartz";
+    try {
+      PollableFuture<LocalizedAssetBody> pollableFuture;
+      if (isAssetLocalizeAsyncQueueEnabled()) {
+        if (assetLocalizeAsyncJobSubmissionService == null) {
+          throw new IllegalStateException(
+              "Asset localize async queue is enabled but the submission service is unavailable");
+        }
+        pollableFuture = assetLocalizeAsyncJobSubmissionService.scheduleJob(quartzJobInfo);
+      } else {
+        pollableFuture = quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+      }
+      recordLocalizedAssetAsyncSchedule(route, "succeeded");
+      return pollableFuture;
+    } catch (RuntimeException e) {
+      recordLocalizedAssetAsyncSchedule(route, "failed");
+      throw e;
+    }
+  }
+
+  private boolean isAssetLocalizeAsyncQueueEnabled() {
+    return asyncJobQueueEnabled
+        && asyncJobQueueAssetLocalizeEnabled
+        && asyncJobQueueAssetLocalizeProducerEnabled;
+  }
+
+  private void recordLocalizedAssetAsyncSchedule(String route, String result) {
+    recordLocalizedAssetMetric(
+        () ->
+            meterRegistry
+                .counter(
+                    "assetWS.getLocalizedAssetForContentAsync.schedule",
+                    Tags.of("route", route, "result", result))
+                .increment());
+  }
+
+  private void recordLocalizedAssetMetric(Runnable recording) {
+    try {
+      recording.run();
+    } catch (Throwable failure) {
+      if (failure instanceof VirtualMachineError
+          || "java.lang.ThreadDeath".equals(failure.getClass().getName())) {
+        throw (Error) failure;
+      }
+      logger.warn("Failed to record localized asset scheduling metric", failure);
+    }
   }
 
   /**

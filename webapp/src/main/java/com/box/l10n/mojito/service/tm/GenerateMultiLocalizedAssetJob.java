@@ -10,16 +10,25 @@ import com.box.l10n.mojito.rest.asset.LocaleInfo;
 import com.box.l10n.mojito.rest.asset.LocalizedAssetBody;
 import com.box.l10n.mojito.rest.asset.MultiLocalizedAssetBody;
 import com.box.l10n.mojito.service.asset.AssetRepository;
+import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.Tags;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 public class GenerateMultiLocalizedAssetJob
     extends QuartzPollableJob<MultiLocalizedAssetBody, MultiLocalizedAssetBody> {
 
+  private static final Logger logger =
+      LoggerFactory.getLogger(GenerateMultiLocalizedAssetJob.class);
+
   @Autowired QuartzPollableTaskScheduler quartzPollableTaskScheduler;
+
+  @Autowired(required = false)
+  AssetLocalizeAsyncJobSubmissionService assetLocalizeAsyncJobSubmissionService;
 
   @Autowired AssetRepository assetRepository;
 
@@ -36,6 +45,15 @@ public class GenerateMultiLocalizedAssetJob
   @Value("${l10n.assetWS.quartz.childSchedulerName:}")
   String childSchedulerName;
 
+  @Value("${l10n.org.async-job-queue.enabled:false}")
+  boolean asyncJobQueueEnabled;
+
+  @Value("${l10n.org.async-job-queue.asset-localize.enabled:false}")
+  boolean asyncJobQueueAssetLocalizeEnabled;
+
+  @Value("${l10n.org.async-job-queue.asset-localize.producer-enabled:true}")
+  boolean asyncJobQueueAssetLocalizeProducerEnabled = true;
+
   @Override
   public MultiLocalizedAssetBody call(MultiLocalizedAssetBody multiLocalizedAssetBody)
       throws Exception {
@@ -46,9 +64,9 @@ public class GenerateMultiLocalizedAssetJob
       throw new AssetWithIdNotFoundException(multiLocalizedAssetBody.getAssetId());
     }
 
-    try (var timer =
-        Timer.resource(meterRegistry, "GenerateMultiLocalizedAssetJob.call")
-            .tag("repositoryName", asset.getRepository().getName())) {
+    String repositoryName = asset.getRepository().getName();
+    long startNanos = System.nanoTime();
+    try {
 
       for (LocaleInfo localeInfo : multiLocalizedAssetBody.getLocaleInfos()) {
 
@@ -73,11 +91,17 @@ public class GenerateMultiLocalizedAssetJob
                         + asset.getPath())
                 .build();
         multiLocalizedAssetBody.addGenerateLocalizedAddedJobIdToMap(
-            outputTag,
-            quartzPollableTaskScheduler.scheduleJob(quartzJobInfo).getPollableTask().getId());
+            outputTag, scheduleLocalizedAssetJob(quartzJobInfo).getPollableTask().getId());
       }
 
       return multiLocalizedAssetBody;
+    } finally {
+      long durationNanos = System.nanoTime() - startNanos;
+      recordMetric(
+          () ->
+              meterRegistry
+                  .timer("GenerateMultiLocalizedAssetJob.call", "repositoryName", repositoryName)
+                  .record(durationNanos, java.util.concurrent.TimeUnit.NANOSECONDS));
     }
   }
 
@@ -90,6 +114,56 @@ public class GenerateMultiLocalizedAssetJob
       return multiLocalizedAssetBody.getSchedulerName();
     }
     return childSchedulerName;
+  }
+
+  PollableFuture<LocalizedAssetBody> scheduleLocalizedAssetJob(
+      QuartzJobInfo<LocalizedAssetBody, LocalizedAssetBody> quartzJobInfo) {
+    String route = isAssetLocalizeAsyncQueueEnabled() ? "assetlocalize" : "quartz";
+    try {
+      PollableFuture<LocalizedAssetBody> pollableFuture;
+      if (isAssetLocalizeAsyncQueueEnabled()) {
+        if (assetLocalizeAsyncJobSubmissionService == null) {
+          throw new IllegalStateException(
+              "Asset localize async queue is enabled but the submission service is unavailable");
+        }
+        pollableFuture = assetLocalizeAsyncJobSubmissionService.scheduleJob(quartzJobInfo);
+      } else {
+        pollableFuture = quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
+      }
+      recordLocalizedAssetSchedule(route, "succeeded");
+      return pollableFuture;
+    } catch (RuntimeException e) {
+      recordLocalizedAssetSchedule(route, "failed");
+      throw e;
+    }
+  }
+
+  private boolean isAssetLocalizeAsyncQueueEnabled() {
+    return asyncJobQueueEnabled
+        && asyncJobQueueAssetLocalizeEnabled
+        && asyncJobQueueAssetLocalizeProducerEnabled;
+  }
+
+  private void recordLocalizedAssetSchedule(String route, String result) {
+    recordMetric(
+        () ->
+            meterRegistry
+                .counter(
+                    "GenerateMultiLocalizedAssetJob.schedule",
+                    Tags.of("route", route, "result", result))
+                .increment());
+  }
+
+  private void recordMetric(Runnable recording) {
+    try {
+      recording.run();
+    } catch (Throwable failure) {
+      if (failure instanceof VirtualMachineError
+          || "java.lang.ThreadDeath".equals(failure.getClass().getName())) {
+        throw (Error) failure;
+      }
+      logger.warn("Failed to record multi-locale asset scheduling metric", failure);
+    }
   }
 
   private LocalizedAssetBody createLocalizedAssetBody(
