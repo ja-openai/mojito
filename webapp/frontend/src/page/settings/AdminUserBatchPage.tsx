@@ -5,16 +5,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
-import {
-  type ApiTeam,
-  fetchTeamProjectManagers,
-  fetchTeams,
-  fetchTeamTranslators,
-  replaceTeamProjectManagers,
-  replaceTeamTranslators,
-} from '../../api/teams';
+import { type ApiTeam, fetchTeams, updateUserTeamAssignment } from '../../api/teams';
 import type { ApiAuthority, ApiUserLocale } from '../../api/users';
 import { createUser } from '../../api/users';
+import { MultiSelectChip } from '../../components/MultiSelectChip';
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { useUser } from '../../hooks/useUser';
 import { USERS_QUERY_KEY } from '../../hooks/useUsers';
@@ -224,7 +218,7 @@ export function AdminUserBatchPage() {
     kind: 'success' | 'error';
     message: string;
   } | null>(null);
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
   const teamsQuery = useQuery<ApiTeam[]>({
     queryKey: ['teams'],
     queryFn: fetchTeams,
@@ -329,47 +323,31 @@ export function AdminUserBatchPage() {
       setResults([...nextResults]);
     }
 
-    if (selectedTeamId != null) {
+    if (selectedTeamIds.length > 0) {
       try {
-        const createdPmIds = nextResults
-          .filter(
-            (result) =>
-              result.status === 'success' && result.role === 'ROLE_PM' && result.userId != null,
-          )
-          .map((result) => result.userId as number);
-        const createdTranslatorIds = nextResults
-          .filter(
-            (result) =>
-              result.status === 'success' &&
-              result.role === 'ROLE_TRANSLATOR' &&
-              result.userId != null,
-          )
-          .map((result) => result.userId as number);
+        const assignableResults = nextResults.filter(
+          (result) =>
+            result.status === 'success' &&
+            (result.role === 'ROLE_PM' || result.role === 'ROLE_TRANSLATOR') &&
+            result.userId != null,
+        );
 
-        if (createdPmIds.length > 0) {
-          const pmResponse = await fetchTeamProjectManagers(selectedTeamId);
-          const mergedPmIds = Array.from(new Set([...pmResponse.userIds, ...createdPmIds])).sort(
-            (left, right) => left - right,
-          );
-          await replaceTeamProjectManagers(selectedTeamId, mergedPmIds);
+        for (const result of assignableResults) {
+          await updateUserTeamAssignment(result.userId as number, {
+            pmTeamIds: result.role === 'ROLE_PM' ? selectedTeamIds : [],
+            translatorTeamIds: result.role === 'ROLE_TRANSLATOR' ? selectedTeamIds : [],
+          });
         }
 
-        if (createdTranslatorIds.length > 0) {
-          const translatorResponse = await fetchTeamTranslators(selectedTeamId);
-          const mergedTranslatorIds = Array.from(
-            new Set([...translatorResponse.userIds, ...createdTranslatorIds]),
-          ).sort((left, right) => left - right);
-          await replaceTeamTranslators(selectedTeamId, mergedTranslatorIds);
-        }
-
-        if (createdPmIds.length > 0 || createdTranslatorIds.length > 0) {
+        if (assignableResults.length > 0) {
+          const assignmentCount = assignableResults.length * selectedTeamIds.length;
           setAssignmentStatus({
             kind: 'success',
-            message: `Assigned ${createdPmIds.length + createdTranslatorIds.length} user(s) to team.`,
+            message: `Assigned ${assignmentCount} team membership(s) across ${selectedTeamIds.length} team(s).`,
           });
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to assign users to team.';
+        const message = error instanceof Error ? error.message : 'Failed to assign users to teams.';
         setAssignmentStatus({ kind: 'error', message });
       }
     }
@@ -441,20 +419,21 @@ export function AdminUserBatchPage() {
           </div>
           <div className="user-batch-page__field user-batch-page__mapping-panel">
             <div className="user-batch-page__mapping-row user-batch-page__team-row">
-              <span className="user-batch-page__mapping-label">Team</span>
+              <span className="user-batch-page__mapping-label">Teams</span>
               <div className="user-batch-page__mapping-controls">
-                <SingleSelectDropdown
-                  label="Team"
+                <MultiSelectChip
+                  label="Teams"
                   options={teamOptions}
-                  value={selectedTeamId}
+                  selectedValues={selectedTeamIds}
                   onChange={(next) => {
-                    setSelectedTeamId(next);
+                    setSelectedTeamIds(next);
                     setAssignmentStatus(null);
                   }}
                   className="user-batch-page__team-select"
-                  noneLabel="No team assignment"
                   placeholder="No team assignment"
+                  emptyOptionsLabel={teamsQuery.isLoading ? 'Loading teams...' : 'No teams found'}
                   noResultsLabel={teamsQuery.isLoading ? 'Loading teams…' : 'No teams found'}
+                  buttonAriaLabel="Select teams"
                 />
               </div>
             </div>
