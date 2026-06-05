@@ -14,6 +14,10 @@ import {
 import { type CollectionOption, CollectionSelect } from '../../components/CollectionSelect';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
 import {
+  RepositoryMultiSelect,
+  type RepositoryMultiSelectOption,
+} from '../../components/RepositoryMultiSelect';
+import {
   RequestAttachmentsDropzone,
   type RequestAttachmentUploadQueueItem,
 } from '../../components/review-request/RequestAttachmentsDropzone';
@@ -39,6 +43,7 @@ export type ReviewProjectCreateFormValues = {
   notes: string | null;
   tmTextUnitIds?: number[] | null;
   reviewFeatureIds?: number[] | null;
+  repositoryIds?: number[] | null;
   statusFilter: ReviewProjectCreateStatusFilter;
   skipTextUnitsInOpenProjects: boolean;
   screenshotImageIds: string[];
@@ -46,7 +51,7 @@ export type ReviewProjectCreateFormValues = {
   assignTranslator: boolean;
 };
 
-export type ReviewProjectSourceMode = 'TEXT_UNITS' | 'REVIEW_FEATURE';
+export type ReviewProjectSourceMode = 'TEXT_UNITS' | 'REPOSITORIES' | 'REVIEW_FEATURE';
 
 type Props = {
   defaultName: string;
@@ -59,6 +64,9 @@ type Props = {
   collectionOptions?: CollectionOption[];
   selectedCollectionId?: string | null;
   onChangeCollection?: (id: string | null) => void;
+  repositoryOptions?: RepositoryMultiSelectOption[];
+  selectedRepositoryIds?: number[];
+  onChangeRepositories?: (ids: number[]) => void;
   reviewFeatureOptions?: ApiReviewFeatureOption[];
   selectedReviewFeatureIds?: number[];
   onChangeReviewFeatures?: (ids: number[]) => void;
@@ -85,6 +93,9 @@ export function ReviewProjectCreateForm({
   collectionOptions,
   selectedCollectionId,
   onChangeCollection,
+  repositoryOptions = [],
+  selectedRepositoryIds = [],
+  onChangeRepositories,
   reviewFeatureOptions,
   selectedReviewFeatureIds = [],
   onChangeReviewFeatures,
@@ -149,7 +160,9 @@ export function ReviewProjectCreateForm({
       Boolean(dueDate) &&
       (sourceMode === 'TEXT_UNITS'
         ? tmTextUnitIds.length > 0
-        : selectedReviewFeatureIds.length > 0) &&
+        : sourceMode === 'REPOSITORIES'
+          ? selectedRepositoryIds.length > 0
+          : selectedReviewFeatureIds.length > 0) &&
       selectedLocaleTags.length > 0 &&
       uploadQueue.every((item) => item.status !== 'uploading'),
     [
@@ -157,6 +170,7 @@ export function ReviewProjectCreateForm({
       name,
       selectedLocaleTags.length,
       selectedReviewFeatureIds.length,
+      selectedRepositoryIds.length,
       sourceMode,
       tmTextUnitIds.length,
       uploadQueue,
@@ -265,6 +279,16 @@ export function ReviewProjectCreateForm({
             <button
               type="button"
               className={`review-projects-page__mode-button${
+                sourceMode === 'REPOSITORIES' ? ' is-active' : ''
+              }`}
+              onClick={() => onChangeSourceMode('REPOSITORIES')}
+              disabled={isSubmitting || !repositoryOptions.length}
+            >
+              Repositories
+            </button>
+            <button
+              type="button"
+              className={`review-projects-page__mode-button${
                 sourceMode === 'REVIEW_FEATURE' ? ' is-active' : ''
               }`}
               onClick={() => onChangeSourceMode('REVIEW_FEATURE')}
@@ -274,6 +298,21 @@ export function ReviewProjectCreateForm({
             </button>
           </div>
         </div>
+
+        {sourceMode === 'REPOSITORIES' && onChangeRepositories ? (
+          <div className="review-create__field">
+            <span className="review-create__label">Repositories</span>
+            <RepositoryMultiSelect
+              className="review-create__select-dropdown"
+              options={repositoryOptions}
+              selectedIds={selectedRepositoryIds}
+              onChange={(next) => onChangeRepositories([...next].sort((a, b) => a - b))}
+              disabled={isSubmitting}
+              buttonAriaLabel="Select repositories"
+              showSelectionPresets
+            />
+          </div>
+        ) : null}
 
         {sourceMode === 'TEXT_UNITS' && collectionOptions && onChangeCollection ? (
           <label className="review-create__field">
@@ -315,7 +354,9 @@ export function ReviewProjectCreateForm({
           <span className="review-create__hint">
             {sourceMode === 'TEXT_UNITS'
               ? `${tmTextUnitIds.length} selected text unit${tmTextUnitIds.length === 1 ? '' : 's'}`
-              : `Creates one request per selected feature from review-needed strings (${selectedReviewFeatureIds.length} selected).`}
+              : sourceMode === 'REPOSITORIES'
+                ? `${selectedRepositoryIds.length} selected repositor${selectedRepositoryIds.length === 1 ? 'y' : 'ies'}`
+                : `Creates one request per selected feature from review-needed strings (${selectedReviewFeatureIds.length} selected).`}
           </span>
         </div>
 
@@ -488,6 +529,7 @@ export function ReviewProjectCreateForm({
               localeTags: selectedLocaleTags,
               notes: notes.trim().length > 0 ? notes : null,
               tmTextUnitIds: sourceMode === 'TEXT_UNITS' ? tmTextUnitIds : null,
+              repositoryIds: sourceMode === 'REPOSITORIES' ? selectedRepositoryIds : null,
               reviewFeatureIds: sourceMode === 'REVIEW_FEATURE' ? selectedReviewFeatureIds : null,
               statusFilter: selectedStatusFilter,
               skipTextUnitsInOpenProjects,

@@ -11,6 +11,7 @@ public record CreateReviewProjectRequestCommand(
     String notes,
     List<Long> tmTextUnitIds,
     Long reviewFeatureId,
+    List<Long> repositoryIds,
     StatusFilter statusFilter,
     Boolean skipTextUnitsInOpenProjects,
     ReviewProjectType type,
@@ -21,6 +22,39 @@ public record CreateReviewProjectRequestCommand(
     Boolean assignTranslator,
     Long requestedByUserId,
     List<ProjectSpec> projectSpecs) {
+
+  public CreateReviewProjectRequestCommand(
+      List<String> localeTags,
+      String notes,
+      List<Long> tmTextUnitIds,
+      Long reviewFeatureId,
+      StatusFilter statusFilter,
+      Boolean skipTextUnitsInOpenProjects,
+      ReviewProjectType type,
+      ZonedDateTime dueDate,
+      List<String> screenshotImageIds,
+      String name,
+      Long teamId,
+      Boolean assignTranslator,
+      Long requestedByUserId,
+      List<ProjectSpec> projectSpecs) {
+    this(
+        localeTags,
+        notes,
+        tmTextUnitIds,
+        reviewFeatureId,
+        null,
+        statusFilter,
+        skipTextUnitsInOpenProjects,
+        type,
+        dueDate,
+        screenshotImageIds,
+        name,
+        teamId,
+        assignTranslator,
+        requestedByUserId,
+        projectSpecs);
+  }
 
   public record ProjectSpec(
       ReviewProjectTerminologyPhase terminologyPhase,

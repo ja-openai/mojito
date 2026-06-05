@@ -10,6 +10,7 @@ public record CreateReviewProjectRequestRequest(
     String notes,
     List<Long> tmTextUnitIds,
     Long reviewFeatureId,
+    List<Long> repositoryIds,
     StatusFilter statusFilter,
     Boolean skipTextUnitsInOpenProjects,
     ReviewProjectType type,

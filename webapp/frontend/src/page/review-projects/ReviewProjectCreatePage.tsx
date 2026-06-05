@@ -2,7 +2,7 @@ import './review-projects-page.css';
 
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { type ApiReviewFeatureOption, fetchReviewFeatureOptions } from '../../api/review-features';
 import {
@@ -16,6 +16,7 @@ import { useCreateReviewProject } from '../../hooks/useCreateReviewProject';
 import { useRepositories } from '../../hooks/useRepositories';
 import { toDateTimeLocalInputValue } from '../../utils/dateTime';
 import { useLocaleOptionsWithDisplayNames } from '../../utils/localeSelection';
+import { useRepositorySelectionOptions } from '../../utils/repositorySelection';
 import { useWorkbenchCollections } from '../workbench/useWorkbenchCollections';
 import type {
   ReviewProjectCreateFormValues,
@@ -25,12 +26,16 @@ import { ReviewProjectCreateForm } from './ReviewProjectCreateForm';
 
 type ReviewProjectNavState = {
   tmTextUnitIds?: number[];
+  repositoryIds?: number[];
   collectionName?: string | null;
   collectionId?: string | null;
   defaultName?: string;
   defaultDueDate?: string;
   statusFilter?: ReviewProjectCreateStatusFilter | null;
+  sourceMode?: string | null;
 };
+
+const REPOSITORY_ID_QUERY_PARAMS = ['repositoryId', 'repositoryIds', 'repositoryIds[]'];
 
 function isReviewProjectNavState(value: unknown): value is ReviewProjectNavState {
   if (typeof value !== 'object' || value === null) {
@@ -51,12 +56,101 @@ function isReviewProjectNavState(value: unknown): value is ReviewProjectNavState
 
   return (
     (candidate.tmTextUnitIds === undefined || isNumberArray(candidate.tmTextUnitIds)) &&
+    (candidate.repositoryIds === undefined || isNumberArray(candidate.repositoryIds)) &&
     isOptionalString(candidate.collectionName) &&
     isOptionalString(candidate.collectionId) &&
     (candidate.defaultName === undefined || typeof candidate.defaultName === 'string') &&
     (candidate.defaultDueDate === undefined || typeof candidate.defaultDueDate === 'string') &&
-    isOptionalStatusFilter(candidate.statusFilter)
+    isOptionalStatusFilter(candidate.statusFilter) &&
+    (candidate.sourceMode === undefined ||
+      candidate.sourceMode === null ||
+      typeof candidate.sourceMode === 'string')
   );
+}
+
+function parseReviewProjectSourceMode(
+  value: string | null | undefined,
+): ReviewProjectSourceMode | null {
+  const normalized = value?.trim().toLowerCase().replace(/_/g, '-');
+  if (!normalized) {
+    return null;
+  }
+  if (
+    normalized === 'text-units' ||
+    normalized === 'textunits' ||
+    normalized === 'selected-text-units'
+  ) {
+    return 'TEXT_UNITS';
+  }
+  if (normalized === 'repository' || normalized === 'repositories' || normalized === 'repo') {
+    return 'REPOSITORIES';
+  }
+  if (
+    normalized === 'review-feature' ||
+    normalized === 'review-features' ||
+    normalized === 'feature'
+  ) {
+    return 'REVIEW_FEATURE';
+  }
+  return null;
+}
+
+function toReviewProjectSourceModeParam(mode: ReviewProjectSourceMode): string {
+  switch (mode) {
+    case 'REPOSITORIES':
+      return 'repositories';
+    case 'REVIEW_FEATURE':
+      return 'review-feature';
+    case 'TEXT_UNITS':
+    default:
+      return 'text-units';
+  }
+}
+
+function parseNumberQueryParams(params: URLSearchParams, names: string[]): number[] {
+  const seen = new Set<number>();
+  const parsed: number[] = [];
+  names
+    .flatMap((name) => params.getAll(name))
+    .flatMap((value) => value.split(','))
+    .map((value) => Number(value.trim()))
+    .forEach((value) => {
+      if (!Number.isSafeInteger(value) || value <= 0 || seen.has(value)) {
+        return;
+      }
+      seen.add(value);
+      parsed.push(value);
+    });
+  return parsed;
+}
+
+function getRepositoryIdsFromSearch(search: string): number[] {
+  return parseNumberQueryParams(new URLSearchParams(search), REPOSITORY_ID_QUERY_PARAMS);
+}
+
+function normalizeIds(values: number[] | null | undefined) {
+  return Array.from(
+    new Set((values ?? []).filter((value) => Number.isSafeInteger(value) && value > 0)),
+  ).sort((left, right) => left - right);
+}
+
+function getInitialSourceMode(search: string, navState: ReviewProjectNavState | null) {
+  const params = new URLSearchParams(search);
+  const querySourceMode = parseReviewProjectSourceMode(params.get('scope'));
+  if (querySourceMode) {
+    return querySourceMode;
+  }
+  if (getRepositoryIdsFromSearch(search).length > 0) {
+    return 'REPOSITORIES';
+  }
+  const stateSourceMode = parseReviewProjectSourceMode(navState?.sourceMode);
+  if (stateSourceMode) {
+    return stateSourceMode;
+  }
+  if (navState?.repositoryIds?.length && !navState.tmTextUnitIds?.length) {
+    return 'REPOSITORIES';
+  }
+  return 'TEXT_UNITS';
 }
 
 function getCreateReviewProjectErrorMessage(error: unknown): string {
@@ -126,11 +220,25 @@ function buildCreateSubmissionReport(
 export function ReviewProjectCreatePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: repositories = [] } = useRepositories();
+  const [urlSearchParams, setUrlSearchParams] = useSearchParams();
+  const navState = isReviewProjectNavState(location.state) ? location.state : null;
+  const repositoriesQuery = useRepositories();
+  const repositories = repositoriesQuery.data ?? [];
   const { collections, activeCollection } = useWorkbenchCollections();
   const [tmIds, setTmIds] = useState<number[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
-  const [sourceMode, setSourceMode] = useState<ReviewProjectSourceMode>('TEXT_UNITS');
+  const [sourceMode, setSourceMode] = useState<ReviewProjectSourceMode>(() =>
+    getInitialSourceMode(location.search, navState),
+  );
+  const [selectedRepositoryIds, setSelectedRepositoryIds] = useState<number[]>(() => {
+    const queryRepositoryIds = getRepositoryIdsFromSearch(location.search);
+    if (queryRepositoryIds.length) {
+      return queryRepositoryIds;
+    }
+    return getInitialSourceMode(location.search, navState) === 'REPOSITORIES'
+      ? normalizeIds(navState?.repositoryIds)
+      : [];
+  });
   const [selectedReviewFeatureIds, setSelectedReviewFeatureIds] = useState<number[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [prefillName, setPrefillName] = useState('Review project');
@@ -180,10 +288,16 @@ export function ReviewProjectCreatePage() {
     () => new Map(reviewFeatureOptions.map((feature) => [feature.id, feature])),
     [reviewFeatureOptions],
   );
+  const repositoryOptions = useRepositorySelectionOptions(repositories);
   const hasCollections = collectionOptions.length > 0;
+  const hasRepositories = repositoryOptions.length > 0;
   const hasReviewFeatures = reviewFeatureOptions.length > 0;
-  const showCreateForm = hasCollections || hasReviewFeatures;
-  const navState = isReviewProjectNavState(location.state) ? location.state : null;
+  const showCreateForm =
+    hasCollections ||
+    hasRepositories ||
+    hasReviewFeatures ||
+    repositoriesQuery.isLoading ||
+    reviewFeatureOptionsQuery.isLoading;
 
   useEffect(() => {
     const state = navState;
@@ -193,6 +307,15 @@ export function ReviewProjectCreatePage() {
     if (state.tmTextUnitIds?.length) {
       const unique = Array.from(new Set(state.tmTextUnitIds));
       setTmIds(unique);
+    }
+    if (state.repositoryIds?.length) {
+      setSelectedRepositoryIds(normalizeIds(state.repositoryIds));
+    }
+    const stateSourceMode = parseReviewProjectSourceMode(state.sourceMode);
+    if (stateSourceMode) {
+      setSourceMode(stateSourceMode);
+    } else if (state.repositoryIds?.length && !state.tmTextUnitIds?.length) {
+      setSourceMode('REPOSITORIES');
     }
     if (state.collectionName) {
       setPrefillCollectionName(state.collectionName);
@@ -213,20 +336,75 @@ export function ReviewProjectCreatePage() {
   }, [navState]);
 
   useEffect(() => {
-    if (!hasCollections && hasReviewFeatures) {
-      setSourceMode('REVIEW_FEATURE');
+    if (sourceMode === 'REPOSITORIES' && repositoriesQuery.isLoading) {
       return;
     }
-    if (!hasReviewFeatures && hasCollections) {
-      setSourceMode('TEXT_UNITS');
+    if (sourceMode === 'REVIEW_FEATURE' && reviewFeatureOptionsQuery.isLoading) {
+      return;
     }
-  }, [hasCollections, hasReviewFeatures]);
+
+    const currentModeIsAvailable =
+      (sourceMode === 'TEXT_UNITS' && hasCollections) ||
+      (sourceMode === 'REPOSITORIES' && hasRepositories) ||
+      (sourceMode === 'REVIEW_FEATURE' && hasReviewFeatures);
+    if (currentModeIsAvailable) {
+      return;
+    }
+
+    if (hasCollections) {
+      setSourceMode('TEXT_UNITS');
+      return;
+    }
+    if (hasRepositories) {
+      setSourceMode('REPOSITORIES');
+      return;
+    }
+    if (hasReviewFeatures) {
+      setSourceMode('REVIEW_FEATURE');
+    }
+  }, [
+    hasCollections,
+    hasRepositories,
+    hasReviewFeatures,
+    repositoriesQuery.isLoading,
+    reviewFeatureOptionsQuery.isLoading,
+    sourceMode,
+  ]);
+
+  useEffect(() => {
+    if (repositoryOptions.length === 0) {
+      return;
+    }
+    const availableIds = new Set(repositoryOptions.map((option) => option.id));
+    setSelectedRepositoryIds((current) =>
+      current.filter((repositoryId) => availableIds.has(repositoryId)),
+    );
+  }, [repositoryOptions]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(urlSearchParams);
+    if (sourceMode === 'TEXT_UNITS') {
+      nextParams.delete('scope');
+    } else {
+      nextParams.set('scope', toReviewProjectSourceModeParam(sourceMode));
+    }
+    REPOSITORY_ID_QUERY_PARAMS.forEach((param) => nextParams.delete(param));
+    if (sourceMode === 'REPOSITORIES') {
+      selectedRepositoryIds.forEach((repositoryId) => {
+        nextParams.append('repositoryIds', String(repositoryId));
+      });
+    }
+
+    if (nextParams.toString() !== urlSearchParams.toString()) {
+      setUrlSearchParams(nextParams, { replace: true });
+    }
+  }, [selectedRepositoryIds, setUrlSearchParams, sourceMode, urlSearchParams]);
 
   useEffect(() => {
     if (statusFilterWasCustomized) {
       return;
     }
-    setSelectedStatusFilter(sourceMode === 'REVIEW_FEATURE' ? 'REVIEW_NEEDED' : 'ALL');
+    setSelectedStatusFilter(sourceMode === 'TEXT_UNITS' ? 'ALL' : 'REVIEW_NEEDED');
   }, [sourceMode, statusFilterWasCustomized]);
 
   useEffect(() => {
@@ -273,6 +451,11 @@ export function ReviewProjectCreatePage() {
         setSubmissionReport(null);
         return;
       }
+      if (sourceMode === 'REPOSITORIES' && !values.repositoryIds?.length) {
+        setErrorMessage('Select at least one repository.');
+        setSubmissionReport(null);
+        return;
+      }
       setErrorMessage(null);
       setSubmissionReport(null);
       void (async () => {
@@ -285,6 +468,35 @@ export function ReviewProjectCreatePage() {
               dueDate: values.dueDate,
               tmTextUnitIds: tmIds,
               reviewFeatureId: null,
+              repositoryIds: null,
+              statusFilter: values.statusFilter,
+              skipTextUnitsInOpenProjects: values.skipTextUnitsInOpenProjects,
+              screenshotImageIds: values.screenshotImageIds,
+              name: values.name,
+              teamId: values.teamId ?? null,
+              assignTranslator: values.assignTranslator,
+            });
+            const report = buildCreateSubmissionReport([response]);
+            if (report.skippedLocaleCount === 0 && report.erroredLocaleCount === 0) {
+              const requestId = response.requestId ?? null;
+              void navigate('/review-projects', {
+                state: { requestId },
+              });
+              return;
+            }
+            setSubmissionReport(report);
+            return;
+          }
+
+          if (sourceMode === 'REPOSITORIES') {
+            const response = await createReviewProject.mutateAsync({
+              localeTags: values.localeTags,
+              notes: values.notes,
+              type: values.type,
+              dueDate: values.dueDate,
+              tmTextUnitIds: null,
+              reviewFeatureId: null,
+              repositoryIds: values.repositoryIds ?? [],
               statusFilter: values.statusFilter,
               skipTextUnitsInOpenProjects: values.skipTextUnitsInOpenProjects,
               screenshotImageIds: values.screenshotImageIds,
@@ -314,6 +526,7 @@ export function ReviewProjectCreatePage() {
               dueDate: values.dueDate,
               tmTextUnitIds: null,
               reviewFeatureId,
+              repositoryIds: null,
               statusFilter: values.statusFilter,
               skipTextUnitsInOpenProjects: values.skipTextUnitsInOpenProjects,
               screenshotImageIds: values.screenshotImageIds,
@@ -370,6 +583,9 @@ export function ReviewProjectCreatePage() {
                   setPrefillCollectionName(null);
                 }
               }}
+              repositoryOptions={repositoryOptions}
+              selectedRepositoryIds={selectedRepositoryIds}
+              onChangeRepositories={setSelectedRepositoryIds}
               reviewFeatureOptions={reviewFeatureOptions}
               selectedReviewFeatureIds={selectedReviewFeatureIds}
               onChangeReviewFeatures={setSelectedReviewFeatureIds}
@@ -479,9 +695,12 @@ export function ReviewProjectCreatePage() {
           </>
         ) : (
           <div className="review-create__empty">
-            <div className="review-create__empty-title">No collections or review features yet</div>
+            <div className="review-create__empty-title">
+              No collections, repositories, or review features yet
+            </div>
             <div className="review-create__empty-body">
-              Review projects can be created from Workbench collections or review features.
+              Review projects can be created from Workbench collections, repositories, or review
+              features.
             </div>
             <Link className="review-create__empty-cta" to="/workbench">
               Open Workbench

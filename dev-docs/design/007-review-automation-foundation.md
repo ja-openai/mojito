@@ -73,6 +73,7 @@ Frontend Notes
 - Create/detail pages keep raw `cronExpression` and `timeZone` side by side, with a button-driven generator for `Every day`, `Weekdays`, or `Custom cron`.
 - Batch page can prefill from existing automations or the review-feature roster. Apply mode lives on the CTA: `Apply updates` upserts listed rows only, while `Replace enabled set` upserts listed rows and disables enabled automations omitted from the batch.
 - Detail page adds `Run now` plus a recent-runs table for the selected automation.
+- Manual review-project creation can also use a direct repository scope. Deep links use `/review-projects/new?scope=repositories&repositoryIds=<id>` with repeated `repositoryIds` for multi-repository setup.
 
 Follow-on Work
 

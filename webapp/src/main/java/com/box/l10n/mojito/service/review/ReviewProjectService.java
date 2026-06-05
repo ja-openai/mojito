@@ -201,6 +201,7 @@ public class ReviewProjectService {
             request.notes(),
             request.tmTextUnitIds(),
             request.reviewFeatureId(),
+            request.repositoryIds(),
             request.statusFilter(),
             request.skipTextUnitsInOpenProjects(),
             request.type(),
@@ -553,9 +554,13 @@ public class ReviewProjectService {
     boolean hasTmTextUnitIds =
         request.tmTextUnitIds() != null && !request.tmTextUnitIds().isEmpty();
     boolean hasReviewFeatureId = request.reviewFeatureId() != null;
-    if (hasTmTextUnitIds == hasReviewFeatureId) {
+    boolean hasRepositoryIds =
+        request.repositoryIds() != null && !request.repositoryIds().isEmpty();
+    int sourceCount =
+        (hasTmTextUnitIds ? 1 : 0) + (hasReviewFeatureId ? 1 : 0) + (hasRepositoryIds ? 1 : 0);
+    if (sourceCount != 1) {
       throw new IllegalArgumentException(
-          "Exactly one of tmTextUnitIds or reviewFeatureId must be provided");
+          "Exactly one of tmTextUnitIds, reviewFeatureId, or repositoryIds must be provided");
     }
 
     if (request.type() == null) {
@@ -567,12 +572,13 @@ public class ReviewProjectService {
     }
 
     logger.info(
-        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}, reviewFeatureId={}, statusFilter={}, skipTextUnitsInOpenProjects={}",
+        "Create review project request: name='{}', teamId={}, requestedLocales={}, tmTextUnitCount={}, reviewFeatureId={}, repositoryIdCount={}, statusFilter={}, skipTextUnitsInOpenProjects={}",
         request.name(),
         request.teamId(),
         request.localeTags(),
         hasTmTextUnitIds ? request.tmTextUnitIds().size() : null,
         request.reviewFeatureId(),
+        hasRepositoryIds ? request.repositoryIds().size() : null,
         request.statusFilter(),
         Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects()));
 
@@ -592,10 +598,15 @@ public class ReviewProjectService {
         List<TextUnitDTO> candidates =
             hasTmTextUnitIds
                 ? getTextUnitReviewCandidates(request, locale)
-                : searchReviewFeatureCandidates(
-                    reviewFeature,
-                    locale,
-                    getManualReviewFeatureStatusFilter(request.statusFilter()));
+                : hasReviewFeatureId
+                    ? searchReviewFeatureCandidates(
+                        reviewFeature,
+                        locale,
+                        getManualRepositoryScopeStatusFilter(request.statusFilter()))
+                    : searchRepositoryReviewCandidates(
+                        request.repositoryIds(),
+                        locale,
+                        getManualRepositoryScopeStatusFilter(request.statusFilter()));
         if (Boolean.TRUE.equals(request.skipTextUnitsInOpenProjects())) {
           int originalCandidateCount = candidates.size();
           candidates = excludeOpenReviewProjectTextUnits(candidates, locale);
@@ -3380,7 +3391,30 @@ public class ReviewProjectService {
     return textUnitSearcher.search(params);
   }
 
-  private StatusFilter getManualReviewFeatureStatusFilter(StatusFilter statusFilter) {
+  private List<TextUnitDTO> searchRepositoryReviewCandidates(
+      List<Long> repositoryIds, Locale locale, StatusFilter statusFilter) {
+    if (locale == null) {
+      throw new IllegalArgumentException("locale must be provided");
+    }
+    List<Long> activeRepositoryIds =
+        repositoryIds == null
+            ? List.of()
+            : repositoryIds.stream().filter(Objects::nonNull).distinct().toList();
+
+    if (activeRepositoryIds.isEmpty()) {
+      throw new IllegalArgumentException("repositoryIds must be provided");
+    }
+
+    TextUnitSearcherParameters params = new TextUnitSearcherParameters();
+    params.setRepositoryIds(activeRepositoryIds);
+    params.setLocaleId(locale.getId());
+    params.setPluralFormsFiltered(false);
+    params.setStatusFilter(statusFilter);
+
+    return textUnitSearcher.search(params);
+  }
+
+  private StatusFilter getManualRepositoryScopeStatusFilter(StatusFilter statusFilter) {
     return statusFilter == null ? StatusFilter.REVIEW_NEEDED : statusFilter;
   }
 

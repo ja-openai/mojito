@@ -865,6 +865,7 @@ public class ReviewProjectWS {
         request.notes(),
         request.tmTextUnitIds(),
         request.reviewFeatureId(),
+        request.repositoryIds(),
         request.statusFilter(),
         request.skipTextUnitsInOpenProjects(),
         request.type(),

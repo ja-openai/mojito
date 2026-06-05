@@ -356,6 +356,7 @@ export type ReviewProjectCreateRequest = {
   notes?: string | null;
   tmTextUnitIds?: number[] | null;
   reviewFeatureId?: number | null;
+  repositoryIds?: number[] | null;
   statusFilter?: ReviewProjectCreateStatusFilter | null;
   skipTextUnitsInOpenProjects?: boolean | null;
   type?: ApiReviewProjectType | null;

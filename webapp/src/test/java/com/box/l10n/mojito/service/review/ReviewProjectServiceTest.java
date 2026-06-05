@@ -551,6 +551,37 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
+  public void createReviewProjectRequestSearchesSelectedRepositories() {
+    Locale locale = locale(41L, "ar");
+    when(localeService.findByBcp47Tag("ar")).thenReturn(locale);
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class))).thenReturn(List.of());
+
+    reviewProjectService.createReviewProjectRequest(
+        new CreateReviewProjectRequestCommand(
+            List.of("ar"),
+            null,
+            null,
+            null,
+            List.of(71L, 72L, 71L),
+            null,
+            false,
+            ReviewProjectType.NORMAL,
+            ZonedDateTime.parse("2026-03-30T12:00:00Z"),
+            List.of(),
+            "Manual repositories",
+            null,
+            true,
+            99L,
+            null));
+
+    ArgumentCaptor<TextUnitSearcherParameters> parametersCaptor =
+        ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
+    verify(textUnitSearcher).search(parametersCaptor.capture());
+    assertEquals(StatusFilter.REVIEW_NEEDED, parametersCaptor.getValue().getStatusFilter());
+    assertEquals(List.of(71L, 72L), parametersCaptor.getValue().getRepositoryIds());
+  }
+
+  @Test
   public void createReviewProjectRequestUsesSourceTextUnitsForTerminologyProjects() {
     Locale locale = locale(41L, "en");
     TMTextUnit tmTextUnit = new TMTextUnit();
