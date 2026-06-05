@@ -6,7 +6,9 @@ import com.box.l10n.mojito.rest.resttemplate.AuthenticatedRestTemplate;
 import com.google.common.base.Strings;
 import jakarta.annotation.PostConstruct;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.fusesource.jansi.Ansi;
@@ -174,7 +176,8 @@ public class L10nJCommander {
         .println(2);
     consoleWriter.a("Commands:").println();
 
-    for (Command command : commands.values()) {
+    Set<Command> uniqueCommands = new LinkedHashSet<>(commands.values());
+    for (Command command : uniqueCommands) {
 
       if (command.shouldShowInCommandList() && !command.getName().isEmpty()) {
         String paddedCommandName = Strings.padStart(command.getName(), 20, ' ');
@@ -229,7 +232,9 @@ public class L10nJCommander {
         }
       }
 
-      commands.put(command.getName(), command);
+      for (String name : command.getNames()) {
+        commands.put(name, command);
+      }
       jCommander.addCommand(command);
     }
   }
