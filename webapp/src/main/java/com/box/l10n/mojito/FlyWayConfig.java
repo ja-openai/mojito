@@ -31,6 +31,9 @@ public class FlyWayConfig {
   /** To make flyway clean the database before doing migration (ie. re-create the schema). */
   boolean clean = false;
 
+  /** To make flyway repair the schema history table before doing migration. */
+  boolean repair = false;
+
   @Autowired DataSource dataSource;
 
   @Bean
@@ -41,6 +44,7 @@ public class FlyWayConfig {
         return;
       } else {
         optionalClean(flyway);
+        optionalRepair(flyway);
         try {
           logger.info("Flyway migrate() start");
           flyway.migrate();
@@ -64,8 +68,26 @@ public class FlyWayConfig {
     }
   }
 
+  void optionalRepair(Flyway flyway) {
+    if (repair) {
+      repairIfNotProtected(flyway);
+    } else {
+      logger.info("Don't repair DB with Flyway");
+    }
+  }
+
+  void repairIfNotProtected(Flyway flyway) {
+    if (isFlywayProtectionEnabled()) {
+      throw new RuntimeException(
+          "Attempting to perform Flyway repair on a protected schema, abort. Please, check your configuration");
+    } else {
+      logger.info("Repair DB with Flyway");
+      flyway.repair();
+    }
+  }
+
   void cleanIfNotProtected(Flyway flyway) {
-    if (isDBCleanProtectionEnabled()) {
+    if (isFlywayProtectionEnabled()) {
       throw new RuntimeException(
           "Attempting to perform Flyway clean on a protected schema, abort. Please, check your configuration");
     } else {
@@ -141,21 +163,19 @@ public class FlyWayConfig {
                 + "-> Applied to database : 1443976515\n"
                 + "-> Resolved locally    : -998267617")) {
 
-      logger.info("Flyway repair()");
-      flyway.repair();
-      logger.info("Flyway repair() finished");
+      repairIfNotProtected(flyway);
     } else {
       throw fe;
     }
   }
 
   /**
-   * Additional check to avoid cleaning a critical environment by mistake. This is a weak check
-   * since a failure to perform the query will show that the DB is not protected.
+   * Additional check to avoid repairing or cleaning a critical environment by mistake. This is a
+   * weak check since a failure to perform the query will show that the DB is not protected.
    *
    * <p>This is an extra check added to the settings: spring.flyway.clean-disabled=true (now default
-   * in Mojito) and l10n.flyway.clean=false (that is usually set manually, but can be wrongly
-   * enabled) and shouldn't be solely relied upon.
+   * in Mojito), l10n.flyway.clean=false (that is usually set manually, but can be wrongly enabled),
+   * and l10n.flyway.repair=false and shouldn't be solely relied upon.
    *
    * <p>For now this is enabled manually in the database with: CREATE TABLE
    * flyway_clean_protection(enabled boolean default true); INSERT INTO flyway_clean_protection
@@ -163,20 +183,19 @@ public class FlyWayConfig {
    *
    * @return
    */
-  boolean isDBCleanProtectionEnabled() {
-    boolean isDBCleanProtectionEnabled = false;
+  boolean isFlywayProtectionEnabled() {
+    boolean isFlywayProtectionEnabled = false;
 
     try {
       JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
       Map<String, Object> stringObjectMap =
           jdbcTemplate.queryForMap("select enabled as enabled from flyway_clean_protection");
-      isDBCleanProtectionEnabled = (Boolean) stringObjectMap.get("enabled");
+      isFlywayProtectionEnabled = (Boolean) stringObjectMap.get("enabled");
     } catch (Exception e) {
-      logger.info(
-          "Can't check if the flyway clean protection is enabled, assume it is not protected");
+      logger.info("Can't check if the flyway protection is enabled, assume it is not protected");
     }
 
-    return isDBCleanProtectionEnabled;
+    return isFlywayProtectionEnabled;
   }
 
   public boolean isClean() {
@@ -185,5 +204,13 @@ public class FlyWayConfig {
 
   public void setClean(boolean clean) {
     this.clean = clean;
+  }
+
+  public boolean isRepair() {
+    return repair;
+  }
+
+  public void setRepair(boolean repair) {
+    this.repair = repair;
   }
 }

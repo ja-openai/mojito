@@ -273,6 +273,9 @@ requires `spring.jpa.defer-datasource-initialization=false` to override an HSQL 
 Set the properties `l10n.flyway.clean=true` (and have `spring.flyway.clean-disabled=false`) to have Flyway clean the schema first 
 and then recreate it from the migration files. This will allow during development to do have a similar behavior as `spring.jpa.hibernate.ddl-auto=create`.
 
+### Repair Flyway metadata
+For local development only, set `l10n.flyway.repair=true` to run `flyway.repair()` before migration. This repairs Flyway's schema history metadata, not the application schema itself, and is rejected when the database has `flyway_clean_protection` enabled.
+
 ### When working on Jpa entities
 - Set `spring.jpa.hibernate.ddl-auto=update` so that Hibernate will update the DB schema as you keep doing changes
 - Flyway is be used to create or just update the schema depending if the flags were set to clean the DB 

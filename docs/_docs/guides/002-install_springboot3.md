@@ -198,8 +198,8 @@ In short, recommended settings are:
 spring.flyway.clean-disabled=true 
 l10n.flyway.clean=false
 ```
-An additional protection which is not based on settings is also available. The clean operation can be prevented by
-adding a flag in the database using following commands:
+An additional protection which is not based on settings is also available. The clean and repair operations can be prevented
+by adding a flag in the database using following commands:
 
 ```sql
 CREATE TABLE flyway_clean_protection(enabled boolean default true);
