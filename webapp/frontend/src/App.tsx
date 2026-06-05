@@ -31,6 +31,7 @@ import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslate
 import { AdminAiTranslatePromptsPage } from './page/settings/AdminAiTranslatePromptsPage';
 import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
 import { AdminGlossaryWorkflowPage } from './page/settings/AdminGlossaryWorkflowPage';
+import { AdminJsonConfigLocalizationPage } from './page/settings/AdminJsonConfigLocalizationPage';
 import { AdminLinguistTimeSpentPage } from './page/settings/AdminLinguistTimeSpentPage';
 import { AdminReviewAutomationBatchPage } from './page/settings/AdminReviewAutomationBatchPage';
 import { AdminReviewAutomationDetailPage } from './page/settings/AdminReviewAutomationDetailPage';
@@ -181,7 +182,6 @@ export function App() {
             <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
             <Route path="/tools/bidi-helper" element={<BidiHelperPage />} />
             <Route path="/tools/icu-preview" element={<IcuMessagePreviewPage />} />
-            <Route path="*" element={<Navigate to="/repositories" replace />} />
           </Route>
           <Route
             element={
@@ -207,6 +207,22 @@ export function App() {
             />
             <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
             <Route path="/settings/system/review-features" element={<AdminReviewFeaturesPage />} />
+            <Route
+              path="/settings/admin/json-config-localization"
+              element={<AdminJsonConfigLocalizationPage />}
+            />
+            <Route
+              path="/settings/admin/json-config-localization/:repositoryId"
+              element={<AdminJsonConfigLocalizationPage />}
+            />
+            <Route
+              path="/settings/system/json-config-localization"
+              element={<AdminJsonConfigLocalizationPage />}
+            />
+            <Route
+              path="/settings/system/json-config-localization/:repositoryId"
+              element={<AdminJsonConfigLocalizationPage />}
+            />
             <Route
               path="/settings/admin/linguist-time-spent"
               element={<AdminLinguistTimeSpentPage />}
@@ -362,6 +378,7 @@ export function App() {
               element={<AdminTranslationIncidentsPage />}
             />
           </Route>
+          <Route path="*" element={<Navigate to="/repositories" replace />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

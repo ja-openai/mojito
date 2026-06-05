@@ -23,6 +23,7 @@ type Props = {
   emptyLabel?: string;
   uploadButtonLabel?: string;
   dropHint?: string;
+  accept?: string;
   optimizeImages?: boolean;
   onToggleOptimizeImages?: (checked: boolean) => void;
   keys: string[];
@@ -39,6 +40,7 @@ export function RequestAttachmentsDropzone({
   emptyLabel = 'No attachments',
   uploadButtonLabel = 'Drop files or click to upload',
   dropHint = 'or drop files here',
+  accept = 'image/*,video/*,application/pdf',
   optimizeImages = true,
   onToggleOptimizeImages,
   keys,
@@ -172,7 +174,7 @@ export function RequestAttachmentsDropzone({
           type="file"
           multiple
           className="request-attachments__file-input"
-          accept="image/*,video/*,application/pdf"
+          accept={accept}
           onChange={handleInputChange}
           disabled={disabled}
         />

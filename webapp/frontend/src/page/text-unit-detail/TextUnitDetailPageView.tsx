@@ -33,6 +33,12 @@ export type TextUnitDetailMetaSection = {
   rows: TextUnitDetailMetaRow[];
 };
 
+export type TextUnitDetailScreenshot = {
+  id?: number | null;
+  name?: string | null;
+  src?: string | null;
+};
+
 type TargetCommentEditorProps = {
   draft: string;
   isEditing: boolean;
@@ -105,6 +111,7 @@ type TextUnitDetailPageViewProps = {
     isLoading: boolean;
     errorMessage: string | null;
   } | null;
+  sourceScreenshots: TextUnitDetailScreenshot[];
   isGlossaryCollapsed: boolean;
   onToggleGlossaryCollapsed: () => void;
   isMetaCollapsed: boolean;
@@ -168,6 +175,7 @@ export function TextUnitDetailPageView({
   isGlossaryLoading,
   glossaryErrorMessage,
   glossaryTermMetadata,
+  sourceScreenshots,
   isGlossaryCollapsed,
   onToggleGlossaryCollapsed,
   isMetaCollapsed,
@@ -214,6 +222,7 @@ export function TextUnitDetailPageView({
   const glossaryPartOfSpeech = formatGlossaryMetadataValue(glossaryTerm?.partOfSpeech);
   const glossaryTermScreenshots = getGlossaryTermScreenshotEvidence(glossaryTerm?.evidence);
   const [isGlossaryScreenshotsCollapsed, setIsGlossaryScreenshotsCollapsed] = useState(false);
+  const [isSourceScreenshotsCollapsed, setIsSourceScreenshotsCollapsed] = useState(false);
   const historyCount =
     historyRows.length + (showDeletedHistoryEntry ? 1 : 0) + (historyInitialDate ? 1 : 0);
   const historyTitle = isHistoryCountReady ? `History (${historyCount})` : 'History';
@@ -221,6 +230,10 @@ export function TextUnitDetailPageView({
   useEffect(() => {
     setIsGlossaryScreenshotsCollapsed(false);
   }, [glossaryTerm?.tmTextUnitId, glossaryTermScreenshots.length]);
+
+  useEffect(() => {
+    setIsSourceScreenshotsCollapsed(false);
+  }, [tmTextUnitId, sourceScreenshots.length]);
 
   return (
     <div className="review-project-page text-unit-detail-page">
@@ -414,6 +427,26 @@ export function TextUnitDetailPageView({
                     </pre>
                   </dd>
                 </div>
+                {sourceScreenshots.length > 0 ? (
+                  <div className="text-unit-detail-page__key-info-row">
+                    <dt className="text-unit-detail-page__key-info-label">
+                      <span>Screenshots</span>
+                      <button
+                        type="button"
+                        className="text-unit-detail-page__inline-toggle"
+                        onClick={() => setIsSourceScreenshotsCollapsed((current) => !current)}
+                        aria-expanded={!isSourceScreenshotsCollapsed}
+                      >
+                        {isSourceScreenshotsCollapsed ? 'Show' : 'Hide'}
+                      </button>
+                    </dt>
+                    <dd>
+                      {isSourceScreenshotsCollapsed ? null : (
+                        <TextUnitScreenshotThumbnails screenshots={sourceScreenshots} />
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
                 {glossaryPartOfSpeech ? (
                   <div className="text-unit-detail-page__key-info-row">
                     <dt>POS</dt>
@@ -435,7 +468,7 @@ export function TextUnitDetailPageView({
                 {glossaryTermScreenshots.length > 0 ? (
                   <div className="text-unit-detail-page__key-info-row">
                     <dt className="text-unit-detail-page__key-info-label">
-                      <span>Screenshots</span>
+                      <span>Glossary screenshots</span>
                       <button
                         type="button"
                         className="text-unit-detail-page__inline-toggle"
@@ -577,6 +610,39 @@ export function TextUnitDetailPageView({
         onConfirm={onConfirmDeleteEditor}
         onCancel={onDismissDeleteDialog}
       />
+    </div>
+  );
+}
+
+function TextUnitScreenshotThumbnails({
+  screenshots,
+}: {
+  screenshots: TextUnitDetailScreenshot[];
+}) {
+  const visibleScreenshots = screenshots.filter((screenshot) => screenshot.src?.trim());
+
+  if (!visibleScreenshots.length) {
+    return null;
+  }
+
+  return (
+    <div className="text-unit-detail-page__screenshots">
+      {visibleScreenshots.map((screenshot, index) => {
+        const src = screenshot.src?.trim() ?? '';
+        const label = screenshot.name?.trim() || `Screenshot ${index + 1}`;
+        return (
+          <a
+            key={`${screenshot.id ?? index}:${src}`}
+            className="text-unit-detail-page__screenshot"
+            href={src}
+            target="_blank"
+            rel="noreferrer"
+            title={label}
+          >
+            <img src={src} alt={label} />
+          </a>
+        );
+      })}
     </div>
   );
 }

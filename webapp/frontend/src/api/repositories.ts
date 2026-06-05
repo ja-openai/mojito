@@ -1,5 +1,11 @@
 export type ApiLocale = {
+  id?: number | null;
   bcp47Tag: string;
+};
+
+export type ApiScreenshotRun = {
+  id: number;
+  name?: string | null;
 };
 
 export type ApiRepositoryLocale = {
@@ -30,6 +36,7 @@ export type ApiRepository = {
   id: number;
   name: string;
   sourceLocale?: ApiLocale | null;
+  manualScreenshotRun?: ApiScreenshotRun | null;
   repositoryLocales?: ApiRepositoryLocale[] | null;
   repositoryStatistic?: ApiRepositoryStatistic | null;
   isGlossary?: boolean | null;
@@ -44,4 +51,15 @@ export const fetchRepositories = async (): Promise<ApiRepository[]> => {
   }
 
   return (await response.json()) as ApiRepository[];
+};
+
+export const fetchRepositoryById = async (repositoryId: number): Promise<ApiRepository> => {
+  const response = await fetch(`/api/repositories/${repositoryId}`);
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load repository');
+  }
+
+  return (await response.json()) as ApiRepository;
 };

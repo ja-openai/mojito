@@ -57,6 +57,7 @@ import {
   type TextUnitDetailMetaRow,
   type TextUnitDetailMetaSection,
   TextUnitDetailPageView,
+  type TextUnitDetailScreenshot,
 } from './TextUnitDetailPageView';
 
 type LocationState = {
@@ -507,6 +508,10 @@ export function TextUnitDetailPage() {
   }, [aiTranslateAttemptsQuery.data, localeTag, tmTextUnitId]);
 
   const gitBlame = useMemo(() => gitBlameQuery.data?.[0] ?? null, [gitBlameQuery.data]);
+  const sourceScreenshots = useMemo<TextUnitDetailScreenshot[]>(
+    () => (gitBlame?.screenshots ?? []).filter((screenshot) => Boolean(screenshot.src?.trim())),
+    [gitBlame?.screenshots],
+  );
 
   const textUnitLocation = useMemo(() => {
     const usagesFromGitBlame = gitBlame?.usages ?? [];
@@ -1132,6 +1137,7 @@ export function TextUnitDetailPage() {
             }
           : null
       }
+      sourceScreenshots={sourceScreenshots}
       isGlossaryCollapsed={isGlossaryCollapsed}
       onToggleGlossaryCollapsed={() => setIsGlossaryCollapsed((current) => !current)}
       isMetaCollapsed={isMetaCollapsed}

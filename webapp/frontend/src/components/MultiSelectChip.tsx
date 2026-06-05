@@ -236,6 +236,25 @@ export function MultiSelectChip<T extends string | number>({
   const onlyText = onlyLabel ?? 'Only';
   const resolvedCustomActions = customActions ?? [];
   const resolvedQuickActions = quickActions ?? [];
+  const quickActionStrip = resolvedQuickActions.length ? (
+    <div className="multi-select-chip__actions multi-select-chip__actions--strip">
+      {resolvedQuickActions.map((action) => (
+        <button
+          type="button"
+          key={action.label}
+          className={`multi-select-chip__action-button multi-select-chip__action-button--strip${
+            action.active ? ' is-active' : ''
+          }`}
+          onClick={action.onClick}
+          disabled={Boolean(action.disabled)}
+          aria-label={action.ariaLabel ?? action.label}
+          aria-pressed={Boolean(action.active)}
+        >
+          {action.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
   const canOpen =
     !disabled &&
     (options.length > 0 || resolvedCustomActions.length > 0 || resolvedQuickActions.length > 0);
@@ -285,25 +304,7 @@ export function MultiSelectChip<T extends string | number>({
                     placeholder={filterInputPlaceholder}
                     className="multi-select-chip__search"
                   />
-                  {resolvedQuickActions.length ? (
-                    <div className="multi-select-chip__actions multi-select-chip__actions--strip">
-                      {resolvedQuickActions.map((action) => (
-                        <button
-                          type="button"
-                          key={action.label}
-                          className={`multi-select-chip__action-button multi-select-chip__action-button--strip${
-                            action.active ? ' is-active' : ''
-                          }`}
-                          onClick={action.onClick}
-                          disabled={Boolean(action.disabled)}
-                          aria-label={action.ariaLabel ?? action.label}
-                          aria-pressed={Boolean(action.active)}
-                        >
-                          {action.label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
+                  {quickActionStrip ?? (
                     <div className="multi-select-chip__actions">
                       <button
                         type="button"
@@ -381,6 +382,7 @@ export function MultiSelectChip<T extends string | number>({
                 </>
               ) : (
                 <>
+                  {quickActionStrip}
                   {resolvedCustomActions.length ? (
                     <div className="multi-select-chip__actions multi-select-chip__actions--secondary">
                       {resolvedCustomActions.map((action) => (
