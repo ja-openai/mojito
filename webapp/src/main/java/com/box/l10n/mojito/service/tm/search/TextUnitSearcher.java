@@ -464,8 +464,19 @@ public class TextUnitSearcher {
       case LOCATION -> searchTypePredicate(cb, context.usage, null, searchType, value);
       case PLURAL_FORM_OTHER ->
           searchTypePredicate(cb, context.textUnit.get("pluralFormOther"), null, searchType, value);
-      case TM_TEXT_UNIT_IDS -> context.textUnit.get("id").in(parseTextUnitIds(value));
+      case TM_TEXT_UNIT_IDS ->
+          textUnitIdSearchPredicate(cb, context.textUnit.get("id"), searchType, value);
     };
+  }
+
+  private Predicate textUnitIdSearchPredicate(
+      CriteriaBuilder cb, Expression<Long> idColumn, SearchType searchType, String value) {
+    SearchType effectiveSearchType = searchType == null ? SearchType.EXACT : searchType;
+    if (SearchType.EXACT.equals(effectiveSearchType)) {
+      return idColumn.in(parseTextUnitIds(value));
+    }
+
+    return searchTypePredicate(cb, idColumn.as(String.class), null, effectiveSearchType, value);
   }
 
   private Predicate searchTypePredicate(

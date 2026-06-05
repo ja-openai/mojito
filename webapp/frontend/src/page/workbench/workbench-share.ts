@@ -39,7 +39,7 @@ export function buildWorkbenchSharePayload({
       : {
           ...normalizedSearchRequest,
           searchAttribute: 'tmTextUnitIds',
-          searchType: 'contains',
+          searchType: 'exact',
           searchText: ids.join(','),
           limit: ids.length || normalizedSearchRequest.limit,
           offset: 0,

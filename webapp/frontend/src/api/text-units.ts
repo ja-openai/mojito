@@ -473,21 +473,28 @@ function parseTmTextUnitIds(value: string): number[] {
     .filter((token) => Number.isInteger(token) && token > 0);
 }
 
+function getExactTmTextUnitIdFilter(
+  request: TextUnitSearchRequest,
+  textSearch: TextSearch | undefined,
+) {
+  const explicitTmTextUnitIds = request.tmTextUnitIds ?? [];
+  const exactTextSearchTmTextUnitIds =
+    textSearch?.operator === 'OR'
+      ? []
+      : (textSearch?.predicates
+          .filter(
+            (predicate) => predicate.field === 'tmTextUnitIds' && predicate.searchType === 'exact',
+          )
+          .flatMap((predicate) => parseTmTextUnitIds(predicate.value)) ?? []);
+
+  return Array.from(new Set([...explicitTmTextUnitIds, ...exactTextSearchTmTextUnitIds]));
+}
+
 function buildSearchBody(request: TextUnitSearchRequest): TextUnitSearchBody {
   const limit = request.limit ?? DEFAULT_SEARCH_LIMIT;
   const offset = request.offset ?? 0;
   const textSearch = getCanonicalTextSearch(request);
-  const legacyTmTextUnitIds =
-    request.searchAttribute === 'tmTextUnitIds' && request.searchText
-      ? parseTmTextUnitIds(request.searchText)
-      : [];
-  const textSearchTmTextUnitIds =
-    textSearch?.predicates
-      .filter((predicate) => predicate.field === 'tmTextUnitIds')
-      .flatMap((predicate) => parseTmTextUnitIds(predicate.value)) ?? [];
-  const tmTextUnitIds = Array.from(
-    new Set([...(request.tmTextUnitIds ?? []), ...legacyTmTextUnitIds, ...textSearchTmTextUnitIds]),
-  );
+  const tmTextUnitIds = getExactTmTextUnitIdFilter(request, textSearch);
 
   const body: TextUnitSearchBody = {
     repositoryIds: request.repositoryIds,

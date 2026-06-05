@@ -1150,6 +1150,56 @@ public class TextUnitSearcherTest extends ServiceTestBase {
         .containsExactly(tuple("Comment3", "Content3", "fr-FR"));
   }
 
+  @Transactional
+  @Test
+  public void testContainsTextUnitIdsTextSearch() {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+
+    TextUnitTextSearchPredicate textUnitIdsPredicate = new TextUnitTextSearchPredicate();
+    textUnitIdsPredicate.setField(TextUnitTextSearchField.TM_TEXT_UNIT_IDS);
+    textUnitIdsPredicate.setSearchType(SearchType.CONTAINS);
+    textUnitIdsPredicate.setValue(String.valueOf(tmTestData.addTMTextUnit1.getId()));
+
+    TextUnitTextSearch textSearch = new TextUnitTextSearch();
+    textSearch.setPredicates(Arrays.asList(textUnitIdsPredicate));
+
+    TextUnitSearcherParameters textUnitSearcherParameters =
+        new TextUnitSearcherParametersForTesting();
+    textUnitSearcherParameters.setRepositoryIds(tmTestData.repository.getId());
+    textUnitSearcherParameters.setTextSearch(textSearch);
+
+    List<TextUnitDTO> textUnitDTOs = textUnitSearcher.search(textUnitSearcherParameters);
+
+    assertThat(textUnitDTOs)
+        .extracting(TextUnitDTO::getTmTextUnitId)
+        .contains(tmTestData.addTMTextUnit1.getId());
+  }
+
+  @Transactional
+  @Test
+  public void testILikeTextUnitIdsTextSearch() {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+
+    TextUnitTextSearchPredicate textUnitIdsPredicate = new TextUnitTextSearchPredicate();
+    textUnitIdsPredicate.setField(TextUnitTextSearchField.TM_TEXT_UNIT_IDS);
+    textUnitIdsPredicate.setSearchType(SearchType.ILIKE);
+    textUnitIdsPredicate.setValue("%" + tmTestData.addTMTextUnit1.getId() + "%");
+
+    TextUnitTextSearch textSearch = new TextUnitTextSearch();
+    textSearch.setPredicates(Arrays.asList(textUnitIdsPredicate));
+
+    TextUnitSearcherParameters textUnitSearcherParameters =
+        new TextUnitSearcherParametersForTesting();
+    textUnitSearcherParameters.setRepositoryIds(tmTestData.repository.getId());
+    textUnitSearcherParameters.setTextSearch(textSearch);
+
+    List<TextUnitDTO> textUnitDTOs = textUnitSearcher.search(textUnitSearcherParameters);
+
+    assertThat(textUnitDTOs)
+        .extracting(TextUnitDTO::getTmTextUnitId)
+        .contains(tmTestData.addTMTextUnit1.getId());
+  }
+
   public void testSearchText(
       String attribute, String value, SearchType searchType, List<String> expectedNames) {
     TMTestData tmTestData = new TMTestData(testIdWatcher);
