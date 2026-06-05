@@ -13,6 +13,9 @@ public enum Role {
   /** Administrator of Mojito. */
   ROLE_ADMIN,
 
+  /** Read-only CMS snapshot delivery service account. */
+  ROLE_CMS_DELIVERY,
+
   /**
    * User does not have much authorities. Any new user who is logging in for the first time will
    * have this role

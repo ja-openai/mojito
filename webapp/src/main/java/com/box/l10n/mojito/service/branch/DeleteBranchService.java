@@ -4,6 +4,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 import com.box.l10n.mojito.entity.Branch;
 import com.box.l10n.mojito.service.asset.AssetService;
+import com.box.l10n.mojito.service.asset.CmsManagedVirtualAssetMutationException;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,8 @@ public class DeleteBranchService {
     this.assetService = assetService;
   }
 
-  public void deleteBranch(Long repositoryId, Long branchId) {
+  public void deleteBranch(Long repositoryId, Long branchId)
+      throws CmsManagedVirtualAssetMutationException {
     deleteBranchAsset(branchId, repositoryId);
 
     Branch branch = branchRepository.findById(branchId).orElse(null);
@@ -37,7 +39,8 @@ public class DeleteBranchService {
     branchRepository.save(branch);
   }
 
-  public void deleteBranchAsset(Long branchId, Long repositoryId) {
+  public void deleteBranchAsset(Long branchId, Long repositoryId)
+      throws CmsManagedVirtualAssetMutationException {
     Set<Long> assetIds = assetService.findAllAssetIds(repositoryId, null, false, false, branchId);
     assetService.deleteAssetsOfBranch(assetIds, branchId);
   }

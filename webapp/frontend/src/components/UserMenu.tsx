@@ -10,6 +10,8 @@ function formatRole(role: ApiUserProfile['role']) {
   switch (role) {
     case 'ROLE_ADMIN':
       return 'Admin';
+    case 'ROLE_CMS_DELIVERY':
+      return 'CMS delivery';
     case 'ROLE_PM':
       return 'Project manager';
     case 'ROLE_TRANSLATOR':

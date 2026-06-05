@@ -6,7 +6,9 @@ import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant_;
 import com.box.l10n.mojito.entity.TMTextUnit_;
 import com.box.l10n.mojito.entity.TM_;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantMutationLockService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.google.common.base.Preconditions;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -40,6 +42,11 @@ public class CurrentVariantRollbackService {
 
   @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
 
+  @Autowired
+  TMTextUnitCurrentVariantMutationLockService tmTextUnitCurrentVariantMutationLockService;
+
+  @Autowired TMTextUnitRepository tmTextUnitRepository;
+
   /**
    * Rollbacks the current variants of the given TM to the state at the given date.
    *
@@ -48,6 +55,7 @@ public class CurrentVariantRollbackService {
    * @param tmId ID of the TM the {@link TMTextUnitCurrentVariant}s to be rolled back should belong
    *     to
    */
+  @Transactional
   public void rollbackCurrentVariantsFromTMToDate(ZonedDateTime rollbackDateTime, Long tmId) {
     rollbackCurrentVariantsFromTMToDate(
         rollbackDateTime, tmId, new CurrentVariantRollbackParameters());
@@ -69,8 +77,21 @@ public class CurrentVariantRollbackService {
 
     Preconditions.checkNotNull(extraParameters, "Extra parameters should not be null");
 
+    lockCurrentVariantMutationScope(tmId, extraParameters);
     deleteExistingCurrentVariants(tmId, extraParameters);
     addCurrentVariantsAsOfRollbackDate(rollbackDateTime, tmId, extraParameters);
+  }
+
+  private void lockCurrentVariantMutationScope(
+      Long tmId, CurrentVariantRollbackParameters extraParameters) {
+    List<Long> tmTextUnitIds = extraParameters.getTmTextUnitIds();
+    if (tmTextUnitIds == null || tmTextUnitIds.isEmpty()) {
+      tmTextUnitIds =
+          tmTextUnitRepository.findByTm_id(tmId).stream()
+              .map(tmTextUnit -> tmTextUnit.getId())
+              .toList();
+    }
+    tmTextUnitCurrentVariantMutationLockService.lockTextUnits(tmTextUnitIds);
   }
 
   /**

@@ -1,9 +1,11 @@
 package com.box.l10n.mojito.react;
 
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.rest.security.CsrfTokenController;
 import com.box.l10n.mojito.rest.security.UserProfile;
 import com.box.l10n.mojito.rest.security.UserProfileMapper;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
+import com.box.l10n.mojito.security.Role;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.IllformedLocaleException;
 import java.util.Locale;
@@ -53,8 +55,15 @@ public class FrontendConfigController {
   UserProfile getUserProfile() {
     return auditorAwareImpl
         .getCurrentAuditor()
+        .filter(user -> !hasCmsDeliveryRole(user))
         .map(userProfileMapper::toUserProfile)
         .orElse(new UserProfile());
+  }
+
+  private boolean hasCmsDeliveryRole(User user) {
+    return user.getAuthorities() != null
+        && user.getAuthorities().stream()
+            .anyMatch(authority -> Role.ROLE_CMS_DELIVERY.name().equals(authority.getAuthority()));
   }
 
   /**

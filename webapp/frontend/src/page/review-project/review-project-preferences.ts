@@ -3,6 +3,7 @@ export type ReviewProjectShortcutHelpRole =
   | 'ROLE_PM'
   | 'ROLE_TRANSLATOR'
   | 'ROLE_ADMIN'
+  | 'ROLE_CMS_DELIVERY'
   | 'ROLE_USER';
 
 export const REVIEW_PROJECT_SHORTCUT_HELP_KEY = 'reviewProject.shortcutHelp.v1';

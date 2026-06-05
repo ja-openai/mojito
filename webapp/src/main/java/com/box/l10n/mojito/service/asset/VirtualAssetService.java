@@ -95,6 +95,8 @@ public class VirtualAssetService {
 
   @Autowired VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService;
 
+  @Autowired CmsManagedVirtualAssetGuard cmsManagedVirtualAssetGuard;
+
   @Autowired RepositoryService repositoryService;
 
   @Autowired LocaleService localeService;
@@ -125,6 +127,7 @@ public class VirtualAssetService {
       throw new VirtualAssetRequiredException("Standard asset can't be modify");
     } else if (asset != null) {
       logger.debug("Virtual asset exists, update it");
+      cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
       if (virtualAsset.getDeleted() == null) {
         throw new VirtualAssetRequiredException("Missing deleted attribute for update");
       }
@@ -305,12 +308,14 @@ public class VirtualAssetService {
   }
 
   PollableFuture<Void> updateTextUnits(
-      long assetId, List<VirtualAssetTextUnit> virtualAssetTextUnits, boolean b) {
+      long assetId, List<VirtualAssetTextUnit> virtualAssetTextUnits, boolean replace)
+      throws VirtualAssetRequiredException {
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(getVirtualAsset(assetId));
     VirtualTextUnitBatchUpdateJobInput importVirtualAssetJobInput =
         new VirtualTextUnitBatchUpdateJobInput();
     importVirtualAssetJobInput.setAssetId(assetId);
     importVirtualAssetJobInput.setVirtualAssetTextUnits(virtualAssetTextUnits);
-    importVirtualAssetJobInput.setReplace(b);
+    importVirtualAssetJobInput.setReplace(replace);
     return quartzPollableTaskScheduler.scheduleJob(
         VirtualTextUnitBatchUpdateJob.class, importVirtualAssetJobInput, schedulerName);
   }
@@ -347,12 +352,14 @@ public class VirtualAssetService {
   }
 
   @Transactional
-  public void deleteTextUnit(Long assetId, String name) {
-    Asset asset = assetRepository.findById(assetId).orElse(null);
+  public void deleteTextUnit(Long assetId, String name) throws VirtualAssetRequiredException {
+    Asset asset = getVirtualAsset(assetId);
     deleteTextUnits(asset, Arrays.asList(name));
   }
 
-  public void deleteTextUnits(Asset asset, List<String> names) {
+  public void deleteTextUnits(Asset asset, List<String> names)
+      throws VirtualAssetRequiredException {
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
 
     Long assetExtractionId = asset.getLastSuccessfulAssetExtraction().getId();
 

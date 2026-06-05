@@ -32,6 +32,7 @@ import com.box.l10n.mojito.okapi.extractor.AssetExtractorTextUnit;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.asset.AssetRepository;
+import com.box.l10n.mojito.service.asset.CmsManagedVirtualAssetGuard;
 import com.box.l10n.mojito.service.asset.FilterOptionsMd5Builder;
 import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
 import com.box.l10n.mojito.service.assetcontent.AssetContentService;
@@ -117,6 +118,8 @@ public class AssetExtractionService {
   @Autowired AssetMappingService assetMappingService;
 
   @Autowired AssetRepository assetRepository;
+
+  @Autowired CmsManagedVirtualAssetGuard cmsManagedVirtualAssetGuard;
 
   @Autowired AssetContentService assetContentService;
 
@@ -226,7 +229,7 @@ public class AssetExtractionService {
       throws UnsupportedAssetFilterTypeException, AssetExtractionConflictException {
 
     logger.info("Start processing asset content, id: {}", assetContentId);
-    AssetContent assetContent = assetContentService.findOne(assetContentId);
+    AssetContent assetContent = findAssetContentForGenericMutation(assetContentId);
     Asset asset = getUndeletedAsset(assetContent.getAsset());
 
     MultiBranchState stateForNewContent =
@@ -561,6 +564,7 @@ public class AssetExtractionService {
   }
 
   Asset getUndeletedAsset(Asset asset) {
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
     if (asset.getDeleted()) {
       asset.setDeleted(false);
       asset = assetRepository.save(asset);
@@ -1459,6 +1463,7 @@ public class AssetExtractionService {
   }
 
   public void deleteAssetBranch(Asset asset, String branchName) {
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
 
     Branch branch = branchRepository.findByNameAndRepository(branchName, asset.getRepository());
     AssetExtractionByBranch assetExtractionByBranch =
@@ -1536,6 +1541,7 @@ public class AssetExtractionService {
       throws UnsupportedAssetFilterTypeException,
           InterruptedException,
           AssetExtractionConflictException {
+    findAssetContentForGenericMutation(assetContentId);
 
     ProcessAssetJobInput processAssetJobInput = new ProcessAssetJobInput();
     processAssetJobInput.setAssetContentId(assetContentId);
@@ -1575,6 +1581,7 @@ public class AssetExtractionService {
    */
   @Retryable
   public void markAssetExtractionAsLastSuccessful(Asset asset, AssetExtraction assetExtraction) {
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
     logger.debug(
         "Marking asset extraction as last successful, assetExtractionId: {}",
         assetExtraction.getId());
@@ -1585,6 +1592,7 @@ public class AssetExtractionService {
 
   @Transactional
   public AssetExtraction createAssetExtraction(Asset asset, PollableTask pollableTask) {
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
     AssetExtraction assetExtraction = new AssetExtraction();
     assetExtraction.setAsset(asset);
     assetExtraction.setPollableTask(pollableTask);
@@ -1637,6 +1645,8 @@ public class AssetExtractionService {
       boolean doNotTranslate,
       Set<String> usages,
       Branch branch) {
+    AssetExtraction assetExtraction = assetExtractionRepository.getReferenceById(assetExtractionId);
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(assetExtraction.getAsset());
 
     logger.debug(
         "Adding AssetTextUnit for assetExtractionId: {}\nname: {}\ncontent: {}\ncomment: {}\n",
@@ -1646,7 +1656,7 @@ public class AssetExtractionService {
         comment);
 
     AssetTextUnit assetTextUnit = new AssetTextUnit();
-    assetTextUnit.setAssetExtraction(assetExtractionRepository.getReferenceById(assetExtractionId));
+    assetTextUnit.setAssetExtraction(assetExtraction);
     assetTextUnit.setName(name);
     assetTextUnit.setContent(content);
     assetTextUnit.setComment(comment);
@@ -1663,5 +1673,14 @@ public class AssetExtractionService {
     logger.trace("AssetTextUnit saved");
 
     return assetTextUnit;
+  }
+
+  private AssetContent findAssetContentForGenericMutation(Long assetContentId) {
+    AssetContent assetContent = assetContentService.findOne(assetContentId);
+    if (assetContent == null) {
+      throw new IllegalArgumentException("Asset content not found: " + assetContentId);
+    }
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(assetContent.getAsset());
+    return assetContent;
   }
 }

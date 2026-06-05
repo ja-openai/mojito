@@ -67,8 +67,8 @@ public class UserService {
   @Autowired UserDeletionService userDeletionService;
 
   /**
-   * Allow PMs and ADMINs to create / edit users. However, a PM user can not create / edit ADMIN
-   * users.
+   * Allow PMs and ADMINs to create / edit users. However, a PM user can not create / edit
+   * admin-only users.
    */
   private void checkPermissionsForRole(Role role) {
     final Optional<User> currentUser = auditorAwareImpl.getCurrentAuditor();
@@ -83,18 +83,23 @@ public class UserService {
 
     switch (currentRole) {
       case ROLE_PM -> {
-        if (role == Role.ROLE_ADMIN) {
+        if (isAdminOnlyRole(role)) {
           throw new AccessDeniedException(
-              "Access denied! PMs are not allowed to edit / create ADMINs");
+              "Access denied! PMs are not allowed to edit / create admin-only users");
         }
       }
       case ROLE_ADMIN -> {
         // There is nothing above admin
       }
-      case ROLE_TRANSLATOR, ROLE_USER ->
+      case ROLE_TRANSLATOR, ROLE_CMS_DELIVERY, ROLE_USER ->
           throw new AccessDeniedException(
-              "Access denied! Users and Translators are not allowed to to edit / create users");
+              "Access denied! Users, Translators, and CMS delivery users are not allowed to"
+                  + " edit / create users");
     }
+  }
+
+  private boolean isAdminOnlyRole(Role role) {
+    return role == Role.ROLE_ADMIN || role == Role.ROLE_CMS_DELIVERY;
   }
 
   public void checkUserCanEditLocale(Long localeId) {
@@ -119,6 +124,10 @@ public class UserService {
 
   public boolean isCurrentUserAdmin() {
     return hasCurrentUserRole(Role.ROLE_ADMIN);
+  }
+
+  public boolean isCurrentUserCmsDelivery() {
+    return hasCurrentUserRole(Role.ROLE_CMS_DELIVERY);
   }
 
   public boolean isCurrentUserPm() {

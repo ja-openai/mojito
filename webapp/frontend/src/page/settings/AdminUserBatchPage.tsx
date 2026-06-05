@@ -16,6 +16,7 @@ import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 const ROLE_OPTIONS = [
   { value: 'ROLE_ADMIN', label: 'Admin' },
+  { value: 'ROLE_CMS_DELIVERY', label: 'CMS delivery' },
   { value: 'ROLE_PM', label: 'Project manager' },
   { value: 'ROLE_TRANSLATOR', label: 'Translator' },
   { value: 'ROLE_USER', label: 'User' },
@@ -27,6 +28,8 @@ const formatRole = (role?: string | null) => {
   switch (role) {
     case 'ROLE_ADMIN':
       return 'Admin';
+    case 'ROLE_CMS_DELIVERY':
+      return 'CMS delivery';
     case 'ROLE_PM':
       return 'Project manager';
     case 'ROLE_TRANSLATOR':
@@ -50,6 +53,9 @@ const normalizeRoleInput = (value?: string | null) => {
     case 'admin':
     case 'roleadmin':
       return 'ROLE_ADMIN';
+    case 'cmsdelivery':
+    case 'rolecmsdelivery':
+      return 'ROLE_CMS_DELIVERY';
     case 'pm':
     case 'projectmanager':
     case 'rolepm':

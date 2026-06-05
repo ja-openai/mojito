@@ -5,6 +5,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetContent;
 import com.box.l10n.mojito.entity.Branch;
+import com.box.l10n.mojito.service.asset.CmsManagedVirtualAssetGuard;
 import com.box.l10n.mojito.service.branch.BranchService;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
@@ -33,6 +34,8 @@ public class AssetContentService {
 
   @Autowired AssetContentRepository assetContentRepository;
 
+  @Autowired CmsManagedVirtualAssetGuard cmsManagedVirtualAssetGuard;
+
   /**
    * Creates an {@link AssetContent} with no branch name specified. This will create a {@link
    * Branch} with branch name: null.
@@ -42,6 +45,7 @@ public class AssetContentService {
    * @return
    */
   public AssetContent createAssetContent(Asset asset, String content) {
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
     Branch branch =
         branchService.getUndeletedOrCreateBranch(asset.getRepository(), null, null, null);
     return createAssetContent(asset, content, false, branch);
@@ -58,6 +62,7 @@ public class AssetContentService {
    */
   public AssetContent createAssetContent(
       Asset asset, String content, boolean extractedContent, Branch branch) {
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
     logger.debug(
         "Create asset content for asset id: {} and branch id: {}", asset.getId(), branch.getId());
     AssetContent assetContent = new AssetContent();

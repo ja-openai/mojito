@@ -29,6 +29,7 @@ import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
 import { AdminAiTranslatePromptsPage } from './page/settings/AdminAiTranslatePromptsPage';
+import { AdminContentCmsPage } from './page/settings/AdminContentCmsPage';
 import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
 import { AdminGlossaryWorkflowPage } from './page/settings/AdminGlossaryWorkflowPage';
 import { AdminJsonConfigLocalizationPage } from './page/settings/AdminJsonConfigLocalizationPage';
@@ -403,6 +404,8 @@ export function App() {
               path="/settings/system/translation-incidents"
               element={<AdminTranslationIncidentsPage />}
             />
+            <Route path="/settings/admin/content-cms" element={<AdminContentCmsPage />} />
+            <Route path="/settings/system/content-cms" element={<AdminContentCmsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/repositories" replace />} />
         </Routes>

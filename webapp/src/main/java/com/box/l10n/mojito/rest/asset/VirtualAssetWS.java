@@ -61,8 +61,8 @@ public class VirtualAssetWS {
 
   @RequestMapping(value = "/api/virtualAssets/{assetId}/textUnits", method = RequestMethod.DELETE)
   public void deleteTextUnit(
-      @PathVariable("assetId") long assetId,
-      @RequestBody VirtualAssetTextUnit virtualAssetTextUnit) {
+      @PathVariable("assetId") long assetId, @RequestBody VirtualAssetTextUnit virtualAssetTextUnit)
+      throws VirtualAssetRequiredException {
     virtualAssetService.deleteTextUnit(assetId, virtualAssetTextUnit.getName());
   }
 

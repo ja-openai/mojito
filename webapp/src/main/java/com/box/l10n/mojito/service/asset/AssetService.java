@@ -67,6 +67,8 @@ public class AssetService {
 
   @Autowired AssetRepository assetRepository;
 
+  @Autowired CmsManagedVirtualAssetGuard cmsManagedVirtualAssetGuard;
+
   @Autowired AssetExtractionByBranchRepository assetExtractionByBranchRepository;
 
   @Autowired AssetExtractionRepository assetExtractionRepository;
@@ -371,7 +373,8 @@ public class AssetService {
    * @param asset
    */
   @Transactional
-  public void deleteAsset(Asset asset) {
+  public void deleteAsset(Asset asset) throws CmsManagedVirtualAssetMutationException {
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
     logger.debug("Delete an asset with path: {}", asset.getPath());
 
     asset.setDeleted(true);
@@ -394,9 +397,10 @@ public class AssetService {
    * @param assetIds
    */
   @Transactional
-  public void deleteAssets(Set<Long> assetIds) {
+  public void deleteAssets(Set<Long> assetIds) throws CmsManagedVirtualAssetMutationException {
 
     logger.debug("Delete assets {}", assetIds.toString());
+    requireGenericMutationAllowed(assetIds);
 
     for (Long assetId : assetIds) {
       Asset asset = assetRepository.findById(assetId).orElse(null);
@@ -408,7 +412,9 @@ public class AssetService {
     logger.debug("Deleted assets {}", assetIds.toString());
   }
 
-  public PollableFuture<Void> asyncDeleteAssetsOfBranch(Set<Long> assetIds, Long branchId) {
+  public PollableFuture<Void> asyncDeleteAssetsOfBranch(Set<Long> assetIds, Long branchId)
+      throws CmsManagedVirtualAssetMutationException {
+    requireGenericMutationAllowed(assetIds);
     DeleteAssetsOfBranchJobInput deleteAssetsOfBranchJobInput = new DeleteAssetsOfBranchJobInput();
     deleteAssetsOfBranchJobInput.setAssetIds(assetIds);
     deleteAssetsOfBranchJobInput.setBranchId(branchId);
@@ -426,10 +432,12 @@ public class AssetService {
     return quartzPollableTaskScheduler.scheduleJob(quartzJobInfo);
   }
 
-  public void deleteAssetsOfBranch(Set<Long> assetIds, Long branchId) {
+  public void deleteAssetsOfBranch(Set<Long> assetIds, Long branchId)
+      throws CmsManagedVirtualAssetMutationException {
     if (logger.isDebugEnabled()) {
       logger.debug("Delete assets {} for branch id: {}", assetIds.toString(), branchId);
     }
+    requireGenericMutationAllowed(assetIds);
 
     for (Long assetId : assetIds) {
       deleteAssetOfBranch(assetId, branchId);
@@ -438,11 +446,13 @@ public class AssetService {
     logger.debug("Deleted assets {} for branch id: {}", assetIds.toString(), branchId);
   }
 
-  public void deleteAssetOfBranch(Long assetId, Long branchId) {
+  public void deleteAssetOfBranch(Long assetId, Long branchId)
+      throws CmsManagedVirtualAssetMutationException {
 
     logger.debug("deleteAssetOfBranch: asset id: {}, branch id: {}", assetId, branchId);
     Asset asset = assetRepository.findById(assetId).orElse(null);
     if (asset != null) {
+      cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
       Branch branch = branchRepository.findById(branchId).orElse(null);
       AssetExtractionByBranch assetExtractionByBranch =
           assetExtractionByBranchRepository.findByAssetAndBranch(asset, branch).orElse(null);
@@ -474,6 +484,16 @@ public class AssetService {
       if (assetExtractionByBranches.isEmpty()) {
         logger.debug("All branch are deleted or removed, delete asset");
         deleteAsset(asset);
+      }
+    }
+  }
+
+  private void requireGenericMutationAllowed(Set<Long> assetIds)
+      throws CmsManagedVirtualAssetMutationException {
+    for (Long assetId : assetIds) {
+      Asset asset = assetRepository.findById(assetId).orElse(null);
+      if (asset != null) {
+        cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
       }
     }
   }

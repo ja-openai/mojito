@@ -18,6 +18,9 @@ public class TMTextUnitCurrentVariantService {
 
   @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
 
+  @Autowired
+  TMTextUnitCurrentVariantMutationLockService tmTextUnitCurrentVariantMutationLockService;
+
   @Autowired TMService tmService;
 
   /**
@@ -33,6 +36,7 @@ public class TMTextUnitCurrentVariantService {
    *
    * @param textUnitId
    */
+  @Transactional
   public boolean removeCurrentVariant(Long tmTextUnitCurrentVariantId) {
     TMTextUnitCurrentVariant tmtucv =
         tmTextUnitCurrentVariantRepository.findById(tmTextUnitCurrentVariantId).orElse(null);
@@ -44,6 +48,12 @@ public class TMTextUnitCurrentVariantService {
       logger.debug(
           "Update tmTextUnitCurrentVariant with id: {} to remove the current variant (\"remove\" current translation)",
           tmtucv.getId());
+      tmTextUnitCurrentVariantMutationLockService.lockTextUnit(tmtucv.getTmTextUnit().getId());
+      tmtucv = tmTextUnitCurrentVariantRepository.findById(tmTextUnitCurrentVariantId).orElse(null);
+      if (tmtucv == null) {
+        logger.debug("Current variant was removed before lock, do nothing");
+        return false;
+      }
       tmtucv.setTmTextUnitVariant(null);
       tmTextUnitCurrentVariantRepository.save(tmtucv);
       return true;

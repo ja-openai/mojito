@@ -9,6 +9,7 @@ import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.asset.AssetRepository;
+import com.box.l10n.mojito.service.asset.CmsManagedVirtualAssetGuard;
 import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
 import com.box.l10n.mojito.service.leveraging.LeveragingService;
 import com.box.l10n.mojito.service.pollableTask.ParentTask;
@@ -54,6 +55,8 @@ public class AssetMappingService {
 
   @Autowired AssetRepository assetRepository;
 
+  @Autowired CmsManagedVirtualAssetGuard cmsManagedVirtualAssetGuard;
+
   @Autowired EntityManager entityManager;
 
   @Autowired AssetExtractionRepository assetExtractionRepository;
@@ -83,6 +86,7 @@ public class AssetMappingService {
       Long assetId,
       User createdByUser,
       @ParentTask PollableTask parentTask) {
+    requireGenericMutationAllowed(assetExtractionId, assetId);
 
     logger.debug("Map exact matches a first time to map to existing text units");
     long mapExactMatches = mapExactMatches(assetExtractionId, tmId, assetId);
@@ -109,6 +113,16 @@ public class AssetMappingService {
     leveragingService.performSourceLeveraging(newlyCreatedTMTextUnits);
 
     logger.debug("Asset text unit and tm text unit mapping complete");
+  }
+
+  void requireGenericMutationAllowed(Long assetExtractionId, Long assetId) {
+    assetExtractionRepository
+        .findById(assetExtractionId)
+        .map(AssetExtraction::getAsset)
+        .ifPresent(cmsManagedVirtualAssetGuard::requireGenericMutationAllowed);
+    assetRepository
+        .findById(assetId)
+        .ifPresent(cmsManagedVirtualAssetGuard::requireGenericMutationAllowed);
   }
 
   /**

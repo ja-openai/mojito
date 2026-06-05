@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetExtractionByBranch;
@@ -21,6 +22,7 @@ import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.assetExtraction.AssetExtractionByBranchRepository;
 import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
 import com.box.l10n.mojito.service.branch.BranchRepository;
+import com.box.l10n.mojito.service.cms.CmsContentService;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.repository.RepositoryNameAlreadyUsedException;
 import com.box.l10n.mojito.service.repository.RepositoryService;
@@ -35,6 +37,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * @author aloison
@@ -53,6 +56,8 @@ public class AssetWSTest extends WSTestBase {
   @Autowired AssetTextUnitRepository assetTextUnitRepository;
 
   @Autowired LocaleService localeService;
+
+  @Autowired CmsContentService cmsContentService;
 
   @Autowired AssetClient assetClient;
 
@@ -141,6 +146,28 @@ public class AssetWSTest extends WSTestBase {
   }
 
   @Test
+  public void testDeleteCmsManagedVirtualAssetRejected() throws RepositoryNameAlreadyUsedException {
+    Repository repository = testDataFactory.createRepository(testIdWatcher);
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                "asset-ws-cms-" + Long.toUnsignedString(System.nanoTime()),
+                "Asset WS CMS",
+                null,
+                true,
+                repository.getId(),
+                null,
+                null));
+    Long assetId = detail.project().asset().id();
+
+    assertCmsDeleteRejected(() -> assetClient.deleteAssetById(assetId));
+    assertCmsDeleteRejected(() -> assetClient.deleteAssetsInBranch(Sets.newHashSet(assetId), null));
+    assertFalse(
+        "The CMS-managed asset should not be deleted",
+        assetRepository.findById(assetId).orElseThrow().getDeleted());
+  }
+
+  @Test
   public void testDeleteUnusedAssets()
       throws RepositoryNotFoundException, RepositoryNameAlreadyUsedException {
     Repository repository = testDataFactory.createRepository(testIdWatcher);
@@ -213,6 +240,20 @@ public class AssetWSTest extends WSTestBase {
     sourceAsset.setContent(testDataFactory.getTestSourceAssetContent());
 
     return sourceAsset;
+  }
+
+  private void assertCmsDeleteRejected(Runnable deleteRequest) {
+    try {
+      deleteRequest.run();
+      fail("HTTP error 400 is expected");
+    } catch (HttpClientErrorException httpClientErrorException) {
+      assertEquals(400, httpClientErrorException.getStatusCode().value());
+      assertTrue(
+          "The error must direct callers to CMS endpoints",
+          httpClientErrorException
+              .getResponseBodyAsString()
+              .contains("/api/content-cms endpoints"));
+    }
   }
 
   @Test

@@ -2,7 +2,7 @@ import type { ApiLocale } from './locales';
 
 export type ApiUserProfile = {
   username: string;
-  role: 'ROLE_PM' | 'ROLE_TRANSLATOR' | 'ROLE_ADMIN' | 'ROLE_USER';
+  role: 'ROLE_PM' | 'ROLE_TRANSLATOR' | 'ROLE_ADMIN' | 'ROLE_CMS_DELIVERY' | 'ROLE_USER';
   canTranslateAllLocales: boolean;
   userLocales: string[];
   teamIds?: number[];

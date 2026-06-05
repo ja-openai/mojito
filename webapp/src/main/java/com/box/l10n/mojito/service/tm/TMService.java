@@ -47,6 +47,7 @@ import com.box.l10n.mojito.retry.DataIntegrityViolationExceptionRetryTemplate;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.asset.AssetRepository;
+import com.box.l10n.mojito.service.asset.CmsManagedVirtualAssetGuard;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckStep;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
@@ -110,6 +111,9 @@ public class TMService {
 
   @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
 
+  @Autowired
+  TMTextUnitCurrentVariantMutationLockService tmTextUnitCurrentVariantMutationLockService;
+
   @Autowired EntityManager entityManager;
 
   @Autowired AssetExtractor assetExtractor;
@@ -123,6 +127,8 @@ public class TMService {
   @Autowired WordCountService wordCountService;
 
   @Autowired AssetRepository assetRepository;
+
+  @Autowired CmsManagedVirtualAssetGuard cmsManagedVirtualAssetGuard;
 
   @Autowired TMXliffRepository tmXliffRepository;
 
@@ -162,6 +168,7 @@ public class TMService {
    * @throws DataIntegrityViolationException If trying to create a {@link TMTextUnit} with same
    *     logical key as an existing one or TM id invalid
    */
+  @Transactional
   public TMTextUnit addTMTextUnit(
       Long tmId, Long assetId, String name, String content, String comment) {
     TM tm = tmRepository.findById(tmId).orElse(null);
@@ -183,6 +190,7 @@ public class TMService {
    * @throws DataIntegrityViolationException If trying to create a {@link TMTextUnit} with same
    *     logical key as an existing one or TM id invalid
    */
+  @Transactional
   public TMTextUnit addTMTextUnit(
       TM tm,
       Asset asset,
@@ -211,6 +219,7 @@ public class TMService {
    * @throws DataIntegrityViolationException If trying to create a {@link TMTextUnit} with same
    *     logical key as an existing one or TM id invalid
    */
+  @Transactional
   public TMTextUnit addTMTextUnit(
       TM tm,
       Asset asset,
@@ -221,6 +230,8 @@ public class TMService {
       ZonedDateTime createdDate,
       PluralForm pluralForm,
       String pluralFormOther) {
+
+    cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
 
     Locale sourceLocale = asset.getRepository().getSourceLocale();
     Preconditions.checkNotNull(sourceLocale, "There must be a source locale");
@@ -273,19 +284,44 @@ public class TMService {
     tmTextUnit = tmTextUnitRepository.save(tmTextUnit);
 
     logger.debug("Add a current TMTextUnitVariant for the source text ie. the default locale");
-    TMTextUnitVariant addTMTextUnitVariant =
-        addTMTextUnitVariant(
-            tmTextUnit.getId(),
-            sourceLocaleId,
-            content,
-            comment,
-            TMTextUnitVariant.Status.APPROVED,
-            true,
-            createdDate);
-    makeTMTextUnitVariantCurrent(
-        tmId, tmTextUnit.getId(), sourceLocaleId, addTMTextUnitVariant.getId(), assetId);
+    addTMTextUnitVariantAndMakeCurrent(
+        tmId,
+        assetId,
+        tmTextUnit.getId(),
+        sourceLocaleId,
+        content,
+        comment,
+        TMTextUnitVariant.Status.APPROVED,
+        true,
+        createdDate);
 
     return tmTextUnit;
+  }
+
+  /**
+   * Adds a {@link TMTextUnitVariant} and makes it current without checking existing translations.
+   *
+   * <p>Use this only when the caller has already established that no current variant can exist.
+   * Current-variant creation still takes the shared text-unit mutation lock.
+   */
+  @Transactional
+  public TMTextUnitVariant addTMTextUnitVariantAndMakeCurrent(
+      Long tmId,
+      Long assetId,
+      Long tmTextUnitId,
+      Long localeId,
+      String content,
+      String comment,
+      TMTextUnitVariant.Status status,
+      boolean includedInLocalizedFile,
+      ZonedDateTime createdDate) {
+    tmTextUnitCurrentVariantMutationLockService.lockTextUnit(tmTextUnitId);
+    TMTextUnitVariant tmTextUnitVariant =
+        addTMTextUnitVariant(
+            tmTextUnitId, localeId, content, comment, status, includedInLocalizedFile, createdDate);
+    makeTMTextUnitVariantCurrentAfterLock(
+        tmId, tmTextUnitId, localeId, tmTextUnitVariant.getId(), assetId);
+    return tmTextUnitVariant;
   }
 
   /**
@@ -302,6 +338,7 @@ public class TMService {
    * @return the created {@link TMTextUnitVariant} or an existing one with same content
    * @throws DataIntegrityViolationException If tmTextUnitId or localeId are invalid
    */
+  @Transactional
   public TMTextUnitVariant addCurrentTMTextUnitVariant(
       Long tmTextUnitId, Long localeId, String content) {
     return addTMTextUnitCurrentVariant(tmTextUnitId, localeId, content, null)
@@ -325,6 +362,7 @@ public class TMService {
    * @return the created {@link TMTextUnitVariant} or an existing one with same content
    * @throws DataIntegrityViolationException If tmTextUnitId or localeId are invalid
    */
+  @Transactional
   public TMTextUnitVariant addCurrentTMTextUnitVariant(
       Long tmTextUnitId,
       Long localeId,
@@ -354,6 +392,7 @@ public class TMService {
    * @return the created {@link TMTextUnitVariant} or an existing one with same content
    * @throws DataIntegrityViolationException If tmTextUnitId or localeId are invalid
    */
+  @Transactional
   public TMTextUnitVariant addCurrentTMTextUnitVariant(
       Long tmTextUnitId,
       Long localeId,
@@ -382,6 +421,7 @@ public class TMService {
    *     or an existing one with same content
    * @throws DataIntegrityViolationException If tmTextUnitId or localeId are invalid
    */
+  @Transactional
   public TMTextUnitCurrentVariant addTMTextUnitCurrentVariant(
       Long tmTextUnitId, Long localeId, String content, String comment) {
     return addTMTextUnitCurrentVariant(
@@ -398,6 +438,7 @@ public class TMService {
    *     or an existing one with same content
    * @throws DataIntegrityViolationException If tmTextUnitId or localeId are invalid
    */
+  @Transactional
   public TMTextUnitCurrentVariant addTMTextUnitCurrentVariant(
       Long tmTextUnitId,
       Long localeId,
@@ -426,6 +467,7 @@ public class TMService {
    *     or an existing one with same content
    * @throws DataIntegrityViolationException If tmTextUnitId or localeId are invalid
    */
+  @Transactional
   public TMTextUnitCurrentVariant addTMTextUnitCurrentVariant(
       Long tmTextUnitId,
       Long localeId,
@@ -458,6 +500,7 @@ public class TMService {
    *     or an existing one with same content
    * @throws DataIntegrityViolationException If tmTextUnitId or localeId are invalid
    */
+  @Transactional
   public TMTextUnitCurrentVariant addTMTextUnitCurrentVariant(
       Long tmTextUnitId,
       Long localeId,
@@ -494,6 +537,7 @@ public class TMService {
    *     TMTextUnitVariant} or an existing one with same content
    * @throws DataIntegrityViolationException If tmTextUnitId or localeId are invalid
    */
+  @Transactional
   public AddTMTextUnitCurrentVariantResult addTMTextUnitCurrentVariantWithResult(
       Long tmTextUnitId,
       Long localeId,
@@ -503,26 +547,15 @@ public class TMService {
       boolean includedInLocalizedFile,
       ZonedDateTime createdDate) {
 
-    logger.debug("Check if there is a current TMTextUnitVariant");
+    TMTextUnitTmAssetIdDTO tmTextUnit = lockAndFindTMTextUnitContext(tmTextUnitId);
     TMTextUnitCurrentVariant currentTmTextUnitCurrentVariant =
-        tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(localeId, tmTextUnitId);
-
-    TMTextUnit tmTextUnit = tmTextUnitRepository.findById(tmTextUnitId).orElse(null);
-
-    if (tmTextUnit == null) {
-      String msg =
-          MessageFormat.format(
-              "Unable to find the TMTextUnit with ID: {0}. The TMTextUnitVariant and "
-                  + "TMTextUnitCurrentVariant will not be created.",
-              tmTextUnitId);
-      throw new RuntimeException(msg);
-    }
+        findCurrentVariantAfterLock(localeId, tmTextUnitId);
 
     User createdBy = auditorAwareImpl.getCurrentAuditor().orElse(null);
-    return addTMTextUnitCurrentVariantWithResult(
+    return addTMTextUnitCurrentVariantWithResultAfterLock(
         currentTmTextUnitCurrentVariant,
-        tmTextUnit.getTm().getId(),
-        tmTextUnit.getAsset().getId(),
+        tmTextUnit.tmId(),
+        tmTextUnit.assetId(),
         tmTextUnitId,
         localeId,
         content,
@@ -533,6 +566,7 @@ public class TMService {
         createdBy);
   }
 
+  @Transactional
   public AddTMTextUnitCurrentVariantResult addTMTextUnitCurrentVariantWithResult(
       Long tmTextUnitId,
       Long localeId,
@@ -543,25 +577,14 @@ public class TMService {
       ZonedDateTime createdDate,
       User createdBy) {
 
-    logger.debug("Check if there is a current TMTextUnitVariant");
+    TMTextUnitTmAssetIdDTO tmTextUnit = lockAndFindTMTextUnitContext(tmTextUnitId);
     TMTextUnitCurrentVariant currentTmTextUnitCurrentVariant =
-        tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(localeId, tmTextUnitId);
+        findCurrentVariantAfterLock(localeId, tmTextUnitId);
 
-    TMTextUnit tmTextUnit = tmTextUnitRepository.findById(tmTextUnitId).orElse(null);
-
-    if (tmTextUnit == null) {
-      String msg =
-          MessageFormat.format(
-              "Unable to find the TMTextUnit with ID: {0}. The TMTextUnitVariant and "
-                  + "TMTextUnitCurrentVariant will not be created.",
-              tmTextUnitId);
-      throw new RuntimeException(msg);
-    }
-
-    return addTMTextUnitCurrentVariantWithResult(
+    return addTMTextUnitCurrentVariantWithResultAfterLock(
         currentTmTextUnitCurrentVariant,
-        tmTextUnit.getTm().getId(),
-        tmTextUnit.getAsset().getId(),
+        tmTextUnit.tmId(),
+        tmTextUnit.assetId(),
         tmTextUnitId,
         localeId,
         content,
@@ -576,7 +599,9 @@ public class TMService {
    * Adds a current {@link TMTextUnitVariant} in a {@link TMTextUnit} for a locale other than the
    * default locale.
    *
-   * <p>Requires the {@link TMTextUnitCurrentVariant} and TM id for optimization purpose.
+   * <p>Accepts the caller's prefetched {@link TMTextUnitCurrentVariant} and TM id. The current
+   * variant is reloaded after the text-unit mutation lock so a concurrent publish or translation
+   * write cannot leave this mutation working from stale current state.
    *
    * @param tmTextUnitCurrentVariant current variant or null is there is none
    * @param tmId the {@link TM} id in which the translation is added
@@ -596,7 +621,36 @@ public class TMService {
    *     TMTextUnitVariant} or an existing one with same content
    * @throws DataIntegrityViolationException If tmTextUnitId or localeId are invalid
    */
+  @Transactional
   public AddTMTextUnitCurrentVariantResult addTMTextUnitCurrentVariantWithResult(
+      TMTextUnitCurrentVariant tmTextUnitCurrentVariant,
+      Long tmId,
+      Long assetId,
+      Long tmTextUnitId,
+      Long localeId,
+      String content,
+      String comment,
+      TMTextUnitVariant.Status status,
+      boolean includedInLocalizedFile,
+      ZonedDateTime createdDate,
+      User createdBy) {
+
+    tmTextUnitCurrentVariantMutationLockService.lockTextUnit(tmTextUnitId);
+    return addTMTextUnitCurrentVariantWithResultAfterLock(
+        findCurrentVariantAfterLock(localeId, tmTextUnitId),
+        tmId,
+        assetId,
+        tmTextUnitId,
+        localeId,
+        content,
+        comment,
+        status,
+        includedInLocalizedFile,
+        createdDate,
+        createdBy);
+  }
+
+  private AddTMTextUnitCurrentVariantResult addTMTextUnitCurrentVariantWithResultAfterLock(
       TMTextUnitCurrentVariant tmTextUnitCurrentVariant,
       Long tmId,
       Long assetId,
@@ -631,7 +685,7 @@ public class TMService {
 
       if (tmTextUnitCurrentVariant == null) {
         tmTextUnitCurrentVariant =
-            makeTMTextUnitVariantCurrent(
+            makeTMTextUnitVariantCurrentAfterLock(
                 tmId, tmTextUnitId, localeId, tmTextUnitVariant.getId(), assetId);
       } else {
         tmTextUnitCurrentVariant.setTmTextUnitVariant(tmTextUnitVariant);
@@ -683,6 +737,26 @@ public class TMService {
     }
 
     return new AddTMTextUnitCurrentVariantResult(!noUpdate, tmTextUnitCurrentVariant);
+  }
+
+  private TMTextUnitTmAssetIdDTO lockAndFindTMTextUnitContext(Long tmTextUnitId) {
+    tmTextUnitCurrentVariantMutationLockService.lockTextUnit(tmTextUnitId);
+    TMTextUnitTmAssetIdDTO tmTextUnit = tmTextUnitRepository.findTmAndAssetIdsById(tmTextUnitId);
+    if (tmTextUnit == null) {
+      String msg =
+          MessageFormat.format(
+              "Unable to find the TMTextUnit with ID: {0}. The TMTextUnitVariant and "
+                  + "TMTextUnitCurrentVariant will not be created.",
+              tmTextUnitId);
+      throw new RuntimeException(msg);
+    }
+    return tmTextUnit;
+  }
+
+  private TMTextUnitCurrentVariant findCurrentVariantAfterLock(Long localeId, Long tmTextUnitId) {
+    logger.debug("Check if there is a current TMTextUnitVariant");
+    return tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+        localeId, tmTextUnitId);
   }
 
   /**
@@ -833,7 +907,7 @@ public class TMService {
    * @return {@link TMTextUnitCurrentVariant} that contains the {@link TMTextUnitVariant}
    * @throws DataIntegrityViolationException If tmId, tmTextUnitId or localeId are invalid
    */
-  protected TMTextUnitCurrentVariant makeTMTextUnitVariantCurrent(
+  private TMTextUnitCurrentVariant makeTMTextUnitVariantCurrentAfterLock(
       Long tmId, Long tmTextUnitId, Long localeId, Long tmTextUnitVariantId, Long assetId) {
     logger.debug(
         "Make the TMTextUnitVariant with id: {} current for locale: {}",

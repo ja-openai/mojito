@@ -1,0 +1,188 @@
+.content-cms-admin-page {
+  gap: var(--space-4);
+}
+
+.content-cms-admin-page__form h3,
+.content-cms-admin-page__inline-form h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.content-cms-admin-page__notice {
+  padding: var(--space-2) var(--space-3);
+  border-left: 0.1875rem solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.content-cms-admin-page__notice.is-error {
+  border-left-color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+}
+
+.content-cms-admin-page__layout {
+  display: grid;
+  grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.content-cms-admin-page__sidebar,
+.content-cms-admin-page__main {
+  min-width: 0;
+}
+
+.content-cms-admin-page__sidebar,
+.content-cms-admin-page__main,
+.content-cms-admin-page__form,
+.content-cms-admin-page__inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.content-cms-admin-page__search {
+  width: 100%;
+}
+
+.content-cms-admin-page__project-list {
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+}
+
+.content-cms-admin-page__project-row {
+  width: 100%;
+  border: 0;
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+  text-align: left;
+}
+
+.content-cms-admin-page__project-row:hover,
+.content-cms-admin-page__project-row:focus-visible,
+.content-cms-admin-page__project-row.is-active {
+  color: var(--color-text);
+}
+
+.content-cms-admin-page__project-row.is-active {
+  box-shadow: inset 0.1875rem 0 0 var(--color-accent);
+  padding-left: var(--space-2);
+}
+
+.content-cms-admin-page__project-row-name {
+  font-weight: var(--font-weight-semibold);
+}
+
+.content-cms-admin-page__project-row span {
+  overflow-wrap: anywhere;
+}
+
+.content-cms-admin-page__form {
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+}
+
+.content-cms-admin-page__workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(18rem, 1fr));
+  gap: var(--space-5) var(--space-4);
+}
+
+.content-cms-admin-page__form--wide {
+  grid-column: 1 / -1;
+}
+
+.content-cms-admin-page__inline-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+}
+
+.content-cms-admin-page__field-span {
+  grid-column: 1 / -1;
+}
+
+.content-cms-admin-page__textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.content-cms-admin-page__actions,
+.content-cms-admin-page__toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.content-cms-admin-page__overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-3);
+}
+
+.content-cms-admin-page__definition {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.content-cms-admin-page__definition span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.content-cms-admin-page__definition strong {
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.content-cms-admin-page__mapping-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.content-cms-admin-page__mapping-list li {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.content-cms-admin-page__mapping-list span {
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.content-cms-admin-page__mapping-list a {
+  width: fit-content;
+  font-size: var(--font-size-xs);
+}
+
+@media (max-width: 72rem) {
+  .content-cms-admin-page__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 48rem) {
+  .content-cms-admin-page__workflow-grid,
+  .content-cms-admin-page__inline-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .content-cms-admin-page__form--wide,
+  .content-cms-admin-page__field-span {
+    grid-column: auto;
+  }
+}

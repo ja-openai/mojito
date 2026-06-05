@@ -443,7 +443,7 @@ public class GlossaryTermService {
 
     TextUnitDTO refreshedSource = getSourceTextUnitByKey(asset, termKey);
     if (replacesBackingTextUnit && !Objects.equals(existingSource.getName(), termKey)) {
-      virtualAssetService.deleteTextUnit(asset.getId(), existingSource.getName());
+      deleteVirtualAssetTextUnit(asset, existingSource.getName());
     }
     GlossaryTermMetadata metadata =
         getMetadataForUpsert(glossary, existingSource, refreshedSource, replacesBackingTextUnit);
@@ -555,7 +555,7 @@ public class GlossaryTermService {
             });
     glossaryTermTranslationProposalRepository.deleteByGlossaryIdAndTmTextUnitId(
         glossaryId, tmTextUnitId);
-    virtualAssetService.deleteTextUnit(asset.getId(), sourceTextUnit.getName());
+    deleteVirtualAssetTextUnit(asset, sourceTextUnit.getName());
   }
 
   private TermView updateReaderTermTranslations(
@@ -1464,6 +1464,17 @@ public class GlossaryTermService {
   private void updateVirtualAssetTerms(Asset asset, List<VirtualAssetTextUnit> textUnits) {
     try {
       virtualTextUnitBatchUpdaterService.updateTextUnits(asset, textUnits, false);
+    } catch (VirtualAssetRequiredException ex) {
+      throw new IllegalStateException(
+          "Canonical glossary asset is not a virtual asset for glossary backing repository "
+              + asset.getRepository().getId(),
+          ex);
+    }
+  }
+
+  private void deleteVirtualAssetTextUnit(Asset asset, String textUnitName) {
+    try {
+      virtualAssetService.deleteTextUnit(asset.getId(), textUnitName);
     } catch (VirtualAssetRequiredException ex) {
       throw new IllegalStateException(
           "Canonical glossary asset is not a virtual asset for glossary backing repository "

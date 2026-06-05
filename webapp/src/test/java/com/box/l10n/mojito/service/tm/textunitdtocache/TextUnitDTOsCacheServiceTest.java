@@ -119,7 +119,7 @@ public class TextUnitDTOsCacheServiceTest extends ServiceTestBase {
   }
 
   @Test
-  public void testStandardLocaleWithPlural() {
+  public void testStandardLocaleWithPlural() throws Exception {
     TMTestData tmTestData = new TMTestData(testIdWatcher);
     ImmutableMap<String, TMTextUnit> plural1 = tmTestData.addPluralString("plural_1");
 
@@ -251,7 +251,7 @@ public class TextUnitDTOsCacheServiceTest extends ServiceTestBase {
   }
 
   @Test
-  public void testDeleteAsset() {
+  public void testDeleteAsset() throws Exception {
     TMTestData tmTestData = new TMTestData(testIdWatcher);
 
     assetService.deleteAsset(tmTestData.asset);

@@ -135,6 +135,27 @@ export function AdminSettingsPage() {
             </div>
           </section>
 
+          <section className="settings-card" aria-labelledby="settings-content-cms">
+            <div className="settings-card__header">
+              <h2 id="settings-content-cms">Content CMS</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/content-cms');
+                }}
+              >
+                <div className="settings-directory__title">Product copy CMS</div>
+                <div className="settings-directory__description">
+                  Define i18n-first copy blocks, map fields to text units, and publish JSON
+                  packages.
+                </div>
+              </button>
+            </div>
+          </section>
+
           <section className="settings-card" aria-labelledby="settings-glossaries">
             <div className="settings-card__header">
               <h2 id="settings-glossaries">Glossaries</h2>

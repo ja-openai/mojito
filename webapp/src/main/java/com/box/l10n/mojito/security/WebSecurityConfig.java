@@ -2,6 +2,7 @@ package com.box.l10n.mojito.security;
 
 import com.box.l10n.mojito.ActuatorHealthLegacyConfig;
 import com.box.l10n.mojito.react.FrontendConfigController;
+import com.box.l10n.mojito.rest.security.CsrfTokenController;
 import com.box.l10n.mojito.service.security.user.UserService;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,14 @@ import org.springframework.util.StringUtils;
 public class WebSecurityConfig {
 
   static final String LOGIN_PAGE = "/login";
+  private static final String[] INTERACTIVE_USER_ROLES = {"USER", "TRANSLATOR", "PM", "ADMIN"};
+  private static final String[] AUTHENTICATED_USER_ROLES = {
+    "USER", "TRANSLATOR", "PM", "ADMIN", "CMS_DELIVERY"
+  };
+  private static final String[] CMS_SNAPSHOT_DELIVERY_PATHS = {
+    "/api/content-cms/projects/*/publish-snapshots/latest",
+    "/api/content-cms/projects/*/publish-snapshots/*/artifact"
+  };
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(WebSecurityConfig.class);
@@ -160,15 +169,18 @@ public class WebSecurityConfig {
                 .permitAll()
                 // allow deep link creation and retrieval
                 .requestMatchers(HttpMethod.GET, "/api/clobstorage", "/api/clobstorage/**")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/clobstorage", "/api/clobstorage/**")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 // local access only for rotation management and logger config
                 .requestMatchers("/actuator/shutdown", "/actuator/loggers/**", "/api/rotation")
                 .access(new WebExpressionAuthorizationManager("hasIpAddress('127.0.0.1')"))
-                // Everyone can access the session endpoint
+                // The stateful REST client fetches this session-scoped token after form login.
+                .requestMatchers(HttpMethod.GET, CsrfTokenController.CSRF_TOKEN_PATH)
+                .hasAnyRole(AUTHENTICATED_USER_ROLES)
+                // Interactive users can access their session endpoints
                 .requestMatchers("/api/users/session", "/api/users/me", "/api/users/pw")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 // user management is only allowed for ADMINs and PMs
                 .requestMatchers("/api/users/**")
                 .hasAnyRole("PM", "ADMIN")
@@ -222,6 +234,12 @@ public class WebSecurityConfig {
                 .hasRole("ADMIN")
                 .requestMatchers("/api/string-authoring/**")
                 .hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, CMS_SNAPSHOT_DELIVERY_PATHS)
+                .hasAnyRole("CMS_DELIVERY", "ADMIN")
+                .requestMatchers(HttpMethod.HEAD, CMS_SNAPSHOT_DELIVERY_PATHS)
+                .hasAnyRole("CMS_DELIVERY", "ADMIN")
+                .requestMatchers("/api/content-cms/**")
+                .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/admin/temporary-bulk-translation-accept/**")
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/admin/linguist-time-spent")
@@ -234,9 +252,9 @@ public class WebSecurityConfig {
                     HttpMethod.GET, "/api/admin/linguist-time-spent/recompute/results/*")
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/mcp")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/mcp")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.GET, "/api/review-features", "/api/review-features/*")
                 .hasRole("ADMIN")
                 .requestMatchers(
@@ -260,29 +278,29 @@ public class WebSecurityConfig {
                 .hasRole("ADMIN")
                 // Read-only access is OK for users
                 .requestMatchers(HttpMethod.GET, "/api/textunits/**")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 // Searching is also OK for users
                 .requestMatchers(HttpMethod.POST, "/api/textunits/search")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/textunits/search-hybrid")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/translate")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/ai/review")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.DELETE, "/api/textunits/*")
                 .hasAnyRole("PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/textunits/current-variants/delete-batch")
                 .hasAnyRole("PM", "ADMIN")
                 // Review projects search should be available to translators
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/search")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/review-project-requests/search")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/review-project-requests/search-hybrid")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/glossaries/match")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/*/status")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/review-projects/*/assignment")
@@ -303,29 +321,29 @@ public class WebSecurityConfig {
                 .hasAnyRole("PM", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/glossaries/*/terms/*/proposals")
                 .hasAnyRole("TRANSLATOR", "PM", "ADMIN")
-                // Read-only is OK for everyone
+                // Read-only is OK for interactive users
                 .requestMatchers(HttpMethod.GET, "/api/**")
-                .authenticated()
-                // Everyone can retrieve & upload images
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
+                // Interactive users can retrieve & upload images
                 .requestMatchers(HttpMethod.GET, "/api/images/**")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.PUT, "/api/images/**")
-                .authenticated()
-                // Everyone can retrieve, upload and delete screenshots
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
+                // Interactive users can retrieve, upload and delete screenshots
                 .requestMatchers(HttpMethod.GET, "/api/screenshots")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/screenshots")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.PUT, "/api/screenshots/**")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 .requestMatchers(HttpMethod.DELETE, "/api/screenshots/**")
-                .authenticated()
+                .hasAnyRole(INTERACTIVE_USER_ROLES)
                 // However, all other methods require is PM and ADMIN only unless overwritten above
                 .requestMatchers("/api/**")
                 .hasAnyRole("PM", "ADMIN")
-                // everything else must be authenticated
+                // everything else must be an interactive Mojito user
                 .requestMatchers("/**")
-                .authenticated());
+                .hasAnyRole(INTERACTIVE_USER_ROLES));
   }
 
   @Bean

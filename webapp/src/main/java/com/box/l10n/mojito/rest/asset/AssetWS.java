@@ -18,6 +18,7 @@ import com.box.l10n.mojito.rest.repository.RepositoryWithIdNotFoundException;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.asset.AssetService;
+import com.box.l10n.mojito.service.asset.CmsManagedVirtualAssetMutationException;
 import com.box.l10n.mojito.service.assetExtraction.LeveragingType;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
@@ -397,7 +398,8 @@ public class AssetWS {
    * @return
    */
   @RequestMapping(value = "/api/assets/{assetId}", method = RequestMethod.DELETE)
-  public void deleteAssetById(@PathVariable Long assetId) throws AssetWithIdNotFoundException {
+  public void deleteAssetById(@PathVariable Long assetId)
+      throws AssetWithIdNotFoundException, CmsManagedVirtualAssetMutationException {
     logger.debug("Deleting asset [{}]", assetId);
 
     Asset asset = assetRepository.findById(assetId).orElse(null);
@@ -417,8 +419,8 @@ public class AssetWS {
    */
   @RequestMapping(value = "/api/assets", method = RequestMethod.DELETE)
   public PollableTask deleteAssetsOfBranches(
-      @RequestParam(value = "branchId", required = false) Long branchId,
-      @RequestBody Set<Long> ids) {
+      @RequestParam(value = "branchId", required = false) Long branchId, @RequestBody Set<Long> ids)
+      throws CmsManagedVirtualAssetMutationException {
     logger.debug("Deleting assets: {} for branch id: {}", ids.toString(), branchId);
     PollableFuture<Void> pollableFuture = assetService.asyncDeleteAssetsOfBranch(ids, branchId);
     return pollableFuture.getPollableTask();

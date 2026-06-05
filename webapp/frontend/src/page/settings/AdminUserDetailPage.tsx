@@ -71,6 +71,7 @@ const formatTeamSelectionSummary =
 
 const ROLE_OPTIONS = [
   { value: 'ROLE_ADMIN', label: 'Admin' },
+  { value: 'ROLE_CMS_DELIVERY', label: 'CMS delivery' },
   { value: 'ROLE_PM', label: 'Project manager' },
   { value: 'ROLE_TRANSLATOR', label: 'Translator' },
   { value: 'ROLE_USER', label: 'User' },

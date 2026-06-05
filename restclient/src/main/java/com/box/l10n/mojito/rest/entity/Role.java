@@ -9,6 +9,7 @@ public enum Role {
   ROLE_PM,
   ROLE_TRANSLATOR,
   ROLE_ADMIN,
+  ROLE_CMS_DELIVERY,
   ROLE_USER;
 
   public static Role fromString(String roleName) {

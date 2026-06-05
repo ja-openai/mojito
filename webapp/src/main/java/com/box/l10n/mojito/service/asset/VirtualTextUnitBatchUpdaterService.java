@@ -65,10 +65,32 @@ public class VirtualTextUnitBatchUpdaterService {
 
   @Autowired LocaleService localeService;
 
+  @Autowired CmsManagedVirtualAssetGuard cmsManagedVirtualAssetGuard;
+
   @Transactional
   public void updateTextUnits(
       Asset asset, List<VirtualAssetTextUnit> virtualAssetTextUnits, boolean replace)
       throws VirtualAssetRequiredException {
+    updateTextUnits(asset, virtualAssetTextUnits, replace, false);
+  }
+
+  @Transactional
+  public void updateCmsTextUnits(
+      Asset asset, List<VirtualAssetTextUnit> virtualAssetTextUnits, boolean replace)
+      throws VirtualAssetRequiredException {
+    cmsManagedVirtualAssetGuard.runCmsManagedMutation(
+        asset, () -> updateTextUnits(asset, virtualAssetTextUnits, replace, true));
+  }
+
+  private void updateTextUnits(
+      Asset asset,
+      List<VirtualAssetTextUnit> virtualAssetTextUnits,
+      boolean replace,
+      boolean allowCmsManagedAsset)
+      throws VirtualAssetRequiredException {
+    if (!allowCmsManagedAsset) {
+      cmsManagedVirtualAssetGuard.requireGenericMutationAllowed(asset);
+    }
 
     logger.debug("Update text unit for asset: {}", asset.getPath());
 

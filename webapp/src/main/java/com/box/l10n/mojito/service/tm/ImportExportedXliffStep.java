@@ -296,7 +296,9 @@ public class ImportExportedXliffStep extends BasePipelineStep {
           logger.debug(
               "Import assuming there is no translation in the TM yet (optimized, don't check for update)");
           addTMTextUnitVariant =
-              tmService.addTMTextUnitVariant(
+              tmService.addTMTextUnitVariantAndMakeCurrent(
+                  asset.getRepository().getTm().getId(),
+                  asset.getId(),
                   tmTextUnitId,
                   targetLocale.getId(),
                   translation,
@@ -304,13 +306,6 @@ public class ImportExportedXliffStep extends BasePipelineStep {
                   importExportNote.getStatus(),
                   importExportNote.isIncludedInLocalizedFile(),
                   importExportNote.getCreatedDate());
-
-          tmService.makeTMTextUnitVariantCurrent(
-              asset.getRepository().getTm().getId(),
-              tmTextUnitId,
-              targetLocale.getId(),
-              addTMTextUnitVariant.getId(),
-              asset.getId());
         }
 
         for (TMTextUnitVariantComment variantComment : importExportNote.getVariantComments()) {

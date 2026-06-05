@@ -45,4 +45,9 @@ public interface AssetRepository
 
   @Query(value = "select a.id from Asset a where a.id IN ?1 and a.virtual = true")
   Set<Long> getVirtualAssetIds(@Param("assetId") Set<Long> assetIds);
+
+  @Query(
+      value =
+          "select count(project) from CmsContentProject project where project.asset.id = :assetId")
+  long countCmsContentProjectsByAssetId(@Param("assetId") Long assetId);
 }

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.persistence.*;
 import java.util.Set;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.Check;
 import org.springframework.data.annotation.CreatedBy;
 
 /**
@@ -17,12 +18,31 @@ import org.springframework.data.annotation.CreatedBy;
  * @author aloison
  */
 @Entity
+@Check(
+    name = "CK__ASSET__CMS_MANAGED_VIRTUAL",
+    constraints = "cms_managed = false or \"virtual\" = true")
 @Table(
     name = "asset",
     indexes = {
       @Index(
           name = "UK__ASSET__REPOSITORY_ID__PATH",
           columnList = "repository_id, path",
+          unique = true),
+      @Index(
+          name = "UK__ASSET__ID__REPOSITORY_ID",
+          columnList = "id, repository_id",
+          unique = true),
+      @Index(
+          name = "UK__ASSET__ID__REPOSITORY_ID__VIRTUAL",
+          columnList = "id, repository_id, `virtual`",
+          unique = true),
+      @Index(
+          name = "UK__ASSET__ID__REPOSITORY_ID__VIRTUAL__CMS_MANAGED",
+          columnList = "id, repository_id, `virtual`, cms_managed",
+          unique = true),
+      @Index(
+          name = "UK__ASSET__ID__REPOSITORY_ID__VIRTUAL__CMS_MANAGED__DELETED",
+          columnList = "id, repository_id, `virtual`, cms_managed, deleted",
           unique = true),
     })
 @BatchSize(size = 1000)
@@ -68,6 +88,9 @@ public class Asset extends AuditableEntity {
   @Column(name = "`virtual`", nullable = false)
   @JsonView(View.AssetSummary.class)
   private Boolean virtual = false;
+
+  @Column(name = "cms_managed", nullable = false)
+  private Boolean cmsManaged = false;
 
   @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(
@@ -139,6 +162,14 @@ public class Asset extends AuditableEntity {
 
   public void setVirtual(Boolean virtual) {
     this.virtual = virtual;
+  }
+
+  public Boolean getCmsManaged() {
+    return cmsManaged;
+  }
+
+  public void setCmsManaged(Boolean cmsManaged) {
+    this.cmsManaged = cmsManaged;
   }
 
   public Set<AssetExtractionByBranch> getAssetExtractionByBranches() {

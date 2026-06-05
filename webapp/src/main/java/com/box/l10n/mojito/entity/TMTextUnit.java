@@ -36,6 +36,7 @@ import org.springframework.data.annotation.CreatedBy;
           name = "UK__TM_TEXT_UNIT__MD5__TM_ID__ASSET_ID",
           columnList = "md5, tm_id, asset_id",
           unique = true),
+      @Index(name = "UK__TM_TEXT_UNIT__ID__ASSET_ID", columnList = "id, asset_id", unique = true),
       @Index(name = "I__TM_TEXT_UNIT__NAME", columnList = "name"),
       @Index(name = "I__TM_TEXT_UNIT__CONTENT_MD5", columnList = "content_md5"),
       @Index(name = "I__TM_TEXT_UNIT__PLURAL_FORM_OTHER", columnList = "plural_form_other")
@@ -79,6 +80,9 @@ public class TMTextUnit extends SettableAuditableEntity {
       nullable = false)
   private Asset asset;
 
+  @Column(name = "asset_id", nullable = false, insertable = false, updatable = false)
+  private Long assetId;
+
   @CreatedBy
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(
@@ -112,6 +116,10 @@ public class TMTextUnit extends SettableAuditableEntity {
 
   public void setAsset(Asset asset) {
     this.asset = asset;
+  }
+
+  public Long getAssetId() {
+    return assetId;
   }
 
   public String getName() {

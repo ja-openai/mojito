@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.tm;
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import jakarta.persistence.LockModeType;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.EntityGraph.EntityGraphType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
@@ -34,6 +36,15 @@ public interface TMTextUnitRepository extends JpaRepository<TMTextUnit, Long> {
   List<TMTextUnit> findByTm_id(Long tmId);
 
   List<TMTextUnit> findByIdIn(Collection<Long> ids);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select tu.id from TMTextUnit tu where tu.id in :ids order by tu.id")
+  List<Long> lockIdsByIdInForUpdate(@Param("ids") Collection<Long> ids);
+
+  @Query(
+      "select new com.box.l10n.mojito.service.tm.TMTextUnitTmAssetIdDTO(tu.tm.id, tu.asset.id) "
+          + "from TMTextUnit tu where tu.id = ?1")
+  TMTextUnitTmAssetIdDTO findTmAndAssetIdsById(Long tmTextUnitId);
 
   @Query(
       "select tu from TMTextUnit tu left outer join fetch tu.tmTextUnitStatistic where tu.id IN ?1")
