@@ -326,6 +326,35 @@
   color: var(--color-accent);
 }
 
+.text-unit-detail-page__screenshots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--space-2);
+  max-width: 100%;
+}
+
+.text-unit-detail-page__screenshot {
+  display: block;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-border));
+  aspect-ratio: 4 / 3;
+}
+
+.text-unit-detail-page__screenshot:hover,
+.text-unit-detail-page__screenshot:focus-visible {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+  outline: none;
+}
+
+.text-unit-detail-page__screenshot img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
 .text-unit-detail-page__meta {
   margin: 0;
   display: grid;

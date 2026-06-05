@@ -14,6 +14,7 @@ type Props = {
   align?: 'left' | 'right';
   buttonAriaLabel?: string;
   customActions?: MultiSelectCustomAction[];
+  quickActions?: MultiSelectCustomAction[];
   showSelectionPresets?: boolean;
   summaryFormatter?: (args: {
     options: RepositorySelectionOption[];
@@ -32,12 +33,15 @@ export function RepositoryMultiSelect({
   align = 'left',
   buttonAriaLabel,
   customActions,
+  quickActions: customQuickActions,
   showSelectionPresets = false,
   summaryFormatter,
 }: Props) {
   const multiOptions: Array<MultiSelectOption<number>> = options.map((option) => ({
     value: option.id,
     label: option.name,
+    secondaryLabel: option.secondaryLabel,
+    searchText: option.searchText,
   }));
 
   const resolvedLabel = label ?? 'Repositories';
@@ -49,38 +53,41 @@ export function RepositoryMultiSelect({
     .filter((option) => option.isGlossary)
     .map((option) => option.id);
 
-  const quickActions: MultiSelectCustomAction[] | undefined = showSelectionPresets
-    ? [
-        {
-          label: 'All',
-          onClick: () => onChange(allRepositoryIds),
-          disabled: allRepositoryIds.length === 0,
-          active: allRepositoryIds.length > 0 && hasSameSet(selectedIds, allRepositoryIds),
-          ariaLabel: 'Select all repositories',
-        },
-        {
-          label: 'Repositories',
-          onClick: () => onChange(productRepositoryIds),
-          disabled: productRepositoryIds.length === 0,
-          active: productRepositoryIds.length > 0 && hasSameSet(selectedIds, productRepositoryIds),
-          ariaLabel: 'Select repositories excluding glossaries',
-        },
-        {
-          label: 'Glossaries',
-          onClick: () => onChange(glossaryRepositoryIds),
-          disabled: glossaryRepositoryIds.length === 0,
-          active:
-            glossaryRepositoryIds.length > 0 && hasSameSet(selectedIds, glossaryRepositoryIds),
-          ariaLabel: 'Select glossary backing repositories only',
-        },
-        {
-          label: 'None',
-          onClick: () => onChange([]),
-          active: selectedIds.length === 0,
-          ariaLabel: 'Clear repository selection',
-        },
-      ]
-    : undefined;
+  const quickActions: MultiSelectCustomAction[] | undefined =
+    customQuickActions ??
+    (showSelectionPresets
+      ? [
+          {
+            label: 'All',
+            onClick: () => onChange(allRepositoryIds),
+            disabled: allRepositoryIds.length === 0,
+            active: allRepositoryIds.length > 0 && hasSameSet(selectedIds, allRepositoryIds),
+            ariaLabel: 'Select all repositories',
+          },
+          {
+            label: 'Repositories',
+            onClick: () => onChange(productRepositoryIds),
+            disabled: productRepositoryIds.length === 0,
+            active:
+              productRepositoryIds.length > 0 && hasSameSet(selectedIds, productRepositoryIds),
+            ariaLabel: 'Select repositories excluding glossaries',
+          },
+          {
+            label: 'Glossaries',
+            onClick: () => onChange(glossaryRepositoryIds),
+            disabled: glossaryRepositoryIds.length === 0,
+            active:
+              glossaryRepositoryIds.length > 0 && hasSameSet(selectedIds, glossaryRepositoryIds),
+            ariaLabel: 'Select glossary backing repositories only',
+          },
+          {
+            label: 'None',
+            onClick: () => onChange([]),
+            active: selectedIds.length === 0,
+            ariaLabel: 'Clear repository selection',
+          },
+        ]
+      : undefined);
 
   return (
     <MultiSelectChip

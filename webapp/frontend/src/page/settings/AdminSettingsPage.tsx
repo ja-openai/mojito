@@ -50,6 +50,27 @@ export function AdminSettingsPage() {
             </div>
           </section>
 
+          <section className="settings-card" aria-labelledby="settings-json-config-localization">
+            <div className="settings-card__header">
+              <h2 id="settings-json-config-localization">JSON config localization</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/json-config-localization');
+                }}
+              >
+                <div className="settings-directory__title">Localize config</div>
+                <div className="settings-directory__description">
+                  Import JSON config, extract source strings, run MT and review, and export
+                  localized JSON.
+                </div>
+              </button>
+            </div>
+          </section>
+
           <section className="settings-card" aria-labelledby="settings-review-automation">
             <div className="settings-card__header">
               <h2 id="settings-review-automation">Review Automation</h2>
@@ -261,6 +282,27 @@ export function AdminSettingsPage() {
                 <div className="settings-directory__title">Linguist time spent</div>
                 <div className="settings-directory__description">
                   Compare reported and computed review time by linguist, language, and project.
+                </div>
+              </button>
+            </div>
+          </section>
+
+          <section className="settings-card" aria-labelledby="settings-pm-json-config-localization">
+            <div className="settings-card__header">
+              <h2 id="settings-pm-json-config-localization">JSON config localization</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/json-config-localization');
+                }}
+              >
+                <div className="settings-directory__title">Localize config</div>
+                <div className="settings-directory__description">
+                  Import JSON config, extract source strings, run MT and review, and export
+                  localized JSON.
                 </div>
               </button>
             </div>

@@ -1,0 +1,160 @@
+.json-code-editor {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+}
+
+.json-code-editor__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  padding: var(--space-1) var(--space-2);
+  background: color-mix(in srgb, var(--color-surface-muted) 65%, var(--color-surface));
+}
+
+.json-code-editor__toolbar.is-bottom {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-bottom: none;
+}
+
+.json-code-editor__toolbar-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.json-code-editor__history-button {
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-1);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-xs);
+}
+
+.json-code-editor__history-button:hover:not(:disabled),
+.json-code-editor__history-button:focus-visible {
+  border-color: color-mix(in srgb, var(--color-border) 80%, transparent);
+  color: var(--color-text);
+  background: var(--color-surface);
+  outline: none;
+}
+
+.json-code-editor__history-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.json-code-editor__history-button--primary {
+  background: var(--color-accent);
+  color: var(--color-on-accent, #fff);
+}
+
+.json-code-editor__history-button--secondary {
+  border-color: color-mix(in srgb, var(--color-border) 82%, transparent);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.json-code-editor__history-button--pill {
+  border-radius: var(--radius-pill);
+  padding-right: var(--space-3);
+  padding-left: var(--space-3);
+}
+
+.json-code-editor__history-button--secondary:hover:not(:disabled),
+.json-code-editor__history-button--secondary:focus-visible {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+}
+
+.json-code-editor__history-button--primary:hover:not(:disabled),
+.json-code-editor__history-button--primary:focus-visible {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 88%, #000);
+  color: var(--color-on-accent, #fff);
+}
+
+.json-code-editor__toolbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.json-code-editor__toolbar-toggle input {
+  margin: 0;
+}
+
+.json-code-editor__code {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.json-code-editor:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.json-code-editor .cm-editor {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.875rem;
+  background: transparent;
+}
+
+.json-code-editor .cm-scroller {
+  max-width: 100%;
+  overflow: auto;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+}
+
+.json-code-editor .cm-gutters {
+  border-right: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-muted) 65%, var(--color-surface));
+  color: var(--color-text-muted);
+}
+
+.json-code-editor .cm-activeLine,
+.json-code-editor .cm-activeLineGutter {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.json-code-editor .cm-content {
+  min-width: 0;
+  padding: 0.75rem 0;
+}
+
+.json-code-editor .cm-line {
+  padding: 0 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.json-code-editor .cm-placeholder {
+  color: var(--color-text-muted);
+}
+
+.json-code-editor.is-readonly .cm-content {
+  cursor: default;
+}

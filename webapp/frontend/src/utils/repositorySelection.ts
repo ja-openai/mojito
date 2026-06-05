@@ -6,6 +6,8 @@ export type RepositorySelectionOption = {
   id: number;
   name: string;
   isGlossary?: boolean;
+  secondaryLabel?: string;
+  searchText?: string;
 };
 
 type UseRepositorySelectionOptions = {

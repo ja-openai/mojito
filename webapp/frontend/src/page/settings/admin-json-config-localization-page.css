@@ -1,0 +1,1440 @@
+.json-config-localization-page {
+  width: 100%;
+}
+
+.json-config-localization-page__picker,
+.json-config-localization-page__workspace {
+  width: 100%;
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-7);
+}
+
+.json-config-localization-page__repository-picker-control,
+.json-config-localization-page__list-pane,
+.json-config-localization-page__detail-pane {
+  min-width: 0;
+}
+
+.json-config-localization-page .json-config-localization-page__repository-select {
+  width: 100%;
+}
+
+.json-config-localization-page__setup-badge {
+  display: inline-flex;
+  align-items: center;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.5rem;
+  white-space: nowrap;
+}
+
+.json-config-localization-page__setup-badge.is-configured {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.json-config-localization-page__repository-action {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.json-config-localization-page__repository-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.json-config-localization-page__repository-table-wrap {
+  margin-top: var(--space-4);
+  overflow-x: auto;
+}
+
+.json-config-localization-page__repository-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.json-config-localization-page__repository-table th,
+.json-config-localization-page__repository-table td {
+  padding: var(--space-3) var(--space-2);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.json-config-localization-page__repository-table th {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__repository-table .json-config-localization-page__repository-action {
+  text-align: right;
+}
+
+.json-config-localization-page__repository-table tbody tr:hover,
+.json-config-localization-page__repository-table tbody tr:focus-within {
+  background: color-mix(in srgb, var(--color-surface-muted) 45%, transparent);
+}
+
+.json-config-localization-page__setup-modal-fields {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.json-config-localization-page__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .json-config-localization-page__repository-table
+    .json-config-localization-page__repository-actions {
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .json-config-localization-page__repository-table
+    tr:hover
+    .json-config-localization-page__repository-actions,
+  .json-config-localization-page__repository-table
+    tr:focus-within
+    .json-config-localization-page__repository-actions {
+    opacity: 1;
+  }
+}
+
+.json-config-localization-page__string-list {
+  --json-config-localization-string-row-height: 6rem;
+  display: flex;
+  flex: 1;
+  min-height: 22rem;
+  overflow: hidden;
+  margin-top: var(--space-3);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.json-config-localization-page__string-list .virtual-scroll {
+  width: 100%;
+}
+
+.json-config-localization-page__string-row {
+  width: 100%;
+  border: none;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.json-config-localization-page__string-row {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+}
+
+.json-config-localization-page__string-row:hover,
+.json-config-localization-page__string-row:focus-visible {
+  background: color-mix(in srgb, var(--color-surface-muted) 45%, transparent);
+  outline: none;
+}
+
+.json-config-localization-page__string-row.is-active {
+  border-left-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-surface-muted) 55%, transparent);
+}
+
+.json-config-localization-page__string-row.is-draft {
+  border-left-color: color-mix(in srgb, var(--color-warning) 72%, var(--color-accent));
+  background: color-mix(in srgb, var(--color-warning) 8%, var(--color-surface));
+}
+
+.json-config-localization-page__string-row.is-draft:hover,
+.json-config-localization-page__string-row.is-draft:focus-visible {
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+}
+
+.json-config-localization-page__string-row.is-draft.is-active {
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
+}
+
+.json-config-localization-page__string-row.is-incomplete
+  .json-config-localization-page__source-preview {
+  color: var(--color-warning);
+}
+
+.json-config-localization-page__repository-name,
+.json-config-localization-page__string-id {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__muted,
+.json-config-localization-page__source-preview,
+.json-config-localization-page__empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__empty {
+  padding: var(--space-3) var(--space-2);
+}
+
+.json-config-localization-page__empty.is-error {
+  color: var(--color-danger);
+}
+
+.json-config-localization-page__list-empty {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  width: 100%;
+  padding: var(--space-4) var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__list-empty strong {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__empty-state-card {
+  display: grid;
+  gap: var(--space-4);
+  align-content: center;
+  justify-items: start;
+  min-height: 22rem;
+  max-width: 34rem;
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.json-config-localization-page__empty-state-card h3 {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__empty-state-card p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.json-config-localization-page__tab-panel--strings
+  .json-config-localization-page__empty-state-card {
+  min-height: 16rem;
+  max-width: 38rem;
+  padding: var(--space-4) 0;
+  border: none;
+  background: transparent;
+}
+
+.json-config-localization-page__empty-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.json-config-localization-page__advanced summary {
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.json-config-localization-page__advanced[open] summary {
+  margin-bottom: var(--space-2);
+}
+
+.json-config-localization-page__asset-path {
+  min-width: 0;
+}
+
+.json-config-localization-page__notice {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(30rem, calc(100vw - var(--space-4) * 2));
+  border: var(--border-width) solid color-mix(in srgb, var(--color-accent) 28%, transparent);
+  border-radius: var(--radius-2);
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  box-shadow: 0 0.75rem 2rem color-mix(in srgb, #000 14%, transparent);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__notice.is-success {
+  color: var(--color-text);
+}
+
+.json-config-localization-page__notice.is-info {
+  color: var(--color-text);
+}
+
+.json-config-localization-page__notice.is-error {
+  border-color: color-mix(in srgb, var(--color-danger) 38%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+  color: var(--color-danger);
+}
+
+.json-config-localization-page__notice-spinner {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: 0 0 auto;
+  border: 2px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
+  border-top-color: var(--color-accent);
+  border-radius: 999px;
+  animation: json-config-localization-notice-spin 800ms linear infinite;
+}
+
+.json-config-localization-page__notice button {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__notice button:hover,
+.json-config-localization-page__notice button:focus-visible {
+  color: var(--color-text);
+  outline: none;
+  text-decoration: underline;
+}
+
+@keyframes json-config-localization-notice-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.json-config-localization-page__topbar-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--app-shell-header-height);
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.json-config-localization-page__topbar-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.json-config-localization-page__topbar-tab {
+  height: var(--app-shell-header-height);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: 0 var(--space-3);
+  white-space: nowrap;
+}
+
+.json-config-localization-page__topbar-tab:hover,
+.json-config-localization-page__topbar-tab:focus-visible {
+  color: var(--color-text);
+  outline: none;
+}
+
+.json-config-localization-page__topbar-tab.is-active {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.json-config-localization-page__tab-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.json-config-localization-page__tab-panel--strings {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: calc(100dvh - 5rem);
+  min-height: 34rem;
+  overflow: hidden;
+}
+
+.json-config-localization-page__sync-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.42fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.json-config-localization-page__sync-primary {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.json-config-localization-page__sync-context {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.json-config-localization-page__sync-context strong {
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  overflow-wrap: anywhere;
+}
+
+.json-config-localization-page__sync-options {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.json-config-localization-page__automation-card {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  padding: var(--space-3);
+}
+
+.json-config-localization-page__automation-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.json-config-localization-page__automation-card strong {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.json-config-localization-page__automation-schedule-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.35fr);
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.json-config-localization-page__automation-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.json-config-localization-page__publish-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  padding: var(--space-3);
+  background: color-mix(in srgb, var(--color-surface-muted) 12%, var(--color-surface));
+}
+
+.json-config-localization-page__publish-strip strong {
+  margin-right: var(--space-1);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.json-config-localization-page__publish-strip .settings-button {
+  margin-left: auto;
+}
+
+.json-config-localization-page__sync-progress {
+  display: grid;
+  gap: var(--space-3);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, #000 6%, transparent);
+}
+
+.json-config-localization-page__blocked-region {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+
+.json-config-localization-page__blocked-region.is-blocked {
+  min-height: 24rem;
+}
+
+.json-config-localization-page__blocked-region.is-blocked .json-config-localization-page__layout {
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.24;
+  filter: grayscale(0.15);
+}
+
+.json-config-localization-page__blocking-progress {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  border-radius: var(--radius-2);
+  padding: var(--space-6) var(--space-3) var(--space-3);
+  background: color-mix(in srgb, var(--color-surface) 58%, transparent);
+  backdrop-filter: blur(1px);
+}
+
+.json-config-localization-page__blocking-progress .json-config-localization-page__sync-progress {
+  width: min(46rem, 100%);
+  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+  box-shadow: 0 1rem 2.5rem color-mix(in srgb, #000 14%, transparent);
+}
+
+.json-config-localization-page__sync-progress-bar {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+}
+
+.json-config-localization-page__sync-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 180ms ease;
+}
+
+.json-config-localization-page__sync-step-list {
+  display: grid;
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+}
+
+.json-config-localization-page__sync-step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__sync-step-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__sync-step-status.is-running {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  color: var(--color-accent);
+}
+
+.json-config-localization-page__sync-step-status.is-done {
+  background: color-mix(in srgb, var(--color-success, #1a7f37) 12%, var(--color-surface));
+  color: var(--color-success, #1a7f37);
+}
+
+.json-config-localization-page__sync-step-status.is-error {
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  color: var(--color-danger);
+}
+
+.json-config-localization-page__automation-runs {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+}
+
+.json-config-localization-page__automation-runs-table-wrap {
+  overflow-x: auto;
+}
+
+.json-config-localization-page__automation-runs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.json-config-localization-page__automation-runs-table th,
+.json-config-localization-page__automation-runs-table td {
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  text-align: left;
+  vertical-align: top;
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__automation-runs-table th {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__automation-runs-table th:not(:last-child),
+.json-config-localization-page__automation-runs-table td:not(:last-child) {
+  padding-right: var(--space-4);
+}
+
+.json-config-localization-page__automation-run-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__automation-run-status.is-running {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  color: var(--color-accent);
+}
+
+.json-config-localization-page__automation-run-status.is-completed {
+  background: color-mix(in srgb, var(--color-success, #1a7f37) 12%, var(--color-surface));
+  color: var(--color-success, #1a7f37);
+}
+
+.json-config-localization-page__automation-run-status.is-failed {
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  color: var(--color-danger);
+}
+
+.json-config-localization-page__status-notice {
+  justify-self: start;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-accent) 28%, transparent);
+  border-radius: var(--radius-1);
+  padding: var(--space-1) var(--space-2);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__status-notice.is-success {
+  color: var(--color-text);
+}
+
+.json-config-localization-page__status-notice.is-error {
+  border-color: color-mix(in srgb, var(--color-danger) 38%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+  color: var(--color-danger);
+}
+
+.json-config-localization-page__summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.json-config-localization-page__summary-item {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  padding: var(--space-3);
+}
+
+.json-config-localization-page__summary-item strong {
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+}
+
+.json-config-localization-page__summary-item span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__summary-action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.json-config-localization-page__layout {
+  display: grid;
+  grid-template-columns: minmax(17rem, 0.34fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: stretch;
+  min-height: min(46rem, calc(100vh - 11rem));
+  min-width: 0;
+}
+
+.json-config-localization-page__tab-panel--strings .json-config-localization-page__layout {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.json-config-localization-page__layout--resizable {
+  --json-config-localization-resize-handle-size: 0.625rem;
+  grid-template-columns:
+    minmax(17rem, var(--json-config-localization-list-width, 34%))
+    var(--json-config-localization-resize-handle-size)
+    minmax(0, 1fr);
+  gap: 0;
+}
+
+.json-config-localization-page__layout--resizable .json-config-localization-page__list-pane {
+  padding-right: var(--space-4);
+}
+
+.json-config-localization-page__layout--resizable .json-config-localization-page__detail-pane {
+  padding-left: var(--space-4);
+}
+
+.json-config-localization-page__resize-handle {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+  align-items: stretch;
+  justify-content: center;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.json-config-localization-page__resize-handle::before {
+  content: '';
+  width: 1px;
+  background: color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.json-config-localization-page__resize-handle:hover,
+.json-config-localization-page__resize-handle:focus-visible,
+.json-config-localization-page__resize-handle.is-resizing {
+  background: color-mix(in srgb, var(--color-surface-muted) 45%, transparent);
+  outline: none;
+}
+
+.json-config-localization-page__resize-handle:hover::before,
+.json-config-localization-page__resize-handle:focus-visible::before,
+.json-config-localization-page__resize-handle.is-resizing::before {
+  background: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+}
+
+.json-config-localization-page__list-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.json-config-localization-page__tab-panel--strings .json-config-localization-page__list-pane {
+  overflow: hidden;
+}
+
+.json-config-localization-page__schema-panel {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.json-config-localization-page__schema-layout {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.json-config-localization-page__schema-controls {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.7fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.json-config-localization-page__schema-editor-column {
+  min-width: 0;
+}
+
+.json-config-localization-page__schema-preset-panel {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.json-config-localization-page__schema-preset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.json-config-localization-page__schema-preset-description {
+  margin: calc(-1 * var(--space-1)) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+
+.json-config-localization-page__config-details {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  background: color-mix(in srgb, var(--color-surface-muted) 16%, var(--color-surface));
+}
+
+.json-config-localization-page__config-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  cursor: pointer;
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+
+.json-config-localization-page__config-details[open] summary {
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.json-config-localization-page__config-details-title {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__config-details-summary {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.json-config-localization-page__config-details .settings-field {
+  gap: var(--space-2);
+}
+
+.json-config-localization-page__config-details .settings-field__label,
+.json-config-localization-page__mapping-header h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 2rem;
+}
+
+.json-config-localization-page__mapping-panel {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.json-config-localization-page__mapping-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 2rem;
+}
+
+.json-config-localization-page__mapping-header .settings-button {
+  min-height: 2rem;
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__mapping-preset-pill {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  border-radius: var(--radius-pill);
+  padding: 0.25rem var(--space-2);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.json-config-localization-page__mapping-note {
+  display: grid;
+  gap: var(--space-1);
+  border-left: 0.1875rem solid color-mix(in srgb, var(--color-warning) 60%, var(--color-accent));
+  border-radius: var(--radius-1);
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--color-warning) 6%, var(--color-surface));
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+
+.json-config-localization-page__mapping-note strong {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__mapping-note p,
+.json-config-localization-page__mapping-note ul {
+  margin: 0;
+}
+
+.json-config-localization-page__mapping-note ul {
+  padding-left: var(--space-4);
+}
+
+.json-config-localization-page__provider-grid {
+  display: grid;
+  grid-template-columns: minmax(13rem, 18rem) minmax(18rem, 1fr) minmax(16rem, 24rem);
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.json-config-localization-page__provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.json-config-localization-page__provider-config-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.json-config-localization-page__provider-config-row .settings-input {
+  min-width: 0;
+}
+
+.json-config-localization-page__provider-config-row .settings-button {
+  flex: none;
+}
+
+.json-config-localization-page__setup-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+}
+
+.json-config-localization-page__profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+}
+
+.json-config-localization-page__profile-fields {
+  grid-column: span 2;
+}
+
+.json-config-localization-page__locale-mapping {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+}
+
+.json-config-localization-page__locale-mapping-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.json-config-localization-page__locale-mapping-header h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+}
+
+.json-config-localization-page__locale-mapping-summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.json-config-localization-page__locale-mapping-summary strong {
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+}
+
+.json-config-localization-page__locale-mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-2) var(--space-3);
+  max-height: 14rem;
+  overflow: auto;
+  padding-right: var(--space-1);
+}
+
+.json-config-localization-page__locale-mapping-row {
+  display: grid;
+  grid-template-columns: minmax(4rem, 0.32fr) minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.json-config-localization-page__locale-mapping-row > span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.json-config-localization-page__locale-mapping-import {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.json-config-localization-page__locale-mapping-import-field {
+  gap: var(--space-1);
+}
+
+.json-config-localization-page__locale-mapping-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.json-config-localization-page__locale-mapping-reset {
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__locale-mapping-reset:disabled {
+  color: var(--color-text-subtle);
+  cursor: default;
+  opacity: 0.45;
+}
+
+.json-config-localization-page__locale-mapping-reset:not(:disabled):hover,
+.json-config-localization-page__locale-mapping-reset:not(:disabled):focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+.json-config-localization-page__locale-mapping-empty {
+  border: var(--border-width) dashed color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-2);
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__schema-textarea {
+  min-height: 12rem;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__schema-editor {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  min-height: 12rem;
+}
+
+.json-config-localization-page__config-editor-field,
+.json-config-localization-page__config-editor {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.json-config-localization-page__config-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.json-config-localization-page__config-editor-toolbar-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.json-config-localization-page__config-editor-toolbar-group:last-child {
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.json-config-localization-page__warning-callout {
+  display: grid;
+  gap: var(--space-1);
+  border: var(--border-width) solid
+    color-mix(in srgb, var(--color-warning) 42%, var(--color-border));
+  border-radius: var(--radius-2);
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in srgb, var(--color-warning) 9%, var(--color-surface));
+  color: var(--color-warning);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__warning-callout h3 {
+  margin: 0;
+  color: var(--color-warning);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__warning-callout p,
+.json-config-localization-page__warning-callout ul {
+  margin: 0;
+}
+
+.json-config-localization-page__warning-callout ul {
+  padding-left: var(--space-4);
+}
+
+.json-config-localization-page__list-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.json-config-localization-page__list-search {
+  min-width: 0;
+}
+
+.json-config-localization-page__filter-chip {
+  min-width: 0;
+  width: auto;
+}
+
+.json-config-localization-page__list-toolbar .settings-button {
+  min-width: max-content;
+  white-space: nowrap;
+}
+
+.json-config-localization-page__filter-chip-button {
+  min-height: 2.375rem;
+  border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__filter-chip-panel {
+  min-width: 21rem;
+}
+
+.json-config-localization-page__string-row-main {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.json-config-localization-page__source-preview {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.json-config-localization-page__string-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xs);
+}
+
+.json-config-localization-page__used-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  color: var(--color-accent);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__used-pill.is-unused {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+.json-config-localization-page__draft-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
+  color: var(--color-warning);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.json-config-localization-page__detail-pane {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+  align-items: start;
+  min-width: 0;
+}
+
+.json-config-localization-page__tab-panel--strings .json-config-localization-page__detail-pane {
+  min-height: 0;
+  overflow: auto;
+  padding-right: var(--space-2);
+}
+
+.json-config-localization-page__sync-progress-dismiss {
+  align-self: start;
+  border: none;
+  border-radius: var(--radius-pill);
+  width: 1.75rem;
+  height: 1.75rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+}
+
+.json-config-localization-page__sync-progress-dismiss:hover,
+.json-config-localization-page__sync-progress-dismiss:focus-visible {
+  background: color-mix(in srgb, var(--color-surface-muted) 70%, transparent);
+  color: var(--color-text);
+  outline: none;
+}
+
+.json-config-localization-page__editor-header,
+.json-config-localization-page__section-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.json-config-localization-page__editor-header h2,
+.json-config-localization-page__section-header h2,
+.json-config-localization-page__section-header h3 {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.json-config-localization-page__editor-header h2 {
+  font-size: var(--font-size-xl);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.json-config-localization-page__detail-meta {
+  margin-top: var(--space-1);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+}
+
+.json-config-localization-page__section-header h2,
+.json-config-localization-page__section-header h3 {
+  font-size: var(--font-size-md);
+}
+
+.json-config-localization-page__eyebrow {
+  margin-bottom: var(--space-1);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.json-config-localization-page__text-unit-meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.json-config-localization-page__text-unit-action {
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.json-config-localization-page__text-unit-action:hover,
+.json-config-localization-page__text-unit-action:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+.json-config-localization-page__editor-grid,
+.json-config-localization-page__export {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.json-config-localization-page__textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.json-config-localization-page__textarea--compact {
+  min-height: 4rem;
+}
+
+.json-config-localization-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  align-self: start;
+}
+
+.json-config-localization-page__actions .settings-button {
+  align-self: center;
+}
+
+.json-config-localization-page__export {
+  padding-top: var(--space-5);
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 65%, transparent);
+}
+
+.json-config-localization-page__export-output {
+  min-height: 16rem;
+}
+
+.json-config-localization-page__export-format {
+  width: auto;
+  min-width: 10rem;
+}
+
+@media (max-width: 70rem) {
+  .json-config-localization-page__layout,
+  .json-config-localization-page__provider-grid,
+  .json-config-localization-page__schema-controls,
+  .json-config-localization-page__sync-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .json-config-localization-page__schema-preset-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .json-config-localization-page__layout--resizable {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .json-config-localization-page__layout--resizable .json-config-localization-page__list-pane,
+  .json-config-localization-page__layout--resizable .json-config-localization-page__detail-pane {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .json-config-localization-page__resize-handle {
+    display: none;
+  }
+
+  .json-config-localization-page__profile-grid,
+  .json-config-localization-page__locale-mapping-grid,
+  .json-config-localization-page__summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 60rem) {
+  .json-config-localization-page__picker,
+  .json-config-localization-page__workspace {
+    padding: var(--space-4);
+  }
+
+  .json-config-localization-page__editor-header,
+  .json-config-localization-page__section-header,
+  .json-config-localization-page__locale-mapping-header,
+  .json-config-localization-page__locale-mapping-import,
+  .json-config-localization-page__automation-card-header,
+  .json-config-localization-page__automation-schedule-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 42rem) {
+  .json-config-localization-page__list-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .json-config-localization-page__list-search {
+    grid-column: 1 / -1;
+  }
+
+  .json-config-localization-page__filter-chip {
+    width: auto;
+  }
+
+  .json-config-localization-page__profile-grid,
+  .json-config-localization-page__locale-mapping-grid,
+  .json-config-localization-page__summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .json-config-localization-page__profile-fields {
+    grid-column: auto;
+  }
+}
