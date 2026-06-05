@@ -8,6 +8,10 @@ import { useUser } from '../../hooks/useUser';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
 import {
+  loadVisibleTextEditorEnabled,
+  saveVisibleTextEditorEnabled,
+} from '../../utils/visibleTextEditorPreference';
+import {
   getDefaultReviewProjectShortcutHelpPreference,
   loadReviewProjectShortcutHelpPreference,
   type ReviewProjectShortcutHelpPreference,
@@ -36,6 +40,9 @@ export function SettingsPage() {
     useState<ReviewProjectShortcutHelpPreference>(() =>
       loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
     );
+  const [visibleTextEditorEnabled, setVisibleTextEditorEnabled] = useState(() =>
+    loadVisibleTextEditorEnabled(),
+  );
   const [worksetDraft, setWorksetDraft] = useState<string>(() =>
     savedWorkset == null ? '' : String(savedWorkset),
   );
@@ -153,6 +160,11 @@ export function SettingsPage() {
     setShortcutHelpPreference(nextPreference);
   };
 
+  const handleVisibleTextEditorChange = (enabled: boolean) => {
+    saveVisibleTextEditorEnabled(enabled);
+    setVisibleTextEditorEnabled(enabled);
+  };
+
   return (
     <div className="settings-page">
       <div className="settings-page__header">
@@ -202,6 +214,32 @@ export function SettingsPage() {
               Reset
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="settings-card" aria-labelledby="settings-translation-editor">
+        <div className="settings-card__header">
+          <h2 id="settings-translation-editor">Translation editor</h2>
+        </div>
+        <div className="settings-field">
+          <label className="settings-radio-option">
+            <input
+              type="checkbox"
+              checked={visibleTextEditorEnabled}
+              onChange={(event) => handleVisibleTextEditorChange(event.target.checked)}
+            />
+            <span className="settings-radio-option__body">
+              <span className="settings-radio-option__label">
+                Use the assisted rich text editor in Workbench, Review Project, and text unit
+                details
+              </span>
+              <span className="settings-hint">
+                Enables issue-focused text marks, unprotected editing, and protected placeholder
+                chips for this browser only.
+              </span>
+            </span>
+          </label>
+          <p className="settings-hint">Default is off while the editor is being validated.</p>
         </div>
       </section>
 

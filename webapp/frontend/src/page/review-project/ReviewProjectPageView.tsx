@@ -77,10 +77,17 @@ import {
   TextUnitHistoryTimeline,
   type TextUnitHistoryTimelineEntry,
 } from '../../components/TextUnitHistoryTimeline';
+import {
+  TranslationTextEditor,
+  type TranslationTextEditorKeyDownEvent,
+} from '../../components/TranslationTextEditor';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
+import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { useUser } from '../../hooks/useUser';
+import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
 import {
   formatLocalDate as formatDate,
@@ -190,6 +197,7 @@ type EditKind = 'translation' | 'status' | 'comment';
 type TerminologyConfidenceChoice = 'unspecified' | '1' | '2' | '3' | '4' | '5';
 type TerminologyResolutionStatusChoice = ApiTerminologyResolutionStatus;
 type ContextTab = 'glossary' | 'icu' | 'history' | 'context';
+type DetailEditorField = 'translation' | 'comment' | 'decisionNotes';
 
 const SAVING_INDICATOR_MIN_MS = 600;
 const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
@@ -1693,6 +1701,7 @@ function DetailPane({
   focusTranslationKey: number;
 }) {
   const user = useUser();
+  const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
   const isTerminologyProject = isTerminologyReviewProjectType(projectType);
   const isTermCandidateProject = projectType === 'TERM_CANDIDATE';
   const isSpecialistTerminologyProject = terminologyPhase === 'SPECIALIST_INPUT';
@@ -1705,6 +1714,7 @@ function DetailPane({
   const [showStaleDecision, setShowStaleDecision] = useState(false);
 
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
+  const [showTranslationInvisibles, setShowTranslationInvisibles] = useState(true);
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [activeContextTab, setActiveContextTab] = useState<ContextTab>('glossary');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
@@ -1713,7 +1723,7 @@ function DetailPane({
   const [aiInput, setAiInput] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
   const heroRef = useRef<HTMLDivElement | null>(null);
-  const translationRef = useRef<HTMLTextAreaElement | null>(null);
+  const translationRef = useRef<VisibleTextEditorHandle | null>(null);
   const commentRef = useRef<HTMLTextAreaElement | null>(null);
   const decisionNotesRef = useRef<HTMLTextAreaElement | null>(null);
   const savingIndicatorStartRef = useRef<number | null>(null);
@@ -1755,6 +1765,12 @@ function DetailPane({
     () => hasIcuParameters(source) || hasIcuParameters(draftTarget),
     [draftTarget, source],
   );
+  const draftTargetTokenGuard = useProtectedTextTokenGuard(
+    draftTarget,
+    isVisibleTextEditorEnabled ? 'icu-html' : 'none',
+  );
+  const draftTargetProtectedTokens = draftTargetTokenGuard.protectedTokens;
+  const validateDraftTarget = draftTargetTokenGuard.validateNextValue;
   const [draftTerminologyRecommendation, setDraftTerminologyRecommendation] =
     useState<ApiTerminologyFeedbackRecommendation | null>(terminologySnapshot.recommendation);
   const [draftTerminologyConfidence, setDraftTerminologyConfidence] =
@@ -2425,29 +2441,81 @@ function DetailPane({
     setDraftDecisionNotes(snapshot.decisionNotes ?? '');
   }, [snapshot]);
 
-  const handleEditorKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const focusDetailEditor = useCallback((field: DetailEditorField) => {
+    if (field === 'translation') {
+      translationRef.current?.focus();
+      return;
+    }
+    if (field === 'comment') {
+      commentRef.current?.focus();
+      return;
+    }
+    decisionNotesRef.current?.focus();
+  }, []);
+
+  const blurDetailEditor = useCallback((field: DetailEditorField) => {
+    if (field === 'translation') {
+      translationRef.current?.blur();
+      return;
+    }
+    if (field === 'comment') {
+      commentRef.current?.blur();
+      return;
+    }
+    decisionNotesRef.current?.blur();
+  }, []);
+
+  const focusNextDetailEditor = useCallback(
+    (field: DetailEditorField, shiftKey: boolean) => {
+      const editors: DetailEditorField[] = isTerminologyProject
+        ? ['decisionNotes']
+        : ['translation', 'comment', 'decisionNotes'];
+      const currentIndex = editors.indexOf(field);
+      if (currentIndex === -1) {
+        return false;
+      }
+      const nextIndex = shiftKey
+        ? (currentIndex - 1 + editors.length) % editors.length
+        : (currentIndex + 1) % editors.length;
+      focusDetailEditor(editors[nextIndex]);
+      return true;
+    },
+    [focusDetailEditor, isTerminologyProject],
+  );
+
+  const handleTextEditorKeyDown = useCallback(
+    (event: TranslationTextEditorKeyDownEvent, field: DetailEditorField) => {
       if (event.key === 'Escape') {
-        event.currentTarget.blur();
+        blurDetailEditor(field);
         event.stopPropagation();
         return;
       }
       if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        const editors = isTerminologyProject
-          ? [decisionNotesRef]
-          : [translationRef, commentRef, decisionNotesRef];
-        const currentIndex = editors.findIndex((ref) => ref.current === event.currentTarget);
-        if (currentIndex === -1) {
-          return;
-        }
+        const didFocusNext = focusNextDetailEditor(field, event.shiftKey);
+        if (!didFocusNext) return;
         event.preventDefault();
-        const nextIndex = event.shiftKey
-          ? (currentIndex - 1 + editors.length) % editors.length
-          : (currentIndex + 1) % editors.length;
-        editors[nextIndex]?.current?.focus();
       }
     },
-    [isTerminologyProject],
+    [blurDetailEditor, focusNextDetailEditor],
+  );
+
+  const handleEditorKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const field: DetailEditorField =
+        event.currentTarget === commentRef.current ? 'comment' : 'decisionNotes';
+      handleTextEditorKeyDown(event, field);
+    },
+    [handleTextEditorKeyDown],
+  );
+
+  const handleTranslationEditorKeyDown = useCallback(
+    (event: TranslationTextEditorKeyDownEvent) => {
+      handleTextEditorKeyDown(event, 'translation');
+      if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+      }
+    },
+    [handleTextEditorKeyDown],
   );
 
   const handleAccept = useCallback(() => {
@@ -2648,10 +2716,16 @@ function DetailPane({
     setDraftTarget(suggestion.content);
   }, []);
 
-  const getFocusedTextarea = useCallback(() => {
+  const getFocusedDetailEditor = useCallback(() => {
     const active = document.activeElement;
     if (active && active instanceof HTMLTextAreaElement) {
-      return active;
+      return { blur: () => active.blur() };
+    }
+    if (
+      active instanceof HTMLElement &&
+      active.closest('.review-project-detail__input--translation.visible-text-editor')
+    ) {
+      return translationRef.current;
     }
     return null;
   }, []);
@@ -2738,8 +2812,8 @@ function DetailPane({
       if (event.key !== 'Enter' || (!event.metaKey && !event.ctrlKey)) {
         return;
       }
-      const focusedTextarea = getFocusedTextarea();
-      if (focusedTextarea) {
+      const focusedEditor = getFocusedDetailEditor();
+      if (focusedEditor) {
         event.preventDefault();
       }
       if (event.shiftKey) {
@@ -2751,7 +2825,7 @@ function DetailPane({
             handleAccept();
           }
           onQueueAdvance(false);
-          focusedTextarea?.blur();
+          focusedEditor?.blur();
           return;
         }
         if (canRunPrimaryShortcut) {
@@ -2760,23 +2834,23 @@ function DetailPane({
           requestDecisionState('DECIDED');
         }
         onQueueAdvance(!isTerminologyProject);
-        focusedTextarea?.blur();
+        focusedEditor?.blur();
         return;
       }
       if (mutations.showValidationDialog) {
-        focusedTextarea?.blur();
+        focusedEditor?.blur();
         return;
       }
       if (canRunPrimaryShortcut) {
         handleAccept();
       }
-      focusedTextarea?.blur();
+      focusedEditor?.blur();
     };
     window.addEventListener('keydown', handleSaveShortcut);
     return () => window.removeEventListener('keydown', handleSaveShortcut);
   }, [
     canRunPrimaryShortcut,
-    getFocusedTextarea,
+    getFocusedDetailEditor,
     handleAccept,
     handleTerminologyStatusShortcut,
     isDirty,
@@ -3382,20 +3456,30 @@ function DetailPane({
                 <div className="review-project-detail__label-row">
                   <div className="review-project-detail__label">Translation</div>
                 </div>
-                <AutoTextarea
+                <TranslationTextEditor
+                  assisted={isVisibleTextEditorEnabled}
                   className={`review-project-detail__input review-project-detail__input--autosize review-project-detail__input--translation${
                     isRejected ? ' review-project-detail__input--rejected' : ''
                   }`}
                   ref={translationRef}
                   value={draftTarget}
-                  onChange={(event) => {
-                    setDraftTarget(event.target.value);
-                  }}
+                  onChange={setDraftTarget}
+                  ariaLabel="Translation"
+                  controlBar={
+                    isVisibleTextEditorEnabled
+                      ? {
+                          onToggleInvisibles: () =>
+                            setShowTranslationInvisibles((current) => !current),
+                          protectedTokenCount: draftTargetProtectedTokens.length,
+                        }
+                      : undefined
+                  }
                   spellCheck={true}
                   lang={translationLang}
-                  onKeyDown={handleEditorKeyDown}
-                  rows={1}
-                  style={{ resize: 'none' }}
+                  onKeyDown={handleTranslationEditorKeyDown}
+                  showInvisibles={showTranslationInvisibles}
+                  protectedTokens={draftTargetProtectedTokens}
+                  validateNextValue={isVisibleTextEditorEnabled ? validateDraftTarget : undefined}
                 />
               </div>
 

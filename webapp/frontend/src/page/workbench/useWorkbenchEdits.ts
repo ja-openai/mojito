@@ -10,6 +10,7 @@ import {
   type TextUnitSearchRequest,
   updateTextUnitCurrentVariantsStatus,
 } from '../../api/text-units';
+import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
 import {
   buildIntegrityCheckErrorReport,
   checkTextUnitIntegrityWithRetry,
@@ -83,7 +84,7 @@ type UseWorkbenchEditsResult = {
   onSaveEditing: () => void;
   onChangeEditingValue: (value: string) => void;
   onChangeStatus: (rowId: string, status: string) => void;
-  translationInputRef: RefObject<HTMLTextAreaElement>;
+  translationInputRef: RefObject<VisibleTextEditorHandle>;
   registerRowRef: (rowId: string, element: HTMLDivElement | null) => void;
   isSaving: boolean;
   isApplyingBulkAction: boolean;
@@ -143,7 +144,7 @@ export function useWorkbenchEdits({
   const [statusSavingRowIds, setStatusSavingRowIds] = useState<Set<string>>(() => new Set());
   const [worksetEdits, setWorksetEdits] = useState<Map<string, WorksetEditEntry>>(() => new Map());
   const [diffRowId, setDiffRowId] = useState<string | null>(null);
-  const translationInputRef = useRef<HTMLTextAreaElement>(null);
+  const translationInputRef = useRef<VisibleTextEditorHandle>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const saveAttemptRef = useRef(0);
   const queryClient = useQueryClient();
@@ -402,9 +403,7 @@ export function useWorkbenchEdits({
 
   const handleCancelEditing = useCallback(() => {
     saveAttemptRef.current += 1;
-    if (translationInputRef.current) {
-      translationInputRef.current.blur();
-    }
+    translationInputRef.current?.blur();
     setEditingRowId(null);
     setEditingValue('');
     setEditingInitialValue('');
@@ -658,9 +657,7 @@ export function useWorkbenchEdits({
       rowElement.scrollIntoView({ block: 'nearest' });
     }
 
-    if (translationInputRef.current && document.activeElement !== translationInputRef.current) {
-      translationInputRef.current.focus();
-    }
+    translationInputRef.current?.focus();
   }, [editingRowId]);
 
   const editedRowIds = useMemo(() => {

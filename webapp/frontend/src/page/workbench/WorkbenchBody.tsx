@@ -1,26 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  type KeyboardEvent,
-  type RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { fetchGlossaries } from '../../api/glossaries';
 import type { ApiRepository } from '../../api/repositories';
 import type { TextUnitSearchRequest } from '../../api/text-units';
-import { AutoTextarea } from '../../components/AutoTextarea';
 import { LocalePill } from '../../components/LocalePill';
 import { Modal } from '../../components/Modal';
 import { PillDropdown } from '../../components/PillDropdown';
+import {
+  TranslationTextEditor,
+  type TranslationTextEditorKeyDownEvent,
+} from '../../components/TranslationTextEditor';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
+import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
+import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import { isPrimaryActionShortcut } from '../../utils/keyboardShortcuts';
 import { isRtlLocale } from '../../utils/localeDirection';
@@ -42,7 +40,7 @@ type WorkbenchBodyProps = {
   onChangeEditingValue: (value: string) => void;
   onChangeStatus: (rowId: string, status: string) => void;
   statusOptions: string[];
-  translationInputRef: RefObject<HTMLTextAreaElement>;
+  translationInputRef: RefObject<VisibleTextEditorHandle>;
   registerRowRef: (rowId: string, element: HTMLDivElement | null) => void;
   isSaving: boolean;
   saveErrorMessage: string | null;
@@ -113,6 +111,12 @@ export function WorkbenchBody({
   onRestoreScrollConsumed,
 }: WorkbenchBodyProps) {
   const navigate = useNavigate();
+  const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
+  const [showTranslationInvisibles, setShowTranslationInvisibles] = useState(true);
+  const editingTextTokenGuard = useProtectedTextTokenGuard(
+    editingValue,
+    isVisibleTextEditorEnabled && editingRowId ? 'icu-html' : 'none',
+  );
   const registerRowRefRef = useRef(registerRowRef);
 
   // Keep latest callback without changing ref callback identities.
@@ -490,10 +494,16 @@ export function WorkbenchBody({
               }
 
               const isEditing = editingRowId === row.id;
+              const useAssistedTranslationEditor = isVisibleTextEditorEnabled && isEditing;
               const translationValue = isEditing ? editingValue : (row.translation ?? '');
               const translationDirection = isRtlLocale(row.locale) ? 'rtl' : 'ltr';
               const translationLocale = row.locale;
-              const translationStyle = isEditing ? undefined : { resize: 'none' as const };
+              const translationProtectedTokens = useAssistedTranslationEditor
+                ? editingTextTokenGuard.protectedTokens
+                : [];
+              const validateTranslationValue = useAssistedTranslationEditor
+                ? editingTextTokenGuard.validateNextValue
+                : undefined;
               const isStatusSaving = statusSavingRowIds.has(row.id);
               const isEdited = editedRowIds.has(row.id);
               const isStatusOpen = openStatusRowId === row.id;
@@ -505,7 +515,7 @@ export function WorkbenchBody({
               const glossaryTarget = getGlossaryTargetForRow(row);
               const collectionButtonLabel =
                 hasActiveCollection && isInCollection ? 'In collection' : 'Add to collection';
-              const handleTranslationKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+              const handleTranslationKeyDown = (event: TranslationTextEditorKeyDownEvent) => {
                 if (!isEditing || !row.canEdit || isSaving) {
                   return;
                 }
@@ -611,7 +621,8 @@ export function WorkbenchBody({
                       className="workbench-page__cell workbench-page__cell--translation"
                       data-editing={isEditing ? 'true' : undefined}
                     >
-                      <AutoTextarea
+                      <TranslationTextEditor
+                        assisted={useAssistedTranslationEditor}
                         className="workbench-page__translation-input"
                         value={translationValue}
                         onFocus={() => {
@@ -619,19 +630,30 @@ export function WorkbenchBody({
                             onStartEditing(row.id, row.translation);
                           }
                         }}
-                        onChange={
-                          isEditing
-                            ? (event) => onChangeEditingValue(event.target.value)
+                        onChange={(nextValue) => {
+                          if (isEditing) {
+                            onChangeEditingValue(nextValue);
+                          }
+                        }}
+                        onKeyDown={isEditing ? handleTranslationKeyDown : undefined}
+                        controlBar={
+                          useAssistedTranslationEditor
+                            ? {
+                                onToggleInvisibles: () =>
+                                  setShowTranslationInvisibles((current) => !current),
+                                protectedTokenCount: translationProtectedTokens.length,
+                              }
                             : undefined
                         }
-                        onKeyDown={isEditing ? handleTranslationKeyDown : undefined}
+                        disabled={!row.canEdit}
                         readOnly={!isEditing || !row.canEdit}
-                        aria-disabled={row.canEdit ? undefined : 'true'}
                         ref={isEditing ? translationInputRef : undefined}
+                        showInvisibles={showTranslationInvisibles}
+                        protectedTokens={translationProtectedTokens}
                         spellCheck={true}
                         lang={translationLocale}
                         dir={translationDirection}
-                        style={translationStyle}
+                        validateNextValue={validateTranslationValue}
                       />
                       <div className="workbench-page__translation-footer">
                         {isEdited ? (

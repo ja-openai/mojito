@@ -60,6 +60,7 @@ import { TextUnitDetailPage } from './page/text-unit-detail/TextUnitDetailPage';
 import { BidiHelperPage } from './page/tools/BidiHelperPage';
 import { CharCodeHelperPage } from './page/tools/CharCodeHelperPage';
 import { IcuMessagePreviewPage } from './page/tools/IcuMessagePreviewPage';
+import { TextAssistPrototypePage } from './page/tools/TextAssistPrototypePage';
 import { WorkbenchPage } from './page/workbench/WorkbenchPage';
 import { canAccessGlossaries } from './utils/permissions';
 
@@ -143,6 +144,7 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/tools/mf2-editor-prototype" element={<TextAssistPrototypePage />} />
           <Route
             element={
               <RequireUser>
@@ -182,6 +184,7 @@ export function App() {
             <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
             <Route path="/tools/bidi-helper" element={<BidiHelperPage />} />
             <Route path="/tools/icu-preview" element={<IcuMessagePreviewPage />} />
+            <Route path="/tools/text-assist" element={<TextAssistPrototypePage />} />
           </Route>
           <Route
             element={

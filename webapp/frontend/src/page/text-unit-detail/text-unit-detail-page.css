@@ -112,6 +112,25 @@
   color: var(--color-text);
 }
 
+.text-unit-detail-page__editor-textarea.visible-text-editor {
+  min-height: 4.25rem;
+  padding: 0;
+}
+
+.text-unit-detail-page__editor-textarea.visible-text-editor .ProseMirror,
+.text-unit-detail-page__editor-textarea.visible-text-editor .visible-text-editor__raw-textarea {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  min-height: inherit;
+  padding: var(--space-3);
+}
+
+.text-unit-detail-page__editor-textarea.visible-text-editor .visible-text-editor__control-bar {
+  padding-inline: var(--space-2);
+}
+
 .text-unit-detail-page__editor-textarea:focus-visible {
   outline: 0;
   border-color: var(--color-focus-border);

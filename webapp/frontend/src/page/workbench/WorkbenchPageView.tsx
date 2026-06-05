@@ -8,6 +8,7 @@ import type { TextUnitSearchRequest } from '../../api/text-units';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { Modal } from '../../components/Modal';
+import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import type { RepositorySelectionOption } from '../../utils/repositorySelection';
@@ -73,7 +74,7 @@ type Props = {
   showDiscardDialog: boolean;
   onConfirmDiscardEditing: () => void;
   onDismissDiscardEditing: () => void;
-  translationInputRef: RefObject<HTMLTextAreaElement>;
+  translationInputRef: RefObject<VisibleTextEditorHandle>;
   registerRowRef: (rowId: string, element: HTMLDivElement | null) => void;
   searchAttribute: WorkbenchTextSearchCondition['field'];
   searchType: WorkbenchTextSearchCondition['searchType'];

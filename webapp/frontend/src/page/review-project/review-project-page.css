@@ -1224,6 +1224,20 @@
   min-height: 0;
 }
 
+.review-project-detail__input.visible-text-editor {
+  padding: 0;
+}
+
+.review-project-detail__input.visible-text-editor .ProseMirror,
+.review-project-detail__input.visible-text-editor .visible-text-editor__raw-textarea {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  min-height: 3rem;
+  padding: var(--space-2);
+}
+
 .review-project-detail__input--autosize:focus,
 .review-project-detail__input--autosize:focus-visible {
   resize: none;

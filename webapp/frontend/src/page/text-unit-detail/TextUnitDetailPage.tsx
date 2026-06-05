@@ -29,7 +29,9 @@ import {
   searchTextUnits,
   type TextUnitSearchRequest,
 } from '../../api/text-units';
+import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { useUser } from '../../hooks/useUser';
+import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
 import {
   buildGlossaryContextMessage,
@@ -47,6 +49,7 @@ import {
   INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
   INTEGRITY_CHECK_UNAVAILABLE_TITLE,
 } from '../../utils/integrityCheck';
+import { isRtlLocale } from '../../utils/localeDirection';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
 import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
 import { formatStatus, mapUiStatusToApi } from '../workbench/workbench-helpers';
@@ -89,6 +92,8 @@ export function TextUnitDetailPage() {
   const [isIcuPreviewCollapsed, setIsIcuPreviewCollapsed] = useState(true);
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
+  const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
+  const [showTranslationInvisibles, setShowTranslationInvisibles] = useState(true);
 
   const [draftTarget, setDraftTarget] = useState('');
   const [baselineTarget, setBaselineTarget] = useState('');
@@ -349,6 +354,14 @@ export function TextUnitDetailPage() {
   });
 
   const canEdit = localeForEditing ? canEditLocaleForUser(currentUser, localeForEditing) : false;
+  const useProtectedDetailEditor = isVisibleTextEditorEnabled && !isSourceOnly;
+  const draftTargetTokenGuard = useProtectedTextTokenGuard(
+    draftTarget,
+    useProtectedDetailEditor ? 'icu-html' : 'none',
+  );
+  const draftTargetProtectedTokens = draftTargetTokenGuard.protectedTokens;
+  const validateDraftTarget = draftTargetTokenGuard.validateNextValue;
+  const editorDirection = displayLocale && isRtlLocale(displayLocale) ? 'rtl' : 'ltr';
 
   const editorSeedKey = useMemo(() => {
     if (!activeTextUnit) {
@@ -1091,6 +1104,14 @@ export function TextUnitDetailPage() {
         isDeleting: deleteMutation.isPending,
         errorMessage: saveErrorMessage,
         warningMessage: editorWarningMessage,
+      }}
+      visibleTextEditor={{
+        enabled: useProtectedDetailEditor,
+        showInvisibles: showTranslationInvisibles,
+        onToggleInvisibles: () => setShowTranslationInvisibles((current) => !current),
+        protectedTokens: draftTargetProtectedTokens,
+        validateNextValue: validateDraftTarget,
+        dir: editorDirection,
       }}
       keyInfo={{
         stringId: formatValue(activeTextUnit?.name),

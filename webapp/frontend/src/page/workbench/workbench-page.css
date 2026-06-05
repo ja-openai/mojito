@@ -1447,6 +1447,21 @@
     box-shadow 0.15s ease;
 }
 
+.workbench-page__translation-input.visible-text-editor {
+  min-height: 0;
+  padding: 0;
+}
+
+.workbench-page__translation-input.visible-text-editor .ProseMirror,
+.workbench-page__translation-input.visible-text-editor .visible-text-editor__raw-textarea {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  min-height: 3.25rem;
+  padding: var(--space-2);
+}
+
 .workbench-page__translation-input:focus {
   outline: 0;
   border-color: var(--color-border);

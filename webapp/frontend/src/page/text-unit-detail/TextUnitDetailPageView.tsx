@@ -20,7 +20,9 @@ import {
   type TextUnitHistoryTimelineComment as TextUnitDetailHistoryComment,
   type TextUnitHistoryTimelineEntry as TextUnitDetailHistoryRow,
 } from '../../components/TextUnitHistoryTimeline';
+import { TranslationTextEditor } from '../../components/TranslationTextEditor';
 import { getGlossaryTermScreenshotEvidence } from '../../utils/glossaryTermEvidence';
+import type { ProtectedTextToken } from '../../utils/protectedTextTokens';
 
 export type TextUnitDetailMetaRow = {
   label: string;
@@ -74,6 +76,14 @@ type TextUnitDetailPageViewProps = {
     isDeleting: boolean;
     errorMessage: string | null;
     warningMessage: string | null;
+  };
+  visibleTextEditor: {
+    enabled: boolean;
+    showInvisibles: boolean;
+    onToggleInvisibles: () => void;
+    protectedTokens: ProtectedTextToken[];
+    validateNextValue: (nextValue: string) => boolean;
+    dir: 'ltr' | 'rtl' | 'auto';
   };
   keyInfo: {
     stringId: string;
@@ -151,6 +161,7 @@ export function TextUnitDetailPageView({
   tmTextUnitId,
   onBack,
   editorInfo,
+  visibleTextEditor,
   keyInfo,
   onChangeTarget,
   onChangeStatus,
@@ -287,14 +298,32 @@ export function TextUnitDetailPageView({
             </h1>
 
             <div className="text-unit-detail-page__editor-field">
-              <AutoTextarea
+              <TranslationTextEditor
+                assisted={visibleTextEditor.enabled}
+                ariaLabel={editorInfo.isSourceOnly ? 'Source text' : 'Translation'}
                 className="text-unit-detail-page__editor-textarea"
                 value={editorInfo.target}
-                onChange={(event) => onChangeTarget(event.target.value)}
+                onChange={onChangeTarget}
+                controlBar={
+                  visibleTextEditor.enabled
+                    ? {
+                        onToggleInvisibles: visibleTextEditor.onToggleInvisibles,
+                        protectedTokenCount: visibleTextEditor.protectedTokens.length,
+                      }
+                    : undefined
+                }
+                dir={visibleTextEditor.dir}
                 disabled={!editorInfo.canEdit || editorInfo.isSaving}
+                lang={previewLocale}
+                minRows={1}
                 placeholder="Add translated copy"
-                rows={1}
+                protectedTokens={visibleTextEditor.protectedTokens}
+                showInvisibles={visibleTextEditor.showInvisibles}
+                spellCheck={true}
                 style={{ resize: 'none' }}
+                validateNextValue={
+                  visibleTextEditor.enabled ? visibleTextEditor.validateNextValue : undefined
+                }
               />
             </div>
 

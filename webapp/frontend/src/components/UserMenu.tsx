@@ -82,6 +82,7 @@ export function UserMenu() {
     ? [
         { label: 'Character helper', path: '/tools/char-code' },
         { label: 'Bidi helper', path: '/tools/bidi-helper' },
+        { label: 'Visible text prototype', path: '/tools/mf2-editor-prototype' },
         { label: 'ICU preview', path: '/tools/icu-preview' },
       ]
     : [];
