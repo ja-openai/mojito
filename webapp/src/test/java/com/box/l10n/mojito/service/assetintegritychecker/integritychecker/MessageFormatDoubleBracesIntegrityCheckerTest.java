@@ -158,4 +158,65 @@ public class MessageFormatDoubleBracesIntegrityCheckerTest {
           e.getMessage());
     }
   }
+
+  @Test
+  public void testMustachePartialsAreAllowed() throws MessageFormatIntegrityCheckerException {
+
+    MessageFormatDoubleBracesIntegrityChecker checker =
+        new MessageFormatDoubleBracesIntegrityChecker();
+    String source =
+        "<h2>Document Review Invitation</h2>\n"
+            + "<p>Hello,</p>\n"
+            + "<p>You have been invited to review <strong>{{ documentTitle }}</strong> for"
+            + " {{ accountName }}. Select the button below to get started.</p>\n"
+            + "{{> buttonHeader }}Review Document{{> buttonFooter }}\n"
+            + "<p>Thank you,</p>\n"
+            + "<p>The {{ accountName }} Team</p>";
+    String target =
+        "<h2>Invitation to review a document</h2>\n"
+            + "<p>Hello,</p>\n"
+            + "<p>You have been invited to review <strong>{{ documentTitle }}</strong> for"
+            + " {{ accountName }}. Select the button below to start.</p>\n"
+            + "{{> buttonHeader }}Review Document{{> buttonFooter }}\n"
+            + "<p>Thank you,</p>\n"
+            + "<p>The {{ accountName }} Team</p>";
+
+    checker.check(source, target);
+  }
+
+  @Test
+  public void testMustachePartialsChanged() throws MessageFormatIntegrityCheckerException {
+
+    MessageFormatDoubleBracesIntegrityChecker checker =
+        new MessageFormatDoubleBracesIntegrityChecker();
+    String source = "{{> buttonHeader }}View Report{{> buttonFooter }}";
+    String target = "{{> buttonHeader }}View Report{{ buttonFooter }}";
+
+    try {
+      checker.check(source, target);
+      fail("Exception must be thrown");
+    } catch (MessageFormatIntegrityCheckerException e) {
+      assertEquals(
+          "Mustache partials do not match source. Found: [{{> buttonHeader }}], expected: [{{> buttonHeader }}, {{> buttonFooter }}]",
+          e.getMessage());
+    }
+  }
+
+  @Test
+  public void testMustachePartialOrderChanged() throws MessageFormatIntegrityCheckerException {
+
+    MessageFormatDoubleBracesIntegrityChecker checker =
+        new MessageFormatDoubleBracesIntegrityChecker();
+    String source = "{{> buttonHeader }}View Report{{> buttonFooter }}";
+    String target = "{{> buttonFooter }}View Report{{> buttonHeader }}";
+
+    try {
+      checker.check(source, target);
+      fail("Exception must be thrown");
+    } catch (MessageFormatIntegrityCheckerException e) {
+      assertEquals(
+          "Mustache partials do not match source. Found: [{{> buttonFooter }}, {{> buttonHeader }}], expected: [{{> buttonHeader }}, {{> buttonFooter }}]",
+          e.getMessage());
+    }
+  }
 }
