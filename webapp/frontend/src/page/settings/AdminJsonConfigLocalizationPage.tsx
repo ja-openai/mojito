@@ -42,6 +42,7 @@ import {
   updateJsonConfigLocalization,
 } from '../../api/json-config-localization';
 import type { ApiRepository } from '../../api/repositories';
+import { fetchReviewAutomationSchedulePreview } from '../../api/review-automations';
 import { searchTextUnits } from '../../api/text-units';
 import {
   type FilterSection,
@@ -54,10 +55,12 @@ import { SearchControl } from '../../components/SearchControl';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useUser } from '../../hooks/useUser';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
+import { formatReviewAutomationSchedule } from '../../utils/reviewAutomationSchedule';
 import { buildZipFile, downloadBlob } from '../workbench/workbench-import-export';
 import {
   appendStatsigSourceConfigEntry,
@@ -1069,6 +1072,27 @@ function JsonConfigLocalizationWorkspace({
         : fetchJsonConfigLocalizationRuns(selectedSetupId),
     enabled: Boolean(selectedSetupId),
     staleTime: 0,
+  });
+  const debouncedAutomationCronExpression = useDebouncedValue(automationCronExpression.trim(), 250);
+  const debouncedAutomationTimeZone = useDebouncedValue(automationTimeZone.trim(), 250);
+  const automationScheduleTimeZone = debouncedAutomationTimeZone || getDefaultTimeZone();
+  const automationSchedulePreviewQuery = useQuery({
+    queryKey: [
+      'json-config-localizations',
+      'automation-schedule-preview',
+      debouncedAutomationCronExpression,
+      automationScheduleTimeZone,
+    ],
+    queryFn: () =>
+      fetchReviewAutomationSchedulePreview({
+        cronExpression: debouncedAutomationCronExpression,
+        timeZone: automationScheduleTimeZone,
+        count: 3,
+      }),
+    enabled:
+      activeTab === 'SYNC' && automationEnabled && Boolean(debouncedAutomationCronExpression),
+    staleTime: 15_000,
+    retry: false,
   });
 
   const jsonConfigDraftStorageKey = useMemo(
@@ -2737,6 +2761,36 @@ function JsonConfigLocalizationWorkspace({
     0,
   );
   const automationRuns = automationRunsQuery.data ?? [];
+  const automationSchedulePreviewRuns = automationSchedulePreviewQuery.data?.nextRuns ?? [];
+  const automationSchedulePreviewTimeZone =
+    automationSchedulePreviewQuery.data?.timeZone?.trim() || automationScheduleTimeZone;
+  const automationScheduleDescription = debouncedAutomationCronExpression
+    ? formatReviewAutomationSchedule(
+        debouncedAutomationCronExpression,
+        automationSchedulePreviewTimeZone,
+      )
+    : 'No schedule';
+  const automationNextRunLabel = !automationEnabled
+    ? 'Automation disabled'
+    : !debouncedAutomationCronExpression
+      ? 'No schedule'
+      : automationSchedulePreviewQuery.isLoading
+        ? 'Calculating next run...'
+        : automationSchedulePreviewQuery.isError
+          ? 'Unable to calculate next run'
+          : automationSchedulePreviewRuns[0]
+            ? formatDateTimeInTimeZone(
+                automationSchedulePreviewRuns[0],
+                automationSchedulePreviewTimeZone,
+              )
+            : 'No next run';
+  const automationUpcomingRunLabels = automationSchedulePreviewRuns
+    .slice(1, 3)
+    .map((nextRun) => formatDateTimeInTimeZone(nextRun, automationSchedulePreviewTimeZone));
+  const automationSchedulePreviewError =
+    automationSchedulePreviewQuery.error instanceof Error
+      ? automationSchedulePreviewQuery.error.message
+      : 'Unable to calculate next run';
   const builtInSchemaOptions: JsonConfigSchemaOption[] = JSON_CONFIG_SCHEMA_PRESETS.map(
     (preset) => ({
       id: `preset:${preset.id}`,
@@ -3155,6 +3209,24 @@ function JsonConfigLocalizationWorkspace({
                           {preset.label}
                         </button>
                       ))}
+                    </div>
+                    <div
+                      className="json-config-localization-page__automation-next-run"
+                      title={
+                        automationSchedulePreviewQuery.isError
+                          ? automationSchedulePreviewError
+                          : automationScheduleDescription
+                      }
+                      aria-live="polite"
+                    >
+                      <span className="settings-field__label">Next run</span>
+                      <strong>{automationNextRunLabel}</strong>
+                      <span className="settings-hint">{automationScheduleDescription}</span>
+                      {automationUpcomingRunLabels.length > 0 ? (
+                        <span className="settings-hint">
+                          Then {automationUpcomingRunLabels.join(', ')}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div className="json-config-localization-page__automation-card">
@@ -4602,6 +4674,22 @@ function formatDateTime(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
+}
+
+function formatDateTimeInTimeZone(value: string, timeZone?: string | null): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: timeZone?.trim() || undefined,
+    }).format(date);
+  } catch {
+    return formatDateTime(value);
+  }
 }
 
 function formatShortDate(value: string | null): string {
